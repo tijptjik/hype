@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/svelte/pur
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 vi.mock('svelte/transition', () => ({ slide: () => ({ duration: 0 }) }))
 import Fixture from './fixtures/components/AddressDivisionsFixture.svelte'
+import AddressFormFixture from './fixtures/components/FeatureAddress3dFixture.svelte'
 // API
 import { getAddressDivisionContext } from '#lib/api/division.remote.js'
 // TYPES
@@ -17,8 +18,19 @@ vi.mock('#lib/api/division.remote.js', () => ({ getAddressDivisionContext: vi.fn
 beforeEach(() => {
   vi.useRealTimers()
   vi.clearAllMocks()
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 const member = (id: string, kind: string, category = 'hood'): AddressDivision => ({
   id,
   class: kind,
@@ -63,8 +75,8 @@ it('puts explanatory text behind an info control beside the title', async () => 
   expect(
     view
       .getByRole('button', { name: 'About divisions' })
-      .closest('.flex')
-      ?.querySelector('h3')?.textContent,
+      .closest('[data-address-divisions]')
+      ?.querySelector('h2')?.textContent,
   ).toBe('Divisions')
 })
 
@@ -81,7 +93,7 @@ it('selects one neighbourhood, fills its unique source path and keeps the picker
     target: { value: 'Lan Kwai' },
   })
   await fireEvent.click(view.getByRole('button', { name: 'Lan Kwai Fong Microhood' }))
-  expect(output(view.container).localityPaths).toEqual([[central.id, child.id]])
+  expect(output(view.container).localityPath).toEqual([central.id, child.id])
   expect(getAddressDivisionContext).toHaveBeenCalledTimes(1)
   expect(view.queryByRole('button', { name: 'Add locality' })).toBeNull()
   expect(view.queryByLabelText('Parent level')).toBeNull()
@@ -115,13 +127,15 @@ it('offers only the existing Prince Edward paths, preserving the standalone boun
   await fireEvent.click(
     view.getByRole('button', { name: 'Prince Edward Neighbourhood' }),
   )
-  const choices = view.getByRole('group', { name: 'Choose a path for Prince Edward' })
+  const choices = view.getByRole('group', {
+    name: 'Choose the neighbourhood chain for Prince Edward',
+  })
   expect(choices.querySelectorAll('button')).toHaveLength(2)
   expect(view.getByRole('button', { name: 'Mong Kok → Prince Edward' })).toBeTruthy()
   expect(view.queryByLabelText('Search other localities at this level')).toBeNull()
-  expect(output(view.container).localityPaths).toBeUndefined()
+  expect(output(view.container).localityPath).toBeUndefined()
   await fireEvent.click(view.getByRole('button', { name: 'Prince Edward' }))
-  expect(output(view.container).localityPaths).toEqual([[princeEdward.id]])
+  expect(output(view.container).localityPath).toEqual([princeEdward.id])
   expect(view.queryByText('Lan Kwai Fong')).toBeNull()
   await fireEvent.click(view.getByRole('button', { name: 'Choose neighbourhood' }))
   await fireEvent.input(view.getByLabelText('Search neighbourhoods'), {
@@ -131,25 +145,33 @@ it('offers only the existing Prince Edward paths, preserving the standalone boun
     view.getByRole('button', { name: 'Prince Edward Neighbourhood' }),
   )
   await fireEvent.click(view.getByRole('button', { name: 'Mong Kok → Prince Edward' }))
-  expect(output(view.container).localityPaths).toEqual([[mongKok.id, princeEdward.id]])
+  expect(output(view.container).localityPath).toEqual([mongKok.id, princeEdward.id])
   expect(view.getAllByRole('list', { name: 'Selected neighbourhood' })).toHaveLength(1)
 })
 
-it('clears the whole selection and can return to marker membership', async () => {
+it('removes a specific locality branch and can return to marker membership', async () => {
   vi.mocked(getAddressDivisionContext).mockReturnValue(
     Promise.resolve(context) as never,
   )
   const view = render(Fixture)
   await waitFor(() =>
-    expect(view.getByRole('button', { name: 'Clear neighbourhood' })).toBeTruthy(),
+    expect(
+      view.getByRole('button', { name: 'Clear neighbourhood: Central' }),
+    ).toBeTruthy(),
   )
-  await fireEvent.click(view.getByRole('button', { name: 'Clear neighbourhood' }))
-  expect(output(view.container).localityPaths).toEqual([])
+  await fireEvent.click(
+    view.getByRole('button', { name: 'Clear neighbourhood: Lan Kwai Fong' }),
+  )
+  expect(output(view.container).localityPath).toEqual([central.id])
+  expect(view.queryByText('Lan Kwai Fong')).toBeNull()
+  await fireEvent.click(
+    view.getByRole('button', { name: 'Clear neighbourhood: Central' }),
+  )
+  expect(output(view.container).localityPath).toEqual([])
   expect(view.queryByText('Central')).toBeNull()
-  await fireEvent.click(view.getByRole('button', { name: 'Cancel' }))
   await fireEvent.click(view.getByRole('button', { name: 'From marker' }))
-  expect(output(view.container).localityPaths).toBeNull()
-  expect(view.getByTestId('overrides').textContent).toContain('"mode":"marker"')
+  expect(output(view.container).localityPath).toBeNull()
+  expect(output(view.container)).toEqual({ localityPath: null })
 })
 
 it('does not invent a standalone path when known source ancestors are unavailable', async () => {
@@ -166,7 +188,7 @@ it('does not invent a standalone path when known source ancestors are unavailabl
   })
   await fireEvent.click(view.getByRole('button', { name: 'Lan Kwai Fong Microhood' }))
   expect(view.getByRole('alert').textContent).toContain('ancestor paths')
-  expect(output(view.container).localityPaths).toBeUndefined()
+  expect(output(view.container).localityPath).toBeUndefined()
 })
 
 it('ignores geography returned late for the previous marker', async () => {
@@ -201,8 +223,24 @@ it('keeps neighbourhood editing controls out of display mode', async () => {
   const view = render(Fixture, { isEditing: false })
   await waitFor(() => expect(view.getByText('Lan Kwai Fong')).toBeTruthy())
   expect(view.queryByRole('button', { name: 'Choose neighbourhood' })).toBeNull()
-  expect(view.queryByRole('button', { name: 'Clear neighbourhood' })).toBeNull()
+  expect(
+    view.queryByRole('button', { name: 'Clear neighbourhood: Central' }),
+  ).toBeNull()
   expect(view.getByRole('region', { name: 'Island' })).toBeTruthy()
+})
+
+it('restores grouped divisions and class labels in the read-only Feature address', async () => {
+  vi.mocked(getAddressDivisionContext).mockReturnValue(
+    Promise.resolve(context) as never,
+  )
+  const view = render(AddressFormFixture, { isEditing: false })
+  await waitFor(() => expect(view.getByText('Lan Kwai Fong')).toBeTruthy())
+  expect(view.container.querySelectorAll('[data-address-divisions]')).toHaveLength(1)
+  const locality = view.container.querySelector('[data-division-group="locality"]')
+  expect(locality?.textContent).toContain('Microhood')
+  expect(
+    view.container.querySelector('[data-address-blocks]')?.textContent,
+  ).not.toContain('Lan Kwai Fong')
 })
 
 it('retains the same division nodes until the next marker context resolves', async () => {
@@ -247,4 +285,156 @@ it('keeps the last resolved geography visible when the new marker lookup fails',
       .getByRole('button', { name: 'Choose neighbourhood' })
       .closest('[aria-disabled="true"]'),
   ).toBeTruthy()
+})
+
+it('offers only children of the selected chain and resets an open custom search', async () => {
+  const unrelated = member('Unrelated', 'neighbourhood')
+  const sibling = member('SoHo', 'microhood')
+  sibling.hierarchies = child.hierarchies
+  vi.mocked(getAddressDivisionContext).mockReturnValue(
+    Promise.resolve({
+      ...context,
+      options: [...context.options, sibling, unrelated],
+    }) as never,
+  )
+  const view = render(Fixture)
+  await fireEvent.click(
+    await view.findByRole('button', { name: 'Clear neighbourhood: Lan Kwai Fong' }),
+  )
+  const add = view.getByRole('button', { name: 'Add: Central' })
+  const remove = view.getByRole('button', { name: 'Clear neighbourhood: Central' })
+  expect(add.closest('li')).not.toBe(remove.closest('li'))
+  expect(remove.closest('li')?.nextElementSibling).toBe(add.closest('li'))
+  await fireEvent.click(add)
+  expect(view.getByRole('button', { name: 'Lan Kwai Fong Microhood' })).toBeTruthy()
+  expect(view.getByRole('button', { name: 'SoHo Microhood' })).toBeTruthy()
+  expect(view.queryByRole('button', { name: 'Unrelated Neighbourhood' })).toBeNull()
+  expect(view.queryByRole('button', { name: 'Add: Lan Kwai Fong' })).toBeNull()
+  const input = view.getByLabelText('Search neighbourhoods')
+  await fireEvent.keyDown(input, { key: 'Tab' })
+  expect(document.activeElement).toBe(
+    view.getByRole('button', { name: 'Lan Kwai Fong Microhood' }),
+  )
+  await fireEvent.click(view.getByRole('button', { name: 'SoHo Microhood' }))
+  expect(output(view.container).localityPath).toEqual([central.id, sibling.id])
+  await fireEvent.click(view.getByRole('button', { name: 'Clear neighbourhood: SoHo' }))
+  await fireEvent.click(view.getByRole('button', { name: 'Add: Central' }))
+  await fireEvent.click(view.getByRole('button', { name: 'From marker' }))
+  expect(view.queryByLabelText('Search neighbourhoods')).toBeNull()
+  expect(output(view.container).localityPath).toBeNull()
+})
+
+it('skips Cancel on forward Tab to chain choices and closes the pending choice on reset', async () => {
+  const alternate = member('Boundary child', 'neighbourhood')
+  alternate.hierarchies = {
+    locality: [[{ id: central.id, class: central.class, fullContainment: true }], []],
+  }
+  vi.mocked(getAddressDivisionContext).mockReturnValue(
+    Promise.resolve({ ...context, options: [...context.options, alternate] }) as never,
+  )
+  const view = render(Fixture)
+  await fireEvent.click(
+    await view.findByRole('button', { name: 'Choose neighbourhood' }),
+  )
+  const input = view.getByLabelText('Search neighbourhoods')
+  await fireEvent.input(input, { target: { value: 'Boundary' } })
+  await fireEvent.keyDown(input, { key: 'Tab' })
+  expect(document.activeElement).toBe(
+    view.getByRole('button', { name: 'Boundary child Neighbourhood' }),
+  )
+  await fireEvent.click(
+    view.getByRole('button', { name: 'Boundary child Neighbourhood' }),
+  )
+  await fireEvent.keyDown(input, { key: 'Tab' })
+  expect(document.activeElement).toBe(
+    view.getByRole('button', { name: 'Central → Boundary child' }),
+  )
+  expect(view.queryByText('Choose one of the existing ancestor paths.')).toBeNull()
+  await fireEvent.click(view.getByRole('button', { name: 'From marker' }))
+  expect(
+    view.queryByRole('group', {
+      name: 'Choose the neighbourhood chain for Boundary child',
+    }),
+  ).toBeNull()
+  expect(view.queryByLabelText('Search neighbourhoods')).toBeNull()
+})
+
+it('keeps generated display text in sync with locality selection, removal and marker reset', async () => {
+  const town = member('Tsuen Wan', 'town')
+  town.names['zh-hant'] = { name: '荃灣' }
+  vi.mocked(getAddressDivisionContext).mockReturnValue(
+    Promise.resolve({ available: true, memberships: [town], options: [town] }) as never,
+  )
+  const view = render(AddressFormFixture, { displayAddressInToolbar: true })
+  const composed = () =>
+    view.container.querySelector(
+      '[data-address-toolbar-display] .bits-scrollable-text__content',
+    )?.textContent
+  await waitFor(() => expect(composed()).toBe('70 Sai Yeung Choi St South, Tsuen Wan'))
+  await fireEvent.click(
+    view.getByRole('button', { name: 'Clear neighbourhood: Tsuen Wan' }),
+  )
+  await waitFor(() => expect(composed()).toBe('70 Sai Yeung Choi St South'))
+  await fireEvent.click(view.getByRole('button', { name: 'From marker' }))
+  await waitFor(() => expect(composed()).toBe('70 Sai Yeung Choi St South, Tsuen Wan'))
+  await fireEvent.click(
+    view.container.querySelector(
+      '[data-address-toolbar-display] button[aria-pressed]',
+    )!,
+  )
+  const display = view.container.querySelector(
+    '[data-address-toolbar-display] textarea',
+  ) as HTMLTextAreaElement
+  await fireEvent.input(display, { target: { value: 'Custom entrance' } })
+  await fireEvent.click(
+    view.getByRole('button', { name: 'Clear neighbourhood: Tsuen Wan' }),
+  )
+  expect(display.value).toBe('Custom entrance')
+})
+
+it('retains resolved divisions after an unavailable response for the moved marker', async () => {
+  vi.mocked(getAddressDivisionContext)
+    .mockReturnValueOnce(Promise.resolve(context) as never)
+    .mockReturnValueOnce(
+      Promise.resolve({ available: false, memberships: [], options: [] }) as never,
+    )
+  const view = render(Fixture, { isEditing: false })
+  const previous = await view.findByText('Fixed district')
+  await fireEvent.click(view.getByText('Move marker'))
+  await waitFor(() => expect(view.getByRole('alert')).toBeTruthy())
+  expect(view.getByText('Fixed district')).toBe(previous)
+  expect(view.getByText('Lan Kwai Fong')).toBeTruthy()
+})
+
+it('latches the parent display address locality until replacement divisions resolve', async () => {
+  let resolveNext!: (value: AddressDivisionContext) => void
+  vi.mocked(getAddressDivisionContext)
+    .mockReturnValueOnce(Promise.resolve(context) as never)
+    .mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveNext = resolve
+      }) as never,
+    )
+  const view = render(AddressFormFixture, { displayAddressInToolbar: true })
+  await waitFor(() =>
+    expect(
+      view.container.querySelector('[data-address-toolbar-display]')?.textContent,
+    ).toContain('Lan Kwai Fong'),
+  )
+  const before = view.container.querySelector(
+    '[data-address-toolbar-display]',
+  )?.textContent
+  await view.rerender({ coordinates: [115, 23] })
+  expect(
+    view.container.querySelector('[data-address-toolbar-display]')?.textContent,
+  ).toBe(before)
+  resolveNext({ ...context, memberships: [district, central] })
+  await waitFor(() =>
+    expect(
+      view.container.querySelector('[data-address-toolbar-display]')?.textContent,
+    ).not.toContain('Lan Kwai Fong'),
+  )
+  expect(
+    view.container.querySelector('[data-address-toolbar-display]')?.textContent,
+  ).toContain('Central')
 })
