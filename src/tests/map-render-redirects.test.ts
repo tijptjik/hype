@@ -7,7 +7,7 @@ import { serveMapRenderAsset } from '#lib/api/services/render.js'
 import { GET } from '../routes/api/mapRenders/styles/[key]/asset/+server.js'
 
 vi.mock('#lib/map/styles/index.js', () => ({
-  isMapStyleKey: (key: string) => key === 'hyper',
+  isMapStyleKey: (key: string) => key === 'hype-dark',
   getMapStyleAssetRecord: async () => ({ hash: 'abc123' }),
 }))
 
@@ -124,7 +124,7 @@ describe('SvelteKit 3 external map render redirects', () => {
   it.each(['preview', 'production'])('permits %s style CDN redirects', async stage => {
     await expectAssetRedirect(async () =>
       GET({
-        params: { key: 'hyper' },
+        params: { key: 'hype-dark' },
         locals: { platform: { env: { ENVIRONMENT: stage } } },
       } as unknown as Parameters<typeof GET>[0]),
     )
