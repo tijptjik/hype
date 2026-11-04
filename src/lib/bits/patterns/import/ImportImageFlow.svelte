@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { beforeNavigate } from '$app/navigation'
 import { fade } from 'svelte/transition'
 // PATTERN COMPONENTS
 import * as ImportPrimitive from './components'
@@ -35,9 +36,14 @@ let isUploading = $state(false)
 let currentBatch = $state(0)
 let totalBatches = $state(0)
 let imageUploadSessionId = $state(0)
-let lastProcessedDrop = $state<Props['pendingDrop']>(null)
+let lastProcessedDrop = $state.raw<Props['pendingDrop']>(null)
 let currentPhase = $state<'uploading' | 'finished'>('uploading')
 let replacingResultIds = $state(new Set<string>())
+
+// Keep active uploads mounted; leaving the document invokes the browser's unload warning.
+beforeNavigate(navigation => {
+  if (!navigation.shallow && (isUploading || replacingResultIds.size > 0)) navigation.cancel()
+})
 
 // IMPORT :: STATS
 

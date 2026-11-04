@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { goto } from '$app/navigation'
+import { beforeNavigate, goto } from '$app/navigation'
 import { fade } from 'svelte/transition'
 // CONTEXT
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
@@ -117,6 +117,11 @@ let featureResolutionCanDownloadResults = $state(false)
 let featureResolutionStatusCounts: FeatureResolutionStatusCounts | undefined = $state()
 let featureResolutionIsProcessing = $state(false)
 let featureResolutionFooterStatus = $state('')
+
+// Pending import work belongs to this flow and must finish or be explicitly cancelled first.
+beforeNavigate(navigation => {
+  if (!navigation.shallow && (translationIsProcessing || geoLookupIsBusy || featureResolutionIsProcessing)) navigation.cancel()
+})
 
 // STATE :: RESOURCE HIERACHY
 
