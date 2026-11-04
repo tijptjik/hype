@@ -6,9 +6,6 @@
   "issues": {
     "url": "https://github.com/tijptjik/hype/issues"
   },
-  "overrides": {
-    "kysely": "0.28.17"
-  },
   "scripts": {
     "dev": "vite dev",
     "dev:messaging-notifications": "wrangler dev --config workers/messaging-notifications/wrangler.jsonc --local --ip 127.0.0.1 --port 8796 --persist-to .wrangler/state",
@@ -131,10 +128,10 @@
     "deploy:location-refresh:preview": "bun wrangler deploy -c workers/location-refresh/wrangler.jsonc --env preview"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.5",
+    "@biomejs/biome": "2.6.5",
     "@changesets/cli": "^3.0.3",
     "@cloudflare/vite-plugin": "^1.67.0",
-    "@cloudflare/workers-types": "5.20261026.1",
+    "@cloudflare/workers-types": "5.20261104.1",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@commitlint/cz-commitlint": "^21.2.4",
@@ -148,7 +145,7 @@
     "@protomaps/basemaps": "^5.7.2",
     "@sveltejs/adapter-cloudflare": "^8.0.2",
     "@sveltejs/adapter-static": "^4.0.1",
-    "@sveltejs/kit": "3.1.0",
+    "@sveltejs/kit": "3.1.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tailwindcss/postcss": "^4.3.4",
     "@tailwindcss/upgrade": "^4.3.4",
@@ -244,7 +241,7 @@
     "esm-env": "1.2.2",
     "h3-js": "^4.5.0",
     "heic2any": "^0.0.4",
-    "kysely": "^0.28.17",
+    "kysely": "^0.29.8",
     "libphonenumber-js": "1.13.15",
     "lottie-web": "^5.13.0",
     "maplibre-gl": "^6.16.0",
@@ -268,7 +265,7 @@
     "svelte-toolbelt": "0.10.6",
     "tailwind-merge": "^3.7.0",
     "unique-names-generator": "^4.7.1",
-    "uqr": "0.1.2",
+    "uqr": "0.1.3",
     "utif": "^3.1.0",
     "uuid": "14.0.3",
     "zod": "^4.6.7"
@@ -283,7 +280,7 @@
   },
   "license": "FSL-1.1-MIT",
   "patchedDependencies": {
-    "@sveltejs/kit@3.1.0": "patches/@sveltejs%2Fkit@3.1.0.patch"
+    "@sveltejs/kit@3.1.1": "patches/@sveltejs%2Fkit@3.1.1.patch"
   },
   "imports": {
     "#lib": "./src/lib/index.ts",
