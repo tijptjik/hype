@@ -207,6 +207,7 @@ export const toOrganisationSubmittedFields = (
   data: Partial<Record<OrganisationAuthorizationField, unknown>>,
 ): OrganisationAuthorizationField[] => {
   const fields: OrganisationAuthorizationField[] = []
+  if (data.userPolicy !== undefined) fields.push('userPolicy')
   if (data.settings !== undefined) fields.push('settings')
   if ('code' in data) fields.push('code')
   if ('url' in data) fields.push('url')

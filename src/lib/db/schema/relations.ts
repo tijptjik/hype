@@ -4,6 +4,7 @@ import { relations } from 'drizzle-orm'
 import { passkey, user, userFeature, userLayer } from './user'
 import { hub, hubI18n, hubRole, hubUserState, hubLayer } from './hub'
 import { organisation, organisationI18n, organisationRole } from './organisation'
+import { organisationUserPolicy } from './organisationUser'
 import { project, projectI18n, projectRole } from './project'
 import { mapStyles, mapStyleI18n, projectMapStyles } from './map'
 import { layer, layerI18n, layerProperty } from './layer'
@@ -61,6 +62,10 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
  * Links organization to its translations, members, projects, hub, and metadata
  */
 export const organisationRelations = relations(organisation, ({ one, many }) => ({
+  userPolicy: one(organisationUserPolicy, {
+    fields: [organisation.id],
+    references: [organisationUserPolicy.organisationId],
+  }),
   i18n: many(organisationI18n),
   userRoles: many(organisationRole),
   image: one(image, {

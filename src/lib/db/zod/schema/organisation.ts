@@ -1,5 +1,9 @@
 // CONTENT LOCALES
 import {
+  OrganisationUserPolicySchema,
+  OrganisationUserPolicyFormSchema,
+} from '#lib/organisation-users/policy.js'
+import {
   ContentLocaleSettingsSchema,
   ContentLocaleSettingsFormSchema,
 } from '#lib/content-locales/settings.js'
@@ -245,6 +249,7 @@ export const OrganisationUserRolesFormData = z.preprocess(
 )
 
 export const OrganisationEntityFormData = z.object({
+  userPolicy: OrganisationUserPolicyFormSchema,
   settings: ContentLocaleSettingsFormSchema,
   code: z
     .string()
@@ -374,7 +379,10 @@ export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({
 })
 
 export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI.extend({
-  hub: z.object({ id: z.string(), code: z.string() }).nullish(),
+  hub: z
+    .object({ id: z.string(), code: z.string(), domain: z.string().nullish() })
+    .nullish(),
+  userPolicy: OrganisationUserPolicySchema.nullish(),
   userRoles: z
     .array(OrganisationRoleBase.extend({ user: UserBasic.nullish() }))
     .default([]),

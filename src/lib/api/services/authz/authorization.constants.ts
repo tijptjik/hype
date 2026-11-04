@@ -48,6 +48,7 @@ export const hubAuthorizationActions = [
 ] as const
 
 export const organisationAuthorizationFields = [
+  'userPolicy',
   'settings',
   'code',
   'url',

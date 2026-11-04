@@ -1,5 +1,7 @@
 // CONTENT LOCALES
 import { propertyLocalesToForm } from '#lib/properties/locales.js'
+// USER POLICY
+import { DEFAULT_ORGANISATION_USER_POLICY } from '#lib/organisation-users/policy.js'
 // ROLE POLICY
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // CONTENT LOCALES
@@ -127,6 +129,7 @@ export function toOrganisationFormInput(
     return {
       meta: { mode: 'create', isAdminRequest: true },
       data: {
+        userPolicy: { ...DEFAULT_ORGANISATION_USER_POLICY },
         settings: {},
         code: '',
         url: '',
@@ -151,6 +154,7 @@ export function toOrganisationFormInput(
       isAdminRequest: true,
     },
     data: {
+      userPolicy: { ...(data.userPolicy ?? DEFAULT_ORGANISATION_USER_POLICY) },
       code: data.code ?? '',
       url: data.url ?? '',
       settings: toContentLocaleSettingsForm(data.settings),

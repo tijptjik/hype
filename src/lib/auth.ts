@@ -16,6 +16,7 @@ import { parseSessionSettings } from './auth/session-settings'
 import { requireAvailableAuthUser } from './auth/account-state.server'
 import { breadlineClaimIntegration } from './auth/breadline-claim.server'
 import { passwordSetup } from './auth/password-setup.server'
+import { enrolOrganisationUserOnSignIn } from './organisation-users/enrol.server'
 import { devPersonaPlugin } from './auth/dev-persona.server'
 import { isDevPersona, isDevPersonaHost } from './auth/dev-personas'
 // DB SCHEMA
@@ -245,6 +246,15 @@ function createAuthInstance(
             // All sign-in methods converge here after identifying the account owner.
             await requireAvailableAuthUser(db, session.userId)
             return { data: session }
+          },
+          after: async session => {
+            // Enrol only after a real session is created; the hub came from trusted routing.
+            await enrolOrganisationUserOnSignIn(
+              env.DB,
+              session.userId,
+              hub?.id ?? null,
+              hub?.code === 'core',
+            )
           },
         },
       },

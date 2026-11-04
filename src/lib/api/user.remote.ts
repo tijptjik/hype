@@ -43,6 +43,9 @@ import {
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
 import { readAdminUserProfile } from '#lib/api/services/adminUser.js'
+import { canManageOrganisationUsers } from '#lib/api/services/authz/organisationUsers.js'
+import { organisation } from '#lib/db/schema/index.js'
+import { organisationUsersCondition } from '#lib/db/services/organisationUsers.js'
 import { loadPrivateContributions } from '#lib/api/services/profileContributions.js'
 import { sortContributionGroups } from '#lib/contributions/presentation.js'
 import {
@@ -140,7 +143,8 @@ const resolveTargetUserId = (
  * Uses guarded query context so request-scoped auth/session state is resolved once and
  * `meta.isAdminRequest` semantics stay aligned with the rest of the remote layer.
  * Archived-user search is additionally protected behind a privileged policy gate.
- * Directory fields require active-hub administrator access; email addresses require core/SuperAdmin authority.
+ * Global directory fields require active-hub administrator access; global email reads require core/SuperAdmin authority.
+ * An explicitly authorized organisation directory exposes only that organisation's members and contacts.
  */
 export const searchUsers = guardedQuery(
   UserSearchQueryParamsSchema,
@@ -154,9 +158,27 @@ export const searchUsers = guardedQuery(
       throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
     }
 
-    // The directory exposes additional profile fields only to active-hub admins.
+    // Organisation audience reads require a persisted scope and explicit staff authority.
+    let organisationDirectory = false
+    if (params.organisationId) {
+      const target = await db.query.organisation.findFirst({
+        where: eq(organisation.id, params.organisationId),
+      })
+      if (!target || !canManageOrganisationUsers({ ...user, roles: userRoles }, target))
+        throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+      const policy = await ctx.event.locals.platform.env.DB.prepare(
+        'SELECT enabled FROM organisationUserPolicy WHERE organisationId=?',
+      )
+        .bind(target.id)
+        .first<{ enabled: number }>()
+      if (!policy?.enabled) throw error(403, 'Organisation users are disabled.')
+      organisationDirectory = true
+    }
+
+    // The global directory exposes additional profile fields only to active-hub admins.
     if (
       params.directory &&
+      !organisationDirectory &&
       !canBrowseUsers({
         isAnonymous: user.isAnonymous,
         superAdmin: user.superAdmin,
@@ -168,6 +190,8 @@ export const searchUsers = guardedQuery(
     }
 
     const queryPlan = await toUserSearchQueryPlan(db, params)
+    if (params.organisationId)
+      queryPlan.conditions.push(organisationUsersCondition(params.organisationId))
 
     // Guard privileged archived filter usage.
     if (
@@ -201,13 +225,18 @@ export const searchUsers = guardedQuery(
       result.data.map(row => row.id),
     )
 
-    const canReadEmail = canReadAllUserContacts({ ...user, userRoles })
+    const canReadEmail =
+      organisationDirectory || canReadAllUserContacts({ ...user, userRoles })
 
     // Return loaded records and list metadata.
     return {
       data: result.data.map(row =>
         params.directory
-          ? toUserDirectoryProfile(row, telephoneUserIds.has(row.id), canReadEmail)
+          ? toUserDirectoryProfile(
+              row,
+              organisationDirectory || telephoneUserIds.has(row.id),
+              canReadEmail,
+            )
           : UserAdminListProfileAPI.parse(
               toUserDirectoryProfile(row, telephoneUserIds.has(row.id), canReadEmail),
             ),

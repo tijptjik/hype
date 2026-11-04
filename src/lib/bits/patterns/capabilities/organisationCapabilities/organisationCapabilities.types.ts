@@ -22,6 +22,7 @@ export type CapabilityFormFields = Partial<
 >
 
 export interface OrganisationCapabilitiesProps {
+  users?: import('svelte').Snippet
   selectedCapabilityKeys: CapabilityKey[]
   capabilitySearchOptions: CapabilitySearchOption[]
   selectedCapabilityIds: string[]

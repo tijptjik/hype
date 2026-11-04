@@ -1,6 +1,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
+import UsersIcon from 'virtual:icons/lucide/users'
 import FormInputIcon from 'virtual:icons/proicons/button'
 import StoreIcon from 'virtual:icons/lucide/store'
 import ChatIcon from 'virtual:icons/lucide/message-circle'
@@ -21,6 +22,7 @@ export const ADMIN_FACETS = {
   core: 'core',
   capabilities: 'capabilities',
   messaging: 'messaging',
+  users: 'users',
   address: 'address',
   images: 'images',
   fields: 'fields',
@@ -32,6 +34,7 @@ export const ADMIN_FACETS = {
 
 export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies'
 export type OrganisationFacet =
+  | 'users'
   | 'messaging'
   | 'features'
   | 'advanced'
@@ -51,6 +54,7 @@ export type ProjectFacet =
 export type LayerFacet = 'features' | 'core' | 'fields'
 
 export const ADMIN_FACET_DEFINITIONS = {
+  [ADMIN_FACETS.users]: { label: () => 'Users', icon: UsersIcon },
   [ADMIN_FACETS.messaging]: { label: () => 'Messaging', icon: ChatIcon },
   [ADMIN_FACETS.features]: { label: () => m.omni__title_features(), icon: MapPinIcon },
   [ADMIN_FACETS.advanced]: { label: () => m.project_advanced(), icon: SettingsIcon },
@@ -85,6 +89,7 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  [ADMIN_FACETS.users]: () => 'Users',
   [ADMIN_FACETS.messaging]: () => 'Messaging',
   [ADMIN_FACETS.features]: () => m.omni__title_features(),
   [ADMIN_FACETS.advanced]: () => m.project_advanced(),
@@ -130,7 +135,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   organisation: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.features,
+    ADMIN_FACETS.users,
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.fields,
     ADMIN_FACETS.images,

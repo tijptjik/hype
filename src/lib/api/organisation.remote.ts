@@ -468,6 +468,7 @@ export const organisationForm = guardedForm(
             : {}),
         },
         {
+          userPolicy: data.userPolicy,
           i18n: data.i18n,
           userRoles: toUserRoles(data.userRoles, newOrganisationId),
           ...(normalizedSubmittedProperties.length
@@ -550,6 +551,7 @@ export const organisationForm = guardedForm(
       await updateOrganisationByIdWithConcurrency(db, {
         id: current.id,
         updatedAt: updatedAt as string,
+        userPolicy: data.userPolicy,
         i18n: data.i18n,
         userRoles: toUserRoles(data.userRoles, current.id),
         ...(hasSubmittedPropertiesField

@@ -101,7 +101,7 @@ const organisationWithRelations = {
 
 /**
  * Resolves the organisation relation graph for the requested profile.
- * Adds deep property relations for admin profile and hub relation for super admins.
+ * Adds property, user policy and hub-domain relations for the admin form.
  * @param profile Requested organisation payload profile.
  * @param isSuperAdmin Whether the caller may hydrate the hub relation.
  * @returns Relation graph with the staff-role filter bound to the SQL tag.
@@ -114,6 +114,7 @@ export const getOrganisationWithRelations = (
   if (profile === 'admin') {
     return {
       ...organisationWithRelations,
+      userPolicy: true as const,
       properties: {
         with: {
           i18n: true as const,
@@ -139,7 +140,9 @@ export const getOrganisationWithRelations = (
           },
         },
       },
-      ...(isSuperAdmin ? { hub: true as const } : {}),
+      hub: {
+        columns: { id: true as const, code: true as const, domain: true as const },
+      },
     }
   }
 

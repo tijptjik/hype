@@ -1,6 +1,7 @@
 <script lang="ts">
 // BREADLINE
 import BreadlineCardContent from './components/BreadlineCardContent.svelte'
+import OrganisationOnboarding from '#lib/bits/patterns/organisationUsers/OrganisationOnboarding.svelte'
 import type { BreadlineRunPresentation } from '#lib/features/breadlineCard.js'
 // BITS
 import FeatureCardAddPhotoBody from './components/FeatureCardAddPhotoBody.svelte'
@@ -381,6 +382,11 @@ $effect(() => {
         leftActionsFillAvailableWidth={mode === FeatureCardMode.Display}
       >
         {#snippet topActions()}
+          {#if cardType === 'breadline' &&
+            mode === FeatureCardMode.Display &&
+            feature.organisationId}
+            <OrganisationOnboarding organisationId={feature.organisationId} />
+          {/if}
           {#if mode !== FeatureCardMode.Display}
             <div bind:this={validationElement} class="min-w-0">
               <FeatureCardNewPrimitive.ValidationError />

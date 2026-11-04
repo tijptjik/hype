@@ -305,6 +305,7 @@ export const UserParentChainRoleFilterSchema = z
   )
 
 export const UserSearchQueryParamsSchema = z.object({
+  organisationId: z.string().min(1).max(100).optional(),
   directory: z.boolean().optional(),
   q: z.string().trim().optional(),
   conditions: z

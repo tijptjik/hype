@@ -1,4 +1,13 @@
 <script lang="ts">
+// ORGANISATION USERS
+import OrganisationUserSettings from '#lib/bits/patterns/organisationUsers/OrganisationUserSettings.svelte'
+import OrganisationUsers from '#lib/bits/patterns/organisationUsers/OrganisationUsers.svelte'
+import {
+  DEFAULT_ORGANISATION_USER_POLICY,
+  OrganisationUserPolicyFormSchema,
+} from '#lib/organisation-users/policy.js'
+import type { OrganisationUserPolicy } from '#lib/organisation-users/policy.js'
+import { runRemoteQuery } from '#lib/remote/index.js'
 // MESSAGING
 import OrganisationMessaging from '#lib/bits/patterns/messaging/OrganisationMessaging.svelte'
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
@@ -6,7 +15,6 @@ import { canManageOrganisationMessaging } from '#lib/api/services/authz/messagin
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 import { translateContentField } from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
-import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import LocationVisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationVisibilitySelect.svelte'
 import type { RemoteForm, RemoteFormInput } from '$app/server'
 
@@ -308,6 +316,10 @@ const optimisticOrganisationData = $derived.by(() =>
   isCurrentRefLoaded ? organisation?.data : cachedOrganisationForRef,
 )
 
+const organisationUsersEnabled = $derived(
+  optimisticOrganisationData?.userPolicy?.enabled ?? false,
+)
+
 // § Form
 
 type OrganisationEditorFormInput = ReturnType<typeof toOrganisationFormInput>
@@ -415,6 +427,41 @@ function getHiddenLocaleSettingsAttrs(): Record<string, unknown> {
     as(type: 'hidden', value: string): Record<string, unknown>
   }
   return as('hidden', JSON.stringify(localeSettingsPatch))
+}
+// User settings share the committed form baseline, dirty tracking, cancel and submission.
+const userPolicy = $derived.by((): OrganisationUserPolicy => {
+  const value = formCtx.form.fields.value().data?.userPolicy
+  const parsed = OrganisationUserPolicyFormSchema.safeParse(value)
+  return parsed.success && parsed.data
+    ? parsed.data
+    : { ...DEFAULT_ORGANISATION_USER_POLICY }
+})
+const organisationHubDomain = $derived(
+  optimisticOrganisationData?.hub?.domain?.trim().toLowerCase() ?? null,
+)
+
+/** Stage Users settings in the organisation form.
+ * @param patch Changed enrolment choices. @returns Nothing; the main Save owns persistence.
+ */
+function setUserPolicy(patch: Partial<OrganisationUserPolicy>): void {
+  updateFormData(
+    formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
+    data => {
+      data.userPolicy = { ...userPolicy, ...patch }
+      return data
+    },
+  )
+  revalidateAfterProgrammaticChange()
+}
+
+/** Register Users settings with the main form transport.
+ * @returns Hidden field attributes containing the current staged policy.
+ */
+function getHiddenUserPolicyAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.userPolicy as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
+  return as('hidden', JSON.stringify(userPolicy))
 }
 const isRequiredInPreflight = createSchemaRequiredInferer(OrganisationPreflightFormData)
 const isDirty = $derived(Boolean(formCtx.dirty))
@@ -965,6 +1012,7 @@ const resolvedFacetTabs = $derived.by(() => {
   const tabs = new Map(facetTabs)
   if (!canEditOrganisation) tabs.delete('capabilities')
   if (!canManageMessaging) tabs.delete('messaging')
+  if (!canEditOrganisation || !organisationUsersEnabled) tabs.delete('users')
 
   return tabs
 })
@@ -987,6 +1035,8 @@ const buildFacetNavAction = createFacetNavActionBuilder<OrganisationFacet>({
 
 $effect(() => {
   const currentHash = page.url.hash
+  // Users availability follows the committed organisation; retry its deep link after loading.
+  if (currentHash === '#users' && !organisationFacetOrder.includes('users')) return
   if (currentHash === lastSyncedFacetHash) return
   lastSyncedFacetHash = currentHash
   syncAdminFacetFromHash({
@@ -1599,6 +1649,7 @@ $effect(() => {
         {/if}
       </Main.Facet>
     {/snippet}
+    <input {...getHiddenUserPolicyAttrs()}>
     <Main.Facet
       isVisible={activeFacet === 'advanced'}
       transition="fade"
@@ -1712,8 +1763,8 @@ $effect(() => {
             currentUserId={currentActor.userId}
             icon={OrganisationIcon}
             layout="list"
-            title={m.admin__forms_organisation_members_title()}
-            subtitle={m.admin__forms_organisation_members_subtitle()}
+            title="Staff"
+            subtitle="Owners and members manage this organisation."
             transitionEntityKey={organisation?.data?.id ?? organisationRef}
             removeSelfResourceLabel={m.resource__organisation_singular()}
             issues={userRoleSectionIssues}
@@ -1776,8 +1827,37 @@ $effect(() => {
           onTranslate={onTranslateCapabilities}
           onResetLocale={onResetCapabilityLocale}
           onEnterEditMode={() => headerCtrl.setEditing(true)}
-        />
+        >
+          {#snippet users()}
+            {#if optimisticOrganisationData?.id}
+              <OrganisationUserSettings
+                policy={userPolicy}
+                hubId={optimisticOrganisationData.hubId ?? null}
+                hubDomain={organisationHubDomain}
+                disabled={!isEditing || formCtx.submitting}
+                onChange={setUserPolicy}
+              />
+            {/if}
+          {/snippet}
+        </OrganisationCapabilities>
       </FormSurface>
+    </Main.Facet>
+    <Main.Facet
+      isVisible={activeFacet === 'users' &&
+        canEditOrganisation &&
+        organisationUsersEnabled}
+      fillHeight={true}
+      class="right-0! left-0!"
+      attrs={{ 'data-facet-id': 'users' }}
+    >
+      {#if activeFacet === 'users' &&
+        canEditOrganisation &&
+        organisationUsersEnabled &&
+        optimisticOrganisationData?.id}
+        {#key optimisticOrganisationData.id}
+          <OrganisationUsers organisationId={optimisticOrganisationData.id} />
+        {/key}
+      {/if}
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
@@ -1905,23 +1985,6 @@ $effect(() => {
         {/if}
       </div>
     </FormSurface>
-  </Main.Facet>
-  <Main.Facet
-    isVisible={activeFacet === 'features'}
-    transition="fade"
-    fillHeight={true}
-    edgeToEdge={true}
-    contentClass="h-full overflow-hidden"
-    attrs={{ 'data-facet-id': 'features' }}
-  >
-    {#if activeFacet === 'features' && organisation?.data?.id}
-      {#key organisation.data.id}
-        <ScopedFeatureIndex
-          resourceType="organisation"
-          resourceId={organisation.data.id}
-        />
-      {/key}
-    {/if}
   </Main.Facet>
 </Main.Root>
 
