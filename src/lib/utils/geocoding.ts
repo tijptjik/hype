@@ -1,3 +1,5 @@
+// SHARED PRESENTATION
+export { applyAddressAbbreviations } from '#lib/addresses/formatting.js'
 // THIRD-PARTY
 import proj from 'proj4'
 // ADDRESS
@@ -219,38 +221,6 @@ export const getNormalisedDistrict = (
   return key ? districtNormalised[key]?.[locale] || null : null
 }
 
-// Common address abbreviations
-const addressAbbreviations = {
-  Road: 'Rd',
-  Street: 'St',
-  Lane: 'Ln',
-  Drive: 'Dr',
-  Avenue: 'Ave',
-  Place: 'Pl',
-  Court: 'Ct',
-  Close: 'Cl',
-  Crescent: 'Cres',
-  Gardens: 'Gdns',
-  Heights: 'Hts',
-  Mansion: 'Mansion',
-  House: 'Hse',
-  Building: 'Bldg',
-  Tower: 'Tower',
-  Centre: 'Ctr',
-  Center: 'Ctr',
-  Complex: 'Complex',
-  Estate: 'Estate',
-  Village: 'Village',
-  Phase: 'Phase',
-  Block: 'Blk',
-  Floor: 'F',
-  Room: 'Rm',
-  Unit: 'Unit',
-  Flat: 'Flat',
-  Shop: 'Shop',
-  Suite: 'St',
-}
-
 export function convertWGS84ToHK1980(lng: number, lat: number): [number, number] {
   return proj('EPSG:4326', 'EPSG:2326', [lng, lat])
 }
@@ -280,15 +250,6 @@ export function calculateDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 
   return parseInt((R * c).toFixed(0), 10) // Distance in meters
-}
-
-export function applyAddressAbbreviations(address: string): string {
-  // Apply abbreviations
-  Object.entries(addressAbbreviations).forEach(([full, abbrev]) => {
-    const regex = new RegExp(`\\b${full}\\b`, 'gi')
-    address = address.replace(regex, abbrev)
-  })
-  return address
 }
 
 /**

@@ -1,6 +1,56 @@
 // TYPES
 import type { LocaleKey } from '#lib/types.js'
 
+// Common address abbreviations
+export const addressAbbreviations = {
+  Road: 'Rd',
+  Street: 'St',
+  Lane: 'Ln',
+  Drive: 'Dr',
+  Avenue: 'Ave',
+  Place: 'Pl',
+  Court: 'Ct',
+  Close: 'Cl',
+  Crescent: 'Cres',
+  Gardens: 'Gdns',
+  Heights: 'Hts',
+  Mansion: 'Mans',
+  House: 'Hse',
+  Building: 'Bldg',
+  Tower: 'Twr',
+  Apartment: 'Apt',
+  Quarters: 'Qtrs',
+  Garage: 'Gar',
+  Carpark: 'CP',
+  Office: 'Off',
+  Stage: 'Stg',
+  Centre: 'Ctr',
+  Center: 'Ctr',
+  Complex: 'Complex',
+  Estate: 'Estate',
+  Village: 'Village',
+  Phase: 'Ph',
+  Block: 'Blk',
+  Floor: 'F',
+  Room: 'Rm',
+  Unit: 'Unit',
+  Flat: 'Flat',
+  Shop: 'Shop',
+  Suite: 'St',
+}
+
+/** Apply the canonical address abbreviation table.
+ * @param address Display text. @returns Abbreviated display text; source evidence is not modified.
+ */
+export function applyAddressAbbreviations(address: string): string {
+  // Apply abbreviations
+  Object.entries(addressAbbreviations).forEach(([full, abbrev]) => {
+    const regex = new RegExp(`\\b${full}\\b`, 'gi')
+    address = address.replace(regex, abbrev)
+  })
+  return address
+}
+
 /** Title-case English street labels without changing Chinese text or source records.
  * @param value Published or edited street name. @param locale Display language.
  * @returns Consistent title case, retaining initials, numeric suffixes and apostrophes.
