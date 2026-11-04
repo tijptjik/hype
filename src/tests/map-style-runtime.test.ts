@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { resolveRuntimeMapStyle } from '#lib/map/styles/runtime.js'
+import {
+  resolveMapStyleSpriteUrls,
+  resolveRuntimeMapStyle,
+} from '#lib/map/styles/runtime.js'
+
+import { buildCatalogMapStyle } from '#lib/map/styles/registry.js'
 
 const style = {
   version: 8,
@@ -49,6 +54,32 @@ describe('runtime map styles', () => {
     expect(resolved.sprite).toEqual([
       { id: 'breadline', url: `${origin}/mapSprites/breadline-light/exit` },
     ])
+  })
+
+  it('resolves locally built embedded-map sprites without changing the catalog style', () => {
+    const original = buildCatalogMapStyle('breadline-light')
+    const resolved = resolveMapStyleSpriteUrls(original, 'https://hype.test')
+    expect(resolved.sprite).toEqual([
+      {
+        id: 'default',
+        url: 'https://protomaps.github.io/basemaps-assets/sprites/v4/light',
+      },
+      { id: 'breadline', url: 'https://hype.test/mapSprites/breadline-light/exit' },
+    ])
+    expect(original.sprite?.[1]).toEqual({
+      id: 'breadline',
+      url: '/mapSprites/breadline-light/exit',
+    })
+  })
+
+  it('resolves single sprite paths relative to the style document', () => {
+    expect(
+      resolveMapStyleSpriteUrls(
+        { version: 8, sources: {}, layers: [], sprite: './icons' },
+        'https://hype.test/styles/map.json',
+      ).sprite,
+    ).toBe('https://hype.test/styles/icons')
+    expect(resolveMapStyleSpriteUrls(style).sprite).toBeUndefined()
   })
 
   it('retries transient failures and stops at the configured bound', async () => {
