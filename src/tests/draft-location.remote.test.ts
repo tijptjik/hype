@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   search: vi.fn(),
+  nextCursor: null as string | null,
   nearby: vi.fn(),
   preview: vi.fn(),
   context: {
@@ -23,7 +24,10 @@ vi.mock('#lib/api/server/guarded.js', () => ({
 }))
 vi.mock('#lib/locations/sourceClient.js', async importOriginal => ({
   ...(await importOriginal<object>()),
-  searchSaanSeoiPlaces: mocks.search,
+  searchSaanSeoiPlacesPage: async (...args: unknown[]) => ({
+    candidates: await mocks.search(...args),
+    nextCursor: mocks.nextCursor,
+  }),
 }))
 vi.mock('#lib/locations/sourcePreview.js', () => ({
   readSaanSeoiPlacePreview: mocks.preview,
@@ -38,6 +42,7 @@ import {
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.context.user.isAnonymous = false
+  mocks.nextCursor = null
 })
 describe('unsaved Feature Location discovery', () => {
   it('rejects anonymous callers before upstream discovery', async () => {
@@ -62,6 +67,7 @@ describe('unsaved Feature Location discovery', () => {
       ],
       partial: true,
       limited: false,
+      nextCursor: null,
     })
     expect(mocks.search).toHaveBeenCalledWith(
       expect.anything(),
@@ -146,4 +152,58 @@ it('filters verified previews when upstream search ignores category or status fi
     filters: { taxonomyPrimary: 'abortion_clinic' },
   })
   expect(result.rows.map(row => row.id)).toEqual(['match'])
+})
+
+it('accepts category-only discovery while keeping verified category and status filtering', async () => {
+  mocks.search.mockResolvedValue(
+    ['bakery', 'unrelated', 'closed'].map(placeId => ({
+      placeId,
+      resourceReleaseId: 'release',
+    })),
+  )
+  mocks.preview.mockImplementation(async (_client, input) => ({
+    names: { en: input.ssId },
+    searchClassification: {
+      taxonomyPrimary: input.ssId === 'unrelated' ? 'restaurant' : 'bakery',
+      operatingStatus: input.ssId === 'closed' ? 'permanently_closed' : 'open',
+    },
+  }))
+  const result = await searchDraftLocations({
+    q: '  ',
+    filters: { taxonomyPrimary: 'bakery' },
+  })
+  expect(result.rows.map(row => row.id)).toEqual(['bakery'])
+  expect(mocks.search).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ q: '', limit: 20 }),
+  )
+})
+
+it('returns continuation even when previews fail or all rows are filtered out', async () => {
+  mocks.nextCursor = 'next-page'
+  mocks.search.mockResolvedValue([
+    { placeId: 'wrong-type', resourceReleaseId: 'release', locale: 'en' },
+    { placeId: 'failed', resourceReleaseId: 'release', locale: 'en' },
+  ])
+  mocks.preview
+    .mockResolvedValueOnce({
+      names: {},
+      searchClassification: { taxonomyPrimary: 'cafe' },
+    })
+    .mockRejectedValueOnce(new Error('unavailable'))
+  const result = await searchDraftLocations({
+    q: '',
+    filters: { taxonomyPrimary: 'bakery' },
+    cursor: 'previous',
+  })
+  expect(result).toMatchObject({
+    rows: [],
+    partial: true,
+    limited: false,
+    nextCursor: 'next-page',
+  })
+  expect(mocks.search).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ cursor: 'previous', limit: 20 }),
+  )
 })
