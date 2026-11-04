@@ -139,18 +139,20 @@ type GenAiStateResolverForm = {
   fields: {
     value: () => {
       data?: {
-        i18n?: Partial<Record<
-          string,
-          {
-            titleGen?: FormBooleanValue
-            nameGen?: FormBooleanValue
-            nameShortGen?: FormBooleanValue
-            descriptionGen?: FormBooleanValue
-            subscriptionBenefitsGen?: FormBooleanValue
-            privacyPolicyGen?: FormBooleanValue
-            termsOfServiceGen?: FormBooleanValue
-          }
-        >>
+        i18n?: Partial<
+          Record<
+            string,
+            {
+              titleGen?: FormBooleanValue
+              nameGen?: FormBooleanValue
+              nameShortGen?: FormBooleanValue
+              descriptionGen?: FormBooleanValue
+              subscriptionBenefitsGen?: FormBooleanValue
+              privacyPolicyGen?: FormBooleanValue
+              termsOfServiceGen?: FormBooleanValue
+            }
+          >
+        >
       }
     }
   }
@@ -805,6 +807,7 @@ export function getEditorCtrl({
     load: (ref: string) => Promise<T>
     commit: (value: T) => void
   }) => () => void
+  captureRoute: () => () => boolean
   syncHeader: (params: {
     ref: string
     title: string
@@ -815,6 +818,8 @@ export function getEditorCtrl({
   syncHeaderStatus: (params: SyncHeaderFormActionStatusParams) => string
   clearHeaderActions: () => void
 } {
+  let routeRevision = 0
+  let routeActive = false
   return {
     syncRouteAndLoad: <T>({
       ref,
@@ -829,6 +834,8 @@ export function getEditorCtrl({
       load: (ref: string) => Promise<T>
       commit: (value: T) => void
     }) => {
+      const revision = ++routeRevision
+      routeActive = true
       let cancelled = false
 
       resetFormActionsSignature()
@@ -842,7 +849,17 @@ export function getEditorCtrl({
 
       return () => {
         cancelled = true
+        if (revision === routeRevision) routeActive = false
       }
+    },
+    /**
+     * Captures ownership of the active route for asynchronous editor actions.
+     * @returns A predicate that becomes false on route reload, scope reload or unmount.
+     * @remarks An older load cleanup cannot invalidate a newer route revision.
+     */
+    captureRoute: () => {
+      const revision = routeRevision
+      return () => routeActive && revision === routeRevision
     },
     /**
      * Synchronizes the generic editor header title/icon/base-facet state.
@@ -1668,18 +1685,20 @@ export function getGenAiState(
  */
 export function toggleGenAiField<
   T extends {
-    i18n?: Partial<Record<
-      string,
-      {
-        titleGen?: FormBooleanValue
-        nameGen?: FormBooleanValue
-        nameShortGen?: FormBooleanValue
-        descriptionGen?: FormBooleanValue
-        subscriptionBenefitsGen?: FormBooleanValue
-        privacyPolicyGen?: FormBooleanValue
-        termsOfServiceGen?: FormBooleanValue
-      }
-    >>
+    i18n?: Partial<
+      Record<
+        string,
+        {
+          titleGen?: FormBooleanValue
+          nameGen?: FormBooleanValue
+          nameShortGen?: FormBooleanValue
+          descriptionGen?: FormBooleanValue
+          subscriptionBenefitsGen?: FormBooleanValue
+          privacyPolicyGen?: FormBooleanValue
+          termsOfServiceGen?: FormBooleanValue
+        }
+      >
+    >
   },
 >(form: FormDataUpdaterForm<T>, locale: string, field: GenAiField): void {
   updateFormData(form, data => {

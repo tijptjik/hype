@@ -66,11 +66,28 @@ async function withRequestedRefreshes<T>(write: () => Promise<T>): Promise<T> {
     throw error
   } finally {
     if (committed) {
-      // Load feature query registration after initialization to avoid remote-module cycles.
-      // Only client-requested active pages refresh, including map filters and saved lists.
-      await import('../featureQueries.remote.js')
-      // Await async argument validation and refresh registration before Kit collects updates.
-      await Promise.all(Array.from(refreshableQueries.values(), refresh => refresh()))
+      try {
+        // Load feature query registration after initialization to avoid remote-module cycles.
+        // Only client-requested active pages refresh, including map filters and saved lists.
+        await import('../featureQueries.remote.js')
+        // Await async argument validation and refresh registration before Kit collects updates.
+        const results = await Promise.allSettled(
+          Array.from(refreshableQueries.values(), refresh => refresh()),
+        )
+        for (const result of results) {
+          if (result.status === 'rejected')
+            console.error(
+              'Mutation completed, but query refresh registration failed:',
+              result.reason,
+            )
+        }
+      } catch (error) {
+        // The write or redirect already completed; reporting it as failed invites duplicate retries.
+        console.error(
+          'Mutation completed, but query refresh initialization failed:',
+          error,
+        )
+      }
     }
   }
 }

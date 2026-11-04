@@ -1144,10 +1144,21 @@ async function handleOrganisationStateToggle({
   setBusy: (value: boolean) => void
   mutate: typeof publishOrganisation | typeof archiveOrganisation
 }): Promise<void> {
-  const organisationData = organisation?.data
+  const previousOrganisation = organisation
+  const organisationData = previousOrganisation?.data
 
   if (!organisationData) return
 
+  const mutationRef = organisationRef
+  const mutationScope = adminCtx.view.resources.scopeKey
+  const mutationCache = adminCtx.view.cacheCtx
+  const mutationGeneration = mutationCache.generation
+  let committed = false
+  const ownsRoute = editorCtrl.captureRoute()
+  const isCurrentMutation = (): boolean =>
+    ownsRoute() &&
+    organisationRef === mutationRef &&
+    adminCtx.view.resources.scopeKey === mutationScope
   const nextState = !organisationData[field]
 
   setBusy(true)
@@ -1157,7 +1168,7 @@ async function handleOrganisationStateToggle({
     data: { [field]: nextState },
   })
   try {
-    await mutate({
+    const result = await mutate({
       id: organisationData.id,
       state: nextState,
       ...(field === 'isPublished' ? { publishChildren } : {}),
@@ -1166,30 +1177,59 @@ async function handleOrganisationStateToggle({
       // The cache owns optimistic overrides; these handles only request refreshes.
       ...mutation.updates,
       getOrganisation({
-        ref: organisationRef,
+        ref: mutationRef,
         refKey: 'code',
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }),
-      // TODO Invalidate cache
+      // Request the affected list alongside the acknowledged write.
       getOrganisations({
         conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
         prisms: adminCtx.view.scope.prisms,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }),
     )
+    committed = true
     mutation.settle(true)
-    // TODO Invalidate cache
-    commitSettledOrganisationState(await refreshOrganisation())
-
-    await adminCtx.view.cacheCtx.reconcile('organisation')
+    if (!isCurrentMutation()) return
+    // Settle from the acknowledgement; an empty filtered read must not erase the editor.
+    if (
+      organisationRef === mutationRef &&
+      adminCtx.view.resources.scopeKey === mutationScope
+    ) {
+      const settledOrganisation =
+        organisation?.data?.id === organisationData.id
+          ? organisation
+          : previousOrganisation
+      commitSettledOrganisationState({
+        ...settledOrganisation,
+        data: { ...settledOrganisation?.data, ...result.data },
+      } as OrganisationGetState)
+    }
     toast.success(
-      `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(organisation, 'nameShort')}`,
+      `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(previousOrganisation, 'nameShort')}`,
     )
   } catch {
     mutation.settle(false)
+    if (!isCurrentMutation()) return
     toast.error(m.long_crazy_peacock_care())
+    return
   } finally {
-    setBusy(false)
+    if (isCurrentMutation()) setBusy(false)
+    // Navigation does not cancel cache invalidation; account resets already discard the old generation.
+    if (committed && mutationCache.generation === mutationGeneration) {
+      try {
+        await mutationCache.reconcile('organisation')
+      } catch (error) {
+        console.warn(
+          'Organisation state saved, but dependent lists could not refresh',
+          error,
+        )
+        if (isCurrentMutation())
+          toast.warning(
+            'Saved, but some views could not refresh. Please refresh the page.',
+          )
+      }
+    }
   }
 }
 
@@ -1338,27 +1378,31 @@ $effect(() => {
 // Keep facet + entity data in sync with the current route ref.
 $effect(() => {
   const ref = organisationRef
-  return editorCtrl.syncRouteAndLoad({
-    ref,
-    resetFormActionsSignature: () => {
-      lastFormActionsSignature = ''
-      suppressFormLevelIssues = true
-      settledOrganisationRef = null
-      completedOrganisationLoadRef = null
-    },
-    setFacetForRef: nextRef => {
-      untrack(() => {
-        const currentFacet = adminCtx.activeFacet
-        const nextFacet = currentFacet || 'core'
-        adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.organisation)
-      })
-    },
-    load: refreshOrganisation,
-    commit: result => {
-      commitSettledOrganisationState(result)
-      completedOrganisationLoadRef = ref
-    },
-  })
+  adminCtx.view.resources.scopeKey
+  return untrack(() =>
+    editorCtrl.syncRouteAndLoad({
+      ref,
+      resetFormActionsSignature: () => {
+        headerCtrl.setFormActions({ isPublishing: false, isDeleting: false })
+        lastFormActionsSignature = ''
+        suppressFormLevelIssues = true
+        settledOrganisationRef = null
+        completedOrganisationLoadRef = null
+      },
+      setFacetForRef: nextRef => {
+        untrack(() => {
+          const currentFacet = adminCtx.activeFacet
+          const nextFacet = currentFacet || 'core'
+          adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.organisation)
+        })
+      },
+      load: refreshOrganisation,
+      commit: result => {
+        commitSettledOrganisationState(result)
+        completedOrganisationLoadRef = ref
+      },
+    }),
+  )
 })
 
 $effect(() => {
@@ -1677,9 +1721,7 @@ $effect(() => {
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
 
-          {#snippet children(
-            locale,
-          )}
+          {#snippet children(locale)}
             <FormI18nDescriptorFields
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}

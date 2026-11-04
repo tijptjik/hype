@@ -1008,8 +1008,19 @@ async function handleLayerStateToggle({
   setBusy: (value: boolean) => void
   mutate: (payload: { id: string; state: boolean }) => Promise<{ data: { id: string } }>
 }): Promise<void> {
-  const current = layer?.data
+  const previousLayer = layer
+  const current = previousLayer?.data
   if (!current) return
+  const mutationRef = layerRef
+  const mutationScope = adminCtx.view.resources.scopeKey
+  const mutationCache = adminCtx.view.cacheCtx
+  const mutationGeneration = mutationCache.generation
+  let committed = false
+  const ownsRoute = editorCtrl.captureRoute()
+  const isCurrentMutation = (): boolean =>
+    ownsRoute() &&
+    layerRef === mutationRef &&
+    adminCtx.view.resources.scopeKey === mutationScope
   const nextState = !current[field]
   setBusy(true)
   const mutation = adminCtx.view.cacheCtx.beginMutation('layer', {
@@ -1017,7 +1028,7 @@ async function handleLayerStateToggle({
     data: { [field]: nextState },
   })
   try {
-    await (mutate as typeof publishLayer)({
+    const result = await (mutate as typeof publishLayer)({
       id: current.id,
       state: nextState,
       ...(field === 'isPublished' ? { publishChildren } : {}),
@@ -1026,20 +1037,45 @@ async function handleLayerStateToggle({
       // The cache owns optimistic overrides; these handles only request refreshes.
       ...mutation.updates,
       getLayer({
-        ref: layerRef,
+        ref: mutationRef,
         refKey: 'id',
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }),
     )
+    committed = true
     mutation.settle(true)
-    commitLayerState(await refreshLayer())
-    await adminCtx.view.cacheCtx.reconcile('layer')
+    if (!isCurrentMutation()) return
+    // The write acknowledgement settles this field without depending on another detail read.
+    if (
+      layerRef === mutationRef &&
+      adminCtx.view.resources.scopeKey === mutationScope
+    ) {
+      const settledLayer = layer?.data?.id === current.id ? layer : previousLayer
+      commitSettledLayerState({
+        ...settledLayer,
+        data: { ...settledLayer?.data, ...result.data },
+      } as LayerGetState)
+    }
     toast.success(nextState ? successWhenTrue : successWhenFalse)
   } catch {
     mutation.settle(false)
+    if (!isCurrentMutation()) return
     toast.error(m.long_crazy_peacock_care())
+    return
   } finally {
-    setBusy(false)
+    if (isCurrentMutation()) setBusy(false)
+    // Navigation does not cancel cache invalidation; account resets already discard the old generation.
+    if (committed && mutationCache.generation === mutationGeneration) {
+      try {
+        await mutationCache.reconcile('layer')
+      } catch (error) {
+        console.warn('Layer state saved, but dependent lists could not refresh', error)
+        if (isCurrentMutation())
+          toast.warning(
+            'Saved, but some views could not refresh. Please refresh the page.',
+          )
+      }
+    }
   }
 }
 
@@ -1179,29 +1215,34 @@ $effect(() => {
 
 $effect(() => {
   const resolvedFacetTabsSnapshot = untrack(() => headerFacetTabsWithIssues)
-  return editorCtrl.syncRouteAndLoad({
-    ref: layerRef,
-    resetFormActionsSignature: () => {
-      lastFormActionsSignature = ''
-      suppressFormLevelIssues = true
-      lastMergedProjectId = null
-      prefetchedProjectPropertiesByProjectId = {}
-      settledLayerRef = null
-      isRefreshingMapRender = false
-    },
-    setFacetForRef: nextRef => {
-      untrack(() => {
-        const currentFacet = adminCtx.activeFacet
-        const nextFacet =
-          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
-            ? currentFacet
-            : 'core'
-        adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.layer)
-      })
-    },
-    load: refreshLayer,
-    commit: commitSettledLayerState,
-  })
+  adminCtx.view.resources.scopeKey
+  const ref = layerRef
+  return untrack(() =>
+    editorCtrl.syncRouteAndLoad({
+      ref,
+      resetFormActionsSignature: () => {
+        headerCtrl.setFormActions({ isPublishing: false, isDeleting: false })
+        lastFormActionsSignature = ''
+        suppressFormLevelIssues = true
+        lastMergedProjectId = null
+        prefetchedProjectPropertiesByProjectId = {}
+        settledLayerRef = null
+        isRefreshingMapRender = false
+      },
+      setFacetForRef: nextRef => {
+        untrack(() => {
+          const currentFacet = adminCtx.activeFacet
+          const nextFacet =
+            currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+              ? currentFacet
+              : 'core'
+          adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.layer)
+        })
+      },
+      load: refreshLayer,
+      commit: commitSettledLayerState,
+    }),
+  )
 })
 
 $effect(() => {

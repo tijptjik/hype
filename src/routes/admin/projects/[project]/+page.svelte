@@ -2332,6 +2332,14 @@ async function handleProjectStateToggle({
 
   const mutationRef = projectRef
   const mutationScope = adminCtx.view.resources.scopeKey
+  const mutationCache = adminCtx.view.cacheCtx
+  const mutationGeneration = mutationCache.generation
+  let committed = false
+  const ownsRoute = editorCtrl.captureRoute()
+  const isCurrentMutation = (): boolean =>
+    ownsRoute() &&
+    projectRef === mutationRef &&
+    adminCtx.view.resources.scopeKey === mutationScope
   const nextState = !projectData[field]
   const nextProject = {
     ...previousProject,
@@ -2365,16 +2373,21 @@ async function handleProjectStateToggle({
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }),
     )
+    committed = true
     mutation.settle(true)
+    if (!isCurrentMutation()) return
 
     // Settle from the write acknowledgement, never from a possibly empty filtered read.
     if (
       projectRef === mutationRef &&
       adminCtx.view.resources.scopeKey === mutationScope
     ) {
+      // Preserve relation and license data delivered by native refreshes during the write.
+      const settledProject =
+        project?.data?.id === projectData.id ? project : nextProject
       commitSettledProjectState({
-        ...nextProject,
-        data: { ...projectData, ...result.data },
+        ...settledProject,
+        data: { ...settledProject?.data, ...result.data },
       } as ProjectGetState)
     }
     toast.success(
@@ -2382,6 +2395,7 @@ async function handleProjectStateToggle({
     )
   } catch {
     mutation.settle(false)
+    if (!isCurrentMutation()) return
     if (
       projectRef === mutationRef &&
       adminCtx.view.resources.scopeKey === mutationScope
@@ -2392,14 +2406,22 @@ async function handleProjectStateToggle({
     toast.error(m.long_crazy_peacock_care())
     return
   } finally {
-    setBusy(false)
-  }
-
-  // Refresh dependent lists independently; a read failure must not undo a committed write.
-  try {
-    await adminCtx.view.cacheCtx.reconcile('project')
-  } catch (error) {
-    console.warn('Project state saved, but dependent lists could not refresh', error)
+    if (isCurrentMutation()) setBusy(false)
+    // Navigation does not cancel cache invalidation; account resets already discard the old generation.
+    if (committed && mutationCache.generation === mutationGeneration) {
+      try {
+        await mutationCache.reconcile('project')
+      } catch (error) {
+        console.warn(
+          'Project state saved, but dependent lists could not refresh',
+          error,
+        )
+        if (isCurrentMutation())
+          toast.warning(
+            'Saved, but some views could not refresh. Please refresh the page.',
+          )
+      }
+    }
   }
 }
 
@@ -2636,6 +2658,7 @@ $effect(() => {
     editorCtrl.syncRouteAndLoad({
       ref,
       resetFormActionsSignature: () => {
+        headerCtrl.setFormActions({ isPublishing: false, isDeleting: false })
         lastFormActionsSignature = ''
         suppressFormLevelIssues = true
         settledProjectRef = null

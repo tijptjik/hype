@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { redirect } from '@sveltejs/kit'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
@@ -315,4 +316,80 @@ describe('remote guard wrappers', () => {
       expect(await result).toEqual({ saved: true })
     },
   )
+
+  describe('post-commit refresh failures', () => {
+    it('awaits remaining refresh registration when one family fails', async () => {
+      vi.useRealTimers()
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+      let release!: () => void, started!: () => void
+      const pending = new Promise<void>(resolve => {
+        release = resolve
+      })
+      const registered = new Promise<void>(resolve => {
+        started = resolve
+      })
+      let calls = 0
+      mockRequested.mockImplementation(() => ({
+        refreshAll: async () => {
+          if (++calls === 1) throw new Error('first family failed')
+          started()
+          await pending
+        },
+      }))
+      guardedQuery(z.object({}), async () => ({}))
+      guardedQuery(z.object({}), async () => ({}))
+      const write = guardedCommand(z.object({}), async () => ({ saved: true }))
+      let completed = false
+      const result = write({}).then(value => {
+        completed = true
+        return value
+      })
+      try {
+        await registered
+        await new Promise(resolve => setTimeout(resolve, 0))
+        expect(completed).toBe(false)
+      } finally {
+        release()
+        await result
+        mockRequested.mockImplementation(() => ({ refreshAll: async () => {} }))
+        logged.mockRestore()
+      }
+      expect(await result).toEqual({ saved: true })
+    })
+    it.each(['command', 'form', 'redirect'] as const)(
+      'preserves the committed %s outcome when refresh registration rejects',
+      async kind => {
+        const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+        mockRequested.mockImplementation(() => ({
+          refreshAll: async () => {
+            throw new Error('refresh registration failed')
+          },
+        }))
+        let writes = 0
+        const handler = async () => {
+          writes++
+          if (kind === 'redirect') redirect(303, '/saved')
+          return { saved: true }
+        }
+        const write =
+          kind === 'command'
+            ? guardedCommand(z.object({}), handler)
+            : guardedForm(z.object({}), handler)
+        try {
+          const result = (write as unknown as (input: unknown) => Promise<unknown>)({})
+          if (kind === 'redirect')
+            await expect(result).rejects.toMatchObject({
+              status: 303,
+              location: '/saved',
+            })
+          else await expect(result).resolves.toEqual({ saved: true })
+          expect(writes).toBe(1)
+          expect(logged).toHaveBeenCalled()
+        } finally {
+          mockRequested.mockImplementation(() => ({ refreshAll: async () => {} }))
+          logged.mockRestore()
+        }
+      },
+    )
+  })
 })
