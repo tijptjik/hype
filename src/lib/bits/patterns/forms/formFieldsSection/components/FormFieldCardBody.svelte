@@ -14,8 +14,7 @@ import {
 } from '#lib/properties/range.js'
 import { getDropIndex } from '#lib/client/services/dragDrop.js'
 // COMPONENTS
-import Label from '#lib/bits/custom/form/src/label/Label.svelte'
-import Switch from '#lib/bits/custom/switch/Switch.svelte'
+import FormFieldSettingsSwitches from './FormFieldSettingsSwitches.svelte'
 import { SelectField, TextInput } from '#lib/bits/custom/form/index.js'
 import { FormI18nSection } from '#lib/bits/patterns/forms/formI18nSection/index.js'
 import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
@@ -763,56 +762,31 @@ $effect(() => {
 })
 </script>
 
-{#snippet componentPreview(
-  component: string,
-)}
+{#snippet componentPreview(component: string)}
   <PropertyComponentPreview {component} />
 {/snippet}
 
-{#snippet settingPreview(
-  value: string,
-)}
+{#snippet settingPreview(value: string)}
   <PropertySettingPreview {value} />
 {/snippet}
 
 <!-- Shared definition settings sit above the locale-specific fields. -->
 <div
-  class="bits-theme flex flex-wrap justify-center gap-x-10 gap-y-3 border-b border-border/40 px-6 py-4"
+  class="bits-theme border-border/40 flex flex-wrap justify-center gap-x-10 gap-y-3 border-b px-6 py-4"
 >
-  {#if supportsTranslations}
-    <div
-      class="flex min-h-9 w-full max-w-72 items-center justify-between gap-4 sm:w-auto sm:max-w-none"
-    >
-      <Label for={`translation-${property.id}`} text="Translations" />
-      <Switch
-        id={`translation-${property.id}`}
-        checked={Boolean(property.isTranslatable)}
-        disabled={!isEditing}
-        leftText="Off"
-        rightText="On"
-        size="sm"
-        onCheckedChange={value => {
-          onLayoutMutationStart?.()
-          onUpdateBase(property.id, 'isTranslatable', value)
-        }}
-      />
-    </div>
-  {/if}
-  <div
-    class="flex min-h-9 w-full max-w-72 items-center justify-between gap-4 sm:w-auto sm:max-w-none"
-  >
-    <Label for={`audience-${property.id}`} text="Audience" />
-    <Switch
-      id={`audience-${property.id}`}
-      checked={property.audience !== 'internal'}
-      disabled={!isEditing}
-      leftText="Private"
-      rightText="Public"
-      size="sm"
-      onCheckedChange={value =>
-        onUpdateBase(property.id, 'audience', value ? 'public' : 'internal')}
-    />
-  </div>
+  <FormFieldSettingsSwitches
+    propertyId={property.id}
+    showTranslations={supportsTranslations}
+    isTranslatable={Boolean(property.isTranslatable)}
+    isPublic={property.audience !== 'internal'}
+    {isEditing}
+    onTranslationsChange={value => {
+      onLayoutMutationStart?.()
+      onUpdateBase(property.id, 'isTranslatable', value)
+    }}
+    onAudienceChange={value =>
+      onUpdateBase(property.id, 'audience', value ? 'public' : 'internal')}
+  />
 </div>
 
 <FormI18nSection
@@ -831,9 +805,7 @@ $effect(() => {
     return onResetLocale(property.id, targetLocale)
   }}
 >
-  {#snippet children(
-    locale,
-  )}
+  {#snippet children(locale)}
     {@const showCoreFields = isPrimary(locale)}
     {@const labelGenValue = getPropertyGenState(locale, 'labelGen')}
     {@const placeholderGenValue = getPropertyGenState(locale, 'placeholderGen')}
@@ -1269,7 +1241,7 @@ $effect(() => {
                   {#if valuesAreTranslatable || showCoreFields}
                     <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
                     <div
-                      class={`bits-project-field-card__value-editable focus-override empty:before:content-[attr(data-placeholder)] empty:before:opacity-50 ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                      class={`bits-project-field-card__value-editable focus-override empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
                       role="textbox"
                       aria-label={`Option ${valueIndex + 1}`}
                       data-placeholder="Option label"
