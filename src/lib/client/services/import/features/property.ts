@@ -3,6 +3,8 @@ import type { ImportCtx } from '#lib/context/import.svelte.js'
 import { getImportCtx } from '#lib/context/import.svelte.js'
 // API
 import { getProjectProperties } from '#lib/api/property.remote.js'
+// REMOTE
+import { refreshRemoteQuery } from '#lib/remote/index.js'
 // TYPES
 import type {
   FieldDiscriminator,
@@ -70,12 +72,31 @@ export function getPropertyType(
   return (property?.type as FieldDiscriminator | undefined) || 'classifier'
 }
 
+// Keep request ordering scoped to each import without retaining disposed contexts.
+const propertyLoads = new WeakMap<ImportCtx, object>()
+
+/**
+ * Loads property choices for the currently selected import project.
+ * @param importCtx Import owner, or the current component's context when omitted.
+ * @returns Resolves after this lookup settles.
+ * @remarks Superseded requests cannot publish choices, errors or loading state.
+ */
 export async function fetchAvailablePropertyKeys(importCtx?: ImportCtx): Promise<void> {
   const ctx = importCtx || getImportCtx()
   const selectedProject = ctx.getSelectedProject()
+  const operation = {}
+  propertyLoads.set(ctx, operation)
+  const data = ctx.getData()
+  const isCurrent = (): boolean =>
+    propertyLoads.get(ctx) === operation &&
+    ctx.getSelectedProject() === selectedProject &&
+    ctx.getData() === data
 
   if (!selectedProject) {
     console.warn('No project selected for fetching property keys')
+    ctx.setFetchedProperties([])
+    ctx.setAvailablePropertyKeys([])
+    ctx.setIsFetchingProperties(false)
     return
   }
 
@@ -83,10 +104,13 @@ export async function fetchAvailablePropertyKeys(importCtx?: ImportCtx): Promise
     ctx.setIsFetchingProperties(true)
 
     // Fetch properties for the selected project through the guarded remote boundary.
-    const result = await getProjectProperties({
-      projectId: selectedProject.id,
-      meta: { isAdminRequest: true },
-    })
+    const result = await refreshRemoteQuery(
+      getProjectProperties({
+        projectId: selectedProject.id,
+        meta: { isAdminRequest: true },
+      }),
+    )
+    if (!isCurrent()) return
     const properties = (Array.isArray(result.data) ? result.data : []) as Property[]
     ctx.setFetchedProperties(properties)
 
@@ -94,11 +118,12 @@ export async function fetchAvailablePropertyKeys(importCtx?: ImportCtx): Promise
     const propertyKeys = properties.map(p => p.key)
     ctx.setAvailablePropertyKeys(propertyKeys)
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Error fetching property keys:', error)
     ctx.setFetchedProperties([])
     ctx.setAvailablePropertyKeys([])
   } finally {
-    ctx.setIsFetchingProperties(false)
+    if (isCurrent()) ctx.setIsFetchingProperties(false)
   }
 }
 
