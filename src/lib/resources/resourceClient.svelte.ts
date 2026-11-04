@@ -43,8 +43,12 @@ export class ResourceDetail<T> {
       this.loadedIdentity !== this.identity()
     )
       return undefined
+    // Native queries retain their current payload on refresh errors; denial must hide it
+    // for every consumer, including those that did not initiate the background refresh.
     if (
-      [401, 403, 404].includes((this.error as { status?: number } | null)?.status ?? 0)
+      [this.error, this.query?.error].some(error =>
+        [401, 403, 404].includes((error as { status?: number } | null)?.status ?? 0),
+      )
     )
       return undefined
     return this.query?.current?.data
@@ -62,28 +66,40 @@ export class ResourceDetail<T> {
     const epoch = this.cache.generation
     this.loading = true
     this.error = null
+    // Acquire before releasing so a same-key reload never becomes an inactive eviction candidate.
+    const detach = this.cache.retainDetail(key)
     this.detach?.()
-    this.detach = this.cache.retainDetail(key)
+    this.detach = detach
     try {
       const query = this.cache.detailQuery(key, this.factory)
       this.loadedIdentity = key
       this.loadedEpoch = this.cache.generation
       this.query = query
-      if (force) await query.refresh()
-      await this.cache.ensureResource(
+      const result = await this.cache.ensureResource(
         key,
         () => query,
         () => {},
+        force,
       )
+      // Same-scope reconciliation can supersede a handle without changing the account epoch.
+      if (result === undefined && generation === this.generation) this.query = undefined
+      if (
+        result === undefined ||
+        generation !== this.generation ||
+        key !== this.identity() ||
+        epoch !== this.cache.generation
+      )
+        return undefined
+      return this.data
+    } catch (error) {
+      // Superseded consumers must ignore failures just as they ignore successful old reads.
       if (
         generation !== this.generation ||
         key !== this.identity() ||
         epoch !== this.cache.generation
       )
         return undefined
-      return query.current?.data
-    } catch (error) {
-      if (generation === this.generation) this.error = error
+      this.error = error
       throw error
     } finally {
       if (generation === this.generation) this.loading = false
@@ -177,7 +193,8 @@ export class ResourceClient {
     return {
       scope: this.scopeKey,
       isAdminRequest: this.isAdminRequest(),
-      ...(this.preview() ? { publicationPreview: this.preview()! } : {}),
+      // Explicit absence replaces preview intent retained in a caller's older metadata.
+      publicationPreview: this.preview() ?? undefined,
     }
   }
 
@@ -229,7 +246,7 @@ export class ResourceClient {
     return new ResourceCollection(
       this.createList(type),
       type,
-      () => ({ scope: this.scopeKey, isAdminRequest: this.isAdminRequest() }),
+      () => this.queryMeta,
       defaults,
     )
   }
