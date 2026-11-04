@@ -1,6 +1,9 @@
 // SVELTE
 import { onMount } from 'svelte'
 import { page } from '$app/state'
+// MESSAGING
+import { isMessagingInboxPath } from '#lib/messaging/organisation-selection.js'
+import { getMessagingOrganisations } from '#lib/api/messaging.remote.js'
 // UI
 import { toast } from 'svelte-sonner'
 // LIB
@@ -51,6 +54,10 @@ export function useResourcePanelModel(
 ): ResourcePanelModel {
   const navigation = admin?.navigation ?? getSurfaceNavigation()
   const panelType = mode === 'admin' ? Panel.admin : Panel.prisms
+  const messaging = $derived(mode === 'admin' && isMessagingInboxPath(page.url.pathname))
+  let messagingOrganisationIds = $state<Set<string> | null>(null)
+  let messagingScopeError = $state(false)
+  let messagingRetry = $state(0)
   let search = $state({ organisation: '', project: '', layer: '' })
   let tall = $state(false)
   onMount(() => {
@@ -58,6 +65,27 @@ export function useResourcePanelModel(
   })
   const types = ['organisation', 'project', 'layer'] as const
   const lists = types.map(type => usePanelResources(app, type, () => search[type]))
+
+  // Compact panel rows omit hub ownership; use the server-authorised list shared with the inbox.
+  $effect(() => {
+    if (!messaging) return
+    app.account.revision
+    messagingRetry
+    let current = true
+    messagingOrganisationIds = null
+    messagingScopeError = false
+    void (async () => {
+      try {
+        const query = getMessagingOrganisations({ meta: { isAdminRequest: true } })
+        await query.refresh()
+        const organisations = await query
+        if (current) messagingOrganisationIds = new Set(organisations.map(organisation => organisation.id))
+      } catch {
+        if (current) { messagingOrganisationIds = new Set(); messagingScopeError = true }
+      }
+    })()
+    return () => { current = false }
+  })
 
   /**
    * Handles rejected UI actions while preserving the query's error and retry state.
@@ -92,6 +120,10 @@ export function useResourcePanelModel(
    * @remarks Public row clicks leave organisation and project prism filters unchanged.
    */
   async function primary(type: PanelResourceType, id: string): Promise<void> {
+    if (messaging && type === 'organisation') {
+      await app.scope.selectOrganisation(id)
+      return
+    }
     if (mode === 'admin') {
       if (
         navigation.getActiveResourceType() === type &&
@@ -133,7 +165,8 @@ export function useResourcePanelModel(
    */
   async function toggle(type: PanelResourceType, id: string): Promise<void> {
     if (type === 'organisation') {
-      await app.scope.toggleOrganisation(id)
+      if (messaging) await app.scope.selectOrganisation(id)
+      else await app.scope.toggleOrganisation(id)
     } else if (type === 'project') {
       await app.scope.toggleProject(id)
     } else {
@@ -151,7 +184,11 @@ export function useResourcePanelModel(
   function rows(type: PanelResourceType, index: number): ResourcePanelRow[] {
     const selected = app.scope.prisms[type]
     return lists[index].rows
-      .filter(row => !row.isArchived)
+      .filter(row => {
+        if (row.isArchived) return false
+        if (!messaging || type !== 'organisation') return true
+        return messagingOrganisationIds?.has(row.id) ?? false
+      })
       .map(resource => {
         const record = resource as unknown as Resource
         const name = getI18n(record, 'name', app.getUserPreferences())
@@ -176,7 +213,7 @@ export function useResourcePanelModel(
           (label): label is string => Boolean(label),
         )
         const pinned = selected.includes(resource.id)
-        const active =
+        const active = messaging ? pinned :
           navigation.getActiveResourceType() === type &&
           navigation.getActiveResourceId() === resource.id
         const enabled =
@@ -195,8 +232,9 @@ export function useResourcePanelModel(
           selected: pinned,
           active,
           enabled,
+          exclusive: messaging && type === 'organisation',
           primaryLabel:
-            mode === 'admin'
+            messaging ? `Select ${name} messaging inbox` : mode === 'admin'
               ? active
                 ? pinned
                   ? m.panel__unpin({ name })
@@ -205,7 +243,7 @@ export function useResourcePanelModel(
               : enabled
                 ? m.panel__deactivate_layer({ name })
                 : m.panel__activate_layer({ name }),
-          toggleLabel: pinned ? m.panel__unpin({ name }) : m.panel__pin({ name }),
+          toggleLabel: messaging ? `Select ${name} exclusively` : pinned ? m.panel__unpin({ name }) : m.panel__pin({ name }),
           onPrimary: () => runAction(() => primary(type, resource.id)),
           onToggle: () => runAction(() => toggle(type, resource.id)),
           ...(mode === 'prisms' && type === 'layer'
@@ -253,10 +291,10 @@ export function useResourcePanelModel(
         ? (id, destination) => app.scope.moveLayer(id, destination)
         : undefined,
     get loading() {
-      return lists[index].list.loading
+      return lists[index].list.loading || (messaging && messagingOrganisationIds === null)
     },
     get error() {
-      return Boolean(lists[index].list.error)
+      return Boolean(lists[index].list.error) || (messaging && messagingScopeError)
     },
     get viewKey() {
       return lists[index].viewKey
@@ -283,13 +321,13 @@ export function useResourcePanelModel(
         })
     },
     onNext: () => lists[index].list.next(),
-    onRetry: lists[index].retry,
+    onRetry: () => { lists[index].retry(); if (messaging) messagingRetry++ },
     onVisible: visible => {
       lists[index].list.visibleIds = new Set(visible.map(row => row.id))
     },
-    ...(admin
-      ? { onNavigate: () => navigateOnAdmin(admin, FirstClassResource[type]) }
-      : {}),
+    get onNavigate() {
+      return admin && !messaging ? () => navigateOnAdmin(admin, FirstClassResource[type]) : undefined
+    },
   }))
   return {
     get panel() {
@@ -312,7 +350,7 @@ export function useResourcePanelModel(
     get title() {
       return mode === 'admin' ? m.menu_admin() : m.maps__title()
     },
-    sections,
+    get sections() { return messaging ? sections.filter(section => section.id === 'organisation') : sections },
     onClose: () => {
       if (mode === 'admin') {
         app.panels.closePanelVisually(panelType)

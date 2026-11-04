@@ -7,6 +7,7 @@
 const Facets = [
   'core',
   'capabilities',
+  'messaging',
   'address',
   'images',
   'fields',

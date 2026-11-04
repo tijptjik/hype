@@ -26,6 +26,7 @@ import BuildingLibrary from 'virtual:icons/proicons/bank'
 import InboxArrowDown from 'virtual:icons/proicons/mail-open'
 import MapPin from 'virtual:icons/proicons/location'
 import StoreIcon from 'virtual:icons/lucide/store'
+import ChatIcon from 'virtual:icons/lucide/message-circle'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
@@ -149,7 +150,10 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       label: 'Bulk Upload',
       icon: CloudArrowUp,
     })
+
   }
+
+  items.push({ href: `${ADMIN_PATH}/messaging`, label: 'Messaging', icon: ChatIcon })
 
   return items
 })

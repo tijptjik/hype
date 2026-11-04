@@ -13,6 +13,7 @@ import type { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPane
 // AUTH
 
 // COMPONENTS
+import UserMessagingSettings from '#lib/bits/patterns/messaging/UserMessagingSettings.svelte'
 import {
   setSectionReveal,
   revealPanelSection,
@@ -97,6 +98,7 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
         />
       </div>
     {/if}
+    {#if model.open && !isGuestAccount}<div class="m-4"><UserMessagingSettings /></div>{/if}
     <div class="shrink-0"><Language model={model.language} {...panelProps} /></div>
     <div class="shrink-0"><Theme {model} {...panelProps} /></div>
     {#if !panelProps.isAdmin}

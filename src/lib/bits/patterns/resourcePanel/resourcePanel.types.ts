@@ -15,6 +15,8 @@ export type ResourcePanelRow = {
   onPrimary: () => void | Promise<void>
   onToggle: () => void | Promise<void>
   onIsolate?: () => void | Promise<void>
+  /** Organisation prism chooses exactly one inbox scope instead of toggling a filter. */
+  exclusive?: boolean
 }
 export type ResourcePanelSection = {
   id: 'organisation' | 'project' | 'layer'

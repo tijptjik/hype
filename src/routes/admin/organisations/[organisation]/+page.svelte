@@ -1,4 +1,7 @@
 <script lang="ts">
+// MESSAGING
+import OrganisationMessaging from '#lib/bits/patterns/messaging/OrganisationMessaging.svelte'
+import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
 // BITS COMPONENTS
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import LocationVisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationVisibilitySelect.svelte'
@@ -287,6 +290,7 @@ const isCoreFacet = $derived(activeFacet === 'core')
 const isCapabilitiesFacet = $derived(activeFacet === 'capabilities')
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
+const isMessagingFacet = $derived(activeFacet === 'messaging')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewOrganisationRef = $derived(organisationRef === NEW_REF)
 
@@ -940,6 +944,9 @@ const canCreateOrganisation = $derived(organisationPermissions.canCreate)
 const canEditOrganisation = $derived(organisationPermissions.canEdit)
 const canPublishOrganisation = $derived(organisationPermissions.canPublish)
 const canDeleteOrganisation = $derived(organisationPermissions.canDelete)
+const canManageMessaging = $derived(Boolean(optimisticOrganisationData && currentUser && canManageOrganisationMessaging({
+  ...currentUser, roles: currentUser.roles ?? [],
+}, optimisticOrganisationData)))
 const resolvedFacetTabs = $derived.by(() => {
   if (isNewOrganisationRef) {
     return getAdminFacetTabsForResource(FirstClassResource.organisation, {
@@ -947,11 +954,9 @@ const resolvedFacetTabs = $derived.by(() => {
     })
   }
 
-  if (canEditOrganisation) return facetTabs
-
   const tabs = new Map(facetTabs)
-
-  tabs.delete('capabilities')
+  if (!canEditOrganisation) tabs.delete('capabilities')
+  if (!canManageMessaging) tabs.delete('messaging')
 
   return tabs
 })
@@ -1809,6 +1814,13 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
   </Main.Form>
+  <Main.Facet isVisible={isMessagingFacet && canManageMessaging} transition="fade" attrs={{ 'data-facet-id': 'messaging' }}>
+    {#if isMessagingFacet && canManageMessaging && optimisticOrganisationData}
+      {#key optimisticOrganisationData.id}
+        <OrganisationMessaging organisationId={optimisticOrganisationData.id} />
+      {/key}
+    {/if}
+  </Main.Facet>
   <Main.Facet
     isVisible={isImagesFacet}
     transition="fade"

@@ -12,6 +12,9 @@ const route = vi.hoisted(() => ({
 }))
 vi.mock('$app/state', () => ({ page: route }))
 
+const messagingQueries = vi.hoisted(() => ({ ids: ['a', 'b', 'c'] }))
+vi.mock('#lib/api/messaging.remote.js', () => ({ getMessagingOrganisations: () => Object.assign(Promise.resolve(messagingQueries.ids.map(id => ({ id, code: id }))), { refresh: async () => {} }) }))
+
 const notifications = vi.hoisted(() => ({ error: vi.fn() }))
 vi.mock('svelte-sonner', () => ({ toast: notifications }))
 
@@ -29,6 +32,7 @@ vi.mock('#lib/i18n.js', () => ({
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  route.url = new URL('http://localhost/admin/organisations')
 })
 
 /**
@@ -43,22 +47,27 @@ function setup(
   options: {
     mode?: 'admin' | 'prisms'
     layers?: string[]
+    organisationMember?: string
   } = {},
 ) {
   const resources = ['a', 'b', 'c'].map(id => ({
     id,
     name: `Organisation ${id}`,
+    isArchived: false,
   }))
+  messagingQueries.ids = options.organisationMember ? [options.organisationMember] : ['a', 'b', 'c']
+  const selectOrganisation = vi.fn()
   const toggleOrganisation = vi.fn()
   const list = {
     rows: resources,
     loading: false,
     error: null,
-    load: vi.fn(),
-    next: vi.fn(),
-    revalidate: vi.fn(),
+    load: vi.fn().mockResolvedValue(undefined),
+    next: vi.fn().mockResolvedValue(undefined),
+    revalidate: vi.fn().mockResolvedValue(undefined),
   }
   const app = {
+    account: { revision: 0 },
     scope: {
       prisms: { organisation: selected, project: [], layer: options.layers ?? [] },
       moveLayer: vi.fn(),
@@ -66,6 +75,7 @@ function setup(
       isOrganisationDefaultLayersActive: () => true,
       isProjectDefaultLayersActive: () => true,
       toggleOrganisation,
+      selectOrganisation,
     },
     cacheCtx: {
       pin: (_type: string, id: string) => ({
@@ -103,6 +113,7 @@ function setup(
     sections: model.sections,
     app,
     toggleOrganisation,
+    selectOrganisation,
   }
 }
 
@@ -185,3 +196,28 @@ it.each(['onPrimary', 'onToggle'] as const)(
     }
   },
 )
+
+it.each(['/admin/messaging', '/admin/whatsapp/'])(
+  'uses one exclusive organisation prism on %s and keeps navigation on the inbox',
+  async path => {
+    route.url = new URL(path, 'http://localhost')
+    const { sections, selectOrganisation, toggleOrganisation } = setup(['c', 'a'])
+    await vi.waitFor(() => expect(sections[0].rows).toHaveLength(3))
+    const rows = sections[0].rows
+    expect(sections.map(section => section.id)).toEqual(['organisation'])
+    expect(sections[0].onNavigate).toBeUndefined()
+    expect(rows.every(row => row.exclusive)).toBe(true)
+    expect(rows.find(row => row.id === 'c')).toMatchObject({ selected: true, active: true })
+    await rows.find(row => row.id === 'b')!.onPrimary()
+    await rows.find(row => row.id === 'a')!.onToggle()
+    expect(selectOrganisation.mock.calls).toEqual([['b'], ['a']])
+    expect(toggleOrganisation).not.toHaveBeenCalled()
+    expect(navigation.navigate).not.toHaveBeenCalled()
+  },
+)
+
+it('uses server-authorised IDs even when compact rows omit hub ownership', async () => {
+  route.url = new URL('http://localhost/admin/messaging')
+  const { sections } = setup([], 'b', { organisationMember: 'b' })
+  await vi.waitFor(() => expect(sections[0].rows.map(row => row.id)).toEqual(['b']))
+})

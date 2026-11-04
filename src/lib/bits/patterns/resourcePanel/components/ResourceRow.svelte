@@ -161,7 +161,18 @@ function handleReorderKey(event: KeyboardEvent): void {
     inert={narrow}
     aria-hidden={narrow}
   >
-    {#if !row.onIsolate}
+    {#if row.exclusive}
+      <button
+        type="button"
+        class="inline-flex size-6 shrink-0 items-center justify-center rounded-lg hover:bg-raised focus-override outline-none focus-visible:text-primary {row.selected ? color : 'text-base-content/45'}"
+        aria-label={row.toggleLabel}
+        aria-pressed={row.selected}
+        data-tooltip={row.toggleLabel}
+        onclick={row.onToggle}
+      >
+        <Crosshair class="size-5" />
+      </button>
+    {:else if !row.onIsolate}
       <button
         type="button"
         class="group/funnel inline-flex size-6 shrink-0 items-center justify-center rounded-lg focus-override outline-none hover:bg-raised focus-visible:text-primary {row.selected

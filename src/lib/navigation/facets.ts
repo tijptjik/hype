@@ -19,6 +19,7 @@ import type { FacetType } from '#lib/context/facets.js'
 export const ADMIN_FACETS = {
   core: 'core',
   capabilities: 'capabilities',
+  messaging: 'messaging',
   address: 'address',
   images: 'images',
   fields: 'fields',
@@ -30,6 +31,7 @@ export const ADMIN_FACETS = {
 
 export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies'
 export type OrganisationFacet =
+  | 'messaging'
   | 'features'
   | 'advanced'
   | 'core'
@@ -48,6 +50,7 @@ export type ProjectFacet =
 export type LayerFacet = 'features' | 'core' | 'fields'
 
 export const ADMIN_FACET_DEFINITIONS = {
+  [ADMIN_FACETS.messaging]: { label: () => 'Messaging', icon: FileTextIcon },
   [ADMIN_FACETS.features]: { label: () => m.omni__title_features(), icon: MapPinIcon },
   [ADMIN_FACETS.advanced]: { label: () => m.project_advanced(), icon: SettingsIcon },
   [ADMIN_FACETS.core]: {
@@ -81,6 +84,7 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  [ADMIN_FACETS.messaging]: () => 'Messaging',
   [ADMIN_FACETS.features]: () => m.omni__title_features(),
   [ADMIN_FACETS.advanced]: () => m.project_advanced(),
   [ADMIN_FACETS.core]: () => m.admin__forms_common_descriptors(),
@@ -129,6 +133,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.fields,
     ADMIN_FACETS.images,
+    ADMIN_FACETS.messaging,
     ADMIN_FACETS.advanced,
   ],
   project: [

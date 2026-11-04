@@ -11,6 +11,7 @@ import { getAdminUserProfile } from '#lib/api/user.remote.js'
 // ADAPTERS
 import { createUserContributionsModel } from '#lib/adapters/panels/userContributions.js'
 // BITS
+import UserMessagingSettings from '#lib/bits/patterns/messaging/UserMessagingSettings.svelte'
 import AdminUserProfile from '#lib/bits/patterns/userDirectory/AdminUserProfile.svelte'
 // ICONS
 import PersonIcon from 'virtual:icons/proicons/person'
@@ -110,5 +111,10 @@ $effect(() => {
     </p>
   {:else}
     <AdminUserProfile data={profile} model={contributions} />
+    {#if adminCtx.view.isSuperAdmin()}
+      {#key profile.profile.id}
+        <div class="mt-5"><UserMessagingSettings userId={profile.profile.id} canVerify /></div>
+      {/key}
+    {/if}
   {/if}
 </div>
