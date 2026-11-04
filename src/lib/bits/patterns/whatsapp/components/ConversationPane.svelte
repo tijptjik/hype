@@ -8,6 +8,7 @@ import Avatar from '#lib/bits/core/avatar/Avatar.svelte'
 import SearchIcon from 'virtual:icons/lucide/search'
 import XIcon from 'virtual:icons/lucide/x'
 // MESSAGING
+import { sameMessageGroup } from '#lib/messaging/message-group.js'
 import { messageMediaKey } from '#lib/messaging/message-key.js'
 // COMPONENTS
 import * as WhatsApp from './index.js'
@@ -531,11 +532,13 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
         {/if}
       </div>
     {/if}
-    {#each visible as message (`${message.chat}:${message.sender}:${message.id}`)}
+    {#each visible as message, messageIndex (`${message.chat}:${message.sender}:${message.id}`)}
       <WhatsApp.MessageBubble
         {organisationName}
         {platformLabel}
         {message}
+        showHeader={Boolean(query) ||
+          !sameMessageGroup(visible[messageIndex - 1], message)}
         quoteOriginal={model.quoteOriginal?.(message)}
         onLoadQuote={model.loadQuotePreview
           ? () => model.loadQuotePreview!(message)

@@ -28,11 +28,12 @@ import { messageMediaKey } from '#lib/messaging/message-key.js'
 import { quotedPreview } from '#lib/messaging/quoted-message.js'
 import { selectedTextQuote } from '#lib/messaging/selected-quote.js'
 import type { TextQuote } from '#lib/messaging/types.js'
-import { relativeMessageTime } from './message-time.js'
+import { messageClockTime } from './message-time.js'
 // TYPES
 import type { WhatsAppMessage } from '#lib/api/services/whatsover.types.js'
 interface Props {
   attachmentPending?: boolean
+  showHeader?: boolean
   showTime?: boolean
   sendState?: 'pending' | 'submitted' | 'uncertain' | 'failed'
   transitionName?: string
@@ -64,6 +65,7 @@ interface Props {
 let {
   attachmentPending = false,
   showTime = true,
+  showHeader = true,
   sendState,
   transitionName,
   platformLabel = 'WhatsApp',
@@ -204,9 +206,9 @@ const canDelete = $derived(Boolean(onDelete && message.fromMe && !message.delete
 const actionCount = $derived(
   2 + Number(canEdit) + Number(canForward) + Number(canCopy) + Number(canDelete),
 )
-// Outgoing identity belongs to the organisation; operator attribution stays on hover.
+// Use the provider account identity; operator attribution stays on hover.
 const authorName = $derived(
-  message.fromMe ? organisationName || 'Organisation' : displayName,
+  displayName || (message.fromMe ? organisationName || 'Shared account' : ''),
 )
 const authorPhoto = $derived(photo)
 const authorUsername = $derived(message.fromMe ? undefined : username)
@@ -217,7 +219,58 @@ const operatorDetail = $derived(
 )
 </script>
 
-<div class="flex min-w-0 {message.fromMe ? 'justify-end' : 'justify-start'}">
+{#snippet metadata()}
+  <span class="flex items-center gap-1.5"
+    ><span class="flex items-center gap-1">
+      {#if message.editedAt}
+        <span
+          role="img"
+          aria-label="Edited"
+          title={`Edited ${new Date(message.editedAt).toLocaleString()}`}
+          class="inline-flex text-muted-foreground"
+          ><EditIcon class="size-3" aria-hidden="true" /></span
+        >
+      {/if}
+      {#if showTime}
+        <time
+          class="whitespace-nowrap text-[11px] text-muted-foreground"
+          datetime={new Date(message.timestamp).toISOString()}
+          title={new Date(message.timestamp).toLocaleString()}
+          >{messageClockTime(message.timestamp)}</time
+        >
+      {/if}
+    </span>
+    {#if message.fromMe && !message.deleted}
+      <span
+        role="img"
+        aria-label={deliveryLabel}
+        title={deliveryLabel}
+        class="inline-flex shrink-0 {message.delivery === 'read'
+          ? 'text-sky-600 dark:text-sky-400'
+          : 'text-muted-foreground'}"
+      >
+        {#if sendState === 'failed' || sendState === 'uncertain'}
+          <AlertIcon class="size-3.5 text-error" aria-hidden="true" />
+        {:else if sendState === 'pending'}
+          <CheckIcon
+            class="size-3.5 opacity-40 motion-safe:animate-pulse"
+            aria-hidden="true"
+          />
+        {:else if message.delivery || sendState === 'submitted'}
+          <CheckIcon class="size-3.5" aria-hidden="true" />
+        {:else}
+          <ClockIcon class="size-3.5" aria-hidden="true" />
+        {/if}
+      </span>
+    {/if}
+  </span>
+{/snippet}
+
+<div
+  class="flex min-w-0 {showHeader ? '' : '-mt-2'} {message.fromMe
+    ? 'justify-end'
+    : 'justify-start'}"
+>
   <article
     bind:this={bubble}
     data-message-key={messageMediaKey(message)}
@@ -235,66 +288,25 @@ const operatorDetail = $derived(
       : 'bg-panel border-border'}"
     aria-label={`Message from ${authorName}`}
   >
-    <header
-      title={operatorDetail}
-      class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 text-xs"
-    >
-      <Avatar name={authorName} src={authorPhoto} class="size-8!" />
-      <div class="min-w-0 leading-4">
-        <span class="break-words font-medium text-base-content [overflow-wrap:anywhere]"
-          >{authorName}</span
-        >
-        {#if authorUsername}
-          <p class="text-muted-foreground [overflow-wrap:anywhere]">
-            @{authorUsername.replace(/^@/, '')}
-          </p>
-        {/if}
-      </div>
-      <span class="flex items-start gap-1.5"
-        ><span class="flex flex-col items-end gap-1"
-          >{#if showTime}
-            <time
-              class="whitespace-nowrap text-[11px] text-muted-foreground"
-              datetime={new Date(message.timestamp).toISOString()}
-              title={new Date(message.timestamp).toLocaleString()}
-              >{relativeMessageTime(message.timestamp, now)}</time
-            >
-          {/if}
-          {#if message.editedAt}
-            <span
-              role="img"
-              aria-label="Edited"
-              title={`Edited ${new Date(message.editedAt).toLocaleString()}`}
-              class="inline-flex text-muted-foreground"
-              ><EditIcon class="size-3" aria-hidden="true" /></span
-            >
-          {/if}
-        </span>
-        {#if message.fromMe && !message.deleted}
+    {#if showHeader}
+      <header
+        title={operatorDetail}
+        class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 text-xs"
+      >
+        <Avatar name={authorName} src={authorPhoto} class="size-8!" />
+        <div class="min-w-0 leading-4">
           <span
-            role="img"
-            aria-label={deliveryLabel}
-            title={deliveryLabel}
-            class="inline-flex shrink-0 {message.delivery === 'read'
-              ? 'text-sky-600 dark:text-sky-400'
-              : 'text-muted-foreground'}"
+            class="break-words font-medium text-base-content [overflow-wrap:anywhere]"
+            >{authorName}</span
           >
-            {#if sendState === 'failed' || sendState === 'uncertain'}
-              <AlertIcon class="size-3.5 text-error" aria-hidden="true" />
-            {:else if sendState === 'pending'}
-              <CheckIcon
-                class="size-3.5 opacity-40 motion-safe:animate-pulse"
-                aria-hidden="true"
-              />
-            {:else if message.delivery || sendState === 'submitted'}
-              <CheckIcon class="size-3.5" aria-hidden="true" />
-            {:else}
-              <ClockIcon class="size-3.5" aria-hidden="true" />
-            {/if}
-          </span>
-        {/if}
-      </span>
-    </header>
+          {#if authorUsername}
+            <p class="text-muted-foreground [overflow-wrap:anywhere]">
+              @{authorUsername.replace(/^@/, '')}
+            </p>
+          {/if}
+        </div>
+      </header>
+    {/if}
     {#if message.content?.quoted && !message.deleted}
       <blockquote
         class="min-w-0 rounded-lg border-l-2 border-[var(--chat-quote-border,var(--theme-primary))] bg-[var(--chat-quote-fill,var(--theme-surface))] text-xs"
@@ -411,7 +423,10 @@ const operatorDetail = $derived(
         </form>
       {:else if message.content?.text || message.text}
         <div bind:this={messageBody} class="min-w-0 max-w-full" data-selectable-message>
-          <MessageText text={message.content?.text || message.text || ''} />
+          <MessageText
+            text={message.content?.text || message.text || ''}
+            trailing={reactions.length ? undefined : metadata}
+          />
         </div>
       {/if}
     {/if}
@@ -449,15 +464,26 @@ const operatorDetail = $derived(
     {#if actionError}
       <p role="alert" class="text-xs">{actionError}</p>
     {/if}
+    {#if (editing ||
+      message.deleted ||
+      message.content?.viewOnce ||
+      !(message.content?.text || message.text)) &&
+      (showTime || message.editedAt || message.fromMe) &&
+      !reactions.length}
+      <div class="flex justify-end">{@render metadata()}</div>
+    {/if}
     {#if reactions.length}
-      <section class="flex flex-wrap gap-1" aria-label="Reactions">
-        {#each reactions as reaction}
-          <span class="rounded-full border border-border bg-surface px-2 py-1"
-            >{reaction.emoji}
-            <span class="text-xs text-muted-foreground">{reaction.count}</span></span
-          >
-        {/each}
-      </section>
+      <div class="flex items-end justify-between gap-3">
+        <section class="flex min-w-0 flex-wrap gap-1" aria-label="Reactions">
+          {#each reactions as reaction}
+            <span class="rounded-full border border-border bg-surface px-2 py-1"
+              >{reaction.emoji}
+              <span class="text-xs text-muted-foreground">{reaction.count}</span></span
+            >
+          {/each}
+        </section>
+        <div class="shrink-0">{@render metadata()}</div>
+      </div>
     {/if}
     {#if !sendState}
       <div

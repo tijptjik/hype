@@ -2010,8 +2010,9 @@ it.each(['telegram', 'whatsapp'] as const)(
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Reply' })).toBeTruthy(),
     )
-    const line = screen.container.querySelectorAll('[data-selectable-message] p')[1]
-      .firstChild!
+    const line = screen.container.querySelectorAll(
+      '[data-selectable-message] [data-quote-offset]',
+    )[1].firstChild!
     const range = document.createRange()
     range.setStart(line, 0)
     range.setEnd(line, 5)
@@ -2092,7 +2093,7 @@ it.each(['telegram', 'whatsapp'] as const)(
     await fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
     const composer = within(screen.getByRole('form', { name: 'Message composer' }))
     expect(
-      screen.getByRole('article', { name: 'Message from you' }).textContent,
+      screen.getByRole('article', { name: 'Message from Shared account' }).textContent,
     ).toContain('Immediate optimistic message')
     expect(screen.getByRole('img', { name: 'Sending' })).toBeTruthy()
     expect(composer.queryByRole('status')).toBeNull()
@@ -2192,7 +2193,7 @@ it.each(['telegram', 'whatsapp'] as const)(
       ),
     ).toBeNull()
     expect(
-      screen.getByRole('article', { name: 'Message from you' }).textContent,
+      screen.getByRole('article', { name: 'Message from Shared account' }).textContent,
     ).toContain('Delayed acknowledgment')
   },
 )
@@ -2343,4 +2344,42 @@ it('recovers an old Telegram attachment receipt by native ID without showing a f
   await waitFor(() => expect(screen.getByText('Recovered sticker')).toBeTruthy())
   expect(screen.container.querySelector('[data-pending-send]')).toBeNull()
   expect(mocks.send).not.toHaveBeenCalled()
+})
+
+it('groups consecutive messages by operator while displaying the provider account identity', async () => {
+  const base = {
+    chat: '15555550100@s.whatsapp.net',
+    sender: 'self',
+    timestamp: Date.now(),
+    fromMe: true,
+  }
+  const alex = { id: 'alex', name: 'Alex', username: 'alex_hype', image: null }
+  const sam = { id: 'sam', name: 'Sam', username: 'sam_hype', image: null }
+  mocks.snapshot.mockResolvedValue({
+    ...connected,
+    messages: [
+      { ...base, id: 'a1', sequence: 1, text: 'Alex first', operator: alex },
+      { ...base, id: 'a2', sequence: 2, text: 'Alex second', operator: alex },
+      { ...base, id: 's1', sequence: 3, text: 'Sam message', operator: sam },
+      { ...base, id: 'external', sequence: 4, text: 'External send' },
+    ],
+  })
+  const screen = render(Console)
+  await waitFor(() => expect(screen.getByText('Alex second')).toBeTruthy())
+  const alexBubbles = screen.getAllByRole('article', {
+    name: 'Message from Shared account',
+  })
+  expect(alexBubbles[0].querySelector('header')).not.toBeNull()
+  expect(alexBubbles[1].querySelector('header')).toBeNull()
+  for (const message of screen.getAllByRole('article')) {
+    expect(message.querySelectorAll('time')).toHaveLength(1)
+    expect(message.querySelector('time')?.getAttribute('datetime')).toBe(
+      new Date(base.timestamp).toISOString(),
+    )
+  }
+  expect(alexBubbles[2].querySelector('header')).not.toBeNull()
+  expect(alexBubbles[3].querySelector('header')).toBeTruthy()
+  expect(alexBubbles[0].querySelector('header')?.title).toBe('Alex')
+  expect(alexBubbles[2].querySelector('header')?.title).toBe('Sam')
+  expect(screen.queryByText('You', { exact: true })).toBeNull()
 })

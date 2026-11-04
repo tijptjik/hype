@@ -8,13 +8,33 @@ import { getLocale } from '#lib/i18n.js'
  */
 export function relativeMessageTime(timestamp: number, now: number): string {
   const seconds = (timestamp - now) / 1000
-  const formatter = new Intl.RelativeTimeFormat(getLocale(), { numeric: 'auto', style: 'narrow' })
+  const formatter = new Intl.RelativeTimeFormat(getLocale(), {
+    numeric: 'auto',
+    style: 'narrow',
+  })
   const units: [Intl.RelativeTimeFormatUnit, number][] = [
-    ['year', 365 * 86400], ['month', 30 * 86400], ['week', 7 * 86400],
-    ['day', 86400], ['hour', 3600], ['minute', 60],
+    ['year', 365 * 86400],
+    ['month', 30 * 86400],
+    ['week', 7 * 86400],
+    ['day', 86400],
+    ['hour', 3600],
+    ['minute', 60],
   ]
   for (const [unit, size] of units) {
-    if (Math.abs(seconds) >= size) return formatter.format(Math.trunc(seconds / size), unit)
+    if (Math.abs(seconds) >= size)
+      return formatter.format(Math.trunc(seconds / size), unit)
   }
   return formatter.format(0, 'second')
+}
+
+/** Format a message's local clock time for its compact inline receipt.
+ * @param timestamp Message timestamp in milliseconds.
+ * @returns Localized hours and minutes; the time element exposes the full date on hover.
+ */
+export function messageClockTime(timestamp: number): string {
+  return new Intl.DateTimeFormat(getLocale(), {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(timestamp)
 }

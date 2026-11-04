@@ -71,6 +71,13 @@ export interface WhatsAppSend {
 }
 
 export interface WhatsAppMessage {
+  /** HYPE audit attribution; absent for messages sent outside this application. */
+  operator?: {
+    id: string
+    name: string | null
+    username: string | null
+    image: string | null
+  }
   readByMe?: boolean
   delivery?: 'sent' | 'delivered' | 'read'
   editedAt?: number
