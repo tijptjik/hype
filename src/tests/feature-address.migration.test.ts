@@ -104,7 +104,7 @@ it('renames retained source keys and corrections while preserving legacy evidenc
         address: {
           version: 1,
           source: {
-            records: {
+            rawSource: {
               data: { attributes: { i18n: { en: { estateName: 'Source' } } } },
             },
           },
@@ -120,7 +120,7 @@ it('renames retained source keys and corrections while preserving legacy evidenc
     db.exec(rename)
     const once = db.prepare('SELECT addressMeta FROM feature').get()!
     const address = JSON.parse(String(once.addressMeta)).address
-    expect(address.source.records.data.attributes.i18n.en).toEqual({
+    expect(address.source.rawSource.data.attributes.i18n.en).toEqual({
       premisesName: 'Source',
     })
     expect(address.overrides.en).toEqual({ premisesName: 'Correction' })
