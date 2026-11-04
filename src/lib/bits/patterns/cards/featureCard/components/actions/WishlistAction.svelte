@@ -105,6 +105,7 @@ async function toggleWishlisted(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
   const featureId = feature.id
   const userId = appCtx.user?.id
+  const accountRevision = appCtx.account.revision
 
   const previous = wishlistedFeature ?? visitedFeature ?? null
   const nextIsWishlisted = !isWishlisted
@@ -115,12 +116,14 @@ async function toggleWishlisted(): Promise<void> {
     visitedAt: visitedFeature?.visitedAt ?? null,
   } as UserFeature
 
-  isSubmitting = true
-  clearWishlistError()
-  optimisticWishlisted = nextIsWishlisted
-  appCtx.account.collections.apply(featureId, optimistic)
-
+  const release = appCtx.account.collections.beginListEdit(featureId, 'wishlist')
+  if (!release) return
   try {
+    isSubmitting = true
+    clearWishlistError()
+    optimisticWishlisted = nextIsWishlisted
+    appCtx.account.collections.applyList(featureId, 'wishlist', optimistic)
+
     const mutation = nextIsWishlisted
       ? addUserFeatureToList({ featureId, list: 'wishlist' })
       : removeUserFeatureFromList({ featureId, list: 'wishlist' })
@@ -128,26 +131,38 @@ async function toggleWishlisted(): Promise<void> {
       getUserFeatures({
         userId,
         sorting: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-      }).withOverride(current => ({
-        ...current,
-        data: [
-          optimistic,
-          ...(current.data ?? []).filter(item => item.featureId !== featureId),
-        ],
-      })),
+      }).withOverride(current => {
+        // Compose with the latest query row; the other list may have changed since clicking.
+        const row = current.data?.find(item => item.featureId === featureId)
+        return {
+          ...current,
+          data: [
+            {
+              ...optimistic,
+              ...row,
+              isWishlisted: nextIsWishlisted,
+              isVisited: Boolean(row?.isVisited),
+              visitedAt: row?.visitedAt ?? null,
+            },
+            ...(current.data ?? []).filter(item => item.featureId !== featureId),
+          ],
+        }
+      }),
     )
 
-    // A response from a previous account must not populate the current account's cache.
-    if (appCtx.user?.id !== userId) return
+    // Reject previous account lifetimes, including sign-out/sign-in to the same user.
+    if (appCtx.user?.id !== userId || appCtx.account.revision !== accountRevision)
+      return
     const settled = (response?.data as UserFeature | null) ?? null
-    appCtx.account.collections.apply(featureId, settled)
+    appCtx.account.collections.applyList(featureId, 'wishlist', settled)
     // Successful list edits revalidate active query pages and their authoritative totals.
     void appCtx.cacheCtx.reconcile('feature')
     if (!('id' in feature) || feature.id !== featureId) return
     settledWishlisted = Boolean(settled?.isWishlisted)
   } catch (error) {
-    if (appCtx.user?.id !== userId) return
-    appCtx.account.collections.apply(featureId, previous)
+    if (appCtx.user?.id !== userId || appCtx.account.revision !== accountRevision)
+      return
+    appCtx.account.collections.applyList(featureId, 'wishlist', previous)
     if (!('id' in feature) || feature.id !== featureId) return
     console.error('Error updating wishlist status:', error)
     optimisticWishlisted = Boolean(previous?.isWishlisted)
@@ -156,6 +171,7 @@ async function toggleWishlisted(): Promise<void> {
     showWishlistError(message)
     toast.error(message)
   } finally {
+    release()
     isSubmitting = false
   }
 }

@@ -8,8 +8,14 @@ import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 const mocks = vi.hoisted(() => ({
   app: {
     user: { id: 'old-user' },
+    cacheCtx: { reconcile: vi.fn().mockResolvedValue(undefined) },
     account: {
-      collections: { state: { wishlisted: [], visited: [] }, apply: vi.fn() },
+      revision: 1,
+      collections: {
+        beginListEdit: () => () => {},
+        state: { wishlisted: [], visited: [] },
+        applyList: vi.fn(),
+      },
     },
   },
   updates: vi.fn(),
@@ -44,33 +50,35 @@ describe.each([
   ['wishlist', WishlistAction],
   ['visit', VisitAction],
 ] as const)('%s save scope', (_name, Component) => {
-  it.each(['success', 'failure'] as const)(
-    'does not write to a new account on %s',
-    async outcome => {
-      mocks.app.user = { id: 'old-user' }
-      mocks.app.account.collections.apply.mockClear()
-      let resolve!: (value: unknown) => void
-      let reject!: (reason: Error) => void
-      mocks.updates.mockReturnValue(
-        new Promise((res, rej) => {
-          resolve = res
-          reject = rej
-        }),
-      )
-      render(Component, { feature: { id: 'old-feature' } as Feature })
-      await fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-      expect(mocks.app.account.collections.apply).toHaveBeenCalledTimes(1)
-      mocks.app.user = { id: 'new-user' }
-      if (outcome === 'success') resolve({ data: null })
-      else reject(new Error('Save failed'))
-      await new Promise(res => setTimeout(res, 0))
-      expect(mocks.app.account.collections.apply).toHaveBeenCalledTimes(1)
-    },
-  )
+  it.each(
+    ['success', 'failure'].flatMap(outcome =>
+      ['different-user', 'same-user-new-session'].map(change => ({ outcome, change })),
+    ),
+  )('does not write across $change on $outcome', async ({ outcome, change }) => {
+    mocks.app.user = { id: 'old-user' }
+    mocks.app.account.collections.applyList.mockClear()
+    let resolve!: (value: unknown) => void
+    let reject!: (reason: Error) => void
+    mocks.updates.mockReturnValue(
+      new Promise((res, rej) => {
+        resolve = res
+        reject = rej
+      }),
+    )
+    render(Component, { feature: { id: 'old-feature' } as Feature })
+    await fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(mocks.app.account.collections.applyList).toHaveBeenCalledTimes(1)
+    mocks.app.account.revision++
+    mocks.app.user = { id: change === 'different-user' ? 'new-user' : 'old-user' }
+    if (outcome === 'success') resolve({ data: null })
+    else reject(new Error('Save failed'))
+    await new Promise(res => setTimeout(res, 0))
+    expect(mocks.app.account.collections.applyList).toHaveBeenCalledTimes(1)
+  })
 
   it('reconciles the original feature after the card changes', async () => {
     mocks.app.user = { id: 'old-user' }
-    mocks.app.account.collections.apply.mockClear()
+    mocks.app.account.collections.applyList.mockClear()
     let resolve!: (value: unknown) => void
     mocks.updates.mockReturnValue(
       new Promise(res => {
@@ -82,8 +90,9 @@ describe.each([
     await view.rerender({ feature: { id: 'new-feature' } as Feature })
     resolve({ data: null })
     await vi.waitFor(() => {
-      expect(mocks.app.account.collections.apply).toHaveBeenLastCalledWith(
+      expect(mocks.app.account.collections.applyList).toHaveBeenLastCalledWith(
         'old-feature',
+        _name === 'wishlist' ? 'wishlist' : 'visited',
         null,
       )
     })

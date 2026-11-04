@@ -148,6 +148,7 @@ async function toggleVisited(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
   const featureId = feature.id
   const userId = appCtx.user?.id
+  const accountRevision = appCtx.account.revision
 
   const previous = visitedFeature ?? wishlistedFeature ?? null
   const nextIsVisited = !isVisited
@@ -159,12 +160,14 @@ async function toggleVisited(): Promise<void> {
     visitedAt,
   } as UserFeature
 
-  isSubmitting = true
-  clearVisitError()
-  optimisticVisitState = { isVisited: nextIsVisited, visitedAt }
-  appCtx.account.collections.apply(featureId, optimistic)
-
+  const release = appCtx.account.collections.beginListEdit(featureId, 'visited')
+  if (!release) return
   try {
+    isSubmitting = true
+    clearVisitError()
+    optimisticVisitState = { isVisited: nextIsVisited, visitedAt }
+    appCtx.account.collections.applyList(featureId, 'visited', optimistic)
+
     const mutation = nextIsVisited
       ? addUserFeatureToList({
           featureId,
@@ -176,19 +179,30 @@ async function toggleVisited(): Promise<void> {
       getUserFeatures({
         userId,
         sorting: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-      }).withOverride(current => ({
-        ...current,
-        data: [
-          optimistic,
-          ...(current.data ?? []).filter(item => item.featureId !== featureId),
-        ],
-      })),
+      }).withOverride(current => {
+        // Compose with the latest query row; the other list may have changed since clicking.
+        const row = current.data?.find(item => item.featureId === featureId)
+        return {
+          ...current,
+          data: [
+            {
+              ...optimistic,
+              ...row,
+              isWishlisted: Boolean(row?.isWishlisted),
+              isVisited: nextIsVisited,
+              visitedAt,
+            },
+            ...(current.data ?? []).filter(item => item.featureId !== featureId),
+          ],
+        }
+      }),
     )
 
-    // A response from a previous account must not populate the current account's cache.
-    if (appCtx.user?.id !== userId) return
+    // Reject previous account lifetimes, including sign-out/sign-in to the same user.
+    if (appCtx.user?.id !== userId || appCtx.account.revision !== accountRevision)
+      return
     const settled = (response?.data as UserFeature | null) ?? null
-    appCtx.account.collections.apply(featureId, settled)
+    appCtx.account.collections.applyList(featureId, 'visited', settled)
     // Successful list edits revalidate active query pages and their authoritative totals.
     void appCtx.cacheCtx.reconcile('feature')
     if (!('id' in feature) || feature.id !== featureId) return
@@ -197,8 +211,9 @@ async function toggleVisited(): Promise<void> {
       visitedAt: settled?.visitedAt ?? null,
     }
   } catch (error) {
-    if (appCtx.user?.id !== userId) return
-    appCtx.account.collections.apply(featureId, previous)
+    if (appCtx.user?.id !== userId || appCtx.account.revision !== accountRevision)
+      return
+    appCtx.account.collections.applyList(featureId, 'visited', previous)
     if (!('id' in feature) || feature.id !== featureId) return
     console.error('Error updating visited status:', error)
     const previousVisitState = {
@@ -211,6 +226,7 @@ async function toggleVisited(): Promise<void> {
     showVisitError(message)
     toast.error(message)
   } finally {
+    release()
     isSubmitting = false
   }
 }

@@ -15,6 +15,24 @@ export class UserFeatureCollections {
   >()
   private listeners = new Set<() => void>()
   private generation = 0
+  private pendingEdits = new SvelteMap<string, object>()
+
+  /**
+   * Claims one account's feature/list edit across all mounted cards.
+   * @param featureId Feature being edited.
+   * @param listId Membership being edited.
+   * @returns Idempotent release, or null when an operation already owns this edit.
+   * @remarks Hold until settlement even after unmount; the server operation remains active.
+   */
+  beginListEdit(featureId: Id, listId: 'wishlist' | 'visited'): (() => void) | null {
+    const key = JSON.stringify([featureId, listId])
+    if (this.pendingEdits.has(key)) return null
+    const owner = {}
+    this.pendingEdits.set(key, owner)
+    return () => {
+      if (this.pendingEdits.get(key) === owner) this.pendingEdits.delete(key)
+    }
+  }
 
   /** @param listener Surface projection to reconcile after edits. @returns Cleanup function. */
   subscribe(listener: () => void): () => void {
@@ -29,10 +47,13 @@ export class UserFeatureCollections {
     return ++this.generation
   }
 
-  /** @param featureId Feature to inspect. @returns Whether a recent edit supersedes remote reads. */
+  /** @param featureId Feature to inspect. @returns Whether a pending or recent edit supersedes remote reads. */
   hasRecentOverride(featureId: Id): boolean {
     const override = this.overrides.get(featureId)
-    return Boolean(override && Date.now() - override.updatedAt < 60_000)
+    return Boolean(
+      override &&
+        (this.hasPendingEdit(featureId) || Date.now() - override.updatedAt < 60_000),
+    )
   }
 
   /** @param featureId Feature being read. @param listId Built-in list. @returns Known membership, otherwise undefined. */
@@ -47,6 +68,7 @@ export class UserFeatureCollections {
 
   /** @param featureId Edited feature. @param updated Optimistic or confirmed row; null removes membership. @returns Nothing. */
   apply(featureId: Id, updated: UserFeature | null): void {
+    this.pruneExpiredOverrides()
     this.overrides.set(featureId, { row: updated, updatedAt: Date.now() })
     const known = this.knownRows()
     known.delete(featureId)
@@ -54,9 +76,46 @@ export class UserFeatureCollections {
     this.publish([...known.values()])
   }
 
+  /**
+   * Applies one list edit without replacing concurrent changes to the other list.
+   * @param featureId Edited feature.
+   * @param listId Membership owned by this action.
+   * @param updated Optimistic, confirmed or rollback snapshot for the owned list.
+   * @returns Nothing after publishing the merged membership.
+   */
+  applyList(
+    featureId: Id,
+    listId: 'wishlist' | 'visited',
+    updated: UserFeature | null,
+  ): void {
+    const current = this.knownRows().get(featureId)
+    const isWishlisted = Boolean(
+      listId === 'wishlist' ? updated?.isWishlisted : current?.isWishlisted,
+    )
+    const isVisited = Boolean(
+      listId === 'visited' ? updated?.isVisited : current?.isVisited,
+    )
+    // Only visit edits own the timestamp; wishlist snapshots may predate a check-in.
+    const visitedAt = listId === 'visited' ? updated?.visitedAt : current?.visitedAt
+    this.apply(
+      featureId,
+      isWishlisted || isVisited
+        ? ({
+            ...current,
+            ...updated,
+            featureId,
+            isWishlisted,
+            isVisited,
+            visitedAt: visitedAt ?? null,
+          } as UserFeature)
+        : null,
+    )
+  }
+
   /** @param rows Full account membership response. @param generation Token captured before loading. @returns Whether applied. */
   replace(rows: UserFeature[], generation: number): boolean {
     if (generation !== this.generation) return false
+    this.pruneExpiredOverrides()
     const known = new Map(rows.map(row => [row.featureId, row]))
     this.applyOverrides(known)
     this.publish([...known.values()])
@@ -65,6 +124,7 @@ export class UserFeatureCollections {
 
   /** @param featureIds Rows covered by a page. @param rows Membership facts attached to that page. @returns Nothing. */
   mergePage(featureIds: Id[], rows: UserFeature[]): void {
+    this.pruneExpiredOverrides()
     const known = this.knownRows()
     for (const id of featureIds) if (!this.hasRecentOverride(id)) known.delete(id)
     for (const row of rows)
@@ -75,6 +135,7 @@ export class UserFeatureCollections {
   /** Invalidates pending reads and clears all membership on an account transition. @returns Nothing. */
   reset(): void {
     this.generation++
+    this.pendingEdits.clear()
     this.overrides.clear()
     this.state = { wishlisted: [], visited: [] }
   }
@@ -86,6 +147,23 @@ export class UserFeatureCollections {
         row.featureId,
         row,
       ]),
+    )
+  }
+
+  /** Reclaims expired snapshots during writes without mutating reactive getters. @returns Nothing. */
+  private pruneExpiredOverrides(): void {
+    const now = Date.now()
+    for (const [id, override] of this.overrides) {
+      if (now - override.updatedAt >= 60_000 && !this.hasPendingEdit(id))
+        this.overrides.delete(id)
+    }
+  }
+
+  /** @param featureId Feature whose optimistic state needs protection. @returns Whether either list has an active edit. */
+  private hasPendingEdit(featureId: Id): boolean {
+    return (
+      this.pendingEdits.has(JSON.stringify([featureId, 'wishlist'])) ||
+      this.pendingEdits.has(JSON.stringify([featureId, 'visited']))
     )
   }
 
