@@ -10,6 +10,7 @@ import { page } from '$app/state'
 import { watch } from 'runed'
 import { toast } from 'svelte-sonner'
 // BITS
+import TooltipProvider from '#lib/bits/core/tooltip/TooltipProvider.svelte'
 import { cx } from '#lib/bits/utils.js'
 // AUTH
 import { signIn, useSession } from '#lib/auth/client.js'
@@ -394,6 +395,8 @@ watch(
   },
 )
 </script>
+
+<TooltipProvider />
 
 <svelte:window bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
 
