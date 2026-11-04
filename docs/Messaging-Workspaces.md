@@ -34,6 +34,11 @@ bun run test:workers
 bunx turbo run build --filter=@hype/whatsapp
 ```
 
+`test:workers` runs the Bun launcher checks before the workspace test tasks.
+The web application's Vitest configuration excludes the hosted worker suites,
+the shared messaging bridge's Bun tests, and the Bun launcher tests so each suite
+runs through its own runner.
+
 Turbo follows workspace dependencies: the WhatsApp engine builds before its
 worker is checked or bundled. Runtime tests use synthetic fixtures and local
 workerd instances. Worker builds are dry runs, never deployments. Build/test

@@ -163,6 +163,12 @@ export default defineConfig({
     },
     // Exclude problematic files that might keep handles open
     exclude: [
+      // Hosted worker suites and Bun-only workspace checks run through test:workers.
+      'workers/whatsapp/**/*.test.ts',
+      'workers/telegram/**/*.test.ts',
+      'workers/messaging-notifications/**/*.test.ts',
+      'packages/messaging-bridge/**/*.test.ts',
+      'scripts/messaging/dev-worker.test.ts',
       '**/node_modules/**',
       '**/dist/**',
       '**/.local/**', // Machine-specific manual probes are not the portable test suite.

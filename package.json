@@ -128,7 +128,7 @@
     "deploy:location-refresh:preview": "bun wrangler deploy -c workers/location-refresh/wrangler.jsonc --env preview",
     "build:workers": "turbo run build --filter=./workers/*",
     "check:workers": "bash scripts/dev-check.sh bash -c 'turbo run check --filter=@hype/* \"$@\"' --",
-    "test:workers": "bash scripts/dev-check.sh bash -c 'turbo run test --filter=@hype/* \"$@\"' --",
+    "test:workers": "bash scripts/dev-check.sh bash -c 'bun test scripts/messaging/dev-worker.test.ts && turbo run test --filter=@hype/* \"$@\"' --",
     "dev:messaging": "turbo run dev --filter=./workers/*",
     "build:all": "bun run build:workers && bun run build"
   },
