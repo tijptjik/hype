@@ -301,6 +301,65 @@ it.each(['merge', 'split', 'reconfiguration'] as const)(
     ).toBe(0)
   },
 )
+it('checks merge cycles within each resolved Organisation scope instead of combining incompatible assertions', async () => {
+  const s = setup()
+  const { assessMergeDependencies } = await import(
+    '#lib/db/services/locationMergeImpact.js'
+  )
+  s.sqlite.exec(
+    "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('a','premises','unresolved','p'),('b','premises','unresolved','p'),('c','premises','unresolved','p')",
+  )
+  for (const [id, scope, child, parent] of [
+    ['ab', 'p', 'a', 'b'],
+    ['bc', 'other', 'b', 'c'],
+  ]) {
+    await appendLocationRelationship(
+      s.db,
+      {
+        table: 'locationMembership',
+        id,
+        relationshipId: id,
+        previousRevisionId: null,
+        scopeOrganisationId: scope,
+        assertionState: 'asserted',
+        childLocationId: child,
+        parentLocationId: parent,
+        membershipState: 'current',
+        evidence: [],
+        observedAt: null,
+        verifiedAt: null,
+        effectiveFrom: null,
+        effectiveTo: null,
+      },
+      'editor',
+    )
+  }
+  expect((await assessMergeDependencies(s.db, 'a', 'c')).blockers).toEqual([])
+  await appendLocationRelationship(
+    s.db,
+    {
+      table: 'locationMembership',
+      id: 'bc-own',
+      relationshipId: 'bc-own',
+      previousRevisionId: null,
+      scopeOrganisationId: 'p',
+      assertionState: 'asserted',
+      childLocationId: 'b',
+      parentLocationId: 'c',
+      membershipState: 'current',
+      evidence: [],
+      observedAt: null,
+      verifiedAt: null,
+      effectiveFrom: null,
+      effectiveTo: null,
+    },
+    'editor',
+  )
+  expect((await assessMergeDependencies(s.db, 'a', 'c')).blockers).toContain(
+    'membership-cycle-after-merge',
+  )
+})
+
 it.each([false, true])(
   'hides lineage after a participant becomes private (history=%s)',
   async history => {
