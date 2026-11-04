@@ -19,9 +19,9 @@ let {
 
 <div class={cx('flex items-center gap-3', className)}>
   <div class="flex min-h-10 items-center">
-    <SimpleTooltip disabled={!tooltip}>
+    <SimpleTooltip disabled={!tooltip || tooltip === label}>
       {#snippet trigger()}
-        <div class="text-sm font-medium leading-none text-foreground/72">{label}</div>
+        <div class="text-foreground/72 text-sm leading-none font-medium">{label}</div>
       {/snippet}
 
       {#snippet children()}

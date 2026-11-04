@@ -18,7 +18,10 @@ let {
 <div
   class="col-start-1 row-start-2 flex min-w-0 flex-wrap items-center gap-2 pb-2 pl-20 @min-[48rem]:col-start-2 @min-[48rem]:row-start-1 @min-[48rem]:flex-col @min-[48rem]:items-start @min-[48rem]:p-0"
 >
-  <SimpleTooltip disabled={!message} triggerProps={{ tabindex: -1 }}>
+  <SimpleTooltip
+    disabled={!message || message === typeDisplay}
+    triggerProps={{ tabindex: -1 }}
+  >
     {#snippet trigger()}
       <span
         class={`inline-flex rounded-md border px-2 py-1 text-xs font-medium ${
@@ -37,7 +40,7 @@ let {
     {message}
   </SimpleTooltip>
   {#if reviewActionDisplay}
-    <span class="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+    <span class="text-muted-foreground flex min-w-0 items-center gap-1 text-xs">
       <ChevronRightIcon class="size-3 shrink-0" />
       {reviewActionDisplay}
     </span>

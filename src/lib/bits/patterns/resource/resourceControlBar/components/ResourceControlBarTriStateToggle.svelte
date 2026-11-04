@@ -52,7 +52,7 @@ function handleTrueClick(event: MouseEvent): void {
       {falseLabel}
     </button>
     <div class="relative flex items-center">
-      <SimpleTooltip disabled={!tooltip}>
+      <SimpleTooltip disabled={!tooltip || tooltip === label}>
         {#snippet trigger()}
           <div class="bits-resource-filter-bar__tri-toggle-label">{label}</div>
         {/snippet}

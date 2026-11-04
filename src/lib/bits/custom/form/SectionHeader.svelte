@@ -89,7 +89,7 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
   {/if}
 
   <div
-    class={`bits-form__section-header-right ${showControlLabels ? 'flex-wrap justify-start! lg:justify-end! [container-type:normal]' : ''}`}
+    class={`bits-form__section-header-right ${showControlLabels ? '[container-type:normal] flex-wrap justify-start! lg:justify-end!' : ''}`}
   >
     {#if right}
       {@render right()}
@@ -110,7 +110,7 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
     {/if}
 
     {#if onVisibilityToggle}
-      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+      <SimpleTooltip disabled={showControlLabels} contentProps={{ role: 'tooltip' }}>
         {#snippet trigger()}
           <SectionHeaderPrimitive.Action
             text={visibilityToggleLabel}
@@ -132,7 +132,7 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
     {/if}
 
     {#if onCollapsableToggle}
-      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+      <SimpleTooltip disabled={showControlLabels} contentProps={{ role: 'tooltip' }}>
         {#snippet trigger()}
           <SectionHeaderPrimitive.Action
             text={collapsableToggleLabel}

@@ -154,7 +154,7 @@ function onReorderKey(event: KeyboardEvent): void {
 >
   <div
     bind:clientWidth={leftRailWidth}
-    class="bits-project-field-card__header-left-rail static! transform-none! w-max justify-self-start"
+    class="bits-project-field-card__header-left-rail static! w-max transform-none! justify-self-start"
   >
     {#if isEditing &&
       !isRankMoveLocked &&
@@ -167,7 +167,7 @@ function onReorderKey(event: KeyboardEvent): void {
             data-property-drag-handle
             aria-label="Reorder field"
             onkeydown={onReorderKey}
-            class="flex size-10 cursor-grab touch-none items-center justify-center rounded-md text-foreground/60 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing"
+            class="text-foreground/60 hover:bg-foreground/5 focus-visible:outline-primary flex size-10 cursor-grab touch-none items-center justify-center rounded-md focus-visible:outline-2 active:cursor-grabbing"
           >
             <GripVertical class="size-5" />
           </button>
@@ -187,7 +187,9 @@ function onReorderKey(event: KeyboardEvent): void {
         </SimpleTooltip>
       {/if}
       {#if sourceTag.label}
-        <SimpleTooltip disabled={!sourceTag.title}>
+        <SimpleTooltip
+          disabled={!sourceTag.title || sourceTag.title === sourceTag.label}
+        >
           {#snippet trigger()}
             <span class={sourceTagLabelClass}>
               {sourceTag.label}
@@ -199,11 +201,11 @@ function onReorderKey(event: KeyboardEvent): void {
     {/if}
   </div>
 
-  <div class="bits-project-field-card__title-wrap static! transform-none! min-w-0 px-3">
+  <div class="bits-project-field-card__title-wrap static! min-w-0 transform-none! px-3">
     {#if canCollapse}
       <button
         type="button"
-        class="bits-project-field-card__title-pill relative min-w-0 max-w-full px-2!"
+        class="bits-project-field-card__title-pill relative max-w-full min-w-0 px-2!"
         onclick={onToggleCollapse}
       >
         <h3 class="bits-project-field-card__title truncate">
@@ -212,12 +214,12 @@ function onReorderKey(event: KeyboardEvent): void {
             m.admin__forms_property_untitled()}
         </h3>
         <ChevronDown
-          class={`absolute -right-3 top-1/2 -translate-y-1/2 bits-project-field-card__collapse-icon ${collapsed ? 'bits-project-field-card__collapse-icon--collapsed' : ''}`}
+          class={`bits-project-field-card__collapse-icon absolute top-1/2 -right-3 -translate-y-1/2 ${collapsed ? 'bits-project-field-card__collapse-icon--collapsed' : ''}`}
         />
       </button>
     {:else}
       <div
-        class="bits-project-field-card__title-pill bits-project-field-card__title-pill--static min-w-0 max-w-full px-2!"
+        class="bits-project-field-card__title-pill bits-project-field-card__title-pill--static max-w-full min-w-0 px-2!"
       >
         {#if titleHref}
           <a href={titleHref} class="bits-project-field-card__title-link">
@@ -240,7 +242,7 @@ function onReorderKey(event: KeyboardEvent): void {
 
   <div
     bind:clientWidth={rightRailWidth}
-    class="bits-project-field-card__header-right-rail static! transform-none! w-max justify-self-end gap-2"
+    class="bits-project-field-card__header-right-rail static! w-max transform-none! gap-2 justify-self-end"
   >
     {#if showDefaultEnabledToggle && (isEditing || property.isDefaultEnabled)}
       <SimpleTooltip contentProps={{ role: 'tooltip' }}>
@@ -260,7 +262,7 @@ function onReorderKey(event: KeyboardEvent): void {
             </button>
           {:else}
             <span
-              class="inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/15 px-3 py-2 text-xs font-semibold text-primary"
+              class="border-primary/40 bg-primary/15 text-primary inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold"
             >
               <CopyCheck class="size-4" />
               {isProjectScopedCard || isInheritedHeaderCard

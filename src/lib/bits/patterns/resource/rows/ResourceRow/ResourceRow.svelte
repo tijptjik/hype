@@ -120,7 +120,7 @@ const statusTone = $derived.by(() => {
         <div class={resourceRowMetaCellClass}>
           {#if breadcrumb}
             <SimpleTooltip
-              disabled={!breadcrumb.tooltip}
+              disabled={!breadcrumb.tooltip || breadcrumb.tooltip === breadcrumb.label}
               triggerProps={nonFocusableTooltipTriggerProps}
             >
               {#snippet trigger()}
@@ -154,7 +154,7 @@ const statusTone = $derived.by(() => {
   {#if footerStatus}
     <div class={resourceRowStatusRailClass}>
       <SimpleTooltip
-        disabled={!footerStatus.tooltip}
+        disabled={!footerStatus.tooltip || footerStatus.tooltip === footerStatus.label}
         triggerProps={nonFocusableTooltipTriggerProps}
       >
         {#snippet trigger()}

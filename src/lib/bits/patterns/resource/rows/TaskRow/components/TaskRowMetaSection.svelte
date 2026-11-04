@@ -32,7 +32,7 @@ const createdAtLabel = $derived.by(() => {
     <small class="sr-only">{m.close_muddy_trout_clap()}</small>
     <SimpleTooltip disabled={!createdAtLabel} triggerProps={{ tabindex: -1 }}>
       {#snippet trigger()}
-        <p class="m-0 max-w-44 truncate text-xs text-muted-foreground">
+        <p class="text-muted-foreground m-0 max-w-44 truncate text-xs">
           {createdAtLabel
             ? formatDistanceToNow(new Date(createdAtLabel), { addSuffix: true })
             : '-'}
@@ -44,9 +44,12 @@ const createdAtLabel = $derived.by(() => {
 
   <div class="flex min-w-0 items-center gap-2">
     <small class="sr-only">{m.profile__role_type__contributor()}</small>
-    <SimpleTooltip disabled={!contributorAttribution} triggerProps={{ tabindex: -1 }}>
+    <SimpleTooltip
+      disabled={!contributorAttribution || contributorAttribution === contributorName}
+      triggerProps={{ tabindex: -1 }}
+    >
       {#snippet trigger()}
-        <p class="m-0 max-w-44 truncate text-sm text-foreground">
+        <p class="text-foreground m-0 max-w-44 truncate text-sm">
           {contributorName}
         </p>
       {/snippet}
@@ -56,12 +59,15 @@ const createdAtLabel = $derived.by(() => {
 
   {#if reviewerName !== '-'}
     <div class="hidden min-w-0 items-center gap-2 @min-[72rem]:flex">
-      <small class="text-xs text-muted-foreground"
+      <small class="text-muted-foreground text-xs"
         >{m.stock_active_kestrel_offer()}</small
       >
-      <SimpleTooltip disabled={!reviewerAttribution} triggerProps={{ tabindex: -1 }}>
+      <SimpleTooltip
+        disabled={!reviewerAttribution || reviewerAttribution === reviewerName}
+        triggerProps={{ tabindex: -1 }}
+      >
         {#snippet trigger()}
-          <p class="m-0 max-w-44 truncate text-sm text-foreground">
+          <p class="text-foreground m-0 max-w-44 truncate text-sm">
             {reviewerName}
           </p>
         {/snippet}

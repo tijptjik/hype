@@ -113,7 +113,7 @@ $effect(() => {
   <div class="bits-index-card__footer-left">
     {#if status}
       <SimpleTooltip
-        disabled={!status.tooltip}
+        disabled={!status.tooltip || status.tooltip === status.label}
         triggerProps={nonFocusableTooltipTriggerProps}
       >
         {#snippet trigger()}
@@ -146,7 +146,7 @@ $effect(() => {
   <div class="bits-index-card__footer-right">
     <div
       bind:clientWidth={breadcrumbSlotWidth}
-      class="relative flex justify-end w-full min-w-0"
+      class="relative flex w-full min-w-0 justify-end"
     >
       <div class="bits-index-card__breadcrumbs bits-index-card__meta">
         {#each breadcrumbs.slice(
@@ -154,7 +154,7 @@ $effect(() => {
           visibleBreadcrumbCount,
         ) as breadcrumb, index (index)}
           <SimpleTooltip
-            disabled={!breadcrumb.tooltip}
+            disabled={!breadcrumb.tooltip || breadcrumb.tooltip === breadcrumb.label}
             triggerProps={nonFocusableTooltipTriggerProps}
           >
             {#snippet trigger()}

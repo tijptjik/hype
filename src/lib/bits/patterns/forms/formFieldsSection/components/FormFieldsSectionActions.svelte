@@ -2,7 +2,7 @@
 import { fade } from 'svelte/transition'
 // ICONS
 import Trash from 'virtual:icons/proicons/delete'
-import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
+import { Button } from '#lib/bits/core/index.js'
 import { m } from '#lib/i18n.js'
 // TYPES
 import type { FormFieldsSectionActionsProps } from '../formFieldsSection.types'
@@ -42,28 +42,18 @@ $effect(() => {
       .filter(Boolean)
       .join(' ')}
   >
-    <SimpleTooltip contentProps={{ role: 'tooltip' }}>
-      {#snippet trigger()}
-        <Button
-          text={removeMode
-            ? m.moving_each_orangutan_care()
-            : m.upper_caring_falcon_boost()}
-          size="sm"
-          style="ghost"
-          color="light"
-          iconClasses="size-5! [&_svg]:size-5!"
-          iconComponent={Trash}
-          attrs={{
-            'aria-pressed': removeMode,
-            title: removeMode
-              ? m.moving_each_orangutan_care()
-              : m.upper_caring_falcon_boost(),
-          }}
-          onClick={event => toggleRemoveMode(event)}
-          class="min-h-10 inline-flex items-center gap-2 px-3 [&_svg]:size-5"
-        />
-      {/snippet}
-      {removeMode ? m.moving_each_orangutan_care() : m.upper_caring_falcon_boost()}
-    </SimpleTooltip>
+    <Button
+      text={removeMode ? m.moving_each_orangutan_care() : m.upper_caring_falcon_boost()}
+      size="sm"
+      style="ghost"
+      color="light"
+      iconClasses="size-5! [&_svg]:size-5!"
+      iconComponent={Trash}
+      attrs={{
+        'aria-pressed': removeMode,
+      }}
+      onClick={event => toggleRemoveMode(event)}
+      class="inline-flex min-h-10 items-center gap-2 px-3 [&_svg]:size-5"
+    />
   </div>
 {/if}
