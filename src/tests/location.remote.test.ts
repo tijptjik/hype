@@ -5,6 +5,8 @@ import type { UserRoleDisco } from '#lib/types.js'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
 
 const mocks = vi.hoisted(() => ({
+  retryRematch: vi.fn(),
+  presentationPolicy: vi.fn(),
   directory: vi.fn(),
   rejectIdentity: vi.fn(),
   rejectedSourceIds: vi.fn(),
@@ -61,6 +63,9 @@ const mocks = vi.hoisted(() => ({
     },
   },
 }))
+vi.mock('#lib/db/services/featurePresentationPolicy.js', () => ({
+  readFeaturePresentationPolicy: mocks.presentationPolicy,
+}))
 vi.mock('#lib/api/server/guarded.js', () => {
   const wrap =
     (kind: 'query' | 'command') =>
@@ -74,6 +79,9 @@ vi.mock('#lib/api/server/guarded.js', () => {
       )
   return { guardedQuery: wrap('query'), guardedCommand: wrap('command') }
 })
+vi.mock('#lib/db/services/locationRematch.js', () => ({
+  retryLocationRematch: mocks.retryRematch,
+}))
 vi.mock('#lib/db/services/locationIdentityRejection.js', () => ({
   rejectLocationIdentityReview: mocks.rejectIdentity,
   rejectedFeatureLocationSourceIds: mocks.rejectedSourceIds,
@@ -205,6 +213,7 @@ import {
   acceptLocationMergeReview,
   prepareLocationIdentityReview,
   prepareMirroredLocationIdentityReview,
+  retryLocationRematch,
   getLocationIdentityReviewAccess,
   getLocationIdentityReview,
   acceptLocationIdentityReview,
@@ -217,6 +226,10 @@ beforeEach(() => {
   // Exercise hosted API authorization independently of the development endpoint.
   vi.stubEnv('DEV', false)
   vi.clearAllMocks()
+  mocks.presentationPolicy.mockResolvedValue({
+    allowDescriptions: true,
+    locationBasedNames: false,
+  })
   mocks.rejectedSourceIds.mockResolvedValue(new Set())
   mocks.rejectIdentity.mockResolvedValue({ status: 'rejected' })
   mocks.hydrateSource.mockImplementation(async (_client, projection) => projection)
@@ -365,10 +378,11 @@ it('hides local creation for Project-only managers and rechecks Organisation aut
   })
 })
 
-it('requires Organisation management before local Location creation', async () => {
+it('requires Organisation management and preserves the authored type during local Location creation', async () => {
   const input = {
     projectId: 'p',
     state: 'manual' as const,
+    kind: 'building' as const,
     facts: {
       names: { en: 'Shop' },
       phoneNumber: [],
@@ -383,8 +397,8 @@ it('requires Organisation management before local Location creation', async () =
           address2dId: null,
           address3dId: null,
           address3dUnitId: null,
-          addressSnapshotId: null,
-          records: {},
+          snapshotId: null,
+          rawSource: {},
           fallbackDisplay: {},
         },
       },
@@ -398,7 +412,7 @@ it('requires Organisation management before local Location creation', async () =
   expect(mocks.createLocation).toHaveBeenCalledWith(
     mocks.context.db,
     'org',
-    expect.objectContaining({ state: 'manual' }),
+    expect.objectContaining({ state: 'manual', kind: 'building' }),
     'u',
   )
 })
@@ -410,6 +424,17 @@ describe('initial Location link command', () => {
     revisionId: 'revision',
     expectedFeatureModifiedAt: 'timestamp',
   }
+  it('enforces Location naming when required by the persisted parent policy', async () => {
+    mocks.presentationPolicy.mockResolvedValue({
+      allowDescriptions: true,
+      locationBasedNames: true,
+    })
+    await linkFeatureLocation({ ...input, nameMode: 'independent' })
+    expect(mocks.linkLocation).toHaveBeenCalledWith(
+      mocks.context.db,
+      expect.objectContaining({ nameMode: 'inherit' }),
+    )
+  })
   it('uses persisted ancestry and authorizes every inherited field group', async () => {
     expect(await linkFeatureLocation(input)).toEqual({
       status: 'linked',
@@ -462,6 +487,20 @@ describe('initial Location link command', () => {
 
 describe('Location source search authorization', () => {
   const input = { featureId: 'f', q: 'Shop', locale: 'en' as const }
+  it('preserves category-only filters after authorizing the Feature', async () => {
+    mocks.searchLocations.mockResolvedValue([])
+    await searchFeatureLocations({
+      ...input,
+      q: ' ',
+      filters: { taxonomyPrimary: 'bakery' },
+    })
+    expect(mocks.searchLocations).toHaveBeenCalledWith(expect.anything(), {
+      q: '',
+      locale: 'en',
+      limit: 10,
+      filters: { taxonomyPrimary: 'bakery' },
+    })
+  })
   it('authorizes persisted Feature editing before making an external request', async () => {
     mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false })
     await expect(searchFeatureLocations(input)).rejects.toMatchObject({ status: 403 })
@@ -1226,7 +1265,7 @@ describe('canonical candidate import boundary', () => {
     expect(mocks.persistCandidate).not.toHaveBeenCalled()
   })
   it('sanitizes upstream and unavailable identity failures', async () => {
-    mocks.lookupSource.mockRejectedValueOnce(new Error('private upstream payload'))
+    mocks.lookupSource.mockRejectedValueOnce(new Error('private upstream rawSource'))
     await expect(importFeatureLocationCandidate(input)).rejects.toMatchObject({
       status: 502,
       body: { message: 'LOCATION_SOURCE_LOOKUP_FAILED' },
@@ -1264,6 +1303,23 @@ describe('standalone Location reads', () => {
       q: 'shop',
       scope: 'client-cache-only',
       restrictToOrganisation: false,
+    })
+  })
+  it('forwards kind and lifecycle filters and narrows authorized organisation indexes', async () => {
+    mocks.directory.mockResolvedValue({ data: [], nextCursor: null })
+    await getLocations({
+      organisationId: 'p',
+      kind: 'building',
+      lifecycleStatus: 'demolished',
+      after: 'cursor',
+    })
+    expect(mocks.authorizeOrganisation).toHaveBeenCalled()
+    expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
+      organisationId: 'p',
+      kind: 'building',
+      lifecycleStatus: 'demolished',
+      after: 'cursor',
+      restrictToOrganisation: true,
     })
   })
   it('rejects project discovery and private details before reading facts', async () => {
@@ -1418,4 +1474,37 @@ it('authorizes display-only discovery details without canonical import or writes
   expect(mocks.lookupSource).not.toHaveBeenCalled()
   expect(mocks.persistCandidate).not.toHaveBeenCalled()
   expect(mocks.linkLocation).not.toHaveBeenCalled()
+})
+
+describe('rematch retry authorization', () => {
+  const input = { locationId: 'location', jobId: 'job' }
+  it('requires an account and persisted Location authority before retrying', async () => {
+    mocks.context.user.isAnonymous = true
+    await expect(retryLocationRematch(input)).rejects.toMatchObject({ status: 403 })
+    expect(mocks.retryRematch).not.toHaveBeenCalled()
+    mocks.context.user.isAnonymous = false
+    mocks.authorizeOrganisation.mockReturnValue({
+      allowed: false,
+      reason: 'INSUFFICIENT_ROLE',
+    })
+    await expect(retryLocationRematch(input)).rejects.toMatchObject({ status: 403 })
+    expect(mocks.retryRematch).not.toHaveBeenCalled()
+  })
+  it('queues authorized current work and reports stale or busy intent as conflict', async () => {
+    mocks.retryRematch.mockResolvedValue(true)
+    await expect(retryLocationRematch(input)).resolves.toEqual({ queued: true })
+    expect(mocks.retryRematch).toHaveBeenCalledWith(mocks.context.db, input)
+    mocks.retryRematch.mockResolvedValue(false)
+    await expect(retryLocationRematch(input)).rejects.toMatchObject({ status: 409 })
+  })
+  it('does not grant shared identity authority to a Feature editor', async () => {
+    mocks.probeIdentity.mockResolvedValue({
+      id: 'location',
+      ownerOrganisationId: null,
+      state: 'unresolved',
+      ssId: null,
+    })
+    await expect(retryLocationRematch(input)).rejects.toMatchObject({ status: 403 })
+    expect(mocks.retryRematch).not.toHaveBeenCalled()
+  })
 })
