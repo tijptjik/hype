@@ -1360,6 +1360,12 @@ async function refreshHub(ref: string = hubRef): Promise<HubGetState> {
   }
 }
 
+/**
+ * Settles a Hub toggle from its write acknowledgement while the editor owns the route.
+ * @param params Toggle field, feedback labels, busy setter and remote command.
+ * @returns Completion of the remote write and current-route feedback.
+ * @remarks Navigation or scope reload suppresses late local effects.
+ */
 async function handleHubStateToggle({
   field,
   successWhenTrue,
@@ -1376,11 +1382,18 @@ async function handleHubStateToggle({
   const hubData = hub?.data
   if (!hubData) return
 
+  const mutationRef = hubRef
+  const mutationScope = adminCtx.view.resources.scopeKey
+  const ownsRoute = editorCtrl.captureRoute()
+  const isCurrentMutation = (): boolean =>
+    ownsRoute() &&
+    hubRef === mutationRef &&
+    adminCtx.view.resources.scopeKey === mutationScope
   const nextState = !hubData[field]
   setBusy(true)
 
   try {
-    await mutate({
+    const result = await mutate({
       id: hubData.id,
       state: nextState,
       meta: { isAdminRequest: true },
@@ -1398,12 +1411,20 @@ async function handleHubStateToggle({
       }).withOverride(overrideHubListItemBoolean(hubData.id, field, nextState)),
     )
 
-    commitSettledHubState(await refreshHub())
+    if (!isCurrentMutation()) return
+    // Preserve fresh relations while applying the authoritative changed field.
+    if (hub?.data?.id === hubData.id) {
+      commitSettledHubState({
+        ...hub,
+        data: { ...hub.data, ...result.data },
+      } as HubGetState)
+    }
     toast.success(`${nextState ? successWhenTrue : successWhenFalse} ${hubData.code}`)
   } catch {
+    if (!isCurrentMutation()) return
     toast.error(m.long_crazy_peacock_care())
   } finally {
-    setBusy(false)
+    if (isCurrentMutation()) setBusy(false)
   }
 }
 
@@ -1478,26 +1499,31 @@ $effect(() => {
 
 $effect(() => {
   const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
-  return editorCtrl.syncRouteAndLoad({
-    ref: hubRef,
-    resetFormActionsSignature: () => {
-      lastFormActionsSignature = ''
-      suppressFormLevelIssues = true
-      settledHubRef = null
-    },
-    setFacetForRef: nextRef => {
-      untrack(() => {
-        const currentFacet = adminCtx.activeFacet
-        const nextFacet =
-          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
-            ? currentFacet
-            : 'core'
-        adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.hub)
-      })
-    },
-    load: refreshHub,
-    commit: commitSettledHubState,
-  })
+  const ref = hubRef
+  adminCtx.view.resources.scopeKey
+  return untrack(() =>
+    editorCtrl.syncRouteAndLoad({
+      ref,
+      resetFormActionsSignature: () => {
+        headerCtrl.setFormActions({ isPublishing: false, isDeleting: false })
+        lastFormActionsSignature = ''
+        suppressFormLevelIssues = true
+        settledHubRef = null
+      },
+      setFacetForRef: nextRef => {
+        untrack(() => {
+          const currentFacet = adminCtx.activeFacet
+          const nextFacet =
+            currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+              ? currentFacet
+              : 'core'
+          adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.hub)
+        })
+      },
+      load: refreshHub,
+      commit: commitSettledHubState,
+    }),
+  )
 })
 
 $effect(() => {
@@ -1641,7 +1667,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
@@ -1657,9 +1683,7 @@ $effect(() => {
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
 
-          {#snippet children(
-            locale,
-          )}
+          {#snippet children(locale)}
             <FormI18nDescriptorFields
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}
@@ -1774,7 +1798,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'layers' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
@@ -1796,7 +1820,7 @@ $effect(() => {
       isVisible={isFieldsFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme left-0! right-0! flex gap-4 min-h-0 flex-col"
+      class="bits-theme right-0! left-0! flex min-h-0 flex-col gap-4"
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
@@ -1860,7 +1884,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('policies', 'previous')}
       nextAction={buildFacetNavAction('policies', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'policies' }}
     >
       <FormSurface>
@@ -1887,9 +1911,7 @@ $effect(() => {
           sectionKey="policies"
           {isEditing}
         >
-          {#snippet children(
-            locale,
-          )}
+          {#snippet children(locale)}
             <input
               {...getPolicyGenAttrs(
                 locale,
@@ -1968,7 +1990,7 @@ $effect(() => {
           </ImageProvider>
         {:else}
           <div
-            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground"
+            class="text-muted-foreground flex h-full w-full items-center justify-center p-6 text-center text-sm"
           >
             {m.admin__forms_hub_image_save_hint()}
           </div>
