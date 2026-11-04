@@ -92,11 +92,11 @@ describe('account appearance synchronization', () => {
     api.write.mockImplementationOnce(() => firstWrite.promise)
     const sync = new ThemePreferenceSync(model, api)
     await sync.restore()
-    model.selectMap('hyperLight')
+    model.selectMap('hype-light')
     await settle()
     expect(api.write).toHaveBeenCalledTimes(1)
     expect(api.write.mock.calls[0][0]).toMatchObject({
-      mapStyle: 'hyperLight',
+      mapStyle: 'hype-light',
       syncUiAndMap: false,
       useActiveMapStyle: false,
     })
