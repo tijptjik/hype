@@ -354,7 +354,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
     // Register the hostname after authorization and validation, before publishing the hub.
     try {
-      await ensureHubDomain(ctx.event.platform?.env ?? {}, normalizedCode)
+      await ensureHubDomain(ctx.event.locals.platform?.env ?? {}, normalizedCode)
     } catch (cause) {
       console.error('Hub domain registration failed', cause)
       invalid(
@@ -467,7 +467,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Ensure unchanged names too, allowing operators to repair missing registrations by saving.
   try {
-    await ensureHubDomain(ctx.event.platform?.env ?? {}, normalizedCode, current.code)
+    await ensureHubDomain(ctx.event.locals.platform?.env ?? {}, normalizedCode, current.code)
   } catch (cause) {
     console.error('Hub domain registration failed', cause)
     invalid(

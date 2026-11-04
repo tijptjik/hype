@@ -122,7 +122,7 @@ vi.mock('#lib/api/server/guarded.js', () => ({
           },
         ) => Promise<unknown>
       )(input, {
-        event: { platform: { env: { ENVIRONMENT: 'local' } } },
+        event: { locals: { platform: { env: { ENVIRONMENT: 'local' } } } },
         ...(await mockGuardedContext()),
         invalid,
         issue,
@@ -380,6 +380,48 @@ describe('hub.remote form image handling', () => {
   afterAll(() => {
     policyMatrix.flush()
   })
+
+  it.each(['create', 'update'] as const)(
+    'reads domain bindings from request locals in %s mode',
+    async mode => {
+      const env = { ENVIRONMENT: 'local' }
+      mockGuardedContext.mockResolvedValue({
+        db: buildDbForCreate(),
+        user: { id: 'u-1', superAdmin: true },
+        userRoles: [],
+        event: { locals: { platform: { env } } },
+      })
+      mockProbeHubForUpdate.mockResolvedValue({
+        id: 'hub-1',
+        code: 'mappinghk',
+        modifiedAt: '2026-02-23T00:00:00.000Z',
+      })
+      mockUpdateHubByIdWithConcurrency.mockResolvedValue({ id: 'hub-1' })
+
+      await remote.hubForm(
+        {
+          meta: mode === 'create'
+            ? { mode }
+            : { mode, id: 'hub-1', updatedAt: '2026-02-23T00:00:00.000Z' },
+          data: {
+            code: 'mappinghk',
+            domain: '',
+            i18n: {},
+            userRoles: [{ userId: 'u-1', role: 'admin' }],
+          },
+        },
+        message => { throw new Error(String(message)) },
+      )
+
+      if (mode === 'create') {
+        expect(mockEnsureHubDomain).toHaveBeenCalledWith(env, 'mappinghk')
+      } else {
+        expect(mockEnsureHubDomain).toHaveBeenCalledWith(env, 'mappinghk', 'mappinghk')
+      }
+      expect(mode === 'create' ? mockCreateHub : mockUpdateHubByIdWithConcurrency)
+        .toHaveBeenCalledTimes(1)
+    },
+  )
 
   it('does not persist a hub when domain registration fails', async () => {
     mockGuardedContext.mockResolvedValue({
