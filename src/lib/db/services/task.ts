@@ -15,12 +15,13 @@ import {
   taskImage,
 } from '#lib/db/schema/index.js'
 // CRUD
-import { insert, update, del } from '../crud'
+import { update, del } from '../crud'
 // SERVICES
 import { getProjectForFeatureId } from './project'
 import { getOrganisationForProjectId } from './organisation'
 import { getTaskHubFilter } from './hub'
-import { assertTaskFeatureScope, taskFeatureScopeCondition } from './task-scope'
+import { taskSubmissionScopeCondition, taskFeatureScopeCondition } from './task-scope'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
 import { uploadAndProcessImage } from '#lib/client/services/image.js'
 // FEATURE
 // ENUMS
@@ -42,7 +43,7 @@ import type {
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type { Image, ImageUploadCtx } from '#lib/db/zod/schema/image.types.js'
 // API SERVICES
-import { createUserContributedFeature } from '#lib/api/services/feature.js'
+import { createUserContributedFeatureTask } from '#lib/api/services/feature.js'
 import type { UserContributedFeature } from '#lib/db/zod/schema/feature.types.js'
 // TYPES
 import type {
@@ -303,10 +304,18 @@ export const probeTaskQuery = async (
  * @param data - The task data to create
  * @returns The created task
  * @throws {Error} If task creation fails
+ * @remarks Scope validation and insertion share a transaction so reparenting cannot
+ * create a task under the former project or organisation.
  */
 export const createTask = async (db: Database, data: TaskNew): Promise<TaskDB> => {
-  await assertTaskFeatureScope(db, data)
-  return await insert(db, task, data)
+  // Validate live ancestry before inserting within the same D1 transaction.
+  const result = await executeRevisionBatch(db, taskSubmissionScopeCondition(data), [
+    db.insert(task).values(data).returning(),
+  ])
+  if (!result) throw error(400, 'TASK_FEATURE_SCOPE_MISMATCH')
+  const created = (result[0] as TaskDB[])[0]
+  if (!created) throw error(404, 'Task creation failed')
+  return created
 }
 
 /**
@@ -706,6 +715,50 @@ export const commitTaskFeatureReview = async (
 }
 
 /**
+ * Requires an owned pending draft, live ancestry and retained image evidence at write time.
+ * @param expected Persisted task identity and revision.
+ * @param type Expected contribution type.
+ * @returns Conditions for an atomic finalization update.
+ */
+function taskDraftFinalizationCondition(
+  expected: TaskFeatureDraftFinalizationCommit['task'],
+  type: TaskDB['type'],
+): SQL {
+  return and(
+    eq(task.id, expected.id),
+    eq(task.featureId, expected.featureId),
+    eq(task.contributorId, expected.contributorId),
+    eq(task.modifiedAt, expected.modifiedAt),
+    eq(task.type, type),
+    eq(task.isDraft, true),
+    eq(task.isReviewed, false),
+    taskFeatureScopeCondition(),
+    sql`EXISTS (SELECT 1 FROM taskImage ti JOIN image i ON i.id=ti.imageId
+      WHERE ti.taskId=${task.id} AND i.isArchived=0)`,
+  )!
+}
+
+/**
+ * Finalizes a photo or missing-report draft only while its authorized snapshot is current.
+ * @param db Request-local database.
+ * @param expected Persisted task snapshot checked by the contribution handler.
+ * @returns Submitted task, or undefined when evidence, scope or task state changed.
+ */
+export async function commitTaskDraftFinalization(
+  db: Database,
+  expected: TaskFeatureDraftFinalizationCommit['task'] & Pick<TaskDB, 'type'>,
+): Promise<TaskDB | undefined> {
+  if (expected.type !== 'newPhoto' && expected.type !== 'reportedMissing')
+    return undefined
+  const [submitted] = await db
+    .update(task)
+    .set({ isDraft: false })
+    .where(taskDraftFinalizationCondition(expected, expected.type))
+    .returning()
+  return submitted
+}
+
+/**
  * Finalizes a new-feature draft and its task together.
  * @param db Database handle.
  * @param input Current task and feature snapshots.
@@ -722,6 +775,7 @@ export const commitTaskFeatureDraftFinalization = async (
   const featureSnapshot = and(
     eq(feature.id, input.feature.id),
     eq(feature.modifiedAt, input.feature.modifiedAt),
+    eq(feature.isDraft, true),
   )
 
   // Claim task submission only while its linked feature remains the exact draft snapshot.
@@ -730,13 +784,7 @@ export const commitTaskFeatureDraftFinalization = async (
     .set({ isDraft: false })
     .where(
       and(
-        eq(task.id, input.task.id),
-        eq(task.featureId, input.task.featureId),
-        eq(task.contributorId, input.task.contributorId),
-        eq(task.modifiedAt, input.task.modifiedAt),
-        eq(task.isDraft, true),
-        eq(task.isReviewed, false),
-        taskFeatureScopeCondition(),
+        taskDraftFinalizationCondition(input.task, 'newFeature'),
         sql`exists (select 1 from ${feature} where ${featureSnapshot})`,
       ),
     )
@@ -748,8 +796,13 @@ export const commitTaskFeatureDraftFinalization = async (
     .returning({ id: feature.id })
 
   // Keep these statements adjacent: changes() must describe task submission above.
-  const [completed, finalized] = await db.batch([completion, featureFinalization])
-  return completed.length === 1 && finalized.length === 1
+  const result = await executeRevisionBatch(
+    db,
+    sql`EXISTS (SELECT 1 FROM task WHERE ${taskDraftFinalizationCondition(input.task, 'newFeature')})`,
+    [completion, featureFinalization, prepareRevisionCheck(db, sql`changes() = 1`)],
+  )
+  if (!result) return false
+  return (result[0] as unknown[]).length === 1 && (result[1] as unknown[]).length === 1
 }
 
 /**
@@ -851,27 +904,18 @@ export const createTaskWithDependencies = async (
   // Step 1 : Set contributor ID from session
   taskData = setContributorId(taskData, userId)
 
-  // Step 2: Create feature if needed for newFeature tasks
+  // Step 2: Commit a new Feature and its review task together before uploading photos.
   if (taskData.type === 'newFeature') {
-    // Pass the raw UserContributedFeature data to the API service
-    // The API service will handle enrichment, translation, and defaults
-    const createdFeature = await createUserContributedFeature(
+    // Preparation retains translation/default handling; the task uses persisted Feature ancestry.
+    const created = await createUserContributedFeatureTask(
       db,
-      taskData.feature as UserContributedFeature,
+      { ...taskData.feature, isDraft: false } as UserContributedFeature,
       region,
       subscriptionKey,
+      { contributorId: userId },
     )
-    taskData.featureId = createdFeature.id
-
-    // Update task data with the actual hierarchical IDs from the created feature
-    // This ensures the task references the correct project/organisation
-    taskData.organisationId = createdFeature.organisationId
-    taskData.projectId = createdFeature.projectId
-
-    // Remove the feature object from taskData since we now have featureId
-    // and task validation doesn't need the full feature object
-    const { feature: _feature, ...taskDataWithoutFeature } = taskData
-    taskData = taskDataWithoutFeature as TaskCreation
+    if (images.length > 0) await processTaskImagesDB(db, images, created.task, fetch)
+    return created.task
   }
 
   // Step 3: Validate that all tasks have valid featureIds

@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   createFeatureForm: vi.fn(),
+  createFeatureTask: vi.fn(),
+  saveFeatureTaskDraft: vi.fn(),
   saveUnlinkedFeatureForm: vi.fn(),
   probeFeatureForUpdate: vi.fn(),
   createI18n: vi.fn(),
@@ -14,8 +16,11 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('#lib/db/services/feature.js', () => mocks)
 vi.mock('#lib/db/services/featureFormSave.js', () => mocks)
+vi.mock('#lib/db/services/taskContribution.js', () => mocks)
 vi.mock('#lib/db/services/layer.js', () => mocks)
-vi.mock('#lib/db/services/historicalLayers.js', () => ({ historicalSourceLayerId: vi.fn(async () => null) }))
+vi.mock('#lib/db/services/historicalLayers.js', () => ({
+  historicalSourceLayerId: vi.fn(async () => null),
+}))
 vi.mock('#lib/db/zod/schema/feature.js', async importOriginal => ({
   ...(await importOriginal<object>()),
   FeatureDraftEntityFormData: { parse: mocks.draftParse },
@@ -24,7 +29,9 @@ vi.mock('#lib/db/zod/schema/feature.js', async importOriginal => ({
 
 import {
   createUserContributedFeature,
+  createUserContributedFeatureTask,
   updateUserContributedFeatureDraft,
+  updateUserContributedFeatureTaskDraft,
 } from '#lib/api/services/feature.js'
 
 describe('feature contribution submission stage', () => {
@@ -153,18 +160,123 @@ it('requires the exact persisted draft state for atomic contribution updates', a
   ).rejects.toThrow('Feature draft update failed')
 })
 
-
 it('preserves fourth-language content and verification without copying failed translation fallbacks', async () => {
-  mocks.probeLayerForUpdate.mockResolvedValue({ id: 'layer', projectId: 'project', organisationId: 'organisation' })
-  mocks.createFeatureForm.mockImplementation(async (_db, { data }) => ({ id: 'feature', ...data }))
-  await createUserContributedFeature({ query: { property: { findMany: async () => [] } } } as never, {
-    layerId: 'layer', isDraft: false, i18n: { ja: { title: '喫茶店', titleGen: true, description: '<p>説明</p>', descriptionGen: false } },
-    properties: [{ propertyId: 'p', i18n: { ja: { value: '値', valueGen: true } } }],
-  } as never, '', '')
+  mocks.probeLayerForUpdate.mockResolvedValue({
+    id: 'layer',
+    projectId: 'project',
+    organisationId: 'organisation',
+  })
+  mocks.createFeatureForm.mockImplementation(async (_db, { data }) => ({
+    id: 'feature',
+    ...data,
+  }))
+  await createUserContributedFeature(
+    { query: { property: { findMany: async () => [] } } } as never,
+    {
+      layerId: 'layer',
+      isDraft: false,
+      i18n: {
+        ja: {
+          title: '喫茶店',
+          titleGen: true,
+          description: '<p>説明</p>',
+          descriptionGen: false,
+        },
+      },
+      properties: [{ propertyId: 'p', i18n: { ja: { value: '値', valueGen: true } } }],
+    } as never,
+    '',
+    '',
+  )
   const payload = mocks.finalParse.mock.lastCall?.[0]
-  expect(payload.i18n.ja).toMatchObject({ title: '喫茶店', titleGen: true, description: '<p>説明</p>', descriptionGen: false })
+  expect(payload.i18n.ja).toMatchObject({
+    title: '喫茶店',
+    titleGen: true,
+    description: '<p>説明</p>',
+    descriptionGen: false,
+  })
   expect(payload.i18n.en.title).toBe('')
   expect(payload.i18n.en.description).toBe('')
   expect(payload.properties[0].i18n.ja).toEqual({ value: '値', valueGen: true })
   expect(payload.properties[0].i18n.en.value).toBe('')
+})
+
+it.each([false, true])(
+  'prepares the combined contribution at draft stage %s',
+  async isDraft => {
+    mocks.probeLayerForUpdate.mockResolvedValue({
+      id: 'layer',
+      projectId: 'project',
+      organisationId: 'organisation',
+    })
+    const expected = { feature: { id: 'feature' }, task: { id: 'task' } }
+    mocks.createFeatureTask.mockResolvedValue(expected)
+    await expect(
+      createUserContributedFeatureTask(
+        {} as never,
+        { layerId: 'layer', i18n: {}, properties: [], isDraft } as never,
+        '',
+        '',
+        { contributorId: 'account' },
+      ),
+    ).resolves.toBe(expected)
+    expect(mocks.createFeatureTask).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        data: expect.objectContaining({
+          projectId: 'project',
+          organisationId: 'organisation',
+          isDraft,
+          isPublished: false,
+          isPendingReview: true,
+        }),
+        i18n: expect.any(Object),
+        properties: [],
+      }),
+      { contributorId: 'account' },
+    )
+  },
+)
+
+it('maps a superseded combined draft save to a conflict without a separate Feature write', async () => {
+  mocks.probeFeatureForUpdate.mockResolvedValue({
+    id: 'feature',
+    projectId: 'project',
+    modifiedAt: 'feature-v1',
+  })
+  mocks.probeLayerForUpdate.mockResolvedValue({
+    id: 'layer',
+    projectId: 'project',
+    organisationId: 'organisation',
+  })
+  mocks.saveUnlinkedFeatureForm.mockClear()
+  mocks.saveFeatureTaskDraft.mockResolvedValue(undefined)
+  const expected = {
+    id: 'task',
+    featureId: 'feature',
+    contributorId: 'account',
+    projectId: 'project',
+    organisationId: 'organisation',
+    modifiedAt: 'task-v1',
+  }
+  await expect(
+    updateUserContributedFeatureTaskDraft(
+      {} as never,
+      expected,
+      { layerId: 'layer', i18n: {}, properties: [], contributorId: 'spoofed' } as never,
+      '',
+      '',
+    ),
+  ).rejects.toMatchObject({ status: 409, body: { message: 'STALE_TASK_DRAFT' } })
+  expect(mocks.saveFeatureTaskDraft).toHaveBeenLastCalledWith(
+    expect.anything(),
+    expect.objectContaining({
+      featureId: 'feature',
+      updatedAt: 'feature-v1',
+      expectedDraftState: true,
+      data: expect.objectContaining({ contributorId: 'account', isDraft: true }),
+    }),
+    expected,
+  )
+  expect(mocks.saveUnlinkedFeatureForm).not.toHaveBeenCalled()
 })

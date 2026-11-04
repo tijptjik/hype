@@ -1,3 +1,5 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, or, eq, inArray, sql, type SQL } from 'drizzle-orm'
 // ADDRESS
@@ -7,6 +9,11 @@ import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
 import { toBooleanOrUndefined } from '#lib/api/services/index.js'
 import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // DB
+import {
+  createFeatureTask,
+  saveFeatureTaskDraft,
+  type ContributionDraftTask,
+} from '#lib/db/services/taskContribution.js'
 import {
   createFeatureForm,
   saveUnlinkedFeatureForm,
@@ -24,7 +31,11 @@ import {
 import { probeLayerForUpdate } from '#lib/db/services/layer.js'
 // I18N
 import { supportedLocaleKeys } from '#lib/i18n.js'
-import { adaptContentMap, contentFormKey, contentRowsToForm } from '#lib/i18n/contentRecords.js'
+import {
+  adaptContentMap,
+  contentFormKey,
+  contentRowsToForm,
+} from '#lib/i18n/contentRecords.js'
 // SCHEMA
 import { feature, layer } from '#lib/db/schema/index.js'
 import {
@@ -40,6 +51,7 @@ import {
 import { HierarchicalResource, ImageContextResource } from '#lib/enums.js'
 // CLIENT
 // TYPES
+import type { TaskDB, TaskNew } from '#lib/db/zod/schema/task.types.js'
 import type {
   Database,
   EntityResponse,
@@ -166,6 +178,10 @@ function parseFeatureProfileWithFallback<T>(
 //
 // FEATURE CREATION WITH ENRICHMENT
 // - createUserContributedFeature
+// - createUserContributedFeatureTask
+// - prepareUserContributedFeatureCreation
+// - updateUserContributedFeatureTaskDraft
+// - prepareUserContributedFeatureDraftUpdate
 
 /********************
  *  DB RELATIONS
@@ -800,7 +816,9 @@ const prepareUserContributedFeatureDraft = async (
   }
 
   newFeature = { ...newFeature, i18n: adaptContentMap(newFeature.i18n) }
-  const contentKeys = [...new Set([...supportedLocaleKeys, ...Object.keys(newFeature.i18n)])]
+  const contentKeys = [
+    ...new Set([...supportedLocaleKeys, ...Object.keys(newFeature.i18n)]),
+  ]
   const providedLocaleKeys = contentKeys.filter(localeKey =>
     hasMeaningfulLocaleContent(
       newFeature.i18n[localeKey] as Record<string, unknown> | undefined,
@@ -906,10 +924,13 @@ const prepareUserContributedFeatureDraft = async (
       enrichedI18n[localeKey] = {
         title: targetTitle || translatedTitle || '',
         description: targetDescription || translatedDescription || '',
-        displayAddress:
-          targetDisplayAddress || translatedDisplayAddress || '',
-        titleGen: targetTitle ? (targetTextObj?.titleGen ?? false) : Boolean(translatedTitle),
-        descriptionGen: targetDescription ? (targetTextObj?.descriptionGen ?? false) : Boolean(translatedDescription),
+        displayAddress: targetDisplayAddress || translatedDisplayAddress || '',
+        titleGen: targetTitle
+          ? (targetTextObj?.titleGen ?? false)
+          : Boolean(translatedTitle),
+        descriptionGen: targetDescription
+          ? (targetTextObj?.descriptionGen ?? false)
+          : Boolean(translatedDescription),
         displayAddressGen: targetDisplayAddress
           ? (targetTextObj?.displayAddressGen ?? false)
           : Boolean(translatedDisplayAddress),
@@ -925,9 +946,10 @@ const prepareUserContributedFeatureDraft = async (
       if (!property.i18n) return property
 
       const propertyI18nByLocale =
-        adaptContentMap(property.i18n as Record<string, DraftPropertyLocaleInput>) ??
-        {}
-      const propertyKeys = [...new Set([...contentKeys, ...Object.keys(propertyI18nByLocale)])]
+        adaptContentMap(property.i18n as Record<string, DraftPropertyLocaleInput>) ?? {}
+      const propertyKeys = [
+        ...new Set([...contentKeys, ...Object.keys(propertyI18nByLocale)]),
+      ]
       const propertySourceLocaleKey = propertyKeys.find(localeKey =>
         Boolean(propertyI18nByLocale[localeKey]?.value?.trim()),
       )
@@ -1022,6 +1044,54 @@ export const createUserContributedFeature = async (
   region: string,
   subscriptionKey: string,
 ): Promise<FeatureDB> => {
+  const input = await prepareUserContributedFeatureCreation(
+    db,
+    newFeature,
+    region,
+    subscriptionKey,
+  )
+  return createFeatureForm(db, input)
+}
+
+/**
+ * Creates a translated contribution and its review task in one database transaction.
+ * @param db Request database.
+ * @param newFeature Authorized contribution input and requested draft stage.
+ * @param region Translation service region.
+ * @param subscriptionKey Translation service credential.
+ * @param author Session-owned contributor and optional submitted message.
+ * @returns The committed Feature and task.
+ */
+export const createUserContributedFeatureTask = async (
+  db: Database,
+  newFeature: UserContributedFeature,
+  region: string,
+  subscriptionKey: string,
+  author: Pick<TaskNew, 'contributorId' | 'message'>,
+): Promise<{ feature: FeatureDB; task: TaskDB }> => {
+  const input = await prepareUserContributedFeatureCreation(
+    db,
+    newFeature,
+    region,
+    subscriptionKey,
+  )
+  return createFeatureTask(db, input, author)
+}
+
+/**
+ * Prepares translated and validated contribution fields without persisting them.
+ * @param db Request database for authoritative layer scope and property validation.
+ * @param newFeature Authorized contribution input.
+ * @param region Translation service region.
+ * @param subscriptionKey Translation service credential.
+ * @returns Complete Feature form creation input.
+ */
+const prepareUserContributedFeatureCreation = async (
+  db: Database,
+  newFeature: UserContributedFeature,
+  region: string,
+  subscriptionKey: string,
+): Promise<Parameters<typeof createFeatureForm>[1]> => {
   const stage: UserContributedFeatureDraftStage =
     newFeature.isDraft === true ? 'draft' : 'final'
   const { validatedFeature, layerScope } = await prepareUserContributedFeatureDraft(
@@ -1032,7 +1102,7 @@ export const createUserContributedFeature = async (
     stage,
   )
 
-  const created = await createFeatureForm(db, {
+  return {
     data: {
       ...validatedFeature,
       organisationId: layerScope.organisationId,
@@ -1045,9 +1115,7 @@ export const createUserContributedFeature = async (
     },
     i18n: validatedFeature.i18n,
     properties: validatedFeature.properties ?? [],
-  })
-
-  return created
+  }
 }
 
 /**
@@ -1067,6 +1135,62 @@ export const updateUserContributedFeatureDraft = async (
   region: string,
   subscriptionKey: string,
 ): Promise<FeatureDB> => {
+  const input = await prepareUserContributedFeatureDraftUpdate(
+    db,
+    featureId,
+    newFeature,
+    region,
+    subscriptionKey,
+  )
+  const updated = await saveUnlinkedFeatureForm(db, input)
+  if (!updated) throw new Error('Feature draft update failed')
+  return updated
+}
+
+/**
+ * Saves an authorized contribution draft and its task in one transaction.
+ * @param db Request-local database.
+ * @param expectedTask Persisted task identity and revision after contributor authorization.
+ * @param newFeature Submitted draft form data.
+ * @param region Translation service region.
+ * @param subscriptionKey Translation service credential.
+ * @returns The committed Feature and task; stale submissions are rejected.
+ */
+export const updateUserContributedFeatureTaskDraft = async (
+  db: Database,
+  expectedTask: ContributionDraftTask,
+  newFeature: UserContributedFeature,
+  region: string,
+  subscriptionKey: string,
+): Promise<{ feature: FeatureDB; task: TaskDB }> => {
+  const input = await prepareUserContributedFeatureDraftUpdate(
+    db,
+    expectedTask.featureId,
+    { ...newFeature, isDraft: true, contributorId: expectedTask.contributorId },
+    region,
+    subscriptionKey,
+  )
+  const updated = await saveFeatureTaskDraft(db, input, expectedTask)
+  if (!updated) throw error(409, 'STALE_TASK_DRAFT')
+  return updated
+}
+
+/**
+ * Prepares a translated draft update without persisting Feature or task changes.
+ * @param db Request-local database.
+ * @param featureId Authorized draft identity.
+ * @param newFeature Submitted form data.
+ * @param region Translation service region.
+ * @param subscriptionKey Translation service credential.
+ * @returns Complete Feature update with its expected revision.
+ */
+const prepareUserContributedFeatureDraftUpdate = async (
+  db: Database,
+  featureId: FeatureDB['id'],
+  newFeature: UserContributedFeature,
+  region: string,
+  subscriptionKey: string,
+): Promise<Parameters<typeof saveUnlinkedFeatureForm>[1]> => {
   const featureProbe = await probeFeatureForUpdate(db, featureId)
   if (!featureProbe) {
     throw new Error('Feature not found')
@@ -1082,7 +1206,7 @@ export const updateUserContributedFeatureDraft = async (
     stage,
   )
 
-  const updated = await saveUnlinkedFeatureForm(db, {
+  return {
     featureId,
     projectId: featureProbe.projectId,
     expectedDraftState: true,
@@ -1103,13 +1227,7 @@ export const updateUserContributedFeatureDraft = async (
       isArchived: false,
       isDraft: true,
     },
-  })
-
-  if (!updated) {
-    throw new Error('Feature draft update failed')
   }
-
-  return updated
 }
 
 /**

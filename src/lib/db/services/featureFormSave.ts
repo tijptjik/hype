@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, sql, type SQL } from 'drizzle-orm'
 // IDENTITY
 import { nanoid } from 'nanoid'
 // SCHEMA
@@ -15,6 +15,7 @@ import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 import { getDetachedFeatureBrands } from './locationDetached'
 import { prepareFeatureFormRelations } from './locationRelations'
 // TYPES
+import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
 import type {
   FeatureDB,
@@ -41,12 +42,30 @@ import type {
  */
 export async function createFeatureForm(
   db: Database,
+  input: Parameters<typeof prepareFeatureFormCreation>[1],
+): Promise<FeatureDB> {
+  const plan = prepareFeatureFormCreation(db, input)
+  const result = await db.batch(plan.statements)
+  const created = (result[result.length - 1] as FeatureDB[])[0]
+  if (!created) throw new Error('Feature creation failed')
+  return created
+}
+
+/**
+ * Prepares complete Feature creation for composition with dependent database writes.
+ * @param db Request-local database.
+ * @param input Authorized core values and validated relation snapshots.
+ * @returns Stable identity and unexecuted statements ending in the Feature readback.
+ * @remarks Execute all statements in one batch; preparation does not write data.
+ */
+export function prepareFeatureFormCreation(
+  db: Database,
   input: {
     data: FeatureDBNew
     i18n: Record<string, FeatureI18nPartial>
     properties: NewFeatureProperty[]
   },
-): Promise<FeatureDB> {
+): { id: string; statements: [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]] } {
   const id = input.data.id || nanoid(12)
   const formWriteToken = crypto.randomUUID()
   const parent = db
@@ -61,13 +80,17 @@ export async function createFeatureForm(
     })
     .returning()
   const guard = sql`EXISTS (SELECT 1 FROM feature WHERE id = ${id} AND formWriteToken = ${formWriteToken})`
-  const result = await db.batch([
-    parent,
-    ...prepareFeatureFormRelations(db, id, guard, input.i18n, input.properties),
-  ])
-  const created = (result[0] as FeatureDB[])[0]
-  if (!created) throw new Error('Feature creation failed')
-  return created
+  return {
+    id,
+    statements: [
+      parent,
+      ...prepareFeatureFormRelations(db, id, guard, input.i18n, input.properties),
+      db
+        .select()
+        .from(feature)
+        .where(and(eq(feature.id, id), guard)),
+    ],
+  }
 }
 
 /**
@@ -81,6 +104,26 @@ export async function createFeatureForm(
  */
 export async function saveUnlinkedFeatureForm(
   db: Database,
+  input: Parameters<typeof prepareUnlinkedFeatureFormSave>[1],
+): Promise<FeatureDB | undefined> {
+  const plan = await prepareUnlinkedFeatureFormSave(db, input)
+  if (!plan) return undefined
+  // One atomic batch prevents a linker from observing new parent data with old children.
+  const result = await db.batch(plan.statements)
+  return (result[0] as FeatureDB[])[0]
+    ? (result[result.length - 1] as FeatureDB[])[0]
+    : undefined
+}
+
+/**
+ * Prepares an optimistic Feature save for composition with dependent task writes.
+ * @param db Request-local database.
+ * @param input Authorized persisted identity, revision and complete form input.
+ * @returns Statements and their successful-write guard, or undefined for a missing/stale parent.
+ * @remarks The caller must execute all statements in one transaction; no writes occur here.
+ */
+export async function prepareUnlinkedFeatureFormSave(
+  db: Database,
   input: {
     featureId: string
     projectId: string
@@ -92,7 +135,10 @@ export async function saveUnlinkedFeatureForm(
     locationBrandEdit?: LocationBrandEdit
     actorId?: string
   },
-): Promise<FeatureDB | undefined> {
+): Promise<
+  | { guard: SQL; statements: [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]] }
+  | undefined
+> {
   const brandEdit = input.locationBrandEdit
     ? LocationBrandEditSchema.parse(input.locationBrandEdit)
     : undefined
@@ -161,16 +207,22 @@ export async function saveUnlinkedFeatureForm(
       ),
     )
     .returning()
-  // One atomic batch prevents a linker from observing new parent data with old children.
-  const result = await db.batch([
-    parent,
-    ...prepareFeatureFormRelations(
-      db,
-      input.featureId,
-      guard,
-      input.i18n,
-      input.properties,
-    ),
-  ])
-  return (result[0] as FeatureDB[])[0]
+  // Execute together so a linker cannot observe new parent data with old children.
+  return {
+    guard,
+    statements: [
+      parent,
+      ...prepareFeatureFormRelations(
+        db,
+        input.featureId,
+        guard,
+        input.i18n,
+        input.properties,
+      ),
+      db
+        .select()
+        .from(feature)
+        .where(and(eq(feature.id, input.featureId), guard)),
+    ],
+  }
 }

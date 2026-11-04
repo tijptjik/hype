@@ -11,11 +11,13 @@ const reviewMocks = vi.hoisted(() => ({
   commitTaskImageReview: vi.fn(),
   commitTaskFeatureReview: vi.fn(),
   commitTaskFeatureDraftFinalization: vi.fn(),
+  commitTaskDraftFinalization: vi.fn(),
   probeFeatureForUpdate: vi.fn(),
   probeLayerForUpdate: vi.fn(),
   updateFeatureByIdWithConcurrency: vi.fn(),
   assertUserContributedFeatureDraftIsSubmittable: vi.fn(),
-  updateUserContributedFeatureDraft: vi.fn(),
+  updateUserContributedFeatureTaskDraft: vi.fn(),
+  createUserContributedFeatureTask: vi.fn(),
   createTaskWithDependencies: vi.fn(),
 }))
 
@@ -332,6 +334,45 @@ describe('task draft finalization recovery', () => {
     vi.resetAllMocks()
   })
 
+  it.each(['newPhoto', 'reportedMissing'] as const)(
+    'uses guarded finalization for %s drafts',
+    async type => {
+      const draft = {
+        id: 'task',
+        featureId: 'feature',
+        contributorId: 'contributor',
+        modifiedAt: 'task-v1',
+        type,
+        isDraft: true,
+        images: [{ imageId: 'image' }],
+        message: 'Missing here',
+      }
+      const ctx = {
+        user: { id: 'contributor', isAnonymous: false },
+        userId: 'contributor',
+        event: { locals: {} },
+        db: { query: { task: { findFirst: vi.fn(async () => draft) } } },
+      }
+      reviewMocks.commitTaskDraftFinalization.mockResolvedValue(undefined)
+      await expect(finalizeHandler({ id: 'task' }, ctx)).rejects.toMatchObject({
+        status: 409,
+        message: 'STALE_TASK_DRAFT',
+      })
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+      reviewMocks.commitTaskDraftFinalization.mockResolvedValue({
+        ...draft,
+        isDraft: false,
+      })
+      await expect(finalizeHandler({ id: 'task' }, ctx)).resolves.toMatchObject({
+        data: { isDraft: false },
+      })
+      expect(reviewMocks.commitTaskDraftFinalization).toHaveBeenLastCalledWith(
+        ctx.db,
+        draft,
+      )
+    },
+  )
+
   it.each(['conflict', 'failure', 'missing'])(
     'keeps a task retryable after a feature %s',
     async failure => {
@@ -427,7 +468,7 @@ describe('submitted contribution edit guard', () => {
         ctx,
       ),
     ).rejects.toMatchObject({ status: 409, message: 'TASK_DRAFT_ALREADY_SUBMITTED' })
-    expect(reviewMocks.updateUserContributedFeatureDraft).not.toHaveBeenCalled()
+    expect(reviewMocks.updateUserContributedFeatureTaskDraft).not.toHaveBeenCalled()
     expect(reviewMocks.updateTask).not.toHaveBeenCalled()
   })
 
@@ -445,11 +486,14 @@ describe('submitted contribution edit guard', () => {
         isReviewed: false,
       }),
     }
-    reviewMocks.updateUserContributedFeatureDraft.mockResolvedValue({
-      id: 'feature',
-      organisationId: 'organisation',
-      projectId: 'project',
-      layerId: 'layer',
+    reviewMocks.updateUserContributedFeatureTaskDraft.mockResolvedValue({
+      feature: {
+        id: 'feature',
+        organisationId: 'organisation',
+        projectId: 'project',
+        layerId: 'layer',
+      },
+      task: { id: 'task' },
     })
     await expect(
       editDraftHandler(
@@ -465,14 +509,19 @@ describe('submitted contribution edit guard', () => {
         ctx,
       ),
     ).resolves.toMatchObject({ data: { featureId: 'feature' } })
-    expect(reviewMocks.updateUserContributedFeatureDraft).toHaveBeenCalledWith(
+    expect(reviewMocks.updateUserContributedFeatureTaskDraft).toHaveBeenCalledWith(
       ctx.db,
-      'feature',
+      expect.objectContaining({
+        id: 'task',
+        featureId: 'feature',
+        contributorId: 'contributor',
+        isDraft: true,
+      }),
       { contributorId: 'contributor', isDraft: true },
       '',
       '',
     )
-    expect(reviewMocks.updateTask).toHaveBeenCalledOnce()
+    expect(reviewMocks.updateTask).not.toHaveBeenCalled()
   })
 })
 
@@ -507,6 +556,51 @@ describe('public contribution target guard', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     reviewMocks.createTaskWithDependencies.mockResolvedValue({ id: 'task' })
+  })
+
+  it('creates a new draft through the combined Feature/task transaction', async () => {
+    const feature = {
+      id: 'created',
+      layerId: 'layer',
+      projectId: 'project',
+      organisationId: 'org',
+    }
+    const task = { id: 'draft-task' }
+    reviewMocks.createUserContributedFeatureTask.mockResolvedValue({ feature, task })
+    const db = dbForScope([publicContributionScope])
+    await expect(
+      editDraftHandler(
+        {
+          task: {
+            feature: {},
+            layerId: 'layer',
+            projectId: 'project',
+            organisationId: 'org',
+          },
+        },
+        {
+          db,
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: { locals: {} },
+        },
+      ),
+    ).resolves.toEqual({
+      data: {
+        task,
+        featureId: 'created',
+        layerId: 'layer',
+        projectId: 'project',
+        organisationId: 'org',
+      },
+    })
+    expect(reviewMocks.createUserContributedFeatureTask).toHaveBeenCalledWith(
+      db,
+      { contributorId: 'contributor', isDraft: true },
+      '',
+      '',
+      { contributorId: 'contributor' },
+    )
   })
 
   it('keeps new-feature submissions on their separate creation path', async () => {

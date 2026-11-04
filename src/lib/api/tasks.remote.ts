@@ -44,6 +44,7 @@ import {
   commitTaskImageReview,
   commitTaskFeatureReview,
   commitTaskFeatureDraftFinalization,
+  commitTaskDraftFinalization,
   createTaskWithDependencies,
 } from '#lib/db/services/task.js'
 import {
@@ -56,8 +57,8 @@ import {
 } from '#lib/db/services/layer.js'
 import {
   assertUserContributedFeatureDraftIsSubmittable,
-  createUserContributedFeature,
-  updateUserContributedFeatureDraft,
+  createUserContributedFeatureTask,
+  updateUserContributedFeatureTaskDraft,
 } from '#lib/api/services/feature.js'
 // API SERVICES
 import {
@@ -493,26 +494,16 @@ export const beginNewFeatureDraft = guardedCommand(
         throw error(400, 'TASK_FEATURE_REQUIRED')
       }
 
-      const updatedFeature = await updateUserContributedFeatureDraft(
-        ctx.db,
-        existingTask.featureId as Id,
-        {
-          ...draftFeature,
-          isDraft: true,
-        },
-        region,
-        subscriptionKey,
-      )
+      const { feature: updatedFeature, task: updatedTask } =
+        await updateUserContributedFeatureTaskDraft(
+          ctx.db,
+          existingTask,
+          { ...draftFeature, isDraft: true },
+          region,
+          subscriptionKey,
+        )
 
       scheduleFeatureMtr(ctx.event.locals.platform, updatedFeature.id)
-      const updatedTask = await updateTask(
-        ctx.db,
-        {
-          organisationId: updatedFeature.organisationId,
-          projectId: updatedFeature.projectId,
-        },
-        existingTask.id as Id,
-      )
 
       return {
         data: {
@@ -525,26 +516,16 @@ export const beginNewFeatureDraft = guardedCommand(
       }
     }
 
-    const createdFeature = await createUserContributedFeature(
-      ctx.db,
-      {
-        ...draftFeature,
-        isDraft: true,
-      },
-      region,
-      subscriptionKey,
-    )
+    const { feature: createdFeature, task: createdTask } =
+      await createUserContributedFeatureTask(
+        ctx.db,
+        { ...draftFeature, isDraft: true },
+        region,
+        subscriptionKey,
+        { contributorId: ctx.userId },
+      )
 
     scheduleFeatureMtr(ctx.event.locals.platform, createdFeature.id)
-    const createdTask = await createTask(ctx.db, {
-      type: 'newFeature',
-      featureId: createdFeature.id,
-      projectId: createdFeature.projectId,
-      organisationId: createdFeature.organisationId,
-      contributorId: ctx.userId,
-      isDraft: true,
-      isReviewed: false,
-    })
 
     return {
       data: {
@@ -629,13 +610,6 @@ export const finalizeTaskDraft = guardedCommand(
     }
 
     if (draftTask.type === 'newFeature' && draftTask.featureId) {
-      await assertUserContributedFeatureDraftIsSubmittable(
-        ctx.db,
-        draftTask.featureId as Id,
-      )
-    }
-
-    if (draftTask.type === 'newFeature' && draftTask.featureId) {
       const featureProbe = await probeFeatureForUpdate(
         ctx.db,
         draftTask.featureId as Id,
@@ -645,6 +619,12 @@ export const finalizeTaskDraft = guardedCommand(
         throw error(404, 'FEATURE_NOT_FOUND')
       }
 
+      // Validate content after capturing its revision so edits during validation conflict.
+      await assertUserContributedFeatureDraftIsSubmittable(
+        ctx.db,
+        draftTask.featureId as Id,
+      )
+
       const finalized = await commitTaskFeatureDraftFinalization(ctx.db, {
         task: draftTask,
         feature: featureProbe,
@@ -653,11 +633,8 @@ export const finalizeTaskDraft = guardedCommand(
         throw error(409, 'STALE_TASK_DRAFT')
       }
     } else {
-      const finalizedTask = await updateTask(
-        ctx.db,
-        { isDraft: false },
-        params.id as Id,
-      )
+      const finalizedTask = await commitTaskDraftFinalization(ctx.db, draftTask)
+      if (!finalizedTask) throw error(409, 'STALE_TASK_DRAFT')
       return { data: finalizedTask }
     }
 
