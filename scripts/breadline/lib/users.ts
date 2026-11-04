@@ -392,6 +392,19 @@ export function planUsers(
           .filter((name): name is string => name !== null),
       ),
     ]
+    // An explicit profile decision applies only to its complete, single-email source cohort.
+    const resolution = reviewed.profileResolutions?.find(rule =>
+      rule.sourceUserIds.some(id => sourceUserIds.includes(id)),
+    )
+    if (
+      resolution &&
+      (JSON.stringify(resolution.sourceUserIds) !== JSON.stringify(sourceUserIds) ||
+        emails.length !== 1 ||
+        emails[0] !== resolution.email)
+    ) {
+      reject('reviewed_profile_cohort_changed')
+      continue
+    }
     if (groupKey.startsWith('invalid:')) {
       reject('missing_or_invalid_phone_requires_review')
       continue
@@ -532,7 +545,7 @@ export function planUsers(
       }
       plan.counts.matchedGroups++
     } else {
-      const claimed = emails.length === 1 && names.length <= 1
+      const claimed = emails.length === 1 && (names.length <= 1 || Boolean(resolution))
       const email = claimed ? emails[0] : null
       let displayUsername = generateRunnerUsernameFromId(id)
       let username = displayUsername.toLowerCase()
@@ -585,7 +598,7 @@ export function planUsers(
         username,
         displayUsername,
         email,
-        name: claimed ? titleCaseImportedName(names[0]) : null,
+        name: resolution?.name ?? (claimed ? titleCaseImportedName(names[0]) : null),
         telephone: phone,
         locale: locale(profile.locale),
         image: claimed ? profile.picture?.trim() || null : null,

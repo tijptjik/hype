@@ -401,6 +401,68 @@ function remoteFixture(db: Database, failAt = 0): D1Database {
   } as unknown as D1Database
 }
 
+describe('reviewed profile resolution', () => {
+  it('resolves an existing unclaimed owner without changing history, grants or its ID and replays without writes', () => {
+    const db = fixture()
+    const input = source(
+      {
+        name: 'Example',
+        email: 'same@example.invalid',
+        uid: '123456789012345678901',
+        picture: 'https://example.invalid/avatar.jpg',
+      },
+      {
+        name: 'EXAMPLE [12S1]',
+        email: 'same@example.invalid',
+        telephone: '+85291234560',
+        uid: 'legacy-facebook',
+      },
+    )
+    sync(db, input)
+    const before = db.query('SELECT id FROM user').get() as { id: string }
+    const history = db
+      .query('SELECT * FROM breadlineImportIdentity ORDER BY sourceUserId')
+      .all()
+    const grants = db.query('SELECT * FROM organisationRole').all()
+    const reviewed = {
+      ...options,
+      decisions: {
+        ...options.decisions,
+        profileResolutions: [
+          { sourceUserIds: [1, 2], email: 'same@example.invalid', name: 'Example FL' },
+        ],
+      },
+    }
+    const plan = planUserSync(input, target(db), reviewed)
+    expect(plan.exceptions).toEqual([])
+    applyUserSync(db, plan, state(db))
+    states.set(db, acceptUserSyncPlan(plan, state(db)))
+    expect(db.query('SELECT id,name,email,image FROM user').get()).toEqual({
+      id: before.id,
+      name: 'Example FL',
+      email: 'same@example.invalid',
+      image: 'https://example.invalid/avatar.jpg',
+    })
+    expect(
+      db.query('SELECT state,claimedEmail,claimedAt FROM breadlineImportUser').get(),
+    ).toEqual({
+      state: 'claimed',
+      claimedEmail: 'same@example.invalid',
+      claimedAt: null,
+    })
+    expect(
+      db.query('SELECT * FROM breadlineImportIdentity ORDER BY sourceUserId').all(),
+    ).toEqual(history)
+    expect(db.query('SELECT * FROM organisationRole').all()).toEqual(grants)
+    expect(db.query('SELECT count(*) AS n FROM account').get()).toEqual({ n: 1 })
+    expect(planUserSync(input, target(db), reviewed).mutations).toEqual([])
+    db.query(
+      "UPDATE user SET image='https://example.invalid/owner.jpg',name='Owner preference'",
+    ).run()
+    expect(planUserSync(input, target(db), reviewed).mutations).toEqual([])
+  })
+})
+
 describe('production user sync protocol without production access', () => {
   it('resumes an older small-batch cursor after an unacknowledged batch', async () => {
     const db = fixture(),

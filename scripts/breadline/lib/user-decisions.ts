@@ -10,6 +10,11 @@ export interface UserDecisions {
   version: 1
   merges: Array<{ targetEmail: string; sourceEmails: string[] }>
   excludeEmails: string[]
+  profileResolutions?: Array<{
+    sourceUserIds: number[]
+    email: string
+    name: string
+  }>
   telephoneOverrides?: Array<{
     sourceUserId: number
     expectedTelephone: string
@@ -86,10 +91,44 @@ export function parseUserDecisions(value: unknown): UserDecisions {
       }
     },
   )
+  const profileIds = new Set<number>()
+  if (
+    input.profileResolutions !== undefined &&
+    !Array.isArray(input.profileResolutions)
+  )
+    return fail()
+  const profileResolutions = ((input.profileResolutions ?? []) as unknown[]).map(
+    value => {
+      if (!value || typeof value !== 'object') return fail()
+      const rule = value as Record<string, unknown>
+      if (
+        !Array.isArray(rule.sourceUserIds) ||
+        !rule.sourceUserIds.length ||
+        typeof rule.name !== 'string' ||
+        !rule.name.trim()
+      )
+        return fail()
+      const sourceUserIds = rule.sourceUserIds
+        .map(id => {
+          if (
+            typeof id !== 'number' ||
+            !Number.isSafeInteger(id) ||
+            id <= 0 ||
+            profileIds.has(id)
+          )
+            return fail()
+          profileIds.add(id)
+          return id
+        })
+        .sort((a, b) => a - b)
+      return { sourceUserIds, email: email(rule.email), name: rule.name.trim() }
+    },
+  )
   return {
     version: 1,
     merges,
     excludeEmails: input.excludeEmails.map(unique),
     ...(telephoneOverrides.length ? { telephoneOverrides } : {}),
+    ...(profileResolutions.length ? { profileResolutions } : {}),
   }
 }

@@ -51,6 +51,59 @@ function destination(plan: ReturnType<typeof planUsers>): TargetIdentitySnapshot
 }
 
 describe('Breadline phone-based user mapping', () => {
+  it('resolves only an explicitly reviewed single-email cohort and retains raw names', () => {
+    const rows = [
+      row({ name: 'Example' }),
+      row({
+        id: 2,
+        volunteer_id: 11,
+        uid: 'old-facebook',
+        name: 'EXAMPLE [12S1]',
+        picture: 'https://example.test/old.jpg',
+      }),
+    ]
+    const decisions = {
+      version: 1 as const,
+      merges: [],
+      excludeEmails: [],
+      profileResolutions: [
+        { sourceUserIds: [1, 2], email: 'person@example.com', name: 'Example FL' },
+      ],
+    }
+    const plan = planUsers(rows, empty, 'seed', decisions)
+    expect(plan.exceptions).toEqual([])
+    expect(plan.users[0]).toMatchObject({
+      name: 'Example FL',
+      email: 'person@example.com',
+    })
+    expect(plan.importUsers[0].state).toBe('claimed')
+    expect(plan.identities.map(identity => identity.name)).toEqual([
+      'Example',
+      'EXAMPLE [12S1]',
+    ])
+    expect(plan.accounts).toHaveLength(1)
+    expect(
+      planUsers([...rows, row({ id: 3, volunteer_id: 12 })], empty, 'seed', decisions)
+        .exceptions[0].reason,
+    ).toBe('reviewed_profile_cohort_changed')
+    expect(
+      planUsers(
+        rows.map(r => ({ ...r, email: 'changed@example.com' })),
+        empty,
+        'seed',
+        decisions,
+      ).exceptions[0].reason,
+    ).toBe('reviewed_profile_cohort_changed')
+    expect(() =>
+      planUsers(rows, empty, 'seed', {
+        ...decisions,
+        profileResolutions: [
+          { ...decisions.profileResolutions[0], sourceUserIds: [1, 1] },
+        ],
+      }),
+    ).toThrow('Invalid user decisions')
+  })
+
   it('title-cases imported names while retaining exact source evidence and replay', () => {
     for (const [source, expected] of [
       [' valerie CHAN ', 'Valerie Chan'],

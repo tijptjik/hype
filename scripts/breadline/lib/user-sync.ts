@@ -430,7 +430,63 @@ export function planUserSync(
         put('account', { ...account, userId: id })
       plan.counts.created++
     } else {
-      put('breadlineImportUser', { userId: id, telephone: desired.telephone })
+      const resolution = options.decisions.profileResolutions?.find(
+        rule =>
+          rule.sourceUserIds.length === sourceIds.length &&
+          rule.sourceUserIds.every(sourceId => sourceIds.includes(sourceId)),
+      )
+      const resolveProfile =
+        resolution && ownershipByUser.get(id)?.state === 'unclaimed'
+      if (resolveProfile) {
+        // Operator-reviewed resolution fills the existing latent profile; it never merges owners.
+        if (
+          existing.email ||
+          ownershipByUser.get(id)?.claimedAt != null ||
+          desired.email !== resolution.email
+        ) {
+          reject('reviewed_profile_target_changed')
+          continue
+        }
+        const accounts = canonical.accounts.filter(row => row.userId === desired.id)
+        if (
+          accounts.some(account =>
+            target.account.some(
+              prior =>
+                prior.id === account.id &&
+                (prior.userId !== id ||
+                  prior.providerId !== account.providerId ||
+                  prior.accountId !== account.accountId),
+            ),
+          )
+        ) {
+          reject('generated_identity_collision')
+          continue
+        }
+        put('user', {
+          id,
+          name: resolution.name,
+          email: desired.email,
+          emailVerified: desired.emailVerified,
+          image: existing.image || desired.image,
+          updatedAt: now,
+        })
+        put('breadlineImportUser', {
+          userId: id,
+          telephone: desired.telephone,
+          state: 'claimed',
+          claimedEmail: desired.email,
+        })
+        for (const account of accounts)
+          if (
+            !target.account.some(
+              prior =>
+                prior.userId === id &&
+                prior.providerId === account.providerId &&
+                prior.accountId === account.accountId,
+            )
+          )
+            put('account', { ...account, userId: id })
+      } else put('breadlineImportUser', { userId: id, telephone: desired.telephone })
       // Compare source-owned presentation fields against their last accepted values; retain local edits.
       const previousRows = sourceIds.flatMap(sourceId => {
         const state = stateBySource.get(sourceId)
@@ -439,7 +495,7 @@ export function planUserSync(
           : null
         return previous ? [previous] : []
       })
-      if (previousRows.length) {
+      if (previousRows.length && !resolveProfile) {
         const prior = planUsers(
           previousRows,
           { users: [], accounts: [] },
