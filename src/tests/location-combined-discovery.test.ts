@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
-import { discoverLocations } from '#lib/locations/combinedDiscovery.js'
+import {
+  discoverLocations,
+  discoverLocationKind,
+} from '#lib/locations/combinedDiscovery.js'
 import {
   locationSourceReference,
   type AvailableDiscoveryType,
@@ -63,7 +66,7 @@ describe('unified Location discovery', () => {
     })
   })
 
-  it('qualifies source identity independently of locally authored entity kinds', () => {
+  it('qualifies source identity independently of the supported authored entity kinds', () => {
     expect(locationSourceReference('id')).toEqual({
       provider: 'saanseoi',
       family: 'places',
@@ -73,5 +76,59 @@ describe('unified Location discovery', () => {
     expect(LocalLocationInputSchema.shape.kind.parse(undefined)).toBe('establishment')
     expect(LocalLocationInputSchema.shape.kind.safeParse('building').success).toBe(true)
     expect(LocalLocationInputSchema.shape.kind.safeParse('natural').success).toBe(true)
+    expect(LocalLocationInputSchema.shape.kind.safeParse('address').success).toBe(true)
+  })
+
+  it.each([
+    ['unknown', ['establishment', 'building', 'address']],
+    ['establishment', ['establishment', 'building', 'address']],
+    ['building', ['building', 'address']],
+    ['address', ['address']],
+    ['natural', ['natural']],
+  ] as const)(
+    'routes %s discovery to its compatible families',
+    async (kind, families) => {
+      const providers = {
+        establishment: vi.fn(async () => ({
+          rows: ['establishment'],
+          partial: false,
+          limited: false,
+        })),
+        building: vi.fn(async () => ({
+          rows: ['building'],
+          partial: false,
+          limited: false,
+        })),
+        address: vi.fn(async () => ({
+          rows: ['address'],
+          partial: false,
+          limited: false,
+        })),
+        natural: vi.fn(async () => ({
+          rows: ['natural'],
+          partial: false,
+          limited: false,
+        })),
+      }
+      const found = await discoverLocationKind(kind, providers)
+      expect(found.rows).toEqual(families)
+      expect(found.partial).toBe(false)
+      for (const [family, provider] of Object.entries(providers))
+        expect(provider).toHaveBeenCalledTimes(
+          families.some(item => item === family) ? 1 : 0,
+        )
+    },
+  )
+
+  it('reports the missing Buildings adapter while retaining successful address results', async () => {
+    const found = await discoverLocationKind('building', {
+      address: async () => ({ rows: ['address'], partial: false, limited: false }),
+    })
+    expect(found).toEqual({
+      rows: ['address'],
+      partial: true,
+      limited: false,
+      unavailable: ['building'],
+    })
   })
 })
