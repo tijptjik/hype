@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 // CONTEXT
 import { getImportCtx } from '#lib/context/import.svelte.js'
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
@@ -63,6 +63,34 @@ let {
 
 const importCtx = getImportCtx()
 const appCtx = getSurfaceCtx()
+let disposed = false
+let submissionCurrent: (() => boolean) | undefined
+onDestroy(() => {
+  if (submissionCurrent?.())
+    importCtx.updatePropertyReconciliation({ isProcessing: false })
+  disposed = true
+})
+
+/**
+ * Captures the mounted property editor and import that own pending work.
+ * @returns Whether the original property, input, destination and account remain current.
+ */
+function capturePropertyWork(): () => boolean {
+  const key = property.key
+  const data = importCtx.getData()
+  const columns = importCtx.getColumns()
+  const project = importCtx.getSelectedProject()
+  const step = importCtx.getCurrentStep()
+  const scope = appCtx.getRoleScopeQueryKey()
+  return () =>
+    !disposed &&
+    property.key === key &&
+    importCtx.getData() === data &&
+    importCtx.getColumns() === columns &&
+    importCtx.getSelectedProject() === project &&
+    importCtx.getCurrentStep() === step &&
+    appCtx.getRoleScopeQueryKey() === scope
+}
 
 let propertyKey = $state('')
 let englishLabel = $state('')
@@ -385,8 +413,14 @@ function capitalizeKey(key: string): string {
 }
 
 // Translation function
-async function translateToAllLocales() {
-  if (isTranslating) return
+/** Translates labels only while their editor and source text remain current. @returns Nothing. */
+async function translateToAllLocales(): Promise<void> {
+  if (disposed || isTranslating) return
+  const ownsEditor = capturePropertyWork()
+  const label = englishLabel
+  const placeholder = englishPlaceholder
+  const isCurrent = (): boolean =>
+    ownsEditor() && englishLabel === label && englishPlaceholder === placeholder
 
   isTranslating = true
 
@@ -395,8 +429,9 @@ async function translateToAllLocales() {
       const [zhHantLabel, zhHantPlaceholder] = await translateText({
         source: 'en',
         target: 'zhHant',
-        texts: [englishLabel, englishPlaceholder],
+        texts: [label, placeholder],
       })
+      if (!isCurrent()) return
       translatedLabels.zhHant = zhHantLabel
       translatedPlaceholders.zhHant = zhHantPlaceholder
     }
@@ -405,12 +440,14 @@ async function translateToAllLocales() {
       const [zhHansLabel, zhHansPlaceholder] = await translateText({
         source: 'en',
         target: 'zhHans',
-        texts: [englishLabel, englishPlaceholder],
+        texts: [label, placeholder],
       })
+      if (!isCurrent()) return
       translatedLabels.zhHans = zhHansLabel
       translatedPlaceholders.zhHans = zhHansPlaceholder
     }
   } catch (error) {
+    if (!isCurrent()) return
     console.error('PropertyCreation: Translation error:', error)
   } finally {
     isTranslating = false
@@ -451,8 +488,11 @@ function syncFooterAction(disabled: boolean): void {
   })
 }
 
+/** Creates the property only while this editor owns its import. @returns Nothing. */
 async function submitProperty(): Promise<void> {
-  if (isSubmitting) return
+  if (disposed || isSubmitting) return
+  const isCurrent = capturePropertyWork()
+  submissionCurrent = isCurrent
 
   if (hasPersistedProperty) {
     onActionComplete()
@@ -463,11 +503,15 @@ async function submitProperty(): Promise<void> {
   formErrors = {}
 
   if (isTranslating) {
-    while (isTranslating) {
+    while (isTranslating && isCurrent()) {
       await new Promise(resolve => setTimeout(resolve, 100))
     }
   }
 
+  if (!isCurrent()) {
+    isSubmitting = false
+    return
+  }
   const data = formData
 
   try {
@@ -480,6 +524,7 @@ async function submitProperty(): Promise<void> {
       data,
     })
 
+    if (!isCurrent()) return
     if (!createdState.data) {
       throw new Error('Property creation did not return a property')
     }
@@ -531,6 +576,7 @@ async function submitProperty(): Promise<void> {
     importCtx.updatePropertyReconciliation({ isProcessing: false })
     onActionComplete()
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Error creating property:', error)
     importCtx.updatePropertyReconciliation({ isProcessing: false })
     if (isPropertyKeyTakenError(error)) {
@@ -554,12 +600,12 @@ function setEditingField(
 
 <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+    class="border-warning/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
   >
     <div class="mb-5 flex items-start justify-between gap-4">
       <div>
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-warning"
+          class="text-warning font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
         >
           {propertyKind === 'classifier'
             ? m.create_new_categorical_property()
@@ -572,13 +618,13 @@ function setEditingField(
       <div class="flex flex-col items-end gap-2">
         {#if apiNameTaken}
           <div
-            class="rounded-full border border-error/30 bg-error/15 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-error"
+            class="border-error/30 bg-error/15 text-error rounded-full border px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
           >
             API name taken
           </div>
         {/if}
         <select
-          class="select select-bordered select-sm min-w-36 rounded-full border-warning/25 bg-warning/10 px-3 font-mono text-[11px] font-semibold uppercase tracking-[0.08em]"
+          class="select select-bordered select-sm border-warning/25 bg-warning/10 min-w-36 rounded-full px-3 font-mono text-[11px] font-semibold tracking-[0.08em] uppercase"
           bind:value={propertyKind}
         >
           <option value="specifier">
@@ -633,16 +679,16 @@ function setEditingField(
       />
 
       <div
-        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
+        class="border-foreground/10 bg-foreground/[0.055] grid min-h-[4.35rem] gap-3 rounded-2xl border p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
       >
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+          class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {m.component_type()}
         </div>
         {#if editingField === 'component'}
           <select
-            class="select select-bordered w-full bg-panel/30 px-3 py-2 font-mono text-sm"
+            class="select select-bordered bg-panel/30 w-full px-3 py-2 font-mono text-sm"
             bind:value={componentType}
             onchange={() => {
               editingField = null
@@ -659,7 +705,7 @@ function setEditingField(
             {/if}
           </select>
         {:else}
-          <div class="font-mono text-sm text-base-content/85">{componentType}</div>
+          <div class="text-base-content/85 font-mono text-sm">{componentType}</div>
         {/if}
         <Swap
           checked={editingField === 'component'}
@@ -675,10 +721,10 @@ function setEditingField(
       </div>
 
       <div
-        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
+        class="border-foreground/10 bg-foreground/[0.055] grid min-h-[4.35rem] gap-3 rounded-2xl border p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
       >
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+          class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {m.translatable()}
         </div>
@@ -712,11 +758,11 @@ function setEditingField(
   </section>
 
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+    class="border-info/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
   >
     <div class="mb-5">
       <div
-        class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-info"
+        class="text-info font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
       >
         Scenario {property.scenario} / {property.columns[0]?.header}
       </div>
@@ -735,12 +781,12 @@ function setEditingField(
     </div>
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04]"
+      class="border-foreground/10 bg-foreground/[0.04] min-h-0 flex-1 overflow-y-auto rounded-2xl border"
     >
       {#if componentType === 'InputField' || componentType === 'TextareaField'}
         {#each property.columns[0]?.sampleValues.slice(0, 10) || [] as value}
           <div
-            class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+            class="border-foreground/10 text-base-content/80 border-b px-4 py-3 font-mono text-sm last:border-b-0"
           >
             {value || m.empty_value()}
           </div>
@@ -748,13 +794,13 @@ function setEditingField(
       {:else}
         {#each visibleValues as value}
           <div
-            class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+            class="border-foreground/10 text-base-content/80 border-b px-4 py-3 font-mono text-sm last:border-b-0"
           >
             {value || m.empty_value()}
           </div>
         {/each}
         {#if uniqueValues.length > visibleValues.length}
-          <div class="px-4 py-3 text-xs text-base-content/60">
+          <div class="text-base-content/60 px-4 py-3 text-xs">
             {m.and_more_values({ count: uniqueValues.length - visibleValues.length })}
           </div>
         {/if}
