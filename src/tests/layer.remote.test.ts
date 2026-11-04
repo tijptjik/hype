@@ -779,6 +779,65 @@ describe('layer.remote authz matrix', () => {
     expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
+  it('forwards a privileged relocation edit and its counter in the atomic core write', async () => {
+    const relocationUpdatePolicy = { policy: 'fixed', expectedRevision: 3 }
+    await remote.layerForm(
+      {
+        meta: {
+          id: 'layer-1',
+          mode: 'update',
+          updatedAt: '2026-03-18T00:00:00.000Z',
+        },
+        data: {
+          projectId: 'project-1',
+          metadata: { zoom: 10 },
+          isDefaultVisible: true,
+          i18n: { en: { name: 'Layer' } },
+          relocationUpdatePolicy,
+        },
+      },
+      throwingInvalid,
+    )
+    expect(mockAuthorizeLayerUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ relocationUpdatePolicy }),
+      }),
+    )
+    expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ relocationUpdatePolicy }),
+    )
+  })
+
+  it('blocks a relocation-only write before loading private settings or writing any fields', async () => {
+    mockAuthorizeLayerUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'FIELD_FORBIDDEN',
+    })
+    await expect(
+      remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'project-1',
+            metadata: { zoom: 10 },
+            isDefaultVisible: true,
+            i18n: { en: { name: 'Layer' } },
+            relocationUpdatePolicy: { policy: null, expectedRevision: 1 },
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('FIELD_FORBIDDEN')
+    expect(mockLoadLayer).not.toHaveBeenCalled()
+    expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
+    expect(mockUpdateI18n).not.toHaveBeenCalled()
+  })
+
   it('publishLayer denies when publish authz denies', async () => {
     mockAuthorizeLayerPublishForSubmission.mockReturnValue({
       allowed: false,
@@ -853,6 +912,20 @@ describe('layer.remote authz matrix', () => {
       actual: false,
       code: 'INSUFFICIENT_ROLE',
     })
+  })
+
+  it('rejects manually archiving a managed historical layer', async () => {
+    mockResolveLayerCommandProbe.mockResolvedValueOnce({
+      id: 'layer-1',
+      organisationId: 'org-1',
+      projectId: 'project-1',
+      hubId: null,
+      historicalSourceLayerId: 'source-layer',
+    })
+    await expect(remote.archiveLayer({ id: 'layer-1', state: true })).rejects.toThrow(
+      'HISTORICAL_LAYER_MANAGED',
+    )
+    expect(mockCascadeLayerArchivedStateToDescendants).not.toHaveBeenCalled()
   })
 
   it('archiveLayer delegates the parent and descendant transaction when allowed', async () => {
