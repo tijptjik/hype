@@ -24,10 +24,14 @@ export class ResourceCollection {
     return this.list.scope === this.meta().scope ? this.list.rows : []
   }
   get loading(): boolean {
-    return this.list.loading
+    return this.list.scope === this.meta().scope && this.list.loading
   }
   get error(): unknown {
-    return this.list.error
+    return this.list.scope === this.meta().scope ? this.list.error : null
+  }
+  /** Whether this scope's traversal has lost access to its retained data. */
+  get denied(): boolean {
+    return this.list.scope === this.meta().scope && this.list.denied
   }
   get hasMore(): boolean {
     return this.list.scope === this.meta().scope && this.list.hasMore

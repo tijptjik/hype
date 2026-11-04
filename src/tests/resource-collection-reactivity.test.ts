@@ -55,3 +55,56 @@ describe('resource collection first-render reactivity', () => {
     },
   )
 })
+
+it('notifies rendered collection observers when fallback native membership changes', async () => {
+  const { reactiveCollectionPage } = await import(
+    './fixtures/resourceCollectionHarness.svelte.js'
+  )
+  const original: ResourcePage = {
+    data: [
+      { id: 'org', code: 'org', modifiedAt: '', isPublished: true, isArchived: false },
+    ],
+    nextCursor: null,
+  }
+  const native = reactiveCollectionPage(original)
+  let finish!: (value: ResourcePage) => void
+  const pendingQuery = Object.assign(
+    new Promise<ResourcePage>(resolve => {
+      finish = resolve
+    }),
+    {
+      current: undefined,
+      ready: false,
+    },
+  ) as RemoteQuery<ResourcePage>
+  const collection = new ResourceCollection(
+    new ResourceList(
+      vi.fn().mockReturnValueOnce(native.query).mockReturnValue(pendingQuery),
+    ),
+    'organisation',
+    () => ({ scope: 'public', isAdminRequest: false }),
+  )
+  const observe = vi.fn()
+  const stop = observeResourceCollection(collection, observe)
+  try {
+    await collection.load()
+    const pending = collection.load({ q: 'new' })
+    flushSync()
+    expect(observe).toHaveBeenLastCalledWith({ ids: ['org'], isInitialised: true })
+    native.replace({ data: [], nextCursor: null })
+    flushSync()
+    expect(observe).toHaveBeenLastCalledWith({ ids: [], isInitialised: false })
+    native.replace(original)
+    flushSync()
+    expect(observe).toHaveBeenLastCalledWith({ ids: ['org'], isInitialised: true })
+    const completed: ResourcePage = { data: [], nextCursor: null }
+    Object.assign(pendingQuery, { current: completed, ready: true })
+    finish(completed)
+    await pending
+    flushSync()
+    expect(observe).toHaveBeenLastCalledWith({ ids: [], isInitialised: true })
+  } finally {
+    stop()
+    collection.release()
+  }
+})

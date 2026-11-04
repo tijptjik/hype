@@ -20,3 +20,25 @@ export function observeResourceCollection(
     })
   })
 }
+
+/**
+ * Supplies reactive native page data for collection ownership checks.
+ * @param initial Initially resolved page.
+ * @returns Query handle and payload replacement control.
+ */
+export function reactiveCollectionPage(
+  initial: import('#lib/api/services/resourcePage.types.js').ResourcePage,
+) {
+  let current = $state.raw(initial)
+  const query = Object.assign(Promise.resolve(initial), {
+    ready: true,
+    refresh: async () => {},
+  })
+  Object.defineProperty(query, 'current', { get: () => current })
+  return {
+    query: query as unknown as import('$app/server').RemoteQuery<typeof initial>,
+    replace: (value: typeof initial): void => {
+      current = value
+    },
+  }
+}
