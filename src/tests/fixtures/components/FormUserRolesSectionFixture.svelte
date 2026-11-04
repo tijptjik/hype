@@ -16,7 +16,16 @@ let {
 } = $props()
 setResponsiveCtx()
 const userRoles = [
-  { userId: 'self', role: 'owner', user: { id: 'self', name: 'Alex Self' } },
+  {
+    userId: 'self',
+    role: 'owner',
+    user: {
+      id: 'self',
+      name: 'Alex Self',
+      username: 'alex',
+      displayUsername: 'Alex',
+    },
+  },
   { userId: 'other', role: 'member', user: { id: 'other', name: 'Robin Other' } },
 ] as OrganisationRoleUser[]
 </script>
