@@ -1,0 +1,147 @@
+// @vitest-environment node
+import { expect, it } from 'vitest'
+import {
+  emptyFeatureAddress,
+  getAddressDisplay,
+} from '#lib/addresses/featureAddress.js'
+import { materializeEffectiveLocation } from '#lib/locations/materialize.js'
+import {
+  createLocationFactsSnapshot,
+  readLocationFacts,
+} from '#lib/locations/factsSnapshot.js'
+import {
+  addressBuildingNames,
+  addressLocationNames,
+  localIdentityFromAddress,
+} from '#lib/locations/addressIdentity.js'
+
+function address() {
+  const value = emptyFeatureAddress()
+  value.coordinates = [114.15, 22.3]
+  value.source.address2dId = 'address-id-not-building-id'
+  value.source.rawSource = {
+    data: {
+      attributes: {
+        i18n: {
+          en: {
+            formattedAddress: '',
+            buildingName: 'C WISDOM CENTRE',
+            streetName: 'Hollywood Road',
+            buildingNumberExpression: '35',
+            premisesName: 'Example Estate',
+            floorExpression: '3/F',
+          },
+          'zh-hant': {
+            formattedAddress: '',
+            buildingName: '智慧中心',
+            streetName: '荷李活道',
+            buildingNumberExpression: '35',
+            premisesName: '屋苑',
+          },
+        },
+      },
+    },
+  }
+  return value
+}
+it('uses only building components for identity suggestions', () => {
+  const value = address()
+  expect(addressBuildingNames(value)).toEqual({
+    en: 'C Wisdom Centre',
+    'zh-hant': '智慧中心',
+  })
+  value.overrides = {
+    en: { formattedAddress: '', buildingName: null },
+    'zh-hant': { formattedAddress: '', buildingName: null },
+  }
+  expect(addressBuildingNames(value)).toEqual({})
+})
+it('composes building support addresses while retaining estate context and full source components', () => {
+  const value = address()
+  const before = structuredClone(value)
+  expect(getAddressDisplay(value, 'en', [], 'building')).toBe(
+    'Example Estate, 35 Hollywood Road',
+  )
+  expect(getAddressDisplay(value, 'zhHant', [], 'building')).toBe('荷李活道35號屋苑')
+  expect(getAddressDisplay(value, 'en', [], 'establishment')).toContain(
+    'C Wisdom Centre',
+  )
+  expect(value).toEqual(before)
+})
+it('creates a local building without borrowing its address ID as an entity identity', () => {
+  const value = address()
+  const input = localIdentityFromAddress('building', addressBuildingNames(value), value)
+  expect(input.kind).toBe('building')
+  expect(input.sharingPreference).toBe('private')
+  expect(input.facts.names.en).toBe('C Wisdom Centre')
+  expect(input.facts.location.address.address2dId).toBeNull()
+  expect(input.facts.location.address.authored?.i18n.en.buildingName).toBe(
+    'C Wisdom Centre',
+  )
+  expect(input.facts.location.address.authored?.unit).toBeNull()
+  expect(value.source.address2dId).toBe('address-id-not-building-id')
+})
+it('creates an address-kind identity from the reviewed address label without requiring a separate name', () => {
+  const value = address()
+  value.overrides.en = { formattedAddress: 'Reviewed address, 3/F' }
+  const before = structuredClone(value)
+  const input = localIdentityFromAddress('address', {}, value, 'exclusive')
+  expect(input).toMatchObject({
+    kind: 'address',
+    state: 'manual',
+    facts: { names: { en: 'Reviewed address, 3/F' } },
+  })
+  expect(input.facts.names).toEqual(addressLocationNames(value))
+  expect(input.facts.location.address.authored?.i18n.en.formattedAddress).toBe(
+    'Reviewed address, 3/F',
+  )
+  expect(input.facts.location.address.address2dId).toBeNull()
+  expect(value).toEqual(before)
+})
+it('requires a separately supplied establishment name and keeps its building address', () => {
+  const value = address()
+  expect(() => localIdentityFromAddress('establishment', {}, value)).toThrow()
+  const input = localIdentityFromAddress('establishment', { en: 'New Bakery' }, value)
+  expect(input.facts.names).toEqual({ en: 'New Bakery' })
+  expect(input.facts.location.address.authored?.i18n.en.buildingName).toBe(
+    'C Wisdom Centre',
+  )
+})
+
+it('persists the building-scoped display from the captured entity kind', () => {
+  const value = address()
+  const input = localIdentityFromAddress('building', addressBuildingNames(value), value)
+  const facts = readLocationFacts(createLocationFactsSnapshot(input.facts, 'building'))
+  const result = materializeEffectiveLocation({
+    facts,
+    locationFacts: facts,
+    overrides: {},
+    data: {},
+    i18n: { en: { title: 'Old name' } },
+  })
+  expect(result.i18n.en.title).toBe('C Wisdom Centre')
+  expect(result.i18n.en.displayAddress).toBe('Example Estate, 35 Hollywood Road')
+  expect(result.i18n.en.displayAddressGen).toBe(true)
+  expect(result.data.addressMeta?.address?.source.authored?.i18n.en.buildingName).toBe(
+    'C Wisdom Centre',
+  )
+})
+it('preserves an explicitly authored display label', () => {
+  const value = address()
+  value.overrides.en = { formattedAddress: 'Use the side entrance at C Wisdom Centre' }
+  expect(getAddressDisplay(value, 'en', [], 'building')).toBe(
+    'Use the side entrance at C Wisdom Centre',
+  )
+})
+
+it('defaults to shared visibility and keeps exclusive identities organisation-private', () => {
+  const value = address()
+  const names = { en: 'New Bakery' }
+  expect(localIdentityFromAddress('establishment', names, value).state).toBe(
+    'unresolved',
+  )
+  const exclusive = localIdentityFromAddress('establishment', names, value, 'exclusive')
+  expect(exclusive.state).toBe('manual')
+  // Visibility does not silently opt into upstream sharing consent.
+  expect(exclusive.sharingPreference).toBe('private')
+})
