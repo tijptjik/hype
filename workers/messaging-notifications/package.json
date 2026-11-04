@@ -1,0 +1,19 @@
+{
+  "name": "@hype/messaging-notifications",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "check": "wrangler types --env-interface MessagingNotificationBindings && tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "bun ../../scripts/messaging/dev-worker.ts messaging-notifications"
+  },
+  "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "4.152.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  }
+}

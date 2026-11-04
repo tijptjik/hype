@@ -1,0 +1,8 @@
+{
+  "name": "@hype/whatsapp-relay-native",
+  "private": true,
+  "scripts": {
+    "check": "cargo check --locked",
+    "test": "cargo test --locked"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@hype/whatsapp-engine",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./factory": "./dist/factory.js",
+    "./bindings": "./dist/whatsapp_engine.js",
+    "./wasm.wasm": {
+      "types": "./src/module.d.ts",
+      "default": "./dist/whatsapp_engine_bg.wasm"
+    }
+  },
+  "scripts": {
+    "build": "bash scripts/build-wasm.sh",
+    "check": "cargo check --locked --no-default-features --features wasm --target wasm32-unknown-unknown"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

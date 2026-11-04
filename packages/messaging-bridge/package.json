@@ -1,0 +1,15 @@
+{
+  "name": "@hype/messaging-bridge",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./presence": "./src/presence.ts",
+    "./types": "./src/types.ts",
+    "./phone-lookup": "./src/phone-lookup.ts",
+    "./media-catalog": "./src/media-catalog.ts",
+    "./conversations": "./src/conversations.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  }
+}

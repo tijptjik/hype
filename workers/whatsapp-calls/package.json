@@ -1,0 +1,15 @@
+{
+  "name": "@hype/whatsapp-calls",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "check": "wrangler types --env-interface VoiceGatewayEnv && tsc --noEmit",
+    "types": "wrangler types --env-interface VoiceGatewayEnv",
+    "dev": "bun ../../scripts/messaging/dev-worker.ts whatsapp-calls"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "4.152.0"
+  }
+}

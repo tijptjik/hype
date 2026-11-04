@@ -1,0 +1,89 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "hype-whatsover-relay-prod",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-02",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "upload_source_maps": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RELAYS",
+        "class_name": "WhatsoverRelay"
+      }
+    ]
+  },
+  "containers": [
+    {
+      "class_name": "WhatsoverRelay",
+      "scheduling_policy": "durable_object",
+      "images": {
+        "base": {
+          "dockerfile": "../../packages/whatsapp-relay-native/Dockerfile"
+        }
+      }
+    }
+  ],
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "WhatsoverRelay"
+      ]
+    }
+  ],
+  "env": {
+    "local": {
+      "name": "hype-whatsover-relay-local",
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "RELAYS",
+            "class_name": "WhatsoverRelay"
+          }
+        ]
+      },
+      "containers": [
+        {
+          "class_name": "WhatsoverRelay",
+          "scheduling_policy": "durable_object",
+          "images": {
+            "base": {
+              "dockerfile": "../../packages/whatsapp-relay-native/Dockerfile"
+            }
+          }
+        }
+      ]
+    },
+    "preview": {
+      "name": "hype-whatsover-relay-preview",
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "RELAYS",
+            "class_name": "WhatsoverRelay"
+          }
+        ]
+      },
+      "containers": [
+        {
+          "class_name": "WhatsoverRelay",
+          "scheduling_policy": "durable_object",
+          "images": {
+            "base": {
+              "dockerfile": "../../packages/whatsapp-relay-native/Dockerfile"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -58,3 +58,8 @@ spec/breadline/Breadline v4 - Scope of Work.pdf
 
 # Private Places migration snapshots and matching evidence
 .local/places/
+
+# Workspace build products
+**/target/
+**/dist/
+**/.turbo/

@@ -85,6 +85,15 @@
   },
   "overrides": [
     {
+      "includes": [
+        "workers/telegram/worker-configuration.d.ts",
+        "workers/telegram-calls/worker-configuration.d.ts"
+      ],
+      "formatter": { "enabled": false },
+      "linter": { "enabled": false },
+      "assist": { "enabled": false }
+    },
+    {
       "includes": ["**/tsconfig*.json"],
       "json": {
         "parser": {

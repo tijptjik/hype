@@ -1,0 +1,74 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hype-whatsover-prod",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-02",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "upload_source_maps": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "services": [
+    {
+      "binding": "RELAY",
+      "service": "hype-whatsover-relay-prod"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ACCOUNTS",
+        "class_name": "WhatsoverAccount"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "WhatsoverAccount"
+      ]
+    }
+  ],
+  "env": {
+    "local": {
+      "name": "hype-whatsover-local",
+      "services": [
+        {
+          "binding": "RELAY",
+          "service": "hype-whatsover-relay-local"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "ACCOUNTS",
+            "class_name": "WhatsoverAccount"
+          }
+        ]
+      }
+    },
+    "preview": {
+      "name": "hype-whatsover-preview",
+      "services": [
+        {
+          "binding": "RELAY",
+          "service": "hype-whatsover-relay-preview"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "ACCOUNTS",
+            "class_name": "WhatsoverAccount"
+          }
+        ]
+      }
+    }
+  }
+}

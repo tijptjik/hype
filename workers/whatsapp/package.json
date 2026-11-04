@@ -1,0 +1,24 @@
+{
+  "name": "@hype/whatsapp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:wasm": "bun run --cwd ../../packages/whatsapp-engine build",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "check": "bash scripts/dev-check.sh bash -c 'wrangler types && tsc --noEmit \"$@\"' --",
+    "test": "bash scripts/dev-check.sh bash -c 'WHATSAPP_QUALIFICATION=1 bun run build:wasm && vitest run \"$@\"' --",
+    "types": "wrangler types",
+    "dev": "bun ../../scripts/messaging/dev-worker.ts whatsapp"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.5.0",
+    "@types/node": "^22.15.17",
+    "typescript": "^5.9.3",
+    "vitest": "~4.1.0",
+    "wrangler": "4.152.0"
+  },
+  "dependencies": {
+    "@hype/messaging-bridge": "workspace:*",
+    "@hype/whatsapp-engine": "workspace:*"
+  }
+}

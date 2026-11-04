@@ -1,0 +1,15 @@
+{
+  "name": "@hype/telegram-calls",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "check": "wrangler types && tsc --noEmit",
+    "types": "wrangler types",
+    "dev": "bun ../../scripts/messaging/dev-worker.ts telegram-calls"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "4.152.0"
+  }
+}

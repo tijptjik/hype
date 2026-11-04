@@ -1,0 +1,50 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "CARGO_HOME",
+    "CARGO_TARGET_DIR",
+    "CARGO_NET_OFFLINE",
+    "RUSTUP_HOME",
+    "RUSTUP_TOOLCHAIN",
+    "RUSTFLAGS",
+    "WRANGLER_LOG_PATH",
+    "WRANGLER_SEND_METRICS",
+    "WRANGLER_DOCKER_BIN",
+    "XDG_RUNTIME_DIR",
+    "DBUS_SESSION_BUS_ADDRESS",
+    "DOTJIK_DEV_CHECK"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "cache": false
+    },
+    "check": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "persistent": true,
+      "cache": false,
+      "passThroughEnv": [
+        "TELEGRAM_API_ID",
+        "TELEGRAM_API_HASH",
+        "HYPE_MESSAGING_ENV_FILE",
+        "HYPE_MESSAGING_STATE_DIR",
+        "WHATSAPP_STATE_DIR",
+        "TELEGRAM_STATE_DIR",
+        "WHATSAPP_RELAY_STATE_DIR"
+      ]
+    },
+    "@hype/whatsapp#test": {
+      "dependsOn": ["@hype/whatsapp#build"],
+      "cache": false
+    }
+  }
+}

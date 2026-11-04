@@ -1,0 +1,72 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hype-telegram-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ACCOUNTS",
+        "class_name": "TelegramAccount"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "TelegramAccount"
+      ]
+    }
+  ],
+  "env": {
+    "production": {
+      "name": "hype-telegram-prod",
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "ACCOUNTS",
+            "class_name": "TelegramAccount"
+          }
+        ]
+      },
+      "secrets": {
+        "required": [
+          "TELEGRAM_API_ID",
+          "TELEGRAM_API_HASH"
+        ]
+      }
+    },
+    "preview": {
+      "name": "hype-telegram-preview",
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "ACCOUNTS",
+            "class_name": "TelegramAccount"
+          }
+        ]
+      },
+      "secrets": {
+        "required": [
+          "TELEGRAM_API_ID",
+          "TELEGRAM_API_HASH"
+        ]
+      }
+    }
+  },
+  "secrets": {
+    "required": [
+      "TELEGRAM_API_ID",
+      "TELEGRAM_API_HASH"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hype-telegram-calls-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-03",
+  "workers_dev": true,
+  "preview_urls": false,
+  "services": [{ "binding": "CALLS", "service": "hype-telegram-local", "entrypoint": "CallGateway" }],
+  "env": {
+    "preview": {
+      "name": "hype-telegram-calls-preview",
+      "services": [{ "binding": "CALLS", "service": "hype-telegram-preview", "entrypoint": "CallGateway" }]
+    },
+    "production": {
+      "name": "hype-telegram-calls-prod",
+      "services": [{ "binding": "CALLS", "service": "hype-telegram-prod", "entrypoint": "CallGateway" }]
+    }
+  }
+}

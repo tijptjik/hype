@@ -125,7 +125,12 @@
     "breadline:local:prepare": "bun run scripts/breadline/prepare-local.ts",
     "check:location-refresh": "tsc -p workers/location-refresh/tsconfig.json",
     "deploy:location-refresh:prod": "bun wrangler deploy -c workers/location-refresh/wrangler.jsonc --env production",
-    "deploy:location-refresh:preview": "bun wrangler deploy -c workers/location-refresh/wrangler.jsonc --env preview"
+    "deploy:location-refresh:preview": "bun wrangler deploy -c workers/location-refresh/wrangler.jsonc --env preview",
+    "build:workers": "turbo run build --filter=./workers/*",
+    "check:workers": "bash scripts/dev-check.sh bash -c 'turbo run check --filter=@hype/* \"$@\"' --",
+    "test:workers": "bash scripts/dev-check.sh bash -c 'turbo run test --filter=@hype/* \"$@\"' --",
+    "dev:messaging": "turbo run dev --filter=./workers/*",
+    "build:all": "bun run build:workers && bun run build"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.5",
@@ -184,7 +189,8 @@
     "vite-node": "^6.0.0",
     "vite-plugin-node-polyfills": "^0.28.0",
     "vitest": "^5.1.0",
-    "wrangler": "^4.157.0"
+    "wrangler": "^4.157.0",
+    "turbo": "2.5.8"
   },
   "type": "module",
   "trustedDependencies": [
@@ -285,5 +291,9 @@
   "imports": {
     "#lib": "./src/lib/index.ts",
     "#lib/*": "./src/lib/*"
-  }
+  },
+  "workspaces": [
+    "workers/*",
+    "packages/*"
+  ]
 }

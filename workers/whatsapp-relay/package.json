@@ -1,0 +1,18 @@
+{
+  "name": "@hype/whatsapp-relay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bash scripts/build.sh",
+    "check": "wrangler types --env-interface RelayEnv && tsc --noEmit",
+    "types": "wrangler types --env-interface RelayEnv",
+    "dev": "bun ../../scripts/messaging/dev-worker.ts whatsapp-relay"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "4.156.2"
+  },
+  "dependencies": {
+    "@hype/whatsapp-relay-native": "workspace:*"
+  }
+}
