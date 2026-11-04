@@ -185,11 +185,10 @@ describe('atomic project organisation moves', () => {
   it('preserves historical-layer parent locks without committing the project move', async () => {
     const { sqlite, db } = fixture()
     try {
-      sqlite.exec('ALTER TABLE layer ADD COLUMN historicalSourceLayerId TEXT')
       sqlite.exec(
         "INSERT INTO layer(id,projectId,organisationId,historicalSourceLayerId) VALUES ('history','p','old','child')",
       )
-      const migration = readFileSync('src/tests/fixtures/historical-layers.sql', 'utf8')
+      const migration = readFileSync('migrations/0147_historical_layers.sql', 'utf8')
       sqlite.exec(
         migration.slice(
           migration.indexOf('CREATE TRIGGER historical_layer_lock'),
