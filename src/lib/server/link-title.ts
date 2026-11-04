@@ -40,11 +40,43 @@ export function isPublicAddress(address: string): boolean {
   return true
 }
 
+/** Resolves both address families within the shared metadata deadline.
+ * @param hostname Public website hostname.
+ * @param signal Deadline shared with redirects and body retrieval.
+ * @returns Resolved addresses; rejects when the deadline expires.
+ * @remarks DNS itself may continue in the runtime after the caller stops waiting.
+ */
+async function resolveAddresses(
+  hostname: string,
+  signal: AbortSignal,
+): Promise<string[]> {
+  signal.throwIfAborted()
+  return new Promise((resolve, reject) => {
+    const abort = (): void => reject(signal.reason)
+    signal.addEventListener('abort', abort, { once: true })
+    // Neither resolver is allowed to keep the metadata request waiting past its deadline.
+    void Promise.all([
+      resolve4(hostname).catch(() => [] as string[]),
+      resolve6(hostname).catch(() => [] as string[]),
+    ]).then(
+      addresses => {
+        signal.removeEventListener('abort', abort)
+        resolve(addresses.flat())
+      },
+      reason => {
+        signal.removeEventListener('abort', abort)
+        reject(reason)
+      },
+    )
+  })
+}
+
 /** Validates each destination, including redirects, before retrieving metadata.
  * @param url Candidate destination.
+ * @param signal Shared metadata deadline.
  * @returns A validated public destination address.
  */
-async function validateDestination(url: URL): Promise<string> {
+async function validateDestination(url: URL, signal: AbortSignal): Promise<string> {
   if (
     !['http:', 'https:'].includes(url.protocol) ||
     url.username ||
@@ -60,12 +92,7 @@ async function validateDestination(url: URL): Promise<string> {
     throw new Error('Use a public website')
   const addresses = isIP(hostname)
     ? [hostname]
-    : (
-        await Promise.all([
-          resolve4(hostname).catch(() => [] as string[]),
-          resolve6(hostname).catch(() => [] as string[]),
-        ])
-      ).flat()
+    : await resolveAddresses(hostname, signal)
   if (!addresses.length || !addresses.every(isPublicAddress))
     throw new Error('Use a public website')
   return addresses[0]
@@ -158,7 +185,7 @@ export async function fetchLinkTitle(
   let url = new URL(input)
   const signal = AbortSignal.timeout(6000)
   for (let redirects = 0; redirects <= 3; redirects++) {
-    const address = await validateDestination(url)
+    const address = await validateDestination(url, signal)
     signal.throwIfAborted()
     const response = await requestPage(url, address, signal)
     if (response.status >= 300 && response.status < 400) {

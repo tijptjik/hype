@@ -4,9 +4,13 @@ vi.mock('node:dns/promises', () => ({
   resolve4: vi.fn(async () => ['93.184.216.34']),
   resolve6: vi.fn(async () => []),
 }))
+import { resolve4, resolve6 } from 'node:dns/promises'
 import { fetchLinkTitle, isPublicAddress } from '#lib/server/link-title.js'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 it('rejects loopback, private, mapped and reserved addresses', () => {
   for (const ip of [
     '127.0.0.1',
@@ -63,3 +67,26 @@ it('does not read non-HTML responses', async () => {
   )
   expect(await fetchLinkTitle('https://example.org/image')).toBeNull()
 })
+
+it.each([resolve4, resolve6])(
+  'bounds metadata lookup when a DNS resolver never settles',
+  async resolver => {
+    const controller = new AbortController()
+    vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal)
+    vi.mocked(resolver).mockImplementationOnce(() => new Promise(() => {}))
+    const fetcher = vi.fn()
+    vi.stubGlobal('fetch', fetcher)
+    let outcome = 'pending'
+    void fetchLinkTitle('https://example.org').then(
+      () => {
+        outcome = 'resolved'
+      },
+      () => {
+        outcome = 'rejected'
+      },
+    )
+    controller.abort(new Error('deadline exceeded'))
+    await vi.waitFor(() => expect(outcome).toBe('rejected'), { timeout: 150 })
+    expect(fetcher).not.toHaveBeenCalled()
+  },
+)
