@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { onDestroy } from 'svelte'
 // DRAG AND DROP
 import { draggable, droppable, type DragDropState } from '@thisux/sveltednd'
 import { getDropIndex } from '#lib/client/services/dragDrop.js'
@@ -68,14 +70,36 @@ const decoded = $derived.by(() => {
 })
 let titleStatus = $state<Record<string, string>>({})
 const requestedUrls = new Map<string, string>()
+let active = true
+onDestroy(() => {
+  active = false
+})
+let editGeneration = 0
+$effect(() => {
+  if (!isEditing) {
+    // Ending an edit invalidates pending work even if the editor is reopened later.
+    editGeneration += 1
+    requestedUrls.clear()
+    titleStatus = {}
+  }
+})
 
 /** Fills an empty label only while the same pasted URL still belongs to this item. */
 async function lookupTitle(id: string, url: string): Promise<void> {
-  if (!/^https?:\/\//i.test(url) || requestedUrls.get(id) === url) return
+  if (
+    !active ||
+    !isEditing ||
+    !/^https?:\/\//i.test(url) ||
+    requestedUrls.get(id) === url
+  )
+    return
+  const generation = editGeneration
   requestedUrls.set(id, url)
   titleStatus[id] = 'Looking up page title…'
   try {
     const result = await getLinkTitle({ url, meta: { isAdminRequest: true } })
+    // A detached or read-only editor no longer owns delayed autofill results.
+    if (!active || !isEditing || generation !== editGeneration) return
     const current = decoded.items.find(item => item.id === id)
     if (!current || current.url !== url) return
     if (result && !current.label[result.locale]?.trim()) {
@@ -83,7 +107,12 @@ async function lookupTitle(id: string, url: string): Promise<void> {
       titleStatus[id] = 'Page title added — you can edit it.'
     } else titleStatus[id] = result ? '' : 'No title available. Enter link text below.'
   } catch {
-    if (decoded.items.some(item => item.id === id && item.url === url))
+    if (
+      active &&
+      isEditing &&
+      generation === editGeneration &&
+      decoded.items.some(item => item.id === id && item.url === url)
+    )
       titleStatus[id] = 'Could not fetch the title. Enter link text below.'
   }
 }
@@ -134,7 +163,8 @@ async function translateLabel(
     targetKey = toLocaleKey(target)
   const item = decoded.items.find(item => item.id === id)
   const text = item?.label[sourceKey]?.trim()
-  if (!item || !text) return false
+  if (!active || !isEditing || !item || !text) return false
+  const generation = editGeneration
   const previous = item.label[targetKey] ?? ''
   const [translated] = await translateText({
     source: sourceKey,
@@ -143,6 +173,9 @@ async function translateLabel(
   })
   const current = decoded.items.find(item => item.id === id)
   if (
+    active &&
+    isEditing &&
+    generation === editGeneration &&
     translated &&
     current?.url === item.url &&
     current.label[sourceKey]?.trim() === text &&
@@ -189,7 +222,7 @@ export function add(): void {
       <section
         aria-label={`Link ${index + 1}`}
         class={[
-          'min-w-0 border-b border-border last:border-0',
+          'border-border min-w-0 border-b last:border-0',
           collapsed ? 'py-2' : 'space-y-3 pb-5',
         ]}
         use:draggable={{
@@ -216,8 +249,8 @@ export function add(): void {
                 data-link-drag-handle
                 disabled={decoded.items.length < 2}
                 aria-label={`Reorder link ${index + 1}`}
-                title="Drag to reorder; Alt + arrow keys to move"
-                class="flex size-8 shrink-0 cursor-grab disabled:cursor-default disabled:opacity-40 items-center justify-center rounded text-muted-foreground hover:bg-primary/10 hover:text-primary active:cursor-grabbing"
+                data-tooltip="Drag to reorder; Alt + arrow keys to move"
+                class="text-muted-foreground hover:bg-primary/10 hover:text-primary flex size-8 shrink-0 cursor-grab items-center justify-center rounded active:cursor-grabbing disabled:cursor-default disabled:opacity-40"
                 onkeydown={event => {
                   if (event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
                     event.preventDefault()
@@ -230,8 +263,8 @@ export function add(): void {
             {/if}
             {#if collapsed}
               <span
-                class="block min-w-0 flex-1 break-words text-base font-medium leading-6 text-foreground"
-                title={item.label[getLocaleKey()]?.trim() ||
+                class="text-foreground block min-w-0 flex-1 text-base leading-6 font-medium break-words"
+                data-tooltip={item.label[getLocaleKey()]?.trim() ||
                   item.label.en?.trim() ||
                   m.property__link_untitled()}
                 >{item.label[getLocaleKey()]?.trim() ||
@@ -241,7 +274,7 @@ export function add(): void {
             {:else}
               <label
                 for={`${dragId}-${item.id}-url`}
-                class="text-xs font-semibold text-muted-foreground"
+                class="text-muted-foreground text-xs font-semibold"
                 >URL</label
               >
             {/if}
@@ -250,8 +283,8 @@ export function add(): void {
             <button
               type="button"
               aria-label={`Remove link ${index + 1}`}
-              title="Remove link"
-              class="flex size-8 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              data-tooltip="Remove link"
+              class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex size-8 items-center justify-center rounded"
               onclick={() => save(decoded.items.filter(link => link.id !== item.id))}
             >
               <TrashIcon class="size-5" />
@@ -288,7 +321,7 @@ export function add(): void {
             onValueChange={text => update(item.id, 'url', text)}
           />
           {#if isEditing && titleStatus[item.id]}
-            <p role="status" class="text-xs text-muted-foreground">
+            <p role="status" class="text-muted-foreground text-xs">
               {titleStatus[item.id]}
             </p>
           {/if}
@@ -307,7 +340,7 @@ export function add(): void {
               >
                 <label
                   for={`${dragId}-${item.id}-${locale}`}
-                  class="absolute left-0 top-0 flex h-8 items-center text-xs font-semibold text-muted-foreground @min-[780px]/links:left-3"
+                  class="text-muted-foreground absolute top-0 left-0 flex h-8 items-center text-xs font-semibold @min-[780px]/links:left-3"
                   >Link text</label
                 >
                 <TextInput
@@ -333,7 +366,7 @@ export function add(): void {
     {#if isEditing && !headerAction && canAdd()}
       <button
         type="button"
-        class="inline-flex min-h-9 self-start items-center gap-2 rounded border border-primary/25 px-3 text-sm text-primary hover:bg-primary/10"
+        class="border-primary/25 text-primary hover:bg-primary/10 inline-flex min-h-9 items-center gap-2 self-start rounded border px-3 text-sm"
         onclick={add}
       >
         <PlusIcon class="size-4" />Add link

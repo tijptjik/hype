@@ -196,3 +196,50 @@ it('keeps visible link inputs unnamed because the form submits the structured hi
   expect(inputs).toHaveLength(4)
   expect(inputs.every(input => input.name === '')).toBe(true)
 })
+
+it.each([
+  ['title', 'unmount'],
+  ['title', 'readonly'],
+  ['translation', 'unmount'],
+  ['translation', 'readonly'],
+  ['title', 'reopened'],
+  ['translation', 'reopened'],
+] as const)('does not apply a delayed %s after %s', async (operation, transition) => {
+  let finish!: (value: unknown) => void
+  const pending = new Promise(resolve => {
+    finish = resolve
+  })
+  if (operation === 'title')
+    vi.mocked(getLinkTitle).mockReturnValueOnce(pending as never)
+  else vi.mocked(translateText).mockReturnValueOnce(pending as never)
+  const onChange = vi.fn()
+  const value = JSON.stringify({
+    version: 1,
+    items: [
+      {
+        id: 'a',
+        url: 'https://example.org',
+        label: operation === 'title' ? {} : { en: 'A book' },
+      },
+    ],
+  })
+  const view = render(Links, { value, onChange })
+  if (operation === 'title') await fireEvent.blur(screen.getByLabelText('URL'))
+  else {
+    await fireEvent.focusIn(screen.getByLabelText('Link text — 繁體中文'))
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Translate from en to zh-hant' }),
+    )
+  }
+  if (transition === 'unmount') view.unmount()
+  else {
+    await view.rerender({ value, onChange, isEditing: false })
+    if (transition === 'reopened')
+      await view.rerender({ value, onChange, isEditing: true })
+  }
+  finish(
+    operation === 'title' ? { title: 'Fetched title', locale: 'en' } : ['Translated'],
+  )
+  await new Promise(resolve => setTimeout(resolve, 0))
+  expect(onChange).not.toHaveBeenCalled()
+})
