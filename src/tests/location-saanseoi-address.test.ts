@@ -84,14 +84,14 @@ describe('pinned structured Location Addresses', () => {
     const { projection, response, pin } = fixture()
     const result = resolveSaanSeoiPlaceAddress(projection, response, pin)
     expect(result.facts.location.address.status).toBe('resolved')
-    expect(result.facts.location.address.records).toEqual(response)
-    expect(result.payload.address).toEqual(response)
+    expect(result.facts.location.address.rawSource).toEqual(response)
+    expect(result.rawSource.address).toEqual(response)
     expect(result.issues).toEqual([
       { kind: 'invalidPhone', index: 0, value: 'invalid' },
     ])
     expect(projection.facts.location.address.status).toBe('unresolved')
     response.data.attributes.i18n.en.formattedAddress = 'Changed'
-    expect(result.facts.location.address.records).not.toEqual(response)
+    expect(result.facts.location.address.rawSource).not.toEqual(response)
   })
 
   it.each([
@@ -151,7 +151,7 @@ describe('structured Address network hydration', () => {
     const c = client([response, response])
     const result = await hydrateSaanSeoiPlaceAddress(c, projection)
     expect(result.facts.location.address.status).toBe('resolved')
-    expect(result.payload.address).toEqual(response)
+    expect(result.rawSource.address).toEqual(response)
     expect(result.issues).toEqual([
       { kind: 'invalidPhone', index: 0, value: 'invalid' },
     ])
@@ -172,7 +172,7 @@ describe('structured Address network hydration', () => {
     const c = client([])
     projection.facts.location.address.address2dId = null
     expect(
-      (await hydrateSaanSeoiPlaceAddress(c, projection)).payload.addressHydration,
+      (await hydrateSaanSeoiPlaceAddress(c, projection)).rawSource.addressHydration,
     ).toMatchObject({ reason: 'incomplete-address-reference' })
     projection.facts.location.address.address3dId = null
     projection.facts.location.address.address3dUnitId = null
@@ -194,7 +194,7 @@ describe('structured Address network hydration', () => {
         projection,
       )
       expect(result.facts.location.address.status).toBe('unresolved')
-      expect(result.payload.addressHydration).toMatchObject({ status: 'review' })
+      expect(result.rawSource.addressHydration).toMatchObject({ status: 'review' })
       expect(result.issues).toContainEqual({ kind: 'addressRecordsPending' })
       expect(result.facts).toEqual(projection.facts)
     },
@@ -207,7 +207,7 @@ describe('structured Address network hydration', () => {
           client([new Response(null, { status: 404 })]),
           projection,
         )
-      ).payload.addressHydration,
+      ).rawSource.addressHydration,
     ).toMatchObject({ reason: 'address-not-published' })
     await expect(
       hydrateSaanSeoiPlaceAddress(
@@ -226,14 +226,14 @@ describe('structured Address network hydration', () => {
       resolved,
     )
     expect(pending.facts.location.address.status).toBe('unresolved')
-    expect(pending.facts.location.address.records).toEqual({})
+    expect(pending.facts.location.address.rawSource).toEqual({})
     expect(pending.issues).toContainEqual({ kind: 'addressRecordsPending' })
     const repaired = await hydrateSaanSeoiPlaceAddress(
       client([response, response]),
       pending,
     )
     expect(repaired.facts.location.address.status).toBe('resolved')
-    expect(repaired.payload.addressHydration).toMatchObject({
+    expect(repaired.rawSource.addressHydration).toMatchObject({
       status: 'resolved',
       releaseSet: 'addresses-publication',
     })
