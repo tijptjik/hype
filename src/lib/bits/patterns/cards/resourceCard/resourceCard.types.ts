@@ -14,6 +14,7 @@ export interface ResourceCardMediaProps {
 }
 
 export interface ResourceCardBodyProps {
+  wrapTitle?: boolean
   size?: Card.CardSize
   code?: string | null
   name?: string | null
@@ -21,7 +22,6 @@ export interface ResourceCardBodyProps {
 }
 
 export interface ResourceCardHubActionsProps {
-  isRemoving?: boolean
   isEditing?: boolean
   isSubmitting?: boolean
   canSetCoreInclusive?: boolean

@@ -1,10 +1,13 @@
 <script lang="ts">
-import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
+// I18N
 import { m } from '#lib/i18n.js'
-import FormSection from './FormSection.svelte'
+// COMPONENTS
+import { SectionHeader } from '#lib/bits/custom/form/index.js'
+import FormInlineField from './FormInlineField.svelte'
 
 type HubSpecifiersField = {
   as: (type: 'text') => Record<string, unknown>
+  set: (value: string) => unknown
   issues: () => import('$app/server').RemoteFormIssue[] | undefined
 }
 
@@ -27,24 +30,6 @@ let {
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
 } = $props()
-
-const codeInputAttrs = $derived(form.fields.data.code.as('text'))
-const codeRequired = $derived(isRequiredInPreflight(['data', 'code']))
-const codeIssues = $derived(form.fields.data.code.issues())
-
-const domainInputAttrs = $derived(form.fields.data.domain.as('text'))
-const domainRequired = $derived(isRequiredInPreflight(['data', 'domain']))
-const domainIssues = $derived(form.fields.data.domain.issues())
-
-const legalContactAddressInputAttrs = $derived(
-  form.fields.data.legalContactAddress.as('text'),
-)
-const legalContactAddressRequired = $derived(
-  isRequiredInPreflight(['data', 'legalContactAddress']),
-)
-const legalContactAddressIssues = $derived(
-  form.fields.data.legalContactAddress.issues(),
-)
 </script>
 
 <section class="bits-form__section pb-0!">
@@ -52,33 +37,26 @@ const legalContactAddressIssues = $derived(
     title={m.admin__forms_hub_routing_title()}
     description={m.admin__forms_hub_routing_subtitle()}
   />
-  <FormSection contentClass="grid grid-cols-1 gap-6 pt-4 pb-2 md:grid-cols-3">
-    <TextInput
+  <div
+    class="md:[&>section+section]:border-border/50 grid min-w-0 gap-6 px-6 py-6 md:grid-cols-3 md:[&>section+section]:border-l md:[&>section+section]:pl-6"
+  >
+    <FormInlineField
       label={m.admin__forms_hub_subdomain_label()}
-      required={codeRequired}
+      control={form.fields.data.code}
+      required={isRequiredInPreflight(['data', 'code'])}
       {isEditing}
-      value={(codeInputAttrs as { value?: string }).value ?? ''}
-      issues={codeIssues}
-      inputAttrs={codeInputAttrs as Record<string, unknown>}
     />
-
-    <TextInput
+    <FormInlineField
       label={m.admin__forms_hub_domain_label()}
-      required={domainRequired}
+      control={form.fields.data.domain}
+      required={isRequiredInPreflight(['data', 'domain'])}
       {isEditing}
-      value={(domainInputAttrs as { value?: string }).value ?? ''}
-      issues={domainIssues}
-      inputAttrs={domainInputAttrs as Record<string, unknown>}
     />
-
-    <TextInput
+    <FormInlineField
       label={m.admin__forms_hub_legal_contact_address_label()}
-      required={legalContactAddressRequired}
+      control={form.fields.data.legalContactAddress}
+      required={isRequiredInPreflight(['data', 'legalContactAddress'])}
       {isEditing}
-      disabled={!isEditing}
-      value={(legalContactAddressInputAttrs as { value?: string }).value ?? ''}
-      issues={legalContactAddressIssues}
-      inputAttrs={legalContactAddressInputAttrs as Record<string, unknown>}
     />
-  </FormSection>
+  </div>
 </section>

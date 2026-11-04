@@ -12,6 +12,7 @@ let {
   title,
   description = null,
   maxDescriptionLines = 2,
+  wrapTitle = false,
   class: className = '',
   tags,
 }: Props = $props()
@@ -24,15 +25,23 @@ const descriptionStyle = $derived(
 
 <div class={['bits-card__body', className].filter(Boolean).join(' ')}>
   {#if code}
-    <span class="bits-card__code" title={code}>{code}</span>
+    <span class="bits-card__code" title={wrapTitle ? undefined : code}>{code}</span>
   {/if}
 
-  <ScrollableText
-    text={resolvedTitle}
-    padding={0}
-    class="w-full min-w-0"
-    textClass="bits-card__title-text"
-  />
+  {#if wrapTitle}
+    <p
+      class="min-w-0 text-[15px] leading-6 font-semibold break-words whitespace-normal"
+    >
+      {resolvedTitle}
+    </p>
+  {:else}
+    <ScrollableText
+      text={resolvedTitle}
+      padding={0}
+      class="w-full min-w-0"
+      textClass="bits-card__title-text"
+    />
+  {/if}
 
   {#if description}
     <p class="bits-card__description" style={descriptionStyle} title={description}>
@@ -41,6 +50,6 @@ const descriptionStyle = $derived(
   {/if}
 
   {#if tags}
-    <div class="inline-flex min-w-0 items-center gap-2 flex-wrap">{@render tags()}</div>
+    <div class="inline-flex min-w-0 flex-wrap items-center gap-2">{@render tags()}</div>
   {/if}
 </div>

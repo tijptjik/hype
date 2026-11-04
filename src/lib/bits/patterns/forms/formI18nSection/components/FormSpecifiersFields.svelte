@@ -1,11 +1,15 @@
 <script lang="ts">
+// SVELTE
 import type { Component } from 'svelte'
+// I18N
 import { m } from '#lib/i18n.js'
-import { TextInput, SectionHeader } from '#lib/bits/custom/form/index.js'
-import FormSection from './FormSection.svelte'
+// COMPONENTS
+import { SectionHeader } from '#lib/bits/custom/form/index.js'
+import FormInlineField from './FormInlineField.svelte'
 
 type FormFieldControl = {
   as: (type: 'text' | 'url') => Record<string, unknown>
+  set: (value: string) => unknown
   issues: () => import('$app/server').RemoteFormIssue[] | undefined
 }
 
@@ -36,41 +40,28 @@ let {
 
 const showCode = $derived(fields.includes('code'))
 const showUrl = $derived(fields.includes('url') && Boolean(form.fields.data?.url))
-
-const codeInputAttrs = $derived(form.fields.data.code.as('text'))
-const codeRequired = $derived(isRequiredInPreflight(['data', 'code']))
-const codeIssues = $derived(form.fields.data.code.issues())
-
-const urlInputAttrs = $derived(
-  showUrl ? form.fields.data.url?.as('url') : ({} as Record<string, unknown>),
-)
-const urlRequired = $derived(showUrl ? isRequiredInPreflight(['data', 'url']) : false)
-const urlIssues = $derived(showUrl ? form.fields.data.url?.issues() : undefined)
 </script>
 
 <section class="bits-form__section">
   <SectionHeader {title} {icon} />
-  <FormSection cardClass="bits-form__i18n-card no-i18n">
+  <div
+    class="md:[&>section+section]:border-border/50 grid min-w-0 gap-6 px-6 py-6 md:grid-cols-2 md:[&>section+section]:border-l md:[&>section+section]:pl-6"
+  >
     {#if showCode}
-      <TextInput
+      <FormInlineField
         label="Code"
-        required={codeRequired}
+        control={form.fields.data.code}
+        required={isRequiredInPreflight(['data', 'code'])}
         {isEditing}
-        value={(codeInputAttrs as { value?: string }).value ?? ''}
-        issues={codeIssues}
-        inputAttrs={codeInputAttrs as Record<string, unknown>}
       />
     {/if}
-
-    {#if showUrl}
-      <TextInput
+    {#if showUrl && form.fields.data.url}
+      <FormInlineField
         label="Url"
-        required={urlRequired}
+        control={form.fields.data.url}
+        required={isRequiredInPreflight(['data', 'url'])}
         {isEditing}
-        value={(urlInputAttrs as { value?: string }).value ?? ''}
-        issues={urlIssues}
-        inputAttrs={urlInputAttrs as Record<string, unknown>}
       />
     {/if}
-  </FormSection>
+  </div>
 </section>

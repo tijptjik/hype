@@ -1,5 +1,4 @@
 <script lang="ts">
-import { slide } from 'svelte/transition'
 import {
   Search,
   SectionHeader,
@@ -7,8 +6,15 @@ import {
 } from '#lib/bits/custom/index.js'
 import { getURLfromImage } from '#lib/client/services/image.js'
 import { m } from '#lib/i18n.js'
-import * as FormOrganisationsSectionPrimitive from './components'
 import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
+// STYLES
+import {
+  organisationHeaderStyles,
+  organisationListStyles,
+  organisationRowStyles,
+  organisationMediaStyles,
+  organisationActionsStyles,
+} from './formOrganisationsSection.styles'
 import {
   isOrganisationSearchResultDisabled,
   toOrganisationSearchDisabledMeta,
@@ -29,8 +35,6 @@ let {
   hiddenOrganisationInputAttrs = [],
   isEditing = true,
   isSubmitting = false,
-  isSubmitRequested = false,
-  startInAddingMode = false,
   canSetCoreInclusive = false,
   onSearchOrganisations,
   onAddOrganisation,
@@ -39,11 +43,6 @@ let {
   onToggleHubExclusive,
   class: className = '',
 }: FormOrganisationsSectionProps = $props()
-
-let isAdding = $state(false)
-let isRemoving = $state(false)
-let wasSubmitRequested = $state(false)
-let hasAutoOpenedAdding = $state(false)
 
 const selectionByOrganisationId = $derived(
   new Map(selections.map(selection => [selection.organisationId, selection])),
@@ -83,16 +82,6 @@ function toSelection(organisationId: string): HubOrganisationSelection {
   )
 }
 
-function toggleAdding(): void {
-  isAdding = !isAdding
-  if (isAdding) isRemoving = false
-}
-
-function toggleRemoving(): void {
-  isRemoving = !isRemoving
-  if (isRemoving) isAdding = false
-}
-
 function handleAddOrganisation(organisation: HubOrganisationItem): void {
   if (organisationIds.has(organisation.id)) return
   onAddOrganisation(organisation)
@@ -111,124 +100,64 @@ function handleCoreInclusiveToggle(
 ): void {
   onToggleCoreInclusive(organisationId, nextChecked === true)
 }
-
-$effect(() => {
-  if (!isRemoving) return
-  const handleEscape = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') isRemoving = false
-  }
-  window.addEventListener('keydown', handleEscape)
-  return () => window.removeEventListener('keydown', handleEscape)
-})
-
-$effect(() => {
-  if (!isAdding) return
-  const handleEscape = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') isAdding = false
-  }
-  window.addEventListener('keydown', handleEscape)
-  return () => window.removeEventListener('keydown', handleEscape)
-})
-
-$effect(() => {
-  if (sortedOrganisations.length !== 0) return
-  if (!isRemoving) return
-  isRemoving = false
-  isAdding = true
-})
-
-$effect(() => {
-  if (showModeUi) return
-  isAdding = false
-  isRemoving = false
-})
-
-$effect(() => {
-  if (isSubmitRequested && !wasSubmitRequested) {
-    isAdding = false
-    isRemoving = false
-  }
-  wasSubmitRequested = isSubmitRequested
-})
-
-$effect(() => {
-  if (hasAutoOpenedAdding) return
-  if (!startInAddingMode) return
-  if (!showModeUi) return
-  isAdding = true
-  isRemoving = false
-  hasAutoOpenedAdding = true
-})
 </script>
 
-<section class={`bits-form__section bits-form__parent-resource ${className}`}>
+<section
+  class={`bits-form__section bits-form__parent-resource @container h-auto! pb-0! ${className}`}
+>
   <SectionHeader
     {title}
     description={subtitle}
-    class="bits-form__parent-resource-header"
+    class={isEditing || issues.length
+      ? organisationHeaderStyles
+      : 'h-[68px]! min-h-[68px]! py-0!'}
   >
-    {#snippet center()}
-      <SectionHeaderPrimitive.Issues {issues} />
-    {/snippet}
     {#snippet right()}
-      <FormOrganisationsSectionPrimitive.Actions
-        {isAdding}
-        {isRemoving}
-        {isEditing}
-        {isSubmitting}
-        canRemove={sortedOrganisations.length > 0}
-        onToggleAdding={toggleAdding}
-        onToggleRemoving={toggleRemoving}
-      />
+      <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-3">
+        <SectionHeaderPrimitive.Issues {issues} />
+        {#if isEditing}
+          <div class="w-full max-w-96 min-w-0 flex-1 basis-64" inert={!showModeUi}>
+            <Search
+              placeholder={m.forms__search_organisations_placeholder()}
+              focusOnMount={false}
+              mountTransitionDuration={0}
+              onInput={onSearchOrganisations}
+              excludeIds={Array.from(organisationIds)}
+              getItemId={(organisation: HubOrganisationItem) => organisation.id}
+              onSelect={handleAddOrganisation}
+              resultMap={{
+                image: (organisation: HubOrganisationItem) => toImageSrc(organisation),
+                title: (organisation: HubOrganisationItem) =>
+                  organisation.i18n?.en?.name || organisation.code,
+                descriminator: toOrganisationSearchDiscriminator,
+                disabled: isOrganisationSearchResultDisabled,
+                disabledMeta: toOrganisationSearchDisabledMeta,
+              }}
+            />
+          </div>
+        {/if}
+      </div>
     {/snippet}
   </SectionHeader>
 
-  {#if isAdding && showModeUi}
-    <div class="bits-form__parent-resource-search">
-      <Search
-        placeholder={m.forms__search_organisations_placeholder()}
-        focusOnMount={true}
-        mountTransitionDuration={showModeUi ? 80 : 0}
-        onInput={onSearchOrganisations}
-        excludeIds={Array.from(organisationIds)}
-        getItemId={(organisation: HubOrganisationItem) => organisation.id}
-        onSelect={handleAddOrganisation}
-        resultMap={{
-          image: (organisation: HubOrganisationItem) => toImageSrc(organisation),
-          title: (organisation: HubOrganisationItem) =>
-            organisation.i18n?.en?.name || organisation.code,
-          descriminator: (organisation: HubOrganisationItem) =>
-            toOrganisationSearchDiscriminator(organisation),
-          disabled: (organisation: HubOrganisationItem) =>
-            isOrganisationSearchResultDisabled(organisation),
-          disabledMeta: (organisation: HubOrganisationItem) =>
-            toOrganisationSearchDisabledMeta(organisation),
-        }}
-      />
-    </div>
-  {/if}
-
-  {#if isRemoving && showModeUi}
-    <div transition:slide={{ duration: showModeUi ? 200 : 0 }}>
-      <FormOrganisationsSectionPrimitive.WarningBar />
-    </div>
-  {/if}
-
-  <div class="bits-form__parent-resource-list">
+  <div class={organisationListStyles}>
     {#each sortedOrganisations as organisation (organisation.id)}
       {@const selection = toSelection(organisation.id)}
-      <ResourceCard.Root>
+      <ResourceCard.Root class={organisationRowStyles}>
         <ResourceCard.Media
           size="xl"
+          class={organisationMediaStyles}
           image={toImageSrc(organisation)}
           alt={organisation.i18n?.en?.name || organisation.code}
         />
         <ResourceCard.Body
           code={organisation.code}
           name={organisation.i18n?.en?.name || organisation.code}
+          wrapTitle
+          class="min-w-0"
         />
         <ResourceCard.HubActions
-          {isRemoving}
+          class={organisationActionsStyles}
           {isEditing}
           {isSubmitting}
           {canSetCoreInclusive}

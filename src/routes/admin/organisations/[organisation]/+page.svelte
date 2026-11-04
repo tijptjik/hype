@@ -2,6 +2,9 @@
 // MESSAGING
 import OrganisationMessaging from '#lib/bits/patterns/messaging/OrganisationMessaging.svelte'
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
+// PROFILE
+import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
+import { translateContentField } from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import LocationVisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationVisibilitySelect.svelte'
@@ -42,7 +45,6 @@ import {
   guardRefDesync,
   guardUserRolesDesync,
   revalidateAfterSubmitAttempt,
-  resetLocaleFields,
   removeUserRoleSelection,
   resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
@@ -50,7 +52,6 @@ import {
   syncAdminFacetFromHash,
   toFormLevelIssueMessages,
   toIssueMessage,
-  translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
 } from '#lib/client/services/form.js'
@@ -127,8 +128,6 @@ import {
   FormProfileSkeleton,
 } from '#lib/bits/patterns/forms/formSkeleton/index.js'
 import {
-  FormI18nDescriptorFields,
-  FormI18nSection,
   FormFieldsSection,
   OrganisationCapabilities,
   FormSpecifiersFields,
@@ -310,7 +309,6 @@ const optimisticOrganisationData = $derived.by(() =>
 )
 
 // § Form
-const translatableI18nFields = ['name', 'nameShort', 'description'] as const
 
 type OrganisationEditorFormInput = ReturnType<typeof toOrganisationFormInput>
 type OrganisationRemoteFormInput = RemoteFormInput & OrganisationEditorFormInput
@@ -1040,29 +1038,6 @@ function revalidateAfterProgrammaticChange(): void {
   })
 }
 
-async function onTranslate(
-  sourceLocale: Locale,
-  targetLocale: Locale,
-): Promise<boolean> {
-  const translated = await translateLocaleIntoEmptyFields({
-    form: formCtx.form,
-    sourceLocale,
-    targetLocale,
-    fields: [...translatableI18nFields],
-  })
-  if (translated) revalidateAfterProgrammaticChange()
-  return translated
-}
-
-function onResetLocale(targetLocale: Locale): void {
-  resetLocaleFields({
-    form: formCtx.form,
-    targetLocale,
-    fields: [...translatableI18nFields],
-  })
-  revalidateAfterProgrammaticChange()
-}
-
 // USER ROLES
 
 function onAddUser(user: User): void {
@@ -1320,7 +1295,10 @@ async function onDeleteToggle(): Promise<void> {
   })
 }
 
+let profileResetVersion = $state(0)
+
 function onReset(): void {
+  profileResetVersion += 1
   fieldRemoveMode = false
   fieldsLayoutMutationVersion += 1
   capabilityResetVersion += 1
@@ -1575,16 +1553,16 @@ $effect(() => {
     isReady={isFormReady}
   >
     {#snippet fallback()}
-      <Main.Facet isVisible={!isImagesFacet} class="left-0! right-0!" fillHeight={true}>
+      <Main.Facet isVisible={!isImagesFacet} class="right-0! left-0!" fillHeight={true}>
         {#if hasProfileLoadFailed}
           <FormSurface>
             <div role="alert" class="p-6">
-              <p class="text-sm text-muted-foreground">
+              <p class="text-muted-foreground text-sm">
                 {m.admin__forms_profile_load_failed()}
               </p>
               <button
                 type="button"
-                class="mt-4 rounded-lg border border-border px-4 py-2 text-sm hover:bg-raised"
+                class="border-border hover:bg-raised mt-4 rounded-lg border px-4 py-2 text-sm"
                 onclick={retryOrganisationLoad}
               >
                 {m.retry()}
@@ -1627,7 +1605,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('advanced', 'previous')}
       nextAction={buildFacetNavAction('advanced', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'advanced' }}
     >
       <FormSurface>
@@ -1667,7 +1645,7 @@ $effect(() => {
             {m.content_visibility_heading()}
           </h2>
           <div
-            class="mx-6 flex min-h-14 items-center justify-between rounded-lg border border-border bg-foreground/4 px-5 py-3"
+            class="border-border bg-foreground/4 mx-6 flex min-h-14 items-center justify-between rounded-lg border px-5 py-3"
           >
             <span class="text-sm font-semibold"
               >{m.organisation_location_visibility_default()}</span
@@ -1698,39 +1676,35 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
-        <FormI18nSection
-          title="Profile"
-          localeCodeClass="absolute right-6 top-3 text-base font-medium uppercase text-muted-foreground"
-          {locales}
-          {onTranslate}
-          {onResetLocale}
-          {isEditing}
-        >
+        <SectionHeader title="Profile">
           {#snippet left()}
             <div class="flex items-center gap-3">
-              <OrganisationIcon class="size-6 text-primary" aria-hidden="true" />
+              <OrganisationIcon class="text-primary size-6" aria-hidden="true" />
               <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
             </div>
           {/snippet}
-
           {#snippet center()}
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
-
-          {#snippet children(locale)}
-            <FormI18nDescriptorFields
-              form={formCtx.form}
-              fields={formCtx.form.fields.data.i18n[locale]}
-              {locale}
-              {isEditing}
-              {isRequiredInPreflight}
-            />
-          {/snippet}
-        </FormI18nSection>
+        </SectionHeader>
+        <div class="pt-6">
+          <FormI18nDescriptorProfile
+            form={formCtx.form}
+            fields={formCtx.form.fields.data.i18n}
+            defaultLocales={locales}
+            recordKey={organisationRef}
+            resetVersion={profileResetVersion}
+            {isEditing}
+            {isRequiredInPreflight}
+            translate={(source, target, text) =>
+              translateContentField({ source, target, text })}
+            onChange={revalidateAfterProgrammaticChange}
+          />
+        </div>
 
         {@const roleFieldNameByUserId = getRoleFieldNameByUserId(userRoleResolverForm)}
         <div class={formSectionDividerStyles}>
@@ -1772,7 +1746,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
@@ -1809,7 +1783,7 @@ $effect(() => {
       isVisible={isFieldsFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme min-h-0 left-0! right-0!"
+      class="bits-theme right-0! left-0! min-h-0"
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
@@ -1903,11 +1877,11 @@ $effect(() => {
             <Skeleton class="h-full min-h-64 w-full rounded-xl" />
           </section>
         {:else if hasProfileLoadFailed}
-          <div role="alert" class="p-6 text-sm text-muted-foreground">
+          <div role="alert" class="text-muted-foreground p-6 text-sm">
             <p>{m.admin__forms_profile_load_failed()}</p>
             <button
               type="button"
-              class="mt-4 rounded-lg border border-border px-4 py-2 hover:bg-raised"
+              class="border-border hover:bg-raised mt-4 rounded-lg border px-4 py-2"
               onclick={retryOrganisationLoad}
             >
               {m.retry()}
@@ -1924,7 +1898,7 @@ $effect(() => {
           </ImageProvider>
         {:else}
           <div
-            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+            class="text-base-content/65 flex h-full w-full items-center justify-center p-6 text-center text-sm"
           >
             {m.admin__forms_organisation_image_save_hint()}
           </div>

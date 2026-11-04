@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="Field extends string = ProfileField">
 // SVELTE
 import { onDestroy, type Snippet } from 'svelte'
 import { slide } from 'svelte/transition'
@@ -37,6 +37,9 @@ let {
   values,
   contextKey,
   allowDescriptions = true,
+  fieldConfigs,
+  stackNames = false,
+  showToolbar = true,
   loading = false,
   retainContent = false,
   recordKey = '',
@@ -53,37 +56,49 @@ let {
 }: {
   localeState: ProfileLocaleState
   onLocaleStateChange: (state: ProfileLocaleState) => void
-  values: ProfileValues
+  values: ProfileValues<Field>
   contextKey: string
   loading?: boolean
   retainContent?: boolean
   recordKey?: string
+  fieldConfigs?: ReadonlyArray<{ key: Field; label: string }>
+  stackNames?: boolean
+  showToolbar?: boolean
   allowDescriptions?: boolean
   inherited?: boolean
   policyRequired?: boolean
   offerName?: boolean
   isEditing?: boolean
-  onUseName: () => void
-  onIndependentName: () => void
-  onEditLocation: () => void
+  onUseName?: () => void
+  onIndependentName?: () => void
+  onEditLocation?: () => void
   translate: (
     source: string,
     target: string,
     text: string,
   ) => Promise<ProfileProviderResult>
-  onTranslated: (field: ProfileField, locale: string, text: string) => void
-  children: Snippet<[ProfileField, string, () => void, string]>
+  onTranslated: (field: Field, locale: string, text: string) => void
+  children: Snippet<[Field, string, () => void, string]>
 } = $props()
 const showSkeleton = $derived(loading && !retainContent)
 const options = $derived(contentLocaleOptions(getLocaleKey()))
 const shown = $derived(displayedLocales(localeState, localeState.expanded))
 const fields = $derived(
-  (allowDescriptions ? ['title', 'description'] : ['title']) as ProfileField[],
+  fieldConfigs ??
+    ((allowDescriptions
+      ? [
+          { key: 'title', label: m.feature__title() },
+          { key: 'description', label: m.feature__description() },
+        ]
+      : [{ key: 'title', label: m.feature__title() }]) as unknown as Array<{
+      key: Field
+      label: string
+    }>),
 )
-let busy = $state<Partial<Record<ProfileField, boolean>>>({})
-let busySource = $state<Partial<Record<ProfileField, string>>>({})
-let results = $state<Partial<Record<ProfileField, ProfileTranslationResult[]>>>({})
-const translator = createProfileTranslator({
+let busy = $state<Partial<Record<Field, boolean>>>({})
+let busySource = $state<Partial<Record<Field, string>>>({})
+let results = $state<Partial<Record<Field, ProfileTranslationResult[]>>>({})
+const translator = createProfileTranslator<Field>({
   values: () => values,
   context: () => contextKey,
   locked: field =>
@@ -98,7 +113,7 @@ let previous: Record<string, string> = {}
 $effect(() => {
   const next: Record<string, string> = {}
   for (const locale of localeState.selectedLocales)
-    for (const field of fields) {
+    for (const { key: field } of fields) {
       const key = `${locale}:${field}`
       next[key] = values[contentFormKey(locale)]?.[field] ?? ''
       if (key in previous && next[key] !== previous[key])
@@ -112,7 +127,7 @@ $effect(() => {
   results = {}
 })
 onDestroy(() => translator.cancel())
-async function fill(source: string, field: ProfileField): Promise<void> {
+async function fill(source: string, field: Field): Promise<void> {
   if (busy[field]) return
   busy[field] = true
   busySource[field] = source
@@ -135,31 +150,33 @@ function autonym(locale: string): string {
 </script>
 
 <section
-  class="px-6 pb-6 [&_.bits-form\_\_control-wrap]:bg-panel!"
+  class="[&_.bits-form\_\_control-wrap]:bg-panel! px-6 pb-6"
   data-feature-profile-editor
   aria-busy={loading}
   inert={loading}
 >
-  <div class="mb-6 border-b border-border/50 pb-3" inert={loading}>
-    <LocaleToolbar
-      {...localeState}
-      {options}
-      allowAdd={isEditing}
-      onExpandedChange={expanded => onLocaleStateChange({ ...localeState, expanded })}
-      onChange={change =>
-        onLocaleStateChange({
-          ...localeState,
-          selectedLocales: change.selectedLocales,
-          visibleLocales: change.visibleLocales,
-        })}
-    />
-  </div>
+  {#if showToolbar}
+    <div class="border-border/50 mb-6 border-b pb-3" inert={loading}>
+      <LocaleToolbar
+        {...localeState}
+        {options}
+        allowAdd={isEditing}
+        onExpandedChange={expanded => onLocaleStateChange({ ...localeState, expanded })}
+        onChange={change =>
+          onLocaleStateChange({
+            ...localeState,
+            selectedLocales: change.selectedLocales,
+            visibleLocales: change.visibleLocales,
+          })}
+      />
+    </div>
+  {/if}
   <div
-    class="grid min-w-0 gap-6 {allowDescriptions
-      ? 'md:grid-cols-2 md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6'
-      : ''}"
+    class="grid min-w-0 gap-6 {stackNames
+      ? 'md:grid-cols-3 md:grid-rows-[min-content_1fr]'
+      : `${fields.length > 1 ? 'md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6' : ''} ${fields.length === 3 ? 'md:grid-cols-3' : fields.length === 2 ? 'md:grid-cols-2' : ''}`}"
   >
-    {#each fields as field}
+    {#each fields as { key: field, label } (field)}
       {@const derived = field === 'title' && inherited}
       {@const sources = localeState.selectedLocales.filter(locale =>
         hasProfileText(values[contentFormKey(locale)]?.[field]),
@@ -167,24 +184,62 @@ function autonym(locale: string): string {
       {@const hasTargets = localeState.selectedLocales.some(
         locale => !hasProfileText(values[contentFormKey(locale)]?.[field]),
       )}
-      <section class="min-w-0" data-profile-field={field}>
+      <section
+        class="min-w-0 {stackNames
+          ? field === 'description'
+            ? 'md:col-span-2 md:col-start-2 md:row-span-2 md:row-start-1 md:h-full md:border-l md:border-border/50 md:pl-6'
+            : field === 'nameShort'
+              ? 'md:col-start-1 md:row-start-2'
+              : 'md:col-start-1 md:row-start-1'
+          : ''}"
+        data-profile-field={field}
+      >
         <div class="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
           <h3 class="text-sm font-semibold">
-            {field === 'title' ? m.feature__title() : m.feature__description()}
+            {label}
           </h3>
-        {#if derived}
-          <div class="group/location-link inline-flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-transparent px-2 py-1 transition-colors duration-150 hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 motion-reduce:transition-none" data-profile-derived>
-            <span class="inline-flex items-center gap-2 text-xs text-muted-foreground"><LinkIcon class="size-4 shrink-0 text-primary" />{m.feature_name_derived_help()}</span>
-            {#if isEditing}
-              <div class="flex flex-wrap items-center gap-1 overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
-                {#if !policyRequired}
-                  <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onIndependentName}><UnlinkIcon class="size-3.5" />{m.feature_separate_name()}</button>
-                {/if}
-                <button type="button" class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors group-hover/location-link:text-primary group-focus-within/location-link:text-primary focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onEditLocation}><EditIcon class="size-3.5" />{m.feature_edit_location()}</button>
-              </div>
-            {/if}
-          </div>
-        {/if}
+          {#if derived}
+            <div
+              class="group/location-link hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 inline-flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-transparent px-2 py-1 transition-colors duration-150 motion-reduce:transition-none"
+              data-profile-derived
+            >
+              <span class="text-muted-foreground inline-flex items-center gap-2 text-xs"
+                ><LinkIcon class="text-primary size-4 shrink-0" />
+                {m.feature_name_derived_help()}</span
+              >
+              {#if isEditing}
+                <div
+                  class="flex flex-wrap items-center gap-1 overflow-hidden"
+                  data-profile-edit-action
+                  transition:slide={{
+                    axis: 'x',
+                    duration:
+                      prefersReducedMotion.current ||
+                      typeof globalThis.Element?.prototype.animate !== 'function'
+                        ? 0
+                        : 180,
+                  }}
+                >
+                  {#if !policyRequired}
+                    <button
+                      type="button"
+                      class="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-primary inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs transition-colors focus-visible:outline-2 motion-reduce:transition-none"
+                      onclick={onIndependentName}
+                    >
+                      <UnlinkIcon class="size-3.5" />{m.feature_separate_name()}
+                    </button>
+                  {/if}
+                  <button
+                    type="button"
+                    class="text-muted-foreground group-hover/location-link:text-primary group-focus-within/location-link:text-primary focus-visible:outline-primary inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors focus-visible:outline-2 motion-reduce:transition-none"
+                    onclick={onEditLocation}
+                  >
+                    <EditIcon class="size-3.5" />{m.feature_edit_location()}
+                  </button>
+                </div>
+              {/if}
+            </div>
+          {/if}
           <FormI18nTranslationStatus
             message={results[field]?.length
               ? [
@@ -202,7 +257,6 @@ function autonym(locale: string): string {
                 ].join(' ')
               : ''}
           />
-
         </div>
         <FormI18nSourceBar
           visible={!showSkeleton &&
@@ -246,11 +300,11 @@ function autonym(locale: string): string {
                   >
                     {#if locale !== shown[0]}
                       <span
-                        class="text-center font-mono text-xs leading-[22px] text-muted-foreground"
+                        class="text-muted-foreground text-center font-mono text-xs leading-[22px]"
                         >{shortLocaleLabel(locale)}</span
                       >
                     {/if}
-                    <div class="min-w-0 pl-3 pr-9">
+                    <div class="min-w-0 pr-9 pl-3">
                       <Skeleton class={field === 'title' ? 'h-4 w-2/3' : 'h-4 w-4/5'} />
                     </div>
                     <div class="flex justify-center">
@@ -277,12 +331,12 @@ function autonym(locale: string): string {
         </div>
         {#if !derived && !showSkeleton && field === 'title' && offerName && isEditing}
           <div
-            class="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary/5 p-3 text-xs"
+            class="bg-primary/5 mt-6 flex flex-wrap items-center justify-between gap-2 rounded-lg p-3 text-xs"
           >
             <span>{m.feature_use_location_name_prompt()}</span
             ><button
               type="button"
-              class="rounded-md px-3 py-2 font-medium text-primary hover:bg-primary/10"
+              class="text-primary hover:bg-primary/10 rounded-md px-3 py-2 font-medium"
               onclick={onUseName}
             >
               {m.feature_use_location_name()}

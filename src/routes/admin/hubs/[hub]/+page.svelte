@@ -94,6 +94,9 @@ import { getOrganisations } from '#lib/api/organisation.remote.js'
 import { HubPreflightFormData } from '#lib/db/zod/schema/hub.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
+// PROFILE
+import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
+import { translateContentField } from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
 import {
   FormFieldsSection,
@@ -101,7 +104,6 @@ import {
   FormHubSpecifiersFields,
   FormHubSubscriptionSection,
   FormOrganisationsSection,
-  FormI18nDescriptorFields,
   FormI18nSection,
   FormUserRolesSection,
   Main,
@@ -1087,34 +1089,6 @@ function onSubscriptionServiceChange(nextValue: HubSubscriptionService): void {
   revalidateAfterProgrammaticChange()
 }
 
-function onSubscriptionIdChange(nextValue: string): void {
-  updateFormData(hubEntityUpdaterForm, data => {
-    data.subscriptionId = nextValue
-    return data
-  })
-  revalidateAfterProgrammaticChange()
-}
-
-function onSubscriptionSessionCookieChange(nextValue: string): void {
-  updateFormData(hubEntityUpdaterForm, data => {
-    data.subscriptionSessionCookie = nextValue
-    return data
-  })
-  revalidateAfterProgrammaticChange()
-}
-
-function onSubscriptionBenefitsChange(
-  localeKey: 'en' | 'zhHans' | 'zhHant',
-  nextValue: string,
-): void {
-  updateFormData(hubEntityUpdaterForm, data => {
-    if (!data.i18n?.[localeKey]) return data
-    data.i18n[localeKey].subscriptionBenefits = nextValue
-    return data
-  })
-  revalidateAfterProgrammaticChange()
-}
-
 function onToggleSubscriptionPlacement(
   key: keyof HubSubscriptionPlacement,
   nextValue: boolean,
@@ -1450,7 +1424,10 @@ async function onDeleteToggle(): Promise<void> {
   })
 }
 
+let profileResetVersion = $state(0)
+
 function onReset(): void {
+  profileResetVersion += 1
   fieldRemoveMode = false
   fieldsLayoutMutationVersion += 1
   suppressFormLevelIssues = true
@@ -1671,124 +1648,100 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
-        <FormI18nSection
-          title={m.admin__forms_common_descriptors()}
-          sectionKey="descriptor"
-          {locales}
-          {onTranslate}
-          {onResetLocale}
+        <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+        <FormI18nDescriptorProfile
+          form={formCtx.form}
+          fields={formCtx.form.fields.data.i18n}
+          defaultLocales={locales}
+          recordKey={hubRef}
+          resetVersion={profileResetVersion}
           {isEditing}
+          {isRequiredInPreflight}
+          stickyToolbar
+          translate={(source, target, text) =>
+            translateContentField({ source, target, text })}
+          onChange={revalidateAfterProgrammaticChange}
         >
-          {#snippet center()}
-            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+          {#snippet children(localeState)}
+            <div class={formSectionDividerStyles}>
+              <FormUserRolesSection
+                icon={MembersIcon}
+                layout="list"
+                currentUserId={currentActor.userId}
+                title={m.admin__forms_hub_admins_title()}
+                subtitle={m.admin__forms_hub_admins_subtitle()}
+                minCardWidth={250}
+                transitionEntityKey={hub?.data?.id ?? hubRef}
+                removeSelfResourceLabel={m.resource__hub_singular()}
+                issues={userRoleSectionIssues}
+                userRoles={hubUserRoles}
+                {roleFieldNameByUserId}
+                {hiddenUserIdInputAttrs}
+                {isEditing}
+                isSubmitting={formCtx.submitting}
+                isSubmitRequested={formCtx.isSubmitRequested}
+                startInAddingMode={isNewHubRef}
+                availableRoles={[{ value: HubRoleType.admin, label: 'Admin' }]}
+                userQueryParams={{
+                  conditions: { isArchived: false },
+                }}
+                {onAddUser}
+                {onRemoveUser}
+                {onRoleChange}
+              />
+            </div>
+            {#if !isCoreHub}
+              <div class={formSectionDividerStyles}>
+                <FormOrganisationsSection
+                  class={formSelectionSectionStyles}
+                  title={m.maps__organisations()}
+                  subtitle={m.hub__organisations_note()}
+                  issues={organisationSectionIssues}
+                  organisations={hubOrganisations}
+                  selections={formOrganisationValues}
+                  {hiddenOrganisationInputAttrs}
+                  {isEditing}
+                  isSubmitting={formCtx.submitting}
+                  {canSetCoreInclusive}
+                  {onSearchOrganisations}
+                  {onAddOrganisation}
+                  {onRemoveOrganisation}
+                  {onToggleCoreInclusive}
+                  {onToggleHubExclusive}
+                />
+              </div>
+            {/if}
+            <div class={formSectionDividerStyles}>
+              <FormHubSpecifiersFields
+                form={formCtx.form}
+                {isEditing}
+                {isRequiredInPreflight}
+              />
+            </div>
+            <div class={formSectionDividerStyles}>
+              <FormHubSubscriptionSection
+                form={formCtx.form}
+                {isEditing}
+                isSubscriptionAvailable={Boolean(
+                  formCtx.form.fields.value().data?.isSubscriptionAvailable,
+                )}
+                subscriptionService={(formCtx.form.fields.value().data
+                  ?.subscriptionService ??
+                  HubSubscriptionService.substack) as HubSubscriptionService}
+                {localeState}
+                recordKey={hubRef}
+                resetVersion={profileResetVersion}
+                translate={(source, target, text) =>
+                  translateContentField({ source, target, text })}
+                onChange={revalidateAfterProgrammaticChange}
+                subscriptionPlacement={formSubscriptionPlacement}
+                onAvailabilityChange={onToggleSubscriptionAvailability}
+                onServiceChange={onSubscriptionServiceChange}
+                onPlacementChange={onToggleSubscriptionPlacement}
+              />
+            </div>
           {/snippet}
-
-          {#snippet children(locale)}
-            <FormI18nDescriptorFields
-              form={formCtx.form}
-              fields={formCtx.form.fields.data.i18n[locale]}
-              {locale}
-              {isEditing}
-              {isRequiredInPreflight}
-            />
-          {/snippet}
-        </FormI18nSection>
-
-        <div class={formSectionDividerStyles}>
-          <FormUserRolesSection
-            icon={MembersIcon}
-            layout="list"
-            currentUserId={currentActor.userId}
-            title={m.admin__forms_hub_admins_title()}
-            subtitle={m.admin__forms_hub_admins_subtitle()}
-            minCardWidth={250}
-            transitionEntityKey={hub?.data?.id ?? hubRef}
-            removeSelfResourceLabel={m.resource__hub_singular()}
-            issues={userRoleSectionIssues}
-            userRoles={hubUserRoles}
-            {roleFieldNameByUserId}
-            {hiddenUserIdInputAttrs}
-            {isEditing}
-            isSubmitting={formCtx.submitting}
-            isSubmitRequested={formCtx.isSubmitRequested}
-            startInAddingMode={isNewHubRef}
-            availableRoles={[{ value: HubRoleType.admin, label: 'Admin' }]}
-            userQueryParams={{
-              conditions: { isArchived: false },
-            }}
-            {onAddUser}
-            {onRemoveUser}
-            {onRoleChange}
-          />
-        </div>
-        {#if !isCoreHub}
-          <div class={formSectionDividerStyles}>
-            <FormOrganisationsSection
-              class={formSelectionSectionStyles}
-              title={m.maps__organisations()}
-              subtitle={m.hub__organisations_note()}
-              issues={organisationSectionIssues}
-              organisations={hubOrganisations}
-              selections={formOrganisationValues}
-              {hiddenOrganisationInputAttrs}
-              {isEditing}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewHubRef}
-              {canSetCoreInclusive}
-              {onSearchOrganisations}
-              {onAddOrganisation}
-              {onRemoveOrganisation}
-              {onToggleCoreInclusive}
-              {onToggleHubExclusive}
-            />
-          </div>
-        {/if}
-        <div class={formSectionDividerStyles}>
-          <FormHubSpecifiersFields
-            form={formCtx.form}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        </div>
-        <div class={formSectionDividerStyles}>
-          <FormHubSubscriptionSection
-            form={formCtx.form}
-            {isEditing}
-            isSubscriptionAvailable={Boolean(
-              formCtx.form.fields.value().data?.isSubscriptionAvailable,
-            )}
-            subscriptionService={(formCtx.form.fields.value().data
-              ?.subscriptionService ??
-              HubSubscriptionService.substack) as HubSubscriptionService}
-            subscriptionId={String(
-              formCtx.form.fields.value().data?.subscriptionId ?? '',
-            )}
-            subscriptionSessionCookie={String(
-              formCtx.form.fields.value().data?.subscriptionSessionCookie ?? '',
-            )}
-            subscriptionBenefitsByLocale={{
-              en: String(
-                formCtx.form.fields.value().data?.i18n?.en?.subscriptionBenefits ?? '',
-              ),
-              zhHans: String(
-                formCtx.form.fields.value().data?.i18n?.zhHans?.subscriptionBenefits ??
-                  '',
-              ),
-              zhHant: String(
-                formCtx.form.fields.value().data?.i18n?.zhHant?.subscriptionBenefits ??
-                  '',
-              ),
-            }}
-            subscriptionPlacement={formSubscriptionPlacement}
-            onAvailabilityChange={onToggleSubscriptionAvailability}
-            onServiceChange={onSubscriptionServiceChange}
-            {onSubscriptionIdChange}
-            {onSubscriptionSessionCookieChange}
-            {onSubscriptionBenefitsChange}
-            onPlacementChange={onToggleSubscriptionPlacement}
-          />
-        </div>
+        </FormI18nDescriptorProfile>
       </FormSurface>
     </Main.Facet>
 

@@ -4,6 +4,7 @@ import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
 import { SectionHeader, Switch } from '#lib/bits/custom/index.js'
 import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import Avatar from '#lib/bits/core/avatar/Avatar.svelte'
 import FormDisclosureGroup from '../formDisclosureGroup/FormDisclosureGroup.svelte'
 // ICONS
 import LayersIcon from 'virtual:icons/proicons/layers'
@@ -100,11 +101,12 @@ $effect(() => {
 })
 </script>
 
-<section class={`bits-form__section flex min-h-0 flex-col ${className}`}>
+<section class={`bits-form__section @container flex min-h-0 flex-col ${className}`}>
   <SectionHeader
     icon={LayersIcon}
     {title}
     description={subtitle}
+    class="[&_.bits-form\_\_section-header-right]:[container-type:normal]!"
     onCollapsableToggle={groupedItems.length > 0 ? handleCollapseAll : undefined}
     isCollapsableCollapsed={areAllGroupsCollapsed}
   >
@@ -126,13 +128,20 @@ $effect(() => {
         <ul class="px-6">
           {#each group.items as item (item.id)}
             <li
-              class="flex min-h-16 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border/40 py-4 last:border-b-0"
+              class="border-border/40 grid min-h-16 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 border-b py-3 last:border-b-0"
             >
+              <Avatar
+                src={`/api/mapRenders/layers/${encodeURIComponent(item.id)}/asset`}
+                name={item.layerName}
+                alt={item.layerName}
+                shape="square"
+                class="size-10 rounded-lg"
+              />
               <div class="min-w-0 flex-1">
-                <p class="break-words text-sm font-medium text-foreground">
+                <p class="text-foreground text-sm font-medium break-words">
                   {item.layerName}
                 </p>
-                <p class="break-words text-xs text-muted-foreground">
+                <p class="text-muted-foreground text-xs break-words">
                   {item.projectNameShort}
                 </p>
               </div>
@@ -140,7 +149,9 @@ $effect(() => {
                 class="flex shrink-0 items-center gap-3 [&_.bits-switch-label]:sr-only"
                 title={m.admin__forms_layer_visible_by_default()}
               >
-                <span class="text-xs text-muted-foreground">{m.default_enabled()}</span>
+                <span class="text-muted-foreground hidden text-xs @min-[28rem]:inline"
+                  >{m.default_enabled()}</span
+                >
                 <Switch
                   checked={item.isDefaultVisible}
                   disabled={isDisabled}
@@ -154,7 +165,7 @@ $effect(() => {
         </ul>
       </FormDisclosureGroup>
     {:else}
-      <p class="px-6 py-10 text-sm text-muted-foreground">
+      <p class="text-muted-foreground px-6 py-10 text-sm">
         {m.resource_no_results()}
       </p>
     {/each}

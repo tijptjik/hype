@@ -34,6 +34,7 @@ let {
   <span class="sr-only">{m.resource_loading()}</span>
   <FormSurface>
     <FormLocaleFieldsSkeleton
+      byField
       title="Profile"
       icon={profileIcon}
       {locales}
@@ -52,7 +53,7 @@ let {
     </FormSectionSkeleton>
     <FormSectionSkeleton title="Details" icon={detailsIcon}>
       <div class="bits-form__i18n-card no-i18n">
-        <div class="flex flex-col gap-4 pb-2 pt-2">
+        <div class="flex flex-col gap-4 pt-2 pb-2">
           <FormFieldSkeleton label="Code" />
           <FormFieldSkeleton label="Url" />
         </div>

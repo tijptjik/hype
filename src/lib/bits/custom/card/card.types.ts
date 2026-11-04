@@ -26,6 +26,7 @@ export interface CardMediaProps {
 }
 
 export interface CardBodyProps {
+  wrapTitle?: boolean
   code?: string | null
   title: string
   description?: string | null

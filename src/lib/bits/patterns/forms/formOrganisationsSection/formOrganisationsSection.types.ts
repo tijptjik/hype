@@ -30,8 +30,6 @@ export interface FormOrganisationsSectionProps {
   hiddenOrganisationInputAttrs?: Array<Record<string, unknown>>
   isEditing?: boolean
   isSubmitting?: boolean
-  isSubmitRequested?: boolean
-  startInAddingMode?: boolean
   canSetCoreInclusive?: boolean
   onSearchOrganisations: (query: string) => Promise<HubOrganisationItem[]>
   onAddOrganisation: (organisation: HubOrganisationItem) => void
