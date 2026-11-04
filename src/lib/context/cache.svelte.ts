@@ -157,13 +157,59 @@ export class CacheCtx {
     string,
     { type: PanelResourceType; query: ReturnType<typeof getPinnedResource> }
   >()
+  private readonly pinConsumers = new Map<string, number>()
+  private pinPruneScheduled = false
 
-  /** Retains a native batched identity query for an active selection. */
+  /**
+   * Protects a panel selection until its consumer changes selection or unmounts.
+   * @param type Selected resource family.
+   * @param id Selected resource identity.
+   * @param meta Request access scope, matching the native query identity.
+   * @returns Idempotent release callback that bounds inactive query retention.
+   */
+  retainPin(
+    type: PanelResourceType,
+    id: string,
+    meta: { isAdminRequest: boolean; scope: string },
+  ): () => void {
+    const key = JSON.stringify([type, id, meta])
+    this.pinConsumers.set(key, (this.pinConsumers.get(key) ?? 0) + 1)
+    let active = true
+    return () => {
+      if (!active) return
+      active = false
+      const count = (this.pinConsumers.get(key) ?? 1) - 1
+      if (count > 0) this.pinConsumers.set(key, count)
+      else this.pinConsumers.delete(key)
+      // Wait for reactive selection handoffs to acquire their new ownership first.
+      if (this.pinPruneScheduled) return
+      this.pinPruneScheduled = true
+      queueMicrotask(() => {
+        this.pinPruneScheduled = false
+        // Keep every live selection and only a bounded history of inactive queries.
+        const inactive = [...this.pins.keys()].filter(
+          identity => !this.pinConsumers.has(identity),
+        )
+        for (const identity of inactive.slice(0, Math.max(0, inactive.length - 128)))
+          this.pins.delete(identity)
+      })
+    }
+  }
+
+  /**
+   * Retains a native batched identity query for an active selection.
+   * @param type Selected resource family.
+   * @param id Selected resource identity.
+   * @param meta Request access scope.
+   * @returns Native query for the current cache generation.
+   */
   pin(
     type: PanelResourceType,
     id: string,
     meta: { isAdminRequest: boolean; scope: string },
   ) {
+    // Reacquire unchanged selections when an account transition clears retained queries.
+    void this.epoch
     const key = JSON.stringify([type, id, meta])
     let entry = this.pins.get(key)
     if (!entry) {
@@ -261,12 +307,14 @@ export class CacheCtx {
    * @param key - Resource, ID, payload profile and authorization scope identity.
    * @param fetcher - Factory for an authorized native query.
    * @param commit - Current-scope domain reconciliation callback.
+   * @param force - Await a refresh even when a compatible snapshot is fresh.
    * @returns Compatible retained data or the initial network result.
    */
   async ensureResource(
     key: string,
     fetcher: () => ResourceDetailHandle['query'],
     commit: (data: unknown) => void,
+    force = false,
   ): Promise<unknown> {
     const epoch = this.epoch
     let entry = this.details.get(key)
@@ -275,31 +323,55 @@ export class CacheCtx {
       this.details.set(key, entry)
     }
     const currentEntry = entry
-    const refresh = async () => {
-      try {
-        if (currentEntry.query.refresh) await currentEntry.query.refresh()
-      } catch (error) {
-        const status = (error as { status?: number })?.status
-        if (
-          epoch === this.epoch &&
-          (status === 401 || status === 403 || status === 404)
-        ) {
-          this.details.delete(key)
-          currentEntry.fetchedAt = 0
-          currentEntry.snapshot = undefined
-          commit(undefined)
-        }
-        throw error
+    // Reconciliation can replace an entry without changing the account generation.
+    const isCurrent = (): boolean =>
+      epoch === this.epoch && this.details.get(key) === currentEntry
+    const refresh = (): Promise<unknown> => {
+      if (currentEntry.pending) {
+        currentEntry.pending.commits.add(commit)
+        return currentEntry.pending.promise
       }
-      const result = currentEntry.query.current ?? (await currentEntry.query)
-      if (epoch !== this.epoch) return undefined
-      currentEntry.fetchedAt = Date.now()
-      currentEntry.snapshot = result.data
-      commit(result.data)
-      return result.data
+      const commits = new Set([commit])
+      // All consumers share one native operation, including its error and scope checks.
+      const operation = (async (): Promise<unknown> => {
+        try {
+          const query = currentEntry.query
+          // Query construction already starts initial transport; join it or a native refresh.
+          if (query.refresh && query.ready !== false && !query.loading)
+            await query.refresh()
+          else await query
+          const result = query.current ?? (await query)
+          if (!isCurrent()) return undefined
+          currentEntry.fetchedAt = Date.now()
+          currentEntry.snapshot = result.data
+          for (const reconcile of commits) reconcile(result.data)
+          return result.data
+        } catch (error) {
+          if (!isCurrent()) return undefined
+          const status = (error as { status?: number })?.status
+          if (status === 401 || status === 403 || status === 404) {
+            this.details.delete(key)
+            currentEntry.fetchedAt = 0
+            currentEntry.snapshot = undefined
+            for (const reconcile of commits) reconcile(undefined)
+          }
+          throw error
+        }
+      })()
+      const pending = {
+        commits,
+        promise: operation.finally(() => {
+          if (currentEntry.pending === pending) currentEntry.pending = undefined
+        }),
+      }
+      currentEntry.pending = pending
+      return pending.promise
     }
     const current = currentEntry.query.current
-    if (currentEntry.fetchedAt) {
+    const denied = [401, 403, 404].includes(
+      (currentEntry.query.error as { status?: number })?.status ?? 0,
+    )
+    if (!force && !denied && currentEntry.fetchedAt) {
       if (Date.now() - currentEntry.fetchedAt >= 300_000) void refresh().catch(() => {})
       return current ? current.data : currentEntry.snapshot
     }

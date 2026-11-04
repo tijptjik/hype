@@ -400,3 +400,103 @@ it('reuses parent policy details across Feature reads within the same cache scop
   expect(factory).toHaveBeenCalledTimes(1)
   expect(handle.refresh).toHaveBeenCalledTimes(1)
 })
+
+it.each([
+  ['success', 'reconcile'],
+  ['denial', 'reconcile'],
+  ['success', 'account reset'],
+  ['denial', 'account reset'],
+] as const)(
+  'ignores a superseded detail refresh ending in %s after %s',
+  async (outcome, invalidation) => {
+    const cache = new CacheCtx(resourceProviders)
+    const key = 'project:detail:admin:scope'
+    let finish!: () => void
+    let fail!: (error: unknown) => void
+    const pending = new Promise<void>((resolve, reject) => {
+      finish = resolve
+      fail = reject
+    })
+    const stale = Object.assign(Promise.resolve({ data: { id: 'old' } }), {
+      current: { data: { id: 'old' } },
+      refresh: vi.fn(() => pending),
+    })
+    const staleCommit = vi.fn()
+    const oldRead = cache.ensureResource(key, () => stale, staleCommit)
+    if (invalidation === 'account reset') cache.clear()
+    else await cache.reconcile('project')
+    const data = { id: 'new' }
+    const fresh = Object.assign(Promise.resolve({ data }), {
+      current: { data },
+      refresh: vi.fn(async () => {}),
+    })
+    await expect(cache.ensureResource(key, () => fresh, vi.fn())).resolves.toEqual(data)
+    if (outcome === 'denial') fail({ status: 403 })
+    else finish()
+    await expect(oldRead).resolves.toBeUndefined()
+    expect(staleCommit).not.toHaveBeenCalled()
+    const unexpectedFactory = vi.fn(() => fresh)
+    await expect(
+      cache.ensureResource(key, unexpectedFactory, vi.fn()),
+    ).resolves.toEqual(data)
+    expect(unexpectedFactory).not.toHaveBeenCalled()
+    expect(fresh.refresh).toHaveBeenCalledTimes(1)
+  },
+)
+
+it('evicts a current denied detail when the query promise itself rejects', async () => {
+  const cache = new CacheCtx(resourceProviders)
+  const key = 'project:detail:admin:scope'
+  const commit = vi.fn()
+  await expect(
+    cache.ensureResource(key, () => Promise.reject({ status: 403 }), commit),
+  ).rejects.toEqual({ status: 403 })
+  expect(commit).toHaveBeenCalledWith(undefined)
+  const data = { id: 'authorized-again' }
+  const factory = vi.fn(() => Promise.resolve({ data }))
+  await expect(cache.ensureResource(key, factory, commit)).resolves.toEqual(data)
+  expect(factory).toHaveBeenCalledTimes(1)
+})
+
+it('projects image mutations into visible preview owners after traversal history is invalidated', async () => {
+  const preview = page([
+    { ...row('org'), image: { id: 'portrait', version: 1 } } as PanelResource,
+  ])
+  const native = Object.assign(Promise.resolve(preview.value), preview.query, {
+    ready: true,
+    refresh: async () => {},
+  })
+  let finish!: (value: ResourcePage) => void
+  const replacement = Object.assign(
+    new Promise<ResourcePage>(resolve => {
+      finish = resolve
+    }),
+    {
+      ready: false,
+      current: undefined,
+    },
+  )
+  const cache = new CacheCtx({
+    page: vi.fn().mockReturnValueOnce(native).mockReturnValue(replacement),
+  } as never)
+  const list = cache.createList('organisation')
+  const input = {
+    type: 'organisation' as const,
+    meta: { scope: 'public', isAdminRequest: false },
+  }
+  await list.load(input)
+  const pending = list.load({ ...input, q: 'new' })
+  list.invalidate()
+  const mutation = cache.beginMutation('image', {
+    meta: { id: 'portrait' },
+    data: { version: 2 },
+  })
+  expect(preview.transforms).toHaveLength(1)
+  expect(preview.transforms[0](preview.value).data[0]).toMatchObject({
+    image: { version: 2 },
+  })
+  mutation.settle(false)
+  finish({ data: [], nextCursor: null })
+  await pending
+  list.release()
+})
