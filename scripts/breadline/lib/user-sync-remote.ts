@@ -127,8 +127,10 @@ export async function applyUserSyncRemote(
     complete: false,
   }
   if (!journal) save(progress)
-  for (let offset = progress.nextMutation; offset < mutations.length; offset += 20) {
-    const batch = mutations.slice(offset, offset + 20)
+  // Keep 100 row changes (200 guarded statements) per atomic batch to bound round trips.
+  // A resumed cursor need not align with this size; each row accepts its before or after state.
+  for (let offset = progress.nextMutation; offset < mutations.length; offset += 100) {
+    const batch = mutations.slice(offset, offset + 100)
     await db.batch(
       batch.flatMap(mutation =>
         userSyncRowStatements(mutation).map(row =>

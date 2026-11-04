@@ -16,7 +16,11 @@ import {
   type UserSyncSource,
 } from './lib/user-sync'
 import type { LegacyUser } from './lib/users'
-import { applyUserSyncRemote, type UserSyncJournal } from './lib/user-sync-remote'
+import {
+  applyUserSyncRemote,
+  userSyncRowStatements,
+  type UserSyncJournal,
+} from './lib/user-sync-remote'
 import type { D1Database } from '@cloudflare/workers-types'
 
 const databases: Database[] = []
@@ -398,6 +402,42 @@ function remoteFixture(db: Database, failAt = 0): D1Database {
 }
 
 describe('production user sync protocol without production access', () => {
+  it('resumes an older small-batch cursor after an unacknowledged batch', async () => {
+    const db = fixture(),
+      input = source(...Array.from({ length: 30 }, () => ({ telephone: null })))
+    const plan = planUserSync(input, target(db), {
+      ...options,
+      targetIdentity: 'production:synthetic',
+    })
+    const mutations = plan.mutations.filter(
+      row => row.table !== 'breadlineUserSyncState',
+    )
+    const remote = remoteFixture(db)
+    await remote.batch(
+      mutations
+        .slice(0, 40)
+        .flatMap(m =>
+          userSyncRowStatements(m).map(s => remote.prepare(s.sql).bind(...s.values)),
+        ),
+    )
+    let journal: UserSyncJournal = {
+      planHash: userSyncHash(plan),
+      targetIdentity: plan.targetIdentity,
+      nextMutation: 20,
+      complete: false,
+    }
+    await applyUserSyncRemote(remote, plan, plan.targetIdentity, journal, next => {
+      journal = next
+    })
+    expect(journal.complete).toBe(true)
+    expect(journal.nextMutation).toBe(mutations.length)
+    expect(db.query('SELECT count(*) AS n FROM user').get()).toEqual({ n: 30 })
+    expect(db.query('SELECT count(*) AS n FROM breadlineImportIdentity').get()).toEqual(
+      { n: 30 },
+    )
+    expect(db.query('PRAGMA foreign_key_check').all()).toEqual([])
+  })
+
   it('resumes after a lost response and keeps all bookkeeping local', async () => {
     const db = fixture(),
       input = source({}, {}, {}, {}, {}, {}, {}, {})
