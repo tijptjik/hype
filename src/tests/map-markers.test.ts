@@ -68,6 +68,18 @@ describe('map markers', () => {
   })
   afterEach(() => vi.useRealTimers())
 
+  it('desaturates Black/White photos and replaces the renderer when returning to colour', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const row = feature('historic', [1, 1])
+    renderer.sync([row], { markerStyle: 'image-bw' })
+    const monochrome = renderer.getElement(row.id)
+    expect(monochrome?.querySelector('img')?.style.filter).toBe('grayscale(1)')
+    renderer.sync([row], { markerStyle: 'image' })
+    const colour = renderer.getElement(row.id)
+    expect(colour).not.toBe(monochrome)
+    expect(colour?.querySelector('img')?.style.filter).toBe('')
+  })
+
   it('keeps the same image and native marker through an offscreen return', () => {
     const renderer = createMarkerRenderer(retentionMap, markerFactory)
     const retention = { scope: 'public:layers-a', budget: 1000 }
