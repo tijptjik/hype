@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { onDestroy, onMount } from 'svelte'
 // BITS COMPONENTS
 import Badge from '#lib/bits/custom/badge/Badge.svelte'
 // CONTEXT
@@ -41,6 +41,11 @@ const importCtx = getImportCtx()
 
 // Geocoding state
 let isGeocoding = $state(false)
+let disposed = false
+onDestroy(() => {
+  disposed = true
+  isGeocoding = false
+})
 let isPaused = $state(false)
 let autoProgress = $state(true) // New state for auto-progress mode
 let currentRow = $state(0)
@@ -460,9 +465,17 @@ function prepareExistingRowData(
 }
 
 // Modified handleGeocode for CSV processing
+/**
+ * Resolves a row address while its originating import still owns the work.
+ * @param rawAddress Source address text.
+ * @param locale Source locale.
+ * @param isCurrent Ownership check before caching or processing a response.
+ * @returns Parsed result and cache status, or no result when superseded.
+ */
 async function handleGeocodeForCSV(
   rawAddress: string,
   locale: LocaleKey,
+  isCurrent: () => boolean,
 ): Promise<{
   processedResult: ParsedReverseGeocodeResult | null
   fromCache: boolean
@@ -477,6 +490,7 @@ async function handleGeocodeForCSV(
       const cache = getGeocodeCache()
       const cachedResult = cache[cacheKey]
       const result = cachedResult ?? (await geocodeAddress({ address: rawAddress }))
+      if (!isCurrent()) return { processedResult: null, fromCache: false }
 
       if (!cachedResult && result) {
         cache[cacheKey] = result
@@ -509,6 +523,7 @@ async function handleGeocodeForCSV(
       }
     }
   } catch (error) {
+    if (!isCurrent()) return { processedResult: null, fromCache: false }
     console.error('🗺️ GeoLookupStep: Geocoding error:', error)
     return {
       processedResult: null,
@@ -517,8 +532,12 @@ async function handleGeocodeForCSV(
   }
 }
 
-async function startGeocoding() {
-  if (isGeocoding) return
+/**
+ * Processes the sampled rows only while this mounted step owns the import inputs.
+ * @returns Resolves on completion or cancellation.
+ */
+async function startGeocoding(): Promise<void> {
+  if (disposed || isGeocoding || importCtx.getCurrentStep() !== 'geo-lookup') return
   isGeocoding = true
   isPaused = false
   geocodingProgress = {
@@ -531,6 +550,17 @@ async function startGeocoding() {
 
   const data = importCtx.getData()
   const headers = importCtx.getHeaders()
+
+  const columns = importCtx.getColumns()
+  const project = importCtx.getSelectedProject()
+  const isCurrent = (): boolean =>
+    !disposed &&
+    isGeocoding &&
+    importCtx.getCurrentStep() === 'geo-lookup' &&
+    importCtx.getData() === data &&
+    importCtx.getHeaders() === headers &&
+    importCtx.getColumns() === columns &&
+    importCtx.getSelectedProject() === project
 
   // Create maps for address columns with prioritization support
   const rawAddressLocaleToColumnIndex = new Map<LocaleKey, number>()
@@ -596,14 +626,12 @@ async function startGeocoding() {
 
   for (let i = 0; i < sampledRowIndices.length; i++) {
     // Check for pause
-    while (isPaused && isGeocoding) {
+    while (isPaused && isCurrent()) {
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
     // Check if geocoding was stopped while paused
-    if (!isGeocoding) {
-      break
-    }
+    if (!isCurrent()) return
 
     const originalRowIndex = sampledRowIndices[i]
     currentRow = i + 1
@@ -662,7 +690,8 @@ async function startGeocoding() {
       // Process address if available
       if (addressForGeocoding) {
         const { processedResult: geocodingResult, fromCache } =
-          await handleGeocodeForCSV(addressForGeocoding, locale)
+          await handleGeocodeForCSV(addressForGeocoding, locale, isCurrent)
+        if (!isCurrent()) return
         usedApiLookup = !fromCache
 
         if (geocodingResult) {
@@ -821,6 +850,7 @@ async function startGeocoding() {
         await new Promise(resolve => setTimeout(resolve, 1000))
       }
     } catch (error) {
+      if (!isCurrent()) return
       console.error(
         `🗺️ GeoLookupStep: Error processing sample ${currentRow} (row ${originalRowIndex + 1}):`,
         error,
@@ -830,6 +860,7 @@ async function startGeocoding() {
     }
   }
 
+  if (!isCurrent()) return
   isGeocoding = false
 
   // Auto-proceed to next step immediately after completion
@@ -846,7 +877,9 @@ function togglePauseResume() {
   }
 }
 
-function proceedToNextStep() {
+/** Advances only the currently mounted geocoding step. @returns Nothing. */
+function proceedToNextStep(): void {
+  if (disposed || importCtx.getCurrentStep() !== 'geo-lookup') return
   importCtx.updateFeatureResolution({
     ignoreMissingFeatureIds: true,
     updatePolicy: 'all',
@@ -940,10 +973,10 @@ $effect(() => {
         <div class="flex min-h-0 flex-1 gap-4 overflow-hidden p-4">
           <!-- Left Panel - Existing Values -->
           <div
-            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+            class="border-info/25 bg-panel/[0.45] flex flex-1 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
           >
             <div class="mb-4 flex-none">
-              <h5 class="text-sm font-semibold text-base-content/80">
+              <h5 class="text-base-content/80 text-sm font-semibold">
                 Original Data (Row {currentRowData.originalRowIndex + 1})
               </h5>
             </div>
@@ -951,7 +984,7 @@ $effect(() => {
               <!-- Coordinates -->
               <div>
                 <div
-                  class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+                  class="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase"
                 >
                   Coordinates
                 </div>
@@ -961,7 +994,7 @@ $effect(() => {
                     <div class="ml-2">Lat: {currentRowData.existing.latitude}</div>
                     <div class="ml-2">Lng: {currentRowData.existing.longitude}</div>
                   {:else}
-                    <div class="ml-2 text-base-content/50">No coordinates</div>
+                    <div class="text-base-content/50 ml-2">No coordinates</div>
                   {/if}
                 </div>
               </div>
@@ -969,30 +1002,30 @@ $effect(() => {
               <!-- Addresses -->
               <div>
                 <div
-                  class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+                  class="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase"
                 >
                   Addresses
                 </div>
                 <div class="space-y-2 font-mono text-sm">
                   {#if currentRowData.existing.rawAddress}
                     <div class="ml-2">
-                      <div class="mb-1 font-medium text-base-content/80">Raw:</div>
-                      <div class="ml-2 break-words text-base-content/70">
+                      <div class="text-base-content/80 mb-1 font-medium">Raw:</div>
+                      <div class="text-base-content/70 ml-2 break-words">
                         {currentRowData.existing.rawAddress}
                       </div>
                     </div>
                   {/if}
                   {#if currentRowData.existing.displayAddress}
                     <div class="ml-2">
-                      <div class="mb-1 font-medium text-base-content/80">Display:</div>
-                      <div class="ml-2 break-words text-base-content/70">
+                      <div class="text-base-content/80 mb-1 font-medium">Display:</div>
+                      <div class="text-base-content/70 ml-2 break-words">
                         {currentRowData.existing.displayAddress}
                       </div>
                     </div>
                   {/if}
                   {#if !currentRowData.existing.rawAddress &&
                     !currentRowData.existing.displayAddress}
-                    <div class="ml-2 text-base-content/50">No addresses</div>
+                    <div class="text-base-content/50 ml-2">No addresses</div>
                   {/if}
                 </div>
               </div>
@@ -1001,7 +1034,7 @@ $effect(() => {
               {#if currentRowData.existing.structuredAddress}
                 <div>
                   <div
-                    class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+                    class="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase"
                   >
                     Structured Address
                   </div>
@@ -1010,8 +1043,8 @@ $effect(() => {
                       currentRowData.existing.structuredAddress,
                     ) as [key, value]}
                       <div class="ml-2">
-                        <div class="mb-1 font-medium text-base-content/80">{key}:</div>
-                        <div class="ml-2 break-words text-base-content/70">{value}</div>
+                        <div class="text-base-content/80 mb-1 font-medium">{key}:</div>
+                        <div class="text-base-content/70 ml-2 break-words">{value}</div>
                       </div>
                     {/each}
                   </div>
@@ -1022,10 +1055,10 @@ $effect(() => {
 
           <!-- Right Panel - Enriched Data -->
           <div
-            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-success/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+            class="border-success/25 bg-panel/[0.45] flex flex-1 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
           >
             <div class="mb-4 flex-none">
-              <h5 class="text-sm font-semibold text-base-content/80">
+              <h5 class="text-base-content/80 text-sm font-semibold">
                 Enriched Data (API Result)
               </h5>
             </div>
@@ -1035,7 +1068,7 @@ $effect(() => {
                 <!-- Coordinates -->
                 <div>
                   <div
-                    class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+                    class="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase"
                   >
                     Coordinates
                   </div>
@@ -1048,7 +1081,7 @@ $effect(() => {
                 <!-- Display Addresses -->
                 <div>
                   <div
-                    class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+                    class="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase"
                   >
                     Display Addresses
                   </div>
@@ -1057,10 +1090,10 @@ $effect(() => {
                       currentRowData.processed.displayAddress || {},
                     ) as [locale, address]}
                       <div class="ml-2">
-                        <div class="mb-1 font-medium text-base-content/80">
+                        <div class="text-base-content/80 mb-1 font-medium">
                           {locale}:
                         </div>
-                        <div class="ml-2 break-words text-base-content/70">
+                        <div class="text-base-content/70 ml-2 break-words">
                           {address}
                         </div>
                       </div>
@@ -1071,7 +1104,7 @@ $effect(() => {
                 <!-- Address Properties -->
                 <div>
                   <div
-                    class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+                    class="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase"
                   >
                     Address Properties
                   </div>
@@ -1080,16 +1113,16 @@ $effect(() => {
                       currentRowData.processed.addressProperties || {},
                     ) as [locale, properties]}
                       <div class="ml-2">
-                        <div class="mb-1 font-medium text-base-content/80">
+                        <div class="text-base-content/80 mb-1 font-medium">
                           {locale}:
                         </div>
                         <div class="ml-2 space-y-2">
                           {#each Object.entries(properties || {}) as [key, value]}
                             <div>
-                              <div class="mb-1 text-xs text-base-content/60">
+                              <div class="text-base-content/60 mb-1 text-xs">
                                 {key}:
                               </div>
-                              <div class="ml-2 break-words text-base-content/70">
+                              <div class="text-base-content/70 ml-2 break-words">
                                 {value}
                               </div>
                             </div>
@@ -1104,7 +1137,7 @@ $effect(() => {
                 {#if currentRowData.processed.addressMeta}
                   <div>
                     <div
-                      class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60"
+                      class="text-base-content/60 mb-2 text-xs font-semibold tracking-wide uppercase"
                     >
                       Address Meta
                     </div>
@@ -1113,8 +1146,8 @@ $effect(() => {
                         currentRowData.processed.addressMeta,
                       ) as [key, value]}
                         <div class="ml-2">
-                          <div class="mb-1 text-xs text-base-content/60">{key}:</div>
-                          <div class="ml-2 break-words text-base-content/70">
+                          <div class="text-base-content/60 mb-1 text-xs">{key}:</div>
+                          <div class="text-base-content/70 ml-2 break-words">
                             {value}
                           </div>
                         </div>
@@ -1127,7 +1160,7 @@ $effect(() => {
               <div class="flex flex-1 items-center justify-center">
                 <div class="flex flex-col items-center gap-3">
                   <div class="loading loading-spinner loading-md text-primary"></div>
-                  <div class="font-mono text-sm text-base-content/60">
+                  <div class="text-base-content/60 font-mono text-sm">
                     Processing...
                   </div>
                 </div>
@@ -1140,16 +1173,16 @@ $effect(() => {
         <div class="flex flex-1 items-center p-4">
           <div class="grid w-full grid-cols-1 gap-4 lg:grid-cols-3">
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="border-info/25 bg-panel/[0.45] flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
-                class="font-black text-7xl leading-none tracking-[-0.08em] text-info"
+                class="text-info text-7xl leading-none font-black tracking-[-0.08em]"
               >
                 {addressColumns.length}
               </div>
               <div>
                 <p
-                  class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
+                  class="text-base-content/45 text-xs font-bold tracking-[0.22em] uppercase"
                 >
                   Address Columns
                 </p>
@@ -1159,23 +1192,23 @@ $effect(() => {
                       <Badge text={`${col.field} ${col.locale ?? ''}`} tone="neutral" />
                     {/each}
                   {:else}
-                    <span class="text-sm text-base-content/50">None</span>
+                    <span class="text-base-content/50 text-sm">None</span>
                   {/if}
                 </div>
               </div>
             </section>
 
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="border-warning/25 bg-panel/[0.45] flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
-                class="font-black text-7xl leading-none tracking-[-0.08em] text-warning"
+                class="text-warning text-7xl leading-none font-black tracking-[-0.08em]"
               >
                 {coordinateColumns.latitude.length + coordinateColumns.longitude.length}
               </div>
               <div>
                 <p
-                  class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
+                  class="text-base-content/45 text-xs font-bold tracking-[0.22em] uppercase"
                 >
                   Coordinate Columns
                 </p>
@@ -1188,28 +1221,28 @@ $effect(() => {
                   {/if}
                   {#if coordinateColumns.latitude.length === 0 &&
                     coordinateColumns.longitude.length === 0}
-                    <span class="text-sm text-base-content/50">None</span>
+                    <span class="text-base-content/50 text-sm">None</span>
                   {/if}
                 </div>
               </div>
             </section>
 
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-success/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="border-success/25 bg-panel/[0.45] flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
-                class="font-black text-7xl leading-none tracking-[-0.08em] text-success"
+                class="text-success text-7xl leading-none font-black tracking-[-0.08em]"
               >
                 {geocodeCacheSize}
               </div>
               <div>
                 <p
-                  class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
+                  class="text-base-content/45 text-xs font-bold tracking-[0.22em] uppercase"
                 >
                   Cached Addresses
                 </p>
                 <p
-                  class="mt-4 font-mono text-xs uppercase tracking-[0.18em] text-base-content/55"
+                  class="text-base-content/55 mt-4 font-mono text-xs tracking-[0.18em] uppercase"
                 >
                   {isLoadingCache ? 'Reading cache' : 'Ready'}
                 </p>
