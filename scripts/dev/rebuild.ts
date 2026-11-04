@@ -12,6 +12,7 @@ import { resolve } from 'node:path'
 // SQLITE
 import { Database } from 'bun:sqlite'
 // REBUILD
+import { backfillPreparedMessaging } from '../messaging/rebuild-stage'
 import { restoreD1Export } from './restore-d1-export'
 import { convertExistingLocations } from './convert-locations'
 import { openSqliteDomain } from '../locations/lib/sqlite-domain'
@@ -70,18 +71,20 @@ async function main(): Promise<void> {
   let apply = false,
     mocks = true,
     inputs: string | undefined
+  let messagingOrganisation: string | undefined
   let identityReview: string | undefined
   const args = process.argv.slice(2)
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--apply') apply = true
     else if (args[i] === '--no-mocks') mocks = false
+    else if (args[i] === '--messaging-organisation' && args[i + 1] && !args[i + 1].startsWith('--')) messagingOrganisation = args[++i]
     else if (args[i] === '--inputs' && args[i + 1] && !args[i + 1].startsWith('--'))
       inputs = resolve(args[++i])
     else if (args[i] === '--identity-review' && args[i + 1] && !args[i + 1].startsWith('--'))
       identityReview = resolve(args[++i])
     else
       throw new Error(
-        'Usage: rebuild.ts [--apply] [--inputs retained-export-directory] [--no-mocks] [--identity-review private-review.json]',
+        'Usage: rebuild.ts [--apply] [--inputs retained-export-directory] [--no-mocks] [--identity-review private-review.json] [--messaging-organisation CODE]',
       )
   }
   if (
@@ -383,6 +386,10 @@ async function main(): Promise<void> {
       if (!auditResult.fixturePassed)
         throw new Error('A–Z mock starting-state audit failed')
       receipt.mockScenarios = auditResult.scenarios.length
+    }
+    if (messagingOrganisation) {
+      step = 'messaging-availability'
+      receipt.messagingAvailability = await backfillPreparedMessaging(dbPath, messagingOrganisation, run)
     }
     receipt.counts = JSON.parse(await operation('check'))
     if (apply) {
