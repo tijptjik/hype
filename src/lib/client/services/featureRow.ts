@@ -13,11 +13,6 @@ import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 import type { FeatureRowModel } from '#lib/client/services/featureRows.types.js'
 import type { LocaleKey } from '#lib/types.js'
 
-type FeatureRowModelCacheEntry = {
-  signature: string
-  model: FeatureRowModel
-}
-
 type BuildFeatureRowModelParams = {
   appCtx: ResourceViewCtx
   feature: Feature
@@ -27,55 +22,13 @@ type BuildFeatureRowModelParams = {
   userPreferences: UserPreferences
 }
 
-const featureRowModelCache = new Map<string, FeatureRowModelCacheEntry>()
-
-function toFeatureRowModelSignature({
-  feature,
-  localeKey,
-  activeTranslationLocales,
-  isSuperAdmin,
-}: Omit<BuildFeatureRowModelParams, 'appCtx' | 'userPreferences'>): string {
-  const localizedTitle = feature.i18n?.[localeKey]?.title ?? ''
-  const localizedDescription = feature.i18n?.[localeKey]?.description ?? ''
-  const localizedDisplayAddress = feature.i18n?.[localeKey]?.displayAddress ?? ''
-  const localizedDisplayAddressGen = feature.i18n?.[localeKey]?.displayAddressGen
-    ? '1'
-    : '0'
-  const propertySignature = feature.properties
-    .map(property => {
-      const localizedValue = property.i18n?.[localeKey]?.value ?? ''
-      return [
-        property.propertyId,
-        property.propertyValueId ?? '',
-        property.value ?? '',
-        localizedValue,
-      ].join(':')
-    })
-    .join('|')
-
-  const imageSignature = (feature.images ?? [])
-    .map(image => `${image.image?.id ?? ''}:${image.isPublished ?? ''}`)
-    .join('|')
-
-  return [
-    feature.id,
-    feature.modifiedAt ?? '',
-    localeKey,
-    activeTranslationLocales.join(','),
-    isSuperAdmin ? '1' : '0',
-    feature.isPublished ? '1' : '0',
-    feature.isPendingReview ? '1' : '0',
-    feature.isVisitable ? '1' : '0',
-    feature.isIntangible ? '1' : '0',
-    localizedTitle,
-    localizedDescription,
-    localizedDisplayAddress,
-    localizedDisplayAddressGen,
-    imageSignature,
-    propertySignature,
-  ].join('::')
-}
-
+/**
+ * Builds presentation for a mounted row using the view's existing statistic caches.
+ * @param params Current Feature, view, locale and user preference inputs.
+ * @returns Fresh row presentation with current labels and translations.
+ * @remarks The virtual list bounds these calculations to mounted rows. Do not retain
+ * a second global model cache: its output depends on reactive view definitions and preferences.
+ */
 export function getCachedFeatureRowModel(
   params: BuildFeatureRowModelParams,
 ): FeatureRowModel {
@@ -87,18 +40,6 @@ export function getCachedFeatureRowModel(
     isSuperAdmin,
     userPreferences,
   } = params
-  const signature = toFeatureRowModelSignature({
-    feature,
-    localeKey,
-    activeTranslationLocales,
-    isSuperAdmin,
-  })
-  const cached = featureRowModelCache.get(feature.id)
-
-  if (cached?.signature === signature) {
-    return cached.model
-  }
-
   const model: FeatureRowModel = {
     id: feature.id,
     title:
@@ -130,11 +71,6 @@ export function getCachedFeatureRowModel(
       freeform: calculateFreeformStatuses(feature, appCtx, localeKey),
     },
   }
-
-  featureRowModelCache.set(feature.id, {
-    signature,
-    model,
-  })
 
   return model
 }

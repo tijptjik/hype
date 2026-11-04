@@ -22,6 +22,7 @@ type StatisticValue = boolean | number | null
 type StatisticRecord = {
   value: StatisticValue
   type: StatisticType
+  source?: string
 }
 type AdminStatsCtx = {
   view?: {
@@ -98,6 +99,17 @@ type FeatureWithImageStats =
  ************/
 // +++ Cache Primitives
 
+// Match Feature entity retention without retaining statistics for every visited page.
+const MAX_FEATURE_STAT_ENTITIES = 2_000
+
+/**
+ * Reads a retained statistic without changing retention order.
+ * @param appCtx View owning the cache.
+ * @param resourceType Resource family.
+ * @param id Resource identity.
+ * @param statistic Semantic statistic key.
+ * @returns The retained record, if present.
+ */
 export function getStatistic(
   appCtx: ResourceViewCtx,
   resourceType: FirstClassResource,
@@ -107,6 +119,17 @@ export function getStatistic(
   return appCtx.cache.stats.get(resourceType)?.get(id)?.get(statistic)
 }
 
+/**
+ * Stores a statistic with its source inputs for later compatibility checks.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param resourceType Resource family owning the statistic.
+ * @param id Resource identity.
+ * @param statistic Semantic statistic key.
+ * @param value Calculated statistic value.
+ * @param type Stored statistic type.
+ * @param source Optional token identifying the inputs used for this value.
+ * @returns Nothing.
+ */
 export function setStatistic(
   appCtx: ResourceViewCtx,
   resourceType: FirstClassResource,
@@ -114,6 +137,7 @@ export function setStatistic(
   statistic: string,
   value: StatisticValue,
   type: StatisticType,
+  source?: string,
 ): void {
   let resourceStats = appCtx.cache.stats.get(resourceType)
 
@@ -128,7 +152,16 @@ export function setStatistic(
     resourceStats.set(id, entityStats)
   }
 
-  entityStats.set(statistic, { value, type })
+  entityStats.set(statistic, { value, type, source })
+
+  // Evict whole Feature records on writes; render-time reads remain side-effect-free.
+  if (resourceType === FirstClassResource.feature) {
+    while (resourceStats.size > MAX_FEATURE_STAT_ENTITIES) {
+      const oldest = resourceStats.keys().next()
+      if (oldest.done) break
+      resourceStats.delete(oldest.value)
+    }
+  }
 }
 
 // ---
@@ -137,7 +170,84 @@ export function setStatistic(
  ************/
 // +++ Feature Cache Accessors
 
+/**
+ * Captures only the inputs used by a known Feature statistic.
+ * @param appCtx View-owned property definitions.
+ * @param feature Current row, including optimistic edits without a revision change.
+ * @param statistic Semantic statistic key, optionally locale/property-qualified.
+ * @returns Comparable input token, or undefined for an unknown calculator contract.
+ */
+function featureStatisticSource(
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature | UserContributedFeature,
+  statistic: string,
+): string | undefined {
+  const row = feature as unknown as Record<string, unknown>
+  if (
+    ['isPublished', 'isPendingReview', 'isVisitable', 'isIntangible'].includes(
+      statistic,
+    )
+  )
+    return JSON.stringify(Boolean(row[statistic]))
+  if (['hasImage', 'isOneImagePublished', 'isAllImagePublished'].includes(statistic))
+    return JSON.stringify([row.imageCount ?? 0, row.imagePublishedCount ?? 0])
+  if (
+    ['hasTitle', 'hasDescription', 'hasDisplayAddress'].includes(statistic) ||
+    /^(isTitleTranslated|isDescriptionTranslated|isAddressTranslated)\./.test(statistic)
+  ) {
+    const field = /Title/.test(statistic)
+      ? 'title'
+      : /Description/.test(statistic)
+        ? 'description'
+        : 'displayAddress'
+    // Completion depends on presence and generated flags, not the full retained prose.
+    const translations = (row.i18n ?? {}) as Record<string, Record<string, unknown>>
+    return JSON.stringify(
+      Object.entries(translations).map(([locale, entry]) => [
+        locale,
+        typeof entry?.[field] === 'string' && (entry[field] as string).length > 0,
+        Boolean(entry?.[`${field}Gen`]),
+      ]),
+    )
+  }
+  if (statistic === 'isSpecifierTranslated') return JSON.stringify(row.properties ?? [])
+  if (statistic.startsWith('properties.')) {
+    const propertyId = statistic.slice('properties.'.length)
+    return JSON.stringify([
+      row.properties ?? [],
+      appCtx.cache.property.get(propertyId)?.component,
+    ])
+  }
+  return undefined
+}
+
+/**
+ * Reads a statistic only while its recorded inputs still match the current row.
+ * @param appCtx View owning the statistic cache.
+ * @param feature Current Feature data.
+ * @param statistic Semantic statistic identity.
+ * @returns Compatible cached value; stale or unversioned entries fall back to calculation.
+ */
+function getCurrentFeatureStatistic(
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature | UserContributedFeature,
+  statistic: string,
+): StatisticRecord | undefined {
+  if (!('id' in feature)) return undefined
+  const source = featureStatisticSource(appCtx, feature, statistic)
+  const cached = getStatistic(appCtx, FirstClassResource.feature, feature.id, statistic)
+  return source !== undefined && cached?.source === source ? cached : undefined
+}
+
 // Helper method to get cached boolean statistics for features (read-only)
+/**
+ * Reads a compatible cached statistic or calculates from current inputs.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param statistic Semantic statistic key.
+ * @param calculator Pure fallback for missing or changed inputs.
+ * @returns Current statistic value without mutating the cache.
+ */
 export function getCachedFeatureBoolean(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature | UserContributedFeature,
@@ -148,12 +258,7 @@ export function getCachedFeatureBoolean(
 ): boolean {
   const featureId = 'id' in feature ? feature.id : undefined
   if (featureId) {
-    const cached = getStatistic(
-      appCtx,
-      FirstClassResource.feature,
-      featureId,
-      statistic,
-    )
+    const cached = getCurrentFeatureStatistic(appCtx, feature, statistic)
     if (cached && cached.type === 'boolean' && typeof cached.value === 'boolean') {
       return cached.value
     }
@@ -164,6 +269,14 @@ export function getCachedFeatureBoolean(
 }
 
 // Helper method to set cached boolean statistics for features (separate from reading)
+/**
+ * Stores a statistic with its source inputs for later compatibility checks.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param statistic Semantic statistic key.
+ * @param value Calculated statistic value.
+ * @returns Nothing.
+ */
 export function setCachedFeatureBoolean(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
@@ -177,17 +290,26 @@ export function setCachedFeatureBoolean(
     statistic,
     value,
     'boolean',
+    featureStatisticSource(appCtx, feature, statistic),
   )
 }
 
 // Helper methods for tri-state caching (boolean | null)
+/**
+ * Reads a compatible cached statistic or calculates from current inputs.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param statistic Semantic statistic key.
+ * @param calculator Pure fallback for missing or changed inputs.
+ * @returns Current statistic value without mutating the cache.
+ */
 export function getCachedFeatureTriState(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
   statistic: string,
   calculator: (feature: FeatureFromCollection | Feature) => boolean | null,
 ): boolean | null {
-  const cached = getStatistic(appCtx, FirstClassResource.feature, feature.id, statistic)
+  const cached = getCurrentFeatureStatistic(appCtx, feature, statistic)
   if (
     cached &&
     cached.type === 'boolean' &&
@@ -200,6 +322,14 @@ export function getCachedFeatureTriState(
   return calculator(feature)
 }
 
+/**
+ * Stores a statistic with its source inputs for later compatibility checks.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param statistic Semantic statistic key.
+ * @param value Calculated statistic value.
+ * @returns Nothing.
+ */
 export function setCachedFeatureTriState(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
@@ -213,10 +343,20 @@ export function setCachedFeatureTriState(
     statistic,
     value,
     'boolean',
+    featureStatisticSource(appCtx, feature, statistic),
   )
 }
 
 // Helper methods for per-locale translation caching
+/**
+ * Reads a compatible cached statistic or calculates from current inputs.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param statistic Semantic statistic key.
+ * @param locale Locale used by the calculation.
+ * @param calculator Pure fallback for missing or changed inputs.
+ * @returns Current statistic value without mutating the cache.
+ */
 export function getCachedFeatureTranslationBoolean(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
@@ -225,12 +365,7 @@ export function getCachedFeatureTranslationBoolean(
   calculator: (feature: FeatureFromCollection | Feature, locale: string) => boolean,
 ): boolean {
   const localeStatistic = `${statistic}.${locale}`
-  const cached = getStatistic(
-    appCtx,
-    FirstClassResource.feature,
-    feature.id,
-    localeStatistic,
-  )
+  const cached = getCurrentFeatureStatistic(appCtx, feature, localeStatistic)
   if (cached && cached.type === 'boolean' && typeof cached.value === 'boolean') {
     return cached.value
   }
@@ -239,6 +374,15 @@ export function getCachedFeatureTranslationBoolean(
   return calculator(feature, locale)
 }
 
+/**
+ * Stores a statistic with its source inputs for later compatibility checks.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param statistic Semantic statistic key.
+ * @param locale Locale used by the calculation.
+ * @param value Calculated statistic value.
+ * @returns Nothing.
+ */
 export function setCachedFeatureTranslationBoolean(
   appCtx: ResourceViewCtx,
   feature: Feature,
@@ -254,10 +398,20 @@ export function setCachedFeatureTranslationBoolean(
     localeStatistic,
     value,
     'boolean',
+    featureStatisticSource(appCtx, feature, localeStatistic),
   )
 }
 
 // Helper methods for per-locale translation tri-state caching (boolean | null)
+/**
+ * Reads a compatible cached statistic or calculates from current inputs.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param statistic Semantic statistic key.
+ * @param locale Locale used by the calculation.
+ * @param calculator Pure fallback for missing or changed inputs.
+ * @returns Current statistic value without mutating the cache.
+ */
 export function getCachedFeatureTranslationTriState(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
@@ -269,12 +423,7 @@ export function getCachedFeatureTranslationTriState(
   ) => boolean | null,
 ): boolean | null {
   const localeStatistic = `${statistic}.${locale}`
-  const cached = getStatistic(
-    appCtx,
-    FirstClassResource.feature,
-    feature.id,
-    localeStatistic,
-  )
+  const cached = getCurrentFeatureStatistic(appCtx, feature, localeStatistic)
   if (
     cached &&
     cached.type === 'boolean' &&
@@ -287,6 +436,15 @@ export function getCachedFeatureTranslationTriState(
   return calculator(feature, locale)
 }
 
+/**
+ * Stores a statistic with its source inputs for later compatibility checks.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param statistic Semantic statistic key.
+ * @param locale Locale used by the calculation.
+ * @param value Calculated statistic value.
+ * @returns Nothing.
+ */
 export function setCachedFeatureTranslationTriState(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
@@ -302,10 +460,19 @@ export function setCachedFeatureTranslationTriState(
     localeStatistic,
     value,
     'boolean',
+    featureStatisticSource(appCtx, feature, localeStatistic),
   )
 }
 
 // Helper methods for property-based caching (categories/specifiers)
+/**
+ * Reads a compatible cached statistic or calculates from current inputs.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param propertyId Property whose presence is calculated.
+ * @param calculator Pure fallback for missing or changed inputs.
+ * @returns Current statistic value without mutating the cache.
+ */
 export function getCachedFeaturePropertyBoolean(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
@@ -317,12 +484,7 @@ export function getCachedFeaturePropertyBoolean(
   ) => boolean,
 ): boolean {
   const propertyStatistic = `properties.${propertyId}`
-  const cached = getStatistic(
-    appCtx,
-    FirstClassResource.feature,
-    feature.id,
-    propertyStatistic,
-  )
+  const cached = getCurrentFeatureStatistic(appCtx, feature, propertyStatistic)
   if (cached && cached.type === 'boolean' && typeof cached.value === 'boolean') {
     return cached.value
   }
@@ -331,6 +493,14 @@ export function getCachedFeaturePropertyBoolean(
   return calculator(feature, propertyId, appCtx)
 }
 
+/**
+ * Stores a statistic with its source inputs for later compatibility checks.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param propertyId Property whose presence is calculated.
+ * @param value Calculated statistic value.
+ * @returns Nothing.
+ */
 export function setCachedFeaturePropertyBoolean(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
@@ -345,21 +515,24 @@ export function setCachedFeaturePropertyBoolean(
     propertyStatistic,
     value,
     'boolean',
+    featureStatisticSource(appCtx, feature, propertyStatistic),
   )
 }
 
 // Helper function for tri-state specifier translation caching
+/**
+ * Reads a compatible cached statistic or calculates from current inputs.
+ * @param appCtx View owning cached statistics and property definitions.
+ * @param feature Current Feature inputs, including optimistic edits.
+ * @param calculator Pure fallback for missing or changed inputs.
+ * @returns Current statistic value without mutating the cache.
+ */
 export function getCachedFeatureSpecifierTranslation(
   appCtx: ResourceViewCtx,
   feature: Feature | FeatureFromCollection,
   calculator: (feature: Feature | FeatureFromCollection) => boolean | null,
 ): boolean | null {
-  const cached = getStatistic(
-    appCtx,
-    FirstClassResource.feature,
-    feature.id,
-    'isSpecifierTranslated',
-  )
+  const cached = getCurrentFeatureStatistic(appCtx, feature, 'isSpecifierTranslated')
   if (
     cached &&
     cached.type === 'boolean' &&
@@ -574,6 +747,13 @@ export function calculateSpecifierTranslation(
 // +++ Cache Priming
 
 // Pre-populate stats cache for a feature (called during feature refresh)
+/**
+ * Replaces a Feature's statistics and renews its position in bounded retention.
+ * @param appCtx View owning statistics and property definitions.
+ * @param feature Current Feature snapshot.
+ * @returns Nothing.
+ * @remarks Evicted rows calculate on demand without repopulating during rendering.
+ */
 export function primeFeatureStatsCache(
   appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
@@ -636,6 +816,7 @@ export function primeFeatureStatsCache(
     'isSpecifierTranslated',
     specifierTranslated,
     'boolean',
+    featureStatisticSource(appCtx, feature, 'isSpecifierTranslated'),
   )
 
   const contentCompletion = calculateContentCompletion(appCtx, feature)

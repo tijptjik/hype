@@ -26,7 +26,11 @@ type StatsCache = SvelteMap<
     Id,
     SvelteMap<
       Key,
-      { value: boolean | number | null; type: 'boolean' | 'count' | 'mean' | 'sum' }
+      {
+        value: boolean | number | null
+        type: 'boolean' | 'count' | 'mean' | 'sum'
+        source?: string
+      }
     >
   >
 >
