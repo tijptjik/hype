@@ -309,7 +309,7 @@ const sectionTitles = $derived(
                       <tbody>
                         {#each section.rows as row}
                           <tr class="border-t border-border">
-                            <td class="break-all py-3 pr-2" title={row.label}>
+                            <td class="break-all py-3 pr-2" data-tooltip={row.label}>
                               {row.label}
                             </td>
                             <td class="text-right font-mono">

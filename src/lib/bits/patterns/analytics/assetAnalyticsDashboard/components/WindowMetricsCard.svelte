@@ -243,7 +243,7 @@ function getBreakdownItems(
                     <div class="flex items-center justify-between gap-3">
                       <div
                         class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm text-foreground"
-                        title={`${item.label} • ${formatAnalyticsCount(item.requests)} requests`}
+                        data-tooltip={`${item.label} • ${formatAnalyticsCount(item.requests)} requests`}
                       >
                         {item.label}
                       </div>
