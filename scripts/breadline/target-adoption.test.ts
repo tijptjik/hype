@@ -95,6 +95,35 @@ function fixture(multiple = false, google = true) {
 }
 
 describe('reviewed target adoption', () => {
+  it('coalesces independent organisation grants without weakening either assignment', () => {
+    const f = fixture(true)
+    try {
+      f.db.exec(
+        "ALTER TABLE organisationRole ADD COLUMN grant TEXT; UPDATE organisationRole SET grant=json_object('manual',role)",
+      )
+      f.db.exec(
+        "UPDATE organisationRole SET grant=json_set(grant,'$.onboarding','user') WHERE userId='anchor'",
+      )
+      f.db.exec(
+        "UPDATE organisationRole SET grant=json_set(grant,'$.breadline:3','user') WHERE userId='loser'",
+      )
+      const plan = prepareAdoptions(f.db, f.source, f.review, 'seed', decisions)
+      applyAdoptions(f.db, f.source, f.review, plan, 'seed', decisions, f.backup)
+      const row = f.db.query('SELECT role,grant FROM organisationRole').get() as {
+        role: string
+        grant: string
+      }
+      expect(row.role).toBe('owner')
+      expect(JSON.parse(row.grant)).toEqual({
+        manual: 'owner',
+        onboarding: 'user',
+        'breadline:3': 'user',
+      })
+    } finally {
+      f.close()
+    }
+  })
+
   it('adopts several reviewed source rows to one owner with email-only fallback', () => {
     const f = fixture()
     try {

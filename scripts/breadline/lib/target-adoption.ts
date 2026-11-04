@@ -14,6 +14,11 @@ import {
   type TargetIdentitySnapshot,
 } from './users'
 import type { UserDecisions } from './user-decisions'
+import {
+  strongestOrganisationRole,
+  ORGANISATION_ROLE_LEVEL,
+  type OrganisationRoleGrants,
+} from '../../../src/lib/roles/organisation'
 
 // +++ Table Of Contents
 // 1. PRIVATE REVIEW AND INVENTORY
@@ -388,20 +393,42 @@ function updateRow(db: Database, ref: Reference, before: Row, after: Row): void 
  */
 function coalesce(ref: Reference, retained: Row, moved: Row): Row {
   if (evidenceHash(retained) === evidenceHash(moved)) return retained
-  if (
-    ref.table === 'organisationRole' &&
-    ['owner', 'member'].includes(String(retained.role)) &&
-    ['owner', 'member'].includes(String(moved.role))
-  ) {
-    const combined = {
-      ...retained,
-      role: retained.role === 'owner' || moved.role === 'owner' ? 'owner' : 'member',
+  if (ref.table === 'organisationRole') {
+    // Preserve every independent grant and take the stronger level for shared sources.
+    if ('grant' in retained && 'grant' in moved) {
+      const grants = JSON.parse(String(retained.grant)) as OrganisationRoleGrants
+      for (const [source, level] of Object.entries(
+        JSON.parse(String(moved.grant)) as OrganisationRoleGrants,
+      )) {
+        if (
+          !grants[source] ||
+          ORGANISATION_ROLE_LEVEL[level] > ORGANISATION_ROLE_LEVEL[grants[source]]
+        )
+          grants[source] = level
+      }
+      if (
+        evidenceHash({ ...retained, role: null, grant: null }) !==
+        evidenceHash({ ...moved, role: null, grant: null })
+      )
+        throw new Error('Conflicting organisation membership fields')
+      return {
+        ...retained,
+        role: strongestOrganisationRole(grants),
+        grant: JSON.stringify(grants),
+      }
     }
+    // Older offline fixtures predate grant provenance; preserve their strongest staff role.
     if (
+      ['owner', 'member'].includes(String(retained.role)) &&
+      ['owner', 'member'].includes(String(moved.role)) &&
       evidenceHash({ ...retained, role: null }) ===
-      evidenceHash({ ...moved, role: null })
-    )
-      return combined
+        evidenceHash({ ...moved, role: null })
+    ) {
+      return {
+        ...retained,
+        role: retained.role === 'owner' || moved.role === 'owner' ? 'owner' : 'member',
+      }
+    }
   }
   // A cache revision has no user content; advance beyond both invalidation counters.
   if (ref.table === 'featureCountUserRevision')
