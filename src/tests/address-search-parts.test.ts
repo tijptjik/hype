@@ -7,11 +7,11 @@ it('groups number and street, deduplicates building names and excludes administr
   address.overrides.en = {
     buildingName: 'Market',
     premisesName: 'Market',
-    streetName: 'High Street',
+    streetName: 'HIGH STREET',
     buildingNumberFrom: '1',
     buildingNumberTo: '3',
   }
-  address.source.records = {
+  address.source.rawSource = {
     data: {
       relationships: {
         divisions: {
@@ -41,11 +41,25 @@ it('groups number and street, deduplicates building names and excludes administr
   expect(addressSearchParts(address, 'en')).toEqual([
     { kind: 'building', text: 'Market' },
     { kind: 'street', text: '1-3 High Street' },
-    { kind: 'locality', text: 'Sai Ying Pun' },
+    { kind: 'locality', text: 'Sai Ying Pun', localityClass: 'neighbourhood' },
   ])
 })
 it('retains free-form evidence rather than guessing components', () => {
   expect(
     addressSearchParts(emptyFeatureAddress({ en: 'Shop 2, Example Mall' }), 'en'),
   ).toEqual([{ kind: 'address', text: 'Shop 2, Example Mall' }])
+})
+
+it('keeps the selected canonical unit type in display blocks when the input stores only its reference', async () => {
+  const { setStructuredAddressExpression } = await import(
+    '#lib/addresses/addressExpressions.js'
+  )
+  const address = setStructuredAddressExpression(
+    emptyFeatureAddress(),
+    'en',
+    'unitExpression',
+    'Room 3308',
+    'R',
+  )
+  expect(addressSearchParts(address, 'en')).toEqual([{ kind: 'unit', text: 'Rm 3308' }])
 })
