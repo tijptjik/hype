@@ -68,3 +68,9 @@
 - GitHub issues, sub-issues and repository milestones are the public delivery record. Do not create or maintain a parallel progress ledger in `spec/breadline/breadline.v4.spec.progress.md`; technical specifications link to their tracking issues and document requirements and decisions.
 - Use the Breadline labels and milestone assigned to the issue. Keep issue bodies public-safe: never include credentials, personal contact details or raw migration exports.
 - Link each implementation to the technical domain document under `spec/breadline/proposal/` and update that document when the implementation path or blocker changes.
+
+On managed desktops, run heavy validation through `dev-check COMMAND ...`,
+including direct Vitest, Svelte checks and Cargo builds. It shares one user lock
+across agents and repositories. Do not set DOTJIK_DEV_CHECK manually or bypass
+a failed resource scope. Watch commands retain the slot until stopped; avoid
+them for one-shot checks.
