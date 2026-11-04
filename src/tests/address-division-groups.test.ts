@@ -109,10 +109,10 @@ describe('address division relationships', () => {
     child.hierarchies = { locality: [[ancestor(old)]] }
     const effective = effectiveAddressDivisions(
       { available: true, memberships: [old, child], options: [old, replacement] },
-      { macrohoodId: replacement.id },
+      { localityPath: [replacement.id] },
     )
     const result = ids(effective)
-    expect(result).toEqual([{ key: 'locality', paths: [[child.id], [replacement.id]] }])
+    expect(result).toEqual([{ key: 'locality', paths: [[replacement.id]] }])
   })
 })
 
@@ -155,7 +155,7 @@ it('rejects fabricated ancestry, skipped ancestors and multiple neighbourhood pa
   expect(isApprovedLocalityPath([original.id, child.id], definitions)).toBe(true)
   expect(
     AddressDivisionOverridesSchema.safeParse({
-      localityPaths: [[original.id, child.id], [custom.id]],
+      localityPath: [[original.id, child.id], [custom.id]],
     }).success,
   ).toBe(false)
   expect(() => localityPathOverrides([[original], [custom]])).toThrow(
