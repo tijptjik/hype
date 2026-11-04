@@ -132,7 +132,7 @@
     "@commitlint/cz-commitlint": "^21.2.4",
     "@commitlint/prompt-cli": "^21.2.4",
     "@iconify/json": "^2.2.546",
-    "@inlang/paraglide-js": "^2.29.1",
+    "@inlang/paraglide-js": "^3.0.0",
     "@libsql/client": "^0.18.0",
     "@miniflare/d1": "^2.14.4",
     "@nerdfolio/drizzle-d1-helpers": "^0.1.5",

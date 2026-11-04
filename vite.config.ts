@@ -380,6 +380,7 @@ export default defineConfig(async ({ command }) => ({
     paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/lib/paraglide',
+      // Keep physical output for standalone scripts; v3 otherwise defaults to virtual modules.
       // Group dev translations by locale to avoid Firefox linking a module per message.
       outputStructure: command === 'serve' ? 'locale-modules' : 'message-modules',
     }),
