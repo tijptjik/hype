@@ -221,15 +221,20 @@ Environment selection is handled automatically:
 
 ## Branch Strategy
 
-```
-feature/* → preview → main
-    ↓         ↓       ↓
-   dev    staging   prod
+```text
+preview → main
+   ↓       ↓
+ dev +   production
+ staging
 ```
 
-- **Feature branches**: Development and testing
-- **Preview branch**: Integration testing and staging deployment
-- **Main branch**: Production deployment (promotes preview builds)
+- **Preview branch**: Shared local development, integration testing and staging. The
+  primary `/home/io/code/hype` checkout stays on `preview`.
+- **Main branch**: Production deployment (promotes preview builds).
+- Temporary isolated worktrees may be used for verification and reconciliation;
+  completed work returns to `preview`. Feature branches require an explicit request.
+- Local consolidation does not push or deploy. Remote changes still follow the
+  protection and validation rules below.
 
 ### Branch Protection Rules
 
@@ -245,7 +250,7 @@ feature/* → preview → main
 
 The pipeline follows a strict promotion strategy:
 
-1. **Feature Development**: Work on feature branches
+1. **Development**: Work locally on `preview`; use isolated worktrees when needed
 2. **PR Validation**: Build + Test on PR to preview
 3. **Preview Deployment**: Build + Test + Deploy to staging
 4. **Production Promotion**: Deploy cached build to production

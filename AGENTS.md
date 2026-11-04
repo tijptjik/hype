@@ -1,5 +1,15 @@
 # Repository Guidelines
 
+## Development branch
+
+- Use `preview` as the shared development and integration branch. Keep the primary
+  `/home/io/code/hype` checkout on `preview`.
+- Do not create or switch the primary checkout to a feature branch unless the user
+  explicitly requests it. Temporary isolated worktrees are allowed for safe review,
+  testing and conflict resolution; integrate their completed work back into `preview`.
+- Preserve concurrent uncommitted work when integrating. Committing or consolidating
+  locally does not authorize a push or deployment.
+
 ## Response summaries
 
 - Preface every final summary response with "# SUMMARY `r{sequence}`" with `{sequence}`
