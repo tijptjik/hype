@@ -11,6 +11,16 @@ Accepted architecture, 20 October 2026. Delivery tracking:
 [#213](https://github.com/tijptjik/hype/issues/213). Schedule import remains under
 #195/#196. Production application is a separate release step.
 
+Feature editor loading (Refs #194, parent #180): a known Feature mounts when its
+own authorized read completes. Parent cards hydrate independently without delaying
+or reseeding the form. Location and Photos defer mounting until first visit and
+retain drafts across tabs. Previous/Next requests bounded IDs after the Feature
+loads; editor submits refresh only the first 50 collection records. Collection
+pagination and ID-only traversal were introduced in `3b504c45c`.
+The editor route and `feature-profile-navigation.test.ts` cover readiness with
+unresolved parents and stale-navigation rejection. Authenticated browser timing
+remains unverified; this does not complete broader migration acceptance.
+
 ## Identity and ownership
 
 A Location is a shared physical entity; a Feature is a Project's interpretation

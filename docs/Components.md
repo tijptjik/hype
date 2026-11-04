@@ -117,6 +117,12 @@ or filter changes invalidate that sequence; direct detail visits use the current
 filtered Feature rows. Traversal stops at either end and never falls back to
 unfiltered neighbours when a Feature is outside the matching list.
 
+Feature detail readiness depends on the requested record, never its collection or
+parent cards. Parents hydrate independently without reseeding the form. Location
+and Photos mount on first visit per Feature, then remain mounted across tab changes.
+Previous/Next resolves bounded identities in the background after the record loads;
+submitting the editor refreshes only the first 50 collection records.
+
 ## Responsive and Surface Layout Ownership
 
 `ResponsiveCtx` is root-owned browser measurement state: layout viewport, visual

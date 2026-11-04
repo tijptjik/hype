@@ -602,6 +602,15 @@ let draftHasAddress = $state(false)
 let editorViewportHeight = $state(1040)
 let draftFindMode = $state<'search' | 'pin'>('search')
 let pinHighlightRequest = $state(0)
+// Inactive facets mount on first visit, then retain drafts across tab switches.
+let visitedLocationRef = $state<string | null>(null)
+let visitedImagesRef = $state<string | null>(null)
+$effect(() => {
+  if (isAddressFacet) visitedLocationRef = featureRef
+  if (isImagesFacet) visitedImagesRef = featureRef
+})
+const mountLocationFacet = $derived(isAddressFacet || visitedLocationRef === featureRef)
+
 let draftSearch:
   | { backToResults: () => void; addManualLocation: () => void }
   | undefined = $state()
@@ -994,6 +1003,19 @@ let settledFeatureRef = $state<string | null>(null)
 /********************
  *  SET NAVIGATION STATE
  ************/
+// Resolve stepper identities after the requested record mounts, independently of parent cards.
+$effect(() => {
+  const scope = adminCtx.featureNavigationScope
+  const id = currentFeatureId
+  if (!id || id !== featureRef) return
+  untrack(() => {
+    void adminCtx.ensureFeatureNavigation(id).catch(error => {
+      if (scope === adminCtx.featureNavigationScope)
+        console.error('Feature navigation failed', error)
+    })
+  })
+})
+
 const featureList = $derived(adminCtx.featureNavigationRows)
 
 const currentFeatureId = $derived(feature?.data?.id ?? null)
@@ -1111,6 +1133,7 @@ const configuredFeatureForm = configureForm(() => ({
       // Refresh the list after every submit and prepend the entity query when editing an existing feature.
       const updates: Array<RemoteQuery<unknown> | RemoteQueryOverride> = [
         getFeatures({
+          pagination: { limit: 50, offset: 0 },
           conditions: adminCtx.view.isSuperAdmin()
             ? { isArchived: null, isPublished: null }
             : { isArchived: false, isPublished: null },
@@ -2187,7 +2210,7 @@ function revalidateAfterProgrammaticChange(): void {
  *  SEARCH : PARENTS
  ************/
 
-/** Load the Feature with its projected naming state before exposing the next editor record.
+/** Load the requested Feature independently of parent cards and inactive facets.
  * @param ref Feature reference captured at the start of navigation.
  * @returns The loaded Feature; superseded navigation never changes the active form.
  */
@@ -2206,20 +2229,8 @@ async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)) as FeatureGetState
 
-  if (result?.data && ref === featureRef) {
-    // These lookups reuse the app's scoped ResourceDetail cache, fetching only on a miss/stale entry.
-    // Settle with the parent policy ready so linked-name controls cannot appear late.
-    const [project, layer] = await Promise.all([
-      result.data.projectId
-        ? adminCtx.view.getProjectById(result.data.projectId)
-        : null,
-      result.data.layerId ? adminCtx.view.getLayerById(result.data.layerId) : null,
-    ])
-    if (ref !== featureRef) return result
-    syncSelectedProject(toParentProjectItem(project as never))
-    syncSelectedLayer(toParentLayerItem(layer as never))
-  }
-
+  // Parent cards hydrate through the independent parent effects below.
+  // Commit the requested record immediately; a slow parent must never hold the form inert.
   // Slow responses from a previous Next/Previous navigation must not replace this form.
   if (ref !== featureRef) return result
   commitSettledFeatureState(result)
@@ -2824,143 +2835,135 @@ $effect(() => () => clearVisualSectionReopenState())
         : null}
       attrs={{ 'data-facet-id': 'address' }}
     >
-      <FormSurface class="mb-0! flex h-full min-h-0 flex-col overflow-hidden">
-        {#key featureRef}
-          {#snippet addressEditor(
-            locationControl?: Snippet<[Snippet?]>,
-            locationContent?: Snippet,
-            hideDetails = false,
-            showLookup = true,
-            lookupOverride?: (query?: string) => void,
-            locationActions?: Snippet,
-            locationMapControls?: Snippet,
-          )}
-            <FormFeatureAddress
-              fixedMap={true}
-              hasLocation={!isNewFeatureRef || draftHasPin}
-              coordinatesInLocationControl={isNewFeatureRef && !draftLocationAccepted}
-              showMap={false}
-              onMapControlsChange={controls => (sharedLocationMapControls = controls)}
-              {locationActions}
-              {locationMapControls}
-              {locationControl}
-              {locationContent}
-              hideDetails={hideDetails || (isNewFeatureRef && !draftLocationAccepted)}
-              showAddressDetails={!isNewFeatureRef || draftHasAddress}
-              showDivisions={!isNewFeatureRef || draftHasPin}
-              showCoordinates={!isNewFeatureRef ||
-                (draftHasPin && (draftFindMode === 'pin' || draftLocationAccepted))}
-              {showLookup}
-              show3dAddressOptions={show3dAddressOptions(selectedProject?.flags)}
-              address={editorAddress}
-              coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
-              {isEditing}
-              isLoading={isAddressLookupLoading}
-              message={addressLookupMessage ||
-                (isNewFeatureRef &&
-                draftHasAddress &&
-                editorAddress.matchStatus === 'unresolved'
-                  ? ''
-                  : '')}
-              candidates={addressCandidates}
-              onSelectCandidate={selectAddressCandidate}
-              onCoordinateChange={handleCoordinateChange}
-              onLookup={lookupOverride ?? lookupFeatureAddress}
-              onChange={updateAddressDraft}
-            />
-          {/snippet}
-          {#if placeLinkError && pendingPlaceLink?.featureId === currentFeatureId}
-            <div
-              role="alert"
-              class="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-6 py-3 text-sm"
-            >
-              <span>{m.feature_search_link_pending_saved()}</span>
-              <button
-                type="button"
-                class="rounded-lg bg-primary px-3 py-2 text-white"
-                disabled={placeLinkBusy || isDirty}
-                onclick={() => {
-                  if (feature?.data) void finishDraftPlaceLink(feature.data)
-                }}
+      {#if mountLocationFacet}
+        <FormSurface class="mb-0! flex h-full min-h-0 flex-col overflow-hidden">
+          {#key featureRef}
+            {#snippet addressEditor(
+              locationControl?: Snippet<[Snippet?]>,
+              locationContent?: Snippet,
+              hideDetails = false,
+              showLookup = true,
+              lookupOverride?: (query?: string) => void,
+              locationActions?: Snippet,
+              locationMapControls?: Snippet,
+            )}
+              <FormFeatureAddress
+                fixedMap={true}
+                hasLocation={!isNewFeatureRef || draftHasPin}
+                coordinatesInLocationControl={isNewFeatureRef && !draftLocationAccepted}
+                showMap={false}
+                onMapControlsChange={controls => (sharedLocationMapControls = controls)}
+                {locationActions}
+                {locationMapControls}
+                {locationControl}
+                {locationContent}
+                hideDetails={hideDetails || (isNewFeatureRef && !draftLocationAccepted)}
+                showAddressDetails={!isNewFeatureRef || draftHasAddress}
+                showDivisions={!isNewFeatureRef || draftHasPin}
+                showCoordinates={!isNewFeatureRef ||
+                  (draftHasPin && (draftFindMode === 'pin' || draftLocationAccepted))}
+                {showLookup}
+                show3dAddressOptions={show3dAddressOptions(selectedProject?.flags)}
+                address={editorAddress}
+                coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
+                {isEditing}
+                isLoading={isAddressLookupLoading}
+                message={addressLookupMessage ||
+                  (isNewFeatureRef &&
+                  draftHasAddress &&
+                  editorAddress.matchStatus === 'unresolved'
+                    ? ''
+                    : '')}
+                candidates={addressCandidates}
+                onSelectCandidate={selectAddressCandidate}
+                onCoordinateChange={handleCoordinateChange}
+                onLookup={lookupOverride ?? lookupFeatureAddress}
+                onChange={updateAddressDraft}
+              />
+            {/snippet}
+            {#if placeLinkError && pendingPlaceLink?.featureId === currentFeatureId}
+              <div
+                role="alert"
+                class="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-6 py-3 text-sm"
               >
-                {m.feature_search_retry_link()}
-              </button>
-              <button
-                type="button"
-                class="rounded-lg px-3 py-2 hover:bg-muted"
-                disabled={placeLinkBusy}
-                onclick={() => {
-                  if (pendingPlaceLink)
-                    sessionStorage.removeItem(
-                      `feature-place-link:${pendingPlaceLink.featureId}`,
-                    )
-                  pendingPlaceLink = null
-                  draftPlaceSource = null
-                  placeLinkError = false
+                <span>{m.feature_search_link_pending_saved()}</span>
+                <button
+                  type="button"
+                  class="rounded-lg bg-primary px-3 py-2 text-white"
+                  disabled={placeLinkBusy || isDirty}
+                  onclick={() => {
+                    if (feature?.data) void finishDraftPlaceLink(feature.data)
+                  }}
+                >
+                  {m.feature_search_retry_link()}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg px-3 py-2 hover:bg-muted"
+                  disabled={placeLinkBusy}
+                  onclick={() => {
+                    if (pendingPlaceLink)
+                      sessionStorage.removeItem(
+                        `feature-place-link:${pendingPlaceLink.featureId}`,
+                      )
+                    pendingPlaceLink = null
+                    draftPlaceSource = null
+                    placeLinkError = false
+                  }}
+                >
+                  {m.feature_search_keep_address()}
+                </button>
+              </div>
+            {/if}
+            {#if currentFeatureId && feature?.data?.modifiedAt}
+              <FeatureLocationSection
+                onAddressSelected={updateAddressDraft}
+                address={editorAddress}
+                featureName={currentFeatureData.i18n?.[getLocaleKey()]?.title ?? ''}
+                onMapCandidates={(markers, select) => {
+                  locationSearchMarkers = markers
+                  selectLocationMarker = select
                 }}
-              >
-                {m.feature_search_keep_address()}
-              </button>
-            </div>
-          {/if}
-          {#if currentFeatureId && feature?.data?.modifiedAt}
-            <FeatureLocationSection
-              onAddressSelected={updateAddressDraft}
-              address={editorAddress}
-              featureName={currentFeatureData.i18n?.[getLocaleKey()]?.title ?? ''}
-              onMapCandidates={(markers, select) => {
-                locationSearchMarkers = markers
-                selectLocationMarker = select
-              }}
-              featureId={currentFeatureId}
-              projectId={feature.data.projectId}
-              coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
-              modifiedAt={feature.data.modifiedAt}
-              {isEditing}
-              {isDirty}
-              onSourceUpdate={async () => {
-                await getFeature({
-                  ref: featureRef,
-                  refKey: 'id',
-                  meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-                }).refresh()
-                await refreshFeature()
-              }}
-              onUnlink={async expectedRevision => {
-                const current = feature?.data
-                if (!current || isDirty) return
-                await unlinkFeatureLocation({
-                  featureId: current.id,
-                  expectedFeatureModifiedAt: current.modifiedAt,
-                  expectedRevision,
-                }).updates(
-                  getFeature({
-                    ref: current.id,
+                featureId={currentFeatureId}
+                projectId={feature.data.projectId}
+                coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
+                modifiedAt={feature.data.modifiedAt}
+                {isEditing}
+                {isDirty}
+                onSourceUpdate={async () => {
+                  await getFeature({
+                    ref: featureRef,
                     refKey: 'id',
                     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-                  }),
-                  getFeatureLocation({ featureId: current.id }),
-                  getFeatureDetachedBrands({ featureId: current.id }),
-                )
-                await refreshFeature()
-              }}
-              reset={currentFeatureData.locationReset}
-              onResetFields={reset =>
-                updateFeatureData(data => ({ ...data, locationReset: reset }))}
-              brandEdit={currentFeatureData.locationBrandEdit}
-              onBrandEdit={edit =>
-                updateFeatureData(data => ({ ...data, locationBrandEdit: edit }))}
-            >
-              {#snippet children(
-                locationControl,
-                locationContent,
-                hideDetails,
-                showLookup,
-                lookupOverride,
-                locationActions,
-                locationMapControls,
-              )}
-                {@render addressEditor(
+                  }).refresh()
+                  await refreshFeature()
+                }}
+                onUnlink={async expectedRevision => {
+                  const current = feature?.data
+                  if (!current || isDirty) return
+                  await unlinkFeatureLocation({
+                    featureId: current.id,
+                    expectedFeatureModifiedAt: current.modifiedAt,
+                    expectedRevision,
+                  }).updates(
+                    getFeature({
+                      ref: current.id,
+                      refKey: 'id',
+                      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+                    }),
+                    getFeatureLocation({ featureId: current.id }),
+                    getFeatureDetachedBrands({ featureId: current.id }),
+                  )
+                  await refreshFeature()
+                }}
+                reset={currentFeatureData.locationReset}
+                onResetFields={reset =>
+                  updateFeatureData(data => ({ ...data, locationReset: reset }))}
+                brandEdit={currentFeatureData.locationBrandEdit}
+                onBrandEdit={edit =>
+                  updateFeatureData(data => ({ ...data, locationBrandEdit: edit }))}
+              >
+                {#snippet children(
                   locationControl,
                   locationContent,
                   hideDetails,
@@ -2969,53 +2972,63 @@ $effect(() => () => clearVisualSectionReopenState())
                   locationActions,
                   locationMapControls,
                 )}
-              {/snippet}
-            </FeatureLocationSection>
-          {:else}
-            <DraftFeatureLocationSearch
-              bind:this={draftSearch}
-              onFilterPanelChange={panel => (draftSearchFilterPanel = panel)}
-              onResultsChange={hasResults => (draftSearchHasResults = hasResults)}
-              onResultsEnd={() => {
-                const button = document.getElementById('draft-manual-entry')
-                if (!button) return false
-                button.focus()
-                return document.activeElement === button
-              }}
-              active={isAddressFacet}
-              focusRequest={locationFocusRequest}
-              onSelect={selectDraftLocation}
-              onPreview={previewDraftLocation}
-              onUnlink={() => (draftPlaceSource = null)}
-              onAcceptedChange={accepted => (draftLocationAccepted = accepted)}
-              onBack={undoDraftLocationSelection}
-              hasPin={draftHasPin}
-              coordinates={featureCoordinates
-                ? [featureCoordinates[0], featureCoordinates[1]]
-                : undefined}
-              onModeChange={mode => (draftFindMode = mode)}
-              onManualEntry={startManualLocation}
-              onDropPin={draftMapController ? dropDraftPin : undefined}
-              onMapCandidates={(markers, select) => {
-                locationSearchMarkers = markers
-                selectLocationMarker = select
-              }}
-            >
-              {#snippet children(searchControl, searchResults, mapControls)}
-                {@render addressEditor(
-                  searchControl,
-                  searchResults,
-                  false,
-                  false,
-                  undefined,
-                  undefined,
-                  mapControls,
-                )}
-              {/snippet}
-            </DraftFeatureLocationSearch>
-          {/if}
-        {/key}
-      </FormSurface>
+                  {@render addressEditor(
+                    locationControl,
+                    locationContent,
+                    hideDetails,
+                    showLookup,
+                    lookupOverride,
+                    locationActions,
+                    locationMapControls,
+                  )}
+                {/snippet}
+              </FeatureLocationSection>
+            {:else}
+              <DraftFeatureLocationSearch
+                bind:this={draftSearch}
+                onFilterPanelChange={panel => (draftSearchFilterPanel = panel)}
+                onResultsChange={hasResults => (draftSearchHasResults = hasResults)}
+                onResultsEnd={() => {
+                  const button = document.getElementById('draft-manual-entry')
+                  if (!button) return false
+                  button.focus()
+                  return document.activeElement === button
+                }}
+                active={isAddressFacet}
+                focusRequest={locationFocusRequest}
+                onSelect={selectDraftLocation}
+                onPreview={previewDraftLocation}
+                onUnlink={() => (draftPlaceSource = null)}
+                onAcceptedChange={accepted => (draftLocationAccepted = accepted)}
+                onBack={undoDraftLocationSelection}
+                hasPin={draftHasPin}
+                coordinates={featureCoordinates
+                  ? [featureCoordinates[0], featureCoordinates[1]]
+                  : undefined}
+                onModeChange={mode => (draftFindMode = mode)}
+                onManualEntry={startManualLocation}
+                onDropPin={draftMapController ? dropDraftPin : undefined}
+                onMapCandidates={(markers, select) => {
+                  locationSearchMarkers = markers
+                  selectLocationMarker = select
+                }}
+              >
+                {#snippet children(searchControl, searchResults, mapControls)}
+                  {@render addressEditor(
+                    searchControl,
+                    searchResults,
+                    false,
+                    false,
+                    undefined,
+                    undefined,
+                    mapControls,
+                  )}
+                {/snippet}
+              </DraftFeatureLocationSearch>
+            {/if}
+          {/key}
+        </FormSurface>
+      {/if}
     </Main.Facet>
 
     <Main.Facet
@@ -3026,7 +3039,8 @@ $effect(() => () => clearVisualSectionReopenState())
       contentClass="h-full overflow-hidden"
       attrs={{ 'data-facet-id': 'images' }}
     >
-      {#if featureImageProviderProps.isValid}
+      {#if featureImageProviderProps.isValid &&
+        (isImagesFacet || visitedImagesRef === featureRef)}
         <ImageProvider model={featureImageProviderModel}>
           <FeatureImageEditor />
         </ImageProvider>
