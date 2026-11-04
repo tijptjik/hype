@@ -5,6 +5,303 @@ Tracking: [account support #189](https://github.com/tijptjik/hype/issues/189),
 [identity parent #179](https://github.com/tijptjik/hype/issues/179), and
 [migration parent #180](https://github.com/tijptjik/hype/issues/180).
 
+## Production user sync and organisation users (5 November 2026)
+
+Refs #189 and #194. Implemented and locally verified on 5 November 2026; production
+acceptance remains pending. Tasktjik's HYPE and Breadline projects hold the requested
+verification tasks; the linked GitHub issues remain the public delivery record. Earlier
+local acceptance below does not establish production readiness. This design supersedes
+the earlier insert-only/fresh-target limitation.
+
+### Production schema boundary
+
+A read-only inspection of `hype-db-prod` on 4 November verified receipts for 0085, 0086,
+0089, 0090, 0091 and 0159, the actual telephone unique index, nullable import telephone,
+claim audit columns and source-user/volunteer crosswalk schema. Both
+`breadlineImportUser` and `breadlineImportIdentity` contained zero rows. The existing
+identity schema is sufficient for initial insertion; source deletion eligibility now
+adds a minimal `active` flag to the historic crosswalk.
+
+The full requirement does need one schema-only migration for organisation-user
+enrolment, role provenance and source-active status. Sync state stays in `.local`.
+Production currently has only Owner/Member staff roles and no organisation-user policy.
+It also lacks receipts for 0109–0158 and 0164–0167; having receipt 0163 is not evidence
+of a contiguous schema. Reconcile actual schema and migration dependencies against the
+exact release before applying anything. Never bulk-apply this dirty checkout's
+migrations as an import prerequisite.
+
+Personal records, credentials, source snapshots, reviewed decisions, identity seeds,
+generated data SQL, before-images and execution receipts stay in private ignored
+storage. Version control holds only code, synthetic fixtures and schema changes. The
+production data upload is an explicit operational import, never a data migration
+committed to Git. Migration `0168_organisation_users.sql` adds `organisationUserPolicy`,
+`organisationRole.grant`, `breadlineImportIdentity.active`, indexes and role triggers.
+The former 0169 production cursor prototype is removed. Selectively apply this reviewed
+migration and record its receipt; do not mark unrelated migrations as applied.
+
+### Organisation users and enrolment
+
+Use the existing organisation-role architecture: **user < member < owner**. Every
+stronger role qualifies for user inclusion; **staff** explicitly means member/owner.
+User-only membership grants no staff, dashboard, project or management rights and never
+appears in staff overviews. The existing primary key remains one effective role per
+organisation/person. The JSON `grant` column maps independent reasons to levels, e.g.
+`{"manual":"owner","breadline:123":"user"}`. Triggers derive the strongest surviving
+role and delete the row only after the final grant is removed. Staff replacement changes
+only manual grants. Imports, trusted hub sign-ins, verified domain matches, card
+onboarding and project provisioning retain distinct provenance.
+
+An organisation currently has zero or one owning hub through `organisation.hubId`; this
+is an existing relationship, not a restriction introduced by the policy table.
+
+Split the top of the organisation Capabilities tab into two columns: Users on the left,
+existing capability configuration on the right; retain **Capability I18n** below. Use
+the Languages panel's bordered, divided rows and shared Switch component for **Enable
+Users specific to this Organisation** and the independent rules with OR semantics. Users
+settings belong to the main organisation form: its dirty tracking, Save, Reset and
+Cancel apply to them. The policy and organisation edits share an atomic transaction and
+check both observed revisions; there is no separate save action.
+
+- **If the user signs in through the hub** — offered only when the organisation belongs
+  to a hub; use the trusted server-resolved hub and a durable signed-in user.
+- **If the user's email address ends with @{domain}** — offered only when the
+  organisation belongs to a hub; derive the domain from that hub, require verified email
+  and compare normalized exact domain boundaries. An unverified imported email must not
+  confer membership through this rule. The domain is not editable here. Sign-in resolves
+  the current hub domain, so hub reassignment/domain changes cannot continue matching an
+  earlier domain. The existing nullable `emailDomain` column marks whether this rule is
+  enabled; its saved value comes from the hub.
+- **If the user triggers the onboarding step in the custom card** — store the policy
+  with the explicit action in the Breadline feature card and idempotent server enrolment
+  endpoint. Full live sign-in/provider acceptance remains a release gate.
+
+The master switch prevents automatic enrolment when disabled. Disabling a rule does not
+silently remove historical membership; explicit grant revocation follows the same
+audited membership policy. Hub reassignment and domain changes must not continue
+granting membership from stale policy. Concurrent matching rules upsert a single
+membership and preserve every applicable grant.
+
+Add a **Users** tab to the organisation page when enabled, reusing
+`UserDirectory.svelte`, its controls and server-side paging/search/sort. Scope every
+query, count and profile/contact projection to that organisation on the server. Place
+Capabilities immediately after Users and use the existing Features header shortcut
+instead of a duplicate Features tab. Define organisation-owner and scoped administrator
+access explicitly rather than bypassing the current hub-admin directory guard. Keep the
+existing global admin directory available; ordinary organisation users cannot enumerate
+other users. The component stacks Users before Capabilities below its two-column
+breakpoint. The existing admin shell blocks widths below 1200px; Firefox interaction was
+verified at that supported minimum, not at phone width.
+
+### Settings integration verification (5 November 2026)
+
+The 5 November settings correction is verified locally: 98 focused tests pass, including
+atomic policy/form rollback, policy revision conflicts and current-hub domain matching.
+Firefox verifies the shared Save and Reset, persistence after reopening, the original
+policy restored after the check, and the switch layout at 1450px and 1200px without
+overflow or page errors. The full concurrent workspace check reports 114 errors outside
+the changed files. These corrections need no new database migration and have not been
+included in a new production deployment. Private screenshots/logs are retained under
+`.local/breadline/role-rollout/user-settings-correction/`.
+
+### Repeatable source reconciliation
+
+1. Plan against the last accepted local target state; consecutive runs do not pull HYPE
+   production again. Pin a complete source snapshot, target identity, private decisions
+   and durable per-target seed. Apply the established E.164 normalization, email
+   fallback, reviewed email families, telephone overrides, exclusions, title-case
+   profile cleanup and explicit existing-target adoption/merge decisions. Revalidate old
+   decisions against current source values; do not regenerate the seed on conflict.
+2. Match accepted identities by source user ID to their stable HYPE owner, retaining
+   source volunteer IDs independently for future runs and collected values. A phone or
+   email change must not produce a new HYPE identity or transfer history.
+3. Add durable per-source fingerprints/checkpoints and before/after evidence for all
+   relevant related records, including profile, volunteer, legacy membership and role
+   records. Define a field-level source-owned/HYPE-owned mapping; ingest changed
+   source-owned data, but preserve credentials, verified claims, HYPE roles and
+   independent HYPE edits. Legacy roles are evidence, never staff grants. Stage related
+   history that has no target model without claiming it was imported.
+4. Plan creates, updates, related-record changes and removals explicitly. Unchanged
+   input must produce a zero-write replay. Nonconflicting new users and new source
+   identities for an accepted owner should reconcile without manual SQL. Actual owner
+   collisions, ambiguous merges or conflicting credentials still require adjudication
+   instead of reopening claim ownership.
+5. Assign every retained imported user an HKFoodWorks Organisational User grant,
+   idempotently, without changing staff roles. Preserve all many-to-one mappings.
+6. Detect deletion only from a successfully completed full source snapshot or
+   authoritative deletion feed, never from failed/partial pagination. The user-approved
+   policy is to deactivate the deleted source identity, revoke its import grant, and
+   remove active membership only when no surviving source identity or other enrolment
+   reason supports it. Retain a tombstone and history join. Do not globally delete an
+   independently used/claimed HYPE account. Restoration reactivates the same source
+   identity and stable owner; shared owners retain membership until their last
+   supporting grant is removed.
+7. Implement a production apply command with an exact reviewed plan/input hash, target
+   binding checks, stale-target preconditions, a single-writer guard, checkpointed
+   bounded writes and restart-safe receipts. Use private backup and tested
+   compensation/recovery; do not assume a multi-batch D1 import is one atomic
+   transaction. Gate claim/enrolment traffic as needed to prevent ownership races.
+
+The original `users.ts` planner remains an initial-import/rehearsal tool. The new
+`sync-users.ts` reconciles accepted cohorts using `lib/user-sync.ts` and the existing
+reviewed matching rules. It permits nonconflicting additions to a shared owner; actual
+owner merges/splits, changed volunteer IDs, reuse of a retained volunteer ID by another
+owner, and destination collisions stop the entire apply for review. No credentials or
+claim ownership are reassigned.
+
+### Messaging discovery and release verification
+
+Exclude WhatsApp/Telegram phone discovery from user import. Existing bounded lookup
+tooling is not evidence that probing is safe or that it caused a prior ban. Review
+provider/account restriction notices and timestamped lookup activity privately,
+distinguish rate limits from bans, and assess official supported discovery and
+user-initiated linking before enabling any bulk lookup. No probe is needed to import or
+identify an HKFoodWorks user, and this review must not block an import with discovery
+disabled.
+
+Implement schema/authz first, then enrolment and directory, then reconciliation and
+production application. Rehearse against an isolated fresh production snapshot with the
+reviewed Breadline source. Verify initial import; zero-write replay; new users; changed
+profiles/phones/related records; deletion/restoration; shared identities; claimed users;
+concurrent login/enrolment; stale-plan rejection; interruption/resume; and rollback.
+Confirm complete source coverage or explicit reviewed exceptions, stable user/volunteer
+joins for future run values, referential integrity, no leaked credentials/PII and no
+automatic messaging calls.
+
+Use `dev-check` for focused automated validation. Browser acceptance uses the existing
+authenticated session, all enabled enrolment paths, organisation scoping, contact
+permissions, paging and narrow Firefox layout. Only after these gates pass should
+schema/application deployment and the separately reviewed private data import be
+scheduled. Production write/deploy has not been performed by this implementation
+exercise.
+
+### Implemented ownership and operational commands
+
+`breadlineImportIdentity` remains the stable source-user/source-volunteer crosswalk.
+`breadlineUserSyncState` retains the completed source row plus related records and a
+fingerprint; a source-only change updates this private state even where the future
+run/collection model is not implemented. Counters and historic events are not
+materialized as HYPE runs or summed into new totals.
+
+The importer owns the source crosswalk, its telephone provenance, its per-source
+membership grants and tombstones. For existing users it updates name, locale, image and
+telephone only when the current value still equals the previous accepted source
+projection and the account has not been claimed at runtime. An actual profile change
+also updates `user.updatedAt`. Newly ambiguous source cohorts do not clear an
+established claimed profile. Primary email, verification, credentials, runtime claims,
+HYPE edits and staff roles remain HYPE-owned. On first adoption of an existing local
+import, state and membership are established without rewriting its profile.
+
+Use an explicit complete source mirror, retained seed, decisions and accepted target
+file. The default mirror may be older than the reviewed rebuild input; never choose it
+just because its path is shorter. For production, bootstrap one private accepted
+baseline from the reviewed initial destination and release schema; subsequent plans
+reuse that file, with remote before-image checks instead of another production dump.
+
+```sh
+# Writes only a private plan and source backup; no target writes or network calls.
+bun run breadline:users:sync \
+  --state .local/breadline/target/sync-state.json \
+  --database /private/accepted-target.sqlite \
+  --mirror /private/complete-breadline.sqlite \
+  --seed-file /private/identity-seed.json \
+  --decisions /private/user-decisions.json \
+  --organisation hkfoodworks --out /private/user-sync-plans
+
+# Local rehearsal/application: the plan hash is printed by the planner.
+bun run breadline:users:sync \
+  --state .local/breadline/target/sync-state.json \
+  --database /private/local-rehearsal.sqlite \
+  --apply-plan /private/user-sync-plans/REVIEWED.plan.json \
+  --expect-hash REVIEWED_SHA256
+
+# Production only, after release/schema/rehearsal gates are satisfied.
+bun run breadline:users:apply-production \
+  --state .local/breadline/target/sync-state.json \
+  --database /private/accepted-production.sqlite \
+  --plan /private/user-sync-plans/REVIEWED.plan.json \
+  --expect-hash REVIEWED_SHA256 --target production:EXACT_DATABASE_ID
+```
+
+The seed's target identity must match the chosen baseline; local and production seeds
+are separate. Plans with exceptions cannot apply. Run heavy local rehearsals through
+`dev-check`. Source backups, plans, local before-images and receipts are private
+artifacts; keep them in ignored `.local/` or equivalent private storage.
+
+Local target writes use one immediate SQLite transaction with an FK check. Source
+payloads, fingerprints, accepted checkpoint and progress live in private `.local` JSON
+files, written with temp-file/fsync/rename and restricted permissions. A local operator
+lock serializes each target; retain it for inspection after a crash.
+
+Production uses bounded atomic D1 batches. Every row must match either the exact
+before-image or expected after-image; conflicts abort the whole batch. The operator
+advances its local journal only after success. If a response is lost, retrying that
+batch accepts already-applied rows without rewriting them. This is resumable, not
+globally atomic. There are no production checkpoint, payload, cursor or auth-fence
+tables and consecutive runs do not export HYPE production.
+
+### Interrupted production application and recovery
+
+Retain the hashed plan, local baseline, journal and production recovery point. Resume
+the same command after resolving a transient failure; inspect a crashed local lock
+before removing it. Do not plan another import against a partly applied target. A
+conflicting production edit stops the batch for reviewed reconciliation rather than
+overwriting independent HYPE changes. Keep the original plan and before-images for
+compensation or controlled restore. Promote private source state only after remote
+completion and local baseline application; guarded local replay recovers a crash between
+the SQLite commit and private state promotion.
+
+### Approved role-refactor verification (5 November 2026)
+
+The actual local database was backed up and the conversion rehearsed first. 14,219
+source payloads moved to private JSON; 14,219 Breadline reasons now occupy the existing
+role architecture, preserving staff and all 13,419 HYPE identity owners. Old
+membership/payload/cursor tables were removed locally. SQLite integrity and FKs pass.
+Replay against the reviewed snapshot has zero mutations and zero exceptions. 40 importer
+regression tests pass, including lost-response replay and conflict rollback. Grant
+trigger tests pass with recursive triggers both enabled and disabled; stronger-role
+inclusion and source revocation preserve independent roles. Production rollout
+acceptance remains pending until recorded below. The retained production baseline yields
+25 existing-account conflicts covering 29 reviewed HYPE accounts, including four
+previously reviewed duplicate-account merges. The bulk import remains blocked until
+guarded production adoption can verify current state. Automatic approval review rejected
+both a fresh full database export and a credential-bearing equality comparison; neither
+operation ran. A D1 Time Travel recovery bookmark was recorded without exporting
+records. Schema/application rollout is independent of these blocked data operations.
+
+### Local verification evidence (5 November 2026)
+
+Using the retained complete 22 October source snapshot: 14,226 source rows, seven
+reviewed exclusions, 14,219 retained source identities and 13,419 existing HYPE users.
+The initial prototype added 14,219 source-state rows and 14,219 Breadline grants, with
+no new user/account rows and no exceptions. The installed local database has 13,419
+HKFoodWorks members, no FK errors, and a zero-mutation replan. Related source history
+remains private evidence for later import, not completed event-history migration.
+
+Earlier prototype validation passed 38 importer tests and 55 organisation/auth/directory
+tests; those results do not establish acceptance of the approved role refactor. Tests
+exercise initial/repeat sync, new and changed identities, related-only changes,
+deletion/restoration, shared owners, local edits/claims, reviewed decisions, incomplete
+mirrors, stale plans, rollback, and simulated D1 interruption/resume and writer
+exclusion in the former prototype. Organisation/auth tests cover scoped permissions,
+exact verified domains, independent grant retention, card onboarding and deleted-source
+claims. Chromium and Firefox verify the enabled Users directory, 25-to-50-row paging,
+search/reset and no page errors. Firefox was tested at the 1200px admin minimum; the
+existing shell blocks interaction below that width. A temporary published local
+hierarchy verifies card onboarding, one grant after reload and isolation of its
+one-member directory; the fixture is removed afterward. This also caught and fixed core
+routing without a hub database ID.
+
+The current canonical app check reports 108 errors and 20 warnings across 52 files,
+primarily conflicting Svelte `Snippet` identities; this checkout contains both Svelte
+5.57.2 and 5.57.3. The earlier clean check does not supersede this failure. Resolve the
+dependency/type-check baseline before release. The operational-script type check passes
+separately.
+
+These are local/synthetic results. Production initial reconciliation, live provider
+sign-in enrolment, real D1 apply/restore and post-deploy replay remain unverified.
+Production still needs the reviewed schema migrations and a separate private data
+upload. WhatsApp/Telegram discovery is explicitly deferred and never called by sync.
+
 ## Reviewed existing-target adoption (23 October 2026)
 
 This supersedes the original fresh-destination-only limitation below. Email equality
@@ -510,3 +807,96 @@ photo sections, with links into admin feature pages. They cover published map
 features/photos and associated submission/report counters, not Breadline run history,
 which remains a later event-import stage. See `src/tests/admin-user-profile.test.ts` for
 field-projection, role, archive-filter and username-lookup checks.
+
+### Selective role-schema rollout (5 November 2026)
+
+Migration 0168 was rehearsed against the retained production baseline, then applied
+selectively to `hype-db-prod` with its own receipt. Production verification preserves
+all 23 existing staff assignments (14 owners, nine members) with manual grants;
+foreign-key errors are zero. The five former membership/source-state/cursor tables are
+absent. There are still zero Breadline crosswalk rows in production. No unrelated
+pending migrations were marked as applied. A private Time Travel bookmark precedes the
+schema change. Application deployment and data import have separate receipts.
+
+Do not roll the application back to pre-hierarchy code once user-level production roles
+exist: older any-role checks may treat them as staff. Prefer a forward fix, or a
+reviewed coordinated recovery of schema/data and application. During this stage before
+the data import, production roles remain member/owner and enrolment rules are off.
+
+### Selective application rollout (5 November 2026)
+
+Worker version `24b3a028-3812-49e3-84e7-0fe1836402d5` is deployed at 100%. The isolated
+release starts from the exact previously deployed source and includes 43 selected
+changed paths. Unrelated working-tree changes and pending migrations were excluded.
+Existing routes, service bindings, variables and secrets were retained. The four public
+domains return HTTP 200 HTML after deployment; this is public-route health evidence, not
+authenticated production UI acceptance.
+
+HKFoodWorks Users is enabled in production with all automatic enrolment rules off.
+Read-back verification confirms 14 owners and nine members, matching manual grants, zero
+foreign-key violations, zero Breadline crosswalk rows, only the 0168 receipt from this
+rollout and no obsolete membership/payload/checkpoint/cursor tables. The production user
+data import has not run.
+
+Validation: 40 importer tests, 83 focused runtime tests and 13 isolated-release tests
+pass. Operational importer TypeScript checks, the production build and Wrangler dry run
+pass. The isolated full app check has the same 11 errors and 19 warnings as the
+unchanged deployed baseline, with no added diagnostics. Local Firefox verifies 13,419
+users, 25-to-50-row pagination, search/reset and no page errors or horizontal overflow
+at the supported 1200px admin width. The browser connector was unavailable for
+authenticated production verification.
+
+Private deployment, schema, HTTP, recovery and validation receipts plus selected source
+hashes are retained in `.local/breadline/role-rollout/`. Source changes remain
+uncommitted; these receipts identify the actual deployed artifact independently.
+
+Remaining import gates are updated by the latest-source and comparison evidence below.
+Production apply/recovery, authenticated directory and claim verification, and
+zero-write replay remain unverified. Messaging discovery remains excluded.
+
+### Latest source, approved comparison and settings deployment (5 November 2026)
+
+The user authorized the private equality comparison and required a fresh Breadline
+export first. The full source export completed before comparison: 15 tables, 155,030
+rows, 14,309 users and 68,326 runs; SQLite integrity is `ok`. The consistent source
+snapshot is dated `2026-11-04T18:19:10.139Z`. The database, manifest, reviewed plan and
+receipts remain ignored under `.local/breadline/production-rollout-20261105/`. No source
+records or credential-bearing comparison SQL enter version control.
+
+The read-only comparison of 29 reviewed production accounts returned only mismatch
+counts. One user differs in preferences and updated timestamp; one account row and one
+session row each have a removed and added ID. Passkeys, organisation/project/hub roles
+and Breadline ownership/crosswalks match. The before-state is stale, so no reviewed
+merges or import writes were applied. The fresh-source plan retains the same 25 reviewed
+conflict cohorts. Reconcile current account/session identity and user-field drift, then
+implement/rehearse guarded remote adoption (including independent role-grant coalescing)
+before generating a zero-exception import plan. The comparison no longer awaits
+permission; a full HYPE production export was not performed and is not required for
+consecutive sync runs.
+
+The settings correction is deployed at 100% as Worker
+`2604d0ad-2af5-4428-989b-18f0bc795337`, superseding `24b3a028`. Users settings now share
+the main form's Save/Reset/Cancel and atomic policy revision guard; email matching uses
+the current owning hub domain. Shared Switch rows, **Capability I18n**, and **Users →
+Capabilities** replace the separate save and duplicate Features tab. This isolated
+release contains 23 changed source files relative to the previous release and requires
+no additional migration. Existing bindings/secrets/domains and current enrolment choices
+were preserved.
+
+Validation: 30 isolated release tests, production build and Wrangler dry run pass. The
+full isolated check matches the prior release's 11 errors and 19 warnings. Local Firefox
+Save/Reset/persistence was verified at 1450px and 1200px, with no page errors or
+overflow, and original local settings restored. Production health and public routes
+pass; unauthenticated admin routes redirect to sign-in. Post-deploy queries confirm 14
+owners, nine members, no user-level roles or Breadline identities, and zero foreign-key
+errors. Authenticated production UI and live provider acceptance remain unverified.
+Production policy choices changed since the previous receipt; this deployment preserved
+them rather than resetting them.
+
+The thread changes are now four atomic local commits on `codex/breadline-users-189-194`,
+isolated from the concurrent checkout and not pushed. The assembled series passes 83
+runtime tests and 36 importer tests. Full Svelte checking has exactly the same 40 errors
+and 20 warnings as its unmodified Git base under the same dependencies, with no new
+diagnostics. This Git-base comparison is separate from the deployed release comparison
+above. A committed-path audit covers 61 scoped paths and excludes all private data
+artifacts.

@@ -31,7 +31,8 @@ Table : `hubRole` Examples :
 ## Organisation
 
 - Owner
-- Member (default)
+- Member (staff)
+- User (lowest role)
 
 **Table** : `organisationRole` **Examples** :
 
