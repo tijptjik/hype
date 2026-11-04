@@ -25,7 +25,7 @@ let {
   onExpandedChange,
   onChange,
   disabled = false,
-  allowAdd = true,
+  allowAdd = false,
   mode = 'visibility',
   alwaysExpanded = false,
   labels = defaultLocaleControlLabels,
@@ -33,6 +33,10 @@ let {
 }: LocaleToolbarProps = $props()
 const id = $props.id()
 let searching = $state(false)
+// Leaving edit mode also dismisses a picker opened before permission changed.
+$effect(() => {
+  if (!allowAdd || disabled) searching = false
+})
 let announcement = $state('')
 type LocaleItem = { id: string; tag: string }
 let items = $state<LocaleItem[]>([])

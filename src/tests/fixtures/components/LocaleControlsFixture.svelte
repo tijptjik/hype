@@ -30,11 +30,12 @@ const values = {
 }
 </script>
 
-<main class="bits-theme min-h-screen bg-background px-4 py-8 text-foreground">
+<main class="bits-theme bg-background text-foreground min-h-screen px-4 py-8">
   <div class="mx-auto flex max-w-5xl min-w-0 flex-col gap-8">
     <section aria-label="Profile languages" class="min-w-0">
       <h1 class="mb-6 text-xl font-semibold">Locale controls</h1>
       <LocaleToolbar
+        allowAdd={true}
         {...selection}
         {expanded}
         {options}
@@ -57,14 +58,15 @@ const values = {
       </ol>
       <button
         type="button"
-        class="mt-4 rounded border border-border p-2"
+        class="border-border mt-4 rounded border p-2"
         onclick={() =>
           (selection = { selectedLocales: ['ja', 'en'], visibleLocales: ['ja'] })}
       >
         Replace caller state
       </button>
     </section>
-    <ContentLocaleDefaults organisationName="HKFoodWorks"
+    <ContentLocaleDefaults
+      organisationName="HKFoodWorks"
       value={override}
       inheritedLocales={organisationOverride ?? inherited.locales}
       inheritedOrigin={organisationOverride ? 'organisation' : 'user-default'}
@@ -75,7 +77,8 @@ const values = {
         override = value
       }}
     />
-    <ContentLocaleDefaults organisationName="HKFoodWorks"
+    <ContentLocaleDefaults
+      organisationName="HKFoodWorks"
       value={organisationOverride}
       inheritedLocales={inherited.locales}
       inheritedOrigin="user-default"

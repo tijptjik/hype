@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import Fixture from './fixtures/components/LocaleControlsFixture.svelte'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
 import { searchLocaleOptions } from '#lib/bits/custom/localeControls/localeControls.js'
 import {
@@ -65,9 +66,7 @@ it('adds by keyboard, returns focus quietly to Add and excludes existing languag
   await fireEvent.input(input, { target: { value: 'Japanese' } })
   await fireEvent.keyDown(input, { key: 'Enter' })
   expect(state().selectedLocales).toEqual(['en', 'zh-Hant', 'zh-Hans', 'ja'])
-  expect(document.activeElement).toBe(
-    profile().getByRole('button', { name: '+ Add' }),
-  )
+  expect(document.activeElement).toBe(profile().getByRole('button', { name: '+ Add' }))
   await fireEvent.click(profile().getByRole('button', { name: 'Japanese' }))
   expect(state().visibleLocales).not.toContain('ja')
   await fireEvent.click(profile().getByRole('button', { name: '+ Add' }))
@@ -224,6 +223,7 @@ it('retains unknown saved tags and disables all editing when read-only', async (
     onExpandedChange: vi.fn(),
     onChange,
     disabled: true,
+    allowAdd: false,
   })
   const hawaiian = screen.getByRole('button', { name: 'haw' }) as HTMLButtonElement
   expect(hawaiian.getAttribute('aria-disabled')).toBe('true')
@@ -231,6 +231,74 @@ it('retains unknown saved tags and disables all editing when read-only', async (
   await fireEvent.keyDown(hawaiian, { key: 'ArrowRight', altKey: true })
   expect(onChange).not.toHaveBeenCalled()
 })
+
+it('allows viewing existing languages without offering language additions', async () => {
+  const onChange = vi.fn()
+  render(LocaleToolbar, {
+    selectedLocales: ['en', 'zh-Hant'],
+    visibleLocales: ['en', 'zh-Hant'],
+    expanded: true,
+    options: contentLocaleOptions('en'),
+    allowAdd: false,
+    onExpandedChange: vi.fn(),
+    onChange,
+  })
+  expect(screen.queryByRole('button', { name: '+ Add' })).toBeNull()
+  await fireEvent.click(screen.getByRole('button', { name: 'Traditional Chinese' }))
+  expect(onChange).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      action: 'toggle',
+      selectedLocales: ['en', 'zh-Hant'],
+      visibleLocales: ['en'],
+    }),
+  )
+})
+
+it.each(['organisation', 'project'] as const)(
+  'does not offer language additions in read-only %s settings',
+  scope => {
+    render(ContentLocaleDefaults, {
+      scope,
+      value: undefined,
+      inheritedLocales: ['en', 'zh-Hant'],
+      inheritedOrigin: 'user-default',
+      options: contentLocaleOptions('en'),
+      disabled: true,
+      onChange: vi.fn(),
+    })
+    expect(screen.queryByRole('button', { name: 'Add language' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '+ Add' })).toBeNull()
+    expect(screen.getByText('繁體中文')).toBeTruthy()
+  },
+)
+
+it.each(['allowAdd', 'disabled'] as const)(
+  'closes an open language picker when %s prevents adding and rejects stale choices',
+  async permission => {
+    const onChange = vi.fn()
+    const view = render(LocaleToolbar, {
+      selectedLocales: ['en'],
+      visibleLocales: ['en'],
+      expanded: true,
+      options: contentLocaleOptions('en'),
+      allowAdd: true,
+      onExpandedChange: vi.fn(),
+      onChange,
+    })
+    await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))
+    const search = await screen.findByRole('combobox', { hidden: true })
+    await fireEvent.input(search, { target: { value: 'Japanese' } })
+    const choice = screen.getByRole('option', { hidden: true })
+    await view.rerender(
+      permission === 'allowAdd' ? { allowAdd: false } : { disabled: true },
+    )
+    expect(screen.queryByRole('combobox', { hidden: true })).toBeNull()
+    await fireEvent.click(choice)
+    expect(onChange).not.toHaveBeenCalled()
+    await view.rerender({ allowAdd: true, disabled: false })
+    expect(screen.queryByRole('combobox', { hidden: true })).toBeNull()
+  },
+)
 
 it('uses the backend patch contract without writing inherited defaults and retains nested errors', () => {
   const stored = { otherSetting: true }

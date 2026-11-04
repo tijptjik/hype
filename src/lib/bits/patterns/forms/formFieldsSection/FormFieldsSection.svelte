@@ -301,6 +301,7 @@ $effect(() => {
           {#if card}
             <LocaleToolbar
               options={localeOptions}
+              allowAdd={isEditing && canEdit}
               selectedLocales={locales}
               {visibleLocales}
               expanded={multilingual}

@@ -10,6 +10,7 @@ import Fixture from './fixtures/components/FieldEditorFixture.svelte'
 // CONTENT LOCALES
 import { contentFormKey, contentMapToStorage } from '#lib/i18n/contentRecords.js'
 
+const originalAnimate = Element.prototype.animate
 beforeEach(() => {
   vi.useRealTimers()
   vi.stubGlobal(
@@ -21,6 +22,8 @@ beforeEach(() => {
     },
   )
   if (!Element.prototype.getAnimations) Element.prototype.getAnimations = () => []
+  // JSDOM cannot animate the field editor's edit-mode transitions.
+  Element.prototype.animate = () => ({ cancel() {} }) as Animation
   vi.stubGlobal('matchMedia', () => ({
     matches: true,
     addEventListener() {},
@@ -29,6 +32,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   cleanup()
+  Element.prototype.animate = originalAnimate
   vi.unstubAllGlobals()
 })
 
@@ -66,6 +70,22 @@ it('submits hyphenated locales and verification flags after editing and hiding t
     'sr-Latn-RS': { value: 'Christian sr-Latn-RS', valueGen: true },
   })
   expect(result.i18n[contentFormKey('pt-BR')].label).toBe('Religião')
+})
+
+it('only offers adding field languages in edit mode and closes an open picker when editing ends', async () => {
+  const view = render(Fixture)
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))
+  const search = await screen.findByPlaceholderText('Search languages')
+  await fireEvent.input(search, { target: { value: 'Japanese' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
+  expect(screen.queryByRole('button', { name: '+ Add' })).toBeNull()
+  expect(screen.queryByPlaceholderText('Search languages')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Traditional Chinese' })).toBeTruthy()
+  expect(submitted(view.container).i18n.ja).toBeUndefined()
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
+  expect(screen.getByRole('button', { name: '+ Add' })).toBeTruthy()
+  expect(screen.queryByPlaceholderText('Search languages')).toBeNull()
 })
 
 it('shares locale order across text fields and option columns, retaining hidden and missing translations in submission', async () => {

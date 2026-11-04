@@ -30,6 +30,17 @@ const state = (container: HTMLElement) =>
       .getAttribute('data-profile-state')!,
   )
 
+it('offers language additions only while the profile is being edited', async () => {
+  render(Fixture)
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  expect(screen.getByRole('button', { name: '+ Add' })).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
+  expect(screen.queryByRole('button', { name: '+ Add' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Traditional Chinese' })).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
+  expect(screen.getByRole('button', { name: '+ Add' })).toBeTruthy()
+})
+
 it('opens inline fields, cancels with Escape, commits on blur, and retains rich description markup', async () => {
   const view = render(Fixture)
   expect(screen.queryByRole('textbox', { name: 'description en' })).toBeNull()

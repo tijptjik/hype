@@ -19,6 +19,7 @@ const options = contentLocaleOptions('en')
   {#key feature}
     {#if tab === 'profile'}
       <LocaleToolbar
+        allowAdd={false}
         selectedLocales={['en', 'zh-Hant', 'zh-Hans']}
         visibleLocales={['en', 'zh-Hant', 'zh-Hans']}
         {options}

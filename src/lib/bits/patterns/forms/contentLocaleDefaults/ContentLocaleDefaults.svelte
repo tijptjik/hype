@@ -46,7 +46,7 @@ const differs = $derived(
 
 <section
   aria-labelledby={`${id}-title`}
-  class="min-w-0 rounded-xl border border-border bg-foreground/4 p-5"
+  class="border-border bg-foreground/4 min-w-0 rounded-xl border p-5"
 >
   <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
     <div class="min-w-0">
@@ -55,7 +55,7 @@ const differs = $derived(
           {m.content_languages_order()}
         </h3>
       </div>
-      <p class="mt-1 text-sm text-muted-foreground">
+      <p class="text-muted-foreground mt-1 text-sm">
         {organisationName
           ? m.content_languages_help_named({ name: organisationName })
           : m.content_languages_help()}
@@ -71,7 +71,7 @@ const differs = $derived(
         aria-hidden={!differs}
         style:opacity={differs ? 1 : 0}
         onclick={() => onChange(undefined)}
-        class="flex size-9 shrink-0 items-center justify-center rounded text-muted-foreground transition-opacity duration-200 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary disabled:pointer-events-none motion-reduce:transition-none"
+        class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-9 shrink-0 items-center justify-center rounded transition-opacity duration-200 focus-visible:outline-2 disabled:pointer-events-none motion-reduce:transition-none"
       >
         <ResetIcon class="size-4" aria-hidden="true" />
       </button>
@@ -80,6 +80,7 @@ const differs = $derived(
   {#if !disabled}
     <div class="mt-4">
       <LocaleToolbar
+        allowAdd={!disabled}
         selectedLocales={effective}
         visibleLocales={effective}
         {options}
@@ -96,9 +97,9 @@ const differs = $derived(
     <ol class="mt-4 flex flex-wrap gap-2">
       {#each effective as tag, index (tag)}
         <li
-          class="min-w-0 rounded-lg border border-border/30 bg-foreground/3 px-3 py-2 text-sm whitespace-normal break-words"
+          class="border-border/30 bg-foreground/3 min-w-0 rounded-lg border px-3 py-2 text-sm break-words whitespace-normal"
         >
-          <span class="mr-2 text-muted-foreground">{index + 1}.</span
+          <span class="text-muted-foreground mr-2">{index + 1}.</span
           ><span lang={tag} dir="auto" style:font-family={languageFont(tag)}
             >{options.find(option => option.tag === tag)?.autonym ?? tag}</span
           >
@@ -107,6 +108,6 @@ const differs = $derived(
     </ol>
   {/if}
   {#each issues as issue}
-    <p role="alert" class="mt-2 text-sm text-destructive">{issue}</p>
+    <p role="alert" class="text-destructive mt-2 text-sm">{issue}</p>
   {/each}
 </section>

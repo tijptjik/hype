@@ -39,8 +39,8 @@ export interface LocaleToolbarProps extends LocaleSelection {
   onExpandedChange: (expanded: boolean) => void
   onChange: (change: LocaleChange) => void
   disabled?: boolean
-  /** Allow adding languages independently of presentation controls. */
-  allowAdd?: boolean
+  /** Explicit edit-mode permission to add languages; presentation controls remain independent. */
+  allowAdd: boolean
   /** Settings edit membership; Profile chips toggle visibility without removing values. */
   mode?: 'visibility' | 'membership'
   alwaysExpanded?: boolean
