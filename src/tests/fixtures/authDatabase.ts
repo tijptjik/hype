@@ -25,7 +25,7 @@ interface AuthStatement {
  */
 export function createAuthHookTables(sqlite: DatabaseSync): void {
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS hub (id TEXT PRIMARY KEY, code TEXT);
+    CREATE TABLE IF NOT EXISTS hub (id TEXT PRIMARY KEY, code TEXT, domain TEXT);
     CREATE TABLE IF NOT EXISTS organisationRole(organisationId TEXT,userId TEXT,role TEXT NOT NULL DEFAULT 'member',PRIMARY KEY(organisationId,userId));
     CREATE TABLE organisation (
       id TEXT PRIMARY KEY, hubId TEXT, isArchived INTEGER, isPublished INTEGER,
