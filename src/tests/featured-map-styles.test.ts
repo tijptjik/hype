@@ -1,23 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
 import {
-  canonicalMapStyleCode,
   FEATURED_MAP_STYLE_KEYS,
   SELECTABLE_MAP_STYLE_CATALOG,
   isMapStyleSelectable,
 } from '#lib/map/styles/catalog.js'
-import { buildMapStyle } from '#lib/map/styles/registry.js'
+import { buildMapStyle, isMapStyleKey } from '#lib/map/styles/registry.js'
 
 describe('featured map styles', () => {
-  it('keeps old saved keys renderable without offering duplicate choices', () => {
-    for (const [legacy, canonical] of [
-      ['hyper', 'hype-dark'],
-      ['hyperLight', 'hype-light'],
-    ] as const) {
-      expect(buildMapStyle(legacy)).toEqual(buildMapStyle(canonical))
-      expect(canonicalMapStyleCode(legacy)).toBe(canonical)
-      expect(isMapStyleSelectable(legacy)).toBe(false)
-      expect(isMapStyleSelectable(canonical)).toBe(true)
+  it('excludes removed styles from the registered catalog', () => {
+    for (const key of [
+      'hyper',
+      'hyperLight',
+      'breadline',
+      'ghostery-legacy',
+      'neonmaster',
+    ]) {
+      expect(isMapStyleKey(key)).toBe(false)
     }
   })
   it('presents the six requested choices in order', () => {
@@ -88,14 +87,7 @@ describe('featured map styles', () => {
     },
   )
   it('retires the removed picker options while keeping their saved styles renderable', () => {
-    for (const key of [
-      'ghostery-legacy',
-      'neonmaster',
-      'genesis',
-      'sin',
-      'rosepunk',
-      'breadline',
-    ] as const) {
+    for (const key of ['genesis', 'sin', 'rosepunk'] as const) {
       expect(isMapStyleSelectable(key)).toBe(false)
       expect(SELECTABLE_MAP_STYLE_CATALOG.some(entry => entry.key === key)).toBe(false)
       expect(buildMapStyle(key).layers.length).toBeGreaterThan(0)
