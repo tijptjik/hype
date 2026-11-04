@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { toUserSearchQueryPlan } from '#lib/api/services/user.js'
 import { searchUsersByConditions } from '#lib/db/services/user.js'
 import { UserSearchQueryParamsSchema } from '#lib/db/zod/schema/user.js'
+import { organisationUsersCondition } from '#lib/db/services/organisationUsers.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -62,6 +63,17 @@ describe('contact-presence search', () => {
           })
         ).data.map(row => row.id),
       ).toEqual(['archived'])
+      sqlite.exec(
+        "CREATE TABLE organisationRole(organisationId TEXT,userId TEXT,role TEXT); INSERT INTO organisationRole VALUES('a','both','user'),('a','email','owner'),('b','phone','member')",
+      )
+      const scoped = await toUserSearchQueryPlan(
+        db,
+        UserSearchQueryParamsSchema.parse({ pagination: { limit: 1, offset: 1 } }),
+      )
+      scoped.conditions.push(organisationUsersCondition('a'))
+      const page = await searchUsersByConditions(db, scoped)
+      expect(page.data.map(row => row.id)).toEqual(['email'])
+      expect(page.totalCount).toBe(2)
     } finally {
       sqlite.close()
     }
