@@ -190,3 +190,96 @@ it('sends exact Places filters to upstream search before its result limit', asyn
   expect(url.searchParams.get('filter[operatingStatus]')).toBeNull()
   expect(url.searchParams.get('limit')).toBe('5')
 })
+
+it.each([{ basicCategory: 'restaurant' }, { taxonomyPrimary: 'bakery' }])(
+  'uses filtered collection discovery for empty text with %j',
+  async filters => {
+    const c = client({
+      data: [{ id: 'shop', attributes: { resourceReleaseId: 'release' } }],
+      meta: {
+        apiReleaseSet: 'release',
+        apiCatalogRevision: 'catalog',
+        catalogPublishedAt: '2026-10-18T00:00:00Z',
+        page: { offset: 0, limit: 5, total: 1 },
+      },
+    })
+    expect(
+      await searchSaanSeoiPlaces(c, { q: '  ', filters, locale: 'zh-hant', limit: 5 }),
+    ).toEqual([
+      {
+        placeId: 'shop',
+        resourceReleaseId: 'release',
+        locale: 'zh-hant',
+        nameText: null,
+        brandText: null,
+      },
+    ])
+    const [url, options] = c.request.mock.calls[0]
+    expect(url.pathname).toBe('/places/v0.1')
+    expect(url.searchParams.has('q')).toBe(false)
+    for (const [key, value] of Object.entries(filters))
+      expect(url.searchParams.get(`filter[${key}]`)).toBe(value)
+    expect(url.searchParams.get('page[limit]')).toBe('5')
+    expect(url.searchParams.get('region')).toBe('hk')
+    expect(options.redirect).toBe('error')
+  },
+)
+
+it('includes descendant primary categories and bounds the combined results', async () => {
+  const c = client({ data: [] })
+  c.request.mockImplementation(async (url: URL) => {
+    const category = url.searchParams.get('filter[taxonomyPrimary]')
+    return Response.json({
+      data:
+        category === 'sushi_restaurant'
+          ? [{ id: 'ramen', attributes: { resourceReleaseId: 'release' } }]
+          : [],
+      meta: {
+        apiReleaseSet: 'release',
+        apiCatalogRevision: 'catalog',
+        catalogPublishedAt: '2026-10-18T00:00:00Z',
+        page: { offset: 0, limit: 1, total: category === 'sushi_restaurant' ? 1 : 0 },
+      },
+    })
+  })
+  const results = await searchSaanSeoiPlaces(c, {
+    q: '',
+    filters: { taxonomyCategory: 'japanese_restaurant' },
+    limit: 1,
+  })
+  expect(results.map(row => row.placeId)).toEqual(['ramen'])
+  expect(
+    c.request.mock.calls.some(
+      ([url]) =>
+        url.searchParams.get('filter[taxonomyPrimary]') === 'japanese_restaurant',
+    ),
+  ).toBe(true)
+})
+
+it('rejects empty status-only searches and malformed category collections', async () => {
+  const c = client({ data: [] })
+  for (const operatingStatus of [
+    'open',
+    'any',
+    'temporarily_closed',
+    'permanently_closed',
+  ] as const) {
+    await expect(
+      searchSaanSeoiPlaces(c, { q: ' ', filters: { operatingStatus } }),
+    ).rejects.toThrow()
+  }
+  expect(c.request).not.toHaveBeenCalled()
+  await expect(
+    searchSaanSeoiPlaces(
+      client({ data: [{ id: 'shop', attributes: { resourceReleaseId: '' } }] }),
+      {
+        q: '',
+        filters: { taxonomyPrimary: 'bakery' },
+      },
+    ),
+  ).rejects.toThrow()
+  c.request.mockResolvedValue(new Response('Unavailable', { status: 503 }))
+  await expect(
+    searchSaanSeoiPlaces(c, { q: '', filters: { taxonomyPrimary: 'bakery' } }),
+  ).rejects.toThrow('search failed (503)')
+})
