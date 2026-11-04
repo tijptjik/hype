@@ -153,16 +153,16 @@ describe('mirrored address geography', () => {
     insert('district', 'district', square)
     insert('hood', 'neighbourhood', square)
     await expect(
-      validateAddressDivisionOverrides(db, { neighbourhoodId: 'hood' }),
+      validateAddressDivisionOverrides(db, { localityPath: ['hood'] }),
     ).resolves.toBeUndefined()
     await expect(
-      validateAddressDivisionOverrides(db, { neighbourhoodId: 'district' }),
+      validateAddressDivisionOverrides(db, { localityPath: ['district'] }),
     ).rejects.toThrow('INVALID_ADDRESS_DIVISION')
     await expect(
-      validateAddressDivisionOverrides(db, { neighbourhoodId: 'unknown' }),
+      validateAddressDivisionOverrides(db, { localityPath: ['unknown'] }),
     ).rejects.toThrow('INVALID_ADDRESS_DIVISION')
     await expect(
-      validateAddressDivisionOverrides(db, { neighbourhoodId: { mode: 'marker' } }),
+      validateAddressDivisionOverrides(db, { localityPath: null }),
     ).resolves.toBeUndefined()
   })
 })
@@ -191,15 +191,16 @@ it('accepts only one complete source neighbourhood path and rejects invented anc
   insert('district', 'district', undefined, { level: 2 })
   await expect(
     validateAddressDivisionOverrides(db, {
-      localityPaths: [['macro', 'hood', 'micro']],
+      localityPath: ['macro', 'hood', 'micro'],
     }),
   ).resolves.toBeUndefined()
   await expect(
-    validateAddressDivisionOverrides(db, { localityPaths: [] }),
+    validateAddressDivisionOverrides(db, { localityPath: [] }),
   ).resolves.toBeUndefined()
   await expect(
     validateAddressDivisionOverrides(db, {
-      localityPaths: [['macro', 'hood'], ['other-hood']],
+      // @ts-expect-error Reject nested paths from untyped clients.
+      localityPath: [['macro', 'hood'], ['other-hood']],
     }),
   ).rejects.toThrow('INVALID_ADDRESS_DIVISION')
   for (const path of [
@@ -212,7 +213,7 @@ it('accepts only one complete source neighbourhood path and rejects invented anc
     ['other-hood', 'micro'],
   ]) {
     await expect(
-      validateAddressDivisionOverrides(db, { localityPaths: [path] }),
+      validateAddressDivisionOverrides(db, { localityPath: path }),
     ).rejects.toThrow('INVALID_ADDRESS_DIVISION')
   }
 })
