@@ -4,6 +4,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { withRemoteMeta } from './remote-function-mock'
 
 const {
+  mockRequested,
   mockGetRequestEvent,
   mockSetupRequestHandler,
   mockGetUsersForHydration,
@@ -14,6 +15,7 @@ const {
   mockLoadUser,
   mockToAuthMessage,
 } = vi.hoisted(() => ({
+  mockRequested: vi.fn(() => ({ refreshAll: async () => {} })),
   mockGetRequestEvent: vi.fn(),
   mockSetupRequestHandler: vi.fn(),
   mockGetUsersForHydration: vi.fn(),
@@ -46,7 +48,7 @@ vi.mock('#lib/api/services/userContacts.js', () => ({
 
 vi.mock('$app/server', () => ({
   getRequestEvent: mockGetRequestEvent,
-  requested: vi.fn(() => ({ refreshAll: vi.fn() })),
+  requested: mockRequested,
   query: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(handler as (...args: unknown[]) => unknown, 'query'),
 }))
@@ -120,6 +122,7 @@ vi.mock('#lib/api/services/user.js', () => ({
     state.isArchived === true || state.isArchived === null,
   toEntityResponseShape: mockToEntityResponseShape,
   toUserProfileResponseShape: vi.fn(value => value),
+  toUserFeatureListResponseShape: vi.fn(value => value),
   toUserReadQueryPlan: mockToUserReadQueryPlan,
   toEntityRoleExistsCondition: vi.fn(() => ({ fn: 'exists' })),
   toParentChainCondition: vi.fn(async () => ({ fn: 'parent-chain' })),
@@ -371,6 +374,58 @@ describe('user.remote', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
+
+  it.each(
+    (['profile', 'layers', 'add', 'remove'] as const).flatMap(kind =>
+      [false, true].map(fails => ({ kind, fails })),
+    ),
+  )(
+    'awaits requested refresh registration for $kind mutations (failure: $fails)',
+    async ({ kind, fails }) => {
+      vi.useRealTimers()
+      let release!: () => void, started!: () => void
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const pending = new Promise<void>((resolve, reject) => {
+        release = () => (fails ? reject(new Error('registration failed')) : resolve())
+      })
+      const registered = new Promise<void>(resolve => {
+        started = resolve
+      })
+      mockRequested.mockImplementation(() => ({
+        refreshAll: async () => {
+          started()
+          await pending
+        },
+      }))
+      mockLoadUser.mockResolvedValue({ id: 'u-1' })
+      let completed = false
+      const mutation =
+        kind === 'profile'
+          ? remote.updateUserProfile({ id: 'u-1', data: { locale: 'en' } })
+          : kind === 'layers'
+            ? remote.setUserLayerDefaults({ hubId: 'hub', layers: [] })
+            : kind === 'add'
+              ? remote.addUserFeatureToList({ featureId: 'feature', list: 'wishlist' })
+              : remote.removeUserFeatureFromList({
+                  featureId: 'feature',
+                  list: 'wishlist',
+                })
+      const result = mutation.then(value => {
+        completed = true
+        return value
+      })
+      try {
+        await registered
+        await new Promise(resolve => setTimeout(resolve, 0))
+        expect(completed).toBe(false)
+      } finally {
+        release()
+        await result
+        mockRequested.mockImplementation(() => ({ refreshAll: async () => {} }))
+        logged.mockRestore()
+      }
+    },
+  )
 
   it('loads admin profiles using only server-resolved actor and hub context', async () => {
     const hub = { id: 'active-hub' }

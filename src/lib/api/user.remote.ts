@@ -88,6 +88,24 @@ import type { UserHydrationResult, UserRaw } from '#lib/db/zod/schema/user.types
 // - setUserLayerDefaults
 // - addUserFeatureToList
 // - removeUserFeatureFromList
+// HELPERS
+// - refreshAfterUserMutation
+
+/**
+ * Awaits bounded refresh registration without changing a completed mutation's outcome.
+ * @param refresh Registration callback for the mutation's requested query family.
+ * @returns Nothing once registration settles or its failure is logged.
+ */
+async function refreshAfterUserMutation(refresh: () => Promise<void>): Promise<void> {
+  try {
+    await refresh()
+  } catch (cause) {
+    console.error(
+      'User mutation completed, but query refresh registration failed:',
+      cause,
+    )
+  }
+}
 
 /**
  * Resolves the target user id for self/super-admin operations.
@@ -444,7 +462,7 @@ export const updateUserProfile = guardedCommand(
     }
 
     // Refresh only the user profile query instance requested by this mutation.
-    void requested(getUser, 1).refreshAll()
+    await refreshAfterUserMutation(() => requested(getUser, 1).refreshAll())
 
     return response
   },
@@ -523,7 +541,7 @@ export const setUserLayerDefaults = guardedCommand(
     const response = { data: updated }
 
     // Refresh only the layer-default query instance requested by this mutation.
-    void requested(getUserLayers, 1).refreshAll()
+    await refreshAfterUserMutation(() => requested(getUserLayers, 1).refreshAll())
 
     return response
   },
@@ -614,7 +632,7 @@ export const addUserFeatureToList = guardedCommand(
     }
 
     // Refresh only the user-feature query instance requested by the client mutation.
-    void requested(getUserFeatures, 1).refreshAll()
+    await refreshAfterUserMutation(() => requested(getUserFeatures, 1).refreshAll())
 
     return response
   },
@@ -652,7 +670,7 @@ export const removeUserFeatureFromList = guardedCommand(
     }
 
     // Refresh only the user-feature query instance requested by the client mutation.
-    void requested(getUserFeatures, 1).refreshAll()
+    await refreshAfterUserMutation(() => requested(getUserFeatures, 1).refreshAll())
 
     return response
   },
