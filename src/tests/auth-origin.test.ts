@@ -1,8 +1,21 @@
 // @vitest-environment node
+// NODE
+import { DatabaseSync } from 'node:sqlite'
+// BETTER AUTH
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
-import { describe, expect, it, vi } from 'vitest'
+// TESTS
+import { afterEach, describe, expect, it, vi } from 'vitest'
+// AUTH
 import { getAuthForRequest, getBaseUrlFromRequestHeaders } from '#lib/auth.js'
+// FIXTURES
+import { createAuthDatabase, createAuthHookTables } from './fixtures/authDatabase'
+
+let sqlite: DatabaseSync | undefined
+afterEach(() => {
+  sqlite?.close()
+  sqlite = undefined
+})
 
 describe('authentication origin resolution', () => {
   it('uses the same host as hub routing, ignoring forwarded-host overrides', () => {
@@ -80,8 +93,10 @@ describe('authentication origin resolution', () => {
       'x-forwarded-proto': 'https',
       'x-forwarded-host': 'attacker.example',
     })
+    sqlite = new DatabaseSync(':memory:')
+    createAuthHookTables(sqlite)
     const runtime = getAuthForRequest(headers, {
-      DB: {} as never,
+      DB: createAuthDatabase(sqlite),
       AUTH_SECRET: 'test-secret-long-enough-for-auth-origin-tests',
       AUTH_GOOGLE_ID: '',
       AUTH_GOOGLE_SECRET: '',

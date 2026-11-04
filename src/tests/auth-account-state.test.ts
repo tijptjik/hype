@@ -1,10 +1,16 @@
 // @vitest-environment node
+// NODE
 import { DatabaseSync } from 'node:sqlite'
+// BETTER AUTH
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { hashPassword } from 'better-auth/crypto'
+// TESTS
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+// AUTH
 import { getAuthForRequest } from '#lib/auth.js'
+// FIXTURES
+import { createAuthDatabase, createAuthHookTables } from './fixtures/authDatabase'
 
 // Role enrichment is separate from the authoritative account-state SQL under test.
 vi.mock('#lib/db/services/user.js', () => ({ getUserRoles: vi.fn(async () => []) }))
@@ -18,9 +24,16 @@ beforeAll(async () => {
 })
 beforeEach(() => {
   sqlite = new DatabaseSync(':memory:')
-  sqlite.exec('CREATE TABLE user (id TEXT PRIMARY KEY, isArchived INTEGER NOT NULL)')
+  sqlite.exec(`CREATE TABLE user (
+    id TEXT PRIMARY KEY, isArchived INTEGER NOT NULL, isAnonymous INTEGER DEFAULT 0,
+    email TEXT, emailVerified INTEGER DEFAULT 0
+  )`)
   sqlite.exec('CREATE TABLE breadlineImportUser (userId TEXT PRIMARY KEY, state TEXT)')
-  sqlite.prepare('INSERT INTO user VALUES (?, 0)').run('user')
+  sqlite.exec(
+    'CREATE TABLE breadlineImportIdentity (sourceUserId INTEGER PRIMARY KEY, userId TEXT, email TEXT)',
+  )
+  createAuthHookTables(sqlite)
+  sqlite.prepare('INSERT INTO user (id, isArchived) VALUES (?, 0)').run('user')
 })
 afterEach(() => sqlite.close())
 
@@ -28,17 +41,7 @@ afterEach(() => sqlite.close())
 function setup() {
   const host = `account-state-${serial++}.example`
   const baseURL = `https://${host}`
-  const DB = {
-    prepare: (sql: string) => ({
-      bind: (...params: never[]) => ({
-        raw: async () => {
-          const statement = sqlite.prepare(sql)
-          statement.setReturnArrays(true)
-          return statement.all(...params)
-        },
-      }),
-    }),
-  }
+  const DB = createAuthDatabase(sqlite)
   const runtime = getAuthForRequest(
     new Headers({ host, 'x-forwarded-proto': 'https' }),
     {
@@ -171,6 +174,17 @@ describe('archived account session enforcement', () => {
     const headers = cookies(await signIn())
     headers.set('origin', baseURL)
     sqlite.exec('UPDATE user SET isArchived = 1')
+    expect((await auth.api.signOut({ headers, asResponse: true })).status).toBe(200)
+    expect(store.session).toHaveLength(0)
+  })
+
+  it('keeps session reads and sign-out available while user synchronisation applies', async () => {
+    const { auth, signIn, store, baseURL } = setup()
+    const headers = cookies(await signIn())
+    headers.set('origin', baseURL)
+    sqlite.exec(`INSERT INTO breadlineUserSyncApplication
+      VALUES ('users', 'test', 'plan', 0, 'applying', 1)`)
+    expect((await auth.api.getSession({ headers, asResponse: true })).status).toBe(200)
     expect((await auth.api.signOut({ headers, asResponse: true })).status).toBe(200)
     expect(store.session).toHaveLength(0)
   })

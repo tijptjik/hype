@@ -1,10 +1,17 @@
 // @vitest-environment node
+// NODE
 import { DatabaseSync } from 'node:sqlite'
+// BETTER AUTH
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { hashPassword } from 'better-auth/crypto'
+// TESTS
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+// AUTH
 import { getAuthForRequest } from '#lib/auth.js'
+// FIXTURES
+import { createAuthDatabase, createAuthHookTables } from './fixtures/authDatabase'
+// ROUTES
 import { POST } from '../routes/api/account/password/+server'
 
 let sqlite: DatabaseSync
@@ -16,10 +23,16 @@ beforeAll(async () => {
 })
 beforeEach(() => {
   sqlite = new DatabaseSync(':memory:')
-  sqlite.exec('CREATE TABLE user (id TEXT PRIMARY KEY, isArchived INTEGER NOT NULL)')
+  sqlite.exec(`CREATE TABLE user (
+    id TEXT PRIMARY KEY, isArchived INTEGER NOT NULL, isAnonymous INTEGER DEFAULT 0,
+    email TEXT, emailVerified INTEGER DEFAULT 0
+  )`)
   sqlite.exec('CREATE TABLE breadlineImportUser (userId TEXT PRIMARY KEY, state TEXT)')
-  sqlite.exec('CREATE TABLE breadlineImportIdentity (userId TEXT, email TEXT)')
-  sqlite.exec("INSERT INTO user VALUES ('user', 0)")
+  sqlite.exec(
+    'CREATE TABLE breadlineImportIdentity (sourceUserId INTEGER PRIMARY KEY, userId TEXT, email TEXT)',
+  )
+  createAuthHookTables(sqlite)
+  sqlite.exec("INSERT INTO user (id, isArchived) VALUES ('user', 0)")
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -30,21 +43,7 @@ afterEach(() => {
 async function setup() {
   const instance = ++serial
   const baseURL = `https://password-setup-${instance}.example`
-  const DB = {
-    prepare: (sql: string) => ({
-      bind: (...params: never[]) => ({
-        all: async () => ({
-          results: sqlite.prepare(sql).all(...params),
-          success: true,
-        }),
-        raw: async () => {
-          const statement = sqlite.prepare(sql)
-          statement.setReturnArrays(true)
-          return statement.all(...params)
-        },
-      }),
-    }),
-  }
+  const DB = createAuthDatabase(sqlite)
   const runtime = getAuthForRequest(
     new Headers({
       host: new URL(baseURL).host,
@@ -316,6 +315,19 @@ describe('account password HTTP pipeline', () => {
     sqlite.exec('UPDATE user SET isArchived = 1')
     expect((await request()).status).toBe(401)
     expect(hash).not.toHaveBeenCalled()
+  })
+
+  it('defers password setup on both HTTP entry points while user synchronisation applies', async () => {
+    const { request, store, hash } = await setup()
+    sqlite.exec(`INSERT INTO breadlineUserSyncApplication
+      VALUES ('users', 'test', 'plan', 0, 'applying', 1)`)
+    expect((await request(undefined, true)).status).toBe(503)
+    expect((await request()).status).toBe(503)
+    expect(store.account).toHaveLength(0)
+    expect(hash).not.toHaveBeenCalled()
+    sqlite.exec("UPDATE breadlineUserSyncApplication SET state = 'complete'")
+    expect((await request()).status).toBe(200)
+    expect(hash).toHaveBeenCalledOnce()
   })
 
   it.each([false, true])(

@@ -18,6 +18,8 @@ import {
 import { getAuthForRequest } from '#lib/auth.js'
 import { toLinkedAccountSelector } from '#lib/auth/account-selector.js'
 import { generateDisplayUsernameFromId } from '#lib/utils/username-generator.server.js'
+// FIXTURES
+import { createAuthDatabase, createAuthHookTables } from './fixtures/authDatabase'
 
 // Signup coverage needs the real seeded generator, not the shared constant stub.
 vi.unmock('unique-names-generator')
@@ -56,6 +58,7 @@ beforeEach(() => {
     )
     sqlite.exec(`CREATE TABLE "${config.name}" (${columns.join(', ')})`)
   }
+  createAuthHookTables(sqlite)
   sqlite.exec('CREATE UNIQUE INDEX user_username_nocase_uidx ON user(lower(username))')
   // Start from the actual account DDL in the deployed migration, not a permissive mock.
   const accountDDL = previousMigration.match(
@@ -74,27 +77,7 @@ afterEach(() => sqlite.close())
  * @returns The real Better Auth instance with its configured Drizzle adapter.
  */
 function createAuth(): ReturnType<typeof getAuthForRequest> {
-  const DB = {
-    prepare(sql: string) {
-      return {
-        bind(...params: never[]) {
-          return {
-            async raw() {
-              const statement = sqlite.prepare(sql)
-              statement.setReturnArrays(true)
-              return statement.all(...params)
-            },
-            async all() {
-              return { results: sqlite.prepare(sql).all(...params), success: true }
-            },
-            async run() {
-              return { meta: sqlite.prepare(sql).run(...params), success: true }
-            },
-          }
-        },
-      }
-    },
-  }
+  const DB = createAuthDatabase(sqlite)
   return getAuthForRequest(
     new Headers({ host: `adapter-${++serial}.example`, 'x-forwarded-proto': 'https' }),
     {
