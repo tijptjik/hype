@@ -8,6 +8,8 @@ import * as kitForms from '../../../../node_modules/@sveltejs/kit/src/runtime/fo
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
 import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
+// CONTENT LOCALES
+import { contentFormKey, contentStorageTag } from '#lib/i18n/contentRecords.js'
 // SERVICES
 import {
   updateProjectPropertyBase,
@@ -27,7 +29,8 @@ setResponsiveCtx()
 let {
   translatable = true,
   fieldCount = 1,
-}: { translatable?: boolean; fieldCount?: number } = $props()
+  extraLocales = [],
+}: { translatable?: boolean; fieldCount?: number; extraLocales?: string[] } = $props()
 let data = $state<PropertyFormData>({
   properties: [
     {
@@ -42,6 +45,18 @@ let data = $state<PropertyFormData>({
       audience: 'public',
       isDefaultEnabled: true,
       i18n: {
+        ...Object.fromEntries(
+          untrack(() => extraLocales).map(locale => [
+            contentFormKey(locale),
+            {
+              locale: contentStorageTag(locale),
+              label: `Religion ${locale}`,
+              labelGen: true,
+              placeholder: `Select ${locale}`,
+              placeholderGen: false,
+            },
+          ]),
+        ),
         en: {
           locale: 'en',
           label: 'Religion',
@@ -78,6 +93,16 @@ let data = $state<PropertyFormData>({
         rank,
         value,
         i18n: {
+          ...Object.fromEntries(
+            untrack(() => extraLocales).map(locale => [
+              contentFormKey(locale),
+              {
+                locale: contentStorageTag(locale),
+                value: `${value} ${locale}`,
+                valueGen: true,
+              },
+            ]),
+          ),
           en: { locale: 'en', value, valueGen: false },
           zhHant: {
             locale: 'zh-hant',

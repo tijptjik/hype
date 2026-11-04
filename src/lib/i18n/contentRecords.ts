@@ -3,6 +3,8 @@ import { z } from 'zod'
 // CANONICAL CONTENT CONTRACT (LLM 1)
 import {
   ContentLocaleSchema,
+  CONTENT_LOCALE_FORM_KEY_PREFIX,
+  MAX_CONTENT_LOCALE_LENGTH,
   toLegacyContentLocaleKey,
   type ContentLocale,
 } from '#lib/content-locales/model.js'
@@ -25,11 +27,16 @@ export function canonicalContentTag(input: string): ContentLocale {
   return ContentLocaleSchema.parse(input)
 }
 
-/** Adapt canonical content identity to the existing form field names.
- * @param input Content tag or legacy key. @returns Legacy Chinese key or canonical tag.
+/** Adapt content identity to a JavaScript identifier for remote-form field paths.
+ * @param input Content tag, encoded form key, or legacy key.
+ * @returns A reversible form key, retaining the existing Chinese aliases.
+ * @remarks Hyphens are encoded only at the form boundary; storage keeps BCP 47 tags.
  */
 export function contentFormKey(input: string): string {
-  return toLegacyContentLocaleKey(input)
+  const locale = toLegacyContentLocaleKey(input)
+  return locale.includes('-')
+    ? `${CONTENT_LOCALE_FORM_KEY_PREFIX}${locale.replaceAll('-', '_')}`
+    : locale
 }
 
 /** Retain existing Chinese database keys without a data migration.
@@ -96,7 +103,7 @@ export function contentMapToStorage<T extends Record<string, unknown>>(
 export const ContentTagInput = z
   .string()
   .min(1)
-  .max(64)
+  .max(MAX_CONTENT_LOCALE_LENGTH + CONTENT_LOCALE_FORM_KEY_PREFIX.length)
   .refine(value => {
     try {
       canonicalContentTag(value)

@@ -10,5 +10,6 @@ mount(Fixture, {
   target,
   props: {
     fieldCount: Number(new URLSearchParams(location.search).get('fields') ?? 1),
+    extraLocales: new URLSearchParams(location.search).getAll('locale'),
   },
 })

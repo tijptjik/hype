@@ -7,6 +7,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { convert_formdata } from '../../node_modules/@sveltejs/kit/src/runtime/form-utils.js'
 // COMPONENTS
 import Fixture from './fixtures/components/FieldEditorFixture.svelte'
+// CONTENT LOCALES
+import { contentFormKey, contentMapToStorage } from '#lib/i18n/contentRecords.js'
 
 beforeEach(() => {
   vi.useRealTimers()
@@ -38,6 +40,33 @@ function submitted(container: HTMLElement) {
   if (!form) throw new Error('Missing field form')
   return convert_formdata('field-editor', new FormData(form)).data.properties[0]
 }
+
+it('submits hyphenated locales and verification flags after editing and hiding their rows', async () => {
+  const view = render(Fixture, { extraLocales: ['pt-BR', 'sr-Latn-RS'] })
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Name in UI pt-BR' }))
+  const label = screen.getByRole('textbox', { name: 'Name in UI pt-BR' })
+  await fireEvent.input(label, { target: { value: 'Religião' } })
+  await fireEvent.keyDown(label, { key: 'Enter' })
+  const option = screen.getByRole('textbox', { name: 'Option 1 pt-BR' })
+  await fireEvent.input(option, { target: { textContent: 'Cristão' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  const result = submitted(view.container)
+  expect(contentMapToStorage(result.i18n)).toMatchObject({
+    'pt-BR': {
+      label: 'Religião',
+      labelGen: false,
+      placeholder: 'Select pt-BR',
+      placeholderGen: false,
+    },
+    'sr-Latn-RS': { label: 'Religion sr-Latn-RS', labelGen: true },
+  })
+  expect(contentMapToStorage(result.values[0].i18n)).toMatchObject({
+    'pt-BR': { value: 'Cristão', valueGen: false },
+    'sr-Latn-RS': { value: 'Christian sr-Latn-RS', valueGen: true },
+  })
+  expect(result.i18n[contentFormKey('pt-BR')].label).toBe('Religião')
+})
 
 it('shares locale order across text fields and option columns, retaining hidden and missing translations in submission', async () => {
   const view = render(Fixture)

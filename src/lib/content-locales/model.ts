@@ -4,6 +4,8 @@ import { z } from 'zod'
 /** Content tags are independent of the three compiled application-message locales. */
 export type ContentLocale = string & { readonly __contentLocale: unique symbol }
 export const MAX_CONTENT_LOCALE_LENGTH = 64
+// Reserved transport prefix keeps BCP 47 subtags reversible in remote-form paths.
+export const CONTENT_LOCALE_FORM_KEY_PREFIX = '$locale_'
 export const LEGACY_CONTENT_LOCALE_ALIASES: Readonly<Record<string, string>> = {
   zhHant: 'zh-Hant',
   zhHans: 'zh-Hans',
@@ -11,7 +13,7 @@ export const LEGACY_CONTENT_LOCALE_ALIASES: Readonly<Record<string, string>> = {
 
 /**
  * Canonicalizes a content tag without restricting previously stored languages.
- * @param value - BCP 47 tag or explicit legacy form key.
+ * @param value - BCP 47 tag, encoded remote-form key, or explicit legacy form key.
  * @returns Canonical tag, or null for malformed/oversized input.
  * @remarks Registry eligibility is a separate settings/catalogue concern.
  */
@@ -19,12 +21,15 @@ export function normalizeContentLocale(value: unknown): ContentLocale | null {
   if (
     typeof value !== 'string' ||
     !value.length ||
-    value.length > MAX_CONTENT_LOCALE_LENGTH
+    value.length > MAX_CONTENT_LOCALE_LENGTH + CONTENT_LOCALE_FORM_KEY_PREFIX.length
   )
     return null
   const tag = Object.hasOwn(LEGACY_CONTENT_LOCALE_ALIASES, value)
     ? LEGACY_CONTENT_LOCALE_ALIASES[value]
-    : value
+    : value.startsWith(CONTENT_LOCALE_FORM_KEY_PREFIX)
+      ? value.slice(CONTENT_LOCALE_FORM_KEY_PREFIX.length).replaceAll('_', '-')
+      : value
+  if (tag.length > MAX_CONTENT_LOCALE_LENGTH) return null
   try {
     const [canonical] = Intl.getCanonicalLocales(tag)
     return canonical && canonical.length <= MAX_CONTENT_LOCALE_LENGTH

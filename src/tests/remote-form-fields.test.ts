@@ -8,6 +8,8 @@ import * as kitForms from '../../node_modules/@sveltejs/kit/src/runtime/form-uti
 // COMPONENTS
 import FormFieldCard from '#lib/bits/patterns/forms/formFieldsSection/components/FormFieldCard.svelte'
 import FormFieldCardBody from '#lib/bits/patterns/forms/formFieldsSection/components/FormFieldCardBody.svelte'
+// CONTENT LOCALES
+import { contentFormKey } from '#lib/i18n/contentRecords.js'
 // TYPES
 import type { Property } from '#lib/db/zod/schema/property.types.js'
 
@@ -43,7 +45,14 @@ describe('SvelteKit 3 custom property controls', () => {
         component: 'SelectField',
         isDefaultEnabled: true,
         isTranslatable,
-        i18n: { en: { label: 'Category', labelGen: true, placeholderGen: false } },
+        i18n: {
+          en: { label: 'Category', labelGen: true, placeholderGen: false },
+          [contentFormKey('pt-BR')]: {
+            label: 'Categoria',
+            labelGen: true,
+            placeholderGen: false,
+          },
+        },
         values: [
           { id: 'option', rank: 0, value: 'Cafe', i18n: { en: { value: 'Cafe' } } },
         ],
@@ -106,7 +115,10 @@ describe('SvelteKit 3 custom property controls', () => {
               hubId: 'hub',
               isDefaultEnabled: true,
               isTranslatable,
-              i18n: { en: { labelGen: true, placeholderGen: false } },
+              i18n: {
+                en: { labelGen: true, placeholderGen: false },
+                [contentFormKey('pt-BR')]: { labelGen: true, placeholderGen: false },
+              },
               ...(presentation === 'body' ? {} : { rank: 2 }),
               ...(presentation === 'header'
                 ? {}
@@ -174,24 +186,27 @@ describe('new field collapse controls', () => {
 })
 
 describe('Organisation locale settings submission', () => {
-  it.each(['shared', 'exclusive'])('binds the accompanying %s visibility field', visibility => {
-    const input = { data: { defaultLocationVisibility: visibility } }
-    const fields = kitForms.create_field_proxy({
-      form_id: 'organisation-form',
-      get: () => input,
-      set: vi.fn(),
-      get_issues: () => ({}),
-      get_touched: () => ({}),
-      get_dirty: () => ({}),
-    })
-    const attrs = fields.data.defaultLocationVisibility.as('hidden', visibility)
-    const submitted = new FormData()
-    submitted.set(attrs.name, attrs.value)
-    expect(kitForms.convert_formdata('organisation-form', submitted)).toEqual(input)
+  it.each(['shared', 'exclusive'])(
+    'binds the accompanying %s visibility field',
+    visibility => {
+      const input = { data: { defaultLocationVisibility: visibility } }
+      const fields = kitForms.create_field_proxy({
+        form_id: 'organisation-form',
+        get: () => input,
+        set: vi.fn(),
+        get_issues: () => ({}),
+        get_touched: () => ({}),
+        get_dirty: () => ({}),
+      })
+      const attrs = fields.data.defaultLocationVisibility.as('hidden', visibility)
+      const submitted = new FormData()
+      submitted.set(attrs.name, attrs.value)
+      expect(kitForms.convert_formdata('organisation-form', submitted)).toEqual(input)
 
-    // Reproduce the preflight rejection from the old manually named control.
-    const unbound = new FormData()
-    unbound.set('data.defaultLocationVisibility', visibility)
-    expect(() => kitForms.convert_formdata('organisation-form', unbound)).toThrow()
-  })
+      // Reproduce the preflight rejection from the old manually named control.
+      const unbound = new FormData()
+      unbound.set('data.defaultLocationVisibility', visibility)
+      expect(() => kitForms.convert_formdata('organisation-form', unbound)).toThrow()
+    },
+  )
 })
