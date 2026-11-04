@@ -69,19 +69,32 @@ export const isSqliteMissingSchemaError = (
     if (!current || visited.has(current)) continue
     visited.add(current)
 
-    if (current instanceof Error) {
-      const message = current.message.toUpperCase()
-      const isMissingSchemaObject =
-        message.includes('NO SUCH TABLE') || message.includes('NO SUCH COLUMN')
+    if (typeof current === 'object') {
+      const wrapped = current as {
+        message?: unknown
+        cause?: unknown
+        error?: unknown
+        errors?: unknown
+      }
+      const message =
+        typeof wrapped.message === 'string' ? wrapped.message.toUpperCase() : ''
+      // Match the missing identifier itself, never an unrelated name in appended SQL.
+      const missingIdentifier = /NO SUCH (?:TABLE|COLUMN):\s*([\w.]+)/.exec(
+        message,
+      )?.[1]
 
       if (
-        isMissingSchemaObject &&
-        (!normalizedRelationName || message.includes(normalizedRelationName))
+        missingIdentifier &&
+        (!normalizedRelationName ||
+          missingIdentifier === normalizedRelationName ||
+          missingIdentifier.startsWith(`${normalizedRelationName}.`))
       ) {
         return true
       }
 
-      queue.push(current.cause)
+      // D1 transport wrappers and aggregate errors need not be Error instances.
+      queue.push(wrapped.cause, wrapped.error)
+      if (Array.isArray(wrapped.errors)) queue.push(...wrapped.errors)
     }
   }
 

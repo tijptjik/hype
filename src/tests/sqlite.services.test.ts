@@ -2,6 +2,30 @@ import { describe, expect, it } from 'vitest'
 import { isSqliteMissingSchemaError } from '#lib/db/services/sqlite.js'
 
 describe('isSqliteMissingSchemaError', () => {
+  it('follows plain-object D1 wrappers and cyclic aggregate errors', () => {
+    const wrapper: { errors: unknown[] } = { errors: [] }
+    wrapper.errors.push(wrapper, {
+      error: { message: 'no such table: userFeature' },
+    })
+    expect(isSqliteMissingSchemaError(wrapper, 'userFeature')).toBe(true)
+    expect(isSqliteMissingSchemaError(wrapper, 'userLayer')).toBe(false)
+  })
+
+  it('does not confuse another missing table with the requested relation', () => {
+    expect(
+      isSqliteMissingSchemaError(
+        new Error('no such table: userFeatureBackup'),
+        'userFeature',
+      ),
+    ).toBe(false)
+    expect(
+      isSqliteMissingSchemaError(
+        new Error('no such table: feature; SELECT * FROM userFeature'),
+        'userFeature',
+      ),
+    ).toBe(false)
+  })
+
   it('matches missing table errors for the requested table', () => {
     const error = new Error('D1_ERROR: no such table: userFeature')
 
