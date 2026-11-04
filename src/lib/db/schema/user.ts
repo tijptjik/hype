@@ -115,6 +115,7 @@ export const breadlineImportUser = sqliteTable(
 
 /** Private source crosswalk and email eligibility evidence, never public profile data. */
 export const breadlineImportIdentity = sqliteTable('breadlineImportIdentity', {
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
   sourceUserId: integer('sourceUserId').primaryKey(),
   sourceVolunteerId: integer('sourceVolunteerId'),
   userId: text('userId')

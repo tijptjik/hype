@@ -14,6 +14,7 @@ import {
   updateOrganisationByIdWithConcurrency,
 } from '#lib/db/services/organisation.js'
 import { publicationSqlite } from './fixtures/publicationSqlite.js'
+import { createOrganisationUserTables } from './fixtures/organisationUserTables.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -40,6 +41,7 @@ function fixture() {
         .join(',')})`,
     )
   }
+  createOrganisationUserTables(sqlite)
   sqlite.exec(`
     CREATE UNIQUE INDEX organisation_id ON organisation(id);
     CREATE UNIQUE INDEX role_key ON organisationRole(organisationId,userId);

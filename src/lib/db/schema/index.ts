@@ -2,6 +2,7 @@
 export * from './user'
 export * from './hub'
 export * from './organisation'
+export * from './organisationUser'
 export * from './project'
 export * from './cardStyle'
 export * from './layer'

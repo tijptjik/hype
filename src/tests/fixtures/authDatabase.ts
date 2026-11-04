@@ -1,5 +1,5 @@
-// NODE
-import { readFileSync } from 'node:fs'
+// FIXTURES
+import { createOrganisationUserTables } from './organisationUserTables'
 // TYPES
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite'
 import type { D1Database } from '@cloudflare/workers-types'
@@ -20,18 +20,19 @@ interface AuthStatement {
  * Add the persisted policy tables consulted by the production authentication hooks.
  * @param sqlite - Isolated SQLite database with the suite's user and import tables.
  * @returns Nothing after the policy migrations have been applied.
- * @remarks Empty policies still execute the real sign-in enrolment and sync guards.
+ * @remarks Empty policies still execute the real sign-in enrolment. Callers may
+ * supply minimal legacy tables or tables derived from the current app schema.
  */
 export function createAuthHookTables(sqlite: DatabaseSync): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS hub (id TEXT PRIMARY KEY, code TEXT);
+    CREATE TABLE IF NOT EXISTS organisationRole(organisationId TEXT,userId TEXT,role TEXT NOT NULL DEFAULT 'member',PRIMARY KEY(organisationId,userId));
     CREATE TABLE organisation (
       id TEXT PRIMARY KEY, hubId TEXT, isArchived INTEGER, isPublished INTEGER,
       isCoreInclusive INTEGER, isHubExclusive INTEGER
     );
   `)
-  sqlite.exec(readFileSync('migrations/0168_organisation_users.sql', 'utf8'))
-  sqlite.exec(readFileSync('migrations/0169_breadline_sync_application.sql', 'utf8'))
+  createOrganisationUserTables(sqlite)
 }
 
 /**

@@ -185,10 +185,11 @@ function prepareProjectRelations(
         db
           .insert(organisationRole)
           .select(
-            sql`select ${organisationId}, value, 'member' from json_each(${JSON.stringify(userIds)}) where ${guard}`,
+            sql`select ${organisationId}, json_extract(value,'$.userId'), case when json_extract(value,'$.role')='user' then 'user' else 'member' end, json_object(${'project:' + id},case when json_extract(value,'$.role')='user' then 'user' else 'member' end) from json_each(${JSON.stringify(relations.userRoles)}) where ${guard}`,
           )
-          .onConflictDoNothing({
+          .onConflictDoUpdate({
             target: [organisationRole.organisationId, organisationRole.userId],
+            set: { grant: sql`json_patch(${organisationRole.grant},excluded.grant)` },
           }),
       )
     writes.push(
@@ -331,11 +332,21 @@ const commitUserRoles = async (
           userIds.slice(index, index + membersPerInsert).map(userId => ({
             userId,
             organisationId: parentId,
-            role: 'member' as const,
+            role:
+              userRoles.find(row => row.userId === userId)?.role === 'user'
+                ? ('user' as const)
+                : ('member' as const),
+            grant: {
+              ['project:' + projectId]:
+                userRoles.find(row => row.userId === userId)?.role === 'user'
+                  ? ('user' as const)
+                  : ('member' as const),
+            },
           })),
         )
-        .onConflictDoNothing({
+        .onConflictDoUpdate({
           target: [organisationRole.organisationId, organisationRole.userId],
+          set: { grant: sql`json_patch(${organisationRole.grant},excluded.grant)` },
         }),
     )
   }

@@ -1,3 +1,5 @@
+// ROLE POLICY
+import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // DRIZZLE
 import { and, or, asc, eq, sql, type SQL } from 'drizzle-orm'
 // LIB
@@ -78,6 +80,7 @@ import { chunkedInArray } from '#lib/utils/batch-query.js'
 const organisationWithRelations = {
   i18n: true as const,
   userRoles: {
+    columns: { grant: false as const },
     where: (
       role: Pick<
         typeof import('#lib/db/schema/organisation.js').organisationRole,
@@ -400,10 +403,12 @@ const buildVisibilityAndOwnershipConditions = (
   }
 
   // Admin, non-super/non-hub-admin:
-  // Users can query organisations where they have any organisation role.
-  const allowedOrganisationIds = userRoles
-    .filter(role => role.type === 'organisation')
-    .map(role => role.organisationId) as Id[]
+  // Staff can query organisations where they are a member or owner.
+  const allowedOrganisationIds = userRoles.flatMap(role =>
+    role.type === 'organisation' && isOrganisationStaffRole(role.role)
+      ? [role.organisationId]
+      : [],
+  ) as Id[]
 
   if (allowedOrganisationIds.length === 0) {
     conditions.push(eq(organisation.id, '__none__' as Id))

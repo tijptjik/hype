@@ -72,7 +72,11 @@ export const organisation = sqliteTable('organisation', {
     .notNull()
     .default(true),
   // Default visibility for newly authored Locations; existing identities are unaffected.
-  defaultLocationVisibility: text('defaultLocationVisibility', { enum: ['shared', 'exclusive'] }).notNull().default('shared'),
+  defaultLocationVisibility: text('defaultLocationVisibility', {
+    enum: ['shared', 'exclusive'],
+  })
+    .notNull()
+    .default('shared'),
   // Configurable capability labels and assignable keys for this organisation's projects.
   capabilities: text('capabilities', {
     mode: 'json',
@@ -132,7 +136,7 @@ export const organisationI18n = sqliteTable(
 /**
  * Organization role assignments
  * @remarks
- * Links users to organizations with specific roles (member/owner)
+ * Links users to organizations with the strongest independently granted role (user/member/owner)
  */
 export const organisationRole = sqliteTable(
   'organisationRole',
@@ -148,6 +152,11 @@ export const organisationRole = sqliteTable(
     })
       .notNull()
       .default(OrganisationRoleType.member),
+    // Independent source keys preserve membership when one source is withdrawn.
+    grant: text('grant', { mode: 'json' })
+      .$type<import('#lib/roles/organisation.js').OrganisationRoleGrants>()
+      .notNull()
+      .default({}),
   },
   table => [primaryKey({ columns: [table.organisationId, table.userId] })],
 )

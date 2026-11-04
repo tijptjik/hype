@@ -16,6 +16,9 @@ import {
   organisationRole,
   project,
 } from '../schema'
+// ROLE PROVENANCE
+import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
+import { prepareOrganisationStaffRoles } from './organisationRoleGrants.js'
 // SERVICES
 import {
   firstOrNull,
@@ -169,16 +172,7 @@ function prepareOrganisationRelations(
     )
   }
   if (relations.userRoles !== undefined) {
-    writes.push(
-      ...prepareGuardedReplacement(
-        db,
-        organisationRole,
-        relations.userRoles as InferInsertModel<typeof organisationRole>[],
-        organisationRole.organisationId,
-        id,
-        guard,
-      ),
-    )
+    writes.push(...prepareOrganisationStaffRoles(db, id, relations.userRoles, guard))
   }
   return writes
 }
@@ -265,13 +259,21 @@ export const createUserRoles = async (
   userRoles: OrganisationRoleNew[],
   organisationId: string,
 ): Promise<OrganisationRoleDB[]> => {
-  return await insertManyRelated(
-    db,
-    organisationRole,
-    userRoles as InferInsertModel<typeof organisationRole>[],
-    'organisationId',
-    organisationId,
-  )
+  const writes = userRoles.map(row => {
+    const role = row.role ?? 'member'
+    if (!isOrganisationStaffRole(role))
+      throw new Error('Invalid organisation staff assignment')
+    return db
+      .insert(organisationRole)
+      .values({ organisationId, userId: row.userId, role, grant: { manual: role } })
+      .onConflictDoUpdate({
+        target: [organisationRole.organisationId, organisationRole.userId],
+        set: { grant: sql`json_patch(${organisationRole.grant},excluded.grant)` },
+      })
+  })
+  if (writes.length)
+    await db.batch(writes as [(typeof writes)[number], ...(typeof writes)[number][]])
+  return await listUserRoles(db, organisationId)
 }
 
 // ═══════════════════════
@@ -614,10 +616,14 @@ export const listUserRoles = async (
   organisationId: string,
 ): Promise<OrganisationRoleDB[]> => {
   return await db.query.organisationRole.findMany({
+    columns: { grant: false },
     with: {
       user: true,
     },
-    where: eq(organisationRole.organisationId, organisationId),
+    where: and(
+      eq(organisationRole.organisationId, organisationId),
+      sql`${organisationRole.role} IN ('member','owner')`,
+    ),
   })
 }
 
@@ -635,7 +641,12 @@ export const listUserRoleAssignments = async (
       role: organisationRole.role,
     })
     .from(organisationRole)
-    .where(eq(organisationRole.organisationId, organisationId))
+    .where(
+      and(
+        eq(organisationRole.organisationId, organisationId),
+        sql`${organisationRole.role} IN ('member','owner')`,
+      ),
+    )
 }
 
 // ═══════════════════════
@@ -1019,7 +1030,7 @@ export const updateI18n = async (
 // ═══════════════════════
 
 /**
- * Updates user roles for an organisation by deleting existing ones and creating new ones
+ * Updates manual staff grants while retaining independent audience membership
  * @param db - The database instance
  * @param userRoles - Array of user roles to update
  * @param organisationId - The ID of the organisation
@@ -1030,13 +1041,8 @@ export const syncUserRoles = async (
   userRoles: OrganisationRoleNew[],
   organisationId: string,
 ): Promise<OrganisationRoleDB[]> => {
-  return await replaceManyRelated(
-    db,
-    organisationRole,
-    userRoles as InferInsertModel<typeof organisationRole>[],
-    organisationRole.organisationId,
-    organisationId,
-  )
+  await db.batch(prepareOrganisationStaffRoles(db, organisationId, userRoles))
+  return await listUserRoles(db, organisationId)
 }
 
 // ═══════════════════════

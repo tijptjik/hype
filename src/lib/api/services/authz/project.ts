@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit'
 import { shouldLogAuthzDeny, toAccountRequirementCode, toActorPolicyBase } from '.'
 import { getScopedHubAdminIds, isCoreHubAdmin, isRelevantHubAdmin } from './hub'
-import { hasAnyOrganisationRole, isOrganisationOwner } from './organisation'
+import { hasAnyOrganisationStaffRole, isOrganisationOwner } from './organisation'
 import { hasAuthenticatedSession } from './user'
 // TYPES
 import type {
@@ -145,7 +145,7 @@ const logProjectReject = (
       isSuperAdmin: params.isSuperAdmin ?? false,
       userRoleCount: params.userRoles.length,
       hasAnyProjectRole: hasAnyProjectRole(params.userRoles),
-      hasAnyOrganisationRole: hasAnyOrganisationRole(params.userRoles),
+      hasAnyOrganisationStaffRole: hasAnyOrganisationStaffRole(params.userRoles),
       hasHubAdminRole: hasHubAdminRole(params.userRoles),
       resourceId: params.resourceId ?? null,
       organisationId: params.organisationId ?? null,

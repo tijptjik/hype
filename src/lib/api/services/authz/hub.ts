@@ -1,3 +1,5 @@
+// ROLE HIERARCHY
+import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 import { error } from '@sveltejs/kit'
 import {
   shouldLogAuthzDeny,
@@ -691,9 +693,11 @@ export const hasInvalidHubOrganisationAssignmentsForSubmission = async (params: 
   if (addedOrganisationIds.length === 0) return false
 
   const memberOrganisationIds = new Set(
-    params.userRoles
-      .filter(role => role.type === 'organisation')
-      .map(role => role.organisationId),
+    params.userRoles.flatMap(role =>
+      role.type === 'organisation' && isOrganisationStaffRole(role.role)
+        ? [role.organisationId]
+        : [],
+    ),
   )
 
   return addedOrganisationIds.some(

@@ -291,6 +291,7 @@ export const getUserRoles = async (
 
   const orgRoles = await retryBusyRead(() =>
     db.query.organisationRole.findMany({
+      columns: { grant: false },
       where: (organisationRole, { eq }) => eq(organisationRole.userId, userId),
     }),
   )

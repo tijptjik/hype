@@ -1,3 +1,5 @@
+// ROLE HIERARCHY
+import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 import { eq } from 'drizzle-orm'
 import { hub, userLayer } from '#lib/db/schema/index.js'
 import { canAccessAnalytics } from '#lib/api/services/authz/user.js'
@@ -74,7 +76,9 @@ export function canViewAnalytics(user: SessionUser | null): boolean {
 export const getOrganisationIdforRoles = (userRoles: UserRoleDisco[]) => {
   return userRoles
     .map((role: UserRoleDisco) =>
-      role.type === 'organisation' ? role.organisationId : null,
+      role.type === 'organisation' && isOrganisationStaffRole(role.role)
+        ? role.organisationId
+        : null,
     )
     .filter(Boolean)
 }

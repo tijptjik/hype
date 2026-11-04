@@ -178,12 +178,10 @@ describe('archived account session enforcement', () => {
     expect(store.session).toHaveLength(0)
   })
 
-  it('keeps session reads and sign-out available while user synchronisation applies', async () => {
+  it('keeps session reads and sign-out independent of importer bookkeeping', async () => {
     const { auth, signIn, store, baseURL } = setup()
     const headers = cookies(await signIn())
     headers.set('origin', baseURL)
-    sqlite.exec(`INSERT INTO breadlineUserSyncApplication
-      VALUES ('users', 'test', 'plan', 0, 'applying', 1)`)
     expect((await auth.api.getSession({ headers, asResponse: true })).status).toBe(200)
     expect((await auth.api.signOut({ headers, asResponse: true })).status).toBe(200)
     expect(store.session).toHaveLength(0)

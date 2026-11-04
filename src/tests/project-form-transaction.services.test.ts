@@ -24,6 +24,7 @@ import {
 import { isProjectMapStyleUnavailable } from '#lib/db/services/map.js'
 import { createDefaultProjectLicense } from '#lib/db/services/licence.js'
 import { publicationSqlite } from './fixtures/publicationSqlite.js'
+import { createOrganisationUserTables } from './fixtures/organisationUserTables.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -77,15 +78,17 @@ function fixture() {
         )
         .join(',')})`,
     )
+  createOrganisationUserTables(sqlite)
   sqlite.exec(`
     CREATE UNIQUE INDEX assignment_id ON projectMapStyles(projectId);
     CREATE UNIQUE INDEX project_id ON project(id);
+    CREATE UNIQUE INDEX organisation_id ON organisation(id);
     CREATE UNIQUE INDEX project_role_key ON projectRole(projectId,userId);
     CREATE UNIQUE INDEX organisation_role_key ON organisationRole(organisationId,userId);
     INSERT INTO project(id,organisationId,code,modifiedAt,locationPolicyRevision) VALUES ('p','old','old','before',0);
     INSERT INTO projectI18n(projectId,locale,name) VALUES ('p','en','Old'),('outside','en','Outside');
     INSERT INTO projectRole(projectId,userId,role) VALUES ('p','old','owner'),('outside','outside','owner');
-    INSERT INTO organisationRole VALUES ('new','u-0','owner'),('outside','outside','owner');
+    INSERT INTO organisationRole(organisationId,userId,role) VALUES ('new','u-0','owner'),('outside','outside','owner');
     INSERT INTO layer(id,projectId,organisationId) VALUES ('l','p','old');
     INSERT INTO feature(id,projectId,organisationId) VALUES ('f','p','old');
     INSERT INTO task(id,projectId,organisationId) VALUES ('t','p','old');

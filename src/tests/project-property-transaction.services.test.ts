@@ -27,6 +27,9 @@ import {
   createOrganisation,
   updateOrganisationByIdWithConcurrency,
 } from '#lib/db/services/organisation.js'
+// FIXTURES
+import { createOrganisationUserTables } from './fixtures/organisationUserTables.js'
+// TYPES
 import type { Database } from '#lib/types.js'
 import type { ProjectPropertyForm } from '#lib/db/zod/schema/property.types.js'
 
@@ -92,7 +95,10 @@ beforeEach(() => {
     })
     sqlite.exec(`CREATE TABLE "${getTableName(table)}" (${columns.join(', ')})`)
   }
+  createOrganisationUserTables(sqlite)
   sqlite.exec(`CREATE UNIQUE INDEX layer_property_unique ON layerProperty(layerId, propertyId);
+    CREATE UNIQUE INDEX organisation_role_key ON organisationRole(organisationId,userId);
+    CREATE UNIQUE INDEX organisation_id ON organisation(id);
     CREATE UNIQUE INDEX property_id ON property(id);
     CREATE UNIQUE INDEX hub_property_key ON hubProperty(hubId, propertyId);
     CREATE UNIQUE INDEX organisation_property_key ON organisationProperty(organisationId, propertyId);

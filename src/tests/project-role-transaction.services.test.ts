@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -22,8 +23,12 @@ beforeEach(() => {
     CREATE TABLE projectRole (projectId TEXT NOT NULL, userId TEXT NOT NULL, role TEXT NOT NULL, capabilities TEXT,
       PRIMARY KEY (projectId, userId));
     INSERT INTO project VALUES ('project', 'org'), ('other-project', 'org');
-    INSERT INTO organisationRole VALUES ('org', 'old-user', 'admin');
+    INSERT INTO organisationRole VALUES ('org', 'old-user', 'owner');
     INSERT INTO projectRole VALUES ('project', 'old-user', 'admin', null)`)
+  sqlite.exec(
+    'CREATE TABLE organisation(id TEXT PRIMARY KEY); CREATE TABLE user(id TEXT PRIMARY KEY); CREATE TABLE breadlineImportIdentity(sourceUserId INTEGER PRIMARY KEY)',
+  )
+  sqlite.exec(readFileSync('migrations/0168_organisation_users.sql', 'utf8'))
   db = drizzle({
     prepare: (sql: string) => ({
       bind: (...params: never[]) => ({
@@ -89,8 +94,18 @@ describe('atomic project roles and organisation membership', () => {
     expect(result).toHaveLength(2)
     expect(result.every(row => row.projectId === 'project')).toBe(true)
     expect(snapshot().organisations).toEqual([
-      { organisationId: 'org', userId: 'new-user', role: 'member' },
-      { organisationId: 'org', userId: 'old-user', role: 'admin' },
+      {
+        organisationId: 'org',
+        userId: 'new-user',
+        role: 'user',
+        grant: '{"project:project":"user"}',
+      },
+      {
+        organisationId: 'org',
+        userId: 'old-user',
+        role: 'owner',
+        grant: '{"manual":"owner","project:project":"user"}',
+      },
     ])
   })
 

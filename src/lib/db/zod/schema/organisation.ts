@@ -157,17 +157,22 @@ export const OrganisationI18nUpdate = createUpdateSchema(organisationI18n).omit(
   locale: true,
 })
 
-export const OrganisationRoleBase = createSelectSchema(organisationRole)
+export const OrganisationRoleBase = createSelectSchema(organisationRole).omit({
+  grant: true,
+})
 
 export const OrganisationRoleWithUser = OrganisationRoleBase.extend({
   user: UserBasic.nullish(),
 })
 
 export const OrganisationRoleInsert = createInsertSchema(organisationRole).omit({
+  grant: true,
   organisationId: true,
 })
 
-export const OrganisationRoleUpdate = createUpdateSchema(organisationRole)
+export const OrganisationRoleUpdate = createUpdateSchema(organisationRole).omit({
+  grant: true,
+})
 
 export const OrganisationRoleUpdateExtra = OrganisationRoleUpdate.extend({
   user: UserBasic,
@@ -218,7 +223,7 @@ export const OrganisationRoleFormData = z.object({
   userId: z
     .string()
     .min(1, { message: m.field_is_required({ field: m.field_user() }) }),
-  role: OrganisationRoleBase.shape.role,
+  role: z.enum(['member', 'owner']),
 })
 
 export const OrganisationI18nByLocaleFormData = z.object({

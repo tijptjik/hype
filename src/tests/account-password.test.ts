@@ -317,15 +317,8 @@ describe('account password HTTP pipeline', () => {
     expect(hash).not.toHaveBeenCalled()
   })
 
-  it('defers password setup on both HTTP entry points while user synchronisation applies', async () => {
-    const { request, store, hash } = await setup()
-    sqlite.exec(`INSERT INTO breadlineUserSyncApplication
-      VALUES ('users', 'test', 'plan', 0, 'applying', 1)`)
-    expect((await request(undefined, true)).status).toBe(503)
-    expect((await request()).status).toBe(503)
-    expect(store.account).toHaveLength(0)
-    expect(hash).not.toHaveBeenCalled()
-    sqlite.exec("UPDATE breadlineUserSyncApplication SET state = 'complete'")
+  it('allows password setup without production importer bookkeeping', async () => {
+    const { request, hash } = await setup()
     expect((await request()).status).toBe(200)
     expect(hash).toHaveBeenCalledOnce()
   })

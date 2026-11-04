@@ -133,6 +133,7 @@ export enum HubSubscriptionService {
 // ORGANISATION
 /* -------- */
 export enum OrganisationRoleType {
+  user = 'user',
   member = 'member',
   owner = 'owner',
 }

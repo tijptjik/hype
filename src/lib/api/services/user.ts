@@ -123,7 +123,7 @@ import { HierarchicalResource } from '#lib/enums.js'
  */
 export const userEntityWithRelations = {
   hubRoles: true,
-  organisationRoles: true,
+  organisationRoles: { columns: { grant: false } },
   projectRoles: true,
   userLayers: {
     with: {

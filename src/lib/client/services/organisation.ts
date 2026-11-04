@@ -1,7 +1,8 @@
+// ROLE POLICY
+import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // CONTENT LOCALES
 import { toContentLocaleSettingsForm } from '#lib/content-locales/settings.js'
-// ENUMS
-import type { OrganisationRoleType } from '#lib/enums.js'
+// CAPABILITIES
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '#lib/capabilities.js'
 // I18N
 import { toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
@@ -161,10 +162,12 @@ export function toOrganisationFormInput(
         zhHans: normalizeOrganisationFormLocale(data.i18n?.zhHans),
         zhHant: normalizeOrganisationFormLocale(data.i18n?.zhHant),
       },
-      userRoles: (data.userRoles ?? []).map(userRole => ({
-        userId: userRole.userId ?? '',
-        role: userRole.role as OrganisationRoleType,
-      })),
+      userRoles: (data.userRoles ?? [])
+        .filter(userRole => isOrganisationStaffRole(userRole.role))
+        .map(userRole => ({
+          userId: userRole.userId ?? '',
+          role: userRole.role as 'member' | 'owner',
+        })),
       properties: cloneOrganisationProperties(data.properties),
     },
   }
@@ -266,7 +269,9 @@ export function overrideOrganisationEntityFromFormInput(
     data: current.data
       ? {
           ...current.data,
-          ...(formData.data.defaultLocationVisibility !== undefined ? { defaultLocationVisibility: formData.data.defaultLocationVisibility } : {}),
+          ...(formData.data.defaultLocationVisibility !== undefined
+            ? { defaultLocationVisibility: formData.data.defaultLocationVisibility }
+            : {}),
           ...(nextCode !== undefined ? { code: nextCode } : {}),
           ...(nextUrl !== undefined ? { url: nextUrl } : {}),
           ...(nextCapabilities !== undefined

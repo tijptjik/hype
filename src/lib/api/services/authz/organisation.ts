@@ -1,4 +1,6 @@
 import { error } from '@sveltejs/kit'
+// ROLE HIERARCHY
+import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 import {
   shouldLogAuthzDeny,
   toAccountRequirementCode,
@@ -41,8 +43,8 @@ type OrganisationActionPermissions = {
 //
 // 3. ROLE RESOLUTION
 //    - isOrganisationOwner
-//    - hasOrganisationRole
-//    - hasAnyOrganisationRole
+//    - hasOrganisationStaffRole
+//    - hasAnyOrganisationStaffRole
 //    - hasAnyOrganisationOwnerRole
 //
 // 4. INPUT NORMALIZERS
@@ -142,7 +144,7 @@ const logOrganisationReject = (
       isAuthenticated: params.isAuthenticated ?? null,
       isAnonymous: params.isAnonymous ?? null,
       userRoleCount: params.userRoles.length,
-      hasAnyOrganisationRole: hasAnyOrganisationRole(params.userRoles),
+      hasAnyOrganisationStaffRole: hasAnyOrganisationStaffRole(params.userRoles),
       resourceId: params.resourceId ?? null,
       resourceHubId: params.resourceHubId ?? null,
       fields: params.fields ?? null,
@@ -169,17 +171,25 @@ export const isOrganisationOwner = (
       role.role === 'owner',
   )
 
-const hasOrganisationRole = (
+const hasOrganisationStaffRole = (
   roles: UserRoleDisco[],
   organisationId?: string,
 ): boolean =>
   Boolean(organisationId) &&
   roles.some(
-    role => role.type === 'organisation' && role.organisationId === organisationId,
+    role =>
+      role.type === 'organisation' &&
+      role.organisationId === organisationId &&
+      isOrganisationStaffRole(role.role),
   )
 
-export const hasAnyOrganisationRole = (roles: UserRoleDisco[]): boolean =>
-  roles.some(role => role.type === 'organisation')
+/**
+ * Check for an explicit staff assignment in any organisation.
+ * @param roles Server-resolved assignments.
+ * @returns Whether the actor is a member or owner anywhere.
+ */
+export const hasAnyOrganisationStaffRole = (roles: UserRoleDisco[]): boolean =>
+  roles.some(role => role.type === 'organisation' && isOrganisationStaffRole(role.role))
 
 const hasAnyOrganisationOwnerRole = (roles: UserRoleDisco[]): boolean =>
   roles.some(role => role.type === 'organisation' && role.role === 'owner')
