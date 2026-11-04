@@ -13,7 +13,12 @@ const route = vi.hoisted(() => ({
 vi.mock('$app/state', () => ({ page: route }))
 
 const messagingQueries = vi.hoisted(() => ({ ids: ['a', 'b', 'c'] }))
-vi.mock('#lib/api/messaging.remote.js', () => ({ getMessagingOrganisations: () => Object.assign(Promise.resolve(messagingQueries.ids.map(id => ({ id, code: id }))), { refresh: async () => {} }) }))
+vi.mock('#lib/api/messaging.remote.js', () => ({
+  getMessagingOrganisations: () =>
+    Object.assign(Promise.resolve(messagingQueries.ids.map(id => ({ id, code: id }))), {
+      refresh: async () => {},
+    }),
+}))
 
 const notifications = vi.hoisted(() => ({ error: vi.fn() }))
 vi.mock('svelte-sonner', () => ({ toast: notifications }))
@@ -55,9 +60,11 @@ function setup(
     name: `Organisation ${id}`,
     isArchived: false,
   }))
-  messagingQueries.ids = options.organisationMember ? [options.organisationMember] : ['a', 'b', 'c']
-  const selectOrganisation = vi.fn()
+  messagingQueries.ids = options.organisationMember
+    ? [options.organisationMember]
+    : ['a', 'b', 'c']
   const toggleOrganisation = vi.fn()
+  const selectOrganisation = vi.fn()
   const list = {
     rows: resources,
     loading: false,
@@ -207,7 +214,10 @@ it.each(['/admin/messaging', '/admin/whatsapp/'])(
     expect(sections.map(section => section.id)).toEqual(['organisation'])
     expect(sections[0].onNavigate).toBeUndefined()
     expect(rows.every(row => row.exclusive)).toBe(true)
-    expect(rows.find(row => row.id === 'c')).toMatchObject({ selected: true, active: true })
+    expect(rows.find(row => row.id === 'c')).toMatchObject({
+      selected: true,
+      active: true,
+    })
     await rows.find(row => row.id === 'b')!.onPrimary()
     await rows.find(row => row.id === 'a')!.onToggle()
     expect(selectOrganisation.mock.calls).toEqual([['b'], ['a']])

@@ -3,7 +3,16 @@ import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, asc, eq, gt, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
 // SCHEMA
-import { messagingPhoneLookup, messagingAccount, messagingConversation, messagingMessage, messagingSend, organisation, user, userMessagingIdentity } from '#lib/db/schema/index.js'
+import {
+  messagingPhoneLookup,
+  messagingAccount,
+  messagingConversation,
+  messagingMessage,
+  messagingSend,
+  organisation,
+  user,
+  userMessagingIdentity,
+} from '#lib/db/schema/index.js'
 // API
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
 // UTILITIES
@@ -13,7 +22,14 @@ import { chunkedInArray } from '#lib/utils/batch-query.js'
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 import type { Database } from '#lib/types.js'
 import type { MessagingBinding } from '#lib/messaging/binding.js'
-import type { BridgeMessage, BridgeSnapshot, MessagingPlatform, SendRequest, SendResult } from '#lib/messaging/types.js'
+import type {
+  BridgeConversationState,
+  BridgeMessage,
+  BridgeSnapshot,
+  MessagingPlatform,
+  SendRequest,
+  SendResult,
+} from '#lib/messaging/types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -30,6 +46,7 @@ import type { BridgeMessage, BridgeSnapshot, MessagingPlatform, SendRequest, Sen
 // - messagingViewer
 // 2. INBOX PROJECTION
 // - projectMessagingSnapshot
+// - projectMessagingArchive
 // - readMessagingMessages
 // 3. SEND JOURNAL
 // - dispatchMessagingSend
@@ -42,10 +59,21 @@ export type MessagingAccount = typeof messagingAccount.$inferSelect
  * @param organisationId Requested organisation, loaded independently of client claims.
  * @returns The accessible, unarchived organisation.
  */
-export async function authorizeMessagingOrganisation(ctx: GuardedBaseContext, organisationId: string) {
-  const target = await ctx.db.query.organisation.findFirst({ where: eq(organisation.id, organisationId) })
-  if (!target || !canManageOrganisationMessaging({ ...ctx.user, roles: ctx.userRoles }, target)) {
-    throw error(403, 'Organisation messaging requires membership or administration of this organisation')
+export async function authorizeMessagingOrganisation(
+  ctx: GuardedBaseContext,
+  organisationId: string,
+) {
+  const target = await ctx.db.query.organisation.findFirst({
+    where: eq(organisation.id, organisationId),
+  })
+  if (
+    !target ||
+    !canManageOrganisationMessaging({ ...ctx.user, roles: ctx.userRoles }, target)
+  ) {
+    throw error(
+      403,
+      'Organisation messaging requires membership or administration of this organisation',
+    )
   }
   return target
 }
@@ -55,8 +83,13 @@ export async function authorizeMessagingOrganisation(ctx: GuardedBaseContext, or
  * @param accountId Application account identifier; never a bridge identifier.
  * @returns The authorized account record.
  */
-export async function authorizeMessagingAccount(ctx: GuardedBaseContext, accountId: string): Promise<MessagingAccount> {
-  const account = await ctx.db.query.messagingAccount.findFirst({ where: eq(messagingAccount.id, accountId) })
+export async function authorizeMessagingAccount(
+  ctx: GuardedBaseContext,
+  accountId: string,
+): Promise<MessagingAccount> {
+  const account = await ctx.db.query.messagingAccount.findFirst({
+    where: eq(messagingAccount.id, accountId),
+  })
   if (!account) throw error(404, 'Messaging account not found')
   await authorizeMessagingOrganisation(ctx, account.organisationId)
   return account
@@ -78,18 +111,51 @@ export interface MessagingRecipient {
  * @remarks A stored recipient association is never reassigned to a different person.
  * Dynamic membership uses one JSON SQL parameter instead of an unbounded IN list.
  */
-export async function readMessagingRecipients(db: Database, account: MessagingAccount, addresses: string[]): Promise<Map<string, MessagingRecipient>> {
+export async function readMessagingRecipients(
+  db: Database,
+  account: MessagingAccount,
+  addresses: string[],
+): Promise<Map<string, MessagingRecipient>> {
   if (!addresses.length) return new Map()
-  const rows = await db.select({ address: userMessagingIdentity.address, id: user.id, name: user.name, username: user.username, image: user.image })
+  const rows = await db
+    .select({
+      address: userMessagingIdentity.address,
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      image: user.image,
+    })
     .from(userMessagingIdentity)
-    .innerJoin(user, and(eq(user.id, userMessagingIdentity.userId), eq(user.isArchived, false), eq(user.isAnonymous, false)))
-    .leftJoin(messagingConversation, and(eq(messagingConversation.accountId, account.id), eq(messagingConversation.chatId, userMessagingIdentity.address)))
-    .where(and(
-      eq(userMessagingIdentity.platform, account.platform), isNotNull(userMessagingIdentity.verifiedAt),
-      or(isNull(userMessagingIdentity.sourceTelephone), eq(userMessagingIdentity.sourceTelephone, user.telephone)),
-      chunkedInArray(userMessagingIdentity.address, [...new Set(addresses)], 5),
-      or(isNull(messagingConversation.recipientUserId), eq(messagingConversation.recipientUserId, user.id)),
-    ))
+    .innerJoin(
+      user,
+      and(
+        eq(user.id, userMessagingIdentity.userId),
+        eq(user.isArchived, false),
+        eq(user.isAnonymous, false),
+      ),
+    )
+    .leftJoin(
+      messagingConversation,
+      and(
+        eq(messagingConversation.accountId, account.id),
+        eq(messagingConversation.chatId, userMessagingIdentity.address),
+      ),
+    )
+    .where(
+      and(
+        eq(userMessagingIdentity.platform, account.platform),
+        isNotNull(userMessagingIdentity.verifiedAt),
+        or(
+          isNull(userMessagingIdentity.sourceTelephone),
+          eq(userMessagingIdentity.sourceTelephone, user.telephone),
+        ),
+        chunkedInArray(userMessagingIdentity.address, [...new Set(addresses)], 5),
+        or(
+          isNull(messagingConversation.recipientUserId),
+          eq(messagingConversation.recipientUserId, user.id),
+        ),
+      ),
+    )
   return new Map(rows.map(({ address, ...recipient }) => [address, recipient]))
 }
 
@@ -100,26 +166,80 @@ export async function readMessagingRecipients(db: Database, account: MessagingAc
  * @returns A confirmed native address or an actionable, privacy-safe reason.
  * @remarks Existence is not a new ownership proof: the association relies on HYPE's saved phone.
  */
-async function lookupMessagingPhone(ctx: GuardedBaseContext, account: MessagingAccount, recipient: { id: string; telephone: string | null }): Promise<{ address: string | null; reason: string | null }> {
+async function lookupMessagingPhone(
+  ctx: GuardedBaseContext,
+  account: MessagingAccount,
+  recipient: { id: string; telephone: string | null },
+): Promise<{ address: string | null; reason: string | null }> {
   const label = account.platform === 'telegram' ? 'Telegram' : 'WhatsApp'
   const phone = normalizeTelephone(recipient.telephone)
-  if (!phone) return { address: null, reason: 'No valid phone number on this HYPE profile' }
-  if (!account.enabled || !account.externalAccountId) return { address: null, reason: `Connect this organisation’s ${label} account first` }
+  if (!phone)
+    return { address: null, reason: 'No valid phone number on this HYPE profile' }
+  if (!account.enabled || !account.externalAccountId)
+    return {
+      address: null,
+      reason: `Connect this organisation’s ${label} account first`,
+    }
   try {
-    const result = await messagingService(ctx, account.platform).lookupPhone(account.bridgeAccountId, phone)
-    if (result.status !== 'registered') return { address: null, reason: result.status === 'not_found'
-      ? `No ${label} account found for the saved phone number`
-      : result.status === 'unresolved' ? 'Telegram could not resolve this number; it may be hidden by privacy settings or not registered'
-      : `${label} lookup is temporarily unavailable; try again` }
-    if (!(account.platform === 'whatsapp' ? /^[1-9]\d{6,14}@s\.whatsapp\.net$/ : /^[1-9]\d*$/).test(result.address)) return { address: null, reason: `${label} returned an invalid user identity` }
+    const result = await messagingService(ctx, account.platform).lookupPhone(
+      account.bridgeAccountId,
+      phone,
+    )
+    if (result.status !== 'registered')
+      return {
+        address: null,
+        reason:
+          result.status === 'not_found'
+            ? `No ${label} account found for the saved phone number`
+            : result.status === 'unresolved'
+              ? 'Telegram could not resolve this number; it may be hidden by privacy settings or not registered'
+              : `${label} lookup is temporarily unavailable; try again`,
+      }
+    if (
+      !(
+        account.platform === 'whatsapp'
+          ? /^[1-9]\d{6,14}@s\.whatsapp\.net$/
+          : /^[1-9]\d*$/
+      ).test(result.address)
+    )
+      return { address: null, reason: `${label} returned an invalid user identity` }
     // Never attach a discovered address to a different HYPE person or repoint an existing thread.
-    const [owner] = await ctx.db.select({ id: userMessagingIdentity.userId }).from(userMessagingIdentity)
-      .where(and(eq(userMessagingIdentity.platform, account.platform), eq(userMessagingIdentity.address, result.address))).limit(1)
-    const [thread] = await ctx.db.select({ id: messagingConversation.recipientUserId }).from(messagingConversation)
-      .where(and(eq(messagingConversation.accountId, account.id), eq(messagingConversation.chatId, result.address))).limit(1)
-    if ((owner && owner.id !== recipient.id) || (thread?.id && thread.id !== recipient.id)) return { address: null, reason: 'This account belongs to a different HYPE user; review the phone number' }
+    const [owner] = await ctx.db
+      .select({ id: userMessagingIdentity.userId })
+      .from(userMessagingIdentity)
+      .where(
+        and(
+          eq(userMessagingIdentity.platform, account.platform),
+          eq(userMessagingIdentity.address, result.address),
+        ),
+      )
+      .limit(1)
+    const [thread] = await ctx.db
+      .select({ id: messagingConversation.recipientUserId })
+      .from(messagingConversation)
+      .where(
+        and(
+          eq(messagingConversation.accountId, account.id),
+          eq(messagingConversation.chatId, result.address),
+        ),
+      )
+      .limit(1)
+    if (
+      (owner && owner.id !== recipient.id) ||
+      (thread?.id && thread.id !== recipient.id)
+    )
+      return {
+        address: null,
+        reason:
+          'This account belongs to a different HYPE user; review the phone number',
+      }
     return { address: result.address, reason: null }
-  } catch { return { address: null, reason: `${label} lookup is temporarily unavailable; try again` } }
+  } catch {
+    return {
+      address: null,
+      reason: `${label} lookup is temporarily unavailable; try again`,
+    }
+  }
 }
 
 /** Read or populate discovery cache without changing verified identity ownership.
@@ -128,19 +248,54 @@ async function lookupMessagingPhone(ctx: GuardedBaseContext, account: MessagingA
  * @param recipient HYPE user and current profile telephone.
  * @returns Cached or freshly checked availability; temporary failures expire quickly.
  */
-export async function resolveMessagingPhone(ctx: GuardedBaseContext, account: MessagingAccount, recipient: { id: string; telephone: string | null }): Promise<{ address: string | null; reason: string | null }> {
-  if (!account.enabled || !account.externalAccountId || !normalizeTelephone(recipient.telephone)) return lookupMessagingPhone(ctx, account, recipient)
-  const [cached] = await ctx.db.select().from(messagingPhoneLookup).where(and(
-    eq(messagingPhoneLookup.accountId, account.id), eq(messagingPhoneLookup.userId, recipient.id),
-    eq(messagingPhoneLookup.externalAccountId, account.externalAccountId), eq(messagingPhoneLookup.telephone, recipient.telephone!),
-    gt(messagingPhoneLookup.expiresAt, Date.now()),
-  )).limit(1)
+export async function resolveMessagingPhone(
+  ctx: GuardedBaseContext,
+  account: MessagingAccount,
+  recipient: { id: string; telephone: string | null },
+): Promise<{ address: string | null; reason: string | null }> {
+  if (
+    !account.enabled ||
+    !account.externalAccountId ||
+    !normalizeTelephone(recipient.telephone)
+  )
+    return lookupMessagingPhone(ctx, account, recipient)
+  const [cached] = await ctx.db
+    .select()
+    .from(messagingPhoneLookup)
+    .where(
+      and(
+        eq(messagingPhoneLookup.accountId, account.id),
+        eq(messagingPhoneLookup.userId, recipient.id),
+        eq(messagingPhoneLookup.externalAccountId, account.externalAccountId),
+        eq(messagingPhoneLookup.telephone, recipient.telephone!),
+        gt(messagingPhoneLookup.expiresAt, Date.now()),
+      ),
+    )
+    .limit(1)
   if (cached) return { address: cached.address, reason: cached.reason }
   const result = await lookupMessagingPhone(ctx, account, recipient)
   const checkedAt = Date.now()
-  const ttl = result.address ? 7 * 86400000 : result.reason?.includes('temporarily unavailable') ? 60000 : 86400000
-  const value = { accountId: account.id, userId: recipient.id, externalAccountId: account.externalAccountId, telephone: recipient.telephone!, ...result, checkedAt, expiresAt: checkedAt + ttl }
-  await ctx.db.insert(messagingPhoneLookup).values(value).onConflictDoUpdate({ target: [messagingPhoneLookup.accountId, messagingPhoneLookup.userId], set: value })
+  const ttl = result.address
+    ? 7 * 86400000
+    : result.reason?.includes('temporarily unavailable')
+      ? 60000
+      : 86400000
+  const value = {
+    accountId: account.id,
+    userId: recipient.id,
+    externalAccountId: account.externalAccountId,
+    telephone: recipient.telephone!,
+    ...result,
+    checkedAt,
+    expiresAt: checkedAt + ttl,
+  }
+  await ctx.db
+    .insert(messagingPhoneLookup)
+    .values(value)
+    .onConflictDoUpdate({
+      target: [messagingPhoneLookup.accountId, messagingPhoneLookup.userId],
+      set: value,
+    })
   return result
 }
 
@@ -150,8 +305,14 @@ export async function resolveMessagingPhone(ctx: GuardedBaseContext, account: Me
  * @param address Canonical native peer; names and arbitrary provider lookups are not accepted.
  * @returns The verified active Hype recipient.
  */
-export async function authorizeMessagingRecipient(ctx: GuardedBaseContext, account: MessagingAccount, address: string): Promise<MessagingRecipient> {
-  const recipient = (await readMessagingRecipients(ctx.db, account, [address])).get(address)
+export async function authorizeMessagingRecipient(
+  ctx: GuardedBaseContext,
+  account: MessagingAccount,
+  address: string,
+): Promise<MessagingRecipient> {
+  const recipient = (await readMessagingRecipients(ctx.db, account, [address])).get(
+    address,
+  )
   if (!recipient) throw error(403, 'Messaging is limited to verified HYPE users')
   return recipient
 }
@@ -161,10 +322,17 @@ export async function authorizeMessagingRecipient(ctx: GuardedBaseContext, accou
  * @param platform Database-owned platform selection.
  * @returns The provider's RPC surface.
  */
-export function messagingService(ctx: GuardedBaseContext, platform: MessagingPlatform): MessagingBinding {
+export function messagingService(
+  ctx: GuardedBaseContext,
+  platform: MessagingPlatform,
+): MessagingBinding {
   const env = ctx.event.platform?.env ?? ctx.event.locals.platform?.env
   const service = platform === 'telegram' ? env?.TELEGRAM : env?.WHATSOVER
-  if (!service) throw error(503, `The ${platform === 'telegram' ? 'Telegram' : 'WhatsApp'} service is not configured`)
+  if (!service)
+    throw error(
+      503,
+      `The ${platform === 'telegram' ? 'Telegram' : 'WhatsApp'} service is not configured`,
+    )
   return service
 }
 
@@ -173,8 +341,13 @@ export function messagingService(ctx: GuardedBaseContext, platform: MessagingPla
  * @param tabId Random UUID generated by the browser tab.
  * @returns A stable, opaque viewer identifier scoped to this session and tab.
  */
-export async function messagingViewer(ctx: GuardedBaseContext, tabId: string): Promise<string> {
-  const bytes = new TextEncoder().encode(JSON.stringify([ctx.user.id, ctx.session.id, tabId]))
+export async function messagingViewer(
+  ctx: GuardedBaseContext,
+  tabId: string,
+): Promise<string> {
+  const bytes = new TextEncoder().encode(
+    JSON.stringify([ctx.user.id, ctx.session.id, tabId]),
+  )
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
   return Array.from(digest, value => value.toString(16).padStart(2, '0')).join('')
 }
@@ -188,50 +361,155 @@ export async function messagingViewer(ctx: GuardedBaseContext, tabId: string): P
  * @remarks Each statement binds one row, below D1's parameter limit. Cursor advancement
  * follows every row write; interrupted replays can be retried without losing messages.
  */
-export async function projectMessagingSnapshot(db: Database, account: MessagingAccount, snapshot: BridgeSnapshot, acknowledge = true): Promise<number> {
+export async function projectMessagingSnapshot(
+  db: Database,
+  account: MessagingAccount,
+  snapshot: BridgeSnapshot,
+  acknowledge = true,
+): Promise<number> {
   let cursor = acknowledge ? account.inboxCursor : 0
   const recipients = new Map<string, string | null>()
   for (const message of snapshot.messages) {
-    if (!Number.isSafeInteger(message.sequence) || message.sequence <= cursor) throw new Error('Invalid bridge replay order')
+    if (!Number.isSafeInteger(message.sequence) || message.sequence <= cursor)
+      throw new Error('Invalid bridge replay order')
     if (!recipients.has(message.chat)) {
-      const [identity] = await db.select({ userId: userMessagingIdentity.userId }).from(userMessagingIdentity).innerJoin(user, eq(user.id, userMessagingIdentity.userId)).where(and(
-        eq(userMessagingIdentity.platform, account.platform), eq(userMessagingIdentity.address, message.chat), isNotNull(userMessagingIdentity.verifiedAt),
-        or(isNull(userMessagingIdentity.sourceTelephone), eq(userMessagingIdentity.sourceTelephone, user.telephone)),
-      )).limit(1)
+      const [identity] = await db
+        .select({ userId: userMessagingIdentity.userId })
+        .from(userMessagingIdentity)
+        .innerJoin(user, eq(user.id, userMessagingIdentity.userId))
+        .where(
+          and(
+            eq(userMessagingIdentity.platform, account.platform),
+            eq(userMessagingIdentity.address, message.chat),
+            isNotNull(userMessagingIdentity.verifiedAt),
+            or(
+              isNull(userMessagingIdentity.sourceTelephone),
+              eq(userMessagingIdentity.sourceTelephone, user.telephone),
+            ),
+          ),
+        )
+        .limit(1)
       recipients.set(message.chat, identity?.userId ?? null)
     }
     // Commit the conversation and message atomically before acknowledging the replay.
     await db.batch([
-      db.insert(messagingConversation).values({
-        id: crypto.randomUUID(), accountId: account.id, chatId: message.chat,
-        lastMessageAt: message.timestamp, recipientUserId: recipients.get(message.chat) ?? null,
-      }).onConflictDoUpdate({
-        target: [messagingConversation.accountId, messagingConversation.chatId],
-        set: { lastMessageAt: sql`max(${messagingConversation.lastMessageAt}, excluded.lastMessageAt)`, recipientUserId: sql`coalesce(${messagingConversation.recipientUserId}, excluded.recipientUserId)` },
-      }),
-      db.insert(messagingMessage).values({
-        accountId: account.id, chatId: message.chat, messageId: message.id, senderId: message.sender,
-        sourceSequence: message.sequence, timestamp: message.timestamp, payload: message,
-      }).onConflictDoUpdate({
-        target: [messagingMessage.accountId, messagingMessage.chatId, messagingMessage.messageId, messagingMessage.senderId],
-        set: { sourceSequence: message.sequence, timestamp: message.timestamp, payload: message },
-        setWhere: gt(sql`excluded.sourceSequence`, messagingMessage.sourceSequence),
-      }),
+      db
+        .insert(messagingConversation)
+        .values({
+          id: crypto.randomUUID(),
+          accountId: account.id,
+          chatId: message.chat,
+          lastMessageAt: message.timestamp,
+          recipientUserId: recipients.get(message.chat) ?? null,
+        })
+        .onConflictDoUpdate({
+          target: [messagingConversation.accountId, messagingConversation.chatId],
+          set: {
+            lastMessageAt: sql`max(${messagingConversation.lastMessageAt}, excluded.lastMessageAt)`,
+            recipientUserId: sql`coalesce(${messagingConversation.recipientUserId}, excluded.recipientUserId)`,
+          },
+        }),
+      db
+        .insert(messagingMessage)
+        .values({
+          accountId: account.id,
+          chatId: message.chat,
+          messageId: message.id,
+          senderId: message.sender,
+          sourceSequence: message.sequence,
+          timestamp: message.timestamp,
+          payload: message,
+        })
+        .onConflictDoUpdate({
+          target: [
+            messagingMessage.accountId,
+            messagingMessage.chatId,
+            messagingMessage.messageId,
+            messagingMessage.senderId,
+          ],
+          set: {
+            sourceSequence: message.sequence,
+            timestamp: message.timestamp,
+            payload: message,
+          },
+          setWhere: gt(sql`excluded.sourceSequence`, messagingMessage.sourceSequence),
+        }),
     ])
     cursor = message.sequence
   }
   // Reconcile only known Hype intents; bridge-originated messages still enter the inbox.
   for (const result of snapshot.outbox) {
     if (result.state === 'pending') continue
-    await db.update(messagingSend).set({ state: result.state, messageId: result.messageId, updatedAt: Date.now() }).where(and(
-      eq(messagingSend.accountId, account.id), eq(messagingSend.requestId, result.request.requestId),
-      sql`${messagingSend.state} != 'submitted'`,
-    ))
+    await db
+      .update(messagingSend)
+      .set({ state: result.state, messageId: result.messageId, updatedAt: Date.now() })
+      .where(
+        and(
+          eq(messagingSend.accountId, account.id),
+          eq(messagingSend.requestId, result.request.requestId),
+          sql`${messagingSend.state} != 'submitted'`,
+        ),
+      )
+  }
+  // Apply native folder changes independently, including changes made in the provider's own apps.
+  let archiveCursor = account.archiveCursor
+  for (const conversation of snapshot.conversations ?? []) {
+    if (conversation.sequence <= archiveCursor) continue
+    await projectMessagingArchive(db, account.id, conversation)
+    archiveCursor = conversation.sequence
+  }
+  if (acknowledge && archiveCursor > account.archiveCursor) {
+    await db
+      .update(messagingAccount)
+      .set({
+        archiveCursor: sql`max(${messagingAccount.archiveCursor}, ${archiveCursor})`,
+      })
+      .where(eq(messagingAccount.id, account.id))
   }
   if (acknowledge && cursor > account.inboxCursor) {
-    await db.update(messagingAccount).set({ inboxCursor: sql`max(${messagingAccount.inboxCursor}, ${cursor})` }).where(eq(messagingAccount.id, account.id))
+    await db
+      .update(messagingAccount)
+      .set({ inboxCursor: sql`max(${messagingAccount.inboxCursor}, ${cursor})` })
+      .where(eq(messagingAccount.id, account.id))
   }
   return cursor
+}
+
+/** Persist native folder state without letting delayed polls undo a newer acknowledgment.
+ * @param db Application database.
+ * @param accountId Authorized account whose bridge emitted the event.
+ * @param state Confirmed native archive state and independent bridge sequence.
+ * @returns Resolves after the idempotent conversation projection is durable.
+ */
+export async function projectMessagingArchive(
+  db: Database,
+  accountId: string,
+  state: BridgeConversationState,
+): Promise<void> {
+  if (
+    !Number.isSafeInteger(state.sequence) ||
+    state.sequence <= 0 ||
+    !state.chat ||
+    typeof state.isArchived !== 'boolean'
+  )
+    throw new Error('Invalid native conversation state')
+  await db
+    .insert(messagingConversation)
+    .values({
+      id: crypto.randomUUID(),
+      accountId,
+      chatId: state.chat,
+      isArchived: state.isArchived,
+      archiveSequence: state.sequence,
+    })
+    .onConflictDoUpdate({
+      target: [messagingConversation.accountId, messagingConversation.chatId],
+      set: { isArchived: state.isArchived, archiveSequence: state.sequence },
+      setWhere: gt(
+        sql`excluded.archiveSequence`,
+        messagingConversation.archiveSequence,
+      ),
+    })
 }
 
 /** Read bounded projections independently of bridge connection lifetime.
@@ -240,13 +518,27 @@ export async function projectMessagingSnapshot(db: Database, account: MessagingA
  * @param after Browser's replay cursor.
  * @returns Up to 100 latest projections within the fully acknowledged bridge replay range.
  */
-export async function readMessagingMessages(db: Database, accountId: string, after: number): Promise<BridgeMessage[]> {
-  const rows = await db.select({ payload: messagingMessage.payload }).from(messagingMessage)
-    .where(and(eq(messagingMessage.accountId, accountId), gt(messagingMessage.sourceSequence, after),
-      // Independently imported history must not let browsers skip live events still awaiting projection.
-      lte(messagingMessage.sourceSequence, sql`(SELECT inboxCursor FROM messagingAccount WHERE id = ${accountId})`),
-    ))
-    .orderBy(asc(messagingMessage.sourceSequence)).limit(100)
+export async function readMessagingMessages(
+  db: Database,
+  accountId: string,
+  after: number,
+): Promise<BridgeMessage[]> {
+  const rows = await db
+    .select({ payload: messagingMessage.payload })
+    .from(messagingMessage)
+    .where(
+      and(
+        eq(messagingMessage.accountId, accountId),
+        gt(messagingMessage.sourceSequence, after),
+        // Independently imported history must not let browsers skip live events still awaiting projection.
+        lte(
+          messagingMessage.sourceSequence,
+          sql`(SELECT inboxCursor FROM messagingAccount WHERE id = ${accountId})`,
+        ),
+      ),
+    )
+    .orderBy(asc(messagingMessage.sourceSequence))
+    .limit(100)
   return rows.map(row => row.payload)
 }
 
@@ -257,26 +549,50 @@ export async function readMessagingMessages(db: Database, accountId: string, aft
  * @param recipientUserId Verified Hype recipient, when starting recipient-driven outreach.
  * @returns Durable result; ambiguous delivery is visible and never blindly resent.
  */
-export async function dispatchMessagingSend(ctx: GuardedBaseContext, account: MessagingAccount, request: SendRequest, recipientUserId: string | null = null): Promise<SendResult> {
-  const key = and(eq(messagingSend.accountId, account.id), eq(messagingSend.requestId, request.requestId))
+export async function dispatchMessagingSend(
+  ctx: GuardedBaseContext,
+  account: MessagingAccount,
+  request: SendRequest,
+  recipientUserId: string | null = null,
+): Promise<SendResult> {
+  const key = and(
+    eq(messagingSend.accountId, account.id),
+    eq(messagingSend.requestId, request.requestId),
+  )
   const now = Date.now()
-  await ctx.db.insert(messagingSend).values({
-    accountId: account.id, requestId: request.requestId, actorUserId: ctx.user.id,
-    recipientUserId, request, state: 'pending', createdAt: now, updatedAt: now,
-  }).onConflictDoNothing()
+  await ctx.db
+    .insert(messagingSend)
+    .values({
+      accountId: account.id,
+      requestId: request.requestId,
+      actorUserId: ctx.user.id,
+      recipientUserId,
+      request,
+      state: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing()
   const saved = await ctx.db.query.messagingSend.findFirst({ where: key })
   // Later identity verification can enrich a conversation, but never rewrites an existing send's attribution.
   if (!saved || JSON.stringify(saved.request) !== JSON.stringify(request)) {
     throw error(409, 'This request ID already belongs to a different message')
   }
-  if (saved.state !== 'pending') return { request: saved.request, messageId: saved.messageId, state: saved.state }
+  if (saved.state !== 'pending')
+    return { request: saved.request, messageId: saved.messageId, state: saved.state }
   // Both bridges deduplicate the stable request ID before attempting provider delivery.
   let result: SendResult
-  try { result = await messagingService(ctx, account.platform).send(account.bridgeAccountId, saved.request) }
-  catch {
+  try {
+    result = await messagingService(ctx, account.platform).send(
+      account.bridgeAccountId,
+      saved.request,
+    )
+  } catch {
     result = { request: saved.request, messageId: '', state: 'uncertain' }
   }
-  await ctx.db.update(messagingSend).set({ state: result.state, messageId: result.messageId, updatedAt: Date.now() })
+  await ctx.db
+    .update(messagingSend)
+    .set({ state: result.state, messageId: result.messageId, updatedAt: Date.now() })
     .where(and(key, sql`${messagingSend.state} != 'submitted'`))
   const final = await ctx.db.query.messagingSend.findFirst({ where: key })
   return { request: saved.request, messageId: final!.messageId, state: final!.state }

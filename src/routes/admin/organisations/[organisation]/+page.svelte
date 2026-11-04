@@ -944,9 +944,19 @@ const canCreateOrganisation = $derived(organisationPermissions.canCreate)
 const canEditOrganisation = $derived(organisationPermissions.canEdit)
 const canPublishOrganisation = $derived(organisationPermissions.canPublish)
 const canDeleteOrganisation = $derived(organisationPermissions.canDelete)
-const canManageMessaging = $derived(Boolean(optimisticOrganisationData && currentUser && canManageOrganisationMessaging({
-  ...currentUser, roles: currentUser.roles ?? [],
-}, optimisticOrganisationData)))
+const canManageMessaging = $derived(
+  Boolean(
+    optimisticOrganisationData &&
+      currentUser &&
+      canManageOrganisationMessaging(
+        {
+          ...currentUser,
+          roles: currentUser.roles ?? [],
+        },
+        optimisticOrganisationData,
+      ),
+  ),
+)
 const resolvedFacetTabs = $derived.by(() => {
   if (isNewOrganisationRef) {
     return getAdminFacetTabsForResource(FirstClassResource.organisation, {
@@ -1539,7 +1549,7 @@ $effect(() => {
           </FormSurface>
         {:else if !isCoreFacet}
           <FormSurface>
-            <div role="status" aria-label={m.resource_loading()} aria-busy="true">
+            <section aria-label={m.resource_loading()} aria-busy="true">
               <FormSectionSkeleton
                 divided={false}
                 title={isCapabilitiesFacet
@@ -1553,7 +1563,7 @@ $effect(() => {
                   {/each}
                 </div>
               </FormSectionSkeleton>
-            </div>
+            </section>
           </FormSurface>
         {:else}
           <FormProfileSkeleton
@@ -1667,7 +1677,9 @@ $effect(() => {
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
 
-          {#snippet children(locale)}
+          {#snippet children(
+            locale,
+          )}
             <FormI18nDescriptorFields
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}
@@ -1814,7 +1826,11 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
   </Main.Form>
-  <Main.Facet isVisible={isMessagingFacet && canManageMessaging} transition="fade" attrs={{ 'data-facet-id': 'messaging' }}>
+  <Main.Facet
+    isVisible={isMessagingFacet && canManageMessaging}
+    transition="fade"
+    attrs={{ 'data-facet-id': 'messaging' }}
+  >
     {#if isMessagingFacet && canManageMessaging && optimisticOrganisationData}
       {#key optimisticOrganisationData.id}
         <OrganisationMessaging organisationId={optimisticOrganisationData.id} />
@@ -1837,14 +1853,13 @@ $effect(() => {
       />
       <div class="min-h-0 flex-1">
         {#if !isFormReady && !hasProfileLoadFailed}
-          <div
-            role="status"
+          <section
             aria-label={m.resource_loading()}
             aria-busy="true"
             class="h-full p-6"
           >
             <Skeleton class="h-full min-h-64 w-full rounded-xl" />
-          </div>
+          </section>
         {:else if hasProfileLoadFailed}
           <div role="alert" class="p-6 text-sm text-muted-foreground">
             <p>{m.admin__forms_profile_load_failed()}</p>

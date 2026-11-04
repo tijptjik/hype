@@ -5,7 +5,12 @@ export interface WhatsAppStatus {
   qr: string | null
   qrExpiresAt: number | null
   lastEvent?: string | null
-  identity?: { id: string; name: string; username: string | null; phone: string | null } | null
+  identity?: {
+    id: string
+    name: string
+    username: string | null
+    phone: string | null
+  } | null
 }
 
 export interface WhatsAppRequest {
@@ -18,10 +23,22 @@ export interface WhatsAppRequest {
   attachmentId?: string
 }
 
-export interface WhatsAppTarget { id: string; sender: string }
+export interface WhatsAppTarget {
+  id: string
+  sender: string
+}
 export interface WhatsAppContent {
   animated?: boolean
-  kind: 'text' | 'image' | 'video' | 'audio' | 'sticker' | 'document' | 'reaction' | 'protocol' | 'unsupported'
+  kind:
+    | 'text'
+    | 'image'
+    | 'video'
+    | 'audio'
+    | 'sticker'
+    | 'document'
+    | 'reaction'
+    | 'protocol'
+    | 'unsupported'
   text: string | null
   mimeType: string | null
   fileName: string | null
@@ -29,8 +46,21 @@ export interface WhatsAppContent {
   duration: number | null
   voiceNote: boolean
   viewOnce: boolean
-  quoted: { id: string; sender: string; text: string | null; kind: string; chat?: string; senderName?: string; offset?: number } | null
-  reaction: { targetId: string; targetSender: string | null; targetFromMe: boolean; emoji: string } | null
+  quoted: {
+    id: string
+    sender: string
+    text: string | null
+    kind: string
+    chat?: string
+    senderName?: string
+    offset?: number
+  } | null
+  reaction: {
+    targetId: string
+    targetSender: string | null
+    targetFromMe: boolean
+    emoji: string
+  } | null
 }
 
 export interface WhatsAppSend {
@@ -58,8 +88,17 @@ export interface WhatsAppMessage {
   content?: WhatsAppContent
 }
 
-export interface WhatsAppUpload { animated?: boolean; kind: 'image' | 'audio' | 'sticker' | 'video' | 'document'; mimeType: string; duration?: number; fileName?: string }
-export interface WhatsAppAttachment { id: string; content: WhatsAppContent }
+export interface WhatsAppUpload {
+  animated?: boolean
+  kind: 'image' | 'audio' | 'sticker' | 'video' | 'document'
+  mimeType: string
+  duration?: number
+  fileName?: string
+}
+export interface WhatsAppAttachment {
+  id: string
+  content: WhatsAppContent
+}
 
 export interface WhatsAppProfile {
   jid: string
@@ -84,23 +123,58 @@ export interface WhatsAppCall {
 
 export interface WhatsAppCalls {
   videoSupported?: boolean
-  incoming: { id: string; peer: string; name: string | null; receivedAt: number; video?: boolean }[]
+  incoming: {
+    id: string
+    peer: string
+    name: string | null
+    receivedAt: number
+    video?: boolean
+  }[]
   current: WhatsAppCall | null
 }
 
-export interface WhatsAppVoiceTicket { url: string; token: string; expiresAt: number }
+export interface WhatsAppVoiceTicket {
+  url: string
+  token: string
+  expiresAt: number
+}
 
 export interface WhatsoverBinding {
-  messageAction(account: string, chat: string, target: WhatsAppTarget, action: 'read' | 'delete', requestId: string): Promise<void>
+  messageAction(
+    account: string,
+    chat: string,
+    target: WhatsAppTarget,
+    action: 'read' | 'delete',
+    requestId: string,
+  ): Promise<void>
   watch(account: string, viewer: string, stage?: string): Promise<WhatsAppStatus>
   unwatch(account: string, viewer: string): Promise<void>
-  snapshot(account: string, after: number): Promise<WhatsAppSnapshot>
+  snapshot(
+    account: string,
+    after: number,
+    archiveAfter?: number,
+  ): Promise<WhatsAppSnapshot>
+  archive(
+    account: string,
+    chat: string,
+    archived: boolean,
+  ): Promise<import('#lib/messaging/types.js').BridgeConversationState>
   callSnapshot(account: string): Promise<WhatsAppCalls>
-  voiceTicket(account: string, origin: string): Promise<{ account: string; token: string; expiresAt: number }>
+  voiceTicket(
+    account: string,
+    origin: string,
+  ): Promise<{ account: string; token: string; expiresAt: number }>
   rejectCall(account: string, id: string): Promise<void>
-  lookupPhone(account: string, phone: string): Promise<import('#lib/messaging/types.js').PhoneLookup>
+  lookupPhone(
+    account: string,
+    phone: string,
+  ): Promise<import('#lib/messaging/types.js').PhoneLookup>
   profile(account: string, jid: string): Promise<WhatsAppProfile>
-  upload(account: string, input: WhatsAppUpload, bytes: ArrayBuffer): Promise<WhatsAppAttachment>
+  upload(
+    account: string,
+    input: WhatsAppUpload,
+    bytes: ArrayBuffer,
+  ): Promise<WhatsAppAttachment>
   media(account: string, chat: string, target: WhatsAppTarget): Promise<ArrayBuffer>
   start(account: string, stage?: string): Promise<WhatsAppStatus>
   stop(account: string): Promise<void>

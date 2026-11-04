@@ -98,7 +98,7 @@ export class NotificationDelivery extends DurableObject<Env> {
    * @returns Persisted VAPID keys, generated once and retained across restarts.
    */
   async signingKeys(): Promise<VapidKeys> {
-    return (this.keyPromise ??= this.ctx.blockConcurrencyWhile(async () => {
+    this.keyPromise ??= this.ctx.blockConcurrencyWhile(async () => {
       const previous = await this.ctx.storage.get<VapidKeys>('vapid')
       if (previous) return previous
       const pair = await crypto.subtle.generateKey(
@@ -115,7 +115,8 @@ export class NotificationDelivery extends DurableObject<Env> {
       }
       await this.ctx.storage.put('vapid', value)
       return value
-    }))
+    })
+    return this.keyPromise
   }
   async publicKey(): Promise<string> {
     return (await this.signingKeys()).publicKey!
