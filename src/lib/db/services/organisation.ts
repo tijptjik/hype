@@ -1,11 +1,12 @@
 import { gt } from 'drizzle-orm'
+// IDENTITY
+import { nanoid } from 'nanoid'
 // DRIZZLE
-import { and, eq, like, sql, or } from 'drizzle-orm'
+import { and, eq, exists, like, sql, or } from 'drizzle-orm'
+// CAPABILITY PERSISTENCE
+import { buildOrganisationCapabilityCascade } from './capabilityCascade.js'
 // PUBLICATION
-import {
-  descendantPublicationState,
-  publishScopedFeatureImages,
-} from './publication.js'
+import { buildDescendantPublication } from './publication.js'
 // SCHEMA
 import {
   feature,
@@ -24,8 +25,12 @@ import {
 } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { getOrganisationHubFilter } from './hub'
+import { prepareGuardedReplacement } from './guardedReplacement.js'
+import { preparePropertyCatalog } from './property.js'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
 import type {
   Id,
   Database,
@@ -76,6 +81,7 @@ type OrganisationCommandProbe = {
 //
 // 1.1 CRUD :: CREATE
 //    - createOrganisation
+//    - prepareOrganisationRelations (internal)
 //    - createI18n
 //    - createUserRoles
 //
@@ -106,7 +112,9 @@ type OrganisationCommandProbe = {
 //    - updateOrganisationByIdWithConcurrency
 //    - updateOrganisationPublishedStateById
 //    - cascadeOrganisationPublishedStateToDescendants
+//    - buildOrganisationCommandScopeGuard
 //    - updateOrganisationArchivedStateById
+//    - buildOrganisationArchivedDescendantUpdates
 //    - cascadeOrganisationArchivedStateToDescendants
 //    - updateI18n
 //
@@ -120,21 +128,102 @@ type OrganisationCommandProbe = {
 // 1.1 CRUD :: CREATE
 // ═══════════════════════
 
+/** Optional complete collections submitted with an organisation form. */
+type OrganisationRelations = {
+  properties?: Array<Record<string, unknown>>
+  i18n?: Record<LocaleKey, OrganisationI18nPartial>
+  userRoles?: OrganisationRoleNew[]
+}
+
 /**
- * Creates a new organisation in the database
- * @param db - The database instance
- * @param data - The organisation data to insert
- * @returns The newly created organisation
- * @throws {Error} If the organisation creation fails
+ * Prepares owned organisation collections under the caller's revision guard.
+ * @param db Request database.
+ * @param id Authorized organisation identity.
+ * @param relations Complete submitted collections; omitted collections are preserved.
+ * @param guard Predicate checked by every deletion and insertion.
+ * @returns Unexecuted statements for the caller's atomic batch.
+ */
+function prepareOrganisationRelations(
+  db: Database,
+  id: Id,
+  relations: OrganisationRelations,
+  guard: SQL,
+): BatchItem<'sqlite'>[] {
+  const writes: BatchItem<'sqlite'>[] = []
+  // Enforce ownership independently of any parent IDs in the submitted rows.
+  if (relations.i18n !== undefined) {
+    writes.push(
+      ...prepareGuardedReplacement(
+        db,
+        organisationI18n,
+        toRelatedRecords(
+          relations.i18n,
+          'organisationId',
+          id,
+          'locale',
+        ) as InferInsertModel<typeof organisationI18n>[],
+        organisationI18n.organisationId,
+        id,
+        guard,
+      ),
+    )
+  }
+  if (relations.userRoles !== undefined) {
+    writes.push(
+      ...prepareGuardedReplacement(
+        db,
+        organisationRole,
+        relations.userRoles as InferInsertModel<typeof organisationRole>[],
+        organisationRole.organisationId,
+        id,
+        guard,
+      ),
+    )
+  }
+  return writes
+}
+
+/**
+ * Creates a new organisation in the database.
+ * @param db The database instance.
+ * @param data The organisation data to insert.
+ * @param relations Optional translations and initial role assignments.
+ * @returns The newly created organisation.
+ * @throws {Error} If the organisation creation fails.
+ * @remarks Submitted relations commit with the parent; a failure restores all prior rows.
  */
 export const createOrganisation = async (
   db: Database,
   data: OrganisationDBNew,
-): Promise<OrganisationDB> =>
-  await insert(db, organisation, {
+  relations?: OrganisationRelations,
+): Promise<OrganisationDB> => {
+  if (relations) {
+    const id = data.id ?? nanoid(12)
+    const catalog =
+      relations.properties !== undefined
+        ? await preparePropertyCatalog(
+            db,
+            relations.properties as Parameters<typeof preparePropertyCatalog>[1],
+            { scope: 'organisation', id },
+          )
+        : null
+    // Insert the parent first; a conflicting identity must fail before any relation replacement.
+    const [created] = await db.batch([
+      db
+        .insert(organisation)
+        .values({ ...data, id, isPublished: data.isPublished ?? false })
+        .returning(),
+      ...prepareOrganisationRelations(db, id, relations, sql`1`),
+      ...(catalog?.statements ?? []),
+    ])
+    if (!created[0]) throw new Error('Organisation creation returned no row')
+    return created[0] as OrganisationDB
+  }
+  return await insert(db, organisation, {
     ...data,
     isPublished: data.isPublished ?? false,
   })
+}
 
 /**
  * Creates relational i18n records for an organisation
@@ -609,12 +698,18 @@ export const updateOrganisationById = async (
  * @param db - The database instance.
  * @param params - Update payload including expected `updatedAt`.
  * @returns Updated id/modifiedAt pair or `null` when stale/missing.
+ * @remarks Submitted capability definitions and descendant restrictions commit together;
+ * omitted capability definitions leave project and role permissions unchanged.
+ * Submitted translations and organisation roles share that transaction and revision guard.
  */
 export const updateOrganisationByIdWithConcurrency = async (
   db: Database,
   params: {
     id: Id
     updatedAt: string
+    properties?: Array<Record<string, unknown>>
+    i18n?: Record<LocaleKey, OrganisationI18nPartial>
+    userRoles?: OrganisationRoleNew[]
     data: {
       code: string
       url: string | null
@@ -624,34 +719,82 @@ export const updateOrganisationByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
-  const [updated] = await db
+  const revisionGuard = and(
+    eq(organisation.id, params.id),
+    eq(organisation.modifiedAt, params.updatedAt),
+  )
+  const updateCore = db
     .update(organisation)
     .set(params.data)
-    .where(
-      and(
-        eq(organisation.id, params.id),
-        eq(organisation.modifiedAt, params.updatedAt),
-      ),
-    )
+    .where(revisionGuard)
     .returning({
       id: organisation.id,
       modifiedAt: organisation.modifiedAt,
     })
 
+  const guard = exists(
+    db.select({ id: organisation.id }).from(organisation).where(revisionGuard),
+  )
+  // Keep the parent token unchanged while every submitted collection checks the same revision.
+  const writes = prepareOrganisationRelations(db, params.id, params, guard)
+  if (params.data.capabilities !== undefined) {
+    writes.push(
+      ...buildOrganisationCapabilityCascade(
+        db,
+        params.id,
+        params.data.capabilities,
+        guard,
+      ),
+    )
+  }
+
+  if (params.properties !== undefined) {
+    const catalog = await preparePropertyCatalog(
+      db,
+      params.properties as Parameters<typeof preparePropertyCatalog>[1],
+      { scope: 'organisation', id: params.id },
+    )
+    // Check the revision inside the batch before any catalog mutation can run.
+    const results = await executeRevisionBatch(db, guard, [
+      catalog.statements[0],
+      ...catalog.statements.slice(1),
+      ...writes,
+      updateCore,
+    ])
+    if (!results) return null
+    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
+    return rows[0] ?? null
+  }
+  if (writes.length) {
+    // A failure at any stage restores permissions, translations, descendants and the write token.
+    const results = await db.batch([writes[0], ...writes.slice(1), updateCore])
+    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
+    return rows[0] ?? null
+  }
+  const [updated] = await updateCore
   return updated ?? null
 }
 
 /**
- * Toggles published state and publication metadata for an organisation.
+ * Atomically toggles publication for an organisation, its descendants, and eligible images.
  * @param db - The database instance.
  * @param params - Target id, next publish state, and publisher id.
- * @returns Updated id/state pair or `null`.
+ * @param params.publishChildren - Explicitly include draft descendants when publishing.
+ * @param params.expectedScope - Persisted ancestry used for authorization before this transaction.
+ * @remarks Changed ancestry returns null without publication writes; role grants are not re-read here.
+ * @returns Updated id/state pair or `null`; any write failure rolls back the entire hierarchy command.
  */
 export const updateOrganisationPublishedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean; publisherId: string | null },
+  params: {
+    id: Id
+    expectedScope: { hubId: string | null }
+    state: boolean
+    publisherId: string | null
+    publishChildren?: boolean
+  },
 ): Promise<{ id: string; isPublished: boolean } | null> => {
-  const [updated] = await db
+  const parentUpdate = db
     .update(organisation)
     .set({
       isPublished: params.state,
@@ -664,7 +807,25 @@ export const updateOrganisationPublishedStateById = async (
       isPublished: organisation.isPublished,
     })
 
-  return updated ?? null
+  // Commit parent, descendant snapshots, and image policies as one transaction.
+  // Recheck the authorized ancestry before any publication writes can execute.
+  const results = await executeRevisionBatch(
+    db,
+    buildOrganisationCommandScopeGuard(db, params),
+    [
+      parentUpdate,
+      // A skipped parent write must not commit descendant publication changes.
+      prepareRevisionCheck(db, sql`changes() = 1`),
+      ...buildDescendantPublication(
+        db,
+        { kind: 'organisation', id: params.id },
+        params,
+      ),
+    ],
+  )
+  return results
+    ? ((results[0] as { id: string; isPublished: boolean }[])[0] ?? null)
+    : null
 }
 
 /**
@@ -685,79 +846,52 @@ export const cascadeOrganisationPublishedStateToDescendants = async (
     publisherId?: Id
   },
 ): Promise<void> => {
-  await db
-    .update(project)
-    .set({
-      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
-      ...(params.state && params.publishChildren
-        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
-        : {}),
-      localIsPublished: params.state
-        ? null
-        : sql`coalesce(${project.localIsPublished}, ${project.isPublished})`,
-      isPublished: params.state
-        ? params.publishChildren
-          ? true
-          : descendantPublicationState(project)
-        : sql`0`,
-    })
-    .where(eq(project.organisationId, params.organisationId))
-
-  await db
-    .update(layer)
-    .set({
-      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
-      ...(params.state && params.publishChildren
-        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
-        : {}),
-      localIsPublished: params.state
-        ? null
-        : sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`,
-      isPublished: params.state
-        ? params.publishChildren
-          ? true
-          : descendantPublicationState(layer)
-        : sql`0`,
-    })
-    .where(eq(layer.organisationId, params.organisationId))
-
-  await db
-    .update(feature)
-    .set({
-      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
-      ...(params.state && params.publishChildren
-        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
-        : {}),
-      localIsPublished: params.state
-        ? null
-        : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
-      isPublished: params.state
-        ? params.publishChildren
-          ? true
-          : descendantPublicationState(feature)
-        : sql`0`,
-    })
-    .where(eq(feature.organisationId, params.organisationId))
-  if (params.state) {
-    await publishScopedFeatureImages(
+  await db.batch(
+    buildDescendantPublication(
       db,
       { kind: 'organisation', id: params.organisationId },
-      params.publisherId,
-    )
-  }
+      params,
+    ),
+  )
+}
+
+/**
+ * Rechecks persisted ancestry used to authorize a state command.
+ * @param db Request database.
+ * @param params Target identity and authorized scope.
+ * @returns Transaction predicate requiring unchanged ancestry, including nullable hub identity.
+ * @remarks Role grants are not re-read by this scope predicate.
+ */
+function buildOrganisationCommandScopeGuard(
+  db: Database,
+  params: { id: Id; expectedScope: { hubId: string | null } },
+): SQL {
+  return exists(
+    db
+      .select({ id: organisation.id })
+      .from(organisation)
+      .where(
+        and(
+          eq(organisation.id, params.id),
+          sql`${organisation.hubId} IS ${params.expectedScope.hubId}`,
+        ),
+      ),
+  )
 }
 
 /**
  * Toggles archived state for an organisation.
  * @param db - The database instance.
  * @param params - Target id and next archived state.
+ * @param params.expectedScope Ancestry captured before authorization.
+ * @remarks Parent and descendant writes roll back together; changed scope returns null.
  * @returns Updated id/state pair or `null`.
  */
 export const updateOrganisationArchivedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean },
+  params: { id: Id; state: boolean; expectedScope: { hubId: string | null } },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
-  const [updated] = await db
+  const parentUpdate = db
     .update(organisation)
     .set({ isArchived: params.state })
     .where(eq(organisation.id, params.id))
@@ -766,7 +900,22 @@ export const updateOrganisationArchivedStateById = async (
       isArchived: organisation.isArchived,
     })
 
-  return updated ?? null
+  // Commit the parent and descendant snapshots only in the authorized scope.
+  const results = await executeRevisionBatch(
+    db,
+    buildOrganisationCommandScopeGuard(db, params),
+    [
+      parentUpdate,
+      prepareRevisionCheck(db, sql`changes() = 1`),
+      ...buildOrganisationArchivedDescendantUpdates(db, {
+        organisationId: params.id,
+        state: params.state,
+      }),
+    ],
+  )
+  return results
+    ? ((results[0] as { id: string; isArchived: boolean }[])[0] ?? null)
+    : null
 }
 
 /**
@@ -785,7 +934,21 @@ export const cascadeOrganisationArchivedStateToDescendants = async (
     state: boolean
   },
 ): Promise<void> => {
-  await db
+  await db.batch(buildOrganisationArchivedDescendantUpdates(db, params))
+}
+
+/**
+ * Prepares descendant archive snapshots without executing writes.
+ * @param db Request database.
+ * @param params Parent identity and next archive state.
+ * @returns Ordered statements for the parent's guarded transaction.
+ */
+function buildOrganisationArchivedDescendantUpdates(
+  db: Database,
+  params: { organisationId: Id; state: boolean },
+): [BatchItem<'sqlite'>, BatchItem<'sqlite'>, BatchItem<'sqlite'>] {
+  // Preserve local archive choices while applying or restoring the ancestor state.
+  const projects = db
     .update(project)
     .set({
       localIsArchived: params.state
@@ -797,7 +960,7 @@ export const cascadeOrganisationArchivedStateToDescendants = async (
     })
     .where(eq(project.organisationId, params.organisationId))
 
-  await db
+  const layers = db
     .update(layer)
     .set({
       localIsArchived: params.state
@@ -809,7 +972,7 @@ export const cascadeOrganisationArchivedStateToDescendants = async (
     })
     .where(eq(layer.organisationId, params.organisationId))
 
-  await db
+  const features = db
     .update(feature)
     .set({
       localIsArchived: params.state
@@ -820,6 +983,7 @@ export const cascadeOrganisationArchivedStateToDescendants = async (
         : sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`,
     })
     .where(eq(feature.organisationId, params.organisationId))
+  return [projects, layers, features]
 }
 
 /**

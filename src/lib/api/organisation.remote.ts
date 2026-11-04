@@ -30,7 +30,6 @@ import {
 // SERVICES
 import { publicationPreviewConditions } from './services/publicationPreview.js'
 import {
-  hasOrganisationCapabilitiesChanged,
   toQueryConditions,
   getOrganisationWithRelations,
   toEntityResponseShape,
@@ -49,9 +48,7 @@ import {
   validateUniqueNonReservedCode,
 } from '#lib/api/services/index.js'
 import {
-  createI18n,
   createOrganisation,
-  createUserRoles,
   listUserRoleAssignments,
   listOrganisations,
   probeExistingOrganisation,
@@ -59,18 +56,12 @@ import {
   resolveOrganisationCommandProbe,
   probeOrganisationQuery,
   getOrganisation as loadOrganisation,
-  updateI18n,
   updateOrganisationByIdWithConcurrency,
   updateOrganisationPublishedStateById,
   updateOrganisationArchivedStateById,
-  cascadeOrganisationPublishedStateToDescendants,
-  cascadeOrganisationArchivedStateToDescendants,
-  syncUserRoles,
   toUserRoles,
 } from '#lib/db/services/organisation.js'
 import { hasOrganisationLayersCondition } from '#lib/db/services/layer.js'
-import { syncOrganisationProperties } from '#lib/db/services/property.js'
-import { cascadeOrganisationCapabilitiesToProjects } from '#lib/db/services/project.js'
 // UTILS
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 // SCHEMA
@@ -83,7 +74,6 @@ import {
   PublishOrganisationSchema,
   RemoveOrganisationSchema,
 } from '#lib/db/zod/index.js'
-import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
 import type { EntityResponse, Id, ListResponse, RelationShape } from '#lib/types.js'
 import type {
   OrganisationDB,
@@ -400,7 +390,6 @@ export const organisationForm = guardedForm(
     const isExplicitCreateMode = mode === 'create'
     const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
     const hasSubmittedPropertiesField = Object.hasOwn(data, 'properties')
-    const hasSubmittedCapabilitiesField = Object.hasOwn(data, 'capabilities')
     const submittedProperties = Array.isArray(data.properties) ? data.properties : []
 
     const normalizedSubmittedProperties =
@@ -463,25 +452,29 @@ export const organisationForm = guardedForm(
           invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
       })
 
-      // Create main record and related rows.
-      const created = await createOrganisation(db, {
-        id: nanoid(12),
-        code: normalizedCode,
-        url: data.url.trim() === '' ? null : data.url.trim(),
-        hubId: activeHubId,
-        settings: applyContentLocaleSettingsPatch(undefined, data.settings),
-        defaultLocationVisibility: data.defaultLocationVisibility,
-        ...(data.capabilities !== undefined ? { capabilities: data.capabilities } : {}),
-      })
-
-      await createI18n(db, data.i18n, created.id)
-      await createUserRoles(db, toUserRoles(data.userRoles, created.id), created.id)
-      if (normalizedSubmittedProperties.length > 0) {
-        await syncOrganisationProperties(db, {
-          organisationId: created.id,
-          properties: normalizedSubmittedProperties,
-        })
-      }
+      // Create main record and related rows in one transaction.
+      const newOrganisationId = nanoid(12)
+      const created = await createOrganisation(
+        db,
+        {
+          id: newOrganisationId,
+          code: normalizedCode,
+          url: data.url.trim() === '' ? null : data.url.trim(),
+          hubId: activeHubId,
+          settings: applyContentLocaleSettingsPatch(undefined, data.settings),
+          defaultLocationVisibility: data.defaultLocationVisibility,
+          ...(data.capabilities !== undefined
+            ? { capabilities: data.capabilities }
+            : {}),
+        },
+        {
+          i18n: data.i18n,
+          userRoles: toUserRoles(data.userRoles, newOrganisationId),
+          ...(normalizedSubmittedProperties.length
+            ? { properties: normalizedSubmittedProperties }
+            : {}),
+        },
+      )
 
       return toCreatedResponseShape(created)
     }
@@ -495,13 +488,6 @@ export const organisationForm = guardedForm(
       await probeOrganisationForUpdate(db, targetOrganisationId),
       () => invalid(issue('ORGANISATION_NOT_FOUND')),
     )
-    const capabilitiesChanged = hasOrganisationCapabilitiesChanged({
-      hasSubmittedCapabilitiesField,
-      submittedCapabilities:
-        (data.capabilities as CapabilityDefinitions | null | undefined) ?? null,
-      currentCapabilities:
-        (current.capabilities as CapabilityDefinitions | null | undefined) ?? null,
-    })
 
     // Apply role-based authorization for core update fields.
     const updateDecision = authorizeOrganisationUpdateForSubmission({
@@ -564,6 +550,11 @@ export const organisationForm = guardedForm(
       await updateOrganisationByIdWithConcurrency(db, {
         id: current.id,
         updatedAt: updatedAt as string,
+        i18n: data.i18n,
+        userRoles: toUserRoles(data.userRoles, current.id),
+        ...(hasSubmittedPropertiesField
+          ? { properties: normalizedSubmittedProperties }
+          : {}),
         data: {
           code: normalizedCode,
           ...(data.settings !== undefined
@@ -584,22 +575,7 @@ export const organisationForm = guardedForm(
       () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
     )
 
-    // Persist related i18n and role assignments.
-    await updateI18n(db, data.i18n, current.id)
-    await syncUserRoles(db, toUserRoles(data.userRoles, current.id), current.id)
-    if (capabilitiesChanged) {
-      await cascadeOrganisationCapabilitiesToProjects(db, {
-        organisationId: current.id as Id,
-        organisationCapabilities:
-          (data.capabilities as CapabilityDefinitions | null | undefined) ?? null,
-      })
-    }
-    if (hasSubmittedPropertiesField) {
-      await syncOrganisationProperties(db, {
-        organisationId: current.id,
-        properties: normalizedSubmittedProperties,
-      })
-    }
+    // Translations and role assignments committed with the core revision above.
 
     // Return persisted identity and write token.
     return toCreatedResponseShape(persisted)
@@ -652,19 +628,14 @@ export const publishOrganisation = guardedCommand(
       await updateOrganisationPublishedStateById(db, {
         id: commandOrganisationId,
         state: params.state,
+        expectedScope: probed,
+        publishChildren: params.publishChildren,
         publisherId: user.id,
       }),
       () => {
         throw error(404, 'ORGANISATION_NOT_FOUND')
       },
     )
-
-    await cascadeOrganisationPublishedStateToDescendants(db, {
-      organisationId: commandOrganisationId,
-      state: params.state,
-      publishChildren: params.publishChildren,
-      publisherId: user.id,
-    })
 
     return toBooleanStateResponseShape(persisted, 'isPublished')
   },
@@ -711,16 +682,13 @@ export const archiveOrganisation = guardedCommand(
       await updateOrganisationArchivedStateById(db, {
         id: commandOrganisationId,
         state: params.state,
+        expectedScope: probed,
       }),
       () => {
         throw error(404, 'ORGANISATION_NOT_FOUND')
       },
     )
 
-    await cascadeOrganisationArchivedStateToDescendants(db, {
-      organisationId: commandOrganisationId,
-      state: params.state,
-    })
     return toBooleanStateResponseShape(persisted, 'isArchived')
   },
 )

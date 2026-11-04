@@ -57,7 +57,10 @@ const {
   mockValidateUniqueNonReservedCode: vi.fn(async () => undefined),
   mockToQueryConditions: vi.fn(),
   mockToLookupConditions: vi.fn((params: unknown) => params),
-  mockToRequestedListState: vi.fn(() => ({ isPublished: true, isArchived: false })),
+  mockToRequestedListState: vi.fn(() => ({
+    isPublished: true,
+    isArchived: false,
+  })),
   mockGetOrganisationWithRelations: vi.fn(() => ({})),
   mockToOrganisationProfile: vi.fn((value: unknown, fallback: string) =>
     typeof value === 'string' ? value : fallback,
@@ -301,23 +304,37 @@ describe('organisation.remote authz', () => {
 
     mockAuthorizeOrganisationListForContext.mockReturnValue({ allowed: true })
     mockAuthorizeOrganisationReadForProbe.mockReturnValue({ allowed: true })
-    mockAuthorizeOrganisationCreateForSubmission.mockReturnValue({ allowed: true })
-    mockAuthorizeOrganisationUpdateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationCreateForSubmission.mockReturnValue({
+      allowed: true,
+    })
+    mockAuthorizeOrganisationUpdateForSubmission.mockReturnValue({
+      allowed: true,
+    })
     mockAuthorizeOrganisationManageRolesForSubmission.mockReturnValue({
       allowed: true,
     })
-    mockAuthorizeOrganisationPublishForSubmission.mockReturnValue({ allowed: true })
-    mockAuthorizeOrganisationDeleteForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationPublishForSubmission.mockReturnValue({
+      allowed: true,
+    })
+    mockAuthorizeOrganisationDeleteForSubmission.mockReturnValue({
+      allowed: true,
+    })
     mockValidateUniqueNonReservedCode.mockResolvedValue(undefined)
 
-    mockToQueryConditions.mockReturnValue({ conditions: [], filtersToApply: {} })
+    mockToQueryConditions.mockReturnValue({
+      conditions: [],
+      filtersToApply: {},
+    })
     mockProbeOrganisationQuery.mockResolvedValue({
       id: 'org-1',
       hubId: 'hub-a',
       isPublished: true,
       isArchived: false,
     })
-    mockProbeOrganisationForCommand.mockResolvedValue({ id: 'org-1', hubId: 'hub-a' })
+    mockProbeOrganisationForCommand.mockResolvedValue({
+      id: 'org-1',
+      hubId: 'hub-a',
+    })
     mockResolveOrganisationCommandProbe.mockImplementation(
       async (_db: unknown, _id: string, onNotFound: () => never) => {
         const result = await mockProbeOrganisationForCommand()
@@ -356,11 +373,21 @@ describe('organisation.remote authz', () => {
   it.each([true, false])(
     'forwards explicit child publication choice %s',
     async publishChildren => {
-      await remote.publishOrganisation({ id: 'org-1', state: true, publishChildren })
-      expect(mockCascadeOrganisationPublishedStateToDescendants).toHaveBeenCalledWith(
+      await remote.publishOrganisation({
+        id: 'org-1',
+        state: true,
+        publishChildren,
+      })
+      expect(mockUpdateOrganisationPublishedStateById).toHaveBeenCalledWith(
         expect.any(Object),
-        expect.objectContaining({ state: true, publishChildren, publisherId: 'u-1' }),
+        expect.objectContaining({
+          state: true,
+          publishChildren,
+          expectedScope: expect.objectContaining({ hubId: 'hub-a' }),
+          publisherId: 'u-1',
+        }),
       )
+      expect(mockCascadeOrganisationPublishedStateToDescendants).not.toHaveBeenCalled()
     },
   )
 
@@ -451,7 +478,10 @@ describe('organisation.remote authz', () => {
   })
 
   it('publishOrganisation updates when authz allows', async () => {
-    const result = await remote.publishOrganisation({ id: 'org-1', state: true })
+    const result = await remote.publishOrganisation({
+      id: 'org-1',
+      state: true,
+    })
 
     expect(mockUpdateOrganisationPublishedStateById).toHaveBeenCalledWith(
       expect.any(Object),
@@ -461,15 +491,16 @@ describe('organisation.remote authz', () => {
         publisherId: 'u-1',
       }),
     )
-    expect(mockCascadeOrganisationPublishedStateToDescendants).toHaveBeenCalledWith(
+    expect(mockUpdateOrganisationPublishedStateById).toHaveBeenCalledWith(
       expect.any(Object),
-      {
-        organisationId: 'org-1',
+      expect.objectContaining({
+        id: 'org-1',
         state: true,
         publishChildren: undefined,
         publisherId: 'u-1',
-      },
+      }),
     )
+    expect(mockCascadeOrganisationPublishedStateToDescendants).not.toHaveBeenCalled()
     expect(result).toEqual({
       data: {
         id: 'org-1',
@@ -491,19 +522,20 @@ describe('organisation.remote authz', () => {
   })
 
   it('archiveOrganisation updates when authz allows', async () => {
-    const result = await remote.archiveOrganisation({ id: 'org-1', state: true })
+    const result = await remote.archiveOrganisation({
+      id: 'org-1',
+      state: true,
+    })
 
     expect(mockUpdateOrganisationArchivedStateById).toHaveBeenCalledWith(
       expect.any(Object),
-      { id: 'org-1', state: true },
-    )
-    expect(mockCascadeOrganisationArchivedStateToDescendants).toHaveBeenCalledWith(
-      expect.any(Object),
-      {
-        organisationId: 'org-1',
+      expect.objectContaining({
+        id: 'org-1',
         state: true,
-      },
+        expectedScope: expect.objectContaining({ hubId: 'hub-a' }),
+      }),
     )
+    expect(mockCascadeOrganisationArchivedStateToDescendants).not.toHaveBeenCalled()
     expect(result).toEqual({
       data: {
         id: 'org-1',
@@ -518,6 +550,37 @@ describe('organisation.remote authz', () => {
     await expect(
       remote.publishOrganisation({ id: 'org-1', state: true }),
     ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('creates translations and initial roles through the atomic organisation service', async () => {
+    const services = await import('#lib/db/services/organisation.js')
+    vi.mocked(services.createOrganisation).mockResolvedValue({ id: 'created' } as never)
+    const i18n = { en: {}, zhHans: {}, zhHant: {} }
+    const userRoles = [{ userId: 'u-1', role: 'owner' }]
+    await remote.organisationForm({
+      meta: { mode: 'create' },
+      data: {
+        code: 'org-code',
+        url: '',
+        i18n,
+        userRoles,
+        properties: [{ key: 'test', component: 'SelectField', i18n: {} }],
+      },
+    })
+    expect(services.createOrganisation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: expect.any(String), code: 'org-code' }),
+      expect.objectContaining({
+        i18n,
+        userRoles,
+        properties: [expect.objectContaining({ key: 'test' })],
+      }),
+    )
+    expect(
+      (await import('#lib/db/services/property.js')).syncOrganisationProperties,
+    ).not.toHaveBeenCalled()
+    expect(services.createI18n).not.toHaveBeenCalled()
+    expect(services.createUserRoles).not.toHaveBeenCalled()
   })
 
   it('organisationForm rejects empty userRoles', async () => {
@@ -683,22 +746,49 @@ describe('organisation.remote authz', () => {
     })
   })
 
-  it.each([false, true, null])('persists or resets Organisation multilingual defaults (%j)', async mode => {
-    const services = await import('#lib/db/services/organisation.js')
-    const { ContentLocaleSettingsSchema } = await import('#lib/content-locales/settings.js')
-    vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
-      id: 'org-1', code: 'org-code', hubId: 'hub-a', modifiedAt: 'before',
-      settings: ContentLocaleSettingsSchema.parse({ contentLocales: ['ja'], multilingualContent: true, future: 'kept' }),
-    })
-    vi.mocked(services.updateOrganisationByIdWithConcurrency).mockResolvedValue({ id: 'org-1', modifiedAt: 'after' })
-    await remote.organisationForm({ meta: { id: 'org-1', mode: 'update', updatedAt: 'before' }, data: {
-      code: 'org-code', url: '', i18n: { en: {}, zhHans: {}, zhHant: {} }, userRoles: [{ userId: 'u-1', role: 'owner' }],
-      settings: { multilingualContent: mode, multilingualAddresses: false },
-    } })
-    expect(vi.mocked(services.updateOrganisationByIdWithConcurrency).mock.calls[0]?.[1].data.settings).toEqual({
-      contentLocales: ['ja'], future: 'kept', multilingualAddresses: false, ...(mode === null ? {} : { multilingualContent: mode }),
-    })
-  })
+  it.each([false, true, null])(
+    'persists or resets Organisation multilingual defaults (%j)',
+    async mode => {
+      const services = await import('#lib/db/services/organisation.js')
+      const { ContentLocaleSettingsSchema } = await import(
+        '#lib/content-locales/settings.js'
+      )
+      vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+        id: 'org-1',
+        code: 'org-code',
+        hubId: 'hub-a',
+        modifiedAt: 'before',
+        settings: ContentLocaleSettingsSchema.parse({
+          contentLocales: ['ja'],
+          multilingualContent: true,
+          future: 'kept',
+        }),
+      })
+      vi.mocked(services.updateOrganisationByIdWithConcurrency).mockResolvedValue({
+        id: 'org-1',
+        modifiedAt: 'after',
+      })
+      await remote.organisationForm({
+        meta: { id: 'org-1', mode: 'update', updatedAt: 'before' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [{ userId: 'u-1', role: 'owner' }],
+          settings: { multilingualContent: mode, multilingualAddresses: false },
+        },
+      })
+      expect(
+        vi.mocked(services.updateOrganisationByIdWithConcurrency).mock.calls[0]?.[1]
+          .data.settings,
+      ).toEqual({
+        contentLocales: ['ja'],
+        future: 'kept',
+        multilingualAddresses: false,
+        ...(mode === null ? {} : { multilingualContent: mode }),
+      })
+    },
+  )
 
   it.each([[['ja', 'zhHant']], [null], [undefined]])(
     'preserves other Organisation settings for locale patch %j',
@@ -810,11 +900,24 @@ describe('organisation.remote authz', () => {
       },
     })
 
-    expect(mockCascadeOrganisationCapabilitiesToProjects).toHaveBeenCalledWith(
+    expect(updateOrganisationByIdWithConcurrency).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        organisationId: 'org-1',
+        id: 'org-1',
+        data: expect.objectContaining({
+          capabilities: { manageBakeries: { i18n: {} } },
+        }),
       }),
     )
+    expect(updateOrganisationByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        i18n: { en: {}, zhHans: {}, zhHant: {} },
+        userRoles: [expect.objectContaining({ userId: 'u-1', role: 'owner' })],
+      }),
+    )
+    expect(organisationServices.updateI18n).not.toHaveBeenCalled()
+    expect(organisationServices.syncUserRoles).not.toHaveBeenCalled()
+    expect(mockCascadeOrganisationCapabilitiesToProjects).not.toHaveBeenCalled()
   })
 })
