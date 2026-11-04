@@ -43,6 +43,9 @@
 // API
 import { getUser, searchUsers as searchUsersRemote } from '#lib/api/user.remote.js'
 
+// REMOTE
+import { refreshRemoteQuery } from '#lib/remote/index.js'
+
 // TYPES
 import type { ImportCtx } from '#lib/context/import.svelte.js'
 import type {
@@ -146,11 +149,13 @@ export function getImportUserId(user: UserValidationResult): string | null {
  */
 export async function validateUserById(userId: string): Promise<boolean> {
   try {
-    const result = await getUser({
-      ref: userId,
-      refKey: 'id',
-      meta: { isAdminRequest: true, profile: 'card' },
-    })
+    const result = await refreshRemoteQuery(
+      getUser({
+        ref: userId,
+        refKey: 'id',
+        meta: { isAdminRequest: true, profile: 'card' },
+      }),
+    )
     return Boolean(result.data)
   } catch (error) {
     console.error('Error validating user by ID:', error)
@@ -192,11 +197,13 @@ export async function validateUserByUsername(
   username: string,
 ): Promise<{ isValid: boolean; userId?: string }> {
   try {
-    const result = await getUser({
-      ref: username,
-      refKey: 'username',
-      meta: { isAdminRequest: true, profile: 'card' },
-    })
+    const result = await refreshRemoteQuery(
+      getUser({
+        ref: username,
+        refKey: 'username',
+        meta: { isAdminRequest: true, profile: 'card' },
+      }),
+    )
     const user = result.data
     return {
       isValid: Boolean(user),
@@ -216,10 +223,12 @@ export async function validateUserByUsername(
  */
 export async function searchUsers(query: string): Promise<UserValidationResult[]> {
   try {
-    const result = await searchUsersRemote({
-      q: query,
-      pagination: { limit: 20, offset: 0 },
-    })
+    const result = await refreshRemoteQuery(
+      searchUsersRemote({
+        q: query,
+        pagination: { limit: 20, offset: 0 },
+      }),
+    )
     return result.data.map(toImportUserResult)
   } catch (error) {
     console.error('Error searching users:', error)
@@ -557,9 +566,11 @@ export function startUserResolution(results: UserValidationResult[]): {
  * @param headers - CSV headers.
  * @param onProgress - Receives validation progress updates.
  * @param onResults - Receives the completed validation result list.
+ * @param isCurrent - Whether this validation still owns its input and callbacks.
  * @returns Invalid count and all validation results.
  * @remarks The current import UX intentionally emits progress slowly so users can
- * see validation state during small imports.
+ * see validation state during small imports. Superseded work returns empty results;
+ * callers must recheck ownership before enriching rows or advancing the flow.
  */
 export async function validateUsers(
   userColumns: FeatureCSVColumn[],
@@ -567,6 +578,7 @@ export async function validateUsers(
   headers: string[],
   onProgress: (progress: number, total: number) => void,
   onResults: (results: UserValidationResult[]) => void,
+  isCurrent: () => boolean = () => true,
 ): Promise<{ invalidCount: number; results: UserValidationResult[] }> {
   const userValues = new Set<string>()
   const userColumnIndices = userColumns.map(column => headers.indexOf(column.header))
@@ -586,6 +598,7 @@ export async function validateUsers(
   const userField = userColumns[0]?.field
 
   for (let index = 0; index < uniqueValues.length; index++) {
+    if (!isCurrent()) return { invalidCount: 0, results: [] }
     const value = uniqueValues[index]
     let result: UserValidationResult
 
@@ -610,6 +623,7 @@ export async function validateUsers(
       }
     }
 
+    if (!isCurrent()) return { invalidCount: 0, results: [] }
     results.push(result)
     onProgress(index + 1, uniqueValues.length)
 
@@ -617,6 +631,7 @@ export async function validateUsers(
     await new Promise(resolve => setTimeout(resolve, 100))
   }
 
+  if (!isCurrent()) return { invalidCount: 0, results: [] }
   onResults(results)
 
   const invalidResults = results.filter(result => !result.isValid)
