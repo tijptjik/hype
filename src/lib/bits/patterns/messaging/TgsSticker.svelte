@@ -15,7 +15,7 @@ $effect(() => {
   if (playing) player?.play()
   else player?.pause()
 })
-let container: HTMLDivElement
+let container: HTMLElement
 let error = $state('')
 
 $effect(() => {

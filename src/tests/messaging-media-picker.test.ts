@@ -308,3 +308,45 @@ it('renews an evicted cached reference before sending and keeps the chosen media
   expect(stage.mock.calls.map(call => call[0])).toEqual(['old', 'fresh'])
   expect(search).toHaveBeenCalledTimes(2)
 })
+
+it.each(['gif', 'sticker'] as const)(
+  'previews a held %s without sending and restores tap-to-send after closing',
+  async kind => {
+    search.mockResolvedValue({ items: [item('held', kind)], nextOffset: null })
+    const view = await setup()
+    await openMediaPicker(view, kind === 'gif' ? 'GIFs' : 'Stickers')
+    const tile = await view.findByRole('button', { name: `Send held ${kind}` })
+    await fireEvent.pointerDown(tile, { button: 0, clientX: 20, clientY: 20 })
+    await waitFor(() =>
+      expect(view.getByRole('region', { name: 'Media preview' })).toBeTruthy(),
+    )
+    await fireEvent.pointerUp(tile)
+    await fireEvent.click(tile)
+    expect(stage).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
+    await fireEvent.click(view.getByRole('button', { name: 'Close preview' }))
+    await waitFor(() =>
+      expect(view.queryByRole('region', { name: 'Media preview' })).toBeNull(),
+    )
+    await fireEvent.pointerDown(tile, { button: 0 })
+    await fireEvent.pointerUp(tile)
+    await fireEvent.click(tile)
+    await waitFor(() => expect(stage).toHaveBeenCalledOnce())
+  },
+)
+
+it('scrolls overflowing sticker packs horizontally with the mouse wheel', async () => {
+  transport.stickerPacks = vi
+    .fn()
+    .mockResolvedValue([{ id: 'HappyPack', title: 'Happy pack', count: 6 }])
+  const view = await setup()
+  await openMediaPicker(view, 'Stickers')
+  const row = await view.findByRole('group', { name: 'Sticker packs' })
+  Object.defineProperties(row, {
+    scrollWidth: { value: 1000 },
+    clientWidth: { value: 300 },
+  })
+  await fireEvent.wheel(row, { deltaY: 120, deltaX: 0 })
+  expect(row.scrollLeft).toBe(120)
+  expect(view.getByLabelText('Search stickers')).toBeTruthy()
+})

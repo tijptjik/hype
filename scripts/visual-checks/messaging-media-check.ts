@@ -1,7 +1,7 @@
 // NODE
 import { readFile, mkdir } from 'node:fs/promises'
 // BROWSER
-import { chromium, firefox } from 'playwright'
+import { chromium, firefox } from '@playwright/test'
 
 // Synthetic fixtures exercise the real composer/timeline; no provider receives messages.
 await mkdir('output/playwright', { recursive: true })
@@ -35,13 +35,27 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox]] as c
       await page.getByRole('button', { name: 'Attach files', exact: true }).click()
       await page.getByRole('menuitem', { name: 'GIFs', exact: true }).click()
       const dialog = page.getByRole('dialog', { name: 'GIF and sticker picker' })
-      await dialog.getByRole('status', { name: 'Loading results' }).first().waitFor()
+      await dialog.getByRole('region', { name: 'Loading results' }).first().waitFor()
       await page.screenshot({ path: `output/playwright/${name}-media-skeleton-${width}.png` })
       await page.waitForFunction(() => { const video = document.querySelector('dialog video'); return video instanceof HTMLVideoElement && video.currentTime > 0 })
       await dialog.getByRole('button', { name: 'Close picker' }).click()
       await page.getByRole('button', { name: 'Attach files', exact: true }).click()
       await page.getByRole('menuitem', { name: 'GIFs', exact: true }).click()
       await dialog.getByRole('button', { name: 'Send A colourful celebration' }).waitFor()
+      // Holding previews media without triggering the normal instant-send action.
+      const previewTile = dialog.getByRole('button', { name: 'Send A colourful celebration' })
+      await previewTile.hover()
+      await page.mouse.down()
+      await page.waitForTimeout(800)
+      await page.mouse.up()
+      await dialog.getByRole('region', { name: 'Media preview' }).waitFor()
+      await page.screenshot({ path: `output/playwright/${name}-gif-lightbox-${width}.png` })
+      const previewEvents = await page.evaluate(() => (window as unknown as { mediaFixtureEvents: string[] }).mediaFixtureEvents)
+      if (previewEvents.some(event => event.startsWith('send:'))) throw new Error('Long press sent media')
+      await page.keyboard.press('Escape')
+      await dialog.getByRole('region', { name: 'Media preview' }).waitFor({ state: 'hidden' })
+      await page.waitForTimeout(300)
+
       let events = await page.evaluate(() => (window as unknown as { mediaFixtureEvents: string[] }).mediaFixtureEvents)
       if (events.filter(event => event.startsWith('preview:gif')).length !== 1) throw new Error('Reopening downloaded a GIF again')
       await dialog.getByRole('button', { name: 'Send A colourful celebration' }).click()

@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { tick } from 'svelte'
 // ICONS
 import TrashIcon from 'virtual:icons/lucide/trash-2'
 import UploadIcon from 'virtual:icons/lucide/upload'
@@ -6,10 +8,14 @@ import XIcon from 'virtual:icons/lucide/x'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // COMPONENTS
+import CatalogPreview from './CatalogPreview.svelte'
 import MediaCatalogTile from './MediaCatalogTile.svelte'
 import MediaSkeleton from './MediaSkeleton.svelte'
 // TYPES
-import type { MediaPickerModel } from '#lib/messaging/media-catalog.js'
+import type {
+  MediaCatalogItem,
+  MediaPickerModel,
+} from '#lib/messaging/media-catalog.js'
 
 let {
   model,
@@ -22,12 +28,49 @@ let {
 } = $props()
 let dialog: HTMLDialogElement
 let search: HTMLInputElement
+let enlarged = $state<MediaCatalogItem | null>(null)
+let source: HTMLButtonElement | undefined
+let closePreviewButton: HTMLButtonElement
+let transitioning = false
+
+/** Animate the same media between its tile and the centered preview. */
+async function changePreview(
+  item: MediaCatalogItem | null,
+  tile?: HTMLButtonElement,
+): Promise<void> {
+  if (transitioning || (item && enlarged)) return
+  transitioning = true
+  if (tile) source = tile
+  if (item && source) source.style.viewTransitionName = 'catalog-preview'
+  const update = async (): Promise<void> => {
+    if (source) source.style.viewTransitionName = item ? '' : 'catalog-preview'
+    enlarged = item
+    await tick()
+    if (item) closePreviewButton?.focus()
+    else source?.focus()
+  }
+  try {
+    if (
+      document.startViewTransition &&
+      !matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      await document.startViewTransition(update).finished
+    else await update()
+  } finally {
+    if (source) source.style.viewTransitionName = ''
+    transitioning = false
+  }
+}
 
 $effect(() => {
   if (model.open && !dialog.open) {
     dialog.showModal()
     search.focus()
-  } else if (!model.open && dialog.open) dialog.close()
+  } else if (!model.open && dialog.open) {
+    dialog.close()
+    enlarged = null
+    if (source) source.style.viewTransitionName = ''
+  }
 })
 </script>
 
@@ -35,16 +78,24 @@ $effect(() => {
 <dialog
   bind:this={dialog}
   aria-label="GIF and sticker picker"
-  oncancel={() => model.close()}
+  oncancel={event => {
+    if (enlarged) {
+      event.preventDefault()
+      void changePreview(null)
+    } else model.close()
+  }}
   onclose={() => {
     if (model.open) model.close()
   }}
   onclick={event => {
-    if (event.target === dialog) model.close()
+    if (event.target === dialog && !enlarged) model.close()
   }}
   class="fixed inset-0 z-50 m-auto max-h-[85dvh] w-[min(44rem,calc(100vw-1.5rem))] max-w-none overflow-hidden rounded-xl border border-border bg-panel p-0 text-base-content shadow-xl backdrop:bg-black/50"
 >
-  <div class="flex max-h-[calc(85dvh-2px)] min-h-0 flex-col gap-3 p-4">
+  <div
+    inert={Boolean(enlarged)}
+    class="flex max-h-[calc(85dvh-2px)] min-h-0 flex-col gap-3 p-4"
+  >
     <div class="flex shrink-0 items-center justify-between gap-3">
       <fieldset aria-label="Media type" class="flex gap-2">
         <button
@@ -72,14 +123,26 @@ $effect(() => {
         modifier="circle"
         style="ghost"
         size="sm"
-        attrs={{ title: 'Close picker' }}
+        attrs={{ 'data-tooltip': 'Close picker' }}
         onClick={() => model.close()}
       />
     </div>
     {#if model.kind === 'sticker' && model.packs.length}
       <fieldset
-        class="flex shrink-0 gap-2 overflow-x-auto pb-2 pt-1"
+        class="flex w-full min-w-0 shrink-0 gap-2 overflow-x-auto overscroll-x-contain pb-2 pt-1"
         aria-label="Sticker packs"
+        onwheel={event => {
+          const row = event.currentTarget
+          if (
+            Math.abs(event.deltaY) > Math.abs(event.deltaX) &&
+            row.scrollWidth > row.clientWidth
+          ) {
+            event.preventDefault()
+            row.scrollLeft +=
+              event.deltaY *
+              (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? row.clientWidth : 1)
+          }
+        }}
       >
         <button
           type="button"
@@ -102,7 +165,9 @@ $effect(() => {
       </fieldset>
     {/if}
     <label class="flex shrink-0 flex-col gap-1 text-sm">
-      <span>{model.kind === 'gif' ? 'Search GIFs' : 'Search stickers'}</span>
+      <span class="sr-only"
+        >{model.kind === 'gif' ? 'Search GIFs' : 'Search stickers'}</span
+      >
       <input
         bind:this={search}
         type="search"
@@ -132,7 +197,12 @@ $effect(() => {
         class="grid grid-cols-3 gap-3 min-[480px]:grid-cols-4 min-[720px]:grid-cols-6"
       >
         {#each model.items as item (item.key)}
-          <MediaCatalogTile {item} {model} {disabled} />
+          <MediaCatalogTile
+            {item}
+            {model}
+            {disabled}
+            onPreview={(item, tile) => void changePreview(item, tile)}
+          />
         {/each}
         {#if model.loading && !model.items.length}
           {#each Array(12) as _}
@@ -190,7 +260,7 @@ $effect(() => {
           modifier="circle"
           style="ghost"
           size="sm"
-          attrs={{ title: 'Upload sticker' }}
+          attrs={{ 'data-tooltip': 'Upload sticker' }}
           {disabled}
           onClick={() => {
             model.close()
@@ -199,7 +269,7 @@ $effect(() => {
         />
       {/if}
       <div class="ml-auto flex items-center gap-1">
-        <span role="img" aria-label="Cache used" class="tabular-nums"
+        <span role="status" aria-label="Cache used" class="tabular-nums"
           >{model.cacheBytes === null
             ? '—'
             : model.cacheBytes === 0
@@ -217,16 +287,56 @@ $effect(() => {
           modifier="circle"
           style="ghost"
           size="sm"
-          attrs={{ title: 'Clear cache' }}
+          attrs={{ 'data-tooltip': 'Clear cache' }}
           disabled={model.clearingCache}
           onClick={() => void model.clearCache()}
         />
       </div>
     </div>
   </div>
+  {#if enlarged}
+    <section
+      aria-label="Media preview"
+      class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-panel/95 p-6 backdrop-blur-sm"
+    >
+      <button
+        type="button"
+        aria-label="Close preview"
+        bind:this={closePreviewButton}
+        class="absolute right-3 top-3 rounded-full p-2 hover:bg-raised focus-visible:outline-2 focus-visible:outline-primary"
+        onclick={() => void changePreview(null)}
+      >
+        <XIcon class="size-5" />
+      </button>
+      <div
+        style="view-transition-name: catalog-preview"
+        class="flex aspect-square max-h-[60dvh] w-full max-w-96 items-center justify-center overflow-hidden rounded-xl"
+      >
+        {#if model.urls[enlarged.id]}
+          <CatalogPreview
+            url={model.urls[enlarged.id]}
+            mimeType={enlarged.mimeType}
+            label={enlarged.title}
+          />
+        {:else}
+          <MediaSkeleton />
+        {/if}
+      </div>
+      <p class="max-w-full break-words text-center text-sm">{enlarged.title}</p>
+    </section>
+  {/if}
 </dialog>
 
 <style>
+:global(::view-transition-group(catalog-preview)) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+:global(::view-transition-old(catalog-preview)),
+:global(::view-transition-new(catalog-preview)) {
+  height: 100%;
+  object-fit: contain;
+}
 :global(::view-transition-group(catalog-send)) {
   animation-duration: 240ms;
   animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
