@@ -3,7 +3,7 @@
 import { m } from '#lib/i18n.js'
 // BITS
 import { cx } from '#lib/bits/utils.js'
-import { Button, SimpleTooltip, Swap } from '#lib/bits/index.js'
+import { Button, Swap } from '#lib/bits/index.js'
 // LIB
 import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 import {
@@ -133,219 +133,151 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
   onchange={handleChange}
 >
 
-  <div
-    class={cx(
-      VIEWER_CONTROLS_ROOT_CLASSES,
-      freezeInteractions && 'pointer-events-none',
-      offsetClass,
-    )}
-    aria-busy={freezeInteractions}
-  >
-    {#if showPublishedToggle}
-      <SimpleTooltip>
-        {#snippet trigger()}
-          <Swap
-            checked={isPublished}
-            disabled={disabled || !canMutate}
-            class={disabled || !canMutate
-              ? VIEWER_CONTROLS_TOGGLE_DISABLED_CLASSES
-              : VIEWER_CONTROLS_TOGGLE_ENABLED_CLASSES}
-            label={isPublished
-              ? m.gallery__unpublish_image()
-              : m.gallery__publish_image()}
-            size="sm"
-            variant="transparent"
-            onColor="success"
-            offColor="dark"
-            onIcon={EyeIcon}
-            offIcon={EyeOffIcon}
-            onCheckedChange={() => {
-              onTogglePublished?.()
-            }}
-          />
-        {/snippet}
-        <span
-          >{canMutate
-            ? isPublished
-              ? m.gallery__unpublish_image()
-              : m.gallery__publish_image()
-            : m.gallery__wait_for_image_save()}</span
-        >
-      </SimpleTooltip>
-    {/if}
+<div
+  class={cx(
+    VIEWER_CONTROLS_ROOT_CLASSES,
+    freezeInteractions && 'pointer-events-none',
+    offsetClass,
+  )}
+  aria-busy={freezeInteractions}
+>
+  {#if showPublishedToggle}
+    <Swap
+      checked={isPublished}
+      disabled={disabled || !canMutate}
+      class={disabled || !canMutate
+        ? VIEWER_CONTROLS_TOGGLE_DISABLED_CLASSES
+        : VIEWER_CONTROLS_TOGGLE_ENABLED_CLASSES}
+      label={isPublished ? m.gallery__unpublish_image() : m.gallery__publish_image()}
+      size="sm"
+      variant="transparent"
+      onColor="success"
+      offColor="dark"
+      onIcon={EyeIcon}
+      offIcon={EyeOffIcon}
+      onCheckedChange={() => {
+        onTogglePublished?.()
+      }}
+    />
+  {/if}
 
-    {#if showPresentationModeToggle}
-      <SimpleTooltip>
-        {#snippet trigger()}
-          <Swap
-            checked={isCoverPresentationMode}
-            disabled={disabled || isPresentationModePending || !canMutate}
-            class={disabled || isPresentationModePending || !canMutate
-              ? VIEWER_CONTROLS_TOGGLE_DISABLED_CLASSES
-              : VIEWER_CONTROLS_TOGGLE_ENABLED_CLASSES}
-            label={isCoverPresentationMode
-              ? m.gallery__set_image_to_fill_mode()
-              : m.gallery__set_image_to_fit_mode()}
-            size="sm"
-            variant="transparent"
-            onColor="dark"
-            offColor="dark"
-            onIcon={ExpandIcon}
-            offIcon={ShrinkIcon}
-            onCheckedChange={value => {
-              void handlePresentationModeChange(value)
-            }}
-          />
-        {/snippet}
-        <span
-          >{canMutate
-            ? isCoverPresentationMode
-              ? m.gallery__set_image_to_fill_mode()
-              : m.gallery__set_image_to_fit_mode()
-            : m.gallery__wait_for_image_save()}</span
-        >
-      </SimpleTooltip>
-    {/if}
+  {#if showPresentationModeToggle}
+    <Swap
+      checked={isCoverPresentationMode}
+      disabled={disabled || isPresentationModePending || !canMutate}
+      class={disabled || isPresentationModePending || !canMutate
+        ? VIEWER_CONTROLS_TOGGLE_DISABLED_CLASSES
+        : VIEWER_CONTROLS_TOGGLE_ENABLED_CLASSES}
+      label={isCoverPresentationMode
+        ? m.gallery__set_image_to_fill_mode()
+        : m.gallery__set_image_to_fit_mode()}
+      size="sm"
+      variant="transparent"
+      onColor="dark"
+      offColor="dark"
+      onIcon={ExpandIcon}
+      offIcon={ShrinkIcon}
+      onCheckedChange={value => {
+        void handlePresentationModeChange(value)
+      }}
+    />
+  {/if}
 
-    {#if showReplaceButton}
-      <SimpleTooltip>
-        {#snippet trigger()}
-          <Button
-            text={m.gallery__replace_image()}
-            style="transparent"
-            modifier="circle"
-            hideLabel={true}
-            class={VIEWER_CONTROLS_BUTTON_CLASSES}
-            disabled={disabled || !canReplace}
-            onClick={() => inputEl?.click()}
-            iconComponent={ReplaceIcon}
-            iconClasses="h-[22px] w-[22px]"
-          />
-        {/snippet}
-        <span
-          >{canReplace
-            ? m.gallery__replace_image()
-            : m.gallery__wait_for_image_save()}</span
-        >
-      </SimpleTooltip>
-    {/if}
+  {#if showReplaceButton}
+    <Button
+      text={m.gallery__replace_image()}
+      style="transparent"
+      modifier="circle"
+      hideLabel={true}
+      class={VIEWER_CONTROLS_BUTTON_CLASSES}
+      disabled={disabled || !canReplace}
+      onClick={() => inputEl?.click()}
+      iconComponent={ReplaceIcon}
+      iconClasses="h-[22px] w-[22px]"
+    />
+  {/if}
 
-    {#if showDeleteButton}
-      <SimpleTooltip>
-        {#snippet trigger()}
-          <Button
-            text={m.forms__delete()}
-            style="transparent"
-            modifier="circle"
-            hideLabel={true}
-            class={VIEWER_CONTROLS_BUTTON_CLASSES}
-            disabled={disabled || !canDelete}
-            onClick={() => {
-              void onDelete?.()
-            }}
-            iconComponent={Trash2Icon}
-            iconClasses="h-[22px] w-[22px]"
-          />
-        {/snippet}
-        <span>{canDelete ? m.forms__delete() : m.gallery__wait_for_image_save()}</span>
-      </SimpleTooltip>
-    {/if}
+  {#if showDeleteButton}
+    <Button
+      text={m.forms__delete()}
+      style="transparent"
+      modifier="circle"
+      hideLabel={true}
+      class={VIEWER_CONTROLS_BUTTON_CLASSES}
+      disabled={disabled || !canDelete}
+      onClick={() => {
+        void onDelete?.()
+      }}
+      iconComponent={Trash2Icon}
+      iconClasses="h-[22px] w-[22px]"
+    />
+  {/if}
 
-    {#if showDownloadButton}
-      <SimpleTooltip>
-        {#snippet trigger()}
-          <Button
-            text={m.gallery__download_raw_image()}
-            style="transparent"
-            modifier="circle"
-            hideLabel={true}
-            class={VIEWER_CONTROLS_BUTTON_CLASSES}
-            disabled={disabled || !canDownload}
-            onClick={() => onDownload?.()}
-            iconComponent={DownloadIcon}
-            iconClasses="h-[22px] w-[22px]"
-          />
-        {/snippet}
-        <span
-          >{canDownload
-            ? m.gallery__download_raw_image()
-            : m.gallery__wait_for_image_save()}</span
-        >
-      </SimpleTooltip>
-    {/if}
+  {#if showDownloadButton}
+    <Button
+      text={m.gallery__download_raw_image()}
+      style="transparent"
+      modifier="circle"
+      hideLabel={true}
+      class={VIEWER_CONTROLS_BUTTON_CLASSES}
+      disabled={disabled || !canDownload}
+      onClick={() => onDownload?.()}
+      iconComponent={DownloadIcon}
+      iconClasses="h-[22px] w-[22px]"
+    />
+  {/if}
 
-    {#if shouldShowEditButton}
-      <div class={VIEWER_CONTROLS_EDIT_GROUP_CLASSES}>
-        <SimpleTooltip>
-          {#snippet trigger()}
-            <Button
-              text={isEditExpanded
-                ? m.gallery__hide_image_edit_controls()
-                : m.gallery__show_image_edit_controls()}
-              style="transparent"
-              modifier="circle"
-              hideLabel={true}
-              class={editButtonClass}
-              disabled={disabled || isEditBusy || !canEdit || !canRotate}
-              onClick={() => {
-                if (disabled || isEditBusy || !canEdit || !canRotate) return
-                isEditExpanded = !isEditExpanded
-              }}
-              attrs={{ 'aria-expanded': isEditExpanded }}
-              iconComponent={isEditBusy ? LoaderCircleIcon : SquarePenIcon}
-              iconClasses={isEditBusy ? 'h-5.5 w-5.5 animate-spin' : 'h-5.5 w-5.5'}
-            />
-          {/snippet}
-          <span
-            >{canEdit
-              ? isEditExpanded
-                ? m.gallery__hide_image_edit_controls()
-                : m.gallery__show_image_edit_controls()
-              : m.gallery__wait_for_image_save()}</span
-          >
-        </SimpleTooltip>
+  {#if shouldShowEditButton}
+    <div class={VIEWER_CONTROLS_EDIT_GROUP_CLASSES}>
+      <Button
+        text={isEditExpanded
+          ? m.gallery__hide_image_edit_controls()
+          : m.gallery__show_image_edit_controls()}
+        style="transparent"
+        modifier="circle"
+        hideLabel={true}
+        class={editButtonClass}
+        disabled={disabled || isEditBusy || !canEdit || !canRotate}
+        onClick={() => {
+          if (disabled || isEditBusy || !canEdit || !canRotate) return
+          isEditExpanded = !isEditExpanded
+        }}
+        attrs={{ 'aria-expanded': isEditExpanded }}
+        iconComponent={isEditBusy ? LoaderCircleIcon : SquarePenIcon}
+        iconClasses={isEditBusy ? 'h-5.5 w-5.5 animate-spin' : 'h-5.5 w-5.5'}
+      />
 
-        <div
-          class={viewerControlsEditActionsClass({
-            isEditExpanded,
-            canRotate,
-          })}
-          aria-hidden={!isEditExpanded || !canRotate}
-        >
-          <SimpleTooltip>
-            {#snippet trigger()}
-              <Button
-                text={m.gallery__rotate_image_left()}
-                style="transparent"
-                modifier="circle"
-                hideLabel={true}
-                disabled={disabled || isEditBusy || !canRotate || !isEditExpanded}
-                onClick={() => onRotateLeft?.()}
-                iconComponent={RotateCcwIcon}
-                iconClasses="h-[22px] w-[22px]"
-                class={VIEWER_CONTROLS_ROTATE_BUTTON_CLASSES}
-              />
-            {/snippet}
-            <span>{m.gallery__rotate_image_left()}</span>
-          </SimpleTooltip>
+      <div
+        class={viewerControlsEditActionsClass({
+          isEditExpanded,
+          canRotate,
+        })}
+        aria-hidden={!isEditExpanded || !canRotate}
+      >
+        <Button
+          text={m.gallery__rotate_image_left()}
+          style="transparent"
+          modifier="circle"
+          hideLabel={true}
+          disabled={disabled || isEditBusy || !canRotate || !isEditExpanded}
+          onClick={() => onRotateLeft?.()}
+          iconComponent={RotateCcwIcon}
+          iconClasses="h-[22px] w-[22px]"
+          class={VIEWER_CONTROLS_ROTATE_BUTTON_CLASSES}
+        />
 
-          <SimpleTooltip>
-            {#snippet trigger()}
-              <Button
-                text={m.gallery__rotate_image_right()}
-                style="transparent"
-                modifier="circle"
-                hideLabel={true}
-                disabled={disabled || isEditBusy || !canRotate || !isEditExpanded}
-                onClick={() => onRotateRight?.()}
-                iconComponent={RotateCwIcon}
-                iconClasses="h-[22px] w-[22px]"
-                class={VIEWER_CONTROLS_ROTATE_BUTTON_CLASSES}
-              />
-            {/snippet}
-            <span>{m.gallery__rotate_image_right()}</span>
-          </SimpleTooltip>
-        </div>
+        <Button
+          text={m.gallery__rotate_image_right()}
+          style="transparent"
+          modifier="circle"
+          hideLabel={true}
+          disabled={disabled || isEditBusy || !canRotate || !isEditExpanded}
+          onClick={() => onRotateRight?.()}
+          iconComponent={RotateCwIcon}
+          iconClasses="h-[22px] w-[22px]"
+          class={VIEWER_CONTROLS_ROTATE_BUTTON_CLASSES}
+        />
       </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
+</div>
