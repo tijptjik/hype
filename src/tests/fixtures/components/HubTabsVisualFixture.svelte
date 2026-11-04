@@ -46,12 +46,22 @@ let layerItems = $state([
 ])
 const locales = ['en', 'zhHant', 'zhHans'] as const
 const field = {
+  set: () => {},
   as: (type: string, value?: string) => ({ type, value: value ?? 'Community hub' }),
   issues: () => [],
 }
 const form = {
   fields: {
-    value: () => ({ data: { i18n: {} } }),
+    value: () => ({
+      data: {
+        i18n: {
+          en: { subscriptionBenefits: 'Community news and opportunities' },
+          zhHant: { subscriptionBenefits: '社區消息' },
+          zhHans: { subscriptionBenefits: '社区消息' },
+        },
+      },
+    }),
+    set: () => {},
     data: {
       code: field,
       domain: field,
@@ -76,7 +86,7 @@ $effect(() => {
 })
 </script>
 
-<div class="bits-theme min-h-screen bg-canvas text-foreground">
+<div class="bits-theme bg-canvas text-foreground min-h-screen">
   <main class="bits-admin-shell__main">
     {#if tab === 'fields'}
       <OrganisationTabsVisualFixture bind:this={fieldsFixture} />
@@ -103,9 +113,7 @@ $effect(() => {
             isEditing={editing}
             sectionKey="policies"
           >
-            {#snippet children(
-              locale,
-            )}
+            {#snippet children(locale)}
               <FormPolicyField
                 label="Privacy Policy"
                 {locale}
@@ -124,7 +132,7 @@ $effect(() => {
           </FormI18nSection>
         {:else if tab === 'images'}
           <SectionHeader title="Profile Image" />
-          <div class="p-6 text-muted-foreground">
+          <div class="text-muted-foreground p-6">
             Save this hub before adding images.
           </div>
         {:else}
@@ -139,12 +147,13 @@ $effect(() => {
               isEditing={editing}
               isSubscriptionAvailable={available}
               subscriptionService={HubSubscriptionService.substack}
-              subscriptionId="community"
-              subscriptionBenefitsByLocale={{
-                en: 'Community news and opportunities',
-                zhHant: '社區消息',
-                zhHans: '社区消息',
+              localeState={{
+                selectedLocales: ['en', 'zh-Hant', 'zh-Hans'],
+                visibleLocales: ['en', 'zh-Hant', 'zh-Hans'],
+                expanded: true,
               }}
+              recordKey="hub-tabs-fixture"
+              translate={async () => ({ status: 'unsupported', message: 'Fixture' })}
               subscriptionPlacement={{ topBar: true, hubPanel: true, menu: false }}
               onAvailabilityChange={value => {
                 available = value
