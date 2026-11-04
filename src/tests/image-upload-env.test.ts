@@ -66,32 +66,53 @@ describe('resolveImageAssetBaseUrl', () => {
     )
   })
 
-  it('uses the preview asset host for preview images during local dev', () => {
+  it('uses the local worker preview route for preview images during local dev', () => {
     publicEnv.PUBLIC_ASSET_BASE_URL = 'http://localhost:8788'
     publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL = 'https://assets.preview.hype.hk'
 
     expect(resolveImageAssetBaseUrl('preview', 'http://localhost:5173')).toBe(
-      'https://assets.preview.hype.hk',
+      'http://localhost:8788/preview',
     )
   })
 
-  it('uses the production asset host for production images during local dev', () => {
+  it('uses the local worker production route for production images during local dev', () => {
     publicEnv.PUBLIC_ASSET_BASE_URL = 'http://localhost:8788'
     publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL = 'https://assets.preview.hype.hk'
 
     expect(resolveImageAssetBaseUrl('production', 'http://localhost:5173')).toBe(
+      'http://localhost:8788/production',
+    )
+  })
+
+  it('preserves an explicitly configured production host during local dev', () => {
+    publicEnv.PUBLIC_ASSET_BASE_URL = 'https://assets.hype.hk'
+    publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL = 'https://assets.preview.hype.hk'
+
+    expect(resolveImageAssetBaseUrl('production', 'http://hype.localhost')).toBe(
       'https://assets.hype.hk',
     )
   })
 
-  it('falls back to the local asset domain when a local app session is missing public asset env', () => {
-    publicEnv.PUBLIC_ASSET_BASE_URL = ''
-    publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL = ''
+  it('keeps deployed production sessions on the production asset host', () => {
+    publicEnv.PUBLIC_ASSET_BASE_URL = 'http://localhost:8788'
+    publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL = 'https://assets.preview.hype.hk'
 
-    expect(resolveImageAssetBaseUrl('local', 'http://localhost:5173')).toBe(
-      'http://assets.hype.localhost',
+    expect(resolveImageAssetBaseUrl('production', 'https://hype.hk')).toBe(
+      'https://assets.hype.hk',
     )
   })
+
+  it.each(['local', 'preview', 'production'] as const)(
+    'uses the local %s route when a local app session is missing public asset env',
+    stage => {
+      publicEnv.PUBLIC_ASSET_BASE_URL = ''
+      publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL = ''
+
+      expect(resolveImageAssetBaseUrl(stage, 'http://hype.localhost')).toBe(
+        `http://assets.hype.localhost${stage === 'local' ? '' : `/${stage}`}`,
+      )
+    },
+  )
 })
 
 describe('uploadPreparedImageObject', () => {
