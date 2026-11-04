@@ -63,9 +63,19 @@ export function useImageProviderModel(
   function buildImageStateSignature(): string {
     const options = getOptions()
     return JSON.stringify({
-      imageId: options.image?.image.id ?? null,
-      imagesLength: options.images?.length || 0,
-      hasImages: !!options.images,
+      image: options.image
+        ? {
+            id: options.image.image.id,
+            intent: options.image.intent ?? null,
+            isPublished: options.image.isPublished ?? null,
+          }
+        : null,
+      images:
+        options.images?.map(image => ({
+          id: image.image.id,
+          intent: image.intent ?? null,
+          isPublished: image.isPublished ?? null,
+        })) ?? [],
     })
   }
 

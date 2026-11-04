@@ -242,7 +242,7 @@ export async function uploadPreparedImageObject(
  *
  * @param preparedUpload Prepared upload session returned by `prepareImageUpload`.
  * @returns Persisted image envelope.
- * @remarks Retries transient local D1 lock failures before surfacing an error.
+ * @remarks Replays the same signed confirmation for transient D1 locks or fetch failures.
  */
 export async function finalizePreparedImageUpload(
   preparedUpload: Awaited<ReturnType<typeof prepareImageUpload>>,
@@ -270,8 +270,20 @@ export async function finalizePreparedImageUpload(
         message.includes('SQLITE_BUSY') ||
         message.includes('database is locked') ||
         message.includes('internal error; reference =')
+      // A lost response may follow a committed write; replay its idempotent token.
+      const isRetryableNetworkError =
+        error instanceof TypeError &&
+        /^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?|fetch failed)$/i.test(
+          message,
+        )
+      // Kit parses the response body before returning; truncation can obscure a committed result.
+      const isTruncatedResponse =
+        error instanceof SyntaxError && /unexpected end of json input/i.test(message)
 
-      if (!isRetryableLockError || attempt === retryAttempts - 1) {
+      if (
+        (!isRetryableLockError && !isRetryableNetworkError && !isTruncatedResponse) ||
+        attempt === retryAttempts - 1
+      ) {
         throw error
       }
 
@@ -291,7 +303,7 @@ export async function finalizePreparedImageUpload(
  * @param uploadCtx Context for the upload (resource type, ID, org, project, imageToReplace).
  * @param extendedFeatureInfo Optional info for feature images (publish status, intent).
  * @param fetchFn Fetch implementation to use for the signed PUT request.
- * @param options Lifecycle hooks for object-upload completion.
+ * @param options Lifecycle hooks receiving the prepared session after object-upload completion.
  * @returns The saved/updated image data from the backend.
  */
 export async function uploadAndProcessImage(
@@ -303,12 +315,14 @@ export async function uploadAndProcessImage(
   },
   fetchFn: typeof fetch = fetch,
   options: {
-    onObjectUploaded?: () => void
+    onObjectUploaded?: (
+      prepared: Awaited<ReturnType<typeof prepareImageUpload>>,
+    ) => void
   } = {},
 ): Promise<ImageCtxEnvelope> {
   const preparedUpload = await prepareImageUpload(file, uploadCtx, extendedFeatureInfo)
   await uploadPreparedImageObject(preparedUpload, fetchFn)
-  options.onObjectUploaded?.()
+  options.onObjectUploaded?.(preparedUpload)
   return finalizePreparedImageUpload(preparedUpload)
 }
 

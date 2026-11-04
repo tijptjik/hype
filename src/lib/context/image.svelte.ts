@@ -221,6 +221,9 @@ type SingleImageResourceCacheEntry = {
 //
 // 6. Upload Handling
 //    - handleFilesSelect
+//    - uploadConfirmationIdentity (private)
+//    - retainUploadConfirmation (private)
+//    - retainedUploadConfirmation (private)
 //    - processUploadQueue (private)
 //    - upload
 //    - retryUpload
@@ -261,6 +264,19 @@ export class ImageCtx {
 
   // Track refresh order as well as context transitions to prevent stale image commits.
   private imageRefreshSerial = 0
+  // Queue entries may be observed by overlapping selections and retry clicks.
+  private readonly activeUploads = new Set<string>()
+  private readonly preparedConfirmations = new Map<
+    string,
+    {
+      file: File
+      identity: string
+      featureOptions?: { isPublished: boolean; intent: Intent }
+      prepared: Awaited<ReturnType<typeof prepareImageUpload>>
+    }
+  >()
+  private uploadEntrySerial = 0
+  private readonly imageDeletions = new Map<string, Promise<void>>()
 
   // ═══════════════════════
   // 1. CONSTRUCTOR & SETUP
@@ -574,12 +590,22 @@ export class ImageCtx {
   }
 
   setUploadQueue(uploadQueue: ImageUpload[]) {
+    // Removed/replaced entries must not retain signed credentials or normalized file bytes.
+    for (const [key, retained] of this.preparedConfirmations) {
+      if (
+        !uploadQueue.some(
+          item => item.optimisticKey === key && item.file === retained.file,
+        )
+      )
+        this.preparedConfirmations.delete(key)
+    }
     this.state.uploadQueue = uploadQueue
     // Update active preview
     this.updateActivePreview()
   }
 
   resetUploadQueue() {
+    this.preparedConfirmations.clear()
     this.state.uploadQueue = []
     this.resetActivePreview()
   }
@@ -588,6 +614,7 @@ export class ImageCtx {
     files: File[],
     imageToReplace?: ImageCtxEnvelope,
   ): Promise<void> {
+    const contextAtStart = this.state.context
     if (imageToReplace) {
       this.state.uploadQueue = this.state.uploadQueue.filter(upload => {
         const isReplacementForSameImage =
@@ -615,13 +642,18 @@ export class ImageCtx {
           status: 'uploading',
           retries: 0,
           queuedAt: queuedAtBase + index,
-          optimisticKey: `optimistic-upload-${queuedAtBase}-${index}-${file.name}-${file.lastModified}`,
+          optimisticKey: `optimistic-upload-${queuedAtBase}-${index}-${file.name}-${file.lastModified}-${++this.uploadEntrySerial}`,
           imageToReplace,
           preview,
         } as ImageUpload
       }),
     )
 
+    if (this.state.context !== contextAtStart) {
+      for (const upload of newUploads)
+        if (upload.preview) URL.revokeObjectURL(upload.preview)
+      return
+    }
     this.state.uploadQueue.push(...newUploads)
 
     // Update preview URLs for replacing images
@@ -671,10 +703,9 @@ export class ImageCtx {
   }
 
   setUploadStatus(fileObject: ImageUpload, status: UploadStatus) {
+    // A File can appear in multiple entries; only the queue identity owns this status.
     const upload = this.state.uploadQueue.find(
-      item =>
-        item.optimisticKey === fileObject.optimisticKey ||
-        item.file === fileObject.file,
+      item => item.optimisticKey === fileObject.optimisticKey,
     )
     if (upload) {
       upload.status = status
@@ -685,7 +716,7 @@ export class ImageCtx {
   setUploadToRetry(fileObject: ImageUpload) {
     this.setUploadQueue(
       this.state.uploadQueue.map(item =>
-        item.file === fileObject.file
+        item.optimisticKey === fileObject.optimisticKey
           ? {
               ...item,
               status: 'uploading',
@@ -700,7 +731,7 @@ export class ImageCtx {
   private setUploadError(fileObject: ImageUpload, errorMessage: string): void {
     this.setUploadQueue(
       this.state.uploadQueue.map(item =>
-        item.file === fileObject.file
+        item.optimisticKey === fileObject.optimisticKey
           ? {
               ...item,
               status: 'error',
@@ -849,7 +880,7 @@ export class ImageCtx {
     const ctxId = this.state.context?.ctxId ?? ''
     return await Promise.all(
       files.map(async (file, index) => {
-        const tempId = `staged-${Date.now()}-${index}`
+        const tempId = `staged-${Date.now()}-${index}-${++this.uploadEntrySerial}`
         const preview = await createOptimisticPreviewUrl(file)
 
         return {
@@ -887,6 +918,7 @@ export class ImageCtx {
    * @returns Resolves after staged images and staging queue entries have been created.
    */
   async handleStagedFilesSelect(acceptedFiles: File[], fileRejections: File[]) {
+    const contextAtStart = this.state.context
     const existingImages = this.getImages()
     const hasApiImages = existingImages.some(img => !this.isImageStaged(img))
 
@@ -899,6 +931,12 @@ export class ImageCtx {
     // Convert files to staged Image objects
     const stagedImages = await this.createStagedImagesFromFiles(acceptedFiles)
 
+    if (this.state.context !== contextAtStart) {
+      for (const staged of stagedImages)
+        if (staged.image.preview) URL.revokeObjectURL(staged.image.preview)
+      return
+    }
+
     // Add staged images to existing images (or set if we just reset)
     if (hasApiImages) {
       await this.setImages(stagedImages)
@@ -907,6 +945,8 @@ export class ImageCtx {
       const allImages = [...existingImages, ...stagedImages]
       await this.setImages(allImages)
     }
+
+    if (this.state.context !== contextAtStart) return
 
     // Set the active image to the LATEST (last) staged image
     if (stagedImages.length > 0) {
@@ -930,6 +970,7 @@ export class ImageCtx {
       onError?: () => void
     } = {},
   ) {
+    const contextAtStart = this.state.context
     const stagedImages = this.getImages().filter(img => img.image.cdn === 'preview')
 
     if (stagedImages.length === 0) {
@@ -960,10 +1001,11 @@ export class ImageCtx {
     await this.processUploadQueue(config)
 
     // Clean up staging queue
-    this.state.stagingQueue = []
+    if (this.state.context === contextAtStart) this.state.stagingQueue = []
   }
 
   async addToStagingQueue(files: File[]): Promise<void> {
+    const contextAtStart = this.state.context
     const queuedAtBase = Date.now()
     const newStaged = await Promise.all(
       files.map(async (file, index) => {
@@ -974,12 +1016,17 @@ export class ImageCtx {
           status: 'staged',
           retries: 0,
           queuedAt: queuedAtBase + index,
-          optimisticKey: `staged-upload-${queuedAtBase}-${index}-${file.name}-${file.lastModified}`,
+          optimisticKey: `staged-upload-${queuedAtBase}-${index}-${file.name}-${file.lastModified}-${++this.uploadEntrySerial}`,
           preview,
         } as ImageUpload
       }),
     )
 
+    if (this.state.context !== contextAtStart) {
+      for (const upload of newStaged)
+        if (upload.preview) URL.revokeObjectURL(upload.preview)
+      return
+    }
     this.state.stagingQueue.push(...newStaged)
 
     this.updateActivePreview()
@@ -2148,10 +2195,12 @@ export class ImageCtx {
       throw new Error('Cannot replace multiple images')
     }
 
+    const contextAtStart = this.state.context
     const initialActiveImageId = this.state.activeImage?.image.id ?? null
 
     // Add to upload queue
     await this.addToUploadQueue(acceptedFiles, imageToReplace)
+    if (this.state.context !== contextAtStart) return
     this.addToRejected(fileRejections)
 
     if (imageToReplace) {
@@ -2160,15 +2209,15 @@ export class ImageCtx {
     }
 
     await this.processUploadQueue(config)
-    this.sortImagesInternal() // Calls the private sortImages method
-
-    // Only auto-select a fresh image when there wasn't already an active image.
-    if (!imageToReplace && !initialActiveImageId) {
-      this.setActiveImageToTargetOrFirst()
+    // Completion may belong to a viewer that has since navigated elsewhere.
+    if (this.state.context === contextAtStart) {
+      this.sortImagesInternal() // Calls the private sortImages method
+      // Only auto-select a fresh image when there wasn't already an active image.
+      if (!imageToReplace && !initialActiveImageId) this.setActiveImageToTargetOrFirst()
     }
-    // Invalidate the resource with the new image
-    if (this.state.context?.ctxType && this.state.context?.ctxId) {
-      this.invalidateResource(this.state.context.ctxType, this.state.context.ctxId)
+    // Invalidate the resource with the new image, not the newly selected viewer.
+    if (contextAtStart?.ctxType && contextAtStart.ctxId) {
+      await this.invalidateResource(contextAtStart.ctxType, contextAtStart.ctxId)
     }
   }
 
@@ -2228,13 +2277,13 @@ export class ImageCtx {
         return null
       }
 
-      cache.set(resourceId, {
-        ...cachedResource,
-        image: null,
-      })
+      const optimisticResource = { ...cachedResource, image: null }
+      cache.set(resourceId, optimisticResource)
 
       return () => {
-        cache.set(resourceId, cachedResource)
+        // A newer portrait, resource edit or identity clear supersedes this rollback.
+        if (cache.get(resourceId) === optimisticResource)
+          cache.set(resourceId, cachedResource)
       }
     }
 
@@ -2254,90 +2303,208 @@ export class ImageCtx {
   }
 
   /**
-   * Marks cached feature image collections stale after admin image mutations so future
-   * feature payloads rehydrate relation fields from the server instead of replaying
-   * pre-mutation image arrays.
-   * @param context Resource context whose cached images should be invalidated.
-   * @returns Nothing after marking the cached collection stale.
+   * Reconciles shared resource queries after an image mutation without native updates.
+   * @param context Resource context captured before the mutation.
+   * @returns Completion of active-query refreshes; inactive snapshots are invalidated.
+   * @remarks Clearing entity images alone leaves native Feature pages and map rows stale.
    */
-  private invalidateFeatureImageCache(context = this.state.context): void {
-    if (context?.ctxType !== 'feature' || !context?.ctxId) {
-      return
+  private async reconcileImageMutation(
+    context: Partial<Pick<ImageUploadCtx, 'ctxType' | 'ctxId'>> | null = this.state
+      .context,
+  ): Promise<void> {
+    if (!context?.ctxType || !context.ctxId) return
+    if (context.ctxType === 'feature' && context.ctxId) {
+      const feature = this.appCtx.cache.feature.get(context.ctxId) as
+        | Feature
+        | undefined
+      if (feature)
+        this.appCtx.cache.feature.set(context.ctxId, { ...feature, images: undefined })
     }
-
-    const feature = this.appCtx.cache.feature.get(context.ctxId) as Feature | undefined
-
-    if (!feature) return
-
-    this.appCtx.cache.feature.set(context.ctxId, {
-      ...feature,
-      images: undefined,
-    })
+    // Resource portraits also appear in hierarchy pages; Feature queries contain canonical assets.
+    await this.appCtx.resources.reconcile(
+      context.ctxType === 'project' || context.ctxType === 'organisation'
+        ? context.ctxType
+        : 'feature',
+    )
   }
 
+  /**
+   * Identifies the account scope, destination and submitted options of a prepared upload.
+   * @param context Captured upload destination and replacement identity.
+   * @param extended Explicit Feature metadata, if supplied.
+   * @returns Stable retry identity within this viewer lifetime.
+   */
+  private uploadConfirmationIdentity(
+    context: ImageUploadCtx,
+    extended?: { isPublished: boolean; intent: Intent },
+  ): string {
+    return JSON.stringify([
+      this.appCtx.resources.scopeKey,
+      context.ctxType,
+      context.ctxId,
+      context.hub?.id,
+      context.organisation?.id,
+      context.project?.id,
+      context.imageToReplace?.image.id,
+      extended ? [extended.isPublished, extended.intent] : null,
+    ])
+  }
+
+  /**
+   * Retains a completed PUT for confirmation replay while its queue entry still exists.
+   * @param entry Queue identity and original File.
+   * @param identity Scope captured before upload started.
+   * @param prepared Immutable signed confirmation and metadata.
+   * @param featureOptions Explicit Feature options to preserve for the retry button.
+   * @returns Nothing; removed entries never regain retained credentials.
+   */
+  private retainUploadConfirmation(
+    entry: ImageUpload,
+    identity: string,
+    prepared: Awaited<ReturnType<typeof prepareImageUpload>>,
+    featureOptions?: { isPublished: boolean; intent: Intent },
+  ): void {
+    if (
+      this.state.uploadQueue.some(
+        item => item.optimisticKey === entry.optimisticKey && item.file === entry.file,
+      )
+    )
+      this.preparedConfirmations.set(entry.optimisticKey, {
+        file: entry.file,
+        identity,
+        prepared,
+        featureOptions: featureOptions ? { ...featureOptions } : undefined,
+      })
+  }
+
+  /**
+   * Looks up confirmation work without issuing a fresh upload grant.
+   * @param entry Queue identity and current File.
+   * @param identity Current account/destination/options identity.
+   * @returns Matching prepared upload, or undefined after changed input invalidates it.
+   * @remarks Expired grants are replayed and rejected by the server, never silently replaced.
+   */
+  private retainedUploadConfirmation(
+    entry: ImageUpload,
+    identity: string,
+  ): Awaited<ReturnType<typeof prepareImageUpload>> | undefined {
+    const retained = this.preparedConfirmations.get(entry.optimisticKey)
+    if (retained?.file === entry.file && retained.identity === identity)
+      return retained.prepared
+    this.preparedConfirmations.delete(entry.optimisticKey)
+    return undefined
+  }
+
+  /**
+   * Uploads queued objects and finalizes them sequentially before shared reconciliation.
+   * @param config Per-entry completion callbacks.
+   * @returns Completion of the batch and its shared-query refresh.
+   * @remarks Callback failures are reported after remaining entries finish; committed uploads stay successful.
+   */
   private async processUploadQueue(config: {
     onSuccess?: (savedImage: ImageCtxEnvelope) => void
     onError?: () => void
   }) {
+    const completionErrors: unknown[] = []
     const pendingUploads = this.state.uploadQueue.filter(
-      item => item.status === 'uploading',
+      item =>
+        item.status === 'uploading' && !this.activeUploads.has(item.optimisticKey),
     )
 
-    const preparedUploads = await Promise.all(
-      pendingUploads.map(async fileObject => {
-        try {
-          const uploadCtx = this.getUploadCtx(fileObject.imageToReplace)
-          const preparedUpload = await prepareImageUpload(fileObject.file, uploadCtx)
-          await uploadPreparedImageObject(preparedUpload)
-          this.setUploadStatus(fileObject, 'finalizing')
+    for (const upload of pendingUploads) this.activeUploads.add(upload.optimisticKey)
+    try {
+      const preparedUploads = await Promise.all(
+        pendingUploads.map(async fileObject => {
+          try {
+            const uploadCtx = this.getUploadCtx(fileObject.imageToReplace)
+            const identity = this.uploadConfirmationIdentity(uploadCtx)
+            let preparedUpload = this.retainedUploadConfirmation(fileObject, identity)
+            if (!preparedUpload) {
+              preparedUpload = await prepareImageUpload(fileObject.file, uploadCtx)
+              await uploadPreparedImageObject(preparedUpload)
+              this.retainUploadConfirmation(fileObject, identity, preparedUpload)
+            }
+            this.setUploadStatus(fileObject, 'finalizing')
 
-          return { fileObject, uploadCtx, preparedUpload }
+            return { fileObject, uploadCtx, preparedUpload }
+          } catch (error) {
+            const errorMessage = this.getUploadErrorMessage(error)
+            this.setUploadError(fileObject, errorMessage)
+            this.updateActivePreview()
+
+            try {
+              config.onError?.()
+            } catch (callbackError) {
+              completionErrors.push(callbackError)
+            }
+
+            return null
+          }
+        }),
+      )
+
+      const changedContexts = new Map<string, ImageUploadCtx>()
+      // Finalize sequentially to avoid D1 SQLITE_BUSY lock contention during persistence.
+      for (const preparedEntry of preparedUploads) {
+        if (!preparedEntry) continue
+
+        let savedImage: ImageCtxEnvelope
+        try {
+          savedImage = await finalizePreparedImageUpload(preparedEntry.preparedUpload)
         } catch (error) {
           const errorMessage = this.getUploadErrorMessage(error)
-          this.setUploadError(fileObject, errorMessage)
+          console.error('[ImageCtx] upload finalize failed', {
+            optimisticKey: preparedEntry.fileObject.optimisticKey,
+            fileName: preparedEntry.fileObject.file.name,
+            imageToReplaceId: preparedEntry.uploadCtx.imageToReplace?.image.id ?? null,
+            error,
+          })
+          this.setUploadError(preparedEntry.fileObject, errorMessage)
           this.updateActivePreview()
 
-          if (config.onError) {
-            config.onError()
+          try {
+            config.onError?.()
+          } catch (callbackError) {
+            completionErrors.push(callbackError)
           }
-
-          return null
+          continue
         }
-      }),
-    )
-
-    // Finalize sequentially to avoid D1 SQLITE_BUSY lock contention during persistence.
-    for (const preparedEntry of preparedUploads) {
-      if (!preparedEntry) continue
-
-      try {
-        const savedImage = await finalizePreparedImageUpload(
-          preparedEntry.preparedUpload,
-        )
-        const savedEnvelope = this.applySuccessfulUploadResult(
-          preparedEntry.fileObject,
+        this.preparedConfirmations.delete(preparedEntry.fileObject.optimisticKey)
+        // Persistence has committed; local callbacks cannot turn this entry into a failed upload.
+        changedContexts.set(
+          JSON.stringify([
+            preparedEntry.uploadCtx.ctxType,
+            preparedEntry.uploadCtx.ctxId,
+          ]),
           preparedEntry.uploadCtx,
-          savedImage,
         )
-
-        if (config.onSuccess) {
-          config.onSuccess(savedEnvelope)
-        }
-      } catch (error) {
-        const errorMessage = this.getUploadErrorMessage(error)
-        console.error('[ImageCtx] upload finalize failed', {
-          optimisticKey: preparedEntry.fileObject.optimisticKey,
-          fileName: preparedEntry.fileObject.file.name,
-          imageToReplaceId: preparedEntry.uploadCtx.imageToReplace?.image.id ?? null,
-          error,
-        })
-        this.setUploadError(preparedEntry.fileObject, errorMessage)
-        this.updateActivePreview()
-
-        if (config.onError) {
-          config.onError()
+        try {
+          const savedEnvelope = this.applySuccessfulUploadResult(
+            preparedEntry.fileObject,
+            preparedEntry.uploadCtx,
+            savedImage,
+          )
+          config.onSuccess?.(savedEnvelope)
+        } catch (completionError) {
+          completionErrors.push(completionError)
         }
       }
+      // Refresh each committed resource once, outside upload failure/retry handling.
+      await Promise.all(
+        [...changedContexts.values()].map(context =>
+          this.reconcileImageMutation(context),
+        ),
+      )
+      if (completionErrors.length)
+        throw new AggregateError(
+          completionErrors,
+          changedContexts.size
+            ? 'Images saved, but local completion failed'
+            : 'Upload completion callbacks failed',
+        )
+    } finally {
+      for (const upload of pendingUploads)
+        this.activeUploads.delete(upload.optimisticKey)
     }
   }
 
@@ -2352,37 +2519,72 @@ export class ImageCtx {
     }
   }) {
     const { fileObject, event, extended } = args
-    const localFetch = event?.fetch ?? fetch
-
+    if (this.activeUploads.has(fileObject.optimisticKey))
+      throw new Error('Upload already in progress')
+    this.activeUploads.add(fileObject.optimisticKey)
     try {
-      const uploadCtx = this.getUploadCtx(fileObject.imageToReplace)
-      const savedImage = await uploadAndProcessImage(
-        fileObject.file,
-        uploadCtx,
-        extended?.featureImage,
-        localFetch,
-        {
-          onObjectUploaded: () => {
-            this.setUploadStatus(fileObject, 'finalizing')
-          },
-        },
-      )
-      return this.applySuccessfulUploadResult(fileObject, uploadCtx, savedImage)
-    } catch (error) {
-      const errorMessage = this.getUploadErrorMessage(error)
-      console.error('[ImageCtx] upload failed', {
-        optimisticKey: fileObject.optimisticKey,
-        fileName: fileObject.file.name,
-        imageToReplaceId: fileObject.imageToReplace?.image.id ?? null,
-        error,
-      })
-      this.setUploadError(fileObject, errorMessage)
-      this.updateActivePreview()
-      throw error // Re-throw to allow calling code to handle
+      const localFetch = event?.fetch ?? fetch
+
+      let savedImage: ImageCtxEnvelope
+      let uploadCtx: ImageUploadCtx
+      try {
+        uploadCtx = this.getUploadCtx(fileObject.imageToReplace)
+        const previous = this.preparedConfirmations.get(fileObject.optimisticKey)
+        const featureOptions =
+          extended?.featureImage ??
+          (previous?.file === fileObject.file &&
+          previous.identity ===
+            this.uploadConfirmationIdentity(uploadCtx, previous.featureOptions)
+            ? previous.featureOptions
+            : undefined)
+        const identity = this.uploadConfirmationIdentity(uploadCtx, featureOptions)
+        const retained = this.retainedUploadConfirmation(fileObject, identity)
+        if (retained) this.setUploadStatus(fileObject, 'finalizing')
+        savedImage = retained
+          ? await finalizePreparedImageUpload(retained)
+          : await uploadAndProcessImage(
+              fileObject.file,
+              uploadCtx,
+              featureOptions,
+              localFetch,
+              {
+                onObjectUploaded: prepared => {
+                  this.retainUploadConfirmation(
+                    fileObject,
+                    identity,
+                    prepared,
+                    featureOptions,
+                  )
+                  this.setUploadStatus(fileObject, 'finalizing')
+                },
+              },
+            )
+      } catch (error) {
+        const errorMessage = this.getUploadErrorMessage(error)
+        console.error('[ImageCtx] upload failed', {
+          optimisticKey: fileObject.optimisticKey,
+          fileName: fileObject.file.name,
+          imageToReplaceId: fileObject.imageToReplace?.image.id ?? null,
+          error,
+        })
+        this.setUploadError(fileObject, errorMessage)
+        this.updateActivePreview()
+        throw error // Re-throw to allow calling code to handle
+      }
+      this.preparedConfirmations.delete(fileObject.optimisticKey)
+      // The upload is committed; refresh failure must not turn it into a retryable upload error.
+      try {
+        return this.applySuccessfulUploadResult(fileObject, uploadCtx, savedImage)
+      } finally {
+        await this.reconcileImageMutation(uploadCtx)
+      }
+    } finally {
+      this.activeUploads.delete(fileObject.optimisticKey)
     }
   }
 
   retryUpload(fileObject: ImageUpload) {
+    if (this.activeUploads.has(fileObject.optimisticKey)) return
     this.setUploadToRetry(fileObject)
     void this.upload({ fileObject }).catch(() => {})
   }
@@ -2406,7 +2608,7 @@ export class ImageCtx {
   // Feature images are stored in
   // - {organsation.code}/{project.code}/{image.image.publicId}
   // There can be multiple images per feature, so by default uploads create a new asset path.
-  // A replace flow can explicitly reuse the existing publicId to overwrite the current source object.
+  // A replace flow keeps the image row identity but selects a fresh source object after confirmation.
   // Admins can drop images into the viewer to replace the existing image from the Feature Image section.
 
   // Task images are stored in
@@ -2448,7 +2650,7 @@ export class ImageCtx {
         meta: { isAdminRequest: true },
       })
       // Navigation must not redirect this mutation's refresh into another resource.
-      this.invalidateFeatureImageCache(contextAtStart)
+      await this.reconcileImageMutation(contextAtStart)
       if (this.state.context !== contextAtStart) return
       this.setForImage(imageId, 'intent', newIntent)
       this.setForImage(imageId, 'isPublished', isPublished)
@@ -2488,7 +2690,7 @@ export class ImageCtx {
     })
     if (updatedImage?.data?.image?.id) {
       // Invalidate the mutated resource before refetching its image collection.
-      this.invalidateFeatureImageCache(contextAtStart)
+      await this.reconcileImageMutation(contextAtStart)
       if (this.state.context !== contextAtStart) return
       this.setForImage(imageId, 'isPublished', isPublished)
       await this.refreshImages()
@@ -2524,7 +2726,7 @@ export class ImageCtx {
       })
 
       // Refresh fresh metadata only in the viewer that initiated the rotation.
-      this.invalidateFeatureImageCache(contextAtStart)
+      await this.reconcileImageMutation(contextAtStart)
       if (this.state.context !== contextAtStart) return
       await this.refreshImages()
     } catch (error) {
@@ -2570,10 +2772,32 @@ export class ImageCtx {
    * @param ctx Mutation context to send to the server.
    * @returns Resolves after deletion-side effects have settled.
    */
-  async delete(imageId: Id, ctx: ImageEditCtx) {
+  delete(imageId: Id, ctx: ImageEditCtx): Promise<void> {
+    const key = JSON.stringify([ctx.ctxType, ctx.ctxId, imageId])
+    const pending = this.imageDeletions.get(key)
+    if (pending) return pending
+    const operation = this.performDelete(imageId, ctx).finally(() => {
+      if (this.imageDeletions.get(key) === operation) this.imageDeletions.delete(key)
+    })
+    this.imageDeletions.set(key, operation)
+    return operation
+  }
+
+  /**
+   * Performs one deletion with a rollback limited to its own image and uploads.
+   * @param imageId Image identity.
+   * @param ctx Authorization context for the mutation.
+   * @returns Completion of the mutation and shared reconciliation.
+   */
+  private async performDelete(imageId: Id, ctx: ImageEditCtx): Promise<void> {
     const contextAtStart = this.state.context
     const imagesBeforeDelete = this.getImages()
-    const uploadQueueBeforeDelete = [...this.state.uploadQueue]
+    const removedUploads = this.state.uploadQueue.filter(
+      upload => !upload.imageToReplace && upload.savedImage?.image.id === imageId,
+    )
+    const deletedImage = imagesBeforeDelete.find(image => image.image.id === imageId)
+    let selectionAfterDelete: ImageCtxEnvelope | null = null
+    let itemAfterDelete: string | null = null
     const activeImageBeforeDelete = this.state.activeImage
     const activeItemIdBeforeDelete = this.state.activeItemId
     const rollbackSingleResourceImageCache =
@@ -2588,16 +2812,13 @@ export class ImageCtx {
           null)
         : null
 
+    let deleted = false
     try {
       this.removeImage(imageId)
       this.setUploadQueue(
         this.state.uploadQueue.filter(upload => {
           const isDeletedSavedUpload =
             !upload.imageToReplace && upload.savedImage?.image.id === imageId
-
-          if (isDeletedSavedUpload && upload.preview) {
-            URL.revokeObjectURL(upload.preview)
-          }
 
           return !isDeletedSavedUpload
         }),
@@ -2611,28 +2832,43 @@ export class ImageCtx {
         }
       }
 
+      selectionAfterDelete = this.state.activeImage
+      itemAfterDelete = this.state.activeItemId
       await deleteImageRemote({
         id: imageId,
         ctxType: ctx.ctxType,
         ctxId: ctx.ctxId,
         meta: { isAdminRequest: true },
       })
+      deleted = true
+      // Release removed previews only after commit; failed deletions still need them.
+      for (const upload of removedUploads)
+        if (upload.preview) URL.revokeObjectURL(upload.preview)
     } catch (error: unknown) {
       rollbackSingleResourceImageCache?.()
       // Navigation can replace the viewer while this deletion is pending.
       if (this.state.context !== contextAtStart) return
-      await this.setImages(imagesBeforeDelete)
-      if (this.state.context !== contextAtStart) return
-      this.setUploadQueue(uploadQueueBeforeDelete)
-
-      if (activeImageBeforeDelete) {
-        const restoredActiveImage = this.getImage(activeImageBeforeDelete.image.id)
-
-        if (restoredActiveImage) {
-          this.setActiveImage(restoredActiveImage, false, activeItemIdBeforeDelete)
-        }
-      } else {
-        this.resetActiveImage()
+      // Restore only our removed entry; other deletions, additions and edits remain authoritative.
+      if (deletedImage && !this.state.images.has(imageId)) {
+        this.state.images.set(imageId, deletedImage)
+        this.sortImagesInternal()
+      }
+      const currentKeys = new Set(
+        this.state.uploadQueue.map(upload => upload.optimisticKey),
+      )
+      this.setUploadQueue(
+        [
+          ...this.state.uploadQueue,
+          ...removedUploads.filter(upload => !currentKeys.has(upload.optimisticKey)),
+        ].sort((a, b) => a.queuedAt - b.queuedAt),
+      )
+      if (
+        activeImageBeforeDelete?.image.id === imageId &&
+        this.state.activeImage === selectionAfterDelete &&
+        this.state.activeItemId === itemAfterDelete
+      ) {
+        const restored = this.getImage(imageId)
+        if (restored) this.setActiveImage(restored, false, activeItemIdBeforeDelete)
       }
 
       // Extract error message from the server response
@@ -2660,6 +2896,8 @@ export class ImageCtx {
         this.resetThumbnailLoadStatus(imageId)
       }
     }
+    // Reconcile only committed deletions and never roll them back on a refresh failure.
+    if (deleted) await this.reconcileImageMutation(ctx)
   }
 
   // ═══════════════════════
