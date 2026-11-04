@@ -57,6 +57,9 @@ export function retainAuthoredAddress(
           addressSnapshotId: null,
           records: {},
           fallbackDisplay: { ...old.fallbackDisplay },
+          ...(old.displayOverrides
+            ? { displayOverrides: { ...old.displayOverrides } }
+            : {}),
           authored,
         },
       },

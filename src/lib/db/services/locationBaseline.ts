@@ -124,6 +124,17 @@ export async function readFeatureLocationBaseline(
   const address = parsedAddress.data
   // Preserve effective labels while retaining the full structured correction envelope.
   const fallbackDisplay = { ...address.source.fallbackDisplay }
+  const { displayOverrides: retainedDisplayOverrides, ...sourceEvidence } =
+    address.source
+  const displayOverrides = { ...retainedDisplayOverrides }
+  // Preserve complete authored labels (including explicit clears) in every content locale.
+  for (const [tag, corrections] of Object.entries(address.overrides)) {
+    if (Object.hasOwn(corrections, 'formattedAddress')) {
+      displayOverrides[tag] = String(corrections.formattedAddress ?? '')
+    } else if (Object.keys(corrections).length) {
+      delete displayOverrides[tag]
+    }
+  }
   for (const locale of Object.keys(ADDRESS_LOCALES) as LocaleKey[]) {
     const tag = ADDRESS_LOCALES[locale]
     if (
@@ -297,8 +308,9 @@ export async function readFeatureLocationBaseline(
     location: {
       geometry: row.geometry,
       address: {
-        ...address.source,
+        ...sourceEvidence,
         fallbackDisplay,
+        ...(Object.keys(displayOverrides).length ? { displayOverrides } : {}),
         ...(authored ? { authored } : {}),
       },
     },

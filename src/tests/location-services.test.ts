@@ -4416,7 +4416,7 @@ describe('retained negative Location identity decisions', () => {
       apply(target, receiver, args) {
         sqlite
           .prepare(
-            `UPDATE locationIdentityReview SET rejection=json_object('reviewId',?1,'locationId',?2,'ssId',?3,'actorId',?4,'reason',?5,'createdAt','now') WHERE id=?1`,
+            `UPDATE locationIdentityReview SET rejection=json_object('reviewId',?,'locationId',?,'ssId',?,'actorId',?,'reason',?,'createdAt','now') WHERE id=?`,
           )
           .run(
             input.reviewId,
@@ -4424,6 +4424,7 @@ describe('retained negative Location identity decisions', () => {
             candidate.ssId,
             'other-reviewer',
             'Different shop',
+            input.reviewId,
           )
         return Reflect.apply(target, receiver, args)
       },
@@ -4968,73 +4969,77 @@ it.each([false, true])(
   },
 )
 
-it('retains local structured Feature corrections and explicit clearing without duplicating unit labels', async () => {
-  const { db, sqlite } = setup()
-  const authored = {
-    granularity: 'building',
-    i18n: {
-      en: {
-        formattedAddress: '',
-        buildingName: 'Shared Building',
-        streetName: 'Example Road',
+it.each([null, '', 'Use the side entrance'])(
+  'retains local structured Feature corrections and complete label %s without duplicating unit labels',
+  async label => {
+    const { db, sqlite } = setup()
+    const authored = {
+      scope: 'building',
+      i18n: {
+        en: {
+          formattedAddress: '',
+          buildingName: 'Shared Building',
+          streetName: 'Example Road',
+        },
       },
-    },
-    unit: {
-      unitRef: 'A',
-      unitType: 'U',
-      floorRef: '2',
-      floorType: 'F',
-      unitPortion: null,
-    },
-    unitI18n: {},
-  }
-  const address = {
-    version: 1,
-    source: { ...facts.location.address, fallbackDisplay: {}, authored },
-    coordinates: facts.location.geometry.coordinates,
-    matchStatus: 'unresolved',
-    overrides: { en: { buildingName: 'Feature Building' } },
-  }
-  sqlite
-    .prepare('UPDATE feature SET geometry=?,addressMeta=? WHERE id=?')
-    .run(JSON.stringify(facts.location.geometry), JSON.stringify({ address }), 'f')
-  sqlite
-    .prepare(
-      'INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES (?,?,?,?)',
+      unit: {
+        unitRef: 'A',
+        unitType: 'U',
+        floorRef: '2',
+        floorType: 'F',
+        unitPortion: null,
+      },
+      unitI18n: {},
+    }
+    const address = {
+      version: 1,
+      source: { ...facts.location.address, fallbackDisplay: {}, authored },
+      coordinates: facts.location.geometry.coordinates,
+      matchStatus: 'unresolved',
+      overrides: { en: { buildingName: 'Feature Building' } },
+    }
+    sqlite
+      .prepare('UPDATE feature SET geometry=?,addressMeta=? WHERE id=?')
+      .run(JSON.stringify(facts.location.geometry), JSON.stringify({ address }), 'f')
+    sqlite
+      .prepare(
+        'INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES (?,?,?,?)',
+      )
+      .run('f', 'en', 'Bakery', 'Unit A, 2/F, Feature Building, Example Road')
+    const baseline = await readFeatureLocationBaseline(db, 'f', 'p')
+    expect(baseline.status).toBe('ready')
+    if (baseline.status !== 'ready') throw new Error('Missing baseline')
+    const { getAddressDisplay } = await import('#lib/addresses/featureAddress.js')
+    const effective = {
+      ...baseline.baseline.address,
+      source: baseline.baseline.effective.location!.address,
+      overrides: {},
+    }
+    expect(getAddressDisplay(effective, 'en')).toBe(
+      'Unit A, 2/F, Feature Building, Example Road',
     )
-    .run('f', 'en', 'Bakery', 'Unit A, 2/F, Feature Building, Example Road')
-  const baseline = await readFeatureLocationBaseline(db, 'f', 'p')
-  expect(baseline.status).toBe('ready')
-  if (baseline.status !== 'ready') throw new Error('Missing baseline')
-  const { getAddressDisplay } = await import('#lib/addresses/featureAddress.js')
-  const effective = {
-    ...baseline.baseline.address,
-    source: baseline.baseline.effective.location!.address,
-    overrides: {},
-  }
-  expect(getAddressDisplay(effective, 'en')).toBe(
-    'Unit A, 2/F, Feature Building, Example Road',
-  )
-  expect(
-    baseline.baseline.effective.location?.address.authored?.i18n.en.buildingName,
-  ).toBe('Feature Building')
-  const clear = { ...address, overrides: { en: { formattedAddress: null } } }
-  sqlite
-    .prepare('UPDATE feature SET addressMeta=? WHERE id=?')
-    .run(JSON.stringify({ address: clear }), 'f')
-  const cleared = await readFeatureLocationBaseline(db, 'f', 'p')
-  if (cleared.status !== 'ready') throw new Error('Missing clear baseline')
-  expect(
-    getAddressDisplay(
-      {
-        ...cleared.baseline.address,
-        source: cleared.baseline.effective.location!.address,
-        overrides: {},
-      },
-      'en',
-    ),
-  ).toBe('')
-})
+    expect(
+      baseline.baseline.effective.location?.address.authored?.i18n.en.buildingName,
+    ).toBe('Feature Building')
+    const clear = { ...address, overrides: { en: { formattedAddress: label } } }
+    sqlite
+      .prepare('UPDATE feature SET addressMeta=? WHERE id=?')
+      .run(JSON.stringify({ address: clear }), 'f')
+    const cleared = await readFeatureLocationBaseline(db, 'f', 'p')
+    if (cleared.status !== 'ready') throw new Error('Missing clear baseline')
+    expect(
+      getAddressDisplay(
+        {
+          ...cleared.baseline.address,
+          source: cleared.baseline.effective.location!.address,
+          overrides: {},
+        },
+        'en',
+      ),
+    ).toBe(label ?? '')
+    expect(cleared.baseline.effective.location!.address.authored).toEqual(authored)
+  },
+)
 
 describe('Organisation-wide Location corrections', () => {
   /** Build real SQL projections so adoption and rollback exercise the same columns as production. */

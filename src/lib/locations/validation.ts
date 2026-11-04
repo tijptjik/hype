@@ -1,5 +1,9 @@
 // AUTHORED CONTENT LOCALES
-import { contentLocaleMap, contentStorageTag, adaptContentMap } from '#lib/i18n/contentRecords.js'
+import {
+  contentLocaleMap,
+  contentStorageTag,
+  adaptContentMap,
+} from '#lib/i18n/contentRecords.js'
 // VALIDATION
 import { z } from 'zod'
 import { LocationEntitySchema } from './factsDetails'
@@ -17,7 +21,9 @@ import type {
 
 const names = z.record(z.string(), z.string())
 /** Complete authored name set; absent locales are explicitly removed by the correction writer. */
-export const LocationNamesEditSchema = contentLocaleMap(z.string().trim().min(1).max(1000))
+export const LocationNamesEditSchema = contentLocaleMap(
+  z.string().trim().min(1).max(1000),
+)
   .transform(value => adaptContentMap(value, contentStorageTag))
   .refine(
     value => Object.keys(value).length > 0 && Object.keys(value).length <= 100,
@@ -40,6 +46,7 @@ const location = z.strictObject({
       addressSnapshotId: z.string().min(1).nullable(),
       records: z.record(z.string(), z.unknown()),
       fallbackDisplay: names,
+      displayOverrides: names.optional(),
     })
     .refine(
       address =>

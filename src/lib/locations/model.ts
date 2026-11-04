@@ -29,6 +29,8 @@ export type LocationAddress = {
   addressSnapshotId: string | null
   records: Record<string, unknown>
   fallbackDisplay: Record<string, string>
+  /** Explicit complete labels; empty strings suppress display. */
+  displayOverrides?: Record<string, string>
 }
 
 /** Location is adopted atomically so a new unit cannot inherit an old building. */

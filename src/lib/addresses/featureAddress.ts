@@ -213,6 +213,15 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
   const overrides = address.overrides[tag] ?? {}
   const hasDisplayOverride = Object.hasOwn(overrides, 'formattedAddress')
   if (hasDisplayOverride) return String(overrides.formattedAddress ?? '')
+  // Effective local baselines retain complete labels separately from structured evidence.
+  const retainedDisplay = address.source.displayOverrides
+  if (
+    !Object.keys(overrides).length &&
+    retainedDisplay &&
+    Object.hasOwn(retainedDisplay, tag)
+  ) {
+    return retainedDisplay[tag]
+  }
   const value = getAddressLocale(address, locale)
   // A partial component edit must not discard retained text that has not been structured yet.
   const original = getAddressLocale({ ...address, overrides: {} }, locale)

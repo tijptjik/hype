@@ -45,6 +45,28 @@ function fixture() {
 }
 
 describe('canonical feature addresses', () => {
+  it('round-trips explicit baseline labels while preserving structured evidence and later edits', () => {
+    const address = fixture()
+    const evidence = structuredClone(address.source.records)
+    address.source.displayOverrides = { en: '', 'zh-hant': 'Custom entrance' }
+    const restored = FeatureAddressSchema.parse(JSON.parse(JSON.stringify(address)))
+    expect(getAddressDisplay(restored, 'en')).toBe('')
+    expect(getAddressDisplay(restored, 'zhHant')).toBe('Custom entrance')
+    expect(
+      getAddressDisplay(
+        setAddressOverride(restored, 'en', 'streetName', 'New Street'),
+        'en',
+      ),
+    ).toBe('18 New Street')
+    expect(
+      getAddressDisplay(
+        setAddressOverride(restored, 'en', 'formattedAddress', 'New label'),
+        'en',
+      ),
+    ).toBe('New label')
+    expect(restored.source.records).toEqual(evidence)
+  })
+
   it('saves manual floor and unit details without inventing source unit identities', () => {
     const original = fixture()
     let address = setAddressOverride(original, 'en', 'floorExpression', '3/F')
