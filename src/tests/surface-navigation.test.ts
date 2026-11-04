@@ -24,8 +24,8 @@ describe('surface navigation projection', () => {
       resourceRef: 'one',
       facet: 'images',
     })
-    nav.syncUrl(url('/admin/features/one#address'), 'admin')
-    expect(nav.getActiveFacet()).toBe('address')
+    nav.syncUrl(url('/admin/features/one#location'), 'admin')
+    expect(nav.getActiveFacet()).toBe('location')
     nav.syncUrl(url('/admin/features'), 'admin')
     expect(nav.state).toEqual({
       resourceType: 'feature',
