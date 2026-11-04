@@ -7,11 +7,13 @@ Tracking: [account support #189](https://github.com/tijptjik/hype/issues/189),
 
 ## Production user sync and organisation users (5 November 2026)
 
-Refs #189 and #194. Implemented and locally verified on 5 November 2026; production
-acceptance remains pending. Tasktjik's HYPE and Breadline projects hold the requested
-verification tasks; the linked GitHub issues remain the public delivery record. Earlier
-local acceptance below does not establish production readiness. This design supersedes
-the earlier insert-only/fresh-target limitation.
+Refs #189 and #194. Implemented and locally verified on 5 November 2026; production data
+import and zero-write replay are now verified; authenticated directory, provider claims
+and enrolment acceptance remain pending. See the completed-import evidence below.
+Tasktjik's HYPE and Breadline projects hold the requested verification tasks; the linked
+GitHub issues remain the public delivery record. Earlier local acceptance below does not
+establish production readiness. This design supersedes the earlier
+insert-only/fresh-target limitation.
 
 ### Production schema boundary
 
@@ -23,12 +25,12 @@ identity schema is sufficient for initial insertion; source deletion eligibility
 adds a minimal `active` flag to the historic crosswalk.
 
 The full requirement does need one schema-only migration for organisation-user
-enrolment, role provenance and source-active status. Sync state stays in `.local`.
-Production currently has only Owner/Member staff roles and no organisation-user policy.
-It also lacks receipts for 0109–0158 and 0164–0167; having receipt 0163 is not evidence
-of a contiguous schema. Reconcile actual schema and migration dependencies against the
-exact release before applying anything. Never bulk-apply this dirty checkout's
-migrations as an import prerequisite.
+enrolment, role provenance and source-active status. Sync state stays in `.local`. The
+pre-rollout inspection found only Owner/Member staff roles and no organisation-user
+policy. It also lacked receipts for 0109–0158 and 0164–0167; having receipt 0163 is not
+evidence of a contiguous schema. Reconcile actual schema and migration dependencies
+against the exact release before applying anything. Never bulk-apply this dirty
+checkout's migrations as an import prerequisite.
 
 Personal records, credentials, source snapshots, reviewed decisions, identity seeds,
 generated data SQL, before-images and execution receipts stay in private ignored
@@ -938,3 +940,51 @@ only after confirmed remote completion. Validation: 60 focused importer/adoption
 scoped TypeScript checks, exact-schema SQL rehearsal, Node operator bundles, production
 preflight and post-application replay pass. No further schema or application deployment
 was needed for this operational reconciliation.
+
+### Distinct-person correction and completed user import (5 November 2026)
+
+Refs #189 and #194. The user explicitly rejected the remaining cross-person merge. The
+shared source phone was not evidence of a shared identity. The saved review is
+superseded by two separate adoption cohorts, retaining each existing account and its own
+source-user/volunteer mappings. The ambiguous phone remains unassigned to either
+account, with the original value preserved privately. Existing credentials, roles,
+profiles and content did not move between these accounts. Adoption now obtains its
+effective phone from the normal planner so reviewed phone corrections cannot be
+discarded during application; a regression test covers distinct people sharing a source
+phone.
+
+Before bulk application, a minimal live identity/provider-subject/role index reconciled
+128 newer accounts, one removed anonymous account and a changed username in the retained
+initial baseline. It included five additional staff assignments. No passwords or session
+tokens were fetched, and no full production database export was needed. This initial
+reconciliation does not introduce recurring production pulls into consecutive syncs.
+
+The zero-exception production import is complete: **13,468 new users**, **13,494
+HKFoodWorks users** including existing stronger roles, and **14,302 active historic
+source identities** from 14,309 source rows with seven reviewed exclusions. Production
+contains 15,169 total users and 10,767 populated phone values. There are 13,492
+user-level organisation roles; all 14 owner and nine member assignments and their
+independent grants remain. The bulk plan inserts new accounts and adds source grants; it
+does not rewrite existing HYPE profiles or credentials.
+
+Read-back compared all 67,397 runtime mutations plus the 39 previously adopted history
+mappings: zero mismatches, zero foreign-key errors and zero duplicate provider subjects.
+The operator resumed the same immutable plan from its durable local cursor after a
+controlled interruption. Batches now contain 100 row changes/200 guarded statements,
+verified on D1 and tested against an older smaller-batch cursor with an unacknowledged
+batch. This proves interruption/resume; it does not claim a Time Travel restore was
+performed. A fresh recovery bookmark and before-images are retained privately.
+
+The accepted local baseline and source state were promoted only after remote completion.
+Replanning the same source produces zero mutations, zero exceptions and no checkpoint
+change; running that repeat plan through the production operator records zero runtime
+mutations. `.local/breadline/users/production/accepted-sync.json` points to the current
+private decisions, baseline, state, seed and receipts. The superseded review and source
+snapshot remain retained as evidence. Source payloads and progress stay outside Git and
+outside production bookkeeping tables.
+
+Validation: 62 focused tests and scoped TypeScript checks pass. No additional schema
+migration or application deployment was required. Authenticated production directory,
+live provider claims and enrolment acceptance remain open: the browser access host was
+unavailable. Data import completion does not close those broader release checks, and
+WhatsApp/Telegram discovery remains disabled.
