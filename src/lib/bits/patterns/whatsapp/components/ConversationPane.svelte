@@ -8,6 +8,7 @@ import Avatar from '#lib/bits/core/avatar/Avatar.svelte'
 import SearchIcon from 'virtual:icons/lucide/search'
 import XIcon from 'virtual:icons/lucide/x'
 // MESSAGING
+import { preserveMessageAnchor } from '#lib/messaging/scroll-anchor.js'
 import { sameMessageGroup } from '#lib/messaging/message-group.js'
 import { messageMediaKey } from '#lib/messaging/message-key.js'
 // COMPONENTS
@@ -78,6 +79,19 @@ const timeline = $derived(
     ),
 )
 let log = $state<HTMLDivElement>()
+let scrollAnchor: ReturnType<typeof preserveMessageAnchor> | undefined
+$effect(() => {
+  if (!log || typeof ResizeObserver === 'undefined') return
+  const anchor = preserveMessageAnchor(
+    log,
+    () => atBottom && !query && !quoteLoading && !quoteScroll,
+  )
+  scrollAnchor = anchor
+  return () => {
+    anchor.destroy()
+    if (scrollAnchor === anchor) scrollAnchor = undefined
+  }
+})
 let query = $state('')
 let searchOpen = $state(false)
 let searchInput = $state<HTMLInputElement>()
@@ -294,13 +308,12 @@ async function scrollHistory(force = false): Promise<void> {
     model.historyComplete
   )
     return
-  const chat = model.selectedChat,
-    height = log.scrollHeight,
-    top = log.scrollTop
+  const chat = model.selectedChat
+  scrollAnchor?.capture()
   await model.loadOlder?.()
   await tick()
   if (log && chat === model.selectedChat) {
-    log.scrollTop = top + log.scrollHeight - height
+    scrollAnchor?.restore()
     previousTop = log.scrollTop
   }
 }
@@ -501,7 +514,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
       quoteScroll = false
       if (event.deltaY < 0 && log && log.scrollTop === 0) void scrollHistory(true)
     }}
-    class="flex flex-col gap-3 overflow-y-auto overscroll-contain bg-surface bg-[image:linear-gradient(color-mix(in_srgb,var(--color-surface)_var(--chat-background-mask,94%),transparent),color-mix(in_srgb,var(--color-surface)_var(--chat-background-mask,94%),transparent)),var(--chat-background-image,none)] bg-[length:auto,var(--chat-background-size,320px)] bg-repeat p-3 sm:p-4 {fill
+    class="flex flex-col gap-3 [overflow-anchor:none] overflow-y-auto overscroll-contain bg-surface bg-[image:linear-gradient(color-mix(in_srgb,var(--color-surface)_var(--chat-background-mask,94%),transparent),color-mix(in_srgb,var(--color-surface)_var(--chat-background-mask,94%),transparent)),var(--chat-background-image,none)] bg-[length:auto,var(--chat-background-size,320px)] bg-repeat p-3 sm:p-4 {fill
       ? 'min-h-0 flex-1'
       : 'min-h-48 max-h-[60vh]'}"
     role="log"
