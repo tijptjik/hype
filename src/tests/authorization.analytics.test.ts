@@ -124,3 +124,29 @@ describe('resolveAnalyticsScope', () => {
     })
   })
 })
+
+it('ignores caller prefixes for a project owner while retaining only the owned project', async () => {
+  const result = await resolveAnalyticsScope({
+    db: {} as never,
+    user: { superAdmin: false },
+    userRoles: [projectOwner('project-1')],
+    requestedScope: scope({ scopePrefixes: ['/', 'h/foreign/'] }),
+  })
+  expect(result).toEqual({
+    allowed: true,
+    scope: { scopePrefixes: [], organisationIds: [], projectIds: ['project-1'] },
+  })
+})
+
+it.each([{ userRoles: [] }, { userRoles: [scopedHubAdmin('empty-hub')] }])(
+  'denies an empty effective scope despite caller prefixes',
+  async ({ userRoles }) => {
+    const result = await resolveAnalyticsScope({
+      db: dbWithResponses([[]]) as never,
+      user: { superAdmin: false },
+      userRoles,
+      requestedScope: scope({ scopePrefixes: ['h/foreign/'] }),
+    })
+    expect(result).toEqual({ allowed: false, code: 'INSUFFICIENT_ROLE' })
+  },
+)
