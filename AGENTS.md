@@ -2,10 +2,7 @@
 
 ## Response summaries
 
-- Before sending each final summary response, append its full Markdown text to `.local/prompts/{date}-{topic}.md`, creating the directory and file when needed.
-- Use `YYYY-MM-DD` for `{date}` in the user's timezone (Asia/Hong_Kong by default) and a concise lowercase kebab-case topic for `{topic}`.
-- Append subsequent summaries for the same date and topic to the same file, preserving earlier entries. Separate entries with a timestamp heading that includes the timezone.
-- Continue sending the summary in chat as usual; the local file is a searchable archive of those responses.
+- Preface every final summary response with "# SUMMARY `r{sequence}`" with `{sequence}` is an auto-incrementing number.
 
 ## Documentation
 
@@ -42,11 +39,13 @@
 - Use inline Tailwind utility classes for light styling.
 - Use a colocated `{component}.styles.ts` when the styling becomes heavy. Break the styles up into readable, logical chunks based on their domain and combine them with `cx()`
 - NEVER add semantic wrapper classes.
+- NEVER use Tailwind `truncate` for street names or essential labels in flex/grid result buttons: this pattern has hidden names in Firefox. Use a `minmax(0, 1fr)` grid column with `min-w-0 whitespace-normal break-words`, allow rows to grow, and verify narrow layouts in Firefox.
 - Use shared CSS in `src/lib/styles/*.css` under `@layer components` only for genuinely reusable theme tokens, CSS variables, cross-component states, or styling that cannot be expressed cleanly inline.
 
 ### Browser UI verification (Playwright)
 
 - Use the installed `playwright` package directly with Bun for manual UI checks; do not add a dependency solely for this.
+- Call it directly with `bun -e "import { chromium } from 'playwright'; /* launch, inspect, screenshot, close */"` when the `playwright-cli` wrapper cannot resolve this checkout's dependencies.
 - For admin UI verification, use the user's existing authenticated browser session. A redirect from a fresh unauthenticated Playwright context does not establish that no admin session is available.
 - Start the app with `bun run dev -- --host 127.0.0.1 --port 4173`, then stop it after the check.
 - Launch Chromium with `args: ['--disable-web-security']` for local map verification: the development origin otherwise cannot load the external map tiles because of CORS.
