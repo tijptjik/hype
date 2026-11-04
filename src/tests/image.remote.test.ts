@@ -5,7 +5,6 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import sharp from 'sharp'
 import { withRemoteMeta } from './remote-function-mock'
-import { createUploadedImage } from '#lib/db/services/image.js'
 
 const {
   mockAuthorizeImageList,
@@ -22,6 +21,9 @@ const {
   mockToResponseShapeProjectOrOrganisation,
   mockUpdateImageForContext,
   mockCreateFeatureImage,
+  mockCreateUploadedFeatureImage,
+  mockCreateUploadedResourceImage,
+  mockGetResourceUploadSnapshot,
   mockCreateImageRecord,
   mockLoadFeatureCanonicalImageOccupancy,
   mockLoadImageById,
@@ -39,7 +41,9 @@ const {
   mockReadMetadataDocument,
   mockVerifyUploadToken,
   mockWaitUntil,
+  mockHasImageStorageReference,
 } = vi.hoisted(() => ({
+  mockHasImageStorageReference: vi.fn(async () => false),
   mockAuthorizeImageList: vi.fn((): { allowed: boolean; code?: string } => ({
     allowed: true,
   })),
@@ -59,6 +63,9 @@ const {
   mockToResponseShape: vi.fn(async (image: unknown) => image),
   mockToResponseShapeProjectOrOrganisation: vi.fn(async (image: unknown) => image),
   mockUpdateImageForContext: vi.fn(async () => ({ data: { id: 'img-1' } })),
+  mockCreateUploadedFeatureImage: vi.fn(),
+  mockCreateUploadedResourceImage: vi.fn(),
+  mockGetResourceUploadSnapshot: vi.fn(),
   mockCreateFeatureImage: vi.fn(async () => ({ id: 'fi-1' })),
   mockCreateImageRecord: vi.fn(async () => ({
     id: 'img-1',
@@ -109,6 +116,11 @@ const {
   mockWaitUntil: vi.fn(),
 }))
 
+vi.mock('#lib/db/services/imageCleanup.js', async original => ({
+  ...(await original<object>()),
+  hasImageStorageReference: mockHasImageStorageReference,
+}))
+
 vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
@@ -148,6 +160,15 @@ vi.mock('#lib/api/services/image.js', () => ({
   updateImageForContext: mockUpdateImageForContext,
 }))
 
+vi.mock('#lib/db/services/imageUpload.js', () => ({
+  createUploadedFeatureImage: mockCreateUploadedFeatureImage,
+  getFeatureImageCreationScope: vi.fn(async () => ({
+    projectId: 'project',
+    organisationId: 'organisation',
+    hubId: 'hub',
+  })),
+}))
+
 vi.mock('#lib/db/services/image.js', () => ({
   createFeatureImage: mockCreateFeatureImage,
   createImage: mockCreateImageRecord,
@@ -183,6 +204,11 @@ vi.mock('coordinate-parser', () => ({
       return 0
     }
   },
+}))
+
+vi.mock('#lib/db/services/resourceImageUpload.js', () => ({
+  createUploadedResourceImage: mockCreateUploadedResourceImage,
+  getResourceUploadSnapshot: mockGetResourceUploadSnapshot,
 }))
 
 vi.mock('#lib/db/services/imageMutationScope.js', async () => {
@@ -287,12 +313,26 @@ describe('image.remote', () => {
   })
 
   beforeEach(() => {
+    mockHasImageStorageReference.mockResolvedValue(false)
+    mockCreateUploadedResourceImage
+      .mockReset()
+      .mockImplementation(() => mockCreateImageRecord())
+    mockGetResourceUploadSnapshot.mockResolvedValue({
+      imageId: null,
+      modifiedAt: 'revision',
+      organisationId: null,
+      hubId: null,
+    })
     vi.clearAllMocks()
     mockCreateImageRecord.mockReset()
     mockCreateImageRecord.mockResolvedValue({
       id: 'img-1',
       publicId: null as string | null,
     })
+    mockCreateUploadedFeatureImage.mockReset().mockImplementation(async () => ({
+      image: await mockCreateImageRecord(),
+      featureImage: await mockCreateFeatureImage(),
+    }))
     mockGetImagesByIds.mockReset()
     mockGetImagesByIds.mockResolvedValue([])
     mockLoadFeatureCanonicalImageOccupancy.mockReset()
@@ -573,6 +613,14 @@ describe('image.remote', () => {
     expect(mockAssertPermissionsToCreateImage).toHaveBeenCalled()
     expect(mockCreateImageRecord).toHaveBeenCalled()
     expect(mockCreateFeatureImage).toHaveBeenCalled()
+    expect(mockCreateUploadedFeatureImage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      [],
+      undefined,
+      expect.any(String),
+      { projectId: 'project', organisationId: 'organisation', hubId: 'hub' },
+    )
     expect(result).toEqual({
       data: {
         data: { id: 'img-1', publicId: null },
@@ -580,6 +628,82 @@ describe('image.remote', () => {
         ctxId: 'feature-1',
       },
     })
+  })
+
+  it('captures Feature ancestry before legacy creation authorization', async () => {
+    const { getFeatureImageCreationScope } = await import(
+      '#lib/db/services/imageUpload.js'
+    )
+    await remote.createImage({
+      data: { ctxType: 'feature', ctxId: 'feature-1', featureImage: {} },
+    })
+    expect(
+      vi.mocked(getFeatureImageCreationScope).mock.invocationCallOrder[0],
+    ).toBeLessThan(mockAssertPermissionsToCreateImage.mock.invocationCallOrder[0])
+    expect(mockCreateUploadedFeatureImage.mock.calls[0][5]).toEqual({
+      projectId: 'project',
+      organisationId: 'organisation',
+      hubId: 'hub',
+    })
+  })
+
+  it('rejects missing Feature ancestry before legacy insertion', async () => {
+    const { getFeatureImageCreationScope } = await import(
+      '#lib/db/services/imageUpload.js'
+    )
+    vi.mocked(getFeatureImageCreationScope).mockResolvedValueOnce(null)
+    await expect(
+      remote.createImage({
+        data: { ctxType: 'feature', ctxId: 'feature-1', featureImage: {} },
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+    expect(mockCreateUploadedFeatureImage).not.toHaveBeenCalled()
+  })
+
+  it.each(['project', 'organisation', 'hub'] as const)(
+    'creates a legacy %s image through the guarded pointer transaction',
+    async ctxType => {
+      const snapshot = {
+        imageId: 'previous',
+        modifiedAt: 'revision',
+        organisationId: null,
+        hubId: null,
+      }
+      mockGetResourceUploadSnapshot.mockResolvedValueOnce(snapshot)
+      await remote.createImage({
+        data: {
+          ctxType,
+          ctxId: 'target',
+          publicId: 'legacy-key',
+          cdn: 'cloudflareR2',
+          env: 'local',
+        },
+      })
+      expect(mockGetResourceUploadSnapshot.mock.invocationCallOrder[0]).toBeLessThan(
+        mockAssertPermissionsToCreateImage.mock.invocationCallOrder[0],
+      )
+      expect(mockCreateUploadedResourceImage).toHaveBeenCalledWith(
+        expect.anything(),
+        ctxType,
+        'target',
+        expect.anything(),
+        snapshot,
+        expect.any(String),
+      )
+      expect(mockUpdateProjectById).not.toHaveBeenCalled()
+      expect(mockUpdateOrganisationById).not.toHaveBeenCalled()
+    },
+  )
+
+  it('rejects legacy creation after its resource disappears without inserting an image', async () => {
+    mockGetResourceUploadSnapshot.mockResolvedValueOnce(null)
+    await expect(
+      remote.createImage({
+        data: { ctxType: 'project', ctxId: 'missing', publicId: 'legacy-key' },
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+    expect(mockCreateUploadedResourceImage).not.toHaveBeenCalled()
+    expect(mockCreateImageRecord).not.toHaveBeenCalled()
   })
 
   it('setImageIntent requires featureId', async () => {
@@ -714,20 +838,33 @@ describe('image.remote', () => {
     )
   })
 
-  it.each([false, true])(
+  it.each(['success', 'failure', 'skip', 'stale-scope'] as const)(
     'deletes image associations atomically (failure: %s)',
-    async fail => {
+    async scenario => {
+      const fail = scenario !== 'success'
+      if (scenario === 'stale-scope') {
+        const { sql } = await import('drizzle-orm')
+        const { createImageMutationGuards } = await import(
+          '#lib/db/services/imageMutationScope.js'
+        )
+        vi.mocked(createImageMutationGuards).mockReturnValueOnce({
+          before: sql`0`,
+          after: sql`0`,
+        })
+      }
       const sqlite = new DatabaseSync(':memory:')
       try {
         sqlite.exec(`CREATE TABLE image (id TEXT PRIMARY KEY);
         CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
+        CREATE TABLE task(id TEXT PRIMARY KEY,isReviewed INTEGER,modifiedAt TEXT);
+        INSERT INTO task VALUES('task',0,'2099-01-01T00:00:00.000Z');
         CREATE TABLE featureImage (featureId TEXT, imageId TEXT);
         INSERT INTO image VALUES ('img-1');
         INSERT INTO taskImage VALUES ('task', 'img-1');
         INSERT INTO featureImage VALUES ('feature', 'img-1');`)
         if (fail) {
           sqlite.exec(`CREATE TRIGGER reject_delete BEFORE DELETE ON image
-          BEGIN SELECT RAISE(ABORT, 'delete failed'); END;`)
+          BEGIN SELECT RAISE(${scenario === 'skip' ? 'IGNORE' : "ABORT, 'delete failed'"}); END;`)
         }
         const db = drizzle({} as never)
         // Execute real generated SQL using D1's documented batch rollback semantics.
@@ -760,12 +897,18 @@ describe('image.remote', () => {
           ctxType: 'feature',
         })
         if (fail) {
-          await expect(deletion).rejects.toThrow('delete failed')
+          if (scenario === 'skip' || scenario === 'stale-scope')
+            await expect(deletion).rejects.toMatchObject({ status: 409 })
+          else await expect(deletion).rejects.toThrow('delete failed')
           expect(mockWaitUntil).not.toHaveBeenCalled()
         } else {
           await expect(deletion).resolves.toMatchObject({ type: 'success' })
           expect(mockWaitUntil).toHaveBeenCalledOnce()
         }
+        const revision = sqlite
+          .prepare("SELECT modifiedAt FROM task WHERE id='task'")
+          .get()?.modifiedAt as string
+        expect(revision > '2099-01-01T00:00:00.000Z').toBe(!fail)
         for (const table of ['image', 'taskImage', 'featureImage']) {
           expect(
             sqlite.prepare(`SELECT count(*) AS count FROM ${table}`).get(),
@@ -796,6 +939,56 @@ describe('image.remote', () => {
       method: 'PUT',
       confirmToken: 'signed-upload-token',
     })
+  })
+
+  it.each(['project', 'organisation', 'hub'] as const)(
+    'authImageUpload signs the original %s state before authorization',
+    async ctxType => {
+      const snapshot = {
+        imageId: 'previous',
+        modifiedAt: 'revision',
+        organisationId: ctxType === 'project' ? 'org' : null,
+        hubId: null,
+      }
+      mockGetResourceUploadSnapshot.mockResolvedValueOnce(snapshot)
+      await remote.authImageUpload({
+        cdn: 'cloudflareR2',
+        env: 'local',
+        ctxType,
+        ctxId: 'target',
+        filename: 'image.jpg',
+        contentType: 'image/jpeg',
+        size: 1234,
+      })
+      const { createUploadToken } = await import('#lib/images/auth.js')
+      expect(createUploadToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ctxType,
+          ctxId: 'target',
+          resourceSnapshot: snapshot,
+        }),
+        'secret',
+      )
+      expect(mockGetResourceUploadSnapshot.mock.invocationCallOrder[0]).toBeLessThan(
+        mockAssertPermissionsToCreateImage.mock.invocationCallOrder[0],
+      )
+    },
+  )
+
+  it('does not issue an upload grant for a missing resource snapshot', async () => {
+    mockGetResourceUploadSnapshot.mockResolvedValueOnce(null)
+    await expect(
+      remote.authImageUpload({
+        cdn: 'cloudflareR2',
+        env: 'local',
+        ctxType: 'project',
+        ctxId: 'missing',
+        filename: 'image.jpg',
+        contentType: 'image/jpeg',
+        size: 1234,
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+    expect(mockCreatePresignedR2UploadUrl).not.toHaveBeenCalled()
   })
 
   it.each(['feature', 'project', 'organisation', 'hub'] as const)(
@@ -1138,7 +1331,14 @@ describe('image.remote', () => {
     )
   })
 
-  it.each(['new', 'retry-missing', 'retry-existing', 'failure', 'draft-contribution'])(
+  it.each([
+    'new',
+    'retry-missing',
+    'retry-existing',
+    'failure',
+    'draft-contribution',
+    'stale-draft',
+  ])(
     'finalizeImageUpload keeps sidecars aligned with persisted state (%s)',
     async scenario => {
       const put = vi.fn(async () => undefined)
@@ -1219,15 +1419,21 @@ describe('image.remote', () => {
       }
       if (scenario === 'failure')
         mockCreateImageRecord.mockRejectedValueOnce(new Error('insert failed'))
-      if (scenario === 'draft-contribution') {
+      if (scenario === 'draft-contribution' || scenario === 'stale-draft') {
         mockAssertPermissionsToCreateImage.mockResolvedValueOnce(
           'draft-contribution' as never,
         )
       }
+      if (scenario === 'stale-draft')
+        mockCreateUploadedFeatureImage.mockResolvedValueOnce(null)
       const confirmation = remote.finalizeImageUpload({
         token: 'signed-upload-token',
         persist: {
           contributorId: 'other-account',
+          links:
+            scenario === 'draft-contribution' || scenario === 'stale-draft'
+              ? [{ type: 'taskImage', taskId: 'task-1' }]
+              : [],
           featureImage: {
             featureId: 'feature-1',
             intent: 'canonical',
@@ -1251,6 +1457,17 @@ describe('image.remote', () => {
         },
       })
 
+      if (scenario === 'stale-draft') {
+        await expect(confirmation).rejects.toMatchObject({
+          status: 409,
+          body: { message: 'STALE_IMAGE_UPLOAD_CONTEXT' },
+        })
+        expect(put).not.toHaveBeenCalled()
+        expect(mockWaitUntil).not.toHaveBeenCalled()
+        fetchSpy.mockRestore()
+        dateNowSpy.mockRestore()
+        return
+      }
       if (scenario === 'failure') {
         await expect(confirmation).rejects.toThrow('insert failed')
         expect(put).not.toHaveBeenCalled()
@@ -1260,9 +1477,14 @@ describe('image.remote', () => {
         return
       }
       const result = await confirmation
+      const { getFeatureImageCreationScope } = await import(
+        '#lib/db/services/imageUpload.js'
+      )
+      expect(
+        vi.mocked(getFeatureImageCreationScope).mock.invocationCallOrder[0],
+      ).toBeLessThan(mockAssertPermissionsToCreateImage.mock.invocationCallOrder[0])
       if (scenario === 'draft-contribution') {
-        expect(createUploadedImage).toHaveBeenCalledWith(
-          expect.anything(),
+        expect(mockCreateUploadedFeatureImage.mock.calls[0][1]).toEqual(
           expect.objectContaining({
             contributorId: 'u-1',
             featureImage: expect.objectContaining({
@@ -1275,8 +1497,7 @@ describe('image.remote', () => {
           }),
         )
       } else if (scenario === 'new') {
-        expect(createUploadedImage).toHaveBeenCalledWith(
-          expect.anything(),
+        expect(mockCreateUploadedFeatureImage.mock.calls[0][1]).toEqual(
           expect.objectContaining({
             contributorId: 'other-account',
             featureImage: expect.objectContaining({
@@ -1287,9 +1508,14 @@ describe('image.remote', () => {
         )
       }
 
+      expect(mockCreateUploadedFeatureImage.mock.calls[0].slice(2)).toEqual([
+        scenario === 'draft-contribution' ? ['task-1'] : [],
+        scenario === 'draft-contribution' ? 'u-1' : undefined,
+        undefined,
+        { projectId: 'project', organisationId: 'organisation', hubId: 'hub' },
+      ])
       expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
-      expect(createUploadedImage).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(mockCreateUploadedFeatureImage.mock.calls[0][1]).toEqual(
         expect.objectContaining({
           publicId: 'h/features/feature-1/image-a',
           env: 'local',
@@ -1325,21 +1551,65 @@ describe('image.remote', () => {
     },
   )
 
-  it.each([
-    { failDatabase: false, sameAsset: false },
-    { failDatabase: true, sameAsset: false },
-    { failDatabase: false, sameAsset: true },
-  ])(
+  it.each(
+    [
+      { failDatabase: false, sameAsset: false },
+      { failDatabase: true, sameAsset: false },
+      { failDatabase: false, sameAsset: false, sharedStorage: true },
+      { failDatabase: false, sameAsset: false, referenceLookupFails: true },
+      { failDatabase: false, sameAsset: true },
+      { failDatabase: false, sameAsset: false, stillReferenced: true },
+      { failDatabase: false, sameAsset: false, staleContext: true },
+      { failDatabase: false, sameAsset: false, missingSnapshot: true },
+    ].flatMap(scenario =>
+      (['project', 'organisation', 'hub'] as const).map(ctxType => ({
+        ...scenario,
+        ctxType,
+      })),
+    ),
+  )(
     'finalizeImageUpload safely cleans detached images (%j)',
-    async ({ failDatabase, sameAsset }) => {
+    async ({
+      ctxType,
+      failDatabase,
+      sameAsset,
+      stillReferenced = false,
+      staleContext = false,
+      missingSnapshot = false,
+      sharedStorage = false,
+      referenceLookupFails = false,
+    }) => {
+      mockHasImageStorageReference.mockResolvedValue(sharedStorage)
+      if (referenceLookupFails)
+        mockHasImageStorageReference.mockRejectedValueOnce(
+          new Error('reference lookup unavailable'),
+        )
       const waitUntilPromises: Promise<unknown>[] = []
       const consoleErrorSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => undefined)
-      const dbDeleteWhere = vi.fn(async () => undefined)
+      const dbDeleteReturning = vi.fn(async () =>
+        stillReferenced ? [] : [{ id: 'img-old' }],
+      )
+      const dbDeleteWhere = vi.fn(() => ({ returning: dbDeleteReturning }))
       if (failDatabase)
-        dbDeleteWhere.mockRejectedValue(new Error('database delete failed'))
+        dbDeleteReturning.mockRejectedValue(new Error('database delete failed'))
       const deleteAssets = vi.fn(async () => undefined)
+      const listOriginals = vi.fn(async (options: { cursor?: string }) =>
+        options.cursor
+          ? {
+              objects: [{ key: 'h/projects/project-1/image-old.v99.json' }],
+              truncated: false,
+            }
+          : {
+              objects: [
+                { key: 'h/projects/project-1/image-old.variant' },
+                { key: 'h/projects/project-1/image-old.v12.json/other' },
+              ],
+              truncated: true,
+              cursor: 'metadata-page-two',
+            },
+      )
       const db = {
         ...buildDbWithContextRow({
           imageId: 'img-old',
@@ -1378,9 +1648,7 @@ describe('image.remote', () => {
                   head,
                   put,
                   delete: deleteAssets,
-                  list: vi.fn(async () => {
-                    throw new Error('list: Unspecified error (0)')
-                  }),
+                  list: listOriginals,
                 },
                 ASSET_RAW_PREVIEW: {
                   head: vi.fn(async (): Promise<unknown> => null),
@@ -1414,8 +1682,16 @@ describe('image.remote', () => {
       mockVerifyUploadToken.mockResolvedValue({
         publicId: 'h/projects/project-1/image-a',
         env: 'local',
-        ctxType: 'project',
+        ctxType,
         ctxId: 'project-1',
+        resourceSnapshot: missingSnapshot
+          ? undefined
+          : {
+              imageId: 'img-old',
+              modifiedAt: 'revision',
+              organisationId: 'org-1',
+              hubId: null,
+            },
         filename: 'image.jpg',
         contentType: 'image/jpeg',
         size: 1234,
@@ -1437,25 +1713,37 @@ describe('image.remote', () => {
         publicId: 'h/projects/project-1/image-a',
       })
 
-      await expect(
-        remote.finalizeImageUpload({
-          token: 'signed-upload-token',
-          metadata: {
-            originalFilename: 'image.jpg',
-            originalExtension: 'jpg',
-            originalWidth: 100,
-            originalHeight: 200,
-            cameraModel: null,
-            capturedAt: null,
-            credit: null,
-            latitude: null,
-            longitude: null,
-            metadata: null,
-          },
-        }),
-      ).resolves.toMatchObject({
+      if (staleContext) mockCreateUploadedResourceImage.mockResolvedValueOnce(null)
+      const confirmation = remote.finalizeImageUpload({
+        token: 'signed-upload-token',
+        metadata: {
+          originalFilename: 'image.jpg',
+          originalExtension: 'jpg',
+          originalWidth: 100,
+          originalHeight: 200,
+          cameraModel: null,
+          capturedAt: null,
+          credit: null,
+          latitude: null,
+          longitude: null,
+          metadata: null,
+        },
+      })
+      if (staleContext || missingSnapshot) {
+        await expect(confirmation).rejects.toMatchObject({
+          status: 409,
+          body: { message: 'STALE_IMAGE_UPLOAD_CONTEXT' },
+        })
+        expect(waitUntilPromises).toHaveLength(0)
+        expect(put).not.toHaveBeenCalled()
+        expect(deleteAssets).not.toHaveBeenCalled()
+        expect(db.delete).not.toHaveBeenCalled()
+        consoleErrorSpy.mockRestore()
+        return
+      }
+      await expect(confirmation).resolves.toMatchObject({
         data: {
-          ctxType: 'project',
+          ctxType,
           ctxId: 'project-1',
         },
       })
@@ -1465,19 +1753,57 @@ describe('image.remote', () => {
           'database delete failed',
         )
         expect(deleteAssets).not.toHaveBeenCalled()
-      } else if (sameAsset) {
+      } else if (
+        sameAsset ||
+        stillReferenced ||
+        sharedStorage ||
+        referenceLookupFails
+      ) {
         await expect(Promise.all(waitUntilPromises)).resolves.toBeDefined()
         expect(deleteAssets).not.toHaveBeenCalled()
       } else {
         // Storage-listing errors remain best-effort after the row has been removed.
         await expect(Promise.all(waitUntilPromises)).resolves.toBeDefined()
         expect(deleteAssets).toHaveBeenCalled()
+        expect(listOriginals).toHaveBeenCalledTimes(2)
+        expect(listOriginals).toHaveBeenNthCalledWith(2, {
+          prefix: 'h/projects/project-1/image-old.v',
+          cursor: 'metadata-page-two',
+        })
+        expect(deleteAssets.mock.calls.flat(2)).toContain(
+          'h/projects/project-1/image-old.v99.json',
+        )
+        expect(deleteAssets.mock.calls.flat(2)).not.toContain(
+          'h/projects/project-1/image-old.variant',
+        )
+        expect(deleteAssets.mock.calls.flat(2)).not.toContain(
+          'h/projects/project-1/image-old.v12.json/other',
+        )
         expect(dbDeleteWhere.mock.invocationCallOrder[0]).toBeLessThan(
           deleteAssets.mock.invocationCallOrder[0],
         )
       }
       expect(db.delete).toHaveBeenCalledTimes(1)
       expect(dbDeleteWhere).toHaveBeenCalledTimes(1)
+      if (sharedStorage || referenceLookupFails) {
+        expect(mockHasImageStorageReference).toHaveBeenCalledWith(
+          db,
+          expect.objectContaining({
+            env: 'local',
+            publicId: 'h/projects/project-1/image-old',
+          }),
+        )
+        expect(dbDeleteReturning.mock.invocationCallOrder[0]).toBeLessThan(
+          mockHasImageStorageReference.mock.invocationCallOrder[0],
+        )
+      }
+      if (referenceLookupFails)
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          '[image.remote.cleanupDetachedResourceImage] storage cleanup failed',
+          expect.objectContaining({
+            error: expect.objectContaining({ message: 'reference lookup unavailable' }),
+          }),
+        )
 
       consoleErrorSpy.mockRestore()
     },

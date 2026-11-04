@@ -27,10 +27,6 @@ import {
 } from '#lib/api/services/image.js'
 // DB SERVICES
 import {
-  createFeatureImage,
-  createImage as createImageRecord,
-  createUploadedImage,
-  createTaskImagesFromImageIds,
   getFeatureCanonicalImageOccupancy as loadFeatureCanonicalImageOccupancy,
   getImageById as loadImageById,
   toImageEnvelope,
@@ -39,10 +35,25 @@ import {
   toImageEntityResponseShape,
   toImageListResponseShape,
 } from '#lib/db/services/image.js'
-import { getImageMutationSnapshot } from '#lib/db/services/imageMutationScope.js'
+import {
+  createUploadedResourceImage,
+  getResourceUploadSnapshot,
+} from '#lib/db/services/resourceImageUpload.js'
+import {
+  getImageMutationSnapshot,
+  createImageMutationGuards,
+} from '#lib/db/services/imageMutationScope.js'
+import { deleteImageWithEvidence } from '#lib/db/services/imageDeletion.js'
+import {
+  deleteDetachedImage,
+  hasImageStorageReference,
+} from '#lib/db/services/imageCleanup.js'
+import {
+  createUploadedFeatureImage,
+  getFeatureImageCreationScope,
+  type FeatureImageCreationScope,
+} from '#lib/db/services/imageUpload.js'
 import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
-import { updateOrganisationById } from '#lib/db/services/organisation.js'
-import { updateProjectById } from '#lib/db/services/project.js'
 import { getUserById } from '#lib/db/services/user.js'
 // DB SCHEMA
 import {
@@ -53,7 +64,6 @@ import {
   organisation,
   project,
   task,
-  taskImage,
   user as userTable,
 } from '#lib/db/schema/index.js'
 // SCHEMA
@@ -80,11 +90,12 @@ import {
   ImageEnv,
 } from '#lib/enums.js'
 // TYPES
+import type { ResourceUploadType } from '#lib/db/services/resourceImageUpload.js'
+import type { ResourceUploadSnapshot } from '#lib/images/uploadContext.js'
 import type { Database, EntityResponse, Id, UserRoleDisco } from '#lib/types.js'
 import type { GuardedQueryContext } from '#lib/api/guarded.types.js'
 import type {
   CreateImageParams,
-  FinalizeImageUploadLink,
   FinalizeImageUploadParams,
   Image,
   ImageByIdParamsByProfile,
@@ -146,7 +157,6 @@ const normalizeMetadataPublicId = (publicId: string): string =>
 // - authorizeMetadataRead
 //
 // 2. STORAGE & METADATA HELPERS
-// - attachImageLinks
 // - safeOriginalsBucketGet
 // - safeOriginalsBucketHead
 // - waitForOriginalUploadVisibility
@@ -602,24 +612,6 @@ const authorizeMetadataRead = async (
   throw error(403, 'INSUFFICIENT_ROLE')
 }
 
-/**
- * Attaches secondary links, such as task-image relations, after image creation.
- *
- * @param params Attachment parameters.
- * @returns Nothing.
- */
-const attachImageLinks = async (params: {
-  db: Database
-  imageId: Id
-  links?: FinalizeImageUploadLink[]
-}): Promise<void> => {
-  for (const link of params.links ?? []) {
-    if (link.type === 'taskImage') {
-      await createTaskImagesFromImageIds(params.db, link.taskId, [params.imageId])
-    }
-  }
-}
-
 const decodeXmlEntities = (value: string): string =>
   value
     .replace(/&quot;/gu, '"')
@@ -926,9 +918,17 @@ const deleteBucketKeys = async (
   }
 }
 
+/**
+ * Deletes listed keys within a prefix that also satisfy the ownership filter.
+ * @param bucket Storage bucket to clean.
+ * @param prefix Namespace to enumerate.
+ * @param includeKey Optional exact-format filter for namespaces sharing a textual prefix.
+ * @returns Completion of best-effort deletion across all listed pages.
+ */
 const deleteBucketPrefix = async (
   bucket: ReturnType<typeof getOriginalsBucketForStage>,
   prefix: string,
+  includeKey: (key: string) => boolean = () => true,
 ): Promise<void> => {
   let cursor: string | undefined
 
@@ -949,7 +949,7 @@ const deleteBucketPrefix = async (
       return
     }
 
-    const keys = listed.objects.map(object => object.key)
+    const keys = listed.objects.map(object => object.key).filter(includeKey)
 
     await deleteBucketKeys(bucket, keys)
     cursor = listed.truncated ? listed.cursor : undefined
@@ -1016,13 +1016,14 @@ const cleanupDetachedResourceImage = async (params: {
   preserveAssets?: boolean
 }): Promise<void> => {
   // Retain the originals if database deletion fails, matching explicit image deletion.
-  await params.db.delete(image).where(eq(image.id, params.image.id))
+  if (!(await deleteDetachedImage(params.db, params.image.id))) return
 
   // Retried confirmation can replace a row while retaining the same storage object.
   if (params.preserveAssets) return
 
   try {
     await cleanupImageAssets({
+      db: params.db,
       platform: params.platform,
       image: params.image,
     })
@@ -1045,9 +1046,12 @@ const cleanupDetachedResourceImage = async (params: {
  * @returns Nothing.
  */
 const cleanupImageAssets = async (params: {
+  db: Database
   platform: App.Platform | undefined
   image: ImageDBFlat
 }): Promise<void> => {
+  // Another image row may share this object key even after the deleted row is gone.
+  if (await hasImageStorageReference(params.db, params.image)) return
   const stage = toImageStage(params.image.env)
   const originalsBucket = getOriginalsBucketForStage(params.platform, stage)
   const derivedBucket = getDerivedBucketForStage(params.platform, stage)
@@ -1061,7 +1065,11 @@ const cleanupImageAssets = async (params: {
         ? [toMetadataObjectKey(params.image.publicId, params.image.version)]
         : []),
     ]),
-    deleteBucketPrefix(originalsBucket, `${params.image.publicId}.v`),
+    deleteBucketPrefix(originalsBucket, `${params.image.publicId}.v`, key => {
+      // A textual prefix also matches unrelated originals; only numeric metadata revisions belong here.
+      const suffix = key.slice(`${params.image.publicId}.v`.length)
+      return /^\d+\.json$/.test(suffix)
+    }),
     deleteBucketPrefix(derivedBucket, `${params.image.publicId}/`),
   ])
 }
@@ -1254,26 +1262,28 @@ const createImageInContext = async (params: {
   userId: Id
   imageData: ImageNew
   retryableUpload?: boolean
+  featureScope?: FeatureImageCreationScope
+  resourceSnapshot?: ResourceUploadSnapshot
+  taskIds?: string[]
+  draftContributorId?: string
 }): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
   const userWithAttribution = await getUserById(params.db, params.userId)
-  const createRecord = params.retryableUpload ? createUploadedImage : createImageRecord
 
   if (params.imageData.ctxType === ImageContextResource.feature) {
+    if (!params.featureScope) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
     const validatedData = ImageInsertWithFeatureAPI.parse(params.imageData)
-    const createdImage = await createRecord(params.db, validatedData)
-    const createdFeatureImage = await createFeatureImage(
+    // Creation commits the image and every evidence link under live task predicates.
+    const uploaded = await createUploadedFeatureImage(
       params.db,
-      {
-        ...validatedData.featureImage,
-        imageId: createdImage.id,
-        featureId: validatedData.ctxId,
-        localIsPublished: validatedData.featureImage.localIsPublished ?? null,
-        publishedAt: validatedData.featureImage.publishedAt ?? null,
-        publisherId: validatedData.featureImage.publisherId ?? null,
-      },
-      createdImage.id,
-      params.retryableUpload ?? false,
+      validatedData,
+      params.taskIds ?? [],
+      params.draftContributorId,
+      params.retryableUpload ? undefined : nanoid(),
+      params.featureScope,
     )
+    if (!uploaded) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
+    const createdImage = uploaded.image
+    const createdFeatureImage = uploaded.featureImage
 
     const responseData = await toResponseShape(
       createdImage,
@@ -1297,21 +1307,17 @@ const createImageInContext = async (params: {
     const validatedData = ImageInsertWithProjectOrOrganisationAPI.parse(
       params.imageData,
     )
-    const createdImage = await createRecord(params.db, validatedData)
-
-    if (validatedData.ctxType === ImageContextResource.project) {
-      await updateProjectById(
+    const createdImage =
+      params.resourceSnapshot &&
+      (await createUploadedResourceImage(
         params.db,
-        { imageId: createdImage.id },
+        validatedData.ctxType,
         validatedData.ctxId,
-      )
-    } else {
-      await updateOrganisationById(
-        params.db,
-        { imageId: createdImage.id },
-        validatedData.ctxId,
-      )
-    }
+        validatedData,
+        params.resourceSnapshot,
+        ...(params.retryableUpload ? [] : [nanoid()]),
+      ))
+    if (!createdImage) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
 
     const responseData = await toResponseShapeProjectOrOrganisation(
       createdImage,
@@ -1329,12 +1335,17 @@ const createImageInContext = async (params: {
 
   if (params.imageData.ctxType === ImageContextResource.hub) {
     const validatedData = ImageInsertWithHubAPI.parse(params.imageData)
-    const createdImage = await createRecord(params.db, validatedData)
-
-    await params.db
-      .update(hub)
-      .set({ imageId: createdImage.id })
-      .where(eq(hub.id, validatedData.ctxId))
+    const createdImage =
+      params.resourceSnapshot &&
+      (await createUploadedResourceImage(
+        params.db,
+        'hub',
+        validatedData.ctxId,
+        validatedData,
+        params.resourceSnapshot,
+        ...(params.retryableUpload ? [] : [nanoid()]),
+      ))
+    if (!createdImage) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
 
     const responseData = await toResponseShapeProjectOrOrganisation(
       createdImage,
@@ -1614,6 +1625,9 @@ export const getMetadata = guardedQuery(
 
 /**
  * Issues a short-lived direct-to-R2 upload session.
+ * @param params Upload identity, context and expected object properties.
+ * @returns Signed upload grant and storage destination.
+ * @remarks Single-resource grants bind the original resource revision and scope.
  */
 export const authImageUpload = guardedCommand(
   AuthImageUploadSchema,
@@ -1625,7 +1639,16 @@ export const authImageUpload = guardedCommand(
       throw error(400, 'Only cloudflareR2 uploads are supported')
     }
 
-    // Bind replacement authorization to the original image and its resource scope.
+    // Capture before authorization so subsequent reparenting invalidates this grant.
+    const isSingleResource = ['project', 'organisation', 'hub'].includes(params.ctxType)
+    const resourceSnapshot =
+      !params.replaceImageId && isSingleResource
+        ? await getResourceUploadSnapshot(
+            db,
+            params.ctxType as ResourceUploadType,
+            params.ctxId,
+          )
+        : undefined
     const replacementSnapshot = params.replaceImageId
       ? await getImageMutationSnapshot(
           db,
@@ -1643,6 +1666,8 @@ export const authImageUpload = guardedCommand(
       params.ctxId as Id,
       params.links,
     )
+
+    if (resourceSnapshot === null) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
 
     const stage = toImageStage(event.locals.platform?.env.ENVIRONMENT ?? params.env)
     const bucket = getOriginalsBucketForStage(event.locals.platform, stage)
@@ -1671,7 +1696,7 @@ export const authImageUpload = guardedCommand(
 
       if (!replacementSnapshot?.source) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
     }
-    // Each replacement uploads to a new key; pending uploads cannot alter the active asset.
+    // Each replacement uploads to a new key; an unconfirmed upload must not alter the active asset.
     while (await safeOriginalsBucketHead(bucket, publicId)) {
       publicId = `h/${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
     }
@@ -1685,6 +1710,7 @@ export const authImageUpload = guardedCommand(
         ctxId: params.ctxId,
         filename: params.filename,
         replaceImageId: params.replaceImageId,
+        resourceSnapshot,
         replacementSnapshot: replacementSnapshot ?? undefined,
         contentType: params.contentType,
         size: params.size,
@@ -1722,6 +1748,9 @@ export const authImageUpload = guardedCommand(
 
 /**
  * Confirms a completed direct R2 upload and writes metadata sidecars.
+ * @param params Signed grant, metadata and requested evidence links.
+ * @returns Persisted image envelope.
+ * @remarks Stale new-upload contexts reject before scheduling storage side effects.
  */
 export const finalizeImageUpload = guardedCommand(
   FinalizeImageUploadSchema,
@@ -1737,6 +1766,15 @@ export const finalizeImageUpload = guardedCommand(
       throw error(403, 'Upload token does not belong to the current user')
     }
 
+    // Older single-resource grants lack a revision and cannot safely confirm after a new selection.
+    if (
+      !payload.replaceImageId &&
+      ['project', 'organisation', 'hub'].includes(payload.ctxType) &&
+      !payload.resourceSnapshot
+    ) {
+      throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
+    }
+
     if (
       payload.replaceImageId &&
       (!payload.replacementSnapshot?.source ||
@@ -1746,6 +1784,10 @@ export const finalizeImageUpload = guardedCommand(
       throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
     }
 
+    const featureScope =
+      !payload.replaceImageId && payload.ctxType === 'feature'
+        ? await getFeatureImageCreationScope(db, payload.ctxId)
+        : undefined
     const creationAccess = await assertPermissionsToCreateImage(
       db,
       user,
@@ -1755,6 +1797,8 @@ export const finalizeImageUpload = guardedCommand(
       payload.ctxId as Id,
       params.persist?.links,
     )
+
+    if (featureScope === null) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
 
     const previousResourceImage =
       !payload.replaceImageId &&
@@ -1898,6 +1942,11 @@ export const finalizeImageUpload = guardedCommand(
           db,
           userId,
           retryableUpload: true,
+          featureScope,
+          resourceSnapshot: payload.resourceSnapshot,
+          taskIds: (params.persist?.links ?? []).map(link => link.taskId),
+          draftContributorId:
+            creationAccess === 'draft-contribution' ? user.id : undefined,
           imageData:
             payload.ctxType === ImageContextResource.feature
               ? {
@@ -1910,14 +1959,6 @@ export const finalizeImageUpload = guardedCommand(
                 }
               : imageData,
         })
-
-    if (!payload.replaceImageId && created.data?.image?.id) {
-      await attachImageLinks({
-        db,
-        imageId: created.data.image.id,
-        links: params.persist?.links,
-      })
-    }
 
     // A retry reuses the stored row version; never publish a manifest for an uncommitted version.
     const persistedVersion = created.data?.image?.version ?? version
@@ -1989,6 +2030,10 @@ export const finalizeImageUpload = guardedCommand(
 
 /**
  * Creates a new image in context.
+ * @param input Image payload and owning resource context.
+ * @param ctx Guarded request with account, roles and database.
+ * @returns Image envelope after atomic image and association persistence.
+ * @remarks Non-upload creates retain fresh identities; resource snapshots reject concurrent pointer changes.
  */
 export const createImage = guardedCommand(async (input, ctx) => {
   const params = (input ?? {}) as Record<string, unknown>
@@ -2006,6 +2051,17 @@ export const createImage = guardedCommand(async (input, ctx) => {
     throw error(400, 'ctxType and ctxId are required')
   }
 
+  // Capture the authorized pointer and parent scope before asynchronous role checks.
+  const resourceSnapshot =
+    imageData.ctxType === 'project' ||
+    imageData.ctxType === 'organisation' ||
+    imageData.ctxType === 'hub'
+      ? await getResourceUploadSnapshot(db, imageData.ctxType, imageData.ctxId)
+      : undefined
+  const featureScope =
+    imageData.ctxType === 'feature'
+      ? await getFeatureImageCreationScope(db, imageData.ctxId)
+      : undefined
   await assertPermissionsToCreateImage(
     db,
     user,
@@ -2014,7 +2070,9 @@ export const createImage = guardedCommand(async (input, ctx) => {
     imageData.ctxType as ImageContextResource,
     imageData.ctxId as Id,
   )
-  return createImageInContext({ db, userId, imageData })
+  if (resourceSnapshot === null || featureScope === null)
+    throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
+  return createImageInContext({ db, userId, imageData, resourceSnapshot, featureScope })
 })
 
 /**
@@ -2246,6 +2304,12 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
   const { db, user, userRoles, event } = ctx
   if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
 
+  const snapshot = await getImageMutationSnapshot(
+    db,
+    params.ctxType as ImageContextType,
+    params.ctxId,
+    params.id,
+  )
   await assertPermissionsToDeleteImage(
     db,
     user,
@@ -2256,20 +2320,31 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
     params.ctxType as ImageContextResource | ImageContextResourceExtended,
   )
 
+  if (!snapshot) throw error(409, 'STALE_IMAGE_DELETE')
+
   const imageToDelete = await loadImageById(db, [eq(image.id, params.id as Id)])
   if (!imageToDelete) {
     throw error(404, 'Image not found')
   }
 
-  // Preserve associations if any deletion fails, and only clean assets after commit.
-  await db.batch([
-    db.delete(taskImage).where(eq(taskImage.imageId, params.id as Id)),
-    db.delete(featureImage).where(eq(featureImage.imageId, params.id as Id)),
-    db.delete(image).where(eq(image.id, params.id as Id)),
-  ])
+  // Preserve associations and pending review revisions if deletion fails; clean assets after commit.
+  if (
+    !(await deleteImageWithEvidence(
+      db,
+      params.id,
+      createImageMutationGuards(
+        db,
+        params.ctxType as ImageContextType,
+        params.ctxId,
+        snapshot,
+      ).before,
+    ))
+  )
+    throw error(409, 'STALE_IMAGE_DELETE')
 
   event.locals.platform?.context.waitUntil(
     cleanupImageAssets({
+      db,
       platform: event.locals.platform,
       image: imageToDelete,
     }).catch(cleanupError => {

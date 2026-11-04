@@ -43,7 +43,9 @@ import { prepareTaskEvidenceRevision } from './taskEvidenceRevision.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 // PUBLICATION
 import { publishScopedFeatureImages } from './publication.js'
+import { buildFeatureCommandScopeGuard } from './featureCommandScope.js'
 // TYPES
+import type { FeatureCommandProbe } from '#lib/db/zod/schema/feature.types.js'
 import type { ImageMutationGuards } from './imageMutationScope.js'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { Id, Database, EntityResponse } from '#lib/types.js'
@@ -71,6 +73,7 @@ import { ImageListProfileAPI, ImageAdminProfileAPI } from '#lib/db/zod/index.js'
 //
 // 1. CRUD :: CORE OPERATIONS
 //    - createImage
+//    - getUploadedImageId
 //    - createUploadedImage
 //    - updateImage
 //    - updateImageWithFeatureImage
@@ -81,6 +84,7 @@ import { ImageListProfileAPI, ImageAdminProfileAPI } from '#lib/db/zod/index.js'
 //    - prepareFeatureImageMutation
 //    - createTaskImagesFromImageIds
 //    - publishAllImagesWithPublicIntent
+//    - publishAllFeatureImagesExceptResearch
 //
 // 3. LOOKUPS
 //    - getImageById
@@ -115,6 +119,23 @@ export const createImage = async (db: Database, data: ImageDBNew): Promise<Image
   await insert(db, image, data)
 
 /**
+ * Derives the stable database identity for a verified direct upload.
+ * @param data Storage stage and public object identity.
+ * @returns Deterministic image primary key shared by confirmation retries.
+ */
+export async function getUploadedImageId(
+  data: Pick<ImageDBNew, 'env' | 'publicId'>,
+): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(
+      JSON.stringify([data.env ?? ImageEnv.local, data.publicId]),
+    ),
+  )
+  return `upload-${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
  * Creates one image row per direct-upload storage identity, including concurrent retries.
  * @param db Database handle.
  * @param data Verified upload image data.
@@ -125,13 +146,7 @@ export const createUploadedImage = async (
   db: Database,
   data: ImageDBNew,
 ): Promise<ImageDB> => {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(
-      JSON.stringify([data.env ?? ImageEnv.local, data.publicId]),
-    ),
-  )
-  const id = `upload-${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')}`
+  const id = await getUploadedImageId(data)
   // The primary key arbitrates concurrent confirmations without a read-before-write race.
   const [created] = await db
     .insert(image)
@@ -487,6 +502,55 @@ export const publishAllImagesWithPublicIntent = async (
   publisherId: Id,
 ): Promise<void> => {
   await publishScopedFeatureImages(db, { kind: 'feature', id: featureId }, publisherId)
+}
+
+/**
+ * Publishes every active image assigned to a Feature except research-only images.
+ * @param db The database instance.
+ * @param featureId The Feature whose direct image assignments will be published.
+ * @param publisherId The user who explicitly approved publication.
+ * @param expectedScope Persisted Feature ancestry used to authorize the command.
+ * @returns True for a valid scope (including no-op retries), false for missing or moved targets.
+ * @remarks This deliberately bypasses project classification policy after an editor
+ * explicitly chooses to publish all photos. Archived source images stay unpublished.
+ */
+export const publishAllFeatureImagesExceptResearch = async (
+  db: Database,
+  featureId: Id,
+  publisherId: Id,
+  expectedScope: Omit<FeatureCommandProbe, 'id'>,
+): Promise<boolean> => {
+  // Publish only direct, public-facing image assignments that still have an active source image.
+  const publish = db
+    .update(featureImage)
+    .set({
+      isPublished: true,
+      localIsPublished: null,
+      publishedAt: new Date().toISOString(),
+      publisherId,
+    })
+    .where(
+      and(
+        eq(featureImage.featureId, featureId),
+        eq(featureImage.isPublished, false),
+        ne(featureImage.intent, 'research'),
+        exists(
+          db
+            .select({ id: image.id })
+            .from(image)
+            .where(
+              and(eq(image.id, featureImage.imageId), eq(image.isArchived, false)),
+            ),
+        ),
+      ),
+    )
+  // Keep the authorization scope assertion and image write in the same D1 transaction.
+  const result = await executeRevisionBatch(
+    db,
+    buildFeatureCommandScopeGuard(db, featureId, expectedScope),
+    [publish],
+  )
+  return result !== null
 }
 
 // ═══════════════════════
