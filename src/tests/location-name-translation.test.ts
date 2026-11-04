@@ -8,7 +8,9 @@ import {
   waitFor,
   within,
 } from '@testing-library/svelte/pure'
+import Names from '#lib/bits/patterns/forms/featureLocation/DraftLocationNameFields.svelte'
 import AddressDisplay from '#lib/bits/patterns/forms/formFeatureAddress/AddressDisplayField.svelte'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 const mocks = vi.hoisted(() => ({ translate: vi.fn(), translateName: vi.fn() }))
 vi.mock('#lib/i18n.js', async original => ({
@@ -18,6 +20,11 @@ vi.mock('#lib/i18n.js', async original => ({
 vi.mock('#lib/api/translation.remote.js', () => ({
   translateContentField: mocks.translateName,
 }))
+const localeState = {
+  selectedLocales: normalizeContentLocales(['en', 'zh-Hant']),
+  visibleLocales: normalizeContentLocales(['en', 'zh-Hant']),
+  expanded: true,
+}
 beforeEach(() => {
   vi.useRealTimers()
   mocks.translate.mockReset()
@@ -38,6 +45,61 @@ vi.mock('#lib/api/division.remote.js', () => ({
     options: [],
   }),
 }))
+
+it('offers translation from populated names and fills only the chosen empty locale', async () => {
+  mocks.translateName.mockResolvedValue({
+    status: 'translated',
+    source: 'en',
+    target: 'zh-Hant',
+    text: '麵包店',
+  })
+  const onChange = vi.fn()
+  render(Names, {
+    names: { en: 'Bakery' },
+    kind: 'establishment',
+    localeState,
+    translations: true,
+    isEditing: true,
+    onChange,
+  })
+  await fireEvent.click(screen.getByRole('button', { name: 'Bakery' }))
+  expect(screen.getByRole('textbox', { name: 'Name' })).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'from en' }))
+  await waitFor(() =>
+    expect(mocks.translateName).toHaveBeenCalledWith({
+      source: 'en',
+      target: 'zh-Hant',
+      text: 'Bakery',
+    }),
+  )
+  await waitFor(() =>
+    expect(onChange).toHaveBeenCalledWith({ en: 'Bakery', 'zh-Hant': '麵包店' }),
+  )
+})
+
+it('does not overwrite a name edited while translation is pending', async () => {
+  let resolve!: (value: { status: string; text: string }) => void
+  mocks.translateName.mockReturnValue(
+    new Promise(done => {
+      resolve = done
+    }),
+  )
+  const onChange = vi.fn()
+  const view = render(Names, {
+    names: { en: 'Bakery' },
+    kind: 'building',
+    localeState,
+    translations: true,
+    isEditing: true,
+    onChange,
+  })
+  await fireEvent.click(screen.getByRole('button', { name: 'from en' }))
+  await waitFor(() => expect(mocks.translateName).toHaveBeenCalledOnce())
+  await view.rerender({ names: { en: 'Bakery', 'zh-hant': '手動名稱' } })
+  resolve({ status: 'translated', text: '麵包店' })
+  await new Promise(done => setTimeout(done, 0))
+  expect(onChange).not.toHaveBeenCalled()
+})
 
 it('offers translation for an explicitly empty display address', async () => {
   const address = emptyFeatureAddress()
@@ -97,7 +159,7 @@ it.each(['unmount', 'readonly', 'replacement'] as const)(
     const onChange = vi.fn()
     const view = render(Fixture, { address, onChange })
     await fireEvent.click(
-      within(screen.getByRole('group', { name: 'Street name' })).getByRole('button', {
+      within(screen.getByRole('group', { name: 'Name' })).getByRole('button', {
         name: 'Translate from en to zh-hant',
       }),
     )
