@@ -17,6 +17,9 @@ function application(path: string): Database {
   const db = new Database(path)
   bootstrapLocalDatabase(db, resolve('.'))
   seedLocalApplication(db)
+  // Own the restoration targets instead of relying on historical seeds removed by migrations.
+  db.exec(`INSERT INTO organisation(id,code,isPublished) VALUES ('restore-org','restore-org',1);
+    INSERT INTO project(id,code,organisationId,isPublished) VALUES ('restore-project','restore-project','restore-org',1);`)
   return db
 }
 
@@ -31,8 +34,8 @@ describe('local application preservation', () => {
     try {
       source.exec(`INSERT INTO user(id,name,email,createdAt,updatedAt) VALUES ('old-author','Original author','old@example.invalid',1,1);
         INSERT INTO account(id,userId,providerId,accountId,accessToken,createdAt,updatedAt) VALUES ('old-account','old-author','google','old-subject','never-restore-this-token',1,1);
-        UPDATE organisation SET isPublished=0,isArchived=1,publisherId='old-author' WHERE code='farmthecity';
-        UPDATE project SET isPublished=0,isArchived=1 WHERE code='foodaccess';`)
+        UPDATE organisation SET isPublished=0,isArchived=1,publisherId='old-author' WHERE code='restore-org';
+        UPDATE project SET isPublished=0,isArchived=1 WHERE code='restore-project';`)
       target.exec(`INSERT INTO user(id,name,email,telephone,createdAt,updatedAt) VALUES ('current','Current user','current@example.invalid','+85291234567',1,1);
         INSERT INTO account(id,userId,providerId,accountId,createdAt,updatedAt) VALUES ('current-account','current','google','current-subject',1,1);
         INSERT INTO session(id,userId,token,expiresAt,createdAt,updatedAt) VALUES ('current-session','current','current-token',9999999999999,1,1);`)
@@ -53,10 +56,17 @@ describe('local application preservation', () => {
         expect(
           restored
             .query(
-              "SELECT isPublished,isArchived,publisherId FROM organisation WHERE code='farmthecity'",
+              "SELECT isPublished,isArchived,publisherId FROM organisation WHERE code='restore-org'",
             )
             .get(),
         ).toEqual({ isPublished: 0, isArchived: 1, publisherId: 'old-author' })
+        expect(
+          restored
+            .query(
+              "SELECT isPublished,isArchived FROM project WHERE code='restore-project'",
+            )
+            .get(),
+        ).toEqual({ isPublished: 0, isArchived: 1 })
         expect(
           restored.query("SELECT email,telephone FROM user WHERE id='current'").get(),
         ).toEqual({ email: 'current@example.invalid', telephone: '+85291234567' })
@@ -83,7 +93,7 @@ describe('local application preservation', () => {
       target.close()
       rmSync(directory, { recursive: true, force: true })
     }
-  })
+  }, 20_000) // Two complete migrated databases plus the restoration subprocess.
   it('refuses minimal local installation without an application snapshot', () => {
     const result = Bun.spawnSync([
       'bun',

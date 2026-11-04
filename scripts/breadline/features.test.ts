@@ -106,193 +106,222 @@ function fixture() {
   return { target, generate, apply, output, sourcePath }
 }
 
-test('imports participating donors/dropoffs as linked Locations, with brands and phone arrays', () => {
-  const { target, generate, apply, output } = fixture()
-  try {
-    generate()
-    const firstLocations = readFileSync(output, 'utf8')
-      .split('\n')
-      .filter(line => line.startsWith('INSERT INTO location '))
-    generate()
-    expect(
-      readFileSync(output, 'utf8')
+// These cases apply real migrations and invoke Python to verify atomic rollback.
+const MIGRATED_IMPORT_TIMEOUT_MS = 20_000
+
+test(
+  'imports participating donors/dropoffs as linked Locations, with brands and phone arrays',
+  () => {
+    const { target, generate, apply, output } = fixture()
+    try {
+      generate()
+      const firstLocations = readFileSync(output, 'utf8')
         .split('\n')
-        .filter(line => line.startsWith('INSERT INTO location ')),
-    ).toEqual(firstLocations)
-    apply()
-    expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 2 })
-    expect(target.query('SELECT count(*) AS n FROM featureLocation').get()).toEqual({
-      n: 2,
-    })
-    expect(
-      target.query('SELECT count(*) AS n FROM featureLocationHistory').get(),
-    ).toEqual({ n: 2 })
-    const locationIds = target.query('SELECT id FROM location ORDER BY id').all() as {
-      id: string
-    }[]
-    for (const row of locationIds) expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
-    for (const row of target.query('SELECT id FROM locationRevision').all() as {
-      id: string
-    }[])
-      expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
-    const donor = target
-      .query(
-        "SELECT r.facts,p.kind,p.state,p.ownerOrganisationId,p.ssId FROM breadlineImportFeature i JOIN featureLocation f ON f.featureId=i.featureId JOIN location p ON p.id=f.locationId JOIN locationRevision r ON r.id=f.factsRevisionId WHERE i.sourceTable='donors'",
-      )
-      .get() as {
-      facts: string
-      kind: string
-      state: string
-      ownerOrganisationId: string
-      ssId: null
-    }
-    expect(donor.state).toBe('unresolved')
-    expect(donor.kind).toBe('establishment')
-    expect(
-      target.query("SELECT count(*) AS n FROM location WHERE kind='unknown'").get(),
-    ).toEqual({ n: 1 })
-    expect(donor.ownerOrganisationId).toBe('org')
-    expect(donor.ssId).toBeNull()
-    const snapshot = LocationFactsSnapshotSchema.parse(JSON.parse(donor.facts))
-    expect(snapshot.kind).toBe('establishment')
-    const facts = readLocationFacts(donor.facts)
-    expect(facts.phoneNumber).toEqual(['+85223456789'])
-    expect(facts.brands[0].names.en).toBe('Maison Kayser')
-    expect(facts.location.address.status).toBe('unresolved')
-    expect(
-      target.query("SELECT value FROM featureProperty WHERE value != '[]'").get(),
-    ).toEqual({ value: '["+85223456789"]' })
-    expect(
-      target
+        .filter(line => line.startsWith('INSERT INTO location '))
+      generate()
+      expect(
+        readFileSync(output, 'utf8')
+          .split('\n')
+          .filter(line => line.startsWith('INSERT INTO location ')),
+      ).toEqual(firstLocations)
+      apply()
+      expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 2 })
+      expect(target.query('SELECT count(*) AS n FROM featureLocation').get()).toEqual({
+        n: 2,
+      })
+      expect(
+        target.query('SELECT count(*) AS n FROM featureLocationHistory').get(),
+      ).toEqual({ n: 2 })
+      const locationIds = target.query('SELECT id FROM location ORDER BY id').all() as {
+        id: string
+      }[]
+      for (const row of locationIds) expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
+      for (const row of target.query('SELECT id FROM locationRevision').all() as {
+        id: string
+      }[])
+        expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
+      const donor = target
         .query(
-          "SELECT count(*) AS n FROM featureProperty WHERE propertyId='WhWlW8KcN2wq'",
+          "SELECT r.facts,p.kind,p.state,p.ownerOrganisationId,p.ssId FROM breadlineImportFeature i JOIN featureLocation f ON f.featureId=i.featureId JOIN location p ON p.id=f.locationId JOIN locationRevision r ON r.id=f.factsRevisionId WHERE i.sourceTable='donors'",
         )
-        .get(),
-    ).toEqual({ n: 0 })
-    const receipt = JSON.parse(readFileSync(output + '.receipt.json', 'utf8'))
-    expect(receipt.excludedDonors).toEqual([
-      { sourceId: '900002', reason: 'no_recorded_runs', alreadyImported: false },
-    ])
-    generate()
-    apply()
-    expect(
-      target.query('SELECT count(*) AS n FROM featureLocationHistory').get(),
-    ).toEqual({ n: 2 })
-  } finally {
-    target.close()
-  }
-})
+        .get() as {
+        facts: string
+        kind: string
+        state: string
+        ownerOrganisationId: string
+        ssId: null
+      }
+      expect(donor.state).toBe('unresolved')
+      expect(donor.kind).toBe('establishment')
+      expect(
+        target.query("SELECT count(*) AS n FROM location WHERE kind='unknown'").get(),
+      ).toEqual({ n: 1 })
+      expect(donor.ownerOrganisationId).toBe('org')
+      expect(donor.ssId).toBeNull()
+      const snapshot = LocationFactsSnapshotSchema.parse(JSON.parse(donor.facts))
+      expect(snapshot.kind).toBe('establishment')
+      const facts = readLocationFacts(donor.facts)
+      expect(facts.phoneNumber).toEqual(['+85223456789'])
+      expect(facts.brands[0].names.en).toBe('Maison Kayser')
+      expect(facts.location.address.status).toBe('unresolved')
+      expect(
+        target.query("SELECT value FROM featureProperty WHERE value != '[]'").get(),
+      ).toEqual({ value: '["+85223456789"]' })
+      expect(
+        target
+          .query(
+            "SELECT count(*) AS n FROM featureProperty WHERE propertyId='WhWlW8KcN2wq'",
+          )
+          .get(),
+      ).toEqual({ n: 0 })
+      const receipt = JSON.parse(readFileSync(output + '.receipt.json', 'utf8'))
+      expect(receipt.excludedDonors).toEqual([
+        { sourceId: '900002', reason: 'no_recorded_runs', alreadyImported: false },
+      ])
+      generate()
+      apply()
+      expect(
+        target.query('SELECT count(*) AS n FROM featureLocationHistory').get(),
+      ).toEqual({ n: 2 })
+    } finally {
+      target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
 
-test('rolls back the generated import if association history fails', () => {
-  const { target, generate, apply } = fixture()
-  try {
-    generate()
-    target.exec(
-      "CREATE TRIGGER fail_import BEFORE INSERT ON featureLocationHistory BEGIN SELECT RAISE(ABORT,'injected'); END",
-    )
-    expect(apply).toThrow('injected')
-    for (const table of [
-      'feature',
-      'location',
-      'locationRevision',
-      'featureLocation',
-      'breadlineImportFeature',
-    ])
-      expect(target.query(`SELECT count(*) AS n FROM ${table}`).get()).toEqual({ n: 0 })
-  } finally {
-    target.close()
-  }
-})
+test(
+  'rolls back the generated import if association history fails',
+  () => {
+    const { target, generate, apply } = fixture()
+    try {
+      generate()
+      target.exec(
+        "CREATE TRIGGER fail_import BEFORE INSERT ON featureLocationHistory BEGIN SELECT RAISE(ABORT,'injected'); END",
+      )
+      expect(apply).toThrow('injected')
+      for (const table of [
+        'feature',
+        'location',
+        'locationRevision',
+        'featureLocation',
+        'breadlineImportFeature',
+      ])
+        expect(target.query(`SELECT count(*) AS n FROM ${table}`).get()).toEqual({
+          n: 0,
+        })
+    } finally {
+      target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
 
-test('quarantines malformed eligible rows and removes a stale executable plan', () => {
-  const { target, generate, output, sourcePath } = fixture()
-  try {
-    generate()
-    const source = new Database(sourcePath)
-    source.exec(
-      "UPDATE breadline__public__donors SET active=2,created_at='2025-02-30T00:00:00.000Z',name_en=NULL WHERE id=900001",
-    )
-    source.exec('UPDATE breadline__public__dropoffs SET latitude=NULL')
-    source.close()
-    expect(generate).toThrow('2 quarantined row(s)')
-    const receipt = JSON.parse(readFileSync(output + '.receipt.json', 'utf8'))
-    expect(receipt).toMatchObject({
-      status: 'blocked',
-      quarantined: 2,
-      skipped: 1,
-      created: 0,
-    })
-    expect(receipt.diagnostics.map((row: { code: string }) => row.code).sort()).toEqual(
-      [
+test(
+  'quarantines malformed eligible rows and removes a stale executable plan',
+  () => {
+    const { target, generate, output, sourcePath } = fixture()
+    try {
+      generate()
+      const source = new Database(sourcePath)
+      source.exec(
+        "UPDATE breadline__public__donors SET active=2,created_at='2025-02-30T00:00:00.000Z',name_en=NULL WHERE id=900001",
+      )
+      source.exec('UPDATE breadline__public__dropoffs SET latitude=NULL')
+      source.close()
+      expect(generate).toThrow('2 quarantined row(s)')
+      const receipt = JSON.parse(readFileSync(output + '.receipt.json', 'utf8'))
+      expect(receipt).toMatchObject({
+        status: 'blocked',
+        quarantined: 2,
+        skipped: 1,
+        created: 0,
+      })
+      expect(
+        receipt.diagnostics.map((row: { code: string }) => row.code).sort(),
+      ).toEqual([
         'INVALID_ACTIVITY_FLAG',
         'INVALID_COORDINATE_NUMBER',
         'INVALID_SOURCE_TIMESTAMP',
         'MISSING_ENGLISH_NAME',
-      ],
-    )
-    expect(() => readFileSync(output)).toThrow()
-    expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 0 })
-  } finally {
-    target.close()
-  }
-})
+      ])
+      expect(() => readFileSync(output)).toThrow()
+      expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 0 })
+    } finally {
+      target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
 
-test('excluded donors do not block planning and receipt separates skipped rows', () => {
-  const { target, generate, output, sourcePath } = fixture()
-  try {
-    const source = new Database(sourcePath)
-    source.exec(
-      "UPDATE breadline__public__donors SET active=9,latitude=NULL,created_at='invalid' WHERE id=900002",
-    )
-    source.close()
-    generate()
-    expect(JSON.parse(readFileSync(output + '.receipt.json', 'utf8'))).toMatchObject({
-      status: 'ready',
-      created: 2,
-      skipped: 1,
-      quarantined: 0,
-    })
-  } finally {
-    target.close()
-  }
-})
+test(
+  'excluded donors do not block planning and receipt separates skipped rows',
+  () => {
+    const { target, generate, output, sourcePath } = fixture()
+    try {
+      const source = new Database(sourcePath)
+      source.exec(
+        "UPDATE breadline__public__donors SET active=9,latitude=NULL,created_at='invalid' WHERE id=900002",
+      )
+      source.close()
+      generate()
+      expect(JSON.parse(readFileSync(output + '.receipt.json', 'utf8'))).toMatchObject({
+        status: 'ready',
+        created: 2,
+        skipped: 1,
+        quarantined: 0,
+      })
+    } finally {
+      target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
 
-test('changed accepted source identity remains blocked without changing imported IDs', () => {
-  const { target, generate, apply, sourcePath, output } = fixture()
-  try {
-    generate()
-    apply()
-    const before = target
-      .query('SELECT * FROM breadlineImportFeature ORDER BY sourceTable,sourceId')
-      .all()
-    const source = new Database(sourcePath)
-    source.exec(
-      "UPDATE breadline__public__donors SET _breadline_row_hash='changed' WHERE id=900001",
-    )
-    source.close()
-    expect(generate).toThrow('Source changed for donors:900001')
-    expect(() => readFileSync(output)).toThrow()
-    expect(
-      target
+test(
+  'changed accepted source identity remains blocked without changing imported IDs',
+  () => {
+    const { target, generate, apply, sourcePath, output } = fixture()
+    try {
+      generate()
+      apply()
+      const before = target
         .query('SELECT * FROM breadlineImportFeature ORDER BY sourceTable,sourceId')
-        .all(),
-    ).toEqual(before)
-  } finally {
-    target.close()
-  }
-})
+        .all()
+      const source = new Database(sourcePath)
+      source.exec(
+        "UPDATE breadline__public__donors SET _breadline_row_hash='changed' WHERE id=900001",
+      )
+      source.close()
+      expect(generate).toThrow('Source changed for donors:900001')
+      expect(() => readFileSync(output)).toThrow()
+      expect(
+        target
+          .query('SELECT * FROM breadlineImportFeature ORDER BY sourceTable,sourceId')
+          .all(),
+      ).toEqual(before)
+    } finally {
+      target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
 
-test('requires the universal phone property rather than a same-named scoped property', () => {
-  const { target, generate, output } = fixture()
-  try {
-    generate()
-    target.exec("UPDATE property SET scope='organisation'")
-    expect(generate).toThrow(
-      'Universal phone property gPropPhNum01 is missing or incompatible',
-    )
-    expect(() => readFileSync(output)).toThrow()
-    expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 0 })
-  } finally {
-    target.close()
-  }
-})
+test(
+  'requires the universal phone property rather than a same-named scoped property',
+  () => {
+    const { target, generate, output } = fixture()
+    try {
+      generate()
+      target.exec("UPDATE property SET scope='organisation'")
+      expect(generate).toThrow(
+        'Universal phone property gPropPhNum01 is missing or incompatible',
+      )
+      expect(() => readFileSync(output)).toThrow()
+      expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 0 })
+    } finally {
+      target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
