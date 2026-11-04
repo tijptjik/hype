@@ -1,6 +1,17 @@
 // @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { readFeaturePresentationPolicy } from '#lib/db/services/featurePresentationPolicy.js'
+vi.mock('#lib/db/services/historicalLayers.js', () => ({
+  historicalSourceLayerId: vi.fn(async () => null),
+}))
+vi.mock('#lib/db/services/featurePresentationPolicy.js', () => ({
+  readFeaturePresentationPolicy: vi.fn(async () => ({
+    allowDescriptions: true,
+    locationBasedNames: false,
+  })),
+}))
+
 // Panel query registration is isolated from this resource's authorization fixtures.
 vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { z } from 'zod'
@@ -357,6 +368,10 @@ describe('feature.remote authz matrix', () => {
   beforeEach(() => {
     // Reuse the stateless handlers; reset their mocked dependencies for each case.
     vi.clearAllMocks()
+    vi.mocked(readFeaturePresentationPolicy).mockResolvedValue({
+      allowDescriptions: true,
+      locationBasedNames: false,
+    })
     mockSaveLinkedFeatureForm.mockResolvedValue({ status: 'unlinked' })
 
     mockAuthorizeFeatureListForContext.mockReturnValue({ allowed: true })
@@ -719,6 +734,56 @@ describe('feature.remote authz matrix', () => {
       expect(mockUpdateProperties).not.toHaveBeenCalled()
     },
   )
+
+  it('preserves disabled descriptions and forces persisted Location naming on save', async () => {
+    vi.mocked(readFeaturePresentationPolicy).mockResolvedValue({
+      allowDescriptions: false,
+      locationBasedNames: true,
+    })
+    mockLoadFeature.mockResolvedValue({
+      id: 'feature-1',
+      i18n: {
+        en: { title: 'Venue', description: 'Retain this', descriptionGen: false },
+      },
+      properties: [],
+    })
+    await remote.featureForm(
+      {
+        meta: {
+          id: 'feature-1',
+          mode: 'update',
+          updatedAt: '2026-03-18T00:00:00.000Z',
+        },
+        data: {
+          organisationId: 'org-1',
+          projectId: 'project-1',
+          layerId: 'layer-1',
+          contributorId: null,
+          i18n: { en: { title: 'Venue', description: 'Discard this edit' } },
+          properties: [],
+          geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+          addressMeta: { street: 'Main' },
+          isIntangible: false,
+          isVisitable: true,
+          isPendingReview: false,
+          locationNameMode: 'independent',
+        },
+      },
+      throwingInvalid,
+    )
+    expect(mockSaveLinkedFeatureForm).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        locationNameMode: 'inherit',
+        i18n: {
+          en: expect.objectContaining({
+            description: 'Retain this',
+            descriptionGen: false,
+          }),
+        },
+      }),
+    )
+  })
 
   it('featureForm update allows changed field submission', async () => {
     const result = await remote.featureForm(
