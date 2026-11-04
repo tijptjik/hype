@@ -84,3 +84,22 @@ it('keeps singleton buildings direct while grouping multiple building addresses'
   expect(groupDraftSearchResults([first])[0].expandable).toBe(false)
   expect(groupDraftSearchResults([first, second])[0].expandable).toBe(true)
 })
+
+it('groups Building results only by the same name and exactly identical coordinates', () => {
+  const building = (number: string, longitude = 114.15): DraftSearchResult => ({
+    ...row(number, longitude),
+    kind: 'building',
+    names: { en: 'Hollywood Building' },
+  })
+  const first = building('186A')
+  const second = building('188A')
+  second.address.overrides.en!.streetName = 'Secondary Road'
+  const nearby = building('190A', 114.150001)
+  const otherName = { ...building('192'), names: { en: 'Other Building' } }
+  const groups = groupDraftSearchResults([second, first, nearby, otherName, row('194')])
+  expect(groups).toHaveLength(4)
+  expect(groups[0].members.map(member => member.id)).toEqual(['186A', '188A'])
+  expect(groups[0].expandable).toBe(true)
+  expect(groups[0].representative).toBe(first)
+  expect(groups[1].expandable).toBe(false)
+})
