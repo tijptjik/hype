@@ -27,8 +27,8 @@ function baseline(): PersistedLocationBaseline {
           address2dId: 'address',
           address3dId: null,
           address3dUnitId: null,
-          addressSnapshotId: 'snapshot',
-          records: { original: 'retained' },
+          snapshotId: 'snapshot',
+          rawSource: { original: 'retained' },
           fallbackDisplay: { en: 'Old address' },
         },
       },
@@ -45,7 +45,7 @@ describe('unresolved Feature split planning', () => {
     expect(result.plan.locationId).toMatch(/^[A-Za-z0-9_-]{12}$/)
     expect(result.plan.facts.phoneNumber).toEqual(['+85223456789'])
     expect(result.plan.facts.location.address.address2dId).toBeNull()
-    expect(result.plan.facts.location.address.records).toEqual({})
+    expect(result.plan.facts.location.address.rawSource).toEqual({})
     expect(result.plan.overrides.location).toEqual({
       mode: 'override',
       value: original.effective.location,
