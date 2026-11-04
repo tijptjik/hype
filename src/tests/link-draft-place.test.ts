@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   candidate: vi.fn(),
   import: vi.fn(),
   link: vi.fn(),
+  relink: vi.fn(),
 }))
 vi.mock('#lib/api/location.remote.js', () => ({
   getFeatureLocation: () =>
@@ -12,6 +13,7 @@ vi.mock('#lib/api/location.remote.js', () => ({
   getFeatureLocationCandidate: mocks.candidate,
   importFeatureLocationCandidate: mocks.import,
   linkFeatureLocation: mocks.link,
+  relinkFeatureLocation: mocks.relink,
 }))
 const input = {
   featureId: 'created-id',
@@ -59,4 +61,25 @@ it('propagates import failure without attempting a link', async () => {
   mocks.import.mockRejectedValue(new Error('unavailable'))
   await expect(linkDraftPlace(input)).rejects.toThrow('unavailable')
   expect(mocks.link).not.toHaveBeenCalled()
+})
+
+it('reassociates only the explicitly selected previous identity and preserves the selected naming policy', async () => {
+  mocks.existing.mockReturnValue({ locationId: 'previous', version: 'saved-version' })
+  await linkDraftPlace({
+    ...input,
+    replacementLocationId: 'previous',
+    nameMode: 'independent',
+  })
+  expect(mocks.relink).toHaveBeenCalledWith({
+    featureId: input.featureId,
+    locationId: ready.locationId,
+    revisionId: ready.revisionId,
+    expectedFeatureModifiedAt: input.modifiedAt,
+    expectedRevision: 'saved-version',
+    nameMode: 'independent',
+  })
+  mocks.existing.mockReturnValue({ locationId: 'concurrent', version: 'changed' })
+  await expect(
+    linkDraftPlace({ ...input, replacementLocationId: 'previous' }),
+  ).rejects.toThrow('different')
 })
