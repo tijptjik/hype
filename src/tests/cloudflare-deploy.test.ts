@@ -1,9 +1,37 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   deployWorker,
   shouldTreatDeployErrorAsSuccess,
 } from '../../scripts/cloud/deploy-worker'
+
+const mocks = vi.hoisted(() => ({
+  preserveRoutes: vi.fn(),
+  writeFile: vi.fn(),
+  unlink: vi.fn(),
+}))
+vi.mock('../../scripts/cloud/hub-domain-deploy', () => ({
+  preserveHubDomainRoutes: mocks.preserveRoutes,
+}))
+vi.mock('node:fs/promises', () => ({
+  writeFile: mocks.writeFile,
+  unlink: mocks.unlink,
+}))
+
+/**
+ * Supplies only local configuration and an injected process executor for deployment tests.
+ * @param spawn Mock process executor; never starts a real deployment.
+ * @returns Nothing.
+ */
+function mockRuntime(spawn: ReturnType<typeof vi.fn>): void {
+  vi.stubGlobal('Bun', {
+    spawn,
+    TOML: {
+      parse: () => ({ env: { production: { routes: [] }, preview: { routes: [] } } }),
+    },
+    file: () => ({ text: async () => '' }),
+  })
+}
 
 describe('shouldTreatDeployErrorAsSuccess', () => {
   it('rejects the old breadline.hk DNS collision after upload', () => {
@@ -66,12 +94,19 @@ Uploaded hype-preview (11.93 sec)
   })
 })
 
-describe('division worker deployment', () => {
+describe('database worker deployment', () => {
+  beforeEach(() => {
+    mocks.preserveRoutes
+      .mockReset()
+      .mockResolvedValue([{ pattern: 'retained.example.test', custom_domain: true }])
+    mocks.writeFile.mockReset().mockResolvedValue(undefined)
+    mocks.unlink.mockReset().mockResolvedValue(undefined)
+  })
   afterEach(() => vi.unstubAllGlobals())
 
   it('stops before deploying the app when the division worker fails', async () => {
     const spawn = vi.fn().mockReturnValue({ exited: Promise.resolve(1) })
-    vi.stubGlobal('Bun', { spawn })
+    mockRuntime(spawn)
     expect(await deployWorker('production')).toBe(1)
     expect(spawn).toHaveBeenCalledTimes(1)
     expect(spawn.mock.calls[0][0]).toEqual([
@@ -85,9 +120,10 @@ describe('division worker deployment', () => {
     ])
   })
 
-  it('deploys the matching division worker before the preview app', async () => {
+  it('deploys both matching database workers before the preview app', async () => {
     const spawn = vi
       .fn()
+      .mockReturnValueOnce({ exited: Promise.resolve(0) })
       .mockReturnValueOnce({ exited: Promise.resolve(0) })
       .mockReturnValueOnce({
         exited: Promise.resolve(0),
@@ -102,7 +138,7 @@ describe('division worker deployment', () => {
           },
         }),
       })
-    vi.stubGlobal('Bun', { spawn })
+    mockRuntime(spawn)
     expect(await deployWorker('preview')).toBe(0)
     expect(spawn.mock.calls.map(call => call[0])).toEqual([
       [
@@ -114,7 +150,41 @@ describe('division worker deployment', () => {
         '--env',
         'preview',
       ],
-      ['bun', 'wrangler', 'deploy', '--name', 'hype-preview', '--env', 'preview'],
+      [
+        'bun',
+        'wrangler',
+        'deploy',
+        '--config',
+        'workers/location-refresh/wrangler.jsonc',
+        '--env',
+        'preview',
+      ],
+      [
+        'bun',
+        'wrangler',
+        'deploy',
+        '--config',
+        expect.stringMatching(/^\.hub-deploy-.*\.json$/),
+        '--name',
+        'hype-preview',
+        '--env',
+        'preview',
+      ],
     ])
+    expect(JSON.parse(mocks.writeFile.mock.calls[0][1]).env.preview.routes).toEqual([
+      { pattern: 'retained.example.test', custom_domain: true },
+    ])
+    expect(mocks.unlink).toHaveBeenCalledExactlyOnceWith(
+      mocks.writeFile.mock.calls[0][0],
+    )
+  })
+
+  it('does not start deployment when domain inventory cannot be preserved', async () => {
+    const spawn = vi.fn()
+    mockRuntime(spawn)
+    mocks.preserveRoutes.mockRejectedValue(new Error('Inventory unavailable'))
+    await expect(deployWorker('preview')).rejects.toThrow('Inventory unavailable')
+    expect(spawn).not.toHaveBeenCalled()
+    expect(mocks.writeFile).not.toHaveBeenCalled()
   })
 })

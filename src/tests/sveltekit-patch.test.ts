@@ -1,26 +1,30 @@
 // NODE
-import { execFileSync } from 'node:child_process'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 // TESTING
 import { describe, expect, it } from 'vitest'
 
 /**
  * Runs installed framework modules outside Vite's own remote-module transforms.
  * @param script - Native ESM regression probe.
- * @returns The probe's standard output; assertion failures reject the test.
+ * @returns The native module's completion marker; assertion failures reject the test.
  */
-function runFrameworkProbe(script: string): string {
-  return execFileSync(process.execPath, ['--input-type=module', '-e', script], {
-    cwd: process.cwd(),
-    encoding: 'utf8',
-  })
+async function runFrameworkProbe(script: string): Promise<string> {
+  // Native data-URL imports bypass Vite transforms without requiring a child executable.
+  const source = script.replace("console.log('ok');", "export const output = 'ok';")
+  const module = await import(
+    /* @vite-ignore */ `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
+  )
+  return module.output
 }
 
 describe('SvelteKit 3 dependency compatibility', () => {
-  it('allows remote entry points outside server directories and enforces server-only imports', () => {
+  it('allows remote entry points outside server directories and enforces server-only imports', async () => {
     expect(
-      runFrameworkProbe(`
+      (
+        await runFrameworkProbe(`
       import assert from 'node:assert/strict';
-      import { plugin_guard } from './node_modules/@sveltejs/kit/src/exports/vite/plugins/guard.js';
+      import { plugin_guard } from '${pathToFileURL(resolve('node_modules/@sveltejs/kit/src/exports/vite/plugins/guard.js')).href}';
       const root = process.cwd();
       const page = root + '/src/routes/+page.svelte';
       const remote = root + '/src/lib/api/example.remote.ts';
@@ -47,13 +51,15 @@ describe('SvelteKit 3 dependency compatibility', () => {
       const disabled = await createGuard(false);
       assert.throws(() => disabled.load.handler(misplaced), /config_feature_disabled/);
       console.log('ok');
-    `).trim(),
+    `)
+      ).trim(),
     ).toBe('ok')
   })
 
-  it('returns query results and completes redirects without returning data', () => {
+  it('returns query results and completes redirects without returning data', async () => {
     expect(
-      runFrameworkProbe(`
+      (
+        await runFrameworkProbe(`
       import assert from 'node:assert/strict';
       import { readFileSync } from 'node:fs';
       let source = readFileSync('./node_modules/@sveltejs/kit/src/runtime/client/remote-functions/query/index.js', 'utf8');
@@ -66,14 +72,20 @@ describe('SvelteKit 3 dependency compatibility', () => {
         class QueryProxy { constructor(id, arg, fn) { return { run: () => fn(arg) }; } }
       \`;
       const { query } = await import('data:text/javascript;base64,' + Buffer.from(prelude + source).toString('base64'));
+      try {
       globalThis.__queryProbeRedirects = [];
       globalThis.__queryProbeResult = { _: { value: 42 } };
       assert.deepEqual(await query('probe')('').run(), { value: 42 });
       globalThis.__queryProbeResult = { redirect: '/signin', _: 'must not return' };
       assert.equal(await query('probe')('').run(), undefined);
       assert.deepEqual(globalThis.__queryProbeRedirects, ['/signin']);
+      } finally {
+        delete globalThis.__queryProbeRedirects;
+        delete globalThis.__queryProbeResult;
+      }
       console.log('ok');
-    `).trim(),
+    `)
+      ).trim(),
     ).toBe('ok')
   })
 })
