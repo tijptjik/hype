@@ -33,8 +33,13 @@ const users = ['Alex Chan', 'Robin Lee', 'Sam Wong'].map((name, index) => ({
 const form = {
   fields: {
     data: {
-      code: { as: () => ({ value: 'hkfoodworks' }), issues: () => undefined },
+      code: {
+        set: () => {},
+        as: () => ({ value: 'hkfoodworks' }),
+        issues: () => undefined,
+      },
       url: {
+        set: () => {},
         as: () => ({ value: 'https://hkfoodworks.com/' }),
         issues: () => undefined,
       },
@@ -65,13 +70,11 @@ const form = {
         >
           {#snippet left()}
             <div class="flex items-center gap-3">
-              <OrganisationIcon class="size-6 text-primary" />
+              <OrganisationIcon class="text-primary size-6" />
               <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
             </div>
           {/snippet}
-          {#snippet children(
-            locale,
-          )}
+          {#snippet children(locale)}
             <TextInput label="Name" value="HKFoodWorks" {locale} isEditing={editing} />
             <TextInput
               label="Short Name"
