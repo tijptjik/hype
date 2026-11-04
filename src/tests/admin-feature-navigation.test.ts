@@ -233,6 +233,29 @@ describe('feature detail loading priority', () => {
     expect(admin.featureNavigationRows.map(row => row.id)).toEqual(['a', 'next'])
   })
 
+  it('retires pending navigation IDs after an explicit cache reset', async () => {
+    const { admin, view } = setup()
+    let resolve!: (value: never) => void
+    vi.spyOn(featureRemote, 'getFeatureIds').mockImplementation(
+      () =>
+        new Promise(done => {
+          resolve = done
+        }) as never,
+    )
+    const pending = admin.ensureFeatureNavigation('a')
+    view.clearAllCaches()
+    resolve({ data: [{ id: 'obsolete' }], hasMore: false } as never)
+    await pending
+    expect(admin.featureNavigationRows.some(row => row.id === 'obsolete')).toBe(false)
+  })
+
+  it('retires remembered navigation order after an explicit cache reset', () => {
+    const { admin, view } = setup()
+    admin.rememberFeatureIndex([{ id: 'obsolete' }])
+    view.clearAllCaches()
+    expect(admin.featureNavigationRows.some(row => row.id === 'obsolete')).toBe(false)
+  })
+
   it('discards late navigation IDs after the active filters change', async () => {
     const { admin, view } = setup()
     view.filters.values.feature.text = ''
@@ -249,4 +272,52 @@ describe('feature detail loading priority', () => {
     await pending
     expect(admin.featureNavigationRows.map(row => row.id)).toEqual(['other'])
   })
+})
+
+it.each(['ids', 'cards'])(
+  'refreshes retained %s before selecting neighbours',
+  async mode => {
+    const { admin, view } = setup()
+    view.filters.values.feature.text = ''
+    if (mode === 'cards') view.filters.viewFilters.feature.hasTitle = true
+    const old = {
+      data: [feature('a', 'Anchor'), feature('obsolete', 'Old')],
+      hasMore: false,
+    }
+    const current = {
+      data: [feature('a', 'Anchor'), feature('current', 'Current')],
+      hasMore: false,
+    }
+    const query = Object.assign(Promise.resolve(old), {
+      current: old,
+      refresh: vi.fn(async () => {
+        query.current = current
+      }),
+    })
+    vi.spyOn(
+      featureRemote,
+      mode === 'cards' ? 'getFeatures' : 'getFeatureIds',
+    ).mockReturnValueOnce(query as never)
+    await admin.ensureFeatureNavigation('a')
+    expect(query.refresh).toHaveBeenCalledOnce()
+    expect(getAdjacentResourceRefs(admin.featureNavigationRows, 'a').nextRef).toBe(
+      'current',
+    )
+  },
+)
+
+it('rejects a non-advancing navigation page before dispatching another read', async () => {
+  const { admin } = setup()
+  const query = vi
+    .spyOn(featureRemote, 'getFeatureIds')
+    .mockResolvedValueOnce({
+      data: [{ id: 'unrelated' }],
+      hasMore: true,
+      nextOffset: 0,
+    } as never)
+    .mockRejectedValueOnce(new Error('unexpected repeated read'))
+  await expect(admin.ensureFeatureNavigation('a')).rejects.toThrow(
+    'Feature navigation pagination did not advance',
+  )
+  expect(query).toHaveBeenCalledOnce()
 })

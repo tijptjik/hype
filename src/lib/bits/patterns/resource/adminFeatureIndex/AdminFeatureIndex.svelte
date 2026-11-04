@@ -13,10 +13,11 @@ import { getRootCTX } from '#lib/context/root.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import { getFeatures, updateFeatureBulkState } from '#lib/api/feature.remote.js'
+import { refreshRemoteQuery } from '#lib/remote/index.js'
 // SERVICES
+import { collectBulkSelection } from '#lib/client/services/bulkSelection.js'
 import { runBulkCommands } from '#lib/client/services/bulkCommands.js'
 import { patchBulkFeatureRows } from '#lib/client/services/bulkFeatureRows.js'
-import { collectBulkSelection } from '#lib/client/services/bulkSelection.js'
 import { getCachedFeatureRowModel } from '#lib/client/services/featureRow.js'
 import {
   createPropertyFilterSection,
@@ -533,28 +534,35 @@ async function loadMoreFeatureResults(): Promise<void> {
   remoteLoadingMore = true
   remotePageError = null
   try {
-    const result = await getFeatures({
-      conditions: adminCtx.view.isSuperAdmin()
-        ? { isArchived: null, isPublished: null }
-        : { isArchived: false, isPublished: null },
-      prisms: adminCtx.view.scope.prisms,
-      sorting: adminCtx.view.filters.sorting.feature,
-      q: query,
-      pagination: { limit: 50, offset: remoteNextOffset },
-      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-    })
+    const result = await refreshRemoteQuery(
+      getFeatures({
+        conditions: adminCtx.view.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        prisms: adminCtx.view.scope.prisms,
+        sorting: adminCtx.view.filters.sorting.feature,
+        q: query,
+        pagination: { limit: 50, offset: remoteNextOffset },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+      }),
+    )
     if (
       requestId !== latestRemoteRequestId ||
       query !== normalizedTextQuery ||
       signature !== searchSignature
     )
       return
+    const hasMore = result.hasMore ?? false
+    const nextOffset = result.nextOffset ?? remoteNextOffset + result.data.length
+    // Preserve the current matches and cursor if the search continuation cannot advance.
+    if (hasMore && (result.data.length === 0 || nextOffset <= remoteNextOffset))
+      throw new Error('Feature search pagination did not advance')
     remoteMatchedEntities = toUniqueFeatures([
       ...(remoteMatchedEntities ?? []),
       ...(result.data as Feature[]),
     ])
-    remoteHasMore = result.hasMore ?? false
-    remoteNextOffset = result.nextOffset ?? remoteNextOffset + result.data.length
+    remoteHasMore = hasMore
+    remoteNextOffset = nextOffset
   } catch (error) {
     if (
       requestId === latestRemoteRequestId &&
@@ -694,14 +702,16 @@ async function selectAllFeatureMatches(): Promise<void> {
   try {
     const ids = await collectBulkSelection<Feature>(
       async offset =>
-        await getFeatures({
-          conditions,
-          prisms,
-          sorting,
-          q: query,
-          pagination: { limit: 100, offset },
-          meta,
-        }),
+        await refreshRemoteQuery(
+          getFeatures({
+            conditions,
+            prisms,
+            sorting,
+            q: query,
+            pagination: { limit: 100, offset },
+            meta,
+          }),
+        ),
       rows =>
         adminCtx.view.filters.applyFeatureViewFilters(
           query
@@ -770,6 +780,11 @@ function toBulkRemoteFailureResult(id: string, err: unknown): FeatureBulkStateRe
   }
 }
 
+/**
+ * Publishes confirmed state and revision values into both rendered collections.
+ * @param results Completed bulk command outcomes.
+ * @returns Nothing.
+ */
 function patchSuccessfulBulkUpdates(results: FeatureBulkStateResult[]): void {
   if (!results.some(result => result.ok)) return
   adminCtx.view.setSortedResourceState(
@@ -1021,16 +1036,18 @@ $effect(() => {
       return
 
     remotePending = true
-    void getFeatures({
-      conditions: adminCtx.view.isSuperAdmin()
-        ? { isArchived: null, isPublished: null }
-        : { isArchived: false, isPublished: null },
-      prisms: adminCtx.view.scope.prisms,
-      sorting: adminCtx.view.filters.sorting.feature,
-      q: nextQuery,
-      pagination: { limit: 50, offset: 0 },
-      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-    })
+    void refreshRemoteQuery(
+      getFeatures({
+        conditions: adminCtx.view.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        prisms: adminCtx.view.scope.prisms,
+        sorting: adminCtx.view.filters.sorting.feature,
+        q: nextQuery,
+        pagination: { limit: 50, offset: 0 },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+      }),
+    )
       .then(result => {
         if (latestRemoteRequestId !== nextRequestId || signature !== searchSignature)
           return
@@ -1325,7 +1342,7 @@ function updateRowFocus(index: number) {
     <span>{m.bootstrap__error()}</span>
     <button
       type="button"
-      class="rounded-lg px-3 py-2 font-semibold hover:bg-muted"
+      class="hover:bg-muted rounded-lg px-3 py-2 font-semibold"
       onclick={() => {
         if (normalizedTextQuery && remoteMatchedEntities === null) searchRetry++
         else void loadMoreFeatureResults()

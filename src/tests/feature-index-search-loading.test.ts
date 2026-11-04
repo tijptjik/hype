@@ -4,6 +4,7 @@ import ts from 'typescript'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, untrack } from 'svelte'
 import { compileModule } from 'svelte/compiler'
+import { refreshRemoteQuery } from '#lib/remote/index.js'
 // @ts-expect-error Svelte's compiler runtime is internal and has no public declarations.
 import * as client from 'svelte/internal/client'
 
@@ -53,8 +54,9 @@ const compiled = compileModule(js, {
 const create = new Function(
   'client',
   'untrack',
+  'refreshRemoteQuery',
   `${compiled.replace(/import \* as \$ from ['"]svelte\/internal\/client['"];?/, 'const $ = client;')}\nreturn create;`,
-)(client, untrack)
+)(client, untrack, refreshRemoteQuery)
 const cleanups: Array<() => void> = []
 afterEach(() => {
   for (const stop of cleanups.splice(0)) stop()
@@ -114,6 +116,57 @@ describe('Feature index search loading', () => {
     expect(state.state()).toMatchObject({
       ids: ['a', 'b'],
       hasMore: false,
+      complete: true,
+    })
+  })
+
+  it('uses refreshed native query payloads for initial and continuation pages', async () => {
+    const first = Object.assign(Promise.resolve(page(['stale'])), {
+      current: page(['stale']),
+      refresh: vi.fn(async () => {
+        first.current = page(['fresh'], true, 1)
+      }),
+    })
+    const second = Object.assign(Promise.resolve(page(['stale-more'])), {
+      current: page(['stale-more']),
+      refresh: vi.fn(async () => {
+        second.current = page(['fresh-more'])
+      }),
+    })
+    const request = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second)
+    const state = setup(request)
+    await settle()
+    expect(state.state().ids).toEqual(['fresh'])
+    await state.more()
+    expect(state.state().ids).toEqual(['fresh', 'fresh-more'])
+    expect(first.refresh).toHaveBeenCalledOnce()
+    expect(second.refresh).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    { ids: ['invalid'], nextOffset: 1 },
+    { ids: ['invalid'], nextOffset: 0 },
+    { ids: [], nextOffset: 2 },
+  ])('retains results and cursor for a malformed continuation %j', async malformed => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(page(['first'], true, 1))
+      .mockResolvedValueOnce(page(malformed.ids, true, malformed.nextOffset))
+      .mockResolvedValueOnce(page(['second']))
+    const state = setup(request)
+    await settle()
+    await state.more()
+    expect(state.state()).toMatchObject({
+      ids: ['first'],
+      loadingMore: false,
+      hasMore: true,
+      error: expect.any(Error),
+    })
+    await state.more()
+    expect(request.mock.calls[2][0].pagination.offset).toBe(1)
+    expect(state.state()).toMatchObject({
+      ids: ['first', 'second'],
+      error: null,
       complete: true,
     })
   })

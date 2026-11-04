@@ -95,3 +95,92 @@ describe('entity feature tabs', () => {
     },
   )
 })
+
+/** Creates an admin index owner registered for teardown. */
+function createIndex() {
+  const view = new ResourceViewCtx(
+    new DivisionCtx(),
+    new AccountState(),
+    new ResponsiveCtx(),
+    undefined,
+    'admin',
+  )
+  views.push(view)
+  return { view, admin: new AdminCtx(view) }
+}
+
+it('starts a new first-page request after reset instead of joining an obsolete read', async () => {
+  const { view, admin } = createIndex()
+  let resolve!: (value: unknown) => void
+  const pending = new Promise(resolvePromise => {
+    resolve = resolvePromise
+  })
+  const request = vi
+    .spyOn(featureRemote, 'getFeatures')
+    .mockReturnValueOnce(pending as never)
+    .mockResolvedValueOnce({
+      data: [{ id: 'new' }],
+      totalCount: 1,
+      hasMore: false,
+    } as never)
+  const older = admin.ensureFeatureIndex()
+  view.clearAllCaches()
+  const replacement = admin.ensureFeatureIndex()
+  // Settle the obsolete request even on failure so the test leaves no pending reads.
+  const calls = request.mock.calls.length
+  resolve({ data: [{ id: 'old' }], totalCount: 99, hasMore: true })
+  await Promise.all([older, replacement])
+  expect(calls).toBe(2)
+  expect(view.queries.rows.feature.map(row => row.id)).toEqual(['new'])
+  expect(view.getListQueryMeta(view.featuresQueryKey())?.totalCount).toBe(1)
+})
+
+it('does not restore first-page metadata after reset without a replacement', async () => {
+  const { view, admin } = createIndex()
+  let resolve!: (value: unknown) => void
+  const pending = new Promise(resolvePromise => {
+    resolve = resolvePromise
+  })
+  vi.spyOn(featureRemote, 'getFeatures').mockReturnValueOnce(pending as never)
+  const read = admin.ensureFeatureIndex()
+  view.clearAllCaches()
+  resolve({ data: [{ id: 'old' }], totalCount: 99, hasMore: true })
+  await read
+  expect(view.getListQueryMeta(view.featuresQueryKey())).toBeNull()
+  expect(admin.featureIndexReady).toBe(false)
+})
+
+it('reloads a previously ready index after cache reset', async () => {
+  const { view, admin } = createIndex()
+  const request = vi
+    .spyOn(featureRemote, 'getFeatures')
+    .mockResolvedValueOnce({ data: [{ id: 'old' }], hasMore: false } as never)
+    .mockResolvedValueOnce({ data: [{ id: 'new' }], hasMore: false } as never)
+  await admin.ensureFeatureIndex()
+  view.clearAllCaches()
+  await admin.ensureFeatureIndex()
+  expect(request).toHaveBeenCalledTimes(2)
+  expect(view.queries.rows.feature.map(row => row.id)).toEqual(['new'])
+})
+
+it('rejects a continuation page that finishes after cache reset', async () => {
+  const { view, admin } = createIndex()
+  let resolve!: (value: unknown) => void
+  const pending = new Promise(resolvePromise => {
+    resolve = resolvePromise
+  })
+  vi.spyOn(featureRemote, 'getFeatures')
+    .mockResolvedValueOnce({
+      data: [{ id: 'first' }],
+      hasMore: true,
+      nextOffset: 1,
+    } as never)
+    .mockReturnValueOnce(pending as never)
+  await admin.ensureFeatureIndex()
+  const more = admin.loadMoreFeatures()
+  view.clearAllCaches()
+  resolve({ data: [{ id: 'obsolete' }], hasMore: false })
+  await more
+  expect(view.cache.feature.has('obsolete')).toBe(false)
+  expect(view.queries.rows.feature.some(row => row.id === 'obsolete')).toBe(false)
+})

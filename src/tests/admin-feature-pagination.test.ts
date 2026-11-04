@@ -196,3 +196,68 @@ describe('admin Feature collection pagination', () => {
     expect(view.queries.rows.feature.map(row => row.id)).toEqual(['a', 'b'])
   })
 })
+
+it('refreshes retained continuation handles before appending authorized rows', async () => {
+  const { view, admin } = setup()
+  const retained = Object.assign(Promise.resolve(page(['obsolete'])), {
+    current: page(['obsolete']),
+    refresh: vi.fn(async () => {
+      retained.current = page(['current'])
+    }),
+  })
+  vi.spyOn(featureRemote, 'getFeatures')
+    .mockResolvedValueOnce(page(['first'], true, 1) as never)
+    .mockReturnValueOnce(retained as never)
+  await admin.ensureFeatureIndex()
+  await admin.loadMoreFeatures()
+  expect(retained.refresh).toHaveBeenCalledOnce()
+  expect(view.queries.rows.feature.map(row => row.id)).toEqual(['first', 'current'])
+})
+
+it('does not append retained continuation data when refresh is denied', async () => {
+  const { view, admin } = setup()
+  const denied = new Error('access revoked')
+  const retained = Object.assign(Promise.resolve(page(['obsolete'])), {
+    current: page(['obsolete']),
+    refresh: vi.fn(async () => {
+      throw denied
+    }),
+  })
+  vi.spyOn(featureRemote, 'getFeatures')
+    .mockResolvedValueOnce(page(['first'], true, 1) as never)
+    .mockReturnValueOnce(retained as never)
+  await admin.ensureFeatureIndex()
+  await admin.loadMoreFeatures()
+  expect(view.queries.rows.feature.map(row => row.id)).toEqual(['first'])
+  expect(admin.featurePageError).toBe(denied)
+  expect(admin.featureLoadingMore).toBe(false)
+})
+
+it.each(['same', 'backwards', 'empty', 'empty-advancing'] as const)(
+  'rejects %s continuation before changing rows and allows retry',
+  async scenario => {
+    const { view, admin } = setup()
+    const badPage = scenario.startsWith('empty')
+      ? {
+          data: [],
+          hasMore: true,
+          nextOffset: scenario === 'empty-advancing' ? 2 : undefined,
+        }
+      : page(['bad'], true, scenario === 'same' ? 1 : 0)
+    const request = vi
+      .spyOn(featureRemote, 'getFeatures')
+      .mockResolvedValueOnce(page(['first'], true, 1) as never)
+      .mockResolvedValueOnce(badPage as never)
+      .mockResolvedValueOnce(page(['second']) as never)
+    await admin.ensureFeatureIndex()
+    await admin.loadMoreFeatures()
+    expect(admin.featurePageError).toBeInstanceOf(Error)
+    expect(view.queries.rows.feature.map(row => row.id)).toEqual(['first'])
+    expect(view.cache.feature.has('bad')).toBe(false)
+    expect(admin.featureLoadingMore).toBe(false)
+    await admin.loadMoreFeatures()
+    expect(request.mock.calls[2][0].pagination?.offset).toBe(1)
+    expect(admin.featurePageError).toBeNull()
+    expect(view.queries.rows.feature.map(row => row.id)).toEqual(['first', 'second'])
+  },
+)

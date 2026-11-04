@@ -244,6 +244,7 @@ export class AdminCtx {
   get tasksQueryKey() {
     return [
       FirstClassResource.task,
+      this.view.resources.scopeKey,
       this.getTaskListPrisms().organisation,
       this.getTaskListPrisms().project,
       this.getTaskListPrisms().layer,
@@ -257,6 +258,7 @@ export class AdminCtx {
   get hubsQueryKey() {
     return [
       'hub',
+      this.view.resources.scopeKey,
       this.view.filters.sorting.hub.sortBy,
       this.view.filters.sorting.hub.sortOrder,
     ]
@@ -305,12 +307,24 @@ export class AdminCtx {
   layersQueryFn = async () => this.view.layersQueryFn()
 
   /**
+   * Identifies the Feature page owner, including explicit cache resets.
+   * @returns Serialized access, query and cache-generation identity.
+   */
+  private getFeaturePageKey(): string {
+    return JSON.stringify([
+      this.view.resources.scopeKey,
+      this.view.cacheCtx.generation,
+      this.view.featuresQueryKey(),
+    ])
+  }
+
+  /**
    * Fetches features for the admin view and stores list metadata for later UI decisions.
    *
    * @returns Feature cards for the current admin prism and sort state.
    */
   featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
-    const key = JSON.stringify(this.view.featuresQueryKey())
+    const key = this.getFeaturePageKey()
     if (this.featureIndexLoad?.key === key) return this.featureIndexLoad.promise
     const promise = this.loadFeatureIndexPage(key)
     this.featureIndexLoad = { key, promise }
@@ -365,7 +379,7 @@ export class AdminCtx {
     return (
       revision === this.featurePageRevision &&
       key === this.featurePageKey &&
-      key === JSON.stringify(this.view.featuresQueryKey())
+      key === this.getFeaturePageKey()
     )
   }
 
@@ -411,10 +425,7 @@ export class AdminCtx {
    * @returns Completion of the first page if this account/filter scope has not loaded.
    */
   async ensureFeatureIndex(): Promise<void> {
-    if (
-      this.featureIndexReady &&
-      this.featurePageKey === JSON.stringify(this.view.featuresQueryKey())
-    )
+    if (this.featureIndexReady && this.featurePageKey === this.getFeaturePageKey())
       return
     await this.view.queries.refreshFeatures(false)
   }
@@ -431,20 +442,27 @@ export class AdminCtx {
     this.featureLoadingMore = true
     this.featurePageError = null
     try {
-      const result = await getFeatures({
-        ...this.featureListInput(),
-        pagination: { limit: 50, offset: this.featureNextOffset },
-      })
+      const result = await runRemoteQuery(
+        getFeatures({
+          ...this.featureListInput(),
+          pagination: { limit: 50, offset: this.featureNextOffset },
+        }),
+      )
       if (!this.isCurrentFeaturePage(key, revision)) return
+      const hasMore = result.hasMore ?? false
+      const nextOffset =
+        result.nextOffset ?? this.featureNextOffset + result.data.length
+      // Preserve the last valid page and cursor when the server continuation stalls.
+      if (hasMore && (result.data.length === 0 || nextOffset <= this.featureNextOffset))
+        throw new Error('Feature pagination did not advance')
       const rows = new Map(this.view.queries.rows.feature.map(row => [row.id, row]))
       for (const row of result.data) {
         rows.set(row.id, row)
         this.view.cache.feature.set(row.id, row)
       }
       this.view.queries.rows.feature = [...rows.values()]
-      this.featureHasMore = result.hasMore ?? false
-      this.featureNextOffset =
-        result.nextOffset ?? this.featureNextOffset + result.data.length
+      this.featureHasMore = hasMore
+      this.featureNextOffset = nextOffset
     } catch (error) {
       if (this.isCurrentFeaturePage(key, revision)) this.featurePageError = error
     } finally {
@@ -528,7 +546,9 @@ export class AdminCtx {
         q: values.text?.trim() || undefined,
         pagination: { limit: needsRows ? 50 : 250, offset },
       }
-      const result = needsRows ? await getFeatures(params) : await getFeatureIds(params)
+      const result = needsRows
+        ? await runRemoteQuery(getFeatures(params))
+        : await runRemoteQuery(getFeatureIds(params))
       if (state.key !== this.getFeatureIndexKey()) return
       const matches = needsRows
         ? this.view.filters.applyFeatureViewFilters(result.data as Feature[])
@@ -539,14 +559,47 @@ export class AdminCtx {
         ...matches.filter(row => !ids.has(row.id)).map(row => ({ id: row.id })),
       ]
       complete = !result.hasMore
-      offset = result.nextOffset ?? offset + result.data.length
+      const nextOffset = result.nextOffset ?? offset + result.data.length
+      // Reject broken continuations before retaining the page or issuing another read.
+      if (!complete && nextOffset <= offset)
+        throw new Error('Feature navigation pagination did not advance')
+      offset = nextOffset
       this.navigationPage = { key: state.key, rows, offset, complete }
       const index = rows.findIndex(row => row.id === featureId)
       if (index >= 0 && index < rows.length - 1) return
     }
   }
 
-  tasksQueryFn = async () => {
+  private readonly metadataReadSerials = new Map<'task' | 'hub', number>()
+
+  /**
+   * Captures ownership of a task or hub metadata response before its remote read.
+   * @param resource Resource whose earlier reads are superseded.
+   * @param queryKey Current filter and sort identity provider.
+   * @returns Guard for publishing metadata only within the original active view.
+   */
+  private beginMetadataRead(
+    resource: 'task' | 'hub',
+    queryKey: () => unknown[],
+  ): () => boolean {
+    const serial = (this.metadataReadSerials.get(resource) ?? 0) + 1
+    this.metadataReadSerials.set(resource, serial)
+    const key = JSON.stringify(queryKey())
+    const scope = this.view.resources.scopeKey
+    const generation = this.view.cacheCtx.generation
+    return () =>
+      this.metadataReadSerials.get(resource) === serial &&
+      key === JSON.stringify(queryKey()) &&
+      scope === this.view.resources.scopeKey &&
+      generation === this.view.cacheCtx.generation
+  }
+
+  /**
+   * Fetches tasks and retains metadata only for the request's current query and view.
+   * @returns Task rows, or an empty list when the request is forbidden.
+   */
+  tasksQueryFn = async (): Promise<Task[]> => {
+    const isCurrent = this.beginMetadataRead('task', () => this.tasksQueryKey)
     const taskPrisms = this.getTaskListPrisms()
     try {
       const result = toSafeListResponse<Task>(
@@ -563,7 +616,7 @@ export class AdminCtx {
           }),
         )) as ListResponse<Task> | undefined,
       )
-      this.view.setListQueryMeta(this.tasksQueryKey, result)
+      if (isCurrent()) this.view.setListQueryMeta(this.tasksQueryKey, result)
       return result.data
     } catch (error) {
       if (
@@ -572,12 +625,14 @@ export class AdminCtx {
         'status' in error &&
         error.status === 403
       ) {
-        this.view.setListQueryMeta(this.tasksQueryKey, {
-          data: [],
-          totalCount: 0,
-          hasMore: false,
-          nextOffset: null,
-        })
+        if (isCurrent()) {
+          this.view.setListQueryMeta(this.tasksQueryKey, {
+            data: [],
+            totalCount: 0,
+            hasMore: false,
+            nextOffset: null,
+          })
+        }
         return []
       }
 
@@ -607,7 +662,8 @@ export class AdminCtx {
    *
    * @returns Hub cards for the current admin sort state, or an empty list for non-admin users.
    */
-  hubsQueryFn = async () => {
+  hubsQueryFn = async (): Promise<Hub[]> => {
+    const isCurrent = this.beginMetadataRead('hub', () => this.hubsQueryKey)
     if (!this.view.isAdmin()) return []
     try {
       const result = toSafeListResponse<Hub>(
@@ -622,7 +678,7 @@ export class AdminCtx {
         )) as ListResponse<Hub> | undefined,
       )
       // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
-      this.view.setListQueryMeta(this.hubsQueryKey, result)
+      if (isCurrent()) this.view.setListQueryMeta(this.hubsQueryKey, result)
       return result.data
     } catch (err) {
       const status =
@@ -755,8 +811,7 @@ export class AdminCtx {
    */
   private getFeatureIndexKey(): string {
     return JSON.stringify([
-      this.view.resources.scopeKey,
-      this.view.featuresQueryKey(),
+      this.getFeaturePageKey(),
       getLocaleKey(),
       this.view.filters.values.feature,
       this.view.filters.viewFilters.feature,
@@ -926,7 +981,7 @@ export class AdminCtx {
 
   isViewportContained = $derived(
     this.navigation.state.resourceRef === false ||
-      this.navigation.state.facet === 'address' ||
+      this.navigation.state.facet === 'location' ||
       this.navigation.state.facet === 'images' ||
       (this.navigation.state.resourceType === 'feature' &&
         (this.navigation.state.facet === 'core' ||

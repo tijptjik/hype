@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 // SERVICES
 import { collectBulkSelection } from '#lib/client/services/bulkSelection.js'
+import { refreshRemoteQuery } from '#lib/remote/index.js'
 
 describe('complete bulk selection', () => {
   it('includes unloaded pages, deduplicates IDs and applies filters to every page', async () => {
@@ -74,3 +75,27 @@ describe('complete bulk selection', () => {
     ).rejects.toThrow('did not advance')
   })
 })
+
+it.each([false, true])(
+  'uses refreshed native pages for complete selection (denied: %s)',
+  async denied => {
+    const retained = Object.assign(
+      Promise.resolve({ data: [{ id: 'obsolete' }], hasMore: false }),
+      {
+        current: { data: [{ id: 'obsolete' }], hasMore: false },
+        refresh: vi.fn(async () => {
+          if (denied) throw new Error('access revoked')
+          retained.current = { data: [{ id: 'current' }], hasMore: false }
+        }),
+      },
+    )
+    const pending = collectBulkSelection(
+      () => refreshRemoteQuery(retained),
+      rows => rows,
+      () => true,
+    )
+    if (denied) await expect(pending).rejects.toThrow('access revoked')
+    else expect(await pending).toEqual(['current'])
+    expect(retained.refresh).toHaveBeenCalledOnce()
+  },
+)
