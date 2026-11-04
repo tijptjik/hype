@@ -2,6 +2,7 @@
 import { getContext, setContext } from 'svelte'
 // CONTEXT
 import { AccountState } from './account.svelte.js'
+import { BackgroundJobs } from './backgroundJobs.svelte.js'
 import { CacheCtx } from './cache.svelte.js'
 // TYPES
 import type { SessionUser } from '#lib/types.js'
@@ -12,6 +13,7 @@ import type { ResponsiveCtx } from './responsive.svelte.js'
 export class RootCTX {
   readonly cacheCtx = new CacheCtx(undefined, true)
   readonly account = new AccountState()
+  readonly backgroundJobs = new BackgroundJobs()
 
   /** Authoritative session identity shared by route surfaces. @returns The root session user. */
   get user(): Readonly<SessionUser> | null {

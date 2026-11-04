@@ -1114,51 +1114,30 @@ export const updateFeatureState = guardedCommand(
 )
 
 /**
- * Applies feature state updates in a batched remote query for bulk admin editing.
- *
- * @param params.id - Feature id to update.
- * @param params.field - Boolean state field to change.
- * @param params.value - Boolean value to persist for the field.
- * @returns A per-row result object containing either the persisted feature row or an error.
- * @remarks
- * Call this query concurrently for up to 100 selected feature ids; SvelteKit collapses
- * those calls into a single `query.batch` request while preserving row-level results.
+ * Applies a bounded bulk edit as a command with independent per-row outcomes.
+ * @param updates Feature identities, state fields, values and explicit admin intent.
+ * @returns Results in input order, including failures for individual rows.
+ * @remarks Commands cannot be retained or replayed by native query refreshes.
+ * Each row uses its own admin intent; the batch does not confer another row's scope.
  */
-export const updateFeatureBulkState = guardedBatchQuery(
-  BulkFeatureStateSchema,
-  async (outputs, ctx) => {
-    const resultEntries: Array<readonly [string, FeatureBulkStateResult]> =
-      await Promise.all(
-        outputs.map(async params => {
-          const key = `${params.id}:${params.field}:${params.value}`
-
-          try {
-            const data = await applyFeatureBulkStateField(params, ctx)
-            const result: FeatureBulkStateResult = {
-              id: params.id as Id,
-              ok: true,
-              data,
-            }
-
-            return [key, result] as const
-          } catch (err) {
-            const result: FeatureBulkStateResult = {
-              id: params.id as Id,
-              ok: false,
-              error: toFeatureBulkStateErrorMessage(err),
-            }
-
-            return [key, result] as const
+export const updateFeatureBulkState = guardedCommand(
+  z.array(BulkFeatureStateSchema).min(1).max(100),
+  async (updates, ctx): Promise<FeatureBulkStateResult[]> =>
+    Promise.all(
+      updates.map(async params => {
+        try {
+          const data = await applyFeatureBulkStateField(params, {
+            ...ctx,
+            isAdminRequest: params.meta?.isAdminRequest === true,
+          })
+          return { id: params.id as Id, ok: true, data }
+        } catch (err) {
+          return {
+            id: params.id as Id,
+            ok: false,
+            error: toFeatureBulkStateErrorMessage(err),
           }
-        }),
-      )
-
-    const resultsByKey = new Map(resultEntries)
-    return params =>
-      resultsByKey.get(`${params.id}:${params.field}:${params.value}`) ?? {
-        id: params.id as Id,
-        ok: false,
-        error: 'FEATURE_UPDATE_FAILED',
-      }
-  },
+        }
+      }),
+    ),
 )

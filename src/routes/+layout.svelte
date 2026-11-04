@@ -39,6 +39,7 @@ import { setRootCTX } from '#lib/context/root.svelte.js'
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
 import App from '#lib/bits/patterns/layout/app/App.svelte'
+import BackgroundJobStatus from '#lib/bits/patterns/layout/app/BackgroundJobStatus.svelte'
 import UpgradeAccountDialog from '#lib/bits/patterns/auth/UpgradeAccountDialog.svelte'
 // STYLES
 import '#lib/styles/app.css'
@@ -438,6 +439,8 @@ watch(
   returnTo={upgradeReturnTo}
   onAccountReady={confirmAccountUpgrade}
 />
+
+<BackgroundJobStatus jobs={root.backgroundJobs} />
 
 {#if data.devPersona &&
   ($session.isPending || $session.data?.user?.id === DEV_PERSONAS[data.devPersona].id)}

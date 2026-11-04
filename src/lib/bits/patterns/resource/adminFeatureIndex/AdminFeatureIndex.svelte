@@ -9,10 +9,13 @@ import { toast } from 'svelte-sonner'
 import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexCardModel.js'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getRootCTX } from '#lib/context/root.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import { getFeatures, updateFeatureBulkState } from '#lib/api/feature.remote.js'
 // SERVICES
+import { runBulkCommands } from '#lib/client/services/bulkCommands.js'
+import { patchBulkFeatureRows } from '#lib/client/services/bulkFeatureRows.js'
 import { collectBulkSelection } from '#lib/client/services/bulkSelection.js'
 import { getCachedFeatureRowModel } from '#lib/client/services/featureRow.js'
 import {
@@ -266,6 +269,7 @@ const sortables = createSortables([
 
 // CONTEXT
 const adminCtx = getAdminCtx()
+const root = getRootCTX()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.feature)
 const isSearchFocused = $derived(headerCtrl.isSearchFocused)
@@ -618,6 +622,7 @@ function toggleBulkMode(): void {
 }
 
 function setSelectedBulkAction(value: string): void {
+  bulkSelectionRevision++
   selectedBulkActionValue = value
   bulkRowResultsById = new Map()
   bulkErrorMessagesById = new Map()
@@ -765,36 +770,14 @@ function toBulkRemoteFailureResult(id: string, err: unknown): FeatureBulkStateRe
   }
 }
 
-function patchSuccessfulBulkUpdates(
-  results: FeatureBulkStateResult[],
-  action: FeatureBulkEditOption,
-): void {
-  const successfulIds = new Set(
-    results.filter(result => result.ok).map(result => result.id),
+function patchSuccessfulBulkUpdates(results: FeatureBulkStateResult[]): void {
+  if (!results.some(result => result.ok)) return
+  adminCtx.view.setSortedResourceState(
+    FirstClassResource.feature,
+    patchBulkFeatureRows(adminCtx.view.queries.rows.feature, results),
   )
-  if (successfulIds.size === 0) return
-
-  const nextFeatures = adminCtx.view.queries.rows.feature.map(feature =>
-    successfulIds.has(feature.id)
-      ? {
-          ...feature,
-          [action.field]: action.state,
-        }
-      : feature,
-  )
-
-  adminCtx.view.setSortedResourceState(FirstClassResource.feature, nextFeatures)
-
-  if (remoteMatchedEntities) {
-    remoteMatchedEntities = remoteMatchedEntities.map(feature =>
-      successfulIds.has(feature.id)
-        ? {
-            ...feature,
-            [action.field]: action.state,
-          }
-        : feature,
-    )
-  }
+  if (remoteMatchedEntities)
+    remoteMatchedEntities = patchBulkFeatureRows(remoteMatchedEntities, results)
 }
 
 function showBulkErrorToasts(errorMessages: string[]): void {
@@ -816,6 +799,18 @@ async function applyFeatureBulkEdit(): Promise<void> {
   if (!action || isBulkApplyDisabled) return
 
   const ids = [...selectedBulkFeatureIds]
+  const revision = bulkSelectionRevision
+  const scope = bulkSelectionScope
+  const roleScope = adminCtx.view.getRoleScopeQueryKey()
+  const selection = bulkSelectedFeatureIds
+  const actionValue = selectedBulkActionValue
+  const isCurrent = (): boolean =>
+    isBulkEditActive &&
+    revision === bulkSelectionRevision &&
+    scope === bulkSelectionScope &&
+    roleScope === adminCtx.view.getRoleScopeQueryKey() &&
+    selection === bulkSelectedFeatureIds &&
+    actionValue === selectedBulkActionValue
   bulkRowResultsById = new Map()
   bulkErrorMessagesById = new Map()
   bulkProgress = {
@@ -825,49 +820,65 @@ async function applyFeatureBulkEdit(): Promise<void> {
     isApplying: true,
   }
 
-  const results: FeatureBulkStateResult[] = []
+  const accountRevision = root.account.revision
+  const ownsAccount = (): boolean => root.account.revision === accountRevision
+  await root.backgroundJobs
+    .run(`Features ${action.pastTense}`, ids.length, async advance => {
+      const results = await runBulkCommands(
+        toFeatureBulkChunks(ids),
+        async chunk => {
+          try {
+            return await updateFeatureBulkState(
+              chunk.map(id => ({
+                id,
+                field: action.field,
+                value: action.state,
+                meta: { isAdminRequest: true },
+              })),
+            )
+          } catch (err) {
+            return chunk.map(id => toBulkRemoteFailureResult(id, err))
+          }
+        },
+        chunkResults => {
+          advance(chunkResults.length, chunkResults.filter(result => !result.ok).length)
+          if (isCurrent()) for (const result of chunkResults) recordBulkResult(result)
+        },
+        ownsAccount,
+      )
+      if (!results || !ownsAccount()) return false
 
-  for (const chunk of toFeatureBulkChunks(ids)) {
-    const chunkResults = await Promise.all(
-      chunk.map(async id => {
-        try {
-          const result = (await updateFeatureBulkState({
-            id,
-            field: action.field,
-            value: action.state,
-            meta: {
-              isAdminRequest: true,
-            },
-          })) as FeatureBulkStateResult
-          recordBulkResult(result)
-          return result
-        } catch (err) {
-          const result = toBulkRemoteFailureResult(id, err)
-          recordBulkResult(result)
-          return result
+      const errors = results.filter(result => !result.ok)
+      if (isCurrent()) patchSuccessfulBulkUpdates(results)
+      if (isCurrent())
+        bulkProgress = {
+          completed: results.length,
+          total: ids.length,
+          errors: errors.length,
+          isApplying: false,
         }
-      }),
-    )
 
-    results.push(...chunkResults)
-  }
+      try {
+        await root.cacheCtx.reconcile('feature')
+      } catch {
+        if (ownsAccount())
+          toast.warning(
+            'Changes saved, but some views could not refresh. Please refresh the page.',
+          )
+      }
+      if (!ownsAccount()) return false
+      if (errors.length === 0) {
+        toast.success(`${ids.length} features have been ${action.pastTense}`)
+        if (isCurrent()) setBulkMode(false)
+        return true
+      }
 
-  const errors = results.filter(result => !result.ok)
-  patchSuccessfulBulkUpdates(results, action)
-  bulkProgress = {
-    completed: results.length,
-    total: ids.length,
-    errors: errors.length,
-    isApplying: false,
-  }
-
-  if (errors.length === 0) {
-    toast.success(`${ids.length} features have been ${action.pastTense}`)
-    setBulkMode(false)
-    return
-  }
-
-  showBulkErrorToasts(errors.map(errorResult => errorResult.error))
+      showBulkErrorToasts(errors.map(errorResult => errorResult.error))
+      return true
+    })
+    .catch(() => {
+      toast.error('Bulk update could not finish. Some changes may have saved.')
+    })
 }
 
 onMount(() => {
