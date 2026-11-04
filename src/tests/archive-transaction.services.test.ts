@@ -142,7 +142,7 @@ it.each([false, true])(
       CREATE TABLE layerProperty(layerId TEXT,propertyId TEXT,isVisible INTEGER,isUserContributable INTEGER,UNIQUE(layerId,propertyId));
       CREATE TABLE featureSpatial(featureId TEXT,resolution INTEGER,cell TEXT,layerId TEXT,longitude REAL,latitude REAL,PRIMARY KEY(featureId,resolution));
     `)
-      sqlite.exec(readFileSync('src/tests/fixtures/historical-layers.sql', 'utf8'))
+      sqlite.exec(readFileSync('migrations/0147_historical_layers.sql', 'utf8'))
       sqlite.exec("UPDATE feature SET isIntangible=1 WHERE id IN ('f','archived')")
       const expectedScope = { organisationId: 'o', projectId: 'p', hubId: 'h' }
       await updateLayerArchivedStateById(db, { id: 'l', state: true, expectedScope })
