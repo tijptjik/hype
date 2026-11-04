@@ -27,8 +27,8 @@ const facts: LocationFacts = {
       address2dId: null,
       address3dId: null,
       address3dUnitId: null,
-      addressSnapshotId: null,
-      records: {},
+      snapshotId: null,
+      rawSource: {},
       fallbackDisplay: { en: 'Retained address' },
     },
   },
@@ -247,30 +247,31 @@ describe('typed Location facts snapshots', () => {
     const revision = {
       id: 'old',
       locationId: 'l',
-      sequence: 1,
+      version: 1,
       ssId: null,
       origin: 'local' as const,
       facts: old,
-      payload: {},
+      rawSource: {},
     }
     const policy = {
       version: 1,
-      coordinates: { mode: 'automatic' },
-      address: 'automatic',
-      unit: 'automatic',
+      relocation: 'review',
+      coordinates: { mode: 'follow' },
+      address: 'follow',
+      unit: 'follow',
       establishment: 'review',
     }
     const input = {
       facts: revision,
       location: revision,
-      candidate: { ...revision, id: 'new', sequence: 2, facts: next },
+      candidate: { ...revision, id: 'new', version: 2, facts: next },
       overrides: {},
       policy,
     }
     expect(planLocationAdoption(input).decision.facts).toBe('review')
     const accepted = planLocationAdoption({
       ...input,
-      policy: { ...policy, establishment: 'automatic' },
+      policy: { ...policy, establishment: 'follow' },
     })
     expect(accepted.effective.footprint).toEqual(next.footprint)
     const cleared = planLocationAdoption({
@@ -337,7 +338,6 @@ describe('typed Location facts snapshots', () => {
       expect(readLocationFacts(String(rows[0].facts))).toEqual({
         ...facts,
         successorLocationId: null,
-        operatingStatus: null,
       })
       expect(
         db
