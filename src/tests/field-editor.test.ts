@@ -136,7 +136,8 @@ it('uses one header language strip to add, hide and reorder languages across eve
   await fireEvent.click(screen.getByRole('button', { name: 'Simplified Chinese' }))
   for (const editor of editors) {
     expect(editor.querySelector('[data-property-locale="zh-Hans"]')).toHaveAttribute(
-      'hidden',
+      'aria-hidden',
+      'true',
     )
   }
   await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))

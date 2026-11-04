@@ -968,7 +968,8 @@ $effect(() => {
         data-property-text-column={field}
       >
         <h4 class="mb-3 text-sm font-bold text-[var(--form-label)]">{label}</h4>
-        <div class="grid gap-2">
+        <!-- Keep controls mounted while each language reveals its content and spacing. -->
+        <div class="-mb-2 grid">
           {#each locales as locale (locale)}
             {@const key = contentFormKey(locale)}
             {@const genKey = field === 'label' ? 'labelGen' : 'placeholderGen'}
@@ -977,21 +978,34 @@ $effect(() => {
               (getPropertyLocaleFieldAttrs(key, field) as { value?: string }).value ??
               getLocaleEntry(property.i18n, locale)?.[field] ??
               ''}
-            <div hidden={!shownLocales.includes(locale)} data-property-locale={locale}>
-              <input {...getFieldAttrsWithValue(['i18n', key, genKey], 'hidden', gen)}>
-              <FormFieldLocaleText
-                {value}
-                {gen}
-                {locale}
-                label={`${label} ${locale}`}
-                prefix={multilingual ? shortLocaleLabel(locale) : ''}
-                attrs={getPropertyLocaleFieldAttrs(key, field)}
-                issues={getFieldIssues(['i18n', key, field])}
-                required={isFieldRequired(['i18n', key, field])}
-                {isEditing}
-                onValue={text => onUpdateI18n(property.id, locale, field, text)}
-                onGen={next => onUpdateI18n(property.id, locale, genKey, next)}
-              />
+            <div
+              class="grid transition-[grid-template-rows,opacity] duration-200 ease-in-out motion-reduce:transition-none"
+              style:grid-template-rows={shownLocales.includes(locale) ? '1fr' : '0fr'}
+              style:opacity={shownLocales.includes(locale) ? 1 : 0}
+              aria-hidden={!shownLocales.includes(locale)}
+              inert={!shownLocales.includes(locale)}
+              data-property-locale={locale}
+            >
+              <div class="min-h-0 overflow-hidden">
+                <div class="pb-2">
+                  <input
+                    {...getFieldAttrsWithValue(['i18n', key, genKey], 'hidden', gen)}
+                  >
+                  <FormFieldLocaleText
+                    {value}
+                    {gen}
+                    {locale}
+                    label={`${label} ${locale}`}
+                    prefix={multilingual ? shortLocaleLabel(locale) : ''}
+                    attrs={getPropertyLocaleFieldAttrs(key, field)}
+                    issues={getFieldIssues(['i18n', key, field])}
+                    required={isFieldRequired(['i18n', key, field])}
+                    {isEditing}
+                    onValue={text => onUpdateI18n(property.id, locale, field, text)}
+                    onGen={next => onUpdateI18n(property.id, locale, genKey, next)}
+                  />
+                </div>
+              </div>
             </div>
           {/each}
         </div>
@@ -1022,8 +1036,8 @@ $effect(() => {
             aria-label="Dropdown options"
           >
             <div
-              class="grid w-max min-w-full auto-cols-[minmax(16rem,20rem)] grid-flow-col items-stretch gap-3"
-              style:grid-template-rows={`auto repeat(${valuesAreTranslatable ? shownLocales.length : 1}, minmax(2.5rem, auto))`}
+              class="grid w-max min-w-full auto-cols-[minmax(16rem,20rem)] grid-flow-col items-stretch gap-x-3 transition-[grid-template-rows] duration-200 ease-in-out motion-reduce:transition-none"
+              style:grid-template-rows={`auto ${optionLocales.map(locale => (!valuesAreTranslatable || shownLocales.includes(locale) ? 'minmax(0, 1fr)' : 'minmax(0, 0fr)')).join(' ')}`}
             >
               {#each sortedValues as value, valueIndex (value.id)}
                 {@const formValueIndex = (property.values || []).findIndex(
@@ -1094,11 +1108,18 @@ $effect(() => {
                       {@const showCoreFields = isPrimary(locale)}
                       {@const valueDisplayText = getValueDisplayText(value.id, locale)}
                       <div
-                        hidden={valuesAreTranslatable && !shownLocales.includes(locale)}
+                        class="min-h-0 overflow-hidden transition-opacity duration-200 ease-in-out motion-reduce:transition-none"
+                        style:opacity={!valuesAreTranslatable ||
+                        shownLocales.includes(locale)
+                          ? 1
+                          : 0}
+                        aria-hidden={valuesAreTranslatable &&
+                          !shownLocales.includes(locale)}
+                        inert={valuesAreTranslatable && !shownLocales.includes(locale)}
                         data-option-locale={locale}
                       >
                         <div
-                          class="grid min-w-0 items-start gap-2 {multilingual &&
+                          class="grid min-h-10 min-w-0 items-start gap-2 pt-3 {multilingual &&
                           valuesAreTranslatable
                             ? 'grid-cols-[2.5rem_minmax(0,1fr)]'
                             : 'grid-cols-1'}"
