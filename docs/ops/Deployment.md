@@ -73,6 +73,14 @@ checks the installed patch and includes patch contents in dependency cache keys.
 Reassess the query fix before changing the pinned patch version. The verifier also
 rejects a stale installation that still contains the obsolete import-guard bypass.
 
+The former global Kysely 0.28.17 override worked around
+[Better Auth #9901](https://github.com/better-auth/better-auth/issues/9901). With Better
+Auth 1.7.17, the app uses Kysely 0.29.8: the adapter no longer imports moved migration
+constants from Kysely's main entry point. `@inlang/sdk` retains its separate 0.28.x
+copy, as required by its declared range. The native SQLite migration, sign-up and
+session paths are covered without adapter mocks by
+`src/tests/kysely-adapter-compatibility.test.ts`.
+
 The manual migration findings have been reviewed against the
 [SvelteKit 3 guide](https://svelte.dev/docs/kit/migrating-to-sveltekit-3):
 
