@@ -66,7 +66,7 @@ describe('map styles', () => {
   })
 
   it('hides symbol layers when labels are disabled', () => {
-    const style = buildMapStyle('hyper', { noLabels: true }) as {
+    const style = buildMapStyle('hype-dark', { noLabels: true }) as {
       layers?: Array<{ type?: string; layout?: Record<string, unknown> }>
     }
 
@@ -79,14 +79,11 @@ describe('map styles', () => {
     const styleKeys = [
       'hyperpop',
       'ghostery',
-      'neonmaster',
       'neorange',
       'genesis',
       'sin',
       'rosepunk',
-      'breadline',
       'protomaps-dark',
-      'ghostery-legacy',
     ] as const
 
     for (const key of styleKeys) {
@@ -106,42 +103,16 @@ describe('map styles', () => {
 
       expect(minorRoadLabels?.filter).toEqual(['in', 'kind', 'minor_road', 'other'])
 
-      if (key === 'ghostery-legacy') {
-        expect(majorRoadLabels?.layout?.['symbol-spacing']).toEqual([
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          12,
-          750,
-          16,
-          750,
-          20,
-          750,
-        ])
-        expect(minorRoadLabels?.layout?.['symbol-spacing']).toEqual([
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          16,
-          750,
-          18,
-          750,
-          20,
-          750,
-        ])
-        continue
-      }
-
       expect(majorRoadLabels?.layout?.['symbol-spacing']).toBe(750)
       expect(minorRoadLabels?.layout?.['symbol-spacing']).toBe(750)
     }
   })
 
   it('returns a fresh clone for each request', () => {
-    const firstStyle = buildMapStyle('ghostery-legacy') as {
+    const firstStyle = buildMapStyle('ghostery') as {
       layers?: Array<{ layout?: Record<string, unknown> }>
     }
-    const secondStyle = buildMapStyle('ghostery-legacy') as {
+    const secondStyle = buildMapStyle('ghostery') as {
       layers?: Array<{ layout?: Record<string, unknown> }>
     }
 
