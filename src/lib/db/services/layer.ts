@@ -1,11 +1,11 @@
 import { gt } from 'drizzle-orm'
+// IDS
+import { nanoid } from 'nanoid'
 // DRIZZLE
-import { and, eq, inArray, not, or, sql, type SQL } from 'drizzle-orm'
+import { and, eq, exists, inArray, not, or, sql, type SQL } from 'drizzle-orm'
 // PUBLICATION
-import {
-  descendantPublicationState,
-  publishScopedFeatureImages,
-} from './publication.js'
+import { buildDescendantPublication } from './publication.js'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 // SCHEMA
 import {
   feature,
@@ -28,10 +28,12 @@ import {
 } from '..'
 import { insert, insertMany, insertManyRelated, replaceManyRelated } from '../crud'
 import { retryBusyRead } from './sqlite'
+import { prepareGuardedReplacement } from './guardedReplacement.js'
 import { autochunk, chunkedInArray } from '#lib/utils/batch-query.js'
 // I18N
 import { normalizeI18nLocaleRecord } from '#lib/i18n.js'
 // TYPES
+import type { BatchItem } from 'drizzle-orm/batch'
 import type {
   Database,
   Id,
@@ -86,7 +88,9 @@ import type { TaskEditorLayerOption } from '#lib/db/zod/schema/task.types.js'
 //    - updateLayerByIdWithConcurrency
 //    - updateLayerPublishedStateById
 //    - cascadeLayerPublishedStateToDescendants
+//    - buildLayerCommandScopeGuard
 //    - updateLayerArchivedStateById
+//    - buildLayerArchivedDescendantUpdates
 //    - cascadeLayerArchivedStateToDescendants
 //    - updateI18n
 //    - updateProperties
@@ -106,11 +110,55 @@ import type { TaskEditorLayerOption } from '#lib/db/zod/schema/task.types.js'
  * Used as the base write primitive for layer creation.
  * @param db - Database handle.
  * @param data - New layer including its destination project and presentation.
+ * @param relations - Optional complete translations and property links for atomic form creation.
  * @returns The persisted layer.
  * @remarks Project-only map styles must belong to the destination project.
  */
-export const createLayer = async (db: Database, data: LayerDBNew): Promise<LayerDB> => {
+export const createLayer = async (
+  db: Database,
+  data: LayerDBNew,
+  relations?: {
+    i18n: Record<LocaleKey, LayerI18nPartial>
+    properties: LayerPropertyNew[]
+  },
+): Promise<LayerDB> => {
   await assertMapStyleProjectScope(db, data.projectId, data.metadata?.mapStyleCode)
+  if (relations) {
+    const id = data.id ?? nanoid(12)
+    const guard = exists(
+      db.select({ id: layer.id }).from(layer).where(eq(layer.id, id)),
+    )
+    // The parent and every submitted relation share one commit; late failures cannot leave an orphan.
+    const [created] = await db.batch([
+      db
+        .insert(layer)
+        .values({ ...data, id, isPublished: data.isPublished ?? false })
+        .returning(),
+      ...prepareGuardedReplacement(
+        db,
+        layerI18n,
+        toRelatedRecords(
+          normalizeI18nLocaleRecord(relations.i18n),
+          'layerId',
+          id,
+          'locale',
+        ) as never,
+        layerI18n.layerId,
+        id,
+        guard,
+      ),
+      ...prepareGuardedReplacement(
+        db,
+        layerProperty,
+        relations.properties as never,
+        layerProperty.layerId,
+        id,
+        guard,
+      ),
+    ])
+    if (!created[0]) throw new Error('Layer creation returned no row')
+    return created[0] as LayerDB
+  }
   return await insert(db, layer, {
     ...data,
     isPublished: data.isPublished ?? false,
@@ -559,6 +607,11 @@ export const hasOrganisationLayersCondition = (options?: {
 
 /**
  * Syncs persisted rank/default-visible presentation fields for one project's layers.
+ * @param db Request database.
+ * @param projectId Authorized owning project.
+ * @param rows Submitted layer presentation values.
+ * @returns Nothing after all owned-layer updates commit.
+ * @remarks Missing/foreign layers are ignored; a failed update rolls back every preceding one.
  */
 export const syncProjectLayerPresentation = async (
   db: Database,
@@ -567,31 +620,14 @@ export const syncProjectLayerPresentation = async (
 ): Promise<void> => {
   if (rows.length === 0) return
 
-  const existingRows = await autochunk(
-    { items: rows.map(row => row.id), otherParametersCount: 1 },
-    async rowIds =>
-      await db.query.layer.findMany({
-        where: and(eq(layer.projectId, projectId), inArray(layer.id, rowIds)),
-        columns: {
-          id: true,
-        },
-      }),
+  // Scope each write at execution time and commit all presentation changes together.
+  const updates = rows.map(row =>
+    db
+      .update(layer)
+      .set({ rank: row.rank, isDefaultVisible: row.isDefaultVisible })
+      .where(and(eq(layer.projectId, projectId), eq(layer.id, row.id))),
   )
-  const existingIds = new Set(existingRows.map(row => row.id))
-
-  await Promise.all(
-    rows
-      .filter(row => existingIds.has(row.id))
-      .map(row =>
-        db
-          .update(layer)
-          .set({
-            rank: row.rank,
-            isDefaultVisible: row.isDefaultVisible,
-          })
-          .where(and(eq(layer.projectId, projectId), eq(layer.id, row.id))),
-      ),
-  )
+  await db.batch([updates[0], ...updates.slice(1)])
 }
 
 /**
@@ -601,12 +637,15 @@ export const syncProjectLayerPresentation = async (
  * @param params - Layer identity, concurrency version and replacement values.
  * @returns Updated identity/version, or null for a stale write.
  * @remarks Project moves validate retained map-style ownership too.
+ * Submitted translations and property links commit with the core revision; omitted collections remain intact.
  */
 export const updateLayerByIdWithConcurrency = async (
   db: Database,
   params: {
     id: Id
     updatedAt: string
+    i18n?: Record<LocaleKey, LayerI18nPartial>
+    properties?: LayerPropertyNew[]
     data: {
       organisationId: string
       projectId: string
@@ -626,27 +665,72 @@ export const updateLayerByIdWithConcurrency = async (
         .limit(1)
     )[0]?.metadata
   await assertMapStyleProjectScope(db, params.data.projectId, metadata?.mapStyleCode)
-  const [updated] = await db
-    .update(layer)
-    .set(params.data)
-    .where(and(eq(layer.id, params.id), eq(layer.modifiedAt, params.updatedAt)))
-    .returning({
-      id: layer.id,
-      modifiedAt: layer.modifiedAt,
-    })
+  const revisionGuard = and(
+    eq(layer.id, params.id),
+    eq(layer.modifiedAt, params.updatedAt),
+  )
+  const updateCore = db.update(layer).set(params.data).where(revisionGuard).returning({
+    id: layer.id,
+    modifiedAt: layer.modifiedAt,
+  })
 
+  if (params.i18n !== undefined || params.properties !== undefined) {
+    // Every relation statement checks the unchanged parent token; the final update advances it.
+    const guard = exists(db.select({ id: layer.id }).from(layer).where(revisionGuard))
+    const relations = [
+      ...(params.i18n !== undefined
+        ? prepareGuardedReplacement(
+            db,
+            layerI18n,
+            toRelatedRecords(
+              normalizeI18nLocaleRecord(params.i18n),
+              'layerId',
+              params.id,
+              'locale',
+            ) as never,
+            layerI18n.layerId,
+            params.id,
+            guard,
+          )
+        : []),
+      ...(params.properties !== undefined
+        ? prepareGuardedReplacement(
+            db,
+            layerProperty,
+            params.properties as never,
+            layerProperty.layerId,
+            params.id,
+            guard,
+          )
+        : []),
+    ]
+    const results = await db.batch([relations[0], ...relations.slice(1), updateCore])
+    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
+    return rows[0] ?? null
+  }
+  const [updated] = await updateCore
   return updated ?? null
 }
 
 /**
- * Toggles published state and publication metadata for a layer.
+ * Atomically toggles publication for a layer, its descendants, and eligible images.
  * Used by publish/unpublish command handlers.
+ * @param db Request database.
+ * @param params Target state and persisted ancestry used for authorization.
+ * @returns Updated parent, or null for a missing, moved or skipped target.
+ * @remarks The transaction rechecks ancestry but does not re-read role grants.
  */
 export const updateLayerPublishedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean; publisherId: string | null },
+  params: {
+    id: Id
+    expectedScope: { organisationId: Id; projectId: Id; hubId: string | null }
+    state: boolean
+    publisherId: string | null
+    publishChildren?: boolean
+  },
 ): Promise<{ id: string; isPublished: boolean } | null> => {
-  const [updated] = await db
+  const parentUpdate = db
     .update(layer)
     .set({
       isPublished: params.state,
@@ -659,7 +743,21 @@ export const updateLayerPublishedStateById = async (
       isPublished: layer.isPublished,
     })
 
-  return updated ?? null
+  // Commit parent, descendant snapshots, and image policies as one transaction.
+  // Recheck the authorized ancestry before any publication writes can execute.
+  const results = await executeRevisionBatch(
+    db,
+    buildLayerCommandScopeGuard(db, params),
+    [
+      parentUpdate,
+      // A skipped parent write must not commit descendant publication changes.
+      prepareRevisionCheck(db, sql`changes() = 1`),
+      ...buildDescendantPublication(db, { kind: 'layer', id: params.id }, params),
+    ],
+  )
+  return results
+    ? ((results[0] as { id: string; isPublished: boolean }[])[0] ?? null)
+    : null
 }
 
 /**
@@ -680,41 +778,60 @@ export const cascadeLayerPublishedStateToDescendants = async (
     publisherId?: Id
   },
 ): Promise<void> => {
-  await db
-    .update(feature)
-    .set({
-      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
-      ...(params.state && params.publishChildren
-        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
-        : {}),
-      localIsPublished: params.state
-        ? null
-        : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
-      isPublished: params.state
-        ? params.publishChildren
-          ? true
-          : descendantPublicationState(feature)
-        : sql`0`,
-    })
-    .where(eq(feature.layerId, params.layerId))
-  if (params.state) {
-    await publishScopedFeatureImages(
-      db,
-      { kind: 'layer', id: params.layerId },
-      params.publisherId,
-    )
-  }
+  await db.batch(
+    buildDescendantPublication(db, { kind: 'layer', id: params.layerId }, params),
+  )
+}
+
+/**
+ * Rechecks persisted ancestry used to authorize a state command.
+ * @param db Request database.
+ * @param params Target identity and authorized scope.
+ * @returns Transaction predicate requiring unchanged ancestry, including nullable hub identity.
+ * @remarks Role grants are not re-read by this scope predicate.
+ */
+function buildLayerCommandScopeGuard(
+  db: Database,
+  params: {
+    id: Id
+    expectedScope: { organisationId: Id; projectId: Id; hubId: string | null }
+  },
+): SQL {
+  return exists(
+    db
+      .select({ id: layer.id })
+      .from(layer)
+      .innerJoin(project, eq(layer.projectId, project.id))
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(
+        and(
+          eq(layer.id, params.id),
+          eq(layer.projectId, params.expectedScope.projectId),
+          eq(layer.organisationId, params.expectedScope.organisationId),
+          eq(project.organisationId, params.expectedScope.organisationId),
+          sql`${organisation.hubId} IS ${params.expectedScope.hubId}`,
+        ),
+      ),
+  )
 }
 
 /**
  * Toggles archived state for a layer.
  * Used by archive/unarchive command handlers.
+ * @param db Request database.
+ * @param params Target state and persisted ancestry used for authorization.
+ * @returns Updated parent or null for a missing, moved or skipped target.
+ * @remarks Parent and descendant writes roll back together on failure.
  */
 export const updateLayerArchivedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean },
+  params: {
+    id: Id
+    state: boolean
+    expectedScope: { organisationId: Id; projectId: Id; hubId: string | null }
+  },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
-  const [updated] = await db
+  const parentUpdate = db
     .update(layer)
     .set({ isArchived: params.state })
     .where(eq(layer.id, params.id))
@@ -723,7 +840,23 @@ export const updateLayerArchivedStateById = async (
       isArchived: layer.isArchived,
     })
 
-  return updated ?? null
+  // Commit the parent and descendant snapshots only in the authorized scope.
+  const results = await executeRevisionBatch(
+    db,
+    buildLayerCommandScopeGuard(db, params),
+    [
+      // Restore snapshots before the parent trigger can route Features to a new historical layer.
+      ...buildLayerArchivedDescendantUpdates(db, {
+        layerId: params.id,
+        state: params.state,
+      }),
+      parentUpdate,
+      prepareRevisionCheck(db, sql`changes() = 1`),
+    ],
+  )
+  return results
+    ? ((results.at(-2) as { id: string; isArchived: boolean }[])[0] ?? null)
+    : null
 }
 
 /**
@@ -748,8 +881,21 @@ export const cascadeLayerArchivedStateToDescendants = async (
     state: boolean
   },
 ): Promise<void> => {
+  await db.batch(buildLayerArchivedDescendantUpdates(db, params))
+}
+
+/**
+ * Prepares descendant archive snapshots without executing writes.
+ * @param db Request database.
+ * @param params Parent identity and next archive state.
+ * @returns Ordered statements for the parent's guarded transaction.
+ */
+function buildLayerArchivedDescendantUpdates(
+  db: Database,
+  params: { layerId: Id; state: boolean },
+): [BatchItem<'sqlite'>] {
   // Preserve feature archive snapshots until neither owning ancestor keeps them hidden.
-  await db
+  const features = db
     .update(feature)
     .set({
       localIsArchived: params.state
@@ -784,6 +930,7 @@ export const cascadeLayerArchivedStateToDescendants = async (
           end`,
     })
     .where(eq(feature.layerId, params.layerId))
+  return [features]
 }
 
 /**

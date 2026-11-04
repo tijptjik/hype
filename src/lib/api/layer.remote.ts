@@ -49,13 +49,9 @@ import {
   probeLayerForUpdate,
   probeLayerQuery,
   resolveLayerCommandProbe,
-  updateProperties,
-  updateI18n,
   updateLayerArchivedStateById,
   updateLayerByIdWithConcurrency,
   updateLayerPublishedStateById,
-  cascadeLayerArchivedStateToDescendants,
-  cascadeLayerPublishedStateToDescendants,
 } from '#lib/db/services/layer.js'
 // SCHEMA
 import { layer } from '#lib/db/schema/index.js'
@@ -417,6 +413,9 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     await updateLayerByIdWithConcurrency(db, {
       id: current.id as Id,
       updatedAt,
+      i18n: data.i18n,
+      ...(propertiesChanged ? { properties: submittedProperties } : {}),
+      relocationUpdatePolicy: data.relocationUpdatePolicy,
       data: {
         organisationId: resolvedOrganisationId,
         projectId: data.projectId,
@@ -426,12 +425,6 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     }),
     () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
   )
-
-  await updateI18n(db, data.i18n, current.id)
-
-  if (propertiesChanged) {
-    await updateProperties(db, current.id, submittedProperties)
-  }
 
   return toCreatedResponseShape(persisted)
 })
@@ -471,19 +464,14 @@ export const publishLayer = guardedCommand(PublishLayerSchema, async (params, ct
     await updateLayerPublishedStateById(db, {
       id: layerId,
       state: params.state,
+      expectedScope: probed,
+      publishChildren: params.publishChildren,
       publisherId: user.id,
     }),
     () => {
       throw error(404, 'LAYER_NOT_FOUND')
     },
   )
-
-  await cascadeLayerPublishedStateToDescendants(db, {
-    layerId,
-    state: params.state,
-    publishChildren: params.publishChildren,
-    publisherId: user.id,
-  })
 
   return toBooleanStateResponseShape(persisted, 'isPublished')
 })
@@ -519,13 +507,15 @@ export const archiveLayer = guardedCommand(RemoveLayerSchema, async (params, ctx
   )
 
   const persisted = requireValue(
-    await updateLayerArchivedStateById(db, { id: layerId, state: params.state }),
+    await updateLayerArchivedStateById(db, {
+      id: layerId,
+      state: params.state,
+      expectedScope: probed,
+    }),
     () => {
       throw error(404, 'LAYER_NOT_FOUND')
     },
   )
-
-  await cascadeLayerArchivedStateToDescendants(db, { layerId, state: params.state })
 
   return toBooleanStateResponseShape(persisted, 'isArchived')
 })

@@ -52,7 +52,9 @@ const {
   mockAuthorizeLayerListForContext: vi.fn<() => MockDecision>(() => ({
     allowed: true,
   })),
-  mockAuthorizeLayerReadForProbe: vi.fn<() => MockDecision>(() => ({ allowed: true })),
+  mockAuthorizeLayerReadForProbe: vi.fn<() => MockDecision>(() => ({
+    allowed: true,
+  })),
   mockAuthorizeLayerCreateForSubmission: vi.fn<() => MockDecision>(() => ({
     allowed: true,
   })),
@@ -97,7 +99,10 @@ const {
   mockToQueryConditions: vi.fn(() => ({ conditions: [], filtersToApply: {} })),
   mockToLayerPrisms: vi.fn((value: unknown) => value),
   mockToLookupConditions: vi.fn((params: unknown) => params),
-  mockToRequestedListState: vi.fn(() => ({ isPublished: true, isArchived: false })),
+  mockToRequestedListState: vi.fn(() => ({
+    isPublished: true,
+    isArchived: false,
+  })),
   mockToLayerProfile: vi.fn((value: unknown, fallback: string) =>
     typeof value === 'string' ? value : fallback,
   ),
@@ -321,7 +326,10 @@ describe('layer.remote authz matrix', () => {
     mockAuthorizeLayerUpdateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeLayerPublishForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeLayerDeleteForSubmission.mockReturnValue({ allowed: true })
-    mockToQueryConditions.mockReturnValue({ conditions: [], filtersToApply: {} })
+    mockToQueryConditions.mockReturnValue({
+      conditions: [],
+      filtersToApply: {},
+    })
     mockToRequestedListState.mockReturnValue({
       isPublished: true,
       isArchived: false,
@@ -433,8 +441,14 @@ describe('layer.remote authz matrix', () => {
         expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
         expect(mockUpdateI18n).not.toHaveBeenCalled()
       } else {
-        await expect(submission).resolves.toMatchObject({ data: { id: 'layer-1' } })
-        expect(mockUpdateI18n).toHaveBeenCalled()
+        await expect(submission).resolves.toMatchObject({
+          data: { id: 'layer-1' },
+        })
+        expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ i18n: { en: { name: 'Translated layer' } } }),
+        )
+        expect(mockUpdateI18n).not.toHaveBeenCalled()
       }
       expect(mockUpdateProperties).not.toHaveBeenCalled()
     },
@@ -443,11 +457,21 @@ describe('layer.remote authz matrix', () => {
   it.each([true, false])(
     'forwards explicit child publication choice %s',
     async publishChildren => {
-      await remote.publishLayer({ id: 'layer-1', state: true, publishChildren })
-      expect(mockCascadeLayerPublishedStateToDescendants).toHaveBeenCalledWith(
+      await remote.publishLayer({
+        id: 'layer-1',
+        state: true,
+        publishChildren,
+      })
+      expect(mockUpdateLayerPublishedStateById).toHaveBeenCalledWith(
         expect.any(Object),
-        expect.objectContaining({ state: true, publishChildren, publisherId: 'u-1' }),
+        expect.objectContaining({
+          state: true,
+          publishChildren,
+          expectedScope: expect.objectContaining({ hubId: 'hub-a' }),
+          publisherId: 'u-1',
+        }),
       )
+      expect(mockCascadeLayerPublishedStateToDescendants).not.toHaveBeenCalled()
     },
   )
 
@@ -514,6 +538,40 @@ describe('layer.remote authz matrix', () => {
       code: 'INSUFFICIENT_ROLE',
     })
   })
+
+  it.each(['form', 'command'])(
+    'creates a complete layer through one atomic %s write',
+    async mode => {
+      const context = await mockGuardedContext()
+      mockGuardedContext.mockResolvedValue({
+        ...context,
+        user: { ...context.user, superAdmin: true },
+      })
+      const payload = {
+        meta: { mode: 'create' as const },
+        data: {
+          projectId: 'project-1',
+          metadata: {},
+          isDefaultVisible: true,
+          properties: [{ propertyId: 'property-1', isVisible: false }],
+          i18n: {
+            en: { name: 'Layer', nameShort: 'L' },
+            zhHans: { name: 'Layer', nameShort: 'L' },
+            zhHant: { name: 'Layer', nameShort: 'L' },
+          },
+        },
+      }
+      if (mode === 'form') await remote.layerForm(payload, throwingInvalid)
+      else await remote.createLayer(payload)
+      expect(mockCreateLayer).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ organisationId: 'org-1', projectId: 'project-1' }),
+        { i18n: payload.data.i18n, properties: payload.data.properties },
+      )
+      expect(mockCreateI18n).not.toHaveBeenCalled()
+      expect(mockUpdateProperties).not.toHaveBeenCalled()
+    },
+  )
 
   it('layerForm create denies when create authz denies', async () => {
     mockAuthorizeLayerCreateForSubmission.mockReturnValue({
@@ -616,7 +674,9 @@ describe('layer.remote authz matrix', () => {
       )
       expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ data: expect.objectContaining({ metadata }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ metadata }),
+        }),
       )
       expect(mockAuthorizeLayerUpdateForSubmission).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -656,7 +716,9 @@ describe('layer.remote authz matrix', () => {
       expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          data: expect.objectContaining({ metadata: { zoom: 10, mapStyleCode } }),
+          data: expect.objectContaining({
+            metadata: { zoom: 10, mapStyleCode },
+          }),
         }),
       )
     },
@@ -748,15 +810,16 @@ describe('layer.remote authz matrix', () => {
         publisherId: 'u-1',
       }),
     )
-    expect(mockCascadeLayerPublishedStateToDescendants).toHaveBeenCalledWith(
+    expect(mockUpdateLayerPublishedStateById).toHaveBeenCalledWith(
       expect.any(Object),
-      {
-        layerId: 'layer-1',
+      expect.objectContaining({
+        id: 'layer-1',
         state: true,
         publishChildren: undefined,
         publisherId: 'u-1',
-      },
+      }),
     )
+    expect(mockCascadeLayerPublishedStateToDescendants).not.toHaveBeenCalled()
     expect(result).toEqual({
       data: {
         id: 'layer-1',
@@ -792,15 +855,21 @@ describe('layer.remote authz matrix', () => {
     })
   })
 
-  it('archiveLayer cascades descendant archive state when allowed', async () => {
+  it('archiveLayer delegates the parent and descendant transaction when allowed', async () => {
     await remote.archiveLayer({ id: 'layer-1', state: true })
 
-    expect(mockCascadeLayerArchivedStateToDescendants).toHaveBeenCalledWith(
+    expect(mockUpdateLayerArchivedStateById).toHaveBeenCalledWith(
       expect.any(Object),
-      {
-        layerId: 'layer-1',
+      expect.objectContaining({
+        id: 'layer-1',
         state: true,
-      },
+        expectedScope: expect.objectContaining({
+          organisationId: 'org-1',
+          projectId: 'project-1',
+          hubId: 'hub-a',
+        }),
+      }),
     )
+    expect(mockCascadeLayerArchivedStateToDescendants).not.toHaveBeenCalled()
   })
 })

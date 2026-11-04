@@ -22,11 +22,7 @@ import {
 // DB
 import { transformI18nSafely } from '#lib/db/index.js'
 import { layer } from '#lib/db/schema/index.js'
-import {
-  createI18n,
-  createLayer as insertLayer,
-  updateProperties,
-} from '#lib/db/services/layer.js'
+import { createLayer as insertLayer } from '#lib/db/services/layer.js'
 import { probeProjectForUpdate } from '#lib/db/services/project.js'
 import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import {
@@ -496,17 +492,19 @@ export const createLayerFromSubmission = async ({
     forbidden(createDecision.code ?? 'INSUFFICIENT_ROLE')
   }
 
-  const created = await insertLayer(db, {
-    id: nanoid(12),
-    organisationId: projectScope.organisationId,
-    projectId: submittedData.projectId,
-    metadata: submittedData.metadata,
-    isDefaultVisible: submittedData.isDefaultVisible,
-    isPublished: false,
-    isArchived: false,
-  })
-  await createI18n(db, submittedData.i18n, created.id)
-  await updateProperties(db, created.id, submittedProperties)
+  const created = await insertLayer(
+    db,
+    {
+      id: nanoid(12),
+      organisationId: projectScope.organisationId,
+      projectId: submittedData.projectId,
+      metadata: submittedData.metadata,
+      isDefaultVisible: submittedData.isDefaultVisible,
+      isPublished: false,
+      isArchived: false,
+    },
+    { i18n: submittedData.i18n, properties: submittedProperties },
+  )
 
   return created
 }
