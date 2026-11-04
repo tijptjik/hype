@@ -617,9 +617,14 @@ export class ImportCtx {
   // ═══════════════════════
 
   // Helper function to reset CSV import state to initial values
-  reset() {
+  /**
+   * Clears the completed or cancelled import before another file is processed.
+   * @returns Nothing; all retained rows, enrichment and editor state are released.
+   */
+  reset(): void {
     this.state.file = null
     this.state.headers = []
+    this.state.data = []
     this.state.columns = []
     this.state.selectedOrganisation = null
     this.state.selectedProject = null
@@ -656,6 +661,9 @@ export class ImportCtx {
       resolutions: new Map(),
     }
     this.state.activeLayerCreation = null
+    this.state.isCreatingLayer = false
+    this.state.isSubmittingLayer = false
+    this.state.layerForm = null
 
     // Reset other related state
     this.state.availablePropertyKeys = []
@@ -688,6 +696,7 @@ export class ImportCtx {
     }
 
     // Reset property reconciliation state
+    this.state.rowEnrichedData = new Map()
     this.state.propertyReconciliation = {
       currentAction: 'none',
       enrichedData: new Map(),

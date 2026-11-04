@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { onDestroy, untrack } from 'svelte'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
@@ -51,6 +53,21 @@ $effect(() => {
 let importResourceType: ImportableResource | null = $state(null)
 let pendingFeaturesDrop: DropzoneEvent | null = $state(null)
 let pendingImagesDrop: DropzoneEvent | null = $state(null)
+
+let importScope = appCtx.getRoleScopeQueryKey()
+
+// Account and role changes end the import and invalidate pending input-bound work.
+$effect(() => {
+  const scope = appCtx.getRoleScopeQueryKey()
+  if (scope === importScope) return
+  importScope = scope
+  untrack(() => {
+    importCtx.reset()
+    resetPending()
+  })
+})
+
+onDestroy(() => importCtx.reset())
 
 // HANDLERS
 
