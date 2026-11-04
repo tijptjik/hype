@@ -2,7 +2,9 @@ import type { Polygon, MultiPolygon } from 'geojson'
 // THIRD PARTY
 import { z } from 'zod'
 // SERVICES
-import { applyAddressAbbreviations, titleCase } from '#lib/utils/geocoding.js'
+import { applyAddressAbbreviations } from '#lib/utils/geocoding.js'
+import { addressName } from '#lib/addresses/formatting.js'
+
 // TYPES
 import type { ParsedReverseGeocodeResult } from '#lib/utils/geocoding.types.js'
 import {
@@ -131,15 +133,16 @@ function formatAddress(
     label =
       locale === 'en'
         ? [
-            ...premises,
-            [number, applyAddressAbbreviations(value.streetName)]
+            // Normalize each source component before abbreviations introduce mixed casing.
+            ...premises.map(part => addressName(part, locale)),
+            [number, applyAddressAbbreviations(addressName(value.streetName, locale))]
               .filter(Boolean)
               .join(' '),
           ].join(', ')
         : `${value.streetName}${number ? `${number}${locale === 'zhHans' ? '号' : '號'}` : ''}${[...premises].reverse().join('')}`
   }
   return locale === 'en'
-    ? titleCase(label)
+    ? addressName(label, locale)
         .replace(
           /\b(\d+)([a-z])\b/g,
           (_, digits: string, suffix: string) => digits + suffix.toUpperCase(),

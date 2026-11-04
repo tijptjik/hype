@@ -187,3 +187,16 @@ it('uses local Atlas in development and preserves caller cancellation', async ()
     vi.unstubAllEnvs()
   }
 })
+
+it('normalizes uppercase components independently while preserving mixed-case branding and source evidence', () => {
+  const body = response()
+  body.included[1].attributes.i18n!.en.buildingName = 'iSQUARE'
+  body.included[1].attributes.i18n!.en.premisesName = 'PHASE IV'
+  const original = structuredClone(body)
+  const result = parseGeocodeResult(body, pin)!
+  expect(result.i18n.en.displayAddress).toBe('iSQUARE, Phase IV, 18 Lower Albert Rd')
+  expect(body).toEqual(original)
+  expect(result.addressMeta.address?.source.records).toMatchObject({
+    data: original.included[1],
+  })
+})
