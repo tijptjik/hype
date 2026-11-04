@@ -101,9 +101,12 @@ type PropertyCatalogTarget = {
 //
 // 3.2 CRUD :: UPDATE (SYNC)
 //    - savePropertyCatalog (internal)
+//    - preparePropertyCatalog
 //    - upsertProjectProperties
 //    - seedDefaultInheritedPropertiesForProject
+//    - prepareDefaultInheritedProperties
 //    - syncProjectInheritedProperties
+//    - prepareProjectInheritedProperties
 //    - syncHubProperties
 //    - syncOrganisationProperties
 //
@@ -847,6 +850,29 @@ const savePropertyCatalog = async (
   properties: Array<ProjectPropertyForm | Property | PropertyNew>,
   target: PropertyCatalogTarget,
 ): Promise<Property[]> => {
+  const prepared = await preparePropertyCatalog(db, properties, target)
+  const results = await db.batch([...prepared.statements, prepared.readback])
+  return prepared.toResult(results.at(-1) as PropertyDBRaw[])
+}
+
+/**
+ * Prepares a scoped catalog save without committing it separately from its parent form.
+ * @param db Authorized request database.
+ * @param properties Complete submitted catalog.
+ * @param target Server-owned catalog scope and parent identity.
+ * @returns Bounded writes, optional hydrated readback, and the existing response mapper.
+ * @remarks Callers must execute all statements in one transaction after checking any
+ * parent revision inside that same batch. Preparation performs validation and reads only.
+ */
+export const preparePropertyCatalog = async (
+  db: Database,
+  properties: Array<ProjectPropertyForm | Property | PropertyNew>,
+  target: PropertyCatalogTarget,
+): Promise<{
+  statements: [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]
+  readback: BatchItem<'sqlite'>
+  toResult: (rows: PropertyDBRaw[]) => Property[]
+}> => {
   const ownerColumn =
     target.scope === 'project'
       ? property.projectId
@@ -1103,23 +1129,27 @@ const savePropertyCatalog = async (
     with: { i18n: true, values: { with: { i18n: true } } },
     orderBy: [asc(property.key)],
   })
-  // Each write is parameter-bounded, but all writes and hydrated readback share one transaction.
-  const results = await db.batch([ownership, ...writes, deletion, readback])
-  const rows = results.at(-1) as PropertyDBRaw[]
-  if (target.scope !== 'project') {
-    return rows
-      .map(row => toPropertyResponseFromRaw(row, ranks.get(row.id) ?? 0))
-      .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
+  // Enclosing forms can append the writes without paying for unused hydrated readback.
+  return {
+    statements: [ownership, ...writes, deletion],
+    readback,
+    toResult: (rows: PropertyDBRaw[]): Property[] => {
+      if (target.scope !== 'project') {
+        return rows
+          .map(row => toPropertyResponseFromRaw(row, ranks.get(row.id) ?? 0))
+          .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
+      }
+      return rows.map(row => ({
+        ...row,
+        i18n: transformI18nSafely(row.i18n),
+        values:
+          row.values?.map(value => ({
+            ...value,
+            i18n: transformI18nSafely(value.i18n),
+          })) ?? [],
+      })) as Property[]
+    },
   }
-  return rows.map(row => ({
-    ...row,
-    i18n: transformI18nSafely(row.i18n),
-    values:
-      row.values?.map(value => ({
-        ...value,
-        i18n: transformI18nSafely(value.i18n),
-      })) ?? [],
-  })) as Property[]
 }
 
 /**
@@ -1140,6 +1170,19 @@ export const seedDefaultInheritedPropertiesForProject = async (
     startingRank?: number
   },
 ): Promise<void> => {
+  await db.batch([prepareDefaultInheritedProperties(db, params)])
+}
+
+/**
+ * Prepares default assignments for a project without committing separately from creation.
+ * @param db Request database.
+ * @param params Project identity, inherited hub scope and rank offset.
+ * @returns A bounded insert statement preserving existing explicit assignments.
+ */
+export const prepareDefaultInheritedProperties = (
+  db: Database,
+  params: Parameters<typeof seedDefaultInheritedPropertiesForProject>[1],
+): BatchItem<'sqlite'> => {
   const organisationIds = db
     .select({ id: project.organisationId })
     .from(project)
@@ -1162,7 +1205,7 @@ export const seedDefaultInheritedPropertiesForProject = async (
 
   // Select only missing defaults at write time; explicit choices and ranks remain untouched.
   // INSERT SELECT has a fixed parameter count regardless of the inherited catalog size.
-  await db
+  return db
     .insert(projectProperty)
     .select(
       db
@@ -1222,6 +1265,20 @@ export const syncProjectInheritedProperties = async (
     >
   },
 ): Promise<void> => {
+  await db.batch(prepareProjectInheritedProperties(db, params))
+}
+
+/**
+ * Prepares inherited assignments and child-layer links for an enclosing project transaction.
+ * @param db Request database.
+ * @param params Project identity and authorized assignment collection.
+ * @returns Ordered bounded statements that preserve live omitted flags and layer visibility.
+ * @remarks Execute after the parent move so catalog scope uses the destination organisation.
+ */
+export const prepareProjectInheritedProperties = (
+  db: Database,
+  params: Parameters<typeof syncProjectInheritedProperties>[1],
+): [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]] => {
   const toNumericRank = (value: unknown): number => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
     if (
@@ -1393,12 +1450,7 @@ export const syncProjectInheritedProperties = async (
     .onConflictDoNothing({ target: [layerProperty.layerId, layerProperty.propertyId] })
 
   // Child-layer failures must also restore the parent assignments and their ordering.
-  await db.batch([
-    detachAssignments,
-    ...assignments,
-    detachLayerLinks,
-    insertLayerLinks,
-  ])
+  return [detachAssignments, ...assignments, detachLayerLinks, insertLayerLinks]
 }
 
 /**
