@@ -15,6 +15,11 @@ const roles = sqliteTable(
   },
   table => [primaryKey({ columns: [table.userId, table.projectId] })],
 )
+const mappedRoles = sqliteTable('roles', {
+  userId: text('userId').notNull(),
+  parentId: text('projectId').notNull(),
+  role: text('role').notNull(),
+})
 let sqlite: DatabaseSync
 let db: Database
 let batches: number[]
@@ -63,6 +68,32 @@ function snapshot() {
 }
 
 describe('atomic relation replacement', () => {
+  it('rejects a foreign column before deleting existing relations', async () => {
+    const before = snapshot()
+    await expect(
+      replaceManyRelated(db, roles, [], mappedRoles.parentId, 'project'),
+    ).rejects.toMatchObject({ status: 400 })
+    expect(snapshot()).toEqual(before)
+    expect(batches).toEqual([])
+  })
+
+  it('enforces parent ownership when the property differs from its SQL column name', async () => {
+    const result = await replaceManyRelated(
+      db,
+      mappedRoles,
+      [{ userId: 'new-user', parentId: 'other-project', role: 'viewer' }],
+      mappedRoles.parentId,
+      'project',
+    )
+    expect(result).toEqual([
+      { userId: 'new-user', parentId: 'project', role: 'viewer' },
+    ])
+    expect(snapshot()).toEqual([
+      { userId: 'other-user', projectId: 'other-project', role: 'admin' },
+      { userId: 'new-user', projectId: 'project', role: 'viewer' },
+    ])
+  })
+
   it('keeps a large replacement within one batch and enforces target ownership', async () => {
     const result = await replaceManyRelated(
       db,

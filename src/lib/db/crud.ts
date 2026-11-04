@@ -713,6 +713,14 @@ export const replaceManyRelated = async <T extends DbTable>(
     return error(400, 'Array of records expected for batch replacement')
   }
 
+  // Drizzle values use property keys, which may differ from physical SQL names.
+  const foreignKeyProperty = Object.entries(getTableColumns(table)).find(
+    ([, column]) => column === foreignKeyColumn,
+  )?.[0]
+  if (!foreignKeyProperty) {
+    return error(400, 'Foreign key column must belong to the replacement table')
+  }
+
   const insertStatements =
     data.length === 0
       ? []
@@ -720,7 +728,7 @@ export const replaceManyRelated = async <T extends DbTable>(
           table,
           data.map(item => ({
             ...item,
-            [foreignKeyColumn.name]: foreignKeyValue,
+            [foreignKeyProperty]: foreignKeyValue,
           })),
         ).map(batch =>
           db
