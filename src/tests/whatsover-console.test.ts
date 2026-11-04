@@ -2383,3 +2383,38 @@ it('groups consecutive messages by operator while displaying the provider accoun
   expect(alexBubbles[2].querySelector('header')?.title).toBe('Sam')
   expect(screen.queryByText('You', { exact: true })).toBeNull()
 })
+
+it('uses the explicit account replay cursor when a snapshot includes newer selected-chat history', async () => {
+  const base = { chat: '42', sender: '42', timestamp: 100, fromMe: false }
+  mocks.snapshot
+    .mockResolvedValueOnce({
+      ...connected,
+      replayCursor: 100,
+      messages: [
+        { ...base, sequence: 100, id: '100', text: 'Account replay page' },
+        { ...base, sequence: 2, id: '2', text: 'Saved selected-chat history' },
+        { ...base, sequence: 200, id: '200', text: 'Recent selected-chat message' },
+      ],
+    })
+    .mockResolvedValue({
+      ...connected,
+      replayCursor: 101,
+      messages: [
+        { ...base, sequence: 101, id: '101', text: 'Intervening account message' },
+      ],
+    })
+  const screen = render(Console)
+  await waitFor(() =>
+    expect(screen.getAllByText('Saved selected-chat history').length).toBeGreaterThan(
+      0,
+    ),
+  )
+  await fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+  await waitFor(() =>
+    expect(screen.getAllByText('Intervening account message').length).toBeGreaterThan(
+      0,
+    ),
+  )
+  expect(mocks.snapshot.mock.calls[1][0]).toBe(100)
+  expect(screen.getAllByText('Recent selected-chat message').length).toBeGreaterThan(0)
+})
