@@ -40,3 +40,50 @@ describe('shared API session context', () => {
     await expect(getSessionOrError(locals)).resolves.toEqual(locals)
   })
 })
+
+it('reloads persisted roles on each request instead of trusting retained session roles', async () => {
+  const retained = [{ type: 'organisation', organisationId: 'org', role: 'owner' }]
+  const current = [{ type: 'organisation', organisationId: 'org', role: 'member' }]
+  const locals = {
+    session: { id: 'session-1' },
+    user: { id: 'user-1', isAnonymous: false, roles: retained },
+  } as unknown as App.Locals
+  const event = {
+    locals,
+    platform: { env: { DB: {} } } as App.Platform,
+    request: new Request('https://example.test/api'),
+  }
+  mockGetUserRoles.mockResolvedValueOnce(current as never).mockResolvedValueOnce([])
+  expect((await setupRequestHandler(event)).userRoles).toEqual(current)
+  expect((await setupRequestHandler(event)).userRoles).toEqual([])
+  expect(mockGetUserRoles).toHaveBeenLastCalledWith(expect.anything(), 'user-1')
+})
+
+it('does not load persisted role grants for an authenticated guest', async () => {
+  mockGetUserRoles.mockClear()
+  const result = await setupRequestHandler({
+    locals: {
+      session: { id: 'guest-session' },
+      user: { id: 'guest', isAnonymous: true, roles: [{ role: 'owner' }] },
+    } as unknown as App.Locals,
+    platform: { env: { DB: {} } } as App.Platform,
+    request: new Request('https://example.test/api'),
+  })
+  expect(result.userRoles).toEqual([])
+  expect(mockGetUserRoles).not.toHaveBeenCalled()
+})
+
+it('fails request setup when the current role lookup fails', async () => {
+  const failure = new Error('synthetic role lookup failure')
+  mockGetUserRoles.mockRejectedValueOnce(failure)
+  await expect(
+    setupRequestHandler({
+      locals: {
+        session: { id: 'session-1' },
+        user: { id: 'user-1', isAnonymous: false },
+      } as App.Locals,
+      platform: { env: { DB: {} } } as App.Platform,
+      request: new Request('https://example.test/api'),
+    }),
+  ).rejects.toBe(failure)
+})
