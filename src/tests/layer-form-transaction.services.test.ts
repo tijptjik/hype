@@ -42,7 +42,7 @@ function fixture() {
   }
   sqlite.exec(`CREATE UNIQUE INDEX translation_key ON layerI18n(layerId,locale);
     CREATE UNIQUE INDEX property_key ON layerProperty(layerId,propertyId);
-    INSERT INTO layer(id,organisationId,projectId,metadata,modifiedAt) VALUES ('l','o','p','{}','before');
+    INSERT INTO layer(id,organisationId,projectId,metadata,modifiedAt,relocationPolicyRevision) VALUES ('l','o','p','{}','before',0);
     INSERT INTO layerI18n(layerId,locale,name,nameShort) VALUES ('l','en','Old','O'),('outside','en','Outside','X');
     INSERT INTO layerProperty VALUES ('l','old',1,1),('outside','external',1,1);`)
   return { sqlite, db: db as unknown as Database }
@@ -153,18 +153,28 @@ describe('atomic layer form updates', () => {
     },
   )
 
-  it.each(['timestamp', 'missing'])(
+  it.each(['timestamp', 'policy', 'missing'])(
     'does not mutate relations when the %s guard fails',
     async reason => {
       const { sqlite, db } = fixture()
       try {
         if (reason === 'timestamp')
           sqlite.exec("UPDATE layer SET modifiedAt='concurrent'")
+        if (reason === 'policy')
+          sqlite.exec('UPDATE layer SET relocationPolicyRevision=1')
         const before = snapshot(sqlite)
         expect(
           await updateLayerByIdWithConcurrency(db, {
             ...patch,
             ...(reason === 'missing' ? { id: 'missing' } : {}),
+            ...(reason === 'policy'
+              ? {
+                  relocationUpdatePolicy: {
+                    policy: 'review' as const,
+                    expectedRevision: 0,
+                  },
+                }
+              : {}),
           }),
         ).toBeNull()
         expect(snapshot(sqlite)).toEqual(before)
