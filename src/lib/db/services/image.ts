@@ -8,8 +8,12 @@ import {
   eq,
   exists,
   ne,
+  not,
+  or,
+  sql,
   getTableColumns,
   inArray,
+  isNull,
   type AnyColumn,
   type SQL,
 } from 'drizzle-orm'
@@ -26,7 +30,7 @@ import {
   user,
 } from '../schema'
 // CRUD
-import { insert, insertRelated, update, updateRelated } from '../crud'
+import { insert, insertRelated } from '../crud'
 // ENUMS
 import {
   ImageContextResource,
@@ -35,9 +39,13 @@ import {
 } from '#lib/enums.js'
 // DB
 import { autochunk, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
+import { prepareTaskEvidenceRevision } from './taskEvidenceRevision.js'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 // PUBLICATION
 import { publishScopedFeatureImages } from './publication.js'
 // TYPES
+import type { ImageMutationGuards } from './imageMutationScope.js'
+import type { BatchItem } from 'drizzle-orm/batch'
 import type { Id, Database, EntityResponse } from '#lib/types.js'
 import type {
   FeatureImage,
@@ -65,10 +73,12 @@ import { ImageListProfileAPI, ImageAdminProfileAPI } from '#lib/db/zod/index.js'
 //    - createImage
 //    - createUploadedImage
 //    - updateImage
+//    - updateImageWithFeatureImage
 //
 // 2. CRUD :: RELATIONAL OPERATIONS
 //    - createFeatureImage
 //    - updateFeatureImage
+//    - prepareFeatureImageMutation
 //    - createTaskImagesFromImageIds
 //    - publishAllImagesWithPublicIntent
 //
@@ -146,7 +156,8 @@ export const updateImage = async (
   db: Database,
   data: ImageDBPartial,
   ref: Id,
-): Promise<ImageDB> => await update(db, image, data, image.id, ref)
+): Promise<ImageDB> =>
+  (await updateImageWithFeatureImage(db, data, undefined, ref)).image
 
 // ═══════════════════════
 // 2. CRUD :: RELATIONAL OPERATIONS
@@ -202,27 +213,50 @@ export const updateFeatureImage = async (
   modifiedFeatureImage: Omit<ImageDBFlatUpdate, 'imageId'>,
   imageId: string,
 ): Promise<FeatureImageDB> => {
-  // Extract only the featureImage-specific fields
+  const mutation = prepareFeatureImageMutation(db, modifiedFeatureImage, imageId)
+  const result = await executeRevisionBatch(db, mutation.guard, [
+    ...prepareTaskEvidenceRevision(db, mutation.affectedTasks),
+    ...mutation.statements,
+    prepareRevisionCheck(db, mutation.complete),
+    mutation.current,
+  ])
+  if (!result) throw error(404, 'Feature image assignment not found')
+  return (result.at(-1) as FeatureImageDB[])[0]
+}
+
+/**
+ * Prepares assignment changes and completion checks for an enclosing image transaction.
+ * @param db Database connection.
+ * @param modifiedFeatureImage Assignment fields and owning Feature identity.
+ * @param imageId Image identity.
+ * @param writeGuard Optional predicate suppressing assignment writes on upload replay.
+ * @returns Unexecuted writes, target guards and a persisted-assignment query.
+ * @remarks Checking the final assignment inside the batch also rolls back skipped promotion.
+ */
+function prepareFeatureImageMutation(
+  db: Database,
+  modifiedFeatureImage: Omit<ImageDBFlatUpdate, 'imageId'>,
+  imageId: string,
+  writeGuard?: SQL,
+) {
+  // Extract only the featureImage-specific fields.
   const featureImageData: Partial<FeatureImageDB> = {}
-
-  if (modifiedFeatureImage.isPublished !== undefined) {
-    featureImageData.isPublished = modifiedFeatureImage.isPublished ?? undefined
-  }
-  if (modifiedFeatureImage.intent !== undefined) {
-    featureImageData.intent = modifiedFeatureImage.intent ?? undefined
-  }
-  if (modifiedFeatureImage.publishedAt !== undefined) {
+  if (modifiedFeatureImage.isPublished != null)
+    featureImageData.isPublished = modifiedFeatureImage.isPublished
+  if (modifiedFeatureImage.intent != null)
+    featureImageData.intent = modifiedFeatureImage.intent
+  if (modifiedFeatureImage.publishedAt !== undefined)
     featureImageData.publishedAt = modifiedFeatureImage.publishedAt
-  }
 
+  const target = and(
+    eq(featureImage.imageId, imageId),
+    eq(featureImage.featureId, modifiedFeatureImage.featureId),
+  )!
+  const current = db.select().from(featureImage).where(target)
+  const statements: BatchItem<'sqlite'>[] = []
   if (featureImageData.intent === 'canonical') {
-    const target = and(
-      eq(featureImage.imageId, imageId),
-      eq(featureImage.featureId, modifiedFeatureImage.featureId),
-    )
-    // D1 batches roll back both statements if promotion fails; missing targets must
-    // leave the current canonical assignment intact as well.
-    const [, updated] = await db.batch([
+    // D1 batches roll back demotion and promotion together, including missing/skipped targets.
+    statements.push(
       db
         .update(featureImage)
         .set({ intent: 'undefined' })
@@ -231,29 +265,183 @@ export const updateFeatureImage = async (
             eq(featureImage.featureId, modifiedFeatureImage.featureId),
             eq(featureImage.intent, 'canonical'),
             ne(featureImage.imageId, imageId),
-            exists(
-              db
-                .select({ imageId: featureImage.imageId })
-                .from(featureImage)
-                .where(target),
-            ),
+            exists(current),
+            writeGuard,
           ),
         ),
-      db.update(featureImage).set(featureImageData).where(target).returning(),
-    ])
-    if (!updated[0]) throw error(404, 'Feature image assignment not found')
-    return updated[0]
+    )
   }
-
-  return await updateRelated(
-    db,
-    featureImage,
-    featureImageData,
-    featureImage.imageId,
-    imageId,
-    featureImage.featureId,
-    modifiedFeatureImage.featureId,
+  if (Object.keys(featureImageData).length)
+    statements.push(
+      db.update(featureImage).set(featureImageData).where(and(target, writeGuard)),
+    )
+  const columns = getTableColumns(featureImage)
+  const complete = exists(
+    db
+      .select()
+      .from(featureImage)
+      .where(
+        and(
+          target,
+          ...Object.entries(featureImageData).map(([key, value]) => {
+            const column = columns[key as keyof typeof columns]
+            return value === null ? isNull(column) : eq(column, value as never)
+          }),
+        ),
+      ),
   )
+  // Assignment changes affect this Feature's task evidence, including a demoted canonical image.
+  const affectedImages = db
+    .select({ id: featureImage.imageId })
+    .from(featureImage)
+    .where(
+      and(
+        eq(featureImage.featureId, modifiedFeatureImage.featureId),
+        or(
+          eq(featureImage.imageId, imageId),
+          featureImageData.intent === 'canonical'
+            ? eq(featureImage.intent, 'canonical')
+            : undefined,
+        ),
+      ),
+    )
+  const affectedTasks = and(
+    not(complete),
+    eq(task.featureId, modifiedFeatureImage.featureId),
+    exists(
+      db
+        .select({ id: taskImage.taskId })
+        .from(taskImage)
+        .where(
+          and(
+            eq(taskImage.taskId, task.id),
+            inArray(taskImage.imageId, affectedImages),
+          ),
+        ),
+    ),
+  )!
+  return { guard: exists(current), complete, current, statements, affectedTasks }
+}
+
+/**
+ * Commits image fields and an optional Feature assignment in one transaction.
+ * @param db Request database.
+ * @param data Validated image field changes.
+ * @param assignment Optional validated Feature-assignment changes.
+ * @param imageId Authorized image identity.
+ * @param guards Optional scope/state checks captured before request authorization.
+ * @param replay Optional trusted predicate identifying an already-committed upload.
+ * @returns Persisted image and assignment.
+ * @remarks A failed or skipped assignment write must not leave new image metadata behind.
+ * Changed evidence invalidates pending task revisions in the same transaction.
+ */
+export async function updateImageWithFeatureImage(
+  db: Database,
+  data: ImageDBPartial,
+  assignment: Omit<ImageDBFlatUpdate, 'imageId'> | undefined,
+  imageId: string,
+  guards?: ImageMutationGuards,
+  replay?: SQL,
+): Promise<{ image: ImageDB; featureImage?: FeatureImageDB; replayed?: boolean }> {
+  if (data.id !== undefined && data.id !== imageId)
+    throw error(400, 'IMAGE_ID_MISMATCH')
+  if (replay && (!data.publicId || !data.env))
+    throw error(400, 'INVALID_IMAGE_REPLACEMENT')
+  const { id: _id, ...fields } = data
+  const current = db.select().from(image).where(eq(image.id, imageId))
+  const mutation = assignment
+    ? prepareFeatureImageMutation(
+        db,
+        assignment,
+        imageId,
+        replay ? not(replay) : undefined,
+      )
+    : undefined
+  const columns = getTableColumns(image)
+  const complete = exists(
+    db
+      .select()
+      .from(image)
+      .where(
+        and(
+          eq(image.id, imageId),
+          ...Object.entries(fields)
+            .filter(([, value]) => value !== undefined)
+            .map(([key, value]) => {
+              const column = columns[key as keyof typeof columns]
+              return value === null ? isNull(column) : eq(column, value as never)
+            }),
+        ),
+      ),
+  )
+  const affectedTasks = or(
+    and(
+      not(complete),
+      exists(
+        db
+          .select({ id: taskImage.taskId })
+          .from(taskImage)
+          .where(and(eq(taskImage.taskId, task.id), eq(taskImage.imageId, imageId))),
+      ),
+    ),
+    mutation?.affectedTasks,
+  )!
+  // Validate both targets before writes and both resulting records before committing.
+  const result = await executeRevisionBatch(
+    db,
+    and(exists(current), mutation?.guard, guards?.before)!,
+    [
+      ...prepareTaskEvidenceRevision(
+        db,
+        and(affectedTasks, replay ? not(replay) : undefined)!,
+      ),
+      ...(mutation?.statements ?? []),
+      ...(mutation ? [prepareRevisionCheck(db, or(replay, mutation.complete)!)] : []),
+      ...(Object.values(fields).some(value => value !== undefined)
+        ? [
+            db
+              .update(image)
+              .set(fields)
+              .where(
+                and(
+                  eq(image.id, imageId),
+                  not(complete),
+                  replay ? not(replay) : undefined,
+                ),
+              )
+              .returning({ id: image.id }),
+          ]
+        : []),
+      // The image UPDATE is last: changes() distinguishes a replay from a fresh write.
+      prepareRevisionCheck(
+        db,
+        and(
+          or(
+            and(complete, mutation?.complete),
+            replay ? and(replay, sql`changes() = 0`) : undefined,
+          ),
+          guards?.after,
+        )!,
+      ),
+      current,
+      ...(mutation ? [mutation.current] : []),
+    ],
+  )
+  if (!result) throw error(409, 'STALE_IMAGE_UPDATE')
+  return {
+    image: (result.at(mutation ? -2 : -1) as ImageDB[])[0],
+    ...(replay
+      ? {
+          replayed:
+            (
+              result[
+                2 + (mutation?.statements.length ?? 0) + (mutation ? 1 : 0)
+              ] as unknown[]
+            ).length === 0,
+        }
+      : {}),
+    ...(mutation ? { featureImage: (result.at(-1) as FeatureImageDB[])[0] } : {}),
+  }
 }
 
 /**

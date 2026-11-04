@@ -1,3 +1,10 @@
+import {
+  isResourceUploadSnapshot,
+  isImageMutationSnapshot,
+  type ImageMutationSnapshot,
+  type ResourceUploadSnapshot,
+} from './uploadContext.js'
+
 const encoder = new TextEncoder()
 
 export type UploadTokenPayload = {
@@ -7,6 +14,8 @@ export type UploadTokenPayload = {
   ctxId: string
   filename: string
   replaceImageId?: string
+  resourceSnapshot?: ResourceUploadSnapshot
+  replacementSnapshot?: ImageMutationSnapshot
   contentType: string
   size: number
   uploaderUserId: string
@@ -126,7 +135,17 @@ const isUploadTokenPayload = (value: unknown): value is UploadTokenPayload => {
     typeof claims.exp === 'number' &&
     Number.isSafeInteger(claims.exp) &&
     claims.exp > 0 &&
-    (claims.replaceImageId === undefined ||
-      (typeof claims.replaceImageId === 'string' && claims.replaceImageId.length > 0))
+    (claims.resourceSnapshot === undefined ||
+      isResourceUploadSnapshot(claims.resourceSnapshot)) &&
+    (claims.replaceImageId === undefined
+      ? claims.replacementSnapshot === undefined
+      : typeof claims.replaceImageId === 'string' &&
+        claims.replaceImageId.length > 0 &&
+        isImageMutationSnapshot(claims.replacementSnapshot) &&
+        claims.replacementSnapshot.imageId === claims.replaceImageId &&
+        claims.replacementSnapshot.source !== undefined &&
+        claims.replacementSnapshot.assignmentRevision !== undefined &&
+        (claims.publicId !== claims.replacementSnapshot.source.publicId ||
+          claims.env !== claims.replacementSnapshot.source.env))
   )
 }

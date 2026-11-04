@@ -185,6 +185,20 @@ vi.mock('coordinate-parser', () => ({
   },
 }))
 
+vi.mock('#lib/db/services/imageMutationScope.js', async () => {
+  const { sql } = await import('drizzle-orm')
+  return {
+    getImageMutationSnapshot: vi.fn(async () => ({
+      imageId: 'img-1',
+      imageRevision: 'revision',
+      assignmentRevision: 'assignment',
+      scope: 'scope',
+      source: { publicId: 'old-key', env: 'local', version: 1 },
+    })),
+    createImageMutationGuards: vi.fn(() => ({ before: sql`1`, after: sql`1` })),
+  }
+})
+
 vi.mock('#lib/images/auth.js', () => ({
   createUploadToken: vi.fn(async () => 'signed-upload-token'),
   verifyUploadToken: mockVerifyUploadToken,
@@ -778,10 +792,276 @@ describe('image.remote', () => {
     expect(result).toMatchObject({
       publicId: expect.stringContaining('h/features/feature-1/'),
       uploadUrl: 'https://upload.example.test/object',
+      headers: expect.objectContaining({ 'if-none-match': '*' }),
       method: 'PUT',
       confirmToken: 'signed-upload-token',
     })
   })
+
+  it.each(['feature', 'project', 'organisation', 'hub'] as const)(
+    'authorizes a %s replacement on a fresh key with the original signed snapshot',
+    async ctxType => {
+      mockLoadImageById.mockResolvedValueOnce({
+        id: 'img-1',
+        publicId: 'old-key',
+        env: 'local',
+      } as never)
+      const session = await remote.authImageUpload({
+        cdn: 'cloudflareR2',
+        env: 'local',
+        ctxType,
+        ctxId: 'context',
+        replaceImageId: 'img-1',
+        filename: 'image.jpg',
+        contentType: 'image/jpeg',
+        size: 1234,
+      })
+      expect(session.publicId).not.toBe('old-key')
+      expect(session.publicId).toContain(`h/${ctxType}s/context/`)
+      const { createUploadToken } = await import('#lib/images/auth.js')
+      expect(createUploadToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          publicId: session.publicId,
+          replaceImageId: 'img-1',
+          replacementSnapshot: expect.objectContaining({
+            imageId: 'img-1',
+            source: { publicId: 'old-key', env: 'local', version: 1 },
+          }),
+        }),
+        'secret',
+      )
+      expect(mockCreatePresignedR2UploadUrl).toHaveBeenCalledWith(
+        expect.objectContaining({ objectKey: session.publicId }),
+      )
+      const { getImageMutationSnapshot } = await import(
+        '#lib/db/services/imageMutationScope.js'
+      )
+      expect(
+        vi.mocked(getImageMutationSnapshot).mock.invocationCallOrder[0],
+      ).toBeLessThan(mockAssertPermissionsToDeleteImage.mock.invocationCallOrder[0])
+    },
+  )
+
+  it.each(['fresh', 'retry', 'recover-sidecars', 'stale', 'missing-snapshot'] as const)(
+    'finalizes isolated replacement storage safely: %s',
+    async scenario => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(2000)
+      try {
+        const ctx = await mockGuardedContext()
+        const bucket = ctx.event.locals.platform.env.ASSET_RAW_DEV
+        bucket.head.mockResolvedValue({
+          size: 1234,
+          httpMetadata: { contentType: 'image/jpeg' },
+        })
+        const replacementSnapshot = {
+          imageId: 'img-1',
+          imageRevision: 'revision',
+          assignmentRevision: 'assignment',
+          scope: 'scope',
+          source: { publicId: 'old-key', env: 'production', version: 1 },
+        }
+        mockVerifyUploadToken.mockResolvedValueOnce({
+          publicId: 'new-key',
+          env: 'local',
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+          replaceImageId: 'img-1',
+          replacementSnapshot:
+            scenario === 'missing-snapshot' ? undefined : replacementSnapshot,
+          filename: 'image.jpg',
+          contentType: 'image/jpeg',
+          size: 1234,
+          uploaderUserId: 'u-1',
+          exp: 5000,
+        })
+        const replayed = scenario === 'retry' || scenario === 'recover-sidecars'
+        const storedVersion = replayed ? 1000 : 2000
+        if (scenario === 'stale')
+          mockUpdateImageForContext.mockRejectedValueOnce({
+            status: 409,
+            body: { message: 'STALE_IMAGE_UPDATE' },
+          })
+        else if (scenario !== 'missing-snapshot')
+          mockUpdateImageForContext.mockResolvedValueOnce({
+            data: {
+              image: { id: 'img-1', publicId: 'new-key', version: storedVersion },
+            },
+            replayed,
+          } as never)
+        mockReadMetadataDocument.mockResolvedValueOnce({
+          document: {
+            originalFilename: 'old.jpg',
+            cameraModel: 'Old camera',
+            sourceVersion: 1,
+          },
+          resolvedEnv: 'production',
+          resolvedVersion: 1,
+        })
+        if (replayed)
+          mockReadMetadataDocument.mockResolvedValueOnce({
+            document:
+              scenario === 'retry'
+                ? { sourceVersion: 1000, originalFilename: 'already-saved.jpg' }
+                : null,
+            resolvedEnv: 'local',
+            resolvedVersion: 1000,
+          })
+        const confirmation = remote.finalizeImageUpload({
+          token: 'token',
+          metadata: {
+            originalFilename: 'image.jpg',
+            originalExtension: 'jpg',
+            originalWidth: 100,
+            originalHeight: 200,
+            cameraModel: null,
+            capturedAt: null,
+            credit: null,
+            latitude: null,
+            longitude: null,
+            metadata: null,
+          },
+        })
+        if (scenario === 'stale' || scenario === 'missing-snapshot') {
+          await expect(confirmation).rejects.toMatchObject({ status: 409 })
+          expect(bucket.put).not.toHaveBeenCalled()
+          expect(mockWaitUntil).not.toHaveBeenCalled()
+          return
+        }
+        expect((await confirmation).data.image.version).toBe(storedVersion)
+        await Promise.all(mockWaitUntil.mock.calls.map(([promise]) => promise))
+        expect(mockUpdateImageForContext).toHaveBeenCalledWith(
+          expect.objectContaining({
+            replacement: {
+              snapshot: replacementSnapshot,
+              publicId: 'new-key',
+              env: 'local',
+            },
+          }),
+        )
+        expect(mockReadMetadataDocument).toHaveBeenCalledWith(
+          expect.objectContaining({
+            publicId: 'old-key',
+            env: 'production',
+            version: 1,
+          }),
+        )
+        expect(bucket.put).toHaveBeenCalledTimes(3)
+        for (const [key] of bucket.put.mock.calls) expect(key).toMatch(/^new-key/)
+        if (scenario !== 'retry')
+          expect(bucket.put).toHaveBeenCalledWith(
+            expect.stringContaining(`.v${storedVersion}`),
+            expect.stringContaining('Old camera'),
+            expect.anything(),
+          )
+        if (scenario === 'recover-sidecars')
+          expect(bucket.put).toHaveBeenCalledWith(
+            expect.stringContaining('.v1000'),
+            expect.stringContaining('"replacementEditedAt":"1970-01-01T00:00:01.000Z"'),
+            expect.anything(),
+          )
+        expect(
+          ctx.event.locals.platform.env.ASSET_RAW_PRODUCTION.put,
+        ).not.toHaveBeenCalled()
+        expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith(
+          expect.objectContaining({ publicId: 'new-key', version: storedVersion }),
+        )
+      } finally {
+        now.mockRestore()
+      }
+    },
+  )
+
+  it.each(['concurrent', 'repair'] as const)(
+    'preserves one canonical metadata document across %s confirmations',
+    async scenario => {
+      const ctx = await mockGuardedContext()
+      const bucket = ctx.event.locals.platform.env.ASSET_RAW_DEV
+      const stored = new Map<string, string>()
+      bucket.head.mockResolvedValue({
+        size: 1234,
+        httpMetadata: { contentType: 'image/jpeg' },
+      })
+      bucket.put.mockImplementation(
+        async (
+          key: string,
+          body: string,
+          options: { onlyIf?: { etagDoesNotMatch?: string } },
+        ) => {
+          if (stored.has(key) && options.onlyIf?.etagDoesNotMatch === '*') return null
+          stored.set(key, body)
+          return { etag: 'stored' }
+        },
+      )
+      Object.assign(bucket, {
+        get: vi.fn(async (key: string) =>
+          stored.has(key) ? { json: async () => JSON.parse(stored.get(key)!) } : null,
+        ),
+      })
+      if (scenario === 'repair')
+        stored.set(
+          'new-key.v1000.json',
+          JSON.stringify({ sourceVersion: 1000, credit: 'Original credit' }),
+        )
+      mockVerifyUploadToken.mockResolvedValue({
+        publicId: 'new-key',
+        env: 'local',
+        ctxType: 'feature',
+        ctxId: 'feature-1',
+        replaceImageId: 'img-1',
+        replacementSnapshot: {
+          imageId: 'img-1',
+          imageRevision: 'revision',
+          assignmentRevision: 'assignment',
+          scope: 'scope',
+          source: { publicId: 'old-key', env: 'local', version: 1 },
+        },
+        filename: 'image.jpg',
+        contentType: 'image/jpeg',
+        size: 1234,
+        uploaderUserId: 'u-1',
+        exp: Date.now() + 5000,
+      })
+      for (let i = 0; i < 2; i++)
+        mockUpdateImageForContext.mockResolvedValueOnce({
+          data: { image: { id: 'img-1', publicId: 'new-key', version: 1000 } },
+          replayed: true,
+        } as never)
+      mockReadMetadataDocument.mockResolvedValue({
+        document: null,
+        resolvedEnv: 'local',
+        resolvedVersion: 1000,
+      })
+      const confirm = (credit: string) =>
+        remote.finalizeImageUpload({
+          token: 'token',
+          metadata: {
+            credit,
+            originalFilename: 'image.jpg',
+            originalExtension: 'jpg',
+            originalWidth: 100,
+            originalHeight: 200,
+            cameraModel: null,
+            capturedAt: null,
+            latitude: null,
+            longitude: null,
+            metadata: null,
+          },
+        })
+      await Promise.all([confirm('First credit'), confirm('Second credit')])
+      await Promise.all(mockWaitUntil.mock.calls.map(([promise]) => promise))
+      const canonical = stored.get('new-key.v1000.json')!
+      expect(stored.get('new-key.json')).toBe(canonical)
+      expect(JSON.parse(canonical).credit).toBe(
+        scenario === 'repair' ? 'Original credit' : 'First credit',
+      )
+      expect(JSON.parse(stored.get('new-key.manifest.json')!).version).toBe(1000)
+      expect(bucket.put).toHaveBeenCalledWith(
+        'new-key.v1000.json',
+        expect.any(String),
+        expect.objectContaining({ onlyIf: { etagDoesNotMatch: '*' } }),
+      )
+    },
+  )
 
   it('authImageUpload targets the dev raw bucket for local uploads', async () => {
     await remote.authImageUpload({
@@ -1015,7 +1295,7 @@ describe('image.remote', () => {
           env: 'local',
         }),
       )
-      expect(put).toHaveBeenCalledTimes(scenario === 'retry-existing' ? 0 : 3)
+      expect(put).toHaveBeenCalledTimes(3)
       if (scenario === 'retry-missing') {
         expect(put).toHaveBeenCalledWith(
           expect.stringContaining('.v1000'),
@@ -1023,7 +1303,7 @@ describe('image.remote', () => {
           expect.anything(),
         )
       }
-      expect(mockWaitUntil).toHaveBeenCalledTimes(scenario === 'retry-existing' ? 1 : 2)
+      expect(mockWaitUntil).toHaveBeenCalledTimes(2)
       expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
         event: expect.objectContaining({
           request: expect.any(Request),
@@ -1295,143 +1575,199 @@ describe('image.remote', () => {
     expect(mockLoadFeatureCanonicalImageOccupancy).not.toHaveBeenCalled()
   })
 
-  it('rotateImage rewrites stored objects, bumps version, and warms fresh variants', async () => {
-    const put = vi.fn(async () => undefined)
-    const originalGet = vi.fn(async (key: string) => {
-      if (key === 'h/features/feature-1/image-a') {
-        return {
-          arrayBuffer: async () =>
-            await sharp({
-              create: {
-                width: 100,
-                height: 200,
-                channels: 3,
-                background: '#112233',
-              },
-            })
-              .jpeg()
-              .toBuffer(),
-          httpMetadata: { contentType: 'image/jpeg' },
+  it.each(['success', 'stale', 'database-failure', 'source-drift'] as const)(
+    'rotateImage isolates stored objects before database selection: %s',
+    async scenario => {
+      const put = vi.fn(async () => undefined)
+      const originalGet = vi.fn(async (key: string) => {
+        if (key === 'h/features/feature-1/image-a') {
+          return {
+            arrayBuffer: async () =>
+              await sharp({
+                create: {
+                  width: 100,
+                  height: 200,
+                  channels: 3,
+                  background: '#112233',
+                },
+              })
+                .jpeg()
+                .toBuffer(),
+            httpMetadata: { contentType: 'image/jpeg' },
+          }
         }
-      }
 
-      return null
-    })
-    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(2468)
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(null, { status: 200 }))
+        return null
+      })
+      const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(2468)
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(new Response(null, { status: 200 }))
 
-    mockLoadImageById.mockResolvedValue({
-      id: 'img-1',
-      env: 'local',
-      publicId: 'h/features/feature-1/image-a',
-      version: 1234,
-      featureId: 'feature-1',
-    })
+      mockLoadImageById.mockResolvedValue({
+        id: 'img-1',
+        env: 'local',
+        publicId: 'h/features/feature-1/image-a',
+        version: 1234,
+        featureId: 'feature-1',
+      })
 
-    mockGuardedContext.mockResolvedValue({
-      db: buildDbWithContextRow({
-        isPublished: true,
-        isArchived: false,
-        resourceHubId: 'hub-a',
-      }),
-      user: { id: 'u-1', isAnonymous: false },
-      userId: 'u-1',
-      userRoles: [],
-      isAdminRequest: true,
-      event: {
-        request: new Request('https://example.test'),
-        locals: {
-          platform: {
-            env: {
-              ENVIRONMENT: 'local',
-              AUTH_SECRET: 'secret',
-              CLOUDFLARE_ACCOUNT_ID: 'account-id',
-              R2_S3_ACCESS_KEY_ID: 'access-key',
-              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-              PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-              ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
-              ASSET_RAW_PREVIEW: { get: vi.fn(), head: vi.fn(), put },
-              ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
-              ASSET_PUBLIC_DEV: { put, get: vi.fn() },
-              ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-              ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+      mockGuardedContext.mockResolvedValue({
+        db: buildDbWithContextRow({
+          isPublished: true,
+          isArchived: false,
+          resourceHubId: 'hub-a',
+        }),
+        user: { id: 'u-1', isAnonymous: false },
+        userId: 'u-1',
+        userRoles: [],
+        isAdminRequest: true,
+        event: {
+          request: new Request('https://example.test'),
+          locals: {
+            platform: {
+              env: {
+                ENVIRONMENT: 'local',
+                AUTH_SECRET: 'secret',
+                CLOUDFLARE_ACCOUNT_ID: 'account-id',
+                R2_S3_ACCESS_KEY_ID: 'access-key',
+                R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+                PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+                ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
+                ASSET_RAW_PREVIEW: { get: vi.fn(), head: vi.fn(), put },
+                ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
+                ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+                ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+                ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+              },
+              context: {
+                waitUntil: mockWaitUntil,
+              },
             },
-            context: {
-              waitUntil: mockWaitUntil,
-            },
+            hub: null,
           },
-          hub: null,
         },
-      },
-    })
+      })
 
-    mockReadMetadataDocument.mockResolvedValue({
-      document: {
-        originalFilename: 'image.jpg',
-        originalExtension: 'jpg',
-        originalWidth: 100,
-        originalHeight: 200,
-        rotation: 0,
-        cameraModel: null,
-        capturedAt: null,
-        credit: null,
-        latitude: null,
-        longitude: null,
-        metadata: {
-          uploadedWidth: '100',
-          uploadedHeight: '200',
+      mockReadMetadataDocument.mockResolvedValue({
+        document: {
+          originalFilename: 'image.jpg',
+          originalExtension: 'jpg',
+          originalWidth: 100,
+          originalHeight: 200,
+          rotation: 0,
+          cameraModel: null,
+          capturedAt: null,
+          credit: null,
+          latitude: null,
+          longitude: null,
+          metadata: {
+            uploadedWidth: '100',
+            uploadedHeight: '200',
+          },
+          sourceVersion: 1234,
+          uploadedAt: '2026-03-01T00:00:00.000Z',
+          modifiedAt: '2026-03-01T00:00:00.000Z',
         },
-        sourceVersion: 1234,
-        uploadedAt: '2026-03-01T00:00:00.000Z',
-        modifiedAt: '2026-03-01T00:00:00.000Z',
-      },
-      resolvedEnv: 'local',
-      resolvedVersion: 1234,
-    })
+        resolvedEnv: 'local',
+        resolvedVersion: 1234,
+      })
 
-    const result = await remote.rotateImage({
-      id: 'img-1',
-      ctxType: 'feature',
-      ctxId: 'feature-1',
-      rotation: 90,
-    })
-
-    expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
-    expect(originalGet).toHaveBeenCalledWith('h/features/feature-1/image-a')
-    expect(originalGet).toHaveBeenCalledTimes(1)
-    expect(put).toHaveBeenCalledTimes(4)
-    expect(mockUpdateImageForContext).toHaveBeenCalledWith(
-      expect.objectContaining({
+      const { getImageMutationSnapshot } = await import(
+        '#lib/db/services/imageMutationScope.js'
+      )
+      vi.mocked(getImageMutationSnapshot).mockResolvedValueOnce({
+        imageId: 'img-1',
+        imageRevision: 'revision',
+        assignmentRevision: 'assignment',
+        scope: 'scope',
+        source: {
+          publicId:
+            scenario === 'source-drift'
+              ? 'changed-key'
+              : 'h/features/feature-1/image-a',
+          env: 'local',
+          version: 1234,
+        },
+      })
+      if (scenario === 'stale' || scenario === 'database-failure')
+        mockUpdateImageForContext.mockRejectedValueOnce(
+          scenario === 'stale' ? { status: 409 } : new Error('database unavailable'),
+        )
+      const operation = remote.rotateImage({
         id: 'img-1',
         ctxType: 'feature',
         ctxId: 'feature-1',
-        data: {
-          env: 'local',
-          version: 2468,
-        },
-      }),
-    )
-    expect(put).toHaveBeenCalledWith(
-      'h/features/feature-1/image-a.json',
-      expect.stringContaining('"rotation":90'),
-      expect.any(Object),
-    )
-    expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
-      event: expect.objectContaining({
-        request: expect.any(Request),
-      }),
-      env: 'local',
-      publicId: 'h/features/feature-1/image-a',
-      version: 2468,
-    })
-    expect(fetchSpy).not.toHaveBeenCalled()
-    expect(result).toEqual({ data: { id: 'img-1' } })
+        rotation: 90,
+      })
 
-    fetchSpy.mockRestore()
-    dateNowSpy.mockRestore()
-  })
+      if (scenario === 'source-drift') {
+        await expect(operation).rejects.toMatchObject({ status: 409 })
+        expect(put).not.toHaveBeenCalled()
+        expect(mockUpdateImageForContext).not.toHaveBeenCalled()
+        fetchSpy.mockRestore()
+        dateNowSpy.mockRestore()
+        return
+      }
+      if (scenario !== 'success') {
+        await expect(operation).rejects.toBeDefined()
+        expect(put).toHaveBeenCalledTimes(4)
+        for (const [key] of put.mock.calls as unknown as [string][])
+          expect(key).toMatch(/^h\/rotations\//)
+        expect(mockEnqueueDerivedAssetWarmup).not.toHaveBeenCalled()
+        expect(mockUpdateImageForContext).toHaveBeenCalledWith(
+          expect.objectContaining({
+            replacement: expect.objectContaining({
+              snapshot: expect.objectContaining({
+                imageRevision: 'revision',
+                assignmentRevision: 'assignment',
+              }),
+            }),
+          }),
+        )
+        fetchSpy.mockRestore()
+        dateNowSpy.mockRestore()
+        return
+      }
+      const result = await operation
+      for (const [key] of put.mock.calls as unknown as [string][])
+        expect(key).toMatch(/^h\/rotations\//)
+      expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
+      expect(originalGet).toHaveBeenCalledWith('h/features/feature-1/image-a')
+      expect(originalGet).toHaveBeenCalledTimes(1)
+      expect(put).toHaveBeenCalledTimes(4)
+      expect(mockUpdateImageForContext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'img-1',
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+          data: {
+            publicId: expect.stringMatching(/^h\/rotations\//),
+            env: 'local',
+            version: 2468,
+          },
+        }),
+      )
+      expect(put).toHaveBeenCalledWith(
+        expect.stringMatching(/^h\/rotations\/.+\.json$/),
+        expect.stringContaining('"rotation":90'),
+        expect.any(Object),
+      )
+      expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
+        event: expect.objectContaining({
+          request: expect.any(Request),
+        }),
+        env: 'local',
+        publicId: expect.stringMatching(/^h\/rotations\//),
+        version: 2468,
+      })
+      expect(fetchSpy).not.toHaveBeenCalled()
+      expect(result).toEqual({ data: { id: 'img-1' } })
+
+      fetchSpy.mockRestore()
+      dateNowSpy.mockRestore()
+    },
+  )
 
   it('rotateImage falls back to direct R2 reads and writes when the binding cannot access the original', async () => {
     const put = vi
@@ -1540,6 +1876,16 @@ describe('image.remote', () => {
       resolvedVersion: 4321,
     })
 
+    const { getImageMutationSnapshot } = await import(
+      '#lib/db/services/imageMutationScope.js'
+    )
+    vi.mocked(getImageMutationSnapshot).mockResolvedValueOnce({
+      imageId: 'img-2',
+      imageRevision: 'revision',
+      assignmentRevision: 'assignment',
+      scope: 'scope',
+      source: { publicId: 'h/features/feature-2/image-b', env: 'local', version: 4321 },
+    })
     const result = await remote.rotateImage({
       id: 'img-2',
       ctxType: 'feature',
@@ -1563,7 +1909,7 @@ describe('image.remote', () => {
         request: expect.any(Request),
       }),
       env: 'preview',
-      publicId: 'h/features/feature-2/image-b',
+      publicId: expect.stringMatching(/^h\/rotations\//),
       version: 97531,
     })
     expect(result).toEqual({ data: { id: 'img-1' } })

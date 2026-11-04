@@ -95,7 +95,7 @@ The app now uses a three-step upload flow:
 
 For local development, the app worker and asset worker R2 bindings use `remote = true` so direct uploads and reads target the same real buckets instead of separate local Miniflare state.
 
-Apply the companion R2 CORS policy from `scripts/cloud/r2-image-upload.cors.json` to each raw asset bucket so browser `PUT` uploads are allowed from local, preview, and production app origins.
+Apply the companion R2 CORS policy from `scripts/cloud/r2-image-upload.cors.json` to each raw asset bucket so browser `PUT` uploads are allowed from local, preview, and production app origins. The policy must allow `if-none-match` before rolling out create-only signed uploads. The browser must send the returned `If-None-Match: *` header; it is bound into the signature. An occupied destination returns 412 and requires a fresh upload grant, because the response alone cannot prove matching file contents. Previously issued URLs retain their original permissions until expiration.
 
 ## Asset Analytics
 
@@ -145,3 +145,7 @@ The Cloudflare API token needs permission to query Analytics Engine for the acco
 - Derived variants are written to the stage-specific derived buckets.
 - Lower stages can read higher-stage originals if the requested asset is not present locally.
 - Metadata sidecars are stored next to the original object as `{publicId}.json` and `{publicId}.v{version}.json`.
+
+### Replacing an image
+
+Replacement uploads use a fresh object key and keep the existing image record and associations. The signed grant captures the original image, assignment and resource scope. Confirmation selects the new object in one guarded database transaction; competing edits or a moved resource reject stale grants. Replaying a completed confirmation preserves the committed version and repairs missing metadata mirrors. The previous source object stays untouched, and replacement metadata records its storage identity. Image rotation uses the same isolated-object selection flow.

@@ -39,6 +39,7 @@ import {
   toImageEntityResponseShape,
   toImageListResponseShape,
 } from '#lib/db/services/image.js'
+import { getImageMutationSnapshot } from '#lib/db/services/imageMutationScope.js'
 import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
 import { updateOrganisationById } from '#lib/db/services/organisation.js'
 import { updateProjectById } from '#lib/db/services/project.js'
@@ -107,6 +108,7 @@ import {
   getReadableStages,
   readMetadataDocument,
   readR2ObjectViaApi,
+  readR2JsonViaApi,
   headR2ObjectViaApi,
   putR2ObjectViaApi,
   type ImageMetadataDocument,
@@ -887,51 +889,75 @@ const persistOriginalMetadataSidecars = async (params: {
     fetch: typeof fetch
   }
 }): Promise<void> => {
+  const canonicalKey = toMetadataObjectKey(params.publicId, params.version)
+  const credentials = getStorageApiCredentials(params.event.locals.platform)
+  const remoteParams = credentials
+    ? {
+        ...credentials,
+        bucket: getOriginalsBucketNameForStage(params.stage),
+        fetchFn: params.event.fetch,
+      }
+    : null
+
+  // Elect one immutable document; all concurrent retries publish that same content.
+  let created: boolean
+  try {
+    created =
+      (await params.bucket.put(canonicalKey, JSON.stringify(params.metadataDocument), {
+        onlyIf: { etagDoesNotMatch: '*' },
+        httpMetadata: { contentType: 'application/json' },
+      })) !== null
+  } catch (cause) {
+    if (!remoteParams) throw cause
+    created = await putR2ObjectViaApi({
+      ...remoteParams,
+      objectKey: canonicalKey,
+      body: JSON.stringify(params.metadataDocument),
+      contentType: 'application/json',
+      createOnly: true,
+    })
+  }
+  let document = params.metadataDocument
+  if (!created) {
+    let stored: ImageMetadataDocument | null = null
+    try {
+      const object = await params.bucket.get(canonicalKey)
+      if (object) stored = await object.json<ImageMetadataDocument>()
+    } catch (cause) {
+      if (!remoteParams) throw cause
+    }
+    if (!stored && remoteParams)
+      stored = await readR2JsonViaApi<ImageMetadataDocument>({
+        ...remoteParams,
+        objectKey: canonicalKey,
+      })
+    if (!stored || stored.sourceVersion !== params.version)
+      throw new Error(
+        'Committed image metadata is missing or has a conflicting version',
+      )
+    document = stored
+  }
+
+  // Repair mirrors even when the immutable document survived an earlier partial failure.
   const writes = [
-    {
-      key: toMetadataObjectKey(params.publicId),
-      body: JSON.stringify(params.metadataDocument),
-    },
-    {
-      key: toMetadataObjectKey(params.publicId, params.version),
-      body: JSON.stringify(params.metadataDocument),
-    },
+    { key: toMetadataObjectKey(params.publicId), body: JSON.stringify(document) },
     {
       key: toManifestObjectKey(params.publicId),
       body: JSON.stringify(params.manifestDocument),
     },
-  ] as const
-
-  try {
-    for (const write of writes) {
+  ]
+  for (const write of writes) {
+    try {
       await params.bucket.put(write.key, write.body, {
         httpMetadata: { contentType: 'application/json' },
       })
-    }
-    return
-  } catch (cause) {
-    const credentials = getStorageApiCredentials(params.event.locals.platform)
-
-    if (!credentials) {
-      throw cause
-    }
-
-    console.warn(
-      '[image.remote.finalizeImageUpload] bucket metadata put failed; falling back to direct R2 API',
-      {
-        publicId: params.publicId,
-        cause,
-      },
-    )
-
-    for (const write of writes) {
+    } catch (cause) {
+      if (!remoteParams) throw cause
       await putR2ObjectViaApi({
-        ...credentials,
-        bucket: getOriginalsBucketNameForStage(params.stage),
+        ...remoteParams,
         objectKey: write.key,
         body: write.body,
         contentType: 'application/json',
-        fetchFn: params.event.fetch,
       })
     }
   }
@@ -1301,6 +1327,7 @@ const buildReplacementMetadataDocument = (params: {
   editorUserId: string
   editorName: string | null
   editorAttribution: string | null
+  source: { publicId: string; env: string; version: number | null }
 }): ImageMetadataDocument => {
   const existingMetadataEntries = params.existingDocument?.metadata
     ? { ...params.existingDocument.metadata }
@@ -1312,6 +1339,10 @@ const buildReplacementMetadataDocument = (params: {
   const mergedMetadataEntries: Record<string, string> = {
     ...existingMetadataEntries,
     ...incomingMetadataEntries,
+    replacementSourcePublicId: params.source.publicId,
+    replacementSourceEnv: params.source.env,
+    replacementSourceVersion:
+      params.source.version === null ? 'unversioned' : String(params.source.version),
     replacementEditedAt: params.timestamp,
     replacementEditedByUserId: params.editorUserId,
     replacementEditedWith:
@@ -1742,6 +1773,15 @@ export const authImageUpload = guardedCommand(
       throw error(400, 'Only cloudflareR2 uploads are supported')
     }
 
+    // Bind replacement authorization to the original image and its resource scope.
+    const replacementSnapshot = params.replaceImageId
+      ? await getImageMutationSnapshot(
+          db,
+          params.ctxType as ImageContextType,
+          params.ctxId,
+          params.replaceImageId,
+        )
+      : undefined
     await assertPermissionsToCreateImage(
       db,
       user,
@@ -1777,11 +1817,11 @@ export const authImageUpload = guardedCommand(
         params.ctxType as ImageContextResource,
       )
 
-      publicId = existing.publicId
-    } else {
-      while (await safeOriginalsBucketHead(bucket, publicId)) {
-        publicId = `h/${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
-      }
+      if (!replacementSnapshot?.source) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
+    }
+    // Each replacement uploads to a new key; pending uploads cannot alter the active asset.
+    while (await safeOriginalsBucketHead(bucket, publicId)) {
+      publicId = `h/${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
     }
 
     const expiresAtMs = Date.now() + 5 * 60 * 1000
@@ -1793,6 +1833,7 @@ export const authImageUpload = guardedCommand(
         ctxId: params.ctxId,
         filename: params.filename,
         replaceImageId: params.replaceImageId,
+        replacementSnapshot: replacementSnapshot ?? undefined,
         contentType: params.contentType,
         size: params.size,
         uploaderUserId: user.id,
@@ -1818,6 +1859,7 @@ export const authImageUpload = guardedCommand(
       headers: {
         'content-type': params.contentType,
         'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+        'if-none-match': '*',
       },
       confirmToken: token,
       expiresAt: new Date(expiresAtMs).toISOString(),
@@ -1841,6 +1883,15 @@ export const finalizeImageUpload = guardedCommand(
     if (!payload) throw error(403, 'Invalid upload token')
     if (payload.uploaderUserId !== user.id) {
       throw error(403, 'Upload token does not belong to the current user')
+    }
+
+    if (
+      payload.replaceImageId &&
+      (!payload.replacementSnapshot?.source ||
+        payload.replacementSnapshot.assignmentRevision === undefined ||
+        payload.replacementSnapshot.imageId !== payload.replaceImageId)
+    ) {
+      throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
     }
 
     const creationAccess = await assertPermissionsToCreateImage(
@@ -1914,16 +1965,12 @@ export const finalizeImageUpload = guardedCommand(
     }
 
     if (payload.replaceImageId) {
-      const existing = await loadImageById(db, [eq(image.id, payload.replaceImageId)])
-      if (!existing) {
-        throw error(404, 'Replacement image not found')
-      }
-
+      const source = payload.replacementSnapshot!.source!
       const { document: existingDocument } = await readMetadataDocument({
         platform: event.locals.platform,
-        env: stage,
-        publicId: existing.publicId,
-        version: existing.version ?? undefined,
+        env: toImageStage(source.env),
+        publicId: source.publicId,
+        version: source.version ?? undefined,
         fetchFn: event.fetch,
       })
 
@@ -1935,6 +1982,7 @@ export const finalizeImageUpload = guardedCommand(
         editorUserId: user.id,
         editorName: editorUser?.name ?? null,
         editorAttribution: editorUser?.attribution ?? null,
+        source,
       })
     }
 
@@ -1966,69 +2014,52 @@ export const finalizeImageUpload = guardedCommand(
       ...(featureImageData ? { featureImage: featureImageData } : {}),
     }
 
-    if (payload.replaceImageId) {
-      const updated = await updateImageForContext({
-        db,
-        user,
-        userId,
-        userRoles,
-        event,
-        isAdminRequest: ctx.isAdminRequest,
-        id: payload.replaceImageId as Id,
-        ctxType: payload.ctxType as ImageContextType,
-        ctxId: payload.ctxId,
-        data: {
-          ...imageData,
-          ...(payload.ctxType === ImageContextResource.feature && featureImageData
-            ? {
-                imageId: payload.replaceImageId,
-                featureId: featureImageData.featureId,
-                intent: featureImageData.intent,
-                isPublished: featureImageData.isPublished,
-              }
-            : {}),
-        },
-      })
-      // Persist metadata sidecars off the critical response path once the image row
-      // and links can be committed safely.
-      enqueueMetadataSidecarPersistence({
-        bucket: originalsBucket,
-        publicId: payload.publicId,
-        version,
-        metadataDocument,
-        manifestDocument,
-        stage,
-        event,
-      })
-      event.locals.platform?.context.waitUntil(
-        enqueueDerivedAssetWarmup({
+    const created = payload.replaceImageId
+      ? await updateImageForContext({
+          db,
+          user,
+          userId,
+          userRoles,
           event,
-          env: stage,
-          publicId: payload.publicId,
-          version,
-        }),
-      )
-      return updated
-    }
+          isAdminRequest: ctx.isAdminRequest,
+          id: payload.replaceImageId as Id,
+          replacement: {
+            snapshot: payload.replacementSnapshot!,
+            publicId: payload.publicId,
+            env: stage,
+          },
+          ctxType: payload.ctxType as ImageContextType,
+          ctxId: payload.ctxId,
+          data: {
+            ...imageData,
+            ...(payload.ctxType === ImageContextResource.feature && featureImageData
+              ? {
+                  imageId: payload.replaceImageId,
+                  featureId: featureImageData.featureId,
+                  intent: featureImageData.intent,
+                  isPublished: featureImageData.isPublished,
+                }
+              : {}),
+          },
+        })
+      : await createImageInContext({
+          db,
+          userId,
+          retryableUpload: true,
+          imageData:
+            payload.ctxType === ImageContextResource.feature
+              ? {
+                  ...imageData,
+                  featureImage: imageData.featureImage ?? {
+                    featureId: payload.ctxId,
+                    intent: 'undefined',
+                    isPublished: false,
+                  },
+                }
+              : imageData,
+        })
 
-    const created = await createImageInContext({
-      db,
-      userId,
-      retryableUpload: true,
-      imageData:
-        payload.ctxType === ImageContextResource.feature
-          ? {
-              ...imageData,
-              featureImage: imageData.featureImage ?? {
-                featureId: payload.ctxId,
-                intent: 'undefined',
-                isPublished: false,
-              },
-            }
-          : imageData,
-    })
-
-    if (created.data?.image?.id) {
+    if (!payload.replaceImageId && created.data?.image?.id) {
       await attachImageLinks({
         db,
         imageId: created.data.image.id,
@@ -2040,7 +2071,7 @@ export const finalizeImageUpload = guardedCommand(
     const persistedVersion = created.data?.image?.version ?? version
     const persistedTimestamp = new Date(persistedVersion).toISOString()
     const previousMetadata =
-      persistedVersion !== version
+      ('replayed' in created && created.replayed) || persistedVersion !== version
         ? await readMetadataDocument({
             platform: event.locals.platform,
             env: stage,
@@ -2049,27 +2080,36 @@ export const finalizeImageUpload = guardedCommand(
             fetchFn: event.fetch,
           })
         : null
-    // Recover missing sidecars on retry, but preserve metadata already written for this version.
-    if (!previousMetadata?.document) {
-      enqueueMetadataSidecarPersistence({
-        bucket: originalsBucket,
-        publicId: payload.publicId,
+    // Always repair mirrors; conditional canonical writes preserve the winning metadata.
+    enqueueMetadataSidecarPersistence({
+      bucket: originalsBucket,
+      publicId: payload.publicId,
+      version: persistedVersion,
+      metadataDocument:
+        previousMetadata?.document?.sourceVersion === persistedVersion
+          ? previousMetadata.document
+          : {
+              ...metadataDocument,
+              uploadedAt: params.metadata.uploadedAt ?? persistedTimestamp,
+              ...(payload.replaceImageId
+                ? {
+                    metadata: {
+                      ...metadataDocument.metadata,
+                      replacementEditedAt: persistedTimestamp,
+                    },
+                  }
+                : {}),
+              sourceVersion: persistedVersion,
+              modifiedAt: persistedTimestamp,
+            },
+      manifestDocument: {
+        ...manifestDocument,
         version: persistedVersion,
-        metadataDocument: {
-          ...metadataDocument,
-          sourceVersion: persistedVersion,
-          modifiedAt: persistedTimestamp,
-        },
-        manifestDocument: {
-          ...manifestDocument,
-          version: persistedVersion,
-          updatedAt: persistedTimestamp,
-        },
-        stage,
-        event,
-      })
-    }
-
+        updatedAt: persistedTimestamp,
+      },
+      stage,
+      event,
+    })
     if (previousResourceImage && previousResourceImage.id !== created.data?.image?.id) {
       event.locals.platform?.context.waitUntil(
         cleanupDetachedResourceImage({
@@ -2091,7 +2131,7 @@ export const finalizeImageUpload = guardedCommand(
         version: persistedVersion,
       }),
     )
-    return created
+    return { data: created.data }
   },
 )
 
@@ -2212,6 +2252,20 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     throw error(404, 'Image not found')
   }
 
+  const snapshot = await getImageMutationSnapshot(
+    db,
+    params.ctxType as ImageContextType,
+    params.ctxId,
+    params.id,
+  )
+  if (
+    !snapshot?.source ||
+    snapshot.source.publicId !== existing.publicId ||
+    snapshot.source.env !== existing.env ||
+    snapshot.source.version !== (existing.version ?? null)
+  )
+    throw error(409, 'STALE_IMAGE_UPDATE')
+
   await assertPermissionsToUpdateImage(
     db,
     user,
@@ -2271,9 +2325,11 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     sourceHeight: rotatedIntermediate.sourceHeight,
     previousVersion: existing.version ?? null,
   })
+  // Prepare a separate asset so failures and competing rotations cannot alter the active source.
+  const publicId = `h/rotations/${nanoid(24)}`
   await putOriginalObjectViaBindingsOrApi({
     bucket: originalsBucket,
-    key: existing.publicId,
+    key: publicId,
     body: rotatedIntermediate.body,
     contentType: rotatedIntermediate.contentType,
     stage: resolvedEnv,
@@ -2289,14 +2345,14 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     timestamp,
   })
   const manifestDocument = {
-    publicId: existing.publicId,
+    publicId,
     version,
     updatedAt: timestamp,
   }
 
   await persistOriginalMetadataSidecars({
     bucket: originalsBucket,
-    publicId: existing.publicId,
+    publicId,
     version,
     metadataDocument,
     manifestDocument,
@@ -2314,7 +2370,9 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     id: params.id,
     ctxType: params.ctxType as ImageContextType,
     ctxId: params.ctxId,
+    replacement: { snapshot, publicId, env: resolvedEnv },
     data: {
+      publicId,
       env: resolvedEnv,
       version,
     },
@@ -2324,12 +2382,13 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     enqueueDerivedAssetWarmup({
       event,
       env: resolvedEnv,
-      publicId: existing.publicId,
+      publicId,
       version,
     }),
   )
 
-  return updated
+  const { replayed: _replayed, ...result } = updated
+  return result
 })
 
 /**

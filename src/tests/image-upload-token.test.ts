@@ -27,6 +27,22 @@ describe('upload token verification', () => {
     await expect(verifyUploadToken(token, 'secret')).resolves.toBeNull()
   })
 
+  it('authenticates the complete resource snapshot', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000)
+    const payload = {
+      ...claims,
+      ctxType: 'project',
+      resourceSnapshot: {
+        imageId: null,
+        modifiedAt: '2026-01-01T00:00:00.000Z',
+        organisationId: 'org',
+        hubId: null,
+      },
+    }
+    const token = await createUploadToken(payload, 'secret')
+    await expect(verifyUploadToken(token, 'secret')).resolves.toEqual(payload)
+  })
+
   it.each(['', '.', 'bad', 'a.a', '%.%', 'aa.aa.aa'])(
     'returns null for malformed input %j',
     async token => {
@@ -43,9 +59,68 @@ describe('upload token verification', () => {
     { ...claims, size: 1.5 },
     { ...claims, publicId: '' },
     { ...claims, replaceImageId: 42 },
+    { ...claims, resourceSnapshot: null },
+    { ...claims, resourceSnapshot: {} },
+    {
+      ...claims,
+      resourceSnapshot: {
+        imageId: null,
+        modifiedAt: 'revision',
+        organisationId: 42,
+        hubId: null,
+      },
+    },
+    {
+      ...claims,
+      resourceSnapshot: {
+        imageId: null,
+        modifiedAt: '',
+        organisationId: null,
+        hubId: null,
+      },
+    },
   ])('rejects malformed authenticated claims %j', async payload => {
     vi.spyOn(Date, 'now').mockReturnValue(1000)
     const token = await createUploadToken(payload as never, 'secret')
     await expect(verifyUploadToken(token, 'secret')).resolves.toBeNull()
+  })
+  it('requires a matching signed replacement snapshot and source identity', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000)
+    const replacementSnapshot = {
+      imageId: 'image',
+      imageRevision: 'revision',
+      assignmentRevision: 'assignment',
+      scope: 'scope',
+      source: { publicId: 'old-key', env: 'local', version: 123 },
+    }
+    const payload = { ...claims, replaceImageId: 'image', replacementSnapshot }
+    await expect(
+      verifyUploadToken(await createUploadToken(payload, 'secret'), 'secret'),
+    ).resolves.toEqual(payload)
+    await expect(
+      verifyUploadToken(
+        await createUploadToken({ ...payload, publicId: 'old-key' }, 'secret'),
+        'secret',
+      ),
+    ).resolves.toBeNull()
+    for (const altered of [
+      undefined,
+      {},
+      { ...replacementSnapshot, imageId: 'different' },
+      { ...replacementSnapshot, assignmentRevision: undefined },
+      { ...replacementSnapshot, assignmentRevision: 42 },
+      { ...replacementSnapshot, source: undefined },
+      { ...replacementSnapshot, source: { publicId: '', env: 'local', version: 123 } },
+    ]) {
+      await expect(
+        verifyUploadToken(
+          await createUploadToken(
+            { ...payload, replacementSnapshot: altered } as never,
+            'secret',
+          ),
+          'secret',
+        ),
+      ).resolves.toBeNull()
+    }
   })
 })

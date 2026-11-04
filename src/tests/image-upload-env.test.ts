@@ -93,3 +93,28 @@ describe('resolveImageAssetBaseUrl', () => {
     )
   })
 })
+
+describe('uploadPreparedImageObject', () => {
+  it('forwards the signed condition and rejects collisions instead of accepting unknown bytes', async () => {
+    const { uploadPreparedImageObject } = await import('#lib/client/services/image.js')
+    const prepared = {
+      auth: {
+        uploadUrl: 'https://upload.example.test/image',
+        method: 'PUT',
+        headers: { 'if-none-match': '*' },
+      },
+      normalizedUpload: { file: new Blob(['abc']) },
+    } as unknown as Awaited<
+      ReturnType<typeof import('#lib/client/services/image.js')['prepareImageUpload']>
+    >
+    const fetchFn = vi.fn(async () => new Response(null, { status: 412 }))
+    await expect(
+      uploadPreparedImageObject(prepared, fetchFn as unknown as typeof fetch),
+    ).rejects.toThrow('Start a new upload')
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+    expect(fetchFn).toHaveBeenCalledWith(
+      prepared.auth.uploadUrl,
+      expect.objectContaining({ headers: { 'if-none-match': '*' } }),
+    )
+  })
+})

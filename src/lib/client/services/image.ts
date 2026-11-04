@@ -228,6 +228,10 @@ export async function uploadPreparedImageObject(
     headers: preparedUpload.auth.headers,
     body: preparedUpload.normalizedUpload.file,
   })
+  // A collision does not prove that the stored bytes match this prepared file.
+  if (uploadResponse.status === 412) {
+    throw new Error('Image upload destination is already used. Start a new upload.')
+  }
   if (!uploadResponse.ok) {
     throw new Error(`Image upload failed: ${uploadResponse.statusText}`)
   }

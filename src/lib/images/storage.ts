@@ -353,6 +353,8 @@ const throwR2RequestError = (operation: string, response: Response): never => {
  *
  * @param params Presign parameters.
  * @returns Presigned `PUT` URL for the target object.
+ * @remarks Requires `If-None-Match: *`; the signed condition prevents overwriting
+ * an occupied key, including retries after confirmation.
  */
 export const createPresignedR2UploadUrl = async (params: {
   accountId: string
@@ -370,6 +372,7 @@ export const createPresignedR2UploadUrl = async (params: {
     method: 'PUT',
     headers: {
       'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+      'if-none-match': '*',
     },
     aws: {
       signQuery: true,
@@ -413,7 +416,7 @@ export const headR2ObjectViaApi = async (params: {
  * Writes an object directly to the R2 S3 API.
  *
  * @param params Remote put parameters.
- * @returns Nothing.
+ * @returns Whether the write succeeded; false means a create-only collision.
  */
 export const putR2ObjectViaApi = async (params: {
   accountId: string
@@ -423,20 +426,25 @@ export const putR2ObjectViaApi = async (params: {
   secretAccessKey: string
   body: BodyInit
   contentType: string
+  createOnly?: boolean
   fetchFn?: typeof fetch
-}): Promise<void> => {
+}): Promise<boolean> => {
   const response = await executeR2Request(params, {
     method: 'PUT',
     headers: {
+      ...(params.createOnly ? { 'if-none-match': '*' } : {}),
       'content-type': params.contentType,
       'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
     },
     body: params.body,
   })
 
+  if (params.createOnly && response.status === 412) return false
+
   if (!response.ok) {
     throwR2RequestError('put', response)
   }
+  return true
 }
 
 /**

@@ -23,7 +23,8 @@
         ],
         "headers": [
           "content-type",
-          "x-amz-content-sha256"
+          "x-amz-content-sha256",
+          "if-none-match"
         ]
       },
       "expose_headers": [

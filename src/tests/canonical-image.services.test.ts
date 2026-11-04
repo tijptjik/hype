@@ -26,8 +26,8 @@ function setup() {
     CREATE TABLE organisation (id TEXT PRIMARY KEY, imageId TEXT);
     CREATE TABLE hub (id TEXT PRIMARY KEY, imageId TEXT);
     CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
-    CREATE TABLE task (id TEXT PRIMARY KEY, featureId TEXT);
-    INSERT INTO task VALUES ('task', 'feature');`)
+    CREATE TABLE task (id TEXT PRIMARY KEY, featureId TEXT, isReviewed INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT '2026-01-01T00:00:00.000Z');
+    INSERT INTO task(id,featureId) VALUES ('task', 'feature');`)
   const db = drizzle({
     prepare: (sql: string) => ({
       bind: (...params: unknown[]) => ({
@@ -140,7 +140,7 @@ describe('canonical image replacement', () => {
         } else if (resource === 'task' || resource === 'same-feature-task') {
           sqlite.exec("INSERT INTO taskImage VALUES ('other-task', 'old')")
           sqlite
-            .prepare('INSERT INTO task VALUES (?, ?)')
+            .prepare('INSERT INTO task(id,featureId) VALUES (?, ?)')
             .run('other-task', resource === 'task' ? 'other' : 'feature')
         } else {
           // Resource names come only from the fixed test matrix above.
@@ -297,6 +297,18 @@ describe('canonical image replacement', () => {
     await expect(
       updateFeatureImage(db, { featureId: 'feature', intent: 'canonical' }, 'new'),
     ).rejects.toThrow('simulated failure')
+    expect(
+      sqlite.prepare("SELECT intent FROM featureImage WHERE imageId = 'old'").get(),
+    ).toEqual({ intent: 'canonical' })
+  })
+  it('rolls back demotion when promotion is silently skipped', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(`CREATE TRIGGER skip_promotion BEFORE UPDATE ON featureImage
+      WHEN NEW.imageId = 'new' AND NEW.intent = 'canonical'
+      BEGIN SELECT RAISE(IGNORE); END;`)
+    await expect(
+      updateFeatureImage(db, { featureId: 'feature', intent: 'canonical' }, 'new'),
+    ).rejects.toMatchObject({ status: 404 })
     expect(
       sqlite.prepare("SELECT intent FROM featureImage WHERE imageId = 'old'").get(),
     ).toEqual({ intent: 'canonical' })

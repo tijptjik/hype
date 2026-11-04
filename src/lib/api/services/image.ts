@@ -1,4 +1,5 @@
 // TYPES
+import type { ImageMutationSnapshot } from '#lib/images/uploadContext.js'
 import type { Queue } from '@cloudflare/workers-types'
 // DRIZZLE
 import { and, eq, isNull, or, sql, type SQL } from 'drizzle-orm'
@@ -17,6 +18,11 @@ import {
   assertParamIdentifierEqualsFormIdentifier,
 } from '#lib/auth/asserts.js'
 // DB
+import {
+  getImageMutationSnapshot,
+  createImageMutationGuards,
+  createImageReplacementGuards,
+} from '#lib/db/services/imageMutationScope.js'
 import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
 import { isSuperAdmin } from '#lib/client/services/auth.js'
@@ -33,12 +39,10 @@ import {
   taskImage,
 } from '#lib/db/schema/index.js'
 import {
-  getImageById as loadImageById,
   toImageEntityResponseShape,
   toResponseShape as toImageResponseShapeFromDb,
   toResponseShapeProjectOrOrganisation as toImageProjectOrOrganisationResponseShapeFromDb,
-  updateFeatureImage,
-  updateImage as updateImageRecord,
+  updateImageWithFeatureImage,
 } from '#lib/db/services/image.js'
 // TYPES
 import type {
@@ -616,6 +620,9 @@ export const enqueueDerivedAssetWarmup = async (params: {
 
 /**
  * Updates an image for a given context with authorization and feature-image relation updates.
+ * @param args Authorized context, current account and requested image/assignment fields.
+ * @returns Persisted image envelope.
+ * @remarks Image and assignment writes commit atomically after request authorization.
  */
 export const updateImageForContext = async (args: {
   db: Database
@@ -628,14 +635,17 @@ export const updateImageForContext = async (args: {
   ctxType: ImageContextType
   ctxId: string
   data: Record<string, unknown>
-}): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
+  replacement?: { snapshot: ImageMutationSnapshot; publicId: string; env: string }
+}): Promise<{ data: ImageContextEnvelope<'detail'>; replayed?: boolean }> => {
   const { db, user, userId, userRoles, isAdminRequest, id, ctxType, ctxId, data } = args
 
   const payload = {
     ...data,
-    id,
+    id: data.id ?? id,
   } as ImageDBFlat
 
+  // Bind the later transaction to the state observed before resource authorization.
+  const snapshot = await getImageMutationSnapshot(db, ctxType, ctxId, id)
   await assertPermissionsToUpdateImage(
     db,
     user,
@@ -647,26 +657,56 @@ export const updateImageForContext = async (args: {
     ctxType,
   )
 
+  if (!snapshot) throw error(409, 'STALE_IMAGE_UPDATE')
+
   // Read attribution only after the caller has passed the resource authorization check.
   const userWithAttribution = await getUserById(db, userId)
   const imageToUpdate = ImageUpdate.parse(data)
-  let updatedImage: ImageDBFlat | undefined
-
-  if (Object.keys(imageToUpdate).length > 0) {
-    updatedImage = (await updateImageRecord(db, imageToUpdate, id as Id)) as ImageDBFlat
-  } else {
-    updatedImage = await loadImageById(db, [eq(image.id, id as Id)])
-  }
-
-  if (!updatedImage) {
-    throw error(404, 'Image not found')
-  }
-
-  let updatedFeatureImage: Awaited<ReturnType<typeof updateFeatureImage>> | undefined
-  const parseResult = ImageFlatUpdate.safeParse(data)
-  if (parseResult.success && parseResult.data.featureId) {
-    updatedFeatureImage = await updateFeatureImage(db, parseResult.data, id)
-  }
+  // Supplied assignment fields must validate; silently dropping them would save a partial edit.
+  const hasAssignmentFields = [
+    'featureId',
+    'intent',
+    'isPublished',
+    'publishedAt',
+  ].some(key => data[key] !== undefined)
+  const parsedAssignment = hasAssignmentFields
+    ? ImageFlatUpdate.safeParse({ ...data, imageId: data.imageId ?? id })
+    : undefined
+  if (parsedAssignment && !parsedAssignment.success)
+    throw error(400, 'INVALID_IMAGE_ASSIGNMENT')
+  const assignment = parsedAssignment?.success ? parsedAssignment.data : undefined
+  if (assignment && assignment.imageId !== id) throw error(400, 'IMAGE_ID_MISMATCH')
+  if (args.replacement && args.replacement.snapshot.imageId !== id)
+    throw error(409, 'STALE_IMAGE_UPDATE')
+  if (
+    args.replacement &&
+    (imageToUpdate.publicId !== args.replacement.publicId ||
+      imageToUpdate.env !== args.replacement.env)
+  )
+    throw error(400, 'INVALID_IMAGE_REPLACEMENT')
+  const replacementGuards = args.replacement
+    ? createImageReplacementGuards(
+        db,
+        ctxType,
+        ctxId,
+        args.replacement.snapshot,
+        args.replacement.publicId,
+        args.replacement.env,
+      )
+    : undefined
+  // Persist metadata and assignment together so relation failure cannot leave a partial edit.
+  const {
+    image: updatedImage,
+    featureImage: updatedFeatureImage,
+    replayed,
+  } = await updateImageWithFeatureImage(
+    db,
+    imageToUpdate,
+    assignment,
+    id,
+    replacementGuards ?? createImageMutationGuards(db, ctxType, ctxId, snapshot),
+    replacementGuards?.replay,
+  )
 
   const responseData = await toResponseShape(
     updatedImage,
@@ -683,5 +723,5 @@ export const updateImageForContext = async (args: {
     throw error(500, 'Failed to shape image envelope')
   }
 
-  return { data: envelope }
+  return { data: envelope, ...(args.replacement ? { replayed } : {}) }
 }
