@@ -45,5 +45,10 @@ export function readChatAppearance(
  */
 export function chatAppearanceStyle(appearance: ChatAppearance): string {
   const value = ChatAppearanceSchema.parse(appearance)
-  return `--chat-background-image:${value.image ? `url(${JSON.stringify(value.image)})` : 'none'};--chat-background-mask:${(1 - value.opacity) * 100}%;--chat-background-size:${value.size}px;`
+  // Stagger the built-in characters while retaining existing saved background selections.
+  const background =
+    value.image === TOASTIE_CHAT_BACKGROUND
+      ? '/messaging/toastie-and-friends-staggered.svg'
+      : value.image
+  return `--chat-background-image:${background ? `url(${JSON.stringify(background)})` : 'none'};--chat-background-mask:${(1 - value.opacity) * 100}%;--chat-background-size:${value.size}px;`
 }
