@@ -15,3 +15,11 @@ SQLite fixtures apply the production triggers to both legacy and schema-derived 
 skipping only additive columns that already exist. The fixture creates import identity
 tables before applying the migration and preserves the organisation role uniqueness
 constraint.
+
+## Organisation policy transaction
+
+Optional organisation user-policy settings share the parent form transaction. The saved
+email rule uses the current hub domain, and the write checks both the policy revision
+and parent revision before any child mutation commits. Stale policy or parent revisions
+return a conflict without changing any relation. Translation or policy write failures
+roll back the entire form.

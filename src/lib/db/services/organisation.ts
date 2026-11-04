@@ -19,6 +19,7 @@ import {
 // ROLE PROVENANCE
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 import { prepareOrganisationStaffRoles } from './organisationRoleGrants.js'
+import { prepareOrganisationUserPolicy } from './organisationUserPolicy.js'
 // SERVICES
 import {
   firstOrNull,
@@ -56,6 +57,7 @@ import type {
 } from '#lib/db/zod/schema/organisation.types.js'
 // TYPES
 import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
+import type { OrganisationUserPolicy } from '#lib/organisation-users/policy.js'
 
 type OrganisationProbe = {
   id: string
@@ -133,6 +135,7 @@ type OrganisationCommandProbe = {
 
 /** Optional complete collections submitted with an organisation form. */
 type OrganisationRelations = {
+  userPolicy?: OrganisationUserPolicy
   properties?: Array<Record<string, unknown>>
   i18n?: Record<LocaleKey, OrganisationI18nPartial>
   userRoles?: OrganisationRoleNew[]
@@ -153,6 +156,9 @@ function prepareOrganisationRelations(
   guard: SQL,
 ): BatchItem<'sqlite'>[] {
   const writes: BatchItem<'sqlite'>[] = []
+  if (relations.userPolicy !== undefined) {
+    writes.push(...prepareOrganisationUserPolicy(db, id, relations.userPolicy, guard))
+  }
   // Enforce ownership independently of any parent IDs in the submitted rows.
   if (relations.i18n !== undefined) {
     writes.push(
@@ -718,6 +724,7 @@ export const updateOrganisationByIdWithConcurrency = async (
   params: {
     id: Id
     updatedAt: string
+    userPolicy?: OrganisationUserPolicy
     properties?: Array<Record<string, unknown>>
     i18n?: Record<LocaleKey, OrganisationI18nPartial>
     userRoles?: OrganisationRoleNew[]
@@ -778,7 +785,11 @@ export const updateOrganisationByIdWithConcurrency = async (
   }
   if (writes.length) {
     // A failure at any stage restores permissions, translations, descendants and the write token.
-    const results = await db.batch([writes[0], ...writes.slice(1), updateCore])
+    const results =
+      params.userPolicy !== undefined
+        ? await executeRevisionBatch(db, guard, [...writes, updateCore])
+        : await db.batch([writes[0], ...writes.slice(1), updateCore])
+    if (!results) return null
     const rows = results.at(-1) as { id: string; modifiedAt: string }[]
     return rows[0] ?? null
   }

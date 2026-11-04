@@ -41,8 +41,9 @@ function fixture() {
         .join(',')})`,
     )
   }
-  createOrganisationUserTables(sqlite)
   sqlite.exec(`
+    CREATE TABLE hub(id TEXT PRIMARY KEY,domain TEXT);
+    INSERT INTO hub VALUES('h','breadline.hk');
     CREATE UNIQUE INDEX organisation_id ON organisation(id);
     CREATE UNIQUE INDEX role_key ON organisationRole(organisationId,userId);
     CREATE TABLE project(id TEXT PRIMARY KEY, organisationId TEXT, capabilities TEXT, modifiedAt TEXT);
@@ -53,6 +54,8 @@ function fixture() {
     INSERT INTO project VALUES ('p','o','{"manageBakeries":true}','before');
     INSERT INTO projectRole VALUES ('p','old','{"manageBakeries":true}');
   `)
+  createOrganisationUserTables(sqlite)
+  sqlite.exec("UPDATE organisation SET hubId='h' WHERE id='o'")
   return { sqlite, db: db as unknown as Database }
 }
 
@@ -62,6 +65,7 @@ function snapshot(sqlite: ReturnType<typeof fixture>['sqlite']) {
     'organisation',
     'organisationI18n',
     'organisationRole',
+    'organisationUserPolicy',
     'project',
     'projectRole',
   ].map(table => sqlite.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all())
@@ -126,6 +130,54 @@ describe('organisation form revision transaction', () => {
     },
   )
 
+  it.each(['success', 'stale-policy', 'stale-parent', 'failure'])(
+    'saves user policy with the whole organisation form: %s',
+    async mode => {
+      const { db, sqlite } = fixture()
+      try {
+        sqlite.exec("INSERT INTO organisationUserPolicy VALUES('o',0,0,NULL,0,2)")
+        if (mode === 'failure')
+          sqlite.exec(
+            "CREATE TRIGGER fail_translation BEFORE INSERT ON organisationI18n BEGIN SELECT RAISE(ABORT,'injected failure'); END",
+          )
+        const before = snapshot(sqlite)
+        const saving = updateOrganisationByIdWithConcurrency(db, {
+          ...patch,
+          updatedAt: mode === 'stale-parent' ? 'stale' : 'before',
+          userPolicy: {
+            enabled: true,
+            hubSignIn: true,
+            emailDomain: 'ignored.org',
+            customCard: true,
+            revision: mode === 'stale-policy' ? 1 : 2,
+          },
+        })
+        if (mode === 'success') {
+          expect(await saving).toMatchObject({ id: 'o' })
+          expect(sqlite.prepare('SELECT * FROM organisationUserPolicy').get()).toEqual({
+            organisationId: 'o',
+            enabled: 1,
+            hubSignIn: 1,
+            emailDomain: 'breadline.hk',
+            customCard: 1,
+            revision: 3,
+          })
+          expect(
+            sqlite.prepare("SELECT code FROM organisation WHERE id='o'").get(),
+          ).toEqual({ code: 'new' })
+        } else if (mode === 'stale-policy' || mode === 'stale-parent') {
+          expect(await saving).toBeNull()
+          expect(snapshot(sqlite)).toEqual(before)
+        } else {
+          await expect(saving).rejects.toThrow()
+          expect(snapshot(sqlite)).toEqual(before)
+        }
+      } finally {
+        sqlite.close()
+      }
+    },
+  )
+
   it('commits core, translations, roles and descendant restrictions together', async () => {
     const { db, sqlite } = fixture()
     try {
@@ -170,6 +222,7 @@ describe('organisation form revision transaction', () => {
   it.each([
     'organisationI18n',
     'organisationRole',
+    'organisationUserPolicy',
     'project',
     'projectRole',
     'organisation',
@@ -177,16 +230,31 @@ describe('organisation form revision transaction', () => {
     const { db, sqlite } = fixture()
     try {
       const operation =
-        table === 'organisationI18n' || table === 'organisationRole'
+        table === 'organisationI18n' ||
+        table === 'organisationRole' ||
+        table === 'organisationUserPolicy'
           ? 'INSERT'
           : 'UPDATE'
       sqlite.exec(
         `CREATE TRIGGER fail_write BEFORE ${operation} ON ${table} ${table === 'organisationRole' ? "WHEN NEW.userId='user-249'" : ''} BEGIN SELECT RAISE(ABORT,'injected failure'); END`,
       )
       const before = snapshot(sqlite)
-      await expect(updateOrganisationByIdWithConcurrency(db, patch)).rejects.toThrow(
-        'injected failure',
-      )
+      await expect(
+        updateOrganisationByIdWithConcurrency(db, {
+          ...patch,
+          ...(table === 'organisationUserPolicy'
+            ? {
+                userPolicy: {
+                  enabled: true,
+                  hubSignIn: false,
+                  emailDomain: null,
+                  customCard: false,
+                  revision: 0,
+                },
+              }
+            : {}),
+        }),
+      ).rejects.toThrow('injected failure')
       expect(snapshot(sqlite)).toEqual(before)
     } finally {
       sqlite.close()
