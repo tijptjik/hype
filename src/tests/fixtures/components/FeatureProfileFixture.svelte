@@ -89,7 +89,7 @@ function fields(locale: string) {
 }
 </script>
 <main
-  class="bits-theme min-h-screen bg-panel py-8 text-foreground"
+  class="bits-theme bg-panel text-foreground min-h-screen py-8"
   data-profile-fixture
 >
   <form onsubmit={event => event.preventDefault()}>
@@ -105,6 +105,12 @@ function fields(locale: string) {
         {inherited}
         {isEditing}
         offerName={!inherited}
+        locationNames={{
+          en: 'Fu Yee Court',
+          'zh-Hant': '富怡閣',
+          'zh-Hans': '富怡阁',
+          ja: '富怡コート',
+        }}
         onUseName={() => {
           inherited = true
           values.en.title = 'Fu Yee Court'
