@@ -189,13 +189,17 @@ persisted user/email verification in the INSERT itself. Card onboarding uses the
 owner and trusted active hub; core access additionally requires core-inclusive,
 non-exclusive publication. A grant is not a staff role.
 
-Migrations 0168/0169 must precede this runtime. During an applying Breadline sync, auth
-mutation requests are held (session reads/sign-out remain available), claim SQL cannot
-acquire ownership, and enrolment cannot add grants. Deleted source identities cannot
-claim a latent account. A failed remote batch retains its application fence until the
-same reviewed plan resumes or a reviewed recovery is completed. This fence is not a
-global lock on unrelated application writes; exact row before-images guard sync writes
-against concurrent HYPE changes.
+Migration 0168 must precede this runtime. The existing organisation role uses
+independent grant reasons; only member/owner grants confer staff access. Source
+payloads, accepted state and sync progress remain in private local files. There is no
+production cursor or authentication fence. Before-or-after row guards abort a
+conflicting import batch without overwriting independent HYPE edits. Deleted source
+identities cannot claim a latent account.
+
+Users settings share the main organisation form's dirty baseline, Reset and Save. Policy
+revision guards participate in the same atomic transaction as the other form fields. The
+email rule derives its domain from the current owning hub; the stored nullable domain is
+an activation marker, not a separately configurable address.
 
 ## Request Handling and Error Model
 
