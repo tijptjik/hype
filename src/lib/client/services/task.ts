@@ -7,6 +7,8 @@ import {
   finalizeTaskDraft as finalizeTaskDraftRemote,
   reviewTask as reviewTaskRemote,
 } from '#lib/api/tasks.remote.js'
+// RETRY STATE
+import { TaskSubmissionRetry, type TaskSubmissionAttempt } from './taskSubmissionRetry'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
@@ -47,6 +49,8 @@ import { ImageContextResource } from '#lib/enums.js'
 // - createJsonResponse
 // - assertPhotosProvided
 // - uploadTaskDraftImages
+// - settleStartedWork
+// - submissionAttempt
 // - getReviewAction
 // - getTaskReviewActionLabel
 //
@@ -75,6 +79,30 @@ import { ImageContextResource } from '#lib/enums.js'
  *  0. SHARED HELPERS
  ************/
 // +++ Shared Helpers
+
+export type TaskSubmissionOptions = {
+  onStatusChange?: (label: string) => void
+  retry?: { session: TaskSubmissionRetry; scope: () => string }
+}
+
+/**
+ * Resolves form-owned retention for one exact contribution request.
+ * @param options Owning form callbacks and optional retry session.
+ * @param request Contribution type, target and submitted fields.
+ * @param photos Selected upload files.
+ * @returns Isolated attempt; callers without a session retain only within this invocation.
+ */
+function submissionAttempt(
+  options: TaskSubmissionOptions,
+  request: unknown,
+  photos: ImageUpload[],
+): TaskSubmissionAttempt {
+  return (options.retry?.session ?? new TaskSubmissionRetry()).begin(
+    options.retry?.scope ?? (() => ''),
+    JSON.stringify(request),
+    photos.map(photo => photo.file),
+  )
+}
 
 const JSON_RESPONSE_HEADERS = { 'Content-Type': 'application/json' }
 const DEFAULT_NEW_FEATURE_DRAFT_COORDINATES: [number, number] = [
@@ -174,6 +202,20 @@ const toDraftNewFeatureTask = (
 }
 
 /**
+ * Waits for every started operation before exposing a stage failure to its retry UI.
+ * @param work Operations already started in the current upload stage.
+ * @returns Ordered successful results, or the first input-ordered failure after all settle.
+ * @remarks A failed request must not release the submission lock while sibling writes continue.
+ */
+async function settleStartedWork<T>(work: Promise<T>[]): Promise<T[]> {
+  const results = await Promise.allSettled(work)
+  return results.map(result => {
+    if (result.status === 'rejected') throw result.reason
+    return result.value
+  })
+}
+
+/**
  * Runs async work over a list with a small fixed concurrency.
  * This keeps image finalization off the fully-serial path without overwhelming D1.
  *
@@ -188,14 +230,21 @@ const mapWithConcurrency = async <T>(
   worker: (item: T) => Promise<void>,
 ): Promise<void> => {
   let nextIndex = 0
+  let failed = false
   const workerCount = Math.min(Math.max(concurrency, 1), items.length)
 
-  await Promise.all(
+  await settleStartedWork(
     Array.from({ length: workerCount }, async () => {
-      while (nextIndex < items.length) {
+      while (!failed && nextIndex < items.length) {
         const currentIndex = nextIndex
         nextIndex += 1
-        await worker(items[currentIndex] as T)
+        try {
+          await worker(items[currentIndex] as T)
+        } catch (error) {
+          // Drain active workers, but leave untouched items for a later attempt.
+          failed = true
+          throw error
+        }
       }
     }),
   )
@@ -212,6 +261,7 @@ const uploadTaskDraftImages = async (params: {
   organisationId: Id
   projectId: Id
   photos: ImageUpload[]
+  attempt: TaskSubmissionAttempt
   intent: Intent
   finalizingLabel?: string
   onStatusChange?: (label: string) => void
@@ -231,12 +281,22 @@ const uploadTaskDraftImages = async (params: {
   params.onStatusChange?.(
     toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.uploadingImage),
   )
-  const preparedUploads = await Promise.all(
-    params.photos.map(photo => prepareImageUpload(photo.file, uploadCtx, featureImage)),
+  const preparedUploads = await settleStartedWork(
+    params.photos.map(async (photo, index) => {
+      const prepared = await params.attempt.run(`prepare:${index}`, () =>
+        prepareImageUpload(photo.file, uploadCtx, featureImage),
+      )
+      params.attempt.expires(`finalize:${index}`, prepared.auth?.expiresAt)
+      return prepared
+    }),
   )
 
-  await Promise.all(
-    preparedUploads.map(preparedUpload => uploadPreparedImageObject(preparedUpload)),
+  await settleStartedWork(
+    preparedUploads.map((preparedUpload, index) =>
+      params.attempt.run(`upload:${index}`, () =>
+        uploadPreparedImageObject(preparedUpload),
+      ),
+    ),
   )
 
   params.onStatusChange?.(
@@ -244,9 +304,15 @@ const uploadTaskDraftImages = async (params: {
       toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingReport),
   )
 
-  await mapWithConcurrency(preparedUploads, 2, async preparedUpload => {
-    await finalizePreparedImageUpload(preparedUpload)
-  })
+  await mapWithConcurrency(
+    preparedUploads.map((preparedUpload, index) => ({ preparedUpload, index })),
+    2,
+    async ({ preparedUpload, index }) => {
+      await params.attempt.run(`finalize:${index}`, () =>
+        finalizePreparedImageUpload(preparedUpload),
+      )
+    },
+  )
 }
 
 /**
@@ -569,9 +635,7 @@ export const submitMissingReport = async (
   organisation: Organisation,
   reason: string,
   photos: ImageUpload[],
-  options: {
-    onStatusChange?: (label: string) => void
-  } = {},
+  options: TaskSubmissionOptions = {},
 ): Promise<Response> => {
   assertPhotosProvided(photos, 'At least one image is required as evidence')
 
@@ -582,17 +646,32 @@ export const submitMissingReport = async (
   options.onStatusChange?.(
     toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.draftingReport),
   )
-  const draftResult = await beginMissingReportDraftRemote({
-    featureId: feature.id,
-    layerId: layer.id,
-    projectId: project.id,
-    organisationId: organisation.id,
-    reason: reason.trim(),
-  })
+  const attempt = submissionAttempt(
+    options,
+    [
+      'reportedMissing',
+      feature.id,
+      layer.id,
+      project.id,
+      organisation.id,
+      reason.trim(),
+    ],
+    photos,
+  )
+  const draftResult = await attempt.run('draft', () =>
+    beginMissingReportDraftRemote({
+      featureId: feature.id,
+      layerId: layer.id,
+      projectId: project.id,
+      organisationId: organisation.id,
+      reason: reason.trim(),
+    }),
+  )
 
   const draftTask = draftResult.data as { id: Id }
 
   await uploadTaskDraftImages({
+    attempt,
     taskId: draftTask.id,
     featureId: feature.id,
     organisationId: organisation.id as Id,
@@ -606,9 +685,11 @@ export const submitMissingReport = async (
   options.onStatusChange?.(
     toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingReport),
   )
-  const finalizedTask = await finalizeTaskDraftRemote({
-    id: draftTask.id,
-  })
+  const finalizedTask = await attempt.run('submit', () =>
+    finalizeTaskDraftRemote({
+      id: draftTask.id,
+    }),
+  )
 
   return createJsonResponse(finalizedTask)
 }
@@ -622,9 +703,7 @@ export const submitMissingReport = async (
 export const submitNewFeature = async (
   newFeature: NewFeatureTask,
   photos: ImageUpload[],
-  options: {
-    onStatusChange?: (label: string) => void
-  } = {},
+  options: TaskSubmissionOptions = {},
 ): Promise<Response> => {
   // Validate the minimum task submission inputs before invoking the remote action.
   assertPhotosProvided(photos, 'At least one image is required')
@@ -636,9 +715,11 @@ export const submitNewFeature = async (
   options.onStatusChange?.(
     toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.draftingFeature),
   )
-  const draftData = await upsertNewFeatureDraft(newFeature)
+  const attempt = submissionAttempt(options, ['newFeature', newFeature], photos)
+  const draftData = await attempt.run('draft', () => upsertNewFeatureDraft(newFeature))
 
   await uploadTaskDraftImages({
+    attempt,
     taskId: draftData.task.id,
     featureId: draftData.featureId,
     organisationId: draftData.organisationId,
@@ -654,9 +735,11 @@ export const submitNewFeature = async (
   options.onStatusChange?.(
     toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingFeature),
   )
-  const finalizedTask = await finalizeTaskDraftRemote({
-    id: draftData.task.id,
-  })
+  const finalizedTask = await attempt.run('submit', () =>
+    finalizeTaskDraftRemote({
+      id: draftData.task.id,
+    }),
+  )
 
   return createJsonResponse(finalizedTask)
 }
@@ -676,9 +759,7 @@ export const submitNewPhotos = async (
   project: Project,
   organisation: Organisation,
   photos: ImageUpload[],
-  options: {
-    onStatusChange?: (label: string) => void
-  } = {},
+  options: TaskSubmissionOptions = {},
 ): Promise<Response> => {
   // Validate the minimum task submission inputs before invoking the remote action.
   assertPhotosProvided(photos, 'At least one image is required')
@@ -686,16 +767,24 @@ export const submitNewPhotos = async (
   options.onStatusChange?.(
     toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.draftingPhotos),
   )
-  const draftResult = await beginNewPhotosDraftRemote({
-    featureId: feature.id,
-    layerId: layer.id,
-    projectId: project.id,
-    organisationId: organisation.id,
-  })
+  const attempt = submissionAttempt(
+    options,
+    ['newPhoto', feature.id, layer.id, project.id, organisation.id],
+    photos,
+  )
+  const draftResult = await attempt.run('draft', () =>
+    beginNewPhotosDraftRemote({
+      featureId: feature.id,
+      layerId: layer.id,
+      projectId: project.id,
+      organisationId: organisation.id,
+    }),
+  )
 
   const draftTask = draftResult.data as { id: Id }
 
   await uploadTaskDraftImages({
+    attempt,
     taskId: draftTask.id,
     featureId: feature.id,
     organisationId: organisation.id as Id,
@@ -709,9 +798,11 @@ export const submitNewPhotos = async (
   options.onStatusChange?.(
     toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingPhotos),
   )
-  const finalizedTask = await finalizeTaskDraftRemote({
-    id: draftTask.id,
-  })
+  const finalizedTask = await attempt.run('submit', () =>
+    finalizeTaskDraftRemote({
+      id: draftTask.id,
+    }),
+  )
 
   return createJsonResponse(finalizedTask)
 }
