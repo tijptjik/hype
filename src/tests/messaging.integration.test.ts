@@ -2064,3 +2064,93 @@ it('rejects archive writes outside the operator organisation or verified recipie
   })
   expect(bridge.archive).not.toHaveBeenCalled()
 })
+
+it.each(['telegram', 'whatsapp'] as const)(
+  'keeps the saved %s folder on native failure and rejects mismatched acknowledgments',
+  async platform => {
+    account = { ...account, platform }
+    sqlite.prepare('UPDATE messagingAccount SET platform=?').run(platform)
+    const chat = platform === 'telegram' ? '42' : '15555550100@s.whatsapp.net'
+    await projectMessagingArchive(state.ctx.db, account.id, {
+      chat,
+      isArchived: false,
+      sequence: 1,
+    })
+    const input = { meta, accountId: account.id, chat, archived: true }
+    bridge.archive.mockRejectedValueOnce(new Error('Provider offline'))
+    await expect(setMessagingConversationArchived(input)).rejects.toThrow(
+      'Provider offline',
+    )
+    expect(
+      await getMessagingConversations({ meta, accountId: account.id }),
+    ).toHaveLength(1)
+    bridge.archive.mockResolvedValueOnce({
+      chat: 'another-chat',
+      isArchived: true,
+      sequence: 2,
+    })
+    await expect(setMessagingConversationArchived(input)).rejects.toMatchObject({
+      status: 502,
+    })
+    expect(
+      sqlite
+        .prepare('SELECT isArchived,archiveSequence FROM messagingConversation')
+        .get(),
+    ).toEqual({ isArchived: 0, archiveSequence: 1 })
+  },
+)
+
+it.each(['telegram', 'whatsapp'] as const)(
+  'replays %s native-app archives independently and rejects delayed older folder state',
+  async platform => {
+    account = { ...account, platform }
+    sqlite.prepare('UPDATE messagingAccount SET platform=?').run(platform)
+    const chat = platform === 'telegram' ? '42' : '15555550100@s.whatsapp.net'
+    bridge.snapshot.mockResolvedValueOnce({
+      status,
+      messages: [],
+      outbox: [],
+      conversations: [{ chat, isArchived: true, sequence: 5 }],
+    })
+    const snapshot = await getMessagingInbox({ meta, accountId: account.id, after: 0 })
+    expect(snapshot.conversations).toBeUndefined()
+    expect(
+      await getMessagingConversations({ meta, accountId: account.id, archived: true }),
+    ).toHaveLength(1)
+    expect(
+      sqlite.prepare('SELECT inboxCursor,archiveCursor FROM messagingAccount').get(),
+    ).toEqual({ inboxCursor: 0, archiveCursor: 5 })
+    // A native command can overtake a poll already on the wire; that older poll must not undo it.
+    bridge.archive.mockResolvedValueOnce({ chat, isArchived: false, sequence: 10 })
+    await setMessagingConversationArchived({
+      meta,
+      accountId: account.id,
+      chat,
+      archived: false,
+    })
+    bridge.snapshot.mockResolvedValueOnce({
+      status,
+      messages: [],
+      outbox: [],
+      conversations: [{ chat, isArchived: true, sequence: 8 }],
+    })
+    await getMessagingInbox({ meta, accountId: account.id, after: 0 })
+    expect(bridge.snapshot).toHaveBeenLastCalledWith(account.bridgeAccountId, 0, 5)
+    expect(
+      await getMessagingConversations({ meta, accountId: account.id }),
+    ).toHaveLength(1)
+    expect(
+      sqlite.prepare('SELECT archiveSequence FROM messagingConversation').get(),
+    ).toEqual({ archiveSequence: 10 })
+    bridge.snapshot.mockResolvedValueOnce({
+      status,
+      messages: [],
+      outbox: [],
+      conversations: [{ chat, isArchived: true, sequence: 11 }],
+    })
+    await getMessagingInbox({ meta, accountId: account.id, after: 0 })
+    expect(
+      await getMessagingConversations({ meta, accountId: account.id, archived: true }),
+    ).toHaveLength(1)
+  },
+)

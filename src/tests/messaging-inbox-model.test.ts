@@ -416,3 +416,15 @@ it('rolls back a failed archive and discards a stale inbox refresh', async () =>
   await refresh
   expect(model.conversations).toHaveLength(0)
 })
+
+it('uses the native acknowledgment when another client changes the folder during the request', async () => {
+  const model = setup(['a'])
+  await waitFor(() => expect(model.conversations).toHaveLength(1))
+  model.registerRuntime('a', runtime())
+  await model.selectConversation('a:42')
+  mock.archive.mockResolvedValueOnce({ id: 'a', isArchived: false })
+  await model.archiveConversation('a:42', true)
+  expect(model.conversations).toHaveLength(1)
+  expect(model.selected?.key).toBe('a:42')
+  expect(model.error).toBe('')
+})
