@@ -1258,7 +1258,10 @@ export function getLayerHubFilter(
 }
 
 /**
- * Features inherit filtering from layer → project → organisation
+ * Features inherit filtering from layer → project → organisation.
+ * @param db Request database.
+ * @param opts Server-resolved hub and viewer scope.
+ * @returns An existence predicate without hydrating unrelated parent columns.
  */
 export function getFeatureHubFilter(
   db: Database,
@@ -1272,7 +1275,7 @@ export function getFeatureHubFilter(
     // Core: feature's layer's project's org has no hub OR org is not hub-exclusive
     return exists(
       db
-        .select()
+        .select({ id: layer.id })
         .from(layer)
         .innerJoin(project, eq(project.id, layer.projectId))
         .innerJoin(organisation, eq(organisation.id, project.organisationId))
@@ -1297,7 +1300,7 @@ export function getFeatureHubFilter(
 
     return exists(
       db
-        .select()
+        .select({ id: layer.id })
         .from(layer)
         .innerJoin(project, eq(project.id, layer.projectId))
         .innerJoin(organisation, eq(organisation.id, project.organisationId))

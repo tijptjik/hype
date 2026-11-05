@@ -1,5 +1,8 @@
 // REMOTE
-import { getFeature } from '#lib/api/feature.remote.js'
+import {
+  getUserContributedFeatures,
+  getUserContributedImages,
+} from '#lib/api/user.remote.js'
 // I18N
 import { getI18n } from '#lib/i18n.js'
 // TYPES
@@ -34,15 +37,19 @@ export function createUserContributionsModel(
   navigation: ContributionNavigation,
 ) {
   return {
-    // Await the remote directly; profile rows do not retain the map's detail handles.
-    getFeatureById: async (id: string) => {
-      const result = await getFeature({
-        ref: id,
-        refKey: 'id',
-        meta: { profile: 'default', isAdminRequest: app.isAdmin() },
-      })
-      return result.data ?? undefined
-    },
+    // Await each bounded page directly; display rows do not retain map detail handles.
+    getFeatures: async (userId: string, ids: string[]) =>
+      await getUserContributedFeatures({
+        userId,
+        ids,
+        meta: { isAdminRequest: app.isAdmin() },
+      }),
+    getImages: async (userId: string, ids: string[]) =>
+      await getUserContributedImages({
+        userId,
+        ids,
+        meta: { isAdminRequest: app.isAdmin() },
+      }),
     getHierarchy: (resource: Parameters<ResourceViewCtx['getHierarchy']>[0]) =>
       app.getHierarchy(resource),
     getProjectHierarchy: async (id: Id): Promise<ResourceContext> => {

@@ -30,6 +30,13 @@ const {
 const mockUpdateUser = vi.hoisted(() => vi.fn())
 const mockReadAdminUserProfile = vi.hoisted(() => vi.fn())
 const mockReadContributionPreviews = vi.hoisted(() => vi.fn())
+const mockReadContributedFeatures = vi.hoisted(() => vi.fn(async () => []))
+const mockReadContributedImages = vi.hoisted(() => vi.fn(async () => []))
+vi.mock('#lib/api/services/userContributions.js', () => ({
+  readUserContributedFeatures: mockReadContributedFeatures,
+  readUserContributedImages: mockReadContributedImages,
+}))
+
 vi.mock('#lib/api/services/userContributionPreviews.js', () => ({
   readUserContributionPreviews: mockReadContributionPreviews,
 }))
@@ -506,6 +513,40 @@ describe('user.remote', () => {
         hub,
         locale: expect.any(String),
       },
+    )
+  })
+
+  it('contribution pages receive the guarded surface, viewer and hub context', async () => {
+    const hub = { id: 'hub-1', isCore: false }
+    mockGetRequestEvent.mockReturnValue({
+      locals: { hub },
+      platform: { env: {} },
+      request: { method: 'GET' },
+      url: new URL('https://example.com/'),
+    })
+    await remote.getUserContributedFeatures({
+      userId: 'target',
+      ids: ['f1'],
+      meta: { isAdminRequest: true },
+    })
+    await remote.getUserContributedImages({
+      userId: 'target',
+      ids: ['i1'],
+      meta: { isAdminRequest: false },
+    })
+    const common = {
+      userId: 'target',
+      actor: { id: 'u-1', isAnonymous: false, superAdmin: false },
+      userRoles: [],
+      hub,
+    }
+    expect(mockReadContributedFeatures).toHaveBeenCalledWith(
+      {},
+      { ...common, ids: ['f1'], isAdminRequest: true },
+    )
+    expect(mockReadContributedImages).toHaveBeenCalledWith(
+      {},
+      { ...common, ids: ['i1'], isAdminRequest: false },
     )
   })
 

@@ -219,7 +219,7 @@ const featureListRelations = {
       },
     },
   },
-}
+} as const
 
 const featureDetailRelations = {
   ...featureListRelations,

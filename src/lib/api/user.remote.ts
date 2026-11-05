@@ -43,6 +43,10 @@ import {
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
 import { readAdminUserProfile } from '#lib/api/services/adminUser.js'
+import {
+  readUserContributedFeatures,
+  readUserContributedImages,
+} from '#lib/api/services/userContributions.js'
 import { readUserContributionPreviews } from '#lib/api/services/userContributionPreviews.js'
 import { getLocale } from '#lib/i18n.js'
 import { canManageOrganisationUsers } from '#lib/api/services/authz/organisationUsers.js'
@@ -82,6 +86,8 @@ import type { UserHydrationResult, UserRaw } from '#lib/db/zod/schema/user.types
 // - getUserForAttribution
 // - getUser
 // - getAdminUserProfile
+// - getUserContributedFeatures
+// - getUserContributedImages
 // - getUserContributionPreviews
 // - getUserLayers
 // - getUserFeatures
@@ -327,6 +333,48 @@ export const getUserContributionPreviews = guardedQuery(
       userRoles: ctx.userRoles,
       hub: ctx.event.locals.hub,
       locale: getLocale(),
+    }),
+)
+
+/** Read a bounded page of public feature contributions.
+ * @param params Contributor ID, at most 20 feature IDs and surface metadata.
+ * @returns Collection rows authorized against the current session and hub.
+ */
+export const getUserContributedFeatures = guardedQuery(
+  z.object({
+    userId: z.string().min(1).max(100),
+    ids: z.array(z.string().min(1).max(100)).max(20),
+    meta: z.object({ isAdminRequest: z.boolean() }).optional(),
+  }),
+  async (params, ctx) =>
+    readUserContributedFeatures(ctx.db, {
+      userId: params.userId,
+      ids: params.ids,
+      actor: ctx.user,
+      userRoles: ctx.userRoles,
+      isAdminRequest: ctx.isAdminRequest,
+      hub: ctx.event.locals.hub,
+    }),
+)
+
+/** Read a bounded page of public photo contributions.
+ * @param params Contributor ID, at most 24 image IDs and surface metadata.
+ * @returns Published image locators and readable feature assignments.
+ */
+export const getUserContributedImages = guardedQuery(
+  z.object({
+    userId: z.string().min(1).max(100),
+    ids: z.array(z.string().min(1).max(100)).max(24),
+    meta: z.object({ isAdminRequest: z.boolean() }).optional(),
+  }),
+  async (params, ctx) =>
+    readUserContributedImages(ctx.db, {
+      userId: params.userId,
+      ids: params.ids,
+      actor: ctx.user,
+      userRoles: ctx.userRoles,
+      isAdminRequest: ctx.isAdminRequest,
+      hub: ctx.event.locals.hub,
     }),
 )
 

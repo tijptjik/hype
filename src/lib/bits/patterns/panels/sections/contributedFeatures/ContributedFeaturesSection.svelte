@@ -3,6 +3,8 @@
 import { slide } from 'svelte/transition'
 // I18N
 import { m } from '#lib/i18n.js'
+// ADAPTERS
+import { useContributedFeatures } from '#lib/adapters/panels/useContributedFeatures.svelte.js'
 // SERVICES
 import { formatDistanceToNow } from '#lib'
 // COMPONENTS
@@ -39,7 +41,7 @@ let predictedHeight = $state(0) // For smooth transitions
 
 // Calculate dynamic heights - use predicted height when available
 let effectiveHeight = $derived(predictedHeight > 0 ? predictedHeight : contentHeight)
-let minHeight = $derived(effectiveHeight > 420 ? 420 : effectiveHeight)
+let minHeight = $derived(Math.min(effectiveHeight, 420))
 let maxHeight = $derived(Math.max(420, (availableHeight - 64) / 2))
 let finalHeight = $derived(Math.min(minHeight, maxHeight))
 
@@ -105,51 +107,19 @@ const shouldShowDate = (
   return currentCategory !== previousCategory
 }
 
-// Helper to fetch all features for a project group, and the hierarchy for the first feature
-const fetchFeaturesForProject = async (featureIds: string[], projectId: string) => {
-  // Fetch all features first
-  const features = await Promise.all(
-    featureIds
-      .filter(id => !userData?.privateContributions?.features[id])
-      .map(async featureId => {
-        try {
-          return await model.getFeatureById(featureId)
-        } catch {
-          return null
-        }
-      }),
-  )
-  // Sort by createdAt descending
-  const filtered = features
-    .filter((feature): feature is FeatureFromCollection => feature != null)
-    .sort((a, b) => new Date(b?.createdAt).getTime() - new Date(a?.createdAt).getTime())
-  let hierarchy = await model.getProjectHierarchy(projectId)
-  const firstFeature = filtered[0]
-  if (firstFeature) {
-    hierarchy = await model.getHierarchy(firstFeature)
-  }
-  const entries = [
-    ...filtered.map(feature => ({
-      kind: 'published' as const,
-      id: feature.id,
-      createdAt: feature.createdAt,
-      feature,
-    })),
-    ...featureIds.flatMap(id => {
-      const preview = userData?.privateContributions?.features[id]
-      return preview
-        ? [{ kind: 'private' as const, id, createdAt: preview.createdAt, preview }]
-        : []
-    }),
-  ].sort(
-    (a, b) =>
-      Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.id.localeCompare(b.id),
-  )
-  return { features: filtered, entries, hierarchy }
-}
+// Fetch feature pages and ancestry without launching the entire contribution history.
+const contributions = useContributedFeatures(
+  () => userData,
+  () => model,
+)
 </script>
 
-<div id="contributed-features" class="border-border isolate overflow-hidden {layout === 'dashboard' ? '@3xl:flex @3xl:h-full @3xl:min-h-0 @3xl:flex-col' : 'border-b'}">
+<div
+  id="contributed-features"
+  class="border-border isolate overflow-hidden {layout === 'dashboard'
+    ? '@3xl:flex @3xl:h-full @3xl:min-h-0 @3xl:flex-col'
+    : 'border-b'}"
+>
   <h3
     class="text-muted-foreground relative z-20 shrink-0 bg-[var(--form-workspace,var(--color-panel))] px-6 pt-5 pb-3 text-xs font-semibold tracking-wider uppercase"
   >
@@ -158,7 +128,11 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
 
   {#if userData?.contributedFeatures &&
     Object.keys(userData.contributedFeatures).length > 0}
-    <div class="relative isolate overflow-hidden pr-2 pb-3 {layout === 'dashboard' ? '@3xl:min-h-0 @3xl:flex-1' : ''}">
+    <div
+      class="relative isolate overflow-hidden pr-2 pb-3 {layout === 'dashboard'
+        ? '@3xl:min-h-0 @3xl:flex-1'
+        : ''}"
+    >
       <div
         class="space-y-0 overflow-y-auto {layout === 'dashboard'
           ? 'max-h-[75vh] @3xl:h-full @3xl:max-h-none'
@@ -166,108 +140,119 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
         bind:this={viewport}
       >
         <div bind:this={contents}>
-          {#each Object.entries(
-            userData.contributedFeatures,
-          ) as [projectId, featureIds] (projectId)}
-            {#await fetchFeaturesForProject(featureIds, projectId) then groupData}
-              <div class="group-container" data-group-id={projectId}>
-                <!-- Sticky Group Header -->
-                <button
-                  type="button"
-                  class="sticky top-0 z-10 flex w-full items-center justify-between bg-panel px-6 py-2.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
-                  aria-expanded={!collapsedGroups.has(projectId)}
-                  onclick={() => toggleGroup(projectId)}
-                >
-                  <div class="flex items-center gap-2">
-                    <Icon
-                      src={ChevronDown}
-                      class="h-4 w-4 transition-transform duration-200 {collapsedGroups.has(
-                        projectId,
-                      )
-                        ? '-rotate-90'
-                        : ''}"
-                    />
-                    <p class="flex space-x-0.5 text-xs font-medium">
-                      {#if groupData.hierarchy?.organisation}
-                        <span class="text-primary"
-                          >{model.getOrganisationName(
-                            groupData.hierarchy.organisation,
-                          )}</span
-                        >
-                      {/if}
-                      {#if model.getProjectName(
-                        groupData.hierarchy?.project,
-                        Boolean(groupData.hierarchy?.organisation),
-                      )}
-                        <span class="px-0">›</span>
-                        <span class="text-muted-foreground"
-                          >{model.getProjectName(
-                            groupData.hierarchy?.project,
-                            Boolean(groupData.hierarchy?.organisation),
-                          )}</span
-                        >
-                      {/if}
-                    </p>
-                  </div>
-                  <div class="text-xs tabular-nums text-muted-foreground">
-                    {featureIds.length}
-                  </div>
-                </button>
+          {#each contributions.groups as groupData (groupData.projectId)}
+            {@const projectId = groupData.projectId}
+            <div class="group-container" data-group-id={projectId}>
+              <!-- Sticky Group Header -->
+              <button
+                type="button"
+                class="bg-panel hover:bg-surface focus-visible:ring-focus sticky top-0 z-10 flex w-full items-center justify-between px-6 py-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                aria-expanded={!collapsedGroups.has(projectId)}
+                onclick={() => toggleGroup(projectId)}
+              >
+                <div class="flex items-center gap-2">
+                  <Icon
+                    src={ChevronDown}
+                    class="h-4 w-4 transition-transform duration-200 {collapsedGroups.has(
+                      projectId,
+                    )
+                      ? '-rotate-90'
+                      : ''}"
+                  />
+                  <p class="flex space-x-0.5 text-xs font-medium">
+                    {#if groupData.hierarchy?.organisation}
+                      <span class="text-primary"
+                        >{model.getOrganisationName(
+                          groupData.hierarchy.organisation,
+                        )}</span
+                      >
+                    {/if}
+                    {#if model.getProjectName(
+                      groupData.hierarchy?.project,
+                      Boolean(groupData.hierarchy?.organisation),
+                    )}
+                      <span class="px-0">›</span>
+                      <span class="text-muted-foreground"
+                        >{model.getProjectName(
+                          groupData.hierarchy?.project,
+                          Boolean(groupData.hierarchy?.organisation),
+                        )}</span
+                      >
+                    {/if}
+                  </p>
+                </div>
+                <div class="text-muted-foreground text-xs tabular-nums">
+                  {groupData.total}
+                </div>
+              </button>
 
-                <!-- Collapsible Group Members -->
-                {#if !collapsedGroups.has(projectId)}
-                  <div
-                    class="group-content space-y-2 py-2"
-                    transition:slide={{ duration: 300 }}
-                  >
-                    {#each groupData.entries as entry, index (entry.id)}
-                      {#if entry.kind === 'private'}
-                        {@const preview = entry.preview}
-                        <div class="w-full items-center gap-x-3 gap-y-1 px-6 py-2 {layout === 'dashboard' ? 'grid grid-cols-[auto_minmax(0,1fr)]' : 'flex'}">
-                          <Icon
-                            src={MapPin}
-                            class="h-5 w-5 shrink-0 stroke-[1.5px] text-base-content/60"
-                          />
-                          <div class="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                            {#if preview.address}
-                              <span class="text-xs text-muted-foreground whitespace-normal break-words"
-                                >{preview.address}</span
-                              >
-                            {/if}
-                            <span class="break-words">{preview.title}</span>
-                          </div>
-                          <div class="flex shrink-0 flex-col gap-1.5 {layout === 'dashboard' ? 'col-start-2 items-start' : 'items-end'}">
-                            <ContributionStatus status={preview.status} />
-                            <span class="text-xs text-muted-foreground"
-                              >{formatDistanceToNow(new Date(preview.createdAt), {
-                                addSuffix: true,
-                              })}</span
+              <!-- Collapsible Group Members -->
+              {#if !collapsedGroups.has(projectId)}
+                <div
+                  class="group-content space-y-2 py-2"
+                  transition:slide={{ duration: 300 }}
+                >
+                  {#each groupData.entries as entry, index (entry.id)}
+                    {#if entry.kind === 'private'}
+                      {@const preview = entry.preview}
+                      <div
+                        class="w-full items-center gap-x-3 gap-y-1 px-6 py-2 {layout ===
+                        'dashboard'
+                          ? 'grid grid-cols-[auto_minmax(0,1fr)]'
+                          : 'flex'}"
+                      >
+                        <Icon
+                          src={MapPin}
+                          class="text-base-content/60 h-5 w-5 shrink-0 stroke-[1.5px]"
+                        />
+                        <div class="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                          {#if preview.address}
+                            <span
+                              class="text-muted-foreground text-xs break-words whitespace-normal"
+                              >{preview.address}</span
                             >
-                          </div>
+                          {/if}
+                          <span class="break-words">{preview.title}</span>
                         </div>
-                      {:else}
-                        {@const feature = entry.feature}
-                        <a
-                          href={`/features/${feature.id}`}
-                          onclick={e => {
-                            e.preventDefault()
-                            model.onContributedFeature(
-                              feature.id,
-                              projectId,
-                              groupData.features,
-                              model.getProjectTitle(groupData.hierarchy?.project),
-                              userData?.username ?? '',
-                            )
-                          }}
-                          class="hover:bg-surface focus-visible:ring-focus w-full cursor-pointer items-center gap-x-3 gap-y-1 rounded-md px-6 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset {layout === 'dashboard' ? 'grid grid-cols-[auto_minmax(0,1fr)]' : 'flex'}"
+                        <div
+                          class="flex shrink-0 flex-col gap-1.5 {layout === 'dashboard'
+                            ? 'col-start-2 items-start'
+                            : 'items-end'}"
                         >
-                          <Icon
-                            src={MapPin}
-                            class="h-5 w-5 stroke-[1.5px] text-base-content/60"
-                          />
-                          <div
-                            class="flex min-w-0 flex-1 flex-col gap-0.5 text-sm text-base-content"
+                          <ContributionStatus status={preview.status} />
+                          <span class="text-muted-foreground text-xs"
+                            >{formatDistanceToNow(new Date(preview.createdAt), {
+                              addSuffix: true,
+                            })}</span
                           >
+                        </div>
+                      </div>
+                    {:else}
+                      {@const feature = entry.feature}
+                      <a
+                        href={`/features/${feature.id}`}
+                        onclick={e => {
+                          e.preventDefault()
+                          model.onContributedFeature(
+                            feature.id,
+                            projectId,
+                            groupData.features,
+                            model.getProjectTitle(groupData.hierarchy?.project),
+                            userData?.username ?? '',
+                          )
+                        }}
+                        class="hover:bg-surface focus-visible:ring-focus w-full cursor-pointer items-center gap-x-3 gap-y-1 rounded-md px-6 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset {layout ===
+                        'dashboard'
+                          ? 'grid grid-cols-[auto_minmax(0,1fr)]'
+                          : 'flex'}"
+                      >
+                        <Icon
+                          src={MapPin}
+                          class="text-base-content/60 h-5 w-5 stroke-[1.5px]"
+                        />
+                        <div
+                          class="text-base-content flex min-w-0 flex-1 flex-col gap-0.5 text-sm"
+                        >
                           {#if layout === 'dashboard'}
                             <span
                               class="text-base-content/60 text-xs break-words whitespace-normal"
@@ -293,27 +278,63 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
                               )}
                             />
                           {/if}
+                        </div>
+                        {#if shouldShowDate(groupData.entries, index) &&
+                          feature.createdAt}
+                          <div
+                            class="text-muted-foreground shrink-0 text-xs {layout ===
+                            'dashboard'
+                              ? 'col-start-2'
+                              : ''}"
+                          >
+                            {formatDistanceToNow(new Date(feature.createdAt), {
+                              addSuffix: true,
+                            })}
                           </div>
-                          {#if shouldShowDate(groupData.entries, index) &&
-                            feature.createdAt}
-                            <div class="text-muted-foreground shrink-0 text-xs {layout === 'dashboard' ? 'col-start-2' : ''}">
-                              {formatDistanceToNow(new Date(feature.createdAt), {
-                                addSuffix: true,
-                              })}
-                            </div>
-                          {/if}
-                        </a>
-                      {/if}
-                    {/each}
-                  </div>
-                {/if}
-              </div>
-            {:catch groupError}
-              <div class="flex items-center justify-center py-4 text-error">
-                <span class="text-sm">{m.due_candid_mole_imagine()}: {groupError}</span>
-              </div>
-            {/await}
+                        {/if}
+                      </a>
+                    {/if}
+                  {/each}
+                </div>
+              {/if}
+            </div>
           {/each}
+          {#if contributions.loading}
+            <div
+              role="status"
+              aria-label={m.resource_loading()}
+              class="space-y-4 px-6 py-3"
+            >
+              {#each Array(5) as _}
+                <div
+                  aria-hidden="true"
+                  class="animate-pulse space-y-2 motion-reduce:animate-none"
+                >
+                  <div class="bg-muted h-3 w-2/3 rounded"></div>
+                  <div class="bg-muted h-2 w-1/2 rounded"></div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+          {#if contributions.failed}
+            <p role="alert" class="text-error px-6 py-3 text-sm">
+              {m.due_candid_mole_imagine()}
+            </p>
+          {/if}
+          {#if contributions.hasMore}
+            <button
+              type="button"
+              class="border-border hover:bg-surface mx-6 my-3 rounded-md border px-3 py-2 text-sm disabled:opacity-60"
+              disabled={contributions.loading}
+              onclick={() => contributions.loadMore()}
+            >
+              {contributions.loading
+                ? m.resource_loading()
+                : contributions.failed
+                  ? m.resource_retry()
+                  : m.resource_load_more()}
+            </button>
+          {/if}
         </div>
       </div>
       <Scrollbar
@@ -325,7 +346,7 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
       />
     </div>
   {:else}
-    <div class="flex items-center justify-center p-4 text-base-content/60">
+    <div class="text-base-content/60 flex items-center justify-center p-4">
       <span class="text-sm">{m.wide_front_jackdaw_forgive()}</span>
     </div>
   {/if}
