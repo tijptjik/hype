@@ -2021,6 +2021,10 @@
   "location_visibility_exclusive_help": "：只有你的组织可以新增特色。",
   "location_visibility_reuse_help": "可见性决定谁可以重用此地点",
   "location_visibility_name_override_help": "你的修改会保留，其他组织的更改不会取代它们。",
+  "organisation_permissions_heading": "机构权限",
+  "organisation_permission_user_details": "允许编辑用户资料",
+  "organisation_permission_user_details_description": "允许机构拥有人及相关平台管理员编辑本机构用户的姓名、电话号码、电子邮箱地址及用户名。更改会应用于共享的 HYPE 个人资料。",
+  "organisation_permissions_superadmin_only": "只有超级管理员可以授予或撤销此权限。默认禁用。",
   "organisation_location_visibility_default": "新地点的默认可见性",
   "location_visibility_default_unavailable": "无法获取组织默认值。保存前请选择共享或仅限本组织。",
   "association_locate": "在此定位项目",
@@ -2157,9 +2161,5 @@
   "content_languages_reset": "重置为默认值",
   "content_multilingual_default": "默认显示内容的多语言值",
   "address_multilingual_default": "默认显示地址的多语言值",
-  "content_languages_help_named": "{name} 各编辑器中可用的语言及其排序。",
-  "organisation_permissions_heading": "机构权限",
-  "organisation_permission_user_details": "允许编辑用户资料",
-  "organisation_permission_user_details_description": "允许机构拥有人及相关平台管理员编辑本机构用户的姓名、电话号码、电子邮箱地址及用户名。更改会应用于共享的 HYPE 个人资料。",
-  "organisation_permissions_superadmin_only": "只有超级管理员可以授予或撤销此权限。默认禁用。"
+  "content_languages_help_named": "{name} 各编辑器中可用的语言及其排序。"
 }

@@ -2021,6 +2021,10 @@
   "location_visibility_exclusive_help": ": adding Features is reserved for your organisation.",
   "location_visibility_reuse_help": "Visibility defines reuse",
   "location_visibility_name_override_help": "Your edits stay yours. Changes by other organisations won’t replace them.",
+  "organisation_permissions_heading": "Organization Permissions",
+  "organisation_permission_user_details": "Permit to edit user details",
+  "organisation_permission_user_details_description": "Allow organisation Owners and relevant Hub Admins to edit names, phone numbers, email addresses and usernames for users in this organisation. Changes apply to the shared HYPE profile.",
+  "organisation_permissions_superadmin_only": "Only a SuperAdmin can grant or revoke this permission. Disabled by default.",
   "organisation_location_visibility_default": "Default visibility for new Locations",
   "location_visibility_default_unavailable": "Organisation default unavailable. Choose Shared or Organisation-only before saving.",
   "association_locate": "Locate feature here",
@@ -2157,9 +2161,5 @@
   "content_languages_reset": "Reset to defaults",
   "content_multilingual_default": "Always show multilingual values for content",
   "address_multilingual_default": "Always show multilingual values for addresses",
-  "content_languages_help_named": "Availability and order of languages in the editors used across {name}.",
-  "organisation_permissions_heading": "Organization Permissions",
-  "organisation_permission_user_details": "Permit to edit user details",
-  "organisation_permission_user_details_description": "Allow organisation Owners and relevant Hub Admins to edit names, phone numbers, email addresses and usernames for users in this organisation. Changes apply to the shared HYPE profile.",
-  "organisation_permissions_superadmin_only": "Only a SuperAdmin can grant or revoke this permission. Disabled by default."
+  "content_languages_help_named": "Availability and order of languages in the editors used across {name}."
 }
