@@ -93,7 +93,7 @@
   }
 
   .bits-theme .bits-form__control {
-    @apply w-full border-none bg-transparent text-sm selection:bg-primary/60 selection:text-base-content;
+    @apply w-full border-none bg-transparent text-[15px] font-normal leading-[22px] selection:bg-primary/60 selection:text-base-content;
     color: var(--color-foreground);
   }
 
@@ -143,7 +143,7 @@
   }
 
   .bits-theme .bits-form__control--filled {
-    @apply font-medium;
+    @apply font-normal;
   }
 
   .bits-theme .bits-form__control--translated {

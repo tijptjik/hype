@@ -55,6 +55,7 @@ export interface MainVisualSectionProps {
   class?: string
   isCollapsed?: boolean
   expandedHeight?: number
+  minimumHeight?: number
   collapsedHeight?: number
   imageAspectRatio?: number | null
   leftControls?: Snippet

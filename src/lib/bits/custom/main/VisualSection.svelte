@@ -11,6 +11,7 @@ let {
   onHeightChange,
   isCollapsed = false,
   expandedHeight = 520,
+  minimumHeight = 200,
   collapsedHeight = 64,
   imageAspectRatio = null,
   showImage = true,
@@ -44,13 +45,12 @@ function markResizeActivity(): void {
 onDestroy(() => clearTimeout(settleTimer))
 
 const visualId = $props.id()
-const minimumHeight = 200
 const maximumHeight = 1200
 let customHeight = $state<number | null>(null)
 let drag = $state<{ pointerId: number; startY: number; startHeight: number } | null>(
   null,
 )
-const height = $derived(customHeight ?? expandedHeight)
+const height = $derived(Math.max(minimumHeight, customHeight ?? expandedHeight))
 
 /** Sets the expanded height within the same bounds as the address map.
  * @param value Requested height in CSS pixels.
@@ -147,7 +147,9 @@ const rootStyle = $derived(
   {/if}
 
   <div class="bits-feature-visual__body">
-    <div class="bits-feature-visual__map">{@render map?.()}</div>
+    <div class="bits-feature-visual__map {showImage ? '' : 'p-0!'}">
+      {@render map?.()}
+    </div>
 
     {#if showImage}
       <div class="bits-feature-visual__image">{@render image?.()}</div>
@@ -165,7 +167,7 @@ const rootStyle = $derived(
       aria-valuemin={minimumHeight}
       aria-valuemax={maximumHeight}
       aria-valuenow={height}
-      class="absolute inset-x-0 bottom-[-6px] z-10 flex h-3 touch-none cursor-ns-resize items-center justify-end pr-32 outline-none hover:bg-primary/15 focus-visible:bg-primary/20"
+      class="hover:bg-primary/15 focus-visible:bg-primary/20 absolute inset-x-0 bottom-[-6px] z-10 flex h-3 cursor-ns-resize touch-none items-center justify-end pr-32 outline-none"
       onpointerdown={startResize}
       onpointermove={event => {
         if (drag?.pointerId === event.pointerId)
@@ -182,7 +184,7 @@ const rootStyle = $derived(
       onkeydown={resizeWithKeyboard}
       ondblclick={() => (customHeight = null)}
     >
-      <span aria-hidden="true" class="h-1 w-10 rounded-full bg-foreground/35"></span>
+      <span aria-hidden="true" class="bg-foreground/35 h-1 w-10 rounded-full"></span>
     </div>
   {/if}
 </section>

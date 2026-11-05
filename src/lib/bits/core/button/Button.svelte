@@ -135,7 +135,11 @@ function resolveTransition(
       {href}
       class={classes}
       style={buttonStyles}
-      aria-label={shouldHideLabel ? text : undefined}
+      aria-label={typeof attrs['aria-label'] === 'string'
+        ? attrs['aria-label']
+        : shouldHideLabel
+          ? text
+          : undefined}
       aria-disabled={disabled ? 'true' : undefined}
       tabindex={disabled ? -1 : undefined}
       onclick={handleClick}
@@ -152,7 +156,11 @@ function resolveTransition(
       {type}
       class={classes}
       style={buttonStyles}
-      aria-label={shouldHideLabel ? text : undefined}
+      aria-label={typeof attrs['aria-label'] === 'string'
+        ? attrs['aria-label']
+        : shouldHideLabel
+          ? text
+          : undefined}
       tabindex={disabled ? -1 : 0}
       {disabled}
       onclick={handleClick}

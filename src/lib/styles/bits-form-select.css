@@ -31,7 +31,7 @@
   }
 
   .bits-theme .bits-form__select-trigger {
-    @apply inline-flex h-12 w-full items-center rounded-lg border px-3 text-sm outline-none transition-colors;
+    @apply inline-flex h-12 w-full items-center rounded-lg border px-3 text-[15px] font-normal leading-[22px] outline-none transition-colors;
     border-color: color-mix(in oklab, var(--color-border-input) 90%, transparent);
     background-color: var(--color-glass-100);
   }
@@ -78,7 +78,7 @@
   }
 
   .bits-theme .bits-form__select-display {
-    @apply inline-flex w-full items-center bg-transparent pl-2.5 pr-7 text-sm;
+    @apply inline-flex w-full items-center bg-transparent pl-2.5 pr-7 text-[15px] font-normal leading-[22px];
     color: color-mix(in oklab, var(--color-base-content) 90%, transparent);
   }
 

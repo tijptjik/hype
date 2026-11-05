@@ -45,10 +45,10 @@ function handleValueChange(nextValue: string): void {
 
 {#if !isEditing}
   <div
-    class={`bits-form__control-wrap bits-form__select-display-wrap ${variant === 'ghost' ? 'border-transparent bg-transparent shadow-none' : ''} ${itemPreview ? 'pr-3!' : ''} ${displayClass} ${className}`}
+    class={`bits-form__control-wrap bits-form__select-display-wrap ${variant === 'ghost' ? 'border-transparent bg-transparent shadow-none' : ''} ${reserveTriggerSpace && variant === 'ghost' && !itemPreview ? 'border-0! px-0!' : ''} ${itemPreview ? 'pr-3!' : ''} ${displayClass} ${className}`}
   >
     <div
-      class={`bits-form__select-display bits-form__select-display--${variant} text-foreground ${reserveTriggerSpace ? 'gap-2' : ''} ${itemPreview ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1rem] gap-3 p-0!' : ''}`}
+      class={`bits-form__select-display bits-form__select-display--${variant} text-foreground ${reserveTriggerSpace ? 'gap-2' : ''} ${reserveTriggerSpace && variant === 'ghost' && !itemPreview ? 'pr-0! pl-4!' : ''} ${itemPreview ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1rem] gap-3 p-0!' : ''}`}
     >
       <span
         class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : reserveTriggerSpace ? 'pl-1.5' : ''}`}
@@ -78,7 +78,9 @@ function handleValueChange(nextValue: string): void {
     <SelectPrimitive.Trigger
       {...triggerAttrs}
       class={`bits-form__select-trigger bits-form__select-trigger--${variant} text-foreground ${itemPreview ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1rem] gap-3' : ''} ${triggerClass} ${className}`}
-      aria-label={placeholder}
+      aria-label={typeof triggerAttrs['aria-label'] === 'string'
+        ? triggerAttrs['aria-label']
+        : placeholder}
     >
       <span
         class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : ''}`}

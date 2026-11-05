@@ -1,3 +1,4 @@
+import type { Component, Snippet } from 'svelte'
 import type { InputType, LocaleExtended } from '#lib/types.js'
 import type { FormIssueValue } from './src/label/types'
 
@@ -5,13 +6,20 @@ export interface TextInputProps {
   id?: string
   name?: string
   label?: string
+  labelIcon?: Component<{ class?: string }>
+  labelRight?: Snippet
+  /** Optional action inside the control, after the editable value. */
+  trailing?: Snippet
   value?: string
   isEditing?: boolean
+  /** Resource editors use borderless display and a subtle outline while editing. */
+  variant?: 'default' | 'resource'
   placeholder?: string
   required?: boolean
   disabled?: boolean
   readonly?: boolean
   issues?: FormIssueValue
+  errorId?: string
   locale?: LocaleExtended
   isTranslated?: boolean
   isGenAI?: boolean
