@@ -1008,6 +1008,26 @@ describe('project.remote form organisation move authz', () => {
     })
   })
 
+  it('defaults the first ranked layer when no default was selected', async () => {
+    const payload = buildUpdatePayload('org-1')
+    payload.data.layers = [
+      { id: 'layer-1', rank: 9, isDefaultVisible: 'false' },
+      { id: 'layer-2', rank: 3, isDefaultVisible: false },
+    ]
+
+    await remote.projectForm(payload, throwingInvalid)
+
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        layers: [
+          { id: 'layer-2', rank: 0, isDefaultVisible: true },
+          { id: 'layer-1', rank: 1, isDefaultVisible: false },
+        ],
+      }),
+    )
+  })
+
   it('preserves false default-layer values when unchecked form payloads submit strings', async () => {
     const payload = buildUpdatePayload('org-1')
     payload.data.layers = [

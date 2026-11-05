@@ -633,7 +633,8 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     normalizedSubmittedLayers.length > 0 &&
     !normalizedSubmittedLayers.some(layer => layer.isDefaultVisible)
   ) {
-    invalid(issue.data.layers('At least one layer must be visible by default.'))
+    // Preserve explicit defaults; otherwise use the first layer in submitted rank order.
+    normalizedSubmittedLayers[0].isDefaultVisible = true
   }
   if (mode === 'create' && projectId) {
     invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))

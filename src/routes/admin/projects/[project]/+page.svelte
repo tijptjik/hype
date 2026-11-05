@@ -581,7 +581,14 @@ const configuredProjectForm = configureForm(() => ({
         (baselineFormInput.data as ProjectSubmitBaselineRelations).layers ?? [],
       // Always shape layers from the live section projection so drag/toggle edits
       // cannot drift from the nested form snapshot used by preflight/submit.
-      toEffective: () => getProjectLayerSubmitValues() ?? [],
+      toEffective: () => {
+        const layers = getProjectLayerSubmitValues() ?? []
+        // Include the fallback in the changed payload even if the layer section was untouched.
+        if (layers.length > 0 && !layers.some(layer => layer.isDefaultVisible)) {
+          layers[0].isDefaultVisible = true
+        }
+        return layers
+      },
       toComparableEffective: value => value,
       toComparableBaseline: value =>
         normalizeProjectLayersForSubmit(value as Array<Record<string, unknown>>),

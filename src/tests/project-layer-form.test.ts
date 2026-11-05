@@ -6,15 +6,13 @@ import type { Project } from '#lib/db/zod/schema/project.types.js'
 const layersSchema = ProjectEntityFormData.pick({ layers: true })
 
 describe('project layer form state', () => {
-  it('clears default validation when one layer is selected and rejects clearing the last default', () => {
+  it('allows saving when no default layer is selected', () => {
     const layers = [{ id: 'one', rank: 0, isDefaultVisible: false }]
-    const invalid = layersSchema.safeParse({ layers })
-    expect(invalid.success).toBe(false)
-    if (!invalid.success) expect(invalid.error.issues[0].path).toEqual(['layers'])
+    expect(layersSchema.safeParse({ layers }).success).toBe(true)
     layers[0].isDefaultVisible = true
     expect(layersSchema.safeParse({ layers }).success).toBe(true)
     layers[0].isDefaultVisible = false
-    expect(layersSchema.safeParse({ layers }).success).toBe(false)
+    expect(layersSchema.safeParse({ layers }).success).toBe(true)
   })
 
   it('allows omitted relations and projects without layers', () => {
