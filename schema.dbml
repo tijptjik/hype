@@ -2,6 +2,7 @@ table account {
   id text [pk, not null]
   userId text [not null]
   accountId text [not null]
+  issuer text
   providerId text [not null]
   accessToken text
   refreshToken text
@@ -12,15 +13,125 @@ table account {
   password text
   createdAt integer [not null]
   updatedAt integer [not null]
+
+  indexes {
+    (providerId, accountId) [name: 'account_providerId_accountId_uidx', unique]
+  }
+}
+
+table address {
+  id text [pk, not null]
+  sourceKey text [not null]
+}
+
+table addressRevision {
+  id text [pk, not null]
+  addressId text [not null]
+  scope text [not null]
+  components text [not null]
+  geometry text
+  sourceVersion text
+  contentHash text [not null]
+  sourceReferences text [not null]
+  rawSource text [not null]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+
+  indexes {
+    (addressId, contentHash) [name: 'address_revision_content', unique]
+  }
+}
+
+table breadlineImportIdentity {
+  active integer [not null, default: 1]
+  sourceUserId integer [pk, not null]
+  sourceVolunteerId integer
+  userId text [not null]
+  email text
+  name text
+  sourceUid text
+}
+
+table breadlineImportUser {
+  userId text [pk, not null]
+  telephone text [unique]
+  state text [not null]
+  claimedEmail text
+  claimedAt integer
+  claimKey text
+}
+
+table cardStyle {
+  code text [pk, not null]
+}
+
+table divisionDefinition {
+  id text [pk, not null]
+  apiReleaseSet text [not null]
+  attributes text [not null]
+}
+
+table divisionI18n {
+  divisionId text [not null]
+  locale text [not null]
+  name text
+  namedValues text [not null]
+
+  indexes {
+    (divisionId, locale) [pk]
+    (locale, name, divisionId) [name: 'division_i18n_name']
+  }
+}
+
+table divisionRefresh {
+  id integer [pk, not null]
+  appliedRelease text
+  targetRelease text
+  targetReleaseId text
+  comparisonId text
+  cursor text
+  phase text [not null, default: 'idle']
+  checkedMonth text
+  lease text
+  leaseUntil integer [not null, default: 0]
+  lastError text
+}
+
+table divisionRefreshChange {
+  id text [pk, not null]
+  payload text [not null]
+  featureCursor text [not null, default: '']
+}
+
+table facebookDeletionRequest {
+  confirmationCodeHash text [pk, not null]
+  completedAt integer [not null]
 }
 
 table feature {
+  localLocationBrands text
   id text [pk, not null]
   organisationId text [not null]
   projectId text [not null]
   layerId text [not null]
   contributorId text
   geometry text [not null]
+  spatialIndex text
+  countryId text
+  areaId text
+  districtId text
+  townId text
+  ruralAreaId text
+  macrohoodId text
+  neighbourhoodId text
+  villageId text
+  microhoodId text
+  hamletId text
+  islandId text
+  divisionResolution text
+  mtrStation text
+  mtrExit text
+  mtrDistance integer
+  mtrResolution text
   addressMeta text [default: `{}`]
   isPublished integer [not null, default: 0]
   localIsPublished integer
@@ -28,12 +139,129 @@ table feature {
   publishedAt text
   isPendingReview integer [not null, default: 0]
   isArchived integer [not null, default: 0]
+  isDraft integer [not null, default: 0]
   localIsArchived integer
   isIntangible integer [not null, default: 0]
   isVisitable integer [not null, default: 1]
   visitableAsOf text [default: `(CURRENT_DATE)`]
+  formWriteToken text
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    (countryId, id) [name: 'feature_countryId']
+    (areaId, id) [name: 'feature_areaId']
+    (districtId, id) [name: 'feature_districtId']
+    (townId, id) [name: 'feature_townId']
+    (ruralAreaId, id) [name: 'feature_ruralAreaId']
+    (macrohoodId, id) [name: 'feature_macrohoodId']
+    (neighbourhoodId, id) [name: 'feature_neighbourhoodId']
+    (villageId, id) [name: 'feature_villageId']
+    (microhoodId, id) [name: 'feature_microhoodId']
+    (hamletId, id) [name: 'feature_hamletId']
+    (islandId, id) [name: 'feature_islandId']
+    (isDraft, isPublished, isArchived, layerId, organisationId, projectId, id, isVisitable, isIntangible) [name: 'feature_query_visibility_idx']
+    (layerId, isDraft, isPublished, isArchived, id, organisationId, projectId, isVisitable, isIntangible) [name: 'feature_query_layer_idx']
+    (id, isDraft, isPublished, isArchived, layerId, organisationId, projectId, isVisitable, isIntangible) [name: 'feature_query_id_idx']
+  }
+}
+
+table featureCountCache {
+  key text [pk, not null]
+  revision integer [not null]
+  userRevision integer [not null, default: 0]
+  totalCount integer [not null]
+  facets text [not null]
+  updatedAt integer [not null]
+
+  indexes {
+    (updatedAt, key) [name: 'feature_count_cache_updated_idx']
+  }
+}
+
+table featureCountEntry {
+  featureId text [pk, not null]
+  organisationId text [not null]
+  projectId text [not null]
+  layerId text [not null]
+  isPublished integer [not null]
+  isArchived integer [not null]
+  isDraft integer [not null]
+  isVisitable integer [not null]
+  isIntangible integer [not null]
+  countryId text [not null]
+  areaId text [not null]
+  districtId text [not null]
+  townId text [not null]
+  ruralAreaId text [not null]
+  macrohoodId text [not null]
+  neighbourhoodId text [not null]
+  villageId text [not null]
+  microhoodId text [not null]
+  hamletId text [not null]
+  islandId text [not null]
+}
+
+table featureCountRevision {
+  id integer [pk, not null]
+  revision integer [not null, default: 0]
+}
+
+table featureCountRollup {
+  organisationId text [not null]
+  projectId text [not null]
+  layerId text [not null]
+  isPublished integer [not null]
+  isArchived integer [not null]
+  isDraft integer [not null]
+  isVisitable integer [not null]
+  isIntangible integer [not null]
+  countryId text [not null]
+  areaId text [not null]
+  districtId text [not null]
+  townId text [not null]
+  ruralAreaId text [not null]
+  macrohoodId text [not null]
+  neighbourhoodId text [not null]
+  villageId text [not null]
+  microhoodId text [not null]
+  hamletId text [not null]
+  islandId text [not null]
+  totalCount integer [not null]
+
+  indexes {
+    (organisationId, projectId, layerId, isPublished, isArchived, isDraft, isVisitable, isIntangible, countryId, areaId, districtId, townId, ruralAreaId, macrohoodId, neighbourhoodId, villageId, microhoodId, hamletId, islandId) [pk]
+    (layerId, isDraft, isPublished, isArchived) [name: 'feature_count_rollup_layer_idx']
+    (isDraft, isPublished, isArchived, layerId) [name: 'feature_count_rollup_visibility_idx']
+  }
+}
+
+table featureCountUserRevision {
+  userId text [pk, not null]
+  revision integer [not null, default: 0]
+}
+
+table featureDivisionJob {
+  featureId text [pk, not null]
+  generation integer [not null, default: 1]
+  attempts integer [not null, default: 0]
+  retryAt integer [not null, default: 0]
+  lastError text
+
+  indexes {
+    (retryAt, featureId) [name: 'feature_division_job_retry']
+  }
+}
+
+table featureDivisionMembership {
+  featureId text [not null]
+  divisionId text [not null]
+  selected integer [not null]
+
+  indexes {
+    (featureId, divisionId) [pk]
+    (divisionId, featureId) [name: 'feature_division_membership_division']
+  }
 }
 
 table featureI18n {
@@ -67,14 +295,87 @@ table featureImage {
   }
 }
 
+table featureLocation {
+  featureId text [pk, not null]
+  locationId text [not null]
+  version text [not null, default: 'initial']
+  actorId text
+  factsRevisionId text [not null]
+  locationRevisionId text [not null]
+  acceptedOverrides text [not null, default: `{}`]
+  factsOrganisationRevision text
+  locationOrganisationRevision text
+  occupancyRevisionId text
+  addressRevisionId text
+  membershipRevisionIds text [not null, default: `[]`]
+  placementOverrides text [not null, default: `{}`]
+  acceptedGeometry text
+  acceptancePolicy text
+  acceptanceProposalId text
+
+  indexes {
+    
+    (locationId, featureId) [name: 'feature_location_location']
+    
+    
+  }
+}
+
+table featureLocationHistory {
+  id integer [pk, not null, increment]
+  featureId text [not null]
+  version text [not null]
+  previousRevision text
+  action text [not null]
+  locationId text [not null]
+  factsRevisionId text [not null]
+  locationRevisionId text [not null]
+  acceptedOverrides text [not null]
+  actorId text
+  factsOrganisationRevision text
+  locationOrganisationRevision text
+  occupancyRevisionId text
+  addressRevisionId text
+  membershipRevisionIds text [not null, default: `[]`]
+  placementOverrides text [not null, default: `{}`]
+  geometry text
+  policySnapshot text
+  adoptionProposalId text
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    (featureId, id) [name: 'feature_location_history_feature']
+    (featureId, version) [name: 'feature_location_history_revision', unique]
+    
+    
+  }
+}
+
+table featureLocationMembership {
+  featureId text [not null]
+  containerLocationId text [not null]
+  role text [not null]
+  bindingVersion text [not null]
+  occupancyRevisionId text
+  membershipRevisionId text
+
+  indexes {
+    (featureId, containerLocationId, role) [pk]
+  }
+}
+
 table featureProperty {
   featureId text [not null]
   propertyId text [not null]
   propertyValueId text
   value text
+  valueJson text
 
   indexes {
     (featureId, propertyId) [pk]
+    
+    (propertyId, propertyValueId, featureId) [name: 'feature_property_selection_idx']
+    (propertyId, value, featureId) [name: 'feature_property_range_idx']
   }
 }
 
@@ -87,7 +388,32 @@ table featurePropertyI18n {
 
   indexes {
     (featureId, propertyId, locale) [pk]
+    
+  }
+}
 
+table featureSearchDocument {
+  id integer [pk, not null]
+  featureId text [not null]
+  locale text [not null]
+
+  indexes {
+    (featureId, locale) [name: 'feature_search_document_translation_unique', unique]
+    
+  }
+}
+
+table featureSpatial {
+  featureId text [not null]
+  resolution integer [not null]
+  cell text [not null]
+  layerId text [not null]
+  longitude real [not null]
+  latitude real [not null]
+
+  indexes {
+    (featureId, resolution) [pk]
+    (resolution, cell, layerId, featureId) [name: 'featureSpatial_cell_layer_idx']
   }
 }
 
@@ -95,7 +421,13 @@ table hub {
   id text [pk, not null]
   code text [not null, unique]
   domain text [unique]
+  legalContactAddress text
   imageId text
+  isSubscriptionAvailable integer [not null, default: 0]
+  subscriptionService text [default: 'substack']
+  subscriptionId text
+  subscriptionSessionCookie text
+  subscriptionPlacement text [not null, default: `{"hubPanel":false,"topBar":false,"menu":true}`]
   isPublished integer [not null, default: 1]
   isArchived integer [not null, default: 0]
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
@@ -111,6 +443,12 @@ table hubI18n {
   nameShortGen integer [not null, default: 1]
   description text
   descriptionGen integer [not null, default: 1]
+  subscriptionBenefits text
+  subscriptionBenefitsGen integer [not null, default: 0]
+  privacyPolicy text
+  privacyPolicyGen integer [not null, default: 0]
+  termsOfService text
+  termsOfServiceGen integer [not null, default: 0]
 
   indexes {
     (hubId, locale) [pk]
@@ -147,6 +485,20 @@ table hubRole {
   }
 }
 
+table hubUserState {
+  hubId text [not null]
+  userId text [not null]
+  subscriptionPromptDismissed integer [not null, default: 0]
+  subscriptionMember integer [not null, default: 0]
+  hasAgreedToTerms integer [not null, default: 0]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    (hubId, userId) [pk]
+  }
+}
+
 table image {
   id text [pk, not null]
   contributorId text
@@ -154,28 +506,26 @@ table image {
   env text [not null, default: 'local']
   cdnId text
   publicId text [not null]
+  contentHash text
   version integer
-  originalFilename text
-  originalExtension text
-  originalWidth integer
-  originalHeight integer
-  metadata text
-  cameraModel text
-  capturedAt text
-  latitude text
-  longitude text
-  credit text
   presentationMode text [not null, default: 'contain']
   isArchived integer [not null, default: 0]
   localIsArchived integer
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    contentHash [name: 'image_content_hash_idx']
+  }
 }
 
 table layer {
   id text [pk, not null]
   organisationId text [not null]
   projectId text [not null]
+  historicalSourceLayerId text
+  relocationPolicy text
+  relocationPolicyRevision integer [not null, default: 0]
   metadata text
   rank integer [not null, default: 0]
   isDefaultVisible integer [not null, default: 0]
@@ -187,6 +537,10 @@ table layer {
   localIsArchived integer
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    historicalSourceLayerId [name: 'layer_historical_source_idx', unique]
+  }
 }
 
 table layerI18n {
@@ -208,11 +562,329 @@ table layerProperty {
   layerId text [not null]
   propertyId text [not null]
   isVisible integer [not null, default: 1]
-  isUserContributed integer [not null, default: 1]
   isUserContributable integer [not null, default: 1]
 
   indexes {
     (layerId, propertyId) [name: 'layerProperty_layerId_propertyId_idx', unique]
+  }
+}
+
+table location {
+  id text [pk, not null]
+  ssId text [unique]
+  kind text [not null, default: 'unknown']
+  ownerOrganisationId text
+  state text [not null]
+  sourceAvailability text [not null, default: 'current']
+  redirectTargetId text
+  redirect text
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+}
+
+table locationAccessibility {
+  id text [pk, not null]
+  locationId text [not null]
+  previousRevisionId text
+  locationRevisionId text [not null]
+  placementKey text [not null]
+  valuesJson text [not null]
+  actorId text [not null]
+  recordedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+
+  indexes {
+    locationId [name: 'location_accessibility_root', unique]
+    previousRevisionId [name: 'location_accessibility_successor', unique]
+    locationId [name: 'location_accessibility_subject']
+  }
+}
+
+table locationAddress {
+  id text [pk, not null]
+  previousRevisionId text
+  scopeOrganisationId text
+  assertionState text [not null]
+  evidence text [not null]
+  observedAt text
+  verifiedAt text
+  effectiveFrom text
+  effectiveTo text
+  effectiveFromPrecision text
+  effectiveToPrecision text
+  provenance text [not null]
+  actorId text
+  recordedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+  relationshipId text [not null]
+  locationId text [not null]
+  addressRevisionId text [not null]
+  priority integer
+  addressState text [not null]
+}
+
+table locationAdoptionProposal {
+  id text [pk, not null]
+  featureId text [not null]
+  projectId text [not null]
+  locationId text [not null]
+  candidateRevisionId text [not null]
+  associationRevision text [not null]
+  featureModifiedAt text [not null]
+  policyRevision integer [not null]
+  evidence text [not null]
+  organisationRevision text [not null, default: '']
+  factsDecision text
+  locationDecision text
+  occupancyRevisionId text
+  addressRevisionId text
+  layerId text
+  layerPolicyRevision integer
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+
+  indexes {
+    (featureId, projectId, locationId, candidateRevisionId, associationRevision, featureModifiedAt, policyRevision, organisationRevision, occupancyRevisionId, addressRevisionId, layerId, layerPolicyRevision) [name: 'location_adoption_candidate', unique]
+    (projectId, featureId) [name: 'location_adoption_project']
+    
+    
+  }
+}
+
+table locationIdentityHistory {
+  id text [pk, not null]
+  locationId text [not null]
+  previousHistoryId text
+  previousState text [not null]
+  previousSsId text
+  ssId text [not null]
+  sourceRevisionId text [not null]
+  actorId text [not null]
+  reason text [not null]
+  reviewId text
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+
+  indexes {
+    
+    
+    (locationId, createdAt, id) [name: 'location_identity_history_location']
+    previousHistoryId [name: 'location_identity_history_previous', unique]
+    locationId [name: 'location_identity_history_initial', unique]
+    
+    
+    
+    
+  }
+}
+
+table locationIdentityReview {
+  id text [pk, not null]
+  locationId text [not null]
+  ownerOrganisationId text
+  baseline text [not null]
+  projection text [not null]
+  actorId text [not null]
+  mergeReviews text [not null, default: `'[]'`]
+  rejection text
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+
+  indexes {
+    (locationId, createdAt, id) [name: 'location_identity_review_location']
+    
+    
+    
+  }
+}
+
+table locationMembership {
+  id text [pk, not null]
+  previousRevisionId text
+  scopeOrganisationId text
+  assertionState text [not null]
+  evidence text [not null]
+  observedAt text
+  verifiedAt text
+  effectiveFrom text
+  effectiveTo text
+  effectiveFromPrecision text
+  effectiveToPrecision text
+  provenance text [not null]
+  actorId text
+  recordedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+  relationshipId text [not null]
+  childLocationId text [not null]
+  parentLocationId text [not null]
+  membershipState text [not null]
+}
+
+table locationOccupancy {
+  id text [pk, not null]
+  previousRevisionId text
+  scopeOrganisationId text
+  assertionState text [not null]
+  evidence text [not null]
+  observedAt text
+  verifiedAt text
+  effectiveFrom text
+  effectiveTo text
+  effectiveFromPrecision text
+  effectiveToPrecision text
+  provenance text [not null]
+  actorId text
+  recordedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+  relationshipId text [not null]
+  establishmentLocationId text [not null]
+  containerLocationId text
+  addressRevisionId text
+  occupancyState text [not null]
+}
+
+table locationRefresh {
+  id integer [pk, not null]
+  phase text [not null, default: 'idle']
+  accepted text
+  target text
+  runId text
+  checkedMonth text
+  nextOffset integer [not null, default: 0]
+  total integer
+  lease text
+  leaseUntil integer [not null, default: 0]
+  retryAt integer [not null, default: 0]
+  failures integer [not null, default: 0]
+  lastError text
+  scanMode text [not null, default: 'catalogue']
+}
+
+table locationRefreshItem {
+  runId text [not null]
+  locationId text [not null]
+  ssId text
+  sourceOffset integer
+  revisionId text
+  featureCursor text [not null, default: '']
+  outcomes text [not null, default: `{}`]
+  reviewReason text
+  projection text
+  status text [not null, default: 'missing']
+  origin text [not null, default: 'source']
+  organisationId text
+  organisationRevision text
+  actorId text
+
+  indexes {
+    (runId, locationId) [pk]
+    (runId, ssId) [name: 'locationRefreshItem_runId_ssId_unique', unique]
+    (runId, status, locationId) [name: 'location_refresh_item_work']
+  }
+}
+
+table locationRelationshipOperation {
+  id text [pk, not null]
+  scopeOrganisationId text
+  locationId text [not null]
+  rawSource text [not null]
+  recordedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+}
+
+table locationRematchJob {
+  id text [pk, not null]
+  featureId text [not null]
+  projectId text [not null]
+  locationId text [not null]
+  intent text [not null]
+  baseline text [not null]
+  publication text [not null]
+  generation integer [not null]
+  status text [not null, default: 'pending']
+  candidates text
+  candidateCursor integer [not null, default: 0]
+  incomplete integer [not null, default: 1]
+  reason text
+  attempts integer [not null, default: 0]
+  retryAt integer [not null, default: 0]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+
+  indexes {
+    (featureId, intent) [name: 'locationRematchJob_featureId_intent_unique', unique]
+    (generation, status, retryAt, id) [name: 'location_rematch_work']
+  }
+}
+
+table locationRematchReview {
+  reviewId text [pk, not null]
+  jobId text [not null]
+  generation integer [not null]
+  ssId text [not null]
+  evidence text [not null]
+
+  indexes {
+    (jobId, generation, ssId) [name: 'locationRematchReview_jobId_generation_ssId_unique', unique]
+  }
+}
+
+table locationRematchRun {
+  id integer [pk, not null]
+  publication text
+  generation integer [not null, default: 0]
+  cursor text [not null, default: '']
+  scanning integer [not null, default: 0]
+  checkedAt integer [not null, default: 0]
+  lease text
+  leaseUntil integer [not null, default: 0]
+  failures integer [not null, default: 0]
+  retryAt integer [not null, default: 0]
+  lastError text
+}
+
+table locationRevision {
+  id text [pk, not null]
+  locationId text [not null]
+  version integer [not null]
+  origin text [not null]
+  ssId text
+  apiVersion text
+  releaseId text
+  snapshotId text
+  contentHash text [not null]
+  rawSource text [not null]
+  facts text [not null]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    
+    
+    (locationId, id) [name: 'location_revision_identity', unique]
+    (locationId, version) [name: 'location_revision_sequence', unique]
+    
+    
+    
+  }
+}
+
+table locationTransition {
+  id text [pk, not null]
+  previousRevisionId text
+  scopeOrganisationId text
+  assertionState text [not null]
+  evidence text [not null]
+  observedAt text
+  verifiedAt text
+  effectiveFrom text
+  effectiveTo text
+  effectiveFromPrecision text
+  effectiveToPrecision text
+  provenance text [not null]
+  actorId text
+  recordedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`]
+  transitionId text [not null]
+  type text [not null]
+  basis text [not null]
+}
+
+table locationTransitionParticipant {
+  transitionRevisionId text [not null]
+  locationId text [not null]
+  side text [not null]
+
+  indexes {
+    (transitionRevisionId, locationId, side) [pk]
   }
 }
 
@@ -239,7 +911,96 @@ table mapStyles {
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
 }
 
+table messagingAccount {
+  id text [pk, not null]
+  organisationId text [not null]
+  platform text [not null]
+  bridgeAccountId text [not null, unique]
+  externalAccountId text
+  displayName text
+  enabled integer [not null, default: 0]
+  inboxCursor integer [not null, default: 0]
+  archiveCursor integer [not null, default: 0]
+  registeredBy text
+  createdAt integer [not null]
+  updatedAt integer [not null]
+
+  indexes {
+    (organisationId, platform) [name: 'messaging_account_org_platform', unique]
+    (platform, externalAccountId) [name: 'messaging_account_external', unique]
+    
+  }
+}
+
+table messagingConversation {
+  id text [pk, not null]
+  accountId text [not null]
+  chatId text [not null]
+  recipientUserId text
+  displayName text
+  lastMessageAt integer [not null, default: 0]
+  isArchived integer [not null, default: 0]
+  pinnedAt integer
+  archiveSequence integer [not null, default: 0]
+
+  indexes {
+    (accountId, chatId) [name: 'messaging_conversation_native', unique]
+    recipientUserId [name: 'messaging_conversation_recipient']
+    (accountId, isArchived, pinnedAt, lastMessageAt, id) [name: 'messaging_conversation_pins']
+    (accountId, isArchived, lastMessageAt) [name: 'messaging_conversation_archive']
+  }
+}
+
+table messagingMessage {
+  accountId text [not null]
+  chatId text [not null]
+  messageId text [not null]
+  senderId text [not null]
+  sourceSequence integer [not null]
+  timestamp integer [not null]
+  payload text [not null]
+
+  indexes {
+    (accountId, chatId, messageId, senderId) [pk]
+    (accountId, chatId, timestamp) [name: 'messaging_message_history']
+  }
+}
+
+table messagingPhoneLookup {
+  accountId text [not null]
+  userId text [not null]
+  externalAccountId text [not null]
+  telephone text [not null]
+  address text
+  reason text
+  checkedAt integer [not null]
+  expiresAt integer [not null]
+
+  indexes {
+    (accountId, userId) [pk]
+  }
+}
+
+table messagingSend {
+  accountId text [not null]
+  requestId text [not null]
+  actorUserId text
+  recipientUserId text
+  request text [not null]
+  state text [not null]
+  messageId text [not null, default: '']
+  createdAt integer [not null]
+  updatedAt integer [not null]
+
+  indexes {
+    (accountId, requestId) [pk]
+    (accountId, createdAt) [name: 'messaging_send_recent']
+    
+  }
+}
+
 table organisation {
+  settings text [not null, default: `{}`]
   id text [pk, not null]
   code text [not null, unique]
   url text
@@ -247,6 +1008,7 @@ table organisation {
   hubId text
   isHubExclusive integer [not null, default: 0]
   isCoreInclusive integer [not null, default: 1]
+  defaultLocationVisibility text [not null, default: 'shared']
   permitUserDetailsEdit integer [not null, default: 0]
   capabilities text [not null, default: `{}`]
   isPublished integer [not null, default: 1]
@@ -272,6 +1034,22 @@ table organisationI18n {
   }
 }
 
+table organisationLocation {
+  id text [pk, not null]
+  organisationId text [not null]
+  locationId text [not null]
+  previousRevisionId text
+  overrides text [not null]
+  provenance text
+  actorId text [not null]
+  createdAt text [not null]
+
+  indexes {
+    (organisationId, locationId) [name: 'organisation_location_root', unique]
+    previousRevisionId [name: 'organisation_location_successor', unique]
+  }
+}
+
 table organisationProperty {
   organisationId text [not null]
   propertyId text [not null]
@@ -286,17 +1064,49 @@ table organisationRole {
   organisationId text [not null]
   userId text [not null]
   role text [not null, default: 'member']
+  grant text [not null, default: `{}`]
 
   indexes {
     (organisationId, userId) [pk]
   }
 }
 
+table organisationUserPolicy {
+  organisationId text [pk, not null]
+  enabled integer [not null, default: 0]
+  hubSignIn integer [not null, default: 0]
+  emailDomain text
+  contribution integer [not null, default: 0]
+  customCard integer [not null, default: 0]
+  revision integer [not null, default: 0]
+}
+
+table passkey {
+  id text [pk, not null]
+  name text
+  publicKey text [not null]
+  userId text [not null]
+  credentialID text [not null]
+  counter integer [not null]
+  deviceType text [not null]
+  backedUp integer [not null]
+  transports text
+  aaguid text
+  createdAt integer
+}
+
 table project {
+  settings text [not null, default: `{}`]
+  flags text [not null, default: `{}`]
+  locationPolicy text
+  locationPolicyRevision integer [not null, default: 0]
   id text [pk, not null]
   organisationId text [not null]
+  useAllInOrgContext integer [not null, default: 0]
   code text [not null, unique]
   imageId text
+  cardStyleCode text
+  markerStyleCode text
   capabilities text [not null, default: `{"manageBakeries":false,"manageVolunteers":false,"manageDropOffs":false}`]
   license text [not null, default: `{"meta":{"allMediaSameRights":true,"attribution":"","isAllRightsReserved":false,"isPublicDomain":false,"history":[]},"media":{"all":{"license":"CC BY-SA / ODC-ODbL","isPublicDomain":false,"isAllRightsReserved":false,"BY":true,"SA":true,"NC":false,"ND":false},"image":{"license":"CC BY-SA","isPublicDomain":false,"isAllRightsReserved":false,"BY":true,"SA":true,"NC":false,"ND":false},"text":{"license":"CC BY-SA","isPublicDomain":false,"isAllRightsReserved":false,"BY":true,"SA":true,"NC":false,"ND":false},"data":{"license":"ODC-ODbL","isPublicDomain":false,"isAllRightsReserved":false,"BY":true,"SA":true,"NC":false,"ND":false}}}`]
   isPublished integer [not null, default: 0]
@@ -318,10 +1128,6 @@ table projectI18n {
   nameShortGen integer [not null, default: 1]
   description text
   descriptionGen integer [not null, default: 1]
-  license text [not null, default: 'Copyright']
-  licenseGen integer [not null, default: 1]
-  attribution text [not null]
-  attributionGen integer [not null, default: 1]
 
   indexes {
     (projectId, locale) [pk]
@@ -370,16 +1176,26 @@ table property {
   scope text [not null, default: 'project']
   type text [not null, default: 'classifier']
   key text [not null]
-  rank integer [not null, default: 0]
+  dataType text [not null, default: 'text']
+  dateResolution text [not null, default: 'day']
+  timeMaxHour integer [not null, default: 24]
+  cardinality text [not null, default: 'one']
+  presentation text [not null, default: 'text']
+  audience text [not null, default: 'public']
   component text [not null, default: 'SelectField']
   min integer
   max integer
-  isUserContributed integer [not null, default: 1]
   isTranslatable integer [not null, default: 1]
   isUserContributable integer [not null, default: 1]
   isDefaultEnabled integer [not null, default: 0]
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    (scope, projectId, key) [name: 'property_scope_projectId_key_idx', unique]
+    (scope, organisationId, key) [name: 'property_scope_organisationId_key_idx', unique]
+    (scope, hubId, key) [name: 'property_scope_hubId_key_idx', unique]
+  }
 }
 
 table propertyI18n {
@@ -427,6 +1243,7 @@ table task {
   featureId text [not null]
   contributorId text [not null]
   reviewerId text
+  isDraft integer [not null, default: 1]
   type text [not null]
   message text
   isReviewed integer [not null, default: 0]
@@ -450,18 +1267,26 @@ table user {
   id text [pk, not null]
   name text
   username text [unique]
-  displayUsername text [unique]
+  displayUsername text
   image text
   attribution text
   email text [unique]
   emailVerified integer [default: 0]
+  telephone text
+  preferredMessagingPlatform text
   isAnonymous integer [default: 0]
   isArchived integer [not null, default: 0]
   locale text [not null, default: 'en']
-  preferences text [not null, default: `'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`]
+  preferences text [not null, default: `'{"fallbackLocales":["en","zh-hant"], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`]
   experimental text [not null, default: `'{"contributorMode":false, "noLabelsMode":false}'`]
   createdAt integer [not null]
   updatedAt integer [not null]
+
+  indexes {
+    username [name: 'user_username_nocase_uidx', unique]
+    telephone [name: 'user_telephone_uidx', unique]
+    
+  }
 }
 
 table userFeature {
@@ -475,19 +1300,51 @@ table userFeature {
 
   indexes {
     (userId, featureId) [pk]
+    (userId, isWishlisted, featureId) [name: 'user_feature_wishlist_idx']
+    (userId, isVisited, featureId) [name: 'user_feature_visited_idx']
   }
 }
 
 table userLayer {
   layerId text [not null]
   userId text [not null]
-  isVisibleOnLoad integer [not null, default: 0]
   hubId text [not null]
   isDefaultVisible integer [not null, default: 0]
 
   indexes {
-    (layerId, userId) [pk]
     (layerId, userId, hubId) [pk]
+  }
+}
+
+table userMessagingIdentity {
+  userId text [not null]
+  platform text [not null]
+  phoneNumber text
+  username text
+  nativeId text
+  sourceTelephone text
+  verifiedAt integer
+  verifiedBy text
+  updatedAt integer [not null]
+
+  indexes {
+    (userId, platform) [pk]
+    (platform, nativeId) [name: 'messaging_identity_native_id', unique]
+    
+    
+    
+  }
+}
+
+table userMessagingIdentityAlias {
+  userId text [not null]
+  platform text [not null]
+  nativeId text [not null]
+
+  indexes {
+    (platform, nativeId) [pk]
+    (userId, platform) [name: 'messaging_identity_alias_user']
+    
   }
 }
 
@@ -500,11 +1357,15 @@ table verification {
   updatedAt integer [not null]
 }
 
+ref: divisionI18n.divisionId > divisionDefinition.id
+
+ref: featureDivisionMembership.featureId > feature.id
+
 ref: featureI18n.featureId > feature.id
 
 ref: featureImage.featureId > feature.id
 
-ref: image.id - featureImage.imageId
+ref: image.id > featureImage.imageId
 
 ref: featurePropertyI18n.(featureId, propertyId) > featureProperty.(featureId, propertyId)
 
@@ -540,6 +1401,10 @@ ref: hubRole.hubId > hub.id
 
 ref: hubRole.userId > user.id
 
+ref: hubUserState.hubId > hub.id
+
+ref: hubUserState.userId > user.id
+
 ref: image.contributorId > user.id
 
 ref: layerI18n.layerId > layer.id
@@ -562,6 +1427,8 @@ ref: organisationProperty.organisationId > organisation.id
 
 ref: organisationProperty.propertyId > property.id
 
+ref: organisation.id - organisationUserPolicy.organisationId
+
 ref: organisation.imageId - image.id
 
 ref: organisation.publisherId - user.id
@@ -571,6 +1438,8 @@ ref: organisation.hubId > hub.id
 ref: organisationRole.userId > user.id
 
 ref: organisationRole.organisationId > organisation.id
+
+ref: passkey.userId > user.id
 
 ref: projectI18n.projectId > project.id
 
@@ -624,6 +1493,6 @@ ref: userFeature.featureId > feature.id
 
 ref: userLayer.userId > user.id
 
-ref: userLayer.layerId - layer.id
+ref: userLayer.layerId > layer.id
 
 ref: userLayer.hubId - hub.id
