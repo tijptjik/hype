@@ -43,6 +43,8 @@ export interface LocaleToolbarProps extends LocaleSelection {
   allowAdd: boolean
   /** Settings edit membership; Profile chips toggle visibility without removing values. */
   mode?: 'visibility' | 'membership'
+  /** Keep compact header languages on one scrollable line. */
+  horizontal?: boolean
   alwaysExpanded?: boolean
   labels?: LocaleControlLabels
   class?: string

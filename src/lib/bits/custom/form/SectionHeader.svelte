@@ -115,6 +115,7 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
         {#snippet trigger()}
           <SectionHeaderPrimitive.Action
             text={visibilityToggleLabel}
+            labelClasses='[[data-fit]:not([data-fit="0"])_&]:hidden!'
             size="sm"
             style="ghost"
             color="light"
@@ -136,15 +137,21 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
       {#if onCollapsableToggle}
         <button
           type="button"
+          aria-label={collapsableToggleLabel}
+          title={collapsableToggleLabel}
           aria-expanded={!isCollapsableCollapsed}
           onclick={handleCollapsableToggle}
           class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
         >
           <CollapsableToggleIcon class="size-4" />
-          <span class="grid">
+          <span data-control-label class="grid">
             <!-- Both labels reserve their intrinsic width so toggling never shifts adjacent controls. -->
-            <span class="invisible col-start-1 row-start-1" aria-hidden="true">{collapsableExpandLabel ?? m.admin__forms_common_expand()}</span>
-            <span class="invisible col-start-1 row-start-1" aria-hidden="true">{collapsableCollapseLabel ?? m.admin__forms_common_collapse()}</span>
+            <span class="invisible col-start-1 row-start-1" aria-hidden="true"
+              >{collapsableExpandLabel ?? m.admin__forms_common_expand()}</span
+            >
+            <span class="invisible col-start-1 row-start-1" aria-hidden="true"
+              >{collapsableCollapseLabel ?? m.admin__forms_common_collapse()}</span
+            >
             <span class="col-start-1 row-start-1">{collapsableToggleLabel}</span>
           </span>
         </button>

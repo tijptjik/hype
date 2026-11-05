@@ -115,6 +115,8 @@ import {
   formSelectionSectionStyles,
 } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
+import { fitSectionHeader } from '#lib/bits/custom/form/fitSectionHeader.js'
+import { responsiveSectionHeaderClasses } from '#lib/bits/custom/form/responsiveSectionHeader.styles.js'
 import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import type { HubOrganisationItem } from '#lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types.js'
 // ADAPTERS
@@ -139,6 +141,7 @@ import ImageIcon from 'virtual:icons/proicons/photo'
 import HubIcon from 'virtual:icons/proicons/building-multiple'
 import RefreshCw from 'virtual:icons/proicons/arrow-sync'
 import Type from 'virtual:icons/proicons/text'
+import PoliciesIcon from 'virtual:icons/proicons/shield-checkmark'
 // ENUMS
 import {
   classifierComponentTypes,
@@ -1796,22 +1799,6 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'policies' }}
     >
       <FormSurface>
-        <SectionHeader
-          title="Policies"
-          description="Configure the privacy policy and terms of service shown for this hub."
-          actions={[
-            {
-              text: 'Regenerate',
-              iconComponent: RefreshCw,
-              hideLabel: false,
-              hideLabelBelow: 0,
-              size: 'sm',
-              style: 'ghost',
-              onClick: onRegeneratePolicies,
-              disabled: !isEditing,
-            },
-          ]}
-        />
         <FormI18nDescriptorProfile
           bind:expanded={multilingualExpanded}
           form={formCtx.form}
@@ -1824,6 +1811,7 @@ $effect(() => {
           stackNames={false}
           stickyFieldHeaders
           stickyToolbar
+          horizontalToolbar
           fieldConfigs={[
             {
               key: 'privacyPolicy',
@@ -1842,6 +1830,33 @@ $effect(() => {
             translateContentField({ source, target, text })}
           onChange={revalidateAfterProgrammaticChange}
         >
+          {#snippet toolbarHeader(toolbar)}
+            <div class={responsiveSectionHeaderClasses} use:fitSectionHeader>
+              <SectionHeader
+                title="Policies"
+                icon={PoliciesIcon}
+                description="Configure the privacy policy and terms of service shown for this hub."
+                showControlLabels
+              >
+                {#snippet right()}
+                  {@render toolbar()}
+                {/snippet}
+                {#snippet afterControls()}
+                  <button
+                    type="button"
+                    aria-label="Regenerate policies"
+                    title="Regenerate policies"
+                    disabled={!isEditing}
+                    onclick={onRegeneratePolicies}
+                    class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
+                  >
+                    <RefreshCw class="size-4" />
+                    <span data-control-label>Regenerate</span>
+                  </button>
+                {/snippet}
+              </SectionHeader>
+            </div>
+          {/snippet}
           {#snippet renderValue(_field, value)}
             <HubPolicyDocumentBody
               html={renderPolicyMarkdown(value)}

@@ -39,6 +39,7 @@ let {
   translate,
   onChange,
   stickyToolbar = false,
+  horizontalToolbar = false,
   stickyFieldHeaders = false,
   showPrimaryLocaleHeader = true,
   localeHeaderPlacement = 'above',
@@ -47,6 +48,7 @@ let {
   fieldConfigs,
   stackNames = true,
   renderValue,
+  toolbarHeader,
 }: {
   form: FormDataUpdaterForm<T>
   fields: Record<string, object>
@@ -62,6 +64,8 @@ let {
   ) => Promise<ProfileProviderResult>
   onChange: () => void
   stickyToolbar?: boolean
+  /** Keep languages in one scrollable row inside a responsive section header. */
+  horizontalToolbar?: boolean
   stickyFieldHeaders?: boolean | ReadonlyArray<DescriptorField>
   showPrimaryLocaleHeader?: boolean
   localeHeaderPlacement?: 'above' | 'gutter'
@@ -69,6 +73,8 @@ let {
   expanded?: boolean
   fieldConfigs?: DescriptorFieldConfig[]
   stackNames?: boolean
+  /** Render the locale controls inside an owning section header. */
+  toolbarHeader?: Snippet<[Snippet]>
   renderValue?: Snippet<[GenAiField, string]>
 } = $props()
 
@@ -164,27 +170,35 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
     bind:offsetHeight={toolbarHeight}
     data-profile-locale-toolbar
   >
-    <SectionHeader
-      title="Descriptions"
-      description="Names and descriptions in each language"
-      icon={DescriptionsIcon}
-      class="grid-cols-1! gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]! [&_.bits-form\_\_section-header-right]:[container-type:normal]! [&_.bits-form\_\_section-header-right]:block [&_.bits-form\_\_section-header-right]:min-w-0"
-    >
-      {#snippet right()}
-        <!-- Descriptor schemas own their locale set; the toolbar controls order and visibility. -->
-        <LocaleToolbar
-          {...displayLocaleState}
-          options={contentLocaleOptions(getLocaleKey())}
-          allowAdd={false}
-          onExpandedChange={value => {
-            expanded = value
-          }}
-          onChange={change => {
-            localeState = { ...localeState, ...change }
-          }}
-        />
-      {/snippet}
-    </SectionHeader>
+    {#snippet localeToolbar()}
+      <!-- Descriptor schemas own their locale set; the toolbar controls order and visibility. -->
+      <LocaleToolbar
+        {...displayLocaleState}
+        horizontal={horizontalToolbar}
+        options={contentLocaleOptions(getLocaleKey())}
+        allowAdd={false}
+        onExpandedChange={value => {
+          expanded = value
+        }}
+        onChange={change => {
+          localeState = { ...localeState, ...change }
+        }}
+      />
+    {/snippet}
+    {#if toolbarHeader}
+      {@render toolbarHeader(localeToolbar)}
+    {:else}
+      <SectionHeader
+        title="Descriptions"
+        description="Names and descriptions in each language"
+        icon={DescriptionsIcon}
+        class="grid-cols-1! gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]! [&_.bits-form\_\_section-header-right]:[container-type:normal]! [&_.bits-form\_\_section-header-right]:block [&_.bits-form\_\_section-header-right]:min-w-0"
+      >
+        {#snippet right()}
+          {@render localeToolbar()}
+        {/snippet}
+      </SectionHeader>
+    {/if}
   </div>
   <FeatureProfileEditor
     {stackNames}

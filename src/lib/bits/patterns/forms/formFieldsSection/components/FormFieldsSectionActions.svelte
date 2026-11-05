@@ -2,7 +2,6 @@
 import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
 // ICONS
 import Trash from 'virtual:icons/proicons/delete'
-import { Button } from '#lib/bits/core/index.js'
 import { m } from '#lib/i18n.js'
 // TYPES
 import type { FormFieldsSectionActionsProps } from '../formFieldsSection.types'
@@ -41,18 +40,24 @@ $effect(() => {
       .filter(Boolean)
       .join(' ')}
   >
-    <Button
-      text={removeMode ? m.moving_each_orangutan_care() : m.upper_caring_falcon_boost()}
-      size="sm"
-      style="ghost"
-      color="light"
-      iconClasses="size-5! [&_svg]:size-5!"
-      iconComponent={Trash}
-      attrs={{
-        'aria-pressed': removeMode,
-      }}
-      onClick={event => toggleRemoveMode(event)}
-      class="inline-flex min-h-10 items-center gap-2 px-3 [&_svg]:size-5"
-    />
+    <button
+      type="button"
+      aria-label={removeMode
+        ? m.moving_each_orangutan_care()
+        : m.upper_caring_falcon_boost()}
+      title={removeMode
+        ? m.moving_each_orangutan_care()
+        : m.upper_caring_falcon_boost()}
+      aria-pressed={removeMode}
+      onclick={toggleRemoveMode}
+      class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
+    >
+      <Trash class="size-4" />
+      <span data-control-label
+        >{removeMode
+          ? m.moving_each_orangutan_care()
+          : m.upper_caring_falcon_boost()}</span
+      >
+    </button>
   </div>
 </EditModeReveal>

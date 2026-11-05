@@ -104,6 +104,13 @@ const fields = $derived(
       label: string
     }>),
 )
+// Policy documents need roughly 720px each after editor controls and the divider.
+const policyColumns = $derived(
+  fields.length === 2 &&
+    fields.every(
+      field => field.key === 'privacyPolicy' || field.key === 'termsOfService',
+    ),
+)
 let fieldHeaderHeights = $state<Partial<Record<Field, number>>>({})
 
 /** Measure each policy heading so locale badges stick below wrapped translation controls.
@@ -176,7 +183,9 @@ function autonym(locale: string): string {
 </script>
 
 <section
-  class="[&_.bits-form\_\_control-wrap]:bg-panel! px-6 pb-6"
+  class="[&_.bits-form\_\_control-wrap]:bg-panel! px-6 pb-6 {policyColumns
+    ? '@container/profile-editor'
+    : ''}"
   data-feature-profile-editor
   aria-busy={loading}
   inert={loading}
@@ -198,9 +207,11 @@ function autonym(locale: string): string {
     </div>
   {/if}
   <div
-    class="grid min-w-0 gap-x-6 gap-y-4 {stackNames
-      ? 'md:grid-cols-3 md:grid-rows-[min-content_1fr]'
-      : `${fields.length > 1 ? 'md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6' : ''} ${fields.length === 3 ? 'md:grid-cols-3' : fields.length === 2 ? 'md:grid-cols-2' : ''}`}"
+    class="grid min-w-0 gap-x-6 gap-y-4 {policyColumns
+      ? '@min-[100rem]/profile-editor:grid-cols-2 @min-[100rem]/profile-editor:[&>section+section]:border-l @min-[100rem]/profile-editor:[&>section+section]:border-border/50 @min-[100rem]/profile-editor:[&>section+section]:pl-6'
+      : stackNames
+        ? 'md:grid-cols-3 md:grid-rows-[min-content_1fr]'
+        : `${fields.length > 1 ? 'md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6' : ''} ${fields.length === 3 ? 'md:grid-cols-3' : fields.length === 2 ? 'md:grid-cols-2' : ''}`}"
   >
     {#each fields as { key: field, label } (field)}
       {@const stickyHeader =

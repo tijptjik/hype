@@ -12,6 +12,7 @@ import LanguagesIcon from 'virtual:icons/lucide/languages'
 import GripIcon from 'virtual:icons/lucide/grip-vertical'
 // COMPONENTS
 import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
+import { localeOverflow } from './localeOverflow'
 // LOCAL
 import LocaleSearch from './LocaleSearch.svelte'
 import { defaultLocaleControlLabels, shortLocaleLabel } from './localeControls.js'
@@ -30,6 +31,7 @@ let {
   allowAdd = false,
   mode = 'visibility',
   alwaysExpanded = false,
+  horizontal = false,
   labels = defaultLocaleControlLabels,
   class: className = '',
 }: LocaleToolbarProps = $props()
@@ -218,6 +220,10 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
       {#snippet child({ props })}
         <button
           {...props}
+          aria-label={mode === 'visibility'
+            ? m.address_neighbourhood_add()
+            : labels.add}
+          title={mode === 'visibility' ? m.address_neighbourhood_add() : labels.add}
           bind:this={addButton}
           type="button"
           onblur={() => (quietAddFocus = false)}
@@ -226,7 +232,10 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
             ? 'outline-none! ring-0!'
             : 'focus-visible:outline-2 focus-visible:outline-primary'}"
         >
-          + {mode === 'visibility' ? m.address_neighbourhood_add() : labels.add}
+          <span aria-hidden="true">+</span>
+          <span data-control-label
+            >{mode === 'visibility' ? m.address_neighbourhood_add() : labels.add}</span
+          >
         </button>
       {/snippet}
     </Popover.Trigger>
@@ -260,9 +269,11 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
   class={`group/locale-toolbar min-w-0 ${className}`}
 >
   <div
-    class={alwaysExpanded
-      ? 'min-w-0'
-      : 'flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 sm:flex-nowrap'}
+    class={horizontal
+      ? 'flex min-h-10 min-w-0 items-center gap-2'
+      : alwaysExpanded
+        ? 'min-w-0'
+        : 'flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 sm:flex-nowrap'}
   >
     {#if isExpanded}
       <div
@@ -270,13 +281,23 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
         transition:revealLocales
         inert={!isExpanded}
         aria-hidden={!isExpanded}
-        class={alwaysExpanded
-          ? 'min-w-0'
-          : 'order-2 min-w-0 basis-full sm:order-none sm:flex-1 sm:basis-auto'}
+        class={horizontal
+          ? 'max-w-96 min-w-0 flex-1'
+          : alwaysExpanded
+            ? 'min-w-0'
+            : 'order-2 min-w-0 basis-full sm:order-none sm:flex-1 sm:basis-auto'}
       >
-        <div class="min-w-0 overflow-hidden">
+        <div
+          use:localeOverflow={horizontal}
+          class={horizontal
+            ? 'min-w-0 [scrollbar-width:thin] overflow-x-auto overscroll-x-contain'
+            : 'min-w-0 overflow-hidden'}
+          data-locale-scroll={horizontal || undefined}
+        >
           <div
-            class="flex min-w-0 flex-wrap items-center {alwaysExpanded
+            class="flex min-w-0 {horizontal
+              ? 'w-max flex-nowrap'
+              : 'flex-wrap'} items-center {alwaysExpanded
               ? 'justify-start'
               : 'justify-end'} gap-1.5 p-0.5"
           >
@@ -303,7 +324,9 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
               onfinalize={finalizeOrder}
               role="group"
               aria-label={labels.multilingual}
-              class="flex min-w-0 flex-wrap items-center {alwaysExpanded
+              class="flex min-w-0 {horizontal
+                ? 'w-max flex-nowrap'
+                : 'flex-wrap'} items-center {alwaysExpanded
                 ? 'justify-start'
                 : 'justify-end'} gap-1.5"
               data-locale-dnd-zone
@@ -382,6 +405,8 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
     {#if !alwaysExpanded}
       <button
         type="button"
+        aria-label={labels.multilingual}
+        title={labels.multilingual}
         aria-expanded={expanded}
         aria-controls={`${id}-strip`}
         {disabled}
@@ -391,7 +416,8 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
         }}
         class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
       >
-        <LanguagesIcon class="size-4" />{labels.multilingual}
+        <LanguagesIcon class="size-4" />
+        <span data-control-label>{labels.multilingual}</span>
       </button>
     {/if}
   </div>

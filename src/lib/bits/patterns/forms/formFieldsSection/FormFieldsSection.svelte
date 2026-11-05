@@ -12,6 +12,8 @@ import { Button } from '#lib/bits/core/index.js'
 import Header from '#lib/bits/custom/header/Header.svelte'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
 import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions'
+import { fitSectionHeader } from '#lib/bits/custom/form/fitSectionHeader.js'
+import { responsiveSectionHeaderClasses } from '#lib/bits/custom/form/responsiveSectionHeader.styles.js'
 // STYLES
 import {
   getHeaderActionClasses,
@@ -257,83 +259,86 @@ $effect(() => {
   />
 {:else}
   <section class={`${rootClass} flex min-h-0 flex-1 flex-col`}>
-    <SectionHeader
-      class="[&_.bits-form\_\_section-header-right]:flex-nowrap! [&_.bits-form\_\_section-header-right]:overflow-x-auto"
-      {icon}
-      {title}
-      showControlLabels={true}
-      description={description ?? ''}
-      onCollapsableToggle={hasOptimisticItems ? onCollapsableToggle : undefined}
-      isCollapsableCollapsed={isCollapsedAll}
-      {onVisibilityToggle}
-      {isVisibilityOn}
-      {visibilityOnLabel}
-      {visibilityOffLabel}
-    >
-      {#snippet left()}
-        <div class="flex min-w-0 items-center gap-4">
-          <Header
-            text={title}
-            {icon}
-            description={description ?? ''}
-            size="sm"
-            class="bits-form__section-header-heading w-auto! min-w-0"
-          />
-          <EditModeReveal visible={isEditing && canEdit && !isLoading} reserveSpace>
-            <Button
-              text="New"
-              iconComponent={Plus}
-              color="neutral"
-              style="ghost"
-              labelClasses={HEADER_BUTTON_LABEL_CLASSES}
-              class={getHeaderActionClasses(`${HEADER_NEW_BUTTON_CLASSES} shrink-0`)}
-              disabled={removeMode || (disableEmptyAdd && !hasOptimisticItems)}
-              onClick={onAdd}
+    <!-- Keep section controls available within the owning facet scrollport. -->
+    <div class={responsiveSectionHeaderClasses} use:fitSectionHeader>
+      <SectionHeader
+        {icon}
+        {title}
+        showControlLabels={true}
+        description={description ?? ''}
+        onCollapsableToggle={hasOptimisticItems ? onCollapsableToggle : undefined}
+        isCollapsableCollapsed={isCollapsedAll}
+        {onVisibilityToggle}
+        {isVisibilityOn}
+        {visibilityOnLabel}
+        {visibilityOffLabel}
+      >
+        {#snippet left()}
+          <div class="flex min-w-0 items-center gap-4">
+            <Header
+              text={title}
+              {icon}
+              description={description ?? ''}
+              size="sm"
+              class="bits-form__section-header-heading w-auto! min-w-0"
             />
-          </EditModeReveal>
-        </div>
-      {/snippet}
-      {#if hasIssues}
-        {#snippet center()}
-          <SectionHeaderPrimitive.Issues {issues} />
-        {/snippet}
-      {/if}
-      {#snippet right()}
-        {#if showHeaderActions}
-          {#if card}
-            <LocaleToolbar
-              options={localeOptions}
-              allowAdd={isEditing && canEdit}
-              selectedLocales={locales}
-              {visibleLocales}
-              expanded={multilingual}
-              class="min-w-0 grow basis-1/2 sm:grow-0 sm:basis-auto"
-              onExpandedChange={expanded => {
-                triggerFlipLock()
-                multilingual = expanded
-              }}
-              onChange={changeLocales}
-            />
-          {/if}
-        {/if}
-      {/snippet}
-      {#snippet afterControls()}
-        {#if showHeaderActions}
-          <div class="bits-form__section-header-actions">
-            <FormFieldsSectionPrimitive.Actions
-              actions={{
-                ...actions,
-                add: onAdd,
-              }}
-              {isEditing}
-              {removeMode}
-              {onRemoveModeChange}
-              itemCount={items.length}
-            />
+            <EditModeReveal visible={isEditing && canEdit && !isLoading} reserveSpace>
+              <Button
+                text="New"
+                iconComponent={Plus}
+                color="neutral"
+                style="ghost"
+                labelClasses={`${HEADER_BUTTON_LABEL_CLASSES} [[data-fit]:not([data-fit="0"])_&]:hidden!`}
+                class={getHeaderActionClasses(`${HEADER_NEW_BUTTON_CLASSES} shrink-0`)}
+                disabled={removeMode || (disableEmptyAdd && !hasOptimisticItems)}
+                onClick={onAdd}
+              />
+            </EditModeReveal>
           </div>
+        {/snippet}
+        {#if hasIssues}
+          {#snippet center()}
+            <SectionHeaderPrimitive.Issues {issues} />
+          {/snippet}
         {/if}
-      {/snippet}
-    </SectionHeader>
+        {#snippet right()}
+          {#if showHeaderActions}
+            {#if card}
+              <LocaleToolbar
+                horizontal
+                options={localeOptions}
+                allowAdd={isEditing && canEdit}
+                selectedLocales={locales}
+                {visibleLocales}
+                expanded={multilingual}
+                class="min-w-0 grow basis-1/2 sm:grow-0 sm:basis-auto"
+                onExpandedChange={expanded => {
+                  triggerFlipLock()
+                  multilingual = expanded
+                }}
+                onChange={changeLocales}
+              />
+            {/if}
+          {/if}
+        {/snippet}
+        {#snippet afterControls()}
+          {#if showHeaderActions}
+            <div class="bits-form__section-header-actions">
+              <FormFieldsSectionPrimitive.Actions
+                actions={{
+                  ...actions,
+                  add: onAdd,
+                }}
+                {isEditing}
+                {removeMode}
+                {onRemoveModeChange}
+                itemCount={items.length}
+              />
+            </div>
+          {/if}
+        {/snippet}
+      </SectionHeader>
+    </div>
 
     <FormFieldsSectionPrimitive.Wrapper
       {items}
