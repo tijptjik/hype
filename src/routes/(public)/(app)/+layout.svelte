@@ -31,6 +31,8 @@ import {
 } from '#lib/client/services/hubSubscription.js'
 import { shouldSkipGlobalKeydown } from '#lib/client/keybindings.js'
 import { toast } from 'svelte-sonner'
+// ANALYTICS
+import { ProductUsageObserver } from '#lib/analytics/clientProductUsage.js'
 // COMPONENTS
 import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
 // I18N
@@ -103,6 +105,18 @@ let navDest = $state('')
 // CONTEXT :: APP
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx()
+
+const usageObserver = new ProductUsageObserver()
+$effect(() => {
+  if (!hub?.id) return
+  const snapshot = {
+    hubId: hub.id,
+    featureId: appCtx.getActiveFeature()?.id ?? null,
+    layers: [...appCtx.view.scope.prisms.layer],
+    projects: [...appCtx.view.scope.prisms.project],
+  }
+  untrack(() => usageObserver.sync(snapshot))
+})
 
 const settingsModel = useSettingsPanelModel(appCtx.view, getThemeModel())
 const filtersShell = usePanelShellModel(appCtx.view, Panel.filters)
@@ -627,7 +641,7 @@ $effect(() => {
         <SettingsPanel model={settingsModel} />
       {:else if settingsModel.open}
         <div
-          class="bits-theme absolute right-0 top-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center bg-panel shadow-xl"
+          class="bits-theme bg-panel absolute top-0 right-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center shadow-xl"
           role="status"
           aria-label={m.resource_loading()}
         >
@@ -636,7 +650,7 @@ $effect(() => {
               <p>{m.bootstrap__error()}</p>
               <button
                 type="button"
-                class="mt-4 rounded-lg bg-base-content px-4 py-2 text-base-100"
+                class="bg-base-content text-base-100 mt-4 rounded-lg px-4 py-2"
                 onclick={() => void loadSettingsPanel().catch(() => {})}
               >
                 {m.bootstrap__retry()}
@@ -656,7 +670,7 @@ $effect(() => {
         />
       {:else if profileShell.open && profileModel.username}
         <div
-          class="bits-theme absolute right-0 top-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center bg-panel shadow-xl"
+          class="bits-theme bg-panel absolute top-0 right-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center shadow-xl"
           role="status"
           aria-label={m.resource_loading()}
         >
@@ -665,7 +679,7 @@ $effect(() => {
               <p>{m.bootstrap__error()}</p>
               <button
                 type="button"
-                class="mt-4 rounded-lg bg-base-content px-4 py-2 text-base-100"
+                class="bg-base-content text-base-100 mt-4 rounded-lg px-4 py-2"
                 onclick={() => void loadProfilePanel().catch(() => {})}
               >
                 {m.bootstrap__retry()}
@@ -680,18 +694,18 @@ $effect(() => {
       <AppMain>
         {#if navigationModel.showingMap && navigationModel.state.phase === 'ready'}
           <div
-            class="pointer-events-auto absolute bottom-40 left-1/2 z-40 flex -translate-x-1/2 gap-2 rounded-xl border border-border bg-panel p-2 shadow-lg"
+            class="border-border bg-panel pointer-events-auto absolute bottom-40 left-1/2 z-40 flex -translate-x-1/2 gap-2 rounded-xl border p-2 shadow-lg"
           >
             <button
               type="button"
-              class="whitespace-nowrap rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-content"
+              class="bg-primary text-primary-content rounded-lg px-4 py-3 text-sm font-medium whitespace-nowrap"
               onclick={() => navigationModel.showDirections()}
             >
               Show directions
             </button>
             <button
               type="button"
-              class="whitespace-nowrap rounded-lg px-3 py-3 text-sm hover:bg-base-content/10"
+              class="hover:bg-base-content/10 rounded-lg px-3 py-3 text-sm whitespace-nowrap"
               onclick={() => navigationModel.close()}
             >
               End route
@@ -712,7 +726,7 @@ $effect(() => {
             {#if appCtx.view.publicationPreview}
               <aside
                 aria-label={m.publication_preview__title()}
-                class="pointer-events-auto mx-auto mt-3 flex w-fit max-w-full items-center gap-3 rounded-full border border-error/40 bg-panel px-3 py-1.5 text-xs text-error shadow-lg"
+                class="border-error/40 bg-panel text-error pointer-events-auto mx-auto mt-3 flex w-fit max-w-full items-center gap-3 rounded-full border px-3 py-1.5 text-xs shadow-lg"
               >
                 <span class="min-w-0 leading-relaxed"
                   >{m.publication_preview__banner()}</span
@@ -720,7 +734,7 @@ $effect(() => {
                 <a
                   href={appCtx.publicationPreviewExitUrl}
                   data-sveltekit-reload
-                  class="shrink-0 rounded-full bg-error/15 px-3 py-1.5 font-semibold text-error transition-colors hover:bg-error/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error"
+                  class="bg-error/15 text-error hover:bg-error/25 focus-visible:outline-error shrink-0 rounded-full px-3 py-1.5 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
                   >{m.publication_preview__exit()}</a
                 >
               </aside>

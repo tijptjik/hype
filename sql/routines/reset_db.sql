@@ -54,7 +54,6 @@ DROP TABLE IF EXISTS mapStyles;
 -- Organisation + hub children
 DROP TABLE IF EXISTS account;
 DROP TABLE IF EXISTS session;
-DROP TABLE IF EXISTS userActivity;
 DROP TABLE IF EXISTS hubI18n;
 DROP TABLE IF EXISTS hubRole;
 DROP TABLE IF EXISTS organisationI18n;

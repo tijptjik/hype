@@ -10,6 +10,7 @@ import { runRemoteQuery } from '#lib/remote/index.js'
 // API
 import {
   getAssetAnalyticsSummary,
+  getProductAnalyticsSummary,
   getPlatformAnalyticsSummary,
 } from '#lib/api/analytics.remote.js'
 // I18N
@@ -17,6 +18,7 @@ import { getLocale } from '#lib/i18n.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // BITS
+import ProductUsageDashboard from '#lib/bits/patterns/analytics/ProductUsageDashboard.svelte'
 import PlatformAnalyticsDashboardSkeleton from '#lib/bits/patterns/analytics/platformAnalyticsDashboard/PlatformAnalyticsDashboardSkeleton.svelte'
 import PlatformAnalyticsDashboard from '#lib/bits/patterns/analytics/platformAnalyticsDashboard/PlatformAnalyticsDashboard.svelte'
 import {
@@ -33,15 +35,17 @@ import RefreshCw from 'virtual:icons/proicons/arrow-sync'
 import Users from 'virtual:icons/proicons/person-multiple'
 // TYPES
 import type { PlatformAnalyticsResult } from '#lib/api/services/platformAnalytics.types.js'
+import type { ProductAnalyticsResult } from '#lib/api/services/productAnalytics.js'
 import type { AssetAnalyticsSummaryResult } from '#lib/api/services/assetAnalytics.types.js'
 
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 
-type AnalyticsFacet = 'views' | 'audience' | 'assets' | 'data'
+type AnalyticsFacet = 'views' | 'audience' | 'assets' | 'data' | 'usage'
 
 const DEFAULT_ANALYTICS_FACET: AnalyticsFacet = 'assets'
 const ANALYTICS_FACETS = [
+  { ref: 'usage', label: 'Usage', icon: ChartColumnIncreasing },
   { ref: 'views', label: 'Views', icon: Globe },
   { ref: 'audience', label: 'Audience', icon: Users },
   { ref: 'assets', label: 'Assets', icon: Image },
@@ -70,6 +74,7 @@ const prismSignature = $derived(
 let analyticsState = $state<AssetAnalyticsSummaryResult | null>(null)
 let analyticsPreviewState = $state<AssetAnalyticsSummaryResult | null>(null)
 let platformState = $state<PlatformAnalyticsResult | null>(null)
+let usageState = $state<ProductAnalyticsResult | null>(null)
 let hostname = $state('')
 let isRefreshing = $state(false)
 let analyticsRequestVersion = 0
@@ -235,9 +240,22 @@ async function runAnalyticsLoad(options?: {
   if (!preservePreview) {
     analyticsState = null
     platformState = null
+    usageState = null
   }
 
   try {
+    if (activeFacet === 'usage') {
+      const query = getProductAnalyticsSummary({
+        meta: { isAdminRequest: true, scope: requestScope },
+      })
+      if (preservePreview) await query.refresh()
+      const result = await runRemoteQuery(query)
+      if (requestVersion !== analyticsRequestVersion || requestScope !== analyticsScope)
+        return
+      usageState = result
+      isRefreshing = false
+      return
+    }
     if (activeFacet !== 'assets') {
       const query = getPlatformAnalyticsSummary({
         facet: activeFacet,
@@ -268,6 +286,7 @@ async function runAnalyticsLoad(options?: {
     const message = formatAnalyticsError(cause)
     analyticsState = { status: 'error', message }
     platformState = { status: 'error', message }
+    usageState = { status: 'error', message }
   }
 
   if (requestVersion === analyticsRequestVersion && requestScope === analyticsScope) {
@@ -361,6 +380,7 @@ $effect(() => {
     analyticsState = null
     analyticsPreviewState = null
     platformState = null
+    usageState = null
     hostname = ''
     isRefreshing = false
   }
@@ -373,7 +393,9 @@ $effect(() => {
 </script>
 
 <section class="bits-theme flex h-full min-h-0 flex-col overflow-y-auto p-3 pb-12">
-  {#if activeFacet === 'assets' ? !analyticsState : !platformState}
+  {#if activeFacet === 'usage'}
+    <ProductUsageDashboard state={usageState} />
+  {:else if activeFacet === 'assets' ? !analyticsState : !platformState}
     <div in:fade={{ duration: 180 }} out:fade={{ duration: 140 }}>
       {#if activeFacet === 'assets'}
         <AssetAnalyticsDashboardSkeleton />

@@ -463,12 +463,6 @@ table user {
   updatedAt integer [not null]
 }
 
-table userActivity {
-  userId text [pk, not null]
-  loginCount integer [default: `0`]
-  lastLogin text [default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
-}
-
 table userFeature {
   userId text [not null]
   featureId text [not null]

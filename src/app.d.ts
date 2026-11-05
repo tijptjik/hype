@@ -5,6 +5,7 @@ import type { AssetRenderJob, MapRenderJob } from '#lib/map/renders/render.types
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type {
   D1Database,
+  AnalyticsEngineDataset,
   Fetcher,
   RateLimit,
   Queue,
@@ -47,6 +48,9 @@ declare global {
         ENVIRONMENT: string
         NODE_ENV: string
         // CLOUDFLARE BINDINGS
+        PRODUCT_USAGE?: AnalyticsEngineDataset
+        PRODUCT_USAGE_DATASET?: string
+        PRODUCT_USAGE_READ_TOKEN?: string
         DB: D1Database
         ASSETS: Fetcher
         ROUTING_SERVICE?: Fetcher

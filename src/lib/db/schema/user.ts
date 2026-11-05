@@ -27,7 +27,7 @@ import { SupportedLocales } from '../../enums'
  * @remarks
  * - Stores basic user information (name, email, etc.)
  * - Contains user preferences for language and experimental features
- * - Links to user activity and roles in organizations/projects
+ * - Links to saved features, layer preferences and roles in organizations/projects
  */
 export const user = sqliteTable(
   'user',
@@ -134,23 +134,6 @@ export const breadlineImportIdentity = sqliteTable('breadlineImportIdentity', {
   name: text('name'),
   // Legacy subjects are evidence; only auto-claimed portable Google IDs become accounts.
   sourceUid: text('sourceUid'),
-})
-
-/**
- * User activity tracking
- * @remarks
- * Tracks user activity metrics such as login count and last login timestamp
- */
-export const userActivity = sqliteTable('userActivity', {
-  userId: text('userId')
-    .primaryKey()
-    .references(() => user.id, { onUpdate: 'cascade', onDelete: 'cascade' }),
-  loginCount: integer('loginCount')
-    .default(sql`0`)
-    .$onUpdateFn(() => sql`login_count + 1`),
-  lastLogin: text('lastLogin')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString()),
 })
 
 /* ============================================================================

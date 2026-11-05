@@ -6,6 +6,8 @@ import { isMessagingInboxPath } from '#lib/messaging/organisation-selection.js'
 import { getMessagingOrganisations } from '#lib/api/messaging.remote.js'
 // UI
 import { toast } from 'svelte-sonner'
+// ANALYTICS
+import { trackClientProductUsage } from '#lib/analytics/clientProductUsage.js'
 // LIB
 import { ADMIN_PATH } from '#lib/constants.js'
 // I18N
@@ -153,6 +155,7 @@ export function useResourcePanelModel(
       return
     }
     if (type === 'organisation') {
+      trackClientProductUsage({ event: 'organisation.click', entityId: id })
       if (app.scope.isOrganisationDefaultLayersActive(id))
         await app.scope.deactivateOrganisationLayers(id)
       else await app.scope.addOrganisationDefaultLayers(id)

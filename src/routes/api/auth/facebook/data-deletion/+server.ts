@@ -118,11 +118,6 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
           and(eq(schema.verification.value, matchingAccount.userId), canAnonymize),
         ),
       db
-        .delete(schema.userActivity)
-        .where(
-          and(eq(schema.userActivity.userId, matchingAccount.userId), canAnonymize),
-        ),
-      db
         .delete(schema.userFeature)
         .where(
           and(eq(schema.userFeature.userId, matchingAccount.userId), canAnonymize),

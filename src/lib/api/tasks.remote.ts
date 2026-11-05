@@ -5,6 +5,8 @@ import { error } from '@sveltejs/kit'
 import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
 import { and, eq } from 'drizzle-orm'
+// ANALYTICS
+import { recordTaskContribution } from '#lib/analytics/productUsage.server.js'
 // API
 import { scheduleFeatureMtr } from '#lib/api/services/feature-mtr.js'
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
@@ -632,9 +634,11 @@ export const finalizeTaskDraft = guardedCommand(
       if (!finalized) {
         throw error(409, 'STALE_TASK_DRAFT')
       }
+      recordTaskContribution(ctx.event.locals, draftTask)
     } else {
       const finalizedTask = await commitTaskDraftFinalization(ctx.db, draftTask)
       if (!finalizedTask) throw error(409, 'STALE_TASK_DRAFT')
+      recordTaskContribution(ctx.event.locals, finalizedTask)
       return { data: finalizedTask }
     }
 
@@ -693,6 +697,7 @@ export const submitMissingReport = guardedForm(
       ctx.event.fetch,
     )
 
+    recordTaskContribution(ctx.event.locals, createdTask)
     return { data: createdTask }
   },
 )
@@ -729,6 +734,7 @@ export const submitNewFeature = guardedCommand(
       ctx.event.fetch,
     )
 
+    recordTaskContribution(ctx.event.locals, createdTask)
     return { data: createdTask }
   },
 )
@@ -772,6 +778,7 @@ export const submitNewPhotos = guardedCommand(
       ctx.event.fetch,
     )
 
+    recordTaskContribution(ctx.event.locals, createdTask)
     return { data: createdTask }
   },
 )

@@ -12,6 +12,7 @@ import { getScopedHubAdminIds, isCoreHubAdmin } from '#lib/api/services/authz/hu
 import { resolveAnalyticsScope, toAuthMessage } from '#lib/api/services/authz/index.js'
 import { canAccessAnalytics } from '#lib/api/services/authz/user.js'
 // SERVER
+import { fetchProductAnalytics } from '#lib/api/services/productAnalytics.js'
 import { fetchPlatformAnalytics } from '#lib/api/services/platformAnalytics.js'
 import {
   fetchAssetAnalyticsSummary,
@@ -25,6 +26,7 @@ import {
 // GET
 // - getAssetAnalyticsSummary
 // - getPlatformAnalyticsSummary
+// - getProductAnalyticsSummary
 
 const assetAnalyticsSummaryParamsSchema = z.object({
   scopePrefixes: z.array(z.string()).optional(),
@@ -166,5 +168,29 @@ export const getPlatformAnalyticsSummary = guardedQuery(
         .map(id => id.trim())
         .filter(Boolean),
     })
+  },
+)
+
+/**
+ * Reads global product interactions and contribution totals from production in every deployment.
+ * @param params Explicit admin intent and cache identity.
+ * @param ctx Verified identity and request-local bindings.
+ * @returns A sampling-weighted 30-day snapshot.
+ * @remarks Global product rankings require a super admin or core-hub admin.
+ */
+export const getProductAnalyticsSummary = guardedQuery(
+  z.object({
+    meta: z
+      .object({ isAdminRequest: FormBoolean.optional(), scope: z.string().optional() })
+      .optional(),
+  }),
+  async (_params, ctx) => {
+    if (
+      ctx.user.isAnonymous ||
+      !ctx.isAdminRequest ||
+      !(ctx.user.superAdmin || isCoreHubAdmin(ctx.userRoles))
+    )
+      throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    return fetchProductAnalytics(ctx.event.locals.platform.env)
   },
 )

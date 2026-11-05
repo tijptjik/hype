@@ -69,7 +69,7 @@ echo "📊 Step 0: Record counts before migration..."
 COUNTS_CACHE_FILE="sql/cache/table-counts-cache-${MODE}.txt"
 
 # Define all business tables to count
-BUSINESS_TABLES="hub hubI18n organisation organisationI18n organisationRole project projectI18n projectRole property propertyI18n propertyValue propertyValueI18n layer layerI18n layerProperty feature featureI18n featureImage featureProperty featurePropertyI18n userFeature userLayer task taskImage user account session userActivity verification image"
+BUSINESS_TABLES="hub hubI18n organisation organisationI18n organisationRole project projectI18n projectRole property propertyI18n propertyValue propertyValueI18n layer layerI18n layerProperty feature featureI18n featureImage featureProperty featurePropertyI18n userFeature userLayer task taskImage user account session verification image"
 
 if [[ -f "$COUNTS_CACHE_FILE" ]]; then
     echo "Using existing table count cache..."
@@ -200,7 +200,6 @@ DELETE FROM userLayer;
 DELETE FROM taskImage;
 DELETE FROM organisationRole;
 DELETE FROM projectRole;
-DELETE FROM userActivity;
 DELETE FROM session;
 DELETE FROM verification;
 DELETE FROM feature;
@@ -443,7 +442,7 @@ for table_name in table_inserts:
 # Define dependency order
 dependency_order = [
     'd1_migrations', 'hub', 'user', 'image', 'verification',
-    'account', 'session', 'userActivity', 'hubI18n', 'organisation',
+    'account', 'session', 'hubI18n', 'organisation',
     'organisationI18n', 'organisationRole', 'project', 'projectI18n', 
     'projectRole', 'property', 'propertyI18n', 'propertyValue', 
     'propertyValueI18n', 'layer', 'layerI18n', 'layerProperty',

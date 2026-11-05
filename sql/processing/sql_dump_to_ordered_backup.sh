@@ -36,7 +36,6 @@ TABLES=(
     # Level 1: Depends on user/hub
     "account"
     "session"
-    "userActivity"
     "hubI18n"
     "organisation"
     
@@ -218,7 +217,7 @@ echo "Generating reordered output..."
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 1: DEPENDS ON LEVEL 0"
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
-    level1_tables=("account" "session" "userActivity" "hubI18n" "organisation" "organisationI18n" "organisationRole")
+    level1_tables=("account" "session" "hubI18n" "organisation" "organisationI18n" "organisationRole")
     for table in "${level1_tables[@]}"; do
         if grep -q "^$table:" "$TEMP_DIR/creates.sql" 2>/dev/null; then
             echo "-- $table"

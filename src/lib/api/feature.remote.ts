@@ -14,6 +14,8 @@ import {
 import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
+// ANALYTICS
+import { recordContribution } from '#lib/analytics/productUsage.server.js'
 // I18N
 import { getLocale } from '#lib/i18n.js'
 // UTILS
@@ -600,6 +602,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       properties: submittedProperties,
     })
 
+    if (!created.isDraft)
+      recordContribution(ctx.event.locals, 'contribution.new_feature', created.id)
     scheduleFeatureMtr(ctx.event.locals.platform, created.id)
     return toCreatedResponseShape(created)
   }
@@ -797,6 +801,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   if (linkedSave.status === 'review')
     invalid(issue(`Location-linked feature requires review: ${linkedSave.reason}`))
   if (linkedSave.status === 'saved') {
+    if (!linkedSave.feature.isDraft)
+      recordContribution(ctx.event.locals, 'contribution.edit', linkedSave.feature.id)
     if (linkedSave.geometryChanged)
       scheduleFeatureMtr(ctx.event.locals.platform, linkedSave.feature.id)
     return toCreatedResponseShape(linkedSave.feature)
@@ -806,6 +812,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
   )
 
+  if (!persisted.isDraft)
+    recordContribution(ctx.event.locals, 'contribution.edit', persisted.id)
   if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, persisted.id)
   return toCreatedResponseShape(persisted)
 })

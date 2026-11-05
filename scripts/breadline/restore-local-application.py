@@ -20,7 +20,7 @@ APPLICATION_TABLES = [
     'featureSearchDocument', 'featureCountEntry', 'featureCountRollup',
 ]
 IDENTITY_TABLES = [
-    'account', 'session', 'verification', 'passkey', 'userActivity',
+    'account', 'session', 'verification', 'passkey',
     'breadlineImportUser', 'breadlineImportIdentity',
 ]
 

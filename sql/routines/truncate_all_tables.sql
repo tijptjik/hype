@@ -20,7 +20,6 @@ DELETE FROM mapStyleI18n;
 DELETE FROM projectProperty;
 DELETE FROM hubProperty;
 DELETE FROM organisationProperty;
-DELETE FROM userActivity;
 DELETE FROM session;
 DELETE FROM verification;
 

@@ -12,7 +12,6 @@ let beforeBatch: () => void
 const privateTables = [
   'session',
   'passkey',
-  'userActivity',
   'userFeature',
   'userLayer',
   'hubRole',
