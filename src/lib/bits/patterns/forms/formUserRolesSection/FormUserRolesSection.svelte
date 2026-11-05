@@ -22,6 +22,8 @@ type UserRoleCardViewModel = {
   userId: string
   role: Role
   name: string | null
+  username: string | null
+  displayUsername: string | null
   attribution: string | null
   image: string | null
 }
@@ -83,6 +85,8 @@ function toUserRoleCardViewModel(userRole: FormUserRole): UserRoleCardViewModel 
     userId: userRole.userId,
     role: userRole.role as Role,
     name: userRole.user?.name ?? null,
+    username: userRole.user?.username ?? null,
+    displayUsername: userRole.user?.displayUsername ?? null,
     attribution: userRole.user?.attribution ?? null,
     image: toImageSrc(userRole.user?.image),
   }
@@ -256,7 +260,12 @@ $effect(() => {
             class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}
           >
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
-            <UserCard.Body name={userRole.name} attribution={userRole.attribution} />
+            <UserCard.Body
+              name={userRole.name}
+              username={userRole.username}
+              displayUsername={userRole.displayUsername}
+              attribution={userRole.attribution}
+            />
             <UserCard.Actions
               selectedRole={userRole.role}
               roleOptions={availableRoles}
@@ -293,7 +302,12 @@ $effect(() => {
             class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}
           >
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
-            <UserCard.Body name={userRole.name} attribution={userRole.attribution} />
+            <UserCard.Body
+              name={userRole.name}
+              username={userRole.username}
+              displayUsername={userRole.displayUsername}
+              attribution={userRole.attribution}
+            />
             <UserCard.Actions
               selectedRole={userRole.role}
               roleOptions={availableRoles}

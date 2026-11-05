@@ -14,6 +14,8 @@ export interface UserCardAvatarProps {
 }
 
 export interface UserCardBodyProps {
+  username?: string | null
+  displayUsername?: string | null
   name?: string | null
   attribution?: string | null
   class?: string

@@ -142,6 +142,8 @@ export const UserBase = createSelectSchema(user)
 
 export const UserBasic = UserBase.pick({
   id: true,
+  username: true,
+  displayUsername: true,
   name: true,
   image: true,
   attribution: true,
