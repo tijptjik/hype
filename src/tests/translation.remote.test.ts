@@ -152,10 +152,16 @@ describe('translation.remote', () => {
       remote.translateContentField({
         source: 'en',
         target: 'ja',
-        text: 'a'.repeat(8193),
+        text: 'a'.repeat(16_001),
       }),
     ).rejects.toThrow()
     expect(mockTranslateField).not.toHaveBeenCalled()
+  })
+
+  it('accepts a full-length policy for chunked translation', async () => {
+    const input = { source: 'en', target: 'zhHant', text: 'a'.repeat(16_000) }
+    await remote.translateContentField(input)
+    expect(mockTranslateField).toHaveBeenCalledWith(input, 'eastasia', 'key-1')
   })
 
   it('exposes a single dynamic target result without changing the request', async () => {

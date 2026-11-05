@@ -59,7 +59,7 @@ export const translateContentField = guardedCommand(
   z.object({
     source: ContentTagInput,
     target: ContentTagInput,
-    text: z.string().min(1).max(8192),
+    text: z.string().min(1).max(16_000),
   }),
   async (params, ctx): Promise<ContentTranslationResult> => {
     if (ctx.user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')

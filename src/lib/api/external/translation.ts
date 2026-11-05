@@ -93,10 +93,36 @@ function localeToApiLanguageTag(
   return { from: azureTag(source), to: azureTag(target) }
 }
 
+/** Split a field at paragraph, line or word boundaries within the provider budget.
+ * @param text Original field text, including formatting whitespace.
+ * @returns Ordered chunks whose concatenation exactly reproduces the input.
+ * @remarks Unbroken text is split without separating UTF-16 surrogate pairs.
+ */
+function splitTranslationText(text: string): string[] {
+  const chunks: string[] = []
+  let remaining = text
+  while (remaining.length > 5_000) {
+    const window = remaining.slice(0, 5_000)
+    let boundary = window.lastIndexOf('\n\n')
+    if (boundary < 1) boundary = window.lastIndexOf('\n')
+    if (boundary < 1) boundary = window.search(/\s+\S*$/u)
+    if (boundary < 1) {
+      boundary = 5_000
+      const last = remaining.charCodeAt(boundary - 1)
+      if (last >= 0xd800 && last <= 0xdbff) boundary -= 1
+    }
+    chunks.push(remaining.slice(0, boundary))
+    remaining = remaining.slice(boundary)
+  }
+  if (remaining) chunks.push(remaining)
+  return chunks
+}
+
 /** Translate one field from one tag to another with explicit per-target outcomes.
  * @param input Immutable text and source/target tags.
  * @param region Azure region. @param apiKey Azure translation key.
  * @returns Success, unsupported-pair, or provider-error result; no form mutation.
+ * @remarks Chunks share one bounded provider batch; no partial translation is returned.
  */
 export async function translateContentField(
   input: { text: string; source: string; target: string },
@@ -106,7 +132,23 @@ export async function translateContentField(
   const source = canonicalContentTag(input.source)
   const target = canonicalContentTag(input.target)
   try {
-    const [text] = await translateText([input.text], source, target, region, apiKey)
+    if (!input.text.trim()) throw new TranslationProviderError('Empty translation input')
+    // Keep chunk-boundary whitespace outside the provider so paragraphs survive reassembly.
+    const chunks = splitTranslationText(input.text).map(chunk => ({
+      prefix: chunk.match(/^\s*/u)?.[0] ?? '',
+      text: chunk.trim(),
+      suffix: chunk.trim() ? chunk.match(/\s*$/u)?.[0] ?? '' : '',
+    }))
+    const translated = await translateText(
+      chunks.filter(chunk => chunk.text).map(chunk => chunk.text),
+      source, target, region, apiKey,
+    )
+    if (translated.some(text => !text.trim()))
+      throw new TranslationProviderError('Empty translation response')
+    let index = 0
+    const text = chunks.map(chunk =>
+      chunk.prefix + (chunk.text ? translated[index++].trim() : '') + chunk.suffix,
+    ).join('')
     if (!text.trim()) throw new TranslationProviderError('Empty translation response')
     return { status: 'translated', text, source, target }
   } catch (error) {
