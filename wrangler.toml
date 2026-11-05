@@ -92,7 +92,9 @@ namespace_id = "21301"
 simple = { limit = 30, period = 60 }
 
 [vars]
+CLOUDFLARE_ACCOUNT_ID = "a6eeace4b6d9f8e07ab307964e74d801"
 ENVIRONMENT = "local"
+PRODUCT_USAGE_DATASET = "hype_product_usage_production"
 WHATSOVER_VOICE_URL = "ws://127.0.0.1:8793/voice"
 TELEGRAM_CALLS_URL = "ws://127.0.0.1:8795/calls"
 # Admin operational analytics intentionally monitors production, including local dev.
@@ -135,7 +137,9 @@ namespace_id = "21302"
 simple = { limit = 30, period = 60 }
 
 [env.production.vars]
+CLOUDFLARE_ACCOUNT_ID = "a6eeace4b6d9f8e07ab307964e74d801"
 ENVIRONMENT = "production"
+PRODUCT_USAGE_DATASET = "hype_product_usage_production"
 WHATSOVER_VOICE_URL = "wss://hype-whatsover-voice-prod.hypehk.workers.dev/voice"
 TELEGRAM_CALLS_URL = "wss://hype-telegram-calls-prod.hypehk.workers.dev/calls"
 # Dedicated HUB_DOMAINS_API_TOKEN secret: DNS Read and Workers Scripts Write.
@@ -246,6 +250,7 @@ simple = { limit = 30, period = 60 }
 # Account ID is not a secret; preview needs it for domain registration.
 CLOUDFLARE_ACCOUNT_ID = "a6eeace4b6d9f8e07ab307964e74d801"
 ENVIRONMENT = "preview"
+PRODUCT_USAGE_DATASET = "hype_product_usage_production"
 WHATSOVER_VOICE_URL = "wss://hype-whatsover-voice-preview.hypehk.workers.dev/voice"
 TELEGRAM_CALLS_URL = "wss://hype-telegram-calls-preview.hypehk.workers.dev/calls"
 HUB_DOMAINS_ZONE_ID = "f001c808ff392341b958e89aedad3dfa"
@@ -416,3 +421,10 @@ remote = true
 binding = "TELEGRAM"
 service = "hype-telegram-preview"
 remote = true
+
+# Only production collects events; all dashboards read the production dataset.
+
+
+[[env.production.analytics_engine_datasets]]
+binding = "PRODUCT_USAGE"
+dataset = "hype_product_usage_production"

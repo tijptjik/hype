@@ -69,7 +69,9 @@ namespace_id = "21301"
 simple = { limit = 30, period = 60 }
 
 [vars]
+CLOUDFLARE_ACCOUNT_ID = "a6eeace4b6d9f8e07ab307964e74d801"
 ENVIRONMENT = "local"
+PRODUCT_USAGE_DATASET = "hype_product_usage_production"
 WHATSOVER_VOICE_URL = "ws://127.0.0.1:8793/voice"
 TELEGRAM_CALLS_URL = "ws://127.0.0.1:8795/calls"
 # Admin operational analytics monitors the same production resources as other modes.
@@ -102,3 +104,5 @@ remote = false
 [[services]]
 binding = "MESSAGING_NOTIFICATIONS"
 service = "hype-messaging-notifications-local"
+
+# Only production collects events; all dashboards read the production dataset.
