@@ -185,11 +185,7 @@ const resourceList = usePanelResources(
   () => adminCtx.view.filters.values.layer.text ?? '',
   'index',
 )
-let entities: Layer[] = $derived(
-  adminCtx.view.filters.applyLayerViewFilters(
-    resourceList.rows as unknown as Layer[],
-  ) as Layer[],
-)
+let entities: Layer[] = $derived(resourceList.rows as unknown as Layer[])
 
 function getIndexModel(entity: Layer) {
   return createAdminIndexCardModel({
@@ -207,7 +203,8 @@ $effect(() => {
     ResourceControlBar,
     {
       resource: FirstClassResource.layer,
-      count: entities.length,
+      count: resourceList.totalCount,
+      countLoading: resourceList.countLoading,
       filters,
       sortables,
     },
@@ -227,15 +224,10 @@ $effect(() => {
   resource={FirstClassResource.layer}
   {entities}
 >
-  {#snippet card(
-    entity: Layer,
-  )}
+  {#snippet card(entity: Layer)}
     <IndexCard {...getIndexModel(entity)} />
   {/snippet}
-  {#snippet row(
-    entity: Layer,
-    index,
-  )}
+  {#snippet row(entity: Layer, index)}
     <ResourceRow {index} breadcrumbColumnCount={2} {...getIndexModel(entity)} />
   {/snippet}
 </ResourceIndex>

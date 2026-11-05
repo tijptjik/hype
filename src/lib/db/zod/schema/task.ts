@@ -278,6 +278,14 @@ export const GetTasksSchema = ListQueryParamsSchema.extend({
     .object({
       isDraft: z.boolean().nullable().optional(),
       isReviewed: z.boolean().nullable().optional(),
+      reviewAction: z
+        .enum(Object.values(TaskReviewAction) as [string, ...string[]])
+        .nullable()
+        .optional(),
+      reviewOutcome: z
+        .enum(Object.values(TaskReviewOutcome) as [string, ...string[]])
+        .nullable()
+        .optional(),
       type: z
         .enum(Object.values(TaskType) as [string, ...string[]])
         .nullable()

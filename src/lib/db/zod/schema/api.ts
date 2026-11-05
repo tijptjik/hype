@@ -2,6 +2,8 @@ import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
 // ZOD
 import { z } from 'zod'
+// INDEX CONTRACT
+import { ResourceIndexFiltersSchema } from '#lib/resources/indexQuery.js'
 // PUBLICATION
 import { PublicationPreviewSchema } from '#lib/publication/schema.js'
 
@@ -20,6 +22,8 @@ export const RequestMetaSchema = z
 /* -------- */
 
 export const ListQueryParamsSchema = z.object({
+  indexFilters: ResourceIndexFiltersSchema.optional(),
+  includeCount: z.boolean().optional(),
   conditions: z.record(z.string(), z.unknown()).optional(),
   prisms: z
     .object({

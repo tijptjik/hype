@@ -220,6 +220,8 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     params.sorting,
     {
       q: params.q,
+      indexFilters: params.indexFilters,
+      includeCount: params.includeCount,
       filtersToApply: filtersToApply as QueryParams,
       locale: getLocale(),
     },

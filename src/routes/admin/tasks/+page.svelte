@@ -1,5 +1,6 @@
 <script lang="ts">
 // CONTEXT
+import { useAdminIndexQuery } from '#lib/adapters/useAdminIndexQuery.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // SERVICES
@@ -95,11 +96,8 @@ let selectedImage = $state<ImageCtxEnvelope | null>(null)
 let selectedTask = $state<Task | null>(null)
 let selectedTaskIndex = $state<number>(-1)
 
-let entities: Task[] = $derived(
-  adminCtx.isInitialised
-    ? adminCtx.view.filters.getViewFilteredResource<Task>(FirstClassResource.task)
-    : [],
-)
+const indexQuery = useAdminIndexQuery(adminCtx, 'task')
+let entities: Task[] = $derived(indexQuery.rows as Task[])
 
 // Group tasks by project
 let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
@@ -138,7 +136,8 @@ $effect(() => {
     ResourceControlBar,
     {
       resource: FirstClassResource.task,
-      count: entities.length,
+      count: indexQuery.totalCount,
+      countLoading: indexQuery.countLoading,
       filters,
       sortables,
     },
@@ -258,17 +257,26 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col overflow-hidden text-foreground">
+<div class="text-foreground flex min-h-0 flex-1 flex-col overflow-hidden">
+  {#if indexQuery.failed}
+    <div role="alert" class="px-6 py-2">
+      <span>{m.resource_action_failed()}</span>
+      <button
+        type="button"
+        class="ml-3 underline"
+        onclick={() => void indexQuery.retry()}
+      >
+        {m.bootstrap__retry()}
+      </button>
+    </div>
+  {/if}
   <GroupedResourceIndex
     resource={FirstClassResource.task}
     {groupedEntities}
     bind:listContainer
     bind:scrollIndexByEntityId
   >
-    {#snippet row(
-      entity,
-      index,
-    )}
+    {#snippet row(entity, index)}
       <TaskRow
         {entity}
         {index}

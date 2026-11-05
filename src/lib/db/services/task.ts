@@ -1,3 +1,5 @@
+// INDEX SEARCH
+import { taskIndexSearchCondition } from './taskIndexFilters.js'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 // DRIZZLE
@@ -157,22 +159,8 @@ export const listTasks = async (
     scopedConditions.push(hubFilter)
   }
 
-  if (query?.q) {
-    const search = query.q.toLowerCase()
-    const searchConditions: SQL<unknown>[] = [
-      sql`("task"."message" IS NOT NULL AND lower("task"."message") like ${`%${search}%`})`,
-      sql`EXISTS (
-        SELECT 1 FROM "featureI18n"
-        WHERE "featureI18n"."featureId" = "task"."featureId"
-        AND lower("featureI18n"."title") like ${`%${search}%`}
-      )`,
-    ]
-
-    const combinedSearchCondition = or(...searchConditions)
-    if (combinedSearchCondition) {
-      scopedConditions.push(combinedSearchCondition)
-    }
-  }
+  // Search the same related text for both the stored and live task queues.
+  if (query?.q) scopedConditions.push(taskIndexSearchCondition(query.q))
 
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'

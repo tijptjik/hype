@@ -1,3 +1,9 @@
+// INDEX QUERY
+import {
+  resourceIndexFilterConditions,
+  resourceIndexSearchCondition,
+} from './resourceIndexFilters.js'
+import type { ResourceIndexFilters } from '#lib/resources/indexQuery.js'
 import { gt } from 'drizzle-orm'
 // IDENTITY
 import { nanoid } from 'nanoid'
@@ -320,6 +326,15 @@ const toOrganisationDbRawList = (rows: unknown[]): OrganisationDBRaw[] =>
 /**
  * listOrganisations operation.
  * Used by organisation DB workflows to keep persistence behavior centralized.
+ * @param db Request-local database.
+ * @param withRelations Relations required by the selected response profile.
+ * @param conditions Server-authorized predicates, narrowed by view filters.
+ * @param opts Hub visibility scope.
+ * @param pagination Bounded page and optional continuation.
+ * @param sorting Requested stable ordering.
+ * @param query Literal index search, view filters and optional count request.
+ * @returns Matching rows and the full matching total, or null when counting is omitted.
+ * @remarks Counts exclude cursor predicates and never hydrate resource relations.
  */
 export const listOrganisations = async (
   db: Database,
@@ -335,6 +350,8 @@ export const listOrganisations = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
+    indexFilters?: ResourceIndexFilters
+    includeCount?: boolean
     searchColumns?: string[]
     ignoreHubFilter?: boolean
     filtersToApply?: QueryParams
@@ -342,9 +359,6 @@ export const listOrganisations = async (
   },
 ): Promise<ListResponse<OrganisationDBRaw>> => {
   const startedAt = Date.now()
-  // Keyset pages advance using a unique immutable ID, independently of row offsets.
-  if (pagination?.afterId && pagination.afterValue === undefined)
-    conditions.push(gt(organisation.id, pagination.afterId))
   // Core or non-core hub filtering
   if (!query?.ignoreHubFilter) {
     const hubFilter = getOrganisationHubFilter(db, opts)
@@ -354,7 +368,14 @@ export const listOrganisations = async (
   }
 
   // Search is treated as a specialised filter.
-  if (query?.q) {
+  // Index search is literal and shares its predicate with the exact count.
+  if (query?.indexFilters) {
+    conditions.push(
+      ...(await resourceIndexFilterConditions(db, 'organisation', query.indexFilters)),
+    )
+    if (query.q) conditions.push(resourceIndexSearchCondition('organisation', query.q))
+  }
+  if (query?.q && !query.indexFilters) {
     const search = query.q.toLowerCase()
     const searchColumns = query.searchColumns || ['code', 'name', 'description']
     const searchConditions: SQL<unknown>[] = []
@@ -417,6 +438,10 @@ export const listOrganisations = async (
     }
   }
 
+  const countWhere = and(...conditions)
+  // Keyset pages advance using a unique immutable ID, independently of row offsets.
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    conditions.push(gt(organisation.id, pagination.afterId))
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
@@ -443,18 +468,25 @@ export const listOrganisations = async (
   })
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-  const data = await db.query.organisation.findMany({
+  let data = await db.query.organisation.findMany({
     with: withRelations,
     where: whereClause,
-    limit: pagination?.limit,
+    limit: pagination?.limit == null ? undefined : pagination.limit + 1,
     offset: pagination?.offset,
     orderBy,
   })
-  const countQuery = db.select({ count: sql<number>`count(*)` }).from(organisation)
-  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
-  const totalCount = Number(totalRows[0]?.count || 0)
+  // Count the complete authorized match, never the cursor's remaining suffix.
+  const totalRows =
+    query?.includeCount === false
+      ? null
+      : await db
+          .select({ count: sql<number>`count(*)` })
+          .from(organisation)
+          .where(countWhere)
+  const totalCount = totalRows === null ? null : Number(totalRows[0]?.count ?? 0)
   const offset = pagination?.offset ?? 0
-  const hasMore = offset + data.length < totalCount
+  const hasMore = pagination?.limit != null && data.length > pagination.limit
+  if (pagination?.limit != null) data = data.slice(0, pagination.limit)
   const nextOffset = hasMore ? offset + data.length : null
   const durationMs = Date.now() - startedAt
 

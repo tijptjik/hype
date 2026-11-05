@@ -711,3 +711,43 @@ it.each(['clear', 'release', 'new view'] as const)(
     list.release()
   },
 )
+
+it('keeps exact totals separate from previews and skips continuation counts', async () => {
+  const first = controlledQuery(),
+    second = controlledQuery(),
+    replacement = controlledQuery()
+  const fetcher = vi
+    .fn()
+    .mockReturnValueOnce(first.query)
+    .mockReturnValueOnce(second.query)
+    .mockReturnValueOnce(replacement.query)
+  const list = new ResourceList(fetcher)
+  const initial = list.load({ ...input, includeCount: true })
+  expect(list.totalCount).toBeNull()
+  first.resolve({
+    data: [row('a')],
+    totalCount: 42,
+    nextCursor: { id: 'a', signature: 'scope' },
+  })
+  await initial
+  expect(list.totalCount).toBe(42)
+  const more = list.next()
+  expect(fetcher).toHaveBeenLastCalledWith(
+    expect.objectContaining({ includeCount: false }),
+  )
+  second.resolve({ data: [row('b')], totalCount: null, nextCursor: null })
+  await more
+  expect(list.totalCount).toBe(42)
+  const changed = list.load({
+    ...input,
+    includeCount: true,
+    indexFilters: { hasName: false },
+  })
+  expect(list.rows).toHaveLength(2)
+  expect(list.totalCount).toBeNull()
+  replacement.resolve({ data: [], totalCount: 0, nextCursor: null })
+  await changed
+  expect(list.totalCount).toBe(0)
+  list.clear()
+  expect(list.totalCount).toBeNull()
+})

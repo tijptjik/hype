@@ -247,6 +247,9 @@ export class AdminCtx {
     return [
       FirstClassResource.task,
       this.view.resources.scopeKey,
+      this.view.filters.values.task.text,
+      this.view.filters.viewFilters.task.reviewAction,
+      this.view.filters.viewFilters.task.reviewOutcome,
       this.getTaskListPrisms().organisation,
       this.getTaskListPrisms().project,
       this.getTaskListPrisms().layer,
@@ -261,6 +264,8 @@ export class AdminCtx {
     return [
       'hub',
       this.view.resources.scopeKey,
+      this.view.filters.values.hub.text,
+      JSON.stringify(this.view.filters.viewFilters.hub),
       this.view.filters.sorting.hub.sortBy,
       this.view.filters.sorting.hub.sortOrder,
     ]
@@ -583,7 +588,15 @@ export class AdminCtx {
       const result = toSafeListResponse<Task>(
         (await runRemoteQuery(
           getTasks({
+            q: this.view.filters.values.task.text,
             conditions: {
+              reviewAction: this.view.filters.viewFilters.task.reviewAction || null,
+              reviewOutcome:
+                this.view.filters.viewFilters.task.reviewOutcome == null
+                  ? null
+                  : this.view.filters.viewFilters.task.reviewOutcome
+                    ? 'accepted'
+                    : 'rejected',
               isReviewed:
                 this.view.filters.viewFilters[FirstClassResource.task].isReviewed,
               type: this.view.filters.viewFilters[FirstClassResource.task].type,
@@ -647,6 +660,8 @@ export class AdminCtx {
       const result = toSafeListResponse<Hub>(
         (await runRemoteQuery(
           getHubs({
+            q: this.view.filters.values.hub.text,
+            indexFilters: this.view.filters.viewFilters.hub,
             conditions: this.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },

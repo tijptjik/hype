@@ -1,3 +1,9 @@
+// INDEX QUERY
+import {
+  resourceIndexFilterConditions,
+  resourceIndexSearchCondition,
+} from './resourceIndexFilters.js'
+import type { ResourceIndexFilters } from '#lib/resources/indexQuery.js'
 import {
   ProjectLocationPolicySchema,
   type ProjectLocationPolicy,
@@ -465,6 +471,8 @@ export async function listProjects<
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
+    indexFilters?: ResourceIndexFilters
+    includeCount?: boolean
     searchColumns?: string[]
     ignoreHubFilter?: boolean
     filtersToApply?: QueryParams
@@ -472,9 +480,6 @@ export async function listProjects<
   },
 ): Promise<ListResponse<TRow>> {
   const startedAt = Date.now()
-  // Keyset pages advance using a unique immutable ID, independently of row offsets.
-  if (pagination?.afterId && pagination.afterValue === undefined)
-    conditions.push(gt(project.id, pagination.afterId))
   if (!query?.ignoreHubFilter) {
     const hubFilter = getProjectHubFilter(db, opts)
     if (hubFilter) {
@@ -482,7 +487,14 @@ export async function listProjects<
     }
   }
 
-  if (query?.q) {
+  // Index search is literal and shares its predicate with the exact count.
+  if (query?.indexFilters) {
+    conditions.push(
+      ...(await resourceIndexFilterConditions(db, 'project', query.indexFilters)),
+    )
+    if (query.q) conditions.push(resourceIndexSearchCondition('project', query.q))
+  }
+  if (query?.q && !query.indexFilters) {
     const search = query.q.toLowerCase()
     const searchColumns = query.searchColumns || ['code', 'name', 'description']
     const searchConditions: SQL<unknown>[] = []
@@ -539,6 +551,10 @@ export async function listProjects<
     }
   }
 
+  const countWhere = and(...conditions)
+  // Keyset pages advance using a unique immutable ID, independently of row offsets.
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    conditions.push(gt(project.id, pagination.afterId))
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
@@ -566,20 +582,27 @@ export async function listProjects<
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
   const baseQuery = {
     where: whereClause,
-    limit: pagination?.limit,
+    limit: pagination?.limit == null ? undefined : pagination.limit + 1,
     offset: pagination?.offset,
     orderBy,
   } as const
 
-  const data = (await db.query.project.findMany({
+  let data = (await db.query.project.findMany({
     ...baseQuery,
     with: withRelations,
   })) as unknown as TRow[]
-  const countQuery = db.select({ count: sql<number>`count(*)` }).from(project)
-  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
-  const totalCount = Number(totalRows[0]?.count || 0)
+  // Count the complete authorized match, never the cursor's remaining suffix.
+  const totalRows =
+    query?.includeCount === false
+      ? null
+      : await db
+          .select({ count: sql<number>`count(*)` })
+          .from(project)
+          .where(countWhere)
+  const totalCount = totalRows === null ? null : Number(totalRows[0]?.count ?? 0)
   const offset = pagination?.offset ?? 0
-  const hasMore = offset + data.length < totalCount
+  const hasMore = pagination?.limit != null && data.length > pagination.limit
+  if (pagination?.limit != null) data = data.slice(0, pagination.limit)
   const nextOffset = hasMore ? offset + data.length : null
   const durationMs = Date.now() - startedAt
 

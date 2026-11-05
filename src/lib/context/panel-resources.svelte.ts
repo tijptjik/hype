@@ -2,6 +2,12 @@
 import { getSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 // SVELTE
 import { untrack, onMount, onDestroy } from 'svelte'
+// INDEX SEARCH
+import {
+  matchesResourceIndexSearch,
+  type ResourceIndexFilters,
+} from '#lib/resources/indexQuery.js'
+import type { Resource } from '#lib/types.js'
 // REMOTE
 // TYPES
 import type { ResourceViewCtx } from './resourceView.svelte'
@@ -15,6 +21,7 @@ import type {
  * @param app - Instance-local application context.
  * @param type - Hierarchy resource being rendered.
  * @param search - Reactive search text getter.
+ * @param slot - Panel selection or index filtering/count semantics.
  * @returns Reactive rows, traversal state and retry action.
  */
 export function usePanelResources(
@@ -31,6 +38,11 @@ export function usePanelResources(
     ...(slot === 'index'
       ? {
           profile: 'default' as const,
+          includeCount: true,
+          // Retained query identities must not mutate when a nested toggle changes.
+          indexFilters: JSON.parse(
+            JSON.stringify(app.filters.viewFilters[type]),
+          ) as ResourceIndexFilters,
           sorting: app.filters.sorting[type],
           conditions: {
             isPublished: app.filters.viewFilters[type].isPublished,
@@ -40,6 +52,7 @@ export function usePanelResources(
       : {}),
   })
   const viewKey = $derived(JSON.stringify(input))
+  let submittedKey = $state('')
   const activeResourceId = $derived(navigation.getActiveResourceId())
   const selected = $derived(
     slot === 'index'
@@ -67,6 +80,7 @@ export function usePanelResources(
     const next = input
     const timer = setTimeout(
       () => {
+        submittedKey = viewKey
         void list.load(next).catch(() => {})
       },
       next.q ? 200 : 0,
@@ -126,6 +140,18 @@ export function usePanelResources(
         byId.set(pin.current.id, pin.current)
     return [...byId.values()]
   })
+  const previewRows = $derived.by(() => {
+    if (slot !== 'index') return rows
+    // Settled server membership is authoritative, even if related preview metadata is absent.
+    if (submittedKey === viewKey && list.totalCount !== null) return rows
+    const searched = rows.filter(row => matchesResourceIndexSearch(row, search()))
+    const apply = {
+      organisation: app.filters.applyOrganisationViewFilters,
+      project: app.filters.applyProjectViewFilters,
+      layer: app.filters.applyLayerViewFilters,
+    }[type]
+    return apply(searched as Resource[]) as PanelResource[]
+  })
   $effect(() => {
     const current = rows
     untrack(() => app.retainPanelRows(type, current))
@@ -136,7 +162,13 @@ export function usePanelResources(
       return list.error ?? pins.find(pin => pin.error)?.error
     },
     get rows() {
-      return rows
+      return previewRows
+    },
+    get totalCount(): number | null {
+      return submittedKey === viewKey ? list.totalCount : null
+    },
+    get countLoading(): boolean {
+      return submittedKey !== viewKey || (list.loading && list.totalCount === null)
     },
     get viewKey() {
       return viewKey

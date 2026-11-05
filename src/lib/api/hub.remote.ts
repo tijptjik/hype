@@ -177,6 +177,8 @@ const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => 
     params.sorting,
     {
       q: params.q,
+      indexFilters: params.indexFilters,
+      includeCount: params.includeCount,
       locale: getLocale(),
     },
   )

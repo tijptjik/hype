@@ -28,10 +28,14 @@ export type PanelResource =
 
 export type ResourcePage = {
   data: PanelResource[]
+  /** Null when omitted; absence supports older retained pages. */
+  totalCount?: number | null
   nextCursor: { id: string; signature: string; value?: string | number | null } | null
 }
 
 export type ResourcePageInput = {
+  indexFilters?: import('#lib/resources/indexQuery.js').ResourceIndexFilters
+  includeCount?: boolean
   type: PanelResourceType
   profile?: 'compact' | 'default'
   sorting?: { sortBy: string; sortOrder: 'asc' | 'desc' }

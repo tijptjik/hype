@@ -179,7 +179,8 @@ $effect(() => {
     ResourceControlBar,
     {
       resource: FirstClassResource.organisation,
-      count: entities.length,
+      count: resourceList.totalCount,
+      countLoading: resourceList.countLoading,
       filters,
       sortables,
     },
@@ -197,11 +198,7 @@ const resourceList = usePanelResources(
   () => adminCtx.view.filters.values.organisation.text ?? '',
   'index',
 )
-let entities: Organisation[] = $derived(
-  adminCtx.view.filters.applyOrganisationViewFilters(
-    resourceList.rows as unknown as Organisation[],
-  ) as Organisation[],
-)
+let entities: Organisation[] = $derived(resourceList.rows as unknown as Organisation[])
 
 function getIndexModel(entity: Organisation) {
   return createAdminIndexCardModel({
@@ -222,15 +219,10 @@ function getIndexModel(entity: Organisation) {
   resource={FirstClassResource.organisation}
   {entities}
 >
-  {#snippet card(
-    entity: Organisation,
-  )}
+  {#snippet card(entity: Organisation)}
     <IndexCard {...getIndexModel(entity)} />
   {/snippet}
-  {#snippet row(
-    entity: Organisation,
-    index,
-  )}
+  {#snippet row(entity: Organisation, index)}
     <ResourceRow {index} breadcrumbColumnCount={0} {...getIndexModel(entity)} />
   {/snippet}
 </ResourceIndex>

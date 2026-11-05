@@ -212,3 +212,34 @@ it.each(['account', 'reset', 'dispose'] as const)(
     }
   },
 )
+
+it('includes search, review action and outcome in task query identity and server input', async () => {
+  const view = new ResourceViewCtx(
+    new DivisionCtx(),
+    new AccountState(),
+    new ResponsiveCtx(),
+    undefined,
+    'admin',
+  )
+  const admin = new AdminCtx(view)
+  try {
+    const before = JSON.stringify(admin.tasksQueryKey)
+    view.filters.values.task.text = 'Parent'
+    view.filters.viewFilters.task.reviewAction = 'added-feature'
+    view.filters.viewFilters.task.reviewOutcome = true
+    expect(JSON.stringify(admin.tasksQueryKey)).not.toBe(before)
+    vi.mocked(getTasks).mockResolvedValueOnce({ data: [], totalCount: 0 } as never)
+    await admin.tasksQueryFn()
+    expect(getTasks).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        q: 'Parent',
+        conditions: expect.objectContaining({
+          reviewAction: 'added-feature',
+          reviewOutcome: 'accepted',
+        }),
+      }),
+    )
+  } finally {
+    view.dispose()
+  }
+})

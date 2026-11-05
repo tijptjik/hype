@@ -119,3 +119,35 @@ describe('default map selection boundary', () => {
     })
   })
 })
+
+it('passes view filters to the authorized reader and binds them into cursor ownership', async () => {
+  mocks.projects.mockResolvedValue({
+    data: [{ id: 'last' }],
+    totalCount: 88,
+    hasMore: true,
+  })
+  const input = {
+    type: 'project' as const,
+    meta: { ...meta, isAdminRequest: true },
+    includeCount: true,
+    indexFilters: { hasName: false },
+  }
+  const first = await getResourcePage(input)
+  expect(first.totalCount).toBe(88)
+  expect(mocks.projects).toHaveBeenLastCalledWith(
+    expect.objectContaining({ indexFilters: { hasName: false }, includeCount: true }),
+  )
+  const next = await getResourcePage({
+    ...input,
+    includeCount: false,
+    cursor: first.nextCursor,
+  })
+  expect(next.totalCount).toBeNull()
+  await expect(
+    getResourcePage({
+      ...input,
+      indexFilters: { hasName: true },
+      cursor: first.nextCursor,
+    }),
+  ).rejects.toMatchObject({ status: 400 })
+})

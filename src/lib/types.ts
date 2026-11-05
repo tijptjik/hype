@@ -147,7 +147,8 @@ export type ListResponse<T> = {
   data: T[]
   limit?: number
   offset?: number
-  totalCount: number
+  /** Exact match count; null when explicitly omitted by the query. */
+  totalCount: number | null
   hasMore?: boolean
   nextOffset?: number | null
   sortBy?: string

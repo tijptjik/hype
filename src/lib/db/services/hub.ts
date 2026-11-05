@@ -1,3 +1,9 @@
+// INDEX QUERY
+import {
+  resourceIndexFilterConditions,
+  resourceIndexSearchCondition,
+} from './resourceIndexFilters.js'
+import type { ResourceIndexFilters } from '#lib/resources/indexQuery.js'
 // DRIZZLE
 import { and, eq, exists, isNull, like, or, sql, type SQL } from 'drizzle-orm'
 // IDENTITY
@@ -300,6 +306,14 @@ const toHubDbRawList = (rows: unknown[]): HubDBRaw[] => rows as HubDBRaw[]
 /**
  * listHubs operation.
  * Used by hub DB workflows to keep persistence behavior centralized.
+ * @param db Request-local database.
+ * @param withRelations Relations required by the selected response profile.
+ * @param conditions Server-authorized predicates, narrowed by view filters.
+ * @param pagination Bounded page and optional continuation.
+ * @param sorting Requested stable ordering.
+ * @param query Literal index search, view filters and optional count request.
+ * @returns Matching rows and the full matching total, or null when counting is omitted.
+ * @remarks Counts exclude cursor predicates and never hydrate resource relations.
  */
 export const listHubs = async (
   db: Database,
@@ -309,6 +323,8 @@ export const listHubs = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
+    indexFilters?: ResourceIndexFilters
+    includeCount?: boolean
     searchColumns?: string[]
     filtersToApply?: Record<string, unknown>
     locale?: Locale
@@ -316,7 +332,14 @@ export const listHubs = async (
 ): Promise<ListResponse<HubDBRaw>> => {
   const startedAt = Date.now()
 
-  if (query?.q) {
+  // Index search is literal and shares its predicate with the exact count.
+  if (query?.indexFilters) {
+    conditions.push(
+      ...(await resourceIndexFilterConditions(db, 'hub', query.indexFilters)),
+    )
+    if (query.q) conditions.push(resourceIndexSearchCondition('hub', query.q))
+  }
+  if (query?.q && !query.indexFilters) {
     const search = query.q.toLowerCase()
     const searchColumns = query.searchColumns || [
       'code',
@@ -374,6 +397,7 @@ export const listHubs = async (
     }
   }
 
+  const countWhere = and(...conditions)
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
@@ -395,18 +419,22 @@ export const listHubs = async (
   })
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-  const data = await db.query.hub.findMany({
+  let data = await db.query.hub.findMany({
     with: withRelations,
     where: whereClause,
-    limit: pagination?.limit,
+    limit: pagination?.limit == null ? undefined : pagination.limit + 1,
     offset: pagination?.offset,
     orderBy,
   })
-  const countQuery = db.select({ count: sql<number>`count(*)` }).from(hub)
-  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
-  const totalCount = Number(totalRows[0]?.count || 0)
+  // Count the complete authorized match, never the cursor's remaining suffix.
+  const totalRows =
+    query?.includeCount === false
+      ? null
+      : await db.select({ count: sql<number>`count(*)` }).from(hub).where(countWhere)
+  const totalCount = totalRows === null ? null : Number(totalRows[0]?.count ?? 0)
   const offset = pagination?.offset ?? 0
-  const hasMore = offset + data.length < totalCount
+  const hasMore = pagination?.limit != null && data.length > pagination.limit
+  if (pagination?.limit != null) data = data.slice(0, pagination.limit)
   const nextOffset = hasMore ? offset + data.length : null
 
   return {

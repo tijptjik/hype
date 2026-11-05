@@ -1,3 +1,5 @@
+// INDEX SEARCH
+import { matchesTaskIndexSearch } from '#lib/resources/indexQuery.js'
 // SERVICES
 import { toProjectLicenseFilterCache } from '#lib/client/services/licence.js'
 import type { Cache } from './cache.types.js'
@@ -1530,29 +1532,9 @@ export class ResourceFilters {
    * Matches task free-text queries against task fields and related resource text.
    */
   private matchesTaskTextQuery = (task: Task, query: string): boolean => {
-    const normalizedQuery = query.trim().toLowerCase()
-    if (normalizedQuery === '') return true
-
-    const { feature, project, organisation } = this.getTaskSearchRelations(task)
-    const localeKey = getLocaleKey()
-    const localizedFeatureTitle =
-      feature?.i18n?.[localeKey]?.title ?? feature?.i18n?.en?.title ?? ''
-
-    return (
-      (feature &&
-        (this.textFilter(FirstClassResource.feature, feature, normalizedQuery) ||
-          localizedFeatureTitle.toLowerCase().includes(normalizedQuery))) ||
-      (project &&
-        this.textFilter(FirstClassResource.project, project, normalizedQuery)) ||
-      (organisation &&
-        this.textFilter(
-          FirstClassResource.organisation,
-          organisation,
-          normalizedQuery,
-        )) ||
-      task.message?.toLowerCase().includes(normalizedQuery) ||
-      task.contributor?.name?.toLowerCase().includes(normalizedQuery) ||
-      false
+    return matchesTaskIndexSearch(
+      { ...task, ...this.getTaskSearchRelations(task) },
+      query,
     )
   }
 

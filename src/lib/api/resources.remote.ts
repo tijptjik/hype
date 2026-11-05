@@ -3,6 +3,7 @@ import { getLocaleKey } from '#lib/i18n.js'
 import { error } from '@sveltejs/kit'
 // SCHEMA
 import { z } from 'zod'
+import { ResourceIndexFiltersSchema } from '#lib/resources/indexQuery.js'
 // REMOTE
 import { PublicationPreviewSchema } from '#lib/publication/schema.js'
 import { guardedBatchQuery, guardedQuery } from './server/guarded.js'
@@ -31,6 +32,8 @@ const meta = z.object({
   publicationPreview: PublicationPreviewSchema.optional(),
 })
 const pageInput = z.object({
+  indexFilters: ResourceIndexFiltersSchema.optional(),
+  includeCount: z.boolean().optional(),
   type: resourceType,
   profile: z.enum(['compact', 'default']).optional(),
   sorting: z
@@ -66,7 +69,7 @@ const pageInput = z.object({
 /**
  * Returns one compact page without requiring any ancestors to be loaded on the client.
  * @param input - Authorized view/search scope and optional matching cursor.
- * @returns Up to 25 rows and the next keyset cursor.
+ * @returns Up to 25 rows, the next keyset cursor and an optional exact matching total.
  * @remarks Scope is a client cache discriminator only; underlying queries authorize every read.
  */
 export const getResourcePage = guardedQuery(
@@ -77,6 +80,7 @@ export const getResourcePage = guardedQuery(
       profile: input.profile ?? 'compact',
       sorting: input.sorting,
       conditions: input.conditions,
+      indexFilters: input.indexFilters,
       q: input.q ?? '',
       prisms: input.prisms ?? {},
       meta: input.meta,
@@ -84,6 +88,8 @@ export const getResourcePage = guardedQuery(
     if (input.cursor && input.cursor.signature !== signature)
       throw error(400, 'CURSOR_SCOPE_MISMATCH')
     const params = {
+      indexFilters: input.indexFilters,
+      includeCount: input.includeCount ?? false,
       conditions: {
         isArchived: input.meta.isAdminRequest
           ? (input.conditions?.isArchived ?? null)
@@ -128,6 +134,7 @@ export const getResourcePage = guardedQuery(
 
     return {
       data,
+      totalCount: input.includeCount ? result.totalCount : null,
       nextCursor:
         result.hasMore && data.length
           ? { id: data[data.length - 1].id, signature, value }

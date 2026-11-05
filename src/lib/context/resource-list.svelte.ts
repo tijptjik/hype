@@ -39,6 +39,7 @@ export class ResourceList {
   pages: RemoteQuery<ResourcePage>[] = $state.raw([])
   loading = $state(false)
   error: unknown = $state(null)
+  private countInvalidated = $state(false)
   visibleIds = new Set<string>()
   private readonly pageIdentities = new WeakMap<RemoteQuery<ResourcePage>, string>()
   private generation = 0
@@ -182,6 +183,19 @@ export class ResourceList {
     return !this.denied && Boolean(this.pages.at(-1)?.current?.nextCursor)
   }
 
+  /** Exact first-page match count; previews and failed refreshes never supply a total. */
+  get totalCount(): number | null {
+    if (
+      this.denied ||
+      this.error ||
+      this.countInvalidated ||
+      this.showingFallback ||
+      this.pages[0]?.loading
+    )
+      return null
+    return this.pages[0]?.current?.totalCount ?? null
+  }
+
   /**
    * Activates a view, retaining previously visited native handles for one-minute reuse.
    * @param input - Complete scope and search arguments.
@@ -252,6 +266,7 @@ export class ResourceList {
       this.fallbackPages = []
       this.fallbackOwners.clear()
       this.loading = false
+      this.countInvalidated = false
       return
     }
     // A replacement must earn freshness again, including after a failed forced refresh.
@@ -273,6 +288,7 @@ export class ResourceList {
       // A read started before a mutation cannot renew the invalidated freshness window.
       if (invalidationRevision !== this.invalidationRevision) return
       this.validatedAt = Date.now()
+      this.countInvalidated = false
       this.history.set(key, { pages: this.pages, fetchedAt: this.validatedAt })
       // Keep back-navigation retention bounded independently of the active traversal.
       while (this.history.size > 12) {
@@ -306,7 +322,7 @@ export class ResourceList {
     this.loading = true
     this.error = null
     try {
-      const pageInput = { ...input, cursor }
+      const pageInput = { ...input, cursor, includeCount: false }
       const page = this.query(pageInput)
       this.pageIdentities.set(page, resourceQueryIdentity(pageInput))
       // A previously resolved cursor query may still hold pre-mutation or revoked data.
@@ -398,6 +414,7 @@ export class ResourceList {
 
   /** Invalidates retained membership after mutations, preserving visible native handles. */
   invalidate(): void {
+    this.countInvalidated = true
     this.invalidationRevision++
     this.history.clear()
     this.validatedAt = Number.NEGATIVE_INFINITY
@@ -405,6 +422,7 @@ export class ResourceList {
 
   /** Clears scope-sensitive handles and supersedes pending page requests. */
   clear(): void {
+    this.countInvalidated = false
     this.generation++
     this.activeLoad = undefined
     this.visibleIds.clear()

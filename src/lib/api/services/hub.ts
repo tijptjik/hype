@@ -285,7 +285,7 @@ export const toListResponseShape = <P extends HubProfileType>(params: {
   profile: P
   limit?: number | undefined
   offset?: number
-  totalCount?: number
+  totalCount?: number | null
   hasMore?: boolean
   nextOffset?: number | null
 }): ListResponse<HubListByProfile<P>> => ({
@@ -294,7 +294,7 @@ export const toListResponseShape = <P extends HubProfileType>(params: {
   ) as HubListByProfile<P>[],
   limit: params.limit ?? undefined,
   offset: params.offset ?? 0,
-  totalCount: params.totalCount ?? 0,
+  totalCount: params.totalCount === undefined ? 0 : params.totalCount,
   hasMore: params.hasMore ?? false,
   nextOffset: params.nextOffset,
 })

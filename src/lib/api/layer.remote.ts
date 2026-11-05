@@ -156,7 +156,13 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
     event.locals.hub,
     params.pagination,
     params.sorting,
-    { q: params.q, filtersToApply, locale: getLocale() },
+    {
+      q: params.q,
+      indexFilters: params.indexFilters,
+      includeCount: params.includeCount,
+      filtersToApply,
+      locale: getLocale(),
+    },
   )
 
   return toListResponseShape(result, profile)

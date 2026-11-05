@@ -174,6 +174,8 @@ const getOrganisationsQuery = guardedQuery(
       params.sorting,
       {
         q: params.q,
+        indexFilters: params.indexFilters,
+        includeCount: params.includeCount,
         filtersToApply,
         locale: getLocale(),
       },
@@ -243,6 +245,8 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
       params.sorting,
       {
         q: params.q,
+        indexFilters: params.indexFilters,
+        includeCount: params.includeCount,
         filtersToApply,
         locale: getLocale(),
       },
