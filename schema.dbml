@@ -247,6 +247,7 @@ table organisation {
   hubId text
   isHubExclusive integer [not null, default: 0]
   isCoreInclusive integer [not null, default: 1]
+  permitUserDetailsEdit integer [not null, default: 0]
   capabilities text [not null, default: `{}`]
   isPublished integer [not null, default: 1]
   publishedAt text

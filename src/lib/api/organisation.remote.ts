@@ -489,6 +489,7 @@ export const organisationForm = guardedForm(
             ? { properties: normalizedSubmittedProperties }
             : {}),
         },
+        { actorId: user.id, reason: 'Organisation created' },
       )
 
       return toCreatedResponseShape(created)
@@ -574,6 +575,7 @@ export const organisationForm = guardedForm(
     // Persist main record atomically with optimistic concurrency.
     const persisted = requireValue(
       await updateOrganisationByIdWithConcurrency(db, {
+        actorId: user.id,
         id: current.id,
         updatedAt: updatedAt as string,
         userPolicy: data.userPolicy,
@@ -710,6 +712,7 @@ export const archiveOrganisation = guardedCommand(
     // Persist archive state update.
     const persisted = requireValue(
       await updateOrganisationArchivedStateById(db, {
+        actorId: user.id,
         id: commandOrganisationId,
         state: params.state,
         expectedScope: probed,

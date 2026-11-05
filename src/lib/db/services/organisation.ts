@@ -4,6 +4,12 @@ import {
   resourceIndexSearchCondition,
 } from './resourceIndexFilters.js'
 import type { ResourceIndexFilters } from '#lib/resources/indexQuery.js'
+// ROLE POLICY
+import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
+// ROLE PROVENANCE
+import { prepareOrganisationStaffRoles } from './organisationRoleGrants.js'
+import { prepareOrganisationUserPolicy } from './organisationUserPolicy.js'
+import type { OrganisationUserPolicy } from '#lib/organisation-users/policy.js'
 import { gt } from 'drizzle-orm'
 // IDENTITY
 import { nanoid } from 'nanoid'
@@ -22,10 +28,6 @@ import {
   organisationRole,
   project,
 } from '../schema'
-// ROLE PROVENANCE
-import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
-import { prepareOrganisationStaffRoles } from './organisationRoleGrants.js'
-import { prepareOrganisationUserPolicy } from './organisationUserPolicy.js'
 // SERVICES
 import {
   firstOrNull,
@@ -37,7 +39,13 @@ import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { getOrganisationHubFilter } from './hub'
 import { prepareGuardedReplacement } from './guardedReplacement.js'
 import { preparePropertyCatalog } from './property.js'
+import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
+import {
+  prepareOrganisationRevisionCapture,
+  organisationRevisionTarget,
+} from './organisationRevision.js'
+import type { OrganisationRevisionActor } from './organisationRevision.js'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
@@ -63,7 +71,6 @@ import type {
 } from '#lib/db/zod/schema/organisation.types.js'
 // TYPES
 import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
-import type { OrganisationUserPolicy } from '#lib/organisation-users/policy.js'
 
 type OrganisationProbe = {
   id: string
@@ -195,6 +202,7 @@ function prepareOrganisationRelations(
  * @param db The database instance.
  * @param data The organisation data to insert.
  * @param relations Optional translations and initial role assignments.
+ * @param actor Server-authenticated actor for immutable revision capture after migration.
  * @returns The newly created organisation.
  * @throws {Error} If the organisation creation fails.
  * @remarks Submitted relations commit with the parent; a failure restores all prior rows.
@@ -203,26 +211,39 @@ export const createOrganisation = async (
   db: Database,
   data: OrganisationDBNew,
   relations?: OrganisationRelations,
+  actor?: OrganisationRevisionActor,
 ): Promise<OrganisationDB> => {
-  if (relations) {
+  if (relations || actor) {
+    const ownedRelations = relations ?? {}
     const id = data.id ?? nanoid(12)
     const catalog =
-      relations.properties !== undefined
+      ownedRelations.properties !== undefined
         ? await preparePropertyCatalog(
             db,
-            relations.properties as Parameters<typeof preparePropertyCatalog>[1],
+            ownedRelations.properties as Parameters<typeof preparePropertyCatalog>[1],
             { scope: 'organisation', id },
+            actor,
           )
         : null
+    const capture = actor
+      ? await prepareOrganisationRevisionCapture(
+          db,
+          organisationRevisionTarget(id),
+          actor,
+        )
+      : { before: [], after: [] }
     // Insert the parent first; a conflicting identity must fail before any relation replacement.
-    const [created] = await db.batch([
+    const results = await db.batch([
+      ...capture.before,
       db
         .insert(organisation)
         .values({ ...data, id, isPublished: data.isPublished ?? false })
         .returning(),
-      ...prepareOrganisationRelations(db, id, relations, sql`1`),
+      ...prepareOrganisationRelations(db, id, ownedRelations, sql`1`),
       ...(catalog?.statements ?? []),
-    ])
+      ...capture.after,
+    ] as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]])
+    const created = results[capture.before.length] as OrganisationDB[]
     if (!created[0]) throw new Error('Organisation creation returned no row')
     return created[0] as OrganisationDB
   }
@@ -757,6 +778,7 @@ export const updateOrganisationByIdWithConcurrency = async (
   db: Database,
   params: {
     id: Id
+    actorId?: string
     updatedAt: string
     userPolicy?: OrganisationUserPolicy
     properties?: Array<Record<string, unknown>>
@@ -801,11 +823,61 @@ export const updateOrganisationByIdWithConcurrency = async (
     )
   }
 
+  const ownCapture = params.actorId
+    ? await prepareOrganisationRevisionCapture(
+        db,
+        organisationRevisionTarget(params.id),
+        { actorId: params.actorId, reason: 'Organisation form save' },
+      )
+    : { before: [], after: [] }
+  const actor = params.actorId ? { actorId: params.actorId } : undefined
+  const projects = await prepareAdminResourceRevisionCapture(
+    db,
+    'project',
+    sql`SELECT id FROM project WHERE organisationId=${params.id}`,
+    params.data.capabilities !== undefined ? actor : undefined,
+  )
+  const capture = {
+    before: [...ownCapture.before, ...projects.before],
+    after: [...projects.after, ...ownCapture.after],
+  }
+  if (capture.before.length) {
+    const catalog =
+      params.properties !== undefined
+        ? await preparePropertyCatalog(
+            db,
+            params.properties as Parameters<typeof preparePropertyCatalog>[1],
+            { scope: 'organisation', id: params.id },
+            {
+              actorId: params.actorId!,
+              reason: 'Organisation field definitions updated',
+            },
+          )
+        : null
+    // Capture the complete preimage and final projection in the same guarded form transaction.
+    const statements = [
+      ...capture.before,
+      ...(catalog?.statements ?? []),
+      ...writes,
+      updateCore,
+      ...capture.after,
+    ]
+    const results = await executeRevisionBatch(db, guard, statements)
+    if (!results) return null
+    const rows = results[
+      capture.before.length + (catalog?.statements.length ?? 0) + writes.length
+    ] as { id: string; modifiedAt: string }[]
+    return rows[0] ?? null
+  }
+
   if (params.properties !== undefined) {
     const catalog = await preparePropertyCatalog(
       db,
       params.properties as Parameters<typeof preparePropertyCatalog>[1],
       { scope: 'organisation', id: params.id },
+      params.actorId
+        ? { actorId: params.actorId, reason: 'Organisation field definitions updated' }
+        : undefined,
     )
     // Check the revision inside the batch before any catalog mutation can run.
     const results = await executeRevisionBatch(db, guard, [
@@ -851,6 +923,30 @@ export const updateOrganisationPublishedStateById = async (
     publishChildren?: boolean
   },
 ): Promise<{ id: string; isPublished: boolean } | null> => {
+  const ownCapture = params.publisherId
+    ? await prepareOrganisationRevisionCapture(
+        db,
+        organisationRevisionTarget(params.id),
+        { actorId: params.publisherId, reason: 'Organisation publication' },
+      )
+    : { before: [], after: [] }
+  const actor = params.publisherId ? { actorId: params.publisherId } : undefined
+  const projects = await prepareAdminResourceRevisionCapture(
+    db,
+    'project',
+    sql`SELECT id FROM project WHERE organisationId=${params.id}`,
+    actor,
+  )
+  const layers = await prepareAdminResourceRevisionCapture(
+    db,
+    'layer',
+    sql`SELECT id FROM layer WHERE organisationId=${params.id}`,
+    actor,
+  )
+  const capture = {
+    before: [...ownCapture.before, ...projects.before, ...layers.before],
+    after: [...layers.after, ...projects.after, ...ownCapture.after],
+  }
   const parentUpdate = db
     .update(organisation)
     .set({
@@ -870,6 +966,7 @@ export const updateOrganisationPublishedStateById = async (
     db,
     buildOrganisationCommandScopeGuard(db, params),
     [
+      ...capture.before,
       parentUpdate,
       // A skipped parent write must not commit descendant publication changes.
       prepareRevisionCheck(db, sql`changes() = 1`),
@@ -878,10 +975,12 @@ export const updateOrganisationPublishedStateById = async (
         { kind: 'organisation', id: params.id },
         params,
       ),
+      ...capture.after,
     ],
   )
   return results
-    ? ((results[0] as { id: string; isPublished: boolean }[])[0] ?? null)
+    ? ((results[capture.before.length] as { id: string; isPublished: boolean }[])[0] ??
+        null)
     : null
 }
 
@@ -946,8 +1045,37 @@ function buildOrganisationCommandScopeGuard(
  */
 export const updateOrganisationArchivedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean; expectedScope: { hubId: string | null } },
+  params: {
+    actorId?: string
+    id: Id
+    state: boolean
+    expectedScope: { hubId: string | null }
+  },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
+  const ownCapture = params.actorId
+    ? await prepareOrganisationRevisionCapture(
+        db,
+        organisationRevisionTarget(params.id),
+        { actorId: params.actorId, reason: 'Organisation archive state' },
+      )
+    : { before: [], after: [] }
+  const actor = params.actorId ? { actorId: params.actorId } : undefined
+  const projects = await prepareAdminResourceRevisionCapture(
+    db,
+    'project',
+    sql`SELECT id FROM project WHERE organisationId=${params.id}`,
+    actor,
+  )
+  const layers = await prepareAdminResourceRevisionCapture(
+    db,
+    'layer',
+    sql`SELECT id FROM layer WHERE organisationId=${params.id}`,
+    actor,
+  )
+  const capture = {
+    before: [...ownCapture.before, ...projects.before, ...layers.before],
+    after: [...layers.after, ...projects.after, ...ownCapture.after],
+  }
   const parentUpdate = db
     .update(organisation)
     .set({ isArchived: params.state })
@@ -962,16 +1090,19 @@ export const updateOrganisationArchivedStateById = async (
     db,
     buildOrganisationCommandScopeGuard(db, params),
     [
+      ...capture.before,
       parentUpdate,
       prepareRevisionCheck(db, sql`changes() = 1`),
       ...buildOrganisationArchivedDescendantUpdates(db, {
         organisationId: params.id,
         state: params.state,
       }),
+      ...capture.after,
     ],
   )
   return results
-    ? ((results[0] as { id: string; isArchived: boolean }[])[0] ?? null)
+    ? ((results[capture.before.length] as { id: string; isArchived: boolean }[])[0] ??
+        null)
     : null
 }
 

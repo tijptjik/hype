@@ -567,6 +567,7 @@ describe('layer.remote authz matrix', () => {
         expect.anything(),
         expect.objectContaining({ organisationId: 'org-1', projectId: 'project-1' }),
         { i18n: payload.data.i18n, properties: payload.data.properties },
+        { actorId: 'u-1' },
       )
       expect(mockCreateI18n).not.toHaveBeenCalled()
       expect(mockUpdateProperties).not.toHaveBeenCalled()

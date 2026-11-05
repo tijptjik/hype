@@ -33,7 +33,13 @@ import {
 import { insertMany, insertManyRelated, replaceManyRelated } from '../crud'
 import { prepareGuardedReplacement } from './guardedReplacement.js'
 import { preparePropertyCatalog } from './property.js'
-import { executeRevisionBatch } from './revisionBatch.js'
+import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
+import {
+  prepareOrganisationRevisionCapture,
+  hubOrganisationRevisionTargets,
+} from './organisationRevision.js'
+import type { OrganisationRevisionActor } from './organisationRevision.js'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
@@ -140,7 +146,7 @@ type HubCommandProbe = {
 /** Complete optional hub collections, already authorized by the form handler. */
 type HubRelations = {
   properties?: Array<Record<string, unknown>>
-  i18n?: Record<LocaleKey, HubI18nPartial>
+  i18n?: Record<string, HubI18nPartial>
   userRoles?: Array<{ userId: string; role: string }>
   organisations?: Array<{
     organisationId: string
@@ -211,6 +217,7 @@ function prepareHubRelations(
  * @param db Request database.
  * @param data New hub fields.
  * @param relations Optional complete collections from the authorized form.
+ * @param actor Authenticated actor for hub and organisation assignment history.
  * @returns The persisted hub.
  * @remarks All submitted collections commit with the parent; failure rolls back the entire batch.
  */
@@ -218,26 +225,51 @@ export const createHub = async (
   db: Database,
   data: HubDBNew,
   relations?: HubRelations,
+  actor?: OrganisationRevisionActor,
 ): Promise<HubDB> => {
-  if (relations) {
+  if (relations || actor) {
+    relations ??= {}
     const id = data.id ?? nanoid(12)
+    const ownCapture = await prepareAdminResourceRevisionCapture(
+      db,
+      'hub',
+      sql`SELECT ${id} AS id`,
+      actor,
+    )
     const catalog =
       relations.properties !== undefined
         ? await preparePropertyCatalog(
             db,
             relations.properties as Parameters<typeof preparePropertyCatalog>[1],
             { scope: 'hub', id },
+            actor,
           )
         : null
+    const capture =
+      actor && relations.organisations !== undefined
+        ? await prepareOrganisationRevisionCapture(
+            db,
+            hubOrganisationRevisionTargets(
+              id,
+              relations.organisations.map(row => row.organisationId),
+            ),
+            actor,
+          )
+        : { before: [], after: [] }
     // Parent identity conflicts must fail before any existing assignments can be changed.
-    const [created] = await db.batch([
+    const results = await db.batch([
+      ...ownCapture.before,
+      ...capture.before,
       db
         .insert(hub)
         .values({ ...data, id })
         .returning(),
       ...prepareHubRelations(db, id, relations, sql`1`),
       ...(catalog?.statements ?? []),
-    ])
+      ...capture.after,
+      ...ownCapture.after,
+    ] as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]])
+    const created = results[ownCapture.before.length + capture.before.length] as HubDB[]
     if (!created[0]) throw new Error('Hub creation returned no row')
     return created[0] as HubDB
   }
@@ -254,7 +286,7 @@ export const createHub = async (
  */
 export const createI18n = async (
   db: Database,
-  i18n: Record<LocaleKey, HubI18nNew>,
+  i18n: Record<string, HubI18nNew>,
   hubId: string,
 ): Promise<HubI18nDB[]> => {
   const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
@@ -812,6 +844,7 @@ export const updateHubByIdWithConcurrency = async (
   db: Database,
   params: HubRelations & {
     id: Id
+    actorId?: string
     updatedAt: string
     data: Partial<
       Pick<HubDB, 'code' | 'domain' | 'legalContactAddress' | 'isSubscriptionAvailable'>
@@ -835,31 +868,53 @@ export const updateHubByIdWithConcurrency = async (
   const guard = exists(db.select({ id: hub.id }).from(hub).where(revisionGuard))
   const writes = prepareHubRelations(db, params.id, params, guard)
 
-  if (params.properties !== undefined) {
-    const catalog = await preparePropertyCatalog(
-      db,
-      params.properties as Parameters<typeof preparePropertyCatalog>[1],
-      { scope: 'hub', id: params.id },
-    )
-    // Check the revision inside the batch before any catalog mutation can run.
-    const results = await executeRevisionBatch(db, guard, [
-      catalog.statements[0],
-      ...catalog.statements.slice(1),
-      ...writes,
-      updateCore,
-    ])
-    if (!results) return null
-    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
-    return rows[0] ?? null
-  }
-  if (writes.length) {
-    // Advance the parent token last, after every related mutation checked the same revision.
-    const results = await db.batch([writes[0], ...writes.slice(1), updateCore])
-    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
-    return rows[0] ?? null
-  }
-  const [updated] = await updateCore
-  return updated ?? null
+  const actor = params.actorId ? { actorId: params.actorId } : undefined
+  const ownCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'hub',
+    sql`SELECT ${params.id} AS id`,
+    actor,
+  )
+  const capture =
+    actor && params.organisations !== undefined
+      ? await prepareOrganisationRevisionCapture(
+          db,
+          hubOrganisationRevisionTargets(
+            params.id,
+            params.organisations.map(row => row.organisationId),
+          ),
+          actor,
+        )
+      : { before: [], after: [] }
+  const catalog =
+    params.properties !== undefined
+      ? await preparePropertyCatalog(
+          db,
+          params.properties as Parameters<typeof preparePropertyCatalog>[1],
+          { scope: 'hub', id: params.id },
+          actor,
+        )
+      : null
+  // Check the old revision before catalogue writes; advance the parent token after all relations.
+  // Preserve the hub and each changed organisation assignment in the same guarded transaction.
+  const before = [
+    ...ownCapture.before,
+    ...capture.before,
+    ...(catalog?.statements ?? []),
+    ...writes,
+  ]
+  const results = await executeRevisionBatch(db, guard, [
+    ...before,
+    updateCore,
+    ...(ownCapture.before.length || capture.before.length
+      ? [prepareRevisionCheck(db, sql`changes() = 1`)]
+      : []),
+    ...capture.after,
+    ...ownCapture.after,
+  ])
+  if (!results) return null
+  const rows = results[before.length] as { id: string; modifiedAt: string }[]
+  return rows[0] ?? null
 }
 
 /**
@@ -870,9 +925,19 @@ export const updateHubByIdWithConcurrency = async (
  */
 export const updateHubPublishedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean },
+  params: { id: Id; actorId?: string; state: boolean },
 ): Promise<{ id: string; isPublished: boolean } | null> => {
-  const [updated] = await db
+  const actorId = params.actorId
+  const actor = actorId ? { actorId, reason: 'Hub published state' } : undefined
+  const ownCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'hub',
+    sql`SELECT ${params.id} AS id`,
+    actor,
+  )
+  const capture = ownCapture
+
+  const updateCore = db
     .update(hub)
     .set({ isPublished: params.state })
     .where(eq(hub.id, params.id))
@@ -881,7 +946,15 @@ export const updateHubPublishedStateById = async (
       isPublished: hub.isPublished,
     })
 
-  return updated ?? null
+  // Keep the state and its attribution in one transaction, including no-op detection.
+  const results = await executeRevisionBatch(
+    db,
+    exists(db.select({ id: hub.id }).from(hub).where(eq(hub.id, params.id))),
+    [...capture.before, updateCore, ...capture.after],
+  )
+  if (!results) return null
+  const rows = results[capture.before.length] as { id: string; isPublished: boolean }[]
+  return rows[0] ?? null
 }
 
 /**
@@ -892,9 +965,19 @@ export const updateHubPublishedStateById = async (
  */
 export const updateHubArchivedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean },
+  params: { id: Id; actorId?: string; state: boolean },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
-  const [updated] = await db
+  const actorId = params.actorId
+  const actor = actorId ? { actorId, reason: 'Hub archived state' } : undefined
+  const ownCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'hub',
+    sql`SELECT ${params.id} AS id`,
+    actor,
+  )
+  const capture = ownCapture
+
+  const updateCore = db
     .update(hub)
     .set({ isArchived: params.state })
     .where(eq(hub.id, params.id))
@@ -903,7 +986,15 @@ export const updateHubArchivedStateById = async (
       isArchived: hub.isArchived,
     })
 
-  return updated ?? null
+  // Keep the state and its attribution in one transaction, including no-op detection.
+  const results = await executeRevisionBatch(
+    db,
+    exists(db.select({ id: hub.id }).from(hub).where(eq(hub.id, params.id))),
+    [...capture.before, updateCore, ...capture.after],
+  )
+  if (!results) return null
+  const rows = results[capture.before.length] as { id: string; isArchived: boolean }[]
+  return rows[0] ?? null
 }
 
 /**
@@ -1007,6 +1098,7 @@ export const upsertHubUserState = async (
  * @param db - Database used by the authorized hub workflow.
  * @param hubId - Hub whose assignment set is being replaced.
  * @param nextRows - Complete authorized organisation assignment set.
+ * @param actor - Authenticated editor recorded on organisation history.
  * @returns Nothing after the entire assignment transaction commits.
  * @remarks Missing targets or write failures roll back detachment and all assignments.
  */
@@ -1018,8 +1110,23 @@ export const syncOrganisations = async (
     isCoreInclusive: boolean
     isHubExclusive: boolean
   }>,
+  actor?: OrganisationRevisionActor,
 ): Promise<void> => {
-  await db.batch(prepareHubOrganisations(db, hubId, nextRows, sql`1`))
+  const capture = actor
+    ? await prepareOrganisationRevisionCapture(
+        db,
+        hubOrganisationRevisionTargets(
+          hubId,
+          nextRows.map(row => row.organisationId),
+        ),
+        actor,
+      )
+    : { before: [], after: [] }
+  await db.batch([
+    ...capture.before,
+    ...prepareHubOrganisations(db, hubId, nextRows, sql`1`),
+    ...capture.after,
+  ] as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]])
 }
 
 /**

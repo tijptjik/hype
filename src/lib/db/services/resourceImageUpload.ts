@@ -10,6 +10,12 @@ import { and, eq, exists, notExists, or, sql } from 'drizzle-orm'
 import { hub, image, organisation, project } from '#lib/db/schema/index.js'
 import { getUploadedImageId } from './image.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
+import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
+import {
+  prepareOrganisationRevisionCapture,
+  organisationRevisionTarget,
+} from './organisationRevision.js'
+import type { OrganisationRevisionActor } from './organisationRevision.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { ImageDB, ImageDBNew } from '#lib/db/zod/schema/image.types.js'
@@ -74,6 +80,7 @@ export async function getResourceUploadSnapshot(
  * @param data Verified upload metadata.
  * @param expected Signed resource state captured before uploading.
  * @param newImageId Fresh server-generated identity for non-upload creation; omit for upload replay.
+ * @param actor Authenticated actor for resource image history.
  * @returns Persisted image, or null for a stale resource or upload.
  * @remarks The original revision prevents resurrection after detached image cleanup.
  * Retries preserve metadata and never reselect an image displaced by a newer upload.
@@ -85,6 +92,7 @@ export async function createUploadedResourceImage(
   data: ImageDBNew,
   expected: ResourceUploadSnapshot,
   newImageId?: string,
+  actor?: OrganisationRevisionActor,
 ): Promise<ImageDB | null> {
   const id = newImageId ?? (await getUploadedImageId(data))
   const table =
@@ -124,8 +132,22 @@ export async function createUploadedResourceImage(
     .select({ id: table.id })
     .from(table)
     .where(and(eq(table.id, resourceId), eq(table.imageId, id)))
+  const capture =
+    type === 'organisation'
+      ? await prepareOrganisationRevisionCapture(
+          db,
+          organisationRevisionTarget(resourceId),
+          actor,
+        )
+      : await prepareAdminResourceRevisionCapture(
+          db,
+          type,
+          sql`SELECT ${resourceId} AS id`,
+          actor,
+        )
   // The batch guards, inserts and selects together; failed/skipped pointer writes roll back.
   const result = await executeRevisionBatch(db, exists(allowed), [
+    ...capture.before,
     db
       .insert(image)
       .values({ ...data, id })
@@ -141,6 +163,7 @@ export async function createUploadedResourceImage(
       })
       .where(and(eq(table.id, resourceId), sql`${table.imageId} IS NOT ${id}`)),
     prepareRevisionCheck(db, and(exists(allowed), exists(selected), exists(stored))!),
+    ...capture.after,
     stored,
   ])
   return result ? (result.at(-1) as ImageDB[])[0] : null

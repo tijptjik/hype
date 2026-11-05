@@ -535,6 +535,7 @@ describe('hub.remote form image handling', () => {
         layerDefaults: [],
         properties: [],
       }),
+      { actorId: 'u-1', reason: 'Hub created with organisation assignments' },
     )
     expect(mockCreateI18n).not.toHaveBeenCalled()
     expect(mockCreateHubUserRoles).not.toHaveBeenCalled()

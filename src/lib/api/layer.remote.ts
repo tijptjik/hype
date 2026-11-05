@@ -417,6 +417,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
 
   const persisted = requireValue(
     await updateLayerByIdWithConcurrency(db, {
+      actorId: user.id,
       id: current.id as Id,
       updatedAt,
       i18n: data.i18n,
@@ -467,6 +468,7 @@ export const publishLayer = guardedCommand(PublishLayerSchema, async (params, ct
 
   const persisted = requireValue(
     await updateLayerPublishedStateById(db, {
+      actorId: user.id,
       id: layerId,
       state: params.state,
       expectedScope: probed,
@@ -513,6 +515,7 @@ export const archiveLayer = guardedCommand(RemoveLayerSchema, async (params, ctx
 
   const persisted = requireValue(
     await updateLayerArchivedStateById(db, {
+      actorId: user.id,
       id: layerId,
       state: params.state,
       expectedScope: probed,

@@ -2,7 +2,7 @@
 import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { and, eq, inArray } from 'drizzle-orm'
+import { sql, and, eq, inArray } from 'drizzle-orm'
 // API
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
@@ -222,6 +222,8 @@ type PropertyScopeProbe = {
 }
 
 type PropertyValueAppendAccess = {
+  ownerHubId?: string | null
+  ownerOrganisationId?: string
   allowed: boolean
   scope: string
   code?: string
@@ -307,6 +309,8 @@ const toPropertyValueAppendAccess = async (params: {
       submittedData: {},
     })
     return {
+      ownerHubId: probe.hubId,
+      ownerOrganisationId: probe.organisationId,
       allowed: decision.allowed,
       code: decision.code,
       scope: existingProperty.scope,
@@ -346,6 +350,7 @@ const toPropertyValueAppendAccess = async (params: {
       submittedData: {},
     })
     return {
+      ownerHubId: organisationProbe.hubId,
       allowed: decision.allowed,
       code: decision.code,
       scope: existingProperty.scope,
@@ -617,6 +622,11 @@ export const createProjectProperty = guardedCommand(
             Parameters<typeof createBaseProperty>[2]
           >['values'],
         },
+        {
+          target: { scope: 'project', id: projectId },
+          actor: { actorId: user.id, reason: 'Project field created' },
+          guard: sql`EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.id=${projectId} AND p.organisationId=${probe.organisationId} AND o.hubId IS ${probe.hubId})`,
+        },
       )
     } catch (createError) {
       if (isPropertyKeyConflictError(createError)) {
@@ -682,7 +692,28 @@ export const appendPropertyValues = guardedCommand(
       throw error(404, 'PROPERTY_NOT_FOUND')
     }
 
-    await createPropertyValues(db, values as PropertyValueNew[], existingProperty.id)
+    await createPropertyValues(
+      db,
+      values as PropertyValueNew[],
+      existingProperty.id,
+      propertyScope.scope === 'organisation' && propertyScope.organisationId
+        ? {
+            organisationId: propertyScope.organisationId,
+            hubId: appendAccess.ownerHubId ?? null,
+            actor: { actorId: user.id, reason: 'Organisation field options appended' },
+          }
+        : propertyScope.scope === 'project' && propertyScope.projectId
+          ? {
+              target: { scope: 'project', id: propertyScope.projectId },
+              actor: { actorId: user.id, reason: 'Project field options appended' },
+              guard: sql`EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.id=${propertyScope.projectId} AND p.organisationId=${appendAccess.ownerOrganisationId} AND o.hubId IS ${appendAccess.ownerHubId ?? null})`,
+            }
+          : {
+              target: { scope: 'hub', id: propertyScope.hubId! },
+              actor: { actorId: user.id, reason: 'Hub field options appended' },
+              guard: sql`EXISTS(SELECT 1 FROM hub WHERE id=${propertyScope.hubId})`,
+            },
+    )
 
     const updatedProperty = await loadProperty(db, propertyCollectionWithRelations, [
       eq(property.id, existingProperty.id),

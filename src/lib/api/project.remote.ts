@@ -764,6 +764,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
           startingRank: submittedLocalProperties.length,
         },
       },
+      { actorId: user.id },
     ).catch(cause => {
       if (isProjectMapStyleUnavailable(cause)) invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
       throw cause
@@ -1130,6 +1131,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   // Persist main record atomically with optimistic concurrency.
   const persisted = requireValue(
     await updateProjectByIdWithConcurrency(db, {
+      actorId: user.id,
       id: current.id as Id,
       updatedAt: updatedAt as string,
       i18n: data.i18n,
@@ -1209,6 +1211,7 @@ export const publishProject = guardedCommand(
       : undefined
     const persisted = requireValue(
       await updateProjectPublishedStateById(db, {
+        actorId: user.id,
         id: projectId,
         state: params.state,
         expectedScope: probed,
@@ -1265,6 +1268,7 @@ export const archiveProject = guardedCommand(
     // Persist archive state update.
     const persisted = requireValue(
       await updateProjectArchivedStateById(db, {
+        actorId: user.id,
         id: projectId,
         state: params.state,
         expectedScope: probed,

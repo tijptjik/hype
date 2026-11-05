@@ -11,6 +11,7 @@ import { nanoid } from 'nanoid'
 import { and, eq, exists, inArray, not, or, sql, type SQL } from 'drizzle-orm'
 // PUBLICATION
 import { buildDescendantPublication } from './publication.js'
+import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 // SCHEMA
 import {
@@ -39,6 +40,7 @@ import { autochunk, chunkedInArray } from '#lib/utils/batch-query.js'
 // I18N
 import { normalizeI18nLocaleRecord } from '#lib/i18n.js'
 // TYPES
+import type { OrganisationRevisionActor } from './organisationRevision.js'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type {
   Database,
@@ -117,6 +119,7 @@ import type { TaskEditorLayerOption } from '#lib/db/zod/schema/task.types.js'
  * @param db - Database handle.
  * @param data - New layer including its destination project and presentation.
  * @param relations - Optional complete translations and property links for atomic form creation.
+ * @param actor Authenticated editor for immutable revision attribution.
  * @returns The persisted layer.
  * @remarks Project-only map styles must belong to the destination project.
  */
@@ -127,15 +130,24 @@ export const createLayer = async (
     i18n: Record<LocaleKey, LayerI18nPartial>
     properties: LayerPropertyNew[]
   },
+  actor?: OrganisationRevisionActor,
 ): Promise<LayerDB> => {
   await assertMapStyleProjectScope(db, data.projectId, data.metadata?.mapStyleCode)
-  if (relations) {
+  if (relations || actor) {
+    relations ??= { i18n: {} as Record<LocaleKey, LayerI18nPartial>, properties: [] }
     const id = data.id ?? nanoid(12)
+    const ownCapture = await prepareAdminResourceRevisionCapture(
+      db,
+      'layer',
+      sql`SELECT ${id} AS id`,
+      actor,
+    )
     const guard = exists(
       db.select({ id: layer.id }).from(layer).where(eq(layer.id, id)),
     )
     // The parent and every submitted relation share one commit; late failures cannot leave an orphan.
-    const [created] = await db.batch([
+    const results = await db.batch([
+      ...ownCapture.before,
       db
         .insert(layer)
         .values({ ...data, id, isPublished: data.isPublished ?? false })
@@ -161,7 +173,9 @@ export const createLayer = async (
         id,
         guard,
       ),
-    ])
+      ...ownCapture.after,
+    ] as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]])
+    const created = results[ownCapture.before.length] as LayerDB[]
     if (!created[0]) throw new Error('Layer creation returned no row')
     return created[0] as LayerDB
   }
@@ -672,6 +686,7 @@ export const updateLayerByIdWithConcurrency = async (
   db: Database,
   params: {
     id: Id
+    actorId?: string
     updatedAt: string
     i18n?: Record<LocaleKey, LayerI18nPartial>
     properties?: LayerPropertyNew[]
@@ -703,6 +718,12 @@ export const updateLayerByIdWithConcurrency = async (
     modifiedAt: layer.modifiedAt,
   })
 
+  const capture = await prepareAdminResourceRevisionCapture(
+    db,
+    'layer',
+    sql`SELECT ${params.id} AS id`,
+    params.actorId ? { actorId: params.actorId } : undefined,
+  )
   if (params.i18n !== undefined || params.properties !== undefined) {
     // Every relation statement checks the unchanged parent token; the final update advances it.
     const guard = exists(db.select({ id: layer.id }).from(layer).where(revisionGuard))
@@ -733,12 +754,30 @@ export const updateLayerByIdWithConcurrency = async (
           )
         : []),
     ]
-    const results = await db.batch([relations[0], ...relations.slice(1), updateCore])
-    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
+    const results = await executeRevisionBatch(db, guard, [
+      ...capture.before,
+      ...relations,
+      updateCore,
+      ...(capture.before.length ? [prepareRevisionCheck(db, sql`changes() = 1`)] : []),
+      ...capture.after,
+    ])
+    if (!results) return null
+    const rows = results[capture.before.length + relations.length] as {
+      id: string
+      modifiedAt: string
+    }[]
     return rows[0] ?? null
   }
-  const [updated] = await updateCore
-  return updated ?? null
+  const guard = exists(db.select({ id: layer.id }).from(layer).where(revisionGuard))
+  const results = await executeRevisionBatch(db, guard, [
+    ...capture.before,
+    updateCore,
+    ...(capture.before.length ? [prepareRevisionCheck(db, sql`changes() = 1`)] : []),
+    ...capture.after,
+  ])
+  if (!results) return null
+  const rows = results[capture.before.length] as { id: string; modifiedAt: string }[]
+  return rows[0] ?? null
 }
 
 /**
@@ -753,12 +792,23 @@ export const updateLayerPublishedStateById = async (
   db: Database,
   params: {
     id: Id
+    actorId?: string
     expectedScope: { organisationId: Id; projectId: Id; hubId: string | null }
     state: boolean
     publisherId: string | null
     publishChildren?: boolean
   },
 ): Promise<{ id: string; isPublished: boolean } | null> => {
+  const actorId = params.actorId ?? params.publisherId
+  const actor = actorId ? { actorId, reason: 'Layer published state' } : undefined
+  const ownCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'layer',
+    sql`SELECT ${params.id} AS id`,
+    actor,
+  )
+  const capture = ownCapture
+
   const parentUpdate = db
     .update(layer)
     .set({
@@ -778,14 +828,17 @@ export const updateLayerPublishedStateById = async (
     db,
     buildLayerCommandScopeGuard(db, params),
     [
+      ...capture.before,
       parentUpdate,
       // A skipped parent write must not commit descendant publication changes.
       prepareRevisionCheck(db, sql`changes() = 1`),
       ...buildDescendantPublication(db, { kind: 'layer', id: params.id }, params),
+      ...capture.after,
     ],
   )
   return results
-    ? ((results[0] as { id: string; isPublished: boolean }[])[0] ?? null)
+    ? ((results[capture.before.length] as { id: string; isPublished: boolean }[])[0] ??
+        null)
     : null
 }
 
@@ -856,10 +909,30 @@ export const updateLayerArchivedStateById = async (
   db: Database,
   params: {
     id: Id
+    actorId?: string
     state: boolean
     expectedScope: { organisationId: Id; projectId: Id; hubId: string | null }
   },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
+  const actorId = params.actorId
+  const actor = actorId ? { actorId, reason: 'Layer archived state' } : undefined
+  const ownCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'layer',
+    sql`SELECT ${params.id} AS id`,
+    actor,
+  )
+  const parentCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'project',
+    sql`SELECT projectId AS id FROM layer WHERE id=${params.id}`,
+    actor,
+  )
+  const capture = {
+    before: [...parentCapture.before, ...ownCapture.before],
+    after: [...ownCapture.after, ...parentCapture.after],
+  }
+
   const parentUpdate = db
     .update(layer)
     .set({ isArchived: params.state })
@@ -874,17 +947,19 @@ export const updateLayerArchivedStateById = async (
     db,
     buildLayerCommandScopeGuard(db, params),
     [
-      // Restore snapshots before the parent trigger can route Features to a new historical layer.
+      ...capture.before,
+      parentUpdate,
+      prepareRevisionCheck(db, sql`changes() = 1`),
       ...buildLayerArchivedDescendantUpdates(db, {
         layerId: params.id,
         state: params.state,
       }),
-      parentUpdate,
-      prepareRevisionCheck(db, sql`changes() = 1`),
+      ...capture.after,
     ],
   )
   return results
-    ? ((results.at(-2) as { id: string; isArchived: boolean }[])[0] ?? null)
+    ? ((results[capture.before.length] as { id: string; isArchived: boolean }[])[0] ??
+        null)
     : null
 }
 

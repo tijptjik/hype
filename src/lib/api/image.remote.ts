@@ -1,3 +1,5 @@
+import { removeOrganisationImage } from '#lib/db/services/organisationImage.js'
+import { removeAdminResourceImage } from '#lib/db/services/adminResourceImage.js'
 // REMOTE
 import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 import { error, isHttpError } from '@sveltejs/kit'
@@ -1315,7 +1317,8 @@ const createImageInContext = async (params: {
         validatedData.ctxId,
         validatedData,
         params.resourceSnapshot,
-        ...(params.retryableUpload ? [] : [nanoid()]),
+        params.retryableUpload ? undefined : nanoid(),
+        { actorId: params.userId, reason: 'Resource image updated' },
       ))
     if (!createdImage) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
 
@@ -1343,7 +1346,8 @@ const createImageInContext = async (params: {
         validatedData.ctxId,
         validatedData,
         params.resourceSnapshot,
-        ...(params.retryableUpload ? [] : [nanoid()]),
+        params.retryableUpload ? undefined : nanoid(),
+        { actorId: params.userId, reason: 'Resource image updated' },
       ))
     if (!createdImage) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
 
@@ -2325,6 +2329,43 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
   const imageToDelete = await loadImageById(db, [eq(image.id, params.id as Id)])
   if (!imageToDelete) {
     throw error(404, 'Image not found')
+  }
+
+  // Organisation history retains the former logo: remove its current assignment, not its media.
+  if (params.ctxType === ImageContextResource.organisation) {
+    const removed = await removeOrganisationImage(db, {
+      organisationId: params.ctxId,
+      imageId: params.id,
+      actor: { actorId: user.id, reason: 'Organisation image removed' },
+      guard: createImageMutationGuards(
+        db,
+        params.ctxType as ImageContextType,
+        params.ctxId,
+        snapshot,
+      ).before,
+    })
+    if (!removed) throw error(409, 'STALE_IMAGE_DELETE')
+    return { type: 'success', message: 'Organisation image removed successfully' }
+  }
+
+  if (
+    params.ctxType === ImageContextResource.project ||
+    params.ctxType === ImageContextResource.hub
+  ) {
+    const removed = await removeAdminResourceImage(db, {
+      resource: params.ctxType,
+      resourceId: params.ctxId,
+      imageId: params.id,
+      actor: { actorId: user.id, reason: 'Resource image removed' },
+      guard: createImageMutationGuards(
+        db,
+        params.ctxType as ImageContextType,
+        params.ctxId,
+        snapshot,
+      ).before,
+    })
+    if (!removed) throw error(409, 'STALE_IMAGE_DELETE')
+    return { type: 'success', message: 'Resource image removed successfully' }
   }
 
   // Preserve associations and pending review revisions if deletion fails; clean assets after commit.

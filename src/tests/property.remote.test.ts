@@ -188,6 +188,11 @@ describe('property.remote', () => {
       expect.anything(),
       expect.objectContaining({ projectId: 'project-1', scope: 'project' }),
       { i18n, values },
+      expect.objectContaining({
+        actor: { actorId: 'u-1', reason: 'Project field created' },
+        target: { scope: 'project', id: 'project-1' },
+        guard: expect.anything(),
+      }),
     )
     expect(mockCreateI18n).not.toHaveBeenCalled()
     expect(mockCreatePropertyValues).not.toHaveBeenCalled()
@@ -436,6 +441,11 @@ describe('property.remote', () => {
         },
       ],
       'prop-1',
+      expect.objectContaining({
+        actor: { actorId: 'u-1', reason: 'Project field options appended' },
+        target: { scope: 'project', id: 'project-1' },
+        guard: expect.anything(),
+      }),
     )
   })
 

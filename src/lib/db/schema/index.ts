@@ -23,3 +23,17 @@ export * from './location'
 export * from './locationRefresh'
 
 export * from './messaging'
+
+export * from './featureRevision'
+
+export * from './organisationRevision'
+
+export * from './propertyCatalogRevision'
+
+export * from './projectRevision'
+
+export * from './layerRevision'
+
+export * from './hubRevision'
+
+export * from './adminResourceRevisionRollout'

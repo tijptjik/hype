@@ -575,12 +575,102 @@ describe('organisation.remote authz', () => {
         userRoles,
         properties: [expect.objectContaining({ key: 'test' })],
       }),
+      { actorId: 'u-1', reason: 'Organisation created' },
     )
     expect(
       (await import('#lib/db/services/property.js')).syncOrganisationProperties,
     ).not.toHaveBeenCalled()
     expect(services.createI18n).not.toHaveBeenCalled()
     expect(services.createUserRoles).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])(
+    'only SuperAdmins can change the persisted permission from %s',
+    async current => {
+      const services = await import('#lib/db/services/organisation.js')
+      vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+        id: 'org-1',
+        code: 'org-code',
+        hubId: 'hub-a',
+        modifiedAt: 'before',
+        permitUserDetailsEdit: current,
+      })
+      const input = {
+        meta: { id: 'org-1', mode: 'update', updatedAt: 'before' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [{ userId: 'u-1', role: 'owner' }],
+          permitUserDetailsEdit: !current,
+        },
+      }
+      await expect(remote.organisationForm(input)).rejects.toThrow('FIELD_FORBIDDEN')
+      expect(services.updateOrganisationByIdWithConcurrency).not.toHaveBeenCalled()
+      mockSetupRequestHandler.mockResolvedValue({
+        db: {},
+        user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+        userRoles: [],
+        event: { locals: { hub: null } },
+      })
+      vi.mocked(services.updateOrganisationByIdWithConcurrency).mockResolvedValue({
+        id: 'org-1',
+        modifiedAt: 'after',
+      })
+      await remote.organisationForm(input)
+      expect(services.updateOrganisationByIdWithConcurrency).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          data: expect.objectContaining({ permitUserDetailsEdit: !current }),
+        }),
+      )
+    },
+  )
+
+  it('does not persist an echoed grant from an ordinary organisation save', async () => {
+    const services = await import('#lib/db/services/organisation.js')
+    vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+      id: 'org-1',
+      code: 'org-code',
+      hubId: 'hub-a',
+      modifiedAt: 'before',
+      permitUserDetailsEdit: true,
+    })
+    vi.mocked(services.updateOrganisationByIdWithConcurrency).mockResolvedValue({
+      id: 'org-1',
+      modifiedAt: 'after',
+    })
+    await remote.organisationForm({
+      meta: { id: 'org-1', mode: 'update', updatedAt: 'before' },
+      data: {
+        code: 'org-code',
+        url: '',
+        i18n: { en: {}, zhHans: {}, zhHant: {} },
+        userRoles: [{ userId: 'u-1', role: 'owner' }],
+        permitUserDetailsEdit: true,
+      },
+    })
+    expect(
+      vi.mocked(services.updateOrganisationByIdWithConcurrency).mock.calls.at(-1)?.[1]
+        .data,
+    ).not.toHaveProperty('permitUserDetailsEdit')
+  })
+
+  it('rejects self-granting on organisation creation', async () => {
+    const services = await import('#lib/db/services/organisation.js')
+    await expect(
+      remote.organisationForm({
+        meta: { mode: 'create' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [{ userId: 'u-1', role: 'owner' }],
+          permitUserDetailsEdit: true,
+        },
+      }),
+    ).rejects.toThrow('FIELD_FORBIDDEN')
+    expect(services.createOrganisation).not.toHaveBeenCalled()
   })
 
   it('organisationForm rejects empty userRoles', async () => {

@@ -51,6 +51,7 @@ import {
   prepareProjectInheritedProperties,
   prepareDefaultInheritedProperties,
 } from './property.js'
+import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { InferInsertModel } from 'drizzle-orm'
@@ -58,6 +59,7 @@ import { buildOrganisationCapabilityCascade } from './capabilityCascade.js'
 // ZOD
 import { getProjectHubFilter } from './hub'
 // TYPES
+import type { OrganisationRevisionActor } from './organisationRevision.js'
 import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
 import type {
   Id,
@@ -217,6 +219,7 @@ function prepareProjectRelations(
  * @param db The database instance.
  * @param data The project data to insert.
  * @param relations Optional translations and initial roles.
+ * @param actor Authenticated editor for immutable revision attribution.
  * @returns The newly created project.
  * @remarks Submitted roles, parent memberships, translations, map style, property catalog
  * and inherited defaults commit with the project.
@@ -225,18 +228,32 @@ export const createProject = async (
   db: Database,
   data: ProjectDBNew,
   relations?: ProjectRelations,
+  actor?: OrganisationRevisionActor,
 ): Promise<ProjectDB> => {
-  if (relations) {
+  if (relations || actor) {
+    relations ??= {}
     const id = data.id ?? nanoid(12)
+    const ownCapture = await prepareAdminResourceRevisionCapture(
+      db,
+      'project',
+      sql`SELECT ${id} AS id`,
+      actor,
+    )
     const catalog =
       relations.properties !== undefined
-        ? await preparePropertyCatalog(db, relations.properties, {
-            scope: 'project',
-            id,
-          })
+        ? await preparePropertyCatalog(
+            db,
+            relations.properties,
+            {
+              scope: 'project',
+              id,
+            },
+            actor,
+          )
         : null
     // A conflicting parent identity fails before any memberships or relations can change.
-    const [created] = await db.batch([
+    const results = await db.batch([
+      ...ownCapture.before,
       db
         .insert(project)
         .values({ ...data, id, isPublished: data.isPublished ?? false })
@@ -269,7 +286,9 @@ export const createProject = async (
             sql`1`,
           )
         : []),
-    ])
+      ...ownCapture.after,
+    ] as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]])
+    const created = results[ownCapture.before.length] as ProjectDB[]
     if (!created[0]) throw new Error('Project creation returned no row')
     return created[0] as ProjectDB
   }
@@ -941,6 +960,7 @@ export const updateProjectByIdWithConcurrency = async (
   db: Database,
   params: ProjectRelations & {
     id: Id
+    actorId?: string
     updatedAt: string
     locationUpdatePolicy?: {
       policy: ProjectLocationPolicy
@@ -1045,6 +1065,20 @@ export const updateProjectByIdWithConcurrency = async (
         .where(and(eq(task.projectId, params.id), moveGuard)),
     )
   }
+  const actor = params.actorId ? { actorId: params.actorId } : undefined
+  const capture = await prepareAdminResourceRevisionCapture(
+    db,
+    'project',
+    sql`SELECT ${params.id} AS id`,
+    actor,
+  )
+  // Project moves, field assignments and layer ordering can also change layer snapshots.
+  const layerCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'layer',
+    sql`SELECT id FROM layer WHERE projectId=${params.id}`,
+    actor,
+  )
   if (
     params.properties !== undefined ||
     params.inheritedProperties !== undefined ||
@@ -1052,12 +1086,22 @@ export const updateProjectByIdWithConcurrency = async (
   ) {
     const catalog =
       params.properties !== undefined
-        ? await preparePropertyCatalog(db, params.properties, {
-            scope: 'project',
-            id: params.id,
-          })
+        ? await preparePropertyCatalog(
+            db,
+            params.properties,
+            {
+              scope: 'project',
+              id: params.id,
+            },
+            actor,
+          )
         : null
-    const beforeCore = [...(catalog?.statements ?? []), ...writes]
+    const beforeCore = [
+      ...capture.before,
+      ...layerCapture.before,
+      ...(catalog?.statements ?? []),
+      ...writes,
+    ]
     const afterCore: BatchItem<'sqlite'>[] = [
       ...(params.inheritedProperties !== undefined
         ? prepareProjectInheritedProperties(db, {
@@ -1073,7 +1117,14 @@ export const updateProjectByIdWithConcurrency = async (
       ),
     ]
     // Check the old revision first; resolve inherited scope only after the parent move.
-    const statements = [...beforeCore, updateCore, ...afterCore]
+    const statements = [
+      ...beforeCore,
+      updateCore,
+      ...(capture.before.length ? [prepareRevisionCheck(db, sql`changes() = 1`)] : []),
+      ...afterCore,
+      ...layerCapture.after,
+      ...capture.after,
+    ]
     const results = await executeRevisionBatch(db, moveGuard, [
       statements[0],
       ...statements.slice(1),
@@ -1082,13 +1133,17 @@ export const updateProjectByIdWithConcurrency = async (
     const rows = results[beforeCore.length] as { id: string; modifiedAt: string }[]
     return rows[0] ?? null
   }
-  if (writes.length) {
-    const results = await db.batch([writes[0], ...writes.slice(1), updateCore])
-    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
-    return rows[0] ?? null
-  }
-  const [updated] = await updateCore
-  return updated ?? null
+  const before = [...capture.before, ...layerCapture.before, ...writes]
+  const results = await executeRevisionBatch(db, moveGuard, [
+    ...before,
+    updateCore,
+    ...(capture.before.length ? [prepareRevisionCheck(db, sql`changes() = 1`)] : []),
+    ...layerCapture.after,
+    ...capture.after,
+  ])
+  if (!results) return null
+  const rows = results[before.length] as { id: string; modifiedAt: string }[]
+  return rows[0] ?? null
 }
 
 /**
@@ -1105,6 +1160,7 @@ export const updateProjectPublishedStateById = async (
   db: Database,
   params: {
     id: Id
+    actorId?: string
     expectedScope: { organisationId: Id; hubId: string | null }
     state: boolean
     publisherId: string | null
@@ -1115,6 +1171,25 @@ export const updateProjectPublishedStateById = async (
     | { license: ProjectDB['license']; expectedLicense: ProjectDB['license'] }
   ),
 ): Promise<{ id: string; isPublished: boolean } | null> => {
+  const actorId = params.actorId ?? params.publisherId
+  const actor = actorId ? { actorId, reason: 'Project published state' } : undefined
+  const ownCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'project',
+    sql`SELECT ${params.id} AS id`,
+    actor,
+  )
+  const descendants = await prepareAdminResourceRevisionCapture(
+    db,
+    'layer',
+    sql`SELECT id FROM layer WHERE projectId=${params.id}`,
+    actor,
+  )
+  const capture = {
+    before: [...ownCapture.before, ...descendants.before],
+    after: [...descendants.after, ...ownCapture.after],
+  }
+
   const publishedAt = params.state
     ? (params.publishedAt ?? new Date().toISOString())
     : null
@@ -1154,14 +1229,17 @@ export const updateProjectPublishedStateById = async (
     db,
     and(buildProjectCommandScopeGuard(db, params), licenseGuard)!,
     [
+      ...capture.before,
       parentUpdate,
       // A skipped parent write must not commit descendant publication changes.
       prepareRevisionCheck(db, sql`changes() = 1`),
       ...buildDescendantPublication(db, { kind: 'project', id: params.id }, params),
+      ...capture.after,
     ],
   )
   return results
-    ? ((results[0] as { id: string; isPublished: boolean }[])[0] ?? null)
+    ? ((results[capture.before.length] as { id: string; isPublished: boolean }[])[0] ??
+        null)
     : null
 }
 
@@ -1226,10 +1304,30 @@ export const updateProjectArchivedStateById = async (
   db: Database,
   params: {
     id: Id
+    actorId?: string
     state: boolean
     expectedScope: { organisationId: Id; hubId: string | null }
   },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
+  const actorId = params.actorId
+  const actor = actorId ? { actorId, reason: 'Project archived state' } : undefined
+  const ownCapture = await prepareAdminResourceRevisionCapture(
+    db,
+    'project',
+    sql`SELECT ${params.id} AS id`,
+    actor,
+  )
+  const descendants = await prepareAdminResourceRevisionCapture(
+    db,
+    'layer',
+    sql`SELECT id FROM layer WHERE projectId=${params.id}`,
+    actor,
+  )
+  const capture = {
+    before: [...ownCapture.before, ...descendants.before],
+    after: [...descendants.after, ...ownCapture.after],
+  }
+
   const parentUpdate = db
     .update(project)
     .set({
@@ -1246,16 +1344,19 @@ export const updateProjectArchivedStateById = async (
     db,
     buildProjectCommandScopeGuard(db, params),
     [
+      ...capture.before,
       parentUpdate,
       prepareRevisionCheck(db, sql`changes() = 1`),
       ...buildProjectArchivedDescendantUpdates(db, {
         projectId: params.id,
         state: params.state,
       }),
+      ...capture.after,
     ],
   )
   return results
-    ? ((results[0] as { id: string; isArchived: boolean }[])[0] ?? null)
+    ? ((results[capture.before.length] as { id: string; isArchived: boolean }[])[0] ??
+        null)
     : null
 }
 

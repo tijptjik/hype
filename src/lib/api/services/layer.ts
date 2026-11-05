@@ -504,6 +504,7 @@ export const createLayerFromSubmission = async ({
       isArchived: false,
     },
     { i18n: submittedData.i18n, properties: submittedProperties },
+    { actorId: user.id },
   )
 
   return created

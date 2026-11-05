@@ -33,6 +33,18 @@ import { PropertyRecordCreate, PropertyRecordUpdate } from '../zod'
 // I18N
 import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
 import { propertyLocalesToForm } from '#lib/properties/locales.js'
+// REVISIONS
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
+import {
+  prepareOrganisationRevisionCapture,
+  organisationRevisionTarget,
+} from './organisationRevision.js'
+import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
+import { preparePropertyCatalogCapture } from './propertyCatalogRevision.js'
+import type {
+  OrganisationRevisionActor,
+  OrganisationRevisionCapture,
+} from './organisationRevision.js'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
@@ -119,11 +131,71 @@ type PropertyCatalogTarget = {
 // ═══════════════════════
 // 1.1 CRUD :: CREATE
 // ═══════════════════════
+/** Trusted scope for independent field creation or option appends. */
+export type PropertyRevisionContext = {
+  target: PropertyCatalogTarget
+  actor: OrganisationRevisionActor
+  guard: SQL
+}
+
+/**
+ * Captures a field catalogue and invalidates its parent's complete-form edit token.
+ * @param db Request database.
+ * @param history Server-authorized field owner and actor.
+ * @returns Atomic capture boundaries; the caller checks the scope guard before writes.
+ */
+async function preparePropertyOwnerCapture(
+  db: Database,
+  history: PropertyRevisionContext,
+): Promise<OrganisationRevisionCapture> {
+  const { target, actor } = history
+  const parent =
+    target.scope === 'organisation'
+      ? organisation
+      : target.scope === 'project'
+        ? project
+        : hub
+  const own =
+    target.scope === 'organisation'
+      ? await prepareOrganisationRevisionCapture(
+          db,
+          organisationRevisionTarget(target.id),
+          actor,
+        )
+      : await prepareAdminResourceRevisionCapture(
+          db,
+          target.scope,
+          sql`SELECT ${target.id} AS id`,
+          actor,
+        )
+  const catalog = await preparePropertyCatalogCapture(db, target, actor)
+  // Monotonic tokens prevent a stale complete Fields form from erasing independent changes.
+  const touch = db
+    .update(parent)
+    .set({
+      modifiedAt: sql`CASE
+    WHEN ${parent.modifiedAt} >= strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    THEN strftime('%Y-%m-%dT%H:%M:%fZ',${parent.modifiedAt},'+0.001 seconds')
+    ELSE strftime('%Y-%m-%dT%H:%M:%fZ','now') END`,
+    })
+    .where(eq(parent.id, target.id))
+  return {
+    before: [...own.before, ...catalog.before],
+    after: [
+      touch,
+      prepareRevisionCheck(db, sql`changes()=1`),
+      ...catalog.after,
+      ...own.after,
+    ],
+  }
+}
+
 /**
  * Creates a new base property record.
  * @param db Database instance
  * @param data Data for the new property (parsed by Zod schema, e.g., PropertyRecordCreate)
  * @param relations Optional translations and values saved atomically with the base.
+ * @param history Trusted owner and actor for independent creation.
  * @returns The newly created property record from DB.
  * @remarks A relation failure rolls back creation, including the reserved property key.
  */
@@ -134,8 +206,10 @@ export const createBaseProperty = async (
     i18n: Record<string, Omit<PropertyI18nNew, 'propertyId' | 'locale'>>
     values?: NewPropertyValueInput[]
   },
+  history?: PropertyRevisionContext,
 ): Promise<PropertyDB> => {
-  if (relations) {
+  if (relations || history) {
+    relations ??= { i18n: {} }
     const id = data.id ?? nanoid(12)
     const values = (relations.values ?? []).map(({ i18n, ...value }) => ({
       ...value,
@@ -187,13 +261,20 @@ export const createBaseProperty = async (
       )
     }
     // The base insert must succeed before any relation replacement can run.
-    const [created] = await db.batch([
+    const capture = history
+      ? await preparePropertyOwnerCapture(db, history)
+      : { before: [], after: [] }
+    const results = await executeRevisionBatch(db, history?.guard ?? sql`1`, [
+      ...capture.before,
       db
         .insert(property)
         .values({ ...data, id })
         .returning(),
       ...writes,
+      ...capture.after,
     ])
+    if (!results) throw error(409, 'PROPERTY_SCOPE_OR_REVISION_CHANGED')
+    const created = results[capture.before.length] as PropertyDB[]
     if (!created[0]) throw new Error('Property creation returned no row')
     return created[0] as PropertyDB
   }
@@ -233,6 +314,7 @@ export const createI18n = async (
  * @param db Database instance
  * @param values Array of new property value data.
  * @param propertyId The ID of the parent property.
+ * @param history Trusted ownership and actor for independent option appends.
  * @returns Array of created propertyValue records in submission order.
  * @remarks Existing values are retained; any value or translation failure rolls back the append.
  */
@@ -240,6 +322,13 @@ export const createPropertyValues = async (
   db: Database,
   values: NewPropertyValueInput[],
   propertyId: string,
+  history?:
+    | PropertyRevisionContext
+    | {
+        organisationId: string
+        hubId: string | null
+        actor: OrganisationRevisionActor
+      },
 ): Promise<PropertyValueDB[]> => {
   if (values.length === 0) return []
   // Allocate identity before batching so translations do not depend on RETURNING row order.
@@ -279,6 +368,29 @@ export const createPropertyValues = async (
         } as InferInsertModel<typeof propertyValueI18n>),
       )
     }
+  }
+  if (history) {
+    const context: PropertyRevisionContext =
+      'target' in history
+        ? history
+        : {
+            target: { scope: 'organisation', id: history.organisationId },
+            actor: history.actor,
+            guard: sql`EXISTS(SELECT 1 FROM organisation WHERE id=${history.organisationId} AND hubId IS ${history.hubId})`,
+          }
+    const capture = await preparePropertyOwnerCapture(db, context)
+    const owner = sql.identifier(context.target.scope + 'Id')
+    const guard = sql`(${context.guard}) AND EXISTS (SELECT 1 FROM property WHERE id=${propertyId} AND scope=${context.target.scope} AND ${owner}=${context.target.id})`
+    const results = await executeRevisionBatch(db, guard, [
+      ...capture.before,
+      ...inserts,
+      ...translations,
+      ...capture.after,
+    ])
+    if (!results) throw error(409, 'PROPERTY_SCOPE_OR_REVISION_CHANGED')
+    return results
+      .slice(capture.before.length, capture.before.length + inserts.length)
+      .flat() as PropertyValueDB[]
   }
   const results = await db.batch([inserts[0], ...inserts.slice(1), ...translations])
   return results.slice(0, inserts.length).flat() as PropertyValueDB[]
@@ -859,6 +971,7 @@ const savePropertyCatalog = async (
  * @param db Authorized request database.
  * @param properties Complete submitted catalog.
  * @param target Server-owned catalog scope and parent identity.
+ * @param actor Trusted editor for immutable catalogue history.
  * @returns Bounded writes, optional hydrated readback, and the existing response mapper.
  * @remarks Callers must execute all statements in one transaction after checking any
  * parent revision inside that same batch. Preparation performs validation and reads only.
@@ -867,6 +980,7 @@ export const preparePropertyCatalog = async (
   db: Database,
   properties: Array<ProjectPropertyForm | Property | PropertyNew>,
   target: PropertyCatalogTarget,
+  actor?: OrganisationRevisionActor,
 ): Promise<{
   statements: [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]
   readback: BatchItem<'sqlite'>
@@ -1111,7 +1225,8 @@ export const preparePropertyCatalog = async (
     }
   }
 
-  // Delete stale properties after successful create/update processing, within the same batch.
+  // Delete omitted public fields before inserts so replacements can reuse their keys.
+  // The enclosing batch restores these rows and their children if any later write fails.
   const deletion = db
     .delete(property)
     .where(
@@ -1126,9 +1241,45 @@ export const preparePropertyCatalog = async (
     with: { i18n: true, values: { with: { i18n: true } } },
     orderBy: [asc(property.key)],
   })
-  // Enclosing forms can append the writes without paying for unused hydrated readback.
+  const capture = actor
+    ? await preparePropertyCatalogCapture(db, target, actor)
+    : { before: [], after: [] }
+  const ownerName = sql.identifier(target.scope + 'Id')
+  const deleted = sql`SELECT id FROM property WHERE scope=${target.scope} AND ${ownerName}=${target.id} AND audience='public' AND id NOT IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`
+  // Capture every assignment removed by FK cascades, including cross-owner shared fields.
+  const affectedOrg = actor
+    ? await prepareOrganisationRevisionCapture(
+        db,
+        sql`SELECT DISTINCT organisationId AS id FROM organisationProperty WHERE propertyId IN (${deleted})`,
+        actor,
+        { touchModifiedAt: true },
+      )
+    : { before: [], after: [] }
+  const affected = []
+  for (const resource of ['project', 'layer', 'hub'] as const) {
+    affected.push(
+      await prepareAdminResourceRevisionCapture(
+        db,
+        resource,
+        sql`SELECT DISTINCT ${sql.identifier(resource + 'Id')} AS id FROM ${sql.identifier(resource + 'Property')} WHERE propertyId IN (${deleted})`,
+        actor,
+        { touchModifiedAt: true },
+      ),
+    )
+  }
+  // Enclosing forms own overlapping captures; nested capture scopes retain their original preimage.
   return {
-    statements: [ownership, ...writes, deletion],
+    statements: [
+      ownership,
+      ...affectedOrg.before,
+      ...affected.flatMap(row => row.before),
+      ...capture.before,
+      deletion,
+      ...writes,
+      ...capture.after,
+      ...affected.toReversed().flatMap(row => row.after),
+      ...affectedOrg.after,
+    ],
     readback,
     toResult: (rows: PropertyDBRaw[]): Property[] => {
       if (target.scope !== 'project') {

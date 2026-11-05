@@ -413,6 +413,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
         layerDefaults: submittedLayerDefaults,
         properties: normalizedSubmittedProperties as Array<Record<string, unknown>>,
       },
+      { actorId: user.id, reason: 'Hub created with organisation assignments' },
     )
 
     return toCreatedResponseShape(created)
@@ -504,6 +505,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Persist main record atomically with optimistic concurrency.
   const result = await updateHubByIdWithConcurrency(db, {
+    actorId: user.id,
     id: current.id,
     updatedAt: updatedAt as string,
     i18n: data.i18n,
@@ -574,6 +576,7 @@ export const publishHub = guardedCommand(PublishHubSchema, async (params, ctx) =
   // Persist publish state update.
   const persisted = requireValue(
     await updateHubPublishedStateById(db, {
+      actorId: user.id,
       id: commandHubId,
       state: params.state,
     }),
@@ -614,6 +617,7 @@ export const archiveHub = guardedCommand(RemoveHubSchema, async (params, ctx) =>
   // Persist archive state update.
   const persisted = requireValue(
     await updateHubArchivedStateById(db, {
+      actorId: user.id,
       id: commandHubId,
       state: params.state,
     }),
