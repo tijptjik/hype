@@ -2,6 +2,7 @@
 // ORGANISATION USERS
 import OrganisationUserSettings from '#lib/bits/patterns/organisationUsers/OrganisationUserSettings.svelte'
 import OrganisationUsers from '#lib/bits/patterns/organisationUsers/OrganisationUsers.svelte'
+import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import {
   DEFAULT_ORGANISATION_USER_POLICY,
   OrganisationUserPolicyFormSchema,
@@ -1857,6 +1858,23 @@ $effect(() => {
           {/snippet}
         </OrganisationCapabilities>
       </FormSurface>
+    </Main.Facet>
+    <Main.Facet
+      isVisible={activeFacet === 'features'}
+      fillHeight={true}
+      edgeToEdge={true}
+      contentClass="h-full overflow-hidden"
+      attrs={{ 'data-facet-id': 'features' }}
+    >
+      {#if activeFacet === 'features' && optimisticOrganisationData?.id}
+        {#key optimisticOrganisationData.id}
+          <ScopedFeatureIndex
+            embedded
+            resourceType="organisation"
+            resourceId={optimisticOrganisationData.id}
+          />
+        {/key}
+      {/if}
     </Main.Facet>
     <Main.Facet
       isVisible={activeFacet === 'users' &&

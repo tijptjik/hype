@@ -379,7 +379,20 @@ export function useAdminHeaderModel(
   // DERIVED :: RESOURCE / ROUTE
   const headerResourceType = $derived(adminCtx.activeResourceType)
   const isIndex = $derived(adminCtx.activeResourceRef === false)
+  const isEmbeddedIndex = $derived(headerCtrl.state.search?.indexView === true)
+  const presentationResourceType = $derived(
+    isEmbeddedIndex
+      ? (headerCtrl.state.search?.resourceType ?? FirstClassResource.user)
+      : headerResourceType,
+  )
+  const presentationListUi = $derived(
+    headerCtrl.state.search?.listUi ?? adminCtx.listUi,
+  )
   const layoutModes = $derived.by((): HeaderLayoutMode[] => {
+    if (isEmbeddedIndex)
+      return presentationResourceType === FirstClassResource.feature
+        ? ['card', 'table']
+        : ['list', 'card']
     if (!headerResourceType) return []
     if (headerResourceType === FirstClassResource.feature) return ['card', 'table']
     if (
@@ -408,11 +421,13 @@ export function useAdminHeaderModel(
       adminCtx.activeResourceType === FirstClassResource.task,
   )
   const layoutMode = $derived(
-    headerResourceType ? adminCtx.listUi.state.layoutMode[headerResourceType] : 'card',
+    presentationResourceType
+      ? presentationListUi.state.layoutMode[presentationResourceType]
+      : 'card',
   )
   const isControlBarVisible = $derived(
-    headerResourceType
-      ? adminCtx.listUi.state.isControlBarVisible[headerResourceType]
+    presentationResourceType
+      ? presentationListUi.state.isControlBarVisible[presentationResourceType]
       : false,
   )
   const showAvatar = $derived(!appCtx.panels.state.settings.isOpen)
@@ -550,7 +565,7 @@ export function useAdminHeaderModel(
 
   // Cycle through the supported layout modes for the active resource index view.
   function handleAdvanceLayout(): void {
-    const resourceType = adminCtx.activeResourceType
+    const resourceType = presentationResourceType
 
     if (!resourceType) return
 
@@ -558,27 +573,29 @@ export function useAdminHeaderModel(
 
     if (supportedModes.length <= 1) return
 
-    const currentMode = adminCtx.listUi.state.layoutMode[
+    const currentMode = presentationListUi.state.layoutMode[
       resourceType
     ] as HeaderLayoutMode
     const currentIndex = Math.max(0, supportedModes.indexOf(currentMode))
     const nextMode = supportedModes[(currentIndex + 1) % supportedModes.length]
 
-    adminCtx.listUi.state.layoutMode[resourceType] = nextMode
+    presentationListUi.state.layoutMode[resourceType] = nextMode
   }
 
   // Toggle the resource control bar beneath the header.
   function handleControlsToggle(): void {
-    const resourceType = adminCtx.activeResourceType
+    const resourceType = presentationResourceType
 
     if (
       !resourceType ||
-      (!isFilterResource(resourceType) && resourceType !== FirstClassResource.location)
+      (!isEmbeddedIndex &&
+        !isFilterResource(resourceType) &&
+        resourceType !== FirstClassResource.location)
     )
       return
 
-    adminCtx.listUi.state.isControlBarVisible[resourceType] =
-      !adminCtx.listUi.state.isControlBarVisible[resourceType]
+    presentationListUi.state.isControlBarVisible[resourceType] =
+      !presentationListUi.state.isControlBarVisible[resourceType]
   }
 
   /**
@@ -693,14 +710,22 @@ export function useAdminHeaderModel(
   // Merge page-level visibility overrides on top of adapter-derived defaults.
   const resolvedVisibility = $derived.by(() => ({
     showNew: visibility.showNew ?? defaultVisibility.showNew,
-    showFilter: visibility.showFilter ?? defaultVisibility.showFilter,
+    showFilter:
+      isEmbeddedIndex || (visibility.showFilter ?? defaultVisibility.showFilter),
     showFacets: visibility.showFacets ?? defaultVisibility.showFacets,
-    showViewActions: visibility.showViewActions ?? defaultVisibility.showViewActions,
-    showFormActions: visibility.showFormActions ?? defaultVisibility.showFormActions,
+    showViewActions:
+      isEmbeddedIndex ||
+      (visibility.showViewActions ?? defaultVisibility.showViewActions),
+    showFormActions:
+      !isEmbeddedIndex &&
+      (visibility.showFormActions ?? defaultVisibility.showFormActions),
     showAvatar: visibility.showAvatar ?? defaultVisibility.showAvatar,
-    showLayoutToggle: visibility.showLayoutToggle ?? defaultVisibility.showLayoutToggle,
+    showLayoutToggle:
+      isEmbeddedIndex ||
+      (visibility.showLayoutToggle ?? defaultVisibility.showLayoutToggle),
     showControlBarToggle:
-      visibility.showControlBarToggle ?? defaultVisibility.showControlBarToggle,
+      isEmbeddedIndex ||
+      (visibility.showControlBarToggle ?? defaultVisibility.showControlBarToggle),
   }))
 
   // ---

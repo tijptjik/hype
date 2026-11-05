@@ -135,6 +135,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   organisation: [
     ADMIN_FACETS.core,
+    ADMIN_FACETS.features,
     ADMIN_FACETS.users,
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.fields,

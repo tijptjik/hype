@@ -1,4 +1,6 @@
 // TYPES
+import type { NavigableResource } from '#lib/types.js'
+import type { ResourceIndexUi } from '#lib/context/resourceIndexUi.svelte.js'
 import type { Component } from 'svelte'
 import type {
   HeaderCrumb,
@@ -70,6 +72,10 @@ export type HeaderFormActionsState = {
 
 export type HeaderCtrlState = {
   search: {
+    /** Use index controls within an entity facet without replacing its title or tabs. */
+    indexView?: boolean
+    resourceType?: NavigableResource
+    listUi?: ResourceIndexUi
     query: string
     placeholder?: string
     onFilter: (query: string) => void
