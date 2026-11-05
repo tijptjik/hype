@@ -17,6 +17,7 @@ export type DescriptorFieldConfig = {
   key: GenAiField
   label: string
   kind: 'input' | 'textarea'
+  markdown?: boolean
   readonly?: boolean
   ariaLabel?: string
   renderHtml?: boolean

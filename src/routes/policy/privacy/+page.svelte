@@ -8,11 +8,9 @@ import { getLocaleKey } from '#lib/i18n.js'
 import { resolveTitle } from '#lib/navigation/title.js'
 // COMPONENTS
 import HubPolicyDocumentBody from '#lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
+import { renderMarkdown as renderPolicyMarkdown } from '#lib/services/markdown.js'
 // SERVICES
-import {
-  createDefaultHubPrivacyPolicy,
-  renderPolicyMarkdown,
-} from '#lib/services/policy.js'
+import { createDefaultHubPrivacyPolicy } from '#lib/services/policy.js'
 // TYPES
 import type { TitleEnvironmentLabel } from '#lib/bits/patterns/panels/panel.types.js'
 import type { PageProps } from './$types'

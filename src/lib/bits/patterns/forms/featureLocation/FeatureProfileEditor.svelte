@@ -87,7 +87,7 @@ let {
     text: string,
   ) => Promise<ProfileProviderResult>
   onTranslated: (field: Field, locale: string, text: string) => void
-  children: Snippet<[Field, string, () => void, string]>
+  children: Snippet<[Field, string, () => void, string, Snippet]>
 } = $props()
 const showSkeleton = $derived(loading && !retainContent)
 const options = $derived(contentLocaleOptions(getLocaleKey()))
@@ -224,6 +224,29 @@ function autonym(locale: string): string {
       {@const hasTargets = localeState.selectedLocales.some(
         locale => !hasProfileText(values[contentFormKey(locale)]?.[field]),
       )}
+      {#snippet translationActions(compact = true)}
+        <FormI18nSourceBar
+          {compact}
+          visible={!showSkeleton &&
+            localeState.expanded &&
+            isEditing &&
+            !derived &&
+            sources.length > 0}
+          sources={sources.map(source => ({
+            locale: source,
+            label: autonym(source),
+            accessibleLabel: m.profile_translate_source({ language: name(source) }),
+          }))}
+          label={m.profile_translate_from()}
+          busy={busy[field] ?? false}
+          busySource={busySource[field]}
+          disabled={!hasTargets}
+          onTranslate={source => void fill(source, field)}
+        />
+      {/snippet}
+      {#snippet editorTranslationActions()}
+        {@render translationActions()}
+      {/snippet}
       <section
         class="min-w-0 {stackNames
           ? field === 'description'
@@ -313,23 +336,9 @@ function autonym(locale: string): string {
                 : ''}
             />
           </div>
-          <FormI18nSourceBar
-            visible={!showSkeleton &&
-              localeState.expanded &&
-              isEditing &&
-              !derived &&
-              sources.length > 0}
-            sources={sources.map(source => ({
-              locale: source,
-              label: autonym(source),
-              accessibleLabel: m.profile_translate_source({ language: name(source) }),
-            }))}
-            label={m.profile_translate_from()}
-            busy={busy[field] ?? false}
-            busySource={busySource[field]}
-            disabled={!hasTargets}
-            onTranslate={source => void fill(source, field)}
-          />
+          <div class="[[data-profile-field]:has([data-markdown-editor])_&]:hidden">
+            {@render translationActions(false)}
+          </div>
         </div>
         <div>
           {#each localeState.selectedLocales as locale (locale)}
@@ -405,6 +414,7 @@ function autonym(locale: string): string {
                     locale,
                     () => translator.touch(locale, field),
                     stickyHeader || locale === shown[0] ? '' : shortLocaleLabel(locale),
+                    editorTranslationActions,
                   )}
                 </div>
               </div>

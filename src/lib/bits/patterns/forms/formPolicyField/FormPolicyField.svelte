@@ -3,7 +3,7 @@
 import { TextArea } from '#lib/bits/custom/form/index.js'
 import HubPolicyDocumentBody from '#lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
 // SERVICES
-import { renderPolicyMarkdown } from '#lib/services/policy.js'
+import { renderMarkdown as renderPolicyMarkdown } from '#lib/services/markdown.js'
 // TYPES
 import type { ComponentProps } from 'svelte'
 
@@ -19,7 +19,7 @@ const renderedHtml = $derived(renderPolicyMarkdown(field.value))
 
 {#if !isEditing}
   <section class="min-w-0 space-y-3 py-2">
-    <h3 class="text-sm font-semibold text-muted-foreground">{field.label}</h3>
+    <h3 class="text-muted-foreground text-sm font-semibold">{field.label}</h3>
     <HubPolicyDocumentBody
       html={renderedHtml}
       class="min-w-0 overflow-x-auto break-words"

@@ -8,17 +8,21 @@ import { m } from '#lib/i18n.js'
 // COMPONENTS
 import { TextArea, TextInput } from '#lib/bits/custom/form/index.js'
 import GenAI from '#lib/bits/custom/form/src/input/components/GenAI.svelte'
+import MarkdownEditor from '#lib/bits/custom/markdownEditor/MarkdownEditor.svelte'
+import { renderMarkdownContent } from '#lib/services/markdown.js'
 import HtmlPreview from '#lib/bits/custom/htmlPreview/HtmlPreview.svelte'
 // I18N
 import { hasMeaningfulText } from '../text'
 
 let {
   preview,
+  toolbarActions,
   showPreview = true,
   value,
   label,
   prefix = '',
   multiline = false,
+  markdown = false,
   editable,
   isGenAI = false,
   showVerification = true,
@@ -31,12 +35,14 @@ let {
   onCancel,
   onClear,
 }: {
+  toolbarActions?: Snippet
   preview?: Snippet
   showPreview?: boolean
   value: string
   label: string
   prefix?: string
   multiline?: boolean
+  markdown?: boolean
   editable: boolean
   isGenAI?: boolean
   showVerification?: boolean
@@ -143,10 +149,27 @@ const editorAttrs = $derived({
     <div
       hidden={!active}
       onfocusout={event => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node)) close()
+        if (!markdown && !event.currentTarget.contains(event.relatedTarget as Node))
+          close()
       }}
     >
-      {#if multiline}
+      {#if markdown}
+        {#if active}
+          <MarkdownEditor
+            {value}
+            {attrs}
+            {label}
+            {toolbarActions}
+            onDone={close}
+            onCancel={keydown}
+          />
+          {#each issues ?? [] as issue}
+            <p class="text-destructive text-sm">{issue.message}</p>
+          {/each}
+        {:else}
+          <textarea {...attrs} {value} hidden aria-label={label}></textarea>
+        {/if}
+      {:else if multiline}
         <TextArea
           {value}
           {required}
@@ -213,6 +236,8 @@ const editorAttrs = $derived({
               <span class="text-muted-foreground">—</span>
             {:else if showPreview && preview}
               {@render preview()}
+            {:else if markdown}
+              <HtmlPreview html={renderMarkdownContent(value)} />
             {:else if renderHtml}
               <HtmlPreview html={value} />
             {:else}
@@ -222,7 +247,7 @@ const editorAttrs = $derived({
         {/key}
       </div>
     </div>
-    {#if editable && value.length}
+    {#if editable && value.length && !(markdown && active)}
       <button
         type="button"
         aria-label={`${m.filters__clear()} ${label}`}

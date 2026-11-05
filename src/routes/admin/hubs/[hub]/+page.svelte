@@ -9,6 +9,7 @@ import { m } from '#lib/i18n.js'
 import { getI18n, getLocale, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
+import { renderMarkdown as renderPolicyMarkdown } from '#lib/services/markdown.js'
 // SERVICES
 import {
   addUserRoleSelection,
@@ -43,7 +44,6 @@ import {
   toHubFormInput,
 } from '#lib/client/services/hub.js'
 import {
-  renderPolicyMarkdown,
   createDefaultHubPrivacyPolicy,
   createDefaultHubTermsOfService,
 } from '#lib/services/policy.js'
@@ -1612,6 +1612,20 @@ $effect(() => {
           {isEditing}
           {isRequiredInPreflight}
           stickyToolbar
+          fieldConfigs={[
+            { key: 'name', label: m.admin__forms_common_name_full(), kind: 'input' },
+            {
+              key: 'nameShort',
+              label: m.admin__forms_common_name_short(),
+              kind: 'input',
+            },
+            {
+              key: 'description',
+              label: m.feature__description(),
+              kind: 'textarea',
+              markdown: true,
+            },
+          ]}
           translate={(source, target, text) =>
             translateContentField({ source, target, text })}
           onChange={revalidateAfterProgrammaticChange}
@@ -1815,12 +1829,14 @@ $effect(() => {
           fieldConfigs={[
             {
               key: 'privacyPolicy',
+              markdown: true,
               label: 'Privacy Policy',
               kind: 'textarea',
               renderHtml: false,
             },
             {
               key: 'termsOfService',
+              markdown: true,
               label: 'Terms of Service',
               kind: 'textarea',
               renderHtml: false,

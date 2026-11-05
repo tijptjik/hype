@@ -1,0 +1,44 @@
+diff --git a/lib/table-block/index.js b/lib/table-block/index.js
+index 5ecaaae6c915e01d78b343aa64bbd32c626eb27c..ff978da381c504d561d9893c938fa62c088b1505 100644
+--- a/lib/table-block/index.js
++++ b/lib/table-block/index.js
+@@ -1076,11 +1076,15 @@ handleClick_fn = function(event) {
+   if (state.selection.eq(selection)) return false;
+   if (state.selection instanceof CellSelection) {
+     setTimeout(() => {
+-      dispatch(state.tr.setSelection(selection).scrollIntoView());
++      // A deferred table click must not apply a selection from an older document.
++      if (!view.isDestroyed && view.state.doc.eq(state.doc))
++        dispatch(view.state.tr.setSelection(selection).scrollIntoView());
+     }, 20);
+   } else {
+     requestAnimationFrame(() => {
+-      dispatch(state.tr.setSelection(selection).scrollIntoView());
++      // A deferred table click must not apply a selection from an older document.
++      if (!view.isDestroyed && view.state.doc.eq(state.doc))
++        dispatch(view.state.tr.setSelection(selection).scrollIntoView());
+     });
+   }
+   return true;
+diff --git a/src/table-block/view/view.ts b/src/table-block/view/view.ts
+index 9b8ba8ee87f0843a94a857fc2bc7a28639ebab36..ce353305cb9ed5674558dfb6047fce143c7c0c8a 100644
+--- a/src/table-block/view/view.ts
++++ b/src/table-block/view/view.ts
+@@ -102,11 +102,15 @@ export class TableNodeView implements NodeView {
+ 
+     if (state.selection instanceof CellSelection) {
+       setTimeout(() => {
+-        dispatch(state.tr.setSelection(selection).scrollIntoView())
++        // A deferred table click must not apply a selection from an older document.
++      if (!view.isDestroyed && view.state.doc.eq(state.doc))
++        dispatch(view.state.tr.setSelection(selection).scrollIntoView())
+       }, 20)
+     } else {
+       requestAnimationFrame(() => {
+-        dispatch(state.tr.setSelection(selection).scrollIntoView())
++        // A deferred table click must not apply a selection from an older document.
++      if (!view.isDestroyed && view.state.doc.eq(state.doc))
++        dispatch(view.state.tr.setSelection(selection).scrollIntoView())
+       })
+     }
+     return true

@@ -219,7 +219,7 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
     {translate}
     onTranslated={applyTranslation}
   >
-    {#snippet children(field, locale, onEditStart, prefix)}
+    {#snippet children(field, locale, onEditStart, prefix, toolbarActions)}
       {@const key = contentFormKey(locale)}
       {@const config = configs.find(config => config.key === field)!}
       {@const language = getContentLocaleRecord(locale, getLocaleKey())}
@@ -231,6 +231,7 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
         inline
         {renderValue}
         {onEditStart}
+        {toolbarActions}
         fieldConfigs={[
           { ...config, label: prefix, ariaLabel: `${config.label} · ${language.name}` },
         ]}

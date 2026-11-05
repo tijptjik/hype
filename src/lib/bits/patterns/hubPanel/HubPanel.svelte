@@ -15,6 +15,8 @@ import {
   PanelRoot as Panel,
 } from '#lib/bits/index.js'
 import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
+import HtmlPreview from '#lib/bits/custom/htmlPreview/HtmlPreview.svelte'
+import { renderMarkdownContent } from '#lib/services/markdown.js'
 // ENUMS
 import { Panel as PanelEnum, PanelSide } from '#lib/enums.js'
 // TYPES
@@ -61,15 +63,17 @@ let isTermsOfServiceOpen = $state(false)
 <Panel isOpen={shell.open} bind:panelContainer {...panelProps}>
   <Header onClose={shell.onClose} {...panelProps} title={m.menu_about()} />
   <div
-    class="h-calc(100vh-10rem) flex flex-col items-stretch overflow-y-auto overscroll-contain"
+    class="flex h-[calc(100vh-10rem)] flex-col items-stretch overflow-y-auto overscroll-contain"
   >
-    <h2 class="grow-0 p-6 text-lg font-semibold uppercase tracking-widest">
+    <h2 class="grow-0 p-6 text-lg font-semibold tracking-widest uppercase">
       {getI18n(hubI18n, 'nameShort', preferences, m.menu_about())}
     </h2>
     <div class="preformatted mb-12">
-      <p class="mb-12">
-        {@html getI18n(hubI18n, 'description', preferences, m.menu_about())}
-      </p>
+      <HtmlPreview
+        html={renderMarkdownContent(
+          getI18n(hubI18n, 'description', preferences, m.menu_about()),
+        )}
+      />
     </div>
     {#if showSubscription && subscriptionProps}
       <HubPanelSubscription

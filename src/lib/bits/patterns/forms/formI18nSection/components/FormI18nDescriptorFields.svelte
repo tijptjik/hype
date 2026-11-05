@@ -42,6 +42,7 @@ let {
   besideShortName,
   inline = false,
   onEditStart,
+  toolbarActions,
   renderValue,
 }: {
   form: FormDataUpdaterForm<T>
@@ -50,6 +51,7 @@ let {
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
   fieldConfigs?: DescriptorFieldConfig[]
+  toolbarActions?: Snippet
   afterField?: Snippet<[GenAiField]>
   inline?: boolean
   onEditStart?: (field: GenAiField) => void
@@ -154,6 +156,8 @@ function cancelEdit(): void {
         value={(attrs as { value?: string }).value ?? ''}
         label={config.ariaLabel ?? config.label}
         prefix={config.label}
+        toolbarActions={config.markdown ? toolbarActions : undefined}
+        markdown={config.markdown}
         multiline={config.kind === 'textarea'}
         editable={isEditing && !config.readonly}
         isGenAI={genValue}

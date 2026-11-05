@@ -246,12 +246,14 @@ const form = {
           fieldConfigs={[
             {
               key: 'privacyPolicy',
+              markdown: true,
               label: 'Privacy Policy',
               kind: 'textarea',
               renderHtml: false,
             },
             {
               key: 'termsOfService',
+              markdown: true,
               label: 'Terms of Service',
               kind: 'textarea',
               renderHtml: false,
