@@ -1,0 +1,21 @@
+{
+  "mode": "built-in image_gen",
+  "prompts": [
+    {
+      "name": "hype-hk",
+      "prompt": "Create one polished landscape 16:9 title card, full bleed graphic artwork, crisp geometric vector-like design and impeccable bold modern grotesk typography. HYPE.HK visual language: angular square spiral/maze motif, purple-to-pink accents, lavender and mint on near-black. Sophisticated Swiss typographic composition with large clearly readable hub name, generous negative space, geometrical pattern taking up right half and integrating subtly behind text. Flat shapes, sharp edges, selective gradients, no photography, no 3D, no mockup, no extra slogans or invented text. Each card part of cohesive family. Exact title: 'HYPE.HK'. Giant white title left lower-middle. Right: oversized interlocking square spirals and concentric right-angle paths, violet to hot pink to coral bands, tiny mint square accents. Deep black-purple background. Make geometry architectural, bold, clean."
+    },
+    {
+      "name": "hk-ghost-signs",
+      "prompt": "Create one polished landscape 16:9 title card, full bleed graphic artwork, crisp geometric vector-like design and impeccable bold modern grotesk typography. HYPE.HK visual language: angular square spiral/maze motif, purple-to-pink accents, lavender and mint on near-black. Sophisticated Swiss typographic composition with large clearly readable hub name, generous negative space, geometrical pattern taking up right half and integrating subtly behind text. Flat shapes, sharp edges, selective gradients, no photography, no 3D, no mockup, no extra slogans or invented text. Each card part of cohesive family. Exact title: 'HK Ghost Signs', white bold type on two lines at left lower-middle, all words fully readable. Pattern at right: repeated offset rectilinear sign frames, square spirals fragmented into nested corner brackets, slight faded repetitions suggesting traces of old signage abstractly. Dominant lavender and violet, hot pink edge accents, sparse mint squares, near-black purple background. Same scale and confidence as a cultural design festival identity."
+    },
+    {
+      "name": "breadline",
+      "prompt": "Create one polished landscape 16:9 title card, full bleed graphic artwork, crisp geometric vector-like design and impeccable bold modern grotesk typography. HYPE.HK visual language: angular square spiral/maze motif, purple-to-pink accents, lavender and mint on near-black. Sophisticated Swiss typographic composition with large clearly readable hub name, generous negative space, geometrical pattern taking up right half and integrating subtly behind text. Flat shapes, sharp edges, selective gradients, no photography, no 3D, no mockup, no extra slogans or invented text. Each card part of cohesive family. Exact title: 'Breadline'. Large white title left lower-middle. Distinct geometric pattern right: interwoven thick right-angle ribbons forming connected modular squares and stepped paths, a sense of sharing and connection. Adapt palette toward peach coral and salmon with lavender and mint accents on deep blue-green almost black, retaining HYPE family structure. No literal bread illustration. Clean, warm, energetic."
+    },
+    {
+      "name": "mappinghk",
+      "prompt": "Create one polished landscape 16:9 title card, full bleed graphic artwork, crisp geometric vector-like design and impeccable bold modern grotesk typography. HYPE.HK visual language: angular square spiral/maze motif, purple-to-pink accents, lavender and mint on near-black. Sophisticated Swiss typographic composition with large clearly readable hub name, generous negative space, geometrical pattern taking up right half and integrating subtly behind text. Flat shapes, sharp edges, selective gradients, no photography, no 3D, no mockup, no extra slogans or invented text. Each card part of cohesive family. Exact and only text: 'MappingHK'. Very large white title left lower-middle. Right side geometric pattern: abstract city grid of thick orthogonal mint paths and violet square blocks, nested square spirals mixed with stepped contours, small pink square nodes. Dominant mint and teal, lavender and hot pink secondary, deep near-black blue-purple background. Strong flat graphic shapes, generous dark space behind title, no literal map labels or pins, no additional logos."
+    }
+  ]
+}

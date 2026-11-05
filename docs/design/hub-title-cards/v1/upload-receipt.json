@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-05",
+  "environments": ["production", "local"],
+  "storage": ["hype-assets-raw-prod", "hype-assets-raw-dev"],
+  "originalsAndRawSha256Verified": true,
+  "cards": [
+    {
+      "code": "core",
+      "hub": "4Jsk5LngvFZq",
+      "file": "docs/design/hub-title-cards/v1/hype-hk.png",
+      "sha": "6a31c8be23dd4929cd6ab452756641ac5bc5c60a9b645a764a6681e4b67559fc",
+      "key": "h/hubs/4Jsk5LngvFZq/title-6a31c8be23dd4929",
+      "id": "hubcard_6a31c8be23dd4929",
+      "previousLocalImageId": "upload-2f118a2344b9c991bb392c1d2530f7ab9d1aaccd8a508c091406d03582d9bc1e",
+      "previousProductionImageId": null
+    },
+    {
+      "code": "hkghostsigns",
+      "hub": "Zmr0egfhmvs-",
+      "file": "docs/design/hub-title-cards/v1/hk-ghost-signs.png",
+      "sha": "22dd10781a0c1edfe31e9fae00f0c95666fbdca84a702cfc659d46511446be27",
+      "key": "h/hubs/Zmr0egfhmvs-/title-22dd10781a0c1edf",
+      "id": "hubcard_22dd10781a0c1edf",
+      "previousLocalImageId": null,
+      "previousProductionImageId": null
+    },
+    {
+      "code": "breadline",
+      "hub": "WGXXgrurxIbS",
+      "file": "docs/design/hub-title-cards/v1/breadline-v2.png",
+      "sha": "cc836a2dfd63659617e885c1678571f452c36b91d08974764addce4d5eab79c1",
+      "key": "h/hubs/WGXXgrurxIbS/title-cc836a2dfd636596",
+      "id": "hubcard_cc836a2dfd636596",
+      "previousLocalImageId": null,
+      "previousProductionImageId": null
+    },
+    {
+      "code": "mappinghk",
+      "hub": "tA_2lcNCF-3h",
+      "file": "docs/design/hub-title-cards/v1/mappinghk.png",
+      "sha": "f5c28a1acc94133f11eff75e39d4f762bf7a7c4a60e2bcb14f488b962dd87f90",
+      "key": "h/hubs/tA_2lcNCF-3h/title-f5c28a1acc94133f",
+      "id": "hubcard_f5c28a1acc94133f",
+      "previousLocalImageId": null,
+      "previousProductionImageId": null
+    }
+  ]
+}
