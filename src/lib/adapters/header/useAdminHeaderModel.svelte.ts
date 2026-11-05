@@ -22,6 +22,7 @@ import Pencil from 'virtual:icons/proicons/pencil'
 import FeatureIcon from 'virtual:icons/proicons/location'
 import RotateCcw from 'virtual:icons/proicons/arrow-counterclockwise'
 import Save from 'virtual:icons/proicons/save'
+import Upload from 'virtual:icons/proicons/arrow-upload'
 import Table2 from 'virtual:icons/proicons/table'
 import Trash2 from 'virtual:icons/proicons/delete'
 import Undo2 from 'virtual:icons/proicons/arrow-undo'
@@ -827,7 +828,7 @@ export function useAdminHeaderModel(
         text: isPublished ? m.forms__unpublish() : m.forms__publish(),
         color: isPublished ? ('neutral' as const) : ('primary' as const),
         style: isPublished ? ('outline' as const) : ('none' as const),
-        icon: isPublishing ? LoaderCircle : isPublished ? EyeOff : Eye,
+        icon: isPublishing ? LoaderCircle : isPublished ? EyeOff : Upload,
         class: 'bits-pattern-header__form-action-publish',
         disabled: isPublishBlocked,
         onClick: handlePublishToggle,
