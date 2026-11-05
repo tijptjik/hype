@@ -131,96 +131,99 @@ async function onFieldDrop(state: DragDropState, targetId: string): Promise<void
 }
 </script>
 
-{#if isLoading}
-  <section
-    class="bits-theme bits-form__section min-h-64"
-    role="status"
-    aria-live="polite"
-    aria-busy="true"
-    in:fade={{ duration: 140 }}
-    out:fade={{ duration: 120 }}
-  >
-    <Loading items={loadingItems} />
-  </section>
-{:else if items.length === 0}
-  <div
-    class="flex min-h-0 flex-1 flex-col"
-    role="status"
-    aria-live="polite"
-    in:fade={{ duration: 140 }}
-    out:fade={{ duration: 120 }}
-  >
-    <EmptyState
-      title={m.admin__forms_project_fields_empty_title()}
-      description={m.admin__forms_project_fields_empty_description()}
-      class="bits-theme bits-form__section bits-project-fields__empty"
-      titleClass="bits-project-fields__empty-title"
-      descriptionClass="bits-project-fields__empty-description"
-      actions={canEdit ? emptyActions : undefined}
-    />
-    {#snippet emptyActions()}
-      <Button
-        text={m.fun_away_bird_peek()}
-        color="primary"
-        iconComponent={ListPlus}
-        disabled={disableEmptyAdd || !onAdd}
-        onClick={event => onAdd?.(event)}
-        class="bits-project-fields__empty-add-btn"
+<!-- Keep outgoing and incoming states in the same cell while their fades overlap. -->
+<div class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] items-start">
+  {#if isLoading}
+    <section
+      class="bits-theme bits-form__section col-start-1 row-start-1 min-h-64 min-w-0"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      in:fade={{ duration: 140 }}
+      out:fade={{ duration: 120 }}
+    >
+      <Loading items={loadingItems} />
+    </section>
+  {:else if items.length === 0}
+    <div
+      class="col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col self-stretch"
+      role="status"
+      aria-live="polite"
+      in:fade={{ duration: 140 }}
+      out:fade={{ duration: 120 }}
+    >
+      <EmptyState
+        title={m.admin__forms_project_fields_empty_title()}
+        description={m.admin__forms_project_fields_empty_description()}
+        class="bits-theme bits-form__section bits-project-fields__empty"
+        titleClass="bits-project-fields__empty-title"
+        descriptionClass="bits-project-fields__empty-description"
+        actions={canEdit ? emptyActions : undefined}
       />
-    {/snippet}
-  </div>
-{:else}
-  <div
-    class="flex flex-col gap-3"
-    in:fade={{ duration: 160 }}
-    out:fade={{ duration: 120 }}
-  >
-    {#each items as property, index (property.id)}
-      {@const itemVisible = isItemVisible ? isItemVisible(property) : true}
-      <div
-        class={itemVisible ? '' : 'hidden'}
-        animate:flip={{ duration: flipDisabled ? 0 : 220, easing: cubicInOut }}
-        in:slide={{
-          axis: 'y',
-          duration: introItemId === property.id ? 180 : 0,
-        }}
-        onintroend={() => {
-          if (introItemId !== property.id) return
-          onIntroEnd?.(property.id)
-        }}
-        onkeydowncapture={event => guardReorderKey(event, index)}
-        id={`property-wrapper-${property.id}`}
-        use:draggable={{
-          container: `${dragGroup}-${property.id}`,
-          containerGroup: dragGroup,
-          dragData: { id: property.id },
-          handle: '[data-property-drag-handle]',
-          disabled: !canReorder(index) || isReordering,
-          attributes: { draggingClass: 'opacity-50' },
-        }}
-        use:droppable={{
-          container: `${dragGroup}-${property.id}`,
-          containerGroup: dragGroup,
-          disabled: !canReorder(index) || isReordering,
-          callbacks: { onDrop: state => onFieldDrop(state, property.id) },
-          attributes: { dragOverClass: 'ring-2' },
-        }}
-      >
-        <Item
-          {property}
-          {index}
-          totalItems={items.length}
-          {moveWindowSize}
-          isMoveLocked={card?.isMoveLocked?.(property) ?? false}
-          keepExpandedOnIntro={introItemId === property.id}
-          {issueItemIds}
-          {card}
-          {collapsedAll}
-          {collapseAllVersion}
-          {onCardCollapseToggle}
-          {onCollapseChange}
+      {#snippet emptyActions()}
+        <Button
+          text={m.fun_away_bird_peek()}
+          color="primary"
+          iconComponent={ListPlus}
+          disabled={disableEmptyAdd || !onAdd}
+          onClick={event => onAdd?.(event)}
+          class="bits-project-fields__empty-add-btn"
         />
-      </div>
-    {/each}
-  </div>
-{/if}
+      {/snippet}
+    </div>
+  {:else}
+    <div
+      class="col-start-1 row-start-1 flex min-w-0 flex-col gap-3"
+      in:fade={{ duration: 160 }}
+      out:fade={{ duration: 120 }}
+    >
+      {#each items as property, index (property.id)}
+        {@const itemVisible = isItemVisible ? isItemVisible(property) : true}
+        <div
+          class={itemVisible ? '' : 'hidden'}
+          animate:flip={{ duration: flipDisabled ? 0 : 220, easing: cubicInOut }}
+          in:slide={{
+            axis: 'y',
+            duration: introItemId === property.id ? 180 : 0,
+          }}
+          onintroend={() => {
+            if (introItemId !== property.id) return
+            onIntroEnd?.(property.id)
+          }}
+          onkeydowncapture={event => guardReorderKey(event, index)}
+          id={`property-wrapper-${property.id}`}
+          use:draggable={{
+            container: `${dragGroup}-${property.id}`,
+            containerGroup: dragGroup,
+            dragData: { id: property.id },
+            handle: '[data-property-drag-handle]',
+            disabled: !canReorder(index) || isReordering,
+            attributes: { draggingClass: 'opacity-50' },
+          }}
+          use:droppable={{
+            container: `${dragGroup}-${property.id}`,
+            containerGroup: dragGroup,
+            disabled: !canReorder(index) || isReordering,
+            callbacks: { onDrop: state => onFieldDrop(state, property.id) },
+            attributes: { dragOverClass: 'ring-2' },
+          }}
+        >
+          <Item
+            {property}
+            {index}
+            totalItems={items.length}
+            {moveWindowSize}
+            isMoveLocked={card?.isMoveLocked?.(property) ?? false}
+            keepExpandedOnIntro={introItemId === property.id}
+            {issueItemIds}
+            {card}
+            {collapsedAll}
+            {collapseAllVersion}
+            {onCardCollapseToggle}
+            {onCollapseChange}
+          />
+        </div>
+      {/each}
+    </div>
+  {/if}
+</div>
