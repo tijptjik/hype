@@ -1186,7 +1186,7 @@ $effect(() => {
                         >
                           <button
                             type="button"
-                            class="flex min-w-0 flex-1 items-center gap-2 pb-2 text-left"
+                            class="flex shrink-0 items-center gap-2 pr-2 pb-2 text-left"
                             class:cursor-grab={!isValueDnDDisabled()}
                             class:select-none={!isValueDnDDisabled()}
                             data-option-drag-handle

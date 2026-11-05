@@ -208,7 +208,9 @@ function onReorderKey(event: KeyboardEvent): void {
         class="bits-project-field-card__title-pill relative max-w-full min-w-0 px-2!"
         onclick={onToggleCollapse}
       >
-        <h3 class="bits-project-field-card__title truncate">
+        <h3
+          class="bits-project-field-card__title min-w-0 leading-snug! break-words whitespace-normal"
+        >
           {property.i18n?.en?.label ||
             property.key ||
             m.admin__forms_property_untitled()}
@@ -223,14 +225,18 @@ function onReorderKey(event: KeyboardEvent): void {
       >
         {#if titleHref}
           <a href={titleHref} class="bits-project-field-card__title-link">
-            <h3 class="bits-project-field-card__title truncate">
+            <h3
+              class="bits-project-field-card__title min-w-0 leading-snug! break-words whitespace-normal"
+            >
               {property.i18n?.en?.label ||
                 property.key ||
                 m.admin__forms_property_untitled()}
             </h3>
           </a>
         {:else}
-          <h3 class="bits-project-field-card__title truncate">
+          <h3
+            class="bits-project-field-card__title min-w-0 leading-snug! break-words whitespace-normal"
+          >
             {property.i18n?.en?.label ||
               property.key ||
               m.admin__forms_property_untitled()}
