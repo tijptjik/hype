@@ -29,6 +29,10 @@ const {
 
 const mockUpdateUser = vi.hoisted(() => vi.fn())
 const mockReadAdminUserProfile = vi.hoisted(() => vi.fn())
+const mockReadContributionPreviews = vi.hoisted(() => vi.fn())
+vi.mock('#lib/api/services/userContributionPreviews.js', () => ({
+  readUserContributionPreviews: mockReadContributionPreviews,
+}))
 const mockPrivateContributions = vi.hoisted(() => vi.fn())
 vi.mock('#lib/api/services/profileContributions.js', () => ({
   loadPrivateContributions: mockPrivateContributions,
@@ -436,9 +440,10 @@ describe('user.remote', () => {
       url: new URL('https://example.com/admin/users/KindRunner01'),
     })
     mockReadAdminUserProfile.mockResolvedValue({
-      profile: { username: 'kindrunner01' },
+      profile: { id: 'target', username: 'kindrunner01' },
       details: null,
     })
+    mockReadContributionPreviews.mockResolvedValue([])
     const result = await remote.getAdminUserProfile({ username: 'KindRunner01' })
     expect(mockReadAdminUserProfile).toHaveBeenCalledWith(
       {},
@@ -449,7 +454,59 @@ describe('user.remote', () => {
         hub,
       },
     )
-    expect(result).toEqual({ profile: { username: 'kindrunner01' }, details: null })
+    expect(mockReadContributionPreviews).toHaveBeenCalledWith(
+      {},
+      {
+        userId: 'target',
+        actor: { id: 'u-1', isAnonymous: false, superAdmin: false },
+        userRoles: [],
+        hub,
+        locale: expect.any(String),
+      },
+    )
+    expect(result).toEqual({
+      profile: { id: 'target', username: 'kindrunner01' },
+      details: null,
+      contributionPreviews: [],
+    })
+  })
+
+  it('keeps the profile available if preloading previews fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockReadAdminUserProfile.mockResolvedValue({
+      profile: { id: 'target' },
+      details: null,
+    })
+    mockReadContributionPreviews.mockRejectedValueOnce(new Error('Preview unavailable'))
+    try {
+      const result = await remote.getAdminUserProfile({ username: 'kindrunner01' })
+      expect(result).toEqual({ profile: { id: 'target' }, details: null })
+      expect(warn).toHaveBeenCalledOnce()
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it('getUserContributionPreviews uses the server viewer and hub for its bounded query', async () => {
+    const hub = { id: 'hub-1', isCore: false }
+    mockGetRequestEvent.mockReturnValue({
+      locals: { hub },
+      platform: { env: {} },
+      request: { method: 'GET' },
+      url: new URL('https://example.com/'),
+    })
+    mockReadContributionPreviews.mockResolvedValue([])
+    expect(await remote.getUserContributionPreviews({ userId: 'target' })).toEqual([])
+    expect(mockReadContributionPreviews).toHaveBeenCalledWith(
+      {},
+      {
+        userId: 'target',
+        actor: { id: 'u-1', isAnonymous: false, superAdmin: false },
+        userRoles: [],
+        hub,
+        locale: expect.any(String),
+      },
+    )
   })
 
   it('getUserForAttribution returns null for archived users', async () => {

@@ -3,6 +3,7 @@
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ContributedFeatures from '#lib/bits/patterns/panels/sections/contributedFeatures/ContributedFeaturesSection.svelte'
 import ContributedImages from '#lib/bits/patterns/panels/sections/contributedImages/ContributedImagesSection.svelte'
+import UserContributionPreviews from './UserContributionPreviews.svelte'
 // UTILS
 import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 // ICONS
@@ -11,9 +12,18 @@ import PersonIcon from 'virtual:icons/proicons/person'
 import type { AdminUserProfile } from '#lib/db/zod/schema/user.types.js'
 import type { UserContributionsModel } from '#lib/adapters/panels/userContributions.js'
 
-let { data, model }: { data: AdminUserProfile; model: UserContributionsModel } =
-  $props()
+let {
+  data,
+  model,
+  showIdentity = true,
+}: {
+  data: AdminUserProfile
+  model: UserContributionsModel
+  showIdentity?: boolean
+} = $props()
 const avatar = $derived(resolveAvatarImageSrc(data.profile.image))
+let expandedProfileId = $state<string | null>(null)
+const showHistory = $derived(!showIdentity || expandedProfileId === data.profile.id)
 const stats = $derived([
   {
     label: 'Published features',
@@ -36,87 +46,91 @@ const stats = $derived([
 </script>
 
 <div
-  class="mx-auto grid w-full max-w-7xl items-start gap-6 xl:grid-cols-[minmax(17rem,1fr)_minmax(0,2fr)]"
+  class="mx-auto grid w-full max-w-7xl items-start gap-6 {showIdentity
+    ? 'xl:grid-cols-[minmax(17rem,1fr)_minmax(0,2fr)]'
+    : ''}"
 >
-  <FormSurface class="min-w-0 rounded-xl border border-border p-6">
-    <section aria-label="Profile details" class="space-y-6">
-      <div class="flex items-center gap-4">
-        <div
-          class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted"
-        >
-          {#if avatar}
-            <img
-              src={avatar}
-              alt=""
-              class="size-full object-cover"
-              referrerpolicy="no-referrer"
-            >
-          {:else}
-            <PersonIcon class="size-10 text-muted-foreground" />
-          {/if}
+  {#if showIdentity}
+    <FormSurface class="border-border min-w-0 rounded-xl border p-6">
+      <section aria-label="Profile details" class="space-y-6">
+        <div class="flex items-center gap-4">
+          <div
+            class="bg-muted flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+          >
+            {#if avatar}
+              <img
+                src={avatar}
+                alt=""
+                class="size-full object-cover"
+                referrerpolicy="no-referrer"
+              >
+            {:else}
+              <PersonIcon class="text-muted-foreground size-10" />
+            {/if}
+          </div>
+          <div class="min-w-0">
+            <h1 class="text-xl font-semibold break-words">
+              {data.details?.name ||
+                data.profile.attribution ||
+                data.profile.displayUsername ||
+                data.profile.username}
+            </h1>
+            <p class="text-muted-foreground text-sm break-all">
+              @{data.profile.displayUsername || data.profile.username}
+            </p>
+          </div>
         </div>
-        <div class="min-w-0">
-          <h1 class="break-words text-xl font-semibold">
-            {data.details?.name ||
-              data.profile.attribution ||
-              data.profile.displayUsername ||
-              data.profile.username}
-          </h1>
-          <p class="break-all text-sm text-muted-foreground">
-            @{data.profile.displayUsername || data.profile.username}
+        <dl class="space-y-4 text-sm">
+          <div>
+            <dt class="text-muted-foreground">Attribution</dt>
+            <dd class="break-words">{data.profile.attribution || 'Not provided'}</dd>
+          </div>
+          {#if data.details}
+            {#if data.details.email}
+              <div>
+                <dt class="text-muted-foreground">Email</dt>
+                <dd class="break-all">{data.details.email}</dd>
+              </div>
+            {/if}
+            {#if data.details.telephone}
+              <div>
+                <dt class="text-muted-foreground">Phone</dt>
+                <dd>{data.details.telephone}</dd>
+              </div>
+            {/if}
+            <div>
+              <dt class="text-muted-foreground">Language</dt>
+              <dd>{data.details.locale}</dd>
+            </div>
+            <div>
+              <dt class="text-muted-foreground">Account status</dt>
+              <dd>{data.details.isArchived ? 'Archived' : 'Active'}</dd>
+            </div>
+            <div>
+              <dt class="text-muted-foreground">Joined</dt>
+              <dd>{new Date(data.details.createdAt).toLocaleDateString()}</dd>
+            </div>
+          {/if}
+        </dl>
+        {#if !data.details}
+          <p class="text-muted-foreground text-sm">
+            Contact and account details are restricted for your role.
           </p>
-        </div>
-      </div>
-      <dl class="space-y-4 text-sm">
-        <div>
-          <dt class="text-muted-foreground">Attribution</dt>
-          <dd class="break-words">{data.profile.attribution || 'Not provided'}</dd>
-        </div>
-        {#if data.details}
-          {#if data.details.email}
-            <div>
-              <dt class="text-muted-foreground">Email</dt>
-              <dd class="break-all">{data.details.email}</dd>
-            </div>
-          {/if}
-          {#if data.details.telephone}
-            <div>
-              <dt class="text-muted-foreground">Phone</dt>
-              <dd>{data.details.telephone}</dd>
-            </div>
-          {/if}
-          <div>
-            <dt class="text-muted-foreground">Language</dt>
-            <dd>{data.details.locale}</dd>
-          </div>
-          <div>
-            <dt class="text-muted-foreground">Account status</dt>
-            <dd>{data.details.isArchived ? 'Archived' : 'Active'}</dd>
-          </div>
-          <div>
-            <dt class="text-muted-foreground">Joined</dt>
-            <dd>{new Date(data.details.createdAt).toLocaleDateString()}</dd>
-          </div>
         {/if}
-      </dl>
-      {#if !data.details}
-        <p class="text-sm text-muted-foreground">
-          Contact and account details are restricted for your role.
-        </p>
-      {/if}
-    </section>
-  </FormSurface>
-  <FormSurface class="min-w-0 overflow-hidden rounded-xl border border-border">
+      </section>
+    </FormSurface>
+  {/if}
+  <FormSurface class="border-border min-w-0 overflow-hidden rounded-xl border">
     <section aria-label="Contributions">
-      <div class="space-y-4 border-b border-border p-6">
+      <div class="border-border space-y-4 border-b p-6">
         <h2 class="text-lg font-semibold">Contributions</h2>
-        <p class="text-sm text-muted-foreground">
+        <p class="text-muted-foreground text-sm">
           Published map contributions and related submissions visible in this hub.
         </p>
         <dl class="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {#each stats as stat (stat.label)}
-            <div class="rounded-lg bg-muted/40 p-3">
-              <dt class="text-xs text-muted-foreground">{stat.label}</dt>
+            <div class="bg-muted/40 rounded-lg p-3">
+              <dt class="text-muted-foreground text-xs">{stat.label}</dt>
               <dd class="mt-1 text-2xl font-semibold tabular-nums">
                 {stat.count.toLocaleString()}
               </dd>
@@ -124,8 +138,18 @@ const stats = $derived([
           {/each}
         </dl>
       </div>
-      <ContributedFeatures userData={data.profile} {model} />
-      <ContributedImages userData={data.profile} {model} />
+      {#if showHistory}
+        <ContributedFeatures userData={data.profile} {model} />
+        <ContributedImages userData={data.profile} {model} />
+      {:else}
+        <div class="flex h-52 min-w-0">
+          <UserContributionPreviews
+            profile={data.profile}
+            initialPreviews={data.contributionPreviews}
+            onMore={() => (expandedProfileId = data.profile.id)}
+          />
+        </div>
+      {/if}
     </section>
   </FormSurface>
 </div>

@@ -43,6 +43,8 @@ import {
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
 import { readAdminUserProfile } from '#lib/api/services/adminUser.js'
+import { readUserContributionPreviews } from '#lib/api/services/userContributionPreviews.js'
+import { getLocale } from '#lib/i18n.js'
 import { canManageOrganisationUsers } from '#lib/api/services/authz/organisationUsers.js'
 import { organisation } from '#lib/db/schema/index.js'
 import { organisationUsersCondition } from '#lib/db/services/organisationUsers.js'
@@ -80,6 +82,7 @@ import type { UserHydrationResult, UserRaw } from '#lib/db/zod/schema/user.types
 // - getUserForAttribution
 // - getUser
 // - getAdminUserProfile
+// - getUserContributionPreviews
 // - getUserLayers
 // - getUserFeatures
 //
@@ -287,13 +290,44 @@ export const getAdminUserProfile = guardedQuery(
   z.object({ username: z.string().trim().min(1).max(32) }),
   async (params, ctx) => {
     if (!ctx.user) error(401, 'AUTH_REQUIRED')
-    return readAdminUserProfile(ctx.db, {
+    const result = await readAdminUserProfile(ctx.db, {
       username: params.username,
       actor: ctx.user,
       userRoles: ctx.userRoles,
       hub: ctx.event.locals.hub,
     })
+    if (!result) return null
+    // Deliver the bounded strip with the profile instead of another client request waterfall.
+    try {
+      result.contributionPreviews = await readUserContributionPreviews(ctx.db, {
+        userId: result.profile.id,
+        actor: ctx.user,
+        userRoles: ctx.userRoles,
+        hub: ctx.event.locals.hub,
+        locale: getLocale(),
+      })
+    } catch (cause) {
+      // Keep the profile usable; the strip can retry its dedicated remote independently.
+      console.warn('Unable to preload profile contribution previews', cause)
+    }
+    return result
   },
+)
+
+/** Load seven accessible contribution thumbnails for an admin profile.
+ * @param params Contributor ID; scope and viewer identity are resolved on the server.
+ * @returns Minimal previews without full contribution lists or feature records.
+ */
+export const getUserContributionPreviews = guardedQuery(
+  z.object({ userId: z.string().min(1).max(100) }),
+  async (params, ctx) =>
+    readUserContributionPreviews(ctx.db, {
+      userId: params.userId,
+      actor: ctx.user,
+      userRoles: ctx.userRoles,
+      hub: ctx.event.locals.hub,
+      locale: getLocale(),
+    }),
 )
 
 /**
