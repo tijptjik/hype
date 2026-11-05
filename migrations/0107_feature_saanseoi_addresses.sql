@@ -11,7 +11,7 @@ SET addressMeta = json_set(coalesce(addressMeta, '{}'), '$.address', json_object
   'version', 1,
   'source', json_object(
     'status', 'unresolved', 'address2dId', NULL, 'address3dId', NULL,
-    'address3dUnitId', NULL, 'addressSnapshotId', NULL, 'records', json('{}'),
+    'address3dUnitId', NULL, 'snapshotId', NULL, 'rawSource', json('{}'),
     'fallbackDisplay', json(coalesce((SELECT json_group_object(i.locale, coalesce(i.displayAddress, ''))
       FROM featureI18n i WHERE i.featureId = feature.id), '{}'))),
   'coordinates', json(CASE WHEN json_extract(geometry, '$.type') = 'Point'
