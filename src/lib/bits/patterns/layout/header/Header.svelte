@@ -1,5 +1,6 @@
 <script lang="ts">
-import { fade, fly } from 'svelte/transition'
+import { fade } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 // COMPONENTS
 import * as HeaderPrimitive from './components'
 import HeaderControlBar from './HeaderControlBar.svelte'
@@ -29,7 +30,14 @@ let {
   ...restProps
 }: HeaderProps = $props()
 
-const facetItems = $derived(facets.items ?? [])
+// Dedicated navigation actions own their destinations without duplicating tabs.
+const facetItems = $derived(
+  (facets.items ?? []).filter(
+    item =>
+      (item.ref !== 'features' || !formActions.featuresAction) &&
+      (item.ref !== 'users' || !formActions.usersAction),
+  ),
+)
 const showFilter = $derived(filter.isFilterable ?? false)
 const showNew = $derived(newAction.isCreatable ?? false)
 const showAvatar = $derived(avatar.isVisible ?? true)
@@ -42,6 +50,16 @@ const showTaskActions = $derived(
     (taskActions.isVisible ?? true),
 )
 const showFormActions = $derived(formActions.isVisible ?? false)
+// Keep the intrinsic form action width while index controls cross-fade in; compact actions must shrink with their labels.
+const reserveFormActionWidth = $derived(
+  showFacets &&
+    Boolean(
+      formActions.primaryAction ||
+        formActions.saveAction ||
+        formActions.publishAction ||
+        formActions.previewAction,
+    ),
+)
 const wrapperClass = $derived(
   ['bits-theme bits-pattern-header-stack', className].filter(Boolean).join(' '),
 )
@@ -118,7 +136,7 @@ const rootClass = $derived(
 
     {#snippet right({ showButtonText })}
       <div class="mr-4 flex min-w-0 flex-1 items-center justify-end gap-0">
-        {#if showFacets || showTaskActions || showFormActions}
+        {#if showFacets || showTaskActions}
           <div
             class="flex min-w-0 flex-1 items-center gap-4"
             in:fade={{ duration: 140 }}
@@ -140,11 +158,29 @@ const rootClass = $derived(
                 hideLabel={!showButtonText}
               />
             {/if}
+          </div>
+        {/if}
 
-            {#if showFormActions}
+        {#if formActions.featuresAction || formActions.usersAction}
+          <div class="mr-2 shrink-0">
+            <HeaderPrimitive.FormActions
+              featuresAction={formActions.featuresAction}
+              usersAction={formActions.usersAction}
+              hideLabel={!showButtonText}
+            />
+          </div>
+        {/if}
+        <div class="grid min-w-0 shrink-0 items-center">
+          {#if showFormActions || reserveFormActionWidth}
+            <div
+              class="col-start-1 row-start-1 justify-self-end transition-opacity duration-180 motion-reduce:transition-none {showFormActions
+                ? 'opacity-100'
+                : 'pointer-events-none opacity-0'}"
+              inert={!showFormActions}
+              aria-hidden={!showFormActions}
+            >
               <HeaderPrimitive.FormActions
                 primaryAction={formActions.primaryAction}
-                featuresAction={formActions.featuresAction}
                 saveAction={formActions.saveAction}
                 deleteAction={formActions.deleteAction}
                 publishAction={formActions.publishAction}
@@ -152,35 +188,35 @@ const rootClass = $derived(
                 previewAction={formActions.previewAction}
                 hideLabel={!showButtonText}
               />
-            {/if}
-          </div>
-        {/if}
-
-        {#if showFilter || showViewActions}
-          <div
-            class="flex flex w-max max-w-full flex-none items-center items-center gap-0 gap-0"
-            in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-            out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-          >
-            <HeaderPrimitive.Search
-              bind:query
-              isFilterable={showFilter}
-              placeholder={filter.placeholder}
-              onFilter={filter.onFilter}
-              onAdvanceFromSearch={filter.onAdvanceFromSearch}
-            />
-
-            {#if showViewActions}
-              <HeaderPrimitive.ViewActions
-                controlsAction={viewActions.controlsAction}
-                layoutAction={viewActions.layoutAction}
-                extraActions={viewActions.extraActions}
-                content={viewActions.content}
-                hideLabel={!showButtonText}
+            </div>
+          {/if}
+          {#if showFilter || showViewActions}
+            <div
+              class="col-start-1 row-start-1 flex items-center justify-end gap-0 {reserveFormActionWidth
+                ? 'w-0 min-w-full [&>label]:min-w-0 [&>label]:flex-1 [&>label>input]:min-w-0'
+                : 'w-max'}"
+              transition:fade={{ duration: prefersReducedMotion.current ? 0 : 180 }}
+            >
+              <HeaderPrimitive.Search
+                bind:query
+                isFilterable={showFilter}
+                placeholder={filter.placeholder}
+                onFilter={filter.onFilter}
+                onAdvanceFromSearch={filter.onAdvanceFromSearch}
               />
-            {/if}
-          </div>
-        {/if}
+
+              {#if showViewActions}
+                <HeaderPrimitive.ViewActions
+                  controlsAction={viewActions.controlsAction}
+                  layoutAction={viewActions.layoutAction}
+                  extraActions={viewActions.extraActions}
+                  content={viewActions.content}
+                  hideLabel={!showButtonText}
+                />
+              {/if}
+            </div>
+          {/if}
+        </div>
       </div>
 
       <HeaderPrimitive.Avatar

@@ -4,6 +4,8 @@ import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 import Icon from 'virtual:icons/lucide/settings'
 setResponsiveCtx()
 let panel = $state(false)
+let editing = $state(false)
+let searching = $state(false)
 let wideIdentity = $state(false)
 const items = ['Profile', 'Capabilities', 'Fields', 'Image', 'Advanced'].map(label => ({
   ref: label.toLowerCase(),
@@ -17,15 +19,38 @@ const items = ['Profile', 'Capabilities', 'Fields', 'Image', 'Advanced'].map(lab
       contentStart={wideIdentity ? 900 : 360}
       title={{ text: 'HKFoodWorks' }}
       facets={{ items, active: 'advanced' }}
-      avatar={{ isVisible: false }}
+      avatar={{ isVisible: true, name: 'Tester' }}
+      filter={{ isFilterable: searching }}
       formActions={{
-        isVisible: true,
-        primaryAction: { text: 'Edit', icon: Icon },
-        publishAction: { kind: 'button', text: 'Publish', icon: Icon },
-        previewAction: { text: 'Preview', icon: Icon },
+        isVisible: !searching,
+        featuresAction: { text: 'Features', icon: Icon, disabled: editing },
+        usersAction: { text: 'Users', icon: Icon, disabled: editing },
+        primaryAction: {
+          text: editing ? 'Cancel' : 'Edit',
+          icon: Icon,
+          class: 'bits-pattern-header__form-action-main',
+        },
+        publishAction: {
+          kind: 'button',
+          text: 'Publish',
+          icon: Icon,
+          class: 'bits-pattern-header__form-action-publish',
+        },
+        saveAction: editing
+          ? {
+              text: 'Save',
+              icon: Icon,
+              class: 'bits-pattern-header__form-action-publish',
+            }
+          : null,
+        previewAction: { text: 'Preview', icon: Icon, disabled: editing },
       }}
     />
   </div>
+  <button type="button" onclick={() => (editing = !editing)}>Toggle editing</button>
+  <button type="button" onclick={() => (searching = !searching)}>
+    Toggle searching
+  </button>
   <button type="button" onclick={() => (panel = !panel)}>Toggle settings panel</button>
   <button type="button" onclick={() => (wideIdentity = !wideIdentity)}>
     Toggle identity width

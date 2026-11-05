@@ -23,6 +23,7 @@ import {
 let {
   primaryAction = null,
   featuresAction = null,
+  usersAction = null,
   saveAction = null,
   deleteAction = null,
   publishAction = null,
@@ -53,6 +54,21 @@ function resolveIconClasses(icon?: unknown): string {
       hideLabelInstantly
       disabled={featuresAction.disabled}
       onClick={() => featuresAction.onClick?.()}
+    />
+  {/if}
+
+  {#if usersAction}
+    <Button
+      size="sm"
+      text={usersAction.text}
+      color={usersAction.color ?? 'neutral'}
+      style={usersAction.style ?? 'outline'}
+      iconComponent={usersAction.icon}
+      class={resolveActionClass(usersAction.class)}
+      hideLabel
+      hideLabelInstantly
+      disabled={usersAction.disabled}
+      onClick={() => usersAction.onClick?.()}
     />
   {/if}
 

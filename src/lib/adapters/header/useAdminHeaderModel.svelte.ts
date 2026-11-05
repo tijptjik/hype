@@ -764,8 +764,23 @@ export function useAdminHeaderModel(
     return {
       text: m.omni__title_features(),
       icon: FeatureIcon,
+      disabled: isEditing || isInFlight,
       style: adminCtx.activeFacet === 'features' ? 'soft' : 'outline',
       onClick: () => navigateOnAdmin(adminCtx, resourceType, resourceRef, 'features'),
+    }
+  })
+  // Reuse the permitted Users facet so its action keeps the same visibility and navigation.
+  const usersAction = $derived.by((): HeaderButtonActionConfig | null => {
+    const usersFacet = facetItems.find(item => item.ref === 'users')
+    if (!usersFacet) return null
+
+    return {
+      text: usersFacet.label,
+      icon: usersFacet.icon,
+      disabled: isEditing || isInFlight || usersFacet.disabled,
+      style:
+        (customActiveFacet ?? adminCtx.activeFacet) === 'users' ? 'soft' : 'outline',
+      onClick: () => (customFacetChangeHandler ?? handleFacetChange)('users'),
     }
   })
   const primaryAction = $derived.by((): HeaderButtonActionConfig | null => {
@@ -844,15 +859,15 @@ export function useAdminHeaderModel(
     }
   })
 
-  // Preview uses the current resource's role-derived handler and saved state.
+  // Preview uses the current resource's role-derived handler and saved state; keep its slot while editing.
   const previewAction = $derived.by((): HeaderButtonActionConfig | null => {
-    if (isEditing || isDeleted || !formActions?.preview) return null
+    if (isDeleted || !formActions?.preview) return null
     return {
       text: m.publication_preview__button(),
       color: 'neutral',
       style: 'outline',
       icon: Eye,
-      disabled: isInFlight,
+      disabled: isEditing || isInFlight,
       onClick: formActions.preview,
     }
   })
@@ -922,6 +937,7 @@ export function useAdminHeaderModel(
       isVisible: resolvedVisibility.showFormActions,
       primaryAction,
       featuresAction,
+      usersAction,
       saveAction,
       deleteAction,
       publishAction,

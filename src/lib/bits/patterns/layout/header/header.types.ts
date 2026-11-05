@@ -115,6 +115,7 @@ export interface HeaderFormActionsConfig {
   isVisible?: boolean
   primaryAction?: HeaderButtonActionConfig | null
   featuresAction?: HeaderButtonActionConfig | null
+  usersAction?: HeaderButtonActionConfig | null
   saveAction?: HeaderButtonActionConfig | null
   deleteAction?: HeaderButtonActionConfig | null
   publishAction?: HeaderActionConfig | null
