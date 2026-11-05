@@ -47,6 +47,7 @@ async function requireDirectoryAccess(
  */
 export const getLocations = guardedQuery(
   z.strictObject({
+    includeCount: z.boolean().default(true),
     scope: z.string().max(4000).optional(),
     organisationId: z.string().min(1).max(200).optional(),
     q: z.string().trim().max(200).optional(),
@@ -72,8 +73,11 @@ export const getSharedLocationIdBySource = guardedQuery(
   z.strictObject({ ssId: z.string().min(1).max(200) }),
   async (input, ctx) => {
     await requireDirectoryAccess(ctx)
-    const row = await ctx.db.select({ id: locationTable.id }).from(locationTable)
-      .where(and(eq(locationTable.ssId, input.ssId), ne(locationTable.state, 'manual'))).get()
+    const row = await ctx.db
+      .select({ id: locationTable.id })
+      .from(locationTable)
+      .where(and(eq(locationTable.ssId, input.ssId), ne(locationTable.state, 'manual')))
+      .get()
     return row?.id ?? null
   },
 )

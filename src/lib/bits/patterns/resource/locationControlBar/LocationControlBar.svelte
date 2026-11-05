@@ -14,6 +14,7 @@ import FunnelIcon from 'virtual:icons/proicons/filter'
 
 let {
   count,
+  countLoading = false,
   kind,
   onKindChange,
   organisationId,
@@ -30,7 +31,8 @@ let {
 }: {
   kind: LocationKind | ''
   onKindChange: (value: string) => void
-  count: number
+  count: number | null
+  countLoading?: boolean
   organisationId: string
   lifecycleStatus: string
   organisations: { value: string; label: string }[]
@@ -52,6 +54,7 @@ let {
   disableMenuToggle
   showSort={false}
   {count}
+  {countLoading}
   resetDisabled={!organisationId && !kind && !lifecycleStatus}
   {onReset}
 >
@@ -59,7 +62,7 @@ let {
     <div class="flex h-16 items-center gap-4">
       <ControlBar.FilterSelect
         label={m.field_organisation()}
-        class="[&>div:last-child]:min-w-0 [&>div:last-child]:w-52"
+        class="[&>div:last-child]:w-52 [&>div:last-child]:min-w-0"
         tooltip={m.location_directory_help()}
         value={organisationId}
         placeholder={m.location_directory_shared()}
@@ -68,7 +71,7 @@ let {
       />
       <ControlBar.FilterSelect
         label={m.filters__type()}
-        class="[&>div:last-child]:min-w-0 [&>div:last-child]:w-40"
+        class="[&>div:last-child]:w-40 [&>div:last-child]:min-w-0"
         value={kind}
         placeholder={m.filters__all()}
         items={LOCATION_KINDS.map(value => ({
@@ -79,7 +82,7 @@ let {
       />
       <ControlBar.FilterSelect
         label={m.location_lifecycle_filter()}
-        class="[&>div:last-child]:min-w-0 [&>div:last-child]:w-44"
+        class="[&>div:last-child]:w-44 [&>div:last-child]:min-w-0"
         value={lifecycleStatus}
         placeholder={m.location_lifecycle_all()}
         items={lifecycleStatusesForKind(kind).map(value => ({

@@ -19,7 +19,11 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import MapPin from 'virtual:icons/proicons/location'
 // DOMAIN
-import { lifecycleStatusesForKind } from '#lib/locations/lifecycle.js'
+import {
+  lifecycleStatusesForKind,
+  lifecycleStatus as getLifecycleStatus,
+} from '#lib/locations/lifecycle.js'
+import { foldFeatureSearchText } from '#lib/features/search.js'
 // TYPES
 import type { LocationKind } from '#lib/locations/kinds.js'
 import type { LifecycleStatus } from '#lib/locations/lifecycle.js'
@@ -34,11 +38,28 @@ let organisationId = $state('')
 let kind = $state<LocationKind | ''>('')
 let lifecycleStatus = $state<LifecycleStatus | ''>('')
 let rows = $state.raw<LocationResource[]>([])
+let totalCount = $state<number | null>(null)
 let cursor = $state<string | null>(null)
 let loading = $state(false)
 let initialised = $state(false)
 let failed = $state(false)
 let version = 0
+const visibleRows = $derived.by(() => {
+  if (totalCount !== null) return rows
+  const needle = foldFeatureSearchText(query.trim())
+  return rows.filter(
+    row =>
+      (!kind || row.kind === kind) &&
+      (!lifecycleStatus || getLifecycleStatus(row.facts) === lifecycleStatus) &&
+      (!needle ||
+        row.id === query.trim() ||
+        row.ssId === query.trim() ||
+        Object.values(row.facts?.names ?? {}).some(
+          name =>
+            typeof name === 'string' && foldFeatureSearchText(name).includes(needle),
+        )),
+  )
+})
 let activeSearch = $state<{
   kind: LocationKind | ''
   q: string
@@ -61,15 +82,15 @@ async function load(more = false): Promise<void> {
       organisationId,
       lifecycleStatus,
     }
-    rows = []
+    totalCount = null
     cursor = null
-    initialised = false
   }
   loading = true
   failed = false
   try {
     const result = await runRemoteQuery(
       getLocations({
+        includeCount: !more,
         scope: admin.view.getRoleScopeQueryKey(),
         q: activeSearch.q,
         kind: activeSearch.kind || undefined,
@@ -81,6 +102,7 @@ async function load(more = false): Promise<void> {
     if (request !== version) return
     rows = more ? [...rows, ...result.data] : result.data
     cursor = result.nextCursor
+    if (!more) totalCount = result.totalCount
   } catch {
     if (request === version) failed = true
   } finally {
@@ -91,18 +113,21 @@ async function load(more = false): Promise<void> {
   }
 }
 
+let previousScope = ''
 // Account and filter changes invalidate private rows before another authorized read.
 $effect(() => {
-  admin.view.getRoleScopeQueryKey()
+  const scope = JSON.stringify([admin.view.getRoleScopeQueryKey(), organisationId])
   query
   kind
   organisationId
   lifecycleStatus
   untrack(() => {
     version++
-    rows = []
+    if (previousScope !== scope) rows = []
+    previousScope = scope
+    totalCount = null
     cursor = null
-    initialised = false
+    initialised = rows.length > 0
     failed = false
     loading = true
   })
@@ -122,7 +147,8 @@ $effect(() => {
   header.setControlBar(
     LocationControlBar,
     {
-      count: rows.length,
+      count: totalCount,
+      countLoading: loading && totalCount === null,
       kind,
       onKindChange: (value: string) => {
         kind = value as LocationKind | ''
@@ -167,7 +193,7 @@ onDestroy(() => {
 })
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col overflow-hidden text-foreground">
+<div class="text-foreground flex min-h-0 flex-1 flex-col overflow-hidden">
   {#if failed}
     <div role="alert" class="flex items-center gap-3 px-6 py-2">
       <span>{m.resource_action_failed()}</span>
@@ -179,16 +205,13 @@ onDestroy(() => {
   {/if}
   <ResourceIndex
     resource={FirstClassResource.location}
-    entities={rows}
+    entities={visibleRows}
     isInitialised={initialised}
     hasMore={Boolean(cursor) && !failed}
     isLoadingMore={loading}
     onNearEnd={() => void load(true)}
   >
-    {#snippet row(
-      entity,
-      index,
-    )}
+    {#snippet row(entity, index)}
       <LocationRow {entity} {index} organisationId={activeSearch.organisationId} />
     {/snippet}
   </ResourceIndex>

@@ -4460,9 +4460,15 @@ describe('standalone Location directory', () => {
           )
       }
     }
-    const shared = await listLocationResources(db, {})
+    const shared = await listLocationResources(db, { includeCount: true })
+    expect(shared.totalCount).toBe(1)
     expect(shared.data.map(row => row.id)).toEqual(['directory-28'])
-    const first = await listLocationResources(db, { organisationId: 'p', q: '%' })
+    const first = await listLocationResources(db, {
+      organisationId: 'p',
+      q: '%',
+      includeCount: true,
+    })
+    expect(first.totalCount).toBe(27)
     expect(first.data).toHaveLength(25)
     expect(first.data[0].id).toBe('directory-02')
     expect(first.data.every(row => row.facts?.names.en === 'Latest % shop')).toBe(true)
@@ -4473,6 +4479,7 @@ describe('standalone Location directory', () => {
     })
     expect(last.data.map(row => row.id)).toEqual(['directory-27', 'directory-28'])
     expect(last.nextCursor).toBeNull()
+    expect(last.totalCount).toBeNull()
     expect(
       (await listLocationResources(db, { organisationId: 'p', q: 'Old name' })).data,
     ).toEqual([])

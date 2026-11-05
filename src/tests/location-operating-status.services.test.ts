@@ -829,7 +829,8 @@ describe('Location directory index filters', () => {
       )
     }
     const filters = { kind: 'building', lifecycleStatus: 'demolished' } as const
-    const first = await listLocationResources(db, filters)
+    const first = await listLocationResources(db, { ...filters, includeCount: true })
+    expect(first.totalCount).toBe(26)
     expect(first.data).toHaveLength(25)
     expect(
       first.data.every(
@@ -838,8 +839,10 @@ describe('Location directory index filters', () => {
     ).toBe(true)
     const second = await listLocationResources(db, {
       ...filters,
+      includeCount: true,
       after: first.nextCursor!,
     })
+    expect(second.totalCount).toBe(26)
     expect(second.data).toHaveLength(1)
     expect(second.nextCursor).toBeNull()
     expect(new Set([...first.data, ...second.data].map(row => row.id)).size).toBe(26)

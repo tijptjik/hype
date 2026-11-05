@@ -107,10 +107,15 @@ projects.release()
 ```
 
 Details expose `data`, `loading`, `error`, `load()`, `refresh()` and `release()`.
-Collections expose `rows`, `loading`, `error`, `isInitialised`, `hasMore`,
+Collections expose `rows`, `totalCount`, `loading`, `error`, `isInitialised`, `hasMore`,
 `load(input)`, `next()`, `refresh()`, `revalidate()` and `release()`. Collection inputs
 contain view intent; the client supplies resource family and access/cache metadata.
-Counts are not invented for endpoints that do not provide them.
+`totalCount` is null when not requested or unavailable; it never falls back to loaded
+row length. Admin hierarchy indexes request it with `includeCount: true` and send their
+view predicates as `indexFilters`. `next()` disables counting and retains the first
+page's total. Both rows and counts use the same server authorization and matching
+predicates, while only rows use the continuation cursor. The smaller hierarchy and Hub
+tables use direct SQL aggregates; Features keep their rollup/revision-cache backend.
 
 The lower-level typed `client.detail(resource, input, nativeFactory)` supports other
 resource families. Domain-specific dashboard collections should supply appropriate typed

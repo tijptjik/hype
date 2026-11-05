@@ -108,8 +108,49 @@ resolved by the existing policy.
 `AdminCtx.listUi` retains per-resource layout mode and control-bar visibility within
 that surface. `HeaderCtrl` owns transient search focus, page metadata and action
 visibility; the header adapter combines those with navigation and list preferences.
-Search focus resets on route navigation. The unused legacy header store has been removed
-rather than extracted into another context.
+
+Admin feature indexes use `FeatureIndexQuerySchema` and `getFeatureIndexPage` for
+prisms, status/content/image/licence/translation/field filters, search and sorting.
+Loaded rows provide an optimistic local preview; only a response for the current query
+replaces rows and publishes an exact count. Counts show a skeleton while pending and
+never use the loaded row count. Draft exclusion and authorization are applied by the
+ordinary server feature-list policy before view filters narrow it.
+
+The initial page requests its count; continuation, bulk-selection and neighbour queries
+use `includeCount: false`. ID-only traversal uses `idsOnly: true`. Counts reuse
+maintained status bins where compatible, otherwise a SQL aggregate cached by authorized
+predicates and database revision. They do not hydrate feature relations or compute
+geographic facets. Migration `0178_feature_index_counts.sql` adds scope indexes and
+invalidation for image, translation-generation, field, licence and contributor changes.
+Apply it before deploying the filtered reader. Detailed cache misses still evaluate
+matching candidates; literal substring search uses FTS candidates for text plus scoped
+ID/contributor checks. Local and server search share SQLite-compatible ASCII case
+folding and literal punctuation matching. Search focus resets on route navigation. The
+unused legacy header store has been removed rather than extracted into another context.
+
+Organisation, Project and Layer indexes use the same `getResourcePage` collection
+interface as hierarchy panels, with `indexFilters` and `includeCount: true` on the first
+page. Status, manual content, translation, image and project licence predicates are
+applied before pagination and counting. Hubs use these predicates through their existing
+authorized list query. These smaller resources use direct SQL counts; they do not need
+the Feature revision cache. Search matches literal identity/code and localized name,
+short name and description, plus domain for Hubs.
+
+`ResourceCollection.totalCount` is authoritative for the current access/query scope, or
+null while unavailable. Index controls show a skeleton during debounce and first-page
+resolution; loaded rows are filtered optimistically until the server supplies the
+matching set. Query inputs snapshot nested filters so toggles cannot mutate retained
+query identities. Continuations omit counts and detect more rows with a bounded
+lookahead; cursor predicates never constrain the full matching total. Hierarchy panels
+do not request counts. Server membership is not filtered again against incomplete client
+relation caches after it resolves.
+
+Task indexes include search, review action and outcome in their server query and query
+identity; the control bar uses the existing authorized queue total. Hubs and Tasks
+retain their existing complete-list traversal. Location indexes count the same
+ownership, kind, lifecycle and text predicates as their pages, omitting the cursor and
+avoiding relation hydration for counts. Location continuations skip counts. Users retain
+their existing server-filtered directory and total.
 
 Admin Feature previous/next navigation retains the index's ordered matching IDs,
 including remote search results and every active view filter. The temporary search-focus

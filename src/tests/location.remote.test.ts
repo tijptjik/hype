@@ -1301,6 +1301,7 @@ describe('standalone Location reads', () => {
     expect(mocks.authorizeOrganisation).not.toHaveBeenCalled()
     expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
       q: 'shop',
+      includeCount: true,
       scope: 'client-cache-only',
       restrictToOrganisation: false,
     })
@@ -1319,6 +1320,7 @@ describe('standalone Location reads', () => {
       kind: 'building',
       lifecycleStatus: 'demolished',
       after: 'cursor',
+      includeCount: true,
       restrictToOrganisation: true,
     })
   })

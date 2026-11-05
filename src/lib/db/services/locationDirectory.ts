@@ -25,6 +25,7 @@ import type { LocationResource } from '#lib/locations/resource.js'
 export async function listLocationResources(
   db: Database,
   input: {
+    includeCount?: boolean
     organisationId?: string
     restrictToOrganisation?: boolean
     kind?: LocationKind
@@ -33,7 +34,61 @@ export async function listLocationResources(
     id?: string
     lifecycleStatus?: LifecycleStatus
   },
-): Promise<{ data: LocationResource[]; nextCursor: string | null }> {
+): Promise<{
+  data: LocationResource[]
+  nextCursor: string | null
+  totalCount: number | null
+}> {
+  const revisionJoin = and(
+    eq(locationRevision.locationId, locationTable.id),
+    sql`${locationRevision.sequence} = (SELECT max(r.sequence) FROM locationRevision r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
+  )
+  const match = and(
+    input.organisationId
+      ? or(
+          sql`${locationTable.state} != 'manual'`,
+          eq(locationTable.ownerOrganisationId, input.organisationId),
+        )
+      : sql`${locationTable.state} != 'manual'`,
+    // Organisation indexes include owned records and current Feature associations only.
+    input.restrictToOrganisation && input.organisationId
+      ? or(
+          eq(locationTable.ownerOrganisationId, input.organisationId),
+          sql`EXISTS (SELECT 1 FROM featureLocation fl
+                JOIN feature f ON f.id=fl.featureId
+                JOIN project p ON p.id=f.projectId
+                WHERE fl.locationId=${locationTable.id} AND p.organisationId=${input.organisationId})`,
+        )
+      : undefined,
+    input.kind ? eq(locationTable.kind, input.kind) : undefined,
+    // Filter the scoped effective assertion before pagination, retaining historic rows by default.
+    input.lifecycleStatus
+      ? sql`COALESCE(
+          CASE WHEN EXISTS(SELECT 1 FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.operatingStatus.mode')='override')
+            THEN (SELECT json_extract(o.overrides,'$.operatingStatus.value') FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
+            ELSE ${locationFactsFieldSql(locationRevision.facts, 'operatingStatus')} END,
+          CASE WHEN EXISTS(SELECT 1 FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.buildingStatus.mode')='override')
+            THEN (SELECT json_extract(o.overrides,'$.buildingStatus.value') FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
+            ELSE ${locationFactsFieldSql(locationRevision.facts, 'buildingStatus')} END,
+          'unknown')=${input.lifecycleStatus}`
+      : undefined,
+    input.id ? eq(locationTable.id, input.id) : undefined,
+    input.q
+      ? or(
+          eq(locationTable.id, input.q),
+          eq(locationTable.ssId, input.q),
+          sql`EXISTS (SELECT 1 FROM json_each(${locationFactsFieldSql(locationRevision.facts, 'names')}) n WHERE n.type='text' AND instr(lower(n.value), lower(${input.q}))>0)`,
+        )
+      : undefined,
+  )
+  // Count the complete scope without hydrating facts, labels or associated records.
+  const countQuery = db.select({ count: sql<number>`count(*)` }).from(locationTable)
+  const counted = input.includeCount
+    ? await (input.q || input.lifecycleStatus
+        ? countQuery.leftJoin(locationRevision, revisionJoin).where(match)
+        : countQuery.where(match))
+    : null
+  const totalCount = counted === null ? null : Number(counted[0]?.count ?? 0)
   // Fence ownership before pagination; never search superseded revisions or raw payloads.
   const rows = await db
     .select({
@@ -54,54 +109,8 @@ export async function listLocationResources(
       >`(SELECT revision FROM organisationLocation WHERE locationId=${locationTable.id} AND organisationId=${input.organisationId ?? null})`,
     })
     .from(locationTable)
-    .leftJoin(
-      locationRevision,
-      and(
-        eq(locationRevision.locationId, locationTable.id),
-        sql`${locationRevision.sequence} = (SELECT max(r.sequence) FROM locationRevision r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
-      ),
-    )
-    .where(
-      and(
-        input.organisationId
-          ? or(
-              sql`${locationTable.state} != 'manual'`,
-              eq(locationTable.ownerOrganisationId, input.organisationId),
-            )
-          : sql`${locationTable.state} != 'manual'`,
-        // Organisation indexes include owned records and current Feature associations only.
-        input.restrictToOrganisation && input.organisationId
-          ? or(
-              eq(locationTable.ownerOrganisationId, input.organisationId),
-              sql`EXISTS (SELECT 1 FROM featureLocation fl
-                JOIN feature f ON f.id=fl.featureId
-                JOIN project p ON p.id=f.projectId
-                WHERE fl.locationId=${locationTable.id} AND p.organisationId=${input.organisationId})`,
-            )
-          : undefined,
-        input.kind ? eq(locationTable.kind, input.kind) : undefined,
-        // Filter the scoped effective assertion before pagination, retaining historic rows by default.
-        input.lifecycleStatus
-          ? sql`COALESCE(
-          CASE WHEN EXISTS(SELECT 1 FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.operatingStatus.mode')='override')
-            THEN (SELECT json_extract(o.overrides,'$.operatingStatus.value') FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
-            ELSE ${locationFactsFieldSql(locationRevision.facts, 'operatingStatus')} END,
-          CASE WHEN EXISTS(SELECT 1 FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.buildingStatus.mode')='override')
-            THEN (SELECT json_extract(o.overrides,'$.buildingStatus.value') FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
-            ELSE ${locationFactsFieldSql(locationRevision.facts, 'buildingStatus')} END,
-          'unknown')=${input.lifecycleStatus}`
-          : undefined,
-        input.id ? eq(locationTable.id, input.id) : undefined,
-        input.after ? gt(locationTable.id, input.after) : undefined,
-        input.q
-          ? or(
-              eq(locationTable.id, input.q),
-              eq(locationTable.ssId, input.q),
-              sql`EXISTS (SELECT 1 FROM json_each(${locationFactsFieldSql(locationRevision.facts, 'names')}) n WHERE n.type='text' AND instr(lower(n.value), lower(${input.q}))>0)`,
-            )
-          : undefined,
-      ),
-    )
+    .leftJoin(locationRevision, revisionJoin)
+    .where(and(match, input.after ? gt(locationTable.id, input.after) : undefined))
     .orderBy(locationTable.id)
     .limit(26)
   const data = rows
@@ -147,5 +156,5 @@ export async function listLocationResources(
         facts,
       }
     })
-  return { data, nextCursor: rows.length > 25 ? data.at(-1)!.id : null }
+  return { data, totalCount, nextCursor: rows.length > 25 ? data.at(-1)!.id : null }
 }
