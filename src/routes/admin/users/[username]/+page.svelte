@@ -3,23 +3,17 @@
 import { untrack } from 'svelte'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
-// NAVIGATION
-import { createUserFacetNavigation } from '#lib/users/userFacetNavigation.svelte.js'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
-import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // API
+import { applyAdminProfileSave } from '#lib/users/adminMessagingDraft.js'
 import { getAdminUserProfile } from '#lib/api/user.remote.js'
 // ADAPTERS
 import { createUserContributionsModel } from '#lib/adapters/panels/userContributions.js'
 // BITS
-import UserMessagingSettings from '#lib/bits/patterns/messaging/UserMessagingSettings.svelte'
-import AdminUserProfile from '#lib/bits/patterns/userDirectory/AdminUserProfile.svelte'
-import UserAccess from '#lib/bits/patterns/userDirectory/UserAccess.svelte'
-import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import AdminUserProfileEditor from '#lib/bits/patterns/userDirectory/AdminUserProfileEditor.svelte'
+import * as Main from '#lib/bits/custom/main/index.js'
 // ICONS
-import AccessIcon from 'virtual:icons/proicons/shield-checkmark'
-import PersonIcon from 'virtual:icons/proicons/person'
 // TYPES
 import type { AdminUserProfile as ProfileData } from '#lib/db/zod/schema/user.types.js'
 
@@ -31,18 +25,11 @@ import type { AdminUserProfile as ProfileData } from '#lib/db/zod/schema/user.ty
 // ═══════════════════════
 
 const adminCtx = getAdminCtx()
-const headerCtrl = getHeaderCtrl()
 adminCtx.setResourceType(false)
 let profile = $state<ProfileData | null>(null)
 let loading = $state(true)
 let failed = $state(false)
 let reload = $state(0)
-const facetNavigation = createUserFacetNavigation(() => facets)
-const activeFacet = $derived(facetNavigation.active)
-const facets = new Map([
-  ['profile', { label: 'Profile', icon: PersonIcon }],
-  ['access', { label: 'Access', icon: AccessIcon }],
-])
 const contributions = createUserContributionsModel(adminCtx.view, {
   onContributedFeature: featureId =>
     goto(`/admin/features/${encodeURIComponent(featureId)}`),
@@ -76,23 +63,6 @@ $effect(() => {
     active = false
   }
 })
-
-$effect(() => {
-  headerCtrl.setHeaderForEntity(
-    profile?.profile.displayUsername ?? page.params.username ?? 'User',
-    PersonIcon,
-    facets,
-  )
-  headerCtrl.setSearch(null)
-  headerCtrl.clearControlBar()
-  headerCtrl.clearFooter()
-})
-$effect(() => {
-  headerCtrl.setFacets(facets, {
-    active: activeFacet,
-    onFacetChange: facetNavigation.select,
-  })
-})
 </script>
 
 <svelte:head
@@ -102,7 +72,10 @@ $effect(() => {
   </title></svelte:head
 >
 
-<div class="min-h-0 flex-1 overflow-y-auto p-4 md:p-6" aria-busy={loading}>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   {#if loading}
     <p role="status" class="text-muted-foreground p-6">Loading profile…</p>
   {:else if failed}
@@ -120,18 +93,16 @@ $effect(() => {
     <p role="status" class="border-border bg-panel rounded-xl border p-6">
       User not found.
     </p>
-  {:else if activeFacet === 'access'}
-    <div class="bits-theme">
-      <FormSurface><UserAccess access={profile.access} /></FormSurface>
-    </div>
   {:else}
-    <AdminUserProfile data={profile} model={contributions} />
-    {#if adminCtx.view.isSuperAdmin()}
-      {#key profile.profile.id}
-        <div class="mt-5">
-          <UserMessagingSettings userId={profile.profile.id} canVerify />
-        </div>
-      {/key}
-    {/if}
+    {#key profile.profile.id}
+      <AdminUserProfileEditor
+        data={profile}
+        superAdmin={adminCtx.view.isSuperAdmin()}
+        onsaved={result => {
+          if (profile) profile = applyAdminProfileSave(profile, result)
+        }}
+        model={contributions}
+      />
+    {/key}
   {/if}
-</div>
+</Main.Root>
