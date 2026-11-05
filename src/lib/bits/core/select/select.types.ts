@@ -14,6 +14,8 @@ export interface SelectProps {
   placeholder?: string
   variant?: 'default' | 'ghost'
   isEditing?: boolean
+  /** Keep the dropdown indicator's space in display mode to prevent edit-mode shifts. */
+  reserveTriggerSpace?: boolean
   allowDeselect?: boolean
   disabled?: boolean
   name?: string

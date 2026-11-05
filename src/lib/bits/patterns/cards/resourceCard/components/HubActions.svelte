@@ -1,6 +1,5 @@
 <script lang="ts">
 // COMPONENTS
-import { Button } from '#lib/bits/core/index.js'
 import { Card } from '#lib/bits/custom/index.js'
 import ResourceCardPolicySelect from './ResourceCardPolicySelect.svelte'
 import HypeMarkIcon from './HypeMarkIcon.svelte'
@@ -32,10 +31,10 @@ const hasRemoveAction = $derived(typeof onRemove === 'function')
   class={`bits-form__resource-card-hub-actions max-w-full min-w-0! ${className}`}
 >
   <div
-    class="grid max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center justify-items-end gap-x-2 gap-y-1 @min-[56rem]:flex @min-[56rem]:flex-wrap @min-[56rem]:justify-end @min-[56rem]:gap-x-3"
+    class="grid max-w-full min-w-0 grid-cols-[minmax(0,1fr)_2.5rem] items-center justify-items-end gap-y-1 @min-[56rem]:flex @min-[56rem]:flex-wrap @min-[56rem]:justify-end"
   >
     <ResourceCardPolicySelect
-      class="col-start-1"
+      class={`col-start-1 ${canSetCoreInclusive ? '@min-[56rem]:mr-3' : ''}`}
       label="Map sharing"
       value={isHubExclusive ? 'exclusive' : 'shared'}
       items={[
@@ -90,18 +89,24 @@ const hasRemoveAction = $derived(typeof onRemove === 'function')
         }}
       />
     {/if}
-    {#if hasRemoveAction && isEditing}
-      <div class="col-start-2 row-start-1" class:row-span-2={canSetCoreInclusive}>
-        <Button
-          text="Remove organisation"
-          style="ghost"
-          color="light"
-          size="sm"
-          iconComponent={Trash2Icon}
-          hideLabel={true}
-          onClick={() => onRemove?.()}
+    {#if hasRemoveAction}
+      <!-- Reserve the remove action's space while viewing so the policy labels stay put. -->
+      <div
+        class="col-start-2 row-start-1 flex size-10 shrink-0 items-center justify-center"
+        class:row-span-2={canSetCoreInclusive}
+        class:invisible={!isEditing}
+        inert={!isEditing}
+        aria-hidden={!isEditing}
+      >
+        <button
+          type="button"
+          aria-label="Remove organisation"
+          class="text-muted-foreground hover:bg-error/10 hover:text-error focus-visible:outline-primary flex size-9 items-center justify-center rounded-md transition-colors focus-visible:outline"
+          onclick={() => onRemove?.()}
           disabled={isDisabled}
-        />
+        >
+          <Trash2Icon class="size-4" aria-hidden="true" />
+        </button>
       </div>
     {/if}
   </div>

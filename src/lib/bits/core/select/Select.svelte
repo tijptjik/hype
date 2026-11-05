@@ -13,6 +13,7 @@ let {
   placeholder = 'Select',
   variant = 'default',
   isEditing = true,
+  reserveTriggerSpace = false,
   allowDeselect = false,
   disabled = false,
   name,
@@ -47,14 +48,20 @@ function handleValueChange(nextValue: string): void {
     class={`bits-form__control-wrap bits-form__select-display-wrap ${variant === 'ghost' ? 'border-transparent bg-transparent shadow-none' : ''} ${displayClass} ${className}`}
   >
     <div
-      class={`bits-form__select-display bits-form__select-display--${variant} text-foreground ${itemPreview ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3' : ''}`}
+      class={`bits-form__select-display bits-form__select-display--${variant} text-foreground ${reserveTriggerSpace ? 'gap-2' : ''} ${itemPreview ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3' : ''}`}
     >
       <span
-        class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : ''}`}
+        class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : reserveTriggerSpace ? 'pl-1.5' : ''}`}
         >{selectedLabel}</span
       >
       {#if itemPreview}
         <span class="flex min-w-0 items-center">{@render itemPreview(value)}</span>
+      {/if}
+      {#if reserveTriggerSpace}
+        <ChevronsUpDownIcon
+          class="bits-form__select-trigger-icon invisible"
+          aria-hidden="true"
+        />
       {/if}
     </div>
   </div>
@@ -97,9 +104,7 @@ function handleValueChange(nextValue: string): void {
               disabled={item.disabled}
               class={`bits-form__select-item text-foreground ${itemPreview ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1rem] gap-3 py-2' : ''}`}
             >
-              {#snippet children({
-                selected,
-              })}
+              {#snippet children({ selected })}
                 <span
                   class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : ''}`}
                   >{item.label}</span
@@ -114,7 +119,7 @@ function handleValueChange(nextValue: string): void {
                     {/if}
                   </span>
                 {:else if selected}
-                  <CheckIcon class="ml-auto h-4 w-4 shrink-0 text-foreground" />
+                  <CheckIcon class="text-foreground ml-auto h-4 w-4 shrink-0" />
                 {/if}
               {/snippet}
             </SelectPrimitive.Item>

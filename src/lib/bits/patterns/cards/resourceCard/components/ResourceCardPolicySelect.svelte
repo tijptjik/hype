@@ -52,11 +52,12 @@ const selected = $derived(items.find(item => item.value === value) ?? items[0])
       {isEditing}
       {disabled}
       allowDeselect={false}
+      reserveTriggerSpace
       variant="ghost"
       placeholder={label}
       triggerAttrs={{ 'aria-label': label }}
-      triggerClass="h-auto min-h-10 w-auto max-w-full gap-2 rounded-lg py-2 pl-8 pr-3 hover:bg-primary/10 [&>span]:whitespace-normal! [&>span]:overflow-visible! [&>span]:break-words! [&>span]:text-left!"
-      displayClass="h-auto! min-h-10 border-0! bg-transparent! shadow-none! [&>div]:pl-8! [&>div]:pr-3! [&_span]:whitespace-normal! [&_span]:overflow-visible! [&_span]:break-words!"
+      triggerClass="h-auto min-h-10 w-auto max-w-full gap-2 rounded-lg py-2 pl-8 pr-3 hover:bg-primary/10 [&>span]:whitespace-normal! [&>span]:overflow-visible! [&>span]:break-words! [&>span]:text-left! [&>svg]:text-muted-foreground"
+      displayClass="h-auto! min-h-10 border-0! bg-transparent! px-0! shadow-none! [&>div]:pl-8! [&>div]:pr-3! [&>div]:py-2! [&_span]:whitespace-normal! [&_span]:overflow-visible! [&_span]:break-words!"
       contentClass="z-[240]!"
       onValueChange={onChange}
     />

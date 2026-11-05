@@ -20,5 +20,6 @@ export const organisationRowStyles = cx(
 export const organisationMediaStyles = 'size-16! min-w-16! sm:size-20! sm:min-w-20!'
 
 // Move the descriptive policy controls beneath the name when a third column would crowd it.
+// Match the member rows' 12px action inset and fixed 40px remove slot.
 export const organisationActionsStyles =
-  'col-span-2 justify-self-end pr-0! @min-[56rem]:col-span-1'
+  'col-span-2 justify-self-end pr-3! @min-[56rem]:col-span-1'
