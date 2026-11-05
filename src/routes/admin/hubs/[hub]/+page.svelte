@@ -1733,6 +1733,7 @@ $effect(() => {
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <!-- Keep fields at natural height; the facet owns trailing scroll clearance. -->
         <FormFieldsSection
+          bind:multilingual={multilingualExpanded}
           class="shrink-0"
           icon={Type}
           keepHeader

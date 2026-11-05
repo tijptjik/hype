@@ -6,6 +6,7 @@ import HubPolicyDocumentBody from '#lib/bits/patterns/policies/hubPolicyDialog/c
 import { renderPolicyMarkdown } from '#lib/services/policy.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
+import FieldEditorFixture from './FieldEditorFixture.svelte'
 import FormHubSpecifiersFields from '#lib/bits/patterns/forms/formI18nSection/components/FormHubSpecifiersFields.svelte'
 import FormHubSubscriptionSection from '#lib/bits/patterns/forms/formI18nSection/components/FormHubSubscriptionSection.svelte'
 import { HubSubscriptionService } from '#lib/enums.js'
@@ -214,6 +215,14 @@ const form = {
       >
         Policies tab
       </button>
+      <button
+        type="button"
+        onclick={() => {
+          tab = 'fields'
+        }}
+      >
+        Fields tab
+      </button>
     {/if}
   </nav>
   <div class="h-[calc(100dvh-72px)] overflow-y-auto" data-fixture-scroll>
@@ -261,6 +270,8 @@ const form = {
             />
           {/snippet}
         </FormI18nDescriptorProfile>
+      {:else if tab === 'fields'}
+        <FieldEditorFixture bind:multilingual={multilingualExpanded} fieldCount={3} />
       {:else}
         <FormI18nDescriptorProfile
           bind:expanded={multilingualExpanded}

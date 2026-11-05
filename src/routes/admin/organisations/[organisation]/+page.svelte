@@ -521,6 +521,8 @@ const organisationPropertyFormAdapter = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{ properties?: Property[] }>,
 )
 let fieldRemoveMode = $state(false)
+// Profile and Fields share presentation state; resetting content must preserve it.
+let multilingualExpanded = $state(false)
 
 function createPropertyActions(getCount: () => number) {
   return {
@@ -1757,6 +1759,7 @@ $effect(() => {
         </SectionHeader>
         <div class="pt-6">
           <FormI18nDescriptorProfile
+            bind:expanded={multilingualExpanded}
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n}
             defaultLocales={locales}
@@ -1884,6 +1887,7 @@ $effect(() => {
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <!-- Keep fields at natural height; the facet owns trailing scroll clearance. -->
         <FormFieldsSection
+          bind:multilingual={multilingualExpanded}
           class="shrink-0"
           icon={Type}
           keepHeader

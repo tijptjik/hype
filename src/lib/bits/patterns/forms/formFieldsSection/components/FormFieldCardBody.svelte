@@ -8,7 +8,8 @@ import { prefersReducedMotion } from 'svelte/motion'
 // DRAG AND DROP
 import { droppable } from '@thisux/sveltednd'
 // I18N
-import { m } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
+import { getContentLocaleRecord } from '#lib/content-locales/catalogue.js'
 import { canonicalContentTag, contentFormKey } from '#lib/i18n/contentRecords.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 // ICONS
@@ -188,6 +189,7 @@ const optionLocales = $derived<string[]>(
 )
 const primaryLocale = $derived(locales[0])
 let translating = $state<string | null>(null)
+let translatingSource = $state<string | undefined>()
 let translationMessage = $state('')
 
 /** Identify the field or option owning a translation request.
@@ -210,19 +212,25 @@ function translationText(origin: PropertyTranslationOrigin, locale: string): str
     : (getLocaleEntry(property.i18n, locale)?.[origin.type] ?? '')
 }
 
-/** Offer languages with content in this field or option only.
- * @param origin Stable text-cell identity. @returns Compact source controls.
+/** Offer languages with content using the profile editor's names and source labels.
+ * @param origin Stable text-cell identity.
+ * @param compact Use short labels in the option-card header.
+ * @returns Eligible source languages and their accessible names.
  */
 function getTranslationSources(
   origin: PropertyTranslationOrigin,
+  compact = false,
 ): Array<{ locale: string; label: string; accessibleLabel: string }> {
   return locales
     .filter(locale => translationText(origin, locale).trim())
-    .map(locale => ({
-      locale,
-      label: shortLocaleLabel(locale),
-      accessibleLabel: m.profile_translate_source({ language: locale }),
-    }))
+    .map(locale => {
+      const record = getContentLocaleRecord(locale, getLocaleKey())
+      return {
+        locale,
+        label: compact ? shortLocaleLabel(locale) : record.autonym,
+        accessibleLabel: m.profile_translate_source({ language: record.name }),
+      }
+    })
 }
 
 /** Check for unfilled target languages, including temporarily hidden locales.
@@ -242,6 +250,7 @@ async function translateMissing(
 ): Promise<void> {
   if (translating) return
   translating = translationKey(origin)
+  translatingSource = source
   translationMessage = ''
   try {
     for (const target of locales) {
@@ -252,6 +261,7 @@ async function translateMissing(
     translationMessage = m.address_translate_error()
   } finally {
     translating = null
+    translatingSource = undefined
   }
 }
 
@@ -1035,19 +1045,22 @@ $effect(() => {
         aria-label={label}
         data-property-text-column={field}
       >
-        <h4 class={`mb-2 flex min-h-7 items-center ${fieldLabelStyles}`}>{label}</h4>
+        <h4 class={`flex min-h-7 items-center ${fieldLabelStyles}`}>{label}</h4>
         <FormI18nSourceBar
           visible={multilingual &&
             isEditing &&
+            !removeMode &&
+            !optionRemoveMode &&
             getTranslationSources({ type: field }).length > 0}
           sources={getTranslationSources({ type: field })}
-          label={m.address_translate_from()}
+          label={m.profile_translate_from()}
           busy={translating === field}
+          busySource={translatingSource}
           disabled={translating !== null || !hasTranslationTargets({ type: field })}
           onTranslate={source => void translateMissing(source, { type: field })}
         />
         <!-- Keep controls mounted while each language reveals its content and spacing. -->
-        <div class="-mb-2 grid">
+        <div class="mt-2 -mb-2 grid">
           {#each locales as locale (locale)}
             {@const key = contentFormKey(locale)}
             {@const genKey = field === 'label' ? 'labelGen' : 'placeholderGen'}
@@ -1203,36 +1216,45 @@ $effect(() => {
                               >Option {valueIndex + 1}</span
                             >
                           </button>
-                          <div class="ml-auto min-w-0 pb-2" data-option-translations>
-                            <FormI18nSourceBar
-                              compact
-                              visible={multilingual &&
-                                valuesAreTranslatable &&
-                                isEditing &&
-                                getTranslationSources({
-                                  type: 'value',
-                                  valueId: value.id,
-                                }).length > 0}
-                              sources={getTranslationSources({
-                                type: 'value',
-                                valueId: value.id,
-                              })}
-                              label={m.address_translate_from()}
-                              busy={translating ===
-                                translationKey({ type: 'value', valueId: value.id })}
-                              disabled={optionRemoveMode ||
-                                translating !== null ||
-                                !hasTranslationTargets({
-                                  type: 'value',
-                                  valueId: value.id,
-                                })}
-                              onTranslate={source =>
-                                void translateMissing(source, {
-                                  type: 'value',
-                                  valueId: value.id,
-                                })}
-                            />
-                          </div>
+                          {#if !optionRemoveMode && !removeMode}
+                            <div
+                              class="pointer-events-none ml-auto min-w-0 pb-2 opacity-0 transition-opacity duration-150 group-focus-within/option:pointer-events-auto group-focus-within/option:opacity-100 group-hover/option:pointer-events-auto group-hover/option:opacity-100 motion-reduce:transition-none"
+                              data-option-translations
+                            >
+                              <FormI18nSourceBar
+                                compact
+                                visible={multilingual &&
+                                  valuesAreTranslatable &&
+                                  isEditing &&
+                                  getTranslationSources({
+                                    type: 'value',
+                                    valueId: value.id,
+                                  }).length > 0}
+                                sources={getTranslationSources(
+                                  {
+                                    type: 'value',
+                                    valueId: value.id,
+                                  },
+                                  true,
+                                )}
+                                label={m.address_translate_from()}
+                                busy={translating ===
+                                  translationKey({ type: 'value', valueId: value.id })}
+                                busySource={translatingSource}
+                                disabled={optionRemoveMode ||
+                                  translating !== null ||
+                                  !hasTranslationTargets({
+                                    type: 'value',
+                                    valueId: value.id,
+                                  })}
+                                onTranslate={source =>
+                                  void translateMissing(source, {
+                                    type: 'value',
+                                    valueId: value.id,
+                                  })}
+                              />
+                            </div>
+                          {/if}
                         </div>
                         {#each optionLocales as locale (locale)}
                           {@const showCoreFields = isPrimary(locale)}

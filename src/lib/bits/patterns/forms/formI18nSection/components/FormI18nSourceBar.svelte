@@ -48,7 +48,7 @@ let {
           class="rounded py-1 {compact ? 'px-1' : 'px-2'} {busy &&
           busySource === source.locale
             ? 'animate-pulse bg-primary/10 text-primary motion-reduce:animate-none'
-            : ''} hover:bg-primary/10 hover:text-primary disabled:opacity-50 aria-busy:opacity-100 focus-visible:outline-2 focus-visible:outline-primary"
+            : ''} enabled:hover:bg-primary/10 enabled:hover:text-primary disabled:opacity-50 aria-busy:opacity-100 focus-visible:outline-2 focus-visible:outline-primary"
           aria-label={source.accessibleLabel}
           disabled={busy || disabled}
           onclick={() => onTranslate(source.locale)}

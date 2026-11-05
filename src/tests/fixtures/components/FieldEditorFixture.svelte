@@ -38,12 +38,14 @@ let {
   fieldCount = 1,
   panelPadding = false,
   extraLocales = [],
+  multilingual = $bindable(false),
   translate,
 }: {
   translatable?: boolean
   fieldCount?: number
   panelPadding?: boolean
   extraLocales?: string[]
+  multilingual?: boolean
   translate?: (
     propertyId: string,
     source: string,
@@ -178,6 +180,7 @@ let editing = $state(true)
   <form data-field-form class={panelPadding ? 'flex min-h-0 flex-1 flex-col' : ''}>
     {#snippet fieldsSection()}
       <FormFieldsSection
+        bind:multilingual
         class={panelPadding ? 'shrink-0' : ''}
         title="Fields"
         description="Categorical and free form fields"

@@ -52,6 +52,7 @@ let {
   visibilityOffLabel = 'Show Unused',
   isItemVisible,
   forceFlipDisabled = false,
+  multilingual = $bindable(false),
   class: className = '',
 }: FormFieldsSectionProps = $props()
 
@@ -61,7 +62,6 @@ const rootClass = $derived(
 const hasIssues = $derived(issues.length > 0)
 
 let isCollapsedAll = $state(false)
-let multilingual = $state(false)
 // Language order and visibility apply to the entire section without removing content.
 let localeSelection = $state<LocaleSelection | null>(null)
 let collapseAllVersion = $state(0)

@@ -50,7 +50,7 @@ for (const [name, engine] of [
           'true',
       )
       const source = first.getByRole('button', {
-        name: 'Translate empty values from en',
+        name: 'Translate empty values from English',
         exact: true,
       })
       await source.dispatchEvent('pointerdown', {

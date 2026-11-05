@@ -44,6 +44,8 @@ export interface FormFieldsSectionProps {
   visibilityOffLabel?: string
   isItemVisible?: (property: Property) => boolean
   forceFlipDisabled?: boolean
+  /** Shared multilingual presentation for every section in the owning form. */
+  multilingual?: boolean
   class?: string
 }
 
