@@ -54,6 +54,12 @@ let editHeight = $state(42)
 let root: HTMLDivElement
 let display: HTMLDivElement
 let session = 0
+let prefixLabel = $state('')
+
+// Retain the label while its column closes so both the text and gutter can fade away.
+$effect(() => {
+  if (prefix) prefixLabel = prefix
+})
 
 async function open(): Promise<void> {
   if (!editable || active) return
@@ -121,22 +127,17 @@ const editorAttrs = $derived({
 
 <div
   bind:this={root}
-  class="grid min-w-0 items-start gap-2 {showVerification
-    ? prefix
-      ? 'grid-cols-[2.5rem_minmax(0,1fr)_2rem]'
-      : 'grid-cols-[minmax(0,1fr)_2rem]'
-    : prefix
-      ? 'grid-cols-[2.5rem_minmax(0,1fr)]'
-      : 'grid-cols-[minmax(0,1fr)]'}"
+  class="grid min-w-0 items-start transition-[grid-template-columns] duration-200 ease-in-out motion-reduce:transition-none"
+  style:grid-template-columns={`${prefix ? '3rem' : '0rem'} minmax(0,1fr)${showVerification ? ' 2.5rem' : ''}`}
   data-inline-locale-row
 >
-  {#if prefix}
-    <span
-      class="text-muted-foreground flex min-h-[42px] min-w-0 items-center justify-center self-center text-center font-mono text-xs leading-[22px] break-words"
-      aria-hidden="true"
-      >{prefix}</span
-    >
-  {/if}
+  <!-- A stable prefix track interpolates the value's position instead of inserting a column. -->
+  <span
+    class="text-muted-foreground flex min-h-[42px] min-w-0 items-center justify-center self-center overflow-hidden pr-2 text-center font-mono text-xs leading-[22px] whitespace-nowrap transition-opacity duration-200 ease-in-out motion-reduce:transition-none"
+    style:opacity={prefix ? 1 : 0}
+    aria-hidden="true"
+    >{prefixLabel}</span
+  >
   <div class="group/inline-field relative min-w-0">
     <!-- Keep the bound control mounted and registered in display mode and hidden locales. -->
     <div
@@ -237,7 +238,7 @@ const editorAttrs = $derived({
     {/if}
   </div>
   {#if showVerification}
-    <div class="flex min-h-[42px] items-center justify-center">
+    <div class="ml-2 flex min-h-[42px] items-center justify-center">
       <GenAI {isGenAI} disabled={!editable} {onToggle} />
     </div>
   {/if}
