@@ -32,29 +32,36 @@ import { SupportedLocales } from '../../enums'
 export const user = sqliteTable(
   'user',
   {
+    // Profile identity
     id: text('id')
       .primaryKey()
       .$defaultFn(() => nanoid(12)),
     name: text('name'),
     username: text('username').unique(),
     displayUsername: text('displayUsername'),
+    image: text('image'),
+    attribution: text('attribution'),
+
+    // Contact and messaging
     email: text('email').unique(),
     emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
-    image: text('image'),
-    locale: text('locale', { enum: ['en', 'zh-hant', 'zh-hans'] })
-      .notNull()
-      .default(SupportedLocales.en),
     telephone: text('telephone'),
     // A user's preferred delivery platform is distinct from their external identity.
     // A null preference uses the application's default for new messaging outreach.
     preferredMessagingPlatform: text('preferredMessagingPlatform', {
       enum: ['whatsapp', 'telegram'],
     }),
-    attribution: text('attribution'),
+
+    // Account status
     // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
     isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
     // If a user is archived, their account is effectively disabled, and they are not allowed to login
     isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+
+    // Preferences
+    locale: text('locale', { enum: ['en', 'zh-hant', 'zh-hans'] })
+      .notNull()
+      .default(SupportedLocales.en),
     // Language features
     preferences: text('preferences')
       .$type<string>()
@@ -67,6 +74,8 @@ export const user = sqliteTable(
       .$type<string>()
       .default(sql`'{"contributorMode":false, "noLabelsMode":false}'`)
       .notNull(),
+
+    // Audit timestamps stay last in the table's column order.
     createdAt: integer('createdAt', { mode: 'timestamp_ms' })
       .notNull()
       .$defaultFn(() => new Date()),

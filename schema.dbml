@@ -450,13 +450,13 @@ table user {
   name text
   username text [unique]
   displayUsername text [unique]
+  image text
+  attribution text
   email text [unique]
   emailVerified integer [default: 0]
-  image text
-  locale text [not null, default: 'en']
-  attribution text
   isAnonymous integer [default: 0]
   isArchived integer [not null, default: 0]
+  locale text [not null, default: 'en']
   preferences text [not null, default: `'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`]
   experimental text [not null, default: `'{"contributorMode":false, "noLabelsMode":false}'`]
   createdAt integer [not null]
