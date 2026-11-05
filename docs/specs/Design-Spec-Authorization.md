@@ -602,6 +602,30 @@ Maintainers see either publication state but no archived rows; Owners see either
 Feature edit authorization enforces the same archive boundary. Existing translation-only
 editing remains field-restricted and does not grant publication preview.
 
+## Organisation revision history
+
+Organisation history uses the existing organisation update policy, including scoped hub
+administration and organisation ownership. Published-resource read access, organisation
+membership, and project roles alone do not grant history access. The history API probes
+current ownership, authorizes the caller, and repeats the persisted nullable hub
+predicate in the history query. Callers cannot supply the hub scope or attribution.
+History contains profile/configuration comparisons, not staff role grants. Reparenting
+invalidates a read authorized against the former hub.
+
+Field-definition history uses that same organisation editor policy and current hub
+predicate. Independent organisation option appends carry the authenticated actor and the
+probed owner/hub into the transaction; client-supplied owner or actor IDs are not used.
+The append also advances the parent edit token so older complete-catalogue forms fail
+their existing concurrency check.
+
+Project, layer and hub profile history uses the corresponding resource update policy
+with a profile-translation submission probe. Public read permission alone is not
+sufficient. The API derives all ancestry from persisted probes; clients submit only
+resource type, identity and pagination cursor. Project history rechecks organisation and
+nullable hub scope in the final read. Layer history additionally rechecks its project
+and consistent project/organisation ancestry. Hub history is identity-scoped. These APIs
+expose profile snapshots, not role grants or subscription credentials.
+
 ## User access overview
 
 The admin user page's Access tab lists direct hub, organisation and project roles,
