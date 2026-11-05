@@ -730,7 +730,10 @@ export const toParentChainCondition = async (
  ************/
 /**
  * Resolves search conditions plus bounded paging/sorting for guarded user search.
- * Keeps remote handlers focused on authorization, DB invocation, and response shaping.
+ * @param db Database used to resolve optional parent-role constraints.
+ * @param params Validated directory filters, search, paging and sorting.
+ * @returns SQL predicates and bounded paging for both rows and their count.
+ * @remarks Joined dates are inclusive UTC calendar dates. Keeps remote handlers focused on authorization and response shaping.
  */
 export const toUserSearchQueryPlan = async (
   db: Database,
@@ -752,16 +755,40 @@ export const toUserSearchQueryPlan = async (
     conditions.push(eq(user.isArchived, requestedState.isArchived))
   }
 
-  // Presence filters treat null, empty and whitespace-only contacts as missing.
+  // Presence filters treat null, empty and whitespace-only profile/contact values as missing.
   for (const [column, value] of [
     [user.email, params.conditions?.hasEmail],
     [user.telephone, params.conditions?.hasTelephone],
+    [user.username, params.conditions?.hasUsername],
+    [user.image, params.conditions?.hasImage],
+    [user.attribution, params.conditions?.hasAttribution],
   ] as const) {
     if (typeof value === 'boolean') {
       conditions.push(
         sql`(length(trim(coalesce(${column}, ''))) > 0) = ${value ? 1 : 0}`,
       )
     }
+  }
+
+  // Nullable legacy flags are false; dates use an exclusive next-day upper bound.
+  for (const [column, value] of [
+    [user.isAnonymous, params.conditions?.isAnonymous],
+    [user.emailVerified, params.conditions?.emailVerified],
+  ] as const) {
+    if (typeof value === 'boolean')
+      conditions.push(sql`coalesce(${column}, 0) = ${value ? 1 : 0}`)
+  }
+  if (params.conditions?.locale)
+    conditions.push(eq(user.locale, params.conditions.locale))
+  if (params.conditions?.joinedFrom) {
+    conditions.push(
+      sql`${user.createdAt} >= ${Date.parse(params.conditions.joinedFrom + 'T00:00:00Z')}`,
+    )
+  }
+  if (params.conditions?.joinedTo) {
+    conditions.push(
+      sql`${user.createdAt} < ${Date.parse(params.conditions.joinedTo + 'T00:00:00Z') + 86_400_000}`,
+    )
   }
 
   const q = params.q?.trim()

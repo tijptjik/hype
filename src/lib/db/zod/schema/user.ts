@@ -313,7 +313,23 @@ export const UserSearchQueryParamsSchema = z.object({
       isArchived: z.boolean().nullable().optional(),
       hasEmail: z.boolean().nullable().optional(),
       hasTelephone: z.boolean().nullable().optional(),
+      isAnonymous: z.boolean().nullable().optional(),
+      emailVerified: z.boolean().nullable().optional(),
+      hasUsername: z.boolean().nullable().optional(),
+      hasImage: z.boolean().nullable().optional(),
+      hasAttribution: z.boolean().nullable().optional(),
+      locale: z.enum(['en', 'zh-hant', 'zh-hans']).optional(),
+      joinedFrom: z.string().date().optional(),
+      joinedTo: z.string().date().optional(),
     })
+    .refine(
+      value =>
+        !value.joinedFrom || !value.joinedTo || value.joinedFrom <= value.joinedTo,
+      {
+        message: 'Joined from must be on or before joined to.',
+        path: ['joinedTo'],
+      },
+    )
     .optional(),
   pagination: z
     .object({

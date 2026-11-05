@@ -17,7 +17,7 @@ describe('contact-presence search', () => {
       sqlite.exec(`CREATE TABLE user (
         id TEXT, name TEXT, username TEXT, displayUsername TEXT, email TEXT,
         telephone TEXT, image TEXT, attribution TEXT, locale TEXT, emailVerified INTEGER,
-        isArchived INTEGER, createdAt INTEGER, updatedAt INTEGER
+        isArchived INTEGER, isAnonymous INTEGER, createdAt INTEGER, updatedAt INTEGER
       );
       INSERT INTO user (id,name,email,telephone,isArchived) VALUES
         ('both','A Both','a@example.invalid','123',0),
@@ -63,6 +63,67 @@ describe('contact-presence search', () => {
           })
         ).data.map(row => row.id),
       ).toEqual(['archived'])
+      // Profile, language and flags compose with existing contact/search constraints.
+      sqlite.exec(`UPDATE user SET locale='en', createdAt=1735689600000;
+        UPDATE user SET username='runner', image='photo.png', attribution='Volunteer',
+          emailVerified=1, locale='zh-hant', createdAt=1735775999999 WHERE id='both';
+        UPDATE user SET username=' ',image=' ',attribution=' ',isAnonymous=1,
+          createdAt=1735776000000 WHERE id='blank';`)
+      expect(
+        (
+          await search({
+            conditions: {
+              hasUsername: true,
+              hasImage: true,
+              hasAttribution: true,
+              emailVerified: true,
+              locale: 'zh-hant',
+            },
+          })
+        ).data.map(row => row.id),
+      ).toEqual(['both'])
+      expect(
+        (
+          await search({
+            conditions: { hasImage: false, hasAttribution: false, hasUsername: false },
+          })
+        ).totalCount,
+      ).toBe(4)
+      expect(
+        (await search({ conditions: { emailVerified: false, isAnonymous: false } }))
+          .totalCount,
+      ).toBe(3)
+      expect(
+        (await search({ conditions: { isAnonymous: true } })).data.map(row => row.id),
+      ).toEqual(['blank'])
+      expect((await search({})).joinedRange).toEqual({
+        from: 1735689600000,
+        to: 1735776000000,
+      })
+      expect((await search({ q: 'does-not-exist' })).joinedRange).toBeNull()
+      // Inclusive UTC days retain the final millisecond and exclude next-day midnight.
+      expect(
+        (
+          await search({
+            conditions: { joinedFrom: '2025-01-01', joinedTo: '2025-01-01' },
+          })
+        ).totalCount,
+      ).toBe(4)
+      expect(
+        (await search({ conditions: { joinedFrom: '2025-01-02' } })).data.map(
+          row => row.id,
+        ),
+      ).toEqual(['blank'])
+      expect(
+        UserSearchQueryParamsSchema.safeParse({
+          conditions: { joinedFrom: '2025-02-30' },
+        }).success,
+      ).toBe(false)
+      expect(
+        UserSearchQueryParamsSchema.safeParse({
+          conditions: { joinedFrom: '2025-02-02', joinedTo: '2025-02-01' },
+        }).success,
+      ).toBe(false)
       sqlite.exec(
         "CREATE TABLE organisationRole(organisationId TEXT,userId TEXT,role TEXT); INSERT INTO organisationRole VALUES('a','both','user'),('a','email','owner'),('b','phone','member')",
       )

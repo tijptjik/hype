@@ -1,15 +1,21 @@
 <script lang="ts">
 // SVELTE
 import { flip } from 'svelte/animate'
+import { onDestroy } from 'svelte'
 import { fade } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
-// ICONS
-import Person from 'virtual:icons/proicons/person'
+// API
+import { getUserDirectoryMetrics } from '#lib/api/user.remote.js'
+import { runRemoteQuery, refreshRemoteQuery } from '#lib/remote/index.js'
+// COMPONENTS
+import UserDirectoryRow from './UserDirectoryRow.svelte'
 // TYPES
 import type { DirectoryUser } from './userDirectory.types'
+import type { UserDirectoryMetrics } from '#lib/users/directoryMetrics.types.js'
 let {
   users,
   showSummary = true,
+  layout = 'list',
   totalCount,
   hasMore = false,
   resetVersion = 0,
@@ -19,6 +25,7 @@ let {
   onLoadMore,
   onRetry,
 }: {
+  layout?: 'card' | 'list'
   showSummary?: boolean
   users: DirectoryUser[]
   totalCount: number
@@ -50,6 +57,88 @@ $effect(() => {
   observer.observe(sentinel)
   return () => observer.disconnect()
 })
+let listElement = $state<HTMLUListElement | null>(null)
+let metrics = $state<Record<string, UserDirectoryMetrics>>({})
+let metricFailures = $state<Record<string, boolean>>({})
+const visible = new Set<string>()
+const inFlight = new Set<string>()
+let batchTimer: ReturnType<typeof setTimeout> | undefined
+let disposed = false
+
+/** Batch only uncached rows that are currently in the scroll viewport.
+ * @returns Nothing; the short delay groups observer notifications into one request.
+ */
+function scheduleMetrics(): void {
+  if (disposed || batchTimer) return
+  batchTimer = setTimeout(() => {
+    batchTimer = undefined
+    const ids = [...visible]
+      .filter(id => !metrics[id] && !metricFailures[id] && !inFlight.has(id))
+      .slice(0, 25)
+    if (ids.length) void loadMetrics(ids)
+  }, 80)
+}
+
+/** Fetch public counters without replacing settled rows or showing failures as zero.
+ * @param ids Bounded visible user IDs.
+ * @param refresh Whether this is an explicit retry of a failed request.
+ * @returns Completion after updating this mounted directory's cache.
+ */
+async function loadMetrics(ids: string[], refresh = false): Promise<void> {
+  ids.forEach(id => {
+    inFlight.add(id)
+  })
+  try {
+    const result = await (refresh ? refreshRemoteQuery : runRemoteQuery)(
+      getUserDirectoryMetrics({ userIds: ids }),
+    )
+    if (disposed) return
+    const byId = new Map(result.map(row => [row.userId, row]))
+    for (const id of ids) {
+      const row = byId.get(id)
+      if (row) metrics[id] = row
+      metricFailures[id] = !row
+    }
+  } catch {
+    if (!disposed)
+      ids.forEach(id => {
+        metricFailures[id] = true
+      })
+  } finally {
+    ids.forEach(id => {
+      inFlight.delete(id)
+    })
+    scheduleMetrics()
+  }
+}
+
+// Observe the real scroll viewport, not every record returned by pagination.
+$effect(() => {
+  users
+  if (!viewport || !listElement) return
+  visible.clear()
+  const observer = new IntersectionObserver(
+    entries => {
+      for (const entry of entries) {
+        const id = (entry.target as HTMLElement).dataset.userId
+        if (!id) continue
+        if (entry.isIntersecting) visible.add(id)
+        else visible.delete(id)
+      }
+      scheduleMetrics()
+    },
+    { root: viewport },
+  )
+  listElement.querySelectorAll('[data-user-id]').forEach(row => {
+    observer.observe(row)
+  })
+  return () => observer.disconnect()
+})
+
+onDestroy(() => {
+  disposed = true
+  clearTimeout(batchTimer)
+})
 </script>
 
 <section
@@ -59,9 +148,9 @@ $effect(() => {
 >
   {#if showSummary}
     <div
-      class="flex min-h-14 items-center justify-between gap-4 border-b border-border bg-panel px-6 py-3"
+      class="border-border bg-panel flex min-h-14 items-center justify-between gap-4 border-b px-6 py-3"
     >
-      <p class="text-sm text-base-content/70">User profiles</p>
+      <p class="text-base-content/70 text-sm">User profiles</p>
       <p class="shrink-0 text-sm font-semibold" role="status">
         {#if loading && !hasLoaded}
           Loading users…
@@ -75,13 +164,13 @@ $effect(() => {
   <div bind:this={viewport} class="min-h-0 flex-1 overflow-y-auto p-3">
     {#if failed}
       <div
-        class="rounded-lg border border-border bg-panel p-8 text-center"
+        class="border-border bg-panel rounded-lg border p-8 text-center"
         role="alert"
       >
         <p>Unable to load users.</p>
         <button
           type="button"
-          class="mt-3 rounded-lg border border-border px-4 py-2"
+          class="border-border mt-3 rounded-lg border px-4 py-2"
           onclick={onRetry}
         >
           Try again
@@ -90,76 +179,41 @@ $effect(() => {
     {/if}
     {#if loading && !hasLoaded}
       <div
-        class="rounded-lg bg-panel p-8 text-center text-base-content/60"
+        class="bg-panel text-base-content/60 rounded-lg p-8 text-center"
         role="status"
       >
         Loading users…
       </div>
     {:else if hasLoaded}
       {#if users.length === 0}
-        <div class="rounded-lg border border-border bg-panel p-8 text-center">
+        <div class="border-border bg-panel rounded-lg border p-8 text-center">
           No users found. Try another name, username or email.
         </div>
       {/if}
-      <ul class="flex flex-col gap-1.5" aria-label="Users">
+      <ul
+        bind:this={listElement}
+        class={layout === 'card'
+          ? 'grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'
+          : 'flex flex-col gap-1.5'}
+        aria-label="Users"
+      >
         {#each users as user (user.id)}
           <li
             animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180 }}
             transition:fade={{ duration: prefersReducedMotion.current ? 0 : 120 }}
-            class="grid min-h-20 grid-cols-[4rem_minmax(0,1fr)] items-center gap-x-4 rounded-lg border border-border bg-panel p-2 shadow-sm lg:grid-cols-[4rem_minmax(12rem,1fr)_minmax(10rem,0.7fr)]"
+            class="border-border bg-panel @container rounded-lg border shadow-sm"
+            data-user-id={user.id}
           >
-            <div
-              class="row-span-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-md bg-base-200 lg:row-span-2"
-            >
-              {#if typeof user.image === 'string' && user.image}
-                <img
-                  src={user.image}
-                  alt=""
-                  class="h-full w-full object-cover"
-                  loading="lazy"
-                  referrerpolicy="no-referrer"
-                >
-              {:else}
-                <Person class="h-8 w-8 text-base-content/45" />
-              {/if}
-            </div>
-            <div class="min-w-0">
-              <p class="truncate font-semibold">
-                {user.name || user.displayUsername || user.username || 'Unnamed user'}
-              </p>
-              <p class="truncate text-sm text-base-content/65">
-                {#if user.username}
-                  <a
-                    class="rounded-sm underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-primary"
-                    href={`/admin/users/${encodeURIComponent(user.username)}`}
-                    >@{user.displayUsername || user.username}</a
-                  >
-                {:else}
-                  No username
-                {/if}
-              </p>
-            </div>
-            <p
-              class="truncate text-sm text-base-content/60"
-              title={user.attribution ?? undefined}
-            >
-              {user.attribution || 'No attribution'}
-            </p>
-            <div
-              class="col-start-2 flex flex-wrap gap-x-4 gap-y-1 pb-1 text-xs text-base-content/60 lg:col-span-2 lg:col-start-2"
-            >
-              {#if user.email}
-                <span>{user.email}</span>
-              {/if}
-              {#if user.telephone}
-                <span>{user.telephone}</span>
-              {/if}
-              <span>{user.locale || 'en'}</span>
-              <span>{user.isArchived ? 'Archived' : 'Active'}</span>
-              {#if user.createdAt}
-                <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
-              {/if}
-            </div>
+            <UserDirectoryRow
+              {user}
+              {layout}
+              metrics={metrics[user.id]}
+              metricsFailed={metricFailures[user.id]}
+              onRetry={() => {
+                metricFailures[user.id] = false
+                void loadMetrics([user.id], true)
+              }}
+            />
           </li>
         {/each}
       </ul>
@@ -171,7 +225,7 @@ $effect(() => {
           type="button"
           disabled={loading || failed}
           onclick={onLoadMore}
-          class="rounded-md px-4 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+          class="text-muted-foreground hover:text-foreground rounded-md px-4 py-2 text-sm disabled:opacity-50"
         >
           {loading ? 'Loading more users…' : 'Load more users'}
         </button>

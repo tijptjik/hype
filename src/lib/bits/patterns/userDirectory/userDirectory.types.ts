@@ -1,3 +1,10 @@
+import type { UserSearchQueryParams } from '#lib/db/zod/schema/user.types.js'
+
+export type DirectoryFilters = Omit<
+  NonNullable<UserSearchQueryParams['conditions']>,
+  'isArchived' | 'hasEmail' | 'hasTelephone'
+>
+
 export type DirectoryUser = {
   id: string
   name: string | null
@@ -12,3 +19,5 @@ export type DirectoryUser = {
   createdAt?: Date
   image: unknown
 }
+
+export type DirectoryJoinedRange = { from: number; to: number }

@@ -13,11 +13,17 @@ import UserDirectory from '#lib/bits/patterns/userDirectory/UserDirectory.svelte
 // ICONS
 import UsersIcon from 'virtual:icons/proicons/person-multiple'
 // TYPES
-import type { DirectoryUser } from '#lib/bits/patterns/userDirectory/userDirectory.types.js'
+import type {
+  DirectoryUser,
+  DirectoryFilters,
+  DirectoryJoinedRange,
+} from '#lib/bits/patterns/userDirectory/userDirectory.types.js'
 
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setResourceType(false)
+let filters = $state<DirectoryFilters>({})
+let joinedRange = $state<DirectoryJoinedRange | null>(null)
 let archived = $state<boolean | null>(false)
 let hasEmail = $state<boolean | null>(null)
 let hasTelephone = $state<boolean | null>(null)
@@ -57,7 +63,7 @@ async function loadUsers(pageOffset = 0, refresh = false): Promise<void> {
         directory: true,
         pagination: { limit: 25, offset: pageOffset },
         sorting,
-        conditions: { isArchived: archived, hasEmail, hasTelephone },
+        conditions: { ...filters, isArchived: archived, hasEmail, hasTelephone },
       }),
     )
     if (version !== requestVersion) return
@@ -67,6 +73,8 @@ async function loadUsers(pageOffset = 0, refresh = false): Promise<void> {
         ? result.data
         : [...new Map([...users, ...result.data].map(user => [user.id, user])).values()]
     totalCount = result.totalCount
+    // Retain the initial audience range so filtering never moves the slider's endpoints.
+    if (!joinedRange && result.joinedRange) joinedRange = result.joinedRange
     nextOffset = result.offset + result.data.length
     hasMore = result.data.length > 0 && nextOffset < totalCount
     if (pageOffset === 0) resetVersion++
@@ -98,6 +106,7 @@ function changeSorting(value: { sortBy: string; sortOrder: 'asc' | 'desc' }): vo
 
 /** @returns Nothing after restoring the initial directory filters and sort. */
 function resetControls(): void {
+  filters = {}
   archived = false
   hasEmail = null
   hasTelephone = null
@@ -132,6 +141,12 @@ $effect(() => {
     UserDirectoryControls,
     {
       count: totalCount,
+      filters,
+      joinedRange,
+      onFiltersChange: (value: DirectoryFilters) => {
+        filters = value
+        void loadUsers()
+      },
       archived,
       hasEmail,
       hasTelephone,

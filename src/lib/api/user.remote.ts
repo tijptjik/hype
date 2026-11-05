@@ -43,6 +43,7 @@ import {
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
 import { readAdminUserProfile } from '#lib/api/services/adminUser.js'
+import { readUserDirectoryMetrics } from '#lib/api/services/userDirectoryMetrics.js'
 import {
   readUserContributedFeatures,
   readUserContributedImages,
@@ -89,6 +90,7 @@ import type { UserHydrationResult, UserRaw } from '#lib/db/zod/schema/user.types
 // - getUserContributedFeatures
 // - getUserContributedImages
 // - getUserContributionPreviews
+// - getUserDirectoryMetrics
 // - getUserLayers
 // - getUserFeatures
 //
@@ -253,6 +255,7 @@ export const searchUsers = guardedQuery(
       limit: queryPlan.limit,
       offset: queryPlan.offset,
       totalCount: result.totalCount,
+      joinedRange: params.directory ? result.joinedRange : null,
     }
   },
 )
@@ -374,6 +377,21 @@ export const getUserContributedImages = guardedQuery(
       actor: ctx.user,
       userRoles: ctx.userRoles,
       isAdminRequest: ctx.isAdminRequest,
+      hub: ctx.event.locals.hub,
+    }),
+)
+
+/** Load public contribution counts for visible directory rows.
+ * @param params At most 25 user IDs.
+ * @returns Permission-scoped counts without profile or contribution payloads.
+ */
+export const getUserDirectoryMetrics = guardedQuery(
+  z.object({ userIds: z.array(z.string().min(1).max(100)).min(1).max(25) }),
+  async (params, ctx) =>
+    readUserDirectoryMetrics(ctx.db, {
+      userIds: params.userIds,
+      actor: ctx.user,
+      userRoles: ctx.userRoles,
       hub: ctx.event.locals.hub,
     }),
 )

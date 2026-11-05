@@ -193,6 +193,7 @@ export const searchUsersByConditions = async (
     attribution: string | null
   }>
   totalCount: number
+  joinedRange: { from: number; to: number } | null
 }> => {
   const sortColumns = {
     name: user.name,
@@ -226,13 +227,21 @@ export const searchUsersByConditions = async (
     .offset(params.offset)
 
   const [countRow] = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({
+      count: sql<number>`count(*)`,
+      firstJoined: sql<number | null>`min(${user.createdAt})`,
+      lastJoined: sql<number | null>`max(${user.createdAt})`,
+    })
     .from(user)
     .where(and(...params.conditions))
 
   return {
     data,
     totalCount: Number(countRow?.count ?? 0),
+    joinedRange:
+      countRow?.firstJoined != null && countRow?.lastJoined != null
+        ? { from: Number(countRow.firstJoined), to: Number(countRow.lastJoined) }
+        : null,
   }
 }
 
