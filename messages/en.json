@@ -1,4 +1,5 @@
 {
+  "scroll_to_top": "Scroll to top",
   "association_back_editor": "Back to location",
   "association_candidate_selected": "Use candidate location",
   "association_back_proposal": "Back to proposed location",
@@ -979,13 +980,8 @@
   "user_contributions__received_button": "See Profile",
   "photo": [
     {
-      "declarations": [
-        "input n",
-        "local photosPlural = n: plural"
-      ],
-      "selectors": [
-        "photosPlural"
-      ],
+      "declarations": ["input n", "local photosPlural = n: plural"],
+      "selectors": ["photosPlural"],
       "match": {
         "photosPlural=one": "photo",
         "photosPlural=other": "photos"
@@ -1004,9 +1000,7 @@
         "input neighbourhoods",
         "local neighbourhoodsPlural = neighbourhoods: plural"
       ],
-      "selectors": [
-        "neighbourhoodsPlural"
-      ],
+      "selectors": ["neighbourhoodsPlural"],
       "match": {
         "neighbourhoodsPlural=one": "1 hood",
         "neighbourhoodsPlural=other": "{neighbourhoods} hoods"
@@ -1019,9 +1013,7 @@
         "input properties",
         "local propertiesPlural = properties: plural"
       ],
-      "selectors": [
-        "propertiesPlural"
-      ],
+      "selectors": ["propertiesPlural"],
       "match": {
         "propertiesPlural=one": "1 category",
         "propertiesPlural=other": "{properties} categories"
@@ -2126,8 +2118,8 @@
   "feature_location_name_help": "This Feature takes its name from its Location.",
   "feature_edit_location": "Edit Location",
   "feature_separate_name": "Unlink",
-"association_match_score": "Match strength: {score}/100",
-"association_exact_match": "Matching name and address · suggested Location",
+  "association_match_score": "Match strength: {score}/100",
+  "association_exact_match": "Matching name and address · suggested Location",
   "association_hide_unused": "Hide additional address details",
   "association_kind_position": "{kind} Position",
   "feature_name_locked": "Linked · read-only",
@@ -2149,6 +2141,7 @@
   "profile_translate_source": "Translate empty values from {language}",
   "profile_translating": "Translating…",
   "profile_translation_complete": "Filled {count} translations.",
+  "profile_translation_all_filled": "All fields have values - Clear them in the languages you want to translate to",
   "profile_translation_unsupported": "Unsupported language pair.",
   "profile_translation_skipped": "Skipped because the field changed.",
   "content_languages_heading": "Languages",

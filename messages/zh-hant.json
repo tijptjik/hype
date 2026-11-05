@@ -1,4 +1,5 @@
 {
+  "scroll_to_top": "返回頂部",
   "association_back_editor": "返回地點",
   "association_candidate_selected": "使用候選地點",
   "association_back_proposal": "返回建議地點",
@@ -979,13 +980,8 @@
   "user_contributions__received_button": "查看個人頁面",
   "photo": [
     {
-      "declarations": [
-        "input n",
-        "local photosPlural = n: plural"
-      ],
-      "selectors": [
-        "photosPlural"
-      ],
+      "declarations": ["input n", "local photosPlural = n: plural"],
+      "selectors": ["photosPlural"],
       "match": {
         "photosPlural=one": "照片",
         "photosPlural=other": "照片"
@@ -1004,9 +1000,7 @@
         "input neighbourhoods",
         "local neighbourhoodsPlural = neighbourhoods: plural"
       ],
-      "selectors": [
-        "neighbourhoodsPlural"
-      ],
+      "selectors": ["neighbourhoodsPlural"],
       "match": {
         "neighbourhoodsPlural=one": "1個引擎蓋",
         "neighbourhoodsPlural=other": "{neighbourhoods}引擎蓋"
@@ -1019,9 +1013,7 @@
         "input properties",
         "local propertiesPlural = properties: plural"
       ],
-      "selectors": [
-        "propertiesPlural"
-      ],
+      "selectors": ["propertiesPlural"],
       "match": {
         "propertiesPlural=one": "1個類別",
         "propertiesPlural=other": "{properties}類別"
@@ -2126,8 +2118,8 @@
   "feature_location_name_help": "此地點項目沿用其位置名稱。",
   "feature_edit_location": "編輯位置",
   "feature_separate_name": "取消連結",
-"association_match_score": "配對強度：{score}/100",
-"association_exact_match": "名稱及地址相同 · 建議地點",
+  "association_match_score": "配對強度：{score}/100",
+  "association_exact_match": "名稱及地址相同 · 建議地點",
   "association_hide_unused": "隱藏其他地址資料",
   "association_kind_position": "{kind}位置",
   "feature_name_locked": "已連結 · 唯讀",
@@ -2149,6 +2141,7 @@
   "profile_translate_source": "從{language}翻譯空白欄位",
   "profile_translating": "翻譯中…",
   "profile_translation_complete": "已填入 {count} 項翻譯。",
+  "profile_translation_all_filled": "所有欄位都有內容 - 請先清除你想翻譯成的語言欄位",
   "profile_translation_unsupported": "不支援此語言組合。",
   "profile_translation_skipped": "欄位已變更，已略過。",
   "content_languages_heading": "語言",

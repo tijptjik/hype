@@ -1,4 +1,5 @@
 {
+  "scroll_to_top": "返回顶部",
   "association_back_editor": "返回地点",
   "association_candidate_selected": "使用候选地点",
   "association_back_proposal": "返回建议地点",
@@ -979,13 +980,8 @@
   "user_contributions__received_button": "查看个人页面",
   "photo": [
     {
-      "declarations": [
-        "input n",
-        "local photosPlural = n: plural"
-      ],
-      "selectors": [
-        "photosPlural"
-      ],
+      "declarations": ["input n", "local photosPlural = n: plural"],
+      "selectors": ["photosPlural"],
       "match": {
         "photosPlural=one": "照片",
         "photosPlural=other": "照片"
@@ -1004,9 +1000,7 @@
         "input neighbourhoods",
         "local neighbourhoodsPlural = neighbourhoods: plural"
       ],
-      "selectors": [
-        "neighbourhoodsPlural"
-      ],
+      "selectors": ["neighbourhoodsPlural"],
       "match": {
         "neighbourhoodsPlural=one": "1个引擎盖",
         "neighbourhoodsPlural=other": "{neighbourhoods}引擎盖"
@@ -1019,9 +1013,7 @@
         "input properties",
         "local propertiesPlural = properties: plural"
       ],
-      "selectors": [
-        "propertiesPlural"
-      ],
+      "selectors": ["propertiesPlural"],
       "match": {
         "propertiesPlural=one": "1个类别",
         "propertiesPlural=other": "{properties}类别"
@@ -2126,8 +2118,8 @@
   "feature_location_name_help": "此地点项目沿用其位置名称。",
   "feature_edit_location": "编辑位置",
   "feature_separate_name": "取消关联",
-"association_match_score": "匹配强度：{score}/100",
-"association_exact_match": "名称及地址相同 · 建议地点",
+  "association_match_score": "匹配强度：{score}/100",
+  "association_exact_match": "名称及地址相同 · 建议地点",
   "association_hide_unused": "隐藏其他地址资料",
   "association_kind_position": "{kind}位置",
   "feature_name_locked": "已关联 · 只读",
@@ -2149,6 +2141,7 @@
   "profile_translate_source": "从{language}翻译空白栏位",
   "profile_translating": "翻译中…",
   "profile_translation_complete": "已填入 {count} 项翻译。",
+  "profile_translation_all_filled": "所有栏位都有内容 - 请先清除你想翻译成的语言栏位",
   "profile_translation_unsupported": "不支持此语言组合。",
   "profile_translation_skipped": "栏位已变更，已跳过。",
   "content_languages_heading": "语言",
