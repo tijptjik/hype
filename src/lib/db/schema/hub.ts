@@ -188,3 +188,17 @@ export const hubLayer = sqliteTable(
   },
   table => [primaryKey({ columns: [table.hubId, table.layerId] })],
 )
+
+/** Transactionally maintained totals for resources included in each hub. */
+export const hubCounts = sqliteTable('hubCounts', {
+  hubId: text('hubId')
+    .primaryKey()
+    .notNull()
+    .references(() => hub.id, {
+      onDelete: 'cascade',
+      onUpdate: 'cascade',
+    }),
+  organisationCount: integer('organisationCount').notNull().default(0),
+  projectCount: integer('projectCount').notNull().default(0),
+  layerCount: integer('layerCount').notNull().default(0),
+})

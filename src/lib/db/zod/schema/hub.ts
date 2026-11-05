@@ -16,6 +16,7 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import {
   hub,
+  hubCounts,
   hubLayer,
   hubI18n,
   hubRole,
@@ -136,7 +137,10 @@ const HubOrganisationRaw = HubOrganisationBase.extend({
   image: ImageBase.nullish(),
 })
 
+const HubCounts = createSelectSchema(hubCounts).omit({ hubId: true })
+
 export const HubRaw = HubBase.extend({
+  counts: HubCounts.nullish(),
   i18n: z.array(HubI18nBase),
   image: ImageBase.nullish(),
   userRoles: z.array(HubRoleWithUser).nullish(),
@@ -371,6 +375,7 @@ const HubSubscriptionFields = HubBase.pick({
 })
 
 export const HubListProfileAPI = HubListFields.extend({
+  counts: HubCounts.nullish(),
   i18n: getLocales(HubI18nBase),
   image: ImageContextEnvelopeAPI.nullish(),
 })

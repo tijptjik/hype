@@ -2,7 +2,7 @@ import { relations } from 'drizzle-orm'
 
 // Import all table definitions
 import { passkey, user, userFeature, userLayer } from './user'
-import { hub, hubI18n, hubRole, hubUserState, hubLayer } from './hub'
+import { hub, hubCounts, hubI18n, hubRole, hubUserState, hubLayer } from './hub'
 import { organisation, organisationI18n, organisationRole } from './organisation'
 import { organisationUserPolicy } from './organisationUser'
 import { project, projectI18n, projectRole } from './project'
@@ -539,6 +539,7 @@ export const taskImageRelations = relations(taskImage, ({ one }) => ({
  * Links hub to its organizations and translations
  */
 export const hubRelations = relations(hub, ({ one, many }) => ({
+  counts: one(hubCounts, { fields: [hub.id], references: [hubCounts.hubId] }),
   i18n: many(hubI18n),
   organisations: many(organisation),
   userRoles: many(hubRole, { relationName: 'hubUserRoles' }),

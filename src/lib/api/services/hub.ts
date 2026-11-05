@@ -63,6 +63,7 @@ type ToImageArg = Parameters<typeof toImageEnvelope>[0]
  * Keeps list endpoints lightweight while still providing display i18n and image data.
  */
 export const hubCollectionWithRelations = {
+  counts: true,
   i18n: true,
   image: true,
 }
@@ -72,6 +73,7 @@ export const hubCollectionWithRelations = {
  * Includes user roles, organisations, and ordered property assignments for admin/detail flows.
  */
 export const hubEntityWithRelations = {
+  counts: true,
   i18n: true,
   image: true,
   layerDefaults: {

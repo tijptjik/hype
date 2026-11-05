@@ -49,46 +49,31 @@ function getPreviewImageSrc(
   return null
 }
 
+/**
+ * Reads authoritative hub-scope totals without depending on loaded collections.
+ * @param entity Hub response containing stored counters.
+ * @returns Metric breadcrumbs; unavailable counters are shown as unknown.
+ */
 function getHubMetricBreadcrumbs(
-  adminCtx: AdminCtx,
   entity: AdminIndexCardEntity<Exclude<Resource, Task>>,
 ): NonNullable<IndexCardProps['breadcrumbs']> {
-  const hubId = 'id' in entity && typeof entity.id === 'string' ? entity.id : null
-  const organisations =
-    hubId == null
-      ? []
-      : adminCtx.view.queries.rows.organisation.filter(
-          organisation => organisation.hubId === hubId,
-        )
-  const organisationIds = new Set(
-    organisations
-      .map(organisation => organisation.id)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0),
-  )
-  const projectIds = new Set(
-    adminCtx.view.queries.rows.project
-      .filter(project => organisationIds.has(project.organisationId))
-      .map(project => project.id),
-  )
-  const layerCount = adminCtx.view.queries.rows.layer.filter(layer =>
-    organisationIds.has(layer.organisationId),
-  ).length
+  const counts = 'counts' in entity ? entity.counts : null
 
   return [
     {
-      label: String(organisationIds.size),
+      label: String(counts?.organisationCount ?? '—'),
       icon: OrganisationIcon,
       tooltip: m.field_organisation(),
       iconClass: 'bits-index-card__crumb-icon--organisation',
     },
     {
-      label: String(projectIds.size),
+      label: String(counts?.projectCount ?? '—'),
       icon: ProjectIcon,
       tooltip: m.maps__projects(),
       iconClass: 'bits-index-card__crumb-icon--project',
     },
     {
-      label: String(layerCount),
+      label: String(counts?.layerCount ?? '—'),
       icon: LayersIcon,
       tooltip: m.maps__layers(),
       iconClass: 'bits-index-card__crumb-icon--layer',
@@ -291,7 +276,7 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
   const breadcrumbs = [] as NonNullable<IndexCardProps['breadcrumbs']>
   if (resourceType) {
     if (resourceType === FirstClassResource.hub) {
-      breadcrumbs.push(...getHubMetricBreadcrumbs(adminCtx, entity))
+      breadcrumbs.push(...getHubMetricBreadcrumbs(entity))
     } else {
       const hierarchy = appCtx.getHierarchySync(entity as never)
 
