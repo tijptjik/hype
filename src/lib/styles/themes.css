@@ -114,6 +114,9 @@
 /* Re-declare aliases at each theme boundary so nested previews remain independent. */
 :root,
 [data-theme] {
+  /* Reset optional scrollbar accents at nested theme boundaries. */
+  --theme-scrollbar-thumb: initial;
+  --theme-scrollbar-opacity: initial;
   /* Palette-derived fallback; the named themes below compose their own admin canvas. */
   --admin-background: linear-gradient(
     to bottom left,
@@ -326,6 +329,14 @@
     var(--color-rose-500),
     var(--color-fuchsia-800)
   );
+}
+
+/* Nebula and Nullspace share a visible violet-blue scrollbar accent. */
+:root:not([data-theme]),
+[data-theme="hype-dark"],
+[data-theme="hype-black"] {
+  --theme-scrollbar-thumb: #665cff;
+  --theme-scrollbar-opacity: 0.9;
 }
 
 /* Nebula: a turquoise glow over a deep violet-to-rose sky. */

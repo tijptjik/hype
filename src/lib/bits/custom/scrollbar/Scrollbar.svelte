@@ -60,6 +60,40 @@ function scheduleRemoveScrollingClass(): void {
   }, 150)
 }
 
+// The virtual scrollbar overlays the viewport as a sibling, so wheel input over
+// its track or thumb needs forwarding to the same native scrolling element.
+$effect(() => {
+  if (!virtual || !scrollbarElement || !viewport) return
+  const element = scrollbarElement
+  const scrollViewport = viewport
+
+  /**
+   * Scrolls the list when wheel input lands on its overlaid scrollbar.
+   * @param event Wheel input from the track or thumb.
+   * @returns Nothing; preserves zoom gestures and outer scrolling at list edges.
+   */
+  function handleWheel(event: WheelEvent): void {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || !event.deltaY) return
+    if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return
+
+    const unit =
+      event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+        ? scrollViewport.clientHeight
+        : event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? Number.parseFloat(getComputedStyle(scrollViewport).lineHeight) || 16
+          : 1
+    const previousTop = scrollViewport.scrollTop
+    scrollViewport.scrollTop += event.deltaY * unit
+    if (scrollViewport.scrollTop !== previousTop) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+
+  element.addEventListener('wheel', handleWheel, { passive: false })
+  return () => element.removeEventListener('wheel', handleWheel)
+})
+
 $effect(() => {
   if (!BROWSER || !scrollbarElement) {
     return

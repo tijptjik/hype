@@ -447,9 +447,9 @@ onDestroy(() => {
           ? width.thumbActive
           : width.thumb}px"
         style:height="{thumbHeight}px"
-        style:opacity={thumbHovered || thumbDragging
-          ? opacity.thumbActive
-          : opacity.thumb}
+        style:opacity={`var(--theme-scrollbar-opacity, ${
+          thumbHovered || thumbDragging ? opacity.thumbActive : opacity.thumb
+        })`}
         in:vThumbIn
         out:vThumbOut
       ></div>
@@ -483,7 +483,7 @@ onDestroy(() => {
   position: relative;
   margin: 0 auto;
   border-radius: var(--svrollbar-thumb-radius, 0.25rem);
-  background: var(--svrollbar-thumb-background, gray);
+  background: var(--theme-scrollbar-thumb, var(--svrollbar-thumb-background, gray));
   box-shadow: var(--svrollbar-thumb-shadow, initial);
   pointer-events: auto;
   cursor: pointer;
