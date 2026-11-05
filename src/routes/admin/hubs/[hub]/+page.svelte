@@ -1698,8 +1698,8 @@ $effect(() => {
 
     <Main.Facet
       isVisible={isLayersFacet}
+      bottomClearance={320}
       transition="fade"
-      fillHeight={true}
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
       class="right-0! left-0!"
@@ -1707,6 +1707,7 @@ $effect(() => {
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <FormHubLayersSection
+          class="shrink-0"
           title={m.maps__layers()}
           subtitle={m.admin__forms_hub_layers_subtitle()}
           localeKey={getLocaleKey()}
@@ -1786,8 +1787,8 @@ $effect(() => {
 
     <Main.Facet
       isVisible={isPoliciesFacet}
+      bottomClearance={320}
       transition="fade"
-      fillHeight={true}
       previousAction={buildFacetNavAction('policies', 'previous')}
       nextAction={buildFacetNavAction('policies', 'next')}
       class="right-0! left-0!"

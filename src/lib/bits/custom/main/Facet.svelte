@@ -16,7 +16,7 @@ let {
   fillHeight = false,
   navMode = 'centered',
   contentClass = '',
-  bottomClearance = 0,
+  bottomClearance = 320,
   edgeToEdge = false,
 }: MainFacetProps = $props()
 

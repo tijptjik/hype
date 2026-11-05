@@ -19,7 +19,7 @@ export interface MainFacetProps {
   fillHeight?: boolean
   navMode?: 'centered' | 'footer' | 'overlay'
   contentClass?: string
-  /** Minimum trailing scroll space beneath content in scrolling facets. */
+  /** Minimum trailing scroll space beneath content in scrolling facets; defaults to 320px. */
   bottomClearance?: number
   edgeToEdge?: boolean
 }
