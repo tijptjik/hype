@@ -15,6 +15,29 @@ GitHub issues remain the public delivery record. Earlier local acceptance below 
 establish production readiness. This design supersedes the earlier
 insert-only/fresh-target limitation.
 
+### Admin profile editing
+
+Refs #189. `/admin/users/[username]` now uses a shared persisted audience predicate for
+full settings reads, profile updates, and messaging settings. Explicit SuperAdmins edit
+globally; organisation Owners and relevant organisation Hub Admins edit only that
+organisation's users only when `permitUserDetailsEdit` is enabled. Migration
+`0180_organisation_user_details_permission.sql` defaults existing and new organisations
+to off. Migration `0181_hkfoodworks_user_details_permission.sql` explicitly grants
+HKFoodWorks this permission as the reviewed exception, preserving existing revision
+history and leaving every other organisation unchanged. Advanced → Organization
+Permissions exposes the grant; only explicit SuperAdmins may change it. Profile saves
+recheck the live permission alongside the same-organisation membership, so revocation
+also blocks already-open editors. Other admin roles receive public profile data only.
+The editor covers identity/contact details, account status, language, appearance,
+contribution/admin display preferences, experimental flags, and separate messaging
+settings. Saves use revision conflict checks and database identity uniqueness.
+
+An organisation Maintainer entitlement remains pending a role-model decision: the
+current organisation roles are User, Member, and Owner. No Member-to-Maintainer
+promotion is inferred. See
+[Authorization Design](../../../docs/specs/Design-Spec-Authorization.md) and
+`src/tests/admin-user-{profile,edit-scope,save}.test.ts` for the profile boundary.
+
 ### Production schema boundary
 
 A read-only inspection of `hype-db-prod` on 4 November verified receipts for 0085, 0086,

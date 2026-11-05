@@ -2157,5 +2157,9 @@
   "content_languages_reset": "Reset to defaults",
   "content_multilingual_default": "Always show multilingual values for content",
   "address_multilingual_default": "Always show multilingual values for addresses",
-  "content_languages_help_named": "Availability and order of languages in the editors used across {name}."
+  "content_languages_help_named": "Availability and order of languages in the editors used across {name}.",
+  "organisation_permissions_heading": "Organization Permissions",
+  "organisation_permission_user_details": "Permit to edit user details",
+  "organisation_permission_user_details_description": "Allow organisation Owners and relevant Hub Admins to edit names, phone numbers, email addresses and usernames for users in this organisation. Changes apply to the shared HYPE profile.",
+  "organisation_permissions_superadmin_only": "Only a SuperAdmin can grant or revoke this permission. Disabled by default."
 }

@@ -2157,5 +2157,9 @@
   "content_languages_reset": "重設為預設值",
   "content_multilingual_default": "預設顯示內容的多語言值",
   "address_multilingual_default": "預設顯示地址的多語言值",
-  "content_languages_help_named": "{name} 各編輯器中可用的語言及其排序。"
+  "content_languages_help_named": "{name} 各編輯器中可用的語言及其排序。",
+  "organisation_permissions_heading": "機構權限",
+  "organisation_permission_user_details": "允許編輯用戶資料",
+  "organisation_permission_user_details_description": "允許機構擁有人及相關平台管理員編輯本機構用戶的姓名、電話號碼、電郵地址及用戶名稱。變更會套用至共用的 HYPE 個人檔案。",
+  "organisation_permissions_superadmin_only": "只有超級管理員可以授予或撤銷此權限。預設為停用。"
 }

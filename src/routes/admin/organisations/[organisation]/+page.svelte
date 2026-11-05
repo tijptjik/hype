@@ -121,6 +121,7 @@ import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
+import OrganisationPermissions from '#lib/bits/patterns/organisationUsers/OrganisationPermissions.svelte'
 import MultilingualDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/MultilingualDefaults.svelte'
 import type { MultilingualSettingKey } from '#lib/content-locales/settings.js'
 // CONTENT LOCALES
@@ -810,6 +811,7 @@ const userRoles = $derived.by(() =>
 const capabilityFormUpdater = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{
     defaultLocationVisibility?: 'shared' | 'exclusive'
+    permitUserDetailsEdit?: boolean
     capabilities?: CapabilityDefinitions
   }>,
 )
@@ -1736,6 +1738,30 @@ $effect(() => {
                 formCtx.form.fields.value().data?.defaultLocationVisibility ?? 'shared',
               )}
             >
+          </div>
+          <SectionHeader title={m.organisation_permissions_heading()} />
+          <div class="mx-6 min-w-0">
+            <OrganisationPermissions
+              permitted={formCtx.form.fields.value().data?.permitUserDetailsEdit ===
+                true}
+              canManage={adminCtx.view.isSuperAdmin()}
+              disabled={!isEditing || formCtx.submitting}
+              onChange={permitted =>
+                updateFormData(capabilityFormUpdater, data => {
+                  data.permitUserDetailsEdit = permitted
+                  return data
+                })}
+            />
+            {#if adminCtx.view.isSuperAdmin()}
+              <input
+                {...formCtx.form.fields.data.permitUserDetailsEdit.as(
+                  'hidden',
+                  String(
+                    formCtx.form.fields.value().data?.permitUserDetailsEdit === true,
+                  ),
+                )}
+              >
+            {/if}
           </div>
         </section>
       </FormSurface>
