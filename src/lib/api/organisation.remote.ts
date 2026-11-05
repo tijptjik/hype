@@ -13,6 +13,7 @@ import { getLocale } from '#lib/i18n.js'
 // UTILS
 import { nanoid } from 'nanoid'
 // AUTHORIZATION
+import { canSubmitOrganisationUserDetailsPermission } from './services/authz/organisationPermissions.js'
 import {
   isReservedCode,
   toAuthMessage,
@@ -435,6 +436,12 @@ export const organisationForm = guardedForm(
       if (organisationId) {
         invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
       }
+      // Permission grants are platform-controlled, including on organisation creation.
+      if (
+        !canSubmitOrganisationUserDetailsPermission(user, data.permitUserDetailsEdit)
+      ) {
+        invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
+      }
       // Apply role-based authorization.
       const createDecision = authorizeOrganisationCreateForSubmission({
         user,
@@ -467,6 +474,9 @@ export const organisationForm = guardedForm(
           hubId: activeHubId,
           settings: applyContentLocaleSettingsPatch(undefined, data.settings),
           defaultLocationVisibility: data.defaultLocationVisibility,
+          ...(user.superAdmin === true && data.permitUserDetailsEdit !== undefined
+            ? { permitUserDetailsEdit: data.permitUserDetailsEdit }
+            : {}),
           ...(data.capabilities !== undefined
             ? { capabilities: data.capabilities }
             : {}),
@@ -506,6 +516,17 @@ export const organisationForm = guardedForm(
     })
     if (!updateDecision.allowed) {
       invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
+    }
+
+    // Ordinary form saves may echo the current flag but cannot grant or revoke it.
+    if (
+      !canSubmitOrganisationUserDetailsPermission(
+        user,
+        data.permitUserDetailsEdit,
+        current.permitUserDetailsEdit,
+      )
+    ) {
+      invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
     }
 
     // Apply role-management authorization only when role membership changed.
@@ -572,6 +593,9 @@ export const organisationForm = guardedForm(
               }
             : {}),
           defaultLocationVisibility: data.defaultLocationVisibility,
+          ...(user.superAdmin === true && data.permitUserDetailsEdit !== undefined
+            ? { permitUserDetailsEdit: data.permitUserDetailsEdit }
+            : {}),
           url: data.url.trim() === '' ? null : data.url.trim(),
           ...(data.capabilities !== undefined
             ? { capabilities: data.capabilities }

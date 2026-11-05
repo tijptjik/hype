@@ -182,15 +182,46 @@ policy and a server-side correlated membership predicate for both results and co
 Authorized audience managers receive contact fields only for the returned members.
 Global user-directory and profile permissions stay independent.
 
-`organisationUserPolicy` stores independently selectable hub-sign-in, verified exact
-email-domain and explicit card-onboarding rules. Policy updates compare the observed
-revision. Sign-in writes re-read publication/archive state, current hub, policy and
-persisted user/email verification in the INSERT itself. Card onboarding uses the session
-owner and trusted active hub; core access additionally requires core-inclusive,
-non-exclusive publication. These enrolment rules grant only the user level, never staff
-membership.
+Admin user profiles expose one target-specific access level: explicit SuperAdmins can
+edit globally; organisation Owners and the organisation's Hub Admins can edit users with
+persisted audience membership in that non-archived organisation **only when** its
+`permitUserDetailsEdit` permission is enabled. This platform permission defaults to
+false for existing and new organisations. Only an explicit, durable SuperAdmin can grant
+or revoke it in Advanced → Organization Permissions; organisation Owners, scoped Hub
+Admins and core Hub Admin roles cannot self-grant it. Project roles and all other admin
+roles receive the same public profile projection as the user app, without contact
+details or account preferences. Core hub administration alone does not grant global
+profile editing. Profile saves repeat the live permission and audience predicate and
+check `updatedAt` in the UPDATE, rejecting stale edits or withdrawn membership. Contact
+changes preserve identity uniqueness; changing email clears verification unless an
+explicit SuperAdmin verifies it. Messaging settings use the same audience boundary,
+while identity verification retains its separate elevated permission.
 
-Migration 0168 must precede this runtime. The existing organisation role uses
+The organisation Maintainer role is not yet represented in the role model; its mapping
+must be resolved before granting that additional profile-edit entitlement.
+
+`organisationUserPolicy` stores independently selectable hub-sign-in, verified exact
+email-domain, explicit card-onboarding and project-contribution rules. Policy updates
+compare the observed revision. Sign-in writes re-read publication/archive state, current
+hub, policy and persisted user/email verification in the INSERT itself. Card onboarding
+uses the session owner and trusted active hub; core access additionally requires
+core-inclusive, non-exclusive publication. These enrolment rules grant only the user
+level, never staff membership.
+
+Contribution enrolment is atomic with a submitted `newFeature`, `newPhoto` or
+`reportedMissing` task (inserted as submitted or finalized from a draft). Migration 0182
+installs the triggers: they resolve the organisation through the persisted
+Feature/Project chain, check the current policy and durable active account, and merge
+only `contribution:<projectId>: user` provenance. Draft uploads do not enrol anyone;
+moderation is not required. Turning the rule off stops new enrolments and preserves
+existing users. Migration 0183 enables this rule for the organisation owning the
+`hkghostsigns` project and backfills its distinct Feature, image and submitted-task
+contributors, including historical imports without tasks. Anonymous/archived accounts,
+unsubmitted drafts, and uploads belonging only to draft tasks are excluded. Existing
+staff roles and independent grants survive. The data migration can be rerun without
+adding grants or history; immutable organisation history is preserved.
+
+Migrations 0168 and 0182 must precede this runtime. The existing organisation role uses
 independent grant reasons; only member/owner grants confer staff access. Source
 payloads, accepted state and sync progress remain in private local files. There is no
 production cursor or authentication fence. Before-or-after row guards abort a

@@ -77,6 +77,10 @@ export const organisation = sqliteTable('organisation', {
   })
     .notNull()
     .default('shared'),
+  // SuperAdmin-granted permission; existing and new organisations start disabled.
+  permitUserDetailsEdit: integer('permitUserDetailsEdit', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   // Configurable capability labels and assignable keys for this organisation's projects.
   capabilities: text('capabilities', {
     mode: 'json',

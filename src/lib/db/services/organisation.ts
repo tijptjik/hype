@@ -73,6 +73,7 @@ type OrganisationProbe = {
 }
 
 type OrganisationUpdateProbe = {
+  permitUserDetailsEdit?: boolean
   settings?: OrganisationDB['settings']
   id: string
   code: string
@@ -595,6 +596,7 @@ export const probeOrganisationForUpdate = async (
         hubId: organisation.hubId,
         capabilities: organisation.capabilities,
         settings: organisation.settings,
+        permitUserDetailsEdit: organisation.permitUserDetailsEdit,
         modifiedAt: organisation.modifiedAt,
       })
       .from(organisation)
@@ -765,6 +767,7 @@ export const updateOrganisationByIdWithConcurrency = async (
       url: string | null
       settings?: OrganisationDB['settings']
       defaultLocationVisibility?: OrganisationDB['defaultLocationVisibility']
+      permitUserDetailsEdit?: boolean
       capabilities?: OrganisationDB['capabilities']
     }
   },

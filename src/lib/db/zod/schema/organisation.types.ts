@@ -111,6 +111,7 @@ export type OrganisationFormSource = {
   userPolicy?: import('#lib/organisation-users/policy.js').OrganisationUserPolicy | null
   settings?: import('#lib/content-locales/settings.js').ContentLocaleSettings
   defaultLocationVisibility?: 'shared' | 'exclusive'
+  permitUserDetailsEdit?: boolean
   id?: string
   modifiedAt?: string
   code?: string

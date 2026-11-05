@@ -262,6 +262,7 @@ export const OrganisationEntityFormData = z.object({
   url: z.union([z.literal(''), z.url({ message: m.admin__validation_url_invalid() })]),
   capabilities: CapabilityBase,
   defaultLocationVisibility: z.enum(['shared', 'exclusive']).default('shared'),
+  permitUserDetailsEdit: FormBoolean.optional(),
   i18n: OrganisationI18nByLocaleFormData,
   userRoles: OrganisationUserRolesFormData,
   properties: z.array(ProjectPropertyFormData).default([]),
@@ -379,6 +380,7 @@ export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({
 })
 
 export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI.extend({
+  permitUserDetailsEdit: OrganisationBase.shape.permitUserDetailsEdit,
   hub: z
     .object({ id: z.string(), code: z.string(), domain: z.string().nullish() })
     .nullish(),

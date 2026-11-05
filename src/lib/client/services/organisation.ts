@@ -135,6 +135,7 @@ export function toOrganisationFormInput(
         url: '',
         capabilities: {},
         defaultLocationVisibility: 'shared',
+        permitUserDetailsEdit: false,
         i18n: {
           en: normalizeOrganisationFormLocale(undefined),
           zhHans: normalizeOrganisationFormLocale(undefined),
@@ -160,6 +161,7 @@ export function toOrganisationFormInput(
       settings: toContentLocaleSettingsForm(data.settings),
       capabilities: normalizeOrganisationCapabilities(data.capabilities),
       defaultLocationVisibility: data.defaultLocationVisibility ?? 'shared',
+      permitUserDetailsEdit: data.permitUserDetailsEdit === true,
       i18n: {
         en: normalizeOrganisationFormLocale(data.i18n?.en),
         zhHans: normalizeOrganisationFormLocale(data.i18n?.zhHans),

@@ -82,6 +82,12 @@ Users cannot enumerate contacts. The master switch stops enrolment and hides the
 directory; disabling a rule does not erase existing grants. See
 [the import specification](../../spec/breadline/proposal/02-user-import.md).
 
+Organisation profile editing additionally requires the SuperAdmin-granted
+`permitUserDetailsEdit` permission on the same organisation as the target membership. It
+defaults to off for all organisations; only explicit SuperAdmins may change it. Owners
+and relevant Hub Admins cannot grant it to themselves. Revocation is checked again when
+saving a profile. Self-profile editing is independent.
+
 ## Project
 
 - Owner
