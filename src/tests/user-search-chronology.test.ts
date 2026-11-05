@@ -23,7 +23,7 @@ describe('user directory numeric timestamp repair', () => {
           id TEXT, name TEXT, username TEXT, displayUsername TEXT, email TEXT,
           telephone TEXT, image TEXT, attribution TEXT, locale TEXT,
           isArchived INTEGER, createdAt INTEGER, updatedAt INTEGER
-        )`)
+        ); CREATE TABLE userMessagingIdentity (userId TEXT, platform TEXT);`)
         const dates = [
           ['old-numeric', Date.parse('2024-12-09T14:18:29.910Z')],
           ['legacy-iso', '2026-06-04T22:46:32.608Z'],

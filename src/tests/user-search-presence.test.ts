@@ -19,6 +19,9 @@ describe('contact-presence search', () => {
         telephone TEXT, image TEXT, attribution TEXT, locale TEXT, emailVerified INTEGER,
         isArchived INTEGER, isAnonymous INTEGER, createdAt INTEGER, updatedAt INTEGER
       );
+      CREATE TABLE userMessagingIdentity (userId TEXT, platform TEXT);
+      INSERT INTO userMessagingIdentity VALUES
+        ('both','whatsapp'), ('both','telegram'), ('email','telegram');
       INSERT INTO user (id,name,email,telephone,isArchived) VALUES
         ('both','A Both','a@example.invalid','123',0),
         ('email','B Email','b@example.invalid','',0),
@@ -39,6 +42,15 @@ describe('contact-presence search', () => {
       const both = await search({ conditions: { hasEmail: true, hasTelephone: true } })
       expect(both.data.map(row => row.id)).toEqual(['both'])
       expect(both.totalCount).toBe(1)
+      expect(both.data[0].hasMessagingIdentity).toBe(true)
+      const identities = await search({})
+      expect(identities.data.map(row => [row.id, row.hasMessagingIdentity])).toEqual([
+        ['both', true],
+        ['email', true],
+        ['phone', false],
+        ['blank', false],
+        ['missing', false],
+      ])
       const noPhone = await search({
         conditions: { hasTelephone: false },
         pagination: { limit: 1, offset: 1 },

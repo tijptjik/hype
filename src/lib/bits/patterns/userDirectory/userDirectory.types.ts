@@ -13,6 +13,7 @@ export type DirectoryUser = {
   email: string | null
   attribution: string | null
   telephone?: string | null
+  hasMessagingIdentity?: boolean
   locale?: string
   emailVerified?: boolean | null
   isArchived?: boolean

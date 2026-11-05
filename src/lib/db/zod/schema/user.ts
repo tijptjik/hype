@@ -188,7 +188,9 @@ export const UserDirectoryProfileAPI = UserAdminListProfileAPI.extend(
     isArchived: true,
     createdAt: true,
   }).shape,
-)
+).extend({
+  hasMessagingIdentity: z.boolean().default(false),
+})
 
 export const UserCardProfileAPI = UserBase.pick({
   id: true,

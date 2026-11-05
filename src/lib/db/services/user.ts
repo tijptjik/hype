@@ -12,6 +12,7 @@ import {
   getTableColumns,
 } from 'drizzle-orm'
 import { hub, hubRole, user, userFeature, userLayer } from '../schema'
+import { userMessagingIdentity } from '../schema/messaging'
 import { isSqliteMissingSchemaError, retryBusyRead } from './sqlite'
 // TYPES
 import type { Id, UserRoleDisco, Database } from '#lib/types.js'
@@ -191,6 +192,7 @@ export const searchUsersByConditions = async (
     isArchived: boolean
     createdAt: Date
     attribution: string | null
+    hasMessagingIdentity: boolean
   }>
   totalCount: number
   joinedRange: { from: number; to: number } | null
@@ -219,6 +221,11 @@ export const searchUsersByConditions = async (
       emailVerified: sql<null>`null`,
       isArchived: user.isArchived,
       createdAt: user.createdAt,
+      // Check identity presence without exposing identifiers or duplicating users with two platforms.
+      hasMessagingIdentity: sql<boolean>`exists (
+        select 1 from ${userMessagingIdentity}
+        where ${userMessagingIdentity.userId} = ${user.id}
+      )`.mapWith(Boolean),
     })
     .from(user)
     .where(and(...params.conditions))

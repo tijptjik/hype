@@ -124,9 +124,18 @@ const contactClass =
       : 'col-start-1 row-start-2 border-t border-border/60 pt-3'}"
   >
     <div class="flex items-center justify-center">
-      <a href="/admin/messaging" aria-label="Open messaging" class={contactClass}
-        ><Chat class="size-6" /></a
-      >
+      {#if user.hasMessagingIdentity}
+        <a href="/admin/messaging" aria-label="Open messaging" class={contactClass}
+          ><Chat class="size-6" /></a
+        >
+      {:else}
+        <span
+          role="img"
+          aria-label="No messaging identity"
+          class="text-base-content/20 flex size-8 items-center justify-center"
+          ><Chat class="size-6" /></span
+        >
+      {/if}
       {#if user.telephone}
         <a
           href={`tel:${user.telephone.replace(/[^+\d]/g, '')}`}
