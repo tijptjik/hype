@@ -192,7 +192,7 @@ function autonym(locale: string): string {
     </div>
   {/if}
   <div
-    class="grid min-w-0 gap-6 {stackNames
+    class="grid min-w-0 gap-x-6 gap-y-4 {stackNames
       ? 'md:grid-cols-3 md:grid-rows-[min-content_1fr]'
       : `${fields.length > 1 ? 'md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6' : ''} ${fields.length === 3 ? 'md:grid-cols-3' : fields.length === 2 ? 'md:grid-cols-2' : ''}`}"
   >

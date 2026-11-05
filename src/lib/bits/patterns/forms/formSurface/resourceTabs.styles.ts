@@ -10,7 +10,6 @@ export const resourceTabsStyles = cx(
   String.raw`[&_.bits-project-capabilities\_\_list>.bits-card]:bg-none [&_.bits-project-capabilities\_\_list>.bits-card]:before:hidden [&_.bits-project-capabilities\_\_list>.bits-card]:shadow-none [&_.bits-project-capabilities\_\_list>.bits-card]:outline-none`,
   // Field definitions become flush sections, with a quiet secondary header per field.
   '[&_[id^=property-wrapper-]]:border-b [&_[id^=property-wrapper-]]:border-border/40 [&_[id^=property-wrapper-]:last-child]:border-b-0 [&_section>header+div.flex]:gap-0',
-  '[&_.bits-project-field-card]:pb-6',
   String.raw`[&_.bits-project-field-card\_\_i18n-grid]:gap-0 [&_.bits-project-field-card\_\_i18n-grid]:grid-cols-1 md:[&_.bits-project-field-card\_\_i18n-grid]:grid-cols-3 [&_.bits-project-field-card\_\_i18n-card]:shadow-none`,
   '[&_[data-locale-code]]:text-base [&_[data-locale-code]]:font-medium [&_[data-locale-code]]:tracking-normal [&_[data-locale-code]]:text-muted-foreground',
   String.raw`[&_.bits-project-field-card\_\_header]:rounded-none [&_.bits-project-field-card\_\_header]:border-0 [&_.bits-project-field-card\_\_header]:border-b [&_.bits-project-field-card\_\_header]:border-border/40 [&_.bits-project-field-card\_\_header]:bg-primary/3 [&_.bits-project-field-card\_\_header]:px-6`,

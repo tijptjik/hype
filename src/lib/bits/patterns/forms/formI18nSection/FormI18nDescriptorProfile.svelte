@@ -151,7 +151,7 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
   style:--profile-locale-toolbar-height={`${stickyToolbar ? toolbarHeight : 0}px`}
 >
   <div
-    class="z-[220] mb-6 border-b border-border/50 bg-[var(--form-workspace,var(--color-panel))] px-6 pb-3 pt-4 {stickyToolbar
+    class="z-[220] mb-4 border-b border-border/50 bg-[var(--form-workspace,var(--color-panel))] px-6 pb-3 pt-4 {stickyToolbar
       ? 'sticky top-0'
       : ''}"
     bind:offsetHeight={toolbarHeight}

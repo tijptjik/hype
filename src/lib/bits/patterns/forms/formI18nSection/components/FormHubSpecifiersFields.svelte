@@ -38,7 +38,7 @@ let {
     description={m.admin__forms_hub_routing_subtitle()}
   />
   <div
-    class="md:[&>section+section]:border-border/50 grid min-w-0 gap-6 px-6 py-6 md:grid-cols-3 md:[&>section+section]:border-l md:[&>section+section]:pl-6"
+    class="md:[&>section+section]:border-border/50 grid min-w-0 gap-6 px-6 pt-4 pb-6 md:grid-cols-3 md:[&>section+section]:border-l md:[&>section+section]:pl-6"
   >
     <FormInlineField
       label={m.admin__forms_hub_subdomain_label()}

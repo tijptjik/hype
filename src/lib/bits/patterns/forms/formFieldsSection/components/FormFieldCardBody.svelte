@@ -752,7 +752,7 @@ $effect(() => {
   <PropertySettingPreview {value} />
 {/snippet}
 
-<div class="bits-theme min-w-0 px-6 py-4" data-property-editor>
+<div class="bits-theme min-w-0 px-6 pt-4 pb-6" data-property-editor>
   <!-- Settings are independent of the ordered locale rows in the two text columns. -->
   <div class="mt-4 grid min-w-0 gap-6 lg:grid-cols-3 lg:gap-0" data-property-columns>
     <section

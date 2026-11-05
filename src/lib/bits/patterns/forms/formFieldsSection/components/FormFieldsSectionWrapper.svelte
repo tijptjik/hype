@@ -173,7 +173,7 @@ async function onFieldDrop(state: DragDropState, targetId: string): Promise<void
     </div>
   {:else}
     <div
-      class="col-start-1 row-start-1 flex min-w-0 flex-col gap-3"
+      class="col-start-1 row-start-1 flex min-w-0 flex-col"
       in:fade={{ duration: 160 }}
       out:fade={{ duration: 120 }}
     >

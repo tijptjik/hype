@@ -104,7 +104,11 @@ function isDisplayReadyUserRole(userRole: FormUserRole): boolean {
 }
 
 const rootClass = $derived(
-  ['bits-form__section @container rounded-2xl p-0 pb-4', className]
+  [
+    'bits-form__section @container rounded-2xl p-0',
+    layout === 'list' ? 'pb-2!' : 'pb-4',
+    className,
+  ]
     .filter(Boolean)
     .join(' '),
 )
@@ -239,7 +243,7 @@ $effect(() => {
 
   {#if layout === 'list'}
     <div
-      class="mx-6 flex justify-between border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground"
+      class="mx-6 mt-4 flex justify-between border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground"
     >
       <!-- Reserve the trash column, then match the role selector's padding, gap and chevron. -->
       <span>Name</span><span class="mr-10 w-36 pr-9 text-right">Role</span>
@@ -261,7 +265,7 @@ $effect(() => {
         class={layout === 'list' ? '[grid-template-columns:1fr]! gap-0' : ''}
       >
         {#each userRoles as userRole (userRole.userId)}
-          <UserCard.Root class="bits-form__user-card-root--full">
+          <UserCard.Root class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}>
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
             <UserCard.Body name={userRole.name} attribution={userRole.attribution} />
             <UserCard.Actions
@@ -297,7 +301,7 @@ $effect(() => {
         class={layout === 'list' ? '[grid-template-columns:1fr]! gap-0' : ''}
       >
         {#each userRoles as userRole (userRole.userId)}
-          <UserCard.Root class="bits-form__user-card-root--full">
+          <UserCard.Root class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}>
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
             <UserCard.Body name={userRole.name} attribution={userRole.attribution} />
             <UserCard.Actions
