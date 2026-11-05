@@ -3,6 +3,8 @@
 import { untrack } from 'svelte'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
+// NAVIGATION
+import { createUserFacetNavigation } from '#lib/users/userFacetNavigation.svelte.js'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
@@ -35,7 +37,8 @@ let profile = $state<ProfileData | null>(null)
 let loading = $state(true)
 let failed = $state(false)
 let reload = $state(0)
-let activeFacet = $state('profile')
+const facetNavigation = createUserFacetNavigation(() => facets)
+const activeFacet = $derived(facetNavigation.active)
 const facets = new Map([
   ['profile', { label: 'Profile', icon: PersonIcon }],
   ['access', { label: 'Access', icon: AccessIcon }],
@@ -87,9 +90,7 @@ $effect(() => {
 $effect(() => {
   headerCtrl.setFacets(facets, {
     active: activeFacet,
-    onFacetChange: facet => {
-      activeFacet = facet
-    },
+    onFacetChange: facetNavigation.select,
   })
 })
 </script>
