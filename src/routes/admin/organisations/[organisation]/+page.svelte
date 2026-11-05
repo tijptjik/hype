@@ -1969,6 +1969,7 @@ $effect(() => {
   </Main.Form>
   <Main.Facet
     isVisible={isMessagingFacet && canManageMessaging}
+    class="right-0! left-0!"
     transition="fade"
     attrs={{ 'data-facet-id': 'messaging' }}
   >

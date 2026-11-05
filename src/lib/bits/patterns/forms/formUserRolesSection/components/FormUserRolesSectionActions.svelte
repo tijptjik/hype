@@ -1,4 +1,5 @@
 <script lang="ts">
+import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
 import { Button } from '#lib/bits/core/index.js'
 import UserPlusIcon from 'virtual:icons/proicons/person-add'
 import UserMinusIcon from 'virtual:icons/tabler/user-minus'
@@ -16,7 +17,7 @@ let {
 }: FormUserRolesSectionActionsProps = $props()
 </script>
 
-{#if isEditing}
+<EditModeReveal visible={isEditing}>
   <div
     class="bits-form__section-header-actions flex w-full flex-row items-center justify-end gap-0"
   >
@@ -30,7 +31,7 @@ let {
         iconComponent={isRemoving ? XIcon : UserMinusIcon}
         onClick={() => onToggleRemoving()}
         disabled={!isEditing || isSubmitting}
-        class="bits-form__section-header-action-btn whitespace-nowrap h-10"
+        class="bits-form__section-header-action-btn h-10 whitespace-nowrap"
       />
     {/if}
 
@@ -44,8 +45,8 @@ let {
         iconComponent={isAdding ? XIcon : UserPlusIcon}
         onClick={() => onToggleAdding()}
         disabled={!isEditing || isSubmitting}
-        class="bits-form__section-header-action-btn whitespace-nowrap h-10"
+        class="bits-form__section-header-action-btn h-10 whitespace-nowrap"
       />
     {/if}
   </div>
-{/if}
+</EditModeReveal>

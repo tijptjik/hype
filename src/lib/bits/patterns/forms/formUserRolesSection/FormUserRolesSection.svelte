@@ -1,5 +1,4 @@
 <script lang="ts" generics="Role extends string = OrganisationRoleType">
-import { fade } from 'svelte/transition'
 import {
   formSearchHeaderStyles,
   formMemberIssuesHeaderStyles,
@@ -192,58 +191,48 @@ $effect(() => {
     {title}
     {icon}
     description={subtitle}
-    class={issues.length > 0
-      ? formMemberIssuesHeaderStyles
-      : isEditing
-        ? formSearchHeaderStyles
-        : 'h-[68px]! min-h-[68px]! py-0!'}
+    class={issues.length > 0 ? formMemberIssuesHeaderStyles : formSearchHeaderStyles}
   >
     {#snippet right()}
-      {#if isEditing || issues.length > 0}
-        <div class="flex w-full flex-wrap items-center justify-end gap-3">
-          {#if issues.length > 0}
-            <SectionHeaderPrimitive.Issues {issues} />
-          {/if}
-          {#if isEditing}
-            <div
-              class="w-full min-w-0 max-w-96 flex-1 basis-64"
-              transition:fade={{ duration: 140 }}
-              inert={!showModeUi}
-            >
-              <div
-                class={isSubmitting
-                  ? 'w-full pointer-events-none opacity-50'
-                  : 'w-full'}
-              >
-                <Search
-                  placeholder={m.admin__forms_add_users_placeholder()}
-                  focusOnMount={false}
-                  mountTransitionDuration={0}
-                  {userQueryParams}
-                  excludeIds={Array.from(userIdSet)}
-                  getItemId={(user: User) => user.id}
-                  onSelect={handleAddUser}
-                  resultMap={{
-                    image: (user: User) => toImageSrc(user.image),
-                    title: (user: User) => user.name || '-',
-                    descriminator: (user: User) =>
-                      user.username
-                        ? `@${user.displayUsername ?? user.username}`
-                        : null,
-                  }}
-                  class="w-full [&_.bits-search-bar]:mb-0"
-                />
-              </div>
-            </div>
-          {/if}
+      <div class="flex w-full flex-wrap items-center justify-end gap-3">
+        {#if issues.length > 0}
+          <SectionHeaderPrimitive.Issues {issues} />
+        {/if}
+        <!-- Keep the search row in view mode so member rows never jump. -->
+        <div
+          class="w-full max-w-96 min-w-0 flex-1 basis-64 transition-opacity duration-180 ease-in-out motion-reduce:transition-none"
+          style:opacity={isEditing ? 1 : 0}
+          aria-hidden={!isEditing}
+          inert={!showModeUi}
+        >
+          <div
+            class={isSubmitting ? 'pointer-events-none w-full opacity-50' : 'w-full'}
+          >
+            <Search
+              placeholder={m.admin__forms_add_users_placeholder()}
+              focusOnMount={false}
+              mountTransitionDuration={0}
+              {userQueryParams}
+              excludeIds={Array.from(userIdSet)}
+              getItemId={(user: User) => user.id}
+              onSelect={handleAddUser}
+              resultMap={{
+                image: (user: User) => toImageSrc(user.image),
+                title: (user: User) => user.name || '-',
+                descriminator: (user: User) =>
+                  user.username ? `@${user.displayUsername ?? user.username}` : null,
+              }}
+              class="w-full [&_.bits-search-bar]:mb-0"
+            />
+          </div>
         </div>
-      {/if}
+      </div>
     {/snippet}
   </SectionHeader>
 
   {#if layout === 'list'}
     <div
-      class="mx-6 mt-4 flex justify-between border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground"
+      class="border-border text-muted-foreground mx-6 mt-4 flex justify-between border-b px-3 py-2 text-xs font-medium"
     >
       <!-- Reserve the trash column, then match the role selector's padding, gap and chevron. -->
       <span>Name</span><span class="mr-10 w-36 pr-9 text-right">Role</span>
@@ -257,15 +246,15 @@ $effect(() => {
     persistenceKey={transitionPersistenceKey}
     duration={160}
   >
-    {#snippet children(
-      userRoles,
-    )}
+    {#snippet children(userRoles)}
       <FormGrid
         minWidth={minCardWidth}
         class={layout === 'list' ? '[grid-template-columns:1fr]! gap-0' : ''}
       >
         {#each userRoles as userRole (userRole.userId)}
-          <UserCard.Root class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}>
+          <UserCard.Root
+            class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}
+          >
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
             <UserCard.Body name={userRole.name} attribution={userRole.attribution} />
             <UserCard.Actions
@@ -277,31 +266,32 @@ $effect(() => {
               onRemove={() => requestRemoveUser(userRole.userId)}
             />
             <div class="flex size-10 shrink-0 items-center justify-center">
-              {#if showModeUi}
-                <button
-                  type="button"
-                  aria-label={`${m.watery_trite_shrimp_clip()} ${userRole.name ?? ''}`}
-                  class="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-error/10 hover:text-error focus-visible:outline focus-visible:outline-primary"
-                  onclick={() => requestRemoveUser(userRole.userId)}
-                >
-                  <TrashIcon class="size-4" aria-hidden="true" />
-                </button>
-              {/if}
+              <button
+                type="button"
+                aria-label={`${m.watery_trite_shrimp_clip()} ${userRole.name ?? ''}`}
+                inert={!showModeUi}
+                aria-hidden={!showModeUi}
+                style:opacity={showModeUi ? 1 : 0}
+                class="text-muted-foreground hover:bg-error/10 hover:text-error focus-visible:outline-primary flex size-9 items-center justify-center rounded-md transition-[color,background-color,opacity] duration-180 ease-in-out focus-visible:outline motion-reduce:transition-none"
+                onclick={() => requestRemoveUser(userRole.userId)}
+              >
+                <TrashIcon class="size-4" aria-hidden="true" />
+              </button>
             </div>
           </UserCard.Root>
         {/each}
       </FormGrid>
     {/snippet}
 
-    {#snippet previous(
-      userRoles,
-    )}
+    {#snippet previous(userRoles)}
       <FormGrid
         minWidth={minCardWidth}
         class={layout === 'list' ? '[grid-template-columns:1fr]! gap-0' : ''}
       >
         {#each userRoles as userRole (userRole.userId)}
-          <UserCard.Root class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}>
+          <UserCard.Root
+            class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}
+          >
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
             <UserCard.Body name={userRole.name} attribution={userRole.attribution} />
             <UserCard.Actions
@@ -339,7 +329,7 @@ $effect(() => {
     {m.admin__forms_remove_self_warning({
       resource: removeSelfResourceLabel ?? m.resource__organisation_singular(),
     })}
-    <span class="mt-3 block text-muted-foreground"
+    <span class="text-muted-foreground mt-3 block"
       >{m.admin__forms_remove_self_save_hint()}</span
     >
   {/snippet}

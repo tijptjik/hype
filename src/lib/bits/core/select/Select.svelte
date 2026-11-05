@@ -45,10 +45,10 @@ function handleValueChange(nextValue: string): void {
 
 {#if !isEditing}
   <div
-    class={`bits-form__control-wrap bits-form__select-display-wrap ${variant === 'ghost' ? 'border-transparent bg-transparent shadow-none' : ''} ${displayClass} ${className}`}
+    class={`bits-form__control-wrap bits-form__select-display-wrap ${variant === 'ghost' ? 'border-transparent bg-transparent shadow-none' : ''} ${itemPreview ? 'pr-3!' : ''} ${displayClass} ${className}`}
   >
     <div
-      class={`bits-form__select-display bits-form__select-display--${variant} text-foreground ${reserveTriggerSpace ? 'gap-2' : ''} ${itemPreview ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3' : ''}`}
+      class={`bits-form__select-display bits-form__select-display--${variant} text-foreground ${reserveTriggerSpace ? 'gap-2' : ''} ${itemPreview ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1rem] gap-3 p-0!' : ''}`}
     >
       <span
         class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : reserveTriggerSpace ? 'pl-1.5' : ''}`}
@@ -57,7 +57,7 @@ function handleValueChange(nextValue: string): void {
       {#if itemPreview}
         <span class="flex min-w-0 items-center">{@render itemPreview(value)}</span>
       {/if}
-      {#if reserveTriggerSpace}
+      {#if reserveTriggerSpace || itemPreview}
         <ChevronsUpDownIcon
           class="bits-form__select-trigger-icon invisible"
           aria-hidden="true"

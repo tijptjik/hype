@@ -185,6 +185,10 @@ export function useOrganisationMessagingModel(organisationId: string) {
     get pendingAction() {
       return pendingAction
     },
+    // Account-specific failures render beside their provider; keep general failures separate.
+    get actionError() {
+      return failure
+    },
     get error() {
       return [failure, ...Object.values(accountFailures)].filter(Boolean).join(' · ')
     },

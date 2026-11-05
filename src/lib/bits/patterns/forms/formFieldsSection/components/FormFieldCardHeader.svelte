@@ -9,6 +9,7 @@ import CopyCheck from 'virtual:icons/lucide/copy-check'
 import Plus from 'virtual:icons/proicons/add'
 import Trash2 from 'virtual:icons/proicons/delete'
 // COMPONENTS
+import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
 import { Button, DestructiveDialog, SimpleTooltip } from '#lib/bits/core/index.js'
 // TYPES
 import type { Id } from '#lib/types.js'
@@ -71,6 +72,7 @@ const canDecreaseRank = $derived(
   !isRankMoveLocked && sectionRank < Math.max(0, resolvedMoveWindowSize) - 1,
 )
 const isProjectScopedCard = $derived(property.scope === 'project')
+// Inherited header cards edit project defaults for layers, regardless of origin.
 const isInheritedHeaderCard = $derived(
   !isProjectScopedCard && presentation === 'header',
 )
@@ -85,12 +87,6 @@ const showDefaultEnabledToggle = $derived(
 const showAddToProjectAction = $derived(isInheritedHeaderCard && !inheritedEnabled)
 const showHeaderActionOverlay = $derived(removeMode || showAddToProjectAction)
 const canCollapse = $derived(presentation === 'full')
-const defaultEnabledHint = $derived(
-  // Inherited header cards edit project defaults for layers, regardless of origin.
-  isProjectScopedCard || isInheritedHeaderCard
-    ? m.admin__forms_property_default_enabled_in_layers()
-    : m.admin__forms_property_default_enabled_in_projects(),
-)
 const canShowRemoveAction = $derived(
   presentation === 'full' || (isInheritedHeaderCard && inheritedEnabled),
 )
@@ -156,24 +152,23 @@ function onReorderKey(event: KeyboardEvent): void {
     bind:clientWidth={leftRailWidth}
     class="bits-project-field-card__header-left-rail static! w-max transform-none! justify-self-start"
   >
-    {#if isEditing &&
-      !isRankMoveLocked &&
-      !showHeaderActionOverlay &&
-      resolvedMoveWindowSize > 1}
-      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
-        {#snippet trigger()}
-          <button
-            type="button"
-            data-property-drag-handle
-            aria-label="Reorder field"
-            onkeydown={onReorderKey}
-            class="text-foreground/60 hover:bg-foreground/5 focus-visible:outline-primary flex size-10 cursor-grab touch-none items-center justify-center rounded-md focus-visible:outline-2 active:cursor-grabbing"
-          >
-            <GripVertical class="size-5" />
-          </button>
-        {/snippet}
-        Drag to reorder. Use Alt + Up or Down with the keyboard.
-      </SimpleTooltip>
+    {#if !isRankMoveLocked && !showHeaderActionOverlay && resolvedMoveWindowSize > 1}
+      <EditModeReveal visible={isEditing} reserveSpace>
+        <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+          {#snippet trigger()}
+            <button
+              type="button"
+              data-property-drag-handle
+              aria-label="Reorder field"
+              onkeydown={onReorderKey}
+              class="text-foreground/60 hover:bg-foreground/5 focus-visible:outline-primary flex size-10 cursor-grab touch-none items-center justify-center rounded-md focus-visible:outline-2 active:cursor-grabbing"
+            >
+              <GripVertical class="size-5" />
+            </button>
+          {/snippet}
+          Drag to reorder. Use Alt + Up or Down with the keyboard.
+        </SimpleTooltip>
+      </EditModeReveal>
     {/if}
     {#if sourceTag}
       {#if sourceTag.iconComponent}
@@ -250,56 +245,48 @@ function onReorderKey(event: KeyboardEvent): void {
     bind:clientWidth={rightRailWidth}
     class="bits-project-field-card__header-right-rail static! w-max transform-none! gap-2 justify-self-end"
   >
-    {#if showDefaultEnabledToggle && (isEditing || property.isDefaultEnabled)}
-      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
-        {#snippet trigger()}
-          {#if isEditing}
-            <button
-              type="button"
-              aria-pressed={Boolean(property.isDefaultEnabled)}
-              class={`inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition-colors ${property.isDefaultEnabled ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/40 text-foreground/50 hover:bg-foreground/5'}`}
-              onclick={() =>
-                onToggleIsDefaultEnabled(property.id, !property.isDefaultEnabled)}
-            >
-              <CopyCheck class="size-4" />
-              {isProjectScopedCard || isInheritedHeaderCard
-                ? 'Layer default'
-                : 'Project default'}
-            </button>
-          {:else}
-            <span
-              class="border-primary/40 bg-primary/15 text-primary inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold"
-            >
-              <CopyCheck class="size-4" />
-              {isProjectScopedCard || isInheritedHeaderCard
-                ? 'Layer default'
-                : 'Project default'}
-            </span>
-          {/if}
-        {/snippet}
-        {defaultEnabledHint}
-      </SimpleTooltip>
+    {#if showDefaultEnabledToggle}
+      <EditModeReveal
+        visible={isEditing || Boolean(property.isDefaultEnabled)}
+        reserveSpace
+      >
+        <button
+          disabled={!isEditing}
+          type="button"
+          aria-pressed={Boolean(property.isDefaultEnabled)}
+          class={`inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition-colors ${property.isDefaultEnabled ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/40 text-foreground/50 hover:bg-foreground/5'}`}
+          onclick={() =>
+            onToggleIsDefaultEnabled(property.id, !property.isDefaultEnabled)}
+        >
+          <CopyCheck class="size-4" />
+          {isProjectScopedCard || isInheritedHeaderCard
+            ? 'Layer default'
+            : 'Project default'}
+        </button>
+      </EditModeReveal>
     {/if}
-    {#if isEditing && showHeaderActionOverlay}
-      {#if showAddToProjectAction}
-        <Button
-          text={m.admin__forms_property_add_to_project()}
-          style="ghost"
-          color="success"
-          iconComponent={Plus}
-          onClick={handleAddToProject}
-          class="min-h-10 [&_svg]:size-5"
-        />
-      {:else if canShowRemoveAction}
-        <Button
-          text={m.admin__forms_common_remove()}
-          style="ghost"
-          color="error"
-          iconComponent={Trash2}
-          onClick={openDeleteConfirm}
-          class="min-h-10 [&_svg]:size-5"
-        />
-      {/if}
+    {#if showHeaderActionOverlay}
+      <EditModeReveal visible={isEditing}>
+        {#if showAddToProjectAction}
+          <Button
+            text={m.admin__forms_property_add_to_project()}
+            style="ghost"
+            color="success"
+            iconComponent={Plus}
+            onClick={handleAddToProject}
+            class="min-h-10 [&_svg]:size-5"
+          />
+        {:else if canShowRemoveAction}
+          <Button
+            text={m.admin__forms_common_remove()}
+            style="ghost"
+            color="error"
+            iconComponent={Trash2}
+            onClick={openDeleteConfirm}
+            class="min-h-10 [&_svg]:size-5"
+          />
+        {/if}
+      </EditModeReveal>
     {/if}
   </div>
 </header>

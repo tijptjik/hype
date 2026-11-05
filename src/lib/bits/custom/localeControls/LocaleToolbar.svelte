@@ -10,6 +10,8 @@ import { dndzone, type DndEvent } from 'svelte-dnd-action'
 // ICONS
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import GripIcon from 'virtual:icons/lucide/grip-vertical'
+// COMPONENTS
+import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
 // LOCAL
 import LocaleSearch from './LocaleSearch.svelte'
 import { defaultLocaleControlLabels, shortLocaleLabel } from './localeControls.js'
@@ -278,8 +280,10 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
               ? 'justify-start'
               : 'justify-end'} gap-1.5 p-0.5"
           >
-            {#if allowAdd && mode === 'visibility'}
-              {@render addControl()}
+            {#if mode === 'visibility'}
+              <EditModeReveal visible={allowAdd} reserveSpace
+                >{@render addControl()}</EditModeReveal
+              >
             {/if}
             <!-- biome-ignore lint/a11y/useSemanticElements: This drag zone groups locale controls rather than form fields. -->
             <div
@@ -366,8 +370,10 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                 </div>
               {/each}
             </div>
-            {#if allowAdd && mode === 'membership'}
-              {@render addControl()}
+            {#if mode === 'membership'}
+              <EditModeReveal visible={allowAdd} reserveSpace
+                >{@render addControl()}</EditModeReveal
+              >
             {/if}
           </div>
         </div>

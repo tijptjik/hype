@@ -179,7 +179,7 @@ const editorAttrs = $derived({
       role={editable ? 'button' : 'group'}
       tabindex={editable ? 0 : undefined}
       aria-label={label}
-      class="min-h-[42px] min-w-0 whitespace-normal break-words rounded-md pl-[11px] pr-9 {multiline
+      class="transition-[border-color,background-color] duration-180 motion-reduce:transition-none min-h-[42px] min-w-0 whitespace-normal break-words rounded-md pl-[11px] pr-9 {multiline
         ? 'py-2'
         : 'py-[9px]'} text-[15px] leading-[22px] {editable
         ? 'cursor-text border border-border/30 hover:border-border/60 hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2'

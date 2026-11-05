@@ -29,6 +29,7 @@ const slotClass = $derived(
 )
 
 function handleRoleChange(nextValue: string): void {
+  if (!isEditing || isRemoving) return
   onRoleChange?.(nextValue)
 }
 </script>
@@ -47,6 +48,7 @@ function handleRoleChange(nextValue: string): void {
       class="bits-form__user-card-actions-slot-content bits-form__user-card-actions-slot-content--select"
       aria-hidden={isRemoving}
     >
+      <!-- Keep the role and its arrow mounted so mode changes share the search/trash fade. -->
       <Select
         value={selectedRole}
         items={roleOptions}
@@ -54,7 +56,8 @@ function handleRoleChange(nextValue: string): void {
         allowDeselect={false}
         onValueChange={handleRoleChange}
         disabled={!isEditing || isRemoving}
-        {isEditing}
+        isEditing={true}
+        triggerClass={`[&>svg]:transition-opacity [&>svg]:duration-180 [&>svg]:ease-in-out motion-reduce:[&>svg]:transition-none ${isEditing ? '[&>svg]:opacity-70' : '[&>svg]:opacity-0'}`}
         class="bits-form__user-card-actions-select"
         placeholder={labelByRole}
       />
@@ -72,7 +75,7 @@ function handleRoleChange(nextValue: string): void {
         hideLabel={true}
         onClick={() => onRemove?.()}
         disabled={!isEditing || !isRemoving}
-        class="min-w-0 w-12 justify-center"
+        class="w-12 min-w-0 justify-center"
       />
     </div>
   </div>

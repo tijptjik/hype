@@ -1,5 +1,4 @@
 <script lang="ts">
-import { fade } from 'svelte/transition'
 import LanguagesIcon from 'virtual:icons/tabler/language'
 import { formSearchHeaderStyles } from '#lib/bits/patterns/forms/formSurface/formSearchHeader.styles.js'
 import { m } from '#lib/i18n.js'
@@ -64,23 +63,33 @@ const headerClass = 'bits-form__capabilities-header'
         class={`${headerClass} ${formSearchHeaderStyles}`}
       >
         {#snippet right()}
-          {#if isEditing}
-            <div class="w-full" transition:fade={{ duration: 140 }}>
-              <OrganisationCapabilitiesSearch
-                {isEditing}
-                {capabilitySearchOptions}
-                {selectedCapabilityIds}
-                {currentLocaleKey}
-                focusOnMount={false}
-                {onAddCapability}
-              />
-            </div>
-          {/if}
+          <div
+            class="w-full transition-opacity duration-180 ease-in-out motion-reduce:transition-none"
+            style:opacity={isEditing ? 1 : 0}
+            inert={!isEditing}
+            aria-hidden={!isEditing}
+          >
+            <OrganisationCapabilitiesSearch
+              {isEditing}
+              {capabilitySearchOptions}
+              {selectedCapabilityIds}
+              {currentLocaleKey}
+              focusOnMount={false}
+              {onAddCapability}
+            />
+          </div>
         {/snippet}
       </SectionHeader>
 
-      {#if !hasCapabilities && !isEditing}
-        <OrganisationCapabilitiesEmpty {onEnterEditMode} disabled={isArchived} />
+      {#if !hasCapabilities}
+        <div
+          class="flex min-h-0 flex-1 flex-col transition-opacity duration-180 ease-in-out motion-reduce:transition-none"
+          style:opacity={isEditing ? 0 : 1}
+          inert={isEditing}
+          aria-hidden={isEditing}
+        >
+          <OrganisationCapabilitiesEmpty {onEnterEditMode} disabled={isArchived} />
+        </div>
       {/if}
       {#if capabilityIssues.length > 0}
         <SectionHeaderPrimitive.Issues issues={capabilityIssues} />

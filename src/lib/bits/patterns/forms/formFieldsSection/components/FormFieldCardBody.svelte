@@ -829,7 +829,7 @@ $effect(() => {
       {/each}
       <SelectField
         value={property.component}
-        displayClass="h-[42px]! rounded-md! border-transparent! bg-transparent! pl-0!"
+        displayClass="h-[42px]! rounded-md! border-transparent! bg-transparent! pl-[11px]!"
         triggerClass="h-[42px]! rounded-md! border-border/30! bg-transparent! pl-[11px]! hover:border-border/60! hover:bg-muted/50! [&_.bits-form\_\_select-label]:pl-0!"
         items={componentOptions}
         itemPreview={componentPreview}
@@ -871,6 +871,8 @@ $effect(() => {
             property.component === 'InputField'}
             <SelectField
               label="Data type"
+              displayClass="h-[42px]! rounded-md! border-transparent! bg-transparent! pl-[11px]!"
+              triggerClass="h-[42px]! rounded-md! border-border/30! bg-transparent! pl-[11px]! hover:border-border/60! hover:bg-muted/50! [&_.bits-form\_\_select-label]:pl-0!"
               value={property.dataType ?? 'text'}
               items={[
                 { value: 'text', label: 'Text' },

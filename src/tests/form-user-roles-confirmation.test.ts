@@ -99,7 +99,11 @@ it('shows search in edit mode without opening results on mount', async () => {
   expect(document.querySelector('.bits-search__results')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Remove User' })).toBeNull()
   await view.rerender({ isEditing: false })
-  expect(screen.queryByPlaceholderText('Add users')).toBeNull()
+  // View mode retains the search footprint but removes it from interaction and accessibility.
+  const search = screen.getByPlaceholderText('Add users')
+  const hiddenSearch = search.closest('[aria-hidden="true"]') as HTMLElement
+  expect(hiddenSearch).not.toBeNull()
+  expect(hiddenSearch.inert).toBe(true)
   expect(screen.queryByRole('button', { name: 'Remove Alex Self' })).toBeNull()
 })
 

@@ -105,37 +105,35 @@ function handleCoreInclusiveToggle(
 <section
   class={`bits-form__section bits-form__parent-resource @container h-auto! pb-0! ${className}`}
 >
-  <SectionHeader
-    {title}
-    description={subtitle}
-    class={isEditing || issues.length
-      ? organisationHeaderStyles
-      : 'h-[68px]! min-h-[68px]! py-0!'}
-  >
+  <SectionHeader {title} description={subtitle} class={organisationHeaderStyles}>
     {#snippet right()}
       <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-3">
         <SectionHeaderPrimitive.Issues {issues} />
-        {#if isEditing}
-          <div class="w-full max-w-96 min-w-0 flex-1 basis-64" inert={!showModeUi}>
-            <Search
-              placeholder={m.forms__search_organisations_placeholder()}
-              focusOnMount={false}
-              mountTransitionDuration={0}
-              onInput={onSearchOrganisations}
-              excludeIds={Array.from(organisationIds)}
-              getItemId={(organisation: HubOrganisationItem) => organisation.id}
-              onSelect={handleAddOrganisation}
-              resultMap={{
-                image: (organisation: HubOrganisationItem) => toImageSrc(organisation),
-                title: (organisation: HubOrganisationItem) =>
-                  organisation.i18n?.en?.name || organisation.code,
-                descriminator: toOrganisationSearchDiscriminator,
-                disabled: isOrganisationSearchResultDisabled,
-                disabledMeta: toOrganisationSearchDisabledMeta,
-              }}
-            />
-          </div>
-        {/if}
+        <!-- Retain the search footprint when viewing to keep the header and rows stable. -->
+        <div
+          class="w-full max-w-96 min-w-0 flex-1 basis-64 transition-opacity duration-180 ease-in-out motion-reduce:transition-none"
+          style:opacity={isEditing ? 1 : 0}
+          inert={!showModeUi}
+          aria-hidden={!isEditing}
+        >
+          <Search
+            placeholder={m.forms__search_organisations_placeholder()}
+            focusOnMount={false}
+            mountTransitionDuration={0}
+            onInput={onSearchOrganisations}
+            excludeIds={Array.from(organisationIds)}
+            getItemId={(organisation: HubOrganisationItem) => organisation.id}
+            onSelect={handleAddOrganisation}
+            resultMap={{
+              image: (organisation: HubOrganisationItem) => toImageSrc(organisation),
+              title: (organisation: HubOrganisationItem) =>
+                organisation.i18n?.en?.name || organisation.code,
+              descriminator: toOrganisationSearchDiscriminator,
+              disabled: isOrganisationSearchResultDisabled,
+              disabledMeta: toOrganisationSearchDisabledMeta,
+            }}
+          />
+        </div>
       </div>
     {/snippet}
   </SectionHeader>

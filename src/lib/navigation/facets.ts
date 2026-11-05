@@ -139,8 +139,8 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.users,
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.fields,
-    ADMIN_FACETS.images,
     ADMIN_FACETS.messaging,
+    ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
   ],
   project: [

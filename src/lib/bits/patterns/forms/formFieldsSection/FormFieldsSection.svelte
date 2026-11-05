@@ -7,6 +7,7 @@ import Plus from 'virtual:icons/proicons/add'
 import { getLocaleKey } from '#lib/i18n.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 // COMPONENTS
+import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
 import { Button } from '#lib/bits/core/index.js'
 import Header from '#lib/bits/custom/header/Header.svelte'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
@@ -257,6 +258,7 @@ $effect(() => {
 {:else}
   <section class={`${rootClass} flex min-h-0 flex-1 flex-col`}>
     <SectionHeader
+      class="[&_.bits-form\_\_section-header-right]:flex-nowrap! [&_.bits-form\_\_section-header-right]:overflow-x-auto"
       {icon}
       {title}
       showControlLabels={true}
@@ -277,7 +279,7 @@ $effect(() => {
             size="sm"
             class="bits-form__section-header-heading w-auto! min-w-0"
           />
-          {#if isEditing && canEdit && !isLoading}
+          <EditModeReveal visible={isEditing && canEdit && !isLoading} reserveSpace>
             <Button
               text="New"
               iconComponent={Plus}
@@ -288,7 +290,7 @@ $effect(() => {
               disabled={removeMode || (disableEmptyAdd && !hasOptimisticItems)}
               onClick={onAdd}
             />
-          {/if}
+          </EditModeReveal>
         </div>
       {/snippet}
       {#if hasIssues}

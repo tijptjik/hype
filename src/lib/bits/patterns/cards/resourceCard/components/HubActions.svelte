@@ -92,9 +92,9 @@ const hasRemoveAction = $derived(typeof onRemove === 'function')
     {#if hasRemoveAction}
       <!-- Reserve the remove action's space while viewing so the policy labels stay put. -->
       <div
-        class="col-start-2 row-start-1 flex size-10 shrink-0 items-center justify-center"
+        class="col-start-2 row-start-1 flex size-10 shrink-0 items-center justify-center transition-opacity duration-180 ease-in-out motion-reduce:transition-none"
         class:row-span-2={canSetCoreInclusive}
-        class:invisible={!isEditing}
+        style:opacity={isEditing ? 1 : 0}
         inert={!isEditing}
         aria-hidden={!isEditing}
       >

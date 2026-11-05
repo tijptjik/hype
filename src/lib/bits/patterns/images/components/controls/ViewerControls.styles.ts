@@ -6,6 +6,7 @@ const TRANSITION_CLASSES = cx(
   'transition-[background-color,color,opacity,transform]',
   'duration-200',
   'ease-out',
+  'motion-reduce:transition-none',
 )
 
 export const VIEWER_CONTROLS_ROOT_CLASSES = cx(
@@ -64,7 +65,7 @@ export function viewerControlsEditActionsClass(args: {
   canRotate: boolean
 }): string {
   return cx(
-    'flex items-center gap-2 overflow-hidden transition-[max-width,opacity,transform] duration-200 ease-out',
+    'flex items-center gap-2 overflow-hidden transition-[max-width,opacity,transform] duration-200 ease-out motion-reduce:transition-none',
     args.isEditExpanded && args.canRotate
       ? 'max-w-28 translate-x-0 opacity-100'
       : 'max-w-0 translate-x-2 opacity-0',

@@ -1,9 +1,14 @@
 <script lang="ts">
 // THIRD PARTY
 import { renderSVG } from 'uqr'
+// ICONS
+import AlertIcon from 'virtual:icons/lucide/circle-alert'
+import RetryIcon from 'virtual:icons/lucide/rotate-cw'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 import TextInputField from '#lib/bits/custom/form/TextInputField.svelte'
+// COMPONENTS
+import MessagingPlatformIcon from './MessagingPlatformIcon.svelte'
 // TYPES
 import type {
   BridgeStatus,
@@ -41,7 +46,7 @@ const qrImage = $derived(
 )
 
 const progress = $derived.by(() => {
-  if (connectionError && !status) return 'Service unavailable'
+  if (connectionError) return 'Service unavailable'
   if (pendingAction === 'stop') return 'Disconnecting…'
   if (pendingAction === 'password' || pendingAction === 'code') return 'Verifying…'
   if (pendingAction === 'phone') return 'Requesting login code…'
@@ -64,13 +69,11 @@ const loginError = $derived.by(() => {
   if (status?.connected) return ''
   const event = status?.lastEvent ?? ''
   if (event.includes('PASSWORD_HASH_INVALID'))
-    return 'That password was not accepted. Enter your Telegram two-step verification password again.'
-  if (event.includes('PHONE_CODE_INVALID'))
-    return 'That login code was not accepted. Check the code and try again.'
+    return 'Incorrect Telegram password. Try again.'
+  if (event.includes('PHONE_CODE_INVALID')) return 'Incorrect login code. Try again.'
   if (event.includes('PHONE_CODE_EXPIRED'))
-    return 'The login code expired. Start again to request a new code.'
-  if (event.includes('FLOOD_WAIT'))
-    return 'Telegram has limited login attempts. Wait before trying again.'
+    return 'Login code expired. Request a new one.'
+  if (event.includes('FLOOD_WAIT')) return 'Too many login attempts. Try again later.'
   return ''
 })
 
@@ -84,12 +87,14 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
 </script>
 
 <section
-  class="flex min-w-0 flex-col gap-4 rounded-xl border border-border bg-panel p-5"
+  class="border-border bg-foreground/2 flex min-w-0 flex-col gap-3 rounded-xl border p-4"
   aria-label={`${name} account`}
 >
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <h3 class="text-lg font-semibold">{name}</h3>
-    <span role="status" class="text-sm text-muted-foreground">{progress}</span>
+    <h3 class="flex items-center gap-2 text-base font-semibold">
+      <MessagingPlatformIcon {platform} size="md" />{name}
+    </h3>
+    <span role="status" class="text-muted-foreground text-sm">{progress}</span>
   </div>
   {#if status?.identity}
     <p class="break-words">
@@ -99,16 +104,19 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
       {/if}
     </p>
   {/if}
-  <p class="text-sm text-muted-foreground">
-    Shared by authorised operators in this organisation.
-  </p>
+  {#if connectionError}
+    <p role="alert" class="text-muted-foreground flex items-start gap-2 text-sm">
+      <AlertIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+      <span>Can’t reach {name}. Try again shortly.</span>
+    </p>
+  {/if}
   {#if registered && !status}
     {#if connectionError}
-      <p class="text-sm text-muted-foreground">
-        Connection status is unavailable. This does not mean the account was signed out.
-      </p>
       <Button
+        size="sm"
+        class="self-start"
         text="Retry connection"
+        iconComponent={RetryIcon}
         style="outline"
         disabled={busy}
         onClick={() => void onAction('connect')}
@@ -116,7 +124,7 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
     {:else}
       <section
         aria-label="Checking saved connection"
-        class="h-24 rounded-lg bg-surface motion-safe:animate-pulse"
+        class="bg-surface h-24 rounded-lg motion-safe:animate-pulse"
       ></section>
     {/if}
   {:else}
@@ -124,6 +132,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
       {#if !status?.connected && !challenge && !qrImage && status?.authState !== 'qr'}
         {#if platform === 'whatsapp' || status?.identity}
           <Button
+            size="sm"
+            class="self-start"
             text={registered ? 'Connect' : 'Connect account'}
             style="outline"
             disabled={busy || status?.connected}
@@ -131,6 +141,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
           />
         {:else}
           <Button
+            size="sm"
+            class="self-start"
             text="Sign in with QR code"
             style="outline"
             disabled={busy}
@@ -140,6 +152,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
       {/if}
       {#if registered}
         <Button
+          size="sm"
+          class="self-start"
           text={status?.connected || status?.identity
             ? 'Disconnect for everyone'
             : 'Cancel sign-in'}
@@ -150,7 +164,10 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
       {/if}
     </div>
   {/if}
-  <div class="flex min-w-0 flex-col gap-4" aria-busy={pendingAction !== null}>
+  <div
+    class="flex min-w-0 flex-col gap-3 empty:hidden [&>button]:self-start"
+    aria-busy={pendingAction !== null}
+  >
     {#if status?.connected}
       <p class="text-sm">
         Ready to send and receive messages. Open the shared inbox to start chatting.
@@ -158,14 +175,14 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
     {:else if pendingAction && !challenge}
       <p
         role="status"
-        class="flex min-h-72 items-center justify-center text-sm text-muted-foreground"
+        class="text-muted-foreground flex min-h-72 items-center justify-center text-sm"
       >
         {progress}
       </p>
     {:else if status?.authState === 'qr' && !qrImage}
       <p
         role="status"
-        class="flex min-h-72 items-center justify-center text-sm text-muted-foreground"
+        class="text-muted-foreground flex min-h-72 items-center justify-center text-sm"
       >
         Preparing a secure QR code. It will appear here automatically.
       </p>
@@ -178,7 +195,7 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
         class="max-w-full self-center rounded-xl bg-white p-3"
         alt={`${name} account sign-in QR code`}
       >
-      <p class="text-sm text-muted-foreground">
+      <p class="text-muted-foreground text-sm">
         {platform === 'telegram'
           ? 'Open Telegram → Settings → Devices → Link Desktop Device.'
           : 'Open WhatsApp → Settings → Linked devices → Link a device.'}
@@ -198,6 +215,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
           }}
         >
           <TextInputField
+            controlClass="rounded-md! border-border/30! bg-transparent! px-0! hover:border-border/60! hover:bg-muted/50!"
+            inputClass="h-10! px-[11px]!"
             id="telegram-account-password"
             placeholder="Enter your Telegram password"
             label="Two-step verification password"
@@ -207,6 +226,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
             inputAttrs={{ autocomplete: 'current-password' }}
           />
           <Button
+            size="sm"
+            class="self-start"
             type="submit"
             text={pendingAction === 'password'
               ? 'Verifying password…'
@@ -215,7 +236,7 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
             disabled={busy || !password}
           />
         </form>
-        <p class="text-sm text-muted-foreground">
+        <p class="text-muted-foreground text-sm">
           This is not a login code or API key. If you forgot the password, use
           Telegram’s official app to recover it.
         </p>
@@ -225,6 +246,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
           app.
         </p>
         <TextInputField
+          controlClass="rounded-md! border-border/30! bg-transparent! px-0! hover:border-border/60! hover:bg-muted/50!"
+          inputClass="h-10! px-[11px]!"
           id="telegram-account-code"
           placeholder="Enter login code"
           label="Telegram login code"
@@ -233,6 +256,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
           inputAttrs={{ autocomplete: 'one-time-code', inputmode: 'numeric' }}
         />
         <Button
+          size="sm"
+          class="self-start"
           text="Verify code"
           style="outline"
           disabled={busy || !code}
@@ -243,6 +268,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
         status?.authState !== 'qr' &&
         !pendingAction}
         <TextInputField
+          controlClass="rounded-md! border-border/30! bg-transparent! px-0! hover:border-border/60! hover:bg-muted/50!"
+          inputClass="h-10! px-[11px]!"
           label="Phone number"
           inputType="tel"
           placeholder="+852…"
@@ -251,6 +278,8 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
           inputAttrs={{ autocomplete: 'tel' }}
         />
         <Button
+          size="sm"
+          class="self-start"
           text="Send login code"
           style="outline"
           disabled={busy || !/^\+[1-9]\d{6,14}$/.test(phone)}
@@ -259,7 +288,10 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
       {/if}
     {/if}
     {#if loginError}
-      <p role="alert" class="break-words text-sm">{loginError}</p>
+      <p role="alert" class="flex items-start gap-2 text-sm break-words">
+        <AlertIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <span>{loginError}</span>
+      </p>
     {/if}
   </div>
 </section>

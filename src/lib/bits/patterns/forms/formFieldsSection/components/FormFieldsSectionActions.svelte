@@ -1,5 +1,5 @@
 <script lang="ts">
-import { fade } from 'svelte/transition'
+import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
 // ICONS
 import Trash from 'virtual:icons/proicons/delete'
 import { Button } from '#lib/bits/core/index.js'
@@ -32,9 +32,8 @@ $effect(() => {
 })
 </script>
 
-{#if isEditing}
+<EditModeReveal visible={isEditing}>
   <div
-    transition:fade={{ duration: 180 }}
     class={[
       'bits-project-fields__actions',
       actionsVisible ? 'bits-project-fields__actions--visible' : '',
@@ -56,4 +55,4 @@ $effect(() => {
       class="inline-flex min-h-10 items-center gap-2 px-3 [&_svg]:size-5"
     />
   </div>
-{/if}
+</EditModeReveal>
