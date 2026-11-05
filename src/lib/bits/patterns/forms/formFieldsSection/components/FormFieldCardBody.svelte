@@ -566,7 +566,7 @@ function getValueDraggableConfig(valueId: string): DraggableOptions<{ id: string
   return {
     container: `${valueContainerGroup}-${valueId}`,
     containerGroup: valueContainerGroup,
-    direction: 'grid',
+    direction: 'horizontal',
     dragData: { id: valueId },
     handle: '[data-option-drag-handle]',
     disabled: isValueDnDDisabled(),
@@ -584,13 +584,13 @@ function getValueDroppableConfig(valueId: string): DragDropOptions<{ id: string 
   return {
     container: `${valueContainerGroup}-${valueId}`,
     containerGroup: valueContainerGroup,
-    direction: 'grid',
+    direction: 'horizontal',
     disabled: isValueDnDDisabled(),
     callbacks: {
       onDrop: state => onValueDrop(state, valueId),
     },
     attributes: {
-      // Only the padding's insertion marker advertises a drop; the card keeps its own appearance.
+      // Only the side insertion marker advertises a drop; the card keeps its own appearance.
       dragOverClass: 'outline-none',
     },
   }

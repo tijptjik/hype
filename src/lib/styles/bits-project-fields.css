@@ -595,22 +595,22 @@
     outline: none;
   }
 
-  /* Every insertion marker is horizontal and stays inside the surrounding drop-zone padding. */
+  /* Options insert left or right in reading order, never above or below a card. */
   .bits-theme .bits-project-field-card__value-item > [data-option-drop-indicator] {
-    inset-inline: 0;
-    height: 2px;
+    inset-block: 0;
+    width: 2px;
   }
 
   .bits-theme
     .bits-project-field-card__value-item
     > [data-option-drop-indicator="before"] {
-    top: -5px;
+    left: -7px;
   }
 
   .bits-theme
     .bits-project-field-card__value-item
     > [data-option-drop-indicator="after"] {
-    bottom: -5px;
+    right: -7px;
   }
 
   .bits-theme .bits-project-field-card__value-handle {

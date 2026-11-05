@@ -86,6 +86,30 @@ for (const [name, engine] of [
       assert.equal(await preview.getAttribute('aria-hidden'), null)
       assert.equal(await preview.locator('..').getAttribute('aria-hidden'), 'true')
       await page.locator('[data-option-drop-indicator="after"]').waitFor()
+      // Top and bottom hover positions must still insert at a side, never stack cards.
+      for (const [fractionX, fractionY, expected] of [
+        [0.6, 0.02, 'after'],
+        [0.4, 0.98, 'before'],
+      ] as const) {
+        await page.mouse.move(
+          target.x + target.width * fractionX,
+          target.y + target.height * fractionY,
+          { steps: 4 },
+        )
+        const marker = page.locator(`[data-option-drop-indicator="${expected}"]`)
+        await marker.waitFor()
+        const markerBox = await marker.boundingBox()
+        assert(markerBox)
+        assert(
+          markerBox.width <= 3 && markerBox.height > 20,
+          'Insertion marker must be vertical',
+        )
+        assert(
+          Math.abs(markerBox.y - target.y) < 2,
+          'Marker must align with the card, not sit above it',
+        )
+      }
+      await page.mouse.move(pointer.x, pointer.y, { steps: 4 })
       await checkActionProximity(page)
       assert.equal(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
