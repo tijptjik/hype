@@ -3,7 +3,7 @@
 import { flip } from 'svelte/animate'
 import { tick } from 'svelte'
 // DRAG AND DROP
-import { draggable, droppable, type DragDropState } from '@thisux/sveltednd'
+import { draggable, droppable, dndState, type DragDropState } from '@thisux/sveltednd'
 import { getDropIndex } from '#lib/client/services/dragDrop.js'
 import { cubicInOut } from 'svelte/easing'
 import { fade, slide } from 'svelte/transition'
@@ -47,6 +47,20 @@ const moveWindowSize = $derived(
 const dragId = $props.id()
 const dragGroup = `property-fields-${dragId}`
 let isReordering = $state(false)
+
+/** Locate the active insertion gap without changing the target property's appearance.
+ * @param propertyId Definition owning the padded drop zone.
+ * @returns The active insertion side, or null for other rows and the drag source.
+ */
+function fieldDropPosition(propertyId: string): 'before' | 'after' | null {
+  const container = `${dragGroup}-${propertyId}`
+  return dndState.isDragging &&
+    dndState.sourceContainerGroup === dragGroup &&
+    dndState.sourceContainer !== container &&
+    dndState.targetContainer === container
+    ? dndState.dropPosition
+    : null
+}
 
 /**
  * Respect the editable rank window and inherited-field locks for drag targets.
@@ -179,8 +193,12 @@ async function onFieldDrop(state: DragDropState, targetId: string): Promise<void
     >
       {#each items as property, index (property.id)}
         {@const itemVisible = isItemVisible ? isItemVisible(property) : true}
+        {@const dropPosition = fieldDropPosition(property.id)}
         <div
-          class={itemVisible ? '' : 'hidden'}
+          class={`relative py-1.5 before:hidden! after:hidden! ${itemVisible ? '' : 'hidden'}`}
+          data-property-drop-zone={property.id}
+          data-dnd-active={dndState.isDragging &&
+            dndState.sourceContainerGroup === dragGroup}
           animate:flip={{ duration: flipDisabled ? 0 : 220, easing: cubicInOut }}
           in:slide={{
             axis: 'y',
@@ -205,7 +223,7 @@ async function onFieldDrop(state: DragDropState, targetId: string): Promise<void
             containerGroup: dragGroup,
             disabled: !canReorder(index) || isReordering,
             callbacks: { onDrop: state => onFieldDrop(state, property.id) },
-            attributes: { dragOverClass: 'ring-2' },
+            attributes: { dragOverClass: 'outline-none' },
           }}
         >
           <Item
@@ -222,6 +240,14 @@ async function onFieldDrop(state: DragDropState, targetId: string): Promise<void
             {onCardCollapseToggle}
             {onCollapseChange}
           />
+          {#if dropPosition}
+            <!-- A shared boundary is the exact centre of the 12px space between cards. -->
+            <div
+              data-property-drop-indicator={dropPosition}
+              aria-hidden="true"
+              class={`bg-primary pointer-events-none absolute inset-x-0 z-20 h-0.5 rounded-full ${dropPosition === 'before' ? '-top-px' : '-bottom-px'}`}
+            ></div>
+          {/if}
         </div>
       {/each}
     </div>

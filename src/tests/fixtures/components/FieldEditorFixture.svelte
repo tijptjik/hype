@@ -23,6 +23,7 @@ import {
   reorderProjectPropertyValue,
   updateProjectPropertyValue,
   updateProjectPropertyValueI18n,
+  changeProjectPropertyRankUnified,
 } from '#lib/client/services/property.js'
 // TYPES
 import type {
@@ -184,13 +185,17 @@ let editing = $state(true)
         class={panelPadding ? 'shrink-0' : ''}
         title="Fields"
         description="Categorical and free form fields"
-        items={data.properties ?? []}
+        items={[...(data.properties ?? [])].sort(
+          (a, b) => (a.rank ?? 0) - (b.rank ?? 0),
+        )}
         isEditing={editing}
         actions={{
           add: () => {},
           remove: () => {},
-          increaseRank: () => {},
-          decreaseRank: () => {},
+          increaseRank: (_event, id) =>
+            changeProjectPropertyRankUnified(form, id, 'up'),
+          decreaseRank: (_event, id) =>
+            changeProjectPropertyRankUnified(form, id, 'down'),
         }}
         card={{
           removeMode: false,
@@ -206,10 +211,13 @@ let editing = $state(true)
           ],
           isRequiredInPreflight: () => false,
           isEditing: editing,
-          getPropertyIndex: (_id, index) => index,
+          getPropertyIndex: id =>
+            (data.properties ?? []).findIndex(property => property.id === id),
           getPropertyFields: (_id, index) => fields.data.properties[index],
-          onIncreaseRank: () => {},
-          onDecreaseRank: () => {},
+          onIncreaseRank: (_event, id) =>
+            changeProjectPropertyRankUnified(form, id, 'up'),
+          onDecreaseRank: (_event, id) =>
+            changeProjectPropertyRankUnified(form, id, 'down'),
           onRemove: () => {},
           onUpdateBase: (...args) => updateProjectPropertyBase(form, ...args),
           onUpdateI18n: (...args) => updateProjectPropertyI18n(form, ...args),

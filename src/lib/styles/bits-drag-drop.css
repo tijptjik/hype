@@ -1,7 +1,8 @@
 @layer components {
   /* Keep the row as the drop target while its controls and tooltips stop hovering.
      Descendants with their own pointer-events rules must also stay suppressed. */
-  .bits-theme [data-dnd-item][data-dnd-active="true"] * {
+  .bits-theme [data-dnd-item][data-dnd-active="true"] *,
+  .bits-theme [data-property-drop-zone][data-dnd-active="true"] * {
     pointer-events: none;
   }
 
