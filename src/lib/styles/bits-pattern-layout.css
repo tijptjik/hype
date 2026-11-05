@@ -455,5 +455,22 @@
     background-size: auto;
     background-repeat: no-repeat;
     background-attachment: local;
+    transition: border-width 160ms ease;
+  }
+
+  /* Scrolled form workspaces meet the panel edges while field gutters stay intact. */
+  .bits-theme .bits-admin-shell__main:has([data-form-surface]):has([data-facet-scrolled="true"]) {
+    border-width: 0;
+  }
+
+  .bits-theme .bits-admin-shell__main [data-facet-scrolled="true"]:has([data-form-surface]) {
+    left: 0 !important;
+    right: 0 !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bits-theme .bits-admin-shell__main:has([data-form-surface]) {
+      transition: none;
+    }
   }
 }

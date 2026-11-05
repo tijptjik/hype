@@ -32,6 +32,7 @@ let bodyHeight = $state<number | null>(null)
 let tailSpacer = $state(0)
 let navShellStyle = $state('')
 let bodyBottomPadding = $state(0)
+let isScrolled = $state(false)
 
 const hasFacetNav = $derived(Boolean(previousAction || nextAction || centerAction))
 const FACET_BOTTOM_CLEARANCE = 24
@@ -312,6 +313,12 @@ onMount(() => {
 
   observer.observe(facet)
   observer.observe(body)
+  // Let the surrounding workspace close its frame once this facet scrolls.
+  const updateScrollState = (): void => {
+    isScrolled = facet.scrollTop > 0
+  }
+  facet.addEventListener('scroll', updateScrollState, { passive: true })
+  updateScrollState()
   const handleLayoutSettled = (): void => {
     queueMicrotask(measureLayout)
   }
@@ -320,6 +327,7 @@ onMount(() => {
 
   return () => {
     observer.disconnect()
+    facet.removeEventListener('scroll', updateScrollState)
     window.removeEventListener('bits:facet-layout-settled', handleLayoutSettled)
   }
 })
@@ -331,6 +339,7 @@ onMount(() => {
     {...attrs}
     class={facetClass}
     aria-hidden={!isVisible}
+    data-facet-scrolled={isVisible && isScrolled}
     inert={!isVisible}
   >
     <div bind:this={innerElement} class={innerClass}>
@@ -370,6 +379,7 @@ onMount(() => {
     class={facetClass}
     hidden={!isVisible}
     aria-hidden={!isVisible}
+    data-facet-scrolled={isVisible && isScrolled}
   >
     <div bind:this={innerElement} class={innerClass}>
       <div bind:this={bodyElement} class={bodyClass} style={bodyStyle}>
