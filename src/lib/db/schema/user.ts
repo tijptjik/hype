@@ -334,3 +334,15 @@ export const userLayer = sqliteTable(
   },
   table => [primaryKey({ columns: [table.layerId, table.userId, table.hubId] })],
 )
+
+/** Emails received directly from OAuth providers; joined only to linked accounts. */
+export const accountProviderProfile = sqliteTable(
+  'accountProviderProfile',
+  {
+    providerId: text('providerId').notNull(),
+    accountId: text('accountId').notNull(),
+    email: text('email'),
+    updatedAt: integer('updatedAt').notNull(),
+  },
+  table => [primaryKey({ columns: [table.providerId, table.accountId] })],
+)

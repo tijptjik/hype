@@ -68,6 +68,10 @@ export const userMessagingIdentity = sqliteTable(
     nativeId: text('nativeId'),
     // Raw profile number used for automatic discovery; changing it invalidates the association.
     sourceTelephone: text('sourceTelephone'),
+    // Existence evidence belongs to this exact claim revision, never ownership.
+    validation: text('validation', { mode: 'json' }).$type<
+      import('#lib/messaging/contactValidation.js').ContactValidation
+    >(),
     verifiedAt: integer('verifiedAt'),
     verifiedBy: text('verifiedBy').references(() => user.id, { onDelete: 'set null' }),
     updatedAt: integer('updatedAt').notNull(),

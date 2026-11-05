@@ -301,6 +301,25 @@ function createAuthInstance(
             google: {
               clientId: env.AUTH_GOOGLE_ID,
               clientSecret: env.AUTH_GOOGLE_SECRET,
+              // Only retain the provider's own email claim, never substitute the HYPE email.
+              mapProfileToUser: async profile => {
+                await db
+                  .insert(schema.accountProviderProfile)
+                  .values({
+                    providerId: 'google',
+                    accountId: String(profile.sub),
+                    email: profile.email ?? null,
+                    updatedAt: Date.now(),
+                  })
+                  .onConflictDoUpdate({
+                    target: [
+                      schema.accountProviderProfile.providerId,
+                      schema.accountProviderProfile.accountId,
+                    ],
+                    set: { email: profile.email ?? null, updatedAt: Date.now() },
+                  })
+                return {}
+              },
             },
           }
         : {}),
@@ -311,6 +330,25 @@ function createAuthInstance(
             facebook: {
               clientId: env.AUTH_FACEBOOK_ID,
               clientSecret: env.AUTH_FACEBOOK_SECRET,
+              // Only retain the provider's own email claim, never substitute the HYPE email.
+              mapProfileToUser: async profile => {
+                await db
+                  .insert(schema.accountProviderProfile)
+                  .values({
+                    providerId: 'facebook',
+                    accountId: String('id' in profile ? profile.id : profile.sub),
+                    email: profile.email ?? null,
+                    updatedAt: Date.now(),
+                  })
+                  .onConflictDoUpdate({
+                    target: [
+                      schema.accountProviderProfile.providerId,
+                      schema.accountProviderProfile.accountId,
+                    ],
+                    set: { email: profile.email ?? null, updatedAt: Date.now() },
+                  })
+                return {}
+              },
             },
           }
         : {}),
