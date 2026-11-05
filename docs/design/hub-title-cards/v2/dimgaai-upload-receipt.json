@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-05",
+  "environment": "production",
+  "storage": "hype-assets-raw-prod",
+  "originalsAndRawSha256Verified": true,
+  "assignmentVerified": true,
+  "delivery": {
+    "status": 200,
+    "contentType": "image/webp",
+    "dimensions": [1024, 819]
+  },
+  "card": {
+    "code": "dimgaai",
+    "hub": "WHxB34VoRfVh",
+    "file": "docs/design/hub-title-cards/v2/dimgaai.png",
+    "sha": "12d6982f21e1997a1e7133ba1b0ac6d3423d9f81d6bd32e7a4c6f49d52228341",
+    "key": "h/hubs/WHxB34VoRfVh/title-12d6982f21e1997a",
+    "id": "hubcard_12d6982f21e1997a",
+    "previousProductionImageId": null,
+    "dimensions": [1402, 1122]
+  }
+}
