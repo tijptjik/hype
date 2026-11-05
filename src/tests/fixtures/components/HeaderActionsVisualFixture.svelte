@@ -4,6 +4,8 @@ import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
 import Header from '#lib/bits/patterns/layout/header/Header.svelte'
 // ICONS
+import Users from 'virtual:icons/lucide/users'
+import Marker from 'virtual:icons/proicons/location'
 import Profile from 'virtual:icons/proicons/person'
 import Shield from 'virtual:icons/proicons/shield-checkmark'
 import Tag from 'virtual:icons/proicons/tag'
@@ -18,6 +20,8 @@ let published = $state(false)
 let active = $state('core')
 const items = [
   { ref: 'core', label: 'Profile', icon: Profile },
+  { ref: 'features', label: 'Features', icon: Marker },
+  { ref: 'users', label: 'Users', icon: Users },
   { ref: 'capabilities', label: 'Capabilities', icon: Shield },
   { ref: 'fields', label: 'Fields', icon: Tag },
   { ref: 'images', label: 'Image', icon: Photo },
@@ -41,6 +45,18 @@ const items = [
     avatar={{ isVisible: false }}
     formActions={{
       isVisible: true,
+      featuresAction: {
+        text: 'Features',
+        icon: Marker,
+        style: active === 'features' ? 'soft' : 'outline',
+        onClick: () => (active = 'features'),
+      },
+      usersAction: {
+        text: 'Users',
+        icon: Users,
+        style: active === 'users' ? 'soft' : 'outline',
+        onClick: () => (active = 'users'),
+      },
       primaryAction: {
         text: editing ? 'Cancel' : 'Edit',
         icon: editing ? Close : Edit,
@@ -71,8 +87,8 @@ const items = [
     }}
   />
   <div
-    class="ml-[348px] h-64 border-l border-t border-primary/50 bg-primary/5 px-6 py-4 text-xl"
+    class="border-primary/50 bg-primary/5 ml-[348px] h-64 border-t border-l px-6 py-4 text-xl"
   >
-    Main panel
+    <span data-active-facet={active}>Main panel</span>
   </div>
 </div>

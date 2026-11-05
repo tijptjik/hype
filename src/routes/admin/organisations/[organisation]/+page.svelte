@@ -1750,32 +1750,24 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
-        <SectionHeader title="Profile">
-          {#snippet left()}
-            <div class="flex items-center gap-3">
-              <OrganisationIcon class="text-primary size-6" aria-hidden="true" />
-              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
-            </div>
-          {/snippet}
-          {#snippet center()}
-            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-          {/snippet}
-        </SectionHeader>
-        <div class="pt-6">
-          <FormI18nDescriptorProfile
-            bind:expanded={multilingualExpanded}
-            form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n}
-            defaultLocales={locales}
-            recordKey={organisationRef}
-            resetVersion={profileResetVersion}
-            {isEditing}
-            {isRequiredInPreflight}
-            translate={(source, target, text) =>
-              translateContentField({ source, target, text })}
-            onChange={revalidateAfterProgrammaticChange}
-          />
-        </div>
+        <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+        <FormI18nDescriptorProfile
+          bind:expanded={multilingualExpanded}
+          form={formCtx.form}
+          fields={formCtx.form.fields.data.i18n}
+          defaultLocales={locales}
+          recordKey={organisationRef}
+          resetVersion={profileResetVersion}
+          {isEditing}
+          {isRequiredInPreflight}
+          stickyToolbar
+          stickyFieldHeaders={['description']}
+          showPrimaryLocaleHeader={false}
+          localeHeaderPlacement="gutter"
+          translate={(source, target, text) =>
+            translateContentField({ source, target, text })}
+          onChange={revalidateAfterProgrammaticChange}
+        />
 
         {@const roleFieldNameByUserId = getRoleFieldNameByUserId(userRoleResolverForm)}
         <div class={formSectionDividerStyles}>

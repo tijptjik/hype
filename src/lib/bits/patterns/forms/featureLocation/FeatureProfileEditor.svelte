@@ -44,6 +44,8 @@ let {
   stackNames = false,
   showToolbar = true,
   stickyFieldHeaders = false,
+  showPrimaryLocaleHeader = true,
+  localeHeaderPlacement = 'above',
   loading = false,
   retainContent = false,
   recordKey = '',
@@ -68,7 +70,9 @@ let {
   fieldConfigs?: ReadonlyArray<{ key: Field; label: string }>
   stackNames?: boolean
   showToolbar?: boolean
-  stickyFieldHeaders?: boolean
+  stickyFieldHeaders?: boolean | ReadonlyArray<Field>
+  showPrimaryLocaleHeader?: boolean
+  localeHeaderPlacement?: 'above' | 'gutter'
   allowDescriptions?: boolean
   inherited?: boolean
   policyRequired?: boolean
@@ -199,6 +203,9 @@ function autonym(locale: string): string {
       : `${fields.length > 1 ? 'md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6' : ''} ${fields.length === 3 ? 'md:grid-cols-3' : fields.length === 2 ? 'md:grid-cols-2' : ''}`}"
   >
     {#each fields as { key: field, label } (field)}
+      {@const stickyHeader =
+        stickyFieldHeaders === true ||
+        (typeof stickyFieldHeaders !== 'boolean' && stickyFieldHeaders.includes(field))}
       {@const derived = field === 'title' && inherited}
       {@const sources = localeState.selectedLocales.filter(locale =>
         hasProfileText(values[contentFormKey(locale)]?.[field]),
@@ -217,15 +224,16 @@ function autonym(locale: string): string {
         style:--profile-field-header-height={`${fieldHeaderHeights[field] ?? 0}px`}
         data-profile-field={field}
       >
-        <!-- Long policy documents keep their field-specific translation actions in view. -->
+        <!-- Long descriptions and policy documents keep their translation actions in view.
+             All field headers share spacing so sticky positioning never offsets sibling labels. -->
         <div
-          class={stickyFieldHeaders
+          class={stickyHeader
             ? 'sticky z-[210] bg-[var(--form-workspace,var(--color-panel))] py-2'
-            : ''}
-          style:top={stickyFieldHeaders
+            : 'py-2'}
+          style:top={stickyHeader
             ? 'var(--profile-locale-toolbar-height, 0px)'
             : undefined}
-          {@attach stickyFieldHeaders ? measureFieldHeader(field) : undefined}
+          {@attach stickyHeader ? measureFieldHeader(field) : undefined}
           data-profile-field-header
         >
           <div class="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
@@ -313,6 +321,9 @@ function autonym(locale: string): string {
         </div>
         <div class="mt-3">
           {#each localeState.selectedLocales as locale (locale)}
+            {@const showLocaleHeader =
+              stickyHeader && (showPrimaryLocaleHeader || locale !== shown[0])}
+            {@const gutter = showLocaleHeader && localeHeaderPlacement === 'gutter'}
             <!-- Keep every locale registered with the form even while translations are collapsed. -->
             <div
               aria-hidden={!shown.includes(locale)}
@@ -326,33 +337,38 @@ function autonym(locale: string): string {
               data-profile-locale={locale}
             >
               <div
-                class="relative min-h-0 {stickyFieldHeaders && shown.includes(locale)
+                class="relative min-h-0 {stickyHeader && shown.includes(locale)
                   ? 'overflow-visible'
-                  : 'overflow-hidden'}"
+                  : 'overflow-hidden'} {gutter
+                  ? 'grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-2'
+                  : ''}"
               >
-                {#if stickyFieldHeaders}
+                {#if showLocaleHeader}
                   <!-- Each language identifies its own long document and releases at its end. -->
                   <div
-                    class="sticky z-[200] bg-[var(--form-workspace,var(--color-panel))] py-2"
+                    class="sticky z-[200] flex flex-col items-center gap-1 py-2 {gutter
+                      ? 'self-start justify-self-center'
+                      : 'bg-[var(--form-workspace,var(--color-panel))]'}"
                     style:top="calc(var(--profile-locale-toolbar-height, 0px) + var(--profile-field-header-height, 0px))"
                     data-profile-locale-header={locale}
                     lang={canonicalContentTag(locale)}
                   >
                     <span
-                      class="bg-muted/50 text-muted-foreground inline-flex rounded-md px-2 py-1 font-mono text-xs font-medium"
+                      class="text-muted-foreground inline-flex font-mono text-xs leading-[22px]"
                       >{shortLocaleLabel(locale)}</span
                     >
                   </div>
                 {/if}
                 {#if showSkeleton && shown.includes(locale)}
                   <div
-                    class="absolute inset-0 grid min-h-[42px] items-center gap-2 {!stickyFieldHeaders &&
+                    class="absolute inset-0 grid min-h-[42px] items-center gap-2 {!stickyHeader &&
                     locale !== shown[0]
                       ? 'grid-cols-[2.5rem_minmax(0,1fr)_2rem]'
                       : 'grid-cols-[minmax(0,1fr)_2rem]'}"
                     data-profile-skeleton-row
+                    style:left={gutter ? '3rem' : undefined}
                   >
-                    {#if !stickyFieldHeaders && locale !== shown[0]}
+                    {#if !stickyHeader && locale !== shown[0]}
                       <span
                         class="text-muted-foreground text-center font-mono text-xs leading-[22px]"
                         >{shortLocaleLabel(locale)}</span
@@ -368,7 +384,7 @@ function autonym(locale: string): string {
                 {/if}
                 <!-- Preserve actual field geometry, including wrapped content, beneath the skeleton. -->
                 <div
-                  class={showSkeleton ? 'invisible [&_*]:invisible!' : ''}
+                  class="min-w-0 {showSkeleton ? 'invisible [&_*]:invisible!' : ''}"
                   aria-hidden={showSkeleton}
                   inert={loading}
                 >
@@ -376,9 +392,7 @@ function autonym(locale: string): string {
                     field,
                     locale,
                     () => translator.touch(locale, field),
-                    stickyFieldHeaders || locale === shown[0]
-                      ? ''
-                      : shortLocaleLabel(locale),
+                    stickyHeader || locale === shown[0] ? '' : shortLocaleLabel(locale),
                   )}
                 </div>
               </div>

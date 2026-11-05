@@ -40,6 +40,8 @@ let {
   onChange,
   stickyToolbar = false,
   stickyFieldHeaders = false,
+  showPrimaryLocaleHeader = true,
+  localeHeaderPlacement = 'above',
   children,
   expanded = $bindable(false),
   fieldConfigs,
@@ -60,7 +62,9 @@ let {
   ) => Promise<ProfileProviderResult>
   onChange: () => void
   stickyToolbar?: boolean
-  stickyFieldHeaders?: boolean
+  stickyFieldHeaders?: boolean | ReadonlyArray<DescriptorField>
+  showPrimaryLocaleHeader?: boolean
+  localeHeaderPlacement?: 'above' | 'gutter'
   children?: Snippet<[ProfileLocaleState]>
   expanded?: boolean
   fieldConfigs?: DescriptorFieldConfig[]
@@ -160,31 +164,33 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
     bind:offsetHeight={toolbarHeight}
     data-profile-locale-toolbar
   >
-      <SectionHeader
-        title="Descriptions"
-        description="Names and descriptions in each language"
-        icon={DescriptionsIcon}
-        class="grid-cols-1! gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]! [&_.bits-form\_\_section-header-right]:[container-type:normal]! [&_.bits-form\_\_section-header-right]:min-w-0 [&_.bits-form\_\_section-header-right]:block"
-      >
-        {#snippet right()}
-    <!-- Descriptor schemas own their locale set; the toolbar controls order and visibility. -->
-    <LocaleToolbar
-      {...displayLocaleState}
-      options={contentLocaleOptions(getLocaleKey())}
-      allowAdd={false}
-      onExpandedChange={value => {
-        expanded = value
-      }}
-      onChange={change => {
-        localeState = { ...localeState, ...change }
-      }}
-    />
-        {/snippet}
-      </SectionHeader>
+    <SectionHeader
+      title="Descriptions"
+      description="Names and descriptions in each language"
+      icon={DescriptionsIcon}
+      class="grid-cols-1! gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]! [&_.bits-form\_\_section-header-right]:[container-type:normal]! [&_.bits-form\_\_section-header-right]:block [&_.bits-form\_\_section-header-right]:min-w-0"
+    >
+      {#snippet right()}
+        <!-- Descriptor schemas own their locale set; the toolbar controls order and visibility. -->
+        <LocaleToolbar
+          {...displayLocaleState}
+          options={contentLocaleOptions(getLocaleKey())}
+          allowAdd={false}
+          onExpandedChange={value => {
+            expanded = value
+          }}
+          onChange={change => {
+            localeState = { ...localeState, ...change }
+          }}
+        />
+      {/snippet}
+    </SectionHeader>
   </div>
   <FeatureProfileEditor
     {stackNames}
     {stickyFieldHeaders}
+    {showPrimaryLocaleHeader}
+    {localeHeaderPlacement}
     showToolbar={false}
     localeState={displayLocaleState}
     onLocaleStateChange={state => {

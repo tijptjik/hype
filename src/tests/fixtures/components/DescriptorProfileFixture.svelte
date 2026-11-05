@@ -227,9 +227,6 @@ const form = {
   </nav>
   <div class="h-[calc(100dvh-72px)] overflow-y-auto" data-fixture-scroll>
     <FormSurface>
-      {#if mode === 'organisation'}
-        <SectionHeader title="Profile" />
-      {/if}
       {#if tab === 'policies'}
         <SectionHeader
           title="Policies"
@@ -282,6 +279,9 @@ const form = {
           isEditing={editing}
           isRequiredInPreflight={() => false}
           stickyToolbar
+          stickyFieldHeaders={['description']}
+          showPrimaryLocaleHeader={false}
+          localeHeaderPlacement="gutter"
           translate={provider}
           onChange={() => {}}
         >
