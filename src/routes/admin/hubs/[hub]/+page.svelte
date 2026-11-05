@@ -1865,6 +1865,7 @@ $effect(() => {
       <SectionHeader
         icon={ImageIcon}
         title={m.admin__forms_project_image_title()}
+        description={m.admin__forms_project_image_description()}
         class="shrink-0"
       />
       <div class="min-h-0 flex-1">

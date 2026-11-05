@@ -1424,18 +1424,13 @@ $effect(() => {
     >
       <FormSurface>
         <FormI18nSection
-          title="Profile"
+          title="Descriptions"
+          subtitle="Names and descriptions in each language"
           {locales}
           {onTranslate}
           {onResetLocale}
           {isEditing}
         >
-          {#snippet left()}
-            <div class="flex items-center gap-3">
-              <LayerIcon class="size-6 text-primary" aria-hidden="true" />
-              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
-            </div>
-          {/snippet}
           {#snippet center()}
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}

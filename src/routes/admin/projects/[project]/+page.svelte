@@ -2960,19 +2960,14 @@ $effect(() => {
     >
       <FormSurface>
         <FormI18nSection
-          title="Profile"
+          title="Descriptions"
+          subtitle="Names and descriptions in each language"
           {locales}
           {onTranslate}
           {onResetLocale}
           sectionKey="descriptor"
           {isEditing}
         >
-          {#snippet left()}
-            <div class="flex items-center gap-3">
-              <ProjectIcon class="text-primary size-6" aria-hidden="true" />
-              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
-            </div>
-          {/snippet}
           {#snippet center()}
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
@@ -3459,6 +3454,7 @@ $effect(() => {
       <SectionHeader
         icon={ImageIcon}
         title={m.admin__forms_project_image_title()}
+        description={m.admin__forms_project_image_description()}
         class="shrink-0"
       />
       <div class="min-h-0 flex-1">

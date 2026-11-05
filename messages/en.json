@@ -393,6 +393,7 @@
   "admin__forms_project_members_title": "Members",
   "admin__forms_project_members_subtitle": "Assigned roles unlock enhanced permissions",
   "admin__forms_project_image_title": "Banner Image",
+  "admin__forms_project_image_description": "Banner shown on listing and profile pages",
   "admin__forms_layer_parent_project_title": "Parent Project",
   "admin__forms_layer_parent_project_subtitle": "This layer belongs to",
   "admin__forms_feature_collections_title": "Collections",

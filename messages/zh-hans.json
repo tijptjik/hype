@@ -393,6 +393,7 @@
   "admin__forms_project_members_title": "成员",
   "admin__forms_project_members_subtitle": "已分配的角色会解锁增强权限",
   "admin__forms_project_image_title": "横幅图片",
+  "admin__forms_project_image_description": "显示于列表及简介页面的横幅",
   "admin__forms_layer_parent_project_title": "父项目",
   "admin__forms_layer_parent_project_subtitle": "此图层属于",
   "admin__forms_feature_collections_title": "集合",

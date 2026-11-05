@@ -1,5 +1,9 @@
 <script lang="ts">
+// ICONS
+import DescriptionsIcon from 'virtual:icons/lucide/file-text'
+// BITS COMPONENTS
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
+// TYPES
 import type { FormI18nHeaderProps } from '../formI18nSection.types'
 
 let {
@@ -26,6 +30,7 @@ let {
   right}
   <SectionHeader
     {title}
+    icon={DescriptionsIcon}
     description={subtitle}
     {flags}
     {actions}

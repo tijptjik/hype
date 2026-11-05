@@ -393,6 +393,7 @@
   "admin__forms_project_members_title": "成員",
   "admin__forms_project_members_subtitle": "已分配的角色會解鎖進階權限",
   "admin__forms_project_image_title": "橫幅圖片",
+  "admin__forms_project_image_description": "顯示於列表及簡介頁面的橫幅",
   "admin__forms_layer_parent_project_title": "父企劃",
   "admin__forms_layer_parent_project_subtitle": "此圖層屬於",
   "admin__forms_feature_collections_title": "集合",

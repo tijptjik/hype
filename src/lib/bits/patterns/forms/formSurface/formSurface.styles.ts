@@ -8,7 +8,8 @@ export const formSectionDividerStyles =
 const surface =
   'mb-6 w-full min-w-0 shrink-0 bg-[var(--form-workspace)] text-foreground'
 
-// Section headings establish hierarchy above compact locale columns and metadata.
+// Section headings share the Fields spacing and grow when controls wrap.
+// Compact locale columns and metadata retain the same horizontal inset.
 const sections = cx(
   String.raw`[&_.bits-form\_\_i18n-card.no-i18n]:pt-4`,
   String.raw`[&_.bits-form\_\_section-header_.bits-header--with-icon]:grid-cols-[1.5rem_minmax(0,1fr)] [&_.bits-form\_\_section-header_.bits-header\_\_icon-wrap]:size-6 [&_.bits-form\_\_section-header_.bits-header\_\_title]:tracking-tight`,
@@ -17,8 +18,8 @@ const sections = cx(
   String.raw`[&_.bits-form\_\_section-header-left]:pl-0`,
   String.raw`[&_.bits-form\_\_section-header]:bg-[var(--admin-form-heading,color-mix(in_oklab,var(--color-primary)_12%,var(--form-workspace)))] [&_.bits-form\_\_section-header]:border-b [&_.bits-form\_\_section-header]:border-primary/25`,
   String.raw`[&_.bits-form\_\_section]:rounded-none [&_.bits-form\_\_i18n-section]:rounded-none [&_.bits-form\_\_section]:pb-6`,
-  String.raw`[&_.bits-form\_\_section-header]:px-6 [&_.bits-form\_\_section-header]:h-[68px] [&_.bits-form\_\_section-header]:min-h-[68px]`,
-  String.raw`[&_.bits-form\_\_section-header_.bits-header\_\_title]:normal-case [&_.bits-form\_\_section-header_.bits-header\_\_title]:text-xl [&_.bits-form\_\_section-header_.bits-header\_\_subtitle]:text-xs [&_.bits-form\_\_section-header_.bits-header\_\_subtitle]:text-muted-foreground`,
+  String.raw`[&_.bits-form\_\_section-header]:px-6 [&_.bits-form\_\_section-header]:h-auto [&_.bits-form\_\_section-header]:min-h-[68px] [&_.bits-form\_\_section-header]:py-3`,
+  String.raw`[&_.bits-form\_\_section-header_.bits-header\_\_title]:normal-case [&_.bits-form\_\_section-header_.bits-header\_\_title]:text-xl [&_.bits-form\_\_section-header_.bits-header\_\_subtitle]:text-xs [&_.bits-form\_\_section-header_.bits-header\_\_subtitle]:text-muted-foreground [&_.bits-form\_\_section-header_.bits-header\_\_subtitle]:whitespace-normal [&_.bits-form\_\_section-header_.bits-header\_\_subtitle]:break-words`,
   String.raw`[&_.bits-form\_\_i18n-grid]:border-0 [&_.bits-form\_\_i18n-grid]:rounded-none [&_.bits-form\_\_i18n-grid]:bg-transparent`,
   String.raw`[&_.bits-form\_\_i18n-card]:border-0 [&_.bits-form\_\_i18n-card]:rounded-none [&_.bits-form\_\_i18n-card]:bg-transparent [&_.bits-form\_\_i18n-card]:px-6 [&_.bits-form\_\_i18n-card]:pt-0 [&_.bits-form\_\_i18n-card]:pb-2`,
   String.raw`[&_.bits-form\_\_i18n-grid>article+article]:border-l [&_.bits-form\_\_i18n-grid>article+article]:border-border/70`,

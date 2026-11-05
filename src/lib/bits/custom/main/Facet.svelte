@@ -247,6 +247,14 @@ function measureLayout(): void {
   const contentHeight = bodyContentHeight + navHeight
   const remainingHeight = Math.max(0, availableHeight - contentHeight)
 
+  // Existing free space counts toward clearance; short lists must not gain artificial scroll travel.
+  if (bottomClearance > 0) {
+    bodyMinHeight = bodyContentHeight
+    tailSpacer = Math.max(remainingHeight, getReservedBottomSpace(navHeight))
+    logInnerChildrenHeights()
+    return
+  }
+
   if (contentHeight <= availableHeight) {
     const leadSpace = Math.floor(remainingHeight / 2)
     const trailSpace = remainingHeight - leadSpace
@@ -313,6 +321,9 @@ onMount(() => {
 
   observer.observe(facet)
   observer.observe(body)
+  // Collapsing content can leave the measured minimum height unchanged, so resize alone misses it.
+  const contentObserver = new MutationObserver(() => queueMicrotask(measureLayout))
+  contentObserver.observe(body, { childList: true, subtree: true })
   // Let the surrounding workspace close its frame once this facet scrolls.
   const updateScrollState = (): void => {
     isScrolled = facet.scrollTop > 0
@@ -327,6 +338,7 @@ onMount(() => {
 
   return () => {
     observer.disconnect()
+    contentObserver.disconnect()
     facet.removeEventListener('scroll', updateScrollState)
     window.removeEventListener('bits:facet-layout-settled', handleLayoutSettled)
   }

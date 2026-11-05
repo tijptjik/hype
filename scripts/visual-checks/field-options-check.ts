@@ -131,6 +131,25 @@ for (const [name, engine] of [
       await page.screenshot({
         path: `${directory}/${name}-${width}-${height}-collapsed-clearance.png`,
       })
+      // A short collapsed list already has its clearance and must not scroll into blank space.
+      await page.locator('.bits-project-field-card__title-pill').click()
+      await page.locator('.bits-project-field-card__body:not(.bits-project-field-card__body--hidden)').waitFor({ state: 'detached' })
+      await page.waitForFunction(() => {
+        const facet = document.querySelector('[data-facet-id="fields"]')
+        const body = facet?.querySelector('.bits-main__section-body')
+        if (!facet || !body || !facet.querySelector('.bits-project-field-card__collapse-icon--collapsed')) return false
+        const contentHeight = body.getBoundingClientRect().height
+        // Narrow headers can still need travel, but only enough to provide the 320px gap.
+        return contentHeight + 320 <= facet.clientHeight
+          ? facet.scrollHeight <= facet.clientHeight + 1 && facet.scrollTop === 0
+          : facet.scrollHeight <= contentHeight + 321
+      }).catch(async error => {
+        console.log(await facet.evaluate(element => ({ height: element.clientHeight, scroll: element.scrollHeight, top: element.scrollTop, body: element.querySelector('.bits-main__section-body')?.getBoundingClientRect().height, collapsed: Boolean(element.querySelector('.bits-project-field-card__collapse-icon--collapsed')) })))
+        throw error
+      })
+      await page.screenshot({
+        path: `${directory}/${name}-${width}-${height}-collapsed-fields.png`,
+      })
       assert.deepEqual(errors, [])
       console.log(
         `${name} ${width}x${height}: expanded/collapsed clearance, full header handle, excluded controls, keyboard reorder/clear and 320px clearance passed`,

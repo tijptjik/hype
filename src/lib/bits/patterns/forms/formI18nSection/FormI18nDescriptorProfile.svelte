@@ -6,7 +6,10 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
 import { getContentLocaleRecord } from '#lib/content-locales/catalogue.js'
 import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions.js'
+// ICONS
+import DescriptionsIcon from 'virtual:icons/lucide/file-text'
 // COMPONENTS
+import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import FeatureProfileEditor from '../featureLocation/FeatureProfileEditor.svelte'
 import FormI18nDescriptorFields from './components/FormI18nDescriptorFields.svelte'
 import { restoreProfileLocales } from '../featureLocation/profileLocales.js'
@@ -151,12 +154,19 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
   style:--profile-locale-toolbar-height={`${stickyToolbar ? toolbarHeight : 0}px`}
 >
   <div
-    class="z-[220] mb-4 border-b border-border/50 bg-[var(--form-workspace,var(--color-panel))] px-6 pb-3 pt-4 {stickyToolbar
+    class="z-[220] mb-4 bg-[var(--form-workspace,var(--color-panel))] {stickyToolbar
       ? 'sticky top-0'
       : ''}"
     bind:offsetHeight={toolbarHeight}
     data-profile-locale-toolbar
   >
+      <SectionHeader
+        title="Descriptions"
+        description="Names and descriptions in each language"
+        icon={DescriptionsIcon}
+        class="grid-cols-1! gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]! [&_.bits-form\_\_section-header-right]:[container-type:normal]! [&_.bits-form\_\_section-header-right]:min-w-0 [&_.bits-form\_\_section-header-right]:block"
+      >
+        {#snippet right()}
     <!-- Descriptor schemas own their locale set; the toolbar controls order and visibility. -->
     <LocaleToolbar
       {...displayLocaleState}
@@ -169,6 +179,8 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
         localeState = { ...localeState, ...change }
       }}
     />
+        {/snippet}
+      </SectionHeader>
   </div>
   <FeatureProfileEditor
     {stackNames}
