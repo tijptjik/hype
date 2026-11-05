@@ -29,6 +29,8 @@ import UnlinkIcon from 'virtual:icons/lucide/unlink'
 import LinkIcon from 'virtual:icons/lucide/link'
 import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.svelte'
 import FormI18nTranslationStatus from '../formI18nSection/components/FormI18nTranslationStatus.svelte'
+// STYLES
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
 // TYPES
 import type { ProfileLocaleState } from './profileLocales'
 
@@ -227,7 +229,7 @@ function autonym(locale: string): string {
           data-profile-field-header
         >
           <div class="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
-            <h3 class="text-sm font-semibold">
+            <h3 class={fieldLabelStyles}>
               {label}
             </h3>
             {#if derived}

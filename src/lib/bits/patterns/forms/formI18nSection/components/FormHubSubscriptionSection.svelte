@@ -16,6 +16,8 @@ import FormI18nDescriptorFields from './FormI18nDescriptorFields.svelte'
 // SERVICES
 import { toUniqueIssueMessages } from '#lib/client/services/form.js'
 import { HubSubscriptionService } from '#lib/enums.js'
+// STYLES
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
 // TYPES
 import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
 import type { HubSubscriptionPlacement } from '#lib/api/services/hub.types.js'
@@ -173,7 +175,7 @@ function applyTranslation(
     <!-- Configuration, translated benefits and placement share equal-width columns. -->
     <div class="min-w-0 space-y-6" data-subscription-configuration>
       <section class="min-w-0">
-        <h3 class="flex min-h-7 items-center text-sm font-semibold">Service</h3>
+        <h3 class={`flex min-h-7 items-center ${fieldLabelStyles}`}>Service</h3>
         <div class="mt-3">
           {#if canEdit}
             <SelectField
@@ -184,6 +186,7 @@ function applyTranslation(
               isEditing={canEdit}
               class="[&_.bits-form\_\_label]:hidden"
               issues={form.fields.data.subscriptionService.issues()}
+              triggerClass="h-[42px]! rounded-md! border-border/30! bg-transparent! pl-[11px]! hover:border-border/60! hover:bg-muted/50! [&_.bits-form\_\_select-label]:pl-0!"
               onValueChange={value =>
                 onServiceChange?.(value as HubSubscriptionService)}
             />
@@ -251,7 +254,7 @@ function applyTranslation(
       class="md:border-border/50 min-w-0 md:border-l md:pl-6"
       data-subscription-placement-column
     >
-      <h3 class="mb-3 flex min-h-7 items-center text-sm font-semibold">Placement</h3>
+      <h3 class={`mb-3 flex min-h-7 items-center ${fieldLabelStyles}`}>Placement</h3>
       <div
         class="divide-border/20 border-border bg-foreground/4 flex min-w-0 flex-col divide-y rounded-xl border px-5"
         data-subscription-placement

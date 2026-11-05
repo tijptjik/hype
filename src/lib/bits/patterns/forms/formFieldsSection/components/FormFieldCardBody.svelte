@@ -28,6 +28,8 @@ import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
 import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelte'
 import PropertyComponentPreview from './PropertyComponentPreview.svelte'
 import PropertySettingPreview from './PropertySettingPreview.svelte'
+// STYLES
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
 // TYPES
 import type { SelectItem } from '#lib/bits/core/select/select.types.js'
 import type { FormIssueLike } from '#lib/client/services/form.types.js'
@@ -788,6 +790,8 @@ $effect(() => {
         value={(keyInputAttrs as { value?: string }).value ?? property.key ?? ''}
         issues={keyIssues}
         {isEditing}
+        controlClass="rounded-md! border-border/30! bg-transparent! px-0! hover:border-border/60! hover:bg-muted/50!"
+        inputClass="h-10! px-[11px]!"
         inputAttrs={keyInputAttrs}
         onValueChange={value => onUpdateBase(property.id, 'key', value)}
       />
@@ -808,7 +812,8 @@ $effect(() => {
       {/each}
       <SelectField
         value={property.component}
-        displayClass="bg-foreground/4 border-foreground/10"
+        displayClass="h-[42px]! rounded-md! border-transparent! bg-transparent! pl-0!"
+        triggerClass="h-[42px]! rounded-md! border-border/30! bg-transparent! pl-[11px]! hover:border-border/60! hover:bg-muted/50! [&_.bits-form\_\_select-label]:pl-0!"
         items={componentOptions}
         itemPreview={componentPreview}
         contentClass="max-h-[calc(100dvh-2rem)] w-[var(--bits-select-anchor-width)] max-w-[calc(100vw-2rem)]"
@@ -1023,7 +1028,7 @@ $effect(() => {
         aria-label={label}
         data-property-text-column={field}
       >
-        <h4 class="mb-3 text-sm font-bold text-[var(--form-label)]">{label}</h4>
+        <h4 class={`mb-2 flex min-h-7 items-center ${fieldLabelStyles}`}>{label}</h4>
         <FormI18nSourceBar
           visible={multilingual &&
             isEditing &&
@@ -1174,8 +1179,7 @@ $effect(() => {
                         }}
                       >
                         <GripVertical class="text-muted-foreground size-4 shrink-0" />
-                        <span
-                          class="text-muted-foreground shrink-0 text-xs font-semibold"
+                        <span class={`shrink-0 ${fieldLabelStyles}`}
                           >Option {valueIndex + 1}</span
                         >
                       </button>
@@ -1275,7 +1279,7 @@ $effect(() => {
                             <div class="group/option-value relative min-w-0">
                               <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
                               <div
-                                class={`bits-project-field-card__value-editable focus-override pr-9! empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                                class={`bits-project-field-card__value-editable focus-override pr-9! text-[15px]! leading-[22px]! font-normal! empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
                                 role="textbox"
                                 aria-label={`Option ${valueIndex + 1} ${locale}`}
                                 data-placeholder="Option label"

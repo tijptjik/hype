@@ -39,14 +39,14 @@ const members = cx(
 
 // Both modes keep identical field geometry; only borders, fills, and controls change.
 const readMode = cx(
-  String.raw`[&_.bits-form\_\_control]:text-[15px] [&_.bits-form\_\_control]:leading-[22px] [&_.bits-form\_\_label-text]:text-[color:color-mix(in_oklab,var(--color-foreground)_80%,var(--form-workspace))]`,
-  String.raw`[&_.bits-form\_\_field]:gap-1 [&_textarea.bits-form\_\_control]:pt-2`,
-  // Match the control's 1px border and two 8px padding insets in both modes.
-  String.raw`[&_.bits-form\_\_label]:pl-[17px]`,
+  String.raw`[&_.bits-form\_\_control]:text-[15px] [&_.bits-form\_\_control]:leading-[22px]`,
+  String.raw`[&_.bits-form\_\_field]:gap-2 [&_textarea.bits-form\_\_control]:pt-2`,
+  // Native labels share the profile editor's header height and flush alignment.
+  // Typography comes from fieldLabelStyles on the shared Label component.
+  String.raw`[&_.bits-form\_\_label]:min-h-7 [&_.bits-form\_\_label]:justify-center`,
   String.raw`[&_.bits-form\_\_control:focus-visible]:shadow-none [&_.bits-form\_\_control:focus-visible]:outline-none [&_input:focus-visible]:ring-0 [&_input:focus-visible]:ring-offset-0 [&_textarea:focus-visible]:ring-0 [&_textarea:focus-visible]:ring-offset-0`,
   String.raw`[&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing,.bits-form\_\_select-display-wrap)]:border-foreground/10 [&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing,.bits-form\_\_select-display-wrap)]:bg-foreground/4 [&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing,.bits-form\_\_select-display-wrap)]:shadow-none`,
   String.raw`[&_.bits-form\_\_control]:font-normal [&_input.bits-form\_\_control]:h-10`,
-  String.raw`[&_.bits-form\_\_label-text]:leading-5 [&_.bits-form\_\_label-text]:text-[13px] [&_.bits-form\_\_label-text]:font-semibold`,
 )
 
 // Centre status buttons on single-line fields; textareas keep a top-aligned indicator.
