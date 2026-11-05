@@ -123,3 +123,18 @@ On managed desktops, run heavy validation through `dev-check COMMAND ...`, inclu
 direct Vitest, Svelte checks and Cargo builds. It shares one user lock across agents and
 repositories. Do not set DOTJIK_DEV_CHECK manually or bypass a failed resource scope.
 Watch commands retain the slot until stopped; avoid them for one-shot checks.
+
+## Test window placement
+
+- Launch all visible testing, browser automation, preview, and demo windows on Hyprland
+  workspace **7**, silently, without switching the active workspace or stealing focus.
+  This includes child windows and dialogs.
+- Set placement before launching (for example, with a narrowly scoped Hyprland launch
+  rule using `workspace 7 silent`); do not launch on the current workspace and move the
+  window afterwards. Verify placement when a visible window is needed.
+- Preserve the user's existing windows, tabs, and activity. Do not move or repurpose an
+  existing user window for testing; use a dedicated test window on workspace 7.
+- Prefer headless checks when they provide the required evidence. If the tool cannot
+  guarantee silent placement on workspace 7, use a headless or isolated alternative
+  rather than opening a disruptive window. Only focus or switch to workspace 7 when the
+  user explicitly asks.
