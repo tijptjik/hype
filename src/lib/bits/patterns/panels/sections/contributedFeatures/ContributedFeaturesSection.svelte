@@ -21,9 +21,11 @@ import type { UserContributionsModel } from '#lib/adapters/panels/userContributi
 let {
   userData,
   model,
+  layout = 'panel',
 }: {
   userData?: UserProfile
   model: UserContributionsModel
+  layout?: 'panel' | 'dashboard'
 } = $props()
 
 // SCROLLBAR
@@ -147,17 +149,22 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
 }
 </script>
 
-<div id="contributed-features" class="border-b border-border">
+<div id="contributed-features" class="border-border isolate overflow-hidden {layout === 'dashboard' ? '@3xl:flex @3xl:h-full @3xl:min-h-0 @3xl:flex-col' : 'border-b'}">
   <h3
-    class="px-6 pt-5 pb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+    class="text-muted-foreground relative z-20 shrink-0 bg-[var(--form-workspace,var(--color-panel))] px-6 pt-5 pb-3 text-xs font-semibold tracking-wider uppercase"
   >
     {m.omni__title_features()}
   </h3>
 
   {#if userData?.contributedFeatures &&
     Object.keys(userData.contributedFeatures).length > 0}
-    <div class="relative pb-3 pr-2">
-      <div class="max-h-105 space-y-0 overflow-y-auto" bind:this={viewport}>
+    <div class="relative isolate overflow-hidden pr-2 pb-3 {layout === 'dashboard' ? '@3xl:min-h-0 @3xl:flex-1' : ''}">
+      <div
+        class="space-y-0 overflow-y-auto {layout === 'dashboard'
+          ? 'max-h-[75vh] @3xl:h-full @3xl:max-h-none'
+          : 'max-h-105'}"
+        bind:this={viewport}
+      >
         <div bind:this={contents}>
           {#each Object.entries(
             userData.contributedFeatures,
@@ -216,20 +223,20 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
                     {#each groupData.entries as entry, index (entry.id)}
                       {#if entry.kind === 'private'}
                         {@const preview = entry.preview}
-                        <div class="flex w-full items-center gap-3 px-6 py-2">
+                        <div class="w-full items-center gap-x-3 gap-y-1 px-6 py-2 {layout === 'dashboard' ? 'grid grid-cols-[auto_minmax(0,1fr)]' : 'flex'}">
                           <Icon
                             src={MapPin}
                             class="h-5 w-5 shrink-0 stroke-[1.5px] text-base-content/60"
                           />
                           <div class="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                             {#if preview.address}
-                              <span class="text-xs text-muted-foreground"
+                              <span class="text-xs text-muted-foreground whitespace-normal break-words"
                                 >{preview.address}</span
                               >
                             {/if}
                             <span class="break-words">{preview.title}</span>
                           </div>
-                          <div class="flex shrink-0 flex-col items-end gap-1.5">
+                          <div class="flex shrink-0 flex-col gap-1.5 {layout === 'dashboard' ? 'col-start-2 items-start' : 'items-end'}">
                             <ContributionStatus status={preview.status} />
                             <span class="text-xs text-muted-foreground"
                               >{formatDistanceToNow(new Date(preview.createdAt), {
@@ -252,7 +259,7 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
                               userData?.username ?? '',
                             )
                           }}
-                          class="flex w-full cursor-pointer items-center gap-3 rounded-md px-6 py-2 text-left transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+                          class="hover:bg-surface focus-visible:ring-focus w-full cursor-pointer items-center gap-x-3 gap-y-1 rounded-md px-6 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset {layout === 'dashboard' ? 'grid grid-cols-[auto_minmax(0,1fr)]' : 'flex'}"
                         >
                           <Icon
                             src={MapPin}
@@ -261,7 +268,19 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
                           <div
                             class="flex min-w-0 flex-1 flex-col gap-0.5 text-sm text-base-content"
                           >
-                            <span class="text-xs text-base-content/60"
+                          {#if layout === 'dashboard'}
+                            <span
+                              class="text-base-content/60 text-xs break-words whitespace-normal"
+                            >
+                              {getFeatureDisplayAddress(
+                                feature as FeatureFromCollection,
+                              )}
+                            </span>
+                            <span class="break-words whitespace-normal">
+                              {model.getFeatureName(feature as FeatureFromCollection)}
+                            </span>
+                          {:else}
+                            <span class="text-base-content/60 text-xs"
                               ><ScrollableText
                                 text={getFeatureDisplayAddress(
                                   feature as FeatureFromCollection,
@@ -273,10 +292,11 @@ const fetchFeaturesForProject = async (featureIds: string[], projectId: string) 
                                 feature as FeatureFromCollection,
                               )}
                             />
+                          {/if}
                           </div>
                           {#if shouldShowDate(groupData.entries, index) &&
                             feature.createdAt}
-                            <div class="shrink-0 text-xs text-muted-foreground">
+                            <div class="text-muted-foreground shrink-0 text-xs {layout === 'dashboard' ? 'col-start-2' : ''}">
                               {formatDistanceToNow(new Date(feature.createdAt), {
                                 addSuffix: true,
                               })}

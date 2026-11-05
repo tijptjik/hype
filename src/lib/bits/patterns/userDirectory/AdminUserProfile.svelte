@@ -46,9 +46,9 @@ const stats = $derived([
 </script>
 
 <div
-  class="mx-auto grid w-full max-w-7xl items-start gap-6 {showIdentity
-    ? 'xl:grid-cols-[minmax(17rem,1fr)_minmax(0,2fr)]'
-    : ''}"
+  class="grid w-full min-w-0 {showIdentity
+    ? 'mx-auto max-w-7xl items-start gap-6 xl:grid-cols-[minmax(17rem,1fr)_minmax(0,2fr)]'
+    : 'min-h-0 flex-1 overflow-auto'}"
 >
   {#if showIdentity}
     <FormSurface class="border-border min-w-0 rounded-xl border p-6">
@@ -120,14 +120,10 @@ const stats = $derived([
       </section>
     </FormSurface>
   {/if}
-  <FormSurface class="border-border min-w-0 overflow-hidden rounded-xl border">
-    <section aria-label="Contributions">
-      <div class="border-border space-y-4 border-b p-6">
-        <h2 class="text-lg font-semibold">Contributions</h2>
-        <p class="text-muted-foreground text-sm">
-          Published map contributions and related submissions visible in this hub.
-        </p>
-        <dl class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+  <div class="@container flex min-h-0 min-w-0 flex-col">
+    <section aria-label="Contributions" class="flex min-h-0 flex-1 flex-col">
+      <div class="border-border shrink-0 border-b p-6">
+        <dl class="grid grid-cols-2 gap-4 @xl:grid-cols-3 @3xl:grid-cols-5">
           {#each stats as stat (stat.label)}
             <div class="bg-muted/40 rounded-lg p-3">
               <dt class="text-muted-foreground text-xs">{stat.label}</dt>
@@ -139,8 +135,14 @@ const stats = $derived([
         </dl>
       </div>
       {#if showHistory}
-        <ContributedFeatures userData={data.profile} {model} />
-        <ContributedImages userData={data.profile} {model} />
+        <div class="grid min-w-0 flex-1 @3xl:min-h-0 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+          <div class="border-border min-w-0 @3xl:min-h-0 @3xl:border-r">
+            <ContributedFeatures userData={data.profile} {model} layout="dashboard" />
+          </div>
+          <div class="min-w-0 @3xl:min-h-0">
+            <ContributedImages userData={data.profile} {model} fillHeight />
+          </div>
+        </div>
       {:else}
         <div class="flex h-52 min-w-0">
           <UserContributionPreviews
@@ -151,5 +153,5 @@ const stats = $derived([
         </div>
       {/if}
     </section>
-  </FormSurface>
+  </div>
 </div>

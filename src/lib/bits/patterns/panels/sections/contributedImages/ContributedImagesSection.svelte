@@ -33,9 +33,10 @@ const TRIGGER_POSITION = 12 // Load next batch when 12th image becomes visible
 type Props = {
   userData: UserProfile
   model: UserContributionsModel
+  fillHeight?: boolean
 }
 
-let { userData, model }: Props = $props()
+let { userData, model, fillHeight = false }: Props = $props()
 
 // SCROLLBAR
 let viewport: HTMLDivElement | null = $state(null)
@@ -473,16 +474,16 @@ const setupNextTrigger = () => {
 }
 </script>
 
-<div id="contributed-images" class="border-b border-border">
+<div id="contributed-images" class="border-border isolate overflow-hidden {fillHeight ? '@3xl:flex @3xl:h-full @3xl:min-h-0 @3xl:flex-col' : 'border-b'}">
   <h3
-    class="px-6 pt-5 pb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+    class="text-muted-foreground relative z-20 shrink-0 bg-[var(--form-workspace,var(--color-panel))] px-6 pt-5 pb-3 text-xs font-semibold tracking-wider uppercase"
   >
     {m.filters__image()}
   </h3>
 
   {#if userData?.contributedImages && typeof userData.contributedImages === 'object'}
-    <div class="relative pb-3 pr-2.25">
-      <div class="max-h-[75vh] space-y-0 overflow-auto" bind:this={viewport}>
+    <div class="relative isolate overflow-hidden pr-2.25 pb-3 {fillHeight ? '@3xl:min-h-0 @3xl:flex-1' : ''}">
+      <div class="max-h-[75vh] space-y-0 overflow-auto {fillHeight ? '@3xl:h-full @3xl:max-h-none' : ''}" bind:this={viewport}>
         {#each Object.entries(
           userData.contributedImages,
         ) as [projectId, imageIds] (projectId)}
