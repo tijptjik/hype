@@ -225,11 +225,12 @@ function autonym(locale: string): string {
         data-profile-field={field}
       >
         <!-- Long descriptions and policy documents keep their translation actions in view.
-             All field headers share spacing so sticky positioning never offsets sibling labels. -->
+             Use the same 28px label row and 8px control gap as the routing fields;
+             keep the gap inside sticky headers so their measured height includes it. -->
         <div
           class={stickyHeader
-            ? 'sticky z-[210] bg-[var(--form-workspace,var(--color-panel))] py-2'
-            : 'py-2'}
+            ? 'sticky z-[210] bg-[var(--form-workspace,var(--color-panel))] pb-2'
+            : 'pb-2'}
           style:top={stickyHeader
             ? 'var(--profile-locale-toolbar-height, 0px)'
             : undefined}
@@ -319,7 +320,7 @@ function autonym(locale: string): string {
             onTranslate={source => void fill(source, field)}
           />
         </div>
-        <div class="mt-3">
+        <div>
           {#each localeState.selectedLocales as locale (locale)}
             {@const showLocaleHeader =
               stickyHeader && (showPrimaryLocaleHeader || locale !== shown[0])}
