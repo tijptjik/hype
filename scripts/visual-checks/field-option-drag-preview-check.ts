@@ -4,26 +4,23 @@ import { mkdir } from 'node:fs/promises'
 // PLAYWRIGHT
 import { chromium, firefox, type Page } from 'playwright'
 
-/** Check the action group stays centred in the visible main panel, independent of strip scroll.
- * @param page Fields fixture page. @returns Resolves after the centring check.
+/** Check option actions remain attached to their heading within the available width.
+ * @param page Fields fixture page. @returns Resolves after the proximity check.
  */
-async function checkActionCentre(page: Page): Promise<void> {
-  const offset = await page.locator('[data-facet-id="fields"]').evaluate(panel => {
-    const add = panel.querySelector('[data-property-value-action="add"]')
-    const remove = panel.querySelector('[data-property-value-action="remove-toggle"]')
+async function checkActionProximity(page: Page): Promise<void> {
+  const offset = await page.locator('[data-property-options]').evaluate(section => {
+    const add = section.querySelector('[data-property-value-action="add"]')
+    const remove = section.querySelector('[data-property-value-action="remove-toggle"]')
     if (!add || !remove) throw new Error('Missing option actions')
-    const bounds = panel.getBoundingClientRect()
-    return (
-      (add.getBoundingClientRect().left +
-        remove.getBoundingClientRect().right -
-        bounds.left -
-        bounds.right) /
-      2
-    )
+    const bounds = section.getBoundingClientRect()
+    return {
+      leading: add.getBoundingClientRect().left - bounds.left,
+      trailing: remove.getBoundingClientRect().right - bounds.right,
+    }
   })
   assert(
-    Math.abs(offset) <= 1,
-    `Actions are displaced ${offset}px from the visible panel centre`,
+    offset.leading < 100 && offset.trailing <= 1,
+    'Actions must stay beside Options and within its bounds',
   )
 }
 
@@ -55,7 +52,8 @@ for (const [name, engine] of [
       await handle.evaluate(element =>
         element.scrollIntoView({ block: 'center', inline: 'nearest' }),
       )
-      await checkActionCentre(page)
+      await checkActionProximity(page)
+      await cards.nth(1).scrollIntoViewIfNeeded()
       const sourceBox = await cards.first().boundingBox()
       const grip = await handle.boundingBox()
       assert(sourceBox && grip)
@@ -64,14 +62,12 @@ for (const [name, engine] of [
       await page.mouse.move(grip.x + grip.width + 8, grip.y + 10, { steps: 4 })
       const preview = page.locator('[data-option-drag-preview]')
       await preview.waitFor()
-      const strip = page.locator('[data-property-options-scroll]')
-      if (width < 700)
-        await strip.evaluate(element => {
-          element.scrollLeft = 330
-        })
       const target = await cards.nth(1).boundingBox()
       assert(target)
-      const pointer = { x: target.x + target.width * 0.75, y: target.y + 18 }
+      const pointer = {
+        x: target.x + target.width - 5,
+        y: target.y + target.height / 2,
+      }
       await page.mouse.move(pointer.x, pointer.y, { steps: 8 })
       await page.waitForFunction(({ x, y }) => {
         const preview = document.querySelector('[data-option-drag-preview]')
@@ -90,7 +86,7 @@ for (const [name, engine] of [
       assert.equal(await preview.getAttribute('aria-hidden'), null)
       assert.equal(await preview.locator('..').getAttribute('aria-hidden'), 'true')
       await page.locator('[data-option-drop-indicator="after"]').waitFor()
-      await checkActionCentre(page)
+      await checkActionProximity(page)
       assert.equal(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         true,
@@ -105,7 +101,7 @@ for (const [name, engine] of [
         return state && JSON.parse(state).properties[0].values[1].id === 'option-0'
       })
       assert.equal(await cards.count(), 7)
-      await checkActionCentre(page)
+      await checkActionProximity(page)
       // Native drag takeover cancels pointer events; its preview must survive until dragend.
       const canceledSource = cards.first()
       const canceledHandle = canceledSource.locator('[data-option-drag-handle]')
@@ -138,7 +134,7 @@ for (const [name, engine] of [
       assert.equal(await cards.count(), 7)
       assert.deepEqual(errors, [])
       console.log(
-        `${name} ${width}: centred preview, visible target, unchanged form registration, correct drop, native cancellation cleanup and centred controls passed`,
+        `${name} ${width}: centred preview, visible target, unchanged form registration, correct drop, native cancellation cleanup and attached option controls passed`,
       )
       await page.close()
     }

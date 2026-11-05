@@ -23,12 +23,14 @@ let {
 </script>
 
 <!-- Intrinsic label columns align both switch tracks as their text widths change. -->
-<div class="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 gap-y-3">
+<div
+  class="border-border/40 mt-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 gap-y-1 border-t pt-3"
+>
   {#if showTranslations}
     <div
       class="col-span-full grid min-h-9 grid-cols-subgrid items-center [&_.bits-switch-label:first-child]:text-right [&_.bits-switch-row]:contents [&>.bits-switch-field]:contents"
     >
-      <Label for={`translation-${propertyId}`} text="Translations" />
+      <Label for={`translation-${propertyId}`} text="Translatable Options" />
       <Switch
         id={`translation-${propertyId}`}
         checked={isTranslatable}
@@ -43,12 +45,12 @@ let {
   <div
     class="col-span-full grid min-h-9 grid-cols-subgrid items-center [&_.bits-switch-label:first-child]:text-right [&_.bits-switch-row]:contents [&>.bits-switch-field]:contents"
   >
-    <Label for={`audience-${propertyId}`} text="Audience" />
+    <Label for={`audience-${propertyId}`} text="Visibility" />
     <Switch
       id={`audience-${propertyId}`}
       checked={isPublic}
       disabled={!isEditing}
-      leftText="Private"
+      leftText="Internal"
       rightText="Public"
       size="sm"
       onCheckedChange={value => onAudienceChange(Boolean(value))}

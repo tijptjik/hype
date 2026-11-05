@@ -587,12 +587,30 @@
 
   /* Drag feedback uses the insertion line; suppress the editing focus border. */
   .bits-theme
-  .bits-project-field-card__value-item:not([data-dnd-active="true"]):focus-within {
+    .bits-project-field-card__value-item:not([data-dnd-active="true"]):focus-within {
     border-color: color-mix(in oklab, var(--color-primary) 60%, transparent);
   }
 
   .bits-theme .bits-project-field-card__value-item:focus {
     outline: none;
+  }
+
+  /* Every insertion marker is horizontal and stays inside the surrounding drop-zone padding. */
+  .bits-theme .bits-project-field-card__value-item > [data-option-drop-indicator] {
+    inset-inline: 0;
+    height: 2px;
+  }
+
+  .bits-theme
+    .bits-project-field-card__value-item
+    > [data-option-drop-indicator="before"] {
+    top: -5px;
+  }
+
+  .bits-theme
+    .bits-project-field-card__value-item
+    > [data-option-drop-indicator="after"] {
+    bottom: -5px;
   }
 
   .bits-theme .bits-project-field-card__value-handle {

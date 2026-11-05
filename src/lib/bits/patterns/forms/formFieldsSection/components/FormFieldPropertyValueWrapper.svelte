@@ -9,6 +9,8 @@ import X from 'virtual:icons/proicons/cancel'
 import ListPlus from 'virtual:icons/lucide/list-plus'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
+// STYLES
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
 // TYPES
 import type { Snippet } from 'svelte'
 
@@ -83,31 +85,34 @@ const hideLabels = $derived(labelledWidth > availableWidth)
 {/snippet}
 
 <section class="bits-project-field-card__values">
-  {#if isEditing}
-    <div class="relative min-h-8.5">
-      <div
-        class="bits-project-field-card__value-actions-layer"
-        transition:fade={{ duration: 180 }}
-      >
-        <!-- Measure the full labels independently so compact mode cannot oscillate. -->
+  <div class="flex min-w-0 items-center gap-4">
+    <h4 class={`shrink-0 ${fieldLabelStyles}`}>{m.admin__forms_property_options()}</h4>
+    {#if isEditing}
+      <div class="relative min-h-8.5 min-w-0 flex-1" data-property-option-actions>
         <div
-          class="pointer-events-none invisible absolute inset-0 overflow-hidden"
-          aria-hidden="true"
-          inert
+          class="bits-project-field-card__value-actions-layer"
+          transition:fade={{ duration: 180 }}
         >
-          <div class="flex w-max items-center gap-2" bind:clientWidth={labelledWidth}>
-            {@render actions(false, true)}
+          <!-- Measure the full labels independently so compact mode cannot oscillate. -->
+          <div
+            class="pointer-events-none invisible absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+            inert
+          >
+            <div class="flex w-max items-center gap-2" bind:clientWidth={labelledWidth}>
+              {@render actions(false, true)}
+            </div>
+          </div>
+          <div
+            class="flex min-h-full items-center justify-start gap-2"
+            bind:clientWidth={availableWidth}
+          >
+            {@render actions(hideLabels)}
           </div>
         </div>
-        <div
-          class="flex min-h-full items-center justify-center gap-2"
-          bind:clientWidth={availableWidth}
-        >
-          {@render actions(hideLabels)}
-        </div>
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   {@render rows?.()}
 </section>
