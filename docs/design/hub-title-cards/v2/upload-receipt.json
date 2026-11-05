@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-05",
+  "environments": ["production", "local"],
+  "storage": ["hype-assets-raw-prod", "hype-assets-raw-dev"],
+  "originalsAndRawSha256Verified": true,
+  "assignmentsVerified": true,
+  "cards": [
+    {
+      "code": "core",
+      "hub": "4Jsk5LngvFZq",
+      "file": "docs/design/hub-title-cards/v2/hype-hk.png",
+      "sha": "84ed113ca97a209d2c8a26e624089be1965711c6d21994f7cda4570ca5633709",
+      "key": "h/hubs/4Jsk5LngvFZq/title-84ed113ca97a209d",
+      "id": "hubcard_84ed113ca97a209d",
+      "previousProductionImageId": "hubcard_6a31c8be23dd4929",
+      "previousLocalImageId": "hubcard_6a31c8be23dd4929"
+    },
+    {
+      "code": "hkghostsigns",
+      "hub": "Zmr0egfhmvs-",
+      "file": "docs/design/hub-title-cards/v2/hk-ghost-signs.png",
+      "sha": "bade6087cfa53f7037cc064bca0bc6c4934bc34dc718a5686f1f1588d0a15886",
+      "key": "h/hubs/Zmr0egfhmvs-/title-bade6087cfa53f70",
+      "id": "hubcard_bade6087cfa53f70",
+      "previousProductionImageId": "hubcard_22dd10781a0c1edf",
+      "previousLocalImageId": "hubcard_22dd10781a0c1edf"
+    },
+    {
+      "code": "breadline",
+      "hub": "WGXXgrurxIbS",
+      "file": "docs/design/hub-title-cards/v2/breadline.png",
+      "sha": "28e366019f1420b7f597f5a40df75b3f4aa92777834d1b8c3702b0b8b8afffaf",
+      "key": "h/hubs/WGXXgrurxIbS/title-28e366019f1420b7",
+      "id": "hubcard_28e366019f1420b7",
+      "previousProductionImageId": "hubcard_cc836a2dfd636596",
+      "previousLocalImageId": "hubcard_cc836a2dfd636596"
+    },
+    {
+      "code": "mappinghk",
+      "hub": "tA_2lcNCF-3h",
+      "file": "docs/design/hub-title-cards/v2/mappinghk.png",
+      "sha": "2773bba2b2271bdf9319c07084f20f84d68df2a13d75abbb542659e188241d59",
+      "key": "h/hubs/tA_2lcNCF-3h/title-2773bba2b2271bdf",
+      "id": "hubcard_2773bba2b2271bdf",
+      "previousProductionImageId": "hubcard_f5c28a1acc94133f",
+      "previousLocalImageId": "hubcard_f5c28a1acc94133f"
+    }
+  ]
+}
