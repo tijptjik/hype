@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 // BITS COMPONENTS
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import { ProjectFlagsSchema, show3dAddressOptions } from '#lib/projects/flags.js'
@@ -254,6 +256,7 @@ const resolvedFacetTabs = $derived.by(() => {
         coreOnly: true,
       })
     : new Map(facetTabs)
+  if (!canEditProject) tabs.delete('updates')
   if (shouldHideCapabilitiesFacet) tabs.delete('capabilities')
   return tabs
 })
@@ -3495,6 +3498,23 @@ $effect(() => {
     {#if activeFacet === 'features' && project?.data?.id}
       {#key project.data.id}
         <ScopedFeatureIndex resourceType="project" resourceId={project.data.id} />
+      {/key}
+    {/if}
+  </Main.Facet>
+  <Main.Facet
+    isVisible={activeFacet === 'updates' && canEditProject}
+    class="right-0! left-0!"
+    attrs={{ 'data-facet-id': 'updates' }}
+  >
+    {#if activeFacet === 'updates' &&
+      canEditProject &&
+      isCurrentRefLoaded &&
+      optimisticProjectData?.id}
+      {#key `${optimisticProjectData.id}:${optimisticProjectData.modifiedAt}:${adminCtx.view.account.user?.id}`}
+        <AdminResourceHistory
+          resource="project"
+          resourceId={optimisticProjectData.id}
+        />
       {/key}
     {/if}
   </Main.Facet>

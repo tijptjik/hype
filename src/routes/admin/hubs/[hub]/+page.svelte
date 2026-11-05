@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 // ROLE HIERARCHY
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // SVELTE
@@ -182,13 +184,13 @@ const headerCtrl = getHeaderCtrl()
 // § Config
 
 const facetTabs = getAdminFacetTabsForResource(FirstClassResource.hub)
-const resolvedFacetTabs = $derived.by(() =>
-  isNewHubRef
-    ? getAdminFacetTabsForResource(FirstClassResource.hub, {
-        coreOnly: true,
-      })
-    : facetTabs,
-)
+const resolvedFacetTabs = $derived.by(() => {
+  const tabs = isNewHubRef
+    ? getAdminFacetTabsForResource(FirstClassResource.hub, { coreOnly: true })
+    : new Map(facetTabs)
+  if (!canEditHub) tabs.delete('updates')
+  return tabs
+})
 
 const editorCtrl = getEditorCtrl({
   headerCtrl,
@@ -1918,5 +1920,19 @@ $effect(() => {
         {/if}
       </div>
     </FormSurface>
+  </Main.Facet>
+  <Main.Facet
+    isVisible={activeFacet === 'updates' && canEditHub}
+    class="right-0! left-0!"
+    attrs={{ 'data-facet-id': 'updates' }}
+  >
+    {#if activeFacet === 'updates' &&
+      canEditHub &&
+      isCurrentRefLoaded &&
+      optimisticHubData?.id}
+      {#key `${optimisticHubData.id}:${optimisticHubData.modifiedAt}:${adminCtx.view.account.user?.id}`}
+        <AdminResourceHistory resource="hub" resourceId={optimisticHubData.id} />
+      {/key}
+    {/if}
   </Main.Facet>
 </Main.Root>

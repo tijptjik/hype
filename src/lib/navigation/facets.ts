@@ -8,6 +8,7 @@ import ChatIcon from 'virtual:icons/lucide/message-circle'
 import FileTextIcon from 'virtual:icons/proicons/file-text'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import Layers3Icon from 'virtual:icons/proicons/layers'
+import UpdatesIcon from 'virtual:icons/proicons/arrow-sync'
 import MapPinIcon from 'virtual:icons/proicons/location'
 import SettingsIcon from 'virtual:icons/proicons/settings'
 import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
@@ -24,6 +25,7 @@ export const ADMIN_FACETS = {
   messaging: 'messaging',
   users: 'users',
   address: 'address',
+  updates: 'updates',
   images: 'images',
   fields: 'fields',
   layers: 'layers',
@@ -54,6 +56,7 @@ export type ProjectFacet =
 export type LayerFacet = 'features' | 'core' | 'fields'
 
 export const ADMIN_FACET_DEFINITIONS = {
+  [ADMIN_FACETS.updates]: { label: () => 'History', icon: UpdatesIcon },
   [ADMIN_FACETS.users]: { label: () => 'Users', icon: UsersIcon },
   [ADMIN_FACETS.messaging]: { label: () => 'Messaging', icon: ChatIcon },
   [ADMIN_FACETS.features]: { label: () => m.omni__title_features(), icon: MapPinIcon },
@@ -89,6 +92,7 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  [ADMIN_FACETS.updates]: () => 'History',
   [ADMIN_FACETS.users]: () => 'Users',
   [ADMIN_FACETS.messaging]: () => 'Messaging',
   [ADMIN_FACETS.features]: () => m.omni__title_features(),
@@ -132,6 +136,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.fields,
     ADMIN_FACETS.policies,
     ADMIN_FACETS.images,
+    ADMIN_FACETS.updates,
   ],
   organisation: [
     ADMIN_FACETS.core,
@@ -142,6 +147,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.messaging,
     ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
+    ADMIN_FACETS.updates,
   ],
   project: [
     ADMIN_FACETS.core,
@@ -152,8 +158,14 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.policies,
     ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
+    ADMIN_FACETS.updates,
   ],
-  layer: [ADMIN_FACETS.core, ADMIN_FACETS.features, ADMIN_FACETS.fields],
+  layer: [
+    ADMIN_FACETS.core,
+    ADMIN_FACETS.features,
+    ADMIN_FACETS.fields,
+    ADMIN_FACETS.updates,
+  ],
   feature: [
     ADMIN_FACETS.core,
     ADMIN_FACETS.address,

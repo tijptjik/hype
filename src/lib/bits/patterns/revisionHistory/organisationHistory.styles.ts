@@ -17,7 +17,7 @@ export const historyStyles = {
     focus,
   ),
   disclosure: cx(
-    'flex w-full items-start gap-3 py-4 text-left hover:bg-primary/3',
+    'ml-auto flex shrink-0 items-center gap-3 rounded-sm py-1 text-left hover:bg-primary/3',
     focus,
   ),
   columns: cx(
@@ -27,7 +27,5 @@ export const historyStyles = {
   row: cx(grid, 'px-3 pb-3 sm:pb-0'),
   before: cx(cell, 'text-muted-foreground'),
   after: cx(cell, 'text-foreground'),
-  value:
-    'min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-sans text-sm leading-relaxed',
   notice: 'flex flex-wrap items-center gap-4 px-6 py-5 text-sm text-muted-foreground',
 } as const

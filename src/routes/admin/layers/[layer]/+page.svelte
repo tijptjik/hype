@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 // BITS COMPONENTS
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
@@ -685,11 +687,13 @@ const hasSelectedParentProject = $derived(selectedParentProjectId.length > 0)
 /********************
  *  FACET + PERMISSION STATE
  ************/
-const headerFacetTabs = $derived(
-  getAdminFacetTabsForResource(FirstClassResource.layer, {
+const headerFacetTabs = $derived.by(() => {
+  const tabs = getAdminFacetTabsForResource(FirstClassResource.layer, {
     coreOnly: !hasSelectedParentProject,
-  }),
-)
+  })
+  if (isNewLayerRef || !canEditLayerCore) tabs.delete('updates')
+  return tabs
+})
 
 const facetIssueState = $derived.by(() =>
   resolveFacetTabsWithIssues({
@@ -1419,7 +1423,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
@@ -1462,7 +1466,7 @@ $effect(() => {
               onSelectMapStyle={onSelectLayerMapStyle}
             />
           </div>
-          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+          <div class="border-border min-w-0 border-t xl:border-t-0 xl:border-l">
             <FormMarkerStyleSection
               value={selectedLayerMarkerStyle}
               allowInherit
@@ -1477,7 +1481,7 @@ $effect(() => {
               onSelect={onSelectLayerMarkerStyle}
             />
           </div>
-          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+          <div class="border-border min-w-0 border-t xl:border-t-0 xl:border-l">
             <FormCardStyleSection
               value={selectedLayerCardStyle}
               allowInherit
@@ -1492,7 +1496,7 @@ $effect(() => {
               onSelect={onSelectLayerCardStyle}
             />
           </div>
-          <div class="min-w-0 border-t border-border xl:col-span-3">
+          <div class="border-border min-w-0 border-t xl:col-span-3">
             <FormParentSection
               class={formSelectionSectionStyles}
               title={m.admin__forms_layer_parent_project_title()}
@@ -1522,7 +1526,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormSurface>
@@ -1530,7 +1534,7 @@ $effect(() => {
           {#each propertyColumns as column, columnIndex}
             <div
               class={columnIndex > 0
-                ? 'min-w-0 border-t border-border lg:border-l lg:border-t-0'
+                ? 'border-border min-w-0 border-t lg:border-t-0 lg:border-l'
                 : 'min-w-0'}
             >
               <LayerPropertyCard.Column
@@ -1563,6 +1567,20 @@ $effect(() => {
     {#if activeFacet === 'features' && layer?.data?.id}
       {#key layer.data.id}
         <ScopedFeatureIndex resourceType="layer" resourceId={layer.data.id} />
+      {/key}
+    {/if}
+  </Main.Facet>
+  <Main.Facet
+    isVisible={activeFacet === 'updates' && canEditLayerCore}
+    class="right-0! left-0!"
+    attrs={{ 'data-facet-id': 'updates' }}
+  >
+    {#if activeFacet === 'updates' &&
+      canEditLayerCore &&
+      isCurrentRefLoaded &&
+      layer?.data?.id}
+      {#key `${layer.data.id}:${layer.data.modifiedAt}:${adminCtx.view.account.user?.id}`}
+        <AdminResourceHistory resource="layer" resourceId={layer.data.id} />
       {/key}
     {/if}
   </Main.Facet>
