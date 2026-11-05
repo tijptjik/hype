@@ -54,24 +54,27 @@ export const getOrganisationUserPolicy = guardedQuery(
   organisationIdSchema,
   async (params, ctx): Promise<OrganisationUserPolicy> => {
     await authorize(ctx, params.organisationId)
-    const row =
-      await ctx.event.locals.platform.env.DB.prepare(`SELECT p.enabled,p.hubSignIn,p.customCard,p.revision,
+    const row = await ctx.event.locals.platform.env.DB.prepare(
+      `SELECT p.enabled,p.hubSignIn,p.customCard,p.contribution,p.revision,
     CASE WHEN p.emailDomain IS NOT NULL THEN lower(trim(h.domain)) ELSE NULL END AS emailDomain
     FROM organisationUserPolicy p JOIN organisation o ON o.id=p.organisationId LEFT JOIN hub h ON h.id=o.hubId
-    WHERE p.organisationId=?`)
-        .bind(params.organisationId)
-        .first<{
-          enabled: number
-          hubSignIn: number
-          emailDomain: string | null
-          customCard: number
-          revision: number
-        }>()
+    WHERE p.organisationId=?`,
+    )
+      .bind(params.organisationId)
+      .first<{
+        enabled: number
+        hubSignIn: number
+        emailDomain: string | null
+        contribution: number
+        customCard: number
+        revision: number
+      }>()
     return row
       ? {
           enabled: Boolean(row.enabled),
           hubSignIn: Boolean(row.hubSignIn),
           emailDomain: row.emailDomain,
+          contribution: Boolean(row.contribution),
           customCard: Boolean(row.customCard),
           revision: row.revision,
         }

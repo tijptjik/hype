@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs'
 import { getTableColumns, getTableName } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 import {
@@ -38,14 +39,27 @@ describe('atomic contribution creation', () => {
         )
       }
       sqlite.exec(`CREATE TABLE property(id TEXT PRIMARY KEY,audience TEXT);
-          CREATE TABLE organisation(id TEXT PRIMARY KEY);
+          CREATE TABLE organisation(id TEXT PRIMARY KEY,isPublished INTEGER DEFAULT 1,isArchived INTEGER DEFAULT 0);
           CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT);
           CREATE TABLE layer(id TEXT PRIMARY KEY,projectId TEXT);
-          INSERT INTO organisation VALUES('org'),('other');
+          INSERT INTO organisation(id) VALUES('org'),('other');
           INSERT INTO project VALUES('project','org'),('other','other');
           INSERT INTO layer VALUES('layer','project');
           CREATE UNIQUE INDEX feature_id ON feature(id);
           CREATE UNIQUE INDEX task_id ON task(id);`)
+      sqlite.exec(`
+        CREATE TABLE user(id TEXT PRIMARY KEY,isAnonymous INTEGER DEFAULT 0,isArchived INTEGER DEFAULT 0);
+        INSERT INTO user(id) VALUES('account');
+        CREATE TABLE organisationRole(organisationId TEXT,userId TEXT,role TEXT,PRIMARY KEY(organisationId,userId));
+        CREATE TABLE breadlineImportIdentity(sourceUserId INTEGER PRIMARY KEY);
+      `)
+      sqlite.exec(readFileSync('migrations/0168_organisation_users.sql', 'utf8'))
+      sqlite.exec(
+        readFileSync('migrations/0182_organisation_contribution_users.sql', 'utf8'),
+      )
+      sqlite.exec(
+        "INSERT INTO organisationUserPolicy(organisationId,enabled,contribution) VALUES('org',1,1)",
+      )
       if (scenario === 'task failure')
         sqlite.exec(
           "CREATE TRIGGER reject_task BEFORE INSERT ON task BEGIN SELECT RAISE(ABORT,'task failed'); END",
@@ -131,6 +145,19 @@ describe('atomic contribution creation', () => {
         expect(
           sqlite.prepare("SELECT organisationId FROM project WHERE id='project'").get(),
         ).toEqual({ organisationId: 'org' })
+      expect(
+        sqlite.prepare('SELECT userId,role,grant FROM organisationRole').all(),
+      ).toEqual(
+        scenario === 'final'
+          ? [
+              {
+                userId: 'account',
+                role: 'user',
+                grant: '{"contribution:project":"user"}',
+              },
+            ]
+          : [],
+      )
       expect(batch).toHaveBeenCalledTimes(1)
     } finally {
       sqlite.close()

@@ -45,6 +45,14 @@ const rules = $derived([
       ]
     : []),
   {
+    key: 'contribution' as const,
+    label: 'If the user contributes to a project',
+    description:
+      'Submitting a feature, photo or missing report adds the user immediately, before review.',
+    checked: policy.contribution,
+    unavailable: false,
+  },
+  {
     key: 'customCard' as const,
     label: 'If the user triggers the onboarding step in the custom card',
     description: '',

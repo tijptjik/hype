@@ -135,7 +135,9 @@ describe('organisation form revision transaction', () => {
     async mode => {
       const { db, sqlite } = fixture()
       try {
-        sqlite.exec("INSERT INTO organisationUserPolicy VALUES('o',0,0,NULL,0,2)")
+        sqlite.exec(
+          "INSERT INTO organisationUserPolicy(organisationId,enabled,hubSignIn,emailDomain,customCard,revision) VALUES('o',0,0,NULL,0,2)",
+        )
         if (mode === 'failure')
           sqlite.exec(
             "CREATE TRIGGER fail_translation BEFORE INSERT ON organisationI18n BEGIN SELECT RAISE(ABORT,'injected failure'); END",
@@ -148,6 +150,7 @@ describe('organisation form revision transaction', () => {
             enabled: true,
             hubSignIn: true,
             emailDomain: 'ignored.org',
+            contribution: true,
             customCard: true,
             revision: mode === 'stale-policy' ? 1 : 2,
           },
@@ -159,6 +162,7 @@ describe('organisation form revision transaction', () => {
             enabled: 1,
             hubSignIn: 1,
             emailDomain: 'breadline.hk',
+            contribution: 1,
             customCard: 1,
             revision: 3,
           })
@@ -248,6 +252,7 @@ describe('organisation form revision transaction', () => {
                   enabled: true,
                   hubSignIn: false,
                   emailDomain: null,
+                  contribution: false,
                   customCard: false,
                   revision: 0,
                 },

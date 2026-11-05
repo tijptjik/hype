@@ -30,4 +30,7 @@ export function createOrganisationUserTables(sqlite: DatabaseSync): void {
     }
     sqlite.exec(statement)
   }
+  sqlite.exec(
+    'ALTER TABLE organisationUserPolicy ADD COLUMN contribution INTEGER NOT NULL DEFAULT 0',
+  )
 }

@@ -12,6 +12,7 @@ export const organisationUserPolicy = sqliteTable('organisationUserPolicy', {
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
   hubSignIn: integer('hubSignIn', { mode: 'boolean' }).notNull().default(false),
   emailDomain: text('emailDomain'),
+  contribution: integer('contribution', { mode: 'boolean' }).notNull().default(false),
   customCard: integer('customCard', { mode: 'boolean' }).notNull().default(false),
   revision: integer('revision').notNull().default(0),
 })

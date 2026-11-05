@@ -37,6 +37,7 @@ export function prepareOrganisationUserPolicy(
     enabled: policy.enabled,
     hubSignIn: policy.hubSignIn,
     emailDomain: emailEnabled ? domain : null,
+    contribution: policy.contribution,
     customCard: policy.customCard,
     revision: policy.revision + 1,
   }

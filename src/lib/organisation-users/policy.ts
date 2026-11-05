@@ -11,6 +11,7 @@ export const OrganisationUserPolicySchema = z.object({
     .toLowerCase()
     .regex(/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}$/)
     .nullable(),
+  contribution: z.boolean().default(false),
   customCard: z.boolean(),
   revision: z.number().int().nonnegative(),
 })
@@ -19,6 +20,7 @@ export const DEFAULT_ORGANISATION_USER_POLICY: OrganisationUserPolicy = {
   enabled: false,
   hubSignIn: false,
   emailDomain: null,
+  contribution: false,
   customCard: false,
   revision: 0,
 }
