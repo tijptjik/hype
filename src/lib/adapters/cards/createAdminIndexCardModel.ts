@@ -339,6 +339,13 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
     title,
     description,
     imageSrc,
+    // A failed map preview falls back to the uploaded cover, then the resource identicon.
+    imageFallbackSrcs: [
+      ...(previewImageSrc && imageEnvelope
+        ? [getURLfromImage({ image: imageEnvelope })]
+        : []),
+      getHashiconUrl(entity.id),
+    ].filter(src => src !== imageSrc),
     imageAlt: title,
     imageLayout,
     footerStatus,

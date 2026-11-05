@@ -97,6 +97,7 @@ export type RenderableImageProps = {
 }
 
 export type ImageProps = {
+  onError?: () => void
   src: string | null
   alt: string
   fit?: GalleryObjectFit

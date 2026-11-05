@@ -99,7 +99,7 @@ function handleImageError(event: Event): void {
   if (
     image &&
     image.currentSrc.length > 0 &&
-    image.currentSrc !== (currentSrc ?? effectiveSrc)
+    image.currentSrc !== new URL(currentSrc ?? effectiveSrc, document.baseURI).href
   ) {
     return
   }

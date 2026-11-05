@@ -4,6 +4,7 @@ import type { ImageProps } from './images.types'
 
 let {
   src,
+  onError,
   alt,
   fit = 'fit',
   isLoading = false,
@@ -28,6 +29,7 @@ const item = $derived(
 <div class={className}>
   <ImagePrimitive.ImageSurface
     {item}
+    {onError}
     {fit}
     {isLoading}
     {rounded}

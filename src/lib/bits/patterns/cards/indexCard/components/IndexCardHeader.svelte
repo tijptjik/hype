@@ -4,16 +4,34 @@ import Image from '#lib/bits/patterns/images/Image.svelte'
 // TYPES
 import type { IndexCardHeaderProps } from '../indexCard.types'
 
-let { imageSrc, imageAlt, imageLayout, onImageClick }: IndexCardHeaderProps = $props()
+let { imageSrc, imageFallbackSrcs = [], imageAlt, imageLayout, onImageClick }: IndexCardHeaderProps = $props()
+// Keep failures scoped to the current source so a refreshed preview can be tried again.
+let failedSources = $state<string[]>([])
+$effect(() => {
+  imageSrc
+  imageFallbackSrcs
+  failedSources = []
+})
+const displayedSrc = $derived(
+  [imageSrc, ...imageFallbackSrcs].find(src => !failedSources.includes(src)) ?? null,
+)
+
+/** Marks the current candidate as failed and advances to the next cover.
+ * @returns Nothing.
+ */
+function handleImageError(): void {
+  if (displayedSrc) failedSources = [...failedSources, displayedSrc]
+}
 </script>
 
 <div class="bits-index-card__header">
-  {#if imageLayout === 'contain'}
-    <img src={imageSrc} alt="" aria-hidden="true" class="bits-index-card__header-blur">
+  {#if imageLayout === 'contain' && displayedSrc}
+    <img src={displayedSrc} alt="" aria-hidden="true" class="bits-index-card__header-blur">
   {/if}
   <div class="bits-index-card__header-overlay"></div>
   <Image
-    src={imageSrc}
+    src={displayedSrc}
+    onError={handleImageError}
     alt={imageAlt}
     class="bits-index-card__header-image"
     fit={imageLayout === 'cover' ? 'cover' : 'fit'}
