@@ -312,6 +312,25 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     submittedRoles.map(userRole => userRole.userId),
   )
 
+  // Attach duplicate-name issues to every matching input so cards and controls highlight.
+  const duplicatePropertyKeys = new Set(
+    getDuplicateValues(submittedProperties.map(property => property.key)),
+  )
+  if (duplicatePropertyKeys.size > 0) {
+    invalid(
+      ...submittedProperties.flatMap((property, index) =>
+        duplicatePropertyKeys.has(property.key)
+          ? [
+              {
+                message: `Name in API must be unique within this hub. Duplicate: ${property.key}`,
+                path: ['data', 'properties', index, 'key'],
+              },
+            ]
+          : [],
+      ),
+    )
+  }
+
   // Validate payload invariants.
   if (submittedRoles.length === 0) {
     invalid(issue(toIssueDetailMessage('USER_ROLES_REQUIRED')))
@@ -467,7 +486,11 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Ensure unchanged names too, allowing operators to repair missing registrations by saving.
   try {
-    await ensureHubDomain(ctx.event.locals.platform?.env ?? {}, normalizedCode, current.code)
+    await ensureHubDomain(
+      ctx.event.locals.platform?.env ?? {},
+      normalizedCode,
+      current.code,
+    )
   } catch (cause) {
     console.error('Hub domain registration failed', cause)
     invalid(

@@ -400,9 +400,10 @@ describe('hub.remote form image handling', () => {
 
       await remote.hubForm(
         {
-          meta: mode === 'create'
-            ? { mode }
-            : { mode, id: 'hub-1', updatedAt: '2026-02-23T00:00:00.000Z' },
+          meta:
+            mode === 'create'
+              ? { mode }
+              : { mode, id: 'hub-1', updatedAt: '2026-02-23T00:00:00.000Z' },
           data: {
             code: 'mappinghk',
             domain: '',
@@ -410,7 +411,9 @@ describe('hub.remote form image handling', () => {
             userRoles: [{ userId: 'u-1', role: 'admin' }],
           },
         },
-        message => { throw new Error(String(message)) },
+        message => {
+          throw new Error(String(message))
+        },
       )
 
       if (mode === 'create') {
@@ -418,8 +421,9 @@ describe('hub.remote form image handling', () => {
       } else {
         expect(mockEnsureHubDomain).toHaveBeenCalledWith(env, 'mappinghk', 'mappinghk')
       }
-      expect(mode === 'create' ? mockCreateHub : mockUpdateHubByIdWithConcurrency)
-        .toHaveBeenCalledTimes(1)
+      expect(
+        mode === 'create' ? mockCreateHub : mockUpdateHubByIdWithConcurrency,
+      ).toHaveBeenCalledTimes(1)
     },
   )
 
@@ -719,6 +723,56 @@ describe('hub.remote form image handling', () => {
         }),
       }),
     )
+  })
+
+  it('reports duplicate property API names before persistence', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: buildDbForCreate(),
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+    const invalid = vi.fn(
+      (...issues: Array<{ message: string; path: Array<string | number> }>) => {
+        throw new Error(issues[0].message)
+      },
+    )
+    await expect(
+      remote.hubForm(
+        {
+          meta: { mode: 'create' },
+          data: {
+            code: 'new-hub',
+            domain: '',
+            i18n: { en: {}, zhHans: {}, zhHant: {} },
+            userRoles: [],
+            organisations: [],
+            properties: ['first', 'unrelated', 'second'].map((id, index) => ({
+              id,
+              rank: 2 - index,
+              key: id === 'unrelated' ? 'other' : 'hits',
+              type: 'classifier',
+              component: 'SelectField',
+              isTranslatable: true,
+              i18n: { en: { label: 'Hits' } },
+              values: [],
+            })),
+          },
+        },
+        invalid,
+      ),
+    ).rejects.toThrow('Name in API must be unique within this hub. Duplicate: hits')
+    expect(invalid).toHaveBeenCalledExactlyOnceWith(
+      {
+        message: 'Name in API must be unique within this hub. Duplicate: hits',
+        path: ['data', 'properties', 0, 'key'],
+      },
+      {
+        message: 'Name in API must be unique within this hub. Duplicate: hits',
+        path: ['data', 'properties', 2, 'key'],
+      },
+    )
+    expect(mockCreateHub).not.toHaveBeenCalled()
+    expect(mockUpdateHubByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
   it('rejects empty userRoles', async () => {
