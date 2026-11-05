@@ -120,6 +120,43 @@ Each run uses a PostgreSQL repeatable-read, read-only transaction and one atomic
 SQLite transaction. A failed pull leaves the last complete mirror and its checkpoints
 unchanged.
 
+### Reviewed attribution for unassigned collections
+
+Refs [repeatable importer #194](https://github.com/tijptjik/hype/issues/194). Rule
+`unassigned-collected-runs-to-daisy-v1` assigns runs with
+`volunteer_id IS NULL AND collected_amount IS NOT NULL` to Daisy Tam's reviewed source
+user `6279`, through volunteer `6323`. Zero is a recorded collection amount and is
+included. Existing volunteer assignments and unreported amounts are preserved. The
+destination user-to-volunteer link must exist; eligible rows fail closed if it does not.
+Same-name accounts are never used for matching.
+
+The source pull installs `_breadline_import_runs` with effective ownership and
+`_breadline_run_attribution` with the run ID, original and effective volunteer IDs,
+source user ID and rule version. Raw `breadline__public__runs` rows, source hashes,
+timestamps, collected amounts, claimed flags, volunteer counters and the source change
+journal remain unchanged. Views recompute from the current source rows, so later source
+assignments take precedence and refreshed/deleted rows cannot leave stale overrides.
+Hashes in the import view are original source hashes, not hashes of the effective import
+payload.
+
+`readUserSyncSource` applies the same projection when retaining related run history,
+including for older exports without the views. Event/history conversion must read
+`readImportRuns` or `_breadline_import_runs`, then resolve volunteer `6323` through the
+target's identity crosswalk. This is attribution for migration, not evidence that Daisy
+physically performed these collections. The broader event/history apply remains
+deferred; this rule does not write Hype D1 or PostgreSQL.
+
+Install these views on an existing export without refreshing production:
+
+```sh
+bun run scripts/breadline/attribute-runs.ts --mirror path/to/breadline.sqlite
+```
+
+The command makes a verified private backup before applying the views transactionally.
+The 5 November 2026 export contains 39 eligible rows: three positive collections and 36
+zero collections. Verification is covered by
+`scripts/breadline/run-attribution.test.ts`.
+
 ## Incremental rules
 
 A table is incrementally pulled only when it has both:

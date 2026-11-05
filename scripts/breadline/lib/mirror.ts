@@ -16,6 +16,9 @@ import {
   readSourceSnapshotTime,
 } from './source'
 
+// IMPORT RULES
+import { installRunAttributionViews } from './run-attribution'
+
 // TYPES
 import type {
   MirrorSyncOptions,
@@ -317,6 +320,8 @@ export async function syncBreadlineMirror(
               await syncOneTable(database, snapshot, table, snapshotAt, runId, options),
             )
           }
+          // Publish effective history ownership without rewriting the source snapshot.
+          installRunAttributionViews(database)
           database.run('COMMIT')
           return { report, snapshotAt, tableResults }
         } catch (error) {

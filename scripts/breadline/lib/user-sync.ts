@@ -21,6 +21,7 @@ import {
 } from './users'
 import type { UserDecisions } from './user-decisions'
 import { userSyncRowStatements } from './user-sync-remote'
+import { readImportRuns } from './run-attribution'
 import {
   strongestOrganisationRole,
   type OrganisationRoleGrants,
@@ -117,7 +118,11 @@ export function readUserSyncSource(db: Database): UserSyncSource {
       ].includes(String(state.strategy))
     )
       throw new Error('Source deletion coverage is incomplete')
-    const rows = db.query(`SELECT * FROM "${state.mirrorTable}"`).all() as Row[]
+    const rows = (
+      state.sourceTable === 'runs'
+        ? readImportRuns(db)
+        : db.query(`SELECT * FROM "${state.mirrorTable}"`).all()
+    ) as Row[]
     if (
       rows.length !== state.localRows ||
       rows.length !== state.sourceRows ||

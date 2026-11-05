@@ -113,7 +113,7 @@ describe('accepted local Breadline user sync', () => {
       INSERT INTO breadline__public__users VALUES(1,10);
       CREATE TABLE breadline__public__volunteers(id INTEGER,total INTEGER);
       INSERT INTO breadline__public__volunteers VALUES(10,3);
-      CREATE TABLE breadline__public__runs(id INTEGER,volunteer_id INTEGER,collected INTEGER);
+      CREATE TABLE breadline__public__runs(id INTEGER,volunteer_id INTEGER,collected_amount INTEGER);
       INSERT INTO breadline__public__runs VALUES(20,10,3);
       CREATE TABLE breadline__public__user_roles(id INTEGER,user_id INTEGER,role_id INTEGER);
       INSERT INTO breadline__public__user_roles VALUES(30,1,40);
@@ -131,7 +131,7 @@ describe('accepted local Breadline user sync', () => {
       'volunteers',
     ])
     db.exec(
-      "UPDATE breadline__public__roles SET name='changed'; UPDATE breadline__public__runs SET collected=4",
+      "UPDATE breadline__public__roles SET name='changed'; UPDATE breadline__public__runs SET collected_amount=4",
     )
     expect(userSyncHash(readUserSyncSource(db).rows)).not.toBe(
       userSyncHash(initial.rows),
