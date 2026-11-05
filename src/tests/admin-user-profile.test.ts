@@ -56,12 +56,27 @@ const row = {
 }
 const actor = { id: 'viewer', isAnonymous: false, superAdmin: false } as SessionUser
 const hub = { id: 'hub-1', isCore: false }
-const db = {} as Database
+const audienceLookup = vi.fn()
+const linkedWhere = vi
+  .fn()
+  .mockResolvedValue([{ providerId: 'google', email: 'provider@example.invalid' }])
+const selectProviders = vi.fn((projection: Record<string, unknown>) => ({
+  from: () => ({
+    leftJoin: () => ({ where: linkedWhere }),
+    where: async () =>
+      'preferredPlatform' in projection ? [{ preferredPlatform: null }] : [],
+  }),
+}))
+const db = {
+  select: selectProviders,
+  query: { user: { findFirst: audienceLookup } },
+} as unknown as Database
 const read = (roles: UserRoleDisco[]) =>
   readAdminUserProfile(db, { username: 'KindRunner01', actor, userRoles: roles, hub })
 
 beforeEach(() => {
   vi.clearAllMocks()
+  audienceLookup.mockResolvedValue(undefined)
   loadUser.mockResolvedValue(row)
   contributions.mockReturnValue({
     contributedFeatures: {},
@@ -99,27 +114,36 @@ describe('admin user profile permissions', () => {
         'experimental',
       ])
         expect(serialized).not.toContain(value)
-      expect(loadUser.mock.calls[0][2]).toHaveLength(2)
+      expect(loadUser.mock.calls[0][2]).toHaveLength(1)
     },
   )
 
-  it('returns non-contact fields to active-hub admins without exposing account or preference data', async () => {
+  it('returns all settings only when the persisted audience check grants editing', async () => {
+    audienceLookup.mockResolvedValue({ id: 'target' })
     const result = await read([
       { type: 'hub', role: 'admin', hubId: 'hub-1' } as UserRoleDisco,
     ])
+    expect(result?.canEdit).toBe(true)
     expect(result?.details).toMatchObject({
       name: row.name,
-      email: null,
+      email: row.email,
+      telephone: row.telephone,
     })
-    expect(JSON.stringify(result)).not.toMatch(
-      /never-expose|preferences|experimental|private@example.invalid|91234567/,
-    )
-    expect(loadUser.mock.calls[0][2]).toHaveLength(1)
-    expect(contributions).toHaveBeenCalledWith(db, {
-      sessionUser: actor,
-      hubOpts: hub,
-      isAdminRequest: true,
-    })
+    expect(result?.linkedAccounts).toEqual([
+      {
+        providerId: 'google',
+        email: 'provider@example.invalid',
+        emailSource: 'provider',
+      },
+    ])
+    expect(Object.keys(selectProviders.mock.calls[0][0] ?? {})).toEqual([
+      'providerId',
+      'accountId',
+      'idToken',
+      'email',
+    ])
+    expect(result?.settings).toMatchObject({ preferences: '{}', experimental: '{}' })
+    expect(JSON.stringify(result)).not.toContain('never-expose')
   })
 
   it('does not give an unrelated hub admin contact access', async () => {
@@ -129,7 +153,7 @@ describe('admin user profile permissions', () => {
     expect(result?.details).toBeNull()
   })
 
-  it('allows core admins and super admins the directory fields', async () => {
+  it('keeps core admins scoped and gives explicit super admins global editing', async () => {
     const core = await read([
       {
         type: 'hub',
@@ -139,8 +163,8 @@ describe('admin user profile permissions', () => {
         hub: { code: 'core' },
       } as UserRoleDisco,
     ])
-    expect(core?.details?.email).toBe(row.email)
-    expect(core?.details?.telephone).toBe(row.telephone)
+    expect(core?.details).toBeNull()
+    expect(core?.canEdit).toBe(false)
     const superUser = await readAdminUserProfile(db, {
       username: 'KindRunner01',
       actor: { ...actor, superAdmin: true },

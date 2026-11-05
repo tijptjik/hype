@@ -164,10 +164,21 @@ export type UserFeatureWithHierarchy = UserFeature & {
 export type UserGetResponse = EntityResponse<User>
 export type UserGetState = UserGetResponse | null
 
-/** Read-only admin profile; private directory fields are omitted without permission. */
+/** Admin profile; private settings are returned only with target-specific edit authority. */
 export type AdminUserProfile = {
   access: import('#lib/users/access.types.js').UserAccessOverview
   contributionPreviews?: import('#lib/users/contributionPreview.types.js').UserContributionPreview[]
+  linkedAccounts?: {
+    providerId: string
+    email: string | null
+    emailSource?: 'provider' | 'sign-in'
+  }[]
+  messagingSettings?:
+    | import('#lib/messaging/contactValidation.js').MessagingProfileSettings
+    | null
   profile: UserProfile
+  canEdit: boolean
+  settings: import('#lib/users/adminProfile.js').AdminUserSettings | null
+  updatedAt: string | null
   details: z.infer<typeof import('./user').UserDirectoryProfileAPI> | null
 }

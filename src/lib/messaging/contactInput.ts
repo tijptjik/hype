@@ -35,7 +35,7 @@ export function shouldValidateMessagingContact(input: string): boolean {
 export function parseMessagingContact(input: string): ContactInput {
   const text = input.trim()
   if (!text) return { kind: 'empty' }
-  if (/[a-zA-Z]/.test(text) || text.startsWith('@')) {
+  if (/^@?[a-zA-Z]/.test(text) || text.startsWith('@')) {
     const username = text.replace(/^@/, '').toLowerCase()
     if (!/^[a-z][a-z0-9_]{4,31}$/.test(username))
       return {
