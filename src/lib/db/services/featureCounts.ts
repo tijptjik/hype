@@ -91,6 +91,7 @@ async function fingerprintFeatureCountQuery(statement: {
  * @param conditions - Complete authorized feature predicates without pagination exclusions.
  * @param source - Indexed feature source used only for a cache-miss detailed aggregate.
  * @param rollupConditions - Equivalent predicates for maintained bins, or null for detailed filters.
+ * @param includeFacets - Whether the caller needs geographic facets as well as the count.
  * @returns Exact count metadata for the authorized query.
  * @remarks Arbitrary filter combinations are computed once per matching revision, not
  * precomputed combinatorially. List revisions are per target user, so one saved-list
@@ -102,6 +103,7 @@ export async function getFeatureQueryCounts(
   conditions: SQL[],
   source: SQL,
   rollupConditions: SQL[] | null,
+  includeFacets = true,
 ): Promise<FeatureQueryCounts> {
   // Aggregate only IDs before joining large polygon attributes; SQLite otherwise
   // carries a copy of those attributes per membership through its grouping sorter.
@@ -156,7 +158,15 @@ export async function getFeatureQueryCounts(
     ? sql<number>`coalesce((${db.select({ revision: featureCountUserRevision.revision }).from(featureCountUserRevision).where(eq(featureCountUserRevision.userId, targetUserId)).limit(1)}), 0)`
     : sql<number>`0`
   const [key, revisionRows] = await Promise.all([
-    fingerprintFeatureCountQuery(aggregate.toSQL()),
+    fingerprintFeatureCountQuery(
+      includeFacets
+        ? aggregate.toSQL()
+        : db
+            .select({ count: sql<number>`count(*)` })
+            .from(source)
+            .where(and(...conditions))
+            .toSQL(),
+    ),
     retryBusyRead(() =>
       db
         .select({
@@ -202,7 +212,7 @@ export async function getFeatureQueryCounts(
           .where(and(...conditions)),
       )
   const counts = toFeatureQueryCounts(
-    await retryBusyRead(() => aggregate),
+    includeFacets ? await retryBusyRead(() => aggregate) : [],
     Number(totals[0]?.count ?? 0),
   )
   // Publish only under the revisions observed before the aggregate, never a newer revision.

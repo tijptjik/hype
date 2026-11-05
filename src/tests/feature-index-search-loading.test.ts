@@ -16,14 +16,18 @@ const route = readFileSync(
 const section = (start: string, end: string) =>
   route.slice(route.indexOf(start), route.indexOf(end, route.indexOf(start)))
 const source = `
-function create(getFeatures) {
+function create(getFeatureIndexPage) {
   const adminCtx = { featureHasMore: false, featurePageError: null, view: {
     isSuperAdmin: () => true, scope: { prisms: {} },
-    filters: { sorting: { feature: {} } }, resources: { queryMeta: {} }
+    filters: { sorting: { feature: {} }, viewFilters: { feature: {} } }, resources: { queryMeta: {} }
   } };
   let normalizedTextQuery = $state('tea');
   let searchSignature = $state('scope-a');
-  const indexInitialised = true;
+  const ownerSignature = 'owner-a';
+  let indexInitialised = $state(true);
+  let matchingCount = $state(null);
+  let matchingCountLoading = $state(true);
+  let matchingCountRevision = $state(0);
   let isSearchFocused = $state(false);
   const activeSearchResultCap = 2;
   const entities = $derived(remoteMatchedEntities ?? []);
@@ -32,7 +36,7 @@ function create(getFeatures) {
   ${section('const remoteMatchesCurrentQuery', 'function buildFeatureSearchIndex')}
   debouncedRemoteQuery = 'tea';
   const stop = $effect.root(() => {
-    ${section('$effect(() => {\n  const nextQuery = debouncedRemoteQuery.trim()', '$effect(() => {\n  if (normalizedTextQuery')}
+    ${section('$effect(() => {\n  const nextQuery = debouncedRemoteQuery.trim()', '$effect(() => {\n  if (remoteMatchesCurrentQuery)')}
   });
   return {
     stop, more: loadMoreFeatureResults,
@@ -40,7 +44,7 @@ function create(getFeatures) {
     search: value => { normalizedTextQuery = value; debouncedRemoteQuery = value; },
     scope: value => { searchSignature = value; },
     retry: () => { searchRetry++; },
-    state: () => ({ ids: remoteMatchesCurrentQuery ? remoteMatchedEntities.map(row => row.id) : [], pending: remotePending, loadingMore: remoteLoadingMore, complete: indexComplete, hasMore: indexHasMore, canLoadMore: indexCanLoadMore, error: remotePageError })
+    state: () => ({ count: matchingCount, countLoading: matchingCountLoading, ids: remoteMatchesCurrentQuery ? remoteMatchedEntities.map(row => row.id) : [], pending: remotePending, loadingMore: remoteLoadingMore, complete: indexComplete, hasMore: indexHasMore, canLoadMore: indexCanLoadMore, error: remotePageError })
   };
 }
 `
@@ -243,4 +247,37 @@ it('pauses pagination at the search-focus display cap and resumes after focus le
     canLoadMore: true,
     complete: false,
   })
+})
+
+it('replaces the count for an empty search and rejects late counts from older filters', async () => {
+  const old = deferred()
+  const request = vi
+    .fn()
+    .mockReturnValueOnce(old.promise)
+    .mockResolvedValueOnce({ ...page(['current']), totalCount: 489 })
+  const state = setup(request)
+  state.search('')
+  state.scope('new-filter-scope')
+  await settle()
+  expect(state.state()).toMatchObject({
+    count: 489,
+    countLoading: false,
+    ids: ['current'],
+  })
+  expect(request.mock.calls[1][0].includeCount).toBe(true)
+  old.resolve({ ...page(['obsolete']), totalCount: 999 })
+  await settle()
+  expect(state.state()).toMatchObject({ count: 489, ids: ['current'] })
+})
+
+it('retains the exact count while fetching continuation rows without recounting', async () => {
+  const request = vi
+    .fn()
+    .mockResolvedValueOnce({ ...page(['first'], true, 1), totalCount: 489 })
+    .mockResolvedValueOnce({ ...page(['next']), totalCount: null })
+  const state = setup(request)
+  await settle()
+  await state.more()
+  expect(request.mock.calls[1][0].includeCount).toBe(false)
+  expect(state.state()).toMatchObject({ count: 489, ids: ['first', 'next'] })
 })

@@ -17,6 +17,7 @@ let {
   showBulkEdit = false,
   showSort = true,
   count,
+  countLoading = false,
   resetDisabled = false,
   onReset,
   filterMenuContent,
@@ -351,7 +352,7 @@ $effect(() => {
 
   <!-- Expanded bulk actions own the row; keep every action reachable on narrow panels. -->
   <div
-    class={`flex min-w-0 items-center text-base-content/60 whitespace-nowrap ${isBulkOpen ? 'flex-1 gap-4 overflow-x-auto px-6' : isCompactSortOpen ? 'flex-1 gap-2 overflow-x-auto px-3' : 'gap-4 pr-8'}`}
+    class={`text-base-content/60 flex min-w-0 items-center whitespace-nowrap ${isBulkOpen ? 'flex-1 gap-4 overflow-x-auto px-6' : isCompactSortOpen ? 'flex-1 gap-2 overflow-x-auto px-3' : 'gap-4 pr-8'}`}
   >
     {#if showBulkEdit && bulkContent}
       <SortCtrl
@@ -373,7 +374,7 @@ $effect(() => {
       </SortCtrl>
     {/if}
     {#if !isBulkOpen}
-      <ResultCount {count} />
+      <ResultCount {count} {countLoading} />
       <FilterReset disabled={resetDisabled} onClick={onReset} />
     {/if}
   </div>

@@ -1,0 +1,170 @@
+// DRIZZLE
+import { and, sql, type SQL } from 'drizzle-orm'
+// API
+import {
+  getFeatureWithRelations,
+  toListResponseShape,
+} from '#lib/api/services/feature.js'
+// DB
+import { feature, featureI18n } from '#lib/db/schema/index.js'
+import { toOrderByWithLocalizedFields } from '#lib/db/index.js'
+import {
+  buildFeatureQueryConditions,
+  buildFeatureRollupConditions,
+  buildFeatureSearchMatch,
+} from './featureQuery.js'
+import {
+  featureIndexFilterConditions,
+  featureIndexLicenseConditions,
+} from './featureIndexFilters.js'
+import { getFeatureQueryCounts } from './featureCounts.js'
+import { retryBusyRead } from './sqlite.js'
+import { featureAuthoringSQL } from './featureAuthoringProjection.js'
+import { featureLocationBrandsSQL } from './locationBrandProjection.js'
+import { featureLocationLifecycleSQL } from './locationLifecycleProjection.js'
+// SEARCH
+import { foldFeatureSearchText } from '#lib/features/search.js'
+// I18N
+import { contentStorageTag } from '#lib/i18n/contentRecords.js'
+// TYPES
+import type { Database, Locale } from '#lib/types.js'
+import type { FeatureIndexQuery, FeatureIndexPage } from '#lib/features/indexQuery.js'
+import type { FeatureQueryInput } from '#lib/api/services/featureQuery.types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+
+// TABLE OF CONTENTS
+// 1. Search predicates
+// 2. Authoritative page and count reads
+
+/** Match the local literal substring search, using FTS candidates for translated text.
+ * @param q Trimmed search text.
+ * @param locale Current display locale, with the same English fallback as the client.
+ * @returns A feature predicate; wildcard characters are literal, never LIKE syntax.
+ * @remarks ID and contributor substring branches are scoped by the outer authorized query.
+ */
+export function featureIndexSearchCondition(q: string, locale: Locale): SQL {
+  const search = foldFeatureSearchText(q)
+  const storageLocale = contentStorageTag(locale)
+  return sql`(
+    instr(lower(${feature.id}), ${search}) > 0 or
+    exists(select 1 from user u where u.id = ${feature.contributorId} and instr(lower(u.name), ${search}) > 0) or
+    (${feature.id} in (select d.featureId from featureSearchFts join featureSearchDocument d on d.id = featureSearchFts.rowid
+      where featureSearchFts match ${buildFeatureSearchMatch(search)}) and
+      exists(select 1 from featureI18n fi where fi.featureId = ${feature.id}
+        and fi.locale = case when exists(select 1 from featureI18n chosen where chosen.featureId = ${feature.id} and chosen.locale = ${storageLocale}) then ${storageLocale} else 'en' end
+        and (instr(lower(fi.title), ${search}) > 0 or instr(lower(fi.description), ${search}) > 0 or instr(lower(fi.displayAddress), ${search}) > 0)))
+  )`
+}
+
+/** Query one page and optionally its exact, revision-cached matching count.
+ * @param db Request database.
+ * @param input Validated prism, filters, search, sort and pagination.
+ * @param authorizedConditions Trusted conditions from the ordinary feature list policy.
+ * @param hub Trusted hub scope.
+ * @param locale Display locale for sorting and search fallback.
+ * @returns Authoritative matches; continuation pages omit count work entirely.
+ * @remarks Counts hydrate no features. Only the bounded visible page loads relations.
+ */
+export async function queryFeatureIndex(
+  db: Database,
+  input: FeatureIndexQuery,
+  authorizedConditions: SQL[],
+  hub: HubOptsExtended,
+  locale: Locale,
+): Promise<FeatureIndexPage | FeatureIndexPage<{ id: string }>> {
+  const queryInput: FeatureQueryInput = {
+    meta: { isAdminRequest: true, scope: 'admin-index' },
+  }
+  const filters = [
+    ...featureIndexFilterConditions(input.filters),
+    ...(await featureIndexLicenseConditions(db, input.filters)),
+  ]
+  const conditions = buildFeatureQueryConditions(
+    db,
+    queryInput,
+    [...authorizedConditions, ...filters],
+    hub,
+  )
+  if (input.q) conditions.push(featureIndexSearchCondition(input.q, locale))
+  const source = sql`${feature}`
+  const limit = input.pagination?.limit ?? 50
+  const offset = input.pagination?.offset ?? 0
+  const orderBy = toOrderByWithLocalizedFields({
+    conditions: [],
+    db,
+    locale,
+    sortBy: input.sorting?.sortBy ?? 'modifiedAt',
+    sortOrder: input.sorting?.sortOrder ?? 'desc',
+    fallbackColumn: feature.modifiedAt,
+    baseTable: feature,
+    localizedSortColumns: {
+      title: featureI18n.title,
+      description: featureI18n.description,
+      displayAddress: featureI18n.displayAddress,
+    },
+    i18nTable: featureI18n,
+    parentIdColumn: feature.id,
+    foreignKeyColumn: featureI18n.featureId,
+    localeColumn: featureI18n.locale,
+  })
+  // The count has no cursor/sort/limit in its cache key, and no geographic facet work.
+  const [candidates, counts] = await Promise.all([
+    retryBusyRead(() =>
+      db
+        .select({ id: feature.id })
+        .from(feature)
+        .where(and(...conditions))
+        .orderBy(...orderBy)
+        .limit(limit + 1)
+        .offset(offset),
+    ),
+    input.includeCount === false
+      ? Promise.resolve(null)
+      : getFeatureQueryCounts(
+          db,
+          queryInput,
+          conditions,
+          source,
+          input.q
+            ? null
+            : buildFeatureRollupConditions(
+                db,
+                queryInput,
+                [...authorizedConditions, ...filters],
+                hub,
+              ),
+          false,
+        ),
+  ])
+  const pageIds = candidates.slice(0, limit).map(row => row.id)
+  const metadata = {
+    totalCount: counts?.totalCount ?? null,
+    hasMore: candidates.length > limit,
+    nextOffset: candidates.length > limit ? offset + limit : null,
+  }
+  if (input.idsOnly) return { data: pageIds.map(id => ({ id })), ...metadata }
+  if (!pageIds.length) return { data: [], ...metadata }
+  // JSON membership is one binding regardless of page size; recheck authorization at hydration.
+  const rows = await retryBusyRead(() =>
+    db.query.feature.findMany({
+      with: getFeatureWithRelations('admin') as never,
+      extras: {
+        locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+        authoring: featureAuthoringSQL().as('authoring'),
+        locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+      },
+      where: and(
+        ...conditions,
+        sql`${feature.id} in (select value from json_each(${JSON.stringify(pageIds)}))`,
+      ),
+    }),
+  )
+  const shaped = await toListResponseShape(
+    {
+      data: rows.sort((a, b) => pageIds.indexOf(a.id) - pageIds.indexOf(b.id)) as never,
+      totalCount: metadata.totalCount ?? 0,
+    },
+    'admin',
+  )
+  return { data: shaped.data, ...metadata }
+}

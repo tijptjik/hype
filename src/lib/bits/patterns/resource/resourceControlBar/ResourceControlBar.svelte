@@ -31,12 +31,14 @@ import type { ResourceSortConfig } from '#lib/client/services/filters.types.js'
 let {
   resource,
   count = 0,
+  countLoading = false,
   filters,
   sortables,
   bulkEdit,
 }: {
   resource: NavigableResource
-  count?: number
+  count?: number | null
+  countLoading?: boolean
   filters: ResourceControlBarConfig
   sortables?: ResourceSortConfig
   bulkEdit?: ResourceBulkEditConfig
@@ -160,6 +162,7 @@ $effect(() => {
     showBulkEdit={Boolean(bulkEdit)}
     showSort={Boolean(sortables)}
     {count}
+    {countLoading}
     resetDisabled={totalFilterCount === 0}
     onReset={resetFilters}
   >
@@ -190,10 +193,7 @@ $effect(() => {
       {/if}
     {/snippet}
 
-    {#snippet filterMenuContent({
-      notifyLayoutChange,
-      closeMenu,
-    })}
+    {#snippet filterMenuContent({ notifyLayoutChange, closeMenu })}
       {#if !singleSectionConfig}
         {#each filters.sections as section, idx (section.key)}
           {#if activeSection !== section.key}

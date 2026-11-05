@@ -194,7 +194,7 @@ function serializeActivePropertyFilters(
  * codepoints. Hex preserves punctuation, accents and short CJK terms through the
  * FTS tokenizer. Exact source checks still verify order and field boundaries.
  */
-function buildFeatureSearchMatch(search: string): string {
+export function buildFeatureSearchMatch(search: string): string {
   const characters = Array.from(search)
   const size = Math.min(3, characters.length)
   const encoder = new TextEncoder()

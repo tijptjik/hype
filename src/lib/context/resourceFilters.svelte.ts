@@ -565,8 +565,16 @@ export class ResourceFilters {
     filters: ViewFilters['feature'],
   ): boolean => {
     if (!feature.i18n) {
-      if (filters.hasTitle === true || filters.hasDescription === true) return false
-      return true
+      if (
+        filters.hasTitle === true ||
+        filters.hasDescription === true ||
+        filters.hasDisplayAddress === true
+      )
+        return false
+      return this.matchesProjectLicenseFilters(
+        this.resolveProjectLicenseFilterCache(feature.projectId),
+        filters,
+      )
     }
 
     const allLocales = Object.keys(feature.i18n) as LocaleKey[]

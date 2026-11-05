@@ -1,3 +1,5 @@
+// SEARCH
+import { foldFeatureSearchText } from '#lib/features/search.js'
 // GUARDS
 import { isFeature } from '#lib/utils/resourceGuards.js'
 //I18N
@@ -157,7 +159,10 @@ export function matchesResourceTextQuery(
   query: string,
   localeKey: LocaleKey,
 ): boolean {
-  const normalizedQuery = query.trim().toLowerCase()
+  const fold = isFeature(entity)
+    ? foldFeatureSearchText
+    : (value: string): string => value.toLowerCase()
+  const normalizedQuery = fold(query.trim())
   if (normalizedQuery === '') return true
 
   const textObject = entity.i18n?.[localeKey] ?? entity.i18n?.en ?? null
@@ -174,7 +179,7 @@ export function matchesResourceTextQuery(
   ]
 
   return candidates.some(
-    value => typeof value === 'string' && value.toLowerCase().includes(normalizedQuery),
+    value => typeof value === 'string' && fold(value).includes(normalizedQuery),
   )
 }
 

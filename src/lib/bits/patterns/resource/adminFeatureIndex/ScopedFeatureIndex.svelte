@@ -95,8 +95,13 @@ $effect(() => {
 
 onDestroy(() => {
   if (embedded) {
-    parentHeader.setSearch(null)
-    parentHeader.clearControlBar()
+    // A replacement index may already own the shared header when this one unmounts.
+    if (parentHeader.state.search?.listUi === adminCtx.listUi) {
+      parentHeader.setSearch(null)
+    }
+    if (parentHeader.state.layout.controlBar?.props?.adminCtx === adminCtx) {
+      parentHeader.clearControlBar()
+    }
   }
   view.dispose()
 })

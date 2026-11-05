@@ -3,7 +3,8 @@ import { getContext, setContext, untrack } from 'svelte'
 // CONTEXT
 import { SurfaceNavigation, setSurfaceNavigation } from './surfaceNavigation.svelte.js'
 import { getHubs } from '#lib/api/hub.remote.js'
-import { getFeatureIds, getFeatures } from '#lib/api/feature.remote.js'
+import { getFeatures } from '#lib/api/feature.remote.js'
+import { getFeatureIndexPage } from '#lib/api/featureIndex.remote.js'
 import { getTasks } from '#lib/api/tasks.remote.js'
 import {
   refreshRemoteQuery as runRemoteQuery,
@@ -15,6 +16,7 @@ import { getLocaleKey } from '#lib/i18n.js'
 // CONTEXT
 import { FeatureMultilingualState } from './featureMultilingual.svelte.js'
 import { ResourceIndexUi } from './resourceIndexUi.svelte.js'
+import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 // ENUMS
 import { FirstClassResource, type HierarchicalResource } from '#lib/enums.js'
@@ -509,50 +511,26 @@ export class AdminCtx {
     featureId: string,
     state: { key: string; rows: { id: string }[]; offset: number; complete: boolean },
   ): Promise<void> {
-    const filters = this.view.filters.viewFilters.feature
-    const statusKeys = [
-      'isPublished',
-      'isArchived',
-      'isIntangible',
-      'isVisitable',
-      'isPendingReview',
-    ] as const
-    const contentFilters = Object.entries(filters).some(([name, value]) => {
-      if (
-        name === 'translationLocales' ||
-        statusKeys.includes(name as (typeof statusKeys)[number])
-      )
-        return false
-      return typeof value === 'object' && value !== null
-        ? Object.values(value).some(item => item !== null)
-        : value !== null
-    })
-    const values = this.view.filters.values.feature
-    // Text search uses the same server predicate as the index; content filters need cards.
-    const needsRows =
-      contentFilters || Boolean(Object.keys(values.properties ?? {}).length)
     const input = this.featureListInput()
-    const conditions: Record<string, unknown> = { ...input.conditions }
-    for (const name of statusKeys)
-      if (filters[name] !== null)
-        conditions[name] = name === 'isPendingReview' ? !filters[name] : filters[name]
+    const values = this.view.filters.values.feature
     let rows = [...state.rows],
       offset = state.offset,
       complete = state.complete
     while (!complete && state.key === this.getFeatureIndexKey()) {
-      const params = {
-        ...input,
-        conditions,
-        q: values.text?.trim() || undefined,
-        pagination: { limit: needsRows ? 50 : 250, offset },
-      }
-      const result = needsRows
-        ? await runRemoteQuery(getFeatures(params))
-        : await runRemoteQuery(getFeatureIds(params))
+      // Navigation uses the same server filters as rows and count, hydrating only IDs.
+      const result = await runRemoteQuery(
+        getFeatureIndexPage({
+          ...input,
+          sorting: input.sorting as FeatureIndexQuery['sorting'],
+          filters: this.view.filters.viewFilters.feature,
+          q: values.text?.trim() || undefined,
+          idsOnly: true,
+          includeCount: false,
+          pagination: { limit: 100, offset },
+        }),
+      )
       if (state.key !== this.getFeatureIndexKey()) return
-      const matches = needsRows
-        ? this.view.filters.applyFeatureViewFilters(result.data as Feature[])
-        : result.data
+      const matches = result.data
       const ids = new Set(rows.map(row => row.id))
       rows = [
         ...rows,

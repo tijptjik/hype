@@ -12,7 +12,9 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getRootCTX } from '#lib/context/root.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
-import { getFeatures, updateFeatureBulkState } from '#lib/api/feature.remote.js'
+import { updateFeatureBulkState } from '#lib/api/feature.remote.js'
+import { getFeatureIndexPage } from '#lib/api/featureIndex.remote.js'
+import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // SERVICES
 import { collectBulkSelection } from '#lib/client/services/bulkSelection.js'
@@ -279,27 +281,8 @@ const featureLayoutMode = $derived(
 )
 const activeSearchResultCap = $derived(featureLayoutMode === 'card' ? 12 : 20)
 
-// Load the first bounded index page only while the index is mounted.
+// Initial rows and count now share one authoritative, bounded request.
 let indexInitialised = $state(false)
-$effect(() => {
-  const key = JSON.stringify(adminCtx.view.featuresQueryKey())
-  let cancelled = false
-  indexInitialised = false
-  untrack(() => {
-    void adminCtx
-      .ensureFeatureIndex()
-      .then(() => {
-        if (!cancelled && key === JSON.stringify(adminCtx.view.featuresQueryKey()))
-          indexInitialised = true
-      })
-      .catch(() => {
-        if (!cancelled) indexInitialised = true
-      })
-  })
-  return () => {
-    cancelled = true
-  }
-})
 
 // STATE
 let listContainer: HTMLElement | null = $state(null)
@@ -317,18 +300,33 @@ let remotePending = $state(false)
 let remotePageError = $state<unknown>(null)
 let searchRetry = $state(0)
 let remoteSortSignature = $state('')
+let remoteOwnerSignature = $state('')
 let debouncedRemoteQuery = $state('')
 let optimisticEntities = $state.raw<Feature[]>([])
 let entities = $state.raw<Feature[]>([])
 let footerEntities = $state.raw<Feature[]>([])
 const textQuery = $derived(adminCtx.view.filters.values.feature.text ?? '')
 const normalizedTextQuery = $derived(textQuery.trim())
+const ownerSignature = $derived(
+  JSON.stringify([
+    adminCtx.view.resources.scopeKey,
+    adminCtx.view.cacheCtx.generation,
+    adminCtx.view.scope.prisms,
+  ]),
+)
 const sortSignature = $derived.by(() => {
   const sorting = adminCtx.view.filters.sorting.feature
   return `${sorting.sortBy}:${sorting.sortOrder}`
 })
 const searchSignature = $derived(
-  JSON.stringify([sortSignature, adminCtx.view.featuresQueryKey()]),
+  JSON.stringify([
+    sortSignature,
+    adminCtx.view.featuresQueryKey(),
+    adminCtx.view.resources.scopeKey,
+    adminCtx.view.cacheCtx.generation,
+    getLocaleKey(),
+    adminCtx.view.filters.viewFilters.feature,
+  ]),
 )
 
 const displayEntities = $derived(
@@ -354,6 +352,9 @@ const bulkSelectionScope = $derived(
   ]),
 )
 let activeBulkSelectionScope = $state('')
+let matchingCount = $state<number | null>(null)
+let matchingCountLoading = $state(true)
+let matchingCountRevision = $state(0)
 onDestroy(() => {
   bulkSelectionRevision++
 })
@@ -482,19 +483,10 @@ const baseEntitiesById = $derived.by(
 const remoteMatchesCurrentQuery = $derived(
   remoteMatchedEntities !== null &&
     remoteSortSignature === searchSignature &&
-    (remoteQuery === normalizedTextQuery ||
-      (remoteQuery !== '' &&
-        normalizedTextQuery.startsWith(remoteQuery) &&
-        remoteHasMore === false)),
+    remoteQuery === normalizedTextQuery,
 )
-const searchIsReady = $derived(
-  !normalizedTextQuery || remoteMatchesCurrentQuery || Boolean(remotePageError),
-)
-const indexHasMore = $derived(
-  normalizedTextQuery
-    ? remoteMatchesCurrentQuery && remoteHasMore === true
-    : adminCtx.featureHasMore,
-)
+const searchIsReady = $derived(remoteMatchesCurrentQuery || Boolean(remotePageError))
+const indexHasMore = $derived(remoteMatchesCurrentQuery && remoteHasMore === true)
 // Search focus deliberately caps visible matches; do not page beyond that hidden boundary.
 const indexCanLoadMore = $derived(
   indexHasMore &&
@@ -516,11 +508,6 @@ const indexComplete = $derived(
  * @returns Completion; changed search/sort/scope identities discard late pages.
  */
 async function loadMoreFeatureResults(): Promise<void> {
-  if (!normalizedTextQuery) {
-    if (!adminCtx.featureIndexReady) await adminCtx.ensureFeatureIndex().catch(() => {})
-    else await adminCtx.loadMoreFeatures()
-    return
-  }
   if (
     !remoteHasMore ||
     remoteLoadingMore ||
@@ -535,14 +522,16 @@ async function loadMoreFeatureResults(): Promise<void> {
   remotePageError = null
   try {
     const result = await refreshRemoteQuery(
-      getFeatures({
+      getFeatureIndexPage({
         conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
         prisms: adminCtx.view.scope.prisms,
-        sorting: adminCtx.view.filters.sorting.feature,
+        sorting: adminCtx.view.filters.sorting.feature as FeatureIndexQuery['sorting'],
+        filters: adminCtx.view.filters.viewFilters.feature,
         q: query,
         pagination: { limit: 50, offset: remoteNextOffset },
+        includeCount: false,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }),
     )
@@ -689,7 +678,9 @@ async function selectAllFeatureMatches(): Promise<void> {
   const scope = bulkSelectionScope
   const query = normalizedTextQuery
   const prisms = structuredClone($state.snapshot(adminCtx.view.scope.prisms))
-  const sorting = { ...adminCtx.view.filters.sorting.feature }
+  const sorting = {
+    ...adminCtx.view.filters.sorting.feature,
+  } as FeatureIndexQuery['sorting']
   const meta = { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const }
   const conditions = adminCtx.view.isSuperAdmin()
     ? { isArchived: null, isPublished: null }
@@ -700,30 +691,22 @@ async function selectAllFeatureMatches(): Promise<void> {
     scope === bulkSelectionScope
   isSelectingAll = true
   try {
-    const ids = await collectBulkSelection<Feature>(
+    const ids = await collectBulkSelection<{ id: string }>(
       async offset =>
         await refreshRemoteQuery(
-          getFeatures({
+          getFeatureIndexPage({
             conditions,
             prisms,
             sorting,
+            filters: adminCtx.view.filters.viewFilters.feature,
+            idsOnly: true,
+            includeCount: false,
             q: query,
             pagination: { limit: 100, offset },
             meta,
           }),
         ),
-      rows =>
-        adminCtx.view.filters.applyFeatureViewFilters(
-          query
-            ? rows.filter(row =>
-                adminCtx.view.filters.textFilter(
-                  FirstClassResource.feature,
-                  row,
-                  query,
-                ),
-              )
-            : rows,
-        ) as Feature[],
+      rows => rows,
       isCurrent,
     )
     if (ids && isCurrent()) {
@@ -787,6 +770,7 @@ function toBulkRemoteFailureResult(id: string, err: unknown): FeatureBulkStateRe
  */
 function patchSuccessfulBulkUpdates(results: FeatureBulkStateResult[]): void {
   if (!results.some(result => result.ok)) return
+  matchingCountRevision++
   adminCtx.view.setSortedResourceState(
     FirstClassResource.feature,
     patchBulkFeatureRows(adminCtx.view.queries.rows.feature, results),
@@ -1010,64 +994,60 @@ $effect(() => {
 $effect(() => {
   const nextQuery = debouncedRemoteQuery.trim()
   const signature = searchSignature
+  const owner = ownerSignature
+  matchingCountRevision
   searchRetry
 
   // Only query intent triggers reads; publishing a page must not fetch it again.
   untrack(() => {
     const nextRequestId = ++latestRemoteRequestId
     remoteLoadingMore = false
-    remotePending = false
-    remotePageError = null
-    if (nextQuery === '') {
-      remoteQuery = ''
-      remoteMatchedEntities = null
-      remoteHasMore = null
-      remoteSortSignature = ''
-      return
-    }
-
-    if (
-      remoteMatchedEntities !== null &&
-      remoteQuery !== '' &&
-      nextQuery.startsWith(remoteQuery) &&
-      remoteHasMore === false &&
-      remoteSortSignature === signature
-    )
-      return
-
     remotePending = true
+    remotePageError = null
+    matchingCount = null
+    matchingCountLoading = true
+    // Retained rows remain an immediate local preview until this exact query settles.
     void refreshRemoteQuery(
-      getFeatures({
+      getFeatureIndexPage({
         conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
         prisms: adminCtx.view.scope.prisms,
-        sorting: adminCtx.view.filters.sorting.feature,
+        sorting: adminCtx.view.filters.sorting.feature as FeatureIndexQuery['sorting'],
+        filters: adminCtx.view.filters.viewFilters.feature,
         q: nextQuery,
         pagination: { limit: 50, offset: 0 },
+        includeCount: true,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }),
     )
       .then(result => {
-        if (latestRemoteRequestId !== nextRequestId || signature !== searchSignature)
+        if (
+          latestRemoteRequestId !== nextRequestId ||
+          signature !== searchSignature ||
+          nextQuery !== normalizedTextQuery
+        )
           return
         remoteQuery = nextQuery
         remoteSortSignature = signature
+        remoteOwnerSignature = owner
         remoteMatchedEntities = toUniqueFeatures(result.data as Feature[])
-        remoteHasMore = result.hasMore ?? result.totalCount > result.data.length
+        remoteHasMore = result.hasMore
         remoteNextOffset = result.nextOffset ?? result.data.length
+        matchingCount = result.totalCount
       })
       .catch(error => {
         if (latestRemoteRequestId !== nextRequestId || signature !== searchSignature)
           return
         remotePageError = error
-        remoteQuery = ''
-        remoteMatchedEntities = null
-        remoteHasMore = null
-        remoteSortSignature = ''
+        remoteHasMore = false
       })
       .finally(() => {
-        if (latestRemoteRequestId === nextRequestId) remotePending = false
+        if (latestRemoteRequestId === nextRequestId) {
+          remotePending = false
+          matchingCountLoading = false
+          indexInitialised = true
+        }
       })
   })
   return () => {
@@ -1076,42 +1056,27 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (normalizedTextQuery === '') {
-    entities = baseEntities
+  if (remoteMatchesCurrentQuery) {
+    // Server predicates are authoritative; local cache completeness cannot remove matches.
+    entities = remoteMatchedEntities ?? []
     return
   }
-
-  if (
-    remoteMatchedEntities != null &&
-    remoteQuery !== '' &&
-    normalizedTextQuery.startsWith(remoteQuery) &&
-    remoteHasMore === false &&
-    remoteSortSignature === searchSignature
-  ) {
-    entities = adminCtx.view.filters.applyFeatureViewFilters(
-      remoteMatchedEntities.filter(feature =>
-        adminCtx.view.filters.textFilter(
-          FirstClassResource.feature,
-          feature,
-          normalizedTextQuery,
-        ),
-      ) as Resource[],
-    ) as Feature[]
-    return
-  }
-
-  if (
-    remoteQuery === normalizedTextQuery &&
-    remoteMatchedEntities != null &&
-    remoteSortSignature === searchSignature
-  ) {
-    entities = adminCtx.view.filters.applyFeatureViewFilters(
-      remoteMatchedEntities as Resource[],
-    ) as Feature[]
-    return
-  }
-
-  entities = optimisticEntities
+  // A changed account or prism cannot preview rows retained by the previous owner.
+  const retained =
+    remoteOwnerSignature === ownerSignature
+      ? (remoteMatchedEntities ?? optimisticEntities)
+      : []
+  entities = adminCtx.view.filters.applyFeatureViewFilters(
+    normalizedTextQuery
+      ? retained.filter(feature =>
+          adminCtx.view.filters.textFilter(
+            FirstClassResource.feature,
+            feature,
+            normalizedTextQuery,
+          ),
+        )
+      : retained,
+  ) as Feature[]
 })
 
 // A page filtered to zero rows is not an empty result while later pages remain.
@@ -1142,12 +1107,9 @@ $effect(() => {
 })
 
 $effect(() => {
-  const totalCount = indexInitialised
-    ? adminCtx.view.getListQueryMeta(adminCtx.view.featuresQueryKey())?.totalCount
-    : undefined
   headerCtrl.setHeaderForIndex(
-    showTotalCount && typeof totalCount === 'number'
-      ? `${m.omni__title_features()} · ${totalCount}`
+    showTotalCount && remoteMatchesCurrentQuery && matchingCount !== null
+      ? `${m.omni__title_features()} · ${matchingCount}`
       : m.omni__title_features(),
     FeatureIcon,
   )
@@ -1155,7 +1117,9 @@ $effect(() => {
     ResourceControlBar,
     {
       resource: FirstClassResource.feature,
-      count: entities.length,
+      count: matchingCount,
+      countLoading:
+        matchingCountLoading || (!remoteMatchesCurrentQuery && !remotePageError),
       filters,
       sortables,
       bulkEdit:
@@ -1344,7 +1308,7 @@ function updateRowFocus(index: number) {
       type="button"
       class="hover:bg-muted rounded-lg px-3 py-2 font-semibold"
       onclick={() => {
-        if (normalizedTextQuery && remoteMatchedEntities === null) searchRetry++
+        if (!remoteMatchesCurrentQuery || remotePageError) searchRetry++
         else void loadMoreFeatureResults()
       }}
     >

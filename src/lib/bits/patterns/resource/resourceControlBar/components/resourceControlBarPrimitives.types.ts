@@ -10,7 +10,8 @@ export type ResourceControlBarRootProps = {
   disableMenuToggle?: boolean
   showBulkEdit?: boolean
   showSort?: boolean
-  count: number
+  count: number | null
+  countLoading?: boolean
   resetDisabled?: boolean
   onReset?: (event: MouseEvent) => void
   filterMenuContent?: Snippet<
@@ -70,7 +71,8 @@ export type ResourceControlBarSortCtrlProps = {
 }
 
 export type ResourceControlBarResultCountProps = {
-  count: number
+  count: number | null
+  countLoading?: boolean
   class?: string
 }
 
