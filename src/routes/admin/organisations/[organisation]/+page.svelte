@@ -1,4 +1,6 @@
 <script lang="ts">
+// HISTORY
+import OrganisationHistory from '#lib/bits/patterns/revisionHistory/OrganisationHistory.svelte'
 // ORGANISATION USERS
 import OrganisationUserSettings from '#lib/bits/patterns/organisationUsers/OrganisationUserSettings.svelte'
 import OrganisationUsers from '#lib/bits/patterns/organisationUsers/OrganisationUsers.svelte'
@@ -1027,6 +1029,7 @@ const resolvedFacetTabs = $derived.by(() => {
 
   const tabs = new Map(facetTabs)
   if (!canEditOrganisation) tabs.delete('capabilities')
+  if (!canEditOrganisation) tabs.delete('updates')
   if (!canManageMessaging) tabs.delete('messaging')
   if (!canEditOrganisation || !organisationUsersEnabled) tabs.delete('users')
 
@@ -1890,6 +1893,19 @@ $effect(() => {
         optimisticOrganisationData?.id}
         {#key optimisticOrganisationData.id}
           <OrganisationUsers organisationId={optimisticOrganisationData.id} />
+        {/key}
+      {/if}
+    </Main.Facet>
+    <Main.Facet
+      isVisible={activeFacet === 'updates' && canEditOrganisation}
+      class="right-0! left-0!"
+      attrs={{ 'data-facet-id': 'updates' }}
+    >
+      {#if activeFacet === 'updates' &&
+        canEditOrganisation &&
+        optimisticOrganisationData?.id}
+        {#key `${optimisticOrganisationData.id}:${optimisticOrganisationData.modifiedAt}:${currentUser?.id}`}
+          <OrganisationHistory organisationId={optimisticOrganisationData.id} />
         {/key}
       {/if}
     </Main.Facet>
