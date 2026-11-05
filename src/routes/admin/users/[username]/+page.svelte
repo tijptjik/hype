@@ -13,7 +13,10 @@ import { createUserContributionsModel } from '#lib/adapters/panels/userContribut
 // BITS
 import UserMessagingSettings from '#lib/bits/patterns/messaging/UserMessagingSettings.svelte'
 import AdminUserProfile from '#lib/bits/patterns/userDirectory/AdminUserProfile.svelte'
+import UserAccess from '#lib/bits/patterns/userDirectory/UserAccess.svelte'
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 // ICONS
+import AccessIcon from 'virtual:icons/proicons/shield-checkmark'
 import PersonIcon from 'virtual:icons/proicons/person'
 // TYPES
 import type { AdminUserProfile as ProfileData } from '#lib/db/zod/schema/user.types.js'
@@ -32,6 +35,11 @@ let profile = $state<ProfileData | null>(null)
 let loading = $state(true)
 let failed = $state(false)
 let reload = $state(0)
+let activeFacet = $state('profile')
+const facets = new Map([
+  ['profile', { label: 'Profile', icon: PersonIcon }],
+  ['access', { label: 'Access', icon: AccessIcon }],
+])
 const contributions = createUserContributionsModel(adminCtx.view, {
   onContributedFeature: featureId =>
     goto(`/admin/features/${encodeURIComponent(featureId)}`),
@@ -67,20 +75,22 @@ $effect(() => {
 })
 
 $effect(() => {
-  headerCtrl.setHeaderForIndex(
+  headerCtrl.setHeaderForEntity(
     profile?.profile.displayUsername ?? page.params.username ?? 'User',
     PersonIcon,
-    {
-      showNew: false,
-      showFilter: false,
-      showViewActions: false,
-      showLayoutToggle: false,
-      showControlBarToggle: false,
-    },
+    facets,
   )
   headerCtrl.setSearch(null)
   headerCtrl.clearControlBar()
   headerCtrl.clearFooter()
+})
+$effect(() => {
+  headerCtrl.setFacets(facets, {
+    active: activeFacet,
+    onFacetChange: facet => {
+      activeFacet = facet
+    },
+  })
 })
 </script>
 
@@ -93,27 +103,33 @@ $effect(() => {
 
 <div class="min-h-0 flex-1 overflow-y-auto p-4 md:p-6" aria-busy={loading}>
   {#if loading}
-    <p role="status" class="p-6 text-muted-foreground">Loading profile…</p>
+    <p role="status" class="text-muted-foreground p-6">Loading profile…</p>
   {:else if failed}
-    <div role="alert" class="rounded-xl border border-border bg-panel p-6">
+    <div role="alert" class="border-border bg-panel rounded-xl border p-6">
       <p>Unable to load this profile.</p>
       <button
         type="button"
-        class="mt-4 rounded-lg border border-border px-4 py-2"
+        class="border-border mt-4 rounded-lg border px-4 py-2"
         onclick={() => reload++}
       >
         Try again
       </button>
     </div>
   {:else if !profile}
-    <p role="status" class="rounded-xl border border-border bg-panel p-6">
+    <p role="status" class="border-border bg-panel rounded-xl border p-6">
       User not found.
     </p>
+  {:else if activeFacet === 'access'}
+    <div class="bits-theme">
+      <FormSurface><UserAccess access={profile.access} /></FormSurface>
+    </div>
   {:else}
     <AdminUserProfile data={profile} model={contributions} />
     {#if adminCtx.view.isSuperAdmin()}
       {#key profile.profile.id}
-        <div class="mt-5"><UserMessagingSettings userId={profile.profile.id} canVerify /></div>
+        <div class="mt-5">
+          <UserMessagingSettings userId={profile.profile.id} canVerify />
+        </div>
       {/key}
     {/if}
   {/if}

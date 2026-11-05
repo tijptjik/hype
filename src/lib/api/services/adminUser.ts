@@ -9,6 +9,7 @@ import { canBrowseUsers, canReadAllUserContacts } from './authz/userDirectory'
 import { user } from '#lib/db/schema/user.js'
 import { getUser } from '#lib/db/services/user.js'
 // SERVICES
+import { readUserAccessOverview } from './userAccess'
 import { getTelephoneVisibleUserIds, toUserDirectoryProfile } from './userContacts'
 import {
   toUserProfileResponseShape,
@@ -80,7 +81,13 @@ export async function readAdminUserProfile(
     { ...actor, hubId: params.hub?.id },
     [row.id],
   )
+  const access = await readUserAccessOverview(db, {
+    targetUserId: row.id,
+    actor: params.actor,
+    userRoles: params.userRoles,
+  })
   return {
+    access,
     profile,
     details:
       canReadDetails || telephoneUserIds.has(row.id)

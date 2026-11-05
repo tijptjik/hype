@@ -11,6 +11,15 @@ import {
 // TYPES
 import type { Database, SessionUser, UserRoleDisco } from '#lib/types.js'
 
+vi.mock('#lib/api/services/userAccess.js', () => ({
+  readUserAccessOverview: vi.fn(async () => ({
+    scope: 'managed',
+    hubs: [],
+    organisations: [],
+    projects: [],
+  })),
+}))
+
 const { loadUser, contributions } = vi.hoisted(() => ({
   loadUser: vi.fn(),
   contributions: vi.fn(),

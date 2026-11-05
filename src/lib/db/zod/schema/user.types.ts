@@ -166,6 +166,7 @@ export type UserGetState = UserGetResponse | null
 
 /** Read-only admin profile; private directory fields are omitted without permission. */
 export type AdminUserProfile = {
+  access: import('#lib/users/access.types.js').UserAccessOverview
   profile: UserProfile
   details: z.infer<typeof import('./user').UserDirectoryProfileAPI> | null
 }

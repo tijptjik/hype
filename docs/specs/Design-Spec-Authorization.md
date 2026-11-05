@@ -570,3 +570,19 @@ Feature visibility follows the agreed matrix: Members see published/non-archived
 Maintainers see either publication state but no archived rows; Owners see either state.
 Feature edit authorization enforces the same archive boundary. Existing translation-only
 editing remains field-restricted and does not grant publication preview.
+
+## User access overview
+
+The admin user page's Access tab lists direct hub, organisation and project roles,
+including organisation-user membership and explicit project capability assignments.
+Management permissions are evaluated through the existing resource policies using the
+subject's current roles. Inherited access is explained separately; the overview does not
+manufacture child assignments or enumerate implicit public access. Capability
+availability is shown separately from the stored assignment.
+
+An authenticated admin-panel viewer may inspect their own assignments. Core/SuperAdmin
+viewers may inspect all assignments. Other viewers only receive assignments for
+resources whose roles they can manage, evaluated against persisted ancestry. Profile
+edit permission does not expose unrelated memberships. Hidden assignments and their
+counts are omitted from the response. The overview is read-only; existing resource
+editors retain assignment and capability mutation authority.
