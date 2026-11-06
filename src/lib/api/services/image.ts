@@ -1,4 +1,8 @@
+// LOGO REVISIONS
+import { readResourceLogoHead, prepareResourceLogoRevision } from '#lib/db/services/resourceLogoRevision.js'
+// AUTHORIZATION
 // TYPES
+import type { LogoRevisionEvidence } from '#lib/db/services/resourceLogoRevision.js'
 import type { ImageMutationSnapshot } from '#lib/images/uploadContext.js'
 import type { Queue } from '@cloudflare/workers-types'
 // DRIZZLE
@@ -637,6 +641,7 @@ export const updateImageForContext = async (args: {
   data: Record<string, unknown>
   replacement?: { snapshot: ImageMutationSnapshot; publicId: string; env: string }
   expectedSnapshot?: ImageMutationSnapshot
+  logoRevision?: LogoRevisionEvidence & { expectedRevisionId?: string; guard?: SQL }
 }): Promise<{ data: ImageContextEnvelope<'detail'>; replayed?: boolean }> => {
   const { db, user, userId, userRoles, isAdminRequest, id, ctxType, ctxId, data } = args
 
@@ -697,6 +702,13 @@ export const updateImageForContext = async (args: {
         args.replacement.env,
       )
     : undefined
+  let logoCapture
+  try {
+    logoCapture = args.logoRevision ? await prepareResourceLogoRevision(db, { ...args.logoRevision, imageId:id, actorId:userId, replaySameAsset: Boolean(args.replacement), reason: args.replacement ? 'Logo file replaced' : 'Logo metadata updated' }) : undefined
+  } catch (cause) {
+    if (cause instanceof Error && cause.message === 'STALE_LOGO_REVISION') throw error(409, 'STALE_IMAGE_UPDATE')
+    throw cause
+  }
   // Persist metadata and assignment together so relation failure cannot leave a partial edit.
   const {
     image: updatedImage,
@@ -707,9 +719,10 @@ export const updateImageForContext = async (args: {
     imageToUpdate,
     assignment,
     id,
-    replacementGuards ??
-      createImageMutationGuards(db, ctxType, ctxId, args.expectedSnapshot ?? snapshot),
+    replacementGuards ?? createImageMutationGuards(db, ctxType, ctxId, args.expectedSnapshot ?? snapshot),
     replacementGuards?.replay,
+    userId,
+    logoCapture,
   )
 
   const responseData = await toResponseShape(
@@ -718,6 +731,10 @@ export const updateImageForContext = async (args: {
     userWithAttribution?.attribution ?? undefined,
   )
 
+  if (args.logoRevision) {
+    const head = await readResourceLogoHead(db, id)
+    if (head) Object.assign(responseData, { imageRevisionId: head.imageRevisionId })
+  }
   const envelope = toImageEntityResponseShape(
     responseData as unknown as Image,
     { ctxType, ctxId: ctxId as Id },

@@ -9,6 +9,8 @@ import {
   project,
   taskImage,
 } from '#lib/db/schema/index.js'
+// SERVICES
+import { organisationImageDeletionGuard } from './organisationImage.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -42,12 +44,14 @@ export async function deleteDetachedImage(
   db: Database,
   imageId: string,
 ): Promise<boolean> {
-  // Preserve images reattached since upload preflight, including shared task evidence.
+  const historyGuard = await organisationImageDeletionGuard(db, imageId)
+  // Preserve historical logos and images reattached since upload preflight, including shared task evidence.
   const deleted = await db
     .delete(image)
     .where(
       and(
         eq(image.id, imageId),
+        historyGuard,
         notExists(
           db
             .select({ id: project.id })

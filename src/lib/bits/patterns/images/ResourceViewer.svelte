@@ -116,7 +116,7 @@ const model = useEntityImageViewerModel(imageCtx, {
 const adminCtx = getAdminCtx()
 const hasActiveImage = $derived(Boolean(model.state.activeImage))
 const hasItems = $derived(model.state.items.length > 0)
-const canUseEditFacility = $derived(canEditPresentationMode || canEditDropzone)
+const canUseEditFacility = $derived(!isReadonly && (canEditPresentationMode || canEditDropzone))
 const canDeleteImage = $derived(
   !isReadonly && adminCtx.view.isSuperAdmin() && model.state.canDeleteActiveImage,
 )
@@ -190,9 +190,9 @@ const displayedCanReplaceImage = $derived(
   !isReadonly && canEditDropzone && displayedCanReplaceActiveImage,
 )
 const displayedCanDeleteImage = $derived(
-  shouldShowRetainedSnapshot
+  !isReadonly && (shouldShowRetainedSnapshot
     ? (retainedSnapshot?.canDeleteImage ?? false)
-    : !isReadonly && adminCtx.view.isSuperAdmin() && displayedCanDeleteActiveImage,
+    : adminCtx.view.isSuperAdmin() && displayedCanDeleteActiveImage),
 )
 const displayedIsEditBusy = $derived(
   shouldShowRetainedSnapshot
@@ -282,13 +282,18 @@ $effect(() => {
   }
 })
 
+/** Remove the active assignment after explaining whether its media is retained.
+ * @returns Completion of the existing viewer mutation and refresh workflow.
+ */
 async function handleDeleteActive(): Promise<void> {
   if (!canDeleteImage) return
 
   if (
     typeof window !== 'undefined' &&
     !window.confirm(
-      `${m.gallery__delete_image_confirm_title()}\n${m.gallery__delete_image_confirm_description()}`,
+      ['organisation', 'project', 'hub'].includes(imageCtx.state.context?.ctxType ?? '')
+        ? 'Remove this image from the resource? The image will be retained for its history.'
+        : `${m.gallery__delete_image_confirm_title()}\n${m.gallery__delete_image_confirm_description()}`,
     )
   ) {
     return
@@ -378,6 +383,9 @@ onDestroy(() => {
           canRotate={canUseEditFacility && displayedCanRotateActiveImage}
           canReplace={displayedCanReplaceImage}
           canDelete={displayedCanDeleteImage}
+          deleteLabel={['organisation', 'project', 'hub'].includes(imageCtx.state.context?.ctxType ?? '')
+            ? m.admin__forms_common_remove()
+            : m.forms__delete()}
           canDownload={displayedCanDownloadActiveImage}
           isEditBusy={displayedIsEditBusy}
           disabled={!displayedActiveImage}
@@ -391,11 +399,12 @@ onDestroy(() => {
             : undefined}
           onDelete={displayedCanDeleteImage ? handleDeleteActive : undefined}
           onDownload={model.actions.downloadActive}
-          onRotateLeft={model.actions.rotateLeft}
-          onRotateRight={model.actions.rotateRight}
+          onRotateLeft={canUseEditFacility ? model.actions.rotateLeft : undefined}
+          onRotateRight={canUseEditFacility ? model.actions.rotateRight : undefined}
           showPublishedToggle={false}
+          showPresentationModeToggle={!isReadonly}
           showDeleteButton={displayedCanDeleteImage}
-          showReplaceButton={displayedCanReplaceImage || shouldShowRetainedSnapshot}
+          showReplaceButton={!isReadonly && (displayedCanReplaceImage || shouldShowRetainedSnapshot)}
         />
       {/snippet}
 

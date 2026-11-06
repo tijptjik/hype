@@ -38,6 +38,7 @@ let {
   canEdit = false,
   canReplace = false,
   canDelete = false,
+  deleteLabel = m.forms__delete(),
   canDownload = false,
   showEditButton = false,
   isEditBusy = false,
@@ -64,6 +65,7 @@ let {
   canEdit?: boolean
   canReplace?: boolean
   canDelete?: boolean
+  deleteLabel?: string
   canDownload?: boolean
   showEditButton?: boolean
   isEditBusy?: boolean
@@ -192,7 +194,7 @@ async function handlePresentationModeChange(
 
   {#if showDeleteButton}
     <Button
-      text={m.forms__delete()}
+      text={deleteLabel}
       style="transparent"
       modifier="circle"
       hideLabel={true}

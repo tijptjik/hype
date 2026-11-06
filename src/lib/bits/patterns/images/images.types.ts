@@ -24,6 +24,7 @@ export type ViewerRenderable = {
   blurSrc?: string | null
   presentationMode?: ImagePresentation
   alt?: string | null
+  galleryPosition?: number
   fallbackSeed?: string | null
   intent?: string | null
   isPublished?: boolean | null

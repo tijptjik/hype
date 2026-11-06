@@ -66,3 +66,20 @@ it('retains shared object identities only in their owning environment', async ()
     sqlite.close()
   }
 })
+
+it('retains a detached logo referenced only by immutable organisation history', async () => {
+  const { db, sqlite } = setup()
+  try {
+    sqlite.exec(`
+      CREATE TABLE organisationRevision(content TEXT);
+      CREATE TABLE organisationRevisionHead(organisationId TEXT);
+      CREATE TABLE organisationRevisionWrite(organisationId TEXT);
+      INSERT INTO organisationRevision VALUES('{"record":{"imageId":"old"}}');
+    `)
+    expect(await deleteDetachedImage(db, 'old')).toBe(false)
+    expect(await deleteDetachedImage(db, 'other')).toBe(true)
+    expect(sqlite.prepare('SELECT id FROM image').all()).toEqual([{ id: 'old' }])
+  } finally {
+    sqlite.close()
+  }
+})

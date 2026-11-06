@@ -97,7 +97,8 @@ export type ImageContextEnvelope<P extends ImageProfile = 'list'> = {
 }
 
 export type ImageCtxEnvelope = Omit<ImageContextEnvelope<'detail'>, 'image'> & {
-  image: Image & {
+  revisionDraft?: { proposalId: string; candidateRevisionId: string }
+  image: Image & Pick<z.infer<typeof ImageListProfileAPI>, 'imageRevisionId' | 'galleryPosition' | 'galleryCaption' | 'galleryAlt'> & {
     preview?: string
     file?: File
   }

@@ -42,3 +42,4 @@ export * from './userResourceCheckpoint'
 export * from './featureBaselineAttribution'
 
 export * from './imageRevision'
+export * from './resourceLogoRevision'

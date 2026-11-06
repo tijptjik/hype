@@ -5,7 +5,8 @@ import { toast } from 'svelte-sonner'
 import { getMetadata } from '#lib/api/image.remote.js'
 import { runRemoteQuery } from '#lib/remote/index.js'
 // I18N
-import { m } from '#lib/i18n.js'
+import { m, getLocaleKey } from '#lib/i18n.js'
+import { galleryText } from '#lib/images/galleryText.js'
 // IMAGE
 import {
   extractVersionFromImageUrl,
@@ -169,6 +170,12 @@ export function useImageEditorGalleryModel(
 
   let rotationRequestSequence = 0
   let metadataByImageId = $state<Record<string, ImageMetadataFull | null>>({})
+  const metadataPinByImageId = new Map<string, string>()
+  /** Identifies exact selected media so an older metadata response cannot label a newer revision. */
+  function metadataPin(imageId: Id): string {
+    const image = imageCtx.getImage(imageId)?.image
+    return image ? JSON.stringify([image.env, image.publicId, image.version, image.imageRevisionId]) : ''
+  }
   let metadataStatusByImageId = $state<Record<string, 'idle' | 'loading' | 'loaded'>>(
     {},
   )
@@ -553,10 +560,9 @@ export function useImageEditorGalleryModel(
               : null),
           thumbnailSrc: resolvedThumbnailSrc,
           blurSrc: replacementPreviewSrc ?? getEditorViewerSrc(resolvedImage),
-          presentationMode: normalizeImagePresentation(
-            resolvedImage.image.presentationMode,
-          ),
-          alt: resolvedImage.intent ?? m.admin__project_license_media_image(),
+          presentationMode: normalizeImagePresentation(resolvedImage.image.presentationMode),
+          alt: galleryText(resolvedImage.image.galleryAlt, getLocaleKey()) || resolvedImage.intent || m.admin__project_license_media_image(),
+          galleryPosition: resolvedImage.image.galleryPosition,
           fallbackSeed: resolvedImage.image.publicId ?? resolvedImage.image.id,
           intent: resolvedImage.intent ?? 'undefined',
           isPublished: resolvedImage.isPublished ?? false,
@@ -710,6 +716,10 @@ export function useImageEditorGalleryModel(
   async function ensureMetadataLoadedForImage(
     imageId: Id,
   ): Promise<ImageMetadataFull | null> {
+    const requestedPin = metadataPin(imageId)
+    if (metadataPinByImageId.has(imageId) && metadataPinByImageId.get(imageId) !== requestedPin)
+      resetMetadataForImage(imageId)
+    metadataPinByImageId.set(imageId, requestedPin)
     const currentStatus = metadataStatusByImageId[imageId] ?? 'idle'
 
     if (currentStatus === 'loading') {
@@ -742,6 +752,8 @@ export function useImageEditorGalleryModel(
     const request = runRemoteQuery(
       getMetadata({
         publicId: currentImage.publicId,
+        imageRevisionId: currentImage.imageRevisionId,
+        featureId: imageCtx.getCtx().ctxType === 'feature' ? imageCtx.getCtx().ctxId : undefined,
         env: currentImage.env ?? undefined,
         version: currentImage.version ?? undefined,
         profile: imageCtx.appCtx.isAdmin() ? 'admin' : 'basic',
@@ -753,7 +765,7 @@ export function useImageEditorGalleryModel(
     try {
       const result = await request
 
-      if (!imageCtx.getImage(imageId)) {
+      if (!imageCtx.getImage(imageId) || metadataPin(imageId) !== requestedPin) {
         return null
       }
 
@@ -768,6 +780,7 @@ export function useImageEditorGalleryModel(
 
       return result
     } catch (error) {
+      if (metadataPin(imageId) !== requestedPin) return null
       if (!imageCtx.getImage(imageId)) {
         return null
       }
@@ -787,7 +800,7 @@ export function useImageEditorGalleryModel(
 
       return null
     } finally {
-      metadataRequests.delete(imageId)
+      if (metadataRequests.get(imageId) === request) metadataRequests.delete(imageId)
     }
   }
 
@@ -799,7 +812,14 @@ export function useImageEditorGalleryModel(
     isRotatePending = true
 
     try {
-      await imageCtx.handleRotate(rotation, imageId)
+      const outcome = await imageCtx.handleRotate(rotation, imageId)
+      if (outcome === 'draft') {
+        // The persisted gallery still shows its accepted orientation until explicit publication.
+        optimisticRotationByImageId = Object.fromEntries(
+          Object.entries(optimisticRotationByImageId).filter(([id]) => id !== imageId),
+        ) as typeof optimisticRotationByImageId
+        return
+      }
       const optimisticRotation = optimisticRotationByImageId[imageId]
       const nextVersion = imageCtx.getImage(imageId)?.image.version ?? null
 

@@ -14,6 +14,7 @@ export type UploadTokenPayload = {
   ctxId: string
   filename: string
   replaceImageId?: string
+  replaceImageRevisionId?: string
   resourceSnapshot?: ResourceUploadSnapshot
   replacementSnapshot?: ImageMutationSnapshot
   contentType: string
@@ -135,6 +136,8 @@ const isUploadTokenPayload = (value: unknown): value is UploadTokenPayload => {
     typeof claims.exp === 'number' &&
     Number.isSafeInteger(claims.exp) &&
     claims.exp > 0 &&
+    (claims.replaceImageRevisionId === undefined ||
+      (typeof claims.replaceImageRevisionId === 'string' && claims.replaceImageRevisionId.length > 0 && typeof claims.replaceImageId === 'string')) &&
     (claims.resourceSnapshot === undefined ||
       isResourceUploadSnapshot(claims.resourceSnapshot)) &&
     (claims.replaceImageId === undefined

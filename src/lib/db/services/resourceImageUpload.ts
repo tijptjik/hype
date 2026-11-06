@@ -7,16 +7,19 @@
 // DRIZZLE
 import { and, eq, exists, notExists, or, sql } from 'drizzle-orm'
 // DB
+import { hasResourceLogoStorage } from './resourceLogoSnapshot'
+import { prepareResourceLogoRevision } from './resourceLogoRevision'
 import { hub, image, organisation, project } from '#lib/db/schema/index.js'
 import { getUploadedImageId } from './image.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
-import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
+import { prepareAdminResourceRevisionCapture, isAdminResourceRevisionRecordingEnabled } from './adminResourceRevision.js'
 import {
   prepareOrganisationRevisionCapture,
   organisationRevisionTarget,
 } from './organisationRevision.js'
 import type { OrganisationRevisionActor } from './organisationRevision.js'
 // TYPES
+import type { LogoRevisionEvidence } from './resourceLogoRevision'
 import type { Database } from '#lib/types.js'
 import type { ImageDB, ImageDBNew } from '#lib/db/zod/schema/image.types.js'
 import type { ResourceUploadSnapshot } from '#lib/images/uploadContext.js'
@@ -81,6 +84,7 @@ export async function getResourceUploadSnapshot(
  * @param expected Signed resource state captured before uploading.
  * @param newImageId Fresh server-generated identity for non-upload creation; omit for upload replay.
  * @param actor Authenticated actor for resource image history.
+ * @param logoEvidence Verified original bytes descriptor and exact metadata for the logo journal.
  * @returns Persisted image, or null for a stale resource or upload.
  * @remarks The original revision prevents resurrection after detached image cleanup.
  * Retries preserve metadata and never reselect an image displaced by a newer upload.
@@ -93,7 +97,14 @@ export async function createUploadedResourceImage(
   expected: ResourceUploadSnapshot,
   newImageId?: string,
   actor?: OrganisationRevisionActor,
+  logoEvidence?: LogoRevisionEvidence,
 ): Promise<ImageDB | null> {
+  if (await hasResourceLogoStorage(db) && (!logoEvidence || !actor)) {
+    throw new Error('Logo uploads require verified image evidence and attribution')
+  }
+  if (logoEvidence && type !== 'organisation' && !await isAdminResourceRevisionRecordingEnabled(db, type)) {
+    throw new Error(`Logo history requires ${type} revision recording to be enabled`)
+  }
   const id = newImageId ?? (await getUploadedImageId(data))
   const table =
     type === 'project' ? project : type === 'organisation' ? organisation : hub
@@ -145,9 +156,11 @@ export async function createUploadedResourceImage(
           sql`SELECT ${resourceId} AS id`,
           actor,
         )
+  const logoCapture = logoEvidence && actor ? await prepareResourceLogoRevision(db, { ...logoEvidence, imageId:id, actorId:actor.actorId, reason:actor.reason??'Logo uploaded', initialUpload:true }) : {before:[],after:[]}
   // The batch guards, inserts and selects together; failed/skipped pointer writes roll back.
   const result = await executeRevisionBatch(db, exists(allowed), [
     ...capture.before,
+    ...logoCapture.before,
     db
       .insert(image)
       .values({ ...data, id })
@@ -163,6 +176,7 @@ export async function createUploadedResourceImage(
       })
       .where(and(eq(table.id, resourceId), sql`${table.imageId} IS NOT ${id}`)),
     prepareRevisionCheck(db, and(exists(allowed), exists(selected), exists(stored))!),
+    ...logoCapture.after,
     ...capture.after,
     stored,
   ])

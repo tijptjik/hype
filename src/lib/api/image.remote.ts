@@ -1,12 +1,31 @@
-import { removeOrganisationImage } from '#lib/db/services/organisationImage.js'
-import { removeAdminResourceImage } from '#lib/db/services/adminResourceImage.js'
-// REMOTE
-import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
+// SVELTEKIT
 import { error, isHttpError } from '@sveltejs/kit'
-// DRIZZLE
-import { and, eq, inArray } from 'drizzle-orm'
+// DRIZZLE / VALIDATION
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
+// API SERVICES
+import {
+  isLogoContext,
+  readLogoEvidence,
+  ensureLogoBaseline,
+  authorizeLogoOwners,
+} from './services/resourceLogoEditing.js'
+import { getStorageApiCredentials } from '#lib/images/storageCredentials.js'
+import { readResourceLogoPreview } from './services/resourceLogoPreview'
+// LOGO REVISIONS
+import { readResourceLogoHead } from '#lib/db/services/resourceLogoRevision.js'
+import type { LogoRevisionEvidence, ResourceLogoHead } from '#lib/db/services/resourceLogoRevision.js'
+import { hasResourceLogoStorage } from '#lib/db/services/resourceLogoSnapshot.js'
+// DB
+
+
+
+
+
+import { readFeatureImageRevisionPreview } from './services/imageRevisionPreview'
+// REMOTE
+import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
 import {
   authorizeImageList,
@@ -28,6 +47,7 @@ import {
   enqueueDerivedAssetWarmup,
 } from '#lib/api/services/image.js'
 // DB SERVICES
+import { readImageRevisionDelivery } from '#lib/db/services/imageRevisionDelivery.js'
 import {
   getFeatureCanonicalImageOccupancy as loadFeatureCanonicalImageOccupancy,
   getImageById as loadImageById,
@@ -45,16 +65,11 @@ import {
   getImageMutationSnapshot,
   createImageMutationGuards,
 } from '#lib/db/services/imageMutationScope.js'
+import { removeAdminResourceImage } from '#lib/db/services/adminResourceImage.js'
+import { removeOrganisationImage } from '#lib/db/services/organisationImage.js'
 import { deleteImageWithEvidence } from '#lib/db/services/imageDeletion.js'
-import {
-  deleteDetachedImage,
-  hasImageStorageReference,
-} from '#lib/db/services/imageCleanup.js'
-import {
-  createUploadedFeatureImage,
-  getFeatureImageCreationScope,
-  type FeatureImageCreationScope,
-} from '#lib/db/services/imageUpload.js'
+import { deleteDetachedImage, hasImageStorageReference } from '#lib/db/services/imageCleanup.js'
+import { createUploadedFeatureImage, getFeatureImageCreationScope, type FeatureImageCreationScope } from '#lib/db/services/imageUpload.js'
 import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
 import { getUserById } from '#lib/db/services/user.js'
 // DB SCHEMA
@@ -82,6 +97,7 @@ import {
   RotateImageSchema,
   UpdateImageSchema,
   GetImageMetadataSchema,
+  ImageMetadataFullSchema,
   AuthImageUploadSchema,
   FinalizeImageUploadSchema,
 } from '#lib/db/zod/index.js'
@@ -91,7 +107,10 @@ import {
   ImageContextResourceExtended,
   ImageEnv,
 } from '#lib/enums.js'
+// IMAGE PRESENTATION
+import { IMAGE_PRESENTATION_MODES } from '#lib/images/presentation.js'
 // TYPES
+import type { SQL } from 'drizzle-orm'
 import type { ResourceUploadType } from '#lib/db/services/resourceImageUpload.js'
 import type { ResourceUploadSnapshot } from '#lib/images/uploadContext.js'
 import type { Database, EntityResponse, Id, UserRoleDisco } from '#lib/types.js'
@@ -121,6 +140,7 @@ import {
   getReadableStages,
   readMetadataDocument,
   readR2JsonViaApi,
+  readR2ObjectViaApi,
   headR2ObjectViaApi,
   putR2ObjectViaApi,
   type ImageMetadataDocument,
@@ -192,12 +212,6 @@ const normalizeMetadataPublicId = (publicId: string): string =>
 // - rotateImage
 // - deleteImage
 
-type StorageApiCredentials = {
-  accountId: string
-  accessKeyId: string
-  secretAccessKey: string
-}
-
 type ImageAccessActor = {
   userId: Id
   userRoles: UserRoleDisco[]
@@ -245,26 +259,6 @@ const toListProfile = <P extends ImageProfile | undefined>(
 const toDetailProfile = <P extends ImageProfile | undefined>(
   profile: P,
 ): ReturnType<typeof toImageProfile> => toImageProfile(profile, 'detail')
-
-/**
- * Reads direct R2 API credentials from the current worker environment.
- *
- * @param platform Current worker platform.
- * @returns Storage API credentials when configured, otherwise `null`.
- */
-const getStorageApiCredentials = (
-  platform: App.Platform | undefined,
-): StorageApiCredentials | null => {
-  const accountId = platform?.env.CLOUDFLARE_ACCOUNT_ID
-  const accessKeyId = platform?.env.R2_S3_ACCESS_KEY_ID
-  const secretAccessKey = platform?.env.R2_S3_SECRET_ACCESS_KEY
-
-  if (!accountId || !accessKeyId || !secretAccessKey) {
-    return null
-  }
-
-  return { accountId, accessKeyId, secretAccessKey }
-}
 
 /**
  * Resolves the effective feature id used by feature-image mutations.
@@ -831,10 +825,7 @@ const persistOriginalMetadataSidecars = async (params: {
       throw new Error(
         'Committed image metadata is missing or has a conflicting version',
       )
-    if (
-      params.immutableOnly &&
-      JSON.stringify(stored) !== JSON.stringify(params.metadataDocument)
-    )
+    if (params.immutableOnly && JSON.stringify(stored) !== JSON.stringify(params.metadataDocument))
       throw error(409, 'STALE_IMAGE_METADATA_VERSION')
     document = stored
   }
@@ -1166,10 +1157,7 @@ const toRotatedMetadataDocument = (params: {
     originalHeight: originalDimensions.height ?? null,
     rotation: params.rotation,
     sourceRotation: params.document.sourceRotation ?? params.document.rotation ?? 0,
-    renderRotation: normalizeRotation(
-      params.rotation -
-        (params.document.sourceRotation ?? params.document.rotation ?? 0),
-    ),
+    renderRotation: normalizeRotation(params.rotation - (params.document.sourceRotation ?? params.document.rotation ?? 0)),
     metadata: metadataEntries,
     sourceVersion: params.version,
     modifiedAt: params.timestamp,
@@ -1203,8 +1191,7 @@ const buildReplacementMetadataDocument = (params: {
     ...incomingMetadataEntries,
     replacementSourcePublicId: params.source.publicId,
     replacementSourceEnv: params.source.env,
-    replacementSourceVersion:
-      params.source.version === null ? 'unversioned' : String(params.source.version),
+    replacementSourceVersion: params.source.version === null ? 'unversioned' : String(params.source.version),
     replacementEditedAt: params.timestamp,
     replacementEditedByUserId: params.editorUserId,
     replacementEditedWith:
@@ -1268,6 +1255,7 @@ const createImageInContext = async (params: {
   resourceSnapshot?: ResourceUploadSnapshot
   taskIds?: string[]
   draftContributorId?: string
+  logoEvidence?: LogoRevisionEvidence
 }): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
   const userWithAttribution = await getUserById(params.db, params.userId)
 
@@ -1319,6 +1307,7 @@ const createImageInContext = async (params: {
         params.resourceSnapshot,
         params.retryableUpload ? undefined : nanoid(),
         { actorId: params.userId, reason: 'Resource image updated' },
+        params.logoEvidence,
       ))
     if (!createdImage) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
 
@@ -1326,6 +1315,10 @@ const createImageInContext = async (params: {
       createdImage,
       userWithAttribution?.attribution ?? undefined,
     )
+    if (params.logoEvidence) {
+      const head = await readResourceLogoHead(params.db, createdImage.id)
+      if (head) Object.assign(responseData, { imageRevisionId: head.imageRevisionId })
+    }
     return {
       data: toImageEnvelope(
         responseData,
@@ -1347,7 +1340,8 @@ const createImageInContext = async (params: {
         validatedData,
         params.resourceSnapshot,
         params.retryableUpload ? undefined : nanoid(),
-        { actorId: params.userId, reason: 'Resource image updated' },
+        { actorId: params.userId, reason: 'Hub image updated' },
+        params.logoEvidence,
       ))
     if (!createdImage) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
 
@@ -1355,6 +1349,10 @@ const createImageInContext = async (params: {
       createdImage,
       userWithAttribution?.attribution ?? undefined,
     )
+    if (params.logoEvidence) {
+      const head = await readResourceLogoHead(params.db, createdImage.id)
+      if (head) Object.assign(responseData, { imageRevisionId: head.imageRevisionId })
+    }
     return {
       data: toImageEnvelope(
         responseData,
@@ -1364,6 +1362,8 @@ const createImageInContext = async (params: {
       ),
     }
   }
+
+  
 
   throw error(400, `Unsupported image context: ${params.imageData.ctxType}`)
 }
@@ -1436,6 +1436,12 @@ export const getImagesForContext = guardedQuery(
       isAdminRequest,
     )) as Image[]
 
+    if(isLogoContext(params.ctxType) && await hasResourceLogoStorage(db)){
+      for(const row of images){
+        const head=await readResourceLogoHead(db,row.id)
+        if(head)Object.assign(row,{imageRevisionId:head.imageRevisionId})
+      }
+    }
     return toImageListResponseShape(
       images,
       {
@@ -1490,6 +1496,10 @@ export const getImagesForIds = guardedQuery(ImagesByIdsSchema, async (params, ct
       isAdminRequest,
     )
     if (!context) continue
+    if (isLogoContext(context.ctxType)) {
+      const head = await readResourceLogoHead(db, imageRow.id)
+      if (head) Object.assign(imageRow, { imageRevisionId: head.imageRevisionId })
+    }
     readableImages.push(imageRow)
     readableContexts.set(imageRow, context)
   }
@@ -1575,8 +1585,13 @@ export const getImageById = guardedQuery(ImageByIdSchema, async (params, ctx) =>
       toImageAccessActor(user, userRoles),
       isAdminRequest,
     )
-    if (context)
+    if (context) {
+      if (isLogoContext(context.ctxType)) {
+        const head = await readResourceLogoHead(db, data.id)
+        if (head) Object.assign(data, { imageRevisionId: head.imageRevisionId })
+      }
       return toImageEntityResponseShape(data as unknown as Image, context, profile)
+    }
   }
   throw error(403, 'INSUFFICIENT_ROLE')
 })
@@ -1587,13 +1602,52 @@ export const getImageByIdByProfile = getImageById as typeof getImageById &
   ) => Promise<EntityResponse<ImageContextEnvelope<P> | null> & { profile: P }>)
 
 /**
- * Returns image metadata from R2 sidecars instead of the database payload.
+ * Returns exact retained metadata for revision pins, or the authorized legacy R2 sidecar.
+ * @param params Image locator, metadata profile and optional immutable revision.
+ * @returns Authorized metadata without falling back from a missing revision to current data.
  */
 export const getMetadata = guardedQuery(
   GetImageMetadataSchema,
   async (params, ctx): Promise<ImageMetadataResponse> => {
     const startedAt = Date.now()
+    if (params.imageRevisionId) {
+      if (params.profile !== 'basic' && !ctx.isAdminRequest) throw error(403, 'INSUFFICIENT_ROLE')
+      let pin = params.featureId ? await readFeatureImageRevisionPreview(ctx.db, params.imageRevisionId, params.featureId,
+        { user: ctx.user, userRoles: ctx.userRoles }, params.profile !== 'basic') : await readImageRevisionDelivery(ctx.db, params.imageRevisionId)
+      if (ctx.isAdminRequest && !params.featureId) {
+        // Admin preview still needs a currently readable assignment carrying this exact accepted pin.
+        const identity = await ctx.db.get<{ imageId: string }>(sql`SELECT imageId FROM imageRevision WHERE id=${params.imageRevisionId}`)
+        if (!identity) throw error(404, 'Image revision not available')
+        pin = await readResourceLogoPreview(ctx.db, params.imageRevisionId, { user: ctx.user, userRoles: ctx.userRoles })
+        const candidates = await getImagesByIds(ctx.db, [identity.imageId])
+        for (const imageRow of candidates) {
+          if (pin) break
+          const context = await resolveAuthorizedImageContext(ctx.db, imageRow, toImageAccessActor(ctx.user, ctx.userRoles), true)
+          if(context && isLogoContext(context.ctxType)){
+            pin=await readResourceLogoPreview(ctx.db,params.imageRevisionId,{user:ctx.user,userRoles:ctx.userRoles})
+            if(pin)break
+          }
+          if (!context || context.ctxType !== ImageContextResource.feature) continue
+          pin = await readImageRevisionDelivery(ctx.db, params.imageRevisionId, sql`EXISTS (
+            SELECT 1 FROM featureRevisionHead h JOIN featureRevisionImage fp ON fp.featureRevisionId=h.publishedRevisionId
+            WHERE h.featureId=${context.ctxId} AND h.state='active' AND fp.imageId=i.id AND fp.imageRevisionId=${params.imageRevisionId})`)
+          if (pin) break
+        }
+      }
+      if (!pin || pin.storageKey !== normalizeMetadataPublicId(params.publicId) || (params.env && pin.storageNamespace !== params.env))
+        throw error(404, 'Image revision not available')
+      const metadata = ImageMetadataFullSchema.safeParse(pin.metadata)
+      return { data: metadata.success ? toMetadataProfilePayload(metadata.data, params.profile) : null, durationMs: Date.now()-startedAt }
+    }
     await authorizeMetadataRead(params, ctx)
+    // Current logo metadata comes from its immutable journal, even if a compatibility mirror is delayed.
+    if(await hasResourceLogoStorage(ctx.db)){
+      const selected=await ctx.db.get<{imageId:string}>(sql`SELECT i.id imageId FROM image i JOIN resourceLogoImageHead h ON h.imageId=i.id
+        WHERE i.publicId=${normalizeMetadataPublicId(params.publicId)} AND (${params.env??null} IS NULL OR i.env=${params.env??null}) AND (${params.version??null} IS NULL OR i.version=${params.version??null})`)
+      if(selected){const head=await readResourceLogoHead(ctx.db,selected.imageId)
+        if(head)return {data:toMetadataProfilePayload(ImageMetadataFullSchema.parse(head.metadata),params.profile),durationMs:Date.now()-startedAt}}
+    }
+
     const env = toImageStage(
       params.env ?? ctx.event.locals.platform?.env.ENVIRONMENT ?? ImageEnv.local,
     )
@@ -1714,6 +1768,7 @@ export const authImageUpload = guardedCommand(
         ctxId: params.ctxId,
         filename: params.filename,
         replaceImageId: params.replaceImageId,
+        replaceImageRevisionId: params.replaceImageRevisionId,
         resourceSnapshot,
         replacementSnapshot: replacementSnapshot ?? undefined,
         contentType: params.contentType,
@@ -1788,10 +1843,11 @@ export const finalizeImageUpload = guardedCommand(
       throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
     }
 
-    const featureScope =
-      !payload.replaceImageId && payload.ctxType === 'feature'
-        ? await getFeatureImageCreationScope(db, payload.ctxId)
-        : undefined
+    const featureScope = !payload.replaceImageId && payload.ctxType === 'feature'
+      ? await getFeatureImageCreationScope(db, payload.ctxId)
+      : undefined
+    
+    
     const creationAccess = await assertPermissionsToCreateImage(
       db,
       user,
@@ -1803,6 +1859,7 @@ export const finalizeImageUpload = guardedCommand(
     )
 
     if (featureScope === null) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
+    
 
     const previousResourceImage =
       !payload.replaceImageId &&
@@ -1816,6 +1873,16 @@ export const finalizeImageUpload = guardedCommand(
           )
         : null
 
+    let logoBaseline: ResourceLogoHead | null = null
+    const logoUpload=isLogoContext(payload.ctxType) && await hasResourceLogoStorage(db)
+    if(logoUpload){
+      const oldId=payload.replaceImageId??previousResourceImage?.id
+      if(oldId){
+        const snapshot=await getImageMutationSnapshot(db,payload.ctxType as ImageContextType,payload.ctxId,oldId)
+        if(!snapshot)throw error(409,'Logo selection changed')
+        logoBaseline = await ensureLogoBaseline(ctx,oldId,createImageMutationGuards(db,payload.ctxType as ImageContextType,payload.ctxId,snapshot).before)
+      }
+    }
     const stage = toImageStage(payload.env)
     const originalsBucket = getOriginalsBucketForStage(event.locals.platform, stage)
     // Verify the upload through the binding first, then fall back to the
@@ -1863,6 +1930,8 @@ export const finalizeImageUpload = guardedCommand(
       version,
       updatedAt: timestamp,
     }
+
+    
 
     if (payload.replaceImageId) {
       const source = payload.replacementSnapshot!.source!
@@ -1914,6 +1983,8 @@ export const finalizeImageUpload = guardedCommand(
       ...(featureImageData ? { featureImage: featureImageData } : {}),
     }
 
+    const logoEvidence=logoUpload?await readLogoEvidence(ctx,{env:stage,publicId:payload.publicId},{...metadataDocument,version,presentationMode:payload.replaceImageId ? (logoBaseline?.metadata as Record<string,unknown>)?.presentationMode ?? 'contain' : 'contain'}):undefined
+    const logoGuard=logoUpload && payload.replaceImageId?await authorizeLogoOwners(ctx,payload.replaceImageId):undefined
     const created = payload.replaceImageId
       ? await updateImageForContext({
           db,
@@ -1923,6 +1994,7 @@ export const finalizeImageUpload = guardedCommand(
           event,
           isAdminRequest: ctx.isAdminRequest,
           id: payload.replaceImageId as Id,
+          logoRevision: logoEvidence ? {...logoEvidence,guard:logoGuard,expectedRevisionId:payload.replaceImageRevisionId} : undefined,
           replacement: {
             snapshot: payload.replacementSnapshot!,
             publicId: payload.publicId,
@@ -1946,6 +2018,7 @@ export const finalizeImageUpload = guardedCommand(
           db,
           userId,
           retryableUpload: true,
+          logoEvidence,
           featureScope,
           resourceSnapshot: payload.resourceSnapshot,
           taskIds: (params.persist?.links ?? []).map(link => link.taskId),
@@ -1967,6 +2040,8 @@ export const finalizeImageUpload = guardedCommand(
     // A retry reuses the stored row version; never publish a manifest for an uncommitted version.
     const persistedVersion = created.data?.image?.version ?? version
     const persistedTimestamp = new Date(persistedVersion).toISOString()
+    const selectedLogo = logoUpload && created.data?.image?.id
+      ? await readResourceLogoHead(db, created.data.image.id) : null
     const previousMetadata =
       ('replayed' in created && created.replayed) || persistedVersion !== version
         ? await readMetadataDocument({
@@ -1982,8 +2057,9 @@ export const finalizeImageUpload = guardedCommand(
       bucket: originalsBucket,
       publicId: payload.publicId,
       version: persistedVersion,
-      metadataDocument:
-        previousMetadata?.document?.sourceVersion === persistedVersion
+      metadataDocument: selectedLogo
+        ? selectedLogo.metadata as ImageMetadataDocument
+        : previousMetadata?.document?.sourceVersion === persistedVersion
           ? previousMetadata.document
           : {
               ...metadataDocument,
@@ -2062,10 +2138,9 @@ export const createImage = guardedCommand(async (input, ctx) => {
     imageData.ctxType === 'hub'
       ? await getResourceUploadSnapshot(db, imageData.ctxType, imageData.ctxId)
       : undefined
-  const featureScope =
-    imageData.ctxType === 'feature'
-      ? await getFeatureImageCreationScope(db, imageData.ctxId)
-      : undefined
+  const featureScope = imageData.ctxType === 'feature'
+    ? await getFeatureImageCreationScope(db, imageData.ctxId)
+    : undefined
   await assertPermissionsToCreateImage(
     db,
     user,
@@ -2074,8 +2149,11 @@ export const createImage = guardedCommand(async (input, ctx) => {
     imageData.ctxType as ImageContextResource,
     imageData.ctxId as Id,
   )
-  if (resourceSnapshot === null || featureScope === null)
-    throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
+  if (resourceSnapshot === null || featureScope === null) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
+  // Logo creation requires the verified upload receipt, including retained original bytes.
+  if (isLogoContext(imageData.ctxType) && await hasResourceLogoStorage(db)) {
+    throw error(409, 'Use the verified image upload flow for resource logos')
+  }
   return createImageInContext({ db, userId, imageData, resourceSnapshot, featureScope })
 })
 
@@ -2085,6 +2163,26 @@ export const createImage = guardedCommand(async (input, ctx) => {
 export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx) => {
   const { db, user, userId, userRoles, event } = ctx
   if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
+  
+  if(isLogoContext(params.ctxType) && await hasResourceLogoStorage(db)){
+    await assertPermissionsToUpdateImage(db,user,ctx.isAdminRequest,{id:params.id} as ImageDBFlat,userRoles,params.id,params.ctxId,params.ctxType)
+    const snapshot=await getImageMutationSnapshot(db,params.ctxType,params.ctxId,params.id)
+    if(!snapshot)throw error(409,'Logo changed')
+    const head=await ensureLogoBaseline(ctx,params.id,createImageMutationGuards(db,params.ctxType,params.ctxId,snapshot).before)
+    const previous=head.metadata as Record<string,unknown>
+    const patch=ImageMetadataFullSchema.pick({credit:true,capturedAt:true,capture:true}).extend({presentationMode:z.enum(IMAGE_PRESENTATION_MODES).optional()}).strict().parse(params.data)
+    const version=Math.max(Date.now(),Number(previous.version??0)+1)
+    const metadata={...previous,...patch,version,modifiedAt:new Date(version).toISOString()}
+    const guard=await authorizeLogoOwners(ctx,params.id)
+    const updated=await updateImageForContext({db,user,userId,userRoles,event,isAdminRequest:ctx.isAdminRequest,id:params.id,ctxType:params.ctxType,ctxId:params.ctxId,expectedSnapshot:snapshot,
+      data:{version,...(patch.presentationMode?{presentationMode:patch.presentationMode}:{})},
+      logoRevision:{asset:head.asset,metadata:metadata as LogoRevisionEvidence['metadata'],guard,expectedRevisionId:params.imageRevisionId}})
+    await persistOriginalMetadataSidecars({bucket:getOriginalsBucketForStage(event.locals.platform,toImageStage(head.asset.storageNamespace)),publicId:head.asset.storageKey,version,
+      metadataDocument:metadata as ImageMetadataDocument,manifestDocument:{publicId:head.asset.storageKey,version,updatedAt:new Date(version).toISOString()},stage:toImageStage(head.asset.storageNamespace),event}).catch(cause => {
+      console.warn('Logo saved, but metadata mirrors could not refresh', cause)
+    })
+    return updated
+  }
   return updateImageForContext({
     db,
     user,
@@ -2196,16 +2294,20 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     params.ctxType as ImageContextResource | ImageContextResourceExtended,
   )
 
+  
+
+  const logoHead=isLogoContext(params.ctxType) && await hasResourceLogoStorage(db)
+    ?await ensureLogoBaseline(ctx,params.id,createImageMutationGuards(db,params.ctxType,params.ctxId,snapshot).before):null
+  const logoGuard=logoHead?await authorizeLogoOwners(ctx,params.id):undefined
   const env = toImageStage(
     existing.env ?? event.locals.platform?.env.ENVIRONMENT ?? ImageEnv.local,
   )
-  const { document: storedDocument, resolvedEnv } = await readMetadataDocument({
-    platform: event.locals.platform,
-    env,
-    publicId: existing.publicId,
-    version: existing.version ?? undefined,
-    fetchFn: event.fetch,
-  })
+  const { document: storedDocument, resolvedEnv } = logoHead
+    ? { document: logoHead.metadata as ImageMetadataDocument, resolvedEnv: toImageStage(logoHead.asset.storageNamespace) }
+    : await readMetadataDocument({
+      platform: event.locals.platform, env, publicId: existing.publicId,
+      version: existing.version ?? undefined, fetchFn: event.fetch,
+    })
 
   const originalsBucket = getOriginalsBucketForStage(event.locals.platform, resolvedEnv)
   // Legacy imports may have a source without sidecars; verify it before creating rotation metadata.
@@ -2218,7 +2320,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     })
     if (!source) throw error(404, 'Image source not found')
   }
-  const document: ImageMetadataDocument = storedDocument ?? {
+  const document: ImageMetadataDocument = (logoHead?.metadata as ImageMetadataDocument | undefined) ?? storedDocument ?? {
     rotation: 0,
     sourceRotation: 0,
     renderRotation: 0,
@@ -2226,9 +2328,9 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
   }
 
   // Rotation changes delivery metadata only; the stored source and public identity are immutable.
-  const publicId = existing.publicId
+  const publicId = logoHead?.asset.storageKey ?? existing.publicId
   const targetRotation = normalizeRotation(params.rotation)
-  const version = Date.now()
+  const version = Math.max(Date.now(), Number(existing.version ?? 0) + 1)
   const timestamp = new Date(version).toISOString()
   const metadataDocument = toRotatedMetadataDocument({
     document,
@@ -2264,6 +2366,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     ctxType: params.ctxType as ImageContextType,
     ctxId: params.ctxId,
     expectedSnapshot: snapshot,
+    logoRevision:logoHead?{asset:logoHead.asset,metadata:{...metadataDocument,version,presentationMode:String((logoHead.metadata as Record<string,unknown>).presentationMode??'contain')} as LogoRevisionEvidence['metadata'],guard:logoGuard,expectedRevisionId:params.imageRevisionId}:undefined,
     data: {
       publicId,
       env: resolvedEnv,
@@ -2302,7 +2405,8 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
  * @param params Image identifier and authorization context.
  * @param ctx Guarded remote context.
  * @returns A success response after the database deletion commits.
- * @remarks Association removal is atomic; storage cleanup is scheduled after commit.
+ * @remarks Organisation logos are detached and retained for history. Other association
+ * removal is atomic; storage cleanup is scheduled only after a hard deletion commits.
  */
 export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx) => {
   const { db, user, userRoles, event } = ctx
@@ -2331,18 +2435,20 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
     throw error(404, 'Image not found')
   }
 
+  const deletionGuard = createImageMutationGuards(db, params.ctxType as ImageContextType, params.ctxId, snapshot).before
+
   // Organisation history retains the former logo: remove its current assignment, not its media.
+  if(isLogoContext(params.ctxType) && await hasResourceLogoStorage(db)){
+    const logoSnapshot=await getImageMutationSnapshot(db,params.ctxType,params.ctxId,params.id)
+    if(!logoSnapshot)throw error(409,'Logo changed')
+    await ensureLogoBaseline(ctx,params.id,createImageMutationGuards(db,params.ctxType,params.ctxId,logoSnapshot).before)
+  }
   if (params.ctxType === ImageContextResource.organisation) {
     const removed = await removeOrganisationImage(db, {
       organisationId: params.ctxId,
       imageId: params.id,
       actor: { actorId: user.id, reason: 'Organisation image removed' },
-      guard: createImageMutationGuards(
-        db,
-        params.ctxType as ImageContextType,
-        params.ctxId,
-        snapshot,
-      ).before,
+      guard: deletionGuard,
     })
     if (!removed) throw error(409, 'STALE_IMAGE_DELETE')
     return { type: 'success', message: 'Organisation image removed successfully' }
@@ -2357,28 +2463,20 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
       resourceId: params.ctxId,
       imageId: params.id,
       actor: { actorId: user.id, reason: 'Resource image removed' },
-      guard: createImageMutationGuards(
-        db,
-        params.ctxType as ImageContextType,
-        params.ctxId,
-        snapshot,
-      ).before,
+      guard: deletionGuard,
     })
     if (!removed) throw error(409, 'STALE_IMAGE_DELETE')
     return { type: 'success', message: 'Resource image removed successfully' }
   }
+
+  
 
   // Preserve associations and pending review revisions if deletion fails; clean assets after commit.
   if (
     !(await deleteImageWithEvidence(
       db,
       params.id,
-      createImageMutationGuards(
-        db,
-        params.ctxType as ImageContextType,
-        params.ctxId,
-        snapshot,
-      ).before,
+      deletionGuard,
     ))
   )
     throw error(409, 'STALE_IMAGE_DELETE')

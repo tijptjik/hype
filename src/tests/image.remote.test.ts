@@ -6,6 +6,10 @@ import { drizzle } from 'drizzle-orm/d1'
 import sharp from 'sharp'
 import { withRemoteMeta } from './remote-function-mock'
 
+// These legacy-path fixtures intentionally model a database before logo rollout.
+// Enrolled logo transactions and permissions use SQLite fixtures in resource-logo tests.
+vi.mock('#lib/db/services/resourceLogoSnapshot.js', () => ({ hasResourceLogoStorage: vi.fn(async () => false) }))
+
 const {
   mockAuthorizeImageList,
   mockAuthorizeImageRead,
@@ -42,7 +46,11 @@ const {
   mockVerifyUploadToken,
   mockWaitUntil,
   mockHasImageStorageReference,
+  mockRemoveOrganisationImage,
+  mockReadImageRevisionDelivery,
 } = vi.hoisted(() => ({
+  mockReadImageRevisionDelivery: vi.fn(async (): Promise<unknown> => null),
+  mockRemoveOrganisationImage: vi.fn(async () => true),
   mockHasImageStorageReference: vi.fn(async () => false),
   mockAuthorizeImageList: vi.fn((): { allowed: boolean; code?: string } => ({
     allowed: true,
@@ -115,6 +123,13 @@ const {
   mockVerifyUploadToken: vi.fn(async (): Promise<unknown> => null),
   mockWaitUntil: vi.fn(),
 }))
+
+vi.mock('#lib/db/services/imageRevisionDelivery.js', () => ({
+  readImageRevisionDelivery: mockReadImageRevisionDelivery,
+}))
+
+
+
 
 vi.mock('#lib/db/services/imageCleanup.js', async original => ({
   ...(await original<object>()),
@@ -206,6 +221,11 @@ vi.mock('coordinate-parser', () => ({
   },
 }))
 
+vi.mock('#lib/db/services/organisationImage.js', async () => ({
+  removeOrganisationImage: mockRemoveOrganisationImage,
+  organisationImageDeletionGuard: async () => (await import('drizzle-orm')).sql`1`,
+}))
+
 vi.mock('#lib/db/services/resourceImageUpload.js', () => ({
   createUploadedResourceImage: mockCreateUploadedResourceImage,
   getResourceUploadSnapshot: mockGetResourceUploadSnapshot,
@@ -254,7 +274,8 @@ vi.mock('#lib/images/storage.js', async importOriginal => {
 
 vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('#lib/db/zod/index.js', () => ({
+vi.mock('#lib/db/zod/index.js', async () => ({
+  ImageMetadataFullSchema: (await import('#lib/db/zod/schema/image.js')).ImageMetadataFullSchema,
   AuthImageUploadSchema: {},
   DeleteImageSchema: {},
   FinalizeImageUploadSchema: {},
@@ -313,6 +334,7 @@ describe('image.remote', () => {
   })
 
   beforeEach(() => {
+    mockReadImageRevisionDelivery.mockReset().mockResolvedValue(null)
     mockHasImageStorageReference.mockResolvedValue(false)
     mockCreateUploadedResourceImage
       .mockReset()
@@ -630,6 +652,8 @@ describe('image.remote', () => {
     })
   })
 
+  
+
   it('captures Feature ancestry before legacy creation authorization', async () => {
     const { getFeatureImageCreationScope } = await import(
       '#lib/db/services/imageUpload.js'
@@ -689,6 +713,8 @@ describe('image.remote', () => {
         expect.anything(),
         snapshot,
         expect.any(String),
+        { actorId: 'u-1', reason: ctxType === 'hub' ? 'Hub image updated' : 'Resource image updated' },
+        undefined,
       )
       expect(mockUpdateProjectById).not.toHaveBeenCalled()
       expect(mockUpdateOrganisationById).not.toHaveBeenCalled()
@@ -919,6 +945,19 @@ describe('image.remote', () => {
       }
     },
   )
+
+  it.each([true, false])('detaches organisation logos without deleting retained assets: %s', async committed => {
+    mockRemoveOrganisationImage.mockResolvedValueOnce(committed)
+    mockLoadImageById.mockResolvedValue({ id: 'img-1', publicId: 'logo-key', env: 'local' } as never)
+    const result = remote.deleteImage({ id: 'img-1', ctxId: 'org', ctxType: 'organisation' })
+    if (committed) await expect(result).resolves.toMatchObject({ type: 'success' })
+    else await expect(result).rejects.toMatchObject({ status: 409 })
+    expect(mockRemoveOrganisationImage).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      organisationId: 'org', imageId: 'img-1',
+      actor: { actorId: 'u-1', reason: 'Organisation image removed' },
+    }))
+    expect(mockWaitUntil).not.toHaveBeenCalled()
+  })
 
   it('authImageUpload returns a direct R2 upload session', async () => {
     const result = await remote.authImageUpload({
@@ -1330,6 +1369,8 @@ describe('image.remote', () => {
       }),
     )
   })
+
+  
 
   it.each([
     'new',
@@ -1808,6 +1849,47 @@ describe('image.remote', () => {
       consoleErrorSpy.mockRestore()
     },
   )
+
+  it('reads public pinned metadata without consulting mutable sidecars', async () => {
+    mockGuardedContext.mockResolvedValue({ ...(await mockGuardedContext()), isAdminRequest: false })
+    mockReadImageRevisionDelivery.mockResolvedValue({
+      storageKey: 'retained/photo', storageNamespace: 'local', metadata: { rotation: 90, credit: 'Original credit' },
+    })
+    const response = await remote.getMetadata({
+      publicId: 'retained/photo', env: 'local', imageRevisionId: 'retained-r1', profile: 'basic',
+    })
+    expect(response.data).toMatchObject({ rotation: 90, credit: 'Original credit' })
+    expect(mockReadImageRevisionDelivery).toHaveBeenCalledWith(expect.anything(), 'retained-r1')
+    expect(mockReadMetadataDocument).not.toHaveBeenCalled()
+  })
+
+  it.each(['missing', 'wrong-key', 'wrong-namespace'])('does not fall back from a %s pin', async scenario => {
+    mockGuardedContext.mockResolvedValue({ ...(await mockGuardedContext()), isAdminRequest: false })
+    if (scenario !== 'missing') mockReadImageRevisionDelivery.mockResolvedValue({
+      storageKey: scenario === 'wrong-key' ? 'another/photo' : 'retained/photo',
+      storageNamespace: scenario === 'wrong-namespace' ? 'production' : 'local', metadata: {},
+    })
+    await expect(remote.getMetadata({
+      publicId: 'retained/photo', env: 'local', imageRevisionId: 'retained-r1', profile: 'basic',
+    })).rejects.toMatchObject({ status: 404 })
+    expect(mockReadMetadataDocument).not.toHaveBeenCalled()
+  })
+
+  it('refuses full pinned metadata without current admin intent', async () => {
+    mockGuardedContext.mockResolvedValue({ ...(await mockGuardedContext()), isAdminRequest: false })
+    await expect(remote.getMetadata({ publicId: 'retained/photo', imageRevisionId: 'retained-r1', profile: 'full' }))
+      .rejects.toMatchObject({ status: 403 })
+    expect(mockReadImageRevisionDelivery).not.toHaveBeenCalled()
+  })
+
+  it('does not use admin intent alone to reveal a private image revision', async () => {
+    const current = await mockGuardedContext()
+    mockGuardedContext.mockResolvedValue({ ...current, db: { ...current.db, get: vi.fn(async () => ({ imageId: 'private-image' })) } })
+    mockGetImagesByIds.mockResolvedValue([])
+    await expect(remote.getMetadata({ publicId: 'private/photo', imageRevisionId: 'private-r1', profile: 'full' }))
+      .rejects.toMatchObject({ status: 404 })
+    expect(mockReadMetadataDocument).not.toHaveBeenCalled()
+  })
 
   it('getMetadata reads the metadata sidecar for the requested public id and env', async () => {
     mockGuardedContext.mockResolvedValue({

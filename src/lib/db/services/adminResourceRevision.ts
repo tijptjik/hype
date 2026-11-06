@@ -13,6 +13,7 @@ import * as hubHistory from '../schema/hubRevision'
 import { revisionChangeSet } from '../schema/featureRevision'
 // REVISIONS
 // SERVICES
+import { hasResourceLogoStorage, withResourceLogoSnapshot } from './resourceLogoSnapshot'
 import { rowSnapshot } from './revisionSnapshot'
 import { prepareRevisionCheck } from './revisionBatch'
 // TYPES
@@ -84,7 +85,7 @@ function collection(table: SQLiteTable, owner: string, key: string, parent: SQL)
  * enter revision payloads. Effective visibility is retained for now, so hierarchy
  * writers must join capture before this staged migration can be enabled.
  */
-export function adminResourceSnapshot(resource: AdminRevisionResource): SQL {
+export function adminResourceSnapshot(resource: AdminRevisionResource, logoStorage = false): SQL {
   const { table, i18n, property } = contracts[resource]
   const owner = `${resource}Id`
   const id = sql`${table.id}`
@@ -101,9 +102,10 @@ export function adminResourceSnapshot(resource: AdminRevisionResource): SQL {
         ? sql`,'mapStyle',json(COALESCE((SELECT ${rowSnapshot(projectMapStyles, ['projectId', 'createdAt', 'modifiedAt'])}
           FROM ${projectMapStyles} WHERE ${projectMapStyles.projectId}=${id}),'null'))`
         : sql``
-  return sql`json_object('record',json(${record}),
+  const content = sql`json_object('record',json(${record}),
     'i18n',${collection(i18n, owner, 'locale', id)},
     'properties',${collection(property, owner, 'propertyId', id)}${extra})`
+  return resource === 'layer' ? content : withResourceLogoSnapshot(content, sql`${contracts[resource].table.imageId}`, logoStorage)
 }
 
 /**
@@ -177,7 +179,7 @@ export async function prepareAdminResourceRevisionCapture(
     baselineChangeId = crypto.randomUUID(),
     changeId = crypto.randomUUID(),
     now = new Date().toISOString()
-  const snapshot = adminResourceSnapshot(resource)
+  const snapshot = adminResourceSnapshot(resource, await hasResourceLogoStorage(db))
   const current = sql`SELECT ${snapshot} FROM ${table} WHERE ${table.id}=w.${owner}`
   const changed = sql`NOT EXISTS (SELECT 1 FROM ${head} h JOIN ${revision} r ON r.id=h.currentRevisionId WHERE h.${owner}=w.${owner} AND r.content=(${current}))`
   const missingHead = sql`NOT EXISTS (SELECT 1 FROM ${head} h WHERE h.${owner}=w.${owner})`

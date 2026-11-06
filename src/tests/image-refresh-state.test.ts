@@ -181,6 +181,21 @@ describe('image refresh ownership', () => {
     },
   )
 
+  it('advances the displayed logo pin after immediate metadata saves', async () => {
+    const ctx = new ImageCtx({}, createImageResources())
+    vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)
+    await ctx.setContext({ context: { ctxType: ImageContextResource.organisation, ctxId: 'org' } })
+    const image = { image: { id: 'image', imageRevisionId: 'before', presentationMode: 'contain' } } as ImageCtxEnvelope
+    const saved = { image: { id: 'image', imageRevisionId: 'after', presentationMode: 'cast-edges' } } as ImageCtxEnvelope
+    await ctx.setImages([image]); ctx.setActiveImage(image)
+    vi.spyOn(ctx.appCtx.resources, 'reconcile').mockResolvedValue(undefined)
+    vi.spyOn(ctx, 'refreshImages').mockResolvedValue(undefined)
+    vi.mocked(updateImage).mockResolvedValue({ data: saved } as never)
+    await ctx.updateMetadata('image', { presentationMode: 'cast-edges' })
+    expect(ctx.activeImage?.image.imageRevisionId).toBe('after')
+    expect(ctx.getImage('image')?.image.presentationMode).toBe('cast-edges')
+  })
+
   it('does not replace the active image after navigation while metadata is saving', async () => {
     const ctx = new ImageCtx({}, createImageResources())
     vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)

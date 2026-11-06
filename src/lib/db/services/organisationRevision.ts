@@ -12,6 +12,7 @@ import {
 import { revisionChangeSet } from '../schema/featureRevision'
 // REVISIONS
 // SERVICES
+import { hasResourceLogoStorage, withResourceLogoSnapshot } from './resourceLogoSnapshot'
 import { rowSnapshot } from './revisionSnapshot'
 import { prepareRevisionCheck } from './revisionBatch'
 // TYPES
@@ -42,7 +43,7 @@ export type OrganisationRevisionCapture = {
  * @remarks Role grants are excluded. Property definitions have their own lifecycle;
  * only this organisation's assignment/order belongs to its profile snapshot.
  */
-export function organisationSnapshotExpression(): SQL {
+export function organisationSnapshotExpression(logoStorage = false): SQL {
   const baseProfile = rowSnapshot(organisation, [
     'id',
     'createdAt',
@@ -61,7 +62,7 @@ export function organisationSnapshotExpression(): SQL {
   // Keep default-off policies compatible with immutable snapshots captured before this rule existed.
   const policy = sql`json_patch(${basePolicy}, CASE WHEN ${organisationUserPolicy.contribution} = 1
     THEN '{"contribution":true}' ELSE '{}' END)`
-  return sql`json_object(
+  const content = sql`json_object(
     'record',json(${profile}),
     'i18n',json((SELECT json_group_object(locale,json(content)) FROM (
       SELECT ${organisationI18n.locale} AS locale,${translation} AS content FROM ${organisationI18n}
@@ -70,6 +71,7 @@ export function organisationSnapshotExpression(): SQL {
     'properties',json((SELECT json_group_object(propertyId,json_object('rank',rank)) FROM (
       SELECT ${organisationProperty.propertyId} AS propertyId,${organisationProperty.rank} AS rank FROM ${organisationProperty}
       WHERE ${organisationProperty.organisationId}=${organisation.id} ORDER BY ${organisationProperty.propertyId}))))`
+  return withResourceLogoSnapshot(content, sql`${organisation.imageId}`, logoStorage)
 }
 
 /**
@@ -137,7 +139,7 @@ export async function prepareOrganisationRevisionCapture(
     baselineChangeId = crypto.randomUUID(),
     changeId = crypto.randomUUID(),
     now = new Date().toISOString()
-  const snapshot = organisationSnapshotExpression()
+  const snapshot = organisationSnapshotExpression(await hasResourceLogoStorage(db))
   const current = sql`SELECT ${snapshot} FROM organisation WHERE organisation.id=w.organisationId`
   const changed = sql`NOT EXISTS (SELECT 1 FROM organisationRevisionHead h JOIN organisationRevision r ON r.id=h.currentRevisionId WHERE h.organisationId=w.organisationId AND r.content=(${current}))`
   const hasBaseline = sql`EXISTS (SELECT 1 FROM organisationRevisionWrite w JOIN organisation o ON o.id=w.organisationId WHERE w.token=${token} AND NOT EXISTS (SELECT 1 FROM organisationRevisionHead h WHERE h.organisationId=w.organisationId))`

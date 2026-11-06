@@ -3,6 +3,7 @@ import { and, eq, exists, notExists } from 'drizzle-orm'
 // DB
 import { featureImage, image, task, taskImage } from '#lib/db/schema/index.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
+import { organisationImageDeletionGuard } from './organisationImage.js'
 import { prepareTaskEvidenceRevision } from './taskEvidenceRevision.js'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -37,16 +38,21 @@ export async function deleteImageWithEvidence(
       .from(taskImage)
       .where(and(eq(taskImage.imageId, imageId), eq(taskImage.taskId, task.id))),
   )
+  const historyGuard = await organisationImageDeletionGuard(db, imageId)
   // A skipped deletion or revision update rolls back all links and earlier revisions.
-  const result = await executeRevisionBatch(db, and(exists(current), guard)!, [
-    ...prepareTaskEvidenceRevision(db, affected),
-    db.delete(taskImage).where(eq(taskImage.imageId, imageId)),
-    db.delete(featureImage).where(eq(featureImage.imageId, imageId)),
-    db.delete(image).where(eq(image.id, imageId)),
-    prepareRevisionCheck(
-      db,
-      and(notExists(current), notExists(evidence), notExists(assignments))!,
-    ),
-  ])
+  const result = await executeRevisionBatch(
+    db,
+    and(exists(current), guard, historyGuard)!,
+    [
+      ...prepareTaskEvidenceRevision(db, affected),
+      db.delete(taskImage).where(eq(taskImage.imageId, imageId)),
+      db.delete(featureImage).where(eq(featureImage.imageId, imageId)),
+      db.delete(image).where(eq(image.id, imageId)),
+      prepareRevisionCheck(
+        db,
+        and(notExists(current), notExists(evidence), notExists(assignments))!,
+      ),
+    ],
+  )
   return result !== null
 }

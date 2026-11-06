@@ -306,6 +306,8 @@ export const ImageByIdSchema = z.object({
 })
 
 export const GetImageMetadataSchema = z.object({
+  featureId: z.string().min(1).optional(),
+  imageRevisionId: z.string().min(1).optional(),
   publicId: z.string().min(1),
   profile: ImageMetadataProfileSchema.default('basic'),
   version: z.number().int().positive().optional(),
@@ -334,6 +336,7 @@ export const AuthImageUploadSchema = z.object({
     .refine(isSupportedUploadImageContentType, 'Unsupported image content type'),
   size: z.number().int().positive(),
   replaceImageId: z.string().optional(),
+  replaceImageRevisionId: z.string().min(1).optional(),
   links: z.array(FinalizeImageUploadLinkSchema).optional(),
   meta: ImageRequestMetaSchema,
 })
@@ -353,6 +356,7 @@ export const FinalizeImageUploadSchema = z.object({
 
 export const UpdateImageSchema = z.object({
   id: z.string().min(1),
+  imageRevisionId: z.string().min(1).optional(),
   ctxType: ImageContextTypeExtendedSchema,
   ctxId: z.string().min(1),
   data: z.record(z.string(), z.unknown()),
@@ -387,6 +391,7 @@ export const SetImagePublishedSchema = z.object({
 
 export const RotateImageSchema = z.object({
   id: z.string().min(1),
+  imageRevisionId: z.string().min(1).optional(),
   ctxType: ImageContextTypeExtendedSchema,
   ctxId: z.string().min(1),
   rotation: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]),

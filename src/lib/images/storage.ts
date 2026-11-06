@@ -545,12 +545,15 @@ export const readMetadataDocument = async ({
   publicId,
   version,
   fetchFn,
+  exact = false,
 }: {
   platform: App.Platform | undefined
   env: ImageStage
   publicId: string
   version?: number
   fetchFn?: typeof fetch
+  /** Pin both namespace and sidecar key; never substitute an unversioned or cross-stage document. */
+  exact?: boolean
 }): Promise<{
   document: ImageMetadataDocument | null
   resolvedEnv: ImageStage
@@ -558,12 +561,12 @@ export const readMetadataDocument = async ({
 }> => {
   const normalizedPublicId = normalizePublicId(publicId)
 
-  for (const readableStage of getReadableStages(env)) {
+  for (const readableStage of exact ? [env] : getReadableStages(env)) {
     const bucket = getOriginalsBucketForStage(platform, readableStage)
     const resolvedVersion =
       typeof version === 'number'
         ? version
-        : ((
+        : exact ? null : ((
             await readJsonViaBindingsOrApi<{ version?: number }>({
               platform,
               stage: readableStage,
@@ -585,7 +588,7 @@ export const readMetadataDocument = async ({
       fetchFn,
     })
 
-    if (!document && resolvedVersion !== undefined) {
+    if (!document && !exact && resolvedVersion !== undefined) {
       const fallback = await readJsonViaBindingsOrApi<ImageMetadataDocument>({
         platform,
         stage: readableStage,

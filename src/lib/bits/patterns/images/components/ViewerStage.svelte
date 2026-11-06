@@ -104,19 +104,26 @@ function shouldRenderImageSurface(item: ViewerRenderable | null): boolean {
 }
 
 /**
- * Keeps presentation changes distinct when the selected image identity is unchanged.
- * @param item - Requested renderable.
- * @param selectedId - Current selection identity.
- * @returns Presentation-aware scene key, or null for an empty viewer.
+ * Identifies the decoded scene, including source changes within one image record.
+ * @param item Requested renderable.
+ * @param selectedId Current selection identity.
+ * @returns Scene key, or null when no image is selected.
+ * @remarks Status-only updates and rotation keep their mounted scene; replacement
+ * sources must pass the decode gate before replacing either visible image layer.
  */
 function getStageSceneKey(
   item: ViewerRenderable | null,
   selectedId: string | null,
 ): string | null {
   const identity = getGallerySceneKey(item, selectedId)
-  return item && identity
-    ? JSON.stringify([identity, item.presentationMode ?? 'contain'])
-    : null
+  if (!item || !identity) return null
+  return JSON.stringify([
+    identity,
+    getGalleryForegroundSrc(item),
+    getGalleryBackgroundSrc(item),
+    item.presentationMode,
+    shouldRenderImageSurface(item),
+  ])
 }
 
 /**
@@ -188,6 +195,29 @@ function markSceneAssetReady(url: string): void {
  */
 function startCrossfade(nextScene: SceneSnapshot): void {
   clearTransitionTimers()
+  const visibleScene = incomingScene ?? displayedScene
+  const sameImage = visibleScene &&
+    getGallerySceneKey(visibleScene.item, visibleScene.item.id) ===
+      getGallerySceneKey(nextScene.item, nextScene.item.id)
+  const visibleSrc = visibleScene ? getGalleryForegroundSrc(visibleScene.item) : null
+  const nextSrc = getGalleryForegroundSrc(nextScene.item)
+  const isUploadHandoff = sameImage && (
+    visibleSrc === nextSrc ||
+    visibleSrc === nextScene.item.sourceFallbackSrc ||
+    (visibleSrc?.startsWith('blob:') && !nextSrc.startsWith('blob:'))
+  )
+
+  // Preview-to-final delivery and renderer cleanup reuse the settled picture.
+  // The caller has already decoded its assets; only a new picture needs a fade.
+  if (isUploadHandoff) {
+    displayedScene = cloneSceneSnapshot(nextScene)
+    previousScene = null
+    incomingScene = null
+    crossfadeActive = false
+    clearPendingScene()
+    return
+  }
+
   previousScene = displayedScene ? cloneSceneSnapshot(displayedScene) : null
   incomingScene = cloneSceneSnapshot(nextScene)
   crossfadeActive = false
@@ -252,15 +282,12 @@ $effect(() => {
   if (currentDisplayedScene?.key === nextScene.key) {
     displayedScene = nextScene
 
-    if (currentPendingScene?.key === nextScene.key) {
-      // Keep the pending preload list aligned with in-flight updates for the same scene.
-      pendingScene = nextScene
-      const nextUrls = buildGallerySceneAssetUrls(nextScene.item, nextScene.fit)
-      pendingSceneAssetUrls = nextUrls
-      loadedSceneAssetUrls = currentLoadedSceneAssetUrls.filter(url =>
-        nextUrls.includes(url),
-      )
-    }
+    // A request returning to the displayed source cancels an obsolete transition.
+    clearTransitionTimers()
+    previousScene = null
+    incomingScene = null
+    crossfadeActive = false
+    clearPendingScene()
 
     return
   }
@@ -268,12 +295,7 @@ $effect(() => {
   // Refresh an already-mounted incoming layer when repeated updates target the same scene.
   if (currentIncomingScene?.key === nextScene.key) {
     incomingScene = nextScene
-    pendingScene = nextScene
-    const nextUrls = buildGallerySceneAssetUrls(nextScene.item, nextScene.fit)
-    pendingSceneAssetUrls = nextUrls
-    loadedSceneAssetUrls = currentLoadedSceneAssetUrls.filter(url =>
-      nextUrls.includes(url),
-    )
+    // Its assets already decoded; metadata updates must not restart the fade.
     return
   }
 
@@ -396,7 +418,8 @@ onDestroy(() => {
             fit={previousScene.fit}
             class="h-full w-full"
             showBackdrop={false}
-            enableSourceTransition={Boolean(previousScene.item.sourceFallbackSrc)}
+            enableSourceTransition={false}
+            animateLoading={false}
             isLoading={false}
           />
         </div>
@@ -462,7 +485,8 @@ onDestroy(() => {
             fit={displayedScene.fit}
             class="h-full w-full"
             showBackdrop={false}
-            enableSourceTransition={Boolean(displayedScene.item.sourceFallbackSrc)}
+            enableSourceTransition={false}
+            animateLoading={false}
             onLoad={() => {
               if (displayedScene) {
                 onCurrentItemLoad?.(displayedScene.item)
@@ -533,7 +557,8 @@ onDestroy(() => {
             fit={incomingScene.fit}
             class="h-full w-full"
             showBackdrop={false}
-            enableSourceTransition={Boolean(incomingScene.item.sourceFallbackSrc)}
+            enableSourceTransition={false}
+            animateLoading={false}
             onLoad={() => {
               if (incomingScene) {
                 onCurrentItemLoad?.(incomingScene.item)

@@ -392,17 +392,17 @@ onDestroy(() => {
             railPaddingClass,
           )}
         >
-          <div class="pointer-events-auto flex min-w-0 flex-1 justify-start">
+          <div class="pointer-events-none flex min-w-0 flex-1 justify-start [&>*]:pointer-events-auto">
             {#if leftRail}
               {@render leftRail(currentItem)}
             {/if}
           </div>
-          <div class="pointer-events-auto flex min-w-0 flex-1 justify-center">
+          <div class="pointer-events-none flex min-w-0 flex-1 justify-center [&>*]:pointer-events-auto">
             {#if centerRail}
               {@render centerRail(currentItem)}
             {/if}
           </div>
-          <div class="pointer-events-auto flex min-w-0 flex-1 justify-end">
+          <div class="pointer-events-none flex min-w-0 flex-1 justify-end [&>*]:pointer-events-auto">
             {#if rightRail}
               {@render rightRail(currentItem)}
             {/if}

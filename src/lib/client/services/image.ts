@@ -4,10 +4,7 @@ import { PUBLIC_ASSET_BASE_URL, PUBLIC_PREVIEW_ASSET_BASE_URL } from '$app/env/p
 // I18N
 import { m } from '#lib/i18n.js'
 // IMAGE
-import {
-  toCloudflareImageWorkerPath,
-  IMAGE_RAW_INTERMEDIATE_TRANSFORMATION,
-} from '#lib/images/delivery.js'
+import { toCloudflareImageWorkerPath, IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '#lib/images/delivery.js'
 import {
   extractImageUploadMetadata,
   type ExtractedImageUploadMetadata,
@@ -194,6 +191,7 @@ export async function prepareImageUpload(
     contentType: normalizedUpload.file.type || 'application/octet-stream',
     size: normalizedUpload.file.size,
     replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
+    replaceImageRevisionId: uploadCtx.imageToReplace?.image.imageRevisionId ?? undefined,
     links: uploadCtx.links,
     meta: { isAdminRequest },
   })
@@ -277,19 +275,13 @@ export async function finalizePreparedImageUpload(
         message.includes('database is locked') ||
         message.includes('internal error; reference =')
       // A lost response may follow a committed write; replay its idempotent token.
-      const isRetryableNetworkError =
-        error instanceof TypeError &&
-        /^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?|fetch failed)$/i.test(
-          message,
-        )
+      const isRetryableNetworkError = error instanceof TypeError &&
+        /^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?|fetch failed)$/i.test(message)
       // Kit parses the response body before returning; truncation can obscure a committed result.
-      const isTruncatedResponse =
-        error instanceof SyntaxError && /unexpected end of json input/i.test(message)
+      const isTruncatedResponse = error instanceof SyntaxError &&
+        /unexpected end of json input/i.test(message)
 
-      if (
-        (!isRetryableLockError && !isRetryableNetworkError && !isTruncatedResponse) ||
-        attempt === retryAttempts - 1
-      ) {
+      if ((!isRetryableLockError && !isRetryableNetworkError && !isTruncatedResponse) || attempt === retryAttempts - 1) {
         throw error
       }
 
@@ -321,9 +313,7 @@ export async function uploadAndProcessImage(
   },
   fetchFn: typeof fetch = fetch,
   options: {
-    onObjectUploaded?: (
-      prepared: Awaited<ReturnType<typeof prepareImageUpload>>,
-    ) => void
+    onObjectUploaded?: (prepared: Awaited<ReturnType<typeof prepareImageUpload>>) => void
   } = {},
 ): Promise<ImageCtxEnvelope> {
   const preparedUpload = await prepareImageUpload(file, uploadCtx, extendedFeatureInfo)
@@ -570,6 +560,11 @@ export async function waitForThumbnailReadyEvent(params: {
  */
 export function sortGalleryItems(itemsToSort: ViewerRenderable[]): ViewerRenderable[] {
   return [...itemsToSort].sort((a, b) => {
+    // Accepted gallery order is editorial content; intent sorting belongs only to legacy rows.
+    if (typeof a.galleryPosition === 'number' && typeof b.galleryPosition === 'number')
+      return a.galleryPosition - b.galleryPosition
+    if (typeof a.galleryPosition === 'number' !== (typeof b.galleryPosition === 'number'))
+      return typeof a.galleryPosition === 'number' ? 1 : -1
     const aIsUnpublishedNoIntent =
       !a.isPublished && (!a.intent || a.intent === 'undefined')
     const bIsUnpublishedNoIntent =
@@ -813,6 +808,21 @@ export function getURLfromImage(opts: {
   // Handle staged images with preview URLs
   if ('preview' in image && typeof image.preview === 'string' && image.preview) {
     return image.preview
+  }
+
+  // Revision-backed galleries never fall through to mutable worker manifests or sidecars.
+  if (image.imageRevisionId) {
+    const params = new URLSearchParams()
+    if (image.version !== null && image.version !== undefined) params.set('v', String(image.version))
+    if (inputImage.ctxType === ImageContextResource.feature) params.set('feature', inputImage.ctxId)
+    const transform = raw ? rawTransformation === undefined ? IMAGE_RAW_INTERMEDIATE_TRANSFORMATION : rawTransformation : transformation
+    if (transform) {
+      params.set('t', transform)
+      params.set('gravity', gravity)
+      params.set('format', format)
+      params.set('quality', quality)
+    }
+    return `/api/images/revisions/${encodeURIComponent(image.imageRevisionId)}?${params}`
   }
 
   if (image.cdn === 'cloudflareR2') {
@@ -1094,7 +1104,8 @@ export function extractVersionFromImageUrl(
 ): number | null {
   if (!url) return null
 
-  const match = url.match(/\/v(\d+)\//)
+  const match = url.match(/\/v(\d+)\//) ??
+    (url.includes('/api/images/revisions/') ? url.match(/[?&]v=(\d+)(?:&|$)/) : null)
 
   if (!match) return null
 
@@ -1176,7 +1187,7 @@ export function getFeatureIdenticonUrl(seed: string): string {
  * @remarks If required inputs are missing, or the target mode matches current mode, the function no-ops and returns `false`.
  */
 export async function updateImagePresentationMode(options: {
-  currentImage?: Pick<Image, 'id' | 'presentationMode'> | ImageDBBasic | null
+  currentImage?: (Pick<Image, 'id' | 'presentationMode'> & { imageRevisionId?: string }) | ImageDBBasic | null
   nextChecked?: boolean | null
   nextMode?: ImagePresentation
   ctx?: ImageEditCtx
@@ -1214,18 +1225,21 @@ export async function updateImagePresentationMode(options: {
 
   try {
     if (options.imageCtx) {
-      await options.imageCtx.updateMetadata(currentImage.id, {
+      const outcome = await options.imageCtx.updateMetadata(currentImage.id, {
         presentationMode: nextMode,
       })
+      if (outcome === 'draft') return true
     } else {
       const { updateImage: updateImageRemote } = await loadImageRemotes()
-      await updateImageRemote({
+      const response = await updateImageRemote({
         id: currentImage.id,
+        imageRevisionId: 'imageRevisionId' in currentImage && typeof currentImage.imageRevisionId === 'string' ? currentImage.imageRevisionId : undefined,
         ctxType: ctx.ctxType,
         ctxId: ctx.ctxId,
         data: { presentationMode: nextMode },
         meta: { isAdminRequest: true },
       })
+      if ('revisionDraft' in response) return true
     }
     options.onSuccess?.(nextMode)
     return true

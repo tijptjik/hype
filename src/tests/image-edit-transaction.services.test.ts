@@ -954,3 +954,16 @@ describe('signed upload replacements', () => {
     }
   })
 })
+
+it('refuses hard deletion through another context when organisation history retains the image', async () => {
+  const {db,sqlite}=await setup()
+  try {
+    sqlite.exec(`CREATE TABLE organisationRevision(content TEXT);
+      CREATE TABLE organisationRevisionHead(organisationId TEXT);
+      CREATE TABLE organisationRevisionWrite(organisationId TEXT);
+      INSERT INTO organisationRevision VALUES('{"record":{"imageId":"new"}}');`)
+    const before=['image','featureImage','taskImage','task'].map(table=>sqlite.prepare(`SELECT * FROM ${table}`).all())
+    expect(await deleteImageWithEvidence(db,'new')).toBe(false)
+    expect(['image','featureImage','taskImage','task'].map(table=>sqlite.prepare(`SELECT * FROM ${table}`).all())).toEqual(before)
+  }finally{sqlite.close()}
+})

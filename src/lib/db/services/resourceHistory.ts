@@ -41,6 +41,19 @@ async function hasHistoryStorage(
 /** Immutable logo identity and optional exact image version retained with a snapshot. */
 export type HistoricalLogo = { imageId: string; imageRevisionId: string | null }
 
+/** Extracts only recorded logo evidence, never substitutes current image data.
+ * @param content Immutable resource snapshot.
+ * @returns Recorded identity and optional exact revision.
+ */
+export function historicalLogo(content: string | null): HistoricalLogo | null {
+  if (!content) return null
+  const snapshot = JSON.parse(content)
+  const imageId = snapshot?.record?.imageId
+  if (typeof imageId !== 'string' || !imageId) return null
+  const pin = snapshot.logo
+  return { imageId, imageRevisionId: pin?.imageId === imageId && typeof pin.imageRevisionId === 'string' ? pin.imageRevisionId : null }
+}
+
 /** A bounded history page containing immutable attribution and comparison evidence. */
 export type OrganisationHistoryPage = {
   available: boolean
@@ -129,6 +142,7 @@ export async function listOrganisationHistory(
       createdAt: row.createdAt,
       initial: row.previous === null,
       previousCreatedAt: row.previousCreatedAt,
+      logo: { before: historicalLogo(row.previous), after: historicalLogo(row.content) },
       changes:
         row.previous === null
           ? []
@@ -224,6 +238,7 @@ export async function listAdminResourceHistory(
       reason: row.reason,
       createdAt: row.createdAt,
       previousCreatedAt: row.previousCreatedAt,
+      logo: { before: historicalLogo(row.previous), after: historicalLogo(row.content) },
       initial: row.previous === null,
       changes:
         row.previous === null

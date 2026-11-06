@@ -9,6 +9,8 @@ export type ImageSurfaceProps = {
   item: ViewerRenderable | null
   fit?: GalleryObjectFit
   class?: string
+  /** Disable repeated loading pulses when the parent owns the visual transition. */
+  animateLoading?: boolean
   isLoading?: boolean
   showBackdrop?: boolean
   enableSourceTransition?: boolean

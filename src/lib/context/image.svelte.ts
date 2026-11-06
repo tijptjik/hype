@@ -266,15 +266,12 @@ export class ImageCtx {
   private imageRefreshSerial = 0
   // Queue entries may be observed by overlapping selections and retry clicks.
   private readonly activeUploads = new Set<string>()
-  private readonly preparedConfirmations = new Map<
-    string,
-    {
-      file: File
-      identity: string
-      featureOptions?: { isPublished: boolean; intent: Intent }
-      prepared: Awaited<ReturnType<typeof prepareImageUpload>>
-    }
-  >()
+  private readonly preparedConfirmations = new Map<string, {
+    file: File
+    identity: string
+    featureOptions?: { isPublished: boolean; intent: Intent }
+    prepared: Awaited<ReturnType<typeof prepareImageUpload>>
+  }>()
   private uploadEntrySerial = 0
   private readonly imageDeletions = new Map<string, Promise<void>>()
 
@@ -592,11 +589,7 @@ export class ImageCtx {
   setUploadQueue(uploadQueue: ImageUpload[]) {
     // Removed/replaced entries must not retain signed credentials or normalized file bytes.
     for (const [key, retained] of this.preparedConfirmations) {
-      if (
-        !uploadQueue.some(
-          item => item.optimisticKey === key && item.file === retained.file,
-        )
-      )
+      if (!uploadQueue.some(item => item.optimisticKey === key && item.file === retained.file))
         this.preparedConfirmations.delete(key)
     }
     this.state.uploadQueue = uploadQueue
@@ -650,8 +643,7 @@ export class ImageCtx {
     )
 
     if (this.state.context !== contextAtStart) {
-      for (const upload of newUploads)
-        if (upload.preview) URL.revokeObjectURL(upload.preview)
+      for (const upload of newUploads) if (upload.preview) URL.revokeObjectURL(upload.preview)
       return
     }
     this.state.uploadQueue.push(...newUploads)
@@ -792,6 +784,14 @@ export class ImageCtx {
     uploadCtx: ImageUploadCtx,
     savedImage: ImageCtxEnvelope,
   ): ImageCtxEnvelope {
+    if (savedImage.revisionDraft) {
+      // Saving a replacement or upload must not replace the accepted image in the gallery.
+      this.setUploadQueue(this.state.uploadQueue.filter(item => item.optimisticKey !== fileObject.optimisticKey))
+      if (fileObject.preview) URL.revokeObjectURL(fileObject.preview)
+      this.updateActivePreview()
+      toast.success('Photo saved for review. Publish it in Updates.')
+      return savedImage
+    }
     const savedEnvelope = {
       ...savedImage,
       image: uploadCtx.imageToReplace
@@ -932,8 +932,7 @@ export class ImageCtx {
     const stagedImages = await this.createStagedImagesFromFiles(acceptedFiles)
 
     if (this.state.context !== contextAtStart) {
-      for (const staged of stagedImages)
-        if (staged.image.preview) URL.revokeObjectURL(staged.image.preview)
+      for (const staged of stagedImages) if (staged.image.preview) URL.revokeObjectURL(staged.image.preview)
       return
     }
 
@@ -1023,8 +1022,7 @@ export class ImageCtx {
     )
 
     if (this.state.context !== contextAtStart) {
-      for (const upload of newStaged)
-        if (upload.preview) URL.revokeObjectURL(upload.preview)
+      for (const upload of newStaged) if (upload.preview) URL.revokeObjectURL(upload.preview)
       return
     }
     this.state.stagingQueue.push(...newStaged)
@@ -1246,9 +1244,30 @@ export class ImageCtx {
   async updateMetadata(
     imageId: Id,
     data: Parameters<typeof updateImageRemote>[0]['data'],
-  ): Promise<void> {
+  ): Promise<'draft' | 'saved'> {
     const ctx = this.getCtx()
     const contextAtStart = this.state.context
+    const displayedRevisionId = this.getImage(imageId)?.image.imageRevisionId
+    // An enrolled gallery keeps showing its accepted pin until the metadata draft is published.
+    if (displayedRevisionId) {
+      const response = await updateImageRemote({
+        id: imageId, imageRevisionId: displayedRevisionId, ctxType: ctx.ctxType,
+        ctxId: ctx.ctxId, data, meta: { isAdminRequest: true },
+      })
+      if ('revisionDraft' in response) {
+        toast.success('Image changes saved for review. Publish them in Updates.')
+        return 'draft'
+      }
+      // Immediate logo saves advance the displayed pin; the next replacement must use that revision.
+      if (this.state.context === contextAtStart && response.data) {
+        const saved = response.data as ImageCtxEnvelope
+        this.state.images.set(imageId, saved)
+        if (this.state.activeImage?.image.id === imageId) this.state.activeImage = saved
+      }
+      await this.reconcileImageMutation(contextAtStart)
+      if (this.state.context === contextAtStart) await this.refreshImages()
+      return 'saved'
+    }
     const mutation = this.appCtx.resources.beginMutation(
       'image',
       { meta: { id: imageId }, data },
@@ -1293,6 +1312,7 @@ export class ImageCtx {
       syncActive()
     }
     await this.appCtx.resources.reconcile('image')
+    return 'saved'
   }
 
   // ═══════════════════════
@@ -2282,8 +2302,7 @@ export class ImageCtx {
 
       return () => {
         // A newer portrait, resource edit or identity clear supersedes this rollback.
-        if (cache.get(resourceId) === optimisticResource)
-          cache.set(resourceId, cachedResource)
+        if (cache.get(resourceId) === optimisticResource) cache.set(resourceId, cachedResource)
       }
     }
 
@@ -2309,16 +2328,12 @@ export class ImageCtx {
    * @remarks Clearing entity images alone leaves native Feature pages and map rows stale.
    */
   private async reconcileImageMutation(
-    context: Partial<Pick<ImageUploadCtx, 'ctxType' | 'ctxId'>> | null = this.state
-      .context,
+    context: Partial<Pick<ImageUploadCtx, 'ctxType' | 'ctxId'>> | null = this.state.context,
   ): Promise<void> {
     if (!context?.ctxType || !context.ctxId) return
     if (context.ctxType === 'feature' && context.ctxId) {
-      const feature = this.appCtx.cache.feature.get(context.ctxId) as
-        | Feature
-        | undefined
-      if (feature)
-        this.appCtx.cache.feature.set(context.ctxId, { ...feature, images: undefined })
+      const feature = this.appCtx.cache.feature.get(context.ctxId) as Feature | undefined
+      if (feature) this.appCtx.cache.feature.set(context.ctxId, { ...feature, images: undefined })
     }
     // Resource portraits also appear in hierarchy pages; Feature queries contain canonical assets.
     await this.appCtx.resources.reconcile(
@@ -2334,17 +2349,10 @@ export class ImageCtx {
    * @param extended Explicit Feature metadata, if supplied.
    * @returns Stable retry identity within this viewer lifetime.
    */
-  private uploadConfirmationIdentity(
-    context: ImageUploadCtx,
-    extended?: { isPublished: boolean; intent: Intent },
-  ): string {
+  private uploadConfirmationIdentity(context: ImageUploadCtx, extended?: { isPublished: boolean; intent: Intent }): string {
     return JSON.stringify([
-      this.appCtx.resources.scopeKey,
-      context.ctxType,
-      context.ctxId,
-      context.hub?.id,
-      context.organisation?.id,
-      context.project?.id,
+      this.appCtx.resources.scopeKey, context.ctxType, context.ctxId,
+      context.hub?.id, context.organisation?.id, context.project?.id,
       context.imageToReplace?.image.id,
       extended ? [extended.isPublished, extended.intent] : null,
     ])
@@ -2358,23 +2366,9 @@ export class ImageCtx {
    * @param featureOptions Explicit Feature options to preserve for the retry button.
    * @returns Nothing; removed entries never regain retained credentials.
    */
-  private retainUploadConfirmation(
-    entry: ImageUpload,
-    identity: string,
-    prepared: Awaited<ReturnType<typeof prepareImageUpload>>,
-    featureOptions?: { isPublished: boolean; intent: Intent },
-  ): void {
-    if (
-      this.state.uploadQueue.some(
-        item => item.optimisticKey === entry.optimisticKey && item.file === entry.file,
-      )
-    )
-      this.preparedConfirmations.set(entry.optimisticKey, {
-        file: entry.file,
-        identity,
-        prepared,
-        featureOptions: featureOptions ? { ...featureOptions } : undefined,
-      })
+  private retainUploadConfirmation(entry: ImageUpload, identity: string, prepared: Awaited<ReturnType<typeof prepareImageUpload>>, featureOptions?: { isPublished: boolean; intent: Intent }): void {
+    if (this.state.uploadQueue.some(item => item.optimisticKey === entry.optimisticKey && item.file === entry.file))
+      this.preparedConfirmations.set(entry.optimisticKey, { file: entry.file, identity, prepared, featureOptions: featureOptions ? { ...featureOptions } : undefined })
   }
 
   /**
@@ -2384,13 +2378,9 @@ export class ImageCtx {
    * @returns Matching prepared upload, or undefined after changed input invalidates it.
    * @remarks Expired grants are replayed and rejected by the server, never silently replaced.
    */
-  private retainedUploadConfirmation(
-    entry: ImageUpload,
-    identity: string,
-  ): Awaited<ReturnType<typeof prepareImageUpload>> | undefined {
+  private retainedUploadConfirmation(entry: ImageUpload, identity: string): Awaited<ReturnType<typeof prepareImageUpload>> | undefined {
     const retained = this.preparedConfirmations.get(entry.optimisticKey)
-    if (retained?.file === entry.file && retained.identity === identity)
-      return retained.prepared
+    if (retained?.file === entry.file && retained.identity === identity) return retained.prepared
     this.preparedConfirmations.delete(entry.optimisticKey)
     return undefined
   }
@@ -2530,35 +2520,25 @@ export class ImageCtx {
       try {
         uploadCtx = this.getUploadCtx(fileObject.imageToReplace)
         const previous = this.preparedConfirmations.get(fileObject.optimisticKey)
-        const featureOptions =
-          extended?.featureImage ??
-          (previous?.file === fileObject.file &&
-          previous.identity ===
-            this.uploadConfirmationIdentity(uploadCtx, previous.featureOptions)
-            ? previous.featureOptions
-            : undefined)
+        const featureOptions = extended?.featureImage ?? (
+          previous?.file === fileObject.file && previous.identity === this.uploadConfirmationIdentity(uploadCtx, previous.featureOptions)
+            ? previous.featureOptions : undefined
+        )
         const identity = this.uploadConfirmationIdentity(uploadCtx, featureOptions)
         const retained = this.retainedUploadConfirmation(fileObject, identity)
         if (retained) this.setUploadStatus(fileObject, 'finalizing')
-        savedImage = retained
-          ? await finalizePreparedImageUpload(retained)
-          : await uploadAndProcessImage(
-              fileObject.file,
-              uploadCtx,
-              featureOptions,
-              localFetch,
-              {
-                onObjectUploaded: prepared => {
-                  this.retainUploadConfirmation(
-                    fileObject,
-                    identity,
-                    prepared,
-                    featureOptions,
-                  )
-                  this.setUploadStatus(fileObject, 'finalizing')
-                },
-              },
-            )
+        savedImage = retained ? await finalizePreparedImageUpload(retained) : await uploadAndProcessImage(
+          fileObject.file,
+          uploadCtx,
+          featureOptions,
+          localFetch,
+          {
+            onObjectUploaded: prepared => {
+              this.retainUploadConfirmation(fileObject, identity, prepared, featureOptions)
+              this.setUploadStatus(fileObject, 'finalizing')
+            },
+          },
+        )
       } catch (error) {
         const errorMessage = this.getUploadErrorMessage(error)
         console.error('[ImageCtx] upload failed', {
@@ -2710,25 +2690,33 @@ export class ImageCtx {
   async handleRotate(
     rotation: 0 | 90 | 180 | 270,
     imageId: Id | null = this.state.activeImage?.image.id ?? null,
-  ): Promise<void> {
+  ): Promise<'draft' | 'saved' | undefined> {
     if (!imageId) return
 
     const ctx = this.getCtx()
     const contextAtStart = this.state.context
 
     try {
-      await rotateImageRemote({
+      const result = await rotateImageRemote({
         id: imageId,
+        imageRevisionId: this.getImage(imageId)?.image.imageRevisionId,
         ctxType: ctx.ctxType,
         ctxId: ctx.ctxId,
         rotation,
         meta: { isAdminRequest: true },
       })
 
+      if (result && 'revisionDraft' in result) {
+        if (this.state.context === contextAtStart)
+          toast.success('Rotation saved as a draft. Review and publish it in Updates.')
+        return 'draft'
+      }
+
       // Refresh fresh metadata only in the viewer that initiated the rotation.
       await this.reconcileImageMutation(contextAtStart)
       if (this.state.context !== contextAtStart) return
       await this.refreshImages()
+      return 'saved'
     } catch (error) {
       toast.error('Failed to rotate image')
       throw error
@@ -2792,9 +2780,7 @@ export class ImageCtx {
   private async performDelete(imageId: Id, ctx: ImageEditCtx): Promise<void> {
     const contextAtStart = this.state.context
     const imagesBeforeDelete = this.getImages()
-    const removedUploads = this.state.uploadQueue.filter(
-      upload => !upload.imageToReplace && upload.savedImage?.image.id === imageId,
-    )
+    const removedUploads = this.state.uploadQueue.filter(upload => !upload.imageToReplace && upload.savedImage?.image.id === imageId)
     const deletedImage = imagesBeforeDelete.find(image => image.image.id === imageId)
     let selectionAfterDelete: ImageCtxEnvelope | null = null
     let itemAfterDelete: string | null = null
@@ -2842,8 +2828,7 @@ export class ImageCtx {
       })
       deleted = true
       // Release removed previews only after commit; failed deletions still need them.
-      for (const upload of removedUploads)
-        if (upload.preview) URL.revokeObjectURL(upload.preview)
+      for (const upload of removedUploads) if (upload.preview) URL.revokeObjectURL(upload.preview)
     } catch (error: unknown) {
       rollbackSingleResourceImageCache?.()
       // Navigation can replace the viewer while this deletion is pending.
@@ -2853,15 +2838,8 @@ export class ImageCtx {
         this.state.images.set(imageId, deletedImage)
         this.sortImagesInternal()
       }
-      const currentKeys = new Set(
-        this.state.uploadQueue.map(upload => upload.optimisticKey),
-      )
-      this.setUploadQueue(
-        [
-          ...this.state.uploadQueue,
-          ...removedUploads.filter(upload => !currentKeys.has(upload.optimisticKey)),
-        ].sort((a, b) => a.queuedAt - b.queuedAt),
-      )
+      const currentKeys = new Set(this.state.uploadQueue.map(upload => upload.optimisticKey))
+      this.setUploadQueue([...this.state.uploadQueue, ...removedUploads.filter(upload => !currentKeys.has(upload.optimisticKey))].sort((a, b) => a.queuedAt - b.queuedAt))
       if (
         activeImageBeforeDelete?.image.id === imageId &&
         this.state.activeImage === selectionAfterDelete &&
