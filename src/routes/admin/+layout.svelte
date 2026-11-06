@@ -247,11 +247,7 @@ afterNavigate(({ shallow }) => {
   {#snippet sidebar()}
     <ResourcePanel model={sidebarModel}
       >{#snippet footer()}
-        <AdminMenu
-          isNarrow={sidebarModel.panel.isNarrow}
-          firstLayerId={sidebarModel.sections.find(section => section.id === 'layer')
-            ?.rows[0]?.id}
-        />
+        <AdminMenu isNarrow={sidebarModel.panel.isNarrow} />
       {/snippet}</ResourcePanel
     >
   {/snippet}
@@ -261,7 +257,7 @@ afterNavigate(({ shallow }) => {
       <SettingsPanel model={settingsModel} />
     {:else if settingsModel.open}
       <div
-        class="bits-theme flex h-full w-[380px] max-w-full shrink-0 items-center justify-center bg-panel shadow-xl"
+        class="bits-theme bg-panel flex h-full w-[380px] max-w-full shrink-0 items-center justify-center shadow-xl"
         role="status"
         aria-label={m.resource_loading()}
       >
@@ -270,7 +266,7 @@ afterNavigate(({ shallow }) => {
             <p>{m.bootstrap__error()}</p>
             <button
               type="button"
-              class="mt-4 rounded-lg bg-base-content px-4 py-2 text-base-100"
+              class="bg-base-content text-base-100 mt-4 rounded-lg px-4 py-2"
               onclick={() => void loadSettingsPanel().catch(() => {})}
             >
               {m.bootstrap__retry()}
