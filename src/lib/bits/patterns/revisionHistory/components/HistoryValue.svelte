@@ -33,6 +33,8 @@ function display(value: RevisionSlot): string {
     }
     return value.value || 'Empty text'
   }
+  if (path.at(-1) === 'rotation' && typeof value.value === 'number')
+    return `${value.value}°`
   return String(value.value)
 }
 </script>

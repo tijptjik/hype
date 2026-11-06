@@ -5,6 +5,7 @@ const labels: Record<string, string> = {
   record: 'Settings',
   logo: 'Logo',
   presentationMode: 'Display mode',
+  rotation: 'Rotation',
   imageRevisionId: 'Exact image version',
   imageId: 'Image identity',
   i18n: 'Translations',

@@ -135,7 +135,8 @@ function isLogoChange(
     (change.path[0] === 'record' &&
       change.path.length === 2 &&
       change.path[1] === 'imageId') ||
-    (change.path[0] === 'logo' && change.path[1] !== 'presentationMode')
+    (change.path[0] === 'logo' &&
+      !['presentationMode', 'rotation'].includes(change.path[1]))
   )
 }
 
