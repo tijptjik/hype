@@ -167,10 +167,12 @@ function applyTranslation(
   </SectionHeader>
   <SectionHeaderPrimitive.Issues issues={sectionIssues} />
 
+  <!-- Keep configuration in place while availability fades between disabled and enabled. -->
   <div
-    class="grid min-w-0 gap-6 px-6 pt-6 md:grid-cols-3"
-    class:opacity-45={!isSubscriptionAvailable}
+    class="grid min-w-0 gap-6 px-6 pt-6 transition-opacity duration-200 ease-in-out motion-reduce:transition-none md:grid-cols-3"
+    style:opacity={isSubscriptionAvailable ? 1 : 0.45}
     inert={!isSubscriptionAvailable}
+    data-subscription-content
   >
     <!-- Configuration, translated benefits and placement share equal-width columns. -->
     <div class="min-w-0 space-y-6" data-subscription-configuration>

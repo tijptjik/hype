@@ -75,6 +75,18 @@ let {
   onLayoutMutationStart,
 }: FormFieldCardBodyProps = $props()
 
+// Use the same appearance for every component-specific setting and range bound.
+const settingInputAppearance = {
+  controlClass:
+    'rounded-md! border-border/30! bg-transparent! px-0! hover:border-border/60! hover:bg-muted/50!',
+  inputClass: 'h-10! px-[11px]!',
+}
+const settingSelectAppearance = {
+  displayClass: 'h-[42px]! rounded-md! border-transparent! bg-transparent! pl-[11px]!',
+  triggerClass:
+    'h-[42px]! rounded-md! border-border/30! bg-transparent! pl-[11px]! hover:border-border/60! hover:bg-muted/50! [&_.bits-form\\_\\_select-label]:pl-0!',
+}
+
 let optionRemoveMode = $state(false)
 
 // Put common inputs first, keep range types together, and append future types.
@@ -184,9 +196,8 @@ const shownLocales = $derived(
     multilingual,
   ),
 )
-const optionLocales = $derived<string[]>(
-  valuesAreTranslatable ? locales : locales.slice(0, 1),
-)
+// Retain locale tracks so disabling translations shrinks rows without reshaping cards.
+const optionLocales = $derived<string[]>(locales)
 const primaryLocale = $derived(locales[0])
 let translating = $state<string | null>(null)
 let translatingSource = $state<string | undefined>()
@@ -299,13 +310,36 @@ function getLocaleEntry<T extends Record<string, unknown>>(
 
 function getValueDisplayText(valueId: string, locale: string): string {
   const match = sortedValues.find(value => value.id === valueId)
-  if (!valuesAreTranslatable) return sanitizeDragPayloadArtifacts(match?.value ?? '')
+  if (!valuesAreTranslatable && isPrimary(locale))
+    return sanitizeDragPayloadArtifacts(match?.value ?? '')
   const localeValue = getLocaleEntry(
     match?.i18n as Record<string, { value?: string }> | null | undefined,
     locale,
   )
   // Empty translations remain empty; a display fallback must never become authored data.
   return sanitizeDragPayloadArtifacts(localeValue?.value ?? '')
+}
+
+/** Animate option reordering without scaling text when locale row heights change.
+ * @param node Keyed option card being repositioned.
+ * @param bounds Card positions before and after the update.
+ * @returns Translation-only FLIP animation with reduced-motion support.
+ */
+function animateOptionReorder(
+  node: Element,
+  { from, to }: { from: DOMRect; to: DOMRect },
+): ReturnType<typeof flip> {
+  return flip(
+    node,
+    {
+      from: new DOMRect(from.x, from.y, to.width, to.height),
+      to,
+    },
+    {
+      duration: prefersReducedMotion.current ? 0 : 220,
+      easing: cubicInOut,
+    },
+  )
 }
 
 function getPropertyField(pathSuffix: Array<string | number>): unknown {
@@ -807,8 +841,7 @@ $effect(() => {
         value={(keyInputAttrs as { value?: string }).value ?? property.key ?? ''}
         issues={keyIssues}
         {isEditing}
-        controlClass="rounded-md! border-border/30! bg-transparent! px-0! hover:border-border/60! hover:bg-muted/50!"
-        inputClass="h-10! px-[11px]!"
+        {...settingInputAppearance}
         inputAttrs={keyInputAttrs}
         onValueChange={value => onUpdateBase(property.id, 'key', value)}
       />
@@ -829,8 +862,7 @@ $effect(() => {
       {/each}
       <SelectField
         value={property.component}
-        displayClass="h-[42px]! rounded-md! border-transparent! bg-transparent! pl-[11px]!"
-        triggerClass="h-[42px]! rounded-md! border-border/30! bg-transparent! pl-[11px]! hover:border-border/60! hover:bg-muted/50! [&_.bits-form\_\_select-label]:pl-0!"
+        {...settingSelectAppearance}
         items={componentOptions}
         itemPreview={componentPreview}
         contentClass="max-h-[calc(100dvh-2rem)] w-[var(--bits-select-anchor-width)] max-w-[calc(100vw-2rem)]"
@@ -871,8 +903,7 @@ $effect(() => {
             property.component === 'InputField'}
             <SelectField
               label="Data type"
-              displayClass="h-[42px]! rounded-md! border-transparent! bg-transparent! pl-[11px]!"
-              triggerClass="h-[42px]! rounded-md! border-border/30! bg-transparent! pl-[11px]! hover:border-border/60! hover:bg-muted/50! [&_.bits-form\_\_select-label]:pl-0!"
+              {...settingSelectAppearance}
               value={property.dataType ?? 'text'}
               items={[
                 { value: 'text', label: 'Text' },
@@ -889,6 +920,7 @@ $effect(() => {
           {#if property.dataType === 'dateRange'}
             <SelectField
               label="Resolution"
+              {...settingSelectAppearance}
               value={property.dateResolution ?? 'day'}
               items={['decade', 'year', 'month', 'day'].map(value => ({
                 value,
@@ -922,7 +954,8 @@ $effect(() => {
                     property,
                     rangeDomain(property)[bound as 'min'],
                   )}
-                  inputClass="min-w-0 w-full"
+                  {...settingInputAppearance}
+                  inputClass={`${settingInputAppearance.inputClass} min-w-0 w-full`}
                   issues={getFieldIssues([bound])}
                   inputAttrs={{
                     onchange: (event: Event) => {
@@ -948,6 +981,7 @@ $effect(() => {
           {:else if property.dataType === 'timeRange'}
             <SelectField
               label="Service day"
+              {...settingSelectAppearance}
               value={String(property.timeMaxHour ?? 24)}
               items={[
                 { value: '24', label: '24 hours' },
@@ -960,9 +994,16 @@ $effect(() => {
                 onUpdateBase(property.id, 'timeMaxHour', Number(value))}
             />
             <div class="grid min-w-0 grid-cols-2 gap-3">
-              <TextInput label="Min" value="00:00" readonly={true} {isEditing} />
+              <TextInput
+                label="Min"
+                value="00:00"
+                readonly={true}
+                {isEditing}
+                {...settingInputAppearance}
+              />
               <TextInput
                 label="Max"
+                {...settingInputAppearance}
                 value={`${property.timeMaxHour ?? 24}:00`}
                 readonly={true}
                 {isEditing}
@@ -972,6 +1013,7 @@ $effect(() => {
           {#if property.dataType === 'link'}
             <SelectField
               label="Cardinality"
+              {...settingSelectAppearance}
               value={property.cardinality ?? 'one'}
               items={[
                 { value: 'one', label: 'One' },
@@ -984,6 +1026,7 @@ $effect(() => {
             />
             <SelectField
               label="Link text"
+              {...settingSelectAppearance}
               value={property.presentation ?? 'labelledLinks'}
               items={[
                 { value: 'numberedReferences', label: 'As Footnotes' },
@@ -1008,6 +1051,7 @@ $effect(() => {
             required={rangeBoundsAreRequired}
             issues={minIssues}
             {isEditing}
+            {...settingInputAppearance}
             inputAttrs={minAttrs}
           />
           <TextInput
@@ -1018,6 +1062,7 @@ $effect(() => {
             required={rangeBoundsAreRequired}
             issues={maxIssues}
             {isEditing}
+            {...settingInputAppearance}
             inputAttrs={maxAttrs}
           />
         </div>
@@ -1143,10 +1188,7 @@ $effect(() => {
                     class="relative grid min-w-0 grid-rows-subgrid gap-y-0 py-1.5 before:hidden! after:hidden!"
                     data-option-drop-zone
                     style:grid-row={`span ${optionLocales.length + 1}`}
-                    animate:flip={{
-                      duration: prefersReducedMotion.current ? 0 : 220,
-                      easing: cubicInOut,
-                    }}
+                    animate:animateOptionReorder
                     use:droppable={getValueDroppableConfig(value.id)}
                   >
                     <!-- Only the grip owns touch reordering; option bodies keep native panning. -->
@@ -1260,40 +1302,36 @@ $effect(() => {
                         </div>
                         {#each optionLocales as locale (locale)}
                           {@const showCoreFields = isPrimary(locale)}
+                          {@const showLocale = valuesAreTranslatable
+                            ? shownLocales.includes(locale)
+                            : showCoreFields}
                           {@const valueDisplayText = getValueDisplayText(
                             value.id,
                             locale,
                           )}
                           <div
                             class="grid min-h-0 overflow-hidden transition-[grid-template-rows,opacity] duration-200 ease-in-out motion-reduce:transition-none"
-                            style:grid-template-rows={!valuesAreTranslatable ||
-                            shownLocales.includes(locale)
-                              ? '1fr'
-                              : '0fr'}
-                            style:opacity={!valuesAreTranslatable ||
-                            shownLocales.includes(locale)
-                              ? 1
-                              : 0}
-                            aria-hidden={valuesAreTranslatable &&
-                              !shownLocales.includes(locale)}
-                            inert={valuesAreTranslatable &&
-                              !shownLocales.includes(locale)}
+                            style:grid-template-rows={showLocale ? '1fr' : '0fr'}
+                            style:opacity={showLocale ? 1 : 0}
+                            aria-hidden={!showLocale}
+                            inert={!showLocale}
                             data-option-locale={locale}
                           >
                             <div class="min-h-0 overflow-hidden">
                               <div
                                 class="grid min-h-10 min-w-0 items-start gap-2 px-3 py-2 {multilingual &&
-                                valuesAreTranslatable
+                                (valuesAreTranslatable || !showCoreFields)
                                   ? 'grid-cols-[2.5rem_minmax(0,1fr)]'
                                   : 'grid-cols-1'}"
                               >
-                                {#if multilingual && valuesAreTranslatable}
+                                {#if multilingual &&
+                                  (valuesAreTranslatable || !showCoreFields)}
                                   <span
                                     class="text-muted-foreground py-2 text-center font-mono text-xs"
                                     >{shortLocaleLabel(locale)}</span
                                   >
                                 {/if}
-                                {#if valuesAreTranslatable}
+                                {#if valuesAreTranslatable || !showCoreFields}
                                   <input
                                     {...getFieldAttrsWithValue(
                                       [
@@ -1332,57 +1370,50 @@ $effect(() => {
                                   >
                                 {/if}
 
-                                {#if valuesAreTranslatable || showCoreFields}
-                                  <div class="group/option-value relative min-w-0">
-                                    <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
-                                    <div
-                                      class={`bits-project-field-card__value-editable focus-override pr-9! text-[15px]! leading-[22px]! font-normal! empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
-                                      role="textbox"
-                                      aria-label={`Option ${valueIndex + 1} ${locale}`}
-                                      data-placeholder="Option label"
-                                      aria-readonly={!isEditing}
-                                      contenteditable={isEditing
-                                        ? 'plaintext-only'
-                                        : false}
-                                      tabindex={isEditing ? 0 : -1}
-                                      use:bindValueEditable={{
-                                        valueId: value.id,
-                                        locale,
-                                        text: valueDisplayText,
-                                      }}
-                                      onbeforeinput={preventDropBeforeInput}
-                                      onkeydown={event => {
-                                        onValueTab(event, value.id, locale)
-                                        void onValueEnter(event, locale)
-                                      }}
-                                      oninput={event =>
-                                        onValueInput(event, value.id, locale)}
-                                      ondragover={preventNativeDropOver}
-                                      ondrop={preventNativeDropInsert}
-                                      onfocus={onValueFocus}
-                                      ondblclick={onValueDoubleClick}
-                                      onblur={event =>
-                                        onValueBlur(event, value.id, locale)}
-                                    ></div>
-                                    {#if isEditing && valueDisplayText.length}
-                                      <button
-                                        type="button"
-                                        aria-label={`${m.filters__clear()} Option ${valueIndex + 1} ${locale}`}
-                                        class="text-muted-foreground hover:text-primary focus-visible:outline-primary absolute top-0 right-0 flex size-8 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/option-value:opacity-100 group-hover/option-value:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 [@media(hover:none)]:opacity-100"
-                                        onpointerdown={event => event.preventDefault()}
-                                        onclick={() =>
-                                          void clearOptionValue(value.id, locale)}
-                                      >
-                                        <XIcon class="size-3.5" aria-hidden="true" />
-                                      </button>
-                                    {/if}
-                                  </div>
-                                {:else}
+                                <div class="group/option-value relative min-w-0">
+                                  <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
                                   <div
-                                    class="bits-project-field-card__value-placeholder"
-                                    aria-hidden="true"
+                                    class={`bits-project-field-card__value-editable focus-override pr-9! text-[15px]! leading-[22px]! font-normal! empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                                    role="textbox"
+                                    aria-label={`Option ${valueIndex + 1} ${locale}`}
+                                    data-placeholder="Option label"
+                                    aria-readonly={!isEditing}
+                                    contenteditable={isEditing
+                                      ? 'plaintext-only'
+                                      : false}
+                                    tabindex={isEditing ? 0 : -1}
+                                    use:bindValueEditable={{
+                                      valueId: value.id,
+                                      locale,
+                                      text: valueDisplayText,
+                                    }}
+                                    onbeforeinput={preventDropBeforeInput}
+                                    onkeydown={event => {
+                                      onValueTab(event, value.id, locale)
+                                      void onValueEnter(event, locale)
+                                    }}
+                                    oninput={event =>
+                                      onValueInput(event, value.id, locale)}
+                                    ondragover={preventNativeDropOver}
+                                    ondrop={preventNativeDropInsert}
+                                    onfocus={onValueFocus}
+                                    ondblclick={onValueDoubleClick}
+                                    onblur={event =>
+                                      onValueBlur(event, value.id, locale)}
                                   ></div>
-                                {/if}
+                                  {#if isEditing && valueDisplayText.length}
+                                    <button
+                                      type="button"
+                                      aria-label={`${m.filters__clear()} Option ${valueIndex + 1} ${locale}`}
+                                      class="text-muted-foreground hover:text-primary focus-visible:outline-primary absolute top-0 right-0 flex size-8 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/option-value:opacity-100 group-hover/option-value:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 [@media(hover:none)]:opacity-100"
+                                      onpointerdown={event => event.preventDefault()}
+                                      onclick={() =>
+                                        void clearOptionValue(value.id, locale)}
+                                    >
+                                      <XIcon class="size-3.5" aria-hidden="true" />
+                                    </button>
+                                  {/if}
+                                </div>
                                 {#if getValueIssues(value.id, locale)?.length}
                                   <div class="bits-form__error">
                                     {getValueIssues(value.id, locale)
