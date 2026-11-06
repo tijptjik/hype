@@ -25,7 +25,9 @@ const descriptionStyle = $derived(
 
 <div class={['bits-card__body', className].filter(Boolean).join(' ')}>
   {#if code}
-    <span class="bits-card__code" title={wrapTitle ? undefined : code}>{code}</span>
+    <span class="bits-card__code" data-tooltip={wrapTitle ? undefined : code}
+      >{code}</span
+    >
   {/if}
 
   {#if wrapTitle}
@@ -44,7 +46,11 @@ const descriptionStyle = $derived(
   {/if}
 
   {#if description}
-    <p class="bits-card__description" style={descriptionStyle} title={description}>
+    <p
+      class="bits-card__description"
+      style={descriptionStyle}
+      data-tooltip={description}
+    >
       {description}
     </p>
   {/if}
