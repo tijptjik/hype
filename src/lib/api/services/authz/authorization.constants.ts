@@ -50,6 +50,7 @@ export const hubAuthorizationActions = [
 export const organisationAuthorizationFields = [
   'userPolicy',
   'settings',
+  'defaultLocationVisibility',
   'code',
   'url',
   'i18n',

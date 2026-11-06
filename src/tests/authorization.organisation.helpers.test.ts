@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   resolveOrganisationActionPermissions,
+  toOrganisationSubmittedFields,
+  authorizeOrganisationUpdateForSubmission,
   type OrganisationAuthActor,
 } from '#lib/api/services/authz/organisation.js'
 import type { UserRoleDisco } from '#lib/types.js'
@@ -61,4 +63,28 @@ describe('resolveOrganisationActionPermissions', () => {
       canDelete: true,
     })
   })
+})
+
+describe('organisation default Location visibility authorization', () => {
+  it('includes explicit visibility changes and leaves omitted values out', () => {
+    expect(
+      toOrganisationSubmittedFields({ defaultLocationVisibility: 'private' }),
+    ).toEqual(['defaultLocationVisibility'])
+    expect(toOrganisationSubmittedFields({})).toEqual([])
+  })
+
+  it.each(['owner', 'member', 'user'] as const)(
+    'authorizes a visibility-only update for %s',
+    role => {
+      const decision = authorizeOrganisationUpdateForSubmission({
+        user: { id: 'u-1' },
+        userRoles: [
+          { type: 'organisation', organisationId: 'org-1', userId: 'u-1', role },
+        ] as UserRoleDisco[],
+        resource: { id: 'org-1', hubId: 'hub-1' },
+        submittedData: { defaultLocationVisibility: 'private' },
+      })
+      expect(decision.allowed).toBe(role === 'owner')
+    },
+  )
 })

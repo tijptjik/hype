@@ -211,6 +211,7 @@ export const toOrganisationSubmittedFields = (
   if (data.settings !== undefined) fields.push('settings')
   if ('code' in data) fields.push('code')
   if ('url' in data) fields.push('url')
+  if ('defaultLocationVisibility' in data) fields.push('defaultLocationVisibility')
   if ('i18n' in data) fields.push('i18n')
   if ('userRoles' in data) fields.push('userRoles')
   if ('properties' in data) fields.push('properties')
