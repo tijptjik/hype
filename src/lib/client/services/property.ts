@@ -60,6 +60,7 @@ import type {
 //
 // 3.1 PROJECT PROPERTY FORM :: INTERNAL HELPERS
 //    - Form state access/mutation helpers
+//      - propertyKeyFromLabel
 //      - rerankPropertiesByType
 //      - getMutableProperties
 //      - mutatePropertyFormData
@@ -436,6 +437,31 @@ const propertyKeyTailNanoId = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$',
   11,
 )
+
+// Track only newly added fields for this form; saved API contracts stay unchanged.
+const automaticPropertyKeys = new WeakMap<object, Map<Id, string>>()
+
+/** Derive an ASCII camelCase API identifier from the English display label.
+ * @param label English UI name.
+ * @returns A legal identifier, or empty when the label contains no usable characters.
+ */
+function propertyKeyFromLabel(label: string): string {
+  const words =
+    label
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .match(/[A-Za-z0-9]+/g) ?? []
+  return words
+    .map((word, index) => {
+      const lower = word.toLowerCase()
+      return index === 0 ? lower : lower[0].toUpperCase() + lower.slice(1)
+    })
+    .join('')
+    .replace(/^[0-9]+/, '')
+    .replace(/^[A-Z]/, letter => letter.toLowerCase())
+}
 
 function createPropertyKey(): string {
   return `${propertyKeyFirstCharNanoId()}${propertyKeyTailNanoId()}`
@@ -974,6 +1000,10 @@ export function addProjectPropertyForType(
     i18n: toEmptyPropertyI18n(id),
   }
 
+  const automaticKeys = automaticPropertyKeys.get(form) ?? new Map<Id, string>()
+  automaticKeys.set(id, newProperty.key)
+  automaticPropertyKeys.set(form, automaticKeys)
+
   mutatePropertyFormData(form, currentProperties => {
     currentProperties.unshift(newProperty as Property)
     currentProperties.forEach((property, index) => {
@@ -1101,6 +1131,8 @@ export function updateProjectPropertyBase(
         : Boolean(property.isDefaultEnabled)
     }
 
+    // Any explicit API-name edit permanently opts this draft out of automatic naming.
+    if (key === 'key') automaticPropertyKeys.get(form)?.delete(propertyId)
     const wasEnabledBeforeChange = isPropertyEnabled(target)
 
     ;(target as Record<string, unknown>)[key] = value
@@ -1254,6 +1286,21 @@ export function updateProjectPropertyI18n(
     }
     ;(target.i18n as WritableI18nRecord)[localeKey] = localeEntry
     localeEntry[key] = value
+    // Follow English labels only while the generated API name remains untouched.
+    const automaticKeys = automaticPropertyKeys.get(form)
+    if (
+      key === 'label' &&
+      localeKey === 'en' &&
+      typeof value === 'string' &&
+      automaticKeys?.has(propertyId) &&
+      automaticKeys.get(propertyId) === target.key
+    ) {
+      const nextKey = propertyKeyFromLabel(value)
+      if (nextKey) {
+        target.key = nextKey
+        automaticKeys.set(propertyId, nextKey)
+      }
+    }
   })
 }
 

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  addProjectPropertyForType,
+  updateProjectPropertyBase,
+  updateProjectPropertyI18n,
   resetProjectPropertyLocale,
   sortProjectPropertyValuesAlphabetically,
   translateProjectPropertyLocale,
@@ -323,5 +326,55 @@ describe('scoped property translations', () => {
       zhHant: { value: 'Generated', valueGen: true },
     })
     expect(getData().properties[0].i18n).toEqual({ en: { label: 'Name' } })
+  })
+})
+
+describe('automatic draft API names', () => {
+  function draft() {
+    const result = createForm<
+      import('#lib/db/zod/schema/property.types.js').PropertyFormData
+    >({ properties: [] })
+    addProjectPropertyForType(
+      result.form,
+      'classifier',
+      '',
+      ['SelectField'],
+      ['InputField'],
+      { scope: 'hub', hubId: 'core' },
+    )
+    return { ...result, id: result.getData().properties![0].id }
+  }
+
+  it('follows successive English labels and produces legal camelCase', () => {
+    const { form, getData, id } = draft()
+    for (const [label, expected] of [
+      ['Food preferences', 'foodPreferences'],
+      ['  123 Café / API Access?! ', 'cafeApiAccess'],
+      ['alreadyCamelCase', 'alreadyCamelCase'],
+    ]) {
+      updateProjectPropertyI18n(form, id, 'en', 'label', label)
+      expect(getData().properties![0].key).toBe(expected)
+    }
+    updateProjectPropertyI18n(form, id, 'zh-Hant', 'label', '名稱')
+    updateProjectPropertyI18n(form, id, 'en', 'placeholder', 'Different text')
+    updateProjectPropertyI18n(form, id, 'en', 'label', '?! 123')
+    expect(getData().properties![0].key).toBe('alreadyCamelCase')
+  })
+
+  it('stops after a manual API edit, including an empty edit', () => {
+    for (const manual of ['customKey', '']) {
+      const { form, getData, id } = draft()
+      updateProjectPropertyBase(form, id, 'key', manual)
+      updateProjectPropertyI18n(form, id, 'en', 'label', 'New name')
+      expect(getData().properties![0].key).toBe(manual)
+    }
+  })
+
+  it('preserves saved keys in a newly loaded form', () => {
+    const initial = draft()
+    const { form, getData } = createForm(initial.getData())
+    const original = getData().properties![0].key
+    updateProjectPropertyI18n(form, initial.id, 'en', 'label', 'Renamed field')
+    expect(getData().properties![0].key).toBe(original)
   })
 })
