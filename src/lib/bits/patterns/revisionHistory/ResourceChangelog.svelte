@@ -265,6 +265,7 @@ $effect(() => {
   aria-busy={loading || pendingFilters}
 >
   <SectionHeader
+    class="[&>div:last-child]:w-24"
     actions={[
       {
         text: filterCount ? `Filters (${filterCount})` : 'Filters',
@@ -278,7 +279,7 @@ $effect(() => {
           'aria-pressed': showFilters,
           'aria-label': filterCount ? `Filters, ${filterCount} active` : 'Filters',
         },
-        class: filterCount || showFilters ? 'bg-primary/10 text-primary' : '',
+        class: `size-11! shrink-0 p-0! ${filterCount || showFilters ? 'bg-primary/10 text-primary' : ''}`,
         onClick: () => {
           showFilters = !showFilters
         },
@@ -286,6 +287,9 @@ $effect(() => {
       {
         text: 'Refresh',
         iconComponent: RefreshIcon,
+        class: 'size-11! shrink-0 p-0!',
+        hideLabel: true,
+        hideLabelInstantly: true,
         style: 'ghost',
         color: 'neutral',
         disabled: loading,

@@ -121,7 +121,7 @@ async function authorizeChangelogScope(
 // 2. Hierarchy feed
 /**
  * Loads the accepted hierarchy changelog for a currently authorized resource editor.
- * @param input Root route reference, preferred locale and stable continuation cursor.
+ * @param input Root route reference, locale, view filters, metadata intent and stable cursor.
  * @returns Localized owner metadata and a bounded page of authorized changes.
  * @remarks Every child is authorized separately. Neither a task nor an unaccepted draft
  * is a change; historical Feature values retain the existing current-audience protection.

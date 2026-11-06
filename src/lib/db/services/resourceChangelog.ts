@@ -106,8 +106,8 @@ function scopeGuard(scope: ChangelogScope): SQL {
 /**
  * Reads accepted resource changes across a current hierarchy with stable keyset paging.
  * @param db Request database.
- * @param input Authorized root, locale fallback order, cursor and per-record authorization.
- * @returns At most 25 attributed entries and the next raw-page cursor.
+ * @param input Authorized root, locale fallback order, filters, cursor and per-record authorization.
+ * @returns At most 25 attributed entries, the next raw-page cursor and optional authorized filter metadata.
  * @remarks Drafts, proposals and tasks are excluded. Feature differences reuse the current
  * privacy-aware readers; unauthorized descendants are omitted before response projection.
  */

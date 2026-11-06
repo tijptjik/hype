@@ -27,6 +27,16 @@ for (const [name, engine] of [
       const toggle = page.getByRole('button', { name: /^Filters/ })
       assert.equal(await toggle.getAttribute('aria-expanded'), 'false')
       await toggle.click()
+      const headingBounds = await page
+        .locator('.bits-form__section-header-left')
+        .boundingBox()
+      const toggleBounds = await toggle.boundingBox()
+      assert.ok(
+        headingBounds &&
+          toggleBounds &&
+          headingBounds.x + headingBounds.width <= toggleBounds.x,
+        'Changelog heading must not overlap its filter action',
+      )
       const bar = page.getByRole('group', { name: 'Changelog filters' })
       await bar.waitFor()
       await bar.getByRole('combobox').click()
