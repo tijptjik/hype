@@ -612,10 +612,10 @@ clearing invalidates pending cache writes.
 Mount `TooltipProvider` once in the root layout. Use `data-tooltip={label}` for
 plain-text help on native controls and in component `attrs` / `triggerAttrs`. The
 provider anchors a Bits popover to the existing element, so labels share the cream-frame
-theme styling without adding layout wrappers or changing tab order. It opens on hover or
-keyboard focus and dismisses on Escape, activation, scrolling, or resize. Keep an
-explicit `aria-label` on icon-only controls; tooltip text is a description, not a
-replacement for the control's accessible name.
+theme styling without adding layout wrappers or changing tab order. It opens after 500
+ms of hover or keyboard focus and dismisses on Escape, activation, scrolling, or resize.
+Keep an explicit `aria-label` on icon-only controls; tooltip text is a description, not
+a replacement for the control's accessible name.
 
 Use `SimpleTooltip` for rich help cards, interactive help, and tap-to-open info buttons.
 Do not add native HTML `title` tooltips. Component properties named `title` that render

@@ -56,7 +56,7 @@ const contentClasses = $derived(
   {@render trigger()}
 {:else}
   <PopoverPrimitive.Root bind:open {...restProps}>
-    <PopoverPrimitive.Trigger openOnHover {...triggerProps}>
+    <PopoverPrimitive.Trigger openOnHover openDelay={500} {...triggerProps}>
       {#snippet child(_triggerChild)}
         <!-- biome-ignore lint/a11y/noStaticElementInteractions: Bits supplies the trigger semantics through the spread props; nested controls retain their own role. -->
         <div

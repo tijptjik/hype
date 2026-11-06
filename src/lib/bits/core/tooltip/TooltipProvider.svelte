@@ -9,11 +9,15 @@ const contentId = `${uid}-tooltip`
 let anchor = $state<HTMLElement | null>(null)
 let text = $state('')
 let open = $state(false)
+let pendingAnchor: HTMLElement | null = null
+let openTimer: ReturnType<typeof setTimeout> | undefined
 let closeTimer: ReturnType<typeof setTimeout> | undefined
 
 /** Dismiss help without moving focus or changing the underlying control. */
 function dismiss(): void {
+  clearTimeout(openTimer)
   clearTimeout(closeTimer)
+  pendingAnchor = null
   open = false
 }
 
@@ -61,6 +65,21 @@ function show(target: HTMLElement | null): void {
   open = true
 }
 
+/** Wait for sustained hover or focus before showing help.
+ * @param target Element requesting help. @returns Nothing.
+ */
+function scheduleShow(target: HTMLElement | null): void {
+  clearTimeout(closeTimer)
+  if (target && (target === pendingAnchor || (target === anchor && open))) return
+  dismiss()
+  if (!target) return
+  pendingAnchor = target
+  openTimer = setTimeout(() => {
+    pendingAnchor = null
+    if (target.isConnected) show(target)
+  }, 500)
+}
+
 // Keep existing accessible descriptions intact and remove only our own reference.
 $effect(() => {
   if (!open || !anchor) return
@@ -105,15 +124,20 @@ onMount(() => {
       clearTimeout(closeTimer)
       return
     }
-    show(findAnchor(event.target))
+    scheduleShow(findAnchor(event.target))
   }
   const out = (event: PointerEvent): void => {
-    if (event.relatedTarget instanceof Node && anchor?.contains(event.relatedTarget))
+    if (
+      event.relatedTarget instanceof Node &&
+      (pendingAnchor ?? anchor)?.contains(event.relatedTarget)
+    )
       return
+    clearTimeout(openTimer)
+    pendingAnchor = null
     // Allow the pointer to cross the small gap and hover readable help.
     closeTimer = setTimeout(dismiss, 120)
   }
-  const focus = (event: FocusEvent): void => show(findAnchor(event.target))
+  const focus = (event: FocusEvent): void => scheduleShow(findAnchor(event.target))
   const blur = (): void => dismiss()
   const key = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') dismiss()
@@ -135,6 +159,7 @@ onMount(() => {
   document.addEventListener('scroll', scroll, true)
   window.addEventListener('resize', dismiss)
   return () => {
+    clearTimeout(openTimer)
     clearTimeout(closeTimer)
     document.removeEventListener('pointerover', over)
     document.removeEventListener('pointerout', out)
