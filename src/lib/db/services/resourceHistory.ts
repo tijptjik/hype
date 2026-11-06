@@ -38,6 +38,9 @@ async function hasHistoryStorage(
   return true
 }
 
+/** Immutable logo identity and optional exact image version retained with a snapshot. */
+export type HistoricalLogo = { imageId: string; imageRevisionId: string | null }
+
 /** A bounded history page containing immutable attribution and comparison evidence. */
 export type OrganisationHistoryPage = {
   available: boolean
@@ -56,6 +59,7 @@ export type OrganisationHistoryPage = {
     reason: string | null
     createdAt: string
     initial: boolean
+    logo?: { before: HistoricalLogo | null; after: HistoricalLogo | null }
     fieldLabels?: Record<string, string>
     previousCreatedAt?: string | null
     changes: import('#lib/revisions/diff.js').RevisionDifference[]

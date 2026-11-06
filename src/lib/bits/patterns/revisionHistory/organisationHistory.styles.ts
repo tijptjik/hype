@@ -3,9 +3,7 @@ import { cx } from '#lib/bits/utils.js'
 
 const focus =
   'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary'
-const grid =
-  'grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,2fr)] sm:gap-x-6'
-const cell = 'flex min-w-0 gap-2 py-2 sm:py-3'
+const cell = 'min-w-0 space-y-2 p-4'
 
 export const historyStyles = {
   tab: cx(
@@ -17,14 +15,18 @@ export const historyStyles = {
     focus,
   ),
   disclosure: cx(
-    'ml-auto flex shrink-0 items-center gap-3 rounded-sm py-1 text-left hover:bg-primary/3',
+    'ml-auto flex min-h-9 shrink-0 items-center gap-2 rounded-md px-2 py-1 text-left text-muted-foreground hover:bg-primary/5 hover:text-foreground',
     focus,
   ),
-  columns: cx(
-    grid,
-    'border-y border-border/40 px-3 py-2 text-xs text-muted-foreground',
-  ),
-  row: cx(grid, 'px-3 pb-3 sm:pb-0'),
+  entry: 'border-border/60 min-w-0 overflow-hidden rounded-lg border',
+  metadata: 'contents',
+  label: 'text-muted-foreground text-xs font-medium',
+  group: 'grid min-w-0 gap-3',
+  comparison: 'border-border/60 bg-panel min-w-0 overflow-hidden rounded-md border',
+  fieldHeading:
+    'border-border/50 bg-muted/30 flex min-w-0 flex-wrap gap-x-8 gap-y-2 border-b px-4 py-3',
+  values:
+    'divide-border/40 grid min-w-0 divide-y @[36rem]:grid-cols-2 @[36rem]:divide-x @[36rem]:divide-y-0',
   before: cx(cell, 'text-muted-foreground'),
   after: cx(cell, 'text-foreground'),
   notice: 'flex flex-wrap items-center gap-4 px-6 py-5 text-sm text-muted-foreground',
