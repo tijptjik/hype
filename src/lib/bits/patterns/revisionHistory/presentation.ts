@@ -95,7 +95,7 @@ const operationPaths = [
   { path: ['i18n', '*'], entity: 'translation' },
 ] as const
 
-/** Identifies catalogue operations from their structural path and before/after presence.
+/** Identifies resource and catalogue operations from structural paths and before/after presence.
  * @param change Immutable difference, retaining explicit absence separately from null.
  * @param catalogue Whether the path starts with a catalogue field identity.
  * @returns An operation label and whether the operation names the entire changed entity.
@@ -106,7 +106,46 @@ export function historyOperation(
   catalogue: boolean,
 ): { label: string; wholeEntity: boolean } {
   const kind = changeKind(change)
-  if (!catalogue) return { label: kind, wholeEntity: false }
+  if (!catalogue) {
+    const path = change.path
+    // Locale field positions are structural; a property ID named "title" is opaque.
+    const localizedField =
+      path[0] === 'i18n' || path[0] === 'translations' ? path[2] : undefined
+    const field =
+      localizedField &&
+      ['name', 'nameShort', 'title', 'description'].includes(localizedField)
+        ? localizedField
+        : undefined
+    const noun = field
+      ? ({ title: 'name', nameShort: 'short name', alt: 'alternative text' }[field] ??
+        field)
+      : path[0] === 'gallery'
+        ? 'photo'
+        : path[0] === 'properties'
+          ? 'value'
+          : path[0] === 'translations' || path[0] === 'i18n'
+            ? 'translation'
+            : null
+    if (noun)
+      return {
+        label: `${kind === 'Added' ? 'New' : kind === 'Updated' ? 'Updated' : 'Removed'} ${noun}`,
+        wholeEntity: false,
+      }
+    const state = path.at(-1)
+    if (change.after.present && typeof change.after.value === 'boolean') {
+      if (state === 'isPublished')
+        return {
+          label: change.after.value ? 'Published' : 'Unpublished',
+          wholeEntity: false,
+        }
+      if (state === 'isArchived')
+        return {
+          label: change.after.value ? 'Archived' : 'Restored',
+          wholeEntity: false,
+        }
+    }
+    return { label: kind, wholeEntity: false }
+  }
   const path = change.path.slice(1)
   const rule = operationPaths.find(
     rule =>
