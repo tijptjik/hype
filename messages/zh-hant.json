@@ -1,4 +1,6 @@
 {
+  "admin__forms_common_activate_field": "啟用欄位",
+  "admin__forms_common_deactivate_field": "停用欄位",
   "scroll_to_top": "返回頂部",
   "association_back_editor": "返回地點",
   "association_candidate_selected": "使用候選地點",

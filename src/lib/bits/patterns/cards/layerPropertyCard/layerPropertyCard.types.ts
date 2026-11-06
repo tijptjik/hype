@@ -24,6 +24,7 @@ export interface LayerPropertyCardActionsProps {
   isUserContributable: boolean
   isContributableDisabled?: boolean
   isEditing?: boolean
+  showMoveAction?: boolean
   onVisibleChange?: (next: boolean) => void
   onUserContributableChange?: (next: boolean) => void
   class?: string

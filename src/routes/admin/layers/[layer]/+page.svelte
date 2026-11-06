@@ -80,6 +80,7 @@ import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import { createLayerPropertyTransfer } from '#lib/bits/patterns/cards/layerPropertyCard/layerPropertyCard.transitions'
 import {
   formSectionDividerStyles,
   formSelectionSectionStyles,
@@ -741,6 +742,7 @@ const canSubmitLayer = $derived(isCoreFacet ? canEditLayerCore : canEditLayerFie
 /********************
  *  FIELD PRESENTATION
  ************/
+const layerPropertyTransfer = createLayerPropertyTransfer()
 const layerPropertyRows = $derived.by(() => {
   return toLayerPropertyRows({
     form: formDataUpdater,
@@ -1545,6 +1547,7 @@ $effect(() => {
                 isEditing={isEditing && canEditLayerFields}
                 isContributableDisabled={column.isContributableDisabled}
                 isFlipDisabled={isLayerCardFlipDisabled}
+                transfer={layerPropertyTransfer}
                 onVisibleChange={(index, value) =>
                   updateLayerPropertyToggle(index, 'isVisible', value)}
                 onUserContributableChange={(index, value) =>
