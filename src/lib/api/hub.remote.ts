@@ -1,6 +1,6 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
-import { error } from '@sveltejs/kit'
+import { error, isHttpError } from '@sveltejs/kit'
 // I18N
 import { getLocale } from '#lib/i18n.js'
 import {
@@ -531,6 +531,19 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
           : normalizedSubscriptionSessionCookie,
       subscriptionPlacement: data.subscriptionPlacement,
     },
+  }).catch(cause => {
+    // Expected contract protections must surface as form issues, not generic failures.
+    if (
+      isHttpError(cause, 400) &&
+      cause.body.message === 'PROPERTY_CONTRACT_HAS_VALUES'
+    ) {
+      invalid(
+        issue.data.properties(
+          'A field with saved feature values cannot change component or value format. Restore its existing component to save translations, or create a new field.',
+        ),
+      )
+    }
+    throw cause
   })
 
   const persisted = requireValue(result, () =>

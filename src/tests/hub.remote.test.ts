@@ -1,6 +1,7 @@
 import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { error as httpError } from '@sveltejs/kit'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -379,6 +380,45 @@ describe('hub.remote form image handling', () => {
 
   afterAll(() => {
     policyMatrix.flush()
+  })
+
+  it('explains populated-field contract changes as a form validation issue', async () => {
+    const message =
+      'A field with saved feature values cannot change component or value format. Restore its existing component to save translations, or create a new field.'
+    mockGuardedContext.mockResolvedValue({
+      db: buildDbForUpdate({ existingRoles: [{ userId: 'u-1', role: 'admin' }] }),
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+    mockListHubRoleAssignments.mockResolvedValue([{ userId: 'u-1', role: 'admin' }])
+    mockProbeHubForUpdate.mockResolvedValue({
+      id: 'hub-1',
+      code: 'core',
+      modifiedAt: 'before',
+    })
+    mockUpdateHubByIdWithConcurrency.mockImplementationOnce(async () => {
+      httpError(400, 'PROPERTY_CONTRACT_HAS_VALUES')
+    })
+    const invalid = vi.fn((issue: string) => {
+      throw new Error(issue)
+    })
+    await expect(
+      remote.hubForm(
+        {
+          meta: { id: 'hub-1', mode: 'update', updatedAt: 'before' },
+          data: {
+            code: 'core',
+            domain: '',
+            i18n: { en: {} },
+            userRoles: [{ userId: 'u-1', role: 'admin' }],
+            organisations: [],
+            properties: [],
+          },
+        },
+        invalid,
+      ),
+    ).rejects.toThrow(message)
+    expect(invalid).toHaveBeenCalledWith(message)
   })
 
   it.each(['create', 'update'] as const)(
