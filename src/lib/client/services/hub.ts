@@ -63,11 +63,19 @@ function normalizeHubSubscriptionService(
     : HubSubscriptionService.substack
 }
 
+/** Preserve a hub translation and fill only missing form controls.
+ * @param root Hub defaults. @param locale Stored translation. @param localeKey Content form key.
+ * @returns Complete controls without inventing English policies for other languages.
+ */
 function normalizeHubFormLocale(
   root: HubFormRootForDefaults | null | undefined,
   locale: { [K in keyof HubFormLocale]?: HubFormLocale[K] | null } | null | undefined,
-  localeKey: 'en' | 'zhHans' | 'zhHant',
+  localeKey: string,
 ): HubFormLocale {
+  const templateLocale =
+    localeKey === 'en' || localeKey === 'zhHans' || localeKey === 'zhHant'
+      ? localeKey
+      : null
   return {
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
@@ -79,21 +87,25 @@ function normalizeHubFormLocale(
     subscriptionBenefitsGen: locale?.subscriptionBenefitsGen ?? false,
     privacyPolicy:
       locale?.privacyPolicy ??
-      createDefaultHubPrivacyPolicy(
-        localeKey,
-        locale?.name,
-        locale?.nameShort,
-        root?.legalContactAddress,
-      ),
+      (templateLocale
+        ? createDefaultHubPrivacyPolicy(
+            templateLocale,
+            locale?.name,
+            locale?.nameShort,
+            root?.legalContactAddress,
+          )
+        : ''),
     privacyPolicyGen: locale?.privacyPolicyGen ?? false,
     termsOfService:
       locale?.termsOfService ??
-      createDefaultHubTermsOfService(
-        localeKey,
-        locale?.name,
-        locale?.nameShort,
-        root?.legalContactAddress,
-      ),
+      (templateLocale
+        ? createDefaultHubTermsOfService(
+            templateLocale,
+            locale?.name,
+            locale?.nameShort,
+            root?.legalContactAddress,
+          )
+        : ''),
     termsOfServiceGen: locale?.termsOfServiceGen ?? false,
   }
 }
@@ -114,6 +126,10 @@ function cloneHubProperties(
   })) as HubFormInput['data']['properties']
 }
 
+/** Build an editable hub snapshot without dropping any content languages.
+ * @param data Persisted hub, or no value for a new hub.
+ * @returns Complete form input with reversible locale keys and existing provenance.
+ */
 export function toHubFormInput(data?: Hub | null): HubFormInput {
   if (!data) {
     const defaultData = {
@@ -195,11 +211,12 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
     },
     data: {
       ...normalizedData,
-      i18n: {
-        en: normalizeHubFormLocale(normalizedData, data.i18n?.en, 'en'),
-        zhHans: normalizeHubFormLocale(normalizedData, data.i18n?.zhHans, 'zhHans'),
-        zhHant: normalizeHubFormLocale(normalizedData, data.i18n?.zhHant, 'zhHant'),
-      },
+      i18n: Object.fromEntries(
+        Object.entries(propertyLocalesToForm(data.i18n)).map(([locale, row]) => [
+          locale,
+          normalizeHubFormLocale(normalizedData, row, locale),
+        ]),
+      ),
       userRoles: (data.userRoles ?? []).map(userRole => ({
         userId: userRole.userId,
         role: userRole.role,

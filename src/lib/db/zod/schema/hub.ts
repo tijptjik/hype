@@ -1,6 +1,7 @@
 // DOMAIN
 import { HUB_CODE_PATTERN } from '#lib/hub-domains.js'
 // I18N
+import { contentLocaleMap, ContentTagInput } from '#lib/i18n/contentRecords.js'
 import { m } from '#lib/i18n.js'
 // ENUMS
 import { HubSubscriptionService } from '#lib/enums.js'
@@ -90,14 +91,18 @@ export const HubInsert = createInsertSchema(hub)
 
 export const HubUpdate = createUpdateSchema(hub)
 
-export const HubI18nBase = createSelectSchema(hubI18n)
+export const HubI18nBase = createSelectSchema(hubI18n, { locale: ContentTagInput })
 
-export const HubI18nInsert = createInsertSchema(hubI18n).omit({
+export const HubI18nInsert = createInsertSchema(hubI18n, {
+  locale: ContentTagInput,
+}).omit({
   hubId: true,
   locale: true,
 })
 
-export const HubI18nUpdate = createUpdateSchema(hubI18n).omit({
+export const HubI18nUpdate = createUpdateSchema(hubI18n, {
+  locale: ContentTagInput,
+}).omit({
   hubId: true,
   locale: true,
 })
@@ -163,12 +168,12 @@ export const HubRaw = HubBase.extend({
 export const HubI18nFormData = z.object({
   name: z
     .string()
-    .min(1, { message: m.field_is_required({ field: m.field_name() }) })
-    .max(128, { message: m.admin__validation_lte_128_chars() }),
+    .max(128, { message: m.admin__validation_lte_128_chars() })
+    .default(''),
   nameShort: z
     .string()
-    .min(1, { message: m.field_is_required({ field: m.field_short_name() }) })
-    .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
+    .max(32, { message: m.admin__validation_short_name_lte_32_chars() })
+    .default(''),
   description: z
     .string()
     .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
@@ -200,11 +205,12 @@ export const HubRoleFormData = z.object({
   role: HubRoleBase.shape.role,
 })
 
-export const HubI18nByLocaleFormData = z.object({
-  en: HubI18nFormData,
-  zhHans: HubI18nFormData,
-  zhHant: HubI18nFormData,
-})
+// Content languages are independent of the compiled application UI languages.
+// A policy-only translation may omit names; the hub still needs a complete display identity.
+export const HubI18nByLocaleFormData = contentLocaleMap(HubI18nFormData).refine(
+  rows => Object.values(rows).some(row => row.name.trim() && row.nameShort.trim()),
+  'Add a hub name and short name in at least one language.',
+)
 
 export const HubUserRolesFormData = z.preprocess(
   value => (value === undefined || value === null ? [] : value),
@@ -376,7 +382,7 @@ const HubSubscriptionFields = HubBase.pick({
 
 export const HubListProfileAPI = HubListFields.extend({
   counts: HubCounts.nullish(),
-  i18n: getLocales(HubI18nBase),
+  i18n: contentLocaleMap(HubI18nBase).nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
 })
 

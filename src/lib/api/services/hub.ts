@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // LIB
 import { toBooleanOrUndefined } from '#lib/api/services/index.js'
 // SCHEMA
@@ -152,7 +154,7 @@ export const toHubProfile = (
 const mapPropertyValuesWithI18n = (values: unknown): UnknownRecord[] =>
   ((values as UnknownRecord[] | undefined) ?? []).map(value => ({
     ...value,
-    i18n: transformI18nSafely(value.i18n as never),
+    i18n: propertyLocalesToForm(value.i18n),
   }))
 
 /**
@@ -161,7 +163,7 @@ const mapPropertyValuesWithI18n = (values: unknown): UnknownRecord[] =>
 const mapPropertiesWithI18n = (properties: unknown): UnknownRecord[] =>
   ((properties as UnknownRecord[] | undefined) ?? []).map(property => ({
     ...property,
-    i18n: transformI18nSafely(property.i18n as never),
+    i18n: propertyLocalesToForm(property.i18n),
     values: mapPropertyValuesWithI18n(property.values),
   }))
 
@@ -178,7 +180,7 @@ const mapPropertiesFromAssignments = (row: UnknownRecord): UnknownRecord[] => {
     return assignments.map((property, rank) => ({
       ...property,
       rank,
-      i18n: transformI18nSafely(property.i18n as never),
+      i18n: propertyLocalesToForm(property.i18n),
       values: mapPropertyValuesWithI18n(property.values),
     }))
   }
@@ -225,6 +227,9 @@ const mapLayerDefaults = (layerDefaults: unknown): UnknownRecord[] =>
 /**
  * Shapes a raw hub row into a profile-specific API payload.
  * Ensures i18n and nested relation payloads are normalized for frontend consumption.
+ * @param row Raw hub and its loaded relations.
+ * @param profile Requested response projection.
+ * @returns Validated payload preserving every stored hub content language.
  */
 const toProfileResponseShape = <P extends HubProfileType>(
   row: HubDBRaw,
@@ -232,7 +237,7 @@ const toProfileResponseShape = <P extends HubProfileType>(
 ): HubEntityByProfile<P> => {
   const shaped = {
     ...row,
-    i18n: transformI18nSafely(row.i18n as never),
+    i18n: propertyLocalesToForm(row.i18n),
     image: row.image
       ? toImageEnvelope(
           row.image as never,

@@ -8,7 +8,7 @@ import { user } from './user'
 import { image } from './image'
 import { layer } from './layer'
 // ENUMS
-import { supportedLocales, HubRoleType, HubSubscriptionService } from '../../enums'
+import { HubRoleType, HubSubscriptionService } from '../../enums'
 // TYPES
 import type { HubSubscriptionPlacement } from '#lib/api/services/hub.types.js'
 
@@ -79,9 +79,7 @@ export const hubI18n = sqliteTable(
       .notNull()
       .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     // IETF BCP 47 language tag
-    locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]],
-    }).notNull(),
+    locale: text('locale').notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
     nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(true),

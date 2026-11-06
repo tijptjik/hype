@@ -154,7 +154,7 @@ import {
   specifierComponentTypes,
 } from '#lib/enums.js'
 // TYPES
-import type { Id, Locale, LocaleKey, UserRoleDisco } from '#lib/types.js'
+import type { Id, UserRoleDisco } from '#lib/types.js'
 import type { User } from '#lib/db/zod/schema/user.types.js'
 import type {
   UserRoleFieldNameResolverForm,
@@ -542,7 +542,7 @@ const updatePropertyBase = (
 
 const updatePropertyI18n = (
   propertyId: Id,
-  locale: Locale,
+  locale: string,
   key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
   value: string | boolean,
 ): void => {
@@ -561,7 +561,7 @@ const addPropertyValue = (propertyId: Id): void => {
  * @param locale - Locale supplying the option labels.
  * @returns Nothing; updates option ranks in the form.
  */
-const sortPropertyValuesAlphabetically = (propertyId: Id, locale: Locale): void => {
+const sortPropertyValuesAlphabetically = (propertyId: Id, locale: string): void => {
   sortProjectPropertyValuesAlphabetically(hubPropertyFormAdapter, propertyId, locale)
   revalidateAfterProgrammaticChange()
 }
@@ -579,7 +579,7 @@ const movePropertyValue = (propertyId: Id, valueId: Id, targetIndex: number): vo
 const updatePropertyValueI18n = (
   propertyId: Id,
   valueId: Id,
-  locale: Locale,
+  locale: string,
   key: 'value',
   value: string,
 ): void => {
@@ -629,7 +629,7 @@ const onTranslatePropertyLocale = async (
   return translated
 }
 
-const onResetPropertyLocale = (propertyId: Id, targetLocale: Locale): void => {
+const onResetPropertyLocale = (propertyId: Id, targetLocale: string): void => {
   resetProjectPropertyLocale(hubPropertyFormAdapter, propertyId, targetLocale)
   revalidateAfterProgrammaticChange()
 }

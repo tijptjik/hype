@@ -31,8 +31,10 @@ import {
 // ZOD
 import { PropertyRecordCreate, PropertyRecordUpdate } from '../zod'
 // I18N
-import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
-import { propertyLocalesToForm } from '#lib/properties/locales.js'
+import {
+  propertyLocalesToForm,
+  propertyContentToStorage,
+} from '#lib/properties/locales.js'
 // REVISIONS
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 import {
@@ -219,7 +221,7 @@ export const createBaseProperty = async (
     }))
     // Allocate identities first so each translation follows its value in the same commit.
     const translations = toRelatedRecords(
-      contentMapToStorage(relations.i18n),
+      propertyContentToStorage(relations.i18n),
       'propertyId',
       id,
       'locale',
@@ -244,7 +246,7 @@ export const createBaseProperty = async (
     ]
     for (const value of values) {
       const localized = toRelatedRecords(
-        contentMapToStorage(value.i18n ?? {}),
+        propertyContentToStorage(value.i18n ?? {}),
         'propertyValueId',
         value.id,
         'locale',
@@ -293,7 +295,9 @@ export const createI18n = async (
   i18n: Record<Locale, PropertyI18nNew>,
   propertyId: string,
 ): Promise<PropertyI18nDB[]> => {
-  const normalizedI18n = contentMapToStorage(i18n as Record<string, PropertyI18nNew>)
+  const normalizedI18n = propertyContentToStorage(
+    i18n as Record<string, PropertyI18nNew>,
+  )
   const relatedRecords = toRelatedRecords(
     normalizedI18n,
     'propertyId',
@@ -358,7 +362,7 @@ export const createPropertyValues = async (
     )
   }
   for (const value of prepared) {
-    const localized = contentMapToStorage(value.i18n ?? {})
+    const localized = propertyContentToStorage(value.i18n ?? {})
     for (const [locale, translation] of Object.entries(localized)) {
       translations.push(
         db.insert(propertyValueI18n).values({
@@ -408,7 +412,7 @@ export const createPropertyValueI18n = async (
   i18n: Record<Locale, PropertyValueI18nNew>,
   propertyValueId: string,
 ): Promise<PropertyValueI18nDB[]> => {
-  const normalizedI18n = contentMapToStorage(
+  const normalizedI18n = propertyContentToStorage(
     i18n as Record<string, PropertyValueI18nNew>,
   )
   const relatedRecords = toRelatedRecords(
@@ -764,7 +768,7 @@ export const updateI18n = async (
   i18n: Record<Locale, PropertyI18nPartial>,
   propertyId: string,
 ): Promise<PropertyI18nDB[]> => {
-  const normalizedI18n = contentMapToStorage(
+  const normalizedI18n = propertyContentToStorage(
     i18n as Record<string, PropertyI18nPartial>,
   )
   const relatedRecords = toRelatedRecords(
@@ -910,7 +914,7 @@ export const updatePropertyValueI18n = async (
   i18n: Record<Locale, PropertyValueI18nPartial>,
   propertyValueId: string,
 ): Promise<PropertyValueI18nDB[]> => {
-  const normalizedI18n = contentMapToStorage(
+  const normalizedI18n = propertyContentToStorage(
     i18n as Record<string, PropertyValueI18nPartial>,
   )
   const relatedRecords = toRelatedRecords(
@@ -1073,7 +1077,9 @@ export const preparePropertyCatalog = async (
       existing,
       parsed,
       values: normalizedValues,
-      i18n: contentMapToStorage((i18n ?? {}) as Record<string, PropertyI18nPartial>),
+      i18n: propertyContentToStorage(
+        (i18n ?? {}) as Record<string, PropertyI18nPartial>,
+      ),
     }
   })
   const ids = prepared.map(row => row.id)
@@ -1182,7 +1188,7 @@ export const preparePropertyCatalog = async (
           .delete(propertyValueI18n)
           .where(eq(propertyValueI18n.propertyValueId, value.id)),
       )
-      const translations = contentMapToStorage(
+      const translations = propertyContentToStorage(
         (i18n ?? {}) as Record<string, PropertyValueI18nPartial>,
       )
       for (const [locale, translation] of Object.entries(translations)) {

@@ -100,6 +100,26 @@ export function contentMapToStorage<T extends Record<string, unknown>>(
   )
 }
 
+/** Omit empty draft translations at an entity's persistence boundary.
+ * @param values Submitted locale rows, including empty editor controls.
+ * @param fields Authored text fields that make a translation meaningful.
+ * @returns Storage-keyed populated rows with all original text and provenance intact.
+ * @remarks Validate identities before filtering, so empty alias collisions still fail.
+ * Use only for replacement collections; an explicit clear must delete the old row.
+ */
+export function populatedContentMapToStorage<T extends Record<string, unknown>>(
+  values: Partial<Record<string, T>>,
+  fields: readonly string[],
+): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(contentMapToStorage(values)).filter(([, row]) =>
+      fields.some(
+        field => typeof row[field] === 'string' && row[field].trim().length > 0,
+      ),
+    ),
+  )
+}
+
 export const ContentTagInput = z
   .string()
   .min(1)

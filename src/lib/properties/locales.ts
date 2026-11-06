@@ -1,5 +1,9 @@
 // CONTENT LOCALES
-import { adaptContentMap, contentRowsToForm } from '#lib/i18n/contentRecords.js'
+import {
+  adaptContentMap,
+  contentRowsToForm,
+  populatedContentMapToStorage,
+} from '#lib/i18n/contentRecords.js'
 
 type LocaleRow = { locale?: string; [key: string]: unknown }
 
@@ -32,4 +36,14 @@ export function propertyLocalesToForm(input: unknown): Record<string, LocaleRow>
     rows[locale] = row
   }
   return adaptContentMap(rows)
+}
+
+/** Store authored field or option text, never locale-picker placeholders alone.
+ * @param values Submitted property or option translations.
+ * @returns Populated storage rows, preserving placeholder-only translations and flags.
+ */
+export function propertyContentToStorage<T extends Record<string, unknown>>(
+  values: Partial<Record<string, T>>,
+): Record<string, T> {
+  return populatedContentMapToStorage(values, ['label', 'placeholder', 'value'])
 }

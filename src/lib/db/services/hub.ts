@@ -4,6 +4,8 @@ import {
   resourceIndexSearchCondition,
 } from './resourceIndexFilters.js'
 import type { ResourceIndexFilters } from '#lib/resources/indexQuery.js'
+// CONTENT LOCALES
+import { populatedContentMapToStorage } from '#lib/i18n/contentRecords.js'
 // DRIZZLE
 import { and, eq, exists, isNull, like, or, sql, type SQL } from 'drizzle-orm'
 // IDENTITY
@@ -43,7 +45,7 @@ import type { OrganisationRevisionActor } from './organisationRevision.js'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
-import type { Database, ListResponse, Locale, LocaleKey, Id } from '#lib/types.js'
+import type { Database, ListResponse, Locale, Id } from '#lib/types.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
 import type {
   HubDB,
@@ -177,9 +179,19 @@ function prepareHubRelations(
       ...prepareGuardedReplacement(
         db,
         hubI18n,
-        toRelatedRecords(relations.i18n, 'hubId', id, 'locale') as InferInsertModel<
-          typeof hubI18n
-        >[],
+        toRelatedRecords(
+          populatedContentMapToStorage(relations.i18n, [
+            'name',
+            'nameShort',
+            'description',
+            'subscriptionBenefits',
+            'privacyPolicy',
+            'termsOfService',
+          ]),
+          'hubId',
+          id,
+          'locale',
+        ) as InferInsertModel<typeof hubI18n>[],
         hubI18n.hubId,
         id,
         guard,
@@ -289,7 +301,19 @@ export const createI18n = async (
   i18n: Record<string, HubI18nNew>,
   hubId: string,
 ): Promise<HubI18nDB[]> => {
-  const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
+  const records = toRelatedRecords(
+    populatedContentMapToStorage(i18n, [
+      'name',
+      'nameShort',
+      'description',
+      'subscriptionBenefits',
+      'privacyPolicy',
+      'termsOfService',
+    ]),
+    'hubId',
+    hubId,
+    'locale',
+  )
   return await insertManyRelated(db, hubI18n, records, 'hubId', hubId)
 }
 
@@ -1006,10 +1030,22 @@ export const updateHubArchivedStateById = async (
  */
 export const updateI18n = async (
   db: Database,
-  i18n: Record<LocaleKey, HubI18nPartial>,
+  i18n: Record<string, HubI18nPartial>,
   hubId: string,
 ): Promise<HubI18nDB[]> => {
-  const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
+  const records = toRelatedRecords(
+    populatedContentMapToStorage(i18n, [
+      'name',
+      'nameShort',
+      'description',
+      'subscriptionBenefits',
+      'privacyPolicy',
+      'termsOfService',
+    ]),
+    'hubId',
+    hubId,
+    'locale',
+  )
   return await replaceManyRelated(
     db,
     hubI18n,

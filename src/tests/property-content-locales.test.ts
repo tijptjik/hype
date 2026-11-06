@@ -2,7 +2,12 @@
 // TESTING
 import { expect, it } from 'vitest'
 // SERVICES
-import { createI18n, createPropertyValues } from '#lib/db/services/property.js'
+import {
+  createI18n,
+  createPropertyValues,
+  updateI18n,
+  updatePropertyValueI18n,
+} from '#lib/db/services/property.js'
 import { propertyLocalesToForm } from '#lib/properties/locales.js'
 import {
   PropertyI18nByLocaleFormData,
@@ -119,6 +124,60 @@ it('persists added languages and legacy Chinese tags without overwriting English
       ja: { value: 'キリスト教' },
       zhHant: { value: '基督教' },
     })
+  } finally {
+    sqlite.close()
+  }
+})
+
+it('omits empty locale controls and removes cleared translations while retaining placeholder-only text', async () => {
+  const { db, sqlite } = publicationSqlite({})
+  try {
+    sqlite.exec(`CREATE TABLE propertyI18n(propertyId TEXT,locale TEXT,label TEXT,labelGen INTEGER,placeholder TEXT,placeholderGen INTEGER);
+      CREATE TABLE propertyValueI18n(propertyValueId TEXT,locale TEXT,value TEXT,valueGen INTEGER);`)
+    await createI18n(
+      db as unknown as Database,
+      {
+        en: { label: 'Grade', placeholder: 'Select grade' },
+        ja: { label: '', placeholder: '', labelGen: true },
+        ko: { label: '  ', placeholder: null },
+        fr: { label: '', placeholder: 'Choisir', placeholderGen: true },
+      } as never,
+      'grade',
+    )
+    expect(
+      sqlite
+        .prepare(
+          'SELECT locale,label,placeholder,placeholderGen FROM propertyI18n ORDER BY locale',
+        )
+        .all(),
+    ).toEqual([
+      { locale: 'en', label: 'Grade', placeholder: 'Select grade', placeholderGen: 1 },
+      { locale: 'fr', label: '', placeholder: 'Choisir', placeholderGen: 1 },
+    ])
+    await updateI18n(
+      db as unknown as Database,
+      {
+        en: { label: 'Grade' },
+        fr: { label: '', placeholder: '' },
+      } as never,
+      'grade',
+    )
+    expect(sqlite.prepare('SELECT locale FROM propertyI18n').all()).toEqual([
+      { locale: 'en' },
+    ])
+    sqlite.exec("INSERT INTO propertyValueI18n VALUES ('v','ja','古い',0)")
+    await updatePropertyValueI18n(
+      db as unknown as Database,
+      {
+        ja: { value: ' ' },
+        ko: { value: '', valueGen: true },
+        fr: { value: 'Option', valueGen: false },
+      } as never,
+      'v',
+    )
+    expect(
+      sqlite.prepare('SELECT locale,value,valueGen FROM propertyValueI18n').all(),
+    ).toEqual([{ locale: 'fr', value: 'Option', valueGen: 0 }])
   } finally {
     sqlite.close()
   }

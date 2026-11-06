@@ -101,6 +101,56 @@ describe('hub form transactions', () => {
     }
   })
 
+  it('saves many content languages atomically without exceeding D1 parameters', async () => {
+    const { db, sqlite } = fixture()
+    try {
+      const batch = vi.spyOn(db, 'batch')
+      const tags = [
+        'en',
+        'ja',
+        'ko',
+        'fr',
+        'de',
+        'es',
+        'it',
+        'nl',
+        'pt-BR',
+        'ar',
+        'hi',
+        'zhHant',
+      ]
+      const i18n = Object.fromEntries(
+        tags.map(locale => [
+          locale,
+          {
+            name: `Hub ${locale}`,
+            nameShort: locale,
+            privacyPolicy: `Privacy ${locale}`,
+            termsOfService: `Terms ${locale}`,
+          },
+        ]),
+      )
+      await updateHubByIdWithConcurrency(db, { ...patch, i18n })
+      expect(
+        sqlite.prepare("SELECT count(*) n FROM hubI18n WHERE hubId='h'").get(),
+      ).toEqual({ n: tags.length })
+      expect(
+        sqlite
+          .prepare(
+            "SELECT privacyPolicy FROM hubI18n WHERE hubId='h' AND locale='pt-BR'",
+          )
+          .get(),
+      ).toEqual({ privacyPolicy: 'Privacy pt-BR' })
+      for (const statement of batch.mock.calls[0][0])
+        expect(
+          (statement as unknown as { toSQL(): { params: unknown[] } }).toSQL().params
+            .length,
+        ).toBeLessThanOrEqual(100)
+    } finally {
+      sqlite.close()
+    }
+  })
+
   it.each(['hubI18n', 'hubRole', 'organisation', 'hubLayer', 'hub'])(
     'rolls everything back on %s failure',
     async table => {
