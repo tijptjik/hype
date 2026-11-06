@@ -2,9 +2,6 @@
 // SVELTE
 import { onDestroy, type Snippet } from 'svelte'
 import type { Attachment } from 'svelte/attachments'
-import { slide } from 'svelte/transition'
-import { prefersReducedMotion } from 'svelte/motion'
-import EditIcon from 'virtual:icons/lucide/pencil'
 // ICONS
 import ArrowUpIcon from 'virtual:icons/proicons/arrow-up'
 // I18N
@@ -26,9 +23,7 @@ import {
   type ProfileProviderResult,
   type ProfileTranslationResult,
 } from './profileTranslation'
-// ICONS
-import UnlinkIcon from 'virtual:icons/lucide/unlink'
-import LinkIcon from 'virtual:icons/lucide/link'
+// TRANSLATION COMPONENTS
 import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.svelte'
 import FormI18nTranslationStatus from '../formI18nSection/components/FormI18nTranslationStatus.svelte'
 // STYLES
@@ -54,6 +49,7 @@ let {
   inherited = false,
   policyRequired = false,
   offerName = false,
+  locationNames = {},
   isEditing = false,
   onUseName,
   onIndependentName,
@@ -80,6 +76,7 @@ let {
   inherited?: boolean
   policyRequired?: boolean
   offerName?: boolean
+  locationNames?: Readonly<Record<string, string>>
   isEditing?: boolean
   onUseName?: () => void
   onIndependentName?: () => void
@@ -97,6 +94,20 @@ let {
 const showSkeleton = $derived(loading && !retainContent)
 const options = $derived(contentLocaleOptions(getLocaleKey()))
 const shown = $derived(displayedLocales(localeState, localeState.expanded))
+// Preview the visible title's language; identify the language when only a fallback name exists.
+const locationNamePreview = $derived.by(() => {
+  const names = Object.entries(locationNames).filter(([, name]) => name.trim())
+  const preferred = contentFormKey(shown[0] ?? 'en')
+  const candidate =
+    names.find(([locale]) => contentFormKey(locale) === preferred) ?? names[0]
+  return candidate
+    ? {
+        locale: candidate[0],
+        name: candidate[1],
+        fallback: contentFormKey(candidate[0]) !== preferred,
+      }
+    : null
+})
 const fields = $derived(
   fieldConfigs ??
     ((allowDescriptions
@@ -379,42 +390,29 @@ function autonym(locale: string): string {
             {/if}
             {#if derived}
               <div
-                class="group/location-link hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 inline-flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-transparent px-2 py-1 transition-colors duration-150 motion-reduce:transition-none"
+                class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs"
                 data-profile-derived
               >
-                <span
-                  class="text-muted-foreground inline-flex items-center gap-2 text-xs"
-                  ><LinkIcon class="text-primary size-4 shrink-0" />
-                  {m.feature_name_derived_help()}</span
+                <span class="text-muted-foreground"
+                  >{m.feature_name_derived_help()}</span
                 >
                 {#if isEditing}
-                  <div
-                    class="flex flex-wrap items-center gap-1 overflow-hidden"
-                    data-profile-edit-action
-                    transition:slide={{
-                      axis: 'x',
-                      duration:
-                        prefersReducedMotion.current ||
-                        typeof globalThis.Element?.prototype.animate !== 'function'
-                          ? 0
-                          : 180,
-                    }}
-                  >
+                  <div class="flex items-center gap-3" data-profile-edit-action>
                     {#if !policyRequired}
                       <button
                         type="button"
-                        class="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-primary inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs transition-colors focus-visible:outline-2 motion-reduce:transition-none"
+                        class="text-primary decoration-primary/40 focus-visible:outline-primary rounded py-1 underline underline-offset-4 hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2"
                         onclick={onIndependentName}
                       >
-                        <UnlinkIcon class="size-3.5" />{m.feature_separate_name()}
+                        {m.feature_separate_name()}
                       </button>
                     {/if}
                     <button
                       type="button"
-                      class="text-muted-foreground group-hover/location-link:text-primary group-focus-within/location-link:text-primary focus-visible:outline-primary inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors focus-visible:outline-2 motion-reduce:transition-none"
+                      class="text-primary decoration-primary/40 focus-visible:outline-primary rounded py-1 underline underline-offset-4 hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2"
                       onclick={onEditLocation}
                     >
-                      <EditIcon class="size-3.5" />{m.feature_edit_location()}
+                      {m.forms__edit()}
                     </button>
                   </div>
                 {/if}
@@ -521,14 +519,33 @@ function autonym(locale: string): string {
             </div>
           {/each}
         </div>
-        {#if !derived && !showSkeleton && field === 'title' && offerName && isEditing}
+        {#if !derived &&
+          !showSkeleton &&
+          field === 'title' &&
+          offerName &&
+          locationNamePreview &&
+          isEditing}
           <div
-            class="bg-primary/5 mt-6 flex flex-wrap items-center justify-between gap-2 rounded-lg p-3 text-xs"
+            class="bg-primary/5 mt-6 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-lg p-3 text-xs"
+            data-profile-name-offer
           >
-            <span>{m.feature_use_location_name_prompt()}</span
-            ><button
+            <div class="min-w-0 space-y-1">
+              <p class="text-muted-foreground">
+                {m.feature_use_location_name_prompt()}
+                {#if locationNamePreview.fallback}
+                  · {shortLocaleLabel(locationNamePreview.locale)}
+                {/if}
+              </p>
+              <p
+                class="min-w-0 text-sm font-medium break-words whitespace-normal"
+                lang={canonicalContentTag(locationNamePreview.locale)}
+              >
+                {locationNamePreview.name}
+              </p>
+            </div>
+            <button
               type="button"
-              class="text-primary hover:bg-primary/10 rounded-md px-3 py-2 font-medium"
+              class="text-primary hover:bg-primary/10 focus-visible:outline-primary rounded-md px-3 py-2 font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
               onclick={onUseName}
             >
               {m.feature_use_location_name()}
