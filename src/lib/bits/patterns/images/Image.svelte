@@ -7,6 +7,7 @@ let {
   onError,
   alt,
   fit = 'fit',
+  presentationMode,
   isLoading = false,
   class: className = '',
   rounded = 'rounded-2xl',
@@ -21,6 +22,7 @@ const item = $derived(
         id: src,
         src,
         alt,
+        presentationMode,
       }
     : null,
 )

@@ -2,13 +2,15 @@
 import type { ImageMetadataBasic } from '#lib/db/zod/schema/image.types.js'
 import type { ViewerRenderable } from './images.types'
 import type { ImageCtx } from '#lib/context/image.svelte.js'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 const RESOURCE_VIEWER_RETAIN_MS = 1500
 
 type ResourceViewerSnapshot = {
   item: ViewerRenderable | null
   activeImage: ImageCtx['activeImage']
-  presentationMode: 'cover' | 'contain'
+  presentationMode: ImagePresentation
   canEditActiveImage: boolean
   canRotateActiveImage: boolean
   canReplaceActiveImage: boolean
@@ -104,7 +106,7 @@ let {
   flush?: boolean
   isReadonly?: boolean
   prefetchMetadata?: boolean
-  onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
+  onPresentationModeCommitted?: (nextMode: ImagePresentation) => void
 } = $props()
 
 const imageCtx = getImageCtx()

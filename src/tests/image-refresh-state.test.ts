@@ -128,9 +128,13 @@ describe('image refresh ownership', () => {
     expect(features.rows[0]).toMatchObject({ image: { publicId: 'new-key' } })
   })
 
-  it.each([false, true])(
-    'projects image metadata before persistence and rolls back failures (fail=%s)',
-    async fail => {
+  it.each(
+    [false, true].flatMap(fail =>
+      (['cover', 'cast-edges'] as const).map(mode => ({ fail, mode })),
+    ),
+  )(
+    'projects image metadata before persistence and rolls back failures (mode=$mode, fail=$fail)',
+    async ({ fail, mode }) => {
       const ctx = new ImageCtx({}, createImageResources())
       vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)
       await ctx.setContext({
@@ -152,16 +156,16 @@ describe('image refresh ownership', () => {
       vi.mocked(updateImage).mockReturnValue(
         Object.assign(remote, { updates: () => remote }) as never,
       )
-      const pending = ctx.updateMetadata('image', { presentationMode: 'cover' })
+      const pending = ctx.updateMetadata('image', { presentationMode: mode })
       expect(getImagesForContext).toHaveBeenCalledWith(
         expect.objectContaining({
           ctxType: ImageContextResource.organisation,
           ctxId: 'org',
         }),
       )
-      expect(ctx.activeImage?.image.presentationMode).toBe('cover')
+      expect(ctx.activeImage?.image.presentationMode).toBe(mode)
       expect(ctx.appCtx.cache.organisation.get('org')).toMatchObject({
-        image: { image: { presentationMode: 'cover' } },
+        image: { image: { presentationMode: mode } },
       })
       if (fail) {
         reject(new Error('denied'))
@@ -170,9 +174,9 @@ describe('image refresh ownership', () => {
         resolve()
         await pending
       }
-      expect(ctx.activeImage?.image.presentationMode).toBe(fail ? 'contain' : 'cover')
+      expect(ctx.activeImage?.image.presentationMode).toBe(fail ? 'contain' : mode)
       expect(ctx.appCtx.cache.organisation.get('org')).toMatchObject({
-        image: { image: { presentationMode: fail ? 'contain' : 'cover' } },
+        image: { image: { presentationMode: fail ? 'contain' : mode } },
       })
     },
   )

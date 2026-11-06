@@ -29,7 +29,7 @@ The core composition work that has landed includes:
 - explicit persisted/upload/replacement/finalized status variants
 - parent-filling image and viewer layout
 - consistent `fit` and `cover` handling across surfaces
-- blurred fit-mode backdrops
+- blurred or cast-edge fit-mode backdrops
 - source-to-source crossfades in `ImageSurface`
 - viewer foreground and backdrop crossfades in `ViewerStage`
 - package-level dropzone composition
@@ -63,7 +63,7 @@ The main remaining gaps are orchestration and legacy overlap:
   - `replacement-upload`
   - `finalized-upload`
 - `ImageSurface` owns delayed skeletons, fallback identity imagery, source promotion
-  crossfades, blurred fit backdrops, and rotation-overlay handling.
+  crossfades, fit backdrops, and rotation-overlay handling.
 - `ViewerStage` holds previous, displayed, incoming, and pending scenes, preloads
   required scene assets, and crossfades both foreground and fit-mode backdrop layers.
 - `ThumbnailWrapper` owns rail scrolling, hover-preview debounce, active-item centering
@@ -85,6 +85,45 @@ The main remaining gaps are orchestration and legacy overlap:
   - presentation-mode controls
   - rotate/replace/delete/download actions
   - lazy metadata panel
+
+### Saved Image Presentation
+
+The image toolbar offers an icon-and-label radio menu with three saved choices:
+
+| Stored value | Label             | Behaviour                                                                           |
+| ------------ | ----------------- | ----------------------------------------------------------------------------------- |
+| `cover`      | Cover             | Fill the container, cropping when necessary.                                        |
+| `contain`    | Full · Blur       | Fit the complete image over its blurred enlargement.                                |
+| `cast-edges` | Full · Cast Edges | Fit the complete image and stretch its outer pixel strips into the remaining space. |
+
+Existing values and the `contain` default retain their behaviour. There is no inherited
+default hierarchy, so the menu does not offer an Inherit choice. The preference belongs
+to the image and flows through the existing metadata update and revision contracts. The
+existing text column accepts the new value without a database migration.
+
+`ImageBackdrop` is shared by cards, image surfaces and viewer stages. Cast Edges uses
+SVG slice viewports from the same source and visible bounds as the foreground, preserves
+transparent margins against the theme surface, and resizes with the container.
+Presentation-only rim detection looks for a thin changing fringe followed by stable,
+opaque background pixels. Detected bounds clip both foreground and backdrop without
+changing the uploaded bytes, metadata or history. Crisp borders, transparency, textured
+edges and other ambiguous cases remain untrimmed.
+
+Pixel inspection uses a bounded canvas read, cached per exact versioned source URL. The
+same-origin `/api/images/presentation-source` reader permits only public raster image
+paths on configured asset hosts, forwards no credentials, refuses redirects, and caps
+the response stream. Same-origin private revision delivery retains its existing
+authorization. Unreadable sources retain their foreground and the earlier one-percent
+background sampling fallback. Analysis is serialized, capped at four million pixels, and
+cached in a 96-entry LRU; no generated assets are persisted. Fractional ResizeObserver
+dimensions and clipped one-pixel overscan keep SVG slices painted through the outermost
+row and column, including at fractional grid sizes. The blurred treatment retains each
+surface's existing tint and opacity; those effects do not apply to cast edges. Explicit
+cover surfaces, including map preview cards and the admin thumbnail rail, retain their
+existing layout policy.
+
+The radio menu supports keyboard selection and focus return, blocks duplicate choices
+while saving, and follows the editor's existing mutation permissions and error recovery.
 
 ### Partially Implemented
 
@@ -174,6 +213,7 @@ type ViewerRenderable = {
   sourceFallbackSrc?: string | null
   thumbnailSrc?: string | null
   blurSrc?: string | null
+  presentationMode?: 'cover' | 'contain' | 'cast-edges'
   alt?: string | null
   fallbackSeed?: string | null
   intent?: string | null
@@ -224,7 +264,8 @@ Notes on the implemented fields:
 - `sourceFallbackSrc` supports optimistic preview to finalized-asset promotion without
   abrupt swaps.
 - `thumbnailSrc` allows thumbnail-specific derivatives when available.
-- `blurSrc` drives fit-mode backdrop imagery.
+- `blurSrc` drives blurred fit-mode backdrop imagery; Cast Edges uses the foreground
+  source so the extended pixels align with the displayed image.
 - `rotationDegrees` and `animateRotation` are already part of the render contract
   because the current editor/resource consumers support rotation workflows.
 - `status` carries sorting, upload, retry, and replacement semantics required by current

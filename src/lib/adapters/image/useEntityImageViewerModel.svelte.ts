@@ -6,6 +6,8 @@ import {
 import type { ImageCtx } from '#lib/context/image.svelte.js'
 import type { ImageMetadataBasic } from '#lib/db/zod/schema/image.types.js'
 import type { ViewerRenderable } from '#lib/bits/patterns/images/index.js'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 type EntityImageViewerModel = {
   state: {
@@ -18,7 +20,7 @@ type EntityImageViewerModel = {
     canReplaceActiveImage: boolean
     canDeleteActiveImage: boolean
     canDownloadActiveImage: boolean
-    presentationMode: 'cover' | 'contain'
+    presentationMode: ImagePresentation
     isEditBusy: boolean
     isUploadBusy: boolean
     isMetadataLoading: boolean
@@ -33,7 +35,7 @@ type EntityImageViewerModel = {
     rotateRight: () => Promise<void>
     deleteActive: () => Promise<void>
     markCurrentItemLoaded: (item: ViewerRenderable) => void
-    setPresentationMode: (mode: 'cover' | 'contain') => Promise<void>
+    setPresentationMode: (mode: ImagePresentation) => Promise<void>
     downloadActive: () => void
     ensureMetadataLoaded: () => Promise<void>
   }
@@ -50,7 +52,7 @@ type EntityImageViewerModel = {
 export function useEntityImageViewerModel(
   imageCtx: ImageCtx,
   options: {
-    onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
+    onPresentationModeCommitted?: (nextMode: ImagePresentation) => void
   } = {},
 ): EntityImageViewerModel {
   const galleryModel = useImageEditorGalleryModel(imageCtx)
@@ -125,7 +127,7 @@ export function useEntityImageViewerModel(
     await imageCtx.handleFilesSelect(acceptedFiles, fileRejections, {}, activeImage)
   }
 
-  async function setPresentationMode(mode: 'cover' | 'contain'): Promise<void> {
+  async function setPresentationMode(mode: ImagePresentation): Promise<void> {
     const previousMode = galleryModel.state.presentationMode
 
     await galleryModel.actions.setPresentationMode(mode)

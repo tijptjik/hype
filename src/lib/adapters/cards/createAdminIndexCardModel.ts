@@ -14,6 +14,8 @@ import EyeOffIcon from 'virtual:icons/proicons/eye-off'
 import LayersIcon from 'virtual:icons/proicons/layers'
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
 import ProjectIcon from 'virtual:icons/proicons/grid'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -206,13 +208,14 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
       ? getURLfromImage({ image: imageEnvelope })
       : getHashiconUrl(entity.id))
   const image = imageEnvelope?.image as
-    | ({ presentationMode?: 'cover' | 'contain' } & Record<string, unknown>)
+    | ({ presentationMode?: ImagePresentation } & Record<string, unknown>)
     | undefined
   const imageLayout =
     previewImageSrc != null
       ? 'cover'
-      : image?.presentationMode === 'contain'
-        ? 'contain'
+      : image?.presentationMode === 'contain' ||
+          image?.presentationMode === 'cast-edges'
+        ? image.presentationMode
         : 'cover'
   const title = String(
     getIndexCardPropertyValue(entity, keyMap, localeKey, keyMap.title) ?? '',

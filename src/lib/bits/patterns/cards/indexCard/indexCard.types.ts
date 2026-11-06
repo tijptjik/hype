@@ -1,4 +1,6 @@
 import type { Component, Snippet } from 'svelte'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 export type IndexCardFooterStatus = {
   icon?: Component<Record<string, unknown>> | null
@@ -20,7 +22,7 @@ export type IndexCardProps = {
   imageSrc: string
   imageFallbackSrcs?: string[]
   imageAlt: string
-  imageLayout?: 'cover' | 'contain'
+  imageLayout?: ImagePresentation
   cardWidth?: number
   footerStatus?: IndexCardFooterStatus | null
   breadcrumbs?: IndexCardFooterBreadcrumb[]
@@ -43,7 +45,7 @@ export type IndexCardHeaderProps = {
   imageSrc: string
   imageFallbackSrcs?: string[]
   imageAlt: string
-  imageLayout: 'cover' | 'contain'
+  imageLayout: ImagePresentation
   onImageClick?: (event: MouseEvent) => void
 }
 

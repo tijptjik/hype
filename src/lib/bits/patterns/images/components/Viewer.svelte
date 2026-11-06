@@ -138,6 +138,7 @@ function shouldReuseCurrentItem(
     previous.src === next.src &&
     previous.sourceFallbackSrc === next.sourceFallbackSrc &&
     previous.blurSrc === next.blurSrc &&
+    previous.presentationMode === next.presentationMode &&
     previous.thumbnailSrc === next.thumbnailSrc &&
     previous.rotationDegrees === next.rotationDegrees &&
     previous.animateRotation === next.animateRotation &&
@@ -324,7 +325,7 @@ onDestroy(() => {
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
-<div class="flex h-full w-full min-h-0 flex-col gap-3 select-none">
+<div class="flex h-full min-h-0 w-full flex-col gap-3 select-none">
   {#if currentItem}
     <div
       class="group/viewer relative min-h-0 flex-1 overflow-hidden"

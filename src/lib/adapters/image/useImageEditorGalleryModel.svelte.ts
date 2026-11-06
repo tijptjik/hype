@@ -18,6 +18,8 @@ import {
   updateImagePresentationMode,
   waitForThumbnailReadyEvent,
 } from '#lib/client/services/image.js'
+// IMAGE PRESENTATION
+import { normalizeImagePresentation } from '#lib/images/presentation.js'
 // TYPES
 import type {
   ViewerRenderable,
@@ -31,6 +33,8 @@ import type {
   UploadStatus,
 } from '#lib/db/zod/schema/image.types.js'
 import type { Id } from '#lib/types.js'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 type ImageEditorGalleryModel = {
   state: {
@@ -40,7 +44,7 @@ type ImageEditorGalleryModel = {
     isProcessingUploads: boolean
     isUploadBusy: boolean
     isPublished: boolean
-    presentationMode: 'cover' | 'contain'
+    presentationMode: ImagePresentation
     canMutateActiveImage: boolean
     canRotateActiveImage: boolean
     canReplaceActiveImage: boolean
@@ -64,7 +68,7 @@ type ImageEditorGalleryModel = {
     rotateLeft: () => Promise<void>
     rotateRight: () => Promise<void>
     togglePublished: () => void
-    setPresentationMode: (mode: 'cover' | 'contain') => Promise<void>
+    setPresentationMode: (mode: ImagePresentation) => Promise<void>
     downloadActive: () => void
     markThumbnailLoaded: (item: ViewerRenderable) => void
     markThumbnailErrored: (item: ViewerRenderable) => void
@@ -483,6 +487,9 @@ export function useImageEditorGalleryModel(
           sourceFallbackSrc: replacementPreviewSrc ?? previewSrc,
           thumbnailSrc: resolvedThumbnailSrc,
           blurSrc: replacementPreviewSrc ?? previewSrc,
+          presentationMode: normalizeImagePresentation(
+            resolvedImage?.image.presentationMode,
+          ),
           alt: resolvedImage?.intent ?? upload.file.name,
           fallbackSeed: resolvedImage?.image.publicId ?? upload.file.name,
           intent: resolvedImage?.intent ?? ('undefined' as const),
@@ -556,6 +563,9 @@ export function useImageEditorGalleryModel(
               : null),
           thumbnailSrc: resolvedThumbnailSrc,
           blurSrc: replacementPreviewSrc ?? getEditorViewerSrc(resolvedImage),
+          presentationMode: normalizeImagePresentation(
+            resolvedImage.image.presentationMode,
+          ),
           alt: resolvedImage.intent ?? m.admin__project_license_media_image(),
           fallbackSeed: resolvedImage.image.publicId ?? resolvedImage.image.id,
           intent: resolvedImage.intent ?? 'undefined',
@@ -671,11 +681,11 @@ export function useImageEditorGalleryModel(
     return canMutateActiveImage
   })
   const canDownloadActiveImage = $derived.by(() => canMutateActiveImage)
-  const presentationMode = $derived.by<'cover' | 'contain'>(() => {
+  const presentationMode = $derived.by<ImagePresentation>(() => {
     if (!activeMetadataImageId) return 'contain'
-    return imageCtx.getImage(activeMetadataImageId)?.image.presentationMode === 'cover'
-      ? 'cover'
-      : 'contain'
+    return normalizeImagePresentation(
+      imageCtx.getImage(activeMetadataImageId)?.image.presentationMode,
+    )
   })
 
   async function addFiles(files: FileList | File[]): Promise<void> {
@@ -884,7 +894,7 @@ export function useImageEditorGalleryModel(
     )
   }
 
-  async function setPresentationMode(nextMode: 'cover' | 'contain'): Promise<void> {
+  async function setPresentationMode(nextMode: ImagePresentation): Promise<void> {
     const currentImage = activeImage?.image ?? null
     const ctx = imageCtx.getCtx()
 

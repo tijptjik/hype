@@ -241,6 +241,8 @@ import type {
   ProjectSubmitBaselineRelations,
   ProjectSubmitDraft,
 } from '#lib/db/zod/schema/project.types.js'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 // § Context
 
@@ -2641,7 +2643,7 @@ function onSubmit(): void {
   formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
 }
 
-function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
+function onPresentationModeCommitted(nextMode: ImagePresentation): void {
   if (!canEditImagePresentationMode) return
   setProjectImagePresentationMode(project, nextMode)
   setProjectImagePresentationMode(committedProject, nextMode)

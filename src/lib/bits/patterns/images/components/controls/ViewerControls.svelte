@@ -4,6 +4,7 @@ import { m } from '#lib/i18n.js'
 // BITS
 import { cx } from '#lib/bits/utils.js'
 import { Button, Swap } from '#lib/bits/index.js'
+import ImagePresentationPicker from './ImagePresentationPicker.svelte'
 // LIB
 import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 import {
@@ -25,9 +26,9 @@ import EyeIcon from 'virtual:icons/proicons/eye'
 import EyeOffIcon from 'virtual:icons/proicons/eye-off'
 import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
 import DownloadIcon from 'virtual:icons/proicons/cloud-arrow-down'
-import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
-import ShrinkIcon from 'virtual:icons/proicons/full-screen-minimize'
 import Trash2Icon from 'virtual:icons/proicons/delete'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 let {
   isPublished = false,
@@ -57,7 +58,7 @@ let {
   onDownload,
 }: {
   isPublished?: boolean
-  presentationMode?: 'cover' | 'contain'
+  presentationMode?: ImagePresentation
   canMutate?: boolean
   canRotate?: boolean
   canEdit?: boolean
@@ -77,7 +78,7 @@ let {
   onRotateLeft?: () => void | Promise<void>
   onRotateRight?: () => void | Promise<void>
   onTogglePublished?: () => void
-  onPresentationModeChange?: (mode: 'cover' | 'contain') => void | Promise<void>
+  onPresentationModeChange?: (mode: ImagePresentation) => void | Promise<void>
   onReplaceFiles?: (files: FileList | File[]) => void
   onDelete?: () => void | Promise<void>
   onDownload?: () => void
@@ -110,15 +111,20 @@ const editButtonClass = $derived(
     canRotate,
   }),
 )
-const isCoverPresentationMode = $derived(presentationMode === 'cover')
-
-async function handlePresentationModeChange(nextChecked: boolean): Promise<void> {
+/**
+ * Saves one presentation choice while blocking duplicate changes until it settles.
+ * @param nextMode - Mode selected in the presentation menu.
+ * @returns Completion after the owning editor has saved or recovered the change.
+ */
+async function handlePresentationModeChange(
+  nextMode: ImagePresentation,
+): Promise<void> {
   if (!onPresentationModeChange || disabled || isPresentationModePending) return
 
   isPresentationModePending = true
 
   try {
-    await onPresentationModeChange(nextChecked ? 'cover' : 'contain')
+    await onPresentationModeChange(nextMode)
   } finally {
     isPresentationModePending = false
   }
@@ -162,24 +168,11 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
   {/if}
 
   {#if showPresentationModeToggle}
-    <Swap
-      checked={isCoverPresentationMode}
-      disabled={disabled || isPresentationModePending || !canMutate}
-      class={disabled || isPresentationModePending || !canMutate
-        ? VIEWER_CONTROLS_TOGGLE_DISABLED_CLASSES
-        : VIEWER_CONTROLS_TOGGLE_ENABLED_CLASSES}
-      label={isCoverPresentationMode
-        ? m.gallery__set_image_to_fill_mode()
-        : m.gallery__set_image_to_fit_mode()}
-      size="sm"
-      variant="transparent"
-      onColor="dark"
-      offColor="dark"
-      onIcon={ExpandIcon}
-      offIcon={ShrinkIcon}
-      onCheckedChange={value => {
-        void handlePresentationModeChange(value)
-      }}
+    <ImagePresentationPicker
+      value={presentationMode}
+      disabled={disabled || !canMutate}
+      busy={isPresentationModePending}
+      onValueChange={handlePresentationModeChange}
     />
   {/if}
 

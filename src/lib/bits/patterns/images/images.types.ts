@@ -1,5 +1,7 @@
 import type { Snippet } from 'svelte'
 import type { Intent, UploadStatus } from '#lib/db/zod/schema/image.types.js'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 export type GalleryObjectFit = 'fit' | 'cover'
 export type GalleryCenterAction = 'none' | 'fullscreen' | 'custom'
@@ -20,6 +22,7 @@ export type ViewerRenderable = {
   sourceFallbackSrc?: string | null
   thumbnailSrc?: string | null
   blurSrc?: string | null
+  presentationMode?: ImagePresentation
   alt?: string | null
   fallbackSeed?: string | null
   intent?: string | null
@@ -101,6 +104,7 @@ export type ImageProps = {
   src: string | null
   alt: string
   fit?: GalleryObjectFit
+  presentationMode?: ImagePresentation
   isLoading?: boolean
   class?: string
   rounded?: string
@@ -195,7 +199,7 @@ export type ImageEditorProps = {
   leftRail?: GalleryWidgetRail
   rightRail?: GalleryWidgetRail
   isPublished?: boolean
-  presentationMode?: 'cover' | 'contain'
+  presentationMode?: ImagePresentation
   canMutateActiveImage?: boolean
   canRotateActiveImage?: boolean
   canEditActiveImage?: boolean
@@ -219,7 +223,7 @@ export type ImageEditorProps = {
   onRotateLeft?: () => void | Promise<void>
   onRotateRight?: () => void | Promise<void>
   onTogglePublished?: () => void
-  onPresentationModeChange?: (mode: 'cover' | 'contain') => void | Promise<void>
+  onPresentationModeChange?: (mode: ImagePresentation) => void | Promise<void>
   onReplaceFiles?: (files: FileList | File[]) => void
   onToggleFullscreen?: () => void | Promise<void>
   onAddFiles?: (files: FileList | File[]) => void

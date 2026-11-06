@@ -177,6 +177,8 @@ import type {
   HubRoleUser,
 } from '#lib/db/zod/schema/hub.types.js'
 import type { LayerCardProfile } from '#lib/db/zod/schema/layer.types.js'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 // § Context
 
@@ -1437,7 +1439,7 @@ function onSubmit(): void {
   formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
 }
 
-function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
+function onPresentationModeCommitted(nextMode: ImagePresentation): void {
   if (!canEditImagePresentationMode) return
   setHubImagePresentationMode(hub, nextMode)
   setHubImagePresentationMode(committedHub, nextMode)

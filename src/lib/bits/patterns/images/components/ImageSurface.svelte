@@ -3,10 +3,8 @@ import { onDestroy } from 'svelte'
 import { getFeatureIdenticonUrl } from '#lib/client/services/image.js'
 import type { ImageSurfaceProps } from './imagePrimitives.types'
 import {
-  backdropImageClass,
   foregroundLayerClass,
   imageStackClass,
-  incomingBackdropClass,
   incomingLayerClass,
   loadingBreathLayerClass,
   preloadImageClass,
@@ -14,6 +12,9 @@ import {
   surfaceRootClass,
 } from './imageSurface.styles'
 import ImageSurfaceOverlays from './ImageSurfaceOverlays.svelte'
+import ImageBackdrop from './ImageBackdrop.svelte'
+import ImageForeground from './ImageForeground.svelte'
+import { resolveImagePresentation } from '#lib/images/presentation.js'
 
 let {
   item,
@@ -59,7 +60,12 @@ const fallbackSrc = $derived(
   getFeatureIdenticonUrl(item?.fallbackSeed ?? item?.id ?? 'gallery-fallback'),
 )
 const effectiveSrc = $derived(src ?? sourceFallbackSrc ?? fallbackSrc)
-const backdropSrc = $derived(blurSrc ?? sourceFallbackSrc ?? src ?? fallbackSrc)
+const backdropMode = $derived(resolveImagePresentation(item?.presentationMode).backdrop)
+const backdropSrc = $derived(
+  backdropMode === 'edges'
+    ? effectiveSrc
+    : (blurSrc ?? sourceFallbackSrc ?? src ?? fallbackSrc),
+)
 const hasDedicatedBackdropSource = $derived(Boolean(blurSrc || sourceFallbackSrc))
 const shouldShowBackdrop = $derived(
   Boolean(src || sourceFallbackSrc) &&
@@ -383,25 +389,34 @@ onDestroy(() => {
   {#if shouldShowBackdrop &&
     (!sourceFallbackSrc ||
       (!incomingSrc && !pendingSrc && currentSrc !== sourceFallbackSrc))}
-    <img src={backdropSrc} alt="" aria-hidden="true" class={backdropImageClass()}>
+    <ImageBackdrop
+      src={backdropSrc}
+      mode={backdropMode}
+      class={backdropMode === 'blur' ? 'opacity-30' : ''}
+    />
   {/if}
 
   {#if shouldShowBackdrop && shouldShowFallbackBackdrop && sourceFallbackSrc}
-    <img src={sourceFallbackSrc} alt="" aria-hidden="true" class={backdropImageClass()}>
+    <ImageBackdrop
+      src={sourceFallbackSrc}
+      mode={backdropMode}
+      class={backdropMode === 'blur' ? 'opacity-30' : ''}
+    />
   {/if}
 
   {#if shouldShowBackdrop && incomingSrc}
-    <img
+    <ImageBackdrop
       src={incomingSrc}
-      alt=""
-      aria-hidden="true"
-      class={incomingBackdropClass(incomingVisible)}
-    >
+      mode={backdropMode}
+      class={`transition-opacity duration-520 ease-out ${incomingVisible ? (backdropMode === 'blur' ? 'opacity-30' : 'opacity-100') : 'opacity-0'}`}
+    />
   {/if}
 
   <div class={imageStackClass()}>
     {#if shouldShowFallbackForeground && sourceFallbackSrc}
-      <img
+      <ImageForeground
+        {fit}
+        trimRim={fit === 'fit' && item?.presentationMode === 'cast-edges'}
         src={sourceFallbackSrc}
         alt=""
         aria-hidden="true"
@@ -411,10 +426,12 @@ onDestroy(() => {
           isGreyscale,
           animateRotation: false,
         })}
-      >
+      />
     {/if}
 
-    <img
+    <ImageForeground
+      {fit}
+      trimRim={fit === 'fit' && item?.presentationMode === 'cast-edges'}
       src={currentSrc ?? effectiveSrc}
       alt={alt || ''}
       class={foregroundLayerClass({
@@ -437,10 +454,12 @@ onDestroy(() => {
         })
       }}
       onerror={handleImageError}
-    >
+    />
 
     {#if shouldPulseImage && !(rotationOverlaySrc && rotationOverlayVisible)}
-      <img
+      <ImageForeground
+        {fit}
+        trimRim={fit === 'fit' && item?.presentationMode === 'cast-edges'}
         src={currentSrc ?? effectiveSrc}
         alt=""
         aria-hidden="true"
@@ -450,12 +469,14 @@ onDestroy(() => {
           isGreyscale,
           isVisible: true,
         })}
-      >
+      />
     {/if}
 
     {#if rotationOverlaySrc && rotationOverlayVisible}
       {#key rotationOverlaySrc}
-        <img
+        <ImageForeground
+          {fit}
+          trimRim={fit === 'fit' && item?.presentationMode === 'cast-edges'}
           src={rotationOverlaySrc}
           alt=""
           aria-hidden="true"
@@ -466,12 +487,14 @@ onDestroy(() => {
             isGreyscale,
             isFadingOut: rotationOverlayFadeOut,
           })}
-        >
+        />
       {/key}
     {/if}
 
     {#if incomingSrc && enableSourceTransition}
-      <img
+      <ImageForeground
+        {fit}
+        trimRim={fit === 'fit' && item?.presentationMode === 'cast-edges'}
         src={incomingSrc}
         alt={alt || ''}
         class={incomingLayerClass({
@@ -482,10 +505,12 @@ onDestroy(() => {
           isVisible: incomingVisible && (!revealOnLoad || hasLoaded),
         })}
         aria-hidden="true"
-      >
+      />
 
       {#if shouldPulseImage && incomingVisible}
-        <img
+        <ImageForeground
+          {fit}
+          trimRim={fit === 'fit' && item?.presentationMode === 'cast-edges'}
           src={incomingSrc}
           alt=""
           aria-hidden="true"
@@ -495,13 +520,15 @@ onDestroy(() => {
             isGreyscale,
             isVisible: true,
           })}
-        >
+        />
       {/if}
     {/if}
   </div>
 
   {#if pendingSrc && enableSourceTransition}
-    <img
+    <ImageForeground
+      {fit}
+      trimRim={fit === 'fit' && item?.presentationMode === 'cast-edges'}
       src={pendingSrc}
       alt=""
       aria-hidden="true"
@@ -522,7 +549,7 @@ onDestroy(() => {
       onerror={() => {
         pendingSrc = null
       }}
-    >
+    />
   {/if}
 
   <ImageSurfaceOverlays {showSkeleton} {hasLoaded} {hasError} />

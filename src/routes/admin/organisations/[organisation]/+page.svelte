@@ -211,6 +211,9 @@ import type {
   CapabilitySearchOption,
 } from '#lib/bits/patterns/capabilities/organisationCapabilities/index.js'
 
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
+
 // § Context
 const adminCtx = getAdminCtx()
 
@@ -1398,7 +1401,7 @@ function onSubmit(): void {
   formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
 }
 
-function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
+function onPresentationModeCommitted(nextMode: ImagePresentation): void {
   if (!canEditImagePresentationMode) return
   setOrganisationImagePresentationMode(organisation, nextMode)
   setOrganisationImagePresentationMode(committedOrganisation, nextMode)

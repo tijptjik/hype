@@ -187,6 +187,7 @@ export enum ImageIntentPublic {
 export enum ImagePresentationMode {
   cover = 'cover',
   contain = 'contain',
+  castEdges = 'cast-edges',
 }
 
 export enum ImageEnv {

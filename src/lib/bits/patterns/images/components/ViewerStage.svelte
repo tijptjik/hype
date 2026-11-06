@@ -12,6 +12,8 @@ import {
 } from '#lib/client/services/image.js'
 // BITS
 import ImageSurface from './ImageSurface.svelte'
+import ImageBackdrop from './ImageBackdrop.svelte'
+import ImageForeground from './ImageForeground.svelte'
 // TYPES
 import type { ViewerStageProps } from './imagePrimitives.types'
 import type { ViewerRenderable } from '../images.types'
@@ -102,6 +104,22 @@ function shouldRenderImageSurface(item: ViewerRenderable | null): boolean {
 }
 
 /**
+ * Keeps presentation changes distinct when the selected image identity is unchanged.
+ * @param item - Requested renderable.
+ * @param selectedId - Current selection identity.
+ * @returns Presentation-aware scene key, or null for an empty viewer.
+ */
+function getStageSceneKey(
+  item: ViewerRenderable | null,
+  selectedId: string | null,
+): string | null {
+  const identity = getGallerySceneKey(item, selectedId)
+  return item && identity
+    ? JSON.stringify([identity, item.presentationMode ?? 'contain'])
+    : null
+}
+
+/**
  * Applies a view-transition name only to the layer that matches the currently
  * active gallery scene.
  *
@@ -111,7 +129,7 @@ function shouldRenderImageSurface(item: ViewerRenderable | null): boolean {
 function getLayerTransitionStyle(sceneKey: string): string | undefined {
   if (!viewTransitionName) return undefined
 
-  return getGallerySceneKey(currentItem, activeId) === sceneKey
+  return getStageSceneKey(currentItem, activeId) === sceneKey
     ? `view-transition-name: ${viewTransitionName};`
     : undefined
 }
@@ -194,7 +212,7 @@ function startCrossfade(nextScene: SceneSnapshot): void {
 }
 
 $effect(() => {
-  const nextKey = getGallerySceneKey(currentItem, activeId)
+  const nextKey = getStageSceneKey(currentItem, activeId)
   const currentDisplayedScene = untrack(() => displayedScene)
   const currentPendingScene = untrack(() => pendingScene)
   const currentIncomingScene = untrack(() => incomingScene)
@@ -294,7 +312,7 @@ onDestroy(() => {
     <div
       aria-hidden="true"
       data-image-skeleton
-      class="pointer-events-none absolute inset-0 animate-pulse bg-base-300 motion-reduce:animate-none"
+      class="bg-base-300 pointer-events-none absolute inset-0 animate-pulse motion-reduce:animate-none"
     ></div>
   {/if}
   {#if pendingScene}
@@ -332,13 +350,16 @@ onDestroy(() => {
         class="viewer-backdrop absolute inset-0"
         style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
       >
-        <img
-          src={getGalleryBackgroundSrc(previousScene.item)}
-          alt=""
-          aria-hidden="true"
-          class="h-full w-full scale-[1.04] object-cover blur-lg"
-        >
-        <div class="viewer-backdrop-tint absolute inset-0"></div>
+        <ImageBackdrop
+          src={getGalleryBackgroundSrc(previousScene.item)!}
+          mode={previousScene.item.presentationMode === 'cast-edges' ? 'edges' : 'blur'}
+          rotationDegrees={previousScene.item.presentationMode === 'cast-edges'
+            ? (previousScene.item.rotationDegrees ?? 0)
+            : 0}
+        />
+        {#if previousScene.item.presentationMode !== 'cast-edges'}
+          <div class="viewer-backdrop-tint absolute inset-0"></div>
+        {/if}
       </div>
     {/if}
 
@@ -352,14 +373,17 @@ onDestroy(() => {
           style={getLayerTransitionStyle(previousScene.key)}
         >
           <div class="absolute inset-0 flex items-center justify-center">
-            <img
+            <ImageForeground
+              fit={previousScene.fit}
+              trimRim={previousScene.fit === 'fit' &&
+                previousScene.item.presentationMode === 'cast-edges'}
               src={getGalleryForegroundSrc(previousScene.item)}
               alt={previousScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(previousScene.item)}
               class={`absolute inset-0 h-full w-full ${
                 previousScene.fit === 'cover' ? 'object-cover' : 'object-contain'
               } ${getForegroundRotationClass(previousScene.item)}`}
-            >
+            />
           </div>
         </div>
       {:else}
@@ -385,13 +409,18 @@ onDestroy(() => {
       displayedScene.fit === 'fit' &&
       getGalleryBackgroundSrc(displayedScene.item)}
       <div class="viewer-backdrop absolute inset-0">
-        <img
-          src={getGalleryBackgroundSrc(displayedScene.item)}
-          alt=""
-          aria-hidden="true"
-          class="h-full w-full scale-[1.04] object-cover blur-lg"
-        >
-        <div class="viewer-backdrop-tint absolute inset-0"></div>
+        <ImageBackdrop
+          src={getGalleryBackgroundSrc(displayedScene.item)!}
+          mode={displayedScene.item.presentationMode === 'cast-edges'
+            ? 'edges'
+            : 'blur'}
+          rotationDegrees={displayedScene.item.presentationMode === 'cast-edges'
+            ? (displayedScene.item.rotationDegrees ?? 0)
+            : 0}
+        />
+        {#if displayedScene.item.presentationMode !== 'cast-edges'}
+          <div class="viewer-backdrop-tint absolute inset-0"></div>
+        {/if}
       </div>
     {/if}
 
@@ -405,7 +434,10 @@ onDestroy(() => {
           style={getLayerTransitionStyle(displayedScene.key)}
         >
           <div class="absolute inset-0 flex items-center justify-center">
-            <img
+            <ImageForeground
+              fit={displayedScene.fit}
+              trimRim={displayedScene.fit === 'fit' &&
+                displayedScene.item.presentationMode === 'cast-edges'}
               src={getGalleryForegroundSrc(displayedScene.item)}
               alt={displayedScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(displayedScene.item)}
@@ -417,7 +449,7 @@ onDestroy(() => {
                   onCurrentItemLoad?.(displayedScene.item)
                 }
               }}
-            >
+            />
           </div>
         </div>
       {:else}
@@ -450,13 +482,16 @@ onDestroy(() => {
         class="viewer-backdrop absolute inset-0"
         style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
       >
-        <img
-          src={getGalleryBackgroundSrc(incomingScene.item)}
-          alt=""
-          aria-hidden="true"
-          class="h-full w-full scale-[1.04] object-cover blur-lg"
-        >
-        <div class="viewer-backdrop-tint absolute inset-0"></div>
+        <ImageBackdrop
+          src={getGalleryBackgroundSrc(incomingScene.item)!}
+          mode={incomingScene.item.presentationMode === 'cast-edges' ? 'edges' : 'blur'}
+          rotationDegrees={incomingScene.item.presentationMode === 'cast-edges'
+            ? (incomingScene.item.rotationDegrees ?? 0)
+            : 0}
+        />
+        {#if incomingScene.item.presentationMode !== 'cast-edges'}
+          <div class="viewer-backdrop-tint absolute inset-0"></div>
+        {/if}
       </div>
     {/if}
 
@@ -470,7 +505,10 @@ onDestroy(() => {
           style={getLayerTransitionStyle(incomingScene.key)}
         >
           <div class="absolute inset-0 flex items-center justify-center">
-            <img
+            <ImageForeground
+              fit={incomingScene.fit}
+              trimRim={incomingScene.fit === 'fit' &&
+                incomingScene.item.presentationMode === 'cast-edges'}
               src={getGalleryForegroundSrc(incomingScene.item)}
               alt={incomingScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(incomingScene.item)}
@@ -482,7 +520,7 @@ onDestroy(() => {
                   onCurrentItemLoad?.(incomingScene.item)
                 }
               }}
-            >
+            />
           </div>
         </div>
       {:else}

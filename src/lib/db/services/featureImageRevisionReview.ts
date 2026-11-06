@@ -5,6 +5,8 @@ import { ImageMetadataBasicSchema } from '#lib/db/zod/schema/image.js'
 import { z } from 'zod'
 // DOMAIN
 import { diffRevisionValues } from '#lib/revisions/diff.js'
+// IMAGE PRESENTATION
+import { IMAGE_PRESENTATION_MODES } from '#lib/images/presentation.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { FeatureRevisionContent } from '#lib/revisions/featureContent.js'
@@ -17,7 +19,7 @@ const reviewMetadata = ImageMetadataBasicSchema.pick({
   rotation: true,
   originalWidth: true,
   originalHeight: true,
-}).extend({ presentationMode: z.enum(['contain', 'cover']).optional() })
+}).extend({ presentationMode: z.enum(IMAGE_PRESENTATION_MODES).optional() })
 
 /**
  * Explains changed gallery pins with the authored image metadata a reviewer is accepting.

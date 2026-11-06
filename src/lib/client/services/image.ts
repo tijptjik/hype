@@ -53,6 +53,8 @@ import type {
 import type { ImageCtx } from '#lib/context/image.svelte.js'
 
 import { hashicon } from '@emeraldpay/hashicon'
+// TYPES
+import type { ImagePresentation } from '#lib/images/presentation.js'
 
 type FeatureImageProviderOrganisation = { id?: string | null; code?: string | null }
 
@@ -680,13 +682,17 @@ export function getGallerySceneKey(
 }
 
 /**
- * Resolves the blurred backdrop source for a viewer/gallery item.
+ * Resolves the backdrop source for a viewer/gallery item.
  *
  * @param item Current gallery item.
  * @returns Backdrop image source or `null`.
  */
 export function getGalleryBackgroundSrc(item: ViewerRenderable | null): string | null {
   if (!item) return null
+  // Edge casting must sample the same uncropped source as the foreground.
+  if (item.presentationMode === 'cast-edges') {
+    return item.src ?? item.sourceFallbackSrc ?? null
+  }
   return item.blurSrc ?? item.sourceFallbackSrc ?? item.src ?? null
 }
 
@@ -1137,7 +1143,7 @@ export function getFeatureIdenticonUrl(seed: string): string {
  *
  * @param options.currentImage Explicit image target. Falls back to `imageCtx.activeImage`.
  * @param options.nextChecked Switch-like checked value. Used only when `nextMode` is not provided.
- * @param options.nextMode Explicit target mode (`cover` or `contain`).
+ * @param options.nextMode Explicit target mode (`cover`, `contain`, or `cast-edges`).
  * @param options.ctx Explicit image edit context. Falls back to `imageCtx.getCtx()`.
  * @param options.imageCtx Image context used to infer `currentImage` and `ctx` when omitted.
  * @param options.onSuccess Callback invoked after a successful update.
@@ -1148,10 +1154,10 @@ export function getFeatureIdenticonUrl(seed: string): string {
 export async function updateImagePresentationMode(options: {
   currentImage?: Pick<Image, 'id' | 'presentationMode'> | ImageDBBasic | null
   nextChecked?: boolean | null
-  nextMode?: 'cover' | 'contain'
+  nextMode?: ImagePresentation
   ctx?: ImageEditCtx
   imageCtx?: ImageCtx | null
-  onSuccess?: (nextMode: 'cover' | 'contain') => void
+  onSuccess?: (nextMode: ImagePresentation) => void
   onFailure?: (error: unknown) => void
 }): Promise<boolean> {
   const currentImageFromCtx = options.imageCtx?.activeImage?.image ?? null
@@ -1215,7 +1221,7 @@ export function setEntityImagePresentationMode<
       image?: { image?: { presentationMode?: string | null } | null } | null
     } | null
   } | null,
->(state: TState, mode: 'cover' | 'contain'): boolean {
+>(state: TState, mode: ImagePresentation): boolean {
   if (!state?.data?.image?.image) return false
   state.data.image.image.presentationMode = mode
   return true
@@ -1227,7 +1233,7 @@ export function setEntityImagePresentationMode<
  */
 export function setOrganisationImagePresentationMode(
   state: OrganisationGetState,
-  mode: 'cover' | 'contain',
+  mode: ImagePresentation,
 ): boolean {
   return setEntityImagePresentationMode(state, mode)
 }
@@ -1238,7 +1244,7 @@ export function setOrganisationImagePresentationMode(
  */
 export function setProjectImagePresentationMode(
   state: ProjectGetState,
-  mode: 'cover' | 'contain',
+  mode: ImagePresentation,
 ): boolean {
   return setEntityImagePresentationMode(state, mode)
 }
@@ -1249,7 +1255,7 @@ export function setProjectImagePresentationMode(
  */
 export function setHubImagePresentationMode(
   state: HubGetState,
-  mode: 'cover' | 'contain',
+  mode: ImagePresentation,
 ): boolean {
   return setEntityImagePresentationMode(state, mode)
 }

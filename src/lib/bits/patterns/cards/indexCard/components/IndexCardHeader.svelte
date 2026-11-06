@@ -1,10 +1,17 @@
 <script lang="ts">
 // COMPONENTS
 import Image from '#lib/bits/patterns/images/Image.svelte'
+import ImageBackdrop from '#lib/bits/patterns/images/components/ImageBackdrop.svelte'
 // TYPES
 import type { IndexCardHeaderProps } from '../indexCard.types'
 
-let { imageSrc, imageFallbackSrcs = [], imageAlt, imageLayout, onImageClick }: IndexCardHeaderProps = $props()
+let {
+  imageSrc,
+  imageFallbackSrcs = [],
+  imageAlt,
+  imageLayout,
+  onImageClick,
+}: IndexCardHeaderProps = $props()
 // Keep failures scoped to the current source so a refreshed preview can be tried again.
 let failedSources = $state<string[]>([])
 $effect(() => {
@@ -26,17 +33,20 @@ function handleImageError(): void {
 
 <div class="bits-index-card__header">
   {#if imageLayout === 'contain' && displayedSrc}
-    <img src={displayedSrc} alt="" aria-hidden="true" class="bits-index-card__header-blur">
+    <ImageBackdrop src={displayedSrc} blurClass="bits-index-card__header-blur" />
   {/if}
-  <div class="bits-index-card__header-overlay"></div>
+  {#if imageLayout !== 'cast-edges'}
+    <div class="bits-index-card__header-overlay"></div>
+  {/if}
   <Image
     src={displayedSrc}
     onError={handleImageError}
     alt={imageAlt}
     class="bits-index-card__header-image"
     fit={imageLayout === 'cover' ? 'cover' : 'fit'}
+    presentationMode={imageLayout}
     rounded="rounded-t-2xl rounded-b-none"
-    showBackdrop={false}
+    showBackdrop={imageLayout === 'cast-edges'}
     enableSourceTransition={false}
     revealOnLoad={true}
   />
