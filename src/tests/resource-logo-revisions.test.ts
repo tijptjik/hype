@@ -276,3 +276,50 @@ describe('exact resource logo history', () => {
     })
   })
 })
+
+describe('hub Cast Edges data migration', () => {
+  it('advances enrolled shared logo heads while retaining exact historical pins and bytes', async () => {
+    await enroll()
+    const { sqlite } = fixture
+    const before = Object.fromEntries(['hub', 'project', 'organisation'].map(kind => [kind,
+      sqlite.prepare(`SELECT * FROM ${kind}Revision ORDER BY id`).all(),
+    ]))
+    const assets = sqlite.prepare('SELECT * FROM imageAssetVersion').all()
+    const migration = readFileSync('migrations/0198_hub_image_cast_edges.sql', 'utf8')
+    sqlite.exec(`BEGIN; ${migration} COMMIT;`)
+    expect((await readResourceLogoHead(db, 'logo'))?.metadata).toMatchObject({ presentationMode: 'cast-edges', version: 1 })
+    expect(sqlite.prepare("SELECT presentationMode FROM image WHERE id='logo'").get()).toEqual({ presentationMode: 'cast-edges' })
+    expect(sqlite.prepare("SELECT metadata FROM imageRevision WHERE id='original'").get()).toEqual({ metadata: '{"version":1,"presentationMode":"contain"}' })
+    expect(sqlite.prepare('SELECT * FROM imageAssetVersion').all()).toEqual(assets)
+    for (const kind of ['hub', 'project', 'organisation']) {
+      const rows = sqlite.prepare(`SELECT * FROM ${kind}Revision ORDER BY id`).all()
+      for (const old of before[kind]) expect(rows).toContainEqual(old)
+      expect(rows).toHaveLength(before[kind].length + 1)
+      const head = sqlite.prepare(`SELECT r.content FROM ${kind}RevisionHead h JOIN ${kind}Revision r ON r.id=h.currentRevisionId`).get() as { content: string }
+      expect(JSON.parse(head.content).logo.imageRevisionId).toBe('migration-0198-image-logo')
+      expect(sqlite.prepare(`SELECT * FROM ${kind}RevisionWrite`).all()).toEqual([])
+    }
+    const count = sqlite.prepare('SELECT count(*) AS n FROM imageRevision').get()
+    sqlite.exec(`BEGIN; ${migration} COMMIT;`)
+    expect(sqlite.prepare('SELECT count(*) AS n FROM imageRevision').get()).toEqual(count)
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+  })
+
+  it('updates legacy and archived hub images without enrolling them or touching unrelated images', () => {
+    const { sqlite } = fixture
+    sqlite.exec(`INSERT INTO image(id,publicId,presentationMode,isArchived) VALUES
+      ('unrelated','unrelated','cover',0),('archived','archived','cover',1);
+      INSERT INTO hub(id,imageId) VALUES('archived-hub','archived'),('empty-hub',NULL);`)
+    const migration = readFileSync('migrations/0198_hub_image_cast_edges.sql', 'utf8')
+    sqlite.exec(`BEGIN; ${migration} COMMIT;`)
+    expect(sqlite.prepare('SELECT id,presentationMode FROM image ORDER BY id').all()).toEqual([
+      { id: 'archived', presentationMode: 'cast-edges' },
+      { id: 'logo', presentationMode: 'cast-edges' },
+      { id: 'unrelated', presentationMode: 'cover' },
+    ])
+    expect(sqlite.prepare('SELECT * FROM resourceLogoImageHead').all()).toEqual([])
+    expect(sqlite.prepare('SELECT * FROM hubRevision').all()).toEqual([])
+    sqlite.exec(`BEGIN; ${migration} COMMIT;`)
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+  })
+})

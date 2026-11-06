@@ -108,7 +108,7 @@ import {
   ImageEnv,
 } from '#lib/enums.js'
 // IMAGE PRESENTATION
-import { IMAGE_PRESENTATION_MODES } from '#lib/images/presentation.js'
+import { DEFAULT_UPLOAD_IMAGE_PRESENTATION, IMAGE_PRESENTATION_MODES } from '#lib/images/presentation.js'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { ResourceUploadType } from '#lib/db/services/resourceImageUpload.js'
@@ -1983,7 +1983,7 @@ export const finalizeImageUpload = guardedCommand(
       ...(featureImageData ? { featureImage: featureImageData } : {}),
     }
 
-    const logoEvidence=logoUpload?await readLogoEvidence(ctx,{env:stage,publicId:payload.publicId},{...metadataDocument,version,presentationMode:payload.replaceImageId ? (logoBaseline?.metadata as Record<string,unknown>)?.presentationMode ?? 'contain' : 'contain'}):undefined
+    const logoEvidence=logoUpload?await readLogoEvidence(ctx,{env:stage,publicId:payload.publicId},{...metadataDocument,version,presentationMode:payload.replaceImageId ? (logoBaseline?.metadata as Record<string,unknown>)?.presentationMode ?? 'contain' : DEFAULT_UPLOAD_IMAGE_PRESENTATION}):undefined
     const logoGuard=logoUpload && payload.replaceImageId?await authorizeLogoOwners(ctx,payload.replaceImageId):undefined
     const created = payload.replaceImageId
       ? await updateImageForContext({

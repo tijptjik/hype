@@ -8,6 +8,7 @@ import { feature, featureImage, image } from '#lib/db/schema/index.js'
 import { ImageCaptureSchema, ImageCaptureSourceSchema } from '#lib/images/capture.js'
 import { ImageListFields } from './imageList.js'
 import { isSupportedUploadImageContentType } from '#lib/images/accept.js'
+import { DEFAULT_UPLOAD_IMAGE_PRESENTATION, IMAGE_PRESENTATION_MODES } from '#lib/images/presentation.js'
 import {
   ImageCDN,
   ImageContextResource,
@@ -88,6 +89,7 @@ export const ImageBasic = ImageBase.pick({
   presentationMode: true,
 })
 export const ImageInsert = createInsertSchema(image).extend({
+  presentationMode: z.enum(IMAGE_PRESENTATION_MODES).prefault(DEFAULT_UPLOAD_IMAGE_PRESENTATION),
   id: z.string().optional(),
   publicId: z.string().min(1, 'Public ID is required'),
   cdn: z

@@ -1,6 +1,8 @@
 /** Stored presentation choices; `contain` retains the existing blurred treatment. */
 export const IMAGE_PRESENTATION_MODES = ['cover', 'contain', 'cast-edges'] as const
 export type ImagePresentation = (typeof IMAGE_PRESENTATION_MODES)[number]
+/** Initial presentation for newly uploaded images. */
+export const DEFAULT_UPLOAD_IMAGE_PRESENTATION: ImagePresentation = 'cast-edges'
 export type ImageBackdropMode = 'blur' | 'edges'
 
 /**
