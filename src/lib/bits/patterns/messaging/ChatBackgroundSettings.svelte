@@ -201,7 +201,6 @@ async function chooseImage(file?: File): Promise<void> {
         </div>
       </div>
       <div class="flex min-w-0 flex-col gap-2">
-        <span class="text-sm font-medium">Preview</span>
         <section
           aria-label="Chat background preview"
           style={chatAppearanceStyle(
