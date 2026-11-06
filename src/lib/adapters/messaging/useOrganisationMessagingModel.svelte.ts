@@ -1,5 +1,7 @@
 // SVELTE
 import { onMount } from 'svelte'
+// MESSAGING
+import { messagingIntegrations } from '#lib/messaging/integrations.js'
 // API
 import {
   connectMessagingAccount,
@@ -52,6 +54,7 @@ export function useOrganisationMessagingModel(organisationId: string) {
     try {
       for (const account of accounts) {
         if (!alive) break
+        if (!messagingIntegrations[account.platform]) continue
         const revision = statusRevision[account.platform]
         // One unavailable bridge must not prevent the other account renewing its lease.
         try {
@@ -102,7 +105,7 @@ export function useOrganisationMessagingModel(organisationId: string) {
     platform: MessagingPlatform,
     action: 'connect' | 'stop' | LoginInput,
   ): Promise<void> {
-    if (busy || !alive || !tabId) return
+    if (busy || !alive || !tabId || !messagingIntegrations[platform]) return
     busy = platform
     pendingAction = typeof action === 'string' ? action : action.kind
     statusRevision[platform]++
@@ -162,9 +165,10 @@ export function useOrganisationMessagingModel(organisationId: string) {
       alive = false
       clearInterval(timer)
       for (const account of accounts)
-        void unwatchMessagingAccount({ meta, accountId: account.id, tabId }).catch(
-          () => {},
-        )
+        if (messagingIntegrations[account.platform])
+          void unwatchMessagingAccount({ meta, accountId: account.id, tabId }).catch(
+            () => {},
+          )
       // A tab crash or failed release is handled by the bridge's expiring lease.
     }
   })

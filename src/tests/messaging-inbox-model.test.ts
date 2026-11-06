@@ -14,6 +14,11 @@ import type {
 } from '#lib/adapters/messaging/useMessagingInboxModel.svelte.js'
 import type { WhatsAppConsoleModel } from '#lib/bits/patterns/whatsapp/whatsapp.types.js'
 
+const integrations = vi.hoisted(() => ({ whatsapp: true, telegram: true }))
+vi.mock('#lib/messaging/integrations.js', () => ({
+  messagingIntegrations: integrations,
+}))
+
 const channels = (checking = false): MessagingAvailability[] => [
   {
     platform: 'whatsapp',
@@ -122,6 +127,7 @@ function setup(pins: string[] = []) {
 }
 beforeEach(() => {
   vi.resetAllMocks()
+  integrations.telegram = true
   mock.organisations.mockImplementation(() =>
     query([
       { id: 'a', code: 'a', isMember: true, hasMessaging: true },
@@ -594,4 +600,24 @@ it('pins without changing selection or drafts, retains pins during refresh, and 
   expect(model.error).toBe('Pin save failed')
   await model.pinConversation('a:77', false)
   expect(model.conversations.map(row => row.chatId)).toEqual(['42', '77'])
+})
+
+it('does not mount suspended Telegram runtimes or request their directory', async () => {
+  integrations.telegram = false
+  mock.accounts.mockImplementation(() =>
+    query([
+      { id: 'tg', organisationId: 'a', platform: 'telegram' },
+      { id: 'wa', organisationId: 'a', platform: 'whatsapp' },
+    ]),
+  )
+  const model = setup(['a'])
+  await waitFor(() => expect(model.accounts.map(account => account.id)).toEqual(['wa']))
+  expect(mock.conversations).not.toHaveBeenCalledWith(
+    expect.objectContaining({ accountId: 'tg' }),
+  )
+  await waitFor(() =>
+    expect(mock.conversations).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: 'wa' }),
+    ),
+  )
 })

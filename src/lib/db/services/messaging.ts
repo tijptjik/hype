@@ -16,6 +16,8 @@ import {
 } from '#lib/db/schema/index.js'
 // API
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
+// MESSAGING
+import { messagingIntegrations } from '#lib/messaging/integrations.js'
 // UTILITIES
 import { normalizeTelephone } from '#lib/utils/telephone.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
@@ -360,6 +362,11 @@ export function messagingService(
   ctx: GuardedBaseContext,
   platform: MessagingPlatform,
 ): MessagingBinding {
+  if (!messagingIntegrations[platform])
+    throw error(
+      503,
+      `${platform === 'telegram' ? 'Telegram' : 'WhatsApp'} integration is temporarily disabled`,
+    )
   const env = ctx.event.platform?.env ?? ctx.event.locals.platform?.env
   const service = platform === 'telegram' ? env?.TELEGRAM : env?.WHATSOVER
   if (!service)

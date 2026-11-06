@@ -3,6 +3,7 @@ import { onMount } from 'svelte'
 // ADAPTERS
 import { createMediaPickerModel } from '#lib/adapters/messaging/useMediaPickerModel.svelte.js'
 // MESSAGING
+import { messagingIntegrations } from '#lib/messaging/integrations.js'
 import { findQuotedMessage, validTextQuote } from '#lib/messaging/quoted-message.js'
 import { messageMediaKey, messageMediaRevision } from '#lib/messaging/message-key.js'
 import { createMediaCache } from '#lib/messaging/media-cache.js'
@@ -1780,6 +1781,10 @@ export function createWhatsAppModel(options: {
   }
 
   onMount(() => {
+    if (!messagingIntegrations[platform]) {
+      pollError = `${platformLabel} integration is temporarily disabled`
+      return
+    }
     active = true
     tabId = crypto.randomUUID()
     void watch()

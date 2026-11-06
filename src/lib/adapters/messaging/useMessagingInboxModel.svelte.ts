@@ -17,6 +17,7 @@ import {
 } from '#lib/api/messaging.remote.js'
 // MESSAGING
 import { chooseMessagingOrganisation } from '#lib/messaging/organisation-selection.js'
+import { messagingIntegrations } from '#lib/messaging/integrations.js'
 // TYPES
 import type { WhatsAppConsoleModel } from '#lib/bits/patterns/whatsapp/whatsapp.types.js'
 import type { MessagingPlatform } from '#lib/messaging/types.js'
@@ -229,7 +230,7 @@ export function useMessagingInboxModel() {
       await query.refresh()
       const rows = await query
       if (!active || revision !== generation) return
-      accounts = rows
+      accounts = rows.filter(account => messagingIntegrations[account.platform])
       await refreshDirectory()
     } catch (cause) {
       if (active && revision === generation)

@@ -30,6 +30,11 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 import type { MessagingAccount } from '#lib/db/services/messaging.js'
 import type { BridgeMessage } from '#lib/messaging/types.js'
 
+const integrations = vi.hoisted(() => ({ whatsapp: true, telegram: true }))
+vi.mock('#lib/messaging/integrations.js', () => ({
+  messagingIntegrations: integrations,
+}))
+
 const state = vi.hoisted(() => ({ ctx: null as unknown as GuardedBaseContext }))
 vi.mock('#lib/api/server/guarded.js', () => {
   const wrap =
@@ -65,6 +70,8 @@ import {
   getMessagingAccounts,
   registerMessagingAccount,
   watchMessagingAccount,
+  unwatchMessagingAccount,
+  connectMessagingAccount,
   sendMessagingMessage,
   getMessagingInbox,
   getUserMessagingSettings,
@@ -105,6 +112,7 @@ const bridge = {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  integrations.telegram = true
   sqlite = new DatabaseSync(':memory:')
   sqlite.exec(
     "PRAGMA foreign_keys=ON; CREATE TABLE user (id TEXT PRIMARY KEY, username TEXT, name TEXT, image TEXT, telephone TEXT, updatedAt INTEGER NOT NULL DEFAULT 1, isAnonymous INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0); INSERT INTO user(id,username) VALUES ('operator-a','operator_a'), ('operator-b','operator_b')",
@@ -134,6 +142,7 @@ beforeEach(() => {
     readFileSync('migrations/0166_messaging_discovered_phone_format.sql', 'utf8'),
   )
   sqlite.exec(readFileSync('migrations/0167_messaging_conversation_pins.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0179_user_contact_validation.sql', 'utf8'))
   // Exercise actual Drizzle D1 SQL, including atomic batches and JSON projections.
   function prepared(query: string, params: never[] = []) {
     return {
@@ -3113,4 +3122,27 @@ it('paginates across pinned and unpinned chats without dropping older pinned thr
     before: { id: last.id, lastMessageAt: last.lastMessageAt, pinnedAt: last.pinnedAt },
   })
   expect(rest.map(row => row.id)).toEqual(['pin-100', 'pin-101', 'pin-102', 'plain'])
+})
+
+// Suspension must remain safe even while a stale browser still holds an account ID.
+it('keeps suspended Telegram watches inert and blocks provider actions without changing saved accounts', async () => {
+  integrations.telegram = false
+  const input = { meta, accountId: account.id, tabId: crypto.randomUUID() }
+  expect(await watchMessagingAccount(input)).toEqual({
+    connected: false,
+    loggedOut: false,
+    qr: null,
+    qrExpiresAt: null,
+  })
+  expect(await unwatchMessagingAccount(input)).toEqual({ released: true })
+  await expect(connectMessagingAccount(input)).rejects.toMatchObject({ status: 503 })
+  await expect(
+    loadMessagingConversations({ meta, accountId: account.id }),
+  ).rejects.toMatchObject({ status: 503 })
+  expect(bridge.watch).not.toHaveBeenCalled()
+  expect(bridge.start).not.toHaveBeenCalled()
+  expect(bridge.dialogs).not.toHaveBeenCalled()
+  expect(await getMessagingAccounts({ meta, organisationId: 'org-a' })).toEqual([
+    expect.objectContaining({ id: account.id, enabled: true }),
+  ])
 })

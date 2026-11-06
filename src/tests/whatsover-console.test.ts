@@ -17,6 +17,11 @@ import type {
   WhatsAppSnapshot,
 } from '#lib/api/services/whatsover.types.js'
 
+const integrations = vi.hoisted(() => ({ whatsapp: true, telegram: true }))
+vi.mock('#lib/messaging/integrations.js', () => ({
+  messagingIntegrations: integrations,
+}))
+
 const mocks = vi.hoisted(() => ({
   snapshot: vi.fn(),
   connect: vi.fn(),
@@ -105,6 +110,8 @@ beforeEach(() => {
     },
   )
   vi.resetAllMocks()
+  integrations.whatsapp = true
+  integrations.telegram = true
   mocks.snapshot.mockResolvedValue(connected)
   mocks.stop.mockResolvedValue({ stopped: true })
   mocks.microphoneStart.mockResolvedValue(undefined)
@@ -2418,3 +2425,38 @@ it('uses the explicit account replay cursor when a snapshot includes newer selec
   expect(mocks.snapshot.mock.calls[1][0]).toBe(100)
   expect(screen.getAllByText('Recent selected-chat message').length).toBeGreaterThan(0)
 })
+
+it.each(['whatsapp', 'telegram'] as const)(
+  'keeps a suspended %s console dormant on mount and disposal',
+  async platform => {
+    integrations[platform] = false
+    const watch = vi.fn()
+    const unwatch = vi.fn()
+    const transport = {
+      snapshot: mocks.snapshot,
+      connect: mocks.connect,
+      disconnect: mocks.stop,
+      send: mocks.send,
+      profile: mocks.profile,
+      upload: mocks.upload,
+      media: mocks.download,
+      voiceTicket: mocks.ticket,
+      declineCall: mocks.decline,
+      watch,
+      unwatch,
+    }
+    const screen = render(Console, { options: { platform, transport } })
+    const label = platform === 'telegram' ? 'Telegram' : 'WhatsApp'
+    await waitFor(() =>
+      expect(
+        screen.getByText(`${label} integration is temporarily disabled`),
+      ).toBeTruthy(),
+    )
+    vi.useFakeTimers()
+    await vi.advanceTimersByTimeAsync(30_000)
+    screen.unmount()
+    expect(watch).not.toHaveBeenCalled()
+    expect(unwatch).not.toHaveBeenCalled()
+    expect(mocks.snapshot).not.toHaveBeenCalled()
+  },
+)

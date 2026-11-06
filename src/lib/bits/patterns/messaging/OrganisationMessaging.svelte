@@ -3,6 +3,8 @@
 import { untrack } from 'svelte'
 // ADAPTER
 import { useOrganisationMessagingModel } from '#lib/adapters/messaging/useOrganisationMessagingModel.svelte.js'
+// MESSAGING
+import { messagingIntegrations } from '#lib/messaging/integrations.js'
 // ICONS
 import AlertIcon from 'virtual:icons/lucide/circle-alert'
 import ChatIcon from 'virtual:icons/lucide/message-circle'
@@ -61,10 +63,12 @@ const platforms: MessagingPlatform[] = ['whatsapp', 'telegram']
           <MessagingAccountCard
             {platform}
             status={model.statuses[platform]}
-            connectionError={model.connectionErrors[platform]}
+            connectionError={messagingIntegrations[platform]
+              ? model.connectionErrors[platform]
+              : `${platform === 'telegram' ? 'Telegram' : 'WhatsApp'} integration is temporarily disabled.`}
             registered={Boolean(account)}
             enabled={account?.enabled}
-            busy={model.busy !== null}
+            busy={model.busy !== null || !messagingIntegrations[platform]}
             pendingAction={model.busy === platform ? model.pendingAction : null}
             onAction={action => model.act(platform, action)}
           />

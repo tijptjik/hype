@@ -23,6 +23,7 @@ import { canManageOrganisationMessaging } from '#lib/api/services/authz/messagin
 import { canUpdateUserProfile } from '#lib/api/services/authz/user.js'
 import { findQuotedMessage, validTextQuote } from '#lib/messaging/quoted-message.js'
 import { messagingAvailability } from '#lib/messaging/availability.js'
+import { messagingIntegrations } from '#lib/messaging/integrations.js'
 import {
   isMessagingNativeId,
   messagingIdentityLookups,
@@ -240,11 +241,14 @@ export const registerMessagingAccount = guardedCommand(
 /** Renew a tab's lease and resume a previously enabled connection.
  * @param params Authorized account and tab UUID.
  * @returns Current pairing/connection state.
+ * @remarks Suspended providers stay disconnected without contacting their worker.
  */
 export const watchMessagingAccount = guardedCommand(
   viewerInput,
   async ({ accountId, tabId }, ctx) => {
     const account = await authorizeMessagingAccount(ctx, accountId)
+    if (!messagingIntegrations[account.platform])
+      return { connected: false, loggedOut: false, qr: null, qrExpiresAt: null }
     const service = messagingService(ctx, account.platform)
     let status = await service.watch(
       account.bridgeAccountId,
@@ -271,6 +275,7 @@ export const unwatchMessagingAccount = guardedCommand(
   viewerInput,
   async ({ accountId, tabId }, ctx) => {
     const account = await authorizeMessagingAccount(ctx, accountId)
+    if (!messagingIntegrations[account.platform]) return { released: true }
     await messagingService(ctx, account.platform).unwatch(
       account.bridgeAccountId,
       await messagingViewer(ctx, tabId),
@@ -316,8 +321,9 @@ export const loginTelegramAccount = guardedCommand(
     const account = await authorizeMessagingAccount(ctx, params.accountId)
     if (account.platform !== 'telegram')
       throw error(400, 'This is not a Telegram account')
-    const service = (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)
-      ?.TELEGRAM
+    const service = messagingIntegrations.telegram
+      ? (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)?.TELEGRAM
+      : undefined
     if (!service) throw error(503, 'The Telegram service is not configured')
     await service.watch(
       account.bridgeAccountId,
@@ -525,8 +531,9 @@ export const loadMessagingQuotedMessage = guardedCommand(
     // A direct native anchor avoids downloading every intervening page for an old reply.
     if (!/^[1-9]\d{0,9}$/.test(quote.id) || Number(quote.id) >= 2_147_483_647)
       return null
-    const service = (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)
-      ?.TELEGRAM
+    const service = messagingIntegrations.telegram
+      ? (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)?.TELEGRAM
+      : undefined
     if (!service) throw error(503, 'The Telegram service is not configured')
     const page = await service.history(
       account.bridgeAccountId,
@@ -572,8 +579,9 @@ export const loadMessagingHistory = guardedCommand(
     if (account.platform !== 'telegram')
       throw error(400, 'History pagination is not supported for this account')
     await authorizeMessagingConversation(ctx, account, chat)
-    const service = (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)
-      ?.TELEGRAM
+    const service = messagingIntegrations.telegram
+      ? (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)?.TELEGRAM
+      : undefined
     if (!service) throw error(503, 'The Telegram service is not configured')
     const page = await service.history(account.bridgeAccountId, chat, before)
     // Independent pages may overtake live events, so they must never advance the shared inbox cursor.
@@ -615,8 +623,9 @@ export const loadMessagingConversations = guardedCommand(
     const account = await authorizeMessagingAccount(ctx, accountId)
     if (account.platform !== 'telegram')
       throw error(400, 'Conversation discovery is not supported for this account')
-    const service = (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)
-      ?.TELEGRAM
+    const service = messagingIntegrations.telegram
+      ? (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)?.TELEGRAM
+      : undefined
     if (!service) throw error(503, 'The Telegram service is not configured')
     const page = await service.dialogs(account.bridgeAccountId, cursor)
     await projectMessagingSnapshot(
@@ -1081,7 +1090,9 @@ async function telegramCatalogue(
       )
     account = await authorizeMessagingAccount(ctx, source.id)
   }
-  const service = (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)?.TELEGRAM
+  const service = messagingIntegrations.telegram
+    ? (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)?.TELEGRAM
+    : undefined
   if (!service) throw error(503, 'Telegram media search is unavailable')
   return { account, target, service }
 }
@@ -1552,7 +1563,7 @@ export const getMessagingVoiceTicket = guardedCommand(
     const account = await authorizeMessagingAccount(ctx, accountId)
     const env = ctx.event.platform?.env ?? ctx.event.locals.platform?.env
     if (account.platform === 'telegram') {
-      if (!env?.TELEGRAM || !env.TELEGRAM_CALLS_URL)
+      if (!messagingIntegrations.telegram || !env?.TELEGRAM || !env.TELEGRAM_CALLS_URL)
         throw error(503, 'The Telegram call service is not configured')
       const ticket = await env.TELEGRAM.callTicket(
         account.bridgeAccountId,
@@ -1595,7 +1606,8 @@ export const declineMessagingCall = guardedCommand(
     const account = await authorizeMessagingAccount(ctx, accountId)
     const env = ctx.event.platform?.env ?? ctx.event.locals.platform?.env
     if (account.platform === 'telegram') {
-      if (!env?.TELEGRAM) throw error(503, 'The Telegram service is not configured')
+      if (!messagingIntegrations.telegram || !env?.TELEGRAM)
+        throw error(503, 'The Telegram service is not configured')
       await env.TELEGRAM.rejectCall(account.bridgeAccountId, id)
       return { declined: true }
     }
