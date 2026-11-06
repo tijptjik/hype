@@ -1,11 +1,12 @@
 <script lang="ts">
+// ICONS
+import MapIcon from 'virtual:icons/lucide/map'
 import { mapStyleResultStyles } from './formMapStyleSection.styles.js'
 import { formSelectionSearchHeaderStyles } from '../formSurface/formSearchHeader.styles.js'
 import { LocalSearch, SectionHeader } from '#lib/bits/custom/index.js'
 import { m } from '#lib/i18n.js'
 import { MapStyleCard } from '#lib/bits/patterns/cards/mapStyleCard/index.js'
 import {
-  canonicalMapStyleCode,
   isMapStyleSelectable,
   SELECTABLE_MAP_STYLE_CATALOG,
   isProjectOnlyMapStyle,
@@ -67,15 +68,13 @@ const userPreferenceStyle = $derived<MapStyleSelectionItem>({
 })
 const displayMapStyle = $derived(selectedMapStyle ?? userPreferenceStyle)
 
-// Inheritance choices stay first; explicit styles follow their canonical code.
+// Inheritance choices stay first; explicit styles follow their style code.
 const sortedMapStyles = $derived([
   ...additionalMapStyles,
   userPreferenceStyle,
   ...resolvedMapStyles
     .filter(style => isMapStyleSelectable(style.code))
-    .toSorted((a, b) =>
-      canonicalMapStyleCode(a.code).localeCompare(canonicalMapStyleCode(b.code)),
-    ),
+    .toSorted((a, b) => a.code.localeCompare(b.code)),
 ])
 // Ten narrow windows repeat the dark linework palettes, omitting filled basemaps.
 const darkPreviewStyles = ['hype-dark', 'hyperpop', 'ghostery', 'neorange'] as const
@@ -137,7 +136,12 @@ $effect(() => {
 <section
   class={`bits-form__section bits-form__parent-resource bits-map-style-section ${isAdding && showModeUi ? 'bits-form__parent-resource--search-open' : ''} ${className}`}
 >
-  <SectionHeader {title} description={subtitle} class={formSelectionSearchHeaderStyles}>
+  <SectionHeader
+    {title}
+    icon={MapIcon}
+    description={subtitle}
+    class={formSelectionSearchHeaderStyles}
+  >
     {#snippet right()}
       {#if isAdding && showModeUi}
         <div class="w-[clamp(7rem,12vw,10rem)] min-w-0">
@@ -158,10 +162,8 @@ $effect(() => {
               title: (mapStyle: MapStyleSelectionItem) =>
                 mapStyle.i18n?.en?.name || mapStyle.code,
               descriminator: (mapStyle: MapStyleSelectionItem) =>
-                canonicalMapStyleCode(
-                  mapStyle.displayCode ??
-                    (mapStyle.code === '__project-default__' ? '' : mapStyle.code),
-                ),
+                mapStyle.displayCode ??
+                (mapStyle.code === '__project-default__' ? '' : mapStyle.code),
               previewImage: (mapStyle: MapStyleSelectionItem) =>
                 mapStyle.previewImagePath || null,
               preview: (mapStyle: MapStyleSelectionItem) =>
@@ -191,9 +193,7 @@ $effect(() => {
         alt={displayMapStyle?.i18n?.en?.name || displayMapStyle?.code || `No ${title}`}
       />
       <MapStyleCard.Body
-        code={canonicalMapStyleCode(
-          displayMapStyle.displayCode ?? displayMapStyle.code,
-        )}
+        code={displayMapStyle.displayCode ?? displayMapStyle.code}
         name={displayMapStyle?.i18n?.en?.name || displayMapStyle?.code || `No ${title}`}
         description={displayMapStyle?.i18n?.en?.description || null}
       />

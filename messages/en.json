@@ -1338,7 +1338,7 @@
   "theme_name_milque": "Milque",
   "theme_name_rye": "Rye",
   "theme_ui_title": "Interface",
-  "admin__project_same_as_organisation": "Redundant",
+  "admin__project_same_as_organisation": "Redundant Name",
   "admin__project_same_as_organisation_hint": "Repeats the organisation name.",
   "panel__reorder_layer": "Reorder {name}. Drag or use Up and Down arrow keys. The top layer sets the map style.",
   "profile__status_submitted": "Submitted",

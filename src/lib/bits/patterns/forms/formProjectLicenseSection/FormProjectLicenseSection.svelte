@@ -732,7 +732,7 @@ $effect(() => {
 </script>
 
 <section class={rootClass}>
-  <SectionHeader {title} description={subtitle}>
+  <SectionHeader {title} icon={CopyrightLineIcon} description={subtitle}>
     {#snippet right()}
       {#if isEditing}
         <div
@@ -748,14 +748,14 @@ $effect(() => {
             iconComponent={ReplaceIcon}
             disabled={isSubmitting}
             onClick={openWizard}
-            class="bits-form__parent-resource-replace-btn whitespace-nowrap h-10"
+            class="bits-form__parent-resource-replace-btn h-10 whitespace-nowrap"
           />
         </div>
       {/if}
     {/snippet}
   </SectionHeader>
 
-  <div class="min-w-0 divide-y divide-border/50 px-6">
+  <div class="divide-border/50 min-w-0 divide-y px-6">
     {#each displayedMedia as media (media.key)}
       <LicenseCard
         mediaLabel={media.label}
@@ -853,10 +853,10 @@ $effect(() => {
                       {/if}
                     </span>
                     <span class="min-w-0">
-                      <span class="block font-semibold text-foreground"
+                      <span class="text-foreground block font-semibold"
                         >{choice.label}</span
                       >
-                      <span class="mt-1 block text-sm leading-5 text-muted-foreground"
+                      <span class="text-muted-foreground mt-1 block text-sm leading-5"
                         >{choice.description}</span
                       >
                     </span>
@@ -1107,7 +1107,7 @@ $effect(() => {
               </p>
             </div>
 
-            <div class="grid items-center justify-center w-full">
+            <div class="grid w-full items-center justify-center">
               <div
                 class={[
                   'bits-license__custom-grid',

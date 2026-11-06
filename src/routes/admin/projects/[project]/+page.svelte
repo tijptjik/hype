@@ -36,6 +36,9 @@ import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { resolveContentLocales } from '#lib/content-locales/resolve.js'
 // TOAST
 import { toast } from 'svelte-sonner'
+// PROFILE
+import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
+import { translateContentField } from '#lib/api/translation.remote.js'
 // PUBLICATION
 import { publicationPreviewUrl } from '#lib/publication/preview.js'
 import { canPreviewPublication } from '#lib/publication/permissions.js'
@@ -65,11 +68,9 @@ import {
   resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
-  resetLocaleFields,
   syncAdminFacetFromHash,
   toFormLevelIssueMessages,
   toIssueMessage,
-  translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
 } from '#lib/client/services/form.js'
@@ -154,8 +155,6 @@ import {
 import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import {
   FormFieldsSection,
-  FormI18nDescriptorFields,
-  FormI18nSection,
   FormMapStyleSection,
   FormParentSection,
   FormProjectLayersSection,
@@ -217,7 +216,7 @@ import type {
   UserRoleFieldNameResolverForm,
 } from '#lib/client/services/form.types.js'
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
-import type { Locale, ResourceContext, Id } from '#lib/types.js'
+import type { ResourceContext, Id } from '#lib/types.js'
 import type {
   ProjectLicense,
   ProjectLicenseRights,
@@ -454,15 +453,8 @@ const effectiveProjectResourceHubId = $derived.by(() => {
 // 1. FORM CONFIG + SUBMIT SHAPING
 // ═══════════════════════
 
-// Named i18n sections rendered in the project form.
-type ProjectI18nSectionKey = 'descriptor'
-// Fields eligible for machine translation/reset per i18n section.
-const translatableI18nFieldsBySection: Record<
-  ProjectI18nSectionKey,
-  ReadonlyArray<'name' | 'nameShort' | 'description'>
-> = {
-  descriptor: ['name', 'nameShort', 'description'],
-}
+// Descriptor language visibility and translation jobs reset with the form.
+let profileResetVersion = $state(0)
 let locationPolicyResetVersion = $state(0)
 // Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
@@ -753,7 +745,7 @@ const useAllInOrgContext = $derived(
 )
 
 /**
- * Updates the shared organisation-context naming policy from any locale column.
+ * Updates the shared organisation-context naming policy for all descriptor languages.
  * @param checked - Whether this project should be labelled All beside its organisation.
  * @returns Nothing after updating form state and validation.
  */
@@ -1299,12 +1291,6 @@ const userRoleFieldResolverForm = $derived(
 // Generic entity-data update adapter for project form payload.
 const projectEntityUpdaterForm = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<ProjectFormInput['data']>,
-)
-// Narrowed i18n-only adapter for translation/reset helpers.
-const projectI18nUpdaterForm = $derived(
-  formCtx.form as unknown as FormDataUpdaterForm<
-    Pick<ProjectFormInput['data'], 'i18n'>
-  >,
 )
 // Hidden-input attrs for stable userId submission across role rows.
 const hiddenUserIdInputAttrs = $derived.by(() => {
@@ -2095,32 +2081,6 @@ function revalidateAfterProgrammaticChange(): void {
   })
 }
 
-async function onTranslate(
-  sourceLocale: Locale,
-  targetLocale: Locale,
-  _sectionKey: string = 'descriptor',
-): Promise<boolean> {
-  const section = 'descriptor' as const
-  const translated = await translateLocaleIntoEmptyFields({
-    form: projectI18nUpdaterForm,
-    sourceLocale,
-    targetLocale,
-    fields: [...translatableI18nFieldsBySection[section]],
-  })
-  if (translated) revalidateAfterProgrammaticChange()
-  return translated
-}
-
-function onResetLocale(targetLocale: Locale, _sectionKey: string = 'descriptor'): void {
-  const section = 'descriptor' as const
-  resetLocaleFields({
-    form: projectI18nUpdaterForm,
-    targetLocale,
-    fields: [...translatableI18nFieldsBySection[section]],
-  })
-  revalidateAfterProgrammaticChange()
-}
-
 /** Translate missing property content within an optional field or option scope.
  * @param propertyId Definition being edited.
  * @param sourceLocale Source content language.
@@ -2534,6 +2494,7 @@ async function onDeleteToggle(): Promise<void> {
 }
 
 async function onReset(): Promise<void> {
+  profileResetVersion += 1
   locationPolicyResetVersion += 1
   fieldRemoveMode = false
   isProjectFieldResetInProgress = true
@@ -2963,6 +2924,7 @@ $effect(() => {
   >
     <Main.Facet
       isVisible={isCoreFacet}
+      extraScroll={320}
       transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
@@ -2971,97 +2933,76 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
-        <FormI18nSection
-          title="Descriptions"
-          subtitle="Names and descriptions in each language"
-          {locales}
-          {onTranslate}
-          {onResetLocale}
-          sectionKey="descriptor"
+        <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+        <FormI18nDescriptorProfile
+          form={formCtx.form}
+          fields={formCtx.form.fields.data.i18n}
+          defaultLocales={locales}
+          recordKey={projectRef}
+          resetVersion={profileResetVersion}
           {isEditing}
+          {isRequiredInPreflight}
+          stickyToolbar
+          stickyFieldHeaders={['description']}
+          showPrimaryLocaleHeader={false}
+          localeHeaderPlacement="gutter"
+          translate={(source, target, text) =>
+            translateContentField({ source, target, text })}
+          onChange={revalidateAfterProgrammaticChange}
         >
-          {#snippet center()}
-            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+          {#snippet afterField(field)}
+            {#if field === 'nameShort'}
+              <div
+                class="border-border/50 mt-4 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4"
+              >
+                <Checkbox
+                  id="project-use-all-in-org-context"
+                  checked={useAllInOrgContext}
+                  disabled={!isEditing || formCtx.submitting}
+                  rightText={m.admin__project_same_as_organisation()}
+                  color="accent"
+                  size="sm"
+                  onCheckedChange={setUseAllInOrgContext}
+                />
+                <span class="text-muted-foreground text-xs">
+                  {m.admin__project_same_as_organisation_hint()}
+                </span>
+              </div>
+            {/if}
           {/snippet}
+        </FormI18nDescriptorProfile>
 
-          {#snippet children(locale)}
-            <FormI18nDescriptorFields
-              form={formCtx.form}
-              fields={formCtx.form.fields.data.i18n[locale]}
-              {locale}
-              {isEditing}
-              {isRequiredInPreflight}
-            >
-              {#snippet besideShortName()}
-                <div title={m.admin__project_same_as_organisation_hint()}>
-                  <Checkbox
-                    id={`project-use-all-in-org-context-${locale}`}
-                    checked={useAllInOrgContext}
-                    disabled={!isEditing}
-                    topText={m.admin__project_same_as_organisation()}
-                    color="accent"
-                    size="sm"
-                    onCheckedChange={setUseAllInOrgContext}
-                  />
-                </div>
-              {/snippet}
-            </FormI18nDescriptorFields>
-          {/snippet}
-        </FormI18nSection>
-
-        <div
-          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'xl:grid-cols-3' : ''}`}
-        >
-          <div class={canSetParentOrganisation ? 'min-w-0 xl:col-span-2' : 'min-w-0'}>
-            <FormUserRolesSection
-              icon={MembersIcon}
-              layout="list"
-              currentUserId={authActor.userId}
-              title={m.admin__forms_project_members_title()}
-              subtitle={m.admin__forms_project_members_subtitle()}
-              transitionEntityKey={activeProjectData?.id ?? projectRef}
-              removeSelfResourceLabel={m.resource__project_singular()}
-              issues={userRoleSectionIssues}
-              userRoles={projectUserRoles}
-              {hiddenUserIdInputAttrs}
-              {roleFieldNameByUserId}
-              {isEditing}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewProjectRef}
-              availableRoles={[
-                { value: ProjectRoleType.owner, label: m.profile__role_type__owner() },
-                { value: ProjectRoleType.maintainer, label: 'Maintainer' },
-                {
-                  value: ProjectRoleType.member,
-                  label: m.profile__role_type__member(),
-                },
-                { value: ProjectRoleType.translator, label: 'Translator' },
-                { value: ProjectRoleType.user, label: 'User' },
-              ]}
-              {onAddUser}
-              {onRemoveUser}
-              {onRoleChange}
-            />
-          </div>
-          {#if canSetParentOrganisation}
-            <div class="border-border min-w-0 border-t xl:border-t-0 xl:border-l">
-              <FormParentSection
-                class={formSelectionSectionStyles}
-                title="Parent Organisation"
-                subtitle="This project belongs to"
-                issues={parentOrganisationIssues}
-                parent={selectedParentOrganisation}
-                hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
-                {isEditing}
-                isSubmitting={formCtx.submitting}
-                isSubmitRequested={formCtx.isSubmitRequested}
-                startInAddingMode={isNewProjectRef}
-                onSearch={onSearchParentOrganisations}
-                onReplaceParent={onReplaceParentOrganisation}
-              />
-            </div>
-          {/if}
+        <div class={formSectionDividerStyles}>
+          <FormUserRolesSection
+            icon={MembersIcon}
+            layout="list"
+            currentUserId={authActor.userId}
+            title={m.admin__forms_project_members_title()}
+            subtitle={m.admin__forms_project_members_subtitle()}
+            transitionEntityKey={activeProjectData?.id ?? projectRef}
+            removeSelfResourceLabel={m.resource__project_singular()}
+            issues={userRoleSectionIssues}
+            userRoles={projectUserRoles}
+            {hiddenUserIdInputAttrs}
+            {roleFieldNameByUserId}
+            {isEditing}
+            isSubmitting={formCtx.submitting}
+            isSubmitRequested={formCtx.isSubmitRequested}
+            startInAddingMode={isNewProjectRef}
+            availableRoles={[
+              { value: ProjectRoleType.owner, label: m.profile__role_type__owner() },
+              { value: ProjectRoleType.maintainer, label: 'Maintainer' },
+              {
+                value: ProjectRoleType.member,
+                label: m.profile__role_type__member(),
+              },
+              { value: ProjectRoleType.translator, label: 'Translator' },
+              { value: ProjectRoleType.user, label: 'User' },
+            ]}
+            {onAddUser}
+            {onRemoveUser}
+            {onRoleChange}
+          />
         </div>
 
         <div class={`${formSectionDividerStyles} grid grid-cols-1 xl:grid-cols-3`}>
@@ -3108,8 +3049,36 @@ $effect(() => {
           </div>
         </div>
 
-        <div class={`${formSectionDividerStyles} grid grid-cols-1 md:grid-cols-2`}>
-          <div class="min-w-0">
+        <!-- Share header and body tracks so wrapped headings keep all three panels aligned. -->
+        <div
+          class={`${formSectionDividerStyles} grid grid-cols-1 md:grid-rows-[auto_1fr] ${canSetParentOrganisation ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}
+          data-project-details-row
+        >
+          {#if canSetParentOrganisation}
+            <div
+              class="min-w-0 md:row-span-2 md:grid md:grid-rows-subgrid md:[&>section]:contents"
+            >
+              <FormParentSection
+                wrapTitle
+                icon={MembersIcon}
+                class={`${formSelectionSectionStyles} [&_article]:h-auto!`}
+                title="Parent Organisation"
+                subtitle="This project belongs to"
+                issues={parentOrganisationIssues}
+                parent={selectedParentOrganisation}
+                hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
+                {isEditing}
+                isSubmitting={formCtx.submitting}
+                isSubmitRequested={formCtx.isSubmitRequested}
+                startInAddingMode={isNewProjectRef}
+                onSearch={onSearchParentOrganisations}
+                onReplaceParent={onReplaceParentOrganisation}
+              />
+            </div>
+          {/if}
+          <div
+            class={`min-w-0 md:row-span-2 md:grid md:grid-rows-subgrid md:[&>section]:contents ${canSetParentOrganisation ? 'border-border border-t md:border-t-0 md:border-l' : ''}`}
+          >
             <FormProjectLicenseSection
               title={m.field_license()}
               subtitle={m.admin__project_license_section_subtitle()}
@@ -3126,11 +3095,12 @@ $effect(() => {
               onApplyLicense={onApplyProjectLicense}
             />
           </div>
-
           <div
-            class="border-border min-w-0 border-t md:border-t-0 md:border-l [&_.no-i18n>div:first-child]:grid-cols-1!"
+            class="border-border min-w-0 border-t md:row-span-2 md:grid md:grid-rows-subgrid md:border-t-0 md:border-l md:[&>section]:contents"
           >
             <FormSpecifiersFields
+              icon={Type}
+              subtitle="The unique code used to identify this project."
               title={m.admin__project_identifiers_title()}
               form={formCtx.form}
               fields={['code']}

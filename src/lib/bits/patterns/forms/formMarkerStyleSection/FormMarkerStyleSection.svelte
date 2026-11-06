@@ -1,4 +1,6 @@
 <script lang="ts">
+// ICONS
+import MarkerIcon from 'virtual:icons/lucide/map-pin'
 // BITS
 import { LocalSearch, SectionHeader } from '#lib/bits/custom/index.js'
 import { MapStyleCard } from '#lib/bits/patterns/cards/mapStyleCard/index.js'
@@ -96,6 +98,7 @@ $effect(() => {
   class={`bits-form__section bits-form__parent-resource ${formSelectionSectionStyles} ${isAdding ? 'relative! z-[180]!' : ''}`}
 >
   <SectionHeader
+    icon={MarkerIcon}
     title="Marker Style"
     description={allowInherit
       ? 'Inherit the project style or choose an override.'

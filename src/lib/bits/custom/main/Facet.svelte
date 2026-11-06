@@ -17,6 +17,7 @@ let {
   navMode = 'centered',
   contentClass = '',
   bottomClearance = 320,
+  extraScroll = 0,
   edgeToEdge = false,
 }: MainFacetProps = $props()
 
@@ -79,6 +80,8 @@ const bodyStyle = $derived(
       ? `--bits-main-section-body-height: ${Math.max(0, bodyHeight)}px`
       : '--bits-main-section-body-height: auto',
     `padding-bottom: ${Math.max(0, bodyBottomPadding)}px`,
+    // Extra travel must follow the content instead of sitting behind overflowing flex children.
+    extraScroll > 0 ? `min-height: ${Math.max(0, bodyMinHeight)}px` : '',
     navMode !== 'centered' && bodyHeight != null
       ? `flex: 0 0 ${Math.max(0, bodyHeight)}px; height: ${Math.max(0, bodyHeight)}px`
       : '',
@@ -244,6 +247,16 @@ function measureLayout(): void {
   bodyHeight = null
   bodyBottomPadding = 0
   const bodyContentHeight = getBodyContentHeight(body)
+  // Some profiles need actual scroll travel even when their contents fit in the viewport.
+  if (extraScroll > 0) {
+    bodyMinHeight = bodyContentHeight
+    tailSpacer =
+      Math.max(0, availableHeight - bodyContentHeight) +
+      Math.max(extraScroll, getReservedBottomSpace(navHeight))
+    logInnerChildrenHeights()
+    return
+  }
+
   const contentHeight = bodyContentHeight + navHeight
   const remainingHeight = Math.max(0, availableHeight - contentHeight)
 
@@ -284,6 +297,7 @@ $effect(() => {
   navMode
   contentClass
   bottomClearance
+  extraScroll
   queueMicrotask(measureLayout)
 })
 

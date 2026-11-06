@@ -1,4 +1,6 @@
 <script lang="ts">
+// ICONS
+import CardIcon from 'virtual:icons/lucide/panels-top-left'
 // BITS
 import { LocalSearch, SectionHeader } from '#lib/bits/custom/index.js'
 import { MapStyleCard } from '#lib/bits/patterns/cards/mapStyleCard/index.js'
@@ -118,6 +120,7 @@ $effect(() => {
   class={`bits-form__section bits-form__parent-resource ${formSelectionSectionStyles} ${isAdding ? 'relative! z-[180]!' : ''}`}
 >
   <SectionHeader
+    icon={CardIcon}
     title={m.card_style__title()}
     description={allowInherit
       ? m.card_style__layer_description()

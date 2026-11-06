@@ -61,6 +61,7 @@ let {
   translate,
   onTranslated,
   children,
+  afterField,
 }: {
   localeState: ProfileLocaleState
   onLocaleStateChange: (state: ProfileLocaleState) => void
@@ -90,6 +91,8 @@ let {
   ) => Promise<ProfileProviderResult>
   onTranslated: (field: Field, locale: string, text: string) => void
   children: Snippet<[Field, string, () => void, string, Snippet]>
+  /** Render field-level controls after all of its language rows. */
+  afterField?: Snippet<[Field]>
 } = $props()
 const showSkeleton = $derived(loading && !retainContent)
 const options = $derived(contentLocaleOptions(getLocaleKey()))
@@ -532,6 +535,7 @@ function autonym(locale: string): string {
             </button>
           </div>
         {/if}
+        {@render afterField?.(field)}
       </section>
     {/each}
   </div>

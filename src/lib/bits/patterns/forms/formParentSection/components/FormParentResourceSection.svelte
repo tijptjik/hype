@@ -34,6 +34,7 @@ let {
   subHeader,
   parent,
   fallbackImage = null,
+  wrapTitle = false,
   hiddenInputAttrs = null,
   isEditing = true,
   isSubmitting = false,
@@ -280,7 +281,7 @@ $effect(() => {
               iconComponent={ReplaceIcon}
               onClick={toggleAdding}
               disabled={isSubmitting}
-              class="bits-form__parent-resource-replace-btn whitespace-nowrap h-10"
+              class="bits-form__parent-resource-replace-btn h-10 whitespace-nowrap"
             />
           </div>
         {/if}
@@ -307,6 +308,8 @@ $effect(() => {
         alt={parent?.i18n?.en?.name || parent?.code || `No ${title}`}
       />
       <ResourceCard.Body
+        {wrapTitle}
+        class={wrapTitle ? 'min-w-0! flex-1!' : ''}
         code={parent?.code}
         name={parent?.i18n?.en?.name || parent?.code || `No ${title}`}
       />
@@ -321,7 +324,7 @@ $effect(() => {
             iconComponent={XIcon}
             onClick={handleRemoveParent}
             disabled={isSubmitting}
-            class="w-10 h-10"
+            class="h-10 w-10"
           />
         </Card.Actions>
       {/if}

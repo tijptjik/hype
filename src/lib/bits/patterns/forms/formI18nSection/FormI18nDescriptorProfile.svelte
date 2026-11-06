@@ -52,6 +52,7 @@ let {
   stackNames = true,
   renderValue,
   toolbarHeader,
+  afterField,
 }: {
   form: FormDataUpdaterForm<T>
   fields: Record<string, object>
@@ -83,6 +84,8 @@ let {
   /** Render the locale controls inside an owning section header. */
   toolbarHeader?: Snippet<[Snippet]>
   renderValue?: Snippet<[GenAiField, string]>
+  /** Render shared descriptor controls within their field column. */
+  afterField?: Snippet<[GenAiField]>
 } = $props()
 
 const configs = $derived(
@@ -280,6 +283,7 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
     fieldConfigs={configs}
     {translate}
     onTranslated={applyTranslation}
+    {afterField}
   >
     {#snippet children(field, locale, onEditStart, prefix, toolbarActions)}
       {@const key = contentFormKey(locale)}

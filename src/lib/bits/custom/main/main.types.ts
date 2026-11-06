@@ -21,6 +21,8 @@ export interface MainFacetProps {
   contentClass?: string
   /** Minimum trailing scroll space beneath content in scrolling facets; defaults to 320px. */
   bottomClearance?: number
+  /** Minimum extra scroll travel beyond the taller of the viewport and content. */
+  extraScroll?: number
   edgeToEdge?: boolean
 }
 

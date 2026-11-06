@@ -47,6 +47,8 @@ export interface FormParentSectionProps<
   subHeader?: Snippet<[FormParentSectionHeaderContext]>
   parent: TItem | null
   fallbackImage?: string | null
+  /** Wrap long parent names within compact selector columns. */
+  wrapTitle?: boolean
   hiddenInputAttrs?: Record<string, unknown> | null
   isEditing?: boolean
   isSubmitting?: boolean

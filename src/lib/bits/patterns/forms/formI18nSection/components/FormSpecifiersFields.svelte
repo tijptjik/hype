@@ -25,12 +25,14 @@ type SpecifiersForm = {
 let {
   form,
   icon,
+  subtitle,
   isEditing = false,
   isRequiredInPreflight,
   fields = ['code', 'url'],
   title = m.admin__forms_common_specifiers(),
 }: {
   icon?: Component
+  subtitle?: string
   form: SpecifiersForm
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
@@ -43,9 +45,11 @@ const showUrl = $derived(fields.includes('url') && Boolean(form.fields.data?.url
 </script>
 
 <section class="bits-form__section">
-  <SectionHeader {title} {icon} />
+  <SectionHeader {title} {icon} description={subtitle} />
   <div
-    class="md:[&>section+section]:border-border/50 grid min-w-0 gap-6 px-6 py-6 md:grid-cols-2 md:[&>section+section]:border-l md:[&>section+section]:pl-6"
+    class="grid min-w-0 gap-6 px-6 py-6 {showCode && showUrl
+      ? 'md:grid-cols-2 md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6'
+      : 'grid-cols-1'}"
   >
     {#if showCode}
       <FormInlineField
