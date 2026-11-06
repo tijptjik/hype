@@ -1,3 +1,4 @@
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 import type { Id } from '#lib/types.js'
 import type {
   Property,
@@ -46,6 +47,8 @@ export interface FormFieldsSectionProps {
   forceFlipDisabled?: boolean
   /** Shared multilingual presentation for every section in the owning form. */
   multilingual?: boolean
+  /** Form-owned language order and visibility shared across tabs. */
+  localeSelection?: LocaleSelection | null
   class?: string
 }
 

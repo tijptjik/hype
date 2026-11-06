@@ -1,4 +1,8 @@
 <script lang="ts">
+// BITS-UI
+import { Popover } from 'bits-ui'
+// I18N
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import LocaleSourceStrip from '#lib/bits/custom/localeControls/LocaleSourceStrip.svelte'
 // ICONS
@@ -14,6 +18,7 @@ let {
   busy = false,
   busySource,
   disabled = false,
+  hasTargets = true,
   onTranslate,
 }: {
   compact?: boolean
@@ -25,8 +30,51 @@ let {
   busy?: boolean
   busySource?: string
   disabled?: boolean
+  hasTargets?: boolean
   onTranslate: (locale: string) => void
 } = $props()
+
+const uid = $props.id()
+const hintId = `${uid}-filled-targets`
+let hintOpen = $state(false)
+let hintAnchor = $state<HTMLButtonElement | null>(null)
+let hintSource = $state('')
+
+/** Explain why a translation has no targets, or run the caller's eligible request.
+ * @param event Source-button activation, including keyboard activation.
+ * @param locale Selected source language.
+ * @returns Nothing; filled targets are never submitted for translation.
+ */
+function selectSource(event: MouseEvent, locale: string): void {
+  if (busy || disabled) return
+  if (!hasTargets) {
+    hintAnchor = event.currentTarget as HTMLButtonElement
+    hintSource = locale
+    hintOpen = true
+    return
+  }
+  hintOpen = false
+  onTranslate(locale)
+}
+
+// Clearing a target or leaving this editing state makes the explanation obsolete.
+$effect(() => {
+  if (!visible || hasTargets || disabled || busy) hintOpen = false
+})
+
+// Keep the hint attached to the selected source without following it out of view.
+$effect(() => {
+  if (!hintOpen) return
+  const dismiss = (): void => {
+    hintOpen = false
+  }
+  document.addEventListener('scroll', dismiss, true)
+  window.addEventListener('resize', dismiss)
+  return () => {
+    document.removeEventListener('scroll', dismiss, true)
+    window.removeEventListener('resize', dismiss)
+  }
+})
 </script>
 
 <div
@@ -59,8 +107,11 @@ let {
               ? 'animate-pulse bg-primary/10 text-primary motion-reduce:animate-none'
               : ''} enabled:hover:bg-primary/10 enabled:hover:text-primary disabled:opacity-50 aria-busy:opacity-100 focus-visible:outline-2 focus-visible:outline-primary"
             aria-label={source.accessibleLabel}
+            aria-describedby={hintOpen && hintSource === source.locale
+              ? hintId
+              : undefined}
             disabled={busy || disabled}
-            onclick={() => onTranslate(source.locale)}
+            onclick={event => selectSource(event, source.locale)}
           >
             {source.label}
           </button>
@@ -69,3 +120,25 @@ let {
     </div>
   </div>
 </div>
+
+<Popover.Root bind:open={hintOpen}>
+  <Popover.Portal>
+    <Popover.Content
+      id={hintId}
+      role="tooltip"
+      aria-live="polite"
+      class="bits-theme bits-tooltip__content z-[250]!"
+      customAnchor={hintAnchor}
+      side="top"
+      sideOffset={8}
+      collisionPadding={16}
+      strategy="fixed"
+      hideWhenDetached={true}
+      trapFocus={false}
+      preventScroll={false}
+      onOpenAutoFocus={event => event.preventDefault()}
+      onCloseAutoFocus={event => event.preventDefault()}
+      >{m.profile_translation_all_filled()}</Popover.Content
+    >
+  </Popover.Portal>
+</Popover.Root>

@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 // SVELTE
 import { untrack } from 'svelte'
 // SVELTEKIT
@@ -43,6 +44,7 @@ let {
   panelPadding = false,
   extraLocales = [],
   multilingual = $bindable(false),
+  localeSelection = $bindable<LocaleSelection | null>(null),
   translate,
   allIssues = [],
 }: {
@@ -52,6 +54,7 @@ let {
   extraLocales?: string[]
   allIssues?: FormIssueLike[]
   multilingual?: boolean
+  localeSelection?: LocaleSelection | null
   translate?: (
     propertyId: string,
     source: string,
@@ -186,6 +189,7 @@ let editing = $state(true)
   <form data-field-form class={panelPadding ? 'flex min-h-0 flex-1 flex-col' : ''}>
     {#snippet fieldsSection()}
       <FormFieldsSection
+        bind:localeSelection
         bind:multilingual
         class={panelPadding ? 'shrink-0' : ''}
         title="Fields"

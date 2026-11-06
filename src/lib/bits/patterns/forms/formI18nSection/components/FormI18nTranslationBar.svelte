@@ -161,7 +161,7 @@ $effect(() => {
               type="button"
               class="bits-form__i18n-translation-source focus-override focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
               aria-label={`Translate from ${sourceLocale} to ${targetLocale}`}
-              title={`Translate from ${sourceLocale} to ${targetLocale}`}
+              data-tooltip={`Translate from ${sourceLocale} to ${targetLocale}`}
               disabled={!onTranslate}
               tabindex={isVisible ? 0 : -1}
               onclick={event => handleTranslate(event, sourceLocale)}

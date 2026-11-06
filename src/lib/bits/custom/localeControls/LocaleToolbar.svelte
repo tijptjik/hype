@@ -249,7 +249,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
           event.preventDefault()
           if (!searching) restoreAddFocus()
         }}
-        class="bits-theme z-[100] w-[min(24rem,calc(100vw-2rem))] outline-none"
+        class="bits-theme z-[300] w-[min(24rem,calc(100vw-2rem))] outline-none"
       >
         <LocaleSearch
           {options}

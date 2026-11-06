@@ -1120,7 +1120,8 @@ $effect(() => {
           label={m.profile_translate_from()}
           busy={translating === field}
           busySource={translatingSource}
-          disabled={translating !== null || !hasTranslationTargets({ type: field })}
+          disabled={translating !== null}
+          hasTargets={hasTranslationTargets({ type: field })}
           onTranslate={source => void translateMissing(source, { type: field })}
         />
         <!-- Keep controls mounted while each language reveals its content and spacing. -->
@@ -1308,12 +1309,11 @@ $effect(() => {
                                 busy={translating ===
                                   translationKey({ type: 'value', valueId: value.id })}
                                 busySource={translatingSource}
-                                disabled={optionRemoveMode ||
-                                  translating !== null ||
-                                  !hasTranslationTargets({
-                                    type: 'value',
-                                    valueId: value.id,
-                                  })}
+                                disabled={optionRemoveMode || translating !== null}
+                                hasTargets={hasTranslationTargets({
+                                  type: 'value',
+                                  valueId: value.id,
+                                })}
                                 onTranslate={source =>
                                   void translateMissing(source, {
                                     type: 'value',

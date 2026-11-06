@@ -8,6 +8,7 @@ import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { getI18n, getLocale, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
@@ -96,6 +97,7 @@ import { HubPreflightFormData } from '#lib/db/zod/schema/hub.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // PROFILE
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 import { translateContentField } from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
@@ -1381,6 +1383,31 @@ async function onDeleteToggle(): Promise<void> {
 
 // Keep multilingual presentation shared across hub tabs; resetting content must preserve it.
 let multilingualExpanded = $state(false)
+let contentLocaleSelection = $state<LocaleSelection | null>(null)
+let localeSelectionRecord = ''
+// Restore every stored language on load; preserve order and hidden chips during edits.
+$effect(() => {
+  const record = `${hubRef}:${profileResetVersion}`
+  const stored = normalizeContentLocales([
+    ...locales,
+    ...Object.keys(formCtx.form.fields.value().data?.i18n ?? {}),
+  ])
+  const previous = untrack(() => contentLocaleSelection)
+  const reset = localeSelectionRecord !== record || !previous
+  const selectedLocales = normalizeContentLocales([
+    ...(reset ? [] : previous.selectedLocales),
+    ...stored,
+  ])
+  const visibleLocales = reset
+    ? selectedLocales
+    : [
+        ...previous.visibleLocales,
+        ...selectedLocales.filter(locale => !previous.selectedLocales.includes(locale)),
+      ]
+  if (reset || selectedLocales.join() !== previous.selectedLocales.join())
+    contentLocaleSelection = { selectedLocales, visibleLocales }
+  localeSelectionRecord = record
+})
 let profileResetVersion = $state(0)
 
 function onReset(): void {
@@ -1608,6 +1635,8 @@ $effect(() => {
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
           bind:expanded={multilingualExpanded}
+          bind:localeSelection={contentLocaleSelection}
+          allowAddLocales
           form={formCtx.form}
           fields={formCtx.form.fields.data.i18n}
           defaultLocales={locales}
@@ -1616,6 +1645,7 @@ $effect(() => {
           {isEditing}
           {isRequiredInPreflight}
           stickyToolbar
+          stickyFieldHeaders={['description']}
           fieldConfigs={[
             { key: 'name', label: m.admin__forms_common_name_full(), kind: 'input' },
             {
@@ -1630,6 +1660,8 @@ $effect(() => {
               markdown: true,
             },
           ]}
+          showPrimaryLocaleHeader={false}
+          localeHeaderPlacement="gutter"
           translate={(source, target, text) =>
             translateContentField({ source, target, text })}
           onChange={revalidateAfterProgrammaticChange}
@@ -1755,6 +1787,7 @@ $effect(() => {
         <!-- Keep fields at natural height; the facet owns trailing scroll clearance. -->
         <FormFieldsSection
           bind:multilingual={multilingualExpanded}
+          bind:localeSelection={contentLocaleSelection}
           class="shrink-0"
           icon={Type}
           keepHeader
@@ -1819,6 +1852,8 @@ $effect(() => {
       <FormSurface>
         <FormI18nDescriptorProfile
           bind:expanded={multilingualExpanded}
+          bind:localeSelection={contentLocaleSelection}
+          allowAddLocales
           form={formCtx.form}
           fields={formCtx.form.fields.data.i18n}
           defaultLocales={locales}
@@ -1827,6 +1862,8 @@ $effect(() => {
           {isEditing}
           {isRequiredInPreflight}
           stackNames={false}
+          showPrimaryLocaleHeader={false}
+          localeHeaderPlacement="gutter"
           stickyFieldHeaders
           stickyToolbar
           horizontalToolbar

@@ -5,6 +5,8 @@ import type { Attachment } from 'svelte/attachments'
 import { slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 import EditIcon from 'virtual:icons/lucide/pencil'
+// ICONS
+import ArrowUpIcon from 'virtual:icons/proicons/arrow-up'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 import { canonicalContentTag, contentFormKey } from '#lib/i18n/contentRecords.js'
@@ -113,7 +115,7 @@ const policyColumns = $derived(
 )
 let fieldHeaderHeights = $state<Partial<Record<Field, number>>>({})
 
-/** Measure each policy heading so locale badges stick below wrapped translation controls.
+/** Measure each field heading so locale badges stick below wrapped translation controls.
  * @param field Field owning this header. @returns Attachment with observer cleanup.
  */
 function measureFieldHeader(field: Field): Attachment<HTMLElement> {
@@ -126,6 +128,62 @@ function measureFieldHeader(field: Field): Attachment<HTMLElement> {
     measure()
     return () => observer.disconnect()
   }
+}
+
+/** Show a return control only once its document starts above its sticky heading.
+ * @param localized Whether the control belongs to a translation.
+ * @returns Attachment that tracks scrolling and layout changes, with cleanup.
+ */
+function showScrollControl(localized: boolean): Attachment<HTMLButtonElement> {
+  return button => {
+    const target = button.closest<HTMLElement>(
+      localized ? '[data-profile-locale]' : '[data-profile-field]',
+    )
+    const heading = button.closest<HTMLElement>(
+      localized ? '[data-profile-locale-header]' : '[data-profile-field-header]',
+    )
+    if (!target || !heading) return
+    let frame = 0
+    const measure = (): void => {
+      frame = 0
+      // Reserve the control's space so visibility never shifts the sticky layout.
+      button.style.visibility =
+        target.getBoundingClientRect().top < heading.getBoundingClientRect().top - 2
+          ? 'visible'
+          : 'hidden'
+    }
+    const schedule = (): void => {
+      if (!frame) frame = requestAnimationFrame(measure)
+    }
+    const observer = new ResizeObserver(schedule)
+    observer.observe(target)
+    observer.observe(heading)
+    window.addEventListener('scroll', schedule, true)
+    window.addEventListener('resize', schedule)
+    schedule()
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', schedule, true)
+      window.removeEventListener('resize', schedule)
+      cancelAnimationFrame(frame)
+    }
+  }
+}
+
+/** Return to a document's start without hiding it beneath the sticky controls.
+ * @param button Activated scroll control. @param localized Whether to target this translation.
+ * @returns Nothing.
+ */
+function scrollToStart(button: HTMLButtonElement, localized: boolean): void {
+  const target = button.closest<HTMLElement>(
+    localized ? '[data-profile-locale]' : '[data-profile-field]',
+  )
+  target?.scrollIntoView({
+    block: 'start',
+    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'instant'
+      : 'smooth',
+  })
 }
 
 let busy = $state<Partial<Record<Field, boolean>>>({})
@@ -217,6 +275,7 @@ function autonym(locale: string): string {
       {@const stickyHeader =
         stickyFieldHeaders === true ||
         (typeof stickyFieldHeaders !== 'boolean' && stickyFieldHeaders.includes(field))}
+      {@const policyField = field === 'privacyPolicy' || field === 'termsOfService'}
       {@const derived = field === 'title' && inherited}
       {@const sources = localeState.selectedLocales.filter(locale =>
         hasProfileText(values[contentFormKey(locale)]?.[field]),
@@ -240,7 +299,7 @@ function autonym(locale: string): string {
           label={m.profile_translate_from()}
           busy={busy[field] ?? false}
           busySource={busySource[field]}
-          disabled={!hasTargets}
+          {hasTargets}
           onTranslate={source => void fill(source, field)}
         />
       {/snippet}
@@ -256,6 +315,7 @@ function autonym(locale: string): string {
               : 'md:col-start-1 md:row-start-1'
           : ''}"
         style:--profile-field-header-height={`${fieldHeaderHeights[field] ?? 0}px`}
+        style:scroll-margin-top="var(--profile-locale-toolbar-height, 0px)"
         data-profile-field={field}
       >
         <!-- Long descriptions and policy documents keep their translation actions in view.
@@ -271,10 +331,49 @@ function autonym(locale: string): string {
           {@attach stickyHeader ? measureFieldHeader(field) : undefined}
           data-profile-field-header
         >
-          <div class="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
-            <h3 class={fieldLabelStyles}>
-              {label}
-            </h3>
+          <div
+            class="flex min-h-7 w-full flex-wrap items-center justify-between gap-x-4 gap-y-2"
+          >
+            <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+              <h3 class={fieldLabelStyles}>
+                {label}
+              </h3>
+              {#if derived}
+                <span class="text-muted-foreground text-xs whitespace-nowrap"
+                  >{m.feature_name_read_only()}</span
+                >
+              {/if}
+              <FormI18nTranslationStatus
+                message={results[field]?.length
+                  ? [
+                      m.profile_translation_complete({
+                        count: results[field]!.filter(
+                          result => result.status === 'translated',
+                        ).length,
+                      }),
+                      ...results[field]!.filter(
+                        result => result.status !== 'translated',
+                      ).map(
+                        result =>
+                          `${name(result.locale)}: ${result.status === 'unsupported' ? m.profile_translation_unsupported() : result.status === 'stale' ? m.profile_translation_skipped() : m.address_translate_error()}`,
+                      ),
+                    ].join(' ')
+                  : ''}
+              />
+            </div>
+            {#if stickyHeader && policyField}
+              <button
+                type="button"
+                class="text-muted-foreground hover:text-foreground hover:bg-muted/50 focus-visible:outline-primary ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2"
+                aria-label={`${m.scroll_to_top()}: ${label}`}
+                title={m.scroll_to_top()}
+                style:visibility="hidden"
+                {@attach showScrollControl(false)}
+                onclick={event => scrollToStart(event.currentTarget, false)}
+              >
+                <ArrowUpIcon class="size-4" aria-hidden="true" />
+              </button>
+            {/if}
             {#if derived}
               <div
                 class="group/location-link hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 inline-flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-transparent px-2 py-1 transition-colors duration-150 motion-reduce:transition-none"
@@ -318,23 +417,6 @@ function autonym(locale: string): string {
                 {/if}
               </div>
             {/if}
-            <FormI18nTranslationStatus
-              message={results[field]?.length
-                ? [
-                    m.profile_translation_complete({
-                      count: results[field]!.filter(
-                        result => result.status === 'translated',
-                      ).length,
-                    }),
-                    ...results[field]!.filter(
-                      result => result.status !== 'translated',
-                    ).map(
-                      result =>
-                        `${name(result.locale)}: ${result.status === 'unsupported' ? m.profile_translation_unsupported() : result.status === 'stale' ? m.profile_translation_skipped() : m.address_translate_error()}`,
-                    ),
-                  ].join(' ')
-                : ''}
-            />
           </div>
           <div class="[[data-profile-field]:has([data-markdown-editor])_&]:hidden">
             {@render translationActions(false)}
@@ -355,6 +437,7 @@ function autonym(locale: string): string {
               style:margin-top={shown.includes(locale) && locale !== shown[0]
                 ? '8px'
                 : '0px'}
+              style:scroll-margin-top="calc(var(--profile-locale-toolbar-height, 0px) + var(--profile-field-header-height, 0px))"
               data-profile-locale={locale}
             >
               <div
@@ -378,6 +461,20 @@ function autonym(locale: string): string {
                       class="text-muted-foreground inline-flex font-mono text-xs leading-[22px]"
                       >{shortLocaleLabel(locale)}</span
                     >
+                    {#if policyField}
+                      <!-- Keep the return control below the label without adding row height. -->
+                      <button
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground hover:bg-muted/50 focus-visible:outline-primary absolute top-full left-1/2 inline-flex size-7 -translate-x-1/2 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2"
+                        aria-label={`${m.scroll_to_top()}: ${label} (${name(locale)})`}
+                        title={m.scroll_to_top()}
+                        style:visibility="hidden"
+                        {@attach showScrollControl(true)}
+                        onclick={event => scrollToStart(event.currentTarget, true)}
+                      >
+                        <ArrowUpIcon class="size-4" aria-hidden="true" />
+                      </button>
+                    {/if}
                   </div>
                 {/if}
                 {#if showSkeleton && shown.includes(locale)}

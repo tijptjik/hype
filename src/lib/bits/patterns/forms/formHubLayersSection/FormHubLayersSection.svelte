@@ -147,7 +147,7 @@ $effect(() => {
               </div>
               <div
                 class="flex shrink-0 items-center gap-3 [&_.bits-switch-label]:sr-only"
-                title={m.admin__forms_layer_visible_by_default()}
+                data-tooltip={m.admin__forms_layer_visible_by_default()}
               >
                 <span class="text-muted-foreground hidden text-xs @min-[28rem]:inline"
                   >{m.default_enabled()}</span

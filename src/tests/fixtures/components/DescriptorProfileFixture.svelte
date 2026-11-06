@@ -1,6 +1,9 @@
 <script lang="ts">
 // CONTEXT
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
+// ICONS
+import RefreshCw from 'virtual:icons/proicons/arrow-sync'
+import PoliciesIcon from 'virtual:icons/proicons/shield-checkmark'
 // COMPONENTS
 import HubPolicyDocumentBody from '#lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
 import { renderPolicyMarkdown } from '#lib/services/policy.js'
@@ -14,6 +17,7 @@ import FormOrganisationsSection from '#lib/bits/patterns/forms/formOrganisations
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import { formSelectionSectionStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 // TYPES
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 import type { DescriptorData } from '#lib/bits/patterns/forms/formI18nSection/components/formI18nDescriptorFields.types.js'
 import type { ProfileProviderResult } from '#lib/bits/patterns/forms/featureLocation/profileTranslation.js'
 
@@ -37,6 +41,7 @@ setResponsiveCtx()
 let mode = $state('organisation')
 let tab = $state('profile')
 let multilingualExpanded = $state(false)
+let contentLocaleSelection = $state<LocaleSelection | null>(null)
 let editing = $state(false)
 type FixtureData = DescriptorData & {
   code?: string
@@ -228,12 +233,10 @@ const form = {
   <div class="h-[calc(100dvh-72px)] overflow-y-auto" data-fixture-scroll>
     <FormSurface>
       {#if tab === 'policies'}
-        <SectionHeader
-          title="Policies"
-          description="Configure the privacy policy and terms of service shown for this hub."
-        />
         <FormI18nDescriptorProfile
           bind:expanded={multilingualExpanded}
+          bind:localeSelection={contentLocaleSelection}
+          allowAddLocales={mode === 'hub'}
           {form}
           {fields}
           defaultLocales={['en', 'zh-Hant', 'zh-Hans']}
@@ -243,6 +246,8 @@ const form = {
           stickyToolbar
           stickyFieldHeaders
           stackNames={false}
+          showPrimaryLocaleHeader={false}
+          localeHeaderPlacement="gutter"
           fieldConfigs={[
             {
               key: 'privacyPolicy',
@@ -262,6 +267,28 @@ const form = {
           translate={provider}
           onChange={() => {}}
         >
+          {#snippet toolbarHeader(toolbar)}
+            <SectionHeader
+              title="Policies"
+              icon={PoliciesIcon}
+              description="Configure the privacy policy and terms of service shown for this hub."
+              showControlLabels
+            >
+              {#snippet right()}
+                {@render toolbar()}
+              {/snippet}
+              {#snippet afterControls()}
+                <button
+                  type="button"
+                  disabled={!editing}
+                  onclick={() => {}}
+                  class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
+                >
+                  <RefreshCw class="size-4" />Regenerate
+                </button>
+              {/snippet}
+            </SectionHeader>
+          {/snippet}
           {#snippet renderValue(_field, value)}
             <HubPolicyDocumentBody
               html={renderPolicyMarkdown(value)}
@@ -270,10 +297,16 @@ const form = {
           {/snippet}
         </FormI18nDescriptorProfile>
       {:else if tab === 'fields'}
-        <FieldEditorFixture bind:multilingual={multilingualExpanded} fieldCount={3} />
+        <FieldEditorFixture
+          bind:localeSelection={contentLocaleSelection}
+          bind:multilingual={multilingualExpanded}
+          fieldCount={3}
+        />
       {:else}
         <FormI18nDescriptorProfile
           bind:expanded={multilingualExpanded}
+          bind:localeSelection={contentLocaleSelection}
+          allowAddLocales={mode === 'hub'}
           {form}
           {fields}
           defaultLocales={['en', 'zh-Hant', 'zh-Hans']}

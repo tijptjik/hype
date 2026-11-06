@@ -24,6 +24,7 @@ import type {
   DescriptorFieldConfig,
 } from './components/formI18nDescriptorFields.types.js'
 import type { ProfileProviderResult } from '../featureLocation/profileTranslation.js'
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 import type { ProfileLocaleState } from '../featureLocation/profileLocales.js'
 
 type DescriptorField = GenAiField
@@ -35,6 +36,7 @@ let {
   recordKey,
   resetVersion = 0,
   isEditing = false,
+  allowAddLocales = false,
   isRequiredInPreflight,
   translate,
   onChange,
@@ -45,6 +47,7 @@ let {
   localeHeaderPlacement = 'above',
   children,
   expanded = $bindable(false),
+  localeSelection = $bindable<LocaleSelection | null>(null),
   fieldConfigs,
   stackNames = true,
   renderValue,
@@ -56,6 +59,8 @@ let {
   recordKey: string
   resetVersion?: number
   isEditing?: boolean
+  /** Enable only for entity schemas that accept dynamic content languages. */
+  allowAddLocales?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
   translate: (
     source: string,
@@ -70,6 +75,8 @@ let {
   showPrimaryLocaleHeader?: boolean
   localeHeaderPlacement?: 'above' | 'gutter'
   children?: Snippet<[ProfileLocaleState]>
+  /** Form-owned language order and visibility shared across tabs. */
+  localeSelection?: LocaleSelection | null
   expanded?: boolean
   fieldConfigs?: DescriptorFieldConfig[]
   stackNames?: boolean
@@ -105,7 +112,15 @@ const localeValues = $derived(
       locale,
       {
         title: [
-          ...configs.map(config => row?.[config.key] ?? ''),
+          ...(
+            [
+              'name',
+              'nameShort',
+              'description',
+              'privacyPolicy',
+              'termsOfService',
+            ] as const
+          ).map(field => row?.[field] ?? ''),
           row?.subscriptionBenefits ?? '',
         ].join('\n'),
         description: '',
@@ -113,8 +128,16 @@ const localeValues = $derived(
     ]),
   ),
 )
-let localeState = $state(
+let localLocaleState = $state(
   untrack(() => restoreProfileLocales(defaultLocales, localeValues)),
+)
+const localeState = $derived(
+  localeSelection
+    ? restoreProfileLocales(defaultLocales, localeValues, {
+        ...localeSelection,
+        expanded,
+      })
+    : localLocaleState,
 )
 const displayLocaleState = $derived({ ...localeState, expanded })
 // Wrapped language chips change the sticky offset on narrow screens and on expansion.
@@ -122,12 +145,12 @@ let toolbarHeight = $state(0)
 $effect(() => {
   recordKey
   resetVersion
-  localeState = untrack(() => restoreProfileLocales(defaultLocales, localeValues))
+  localLocaleState = untrack(() => restoreProfileLocales(defaultLocales, localeValues))
 })
 $effect(() => {
   const stored = localeValues
-  localeState = untrack(() =>
-    restoreProfileLocales(defaultLocales, stored, localeState),
+  localLocaleState = untrack(() =>
+    restoreProfileLocales(defaultLocales, stored, localLocaleState),
   )
 })
 
@@ -171,17 +194,52 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
     data-profile-locale-toolbar
   >
     {#snippet localeToolbar()}
-      <!-- Descriptor schemas own their locale set; the toolbar controls order and visibility. -->
+      <!-- The owning entity enables additions only when its save schema supports them. -->
       <LocaleToolbar
         {...displayLocaleState}
         horizontal={horizontalToolbar}
         options={contentLocaleOptions(getLocaleKey())}
-        allowAdd={false}
+        allowAdd={isEditing && allowAddLocales}
         onExpandedChange={value => {
           expanded = value
         }}
         onChange={change => {
-          localeState = { ...localeState, ...change }
+          // Register a complete empty descriptor bucket before mounting its controls.
+          if (change.action === 'add') {
+            const current = form.fields.value()
+            const key = contentFormKey(change.locale)
+            if (current.data && !current.data.i18n?.[key]) {
+              form.fields.set({
+                ...current,
+                data: {
+                  ...current.data,
+                  i18n: {
+                    ...current.data.i18n,
+                    [key]: {
+                      name: '',
+                      nameShort: '',
+                      description: '',
+                      subscriptionBenefits: '',
+                      privacyPolicy: '',
+                      termsOfService: '',
+                      nameGen: false,
+                      nameShortGen: false,
+                      descriptionGen: false,
+                      subscriptionBenefitsGen: false,
+                      privacyPolicyGen: false,
+                      termsOfServiceGen: false,
+                    },
+                  },
+                },
+              })
+              onChange()
+            }
+          }
+          localLocaleState = { ...localeState, ...change }
+          localeSelection = {
+            selectedLocales: change.selectedLocales,
+            visibleLocales: change.visibleLocales,
+          }
         }}
       />
     {/snippet}
@@ -208,7 +266,11 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
     showToolbar={false}
     localeState={displayLocaleState}
     onLocaleStateChange={state => {
-      localeState = state
+      localLocaleState = state
+      localeSelection = {
+        selectedLocales: state.selectedLocales,
+        visibleLocales: state.visibleLocales,
+      }
       expanded = state.expanded
     }}
     {values}

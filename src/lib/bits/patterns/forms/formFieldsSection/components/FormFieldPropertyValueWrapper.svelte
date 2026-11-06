@@ -42,7 +42,7 @@ const hideLabels = $derived(labelledWidth > availableWidth)
     color="light"
     attrs={{
       'data-property-value-action': measuring ? undefined : 'add',
-      title: m.wacky_home_sawfish_accept(),
+      'data-tooltip': m.wacky_home_sawfish_accept(),
     }}
     iconComponent={ListPlus}
     disabled={optionRemoveMode}
@@ -58,7 +58,7 @@ const hideLabels = $derived(labelledWidth > availableWidth)
     color="light"
     attrs={{
       'data-property-value-action': measuring ? undefined : 'sort',
-      title: m.admin__forms_property_sort_az(),
+      'data-tooltip': m.admin__forms_property_sort_az(),
     }}
     iconComponent={ArrowDownAZ}
     disabled={optionRemoveMode}
@@ -74,7 +74,9 @@ const hideLabels = $derived(labelledWidth > availableWidth)
     color="light"
     attrs={{
       'data-property-value-action': measuring ? undefined : 'remove-toggle',
-      title: optionRemoveMode ? m.filters__done() : m.watery_trite_shrimp_clip(),
+      'data-tooltip': optionRemoveMode
+        ? m.filters__done()
+        : m.watery_trite_shrimp_clip(),
     }}
     iconComponent={X}
     onClick={onToggleRemoveMode}

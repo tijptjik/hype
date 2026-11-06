@@ -56,6 +56,7 @@ let {
   isItemVisible,
   forceFlipDisabled = false,
   multilingual = $bindable(false),
+  localeSelection = $bindable<LocaleSelection | null>(null),
   class: className = '',
 }: FormFieldsSectionProps = $props()
 
@@ -65,8 +66,7 @@ const rootClass = $derived(
 const hasIssues = $derived(issues.length > 0)
 
 let isCollapsedAll = $state(false)
-// Language order and visibility apply to the entire section without removing content.
-let localeSelection = $state<LocaleSelection | null>(null)
+// Language order and visibility are shared by the owning form without removing content.
 let collapseAllVersion = $state(0)
 let layoutFlipLocked = $state(false)
 let introItemId = $state<string | null>(null)
