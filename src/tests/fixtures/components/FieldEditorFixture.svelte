@@ -31,7 +31,10 @@ import type {
   PropertyFormData,
   PropertyTranslationOrigin,
 } from '#lib/db/zod/schema/property.types.js'
-import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
+import type {
+  FormDataUpdaterForm,
+  FormIssueLike,
+} from '#lib/client/services/form.types.js'
 
 setResponsiveCtx()
 let {
@@ -41,11 +44,13 @@ let {
   extraLocales = [],
   multilingual = $bindable(false),
   translate,
+  allIssues = [],
 }: {
   translatable?: boolean
   fieldCount?: number
   panelPadding?: boolean
   extraLocales?: string[]
+  allIssues?: FormIssueLike[]
   multilingual?: boolean
   translate?: (
     propertyId: string,
@@ -198,6 +203,7 @@ let editing = $state(true)
             changeProjectPropertyRankUnified(form, id, 'down'),
         }}
         card={{
+          allIssues,
           removeMode: false,
           locales: ['en', 'zhHant', 'zhHans'],
           classifierComponents: ['SelectField'],

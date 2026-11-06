@@ -1,6 +1,4 @@
 <script lang="ts">
-// SVELTE
-import { fade } from 'svelte/transition'
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
@@ -68,7 +66,7 @@ const hideLabels = $derived(labelledWidth > availableWidth)
     class="bits-project-field-card__value-action-btn"
   />
   <Button
-    text={optionRemoveMode ? m.cancel() : m.watery_trite_shrimp_clip()}
+    text={optionRemoveMode ? m.filters__done() : m.watery_trite_shrimp_clip()}
     hideLabel={compact}
     hideLabelInstantly
     size="sm"
@@ -76,7 +74,7 @@ const hideLabels = $derived(labelledWidth > availableWidth)
     color="light"
     attrs={{
       'data-property-value-action': measuring ? undefined : 'remove-toggle',
-      title: optionRemoveMode ? m.cancel() : m.watery_trite_shrimp_clip(),
+      title: optionRemoveMode ? m.filters__done() : m.watery_trite_shrimp_clip(),
     }}
     iconComponent={X}
     onClick={onToggleRemoveMode}
@@ -87,31 +85,33 @@ const hideLabels = $derived(labelledWidth > availableWidth)
 <section class="bits-project-field-card__values">
   <div class="flex min-w-0 items-center gap-4">
     <h4 class={`shrink-0 ${fieldLabelStyles}`}>{m.admin__forms_property_options()}</h4>
-    {#if isEditing}
-      <div class="relative min-h-8.5 min-w-0 flex-1" data-property-option-actions>
+    <!-- Keep the toolbar's space so options stay put when editing ends. -->
+    <div
+      class="relative min-h-8.5 min-w-0 flex-1 transition-opacity duration-180 motion-reduce:transition-none"
+      data-property-option-actions
+      inert={!isEditing}
+      aria-hidden={!isEditing}
+      style:opacity={isEditing ? 1 : 0}
+    >
+      <div class="bits-project-field-card__value-actions-layer">
+        <!-- Measure the full labels independently so compact mode cannot oscillate. -->
         <div
-          class="bits-project-field-card__value-actions-layer"
-          transition:fade={{ duration: 180 }}
+          class="pointer-events-none invisible absolute inset-0 overflow-hidden"
+          aria-hidden="true"
+          inert
         >
-          <!-- Measure the full labels independently so compact mode cannot oscillate. -->
-          <div
-            class="pointer-events-none invisible absolute inset-0 overflow-hidden"
-            aria-hidden="true"
-            inert
-          >
-            <div class="flex w-max items-center gap-2" bind:clientWidth={labelledWidth}>
-              {@render actions(false, true)}
-            </div>
-          </div>
-          <div
-            class="flex min-h-full items-center justify-start gap-2"
-            bind:clientWidth={availableWidth}
-          >
-            {@render actions(hideLabels)}
+          <div class="flex w-max items-center gap-2" bind:clientWidth={labelledWidth}>
+            {@render actions(false, true)}
           </div>
         </div>
+        <div
+          class="flex min-h-full items-center justify-start gap-2"
+          bind:clientWidth={availableWidth}
+        >
+          {@render actions(hideLabels)}
+        </div>
       </div>
-    {/if}
+    </div>
   </div>
 
   {@render rows?.()}

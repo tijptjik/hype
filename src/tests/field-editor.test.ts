@@ -18,8 +18,14 @@ import Fixture from './fixtures/components/FieldEditorFixture.svelte'
 import { contentFormKey, contentMapToStorage } from '#lib/i18n/contentRecords.js'
 
 const originalAnimate = Element.prototype.animate
+const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts')
 beforeEach(() => {
   vi.useRealTimers()
+  // JSDOM has no font loading API for the section header's layout observer.
+  Object.defineProperty(document, 'fonts', {
+    configurable: true,
+    value: { ready: Promise.resolve() },
+  })
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -40,6 +46,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   Element.prototype.animate = originalAnimate
+  if (originalFonts) Object.defineProperty(document, 'fonts', originalFonts)
+  else Reflect.deleteProperty(document, 'fonts')
   vi.unstubAllGlobals()
 })
 
@@ -51,6 +59,43 @@ function submitted(container: HTMLElement) {
   if (!form) throw new Error('Missing field form')
   return convert_formdata('field-editor', new FormData(form)).data.properties[0]
 }
+
+it('places the shared label error beside the visible Name in UI control', async () => {
+  const view = render(Fixture, {
+    allIssues: [
+      { path: ['data', 'properties', 0, 'i18n'], message: 'Label is required' },
+    ],
+  })
+  const column = view.container.querySelector<HTMLElement>(
+    '[data-property-text-column="label"]',
+  )
+  if (!column) throw new Error('Missing Name in UI column')
+  const display = within(column).getByRole('button', {
+    name: 'Name in UI en',
+  })
+  expect(display.getAttribute('aria-invalid')).toBe('true')
+  expect(
+    document.getElementById(display.getAttribute('aria-describedby') ?? '')
+      ?.textContent,
+  ).toBe('Label is required')
+  expect(within(column).getByRole('alert').textContent).toBe('Label is required')
+  expect(screen.getAllByText('Label is required')).toHaveLength(1)
+  expect(
+    view.container.querySelector('[data-property-text-column="placeholder"]')
+      ?.textContent,
+  ).not.toContain('Label is required')
+
+  await fireEvent.click(display)
+  expect(screen.getAllByText('Label is required')).toHaveLength(1)
+  await fireEvent.keyDown(screen.getByRole('textbox', { name: 'Name in UI en' }), {
+    key: 'Enter',
+  })
+  expect(within(column).getByRole('alert').textContent).toBe('Label is required')
+
+  await view.rerender({ allIssues: [] })
+  expect(screen.queryByText('Label is required')).toBeNull()
+  expect(display.hasAttribute('aria-invalid')).toBe(false)
+})
 
 it('submits hyphenated locales and verification flags after editing and hiding their rows', async () => {
   const view = render(Fixture, { extraLocales: ['pt-BR', 'sr-Latn-RS'] })

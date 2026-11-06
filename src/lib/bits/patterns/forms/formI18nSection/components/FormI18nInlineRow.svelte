@@ -8,6 +8,7 @@ import { m } from '#lib/i18n.js'
 // COMPONENTS
 import { TextArea, TextInput } from '#lib/bits/custom/form/index.js'
 import GenAI from '#lib/bits/custom/form/src/input/components/GenAI.svelte'
+import FieldError from '#lib/bits/custom/form/src/label/components/Error.svelte'
 import MarkdownEditor from '#lib/bits/custom/markdownEditor/MarkdownEditor.svelte'
 import { renderMarkdownContent } from '#lib/services/markdown.js'
 import HtmlPreview from '#lib/bits/custom/htmlPreview/HtmlPreview.svelte'
@@ -61,6 +62,7 @@ let root: HTMLDivElement
 let display: HTMLDivElement
 let session = 0
 let prefixLabel = $state('')
+const displayErrorId = $props.id()
 
 // Retain the label while its column closes so both the text and gutter can fade away.
 $effect(() => {
@@ -202,10 +204,12 @@ const editorAttrs = $derived({
       role={editable ? 'button' : 'group'}
       tabindex={editable ? 0 : undefined}
       aria-label={label}
+      aria-invalid={editable && issues?.length ? 'true' : undefined}
+      aria-describedby={editable && issues?.length ? displayErrorId : undefined}
       class="transition-[border-color,background-color] duration-180 motion-reduce:transition-none min-h-[42px] min-w-0 whitespace-normal break-words rounded-md pl-[11px] pr-9 {multiline
         ? 'py-2'
         : 'py-[9px]'} text-[15px] leading-[22px] {editable
-        ? 'cursor-text border border-border/30 hover:border-border/60 hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2'
+        ? `cursor-text border ${issues?.length ? 'border-error' : 'border-border/30 hover:border-border/60'} hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2`
         : 'border border-transparent'}"
       onclick={() => void open()}
       onkeydown={event => {
@@ -247,6 +251,9 @@ const editorAttrs = $derived({
         {/key}
       </div>
     </div>
+    {#if editable && !active && issues?.length}
+      <div id={displayErrorId} role="alert"><FieldError {issues} class="px-3" /></div>
+    {/if}
     {#if editable && value.length && !(markdown && active)}
       <button
         type="button"

@@ -493,10 +493,25 @@ const minAttrs = $derived(getFieldAttrs(['min'], 'number'))
 const minIssues = $derived(getFieldIssues(['min']))
 const maxAttrs = $derived(getFieldAttrs(['max'], 'number'))
 const maxIssues = $derived(getFieldIssues(['max']))
-const propertyRootIssues = $derived([
-  ...(getFieldIssues([]) ?? []),
-  ...(getFieldIssues(['i18n']) ?? []),
-])
+const propertyRootIssues = $derived(getFieldIssues([]) ?? [])
+
+/** Attach the shared label requirement to a visible Name in UI control.
+ * @param locale Content language owning the control.
+ * @param field Localized property text field.
+ * @returns Cell issues and, for the first visible label, shared translation issues.
+ * @remarks Any authored language satisfies the shared label requirement.
+ */
+function getPropertyTextIssues(
+  locale: string,
+  field: 'label' | 'placeholder',
+): FormIssueLike[] | undefined {
+  const issues = getFieldIssues(['i18n', contentFormKey(locale), field]) ?? []
+  const sharedIssues =
+    field === 'label' && locale === shownLocales[0]
+      ? (getFieldIssues(['i18n']) ?? [])
+      : []
+  return issues.length || sharedIssues.length ? [...issues, ...sharedIssues] : undefined
+}
 
 function onValueBlur(event: FocusEvent, valueId: string, locale: string): void {
   if (!isEditing) return
@@ -1094,6 +1109,8 @@ $effect(() => {
       >
         <h4 class={`flex min-h-7 items-center ${fieldLabelStyles}`}>{label}</h4>
         <FormI18nSourceBar
+          reserveSpace={multilingual &&
+            getTranslationSources({ type: field }).length > 0}
           visible={multilingual &&
             isEditing &&
             !removeMode &&
@@ -1136,7 +1153,7 @@ $effect(() => {
                     label={`${label} ${locale}`}
                     prefix={multilingual ? shortLocaleLabel(locale) : ''}
                     attrs={getPropertyLocaleFieldAttrs(key, field)}
-                    issues={getFieldIssues(['i18n', key, field])}
+                    issues={getPropertyTextIssues(locale, field)}
                     required={isFieldRequired(['i18n', key, field])}
                     {isEditing}
                     onValue={text => onUpdateI18n(property.id, locale, field, text)}
@@ -1267,6 +1284,12 @@ $effect(() => {
                             >
                               <FormI18nSourceBar
                                 compact
+                                reserveSpace={multilingual &&
+                                  valuesAreTranslatable &&
+                                  getTranslationSources({
+                                    type: 'value',
+                                    valueId: value.id,
+                                  }).length > 0}
                                 visible={multilingual &&
                                   valuesAreTranslatable &&
                                   isEditing &&

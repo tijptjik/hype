@@ -8,6 +8,7 @@ import LanguagesIcon from 'virtual:icons/lucide/languages'
 let {
   compact = false,
   visible,
+  reserveSpace = false,
   sources,
   label,
   busy = false,
@@ -17,6 +18,8 @@ let {
 }: {
   compact?: boolean
   visible: boolean
+  /** Keep translations aligned when edit-only actions become hidden. */
+  reserveSpace?: boolean
   sources: readonly { locale: string; label: string; accessibleLabel: string }[]
   label: string
   busy?: boolean
@@ -29,7 +32,7 @@ let {
 <div
   data-i18n-source-bar
   class="grid max-w-full min-w-0 transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none"
-  style:grid-template-rows={visible ? '1fr' : '0fr'}
+  style:grid-template-rows={visible || reserveSpace ? '1fr' : '0fr'}
   style:opacity={visible ? 1 : 0}
   aria-hidden={!visible}
   inert={!visible}
