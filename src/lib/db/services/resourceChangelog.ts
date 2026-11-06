@@ -317,7 +317,14 @@ export async function listResourceChangelog(
               ? `@${row.actorDisplayUsername || row.actorUsername}`
               : row.actorName || row.actorId
             : `${sourceLabels[row.origin] ?? row.origin} · ${row.actorId}`
-        actors.set(key, { id: row.actorId, origin: row.origin, label })
+        actors.set(key, {
+          id: row.actorId,
+          origin: row.origin,
+          label,
+          name: row.actorName,
+          username: row.actorUsername,
+          displayUsername: row.actorDisplayUsername,
+        })
         const period = filterOptions.period
         filterOptions.period = {
           from: !period || row.firstAt < period.from ? row.firstAt : period.from,

@@ -227,7 +227,16 @@ describe('hierarchy changelog', () => {
     })
     expect(page.entries).toEqual([])
     expect(page.filterOptions).toEqual({
-      actors: [{ id: 'editor', origin: 'user', label: 'Editor' }],
+      actors: [
+        {
+          id: 'editor',
+          origin: 'user',
+          label: 'Editor',
+          name: 'Editor',
+          username: null,
+          displayUsername: null,
+        },
+      ],
       period: { from: '2026-11-06T12:00:00.000Z', to: '2026-11-06T12:00:00.000Z' },
     })
     expect(

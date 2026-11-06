@@ -53,7 +53,15 @@ export type ChangelogFilters = {
   to?: string
 }
 export type ChangelogFilterOptions = {
-  actors: { id: string; origin: string; label: string }[]
+  actors: {
+    id: string
+    origin: string
+    label: string
+    /** Current display fields for the shared user-search result presentation. */
+    name?: string | null
+    username?: string | null
+    displayUsername?: string | null
+  }[]
   period: { from: string; to: string } | null
 }
 export type ChangelogPage = {
