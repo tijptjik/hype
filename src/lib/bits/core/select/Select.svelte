@@ -23,6 +23,7 @@ let {
   triggerAttrs = {},
   contentClass = '',
   onValueChange,
+  onOpenChange,
   itemPreview,
 }: SelectProps = $props()
 
@@ -74,6 +75,7 @@ function handleValueChange(nextValue: string): void {
     {allowDeselect}
     {value}
     onValueChange={handleValueChange}
+    {onOpenChange}
   >
     <SelectPrimitive.Trigger
       {...triggerAttrs}

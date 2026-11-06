@@ -25,4 +25,5 @@ export interface SelectProps {
   triggerAttrs?: Record<string, unknown>
   contentClass?: string
   onValueChange?: (value: string) => void
+  onOpenChange?: (open: boolean) => void
 }
