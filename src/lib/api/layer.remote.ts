@@ -308,6 +308,10 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   if (mode === 'create') {
+    // A persisted Layer is required before editing its independently revisioned override.
+    if (data.relocationUpdatePolicy) {
+      invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
+    }
     const created = await createLayerFromSubmission({
       db,
       user,
@@ -342,6 +346,9 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Authorize from the scalar probe before loading the relation-heavy admin shape.
   const submittedDataForUpdate: Record<string, unknown> = { i18n: data.i18n }
+  if (data.relocationUpdatePolicy) {
+    submittedDataForUpdate.relocationUpdatePolicy = data.relocationUpdatePolicy
+  }
   // Property snapshots require the persisted relation comparison below; unchanged
   // properties must not turn a translation edit into a restricted field update.
   if (
@@ -422,6 +429,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
       updatedAt,
       i18n: data.i18n,
       ...(propertiesChanged ? { properties: submittedProperties } : {}),
+      relocationUpdatePolicy: data.relocationUpdatePolicy,
       data: {
         organisationId: resolvedOrganisationId,
         projectId: data.projectId,
@@ -512,6 +520,8 @@ export const archiveLayer = guardedCommand(RemoveLayerSchema, async (params, ctx
     }),
     toIssueDetailMessage,
   )
+
+  if (probed.historicalSourceLayerId) error(400, 'HISTORICAL_LAYER_MANAGED')
 
   const persisted = requireValue(
     await updateLayerArchivedStateById(db, {

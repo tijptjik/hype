@@ -25,6 +25,8 @@ import {
 // SERVICES
 import { getLayerHubFilter } from './hub'
 import { assertMapStyleProjectScope } from './map'
+// DOMAIN
+import { RelocationPolicySchema } from '#lib/locations/model.js'
 // DB
 import {
   firstOrNull,
@@ -51,6 +53,7 @@ import type {
   QueryParams,
 } from '#lib/types.js'
 import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
+import type { RelocationPolicy } from '#lib/locations/model.js'
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type {
@@ -506,6 +509,7 @@ export const probeLayerQuery = async (
     await db
       .select({
         id: layer.id,
+        historicalSourceLayerId: layer.historicalSourceLayerId,
         organisationId: layer.organisationId,
         projectId: layer.projectId,
         hubId: organisation.hubId,
@@ -540,6 +544,7 @@ export const probeLayerForUpdate = async (
     await db
       .select({
         id: layer.id,
+        historicalSourceLayerId: layer.historicalSourceLayerId,
         organisationId: layer.organisationId,
         projectId: layer.projectId,
         metadata: layer.metadata,
@@ -567,6 +572,7 @@ const probeLayerForCommand = async (
     await db
       .select({
         id: layer.id,
+        historicalSourceLayerId: layer.historicalSourceLayerId,
         organisationId: layer.organisationId,
         projectId: layer.projectId,
         hubId: organisation.hubId,
@@ -690,6 +696,10 @@ export const updateLayerByIdWithConcurrency = async (
     updatedAt: string
     i18n?: Record<LocaleKey, LayerI18nPartial>
     properties?: LayerPropertyNew[]
+    relocationUpdatePolicy?: {
+      policy: RelocationPolicy | null
+      expectedRevision: number
+    }
     data: {
       organisationId: string
       projectId: string
@@ -698,6 +708,18 @@ export const updateLayerByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
+  const settings = params.relocationUpdatePolicy
+  if (
+    settings &&
+    (!Number.isSafeInteger(settings.expectedRevision) ||
+      settings.expectedRevision < 0 ||
+      settings.expectedRevision >= Number.MAX_SAFE_INTEGER)
+  ) {
+    throw new Error('Invalid policy revision')
+  }
+  const relocationPolicy = settings
+    ? RelocationPolicySchema.nullable().parse(settings.policy)
+    : undefined
   // Preserve the ownership check when metadata is omitted during a project move.
   const metadata =
     params.data.metadata ??
@@ -712,16 +734,31 @@ export const updateLayerByIdWithConcurrency = async (
   const revisionGuard = and(
     eq(layer.id, params.id),
     eq(layer.modifiedAt, params.updatedAt),
+    settings
+      ? eq(layer.relocationPolicyRevision, settings.expectedRevision)
+      : undefined,
   )
-  const updateCore = db.update(layer).set(params.data).where(revisionGuard).returning({
-    id: layer.id,
-    modifiedAt: layer.modifiedAt,
-  })
+  const updateCore = db
+    .update(layer)
+    .set({
+      ...params.data,
+      ...(settings
+        ? {
+            relocationPolicy,
+            relocationPolicyRevision: settings.expectedRevision + 1,
+          }
+        : {}),
+    })
+    .where(revisionGuard)
+    .returning({
+      id: layer.id,
+      modifiedAt: layer.modifiedAt,
+    })
 
   const capture = await prepareAdminResourceRevisionCapture(
     db,
     'layer',
-    sql`SELECT ${params.id} AS id`,
+    sql`SELECT ${params.id} AS id UNION SELECT id FROM layer WHERE historicalSourceLayerId=${params.id}`,
     params.actorId ? { actorId: params.actorId } : undefined,
   )
   if (params.i18n !== undefined || params.properties !== undefined) {
@@ -804,7 +841,7 @@ export const updateLayerPublishedStateById = async (
   const ownCapture = await prepareAdminResourceRevisionCapture(
     db,
     'layer',
-    sql`SELECT ${params.id} AS id`,
+    sql`SELECT ${params.id} AS id UNION SELECT id FROM layer WHERE historicalSourceLayerId=${params.id}`,
     actor,
   )
   const capture = ownCapture
@@ -832,7 +869,11 @@ export const updateLayerPublishedStateById = async (
       parentUpdate,
       // A skipped parent write must not commit descendant publication changes.
       prepareRevisionCheck(db, sql`changes() = 1`),
-      ...buildDescendantPublication(db, { kind: 'layer', id: params.id }, params),
+      ...(await buildDescendantPublication(
+        db,
+        { kind: 'layer', id: params.id },
+        params,
+      )),
       ...capture.after,
     ],
   )
@@ -861,7 +902,7 @@ export const cascadeLayerPublishedStateToDescendants = async (
   },
 ): Promise<void> => {
   await db.batch(
-    buildDescendantPublication(db, { kind: 'layer', id: params.layerId }, params),
+    await buildDescendantPublication(db, { kind: 'layer', id: params.layerId }, params),
   )
 }
 
@@ -919,7 +960,7 @@ export const updateLayerArchivedStateById = async (
   const ownCapture = await prepareAdminResourceRevisionCapture(
     db,
     'layer',
-    sql`SELECT ${params.id} AS id`,
+    sql`SELECT ${params.id} AS id UNION SELECT id FROM layer WHERE historicalSourceLayerId=${params.id}`,
     actor,
   )
   const parentCapture = await prepareAdminResourceRevisionCapture(
@@ -948,18 +989,23 @@ export const updateLayerArchivedStateById = async (
     buildLayerCommandScopeGuard(db, params),
     [
       ...capture.before,
-      parentUpdate,
-      prepareRevisionCheck(db, sql`changes() = 1`),
+      // Restore snapshots before the parent trigger can route Features to a new historical layer.
       ...buildLayerArchivedDescendantUpdates(db, {
         layerId: params.id,
         state: params.state,
       }),
+      parentUpdate,
+      prepareRevisionCheck(db, sql`changes() = 1`),
       ...capture.after,
     ],
   )
   return results
-    ? ((results[capture.before.length] as { id: string; isArchived: boolean }[])[0] ??
-        null)
+    ? ((
+        results[results.length - capture.after.length - 2] as {
+          id: string
+          isArchived: boolean
+        }[]
+      )[0] ?? null)
     : null
 }
 

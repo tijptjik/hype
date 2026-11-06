@@ -93,7 +93,8 @@ export type LayerPartial = Partial<LayerNew>
 type LayerSchemaInput = z.input<typeof LayerFormData>
 /** String-valued presentation choices for HTML forms; server parsing normalizes blank to null. */
 export type LayerFormInput = Omit<LayerSchemaInput, 'data'> & {
-  data: Omit<LayerSchemaInput['data'], 'metadata'> & {
+  data: Omit<LayerSchemaInput['data'], 'metadata' | 'relocationUpdatePolicy'> & {
+    relocationUpdatePolicy?: string
     metadata?: RemoteFormInput & {
       mapStyleCode?: string
       cardStyleCode?: string
@@ -135,6 +136,7 @@ export type LayerUpdateProbe = {
 }
 
 export type LayerCommandProbe = {
+  historicalSourceLayerId?: string | null
   id: string
   organisationId: string
   projectId: string

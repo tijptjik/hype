@@ -5,6 +5,8 @@ import type { MapStyleKey } from '#lib/map/styles/registry.js'
 
 /** Absent style inherits the project; null explicitly follows the user's map preference. */
 export type LayerMetadata = {
+  allowFeatureDescriptions?: boolean | null
+  locationBasedFeatureNames?: boolean | null
   /** Null or absent inherits the project card style. */
   markerStyleCode?: MarkerStyleCode | null
   cardStyleCode?: CardStyleCode | null

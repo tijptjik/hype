@@ -1,3 +1,4 @@
+import { historicalLayerVisibility } from '#lib/db/services/historicalLayers.js'
 import {
   compactAncestorRelations,
   compactProjectAncestorRelations,
@@ -21,6 +22,7 @@ import {
 } from '#lib/api/services/authz/layer.js'
 // DB
 import { transformI18nSafely } from '#lib/db/index.js'
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 import { layer } from '#lib/db/schema/index.js'
 import { createLayer as insertLayer } from '#lib/db/services/layer.js'
 import { probeProjectForUpdate } from '#lib/db/services/project.js'
@@ -212,7 +214,7 @@ const normalizeLayerPropertiesForProfile = (
     const normalizedValues = Array.isArray(propertyDef.values)
       ? propertyDef.values.map(value => ({
           ...value,
-          i18n: transformI18nSafely(value?.i18n as never),
+          i18n: propertyLocalesToForm(value?.i18n),
         }))
       : propertyDef.values
 
@@ -220,7 +222,7 @@ const normalizeLayerPropertiesForProfile = (
       ...propertyRow,
       property: {
         ...propertyDef,
-        i18n: transformI18nSafely(propertyDef.i18n as never),
+        i18n: propertyLocalesToForm(propertyDef.i18n),
         values: normalizedValues,
       },
     }
@@ -258,6 +260,7 @@ const toProfileResponseShape = async (
     // Public layer profiles need only the style override, not unrelated metadata.
     mapStyleCode: row.metadata?.mapStyleCode,
     cardStyleCode: row.metadata?.cardStyleCode,
+    markerStyleCode: row.metadata?.markerStyleCode,
     i18n: transformI18nSafely(row.i18n),
     properties: normalizeLayerPropertiesForProfile(row.properties),
   }
@@ -456,6 +459,8 @@ export const createLayerFromSubmission = async ({
   const invalidProperties = onInvalidProperties ?? onInvalid
   const notFound = onNotFound ?? onInvalid
   const forbidden = onForbidden ?? onInvalid
+  // New Layers inherit automatically; policy editing requires a persisted revision head.
+  if (submittedData.relocationUpdatePolicy) forbidden('FIELD_FORBIDDEN')
 
   const duplicateSubmittedPropertyIds = getDuplicateValues(
     submittedProperties
@@ -577,5 +582,6 @@ export const toQueryConditions = (
     applyQueryFilters(layer, context.filtersToApply, context.conditions)
   }
 
+  if (!isAdminRequest) context.conditions.push(historicalLayerVisibility())
   return context
 }

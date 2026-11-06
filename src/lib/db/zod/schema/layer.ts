@@ -1,5 +1,6 @@
 import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
+import { RelocationPolicySchema } from '#lib/locations/model.js'
 import { CompactAncestorsSchema } from './api'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -66,6 +67,8 @@ import { UserBasic } from './user'
 /** Layer presentation overrides; empty form values explicitly select User Preference. */
 export const LayerMetadataSchema = z
   .object({
+    allowFeatureDescriptions: FormBoolean.nullable().optional(),
+    locationBasedFeatureNames: FormBoolean.nullable().optional(),
     markerStyleCode: z
       .preprocess(
         value => (value === '' ? null : value),
@@ -172,14 +175,37 @@ export const LayerPropertyFormData = z.object({
   isUserContributable: FormBoolean.default(false),
 })
 
+/** Layer policy edits use the same JSON transport and revision fence as Project settings. */
+export const LayerRelocationPolicyFormData = z.preprocess(
+  value => {
+    if (typeof value !== 'string') return value
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
+  },
+  z
+    .strictObject({
+      policy: RelocationPolicySchema.nullable(),
+      expectedRevision: z
+        .number()
+        .int()
+        .nonnegative()
+        .max(Number.MAX_SAFE_INTEGER - 1),
+    })
+    .optional(),
+)
+
 export const LayerEntityFormData = z.object({
+  relocationUpdatePolicy: LayerRelocationPolicyFormData,
   organisationId: z.string().optional(),
   projectId: z
     .string({ message: m.field_is_required({ field: 'Project' }) })
     .min(1, { message: m.field_is_required({ field: 'Project' }) }),
   i18n: LayerI18nByLocaleFormData,
   properties: z.array(LayerPropertyFormData).optional(),
-  isDefaultVisible: FormBoolean.default(false),
+  isDefaultVisible: FormBoolean.default(true),
   metadata: LayerMetadataSchema.optional().default({}),
 })
 
@@ -239,6 +265,7 @@ export const LayerProfile = z.enum([
 ])
 
 const LayerListFields = LayerRecord.pick({
+  historicalSourceLayerId: true,
   id: true,
   organisationId: true,
   projectId: true,
@@ -266,6 +293,7 @@ export const LayerPropertyAdminProfileAPI = LayerPropertyRecordUpdate.extend({
 })
 
 export const LayerListProfileAPI = LayerListFields.extend({
+  markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().optional(),
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
   mapStyleCode: z.enum(MAP_STYLE_KEYS).nullable().optional(),
   i18n: getLocales(LayerI18nRecord),
@@ -304,6 +332,7 @@ export const LayerCompactProfileAPI = LayerRecord.pick({
   rank: true,
   isDefaultVisible: true,
 }).extend({
+  markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().optional(),
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
   mapStyleCode: z.enum(MAP_STYLE_KEYS).nullable().optional(),
   ancestors: CompactAncestorsSchema.optional(),

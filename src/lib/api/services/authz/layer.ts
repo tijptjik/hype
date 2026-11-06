@@ -62,6 +62,7 @@ export type LayerSubmittedData = Partial<{
   properties: unknown
   isDefaultVisible: boolean
   metadata: unknown
+  relocationUpdatePolicy: unknown
   organisationId: string
   projectId: string
 }>
@@ -815,6 +816,7 @@ const toLayerSubmittedFields = (data: LayerSubmittedData): string[] => {
   if ('properties' in data) fields.push('properties')
   if ('isDefaultVisible' in data) fields.push('isDefaultVisible')
   if ('metadata' in data) fields.push('metadata')
+  if ('relocationUpdatePolicy' in data) fields.push('relocationUpdatePolicy')
   if ('organisationId' in data) fields.push('organisationId')
   if ('projectId' in data) fields.push('projectId')
   return fields

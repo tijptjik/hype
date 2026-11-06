@@ -4,6 +4,7 @@ import {
   sqliteTable,
   text,
   uniqueIndex,
+  type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -16,6 +17,7 @@ import { property } from './property'
 import { supportedLocales } from '../../enums'
 // TYPES
 import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
+import type { RelocationPolicy } from '#lib/locations/model.js'
 
 /* ============================================================================
  * LAYER MANAGEMENT
@@ -32,43 +34,61 @@ import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
  * - Publication status
  * - Default visibility settings
  */
-export const layer = sqliteTable('layer', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
-  organisationId: text('organisationId')
-    .notNull()
-    .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  projectId: text('projectId')
-    .notNull()
-    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  // Additional Information
-  metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
-  rank: integer('rank').notNull().default(0),
-  // Is this layer enabled for new users by default?
-  isDefaultVisible: integer('isDefaultVisible', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  // Accessible to the public in the app
-  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
-  localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
-  publishedAt: text('publishedAt'),
-  publisherId: text('publisherId').references(() => user.id, {
-    onDelete: 'set null',
-    onUpdate: 'cascade',
-  }),
-  // False : Layer may be shown in the Admin Panel
-  // True : Layer is considered deleted
-  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
-  localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
-  createdAt: text('createdAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .notNull(),
-  modifiedAt: text('modifiedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString())
-    .notNull(),
-})
+export const layer = sqliteTable(
+  'layer',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    organisationId: text('organisationId')
+      .notNull()
+      .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    // System-owned derivative identity; null identifies an ordinary source layer.
+    historicalSourceLayerId: text('historicalSourceLayerId').references(
+      (): AnySQLiteColumn => layer.id,
+      { onDelete: 'restrict' },
+    ),
+    // Null inherits the Project relocation default. Changing consent never moves Features.
+    relocationPolicy: text('relocationPolicy', {
+      enum: ['fixed', 'review', 'follow'],
+    }).$type<RelocationPolicy>(),
+    relocationPolicyRevision: integer('relocationPolicyRevision').notNull().default(0),
+    // Additional Information
+    metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
+    rank: integer('rank').notNull().default(0),
+    // Is this layer enabled for new users by default?
+    isDefaultVisible: integer('isDefaultVisible', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    // Accessible to the public in the app
+    isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+    localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
+    publishedAt: text('publishedAt'),
+    publisherId: text('publisherId').references(() => user.id, {
+      onDelete: 'set null',
+      onUpdate: 'cascade',
+    }),
+    // False : Layer may be shown in the Admin Panel
+    // True : Layer is considered deleted
+    isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+    localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
+    createdAt: text('createdAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .notNull(),
+    modifiedAt: text('modifiedAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString())
+      .notNull(),
+  },
+  table => [
+    uniqueIndex('layer_historical_source_idx')
+      .on(table.historicalSourceLayerId)
+      .where(sql`${table.historicalSourceLayerId} IS NOT NULL`),
+  ],
+)
 
 /**
  * Layer translations

@@ -133,7 +133,7 @@ export function toLayerFormInput(data?: Layer | null): LayerFormInput {
           zhHant: normalizeLayerFormLocale(undefined),
         },
         properties: [],
-        isDefaultVisible: false,
+        isDefaultVisible: true,
         metadata: { mapStyleCode: '' },
       },
     }
@@ -780,6 +780,7 @@ const mergeLayerFromSubmit = (
     next.metadata = metadata
     next.mapStyleCode = metadata.mapStyleCode
     next.cardStyleCode = metadata.cardStyleCode
+    next.markerStyleCode = metadata.markerStyleCode ?? null
   }
   return next
 }
