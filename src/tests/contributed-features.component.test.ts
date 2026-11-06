@@ -38,9 +38,38 @@ const profile = (count: number, id = 'user'): UserProfile =>
     },
   }) as UserProfile
 let model: UserContributionsModel
+let intersect: (() => void) | undefined
+let disconnect: ReturnType<typeof vi.fn>
+
+async function readyForContinuation(): Promise<void> {
+  await waitFor(() => expect(intersect).toBeDefined())
+}
+async function reachBottom(): Promise<void> {
+  await readyForContinuation()
+  intersect!()
+}
 
 beforeEach(() => {
   vi.useRealTimers()
+  intersect = undefined
+  disconnect = vi.fn()
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      constructor(private callback: IntersectionObserverCallback) {}
+      observe(): void {
+        intersect = () =>
+          this.callback(
+            [{ isIntersecting: true } as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver,
+          )
+      }
+      disconnect(): void {
+        intersect = undefined
+        disconnect()
+      }
+    },
+  )
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -70,20 +99,23 @@ afterEach(() => {
 it('loads 20 entries across groups and appends without refetching existing rows', async () => {
   const userData = profile(1000)
   const view = render(ContributedFeatures, { userData, model })
-  await screen.findByRole('button', { name: 'Load more' })
+  await readyForContinuation()
   expect(model.getFeatures).toHaveBeenCalledTimes(1)
   expect(screen.getAllByRole('link')).toHaveLength(20)
   await view.rerender({ userData: { ...userData, username: 'renamed' }, model })
   expect(model.getFeatures).toHaveBeenCalledTimes(1)
-  await fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
-  await screen.findByRole('button', { name: 'Load more' })
+  await reachBottom()
+  await readyForContinuation()
+  await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(40))
   expect(model.getFeatures).toHaveBeenCalledTimes(2)
-  expect(screen.getAllByRole('link')).toHaveLength(40)
+  expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+  view.unmount()
+  expect(disconnect).toHaveBeenCalled()
 })
 
 it('makes a single bounded request across multiple project groups', async () => {
   render(ContributedFeatures, { userData: profile(45), model })
-  await screen.findByRole('button', { name: 'Load more' })
+  await readyForContinuation()
   expect(model.getFeatures).toHaveBeenCalledExactlyOnceWith(
     'user',
     Array.from({ length: 20 }, (_, i) => `user-${i}`),
@@ -92,10 +124,11 @@ it('makes a single bounded request across multiple project groups', async () => 
 
 it('stops a failed page and allows retry while preserving already loaded rows', async () => {
   render(ContributedFeatures, { userData: profile(21), model })
-  await screen.findByRole('button', { name: 'Load more' })
+  await readyForContinuation()
   vi.mocked(model.getFeatures).mockRejectedValueOnce(new TypeError('NetworkError'))
-  await fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+  await reachBottom()
   await screen.findByRole('alert')
+  expect(intersect).toBeUndefined()
   expect(screen.getAllByRole('link')).toHaveLength(20)
   expect(model.getFeatures).toHaveBeenCalledTimes(2)
   await fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }))

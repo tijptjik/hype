@@ -1,7 +1,7 @@
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { and, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
 // DB
 import {
   feature,
@@ -12,7 +12,7 @@ import {
 } from '#lib/db/schema/index.js'
 // AUTH AND SCOPE
 import { canReadAdminUserProfile } from './adminUser'
-import { toUserContributionFeatureScope } from './user'
+import { toUserContributionFeatureScope, toAdminContributionFeatureScope } from './user'
 // TYPES
 import type { Database, SessionUser, UserRoleDisco } from '#lib/types.js'
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
@@ -23,7 +23,7 @@ import type { UserContributionPreview } from '#lib/users/contributionPreview.typ
  * @param db Request database.
  * @param params Contributor, authenticated viewer, locale and server-resolved hub.
  * @returns At most seven titles, image locators and navigation identifiers.
- * @remarks Uses the profile's published contribution scope. Limits candidates before
+ * @remarks Uses the profile's public plus authorized unpublished contribution scope. Limits candidates before
  * reading labels and thumbnails; no feature graph or per-item remote reads are needed.
  */
 export async function readUserContributionPreviews(
@@ -43,6 +43,7 @@ export async function readUserContributionPreviews(
     sessionUser: params.actor,
     hubOpts: params.hub,
     isAdminRequest: true,
+    includeAdminUnpublished: true,
   })
   const contributor = db
     .select({ id: user.id })
@@ -64,7 +65,13 @@ export async function readUserContributionPreviews(
       and(
         inArray(image.contributorId, contributor),
         eq(image.isArchived, false),
-        eq(featureImage.isPublished, true),
+        or(
+          eq(featureImage.isPublished, true),
+          inArray(
+            featureImage.featureId,
+            toAdminContributionFeatureScope(db, params.actor),
+          ),
+        ),
         inArray(featureImage.featureId, scope),
       ),
     )

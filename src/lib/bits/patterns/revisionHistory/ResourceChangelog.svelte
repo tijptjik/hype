@@ -37,6 +37,7 @@ import type {
 
 let {
   identity,
+  description = 'Changes to this record and its descendants · newest first',
   locale,
   loadPage,
   onLoaded,
@@ -44,6 +45,7 @@ let {
   filters = $bindable<ChangelogFilters>({}),
 }: {
   identity: string
+  description?: string
   locale: string
   loadPage: (
     before?: ChangelogCursor,
@@ -422,7 +424,7 @@ $effect(() => {
     {#snippet left()}
       <Header
         text="Changelog"
-        description="Changes to this record and its descendants · newest first"
+        {description}
         icon={HistoryIcon}
         size="sm"
         class="bits-form__section-header-heading w-auto! min-w-0"

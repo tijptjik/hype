@@ -34,6 +34,12 @@ beforeEach(() => {
     'image',
     'featureImage',
     'layer',
+    'project',
+    'organisation',
+    'hub',
+    'hubRole',
+    'organisationRole',
+    'projectRole',
   ] as const) {
     const columns = Object.values(getTableColumns(schema[name]))
     sqlite.exec(

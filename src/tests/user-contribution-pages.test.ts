@@ -215,3 +215,40 @@ it('checks core hub membership without selecting unrelated parent columns', asyn
   for (const statement of statements)
     expect(statement.query).not.toContain('permitUserDetailsEdit')
 })
+
+it('includes unpublished admin contributions only with live management authority and consistent ancestry', async () => {
+  sqlite.exec(`INSERT INTO user (id,isArchived,isAnonymous) VALUES ('viewer',0,0);
+    INSERT INTO organisation(id,hubId,isArchived) VALUES ('org','hub',0);
+    INSERT INTO project(id,organisationId,isArchived) VALUES ('project','org',0);
+    UPDATE layer SET organisationId='org',projectId='project';
+    INSERT INTO organisationRole(userId,organisationId,role) VALUES ('viewer','org','owner');`)
+  for (const id of ['private', 'hidden-parent', 'draft', 'archived', 'outside'])
+    addFeature(id)
+  sqlite.exec(`UPDATE feature SET isPublished=0;
+    UPDATE feature SET layerId='hidden' WHERE id='hidden-parent';
+    UPDATE feature SET isDraft=1 WHERE id='draft';
+    UPDATE feature SET isArchived=1 WHERE id='archived';
+    UPDATE feature SET organisationId='other' WHERE id='outside';`)
+  addPhoto('private-photo', 'private')
+  sqlite.exec('UPDATE featureImage SET isPublished=0')
+  const ids = ['private', 'hidden-parent', 'draft', 'archived', 'outside']
+  expect(
+    (await readUserContributedFeatures(db, { ...params, ids }))
+      .map(row => row.id)
+      .sort(),
+  ).toEqual(['hidden-parent', 'private'])
+  expect(
+    (await readUserContributedImages(db, { ...params, ids: ['private-photo'] })).map(
+      row => row.image.id,
+    ),
+  ).toEqual(['private-photo'])
+  expect(
+    await readUserContributedFeatures(db, { ...params, ids, isAdminRequest: false }),
+  ).toEqual([])
+  sqlite.exec("UPDATE organisationRole SET role='member'")
+  expect(await readUserContributedFeatures(db, { ...params, ids })).toEqual([])
+  expect(
+    await readUserContributedImages(db, { ...params, ids: ['private-photo'] }),
+  ).toEqual([])
+  expect(statements.every(statement => statement.parameters < 100)).toBe(true)
+})

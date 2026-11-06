@@ -58,6 +58,26 @@ for (const [name, engine] of [
         '1 feature / 2 photo calls'
       )
         throw new Error('Photo continuation refetched features')
+      const featureViewport = page.locator('#contributed-features .overflow-y-auto')
+      await featureViewport.scrollIntoViewIfNeeded()
+      await featureViewport.evaluate(element => {
+        element.scrollTop = element.scrollHeight
+      })
+      await page.waitForFunction(
+        () => document.querySelectorAll('#contributed-features a').length === 25,
+      )
+      if (
+        await page
+          .locator('#contributed-features')
+          .getByRole('button', { name: 'Load more' })
+          .count()
+      )
+        throw new Error('Feature continuation still requires a button')
+      if (
+        (await page.locator('[data-calls]').textContent()) !==
+        '2 feature / 2 photo calls'
+      )
+        throw new Error('Infinite continuation requested a duplicate page')
       if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
         throw new Error('Horizontal overflow')
       await page.locator('#contributed-images img').first().scrollIntoViewIfNeeded()

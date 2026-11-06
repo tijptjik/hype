@@ -33,6 +33,7 @@ let {
 // SCROLLBAR
 let viewport: HTMLDivElement | null = $state(null)
 let contents: HTMLDivElement | undefined = $state(undefined)
+let continuation: HTMLDivElement | null = $state(null)
 
 // HEIGHT MANAGEMENT
 let contentHeight = $state(0)
@@ -112,6 +113,27 @@ const contributions = useContributedFeatures(
   () => userData,
   () => model,
 )
+
+// Reobserve after each page so short or empty pages keep filling the viewport.
+$effect(() => {
+  if (
+    !viewport || !continuation || contributions.loading ||
+    contributions.failed || !contributions.hasMore
+  )
+    return
+  const observer = new IntersectionObserver(
+    entries => {
+      if (
+        entries.some(entry => entry.isIntersecting) &&
+        !contributions.loading && !contributions.failed
+      )
+        void contributions.loadMore()
+    },
+    { root: viewport, rootMargin: '0px 0px 240px 0px' },
+  )
+  observer.observe(continuation)
+  return () => observer.disconnect()
+})
 </script>
 
 <div
@@ -279,6 +301,9 @@ const contributions = useContributedFeatures(
                             />
                           {/if}
                         </div>
+                        {#if layout === 'dashboard' && !feature.isPublished}
+                          <span class="text-muted-foreground col-start-2 text-xs">Unpublished</span>
+                        {/if}
                         {#if shouldShowDate(groupData.entries, index) &&
                           feature.createdAt}
                           <div
@@ -321,19 +346,23 @@ const contributions = useContributedFeatures(
               {m.due_candid_mole_imagine()}
             </p>
           {/if}
-          {#if contributions.hasMore}
+          {#if contributions.hasMore && contributions.failed}
             <button
               type="button"
               class="border-border hover:bg-surface mx-6 my-3 rounded-md border px-3 py-2 text-sm disabled:opacity-60"
               disabled={contributions.loading}
               onclick={() => contributions.loadMore()}
             >
-              {contributions.loading
-                ? m.resource_loading()
-                : contributions.failed
-                  ? m.resource_retry()
-                  : m.resource_load_more()}
+              {m.resource_retry()}
             </button>
+          {/if}
+          {#if contributions.hasMore}
+            <div
+              bind:this={continuation}
+              aria-hidden="true"
+              class="h-px"
+              data-contribution-continuation
+            ></div>
           {/if}
         </div>
       </div>

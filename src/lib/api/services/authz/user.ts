@@ -21,11 +21,27 @@ type UserUpdateActor = {
  *
  * Allowed:
  * - super admins
- * - any user with at least one role that is not the baseline `user` role
+ * - explicitly recognized staff roles on hubs, organisations or projects
+ * @param actor Session identity and resolved resource role assignments.
+ * @returns Whether the actor has an explicit admin-panel entitlement.
+ * @remarks User membership never grants access. New or unknown roles fail closed
+ * until this policy explicitly admits them; resource actions still authorize separately.
  */
 export const canAccessAdminPanel = (actor: UserSearchActor): boolean => {
   if (actor.superAdmin) return true
-  return actor.userRoles.some(role => role.role !== 'user')
+  return actor.userRoles.some(role => {
+    if (role.type === 'hub') return role.role === 'admin'
+    if (role.type === 'organisation')
+      return role.role === 'owner' || role.role === 'member'
+    if (role.type === 'project')
+      return (
+        role.role === 'owner' ||
+        role.role === 'maintainer' ||
+        role.role === 'translator' ||
+        role.role === 'member'
+      )
+    return false
+  })
 }
 
 /**

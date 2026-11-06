@@ -166,6 +166,8 @@ export type UserGetState = UserGetResponse | null
 
 /** Admin profile; private settings are returned only with target-specific edit authority. */
 export type AdminUserProfile = {
+  /** Live subject eligibility and viewer history scope, independent of profile editing. */
+  canViewChangelog?: boolean
   access: import('#lib/users/access.types.js').UserAccessOverview
   contributionPreviews?: import('#lib/users/contributionPreview.types.js').UserContributionPreview[]
   linkedAccounts?: {

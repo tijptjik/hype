@@ -26,14 +26,14 @@ let expandedProfileId = $state<string | null>(null)
 const showHistory = $derived(!showIdentity || expandedProfileId === data.profile.id)
 const stats = $derived([
   {
-    label: 'Published features',
+    label: 'Contributed features',
     count: Object.values(data.profile.contributedFeatures).reduce(
       (sum, ids) => sum + ids.length,
       0,
     ),
   },
   {
-    label: 'Published photos',
+    label: 'Contributed photos',
     count: Object.values(data.profile.contributedImages).reduce(
       (sum, ids) => sum + ids.length,
       0,

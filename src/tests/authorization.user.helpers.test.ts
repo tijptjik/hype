@@ -68,7 +68,7 @@ describe('canAccessAdminPanel', () => {
     expect(canAccessAdminPanel({ superAdmin: true, userRoles: [] })).toBe(true)
   })
 
-  it('allows organisation members because their role is not the baseline user role', () => {
+  it('explicitly allows organisation staff members', () => {
     expect(
       canAccessAdminPanel({
         superAdmin: false,
@@ -77,7 +77,7 @@ describe('canAccessAdminPanel', () => {
     ).toBe(true)
   })
 
-  it('allows project members because their role is not the baseline user role', () => {
+  it('explicitly allows project staff members', () => {
     expect(
       canAccessAdminPanel({
         superAdmin: false,
@@ -93,6 +93,30 @@ describe('canAccessAdminPanel', () => {
         userRoles: [projectUserRole()],
       }),
     ).toBe(false)
+  })
+
+  it('denies organisation users, including users with project user membership', () => {
+    const organisationUser = {
+      ...organisationMemberRole(),
+      role: 'user',
+    } as UserRoleDisco
+    for (const userRoles of [[organisationUser], [organisationUser, projectUserRole()]]) {
+      expect(canAccessAdminPanel({ superAdmin: false, userRoles })).toBe(false)
+    }
+  })
+
+  it('fails closed for unknown role values and resource types', () => {
+    for (const role of [
+      { type: 'organisation', role: 'future-staff' },
+      { type: 'project', role: 'admin' },
+      { type: 'hub', role: 'owner' },
+      { type: 'unknown', role: 'admin' },
+    ]) {
+      expect(canAccessAdminPanel({
+        superAdmin: false,
+        userRoles: [role as unknown as UserRoleDisco],
+      })).toBe(false)
+    }
   })
 })
 

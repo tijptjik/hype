@@ -107,6 +107,7 @@ import { HierarchicalResource } from '#lib/enums.js'
 //
 // READ PLANNING
 // - toUserSearchQueryPlan
+// - toAdminContributionFeatureScope
 // - toUserContributionFeatureScope
 // - toUserRelationsWithContributionConstraints
 // - toUserReadQueryPlan
@@ -224,14 +225,19 @@ export const toEntityResponseShape = <P extends UserHydrationProfile = 'attribut
  *
  * @param user - Raw user row or `null`.
  * @param profile - Target user profile.
+ * @param includeUnpublishedContributions - Retain unpublished rows already authorized by the admin contribution query.
  * @returns Profile-shaped user payload or `null`.
  */
 export const toUserProfileResponseShape = <P extends UserProfileType>(
   user: UserRaw | null | undefined,
   profile: P,
+  includeUnpublishedContributions = false,
 ): UserEntityByProfile<P> | null => {
   if (!user) return null
-  const data = toProfileData(user) as Record<UserProfileType, UserEntityByProfile<P>>
+  const data = toProfileData(user, includeUnpublishedContributions) as Record<
+    UserProfileType,
+    UserEntityByProfile<P>
+  >
   return data[profile]
 }
 
@@ -255,15 +261,16 @@ export const toUserFeatureListResponseShape = (
   rows.map(row => UserFeatureListProfileAPI.parse(row))
 
 /**
- * Groups contribution ids by project id while excluding explicitly unpublished rows.
+ * Groups contribution ids by project id, retaining unpublished rows only for authorized admin projections.
  * Keeps detail/admin profile payloads compact while preserving project-level grouping.
  */
 const toGroupedContributionIds = (
   rows: Array<{ id: string; projectId?: string | null; isPublished?: boolean | null }>,
+  includeUnpublished = false,
 ): Record<string, string[]> => {
   const grouped: Record<string, string[]> = {}
   rows
-    .filter(row => row.isPublished !== false && row.projectId)
+    .filter(row => (includeUnpublished || row.isPublished !== false) && row.projectId)
     .forEach(row => {
       const projectId = row.projectId as string
       if (!grouped[projectId]) grouped[projectId] = []
@@ -276,7 +283,7 @@ const toGroupedContributionIds = (
  * Builds contribution counters and grouped ids used by detail/admin user profiles.
  * Normalizes mixed relation payloads into one stable summary object.
  */
-const toUserContributionSummary = (user: UserRaw) => {
+const toUserContributionSummary = (user: UserRaw, includeUnpublished = false) => {
   const source = user as unknown as Record<string, unknown>
   const contributedFeatures = Array.isArray(source.contributedFeatures)
     ? source.contributedFeatures
@@ -332,8 +339,8 @@ const toUserContributionSummary = (user: UserRaw) => {
     .filter(task => task.type === 'newFeature').length
 
   return {
-    contributedFeatures: toGroupedContributionIds(featureRows),
-    contributedImages: toGroupedContributionIds(imageRows),
+    contributedFeatures: toGroupedContributionIds(featureRows, includeUnpublished),
+    contributedImages: toGroupedContributionIds(imageRows, includeUnpublished),
     reportedMissingCount,
     newPhotoCount,
     newFeatureCount,
@@ -369,6 +376,7 @@ const toRoleSummary = (user: UserRaw): UserRoleDisco[] => {
  */
 const toProfileData = (
   user: UserRaw,
+  includeUnpublishedContributions = false,
 ): {
   attribution: z.infer<typeof UserAttributionProfileAPI>
   adminList: z.infer<typeof UserAdminListProfileAPI>
@@ -378,7 +386,10 @@ const toProfileData = (
   self: z.infer<typeof UserSelfProfileAPI>
   admin: z.infer<typeof UserAdminProfileAPI>
 } => {
-  const contributionSummary = toUserContributionSummary(user)
+  const contributionSummary = toUserContributionSummary(
+    user,
+    includeUnpublishedContributions,
+  )
   const baseAttribution = {
     id: user.id,
     username: user.username,
@@ -811,6 +822,36 @@ export const toUserSearchQueryPlan = async (
   }
 }
 
+/** Select unpublished contribution parents only within the viewer's live management scope.
+ * @param db Request database.
+ * @param actor Authenticated viewer; never supplied by the client.
+ * @returns Feature identities with consistent, non-archived ancestry and explicit staff authority.
+ * @remarks Does not include unsubmitted drafts or grant access through user/member roles.
+ */
+export function toAdminContributionFeatureScope(
+  db: Database,
+  actor: SessionUser,
+): SQLWrapper {
+  return db
+    .select({ id: feature.id })
+    .from(feature)
+    .where(
+      and(
+        eq(feature.isDraft, false),
+        eq(feature.isArchived, false),
+        sql`EXISTS(SELECT 1 FROM layer l JOIN project p ON p.id=l.projectId AND p.organisationId=l.organisationId
+      JOIN organisation o ON o.id=p.organisationId
+      WHERE l.id=${feature.layerId} AND p.id=${feature.projectId} AND o.id=${feature.organisationId}
+      AND l.isArchived=0 AND p.isArchived=0 AND o.isArchived=0
+      AND EXISTS(SELECT 1 FROM user viewer WHERE viewer.id=${actor.id}
+        AND COALESCE(viewer.isAnonymous,0)=0 AND viewer.isArchived=0 AND (
+          EXISTS(SELECT 1 FROM hubRole hr JOIN hub h ON h.id=hr.hubId WHERE hr.userId=viewer.id AND hr.role='admin' AND (h.code='core' OR h.id=o.hubId))
+          OR EXISTS(SELECT 1 FROM organisationRole r WHERE r.userId=viewer.id AND r.organisationId=o.id AND r.role='owner')
+          OR EXISTS(SELECT 1 FROM projectRole r WHERE r.userId=viewer.id AND r.projectId=p.id AND r.role IN ('owner','maintainer')))))`,
+      ),
+    )
+}
+
 /**
  * Builds feature ancestry scope for public contributions and owner-only previews.
  * @param db Request database used for scope subqueries.
@@ -827,6 +868,7 @@ export const toUserContributionFeatureScope = (
     sessionUser: SessionUser
     isAdminRequest: boolean
     includeOwnUnpublished?: boolean
+    includeAdminUnpublished?: boolean
   },
 ): SQLWrapper => {
   // Keep parent, prism and hub boundaries for public rows and personal previews.
@@ -928,17 +970,37 @@ export const toUserContributionFeatureScope = (
     }
   }
 
-  return db
+  const publicScope = db
     .select({ id: feature.id })
     .from(feature)
     .where(and(...featureConstraints))
+  if (
+    !params.isAdminRequest ||
+    !params.includeAdminUnpublished ||
+    params.sessionUser.isAnonymous
+  )
+    return publicScope
+  // Private records require live management authority and a consistent, active parent chain.
+  return db
+    .select({ id: feature.id })
+    .from(feature)
+    .where(
+      and(
+        eq(feature.isDraft, false),
+        eq(feature.isArchived, false),
+        or(
+          inArray(feature.id, publicScope),
+          inArray(feature.id, toAdminContributionFeatureScope(db, params.sessionUser)),
+        ),
+      ),
+    )
 }
 
 /**
- * Loads public contribution relations within the active hub and prism scope.
+ * Loads contribution relations within public scope plus explicitly requested admin management scope.
  * @param db Request database.
  * @param params Viewer and scope constraints.
- * @returns Public-only relation graph.
+ * @returns Scope-filtered contribution relation graph.
  */
 export const toUserRelationsWithContributionConstraints = (
   db: Database,
@@ -947,6 +1009,7 @@ export const toUserRelationsWithContributionConstraints = (
     hubOpts?: Partial<HubOptsExtended> | null
     sessionUser: SessionUser
     isAdminRequest: boolean
+    includeAdminUnpublished?: boolean
   },
 ): RelationShape => {
   const constrainedFeatureIds = toUserContributionFeatureScope(db, params)
@@ -981,7 +1044,18 @@ export const toUserRelationsWithContributionConstraints = (
               },
             },
           },
-          where: inArray(featureImage.featureId, constrainedFeatureIds),
+          where: and(
+            inArray(featureImage.featureId, constrainedFeatureIds),
+            or(
+              eq(featureImage.isPublished, true),
+              params.isAdminRequest && params.includeAdminUnpublished
+                ? inArray(
+                    featureImage.featureId,
+                    toAdminContributionFeatureScope(db, params.sessionUser),
+                  )
+                : undefined,
+            ),
+          ),
         },
       },
     },
@@ -990,7 +1064,10 @@ export const toUserRelationsWithContributionConstraints = (
         id: true,
         type: true,
       },
-      where: inArray(task.featureId, constrainedFeatureIds),
+      where: and(
+        inArray(task.featureId, constrainedFeatureIds),
+        params.includeAdminUnpublished ? eq(task.isDraft, false) : undefined,
+      ),
     },
   }
 }
@@ -1016,13 +1093,7 @@ export const toUserReadQueryPlan = (
 ): {
   conditions: SQL<unknown>[]
   profile:
-    | 'attribution'
-    | 'adminList'
-    | 'card'
-    | 'leaderboard'
-    | 'detail'
-    | 'self'
-    | 'admin'
+    'attribution' | 'adminList' | 'card' | 'leaderboard' | 'detail' | 'self' | 'admin'
   withRelations: Record<string, boolean | object>
 } => {
   const { conditions } = getUserQueryContext(

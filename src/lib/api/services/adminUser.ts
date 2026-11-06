@@ -14,6 +14,7 @@ import { getUser } from '#lib/db/services/user.js'
 // SERVICES
 import { toUserDirectoryProfile } from './userContacts'
 import { readUserAccessOverview } from './userAccess'
+import { canReadUserChangelog } from '#lib/db/services/userChangelogScope.js'
 import {
   toUserProfileResponseShape,
   toUserRelationsWithContributionConstraints,
@@ -37,10 +38,10 @@ export function canReadAdminUserProfile(actor: {
 }
 
 /**
- * Loads a profile with public contributions and permission-filtered personal fields.
+ * Loads a profile with readable contributions and permission-filtered personal fields.
  * @param db Request-scoped database.
  * @param params Username, session actor, roles and server-resolved active hub.
- * @returns Public profile and contributions, with nullable privileged details.
+ * @returns Profile and scoped contributions, with nullable privileged details.
  * @remarks Clients cannot select a broader response profile or supply a hub scope.
  * Only linked provider labels and recorded emails are returned; tokens are never returned. Settings require target-specific edit authority.
  */
@@ -57,11 +58,12 @@ export async function readAdminUserProfile(
   if (!canReadAdminUserProfile(actor)) error(403, 'INSUFFICIENT_ROLE')
   const conditions = [sql`lower(${user.username}) = ${params.username.toLowerCase()}`]
 
-  // Reuse the public contribution scope; an admin URL does not expose draft content.
+  // Include accepted unpublished contributions only within live management scope; drafts stay private.
   const relations = toUserRelationsWithContributionConstraints(db, {
     sessionUser: params.actor,
     hubOpts: params.hub,
     isAdminRequest: true,
+    includeAdminUnpublished: true,
   })
   const row = (await getUser(
     db,
@@ -75,7 +77,7 @@ export async function readAdminUserProfile(
   if (!row) return null
 
   // Project the response on the server so hidden fields never reach the browser.
-  const profile = toUserProfileResponseShape(row, 'detail')
+  const profile = toUserProfileResponseShape(row, 'detail', true)
   if (!profile) return null
   const canEdit = await canEditAdminUser(db, params.actor, row.id)
   if (row.isArchived && !canEdit) return null
@@ -134,6 +136,11 @@ export async function readAdminUserProfile(
   })
   return {
     access,
+    canViewChangelog: await canReadUserChangelog(db, {
+      resource: 'user',
+      id: row.id,
+      viewerId: params.actor.id,
+    }),
     messagingSettings,
     linkedAccounts,
     profile,

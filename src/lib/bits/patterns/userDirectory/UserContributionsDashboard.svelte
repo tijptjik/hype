@@ -25,7 +25,7 @@ let {
   <FormSurface class="mb-0 flex min-h-0 flex-1 shrink flex-col">
     <SectionHeader
       title="Contributions"
-      description="Published contributions visible in this hub"
+      description="Contributions you can view, including unpublished records you manage"
       icon={PersonIcon}
     />
     {#if isVisible}

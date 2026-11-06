@@ -5,11 +5,13 @@ import { matchesChangelogFilters } from '#lib/revisions/changelogFilters.js'
 import { diffRevisionValues } from '#lib/revisions/diff.js'
 // SERVICES
 import { readResourceLogoChanges } from './resourceLogoChanges'
+import { userChangelogGuard } from './userChangelogScope'
 import {
   readFeaturePublicationChanges,
   readFeaturePrivateChanges,
 } from './featureRevisionHistory'
 // TYPES
+import type { UserChangelogScope } from './userChangelogScope'
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
 import type {
@@ -37,7 +39,7 @@ export type ChangelogCandidate = {
   key: string
   resourceType: ChangelogEntry['resourceType']
   resourceId: string
-  ownerType: ChangelogResource | 'feature'
+  ownerType: ChangelogResource | 'feature' | 'hub'
   ownerId: string
   category: ChangelogEntry['category']
   createdAt: string
@@ -116,7 +118,7 @@ function scopeGuard(scope: ChangelogScope): SQL {
 export async function listResourceChangelog(
   db: Database,
   input: {
-    scope: ChangelogScope
+    scope: ChangelogScope | UserChangelogScope
     locales: readonly string[]
     before?: ChangelogCursor
     filters?: ChangelogFilters
@@ -137,7 +139,11 @@ export async function listResourceChangelog(
   const tables = new Set(storage.map(row => row.name))
   const unavailable: string[] = []
   const branches: SQL[] = []
-  const guard = scopeGuard(input.scope)
+  const userScope = input.scope.resource === 'user' ? input.scope : null
+  const guard =
+    input.scope.resource === 'user'
+      ? userChangelogGuard(input.scope, 'feature')
+      : scopeGuard(input.scope)
   /** Build a localized live name with deterministic fallback, including archived records.
    * @param resource Feed resource type.
    * @returns Name expression using the resource alias x.
@@ -161,6 +167,7 @@ export async function listResourceChangelog(
    * @returns Current ancestry joins.
    */
   function ancestry(resource: ChangelogCandidate['ownerType']): SQL {
+    if (resource === 'hub') return sql`hub x`
     if (resource === 'organisation')
       return sql`organisation x JOIN organisation o ON o.id=x.id`
     if (resource === 'project')
@@ -245,8 +252,8 @@ export async function listResourceChangelog(
       json_extract(COALESCE(${content},${previous}),'$.record.key'),field.key)`
     branches.push(sql`SELECT ${key} AS key,${category === 'fields' ? 'property' : resource} AS resourceType,
       ${category === 'fields' ? sql`field.key` : sql`x.id`} AS resourceId,${resource} AS ownerType,x.id AS ownerId,${category} AS category,
-      c.createdAt,c.id AS changeSetId,o.id AS organisationId,${resource === 'organisation' ? sql`NULL` : sql`p.id`} AS projectId,
-      ${resource === 'organisation' || resource === 'project' ? sql`NULL` : sql`l.id`} AS layerId,o.hubId,
+      c.createdAt,c.id AS changeSetId,${resource === 'hub' ? sql`''` : sql`o.id`} AS organisationId,${resource === 'hub' || resource === 'organisation' ? sql`NULL` : sql`p.id`} AS projectId,
+      ${resource === 'hub' || resource === 'organisation' || resource === 'project' ? sql`NULL` : sql`l.id`} AS layerId,${resource === 'hub' ? sql`x.id` : sql`o.hubId`} AS hubId,
       ${isFeature ? sql`r.generation` : sql`0`} AS generation,${revisionId} AS revisionId,${category === 'fields' ? fieldName : nameFor(resource)} AS name,
       ${content} AS content,${previous} AS previous,x.isArchived,c.actorId,
       ${legacyActor} AS baselineActorId,
@@ -261,10 +268,20 @@ export async function listResourceChangelog(
       ${legacyJoin}
       LEFT JOIN user actor ON actor.id=COALESCE(${legacyActor},c.actorId) AND (c.origin='user' OR ${legacyActor} IS NOT NULL) ${predecessor}
       ${category === 'fields' ? sql`JOIN json_each(json_patch(COALESCE(b.content,'{}'),r.content)) field` : sql``}
-      WHERE ${guard} ${category === 'fields' ? sql`AND ${content} IS NOT ${previous}` : sql``}`)
+      WHERE ${userScope ? userChangelogGuard(userScope, resource) : guard}
+      ${
+        userScope
+          ? sql`AND COALESCE(${legacyActor},c.actorId)=${userScope.id}
+        AND (${legacyActor} IS NOT NULL OR c.origin IN ('user','restore'))`
+          : sql``
+      } ${category === 'fields' ? sql`AND ${content} IS NOT ${previous}` : sql``}`)
   }
   // Only sources at or below the authorized root participate; tasks never enter the union.
-  if (input.scope.resource === 'organisation') {
+  if (userScope) {
+    add('hub', 'profile')
+    add('hub', 'fields')
+  }
+  if (input.scope.resource === 'organisation' || userScope) {
     add('organisation', 'profile')
     add('organisation', 'fields')
   }

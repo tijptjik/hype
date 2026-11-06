@@ -11,6 +11,10 @@ import {
 // TYPES
 import type { Database, SessionUser, UserRoleDisco } from '#lib/types.js'
 
+vi.mock('#lib/db/services/userChangelogScope.js', () => ({
+  canReadUserChangelog: vi.fn(async () => false),
+}))
+
 vi.mock('#lib/api/services/userAccess.js', () => ({
   readUserAccessOverview: vi.fn(async () => ({
     scope: 'managed',

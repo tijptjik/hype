@@ -1,12 +1,12 @@
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { and, desc, eq, inArray, sql, type SQLWrapper } from 'drizzle-orm'
+import { and, desc, eq, inArray, or, sql, type SQLWrapper } from 'drizzle-orm'
 // AUTH AND SERVICES
 import { canReadAdminUserProfile } from './adminUser'
 import { canSearchUsers } from './authz/index'
 import { getFeatureWithRelations, toEntityResponseShape } from './feature'
-import { toUserContributionFeatureScope } from './user'
+import { toUserContributionFeatureScope, toAdminContributionFeatureScope } from './user'
 // DB
 import { feature, featureImage, image, user } from '#lib/db/schema/index.js'
 import { featureAuthoringSQL } from '#lib/db/services/featureAuthoringProjection.js'
@@ -40,8 +40,8 @@ type ContributionPageParams = {
  * @param db Request database.
  * @param params Contributor, requested IDs and server-resolved viewer context.
  * @param max Maximum number of IDs in this page.
- * @returns Public parent scope and an active contributor subquery.
- * @remarks IDs narrow the query; they never grant access. Private previews remain owner-only.
+ * @returns Readable parent scope and an active contributor subquery.
+ * @remarks IDs narrow the query; they never grant access. Admin reads additionally allow unpublished content within live management scope.
  */
 function contributionScope(
   db: Database,
@@ -63,6 +63,7 @@ function contributionScope(
     sessionUser: params.actor,
     hubOpts: params.hub,
     isAdminRequest: params.isAdminRequest,
+    includeAdminUnpublished: params.isAdminRequest,
   })
   return {
     scope: publicScope,
@@ -96,7 +97,15 @@ export async function readUserContributedFeatures(
       ...getFeatureWithRelations('list'),
       images: {
         where: and(
-          eq(featureImage.isPublished, true),
+          or(
+            eq(featureImage.isPublished, true),
+            params.isAdminRequest
+              ? inArray(
+                  featureImage.featureId,
+                  toAdminContributionFeatureScope(db, params.actor),
+                )
+              : undefined,
+          ),
           inArray(
             featureImage.imageId,
             db.select({ id: image.id }).from(image).where(eq(image.isArchived, false)),
@@ -119,7 +128,7 @@ export async function readUserContributedFeatures(
         {
           ...row,
           imageCount: row.images.length,
-          imagePublishedCount: row.images.length,
+          imagePublishedCount: row.images.filter(assignment => assignment.isPublished).length,
         },
         'list',
       ),
@@ -131,7 +140,7 @@ export async function readUserContributedFeatures(
 /** Read photo thumbnails with their readable feature assignment in one SQL statement.
  * @param db Request database.
  * @param params At most 24 image IDs and the server-resolved profile scope.
- * @returns Deduplicated public image envelopes; no per-photo authorization probes.
+ * @returns Deduplicated readable image envelopes; no per-photo authorization probes.
  * @remarks Publication, contributor and parent hub visibility are checked before returning locators.
  */
 export async function readUserContributedImages(
@@ -151,7 +160,15 @@ export async function readUserContributedImages(
       .where(
         and(
           inArray(featureImage.imageId, params.ids),
-          eq(featureImage.isPublished, true),
+          or(
+            eq(featureImage.isPublished, true),
+            params.isAdminRequest
+              ? inArray(
+                  featureImage.featureId,
+                  toAdminContributionFeatureScope(db, params.actor),
+                )
+              : undefined,
+          ),
           inArray(featureImage.featureId, scope),
         ),
       )

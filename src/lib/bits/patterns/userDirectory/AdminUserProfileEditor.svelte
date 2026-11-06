@@ -28,6 +28,8 @@ import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import InfoIcon from 'virtual:icons/lucide/info'
 import UserLinkedAccounts from './UserLinkedAccounts.svelte'
 import UserAccess from './UserAccess.svelte'
+import UserChangelog from './UserChangelog.svelte'
+import HistoryIcon from 'virtual:icons/proicons/history'
 import ShieldIcon from 'virtual:icons/lucide/shield-check'
 import SettingsIcon from 'virtual:icons/proicons/settings'
 import type { UserContributionsModel } from '#lib/adapters/panels/userContributions.js'
@@ -207,6 +209,9 @@ const facets = $derived(
     ['profile', { label: 'Profile', icon: PersonIcon }],
     ['contributions', { label: 'Contributions', icon: PersonIcon }],
     ['access', { label: 'Access', icon: ShieldIcon }],
+    ...(data.canViewChangelog
+      ? ([['changelog', { label: 'Change log', icon: HistoryIcon }]] as const)
+      : []),
     ...(data.canEdit
       ? ([['advanced', { label: 'Advanced', icon: SettingsIcon }]] as const)
       : []),
@@ -753,4 +758,17 @@ onDestroy(() => {
     {model}
     isVisible={activeFacet === 'contributions'}
   />
+  {#if data.canViewChangelog && activeFacet === 'changelog'}
+    <Main.Facet
+      isVisible
+      fillHeight
+      edgeToEdge
+      contentClass="h-full overflow-hidden"
+      class="right-0! left-0!"
+    >
+      <FormSurface class="mb-0! flex h-full min-h-0 flex-col">
+        <UserChangelog userId={data.profile.id} />
+      </FormSurface>
+    </Main.Facet>
+  {/if}
 </Main.Form>

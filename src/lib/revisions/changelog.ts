@@ -13,7 +13,7 @@ export type ChangelogResource = 'organisation' | 'project' | 'layer'
 export type ChangelogCursor = { createdAt: string; key: string }
 export type ChangelogEntry = {
   key: string
-  resourceType: ChangelogResource | 'feature' | 'property'
+  resourceType: ChangelogResource | 'feature' | 'property' | 'hub'
   resourceId: string
   name: string
   /** Property key from this revision, or its predecessor when the property was removed. */
