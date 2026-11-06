@@ -13,6 +13,8 @@ export default defineConfig({
   logLevel: 'error',
   plugins: [
     sveltekit({
+      // Keep test sync writes from invalidating the running development server.
+      outDir: '.svelte-kit/vitest',
       experimental: { remoteFunctions: true },
       compilerOptions: { experimental: { async: true } },
     }),
