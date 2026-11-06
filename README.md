@@ -45,6 +45,12 @@ bun run ...
   `local compute + preview remote D1/R2 + local preview queue simulation`
 - `dev:cf:prod`: `local compute + prod remote D1/R2 + local prod queue simulation`
 
+Run `bun run dev:asset-service:local` alongside the app for revision-backed image
+editors. They call the asset Worker's private `ImageRevisionTransformer` entrypoint
+through a local service binding. `dev:asset-service:remote` serves ordinary asset URLs
+but does not register that local entrypoint, so revision images return 503 even when
+their original files load successfully. The local command still uses remote R2 bindings.
+
 ## Database Management
 
 See [Database](docs/Database.md) docs.
