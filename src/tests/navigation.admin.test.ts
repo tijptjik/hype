@@ -212,6 +212,45 @@ describe('getBreadcrumbs', () => {
 })
 
 describe('admin navigation intent', () => {
+  it('does not navigate again when the committed destination is already current', () => {
+    vi.mocked(goto).mockClear()
+    vi.stubGlobal('window', {
+      location: { href: 'http://hype.localhost/admin/organisations' },
+    })
+    try {
+      navigateOnAdmin({} as AdminCtx, FirstClassResource.organisation)
+      expect(goto).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('still navigates to another index and preserves shallow detail facet changes', () => {
+    vi.mocked(goto).mockClear()
+    vi.stubGlobal('window', {
+      location: { href: 'http://hype.localhost/admin/organisations/example#images' },
+    })
+    try {
+      navigateOnAdmin(
+        {} as AdminCtx,
+        FirstClassResource.organisation,
+        'example',
+        'core',
+      )
+      expect(goto).toHaveBeenLastCalledWith(
+        'http://hype.localhost/admin/organisations/example#core',
+        { shallow: true },
+      )
+      navigateOnAdmin({} as AdminCtx, FirstClassResource.project)
+      expect(goto).toHaveBeenLastCalledWith('/admin/projects', {
+        reset: false,
+        replace: false,
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('waits for the committed URL projection instead of preemptively mutating navigation state', () => {
     const admin = {
       setResourceType: vi.fn(),

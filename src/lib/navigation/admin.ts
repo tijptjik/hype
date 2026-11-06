@@ -177,6 +177,8 @@ export const navigateOnAdmin = (
   const currentUrl =
     typeof window !== 'undefined' ? new URL(window.location.href) : null
   const targetUrl = currentUrl ? new URL(url, currentUrl.origin) : null
+  // Re-selecting the committed destination must not restart its queries or rendering.
+  if (currentUrl && targetUrl && currentUrl.href === targetUrl.href) return
   const isHashOnlyNavigation =
     currentUrl &&
     targetUrl &&
