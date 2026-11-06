@@ -18,18 +18,40 @@ key. Pages inspect at most 25 candidates, with one lookahead. Unauthorized candi
 are omitted and still advance the continuation cursor, so a sparse page can have a next
 page. The client appends pages as the visible range approaches the end, using the same
 shared virtual list as the Features index. Variable-height measurement supports expanded
-changes, and disclosure state survives virtual row unmounting. Refresh, resource, locale
-or account changes reset the feed; stale requests are discarded. Failed continuations
-keep loaded rows and offer an explicit retry.
+changes, and disclosure state survives virtual row unmounting. Summary click activation
+(including native Enter/Space activation) updates the retained expansion state directly;
+that state controls both the details open attribute and its comparison content. Deferred
+native toggle events never write it back, so collapse cannot restore stale state during
+virtual row recycling. Actor links remain independent navigation targets. The disclosure
+icon rotates around its center in a fixed-size box with a reduced-motion-aware
+transition. The canonical section-header expand/collapse control toggles all rows,
+including subsequently loaded rows. Initial loading and continuations use the shared
+Skeleton primitive on the same grid as loaded rows; loading announcements remain
+available to assistive technology without visible loading text. Refresh, resource,
+locale or account changes reset the feed; stale requests are discarded. Failed
+continuations keep loaded rows and offer an explicit retry.
 
 Each row starts collapsed and shows resource type, affected record name with locale
 fallback, shared operation labels and date. Expanding shows attribution, reason and
-before/after evidence. Each collapsed row also identifies the actor; user actors link to
-their current username profile, while non-user origins retain their immutable actor
-reference on hover and in expanded details. Dates use localized relative time, refreshed
-while mounted, with exact timestamps on hover. The standard section header matches
-Fields, and rows fill the available content width with 16px horizontal padding. Names
-and essential labels wrap at narrow widths.
+before/after evidence. The expanded header labels Changed (relative time with an
+exact-date tooltip), Actor, Source and optional Reason separately. Raw actor and
+snapshot-recorder identities remain copyable under a top-right Metadata icon button with
+a sliding disclosure and no dedicated toggle row. The record-wide header spans the
+expanded row. Each change has its own bordered panel, with a Field/Action subheader
+above its Before/After values. Header values use natural widths, 48px gaps and a 480px
+maximum width. Empty change areas are omitted. Clicking expanded content collapses its
+record, except for links and embedded controls. Each comparison labels its Field and
+Action above the Before and After values, stacking to fit the actual panel width. Each
+collapsed row also identifies the actor; user actors link to their current username
+profile, while non-user origins retain their immutable actor reference on hover and in
+expanded details. Dates use localized relative time, refreshed while mounted, with exact
+timestamps on hover. The standard section header matches Fields, and rows fill the
+available content width with 16px horizontal padding. Names and essential labels wrap at
+narrow widths. A persistent header labels Resource, Action, Actor and Changed. Header
+and rows share identical grid tracks, including fixed disclosure and date widths, so
+content length cannot shift the action or actor columns. Layout is based on the
+changelog panel's width: narrow panels stack action and actor under the resource while
+keeping the date in its own aligned column.
 
 Feature enrollment keeps its migration actor distinct from original authorship.
 `0194_feature_baseline_attribution.sql` freezes unambiguous creation-task reviewer or
@@ -81,14 +103,27 @@ This extends the
 and the Feature revision boundaries in
 [Places and Features](../../spec/breadline/proposal/01-places-features.md).
 
-The section header's Filters button toggles a responsive filter bar without clearing
-selections. Resource type, action, actor, category, source and literal metadata search
+The section header's Filters button toggles the shared Resource Index filter bar without
+clearing selections. Its 64px row uses the user directory's Filter By anchor,
+icon-labelled section menu, inline active controls, count and reset. Selecting a section
+replaces the menu in the same row; the anchor reopens it. Narrow panels scroll this row
+horizontally. Resource type, action, actor, category, source and literal metadata search
 combine across the full authorized feed. Actor selections retain immutable identity and
-origin rather than matching display names. The Period section reuses the user-directory
-two-handle range slider, with persistent UTC date labels and inclusive endpoints;
-selecting the full range clears the date constraints. Reset clears every section, and
-the header indicates active filters even while the bar is hidden. Resource/account
-changes reset selections; locale changes preserve them and refresh localized options.
+origin rather than matching display names. Text search uses the standard page-header
+search control, with no separate Search section in the filter bar. Header input, filter
+reset and resource/account changes share controlled filter state. Actor selection reuses
+the organisation user-search component in a non-modal popup, with name and username
+matching, keyboard selection, explicit clearing and an empty state. Its candidates come
+from the full authorized changelog actor metadata, including retained baseline authors
+and non-user origins; it never searches an unrelated global directory. The Period
+section reuses the user-directory two-handle range slider, with persistent UTC date
+labels and inclusive endpoints; selecting the full range clears the date constraints.
+This week, Previous week, This month and Previous month shortcuts select complete UTC
+calendar ranges (Monday–Sunday for weeks), highlight the selected range and update both
+slider handles. Slider bounds include these ranges even when no changes occurred in
+them. Reset clears every section, and the header indicates active filters even while the
+bar is hidden. Resource/account changes reset selections; locale changes preserve them
+and refresh localized options.
 
 Actor options and time bounds are aggregated from the unfiltered authorized hierarchy,
 independently of loaded pages or active filters. These aggregates expose attribution and

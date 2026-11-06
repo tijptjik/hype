@@ -3,6 +3,8 @@
 import { onMount, untrack } from 'svelte'
 // COMPONENTS
 import HistoryValue from './components/HistoryValue.svelte'
+import ChangelogEntryHeader from './components/ChangelogEntryHeader.svelte'
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import ChangelogFiltersBar from './components/ChangelogFilters.svelte'
 import ChangelogActor from './components/ChangelogActor.svelte'
 import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
@@ -10,7 +12,10 @@ import Header from '#lib/bits/custom/header/Header.svelte'
 import { VirtualList } from '#lib/bits/custom/index/src/index.js'
 // ICONS
 import HistoryIcon from 'virtual:icons/proicons/history'
+import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 import FilterIcon from 'virtual:icons/proicons/filter'
+import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
+import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 import RefreshIcon from 'virtual:icons/proicons/arrow-sync'
 // PRESENTATION
 import { fieldLabel, historyOperation } from './presentation'
@@ -35,6 +40,7 @@ let {
   loadPage,
   onLoaded,
   lastCheckedAt = null,
+  filters = $bindable<ChangelogFilters>({}),
 }: {
   identity: string
   locale: string
@@ -45,8 +51,8 @@ let {
   ) => Promise<ChangelogPage>
   onLoaded?: (page: ChangelogPage) => void
   lastCheckedAt?: string | null
+  filters?: ChangelogFilters
 } = $props()
-let filters = $state<ChangelogFilters>({})
 let showFilters = $state(false)
 let pendingFilters = $state(false)
 let filterOptions = $state<ChangelogFilterOptions | null>(null)
@@ -62,8 +68,15 @@ let nextCursor = $state<ChangelogCursor | null>(null)
 let visibleEnd = $state(0)
 let feedVersion = $state(0)
 let expanded = $state<Record<string, boolean>>({})
+let expandByDefault = $state(false)
+const allCollapsed = $derived(
+  !entries.some(entry => expanded[entry.key] ?? expandByDefault),
+)
 let generation = 0
 let now = $state(new Date())
+// Fixed disclosure/date tracks keep every virtual row aligned with the column headings.
+const columnClasses =
+  'grid grid-cols-[1rem_minmax(0,1fr)_5.5rem] gap-x-2 px-4 @[48rem]:grid-cols-[1rem_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_9rem]'
 const timeBoundaries = $derived(changelogTimeBoundaries(entries, now))
 const checkBoundary = $derived(
   changelogCheckBoundary(entries, lastCheckedAt, nextCursor !== null),
@@ -118,6 +131,7 @@ async function load(reset = false, refreshOptions = false): Promise<void> {
     nextCursor = null
     visibleEnd = 0
     expanded = {}
+    expandByDefault = false
     feedVersion++
   }
   loading = true
@@ -151,6 +165,34 @@ async function load(reset = false, refreshOptions = false): Promise<void> {
   } finally {
     if (request === generation) loading = false
   }
+}
+
+/** Apply pointer and keyboard activation before native deferred toggle events can race row recycling.
+ * @param event Click activation dispatched by the summary, including Enter and Space.
+ * @param key Immutable changelog entry identity.
+ * @returns Nothing; the retained state drives both the native open attribute and body.
+ * @remarks Actor links stop propagation and retain their own navigation behavior.
+ */
+function toggleEntry(event: MouseEvent, key: string): void {
+  if (event.defaultPrevented) return
+  event.preventDefault()
+  expanded[key] = !(expanded[key] ?? expandByDefault)
+}
+
+/** Collapse an open record from its content without intercepting embedded controls.
+ * @param event Bubbled click from the record.
+ * @param key Immutable changelog entry identity.
+ * @returns Nothing; the summary remains the keyboard disclosure control.
+ */
+function collapseFromContent(event: MouseEvent, key: string): void {
+  if (event.defaultPrevented || !(event.target instanceof Element)) return
+  if (
+    event.target.closest(
+      'summary, a, button, input, select, textarea, [role="button"], [contenteditable="true"]',
+    )
+  )
+    return
+  expanded[key] = false
 }
 
 /** Summarize known operations once each while retaining all differences on expansion.
@@ -236,6 +278,37 @@ $effect(() => {
 })
 </script>
 
+{#snippet loadingRows(count: number, label: string)}
+  <div role="status" aria-label={label} data-changelog-skeletons>
+    <span class="sr-only">{label}</span>
+    {#each Array(count) as _, index (index)}
+      <div
+        class="{columnClasses} border-border items-start gap-y-2 border-b py-2"
+        aria-hidden="true"
+        data-changelog-skeleton-row
+      >
+        <Skeleton class="mt-1 size-3" />
+        <div class="flex min-w-0 flex-col gap-2 py-1">
+          <div class="flex min-w-0 items-center gap-2">
+            <Skeleton class="h-3 w-12 shrink-0" />
+            <Skeleton class="h-3 w-3/5 max-w-72 min-w-0" />
+          </div>
+          <Skeleton class="h-3 w-4/5 @[48rem]:hidden" />
+        </div>
+        <Skeleton
+          class="col-start-2 my-1 h-3 w-24 max-w-full @[48rem]:col-start-auto"
+        />
+        <Skeleton
+          class="col-start-2 my-1 h-3 w-28 max-w-full @[48rem]:col-start-auto"
+        />
+        <Skeleton
+          class="col-start-3 row-start-1 my-1 h-3 w-16 max-w-full justify-self-end @[48rem]:col-start-auto @[48rem]:row-start-auto"
+        />
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
 {#snippet lastCheckedBar()}
   {#if lastCheckedAt}
     <!-- biome-ignore lint/a11y/useSemanticElements: This labeled separator contains a visible timestamp, which an hr cannot contain. -->
@@ -260,16 +333,17 @@ $effect(() => {
 {/snippet}
 
 <section
-  class="flex h-full min-h-0 w-full min-w-0 flex-col"
+  class="@container flex h-full min-h-0 w-full min-w-0 flex-col"
   aria-label="Changelog"
   aria-busy={loading || pendingFilters}
 >
   <SectionHeader
-    class="[&>div:last-child]:w-24"
+    class="[&>div:last-child]:[container-type:normal] [&>div:last-child]:items-center"
     actions={[
       {
         text: filterCount ? `Filters (${filterCount})` : 'Filters',
         iconComponent: FilterIcon,
+        iconClasses: 'size-5! [&_svg]:size-5!',
         hideLabel: true,
         hideLabelInstantly: true,
         style: 'ghost',
@@ -288,6 +362,7 @@ $effect(() => {
         text: 'Refresh',
         iconComponent: RefreshIcon,
         class: 'size-11! shrink-0 p-0!',
+        iconClasses: 'size-5! [&_svg]:size-5!',
         hideLabel: true,
         hideLabelInstantly: true,
         style: 'ghost',
@@ -295,6 +370,23 @@ $effect(() => {
         disabled: loading,
         onClick: () => {
           void load(true, true)
+        },
+      },
+      {
+        text: allCollapsed ? 'Expand all' : 'Collapse all',
+        iconComponent: allCollapsed ? ExpandIcon : CollapseIcon,
+        iconClasses: 'size-5! [&_svg]:size-5!',
+        class: 'size-11! shrink-0 p-0!',
+        hideLabel: true,
+        hideLabelInstantly: true,
+        style: 'ghost',
+        color: 'neutral',
+        attrs: { 'aria-expanded': !allCollapsed },
+        onClick: () => {
+          expandByDefault = allCollapsed
+          expanded = Object.fromEntries(
+            entries.map(entry => [entry.key, expandByDefault]),
+          )
         },
       },
     ]}
@@ -313,6 +405,8 @@ $effect(() => {
     <ChangelogFiltersBar
       {filters}
       options={filterOptions}
+      count={!loading && !pendingFilters && !nextCursor ? entries.length : null}
+      countLoading={loading || pendingFilters}
       onChange={value => {
         filters = value
       }}
@@ -325,6 +419,19 @@ $effect(() => {
       </p>
     {/if}
   {/if}
+  <div
+    data-changelog-columns
+    class="{columnClasses} border-primary/25 bg-[color-mix(in_oklab,var(--color-primary)_18%,var(--color-panel))] text-foreground shrink-0 items-center border-b py-2 text-xs font-semibold"
+  >
+    <span aria-hidden="true"></span>
+    <span data-changelog-column="resource">
+      <span class="@[48rem]:hidden">Resource · Action · Actor</span>
+      <span class="hidden @[48rem]:inline">Resource</span>
+    </span>
+    <span data-changelog-column="action" class="hidden @[48rem]:block">Action</span>
+    <span data-changelog-column="actor" class="hidden @[48rem]:block">Actor</span>
+    <span data-changelog-column="changed" class="text-right">Changed</span>
+  </div>
   {#if entries.length}
     <div class="relative min-h-0 w-full flex-1" data-changelog-list>
       {#key feedVersion}
@@ -355,99 +462,132 @@ $effect(() => {
                 {changelogTimeBoundaryLabel(boundary, locale)}
               </h3>
             {/if}
+            <!-- The native summary provides keyboard activation; content clicks offer the same collapse action. -->
+            <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+            <!-- biome-ignore lint/a11y/useKeyWithClickEvents: The native summary supplies keyboard activation. -->
             <details
               class="group border-border w-full border-b"
               data-change-key={entry.key}
-              open={expanded[entry.key] ?? false}
-              ontoggle={event => {
-                expanded[entry.key] = event.currentTarget.open
-              }}
+              onclick={event => collapseFromContent(event, entry.key)}
+              open={expanded[entry.key] ?? expandByDefault}
             >
+              <!-- biome-ignore lint/a11y/noStaticElementInteractions: Native summary is the keyboard-operable disclosure control. -->
               <summary
-                class="hover:bg-muted/40 focus-visible:outline-ring grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 px-4 py-2 text-sm marker:content-none focus-visible:outline-2 focus-visible:-outline-offset-2 sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.65fr)_auto]"
+                onclick={event => toggleEntry(event, entry.key)}
+                class="{columnClasses} hover:bg-muted/40 focus-visible:outline-ring cursor-pointer select-none items-start gap-y-1 py-2 text-sm marker:content-none focus-visible:outline-2 focus-visible:-outline-offset-2"
               >
                 <span
-                  class="text-muted-foreground pt-0.5 transition-transform group-open:rotate-90"
+                  data-changelog-chevron
+                  class="text-muted-foreground mt-0.5 inline-flex size-4 items-center justify-center"
                   aria-hidden="true"
-                  >›</span
                 >
-                <span class="min-w-0 break-words whitespace-normal"
+                  <ChevronRightIcon
+                    class="size-3 origin-center transition-transform duration-200 motion-reduce:transition-none {(expanded[
+                      entry.key
+                    ] ?? expandByDefault)
+                      ? 'rotate-90'
+                      : ''}"
+                  />
+                </span>
+                <span
+                  data-changelog-cell="resource"
+                  class="min-w-0 break-words whitespace-normal"
                   ><span class="text-muted-foreground mr-2 text-xs capitalize"
                     >{entry.resourceType}</span
                   ><span class="font-medium">{entry.name}</span></span
                 >
                 <span
-                  class="text-muted-foreground col-start-2 min-w-0 text-xs break-words whitespace-normal sm:col-start-auto sm:text-sm"
+                  data-changelog-cell="action"
+                  class="text-muted-foreground col-start-2 min-w-0 text-xs break-words whitespace-normal @[48rem]:col-start-auto @[48rem]:text-sm"
                   >{operations(entry)}</span
                 >
                 <span
-                  class="col-start-2 min-w-0 break-words whitespace-normal sm:col-start-auto"
+                  data-changelog-cell="actor"
+                  class="col-start-2 min-w-0 break-words whitespace-normal @[48rem]:col-start-auto"
                 >
                   <ChangelogActor {entry} />
                 </span>
                 <time
-                  class="text-muted-foreground col-start-3 row-start-1 text-xs whitespace-nowrap sm:col-start-auto sm:row-start-auto"
+                  data-changelog-cell="changed"
+                  class="text-muted-foreground col-start-3 row-start-1 min-w-0 text-right text-xs break-words whitespace-normal @[48rem]:col-start-auto @[48rem]:row-start-auto"
                   datetime={entry.createdAt}
                   title={timestamp(entry.createdAt)}
                   >{relative(entry.createdAt)}</time
                 >
               </summary>
-              {#if expanded[entry.key]}
-                <div
-                  class="border-border bg-muted/15 grid gap-3 border-t px-4 py-3 text-sm"
-                >
+              {#if expanded[entry.key] ?? expandByDefault}
+                <div class="border-border bg-muted/15 border-t text-sm">
                   <div
-                    class="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+                    class="border-border bg-primary/5 px-8 py-4 {entry.changes.length ||
+                    entry.redacted
+                      ? 'border-b'
+                      : ''}"
                   >
-                    <time datetime={entry.createdAt} title={timestamp(entry.createdAt)}
-                      >{relative(entry.createdAt)}</time
-                    >
-                    <span aria-hidden="true">·</span>
-                    <ChangelogActor {entry} />
-                    <span class="min-w-0 font-mono break-words"
-                      >{entry.baselineActor?.actorId ?? entry.actorId}</span
-                    >
+                    <ChangelogEntryHeader
+                      {entry}
+                      relativeTime={relative(entry.createdAt)}
+                      exactTime={timestamp(entry.createdAt)}
+                    />
                   </div>
-                  {#if entry.reason}
-                    <p class="break-words whitespace-pre-wrap">{entry.reason}</p>
-                  {/if}
-                  {#if entry.baseline}
-                    <p class="text-muted-foreground">
-                      State captured when revision tracking began.
-                      {#if entry.baselineActor}
-                        Original {entry.baselineActor.role} attribution is retained;
-                        snapshot recorded by {entry.actorId}.
+                  {#if entry.changes.length || entry.redacted}
+                    <div class="grid min-w-0 gap-4 px-8 py-4">
+                      {#if entry.redacted}
+                        <p class="text-muted-foreground">
+                          Some changes are hidden by current field permissions.
+                        </p>
                       {/if}
-                    </p>
-                  {/if}
-                  {#if entry.redacted}
-                    <p class="text-muted-foreground">
-                      Some changes are hidden by current field permissions.
-                    </p>
-                  {/if}
-                  {#each entry.changes as change}
-                    <div class="border-border grid min-w-0 gap-2 border-t pt-2">
-                      <p class="min-w-0 font-medium break-words">
-                        {historyOperation(change, entry.category === 'fields').label}
-                        <span class="text-muted-foreground font-normal"
-                          >·
-                          {entry.resourceType === 'feature'
+                      {#each entry.changes as change}
+                        <section
+                          class="border-border bg-panel min-w-0 overflow-hidden rounded-md border"
+                          aria-label={entry.resourceType === 'feature'
                             ? featureReviewLabel(change.path)
-                            : fieldLabel(change.path)}</span
+                            : fieldLabel(change.path)}
                         >
-                      </p>
-                      <div class="grid min-w-0 gap-3 sm:grid-cols-2">
-                        <div class="min-w-0">
-                          <p class="text-muted-foreground mb-1 text-xs">Before</p>
-                          <HistoryValue slot={change.before} />
-                        </div>
-                        <div class="min-w-0">
-                          <p class="text-muted-foreground mb-1 text-xs">After</p>
-                          <HistoryValue slot={change.after} />
-                        </div>
-                      </div>
+                          <dl
+                            class="border-border bg-muted/30 flex min-w-0 flex-wrap gap-y-2 border-b px-4 py-3"
+                            style:column-gap="48px"
+                            data-changelog-change-heading
+                          >
+                            <div
+                              class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1"
+                            >
+                              <dt class="text-muted-foreground text-xs font-medium">
+                                Field
+                              </dt>
+                              <dd class="min-w-0 font-medium break-words">
+                                {entry.resourceType === 'feature'
+                                  ? featureReviewLabel(change.path)
+                                  : fieldLabel(change.path)}
+                              </dd>
+                            </div>
+                            <div
+                              class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1"
+                            >
+                              <dt class="text-muted-foreground text-xs font-medium">
+                                Action
+                              </dt>
+                              <dd class="font-medium break-words">
+                                {historyOperation(change, entry.category === 'fields')
+                                  .label}
+                              </dd>
+                            </div>
+                          </dl>
+                          <div
+                            class="grid min-w-0 items-start gap-4 p-4 @[36rem]:grid-cols-2"
+                          >
+                            <div class="min-w-0">
+                              <p class="text-muted-foreground mb-1 text-xs">Before</p>
+                              <HistoryValue slot={change.before} />
+                            </div>
+                            <div class="min-w-0">
+                              <p class="text-muted-foreground mb-1 text-xs">After</p>
+                              <HistoryValue slot={change.after} />
+                            </div>
+                          </div>
+                        </section>
+                      {/each}
                     </div>
-                  {/each}
+                  {/if}
                 </div>
               {/if}
             </details>
@@ -458,6 +598,10 @@ $effect(() => {
         </VirtualList>
       {/key}
     </div>
+  {:else if loading}
+    <div class="min-h-0 flex-1 overflow-hidden">
+      {@render loadingRows(8, 'Loading changes')}
+    </div>
   {:else if !loading && !failed && !nextCursor}
     {#if checkBoundary?.position === 'empty'}
       {@render lastCheckedBar()}
@@ -466,10 +610,10 @@ $effect(() => {
       {filterCount ? 'No changes match these filters.' : 'No recorded changes yet.'}
     </p>
   {/if}
-  {#if loading}
-    <p class="text-muted-foreground shrink-0 px-6 py-3 text-sm" role="status">
-      {entries.length ? 'Loading more changes…' : 'Loading changes…'}
-    </p>
+  {#if loading && entries.length}
+    <div class="shrink-0" data-changelog-continuation-loading>
+      {@render loadingRows(1, 'Loading more changes')}
+    </div>
   {:else if failed}
     <div
       role="alert"

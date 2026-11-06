@@ -25,7 +25,7 @@ for (const [name, engine] of [
       const first = page.locator('details[data-change-key="first-0"]')
       const viewport = page.locator('svelte-virtual-list-viewport')
       await first.waitFor()
-      const summary = first.locator('summary')
+      const summary = first.locator(':scope > summary')
       const padding = await summary.evaluate(element => {
         const style = getComputedStyle(element)
         return [style.paddingLeft, style.paddingRight]
@@ -51,7 +51,7 @@ for (const [name, engine] of [
         throw new Error('Relative age or exact timestamp is missing')
       const system = page
         .locator('details[data-change-key="first-1"]')
-        .locator('summary')
+        .locator(':scope > summary')
       if (
         (await system.getByRole('link').count()) ||
         !(await system.getByText('System', { exact: true }).count())
@@ -92,7 +92,7 @@ for (const [name, engine] of [
       const scrollbar = await page.locator('[data-svrollbar]').boundingBox()
       if (scrollbar && scrollbar.y < listBounds.y - 1)
         throw new Error('The list scrollbar overlaps the section header')
-      await first.locator('summary').focus()
+      await first.locator(':scope > summary').focus()
       await page.keyboard.press('Enter')
       await first.locator('text=Changed name').waitFor({ state: 'visible' })
       await page.screenshot({

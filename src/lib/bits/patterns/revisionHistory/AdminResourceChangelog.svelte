@@ -40,6 +40,7 @@ let { resource, resourceRef }: { resource: ChangelogResource; resourceRef: strin
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 let ownerName = $state('')
+let filters = $state<ChangelogFilters>({})
 let lastCheckedAt = $state<string | null>(null)
 let trackingFailed = $state(false)
 let checkedThrough: string | null = null
@@ -147,7 +148,9 @@ $effect(() => {
     { label: string; icon?: import('svelte').Component | null }
   >(getAdminFacetTabsForResource(FirstClassResource[resource]))
   facets.set('changelog', { label: 'Changelog', icon: HistoryIcon })
-  headerCtrl.setHeaderForEntity(ownerName || resourceRef, icons[resource], facets)
+  headerCtrl.setHeaderForEntity(ownerName || resourceRef, icons[resource], facets, {
+    showFilter: true,
+  })
   headerCtrl.setFacets(facets, { active: 'changelog', onFacetChange: selectFacet })
   headerCtrl.setTitleMenuItems([])
   headerCtrl.clearFormActions()
@@ -158,7 +161,18 @@ $effect(() => {
     showPublishAction: false,
   })
 })
+// Use the same controlled top-header search contract as organisation user indexes.
+$effect(() => {
+  headerCtrl.setSearch({
+    query: filters.search ?? '',
+    placeholder: 'Search changes',
+    onFilter: value => {
+      filters = { ...filters, search: value.slice(0, 200) || undefined }
+    },
+  })
+})
 onDestroy(() => {
+  headerCtrl.setSearch(null)
   visitGeneration++
   headerCtrl.clearFormActions()
 })
@@ -185,6 +199,7 @@ onMount(() => {
         identity={visitIdentity}
         {locale}
         {loadPage}
+        bind:filters
         {lastCheckedAt}
         onLoaded={handleLoaded}
       />

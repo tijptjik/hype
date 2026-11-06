@@ -280,6 +280,7 @@ export class HeaderCtrl {
    * @param title - Header title.
    * @param icon - Header icon component.
    * @param facets - Facets to render for the entity page.
+   * @param visibilityOverrides - Optional visibility overrides for embedded search or controls.
    * @returns void
    */
   setHeaderForEntity(
@@ -295,10 +296,11 @@ export class HeaderCtrl {
           disabled?: boolean
         }
     >,
+    visibilityOverrides: HeaderVisibilityOverrides = {},
   ): void {
     this.applyEntityMeta(title, icon, facets)
     this.showControls('form')
-    this.setVisibility(getEntityVisibility())
+    this.setVisibility(getEntityVisibility(visibilityOverrides))
     this.clearControlBar()
     this.clearFooter()
   }
