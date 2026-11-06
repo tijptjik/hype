@@ -4,7 +4,10 @@ import { PUBLIC_ASSET_BASE_URL, PUBLIC_PREVIEW_ASSET_BASE_URL } from '$app/env/p
 // I18N
 import { m } from '#lib/i18n.js'
 // IMAGE
-import { toCloudflareImageWorkerPath } from '#lib/images/delivery.js'
+import {
+  toCloudflareImageWorkerPath,
+  IMAGE_RAW_INTERMEDIATE_TRANSFORMATION,
+} from '#lib/images/delivery.js'
 import {
   extractImageUploadMetadata,
   type ExtractedImageUploadMetadata,
@@ -73,6 +76,7 @@ type FeatureImageProviderProject = {
 //
 // 3. DELIVERY
 //    - getURLfromImage
+//    - getEditorViewerSrc
 //
 // 4. EXTENSIONS
 //    - extendFeatureImage
@@ -833,6 +837,26 @@ export function getURLfromImage(opts: {
   }
 
   throw error(404, `Image CDN <code>${image.cdn}</code> not supported`)
+}
+
+/**
+ * Resolves an editor preview without requiring legacy downloadable originals.
+ * @param image Image envelope selected by the editor.
+ * @returns A prerender-compatible legacy display URL or an exact revision preview.
+ * @remarks Older imports can retain display derivatives without a raw intermediate.
+ * Images declaring a revision retain their existing bounded source routing.
+ * Download and editing commands retain their own source checks.
+ */
+export function getEditorViewerSrc(
+  image: Parameters<typeof getURLfromImage>[0]['image'],
+): string {
+  return 'imageRevisionId' in image.image && image.image.imageRevisionId
+    ? getURLfromImage({
+        image,
+        raw: true,
+        rawTransformation: IMAGE_RAW_INTERMEDIATE_TRANSFORMATION,
+      })
+    : getURLfromImage({ image })
 }
 
 /**

@@ -7,9 +7,9 @@ import { runRemoteQuery } from '#lib/remote/index.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // IMAGE
-import { IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '#lib/images/delivery.js'
 import {
   extractVersionFromImageUrl,
+  getEditorViewerSrc,
   getGalleryItemTargetImageId,
   getGalleryItemThumbnailStatusId,
   getURLfromImage,
@@ -80,16 +80,6 @@ type ImageEditorGalleryModel = {
 const ROTATION_STEP_MS = 700
 const PROMOTION_MAX_ATTEMPTS = 8
 const PROMOTION_RETRY_DELAY_MS = 350
-
-function getEditorViewerSrc(
-  image: Parameters<typeof getURLfromImage>[0]['image'],
-): string {
-  return getURLfromImage({
-    image,
-    raw: true,
-    rawTransformation: IMAGE_RAW_INTERMEDIATE_TRANSFORMATION,
-  })
-}
 
 function normalizeRotation(rotation: number | null | undefined): 0 | 90 | 180 | 270 {
   const normalized = (((rotation ?? 0) % 360) + 360) % 360
