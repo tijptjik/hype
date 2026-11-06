@@ -1045,3 +1045,41 @@ checkpoint changes; FK errors and duplicate provider subjects are zero. Private 
 source evidence, decisions and receipts remain ignored under `.local`. The production
 accepted-sync manifest and local decisions now retain these resolutions for future runs.
 Authenticated production UI, live provider and enrolment checks remain open.
+
+### Incremental production user sync (6 November 2026)
+
+Refs #189 and #194. The same complete Breadline snapshot used by the local refresh
+(`2026-11-06T05:04:30.690Z`) is now reconciled into `hype-db-prod`, using its own
+retained production seed, reviewed decisions and accepted baseline. The zero-exception
+plan adds five users and updates six existing profile names and their historic source
+name projections. Five portable Google accounts, five import-ownership rows, five
+source-user/volunteer mappings and five source membership grants accompany the new
+users: **37 runtime row changes** in total. Private accepted source state advances for
+51 existing snapshots and five new source users. There are no removals, restorations,
+account merges or ownership transfers; the seven reviewed exclusions remain.
+
+One new user's generated Runner username was occupied by an existing production account.
+The sync planner now retries the shared deterministic generator against existing and
+reserved usernames, preserving the new user's stable ID and every existing owner's
+username. A regression test covers successive occupied candidates, stable identity,
+existing-row preservation and zero-write replay. No application deployment or schema
+migration was needed; the fix runs in the local importer.
+
+The isolated exact-schema rehearsal compared 79 tables, preserving 126,892 unaffected
+rows; the five new organisation grants produced exactly five expected feature-count
+cache invalidations. Integrity and foreign keys pass. Production preflight matched all
+37 before-images with no new identity collisions. A fresh D1 recovery bookmark precedes
+application. Production read-back at `2026-11-06T07:09:49.014Z` matches all 37
+after-images, with zero foreign-key violations and duplicate provider subjects. There
+are **14,307 active source identities**, **13,499 distinct imported owners** and 15,187
+total production users. All current 16 owner and nine member assignments remain.
+
+Validation: 48 focused importer tests pass. Both rehearsal and post-application repeat
+plans have zero mutations, exceptions or checkpoint changes; the production operator
+also recorded a zero-mutation repeat receipt. The accepted production manifest now
+points to the new baseline, source state, decisions and verification receipts under
+`.local/breadline/production-sync-20261106/`. Raw source, plans, before-images and
+recovery details remain private. This completes the incremental database sync; broader
+authenticated UI, live-provider and enrolment acceptance stays open. Repository changes
+are committed separately from the database application; no push or application
+deployment is included.
