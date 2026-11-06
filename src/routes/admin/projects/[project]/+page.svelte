@@ -389,7 +389,7 @@ $effect(() => {
   if (currentHash === lastSyncedFacetHash) return
   lastSyncedFacetHash = currentHash
   syncAdminFacetFromHash({
-    hash: currentHash,
+    hash: currentHash === '#policies' ? '#advanced' : currentHash,
     activeFacet,
     facetOrder: projectFacetOrder,
     adminCtx,
@@ -1336,6 +1336,25 @@ function getHiddenLocationPolicyAttrs(): Record<string, unknown> {
     as(type: 'hidden', value: string): Record<string, unknown>
   }
   return as('hidden', String(formCtx.form.fields.value().data?.locationUpdatePolicy))
+}
+
+const stagedLocationPolicy = $derived.by(() => {
+  const value = formCtx.form.fields.value().data?.locationUpdatePolicy
+  return typeof value === 'string' ? value : undefined
+})
+
+/**
+ * Stage one policy transport shared by Locations and Advanced settings.
+ * @param value Merged policy JSON, or undefined when all settings match the baseline.
+ * @returns Nothing; the normal Project save/cancel flow owns persistence.
+ */
+function onLocationPolicyChange(value: string | undefined): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    if (value === undefined) delete data.locationUpdatePolicy
+    else data.locationUpdatePolicy = value
+    return data
+  })
+  revalidateAfterProgrammaticChange()
 }
 
 const hiddenProjectLayerInputAttrs = $derived.by(() => {
@@ -3112,39 +3131,6 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
     <Main.Facet
-      isVisible={activeFacet === 'policies'}
-      transition="fade"
-      fillHeight={true}
-      previousAction={buildFacetNavAction('policies', 'previous')}
-      nextAction={buildFacetNavAction('policies', 'next')}
-      class="right-0! left-0!"
-      attrs={{ 'data-facet-id': 'policies' }}
-    >
-      <FormSurface>
-        {#if activeCommittedProjectData?.id}
-          {#key activeCommittedProjectData.id}
-            <LocationPolicyPanel
-              projectId={activeCommittedProjectData.id}
-              {isEditing}
-              saving={formCtx.submitting}
-              resetVersion={locationPolicyResetVersion}
-              onChange={value => {
-                updateFormData(projectEntityUpdaterForm, data => {
-                  if (value === undefined) delete data.locationUpdatePolicy
-                  else data.locationUpdatePolicy = value
-                  return data
-                })
-                revalidateAfterProgrammaticChange()
-              }}
-            />
-            {#if formCtx.form.fields.value().data?.locationUpdatePolicy}
-              <input {...getHiddenLocationPolicyAttrs()}>
-            {/if}
-          {/key}
-        {/if}
-      </FormSurface>
-    </Main.Facet>
-    <Main.Facet
       isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
       transition="fade"
       fillHeight={true}
@@ -3401,9 +3387,24 @@ $effect(() => {
             <input {...getHiddenLocaleSettingsAttrs()}>
           </div>
         </section>
+        {#if activeCommittedProjectData?.id}
+          {#key activeCommittedProjectData.id}
+            <LocationPolicyPanel
+              projectId={activeCommittedProjectData.id}
+              staged={stagedLocationPolicy}
+              resetVersion={locationPolicyResetVersion}
+              {isEditing}
+              saving={formCtx.submitting}
+              onChange={onLocationPolicyChange}
+            />
+          {/key}
+        {/if}
       </FormSurface>
     </Main.Facet>
     <div class="hidden" aria-hidden="true">
+      {#if stagedLocationPolicy}
+        <input {...getHiddenLocationPolicyAttrs()}>
+      {/if}
       <input {...getHiddenProjectFlagsAttrs()}>
       <input
         {...formCtx.form.fields.data.useAllInOrgContext.as(

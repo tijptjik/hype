@@ -52,7 +52,6 @@ export type ProjectFacet =
   | 'layers'
   | 'fields'
   | 'images'
-  | 'policies'
 export type LayerFacet = 'features' | 'core' | 'fields'
 
 export const ADMIN_FACET_DEFINITIONS = {
@@ -109,7 +108,7 @@ export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
 export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
-  project: { policies: () => m.location_policy_tab() },
+  project: { updates: () => 'History' },
   feature: {
     address: () => m.feature_location_title(),
     images: () => m.feature__images(),
@@ -119,7 +118,7 @@ export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 export const ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
-  project: { policies: () => m.location_policy_tab() },
+  project: { updates: () => 'History' },
   feature: {
     core: () => m.resources__profile(),
     address: () => m.feature_location_title(),
@@ -155,7 +154,6 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.layers,
     ADMIN_FACETS.fields,
-    ADMIN_FACETS.policies,
     ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
     ADMIN_FACETS.updates,

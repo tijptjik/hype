@@ -71,20 +71,25 @@ export type FeatureLocationOverrides = {
   location?: LocationOverride<LocationPosition>
 }
 
+export const RelocationPolicySchema = z.enum(['fixed', 'review', 'follow'])
+export type RelocationPolicy = z.infer<typeof RelocationPolicySchema>
+
+/** Pre-release v1 uses explicit follow consent and a separate relocation rule. */
 export const ProjectLocationPolicySchema = z.strictObject({
   version: z.literal(1),
   discoveryRadiusMetres: z.number().int().min(50).max(1000).optional(),
   coordinates: z.discriminatedUnion('mode', [
-    z.strictObject({ mode: z.literal('automatic') }),
+    z.strictObject({ mode: z.literal('follow') }),
     z.strictObject({ mode: z.literal('review') }),
     z.strictObject({
       mode: z.literal('withinDistance'),
       maxMetres: z.number().finite().nonnegative(),
     }),
   ]),
-  address: z.enum(['automatic', 'review']),
-  unit: z.enum(['automatic', 'review']),
-  establishment: z.enum(['automatic', 'review']),
+  address: z.enum(['follow', 'review']),
+  unit: z.enum(['follow', 'review']),
+  establishment: z.enum(['follow', 'review']),
+  relocation: RelocationPolicySchema.default('review'),
 })
 
 export type ProjectLocationPolicy = z.infer<typeof ProjectLocationPolicySchema>
@@ -96,4 +101,24 @@ export const DEFAULT_PROJECT_LOCATION_POLICY: ProjectLocationPolicy = {
   address: 'review',
   unit: 'review',
   establishment: 'review',
+  relocation: 'review',
+}
+
+/**
+ * Resolve a Layer override before the Project's validated relocation default.
+ * @param projectPolicy Persisted Project policy; null/absence uses review defaults.
+ * @param layerPolicy Nullable Layer override; null/absence means inherit.
+ * @returns The effective fixed, review or follow rule.
+ * @remarks Resolving consent never applies a move or reopens a rejected candidate.
+ */
+export function resolveRelocationPolicy(
+  projectPolicy: unknown,
+  layerPolicy?: RelocationPolicy | null,
+): RelocationPolicy {
+  const policy = ProjectLocationPolicySchema.parse(
+    projectPolicy ?? DEFAULT_PROJECT_LOCATION_POLICY,
+  )
+  return layerPolicy == null
+    ? policy.relocation
+    : RelocationPolicySchema.parse(layerPolicy)
 }
