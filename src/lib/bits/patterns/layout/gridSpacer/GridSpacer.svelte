@@ -7,7 +7,7 @@ let {
   leftCols = 2,
   centerCols = 1,
   rightCols = 1,
-  gap = 'calc(var(--spacing) * 3)',
+  gap = 'calc(var(--spacing) * 8)',
   left,
   center,
   right,

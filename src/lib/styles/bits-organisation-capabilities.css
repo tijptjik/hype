@@ -109,7 +109,7 @@
   }
 
   .bits-theme .bits-form__capabilities-list {
-    --bits-capability-grid-gap: calc(var(--spacing) * 3);
+    --bits-capability-grid-gap: calc(var(--spacing) * 8);
     display: grid;
     gap: var(--bits-capability-grid-gap);
     grid-template-columns: minmax(0, 1fr);

@@ -94,7 +94,7 @@ const coordinateItems = $derived([
     description={m.location_policy_description()}
     icon={MapPinIcon}
   />
-  <div class="flex flex-col gap-5 p-4 pb-24 sm:p-6 sm:pb-24">
+  <div class="flex flex-col gap-8 p-4 pb-24 sm:p-6 sm:pb-24">
     <div class="max-w-md">
       <TextInput
         id="place-discovery-radius"
@@ -110,11 +110,11 @@ const coordinateItems = $derived([
           stagePolicy()
         }}
       />
-      <p class="mt-2 text-sm text-muted-foreground">
+      <p class="text-muted-foreground mt-2 text-sm">
         {m.feature_location_radius_help()}
       </p>
     </div>
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-8">
       {#each [
         {
           key: 'coordinates',
@@ -146,7 +146,7 @@ const coordinateItems = $derived([
         >
           <div class="flex flex-1 items-start gap-3">
             <span
-              class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+              class="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg"
               aria-hidden="true"
             >
               <setting.icon class="size-5" />
@@ -157,7 +157,7 @@ const coordinateItems = $derived([
               </h3>
               <p
                 id={`place-${setting.key}-help`}
-                class="mt-1 text-sm leading-relaxed text-muted-foreground"
+                class="text-muted-foreground mt-1 text-sm leading-relaxed"
               >
                 {setting.description}
               </p>
@@ -206,7 +206,7 @@ const coordinateItems = $derived([
                   stagePolicy()
                 }}
               />
-              <p class="text-xs leading-relaxed text-muted-foreground">
+              <p class="text-muted-foreground text-xs leading-relaxed">
                 {m.location_policy_distance_help()}
               </p>
             </div>

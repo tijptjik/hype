@@ -10,7 +10,8 @@ type Props = {
   minWidth?: number
 }
 
-const CARD_GRID_GAP_PX = 16
+// Keep the column budget aligned with the shared 32px card gutter.
+const CARD_GRID_GAP_PX = 32
 const MAX_GRID_COLUMNS = 4
 const DEFAULT_CARD_MIN_WIDTH_PX = 320
 
@@ -31,7 +32,7 @@ const columns = $derived.by(() => {
   return Math.max(1, Math.min(MAX_GRID_COLUMNS, nextColumns))
 })
 
-const gridClass = $derived(cx('grid items-start gap-4', className))
+const gridClass = $derived(cx('grid items-start gap-8', className))
 const gridStyle = $derived(`grid-template-columns: repeat(${columns}, minmax(0, 1fr));`)
 </script>
 

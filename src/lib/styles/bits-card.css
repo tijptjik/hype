@@ -575,13 +575,13 @@
 
   .bits-theme .bits-form__user-card-wrapper {
     display: grid;
-    gap: calc(var(--spacing) * 2);
+    gap: calc(var(--spacing) * 8);
     grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
     justify-items: start;
   }
 
   .bits-theme .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
-    --bits-user-card-grid-gap: calc(var(--spacing) * 4);
+    --bits-user-card-grid-gap: calc(var(--spacing) * 8);
     gap: var(--bits-user-card-grid-gap);
     grid-template-columns: minmax(0, 1fr);
     justify-items: stretch;
@@ -620,7 +620,7 @@
   }
 
   .bits-theme .bits-form__layer-card-wrapper {
-    --bits-layer-card-grid-gap: calc(var(--spacing) * 2);
+    --bits-layer-card-grid-gap: calc(var(--spacing) * 8);
     --bits-layer-card-columns: 1;
     display: grid;
     gap: var(--bits-layer-card-grid-gap);

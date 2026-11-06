@@ -60,7 +60,7 @@ let {
       <section class="flex min-w-0 flex-col gap-4">
         <SectionHeader title={m.content_languages_heading()} icon={LanguagesIcon} />
         <div
-          class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4"
+          class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-8"
         >
           <ContentLocaleDefaults
             organisationName={name}

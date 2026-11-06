@@ -3,6 +3,14 @@
 This document defines the UI layering model for Bits components and how logic should be
 distributed.
 
+## Form card spacing
+
+Use 32px (`gap-8`) between separate cards in every form, on both axes, including stacked
+cards and grids with two, three, or four columns. Keep responsive column calculations in
+sync with that gutter; `FormGrid` budgets 32px per gap. Use `gap-8` on custom card
+containers and the same 2rem value in shared CSS. Card-internal controls, toolbar items,
+and continuous rows separated by dividers retain their own compact spacing.
+
 ## Route Context Ownership
 
 Hype remains a single SvelteKit application. Hub mini-apps and dashboards do not require

@@ -123,6 +123,6 @@
   .bits-theme .bits-form__parent-resource-list {
     display: flex;
     flex-direction: column;
-    gap: calc(var(--spacing) * 1.5);
+    gap: calc(var(--spacing) * 8);
   }
 }

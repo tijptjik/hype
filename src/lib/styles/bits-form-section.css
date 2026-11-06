@@ -15,7 +15,7 @@
     --bits-form-grid-spacer-left-cols: 2;
     --bits-form-grid-spacer-center-cols: 1;
     --bits-form-grid-spacer-right-cols: 1;
-    --bits-form-grid-spacer-gap: calc(var(--spacing) * 3);
+    --bits-form-grid-spacer-gap: calc(var(--spacing) * 8);
     @apply grid grid-cols-1;
     gap: var(--bits-form-grid-spacer-gap);
   }

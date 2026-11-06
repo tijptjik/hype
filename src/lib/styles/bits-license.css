@@ -1,7 +1,7 @@
 @layer components {
   .bits-theme .bits-license__cards {
     display: grid;
-    gap: 1rem;
+    gap: 2rem;
     width: 100%;
     min-width: 0;
   }

@@ -14,7 +14,7 @@
   }
 
   .bits-theme .bits-project-capabilities__list {
-    --bits-project-capability-grid-gap: calc(var(--spacing) * 3);
+    --bits-project-capability-grid-gap: calc(var(--spacing) * 8);
     display: grid;
     gap: var(--bits-project-capability-grid-gap);
     grid-template-columns: minmax(0, 1fr);
