@@ -39,3 +39,4 @@ export * from './hubRevision'
 export * from './adminResourceRevisionRollout'
 
 export * from './userResourceCheckpoint'
+export * from './featureBaselineAttribution'
