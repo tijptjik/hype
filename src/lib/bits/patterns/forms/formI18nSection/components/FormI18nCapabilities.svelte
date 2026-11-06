@@ -47,6 +47,7 @@ let {
     ])}
     {@const issues = field.issues()}
     <TextInput
+      variant="resource"
       label={capabilityKey}
       placeholder={capabilityLabels[capabilityKey]?.[locale] ?? ''}
       {locale}

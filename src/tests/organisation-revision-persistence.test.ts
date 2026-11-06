@@ -283,6 +283,151 @@ describe('organisation persisted history through application writes', () => {
     },
   )
 
+  it.each(
+    [false, true].flatMap(enrolled =>
+      ['missing', 'off', 'contributions', 'ready'].map(policyState => ({
+        enrolled,
+        policyState,
+      })),
+    ),
+  )(
+    'enables HKFoodWorks hub sign-in with history=$enrolled and policy=$policyState',
+    async ({ enrolled, policyState }) => {
+      const { db, sqlite } = fixture()
+      try {
+        sqlite.exec(
+          "UPDATE organisation SET code='hkfoodworks',modifiedAt='2026-01-01T00:00:00.000Z' WHERE id='o'",
+        )
+        sqlite.exec("INSERT INTO organisation(id,code) VALUES('unrelated','other')")
+        sqlite.exec(`INSERT INTO organisationUserPolicy(organisationId,enabled,hubSignIn,revision)
+          VALUES('unrelated',0,0,9)`)
+        if (policyState !== 'missing') {
+          sqlite.exec(`INSERT INTO organisationUserPolicy
+            (organisationId,enabled,hubSignIn,emailDomain,customCard,contribution,revision)
+            VALUES('o',${Number(policyState === 'ready')},${Number(policyState === 'ready')},
+              'breadline.hk',1,${Number(policyState === 'contributions')},7)`)
+        }
+        if (enrolled)
+          await updateOrganisationByIdWithConcurrency(db, {
+            ...patch,
+            actorId: 'editor',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            data: { ...patch.data, code: 'hkfoodworks' },
+          })
+        const before = sqlite
+          .prepare('SELECT * FROM organisationRevision ORDER BY rowid')
+          .all()
+        const roles = sqlite
+          .prepare('SELECT * FROM organisationRole ORDER BY rowid')
+          .all()
+        const outside = sqlite
+          .prepare("SELECT * FROM organisation WHERE id='unrelated'")
+          .get()
+        const migration = readFileSync(
+          'migrations/0195_hkfoodworks_hub_sign_in_users.sql',
+          'utf8',
+        )
+        sqlite.exec(`BEGIN; ${migration} COMMIT;`)
+        const policy = sqlite
+          .prepare("SELECT * FROM organisationUserPolicy WHERE organisationId='o'")
+          .get()!
+        expect(policy).toMatchObject({
+          enabled: 1,
+          hubSignIn: 1,
+          emailDomain: policyState === 'missing' ? null : 'breadline.hk',
+          customCard: Number(policyState !== 'missing'),
+          contribution: Number(policyState === 'contributions'),
+          revision: policyState === 'missing' ? 1 : policyState === 'ready' ? 7 : 8,
+        })
+        expect(
+          sqlite.prepare("SELECT * FROM organisation WHERE id='unrelated'").get(),
+        ).toEqual(outside)
+        expect(
+          sqlite
+            .prepare(
+              "SELECT enabled,hubSignIn,revision FROM organisationUserPolicy WHERE organisationId='unrelated'",
+            )
+            .get(),
+        ).toEqual({ enabled: 0, hubSignIn: 0, revision: 9 })
+        expect(
+          sqlite.prepare('SELECT * FROM organisationRole ORDER BY rowid').all(),
+        ).toEqual(roles)
+        const after = sqlite
+          .prepare('SELECT * FROM organisationRevision ORDER BY rowid')
+          .all()
+        expect(after.slice(0, before.length)).toEqual(before)
+        expect(after.length - before.length).toBe(
+          enrolled && policyState !== 'ready' ? 1 : 0,
+        )
+        if (enrolled) {
+          expect(JSON.parse(after.at(-1)!.content as string).userPolicy).toEqual({
+            enabled: true,
+            hubSignIn: true,
+            emailDomain: policy.emailDomain,
+            customCard: Boolean(policy.customCard),
+            ...(policy.contribution ? { contribution: true } : {}),
+          })
+        }
+        const state = snapshot(sqlite)
+        sqlite.exec(`BEGIN; ${migration} COMMIT;`)
+        expect(snapshot(sqlite)).toEqual(state)
+        expect(
+          sqlite.prepare('SELECT * FROM organisationRevision ORDER BY rowid').all(),
+        ).toEqual(after)
+        expect(sqlite.prepare('SELECT * FROM organisationRevisionWrite').all()).toEqual(
+          [],
+        )
+        // A normal edit must still match the migrated projection and may disable the rule.
+        const current = sqlite
+          .prepare("SELECT modifiedAt FROM organisation WHERE id='o'")
+          .get()!
+        await expect(
+          updateOrganisationByIdWithConcurrency(db, {
+            ...patch,
+            actorId: 'editor',
+            updatedAt: current.modifiedAt as string,
+            data: { ...patch.data, code: 'hkfoodworks' },
+            userPolicy: {
+              enabled: true,
+              hubSignIn: false,
+              emailDomain: policy.emailDomain as string | null,
+              customCard: Boolean(policy.customCard),
+              contribution: Boolean(policy.contribution),
+              revision: policy.revision as number,
+            },
+          }),
+        ).resolves.not.toBeNull()
+        expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+      } finally {
+        sqlite.close()
+      }
+    },
+  )
+
+  it('rejects an active writer during HKFoodWorks hub sign-in migration', () => {
+    const { sqlite } = fixture()
+    try {
+      sqlite.exec("UPDATE organisation SET code='hkfoodworks' WHERE id='o'")
+      sqlite.exec(
+        "INSERT INTO organisationRevisionWrite VALUES('o','active','next','baseline')",
+      )
+      const before = snapshot(sqlite)
+      sqlite.exec('BEGIN')
+      expect(() =>
+        sqlite.exec(
+          readFileSync('migrations/0195_hkfoodworks_hub_sign_in_users.sql', 'utf8'),
+        ),
+      ).toThrow()
+      sqlite.exec('ROLLBACK')
+      expect(snapshot(sqlite)).toEqual(before)
+      expect(
+        sqlite.prepare('SELECT token FROM organisationRevisionWrite').get(),
+      ).toEqual({ token: 'active' })
+    } finally {
+      sqlite.close()
+    }
+  })
+
   it.each([false, true])(
     'enables Ghost Signs contributions with existing policy=%s and preserves history',
     async existingPolicy => {

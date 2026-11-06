@@ -15,6 +15,17 @@ GitHub issues remain the public delivery record. Earlier local acceptance below 
 establish production readiness. This design supersedes the earlier
 insert-only/fresh-target limitation.
 
+### HKFoodWorks hub sign-in enrolment
+
+Refs #189. Forward migration `0195_hkfoodworks_hub_sign_in_users.sql` enables
+organisation users and Hub Sign-in for HKFoodWorks. Future sign-ins through its assigned
+hub add an independent organisation User grant through the existing sign-in flow;
+existing Member/Owner roles and other enrolment rules are preserved. The migration
+appends history for organisations already enrolled in revision tracking, invalidates
+stale forms, and makes no changes when both switches are already enabled. It does not
+backfill prior sign-ins. Migration preparation and tests do not establish that it has
+been applied to local, preview, or production databases.
+
 ### Admin profile editing
 
 Refs #189. `/admin/users/[username]` now uses a shared persisted audience predicate for
