@@ -12,11 +12,12 @@ let {
   imageLayout,
   onImageClick,
 }: IndexCardHeaderProps = $props()
-// Keep failures scoped to the current source so a refreshed preview can be tried again.
+// Keep failures scoped to the current source so a changed preview can be tried again.
 let failedSources = $state<string[]>([])
+// Compare URLs rather than array identity when a parent rebuilds the same card model.
+const sourceKey = $derived(JSON.stringify([imageSrc, ...imageFallbackSrcs]))
 $effect(() => {
-  imageSrc
-  imageFallbackSrcs
+  sourceKey
   failedSources = []
 })
 const displayedSrc = $derived(
