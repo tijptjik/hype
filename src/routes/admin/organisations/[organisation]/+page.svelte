@@ -1,21 +1,20 @@
 <script lang="ts">
+// SVELTE
+import { page } from '$app/state'
+import { untrack } from 'svelte'
+// THIRD-PARTY
+import { toast } from 'svelte-sonner'
 // HISTORY
 import OrganisationHistory from '#lib/bits/patterns/revisionHistory/OrganisationHistory.svelte'
 // ORGANISATION USERS
 import OrganisationUserSettings from '#lib/bits/patterns/organisationUsers/OrganisationUserSettings.svelte'
 import OrganisationUsers from '#lib/bits/patterns/organisationUsers/OrganisationUsers.svelte'
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
-import {
-  DEFAULT_ORGANISATION_USER_POLICY,
-  OrganisationUserPolicyFormSchema,
-} from '#lib/organisation-users/policy.js'
-import type { OrganisationUserPolicy } from '#lib/organisation-users/policy.js'
+import ResourceIndex from '#lib/bits/patterns/resource/resourceIndex/ResourceIndex.svelte'
 import { runRemoteQuery } from '#lib/remote/index.js'
 // MESSAGING
 import OrganisationMessaging from '#lib/bits/patterns/messaging/OrganisationMessaging.svelte'
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
-import { readChatAppearance, type ChatAppearance } from '#lib/messaging/appearance.js'
-import { readOrganisationSettingsForm } from '#lib/organisations/settings.js'
 // PROFILE
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 import {
@@ -23,32 +22,24 @@ import {
   translateText as translateCapabilityTexts,
 } from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
-import LocationVisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationVisibilitySelect.svelte'
-import type { RemoteForm, RemoteFormInput } from '$app/server'
-
-// SVELTE
-import { page } from '$app/state'
-
-import { untrack } from 'svelte'
-import type { StandardSchemaV1 } from '@standard-schema/spec'
+import OrganisationImageEditor from '#lib/bits/patterns/organisationEditor/OrganisationImageEditor.svelte'
+import OrganisationAdvancedSettings from '#lib/bits/patterns/organisationEditor/OrganisationAdvancedSettings.svelte'
 
 // I18N
 import { m } from '#lib/i18n.js'
-import { getLocale, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
+import { getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 import { canonicalContentTag, contentFormKey } from '#lib/i18n/contentRecords.js'
-// TOAST
-import { toast } from 'svelte-sonner'
 // PUBLICATION
 import { publicationPreviewUrl } from '#lib/publication/preview.js'
 import { canPreviewPublication } from '#lib/publication/permissions.js'
 // SERVICES
+import { toOrganisationFormInput } from '#lib/client/services/organisation.js'
 import { translateCapabilityLabels } from '#lib/client/services/capabilityTranslation.js'
 import {
   addUserRoleSelection,
   bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
-  createResourceFormConfig,
   focusFacetFromHash,
   getEditorCtrl,
   getUserRoleHiddenInputAttrs,
@@ -67,10 +58,6 @@ import {
   updateUserRoleSelection,
 } from '#lib/client/services/form.js'
 import { getNameForToast } from '#lib/client/services/resource.js'
-import {
-  getOrganisationSubmitUpdates,
-  toOrganisationFormInput,
-} from '#lib/client/services/organisation.js'
 import {
   addProjectPropertyForType,
   addProjectPropertyValue,
@@ -98,7 +85,6 @@ import {
   archiveOrganisation,
   getOrganisation,
   getOrganisations,
-  organisationForm,
   publishOrganisation,
 } from '#lib/api/organisation.remote.js'
 import {
@@ -120,14 +106,9 @@ import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
-import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
-import OrganisationPermissions from '#lib/bits/patterns/organisationUsers/OrganisationPermissions.svelte'
-import MultilingualDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/MultilingualDefaults.svelte'
-import type { MultilingualSettingKey } from '#lib/content-locales/settings.js'
 // CONTENT LOCALES
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
 import { contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
-import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { resolveContentLocales } from '#lib/content-locales/resolve.js'
 // BITS COMPONENTS
 import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
@@ -142,17 +123,16 @@ import {
   FormSpecifiersFields,
   FormUserRolesSection,
   Main,
-  ResourceViewer,
 } from '#lib/bits/index.js'
 import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ADAPTERS
+import {
+  useOrganisationEditorModel,
+  type OrganisationEditorFormInput,
+} from '#lib/adapters/organisation/useOrganisationEditorModel.svelte.js'
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // CLIENT SERVICES
 import { setOrganisationImagePresentationMode } from '#lib/client/services/image.js'
-// FACTORIES
-import { configureForm } from '#lib/factories.svelte.js'
-// COMPONENTS
-import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
@@ -163,11 +143,8 @@ import type { OrganisationFacet } from '#lib/navigation/index.js'
 // UTILS
 import { createSchemaRequiredInferer, toIssueMessages } from '#lib/utils/form-schema.js'
 // ICONS
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import VisibilityIcon from 'virtual:icons/lucide/eye'
-import Blend from 'virtual:icons/proicons/shape-intersect'
-import ImageIcon from 'virtual:icons/proicons/photo'
 import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
+import Blend from 'virtual:icons/proicons/shape-intersect'
 import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
 import Type from 'virtual:icons/proicons/text'
@@ -182,7 +159,7 @@ import {
   specifierComponentTypes,
 } from '#lib/client/services/fieldComponents.js'
 // TYPES
-import type { Locale, Id } from '#lib/types.js'
+import type { Id } from '#lib/types.js'
 
 import type { User } from '#lib/db/zod/schema/user.types.js'
 import type {
@@ -208,7 +185,6 @@ import type {
   CapabilityFormFields,
   CapabilitySearchOption,
 } from '#lib/bits/patterns/capabilities/organisationCapabilities/index.js'
-
 // TYPES
 import type { ImagePresentation } from '#lib/images/presentation.js'
 
@@ -324,172 +300,53 @@ const optimisticOrganisationData = $derived.by(() =>
   isCurrentRefLoaded ? organisation?.data : cachedOrganisationForRef,
 )
 
+// Feature scoping only needs the sidebar identity, not the loaded profile form.
+const featureOrganisationId = $derived(
+  optimisticOrganisationData?.id ??
+    adminCtx.view.getResourceByRefSync(FirstClassResource.organisation, organisationRef)
+      ?.id,
+)
+
 const organisationUsersEnabled = $derived(
   optimisticOrganisationData?.userPolicy?.enabled ?? false,
 )
 
 // § Form
 
-type OrganisationEditorFormInput = ReturnType<typeof toOrganisationFormInput>
-type OrganisationRemoteFormInput = RemoteFormInput & OrganisationEditorFormInput
-
-const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(() => ({
-  form: organisationForm as unknown as RemoteForm<
-    OrganisationRemoteFormInput,
-    { data: { id: string; modifiedAt: string } }
-  >,
-  ...createResourceFormConfig<OrganisationRemoteFormInput>({
-    formEl: contentsElement,
-    key: organisationRef,
-    schema: OrganisationPreflightFormData as unknown as StandardSchemaV1<
-      OrganisationRemoteFormInput,
-      unknown
-    >,
-    // Keep form source anchored to the committed entity snapshot so
-    // optimistic view-only entity tweaks (e.g. role UI rows) cannot
-    // rehydrate stale i18n values back into the live form.
-    data: toOrganisationFormInput(
-      committedOrganisation?.data,
-    ) as OrganisationRemoteFormInput,
-    submitUpdates: async ({ data }) =>
-      getOrganisationSubmitUpdates({
-        data,
-        locale: getLocale(),
-        organisationId: organisation?.data?.id,
-        entityQuery: getOrganisation({
-          ref: organisationRef,
-          refKey: 'code',
-          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-        }),
-        listQuery: getOrganisations({
-          conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
-          prisms: adminCtx.view.scope.prisms,
-          meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
-        }),
-      }),
-    adminCtx,
-    headerCtrl,
-    resourceType: FirstClassResource.organisation,
-    getEntity: () => organisation,
-    refreshResource: async ({ data, shouldRedirect }) => {
-      const submittedCode = data.data?.code?.trim() ?? ''
-      const refreshed = await refreshOrganisation(
-        shouldRedirect ? submittedCode : undefined,
-      )
-
-      commitSettledOrganisationState(refreshed)
-    },
-  }),
-}))
-
-const formCtx = $derived(configuredOrganisationForm())
+const editorModel = useOrganisationEditorModel({
+  adminCtx,
+  headerCtrl,
+  getRef: () => organisationRef,
+  getFormElement: () => contentsElement,
+  getCommitted: () => committedOrganisation,
+  getEntity: () => organisation,
+  isEditing: () => isEditing,
+  canSubmit: () => canSubmitOrganisation,
+  refresh: refreshOrganisation,
+  onRefreshed: commitSettledOrganisationState,
+  onChange: revalidateAfterProgrammaticChange,
+})
+const formCtx = $derived(editorModel.formCtx)
+const organisationSettingsPatch = $derived(editorModel.settings)
+const messagingAppearance = $derived(editorModel.messagingAppearance)
+const userPolicy = $derived(editorModel.userPolicy)
+const {
+  setMessagingAppearance,
+  setContentLocales,
+  setMultilingualDefaults,
+  setUserPolicy,
+  getHiddenOrganisationSettingsAttrs,
+  getHiddenUserPolicyAttrs,
+} = editorModel
 // Shared authoring defaults remain distinct from the descriptor form's UI locales.
 const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
-const organisationSettingsPatch = $derived(
-  readOrganisationSettingsForm(formCtx.form.fields.value().data?.settings),
-)
-const messagingAppearance = $derived(
-  organisationSettingsPatch.messagingAppearance ?? readChatAppearance(undefined),
-)
-
-/** Stage the background in the organisation form without issuing a separate write.
- * @param appearance Background being previewed in the Messaging facet.
- * @returns Nothing; the main Save, cancel and revision guard own this draft.
- */
-function setMessagingAppearance(appearance: ChatAppearance): void {
-  if (!isEditing || formCtx.submitting || !canSubmitOrganisation) return
-  updateFormData(
-    formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
-    data => {
-      data.settings = { ...organisationSettingsPatch, messagingAppearance: appearance }
-      return data
-    },
-  )
-  revalidateAfterProgrammaticChange()
-}
 const inheritedContentLocales = $derived(
   resolveContentLocales({ userLocale: getLocaleKey() }),
 )
-
-/**
- * Stage an explicit default order or reset marker in the existing remote form.
- * @param locales Ordered tags, or undefined to remove the stored override.
- * @returns Nothing; the normal form save owns persistence and authorization.
- */
-function setContentLocales(locales: string[] | undefined): void {
-  updateFormData(
-    formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
-    data => {
-      data.settings = {
-        ...organisationSettingsPatch,
-        contentLocales: locales ? normalizeContentLocales(locales) : null,
-      }
-      return data
-    },
-  )
-  revalidateAfterProgrammaticChange()
-}
-
-/** Stage independent multilingual defaults through the existing authorized settings form.
- * @param patch Explicit boolean overrides or null reset markers. @returns Nothing.
- */
-function setMultilingualDefaults(
-  patch: Partial<Record<MultilingualSettingKey, boolean | null>>,
-): void {
-  updateFormData(
-    formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
-    data => {
-      data.settings = { ...organisationSettingsPatch, ...patch }
-      return data
-    },
-  )
-  revalidateAfterProgrammaticChange()
-}
-
-/** Register shared settings for every facet without copying resolved defaults.
- * @returns Hidden field attributes for the existing settings transport.
- */
-function getHiddenOrganisationSettingsAttrs(): Record<string, unknown> {
-  const { as } = formCtx.form.fields.data.settings as unknown as {
-    as(type: 'hidden', value: string): Record<string, unknown>
-  }
-  return as('hidden', JSON.stringify(organisationSettingsPatch))
-}
-// User settings share the committed form baseline, dirty tracking, cancel and submission.
-const userPolicy = $derived.by((): OrganisationUserPolicy => {
-  const value = formCtx.form.fields.value().data?.userPolicy
-  const parsed = OrganisationUserPolicyFormSchema.safeParse(value)
-  return parsed.success && parsed.data
-    ? parsed.data
-    : { ...DEFAULT_ORGANISATION_USER_POLICY }
-})
 const organisationHubDomain = $derived(
   optimisticOrganisationData?.hub?.domain?.trim().toLowerCase() ?? null,
 )
 
-/** Stage Users settings in the organisation form.
- * @param patch Changed enrolment choices. @returns Nothing; the main Save owns persistence.
- */
-function setUserPolicy(patch: Partial<OrganisationUserPolicy>): void {
-  updateFormData(
-    formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
-    data => {
-      data.userPolicy = { ...userPolicy, ...patch }
-      return data
-    },
-  )
-  revalidateAfterProgrammaticChange()
-}
-
-/** Register Users settings with the main form transport.
- * @returns Hidden field attributes containing the current staged policy.
- */
-function getHiddenUserPolicyAttrs(): Record<string, unknown> {
-  const { as } = formCtx.form.fields.data.userPolicy as unknown as {
-    as(type: 'hidden', value: string): Record<string, unknown>
-  }
-  return as('hidden', JSON.stringify(userPolicy))
-}
 const isRequiredInPreflight = createSchemaRequiredInferer(OrganisationPreflightFormData)
 const isDirty = $derived(Boolean(formCtx.dirty))
 
@@ -624,7 +481,7 @@ const updatePropertyBase = (
 
 const updatePropertyI18n = (
   propertyId: Id,
-  locale: Locale,
+  locale: string,
   key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
   value: string | boolean,
 ): void => {
@@ -649,7 +506,7 @@ const addPropertyValue = (propertyId: Id): void => {
  * @param locale - Locale supplying the option labels.
  * @returns Nothing; updates option ranks in the form.
  */
-const sortPropertyValuesAlphabetically = (propertyId: Id, locale: Locale): void => {
+const sortPropertyValuesAlphabetically = (propertyId: Id, locale: string): void => {
   sortProjectPropertyValuesAlphabetically(
     organisationPropertyFormAdapter,
     propertyId,
@@ -676,7 +533,7 @@ const movePropertyValue = (propertyId: Id, valueId: Id, targetIndex: number): vo
 const updatePropertyValueI18n = (
   propertyId: Id,
   valueId: Id,
-  locale: Locale,
+  locale: string,
   key: 'value',
   value: string,
 ): void => {
@@ -734,7 +591,7 @@ const onTranslatePropertyLocale = async (
   return translated
 }
 
-const onResetPropertyLocale = (propertyId: Id, targetLocale: Locale): void => {
+const onResetPropertyLocale = (propertyId: Id, targetLocale: string): void => {
   resetProjectPropertyLocale(organisationPropertyFormAdapter, propertyId, targetLocale)
   revalidateAfterProgrammaticChange()
 }
@@ -1669,7 +1526,11 @@ $effect(() => {
     isReady={isFormReady}
   >
     {#snippet fallback()}
-      <Main.Facet isVisible={!isImagesFacet} class="right-0! left-0!" fillHeight={true}>
+      <Main.Facet
+        isVisible={!isImagesFacet && activeFacet !== 'features'}
+        class="right-0! left-0!"
+        fillHeight={true}
+      >
         {#if hasProfileLoadFailed}
           <FormSurface>
             <div role="alert" class="p-6">
@@ -1726,98 +1587,41 @@ $effect(() => {
       class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'advanced' }}
     >
-      <FormSurface>
-        <section class="flex min-h-0 flex-col gap-4 pb-6">
-          <div class="grid min-w-0 gap-y-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <section class="flex min-w-0 flex-col gap-4">
-              <SectionHeader
-                title={m.content_languages_heading()}
-                icon={LanguagesIcon}
-              />
-              <div
-                class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4"
-              >
-                <ContentLocaleDefaults
-                  organisationName={formCtx.form.fields.value().data?.i18n?.[
-                    getLocaleKey()
-                  ]?.nameShort || getNameForToast(organisation, 'nameShort')}
-                  {...{ scope: 'organisation' as const }}
-                  value={organisationSettingsPatch.contentLocales ?? undefined}
-                  inheritedLocales={inheritedContentLocales.locales}
-                  inheritedOrigin="user-default"
-                  options={localeOptions}
-                  disabled={!isEditing || formCtx.submitting}
-                  onChange={setContentLocales}
-                  issues={contentLocaleFormIssues(visibleAllIssues)}
-                />
-                <MultilingualDefaults
-                  {...{ scope: 'organisation' as const }}
-                  value={organisationSettingsPatch}
-                  disabled={!isEditing || formCtx.submitting}
-                  onChange={setMultilingualDefaults}
-                />
-              </div>
-            </section>
-            <section class="border-border flex min-w-0 flex-col gap-4 md:border-l">
-              <SectionHeader
-                title={m.content_visibility_heading()}
-                icon={VisibilityIcon}
-              />
-              <div
-                class="border-border bg-foreground/4 mx-6 flex min-h-14 min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border px-5 py-3"
-              >
-                <span class="text-sm font-semibold"
-                  >{m.organisation_location_visibility_default()}</span
-                >
-                <LocationVisibilitySelect
-                  value={formCtx.form.fields.value().data?.defaultLocationVisibility ??
-                    'shared'}
-                  disabled={!isEditing || formCtx.submitting}
-                  onChange={value =>
-                    updateFormData(capabilityFormUpdater, data => {
-                      data.defaultLocationVisibility = value
-                      return data
-                    })}
-                />
-                <input
-                  {...formCtx.form.fields.data.defaultLocationVisibility.as(
-                    'hidden',
-                    formCtx.form.fields.value().data?.defaultLocationVisibility ??
-                      'shared',
-                  )}
-                >
-              </div>
-            </section>
-          </div>
-          <SectionHeader
-            title={m.organisation_permissions_heading()}
-            icon={ShieldIcon}
-          />
-          <div class="mx-6 min-w-0">
-            <OrganisationPermissions
-              permitted={formCtx.form.fields.value().data?.permitUserDetailsEdit ===
-                true}
-              canManage={adminCtx.view.isSuperAdmin()}
-              disabled={!isEditing || formCtx.submitting}
-              onChange={permitted =>
-                updateFormData(capabilityFormUpdater, data => {
-                  data.permitUserDetailsEdit = permitted
-                  return data
-                })}
-            />
-            {#if adminCtx.view.isSuperAdmin()}
-              <input
-                {...formCtx.form.fields.data.permitUserDetailsEdit.as(
-                  'hidden',
-                  String(
-                    formCtx.form.fields.value().data?.permitUserDetailsEdit === true,
-                  ),
-                )}
-              >
-            {/if}
-          </div>
-        </section>
-      </FormSurface>
+      <OrganisationAdvancedSettings
+        name={formCtx.form.fields.value().data?.i18n?.[getLocaleKey()]?.nameShort ||
+          getNameForToast(organisation, 'nameShort')}
+        settings={organisationSettingsPatch}
+        inheritedLocales={inheritedContentLocales.locales}
+        options={localeOptions}
+        disabled={!isEditing || formCtx.submitting}
+        issues={contentLocaleFormIssues(visibleAllIssues)}
+        onContentLocalesChange={setContentLocales}
+        onMultilingualDefaultsChange={setMultilingualDefaults}
+        visibility={formCtx.form.fields.value().data?.defaultLocationVisibility ??
+          'shared'}
+        visibilityAttrs={formCtx.form.fields.data.defaultLocationVisibility.as(
+          'hidden',
+          formCtx.form.fields.value().data?.defaultLocationVisibility ?? 'shared',
+        )}
+        onVisibilityChange={value =>
+          updateFormData(capabilityFormUpdater, data => {
+            data.defaultLocationVisibility = value
+            return data
+          })}
+        permitted={formCtx.form.fields.value().data?.permitUserDetailsEdit === true}
+        canManagePermissions={adminCtx.view.isSuperAdmin()}
+        permissionAttrs={adminCtx.view.isSuperAdmin()
+          ? formCtx.form.fields.data.permitUserDetailsEdit.as(
+              'hidden',
+              String(formCtx.form.fields.value().data?.permitUserDetailsEdit === true),
+            )
+          : undefined}
+        onPermissionChange={value =>
+          updateFormData(capabilityFormUpdater, data => {
+            data.permitUserDetailsEdit = value
+            return data
+          })}
+      />
     </Main.Facet>
     <Main.Facet
       isVisible={isCoreFacet}
@@ -1939,28 +1743,11 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
     <Main.Facet
-      isVisible={activeFacet === 'features'}
-      fillHeight={true}
-      edgeToEdge={true}
-      contentClass="h-full overflow-hidden"
-      attrs={{ 'data-facet-id': 'features' }}
-    >
-      {#if activeFacet === 'features' && optimisticOrganisationData?.id}
-        {#key optimisticOrganisationData.id}
-          <ScopedFeatureIndex
-            embedded
-            resourceType="organisation"
-            resourceId={optimisticOrganisationData.id}
-          />
-        {/key}
-      {/if}
-    </Main.Facet>
-    <Main.Facet
       isVisible={activeFacet === 'users' &&
         canEditOrganisation &&
         organisationUsersEnabled}
       fillHeight={true}
-      class="right-0! left-0!"
+      edgeToEdge={true}
       attrs={{ 'data-facet-id': 'users' }}
     >
       {#if activeFacet === 'users' &&
@@ -2052,6 +1839,42 @@ $effect(() => {
     </Main.Facet>
   </Main.Form>
   <Main.Facet
+    isVisible={activeFacet === 'features'}
+    fillHeight={true}
+    edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
+    attrs={{ 'data-facet-id': 'features' }}
+  >
+    {#if activeFacet === 'features' && featureOrganisationId}
+      {#key featureOrganisationId}
+        <ScopedFeatureIndex
+          embedded
+          resourceType="organisation"
+          resourceId={featureOrganisationId}
+        />
+      {/key}
+    {:else if activeFacet === 'features'}
+      {#if hasProfileLoadFailed}
+        <div role="alert" class="p-6 text-sm">
+          <p>{m.admin__forms_profile_load_failed()}</p>
+          <button
+            type="button"
+            class="border-border mt-4 rounded-lg border px-4 py-2"
+            onclick={retryOrganisationLoad}
+          >
+            {m.retry()}
+          </button>
+        </div>
+      {:else}
+        <ResourceIndex
+          resource={FirstClassResource.feature}
+          entities={[]}
+          isInitialised={false}
+        />
+      {/if}
+    {/if}
+  </Main.Facet>
+  <Main.Facet
     isVisible={isMessagingFacet && canManageMessaging}
     class="right-0! left-0!"
     transition="fade"
@@ -2079,50 +1902,16 @@ $effect(() => {
     contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    <FormSurface class="mb-0! flex h-full min-h-0 flex-col">
-      <SectionHeader
-        icon={ImageIcon}
-        title={m.admin__forms_organisation_image_title()}
-        class="shrink-0"
-      />
-      <div class="min-h-0 flex-1">
-        {#if !isFormReady && !hasProfileLoadFailed}
-          <section
-            aria-label={m.resource_loading()}
-            aria-busy="true"
-            class="h-full p-6"
-          >
-            <Skeleton class="h-full min-h-64 w-full rounded-xl" />
-          </section>
-        {:else if hasProfileLoadFailed}
-          <div role="alert" class="text-muted-foreground p-6 text-sm">
-            <p>{m.admin__forms_profile_load_failed()}</p>
-            <button
-              type="button"
-              class="border-border hover:bg-raised mt-4 rounded-lg border px-4 py-2"
-              onclick={retryOrganisationLoad}
-            >
-              {m.retry()}
-            </button>
-          </div>
-        {:else if imageProviderProps.isValid}
-          <ImageProvider model={imageProviderModel}>
-            <ResourceViewer
-              workspace
-              canEditPresentationMode={canEditImagePresentationMode}
-              canEditDropzone={canEditImageDropzone}
-              {onPresentationModeCommitted}
-            />
-          </ImageProvider>
-        {:else}
-          <div
-            class="text-base-content/65 flex h-full w-full items-center justify-center p-6 text-center text-sm"
-          >
-            {m.admin__forms_organisation_image_save_hint()}
-          </div>
-        {/if}
-      </div>
-    </FormSurface>
+    <OrganisationImageEditor
+      {isFormReady}
+      {hasProfileLoadFailed}
+      isValid={imageProviderProps.isValid}
+      model={imageProviderModel}
+      {canEditImagePresentationMode}
+      {canEditImageDropzone}
+      {retryOrganisationLoad}
+      {onPresentationModeCommitted}
+    />
   </Main.Facet>
 </Main.Root>
 
