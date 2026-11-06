@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { onMount, untrack } from 'svelte'
+// BITS COMPONENTS
+import { Button } from '#lib/bits/core/index.js'
 // COMPONENTS
 import ChangelogValue from './components/ChangelogValue.svelte'
 import HistoryTimestamp from './components/HistoryTimestamp.svelte'
@@ -12,6 +14,7 @@ import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
 import Header from '#lib/bits/custom/header/Header.svelte'
 import { VirtualList } from '#lib/bits/custom/index/src/index.js'
 // ICONS
+import MetadataIcon from 'virtual:icons/proicons/database'
 import HistoryIcon from 'virtual:icons/proicons/history'
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 import FilterIcon from 'virtual:icons/proicons/filter'
@@ -71,6 +74,8 @@ let nextCursor = $state<ChangelogCursor | null>(null)
 let visibleEnd = $state(0)
 let feedVersion = $state(0)
 let expanded = $state<Record<string, boolean>>({})
+let imageMetadata = $state<Record<string, boolean>>({})
+const metadataPrefix = $props.id()
 let expandByDefault = $state(false)
 const allCollapsed = $derived(
   !entries.some(entry => expanded[entry.key] ?? expandByDefault),
@@ -134,6 +139,7 @@ async function load(reset = false, refreshOptions = false): Promise<void> {
     nextCursor = null
     visibleEnd = 0
     expanded = {}
+    imageMetadata = {}
     expandByDefault = false
     feedVersion++
   }
@@ -574,52 +580,101 @@ $effect(() => {
                         </p>
                       {/if}
                       {#each entry.changes as change}
+                        {@const metadataKey = JSON.stringify([entry.key, change.path])}
+                        {@const metadataId =
+                          metadataPrefix + encodeURIComponent(metadataKey)}
+                        {@const hasImage =
+                          ['imageId', 'imageRevisionId'].includes(
+                            change.path.at(-1) ?? '',
+                          ) ||
+                          [change.before, change.after].some(
+                            slot =>
+                              slot.present &&
+                              slot.value &&
+                              typeof slot.value === 'object' &&
+                              !Array.isArray(slot.value) &&
+                              typeof slot.value.imageId === 'string',
+                          )}
                         <section
                           class="border-border bg-panel min-w-0 overflow-hidden rounded-md border"
                           aria-label={changeFieldLabel(entry, change.path)}
                         >
-                          <dl
-                            class="border-border bg-muted/30 flex min-w-0 flex-wrap gap-y-2 border-b px-4 py-3"
-                            style:column-gap="48px"
-                            data-changelog-change-heading
-                          >
-                            <div
-                              class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1"
+                          <div class="relative">
+                            <dl
+                              class="border-border bg-muted/30 flex min-w-0 flex-wrap gap-y-2 border-b px-4 py-3 pr-14"
+                              style:column-gap="48px"
+                              data-changelog-change-heading
                             >
-                              <dt class="text-muted-foreground text-xs font-medium">
-                                Field
-                              </dt>
-                              <dd
-                                class="min-w-0 font-medium break-words"
-                                data-tooltip={entry.resourceType === 'property'
-                                  ? entry.resourceId
-                                  : undefined}
+                              <div
+                                class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1"
                               >
-                                {changeFieldLabel(entry, change.path)}
-                              </dd>
-                            </div>
-                            <div
-                              class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1"
-                            >
-                              <dt class="text-muted-foreground text-xs font-medium">
-                                Action
-                              </dt>
-                              <dd class="font-medium break-words">
-                                {historyOperation(change, entry.category === 'fields')
-                                  .label}
-                              </dd>
-                            </div>
-                          </dl>
+                                <dt class="text-muted-foreground text-xs font-medium">
+                                  Field
+                                </dt>
+                                <dd
+                                  class="min-w-0 font-medium break-words"
+                                  data-tooltip={entry.resourceType === 'property'
+                                    ? entry.resourceId
+                                    : undefined}
+                                >
+                                  {changeFieldLabel(entry, change.path)}
+                                </dd>
+                              </div>
+                              <div
+                                class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1"
+                              >
+                                <dt class="text-muted-foreground text-xs font-medium">
+                                  Action
+                                </dt>
+                                <dd class="font-medium break-words">
+                                  {historyOperation(change, entry.category === 'fields')
+                                    .label}
+                                </dd>
+                              </div>
+                            </dl>
+                            {#if hasImage}
+                              <Button
+                                text="Image metadata"
+                                iconComponent={MetadataIcon}
+                                iconClasses="size-4! [&_svg]:size-4!"
+                                hideLabel
+                                hideLabelInstantly
+                                style="ghost"
+                                color="neutral"
+                                class="absolute top-3 right-3 size-9! p-0!"
+                                attrs={{
+                                  'aria-expanded': imageMetadata[metadataKey] ?? false,
+                                  'aria-pressed': imageMetadata[metadataKey] ?? false,
+                                  'aria-controls': metadataId,
+                                }}
+                                onClick={() => {
+                                  imageMetadata[metadataKey] =
+                                    !imageMetadata[metadataKey]
+                                }}
+                              />
+                            {/if}
+                          </div>
                           <div
+                            id={metadataId}
                             class="grid min-w-0 items-start gap-4 p-4 @[36rem]:grid-cols-2"
                           >
                             <div class="min-w-0">
                               <p class="text-muted-foreground mb-1 text-xs">Before</p>
-                              <ChangelogValue {entry} {change} side="before" />
+                              <ChangelogValue
+                                {entry}
+                                {change}
+                                side="before"
+                                metadataOpen={imageMetadata[metadataKey] ?? false}
+                              />
                             </div>
                             <div class="min-w-0">
                               <p class="text-muted-foreground mb-1 text-xs">After</p>
-                              <ChangelogValue {entry} {change} side="after" />
+                              <ChangelogValue
+                                {entry}
+                                {change}
+                                side="after"
+                                metadataOpen={imageMetadata[metadataKey] ?? false}
+                              />
                             </div>
                           </div>
                         </section>

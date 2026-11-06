@@ -11,13 +11,14 @@ let {
   entry,
   change,
   side,
+  metadataOpen = false,
 }: {
   entry: ChangelogEntry
   change: RevisionDifference
   side: 'before' | 'after'
+  metadataOpen?: boolean
 } = $props()
 const slot = $derived(change[side])
-
 /** Read an immutable image pin without interpreting arbitrary text as an image.
  * @param value Privacy-filtered historical value.
  * @returns Image identity and revision when explicitly recorded together.
@@ -94,15 +95,16 @@ let loadedSource = $state<string | null>(null)
       >
     </div>
   {/key}
-  <details class="text-muted-foreground mt-2 text-xs">
-    <summary class="w-fit cursor-pointer">Image reference</summary>
-    <div class="mt-2"><HistoryValue {slot} /></div>
-  </details>
+  {#if metadataOpen}
+    <div class="text-muted-foreground mt-2 text-xs"><HistoryValue {slot} /></div>
+  {/if}
 {:else}
   {#if image}
     <p class="text-muted-foreground mb-2 text-xs">
       {src ? 'Historical image unavailable' : 'Exact historical preview unavailable'}
     </p>
   {/if}
-  <HistoryValue {slot} path={change.path} />
+  {#if !image || metadataOpen}
+    <HistoryValue {slot} path={change.path} />
+  {/if}
 {/if}
