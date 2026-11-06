@@ -14,6 +14,10 @@ export interface SearchResultMap<T> {
 }
 
 export interface SearchProps<T> {
+  /** Place results in normal flow when Search is already inside a popover. */
+  resultsLayout?: 'overlay' | 'inline'
+  /** Classes applied directly to the input bar. */
+  barClass?: string
   placeholder?: string
   minChars?: number
   focusOnMount?: boolean

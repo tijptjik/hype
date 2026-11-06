@@ -29,6 +29,8 @@ let {
   onResultsVisibilityChange,
   resultMap,
   class: className = '',
+  resultsLayout = 'overlay',
+  barClass = '',
 }: SearchProps<T> = $props()
 
 let query = $state('')
@@ -259,6 +261,7 @@ $effect(() => {
 >
   <SearchPrimitive.SearchBar
     bind:query
+    class={barClass}
     {placeholder}
     focusOnMount={focusOnMount && mountTransitionDuration <= 0}
     {isLoading}
@@ -269,7 +272,9 @@ $effect(() => {
   />
 
   {#if areResultsVisible}
-    <SearchPrimitive.ResultWrapper class="bits-search__results mx-[5%]">
+    <SearchPrimitive.ResultWrapper
+      class={resultsLayout === 'inline' ? 'mt-2' : 'bits-search__results mx-[5%]'}
+    >
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
           <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
@@ -304,7 +309,9 @@ $effect(() => {
       </div>
     </SearchPrimitive.ResultWrapper>
   {:else if shouldShowEmptyState}
-    <SearchPrimitive.ResultWrapper class="bits-search__results mx-[5%]">
+    <SearchPrimitive.ResultWrapper
+      class={resultsLayout === 'inline' ? 'mt-2' : 'bits-search__results mx-[5%]'}
+    >
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
           <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">

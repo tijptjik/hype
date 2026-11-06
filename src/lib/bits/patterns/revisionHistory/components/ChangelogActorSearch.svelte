@@ -80,7 +80,9 @@ async function searchActors(query: string): Promise<Actor[]> {
           actor.username ? `@${actor.displayUsername || actor.username}` : null,
       }}
       noResultsText="No matching actors in this changelog."
-      class={String.raw`w-full [&_.bits-search-bar]:mb-0 [&_.bits-search\_\_results]:static! [&_.bits-search\_\_results]:mx-0! [&_.bits-search\_\_results]:mt-2! [&_.bits-search\_\_results]:px-0!`}
+      resultsLayout="inline"
+      barClass="mb-0"
+      class="w-full"
       onSelect={actor => {
         onChange({ id: actor.id, origin: actor.origin })
         open = false
