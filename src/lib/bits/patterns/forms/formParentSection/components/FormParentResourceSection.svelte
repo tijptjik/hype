@@ -32,9 +32,11 @@ let {
   subtitle,
   issues = [],
   subHeader,
+  headerActions,
   parent,
   fallbackImage = null,
   wrapTitle = false,
+  getSearchFallbackImage,
   hiddenInputAttrs = null,
   isEditing = true,
   isSubmitting = false,
@@ -229,7 +231,9 @@ $effect(() => {
             image: (item: TItem) =>
               getImageSrc(item.image, {
                 transformation: 'c_fill,h_256,w_256',
-              }),
+              }) ??
+              getSearchFallbackImage?.(item) ??
+              null,
             title: (item: TItem) => item.i18n?.en?.name || item.code,
             descriminator: (item: TItem) => item.code ?? null,
           }}
@@ -267,6 +271,7 @@ $effect(() => {
       {/snippet}
       {#snippet right()}
         {@render parentSearch()}
+        {@render headerActions?.()}
         {#if isEditing && !isSearchActive}
           <div
             class="bits-form__parent-resource-header-actions flex flex-row items-center justify-end gap-0"

@@ -10,10 +10,12 @@ export interface FormParentResourceSectionProps<TItem extends ParentSectionItemB
   subtitle?: string
   issues?: string[]
   subHeader?: Snippet<[FormParentSectionHeaderContext]>
+  headerActions?: Snippet
   parent: TItem | null
   fallbackImage?: string | null
   /** Wrap long parent names within compact selector columns. */
   wrapTitle?: boolean
+  getSearchFallbackImage?: (item: TItem) => string | null
   hiddenInputAttrs?: Record<string, unknown> | null
   isEditing?: boolean
   isSubmitting?: boolean

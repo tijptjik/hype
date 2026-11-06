@@ -22,6 +22,7 @@ export interface ParentSectionProjectItem extends ParentSectionItemBase {
 }
 
 export interface ParentSectionLayerItem extends ParentSectionItemBase {
+  metadata?: import('#lib/db/zod/schema/layerMetadata.types.js').LayerMetadata
   organisationId: string
   projectId: string
 }
@@ -45,10 +46,12 @@ export interface FormParentSectionProps<
   subtitle?: string
   issues?: string[]
   subHeader?: Snippet<[FormParentSectionHeaderContext]>
+  headerActions?: Snippet
   parent: TItem | null
   fallbackImage?: string | null
   /** Wrap long parent names within compact selector columns. */
   wrapTitle?: boolean
+  getSearchFallbackImage?: (item: TItem) => string | null
   hiddenInputAttrs?: Record<string, unknown> | null
   isEditing?: boolean
   isSubmitting?: boolean
