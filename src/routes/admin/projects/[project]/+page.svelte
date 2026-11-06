@@ -3566,7 +3566,11 @@ $effect(() => {
   >
     {#if activeFacet === 'features' && project?.data?.id}
       {#key project.data.id}
-        <ScopedFeatureIndex resourceType="project" resourceId={project.data.id} />
+        <ScopedFeatureIndex
+          embedded
+          resourceType="project"
+          resourceId={project.data.id}
+        />
       {/key}
     {/if}
   </Main.Facet>
