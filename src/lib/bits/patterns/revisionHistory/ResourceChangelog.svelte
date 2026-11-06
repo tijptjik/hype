@@ -2,7 +2,7 @@
 // SVELTE
 import { onMount, untrack } from 'svelte'
 // COMPONENTS
-import HistoryValue from './components/HistoryValue.svelte'
+import ChangelogValue from './components/ChangelogValue.svelte'
 import ChangelogEntryHeader from './components/ChangelogEntryHeader.svelte'
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import ChangelogFiltersBar from './components/ChangelogFilters.svelte'
@@ -577,11 +577,11 @@ $effect(() => {
                           >
                             <div class="min-w-0">
                               <p class="text-muted-foreground mb-1 text-xs">Before</p>
-                              <HistoryValue slot={change.before} />
+                              <ChangelogValue {entry} {change} side="before" />
                             </div>
                             <div class="min-w-0">
                               <p class="text-muted-foreground mb-1 text-xs">After</p>
-                              <HistoryValue slot={change.after} />
+                              <ChangelogValue {entry} {change} side="after" />
                             </div>
                           </div>
                         </section>

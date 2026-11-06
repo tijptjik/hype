@@ -22,6 +22,7 @@ let scope = $state('first')
 let requests = $state<string[]>([])
 let failContinuation = new URLSearchParams(window.location.search).has('failure')
 const slow = new URLSearchParams(window.location.search).has('slow')
+const imageCheck = new URLSearchParams(window.location.search).has('images')
 const translation = new URLSearchParams(window.location.search).has('translation')
 const sparse = new URLSearchParams(window.location.search).has('sparse')
 const boundaries = new URLSearchParams(window.location.search).has('boundaries')
@@ -114,29 +115,53 @@ async function loadPage(
       unpublished: false,
       redacted: false,
       changes:
-        translation && index + i === 0
+        imageCheck && index + i === 0
           ? [
               {
-                path: ['i18n', 'fr'],
+                path: ['logo'],
                 before: { present: false },
                 after: {
                   present: true,
                   value: {
-                    name: 'Enseignes historiques de Hong Kong',
-                    nameShort: 'Enseignes HK',
-                    description:
-                      'Exemple synthétique pour examiner les changements multilingues.',
+                    imageId: 'fixture-image',
+                    imageRevisionId: 'fixture-revision',
                   },
                 },
               },
-            ]
-          : [
               {
-                path: ['i18n', 'en', 'name'],
-                before: { present: true, value: 'Previous name' },
-                after: { present: true, value: 'Changed name' },
+                path: ['settings', 'imageId'],
+                before: { present: true, value: 'legacy-image' },
+                after: { present: true, value: 'fixture-image' },
               },
-            ],
+              {
+                path: ['logo', 'imageRevisionId'],
+                before: { present: false },
+                after: { present: true, value: 'unavailable-revision' },
+              },
+            ]
+          : translation && index + i === 0
+            ? [
+                {
+                  path: ['i18n', 'fr'],
+                  before: { present: false },
+                  after: {
+                    present: true,
+                    value: {
+                      name: 'Enseignes historiques de Hong Kong',
+                      nameShort: 'Enseignes HK',
+                      description:
+                        'Exemple synthétique pour examiner les changements multilingues.',
+                    },
+                  },
+                },
+              ]
+            : [
+                {
+                  path: ['i18n', 'en', 'name'],
+                  before: { present: true, value: 'Previous name' },
+                  after: { present: true, value: 'Changed name' },
+                },
+              ],
     }),
   )
   return {

@@ -132,3 +132,9 @@ before candidate pagination. Action predicates apply after privacy-aware compari
 sparse filtered page still advances the raw cursor. Hidden differences never affect
 action membership, and search never inspects historical field values. Filter changes
 cancel stale requests and debounce new reads; continuations retain the filter snapshot.
+
+Image values with immutable revision evidence render previews through the existing
+authorized revision-delivery route. Matching image IDs may reuse a pin from the same
+side of the same change. Image references remain available in a disclosure. Legacy IDs
+without pins and failed image loads retain readable evidence with an unavailable preview
+message; they never substitute the current image for a historical version.
