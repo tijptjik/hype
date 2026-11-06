@@ -65,7 +65,7 @@ const differs = $derived(
       <button
         type="button"
         aria-label={m.content_languages_reset()}
-        title={m.content_languages_reset()}
+        data-tooltip={m.content_languages_reset()}
         disabled={!differs}
         tabindex={differs ? 0 : -1}
         aria-hidden={!differs}

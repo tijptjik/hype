@@ -30,7 +30,7 @@ const id = $props.id()
 </script>
 
 <div
-  class="flex min-w-0 self-start flex-col divide-y divide-border/20 rounded-xl border border-border bg-foreground/4 px-5"
+  class="divide-border/20 border-border bg-foreground/4 flex min-w-0 flex-col divide-y self-start rounded-xl border px-5"
 >
   {#each MULTILINGUAL_SETTING_KEYS as key}
     {@const overridden = typeof value[key] === 'boolean'}
@@ -43,7 +43,7 @@ const id = $props.id()
             : m.address_multilingual_default()}</label
         >
         {#if scope === 'project'}
-          <p class="mt-1 text-xs text-muted-foreground">
+          <p class="text-muted-foreground mt-1 text-xs">
             {overridden
               ? m.content_languages_project()
               : m.content_languages_inherited()}
@@ -59,8 +59,8 @@ const id = $props.id()
             aria-hidden={!differs}
             style:opacity={differs ? 1 : 0}
             aria-label={m.content_languages_reset()}
-            title={m.content_languages_reset()}
-            class="flex size-9 transition-opacity duration-200 motion-reduce:transition-none disabled:pointer-events-none items-center justify-center rounded text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+            data-tooltip={m.content_languages_reset()}
+            class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-9 items-center justify-center rounded transition-opacity duration-200 focus-visible:outline-2 disabled:pointer-events-none motion-reduce:transition-none"
             onclick={() => onChange({ [key]: null })}
           >
             <ResetIcon class="size-4" aria-hidden="true" />

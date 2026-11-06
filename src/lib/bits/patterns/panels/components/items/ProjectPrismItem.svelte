@@ -44,7 +44,7 @@ const primaryActionLabel = $derived(
 </script>
 
 <div
-  class="group flex items-center gap-3 bg-panel py-2 pr-4"
+  class="group bg-panel flex items-center gap-3 py-2 pr-4"
   data-prism-active={isPrismActive}
   in:slide={{ axis: 'y', duration: 200 }}
   out:slide={{ axis: 'y', duration: 200 }}
@@ -75,7 +75,9 @@ const primaryActionLabel = $derived(
     aria-label={isPrismActive
       ? `Remove ${name} project prism`
       : `Add ${name} project prism`}
-    title={isPrismActive ? `Remove ${name} project prism` : `Add ${name} project prism`}
+    data-tooltip={isPrismActive
+      ? `Remove ${name} project prism`
+      : `Add ${name} project prism`}
     onclick={onTogglePrism}
   >
     <Icon
