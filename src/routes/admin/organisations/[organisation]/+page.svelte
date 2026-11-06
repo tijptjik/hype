@@ -164,6 +164,7 @@ import type { OrganisationFacet } from '#lib/navigation/index.js'
 import { createSchemaRequiredInferer, toIssueMessages } from '#lib/utils/form-schema.js'
 // ICONS
 import LanguagesIcon from 'virtual:icons/lucide/languages'
+import VisibilityIcon from 'virtual:icons/lucide/eye'
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
@@ -1727,63 +1728,71 @@ $effect(() => {
     >
       <FormSurface>
         <section class="flex min-h-0 flex-col gap-4 pb-6">
-          <SectionHeader title={m.project_advanced()} />
-          <div class="mx-6 min-w-0">
-            <h2 class="mb-3 flex items-center gap-2 text-base font-semibold">
-              <LanguagesIcon class="size-5" aria-hidden="true" />
-              {m.content_languages_heading()}
-            </h2>
-            <div
-              class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4"
-            >
-              <ContentLocaleDefaults
-                organisationName={formCtx.form.fields.value().data?.i18n?.[
-                  getLocaleKey()
-                ]?.nameShort || getNameForToast(organisation, 'nameShort')}
-                {...{ scope: 'organisation' as const }}
-                value={organisationSettingsPatch.contentLocales ?? undefined}
-                inheritedLocales={inheritedContentLocales.locales}
-                inheritedOrigin="user-default"
-                options={localeOptions}
-                disabled={!isEditing || formCtx.submitting}
-                onChange={setContentLocales}
-                issues={contentLocaleFormIssues(visibleAllIssues)}
+          <div class="grid min-w-0 gap-y-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <section class="flex min-w-0 flex-col gap-4">
+              <SectionHeader
+                title={m.content_languages_heading()}
+                icon={LanguagesIcon}
               />
-              <MultilingualDefaults
-                {...{ scope: 'organisation' as const }}
-                value={organisationSettingsPatch}
-                disabled={!isEditing || formCtx.submitting}
-                onChange={setMultilingualDefaults}
+              <div
+                class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4"
+              >
+                <ContentLocaleDefaults
+                  organisationName={formCtx.form.fields.value().data?.i18n?.[
+                    getLocaleKey()
+                  ]?.nameShort || getNameForToast(organisation, 'nameShort')}
+                  {...{ scope: 'organisation' as const }}
+                  value={organisationSettingsPatch.contentLocales ?? undefined}
+                  inheritedLocales={inheritedContentLocales.locales}
+                  inheritedOrigin="user-default"
+                  options={localeOptions}
+                  disabled={!isEditing || formCtx.submitting}
+                  onChange={setContentLocales}
+                  issues={contentLocaleFormIssues(visibleAllIssues)}
+                />
+                <MultilingualDefaults
+                  {...{ scope: 'organisation' as const }}
+                  value={organisationSettingsPatch}
+                  disabled={!isEditing || formCtx.submitting}
+                  onChange={setMultilingualDefaults}
+                />
+              </div>
+            </section>
+            <section class="border-border flex min-w-0 flex-col gap-4 md:border-l">
+              <SectionHeader
+                title={m.content_visibility_heading()}
+                icon={VisibilityIcon}
               />
-            </div>
+              <div
+                class="border-border bg-foreground/4 mx-6 flex min-h-14 min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border px-5 py-3"
+              >
+                <span class="text-sm font-semibold"
+                  >{m.organisation_location_visibility_default()}</span
+                >
+                <LocationVisibilitySelect
+                  value={formCtx.form.fields.value().data?.defaultLocationVisibility ??
+                    'shared'}
+                  disabled={!isEditing || formCtx.submitting}
+                  onChange={value =>
+                    updateFormData(capabilityFormUpdater, data => {
+                      data.defaultLocationVisibility = value
+                      return data
+                    })}
+                />
+                <input
+                  {...formCtx.form.fields.data.defaultLocationVisibility.as(
+                    'hidden',
+                    formCtx.form.fields.value().data?.defaultLocationVisibility ??
+                      'shared',
+                  )}
+                >
+              </div>
+            </section>
           </div>
-          <h2 class="mx-6 mt-2 text-base font-semibold">
-            {m.content_visibility_heading()}
-          </h2>
-          <div
-            class="border-border bg-foreground/4 mx-6 flex min-h-14 items-center justify-between rounded-lg border px-5 py-3"
-          >
-            <span class="text-sm font-semibold"
-              >{m.organisation_location_visibility_default()}</span
-            >
-            <LocationVisibilitySelect
-              value={formCtx.form.fields.value().data?.defaultLocationVisibility ??
-                'shared'}
-              disabled={!isEditing || formCtx.submitting}
-              onChange={value =>
-                updateFormData(capabilityFormUpdater, data => {
-                  data.defaultLocationVisibility = value
-                  return data
-                })}
-            />
-            <input
-              {...formCtx.form.fields.data.defaultLocationVisibility.as(
-                'hidden',
-                formCtx.form.fields.value().data?.defaultLocationVisibility ?? 'shared',
-              )}
-            >
-          </div>
-          <SectionHeader title={m.organisation_permissions_heading()} />
+          <SectionHeader
+            title={m.organisation_permissions_heading()}
+            icon={ShieldIcon}
+          />
           <div class="mx-6 min-w-0">
             <OrganisationPermissions
               permitted={formCtx.form.fields.value().data?.permitUserDetailsEdit ===
