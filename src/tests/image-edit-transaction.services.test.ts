@@ -1,7 +1,8 @@
 // TESTS
 import { describe, expect, it, vi } from 'vitest'
 // DRIZZLE
-import { getTableColumns } from 'drizzle-orm'
+import { getTableColumns, sql } from 'drizzle-orm'
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
 // DB
 import { featureImage, image } from '#lib/db/schema/image.js'
 import {
@@ -15,6 +16,7 @@ import { ImageContextResource } from '#lib/enums.js'
 import { deleteImageWithEvidence } from '#lib/db/services/imageDeletion.js'
 import { commitTaskImageReview } from '#lib/db/services/task.js'
 import { updateImageWithFeatureImage } from '#lib/db/services/image.js'
+import { prepareRevisionCheck } from '#lib/db/services/revisionBatch.js'
 import { publicationSqlite } from './fixtures/publicationSqlite.js'
 // TYPES
 import type { Database, SessionUser } from '#lib/types.js'
@@ -69,6 +71,80 @@ async function setup() {
 }
 
 describe('atomic image and assignment edits', () => {
+  it.each(['cover', 'contain', 'cast-edges'] as const)(
+    'persists the %s fit mode without a logo capture',
+    async presentationMode => {
+      const { db, sqlite } = await setup()
+      try {
+        const result = await updateImageWithFeatureImage(
+          db,
+          { presentationMode },
+          undefined,
+          'new',
+        )
+        expect(result.image.presentationMode).toBe(presentationMode)
+        expect(
+          sqlite.prepare("SELECT presentationMode FROM image WHERE id='new'").get(),
+        ).toEqual({ presentationMode })
+      } finally {
+        sqlite.close()
+      }
+    },
+  )
+
+  it.each([false, true])(
+    'commits logo capture with the image or rolls both back (failure: %s)',
+    async fail => {
+      const { db, sqlite } = await setup()
+      const history = sqliteTable('logoHistory', { phase: text('phase').primaryKey() })
+      try {
+        sqlite.exec('CREATE TABLE logoHistory(phase TEXT PRIMARY KEY)')
+        const before = sqlite.prepare("SELECT * FROM image WHERE id='new'").get()
+        // Capture checks must see the old mode before the update and the new mode afterward.
+        const update = updateImageWithFeatureImage(
+          db,
+          { presentationMode: 'cast-edges' },
+          undefined,
+          'new',
+          undefined,
+          undefined,
+          'author',
+          {
+            before: [
+              prepareRevisionCheck(
+                db,
+                sql`(SELECT presentationMode FROM image WHERE id='new')='contain'`,
+              ),
+              db.insert(history).values({ phase: 'before' }),
+            ],
+            after: [
+              prepareRevisionCheck(
+                db,
+                sql`(SELECT presentationMode FROM image WHERE id='new')='cast-edges'`,
+              ),
+              db.insert(history).values({ phase: 'after' }),
+              ...(fail ? [prepareRevisionCheck(db, sql`0`)] : []),
+            ],
+          },
+        )
+        if (fail) {
+          await expect(update).rejects.toMatchObject({ status: 409 })
+          expect(sqlite.prepare("SELECT * FROM image WHERE id='new'").get()).toEqual(
+            before,
+          )
+          expect(sqlite.prepare('SELECT * FROM logoHistory').all()).toEqual([])
+        } else {
+          expect((await update).image.presentationMode).toBe('cast-edges')
+          expect(
+            sqlite.prepare('SELECT phase FROM logoHistory ORDER BY rowid').all(),
+          ).toEqual([{ phase: 'before' }, { phase: 'after' }])
+        }
+      } finally {
+        sqlite.close()
+      }
+    },
+  )
+
   it('commits image fields and canonical replacement without changing another Feature assignment', async () => {
     const { db, sqlite } = await setup()
     try {

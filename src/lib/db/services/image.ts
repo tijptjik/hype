@@ -45,6 +45,7 @@ import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 import { publishScopedFeatureImages } from './publication.js'
 import { buildFeatureCommandScopeGuard } from './featureCommandScope.js'
 // TYPES
+import type { OrganisationRevisionCapture } from './organisationRevision'
 import type { FeatureCommandProbe } from '#lib/db/zod/schema/feature.types.js'
 import type { ImageMutationGuards } from './imageMutationScope.js'
 import type { BatchItem } from 'drizzle-orm/batch'
@@ -346,6 +347,8 @@ function prepareFeatureImageMutation(
  * @param imageId Authorized image identity.
  * @param guards Optional scope/state checks captured before request authorization.
  * @param replay Optional trusted predicate identifying an already-committed upload.
+ * @param _actorId Actor attribution reserved for enclosing resource revision writers.
+ * @param logoCapture Optional logo revision statements committed around the image update.
  * @returns Persisted image and assignment.
  * @remarks A failed or skipped assignment write must not leave new image metadata behind.
  * Changed evidence invalidates pending task revisions in the same transaction.
@@ -357,6 +360,8 @@ export async function updateImageWithFeatureImage(
   imageId: string,
   guards?: ImageMutationGuards,
   replay?: SQL,
+  _actorId = 'system:image-assignment',
+  logoCapture: OrganisationRevisionCapture = { before: [], after: [] },
 ): Promise<{ image: ImageDB; featureImage?: FeatureImageDB; replayed?: boolean }> {
   if (data.id !== undefined && data.id !== imageId)
     throw error(400, 'IMAGE_ID_MISMATCH')
@@ -406,6 +411,7 @@ export async function updateImageWithFeatureImage(
     db,
     and(exists(current), mutation?.guard, guards?.before)!,
     [
+      ...logoCapture.before,
       ...prepareTaskEvidenceRevision(
         db,
         and(affectedTasks, replay ? not(replay) : undefined)!,
@@ -438,6 +444,7 @@ export async function updateImageWithFeatureImage(
           guards?.after,
         )!,
       ),
+      ...logoCapture.after,
       current,
       ...(mutation ? [mutation.current] : []),
     ],
@@ -450,7 +457,10 @@ export async function updateImageWithFeatureImage(
           replayed:
             (
               result[
-                2 + (mutation?.statements.length ?? 0) + (mutation ? 1 : 0)
+                logoCapture.before.length +
+                  2 +
+                  (mutation?.statements.length ?? 0) +
+                  (mutation ? 1 : 0)
               ] as unknown[]
             ).length === 0,
         }
