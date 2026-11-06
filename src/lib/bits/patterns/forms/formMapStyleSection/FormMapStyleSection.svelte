@@ -76,11 +76,12 @@ const sortedMapStyles = $derived([
     .filter(style => isMapStyleSelectable(style.code))
     .toSorted((a, b) => a.code.localeCompare(b.code)),
 ])
-// Ten narrow windows repeat the dark linework palettes, omitting filled basemaps.
-const darkPreviewStyles = ['hype-dark', 'hyperpop', 'ghostery', 'neorange'] as const
-const userChoiceSlices = Array.from({ length: 10 }, (_, index) =>
-  getMapStyleRenderAssetPath(darkPreviewStyles[index % darkPreviewStyles.length]),
-)
+// Broad palette panels share one map frame so streets remain legible across seams.
+const userChoicePanels = [
+  { style: 'ghostery', clip: 'polygon(0 0, 44% 0, 24% 100%, 0 100%)' },
+  { style: 'hyperpop', clip: 'polygon(44% 0, 77% 0, 57% 100%, 24% 100%)' },
+  { style: 'neorange', clip: 'polygon(77% 0, 100% 0, 100% 100%, 57% 100%)' },
+] as const
 const showModeUi = $derived(isEditing && !isSubmitting)
 
 function toggleAdding(): void {
@@ -124,11 +125,15 @@ $effect(() => {
 </script>
 
 {#snippet userChoicePreview()}
-  <div class="flex h-full w-full overflow-hidden bg-black" aria-hidden="true">
-    {#each userChoiceSlices as image, index (index)}
-      <div class="relative h-full min-w-0 flex-1 overflow-hidden">
-        <img src={image} alt="" class="h-full w-full object-cover" loading="lazy">
-      </div>
+  <div class="relative h-full w-full overflow-hidden bg-black" aria-hidden="true">
+    {#each userChoicePanels as panel (panel.style)}
+      <img
+        src={getMapStyleRenderAssetPath(panel.style)}
+        alt=""
+        class="absolute inset-0 h-full w-full object-cover"
+        style:clip-path={panel.clip}
+        loading="lazy"
+      >
     {/each}
   </div>
 {/snippet}
