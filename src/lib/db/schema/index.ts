@@ -37,3 +37,5 @@ export * from './layerRevision'
 export * from './hubRevision'
 
 export * from './adminResourceRevisionRollout'
+
+export * from './userResourceCheckpoint'
