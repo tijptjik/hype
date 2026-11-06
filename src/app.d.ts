@@ -52,6 +52,8 @@ declare global {
         PRODUCT_USAGE_DATASET?: string
         PRODUCT_USAGE_READ_TOKEN?: string
         DB: D1Database
+        /** Private entrypoint on our asset Worker; transformations use its WASM codecs. */
+        ASSET_TRANSFORMER: Fetcher
         ASSETS: Fetcher
         ROUTING_SERVICE?: Fetcher
       MESSAGING_NOTIFICATIONS?: {

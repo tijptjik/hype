@@ -32,6 +32,12 @@ enabled = true
 directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
 
+# Private revision transformation uses our asset Worker and its WASM codecs.
+[[services]]
+binding = "ASSET_TRANSFORMER"
+service = "hype-asset-service"
+entrypoint = "ImageRevisionTransformer"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "hype-db-local"
@@ -119,6 +125,11 @@ AUTH_EMAIL_FROM = "accounts@hype.hk"
 
 [env.production]
 name = "hype-prod"
+
+[[env.production.services]]
+binding = "ASSET_TRANSFORMER"
+service = "hype-asset-service-prod"
+entrypoint = "ImageRevisionTransformer"
 
 # Pin the production Worker to APAC (Azure East Asia = Hong Kong) so it is
 # co-located with the hype-db-prod D1 primary (running_in_region: APAC).
@@ -231,6 +242,11 @@ custom_domain = true
 
 [env.preview]
 name = "hype-preview"
+
+[[env.preview.services]]
+binding = "ASSET_TRANSFORMER"
+service = "hype-asset-service-preview"
+entrypoint = "ImageRevisionTransformer"
 
 # Pin the preview Worker to APAC to match hype-db-preview (same D1 region
 # as production). See [env.production.placement] for rationale.

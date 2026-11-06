@@ -19,6 +19,12 @@ enabled = true
 directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
 
+# Private revision transformation uses our asset Worker and its WASM codecs.
+[[services]]
+binding = "ASSET_TRANSFORMER"
+service = "hype-asset-service"
+entrypoint = "ImageRevisionTransformer"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "hype-db-local"

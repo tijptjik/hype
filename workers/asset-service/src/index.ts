@@ -1,3 +1,6 @@
+// PRIVATE REVISION DELIVERY
+import { WorkerEntrypoint } from 'cloudflare:workers'
+import { handleRevisionTransform } from './revision'
 import { rotatePixels } from './rotation'
 import { simd } from 'wasm-feature-detect'
 import resize, { initResize } from '@jsquash/resize'
@@ -74,6 +77,7 @@ type ImageMetadataDocument = {
 }
 
 type TransformRequest = {
+  withoutEnlargement?: boolean
   renderRotation?: 0 | 90 | 180 | 270
   requestedStage: ImageStage
   publicId: string
@@ -3932,7 +3936,7 @@ const resolveTargetDimensions = (
   const heightRatio = requestedHeight
     ? requestedHeight / image.height
     : Number.POSITIVE_INFINITY
-  const ratio = Math.min(widthRatio, heightRatio)
+  const ratio = Math.min(widthRatio, heightRatio, request.withoutEnlargement ? 1 : Number.POSITIVE_INFINITY)
 
   if (!Number.isFinite(ratio)) {
     if (requestedWidth) {
@@ -4579,3 +4583,24 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>
+
+/** Service-only entrypoint; the public asset router never exposes this byte-upload endpoint.
+ * @remarks Uses the same codec pipeline and capacity guard as ordinary asset delivery.
+ */
+export class ImageRevisionTransformer extends WorkerEntrypoint<Env> {
+  /** Transform verified bytes without reading mutable manifests or writing public derivatives.
+   * @param request Private service request from the authorized application.
+   * @returns Exact retained-metadata transformation with no shared cache access.
+   */
+  async fetch(request: Request): Promise<Response> {
+    return handleRevisionTransform(
+      request,
+      (body, contentType, options) => transformSourceAsset(
+        { body, contentType, objectKey: 'immutable-revision', stage: this.env.ENVIRONMENT },
+        { ...options, requestedStage: this.env.ENVIRONMENT, publicId: 'immutable-revision', effects: [] },
+        { enabled: false, publicId: 'immutable-revision', requestedStage: this.env.ENVIRONMENT, requestPath: 'private-service' },
+      ),
+      tryAcquireTransformSlot,
+    )
+  }
+}
