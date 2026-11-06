@@ -425,7 +425,7 @@
     padding-inline: 1.5rem;
   }
 
-  /* A stationary gradient edge delineates the workspace along the top and both sides. */
+  /* A stationary gradient edge and fixed gutters delineate the workspace, including while scrolled. */
   .bits-theme .bits-admin-shell__main:has([data-form-surface]) {
     --search-control-fill: var(
       --admin-form-search-fill,
@@ -455,22 +455,5 @@
     background-size: auto;
     background-repeat: no-repeat;
     background-attachment: local;
-    transition: border-width 160ms ease;
-  }
-
-  /* Scrolled form workspaces meet the panel edges while field gutters stay intact. */
-  .bits-theme .bits-admin-shell__main:has([data-form-surface]):has([data-facet-scrolled="true"]) {
-    border-width: 0;
-  }
-
-  .bits-theme .bits-admin-shell__main [data-facet-scrolled="true"]:has([data-form-surface]) {
-    left: 0 !important;
-    right: 0 !important;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .bits-theme .bits-admin-shell__main:has([data-form-surface]) {
-      transition: none;
-    }
   }
 }

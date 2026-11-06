@@ -2005,6 +2005,8 @@ export function guardUserRolesDesync({
         user: {
           id: resolvedUser.id,
           name: resolvedUser.name,
+          username: resolvedUser.username,
+          displayUsername: resolvedUser.displayUsername,
           image: resolvedUser.image,
           attribution: resolvedUser.attribution,
         },

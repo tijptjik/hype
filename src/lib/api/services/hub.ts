@@ -118,6 +118,8 @@ export const hubEntityWithRelations = {
         columns: {
           id: true,
           name: true,
+          username: true,
+          displayUsername: true,
           image: true,
           attribution: true,
         },

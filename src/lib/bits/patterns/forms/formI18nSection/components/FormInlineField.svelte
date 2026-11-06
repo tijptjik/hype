@@ -2,6 +2,8 @@
 // COMPONENTS
 import FormI18nInlineRow from './FormI18nInlineRow.svelte'
 import FieldError from '#lib/bits/custom/form/src/label/components/Error.svelte'
+// STYLES
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
 
 let {
   label,
@@ -9,6 +11,7 @@ let {
   isEditing = false,
   required = false,
   multiline = false,
+  monospace = false,
   onChange = () => {},
 }: {
   label: string
@@ -20,6 +23,7 @@ let {
   isEditing?: boolean
   required?: boolean
   multiline?: boolean
+  monospace?: boolean
   onChange?: () => void
 } = $props()
 const attrs = $derived(control.as('text'))
@@ -28,18 +32,19 @@ let beforeEdit = ''
 </script>
 
 <section class="min-w-0" data-inline-field={label}>
-  <h3 class="flex min-h-7 items-center gap-1 text-sm font-semibold">
+  <h3 class={`flex min-h-7 items-center gap-1 ${fieldLabelStyles}`}>
     {label}
     {#if required}
       <span class="text-error" aria-hidden="true">*</span>
     {/if}
   </h3>
-  <div class="mt-3">
+  <div class="mt-2">
     <FormI18nInlineRow
       {value}
       {label}
       {required}
       {multiline}
+      {monospace}
       renderHtml={false}
       editable={isEditing}
       showVerification={false}

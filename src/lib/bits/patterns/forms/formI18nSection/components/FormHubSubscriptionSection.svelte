@@ -1,4 +1,6 @@
 <script lang="ts" generics="T extends DescriptorData">
+// ICONS
+import SubscriptionIcon from 'virtual:icons/proicons/mail'
 // I18N
 import { getLocaleKey } from '#lib/i18n.js'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
@@ -13,11 +15,11 @@ import {
 import FormInlineField from './FormInlineField.svelte'
 import FeatureProfileEditor from '../../featureLocation/FeatureProfileEditor.svelte'
 import FormI18nDescriptorFields from './FormI18nDescriptorFields.svelte'
+// STYLES
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
 // SERVICES
 import { toUniqueIssueMessages } from '#lib/client/services/form.js'
 import { HubSubscriptionService } from '#lib/enums.js'
-// STYLES
-import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
 // TYPES
 import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
 import type { HubSubscriptionPlacement } from '#lib/api/services/hub.types.js'
@@ -155,6 +157,7 @@ function applyTranslation(
   </div>
   <SectionHeader
     title="Subscription"
+    icon={SubscriptionIcon}
     description="Configure newsletter promotion for this hub."
   >
     {#snippet right()}
@@ -178,7 +181,7 @@ function applyTranslation(
     <div class="min-w-0 space-y-6" data-subscription-configuration>
       <section class="min-w-0">
         <h3 class={`flex min-h-7 items-center ${fieldLabelStyles}`}>Service</h3>
-        <div class="mt-3">
+        <div class="mt-2">
           {#if canEdit}
             <SelectField
               label="Service"
@@ -211,6 +214,7 @@ function applyTranslation(
         control={form.fields.data.subscriptionSessionCookie}
         isEditing={canEdit}
         multiline
+        monospace
         {onChange}
       />
     </div>
@@ -256,7 +260,7 @@ function applyTranslation(
       class="md:border-border/50 min-w-0 md:border-l md:pl-6"
       data-subscription-placement-column
     >
-      <h3 class={`mb-3 flex min-h-7 items-center ${fieldLabelStyles}`}>Placement</h3>
+      <h3 class={`mb-2 flex min-h-7 items-center ${fieldLabelStyles}`}>Placement</h3>
       <div
         class="divide-border/20 border-border bg-foreground/4 flex min-w-0 flex-col divide-y rounded-xl border px-5"
         data-subscription-placement

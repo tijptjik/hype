@@ -36,6 +36,7 @@ const hasRemoveAction = $derived(typeof onRemove === 'function')
     <ResourceCardPolicySelect
       class={`col-start-1 ${canSetCoreInclusive ? '@min-[56rem]:mr-3' : ''}`}
       label="Map sharing"
+      showInfo={false}
       value={isHubExclusive ? 'exclusive' : 'shared'}
       items={[
         {

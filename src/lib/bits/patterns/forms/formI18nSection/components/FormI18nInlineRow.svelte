@@ -23,6 +23,7 @@ let {
   label,
   prefix = '',
   multiline = false,
+  monospace = false,
   markdown = false,
   editable,
   isGenAI = false,
@@ -43,6 +44,7 @@ let {
   label: string
   prefix?: string
   multiline?: boolean
+  monospace?: boolean
   markdown?: boolean
   editable: boolean
   isGenAI?: boolean
@@ -181,7 +183,7 @@ const editorAttrs = $derived({
           {renderHtml}
           textareaAttrs={editorAttrs}
           controlClass="bg-transparent! px-0! [box-shadow:none]!"
-          class="gap-0! [&_.bits-form\_\_label]:hidden [&_textarea]:min-h-10! [&_textarea]:py-2! [&_textarea]:pr-9! [&_textarea]:pl-[11px]! [&_textarea]:text-[15px]! [&_textarea]:leading-[22px]!"
+          class={String.raw`gap-0! [&_.bits-form\_\_label]:hidden [&_textarea]:min-h-10! [&_textarea]:py-2! [&_textarea]:pr-9! [&_textarea]:pl-[11px]! [&_textarea]:leading-[22px]! ${monospace ? '[&_textarea]:font-mono! [&_textarea]:text-[13px]!' : '[&_textarea]:text-[15px]!'}`}
         />
       {:else}
         <TextInput
@@ -192,7 +194,7 @@ const editorAttrs = $derived({
           inputAttrs={editorAttrs}
           controlClass="bg-transparent! px-0! [box-shadow:none]!"
           class="gap-0! [&_.bits-form\_\_label]:hidden"
-          inputClass="h-10! pl-[11px]! pr-9! py-2! text-[15px]! leading-[22px]!"
+          inputClass={`h-10! pl-[11px]! pr-9! py-2! leading-[22px]! ${monospace ? 'font-mono! text-[13px]!' : 'text-[15px]!'}`}
         />
       {/if}
     </div>
@@ -208,7 +210,9 @@ const editorAttrs = $derived({
       aria-describedby={editable && issues?.length ? displayErrorId : undefined}
       class="transition-[border-color,background-color] duration-180 motion-reduce:transition-none min-h-[42px] min-w-0 whitespace-normal break-words rounded-md pl-[11px] pr-9 {multiline
         ? 'py-2'
-        : 'py-[9px]'} text-[15px] leading-[22px] {editable
+        : 'py-[9px]'} {monospace
+        ? 'font-mono text-[13px]'
+        : 'text-[15px]'} leading-[22px] {editable
         ? `cursor-text border ${issues?.length ? 'border-error' : 'border-border/30 hover:border-border/60'} hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2`
         : 'border border-transparent'}"
       onclick={() => void open()}

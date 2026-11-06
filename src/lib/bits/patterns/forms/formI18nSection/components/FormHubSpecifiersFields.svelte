@@ -1,4 +1,6 @@
 <script lang="ts">
+// ICONS
+import RoutingIcon from 'virtual:icons/proicons/globe'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
@@ -35,6 +37,7 @@ let {
 <section class="bits-form__section pb-0!">
   <SectionHeader
     title={m.admin__forms_hub_routing_title()}
+    icon={RoutingIcon}
     description={m.admin__forms_hub_routing_subtitle()}
   />
   <div

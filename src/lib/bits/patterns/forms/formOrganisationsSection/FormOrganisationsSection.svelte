@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import { SimpleTooltip } from '#lib/bits/core/index.js'
 import {
   Search,
   SectionHeader,
@@ -7,6 +9,9 @@ import {
 import { getURLfromImage } from '#lib/client/services/image.js'
 import { m } from '#lib/i18n.js'
 import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
+// ICONS
+import InfoIcon from 'virtual:icons/lucide/info'
+import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
 // STYLES
 import {
   organisationHeaderStyles,
@@ -105,7 +110,12 @@ function handleCoreInclusiveToggle(
 <section
   class={`bits-form__section bits-form__parent-resource @container h-auto! pb-0! ${className}`}
 >
-  <SectionHeader {title} description={subtitle} class={organisationHeaderStyles}>
+  <SectionHeader
+    {title}
+    icon={OrganisationIcon}
+    description={subtitle}
+    class={organisationHeaderStyles}
+  >
     {#snippet right()}
       <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-3">
         <SectionHeaderPrimitive.Issues {issues} />
@@ -135,6 +145,33 @@ function handleCoreInclusiveToggle(
           />
         </div>
       </div>
+    {/snippet}
+    {#snippet afterControls()}
+      <SimpleTooltip
+        triggerProps={{ 'aria-label': 'About map sharing', role: 'button' }}
+      >
+        {#snippet trigger()}
+          <span
+            class="text-muted-foreground inline-flex size-8 shrink-0 items-center justify-center"
+          >
+            <InfoIcon class="size-4" aria-hidden="true" />
+          </span>
+        {/snippet}
+        <p class="mb-3 font-semibold">Map sharing</p>
+        <ul class="space-y-3">
+          <li>
+            <strong class="font-semibold">List on HYPE.hk</strong>
+            <p>Share your map with others through HYPE.hk.</p>
+          </li>
+          <li>
+            <strong class="font-semibold">Hub Exclusive</strong>
+            <p>
+              Only offer your map through your own domain. Your map won't be recommended
+              on HYPE.hk.
+            </p>
+          </li>
+        </ul>
+      </SimpleTooltip>
     {/snippet}
   </SectionHeader>
 

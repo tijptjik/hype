@@ -138,7 +138,7 @@ import type { HubFacet } from '#lib/navigation/index.js'
 import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
 import Blend from 'virtual:icons/proicons/shape-intersect'
-import MembersIcon from 'virtual:icons/proicons/person-multiple'
+import AdminIcon from 'virtual:icons/proicons/shield'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import HubIcon from 'virtual:icons/proicons/building-multiple'
 import RefreshCw from 'virtual:icons/proicons/arrow-sync'
@@ -732,6 +732,8 @@ const hubUserRoles = $derived.by(() => {
         user: {
           id: selectedUser.id,
           name: selectedUser.name,
+          username: selectedUser.username,
+          displayUsername: selectedUser.displayUsername,
           image: selectedUser.image,
           attribution: selectedUser.attribution,
         },
@@ -1635,7 +1637,7 @@ $effect(() => {
           {#snippet children(localeState)}
             <div class={formSectionDividerStyles}>
               <FormUserRolesSection
-                icon={MembersIcon}
+                icon={AdminIcon}
                 layout="list"
                 currentUserId={currentActor.userId}
                 title={m.admin__forms_hub_admins_title()}
