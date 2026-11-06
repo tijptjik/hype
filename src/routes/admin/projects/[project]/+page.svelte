@@ -3288,12 +3288,14 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'advanced' }}
     >
       <FormSurface>
-        <section class="flex min-h-0 flex-col gap-4">
+        <section class="flex min-h-0 flex-col gap-6 pb-6">
           <SectionHeader
             title={m.project_advanced()}
             description={m.project_3d_address_options_help()}
           />
-          <div class="mx-6 flex min-w-0 flex-col gap-3">
+          <div
+            class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-x-8 gap-y-3"
+          >
             <Card.Root
               size="md"
               class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
@@ -3360,11 +3362,11 @@ $effect(() => {
             {/each}
           </div>
         </section>
-        <section class="flex min-h-0 flex-col gap-4 pb-6">
+        <section class="flex min-h-0 flex-col gap-6 pb-6">
           <SectionHeader title={m.content_languages_heading()} icon={LanguagesIcon} />
           <div class="mx-6 min-w-0">
             <div
-              class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4"
+              class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-x-8 gap-y-4"
             >
               <ContentLocaleDefaults
                 organisationName={getNameForToast(
