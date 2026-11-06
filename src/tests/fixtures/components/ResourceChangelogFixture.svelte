@@ -5,6 +5,7 @@ import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 import Header from '#lib/bits/patterns/layout/header/Header.svelte'
 import ResourceChangelog from '#lib/bits/patterns/revisionHistory/ResourceChangelog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import TooltipProvider from '#lib/bits/core/tooltip/TooltipProvider.svelte'
 // PRESENTATION
 import { matchesChangelogFilters } from '#lib/revisions/changelogFilters.js'
 // TYPES
@@ -26,6 +27,7 @@ const imageCheck = new URLSearchParams(window.location.search).has('images')
 const translation = new URLSearchParams(window.location.search).has('translation')
 const sparse = new URLSearchParams(window.location.search).has('sparse')
 const boundaries = new URLSearchParams(window.location.search).has('boundaries')
+const propertyCheck = new URLSearchParams(window.location.search).has('property')
 const pageSize = boundaries ? 4 : 25
 const total = boundaries ? 12 : 300
 const fixtureNow = Date.now()
@@ -164,6 +166,32 @@ async function loadPage(
               ],
     }),
   )
+  // Exercise property keys separately from their opaque identities and translated labels.
+  if (propertyCheck && index === 0) {
+    entries[0] = {
+      ...entries[0],
+      resourceType: 'property',
+      resourceId: 'K5h8syE2BSyS',
+      name: 'Preferred Contact Method',
+      propertyKey: 'preferredContactMethod',
+      category: 'fields',
+      changes: [
+        {
+          path: ['K5h8syE2BSyS'],
+          before: { present: false },
+          after: {
+            present: true,
+            value: { record: { key: 'preferredContactMethod' } },
+          },
+        },
+        {
+          path: ['K5h8syE2BSyS', 'record', 'key'],
+          before: { present: true, value: 'contactMethod' },
+          after: { present: true, value: 'preferredContactMethod' },
+        },
+      ],
+    }
+  }
   return {
     owner: { id: owner, name: owner },
     entries: entries.filter(entry => matchesChangelogFilters(entry, filters)),
@@ -205,6 +233,10 @@ async function loadPage(
   }
 }
 </script>
+
+{#if propertyCheck}
+  <TooltipProvider />
+{/if}
 
 <div
   class="bits-theme bg-background text-foreground h-screen"

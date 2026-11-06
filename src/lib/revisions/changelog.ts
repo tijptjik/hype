@@ -16,6 +16,8 @@ export type ChangelogEntry = {
   resourceType: ChangelogResource | 'feature' | 'property'
   resourceId: string
   name: string
+  /** Property key from this revision, or its predecessor when the property was removed. */
+  propertyKey?: string
   category: 'profile' | 'fields' | 'publication' | 'maintenance'
   createdAt: string
   actorId: string

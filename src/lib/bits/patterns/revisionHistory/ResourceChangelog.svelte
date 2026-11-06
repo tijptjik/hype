@@ -207,6 +207,20 @@ function operations(entry: ChangelogEntry): string {
       : 'Updated record'
 }
 
+/** Label a changed field using its historical property key instead of its opaque ID.
+ * @param entry Authorized changelog entry with retained property metadata.
+ * @param path Immutable field path, including the property identity for catalogue changes.
+ * @returns Readable field path with the property key preserved verbatim.
+ */
+function changeFieldLabel(entry: ChangelogEntry, path: readonly string[]): string {
+  if (entry.resourceType === 'feature') return featureReviewLabel(path)
+  if (entry.resourceType === 'property') {
+    const key = entry.propertyKey ?? entry.name
+    return path.length > 1 ? `${key} / ${fieldLabel(path.slice(1))}` : key
+  }
+  return fieldLabel(path)
+}
+
 /** Format a timestamp using the selected locale.
  * @param value Immutable change time.
  * @returns Local date and time.
@@ -523,9 +537,7 @@ $effect(() => {
                       {#each entry.changes as change}
                         <section
                           class="border-border bg-panel min-w-0 overflow-hidden rounded-md border"
-                          aria-label={entry.resourceType === 'feature'
-                            ? featureReviewLabel(change.path)
-                            : fieldLabel(change.path)}
+                          aria-label={changeFieldLabel(entry, change.path)}
                         >
                           <dl
                             class="border-border bg-muted/30 flex min-w-0 flex-wrap gap-y-2 border-b px-4 py-3"
@@ -538,10 +550,13 @@ $effect(() => {
                               <dt class="text-muted-foreground text-xs font-medium">
                                 Field
                               </dt>
-                              <dd class="min-w-0 font-medium break-words">
-                                {entry.resourceType === 'feature'
-                                  ? featureReviewLabel(change.path)
-                                  : fieldLabel(change.path)}
+                              <dd
+                                class="min-w-0 font-medium break-words"
+                                data-tooltip={entry.resourceType === 'property'
+                                  ? entry.resourceId
+                                  : undefined}
+                              >
+                                {changeFieldLabel(entry, change.path)}
                               </dd>
                             </div>
                             <div

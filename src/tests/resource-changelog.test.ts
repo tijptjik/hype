@@ -352,6 +352,7 @@ describe('hierarchy changelog', () => {
     expect(project.entries[0]).toMatchObject({
       resourceType: 'property',
       name: 'Field',
+      propertyKey: 'field',
       resourceId: 'field',
     })
     expect(project.unavailable).toContain('layer profile')
@@ -359,19 +360,19 @@ describe('hierarchy changelog', () => {
   })
 
   it('presents changed catalogue fields with localized names, retaining removals and literal IDs', async () => {
-    const field = (label: string) => ({
-      record: { key: label },
+    const field = (label: string, key: string) => ({
+      record: { key },
       i18n: { 'zh-hant': { label } },
     })
     const before = {
-      'literal.id': field('舊名稱'),
-      removed: field('已移除'),
-      unchanged: field('不變'),
+      'literal.id': field('舊名稱', 'oldKey'),
+      removed: field('已移除', 'removedKey'),
+      unchanged: field('不變', 'unchangedKey'),
     }
     const after = {
-      'literal.id': field('新名稱'),
-      added: field('新欄位'),
-      unchanged: field('不變'),
+      'literal.id': field('新名稱', 'renamedKey'),
+      added: field('新欄位', 'preferredContactMethod'),
+      unchanged: field('不變', 'unchangedKey'),
     }
     for (const [id, parent, content] of [
       ['catalog1', null, before],
@@ -387,6 +388,7 @@ describe('hierarchy changelog', () => {
     expect(changes).toHaveLength(3)
     expect(changes.find(entry => entry.resourceId === 'literal.id')).toMatchObject({
       name: '新名稱',
+      propertyKey: 'renamedKey',
       changes: [
         { path: ['literal.id', 'i18n', 'zh-hant', 'label'] },
         { path: ['literal.id', 'record', 'key'] },
@@ -394,10 +396,12 @@ describe('hierarchy changelog', () => {
     })
     expect(changes.find(entry => entry.resourceId === 'removed')).toMatchObject({
       name: '已移除',
+      propertyKey: 'removedKey',
       changes: [{ path: ['removed'], after: { present: false } }],
     })
     expect(changes.find(entry => entry.resourceId === 'added')).toMatchObject({
       name: '新欄位',
+      propertyKey: 'preferredContactMethod',
       changes: [{ path: ['added'], before: { present: false } }],
     })
   })

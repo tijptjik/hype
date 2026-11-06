@@ -390,6 +390,7 @@ export async function listResourceChangelog(
   for (const row of rows.slice(0, 25)) {
     if (!input.authorize(row)) continue
     let changes: ChangelogEntry['changes'] = []
+    let propertyKey: string | undefined
     let initial = row.previous === null,
       baseline = initial && row.origin === 'migration',
       unpublished = false,
@@ -422,13 +423,14 @@ export async function listResourceChangelog(
       unpublished = 'unpublished' in result && result.unpublished === true
       initial = 'baseline' in result && result.baseline === true
     } else if (row.category === 'fields') {
+      // Keep the historical property key alongside its opaque path identity, including removals.
+      const previous = row.previous === null ? null : JSON.parse(row.previous)
+      const content = row.content === null ? null : JSON.parse(row.content)
+      const key = content?.record?.key ?? previous?.record?.key
+      if (typeof key === 'string' && key.trim()) propertyKey = key
       changes = diffRevisionValues(
-        row.previous === null
-          ? { present: false }
-          : { present: true, value: JSON.parse(row.previous) },
-        row.content === null
-          ? { present: false }
-          : { present: true, value: JSON.parse(row.content) },
+        row.previous === null ? { present: false } : { present: true, value: previous },
+        row.content === null ? { present: false } : { present: true, value: content },
       ).map(change => ({ ...change, path: [row.resourceId, ...change.path] }))
     } else if (!initial) {
       changes = diffRevisionValues(
@@ -441,6 +443,7 @@ export async function listResourceChangelog(
       resourceType: row.resourceType,
       resourceId: row.resourceId,
       name: row.name,
+      ...(propertyKey ? { propertyKey } : {}),
       category: row.category,
       createdAt: row.createdAt,
       actorId: row.actorId,
