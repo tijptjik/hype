@@ -26,6 +26,8 @@ import {
   strongestOrganisationRole,
   type OrganisationRoleGrants,
 } from '../../../src/lib/roles/organisation'
+// USERNAMES
+import { generateRunnerUsernameFromId } from '../../../src/lib/utils/username-generator.server'
 
 export {
   canonicalJson,
@@ -292,6 +294,15 @@ export function planUserSync(
     target.breadlineUserSyncState.map(row => [Number(row.sourceUserId), row]),
   )
   const userById = new Map(target.user.map(row => [String(row.id), row]))
+  const targetUsernames = new Set(
+    target.user.flatMap(row =>
+      row.username ? [String(row.username).toLowerCase()] : [],
+    ),
+  )
+  const reservedUsernames = new Set([
+    ...targetUsernames,
+    ...canonical.users.map(row => row.username),
+  ])
   const ownershipByUser = new Map(
     target.breadlineImportUser.map(row => [String(row.userId), row]),
   )
@@ -418,7 +429,6 @@ export function planUserSync(
         volunteerOwners.set(identity.sourceVolunteerId, new Set([id]))
     if (!existing) {
       if (
-        target.user.some(row => row.username === desired.username) ||
         canonical.accounts
           .filter(row => row.userId === desired.id)
           .some(row => target.account.some(prior => prior.id === row.id))
@@ -426,7 +436,22 @@ export function planUserSync(
         reject('generated_identity_collision')
         continue
       }
-      put('user', { ...desired, id })
+      // Retry only a new account's generated username; existing owners and stable IDs stay intact.
+      let displayUsername = desired.displayUsername
+      let username = desired.username
+      if (targetUsernames.has(username)) {
+        for (let attempt = 1; attempt <= 1000; attempt++) {
+          displayUsername = generateRunnerUsernameFromId(id, attempt)
+          username = displayUsername.toLowerCase()
+          if (!reservedUsernames.has(username)) break
+        }
+        if (reservedUsernames.has(username)) {
+          reject('generated_identity_collision')
+          continue
+        }
+      }
+      reservedUsernames.add(username)
+      put('user', { ...desired, id, username, displayUsername })
       put('breadlineImportUser', {
         ...canonical.importUsers.find(row => row.userId === desired.id)!,
         userId: id,

@@ -15,12 +15,15 @@ import {
   userSyncHash,
   type UserSyncSource,
 } from './lib/user-sync'
-import type { LegacyUser } from './lib/users'
 import {
   applyUserSyncRemote,
   userSyncRowStatements,
   type UserSyncJournal,
 } from './lib/user-sync-remote'
+// USERNAMES
+import { generateRunnerUsernameFromId } from '../../src/lib/utils/username-generator.server'
+// TYPES
+import type { LegacyUser } from './lib/users'
 import type { D1Database } from '@cloudflare/workers-types'
 
 const databases: Database[] = []
@@ -103,6 +106,39 @@ function sync(db: Database, input: UserSyncSource): ReturnType<typeof planUserSy
 }
 
 describe('accepted local Breadline user sync', () => {
+  it('retries occupied generated usernames without changing existing owners or the new stable ID', () => {
+    const db = fixture()
+    const input = source({})
+    const initial = planUserSync(input, target(db), options)
+    const desired = initial.mutations.find(row => row.table === 'user')!.after!
+    for (const [index, username] of [
+      String(desired.username),
+      generateRunnerUsernameFromId(String(desired.id), 1).toLowerCase(),
+    ].entries())
+      db.query('INSERT INTO user(id,username,name) VALUES(?,?,?)').run(
+        `existing-${index}`,
+        username,
+        `Existing owner ${index}`,
+      )
+    const before = db
+      .query("SELECT * FROM user WHERE id LIKE 'existing-%' ORDER BY id")
+      .all()
+    const plan = sync(db, input)
+    const inserted = plan.mutations.find(row => row.table === 'user')!.after!
+    expect(inserted.id).toBe(desired.id)
+    expect(inserted.email).toBe(desired.email)
+    expect(inserted.displayUsername).toBe(
+      generateRunnerUsernameFromId(String(desired.id), 2),
+    )
+    expect(inserted.username).toBe(String(inserted.displayUsername).toLowerCase())
+    expect(
+      db.query("SELECT * FROM user WHERE id LIKE 'existing-%' ORDER BY id").all(),
+    ).toEqual(before)
+    const replay = planUserSync(input, target(db), options)
+    expect(replay.mutations).toEqual([])
+    expect(replay.exceptions).toEqual([])
+    expect(replay.checkpointChanged).toBe(false)
+  })
   it('fingerprints direct and referenced related records and refuses incomplete mirror coverage', () => {
     const db = new Database(':memory:')
     databases.push(db)
