@@ -7,6 +7,7 @@ import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
 import { OrganisationSettingsFormSchema } from '#lib/organisations/settings.js'
 // I18N
 import { m } from '#lib/i18n.js'
+import { contentLocaleMap } from '#lib/i18n/contentRecords.js'
 import type {
   CapabilityDefinition,
   CapabilityDefinitions,
@@ -25,7 +26,7 @@ import {
 } from '#lib/db/schema/index.js'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
-import { FormI18nRoot, getLocales } from '../constraints'
+import { getLocales } from '../constraints'
 import { ImageContextEnvelopeAPI } from './image'
 import { ImageBase } from './image'
 import {
@@ -88,7 +89,7 @@ import { UserBasic } from './user'
 // ═══════════════════════
 
 export const CabilityDefinitionSchema: z.ZodType<CapabilityDefinition> = z.object({
-  i18n: FormI18nRoot.optional(),
+  i18n: contentLocaleMap(z.string()).optional(),
 })
 
 export const CapabilityRoot: z.ZodType<CapabilityDefinitions> = z.record(

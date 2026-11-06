@@ -1,6 +1,5 @@
 // TYPES
 import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
-import type { LocaleKey } from '#lib/types.js'
 
 /**
  * Translates populated source labels into empty target labels.
@@ -12,13 +11,9 @@ import type { LocaleKey } from '#lib/types.js'
  */
 export async function translateCapabilityLabels(
   definitions: CapabilityDefinitions,
-  source: LocaleKey,
-  target: LocaleKey,
-  translate: (
-    source: LocaleKey,
-    target: LocaleKey,
-    texts: string[],
-  ) => Promise<string[]>,
+  source: string,
+  target: string,
+  translate: (source: string, target: string, texts: string[]) => Promise<string[]>,
 ): Promise<Partial<Record<CapabilityKey, string>>> {
   if (source === target) return {}
   // Preserve existing translations and omit blank source strings from the request.

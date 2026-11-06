@@ -18,7 +18,10 @@ import { readChatAppearance, type ChatAppearance } from '#lib/messaging/appearan
 import { readOrganisationSettingsForm } from '#lib/organisations/settings.js'
 // PROFILE
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
-import { translateContentField } from '#lib/api/translation.remote.js'
+import {
+  translateContentField,
+  translateText as translateCapabilityTexts,
+} from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
 import LocationVisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationVisibilitySelect.svelte'
 import type { RemoteForm, RemoteFormInput } from '$app/server'
@@ -31,13 +34,8 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 // I18N
 import { m } from '#lib/i18n.js'
-import {
-  getLocale,
-  getLocaleKey,
-  getLocaleOrder,
-  toLocaleKey,
-  translateText,
-} from '#lib/i18n.js'
+import { getLocale, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
+import { canonicalContentTag, contentFormKey } from '#lib/i18n/contentRecords.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // PUBLICATION
@@ -546,7 +544,7 @@ const organisationPropertyFormAdapter = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{ properties?: Property[] }>,
 )
 let fieldRemoveMode = $state(false)
-// Profile and Fields share presentation state; resetting content must preserve it.
+// Profile, Capabilities and Fields share presentation state; resetting content must preserve it.
 let multilingualExpanded = $state(false)
 
 function createPropertyActions(getCount: () => number) {
@@ -900,30 +898,55 @@ function onRemoveCapability(capabilityKey: CapabilityKey): void {
 }
 
 /**
+ * Registers an empty label in every selected capability for a newly added language.
+ * @param locale Canonical content-language tag selected in the shared picker.
+ * @returns Nothing; stages the label buckets and revalidates the form.
+ */
+function onAddCapabilityLocale(locale: string): void {
+  const key = contentFormKey(locale)
+  updateFormData(capabilityFormUpdater, data => {
+    // Register this language without replacing existing labels in other languages.
+    for (const capabilityKey of selectedCapabilityKeys) {
+      const capability = data.capabilities?.[capabilityKey]
+      if (capability && capability.i18n?.[key] === undefined)
+        capability.i18n = { ...capability.i18n, [key]: '' }
+    }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+/**
  * Fills empty capability labels without overwriting edits made during translation.
  * @param sourceLocale - Locale to translate from.
  * @param targetLocale - Locale to fill.
+ * @param capabilityKey - Limit a field's source action to that capability when supplied.
  * @returns Whether any translated labels were applied.
  */
 async function onTranslateCapabilities(
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: string,
+  targetLocale: string,
+  capabilityKey?: CapabilityKey,
 ): Promise<boolean> {
-  const source = toLocaleKey(sourceLocale)
-  const target = toLocaleKey(targetLocale)
+  const source = contentFormKey(sourceLocale)
+  const target = contentFormKey(targetLocale)
   const ref = organisationRef
   const resetVersion = capabilityResetVersion
   const snapshot = Object.fromEntries(
-    selectedCapabilityKeys.map(key => [
-      key,
-      { i18n: { ...formCapabilityDefinitions[key]?.i18n } },
-    ]),
+    selectedCapabilityKeys
+      .filter(key => !capabilityKey || key === capabilityKey)
+      .map(key => [key, { i18n: { ...formCapabilityDefinitions[key]?.i18n } }]),
   )
   const translated = await translateCapabilityLabels(
     snapshot,
     source,
     target,
-    translateText,
+    (source, target, texts) =>
+      translateCapabilityTexts({
+        source: canonicalContentTag(source),
+        target: canonicalContentTag(target),
+        texts,
+      }),
   )
   if (ref !== organisationRef || resetVersion !== capabilityResetVersion || !isEditing)
     return false
@@ -952,9 +975,9 @@ async function onTranslateCapabilities(
  * @param targetLocale - Locale to clear.
  * @returns Nothing.
  */
-function onResetCapabilityLocale(targetLocale: Locale): void {
+function onResetCapabilityLocale(targetLocale: string): void {
   capabilityResetVersion += 1
-  const target = toLocaleKey(targetLocale)
+  const target = contentFormKey(targetLocale)
   updateFormData(capabilityFormUpdater, data => {
     for (const key of selectedCapabilityKeys) {
       const capability = data.capabilities?.[key]
@@ -1861,6 +1884,7 @@ $effect(() => {
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <OrganisationCapabilities
+          bind:multilingual={multilingualExpanded}
           {selectedCapabilityKeys}
           {capabilitySearchOptions}
           {selectedCapabilityIds}
@@ -1869,6 +1893,9 @@ $effect(() => {
           {isEditing}
           isArchived={Boolean(optimisticOrganisationData?.isArchived)}
           resetVersion={capabilityResetVersion}
+          capabilityLocales={Object.values(formCapabilityDefinitions).flatMap(
+            definition => Object.keys(definition?.i18n ?? {}),
+          )}
           {capabilityLabelsByKey}
           formCapabilityFields={formCtx.form.fields.data
             .capabilities as CapabilityFormFields}
@@ -1883,6 +1910,7 @@ $effect(() => {
           {getCapabilityDisplayLabel}
           {onAddCapability}
           {onRemoveCapability}
+          onAddLocale={onAddCapabilityLocale}
           onTranslate={onTranslateCapabilities}
           onResetLocale={onResetCapabilityLocale}
           onEnterEditMode={() => headerCtrl.setEditing(true)}

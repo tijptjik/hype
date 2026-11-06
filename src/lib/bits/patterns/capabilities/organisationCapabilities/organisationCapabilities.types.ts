@@ -1,5 +1,6 @@
 import type { CapabilityI18nRoot, CapabilityKey } from '#lib/capabilities.types.js'
-import type { Locale, LocaleKey } from '#lib/types.js'
+import type { LocaleKey } from '#lib/types.js'
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 
 export type CapabilitySearchOption = {
   id: CapabilityKey
@@ -9,14 +10,15 @@ export type CapabilitySearchOption = {
 
 type CapabilityLabelField = {
   as: (type: 'text') => Record<string, unknown>
-  issues: () => string[]
+  set: (value: string) => unknown
+  issues: () => import('$app/server').RemoteFormIssue[] | undefined
 }
 
 export type CapabilityFormFields = Partial<
   Record<
     CapabilityKey,
     {
-      i18n?: Partial<Record<LocaleKey, CapabilityLabelField>>
+      i18n?: Partial<Record<string, CapabilityLabelField>>
     }
   >
 >
@@ -28,9 +30,13 @@ export interface OrganisationCapabilitiesProps {
   selectedCapabilityIds: string[]
   currentLocaleKey: LocaleKey
   locales: LocaleKey[]
+  capabilityLocales?: string[]
   isEditing: boolean
   isArchived?: boolean
   resetVersion?: number
+  /** Shared presentation state with the organisation's other multilingual forms. */
+  multilingual?: boolean
+  localeSelection?: LocaleSelection | null
   capabilityLabelsByKey: Partial<Record<CapabilityKey, CapabilityI18nRoot>>
   formCapabilityFields: CapabilityFormFields
   emptyCapabilitiesInputAttrs?: Record<string, unknown>
@@ -40,9 +46,14 @@ export interface OrganisationCapabilitiesProps {
   getCapabilityDisplayLabel: (key: CapabilityKey) => string
   onAddCapability: (option: CapabilitySearchOption) => void
   onRemoveCapability: (key: CapabilityKey) => void
+  onAddLocale?: (locale: string) => void
   onEnterEditMode: () => void
-  onTranslate?: (source: Locale, target: Locale) => Promise<boolean | void>
-  onResetLocale?: (target: Locale) => void
+  onTranslate?: (
+    source: string,
+    target: string,
+    capabilityKey?: CapabilityKey,
+  ) => Promise<boolean | void>
+  onResetLocale?: (target: string) => void
 }
 
 export interface OrganisationCapabilitiesSearchProps {

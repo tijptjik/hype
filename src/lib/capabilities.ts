@@ -1,5 +1,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
+import { adaptContentMap } from '#lib/i18n/contentRecords.js'
+import { toLegacyContentLocaleKey } from '#lib/content-locales/model.js'
 // TYPES
 import type {
   CapabilityDefinitions,
@@ -33,6 +35,27 @@ export const CAPABILITY_I18N_BY_KEY: Record<CapabilityKey, CapabilityI18nRoot> =
     zhHans: m.admin__capability_manage_dropoffs({}, { locale: 'zh-hans' }),
     zhHant: m.admin__capability_manage_dropoffs({}, { locale: 'zh-hant' }),
   },
+}
+
+/** Store capability labels without leaking encoded remote-form keys into JSON.
+ * @param definitions Capability definitions accepted by the organisation form.
+ * @returns Definitions with canonical language tags and existing Chinese aliases.
+ * @remarks Keeps existing Chinese keys stable; normalization collisions fail closed.
+ */
+export function capabilityDefinitionsToStorage(
+  definitions: CapabilityDefinitions,
+): CapabilityDefinitions {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([key, definition]) => [
+      key,
+      definition?.i18n
+        ? {
+            ...definition,
+            i18n: adaptContentMap(definition.i18n, toLegacyContentLocaleKey),
+          }
+        : definition,
+    ]),
+  )
 }
 
 export function isProjectCapabilityKey(value: string): value is CapabilityKey {

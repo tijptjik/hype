@@ -28,6 +28,17 @@ describe('capability label translation', () => {
     ).toEqual({})
     expect(translate).not.toHaveBeenCalled()
   })
+  it('retains dynamic language identities when filling an added language', async () => {
+    const translate = vi.fn().mockResolvedValue(['Doadores'])
+    const definitions = {
+      manageBakeries: { i18n: { ja: '寄付者', $locale_pt_BR: '', en: 'Existing' } },
+    }
+    expect(
+      await translateCapabilityLabels(definitions, 'ja', '$locale_pt_BR', translate),
+    ).toEqual({ manageBakeries: 'Doadores' })
+    expect(translate).toHaveBeenCalledExactlyOnceWith('ja', '$locale_pt_BR', ['寄付者'])
+    expect(definitions.manageBakeries.i18n.en).toBe('Existing')
+  })
   it('propagates transport errors to the toolbar and ignores missing response values', async () => {
     const definitions = { manageBakeries: { i18n: { en: 'Bakeries' } } }
     expect(

@@ -23,7 +23,7 @@ const fields = {
     i18n: Object.fromEntries(
       locales.map(locale => [
         locale,
-        { as: () => ({ value: 'Check in' }), issues: () => [] },
+        { as: () => ({ value: 'Check in' }), set: () => {}, issues: () => [] },
       ]),
     ),
   },
@@ -114,7 +114,7 @@ const callbacks = {
         />
       {:else}
         <SectionHeader icon={ImageIcon} title="Profile Image" />
-        <div class="p-6"><div class="h-80 rounded-xl bg-foreground/5"></div></div>
+        <div class="p-6"><div class="bg-foreground/5 h-80 rounded-xl"></div></div>
       {/if}
     </FormSurface>
   </main>

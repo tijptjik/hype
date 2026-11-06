@@ -10,6 +10,7 @@ import { toOrganisationSettingsForm } from '#lib/organisations/settings.js'
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '#lib/capabilities.js'
 // I18N
 import { toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
+import { adaptContentMap } from '#lib/i18n/contentRecords.js'
 // SERVICES
 import {
   overrideResourceEntityBoolean,
@@ -96,18 +97,25 @@ function normalizeOrganisationFormLocale(
   }
 }
 
+/** Restore editable capability labels, including added content languages.
+ * @param capabilities Persisted or form-shaped capability definitions.
+ * @returns Label maps with reversible form keys and defaults for the UI languages.
+ * @remarks Additional language labels survive form reloads and optimistic updates.
+ */
 function normalizeOrganisationCapabilities(
   capabilities: CapabilityDefinitions | null | undefined,
 ): CapabilityDefinitions {
   if (!capabilities) return {}
   const normalized: CapabilityDefinitions = {}
+  // Preserve stored languages while backfilling the three application-language defaults.
   for (const [rawKey, rawDefinition] of Object.entries(capabilities)) {
     if (!isProjectCapabilityKey(rawKey)) continue
     const defaults = CAPABILITY_I18N_BY_KEY[rawKey]
     const definition = (rawDefinition ?? {}) as CapabilityDefinition
-    const labels = definition.i18n ?? {}
+    const labels = adaptContentMap(definition.i18n ?? {})
     normalized[rawKey] = {
       i18n: {
+        ...labels,
         en: labels.en ?? defaults.en ?? rawKey,
         zhHans: labels.zhHans ?? defaults.zhHans ?? defaults.en ?? rawKey,
         zhHant: labels.zhHant ?? defaults.zhHant ?? defaults.en ?? rawKey,

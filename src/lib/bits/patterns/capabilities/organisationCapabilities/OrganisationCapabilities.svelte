@@ -1,18 +1,25 @@
 <script lang="ts">
+// ICONS
 import LanguagesIcon from 'virtual:icons/tabler/language'
-import { formSearchHeaderStyles } from '#lib/bits/patterns/forms/formSurface/formSearchHeader.styles.js'
+import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
+// I18N
 import { m } from '#lib/i18n.js'
+import { contentFormKey } from '#lib/i18n/contentRecords.js'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
+// COMPONENTS
 import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
-import {
-  FormI18nCapabilities,
-  FormI18nSection,
-} from '#lib/bits/patterns/forms/formI18nSection/index.js'
-import type { OrganisationCapabilitiesProps } from './organisationCapabilities.types'
+import { FormI18nCapabilities } from '#lib/bits/patterns/forms/formI18nSection/index.js'
+import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import { displayedLocales } from '#lib/bits/custom/localeControls/localeControls.js'
+import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
 import OrganisationCapabilitiesEmpty from './components/OrganisationCapabilitiesEmpty.svelte'
 import OrganisationCapabilitiesSearch from './components/OrganisationCapabilitiesSearch.svelte'
 import OrganisationCapabilitiesList from './components/OrganisationCapabilitiesList.svelte'
-import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
+// STYLES
+import { formSearchHeaderStyles } from '#lib/bits/patterns/forms/formSurface/formSearchHeader.styles.js'
 import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
+// TYPES
+import type { OrganisationCapabilitiesProps } from './organisationCapabilities.types'
 
 let {
   users,
@@ -21,9 +28,12 @@ let {
   selectedCapabilityIds,
   currentLocaleKey,
   locales,
+  capabilityLocales = [],
   isEditing,
   isArchived = false,
-  capabilityLabelsByKey,
+  resetVersion = 0,
+  multilingual = $bindable(false),
+  localeSelection = $bindable(null),
   formCapabilityFields,
   emptyCapabilitiesInputAttrs,
   shouldSubmitEmptyCapabilities = false,
@@ -32,12 +42,22 @@ let {
   getCapabilityDisplayLabel,
   onAddCapability,
   onRemoveCapability,
+  onAddLocale,
   onEnterEditMode,
   onTranslate,
-  onResetLocale,
 }: OrganisationCapabilitiesProps = $props()
 
 const hasCapabilities = $derived(selectedCapabilityKeys.length > 0)
+const availableLocales: string[] = $derived(
+  normalizeContentLocales([...locales, ...capabilityLocales]),
+)
+const selectedLocales = $derived([
+  ...new Set([...(localeSelection?.selectedLocales ?? []), ...availableLocales]),
+])
+const visibleLocales = $derived(localeSelection?.visibleLocales ?? selectedLocales)
+const shownLocales = $derived(
+  displayedLocales({ selectedLocales, visibleLocales }, multilingual),
+)
 
 const sectionClass =
   '@container bits-form__section bits-form__parent-resource bits-form__capabilities-section'
@@ -108,37 +128,46 @@ const headerClass = 'bits-form__capabilities-header'
 
   {#if hasCapabilities}
     <div class={formSectionDividerStyles}>
-      <FormI18nSection
-        title="Capability I18n"
-        subtitle={m.admin__forms_capabilities_labels_subtitle()}
-        localeCodeClass="absolute right-6 top-3 text-base font-medium uppercase text-muted-foreground"
-        {locales}
-        {isEditing}
-        {onTranslate}
-        {onResetLocale}
-      >
-        {#snippet left()}
-          <div class="flex items-center gap-3">
-            <LanguagesIcon class="text-primary size-6 shrink-0" aria-hidden="true" />
-            <div>
-              <h2 class="text-xl font-semibold tracking-tight">Capability I18n</h2>
-              <p class="text-muted-foreground text-xs">
-                {m.admin__forms_capabilities_labels_subtitle()}
-              </p>
-            </div>
-          </div>
-        {/snippet}
-        {#snippet children(locale)}
-          <FormI18nCapabilities
-            fields={formCapabilityFields}
-            capabilityKeys={selectedCapabilityKeys}
-            capabilityLabels={capabilityLabelsByKey}
-            {locale}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </FormI18nSection>
+      <section>
+        <SectionHeader
+          title="Capability I18n"
+          description={m.admin__forms_capabilities_labels_subtitle()}
+          icon={LanguagesIcon}
+          class="mb-4 grid-cols-1! gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]! [&_.bits-form\_\_section-header-right]:[container-type:normal]! [&_.bits-form\_\_section-header-right]:block [&_.bits-form\_\_section-header-right]:min-w-0"
+        >
+          {#snippet right()}
+            <LocaleToolbar
+              {selectedLocales}
+              {visibleLocales}
+              expanded={multilingual}
+              options={contentLocaleOptions(currentLocaleKey)}
+              allowAdd={isEditing && !isArchived}
+              onExpandedChange={value => {
+                multilingual = value
+              }}
+              onChange={change => {
+                if (change.action === 'add') onAddLocale?.(change.locale)
+                localeSelection = {
+                  selectedLocales: change.selectedLocales,
+                  visibleLocales: change.visibleLocales,
+                }
+              }}
+            />
+          {/snippet}
+        </SectionHeader>
+        <FormI18nCapabilities
+          fields={formCapabilityFields}
+          capabilityKeys={selectedCapabilityKeys}
+          locales={selectedLocales.map(contentFormKey)}
+          visibleLocales={shownLocales.map(contentFormKey)}
+          expanded={multilingual}
+          {currentLocaleKey}
+          {resetVersion}
+          {onTranslate}
+          {isEditing}
+          {isRequiredInPreflight}
+        />
+      </section>
     </div>
   {/if}
 </div>

@@ -1047,7 +1047,7 @@ describe('organisation.remote authz', () => {
     expect(services.updateOrganisationByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
-  it('organisationForm cascades capability removals to projects and project roles', async () => {
+  it('organisationForm preserves added language labels while cascading capability removals to projects and roles', async () => {
     const organisationServices = await import('#lib/db/services/organisation.js')
     const probeOrganisationForUpdate = vi.mocked(
       organisationServices.probeOrganisationForUpdate,
@@ -1083,7 +1083,7 @@ describe('organisation.remote authz', () => {
         i18n: { en: {}, zhHans: {}, zhHant: {} },
         userRoles: [{ userId: 'u-1', role: 'owner' }],
         capabilities: {
-          manageBakeries: { i18n: {} },
+          manageBakeries: { i18n: { ja: '寄付者', $locale_pt_BR: 'Doadores' } },
         },
       },
     })
@@ -1093,7 +1093,9 @@ describe('organisation.remote authz', () => {
       expect.objectContaining({
         id: 'org-1',
         data: expect.objectContaining({
-          capabilities: { manageBakeries: { i18n: {} } },
+          capabilities: {
+            manageBakeries: { i18n: { ja: '寄付者', 'pt-BR': 'Doadores' } },
+          },
         }),
       }),
     )

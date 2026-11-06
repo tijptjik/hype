@@ -29,6 +29,7 @@ import {
   ensureOrganisationCommandAllowed,
 } from '#lib/api/services/authz/index.js'
 // SERVICES
+import { capabilityDefinitionsToStorage } from '#lib/capabilities.js'
 import { publicationPreviewConditions } from './services/publicationPreview.js'
 import {
   toQueryConditions,
@@ -478,7 +479,7 @@ export const organisationForm = guardedForm(
             ? { permitUserDetailsEdit: data.permitUserDetailsEdit }
             : {}),
           ...(data.capabilities !== undefined
-            ? { capabilities: data.capabilities }
+            ? { capabilities: capabilityDefinitionsToStorage(data.capabilities) }
             : {}),
         },
         {
@@ -600,7 +601,7 @@ export const organisationForm = guardedForm(
             : {}),
           url: data.url.trim() === '' ? null : data.url.trim(),
           ...(data.capabilities !== undefined
-            ? { capabilities: data.capabilities }
+            ? { capabilities: capabilityDefinitionsToStorage(data.capabilities) }
             : {}),
         },
       }),

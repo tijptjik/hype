@@ -1,10 +1,7 @@
 // TYPES
 
-export type CapabilityI18nRoot = {
-  en?: string
-  zhHans?: string
-  zhHant?: string
-}
+// Labels use the shared content-language contract, independently of UI locales.
+export type CapabilityI18nRoot = Partial<Record<string, string>>
 
 export type CapabilityKey = 'manageBakeries' | 'manageVolunteers' | 'manageDropOffs'
 
