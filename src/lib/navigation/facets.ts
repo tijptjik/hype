@@ -53,7 +53,7 @@ export type ProjectFacet =
   | 'layers'
   | 'fields'
   | 'images'
-export type LayerFacet = 'features' | 'core' | 'fields'
+export type LayerFacet = 'features' | 'core' | 'fields' | 'advanced'
 
 export const ADMIN_FACET_DEFINITIONS = {
   [ADMIN_FACETS.updates]: { label: () => 'History', icon: UpdatesIcon },
@@ -165,6 +165,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.core,
     ADMIN_FACETS.features,
     ADMIN_FACETS.fields,
+    ADMIN_FACETS.advanced,
     ADMIN_FACETS.updates,
   ],
   feature: [
