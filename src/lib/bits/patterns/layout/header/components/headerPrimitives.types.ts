@@ -33,6 +33,7 @@ export interface HeaderTaskActionsProps
 }
 
 export interface HeaderFacetsProps extends HeaderFacetsConfig {
+  isMeasuring?: boolean
   hideLabel?: boolean
 }
 

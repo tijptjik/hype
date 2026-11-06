@@ -16,7 +16,8 @@ export const HEADER_FACETS_LIST_CLASSES =
 
 export const HEADER_FACETS_LIST_STYLE = ''
 
-export const HEADER_FACET_ITEM_CLASSES = ''
+export const HEADER_FACET_ITEM_CLASSES =
+  'grid shrink-0 transition-[grid-template-columns,opacity] duration-200 ease-out motion-reduce:transition-none'
 
 export const HEADER_NEW_BUTTON_CLASSES = 'px-3.5'
 
