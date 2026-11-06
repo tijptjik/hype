@@ -45,8 +45,17 @@ for (const [name, engine] of [
         .count(),
       1,
     )
-    assert.equal(await row.getByText('legacy-image', { exact: true }).count(), 1)
-    await row.getByText('Image reference', { exact: true }).first().click()
+    assert.equal(await row.getByText('Image reference', { exact: true }).count(), 0)
+    assert.equal(await row.getByText('legacy-image', { exact: true }).count(), 0)
+    const toggles = row.getByRole('button', { name: 'Image metadata', exact: true })
+    assert.equal(await toggles.count(), 3)
+    await toggles.nth(1).click()
+    await row.getByText('legacy-image', { exact: true }).waitFor()
+    await row.getByText('fixture-image', { exact: true }).waitFor()
+    await toggles.nth(1).click()
+    assert.equal(await row.getByText('legacy-image', { exact: true }).count(), 0)
+    assert.equal(await row.getByText('fixture-image', { exact: true }).count(), 0)
+    await toggles.first().click()
     assert.equal(await row.getAttribute('open'), '')
     await row.getByText('fixture-revision', { exact: true }).first().waitFor()
     console.log(
