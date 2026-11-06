@@ -25,6 +25,7 @@ import Save from 'virtual:icons/proicons/save'
 import Upload from 'virtual:icons/proicons/arrow-upload'
 import Table2 from 'virtual:icons/proicons/table'
 import Trash2 from 'virtual:icons/proicons/delete'
+import HistoryIcon from 'virtual:icons/proicons/history'
 import Undo2 from 'virtual:icons/proicons/arrow-undo'
 import X from 'virtual:icons/proicons/cancel'
 // ENUMS
@@ -503,6 +504,26 @@ export function useAdminHeaderModel(
   )
   const titleMenuItems = $derived.by((): HeaderTitleMenuItemConfig[] => {
     const items = [...titleMenuMetaItems]
+
+    // Hierarchy changelogs open as a record view from the same menu as Delete.
+    if (
+      !isIndex &&
+      canEdit &&
+      adminCtx.activeResourceRef &&
+      adminCtx.activeResourceRef !== NEW_REF &&
+      ['organisation', 'project', 'layer'].includes(
+        String(adminCtx.activeResourceType),
+      ) &&
+      !page.url.pathname.endsWith('/changelog')
+    ) {
+      items.push({
+        label: 'Changelog',
+        icon: HistoryIcon,
+        onSelect: () => {
+          void goto(`${page.url.pathname.replace(/\/$/, '')}/changelog`)
+        },
+      })
+    }
 
     if (!showDeleteMenuAction) return items
 
