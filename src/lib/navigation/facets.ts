@@ -36,6 +36,7 @@ export const ADMIN_FACETS = {
 
 export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies'
 export type OrganisationFacet =
+  | 'updates'
   | 'users'
   | 'messaging'
   | 'features'
@@ -108,6 +109,7 @@ export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
 export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
+  organisation: { updates: () => 'History' },
   project: { updates: () => 'History' },
   feature: {
     address: () => m.feature_location_title(),
@@ -118,6 +120,7 @@ export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 export const ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
+  organisation: { updates: () => 'History' },
   project: { updates: () => 'History' },
   feature: {
     core: () => m.resources__profile(),
@@ -144,9 +147,9 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.fields,
     ADMIN_FACETS.messaging,
+    ADMIN_FACETS.updates,
     ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
-    ADMIN_FACETS.updates,
   ],
   project: [
     ADMIN_FACETS.core,
