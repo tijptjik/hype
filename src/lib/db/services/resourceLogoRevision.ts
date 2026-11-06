@@ -142,8 +142,7 @@ export async function enrollResourceLogo(
     {
       actorId: input.actorId,
       origin: 'system',
-      reason:
-        'Verified exact logo baseline; earlier logo versions are not reconstructed',
+      reason: 'Verified baseline',
     },
     false,
   )

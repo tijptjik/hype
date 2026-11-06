@@ -5,7 +5,7 @@ import { onMount, untrack } from 'svelte'
 import { formatDistanceStrict } from 'date-fns'
 // PRESENTATION
 import { historyStyles as styles } from './organisationHistory.styles'
-import { groupChanges } from './presentation'
+import { fieldLabel, groupChanges } from './presentation'
 // COMPONENTS
 import HistoryValue from './components/HistoryValue.svelte'
 // BITS COMPONENTS
@@ -274,6 +274,20 @@ $effect(() => {
         entry.changes.filter(change => hasLogo && isLogoChange(change)),
         entry.fieldLabels,
       )}
+      {@const fields = [
+        ...new Set(
+          entry.changes.map(change =>
+            change.path.length
+              ? (entry.fieldLabels?.[change.path[0]] ??
+                fieldLabel(change.path.slice(0, 1)))
+              : 'Record',
+          ),
+        ),
+      ]}
+      {@const fieldSummary =
+        fields.length > 2
+          ? `${fields.slice(0, 2).join(', ')} +${fields.length - 2} more`
+          : fields.join(', ') || '—'}
       <li class="relative min-w-0 pb-5 pl-5 last:pb-0 @[36rem]:pl-7">
         <!-- Connect revision markers through comparisons and elapsed-time rows. -->
         {#if index < entries.length - 1 || nextCursor !== null}
@@ -311,13 +325,25 @@ $effect(() => {
               <h3
                 class="text-foreground text-sm leading-relaxed font-medium break-words"
               >
-                {entry.reason ??
-                  (entry.initial
-                    ? 'Initial recorded state'
-                    : 'Profile and settings updated')}
+                {entry.reason ===
+                'Verified exact logo baseline; earlier logo versions are not reconstructed'
+                  ? 'Verified baseline'
+                  : (entry.reason ??
+                    (entry.initial
+                      ? 'Initial recorded state'
+                      : 'Profile and settings updated'))}
               </h3>
             </div>
             <dl class={styles.metadata}>
+              <div class="max-w-[min(100%,480px)] min-w-0 space-y-1">
+                <dt class={styles.label}>Field</dt>
+                <dd
+                  class="text-foreground text-sm break-words whitespace-normal"
+                  data-tooltip={fields.length > 2 ? fields.join(', ') : undefined}
+                >
+                  {fieldSummary}
+                </dd>
+              </div>
               <div class="min-w-0 space-y-1">
                 <dt class={styles.label}>Changed</dt>
                 <dd>
@@ -385,14 +411,6 @@ $effect(() => {
                   class={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${expanded[entry.id] ? '' : '-rotate-90'}`}
                 />
               </button>
-            {/if}
-            {#if !entry.initial && !expanded[entry.id]}
-              <p class="text-muted-foreground basis-full text-xs">
-                {[
-                  ...(hasLogo ? ['Logo'] : []),
-                  ...groups.map(group => group.label),
-                ].join(' · ')}
-              </p>
             {/if}
           </header>
           {#snippet fieldComparison(field: HistoryGroup['fields'][number])}
