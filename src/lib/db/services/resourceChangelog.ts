@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm'
 import { matchesChangelogFilters } from '#lib/revisions/changelogFilters.js'
 import { diffRevisionValues } from '#lib/revisions/diff.js'
 // SERVICES
+import { readResourceLogoChanges } from './resourceLogoChanges'
 import {
   readFeaturePublicationChanges,
   readFeaturePrivateChanges,
@@ -440,10 +441,16 @@ export async function listResourceChangelog(
         row.content === null ? { present: false } : { present: true, value: content },
       ).map(change => ({ ...change, path: [row.resourceId, ...change.path] }))
     } else if (!initial) {
+      const previous = JSON.parse(row.previous!)
+      const content = JSON.parse(row.content!)
       changes = diffRevisionValues(
-        { present: true, value: JSON.parse(row.previous!) },
-        { present: true, value: JSON.parse(row.content!) },
+        { present: true, value: previous },
+        { present: true, value: content },
       )
+      // Expand immutable logo metadata only after this resource passes authorization.
+      if (tables.has('imageRevision')) {
+        changes.push(...(await readResourceLogoChanges(db, previous, content)))
+      }
     }
     const entry: ChangelogEntry = {
       key: row.key,

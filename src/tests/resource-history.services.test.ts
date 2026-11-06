@@ -130,3 +130,37 @@ it('distinguishes missing storage from an incomplete rollout', async () => {
     listAdminResourceHistory(db, { resource: 'hub', id: 'hub' }),
   ).rejects.toThrow('Incomplete hub revision migration')
 })
+
+it.each(['organisation', 'hub', 'project'] as const)(
+  'includes pinned logo display-mode changes in %s History',
+  async resource => {
+    fixture.sqlite.exec(`CREATE TABLE imageRevision(id TEXT PRIMARY KEY,imageId TEXT,metadata TEXT);
+      INSERT INTO imageRevision VALUES('old','logo','{"presentationMode":"cover"}'),('new','logo','{"presentationMode":"cast-edges"}');`)
+    for (const [id, revision] of [
+      ['before', 'old'],
+      ['after', 'new'],
+    ]) {
+      fixture.sqlite.prepare(`UPDATE ${resource}Revision SET content=? WHERE id=?`).run(
+        JSON.stringify({
+          record: { imageId: 'logo' },
+          logo: { imageId: 'logo', imageRevisionId: revision },
+        }),
+        id,
+      )
+    }
+    const result =
+      resource === 'organisation'
+        ? await listOrganisationHistory(db, { organisationId: 'org', hubId: 'hub' })
+        : await listAdminResourceHistory(db, {
+            resource,
+            id: resource,
+            organisationId: 'org',
+            hubId: 'hub',
+          })
+    expect(result.entries[0].changes).toContainEqual({
+      path: ['logo', 'presentationMode'],
+      before: { present: true, value: 'cover' },
+      after: { present: true, value: 'cast-edges' },
+    })
+  },
+)

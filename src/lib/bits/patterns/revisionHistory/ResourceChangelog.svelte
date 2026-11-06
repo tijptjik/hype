@@ -77,7 +77,7 @@ let generation = 0
 let now = $state(new Date())
 // Fixed disclosure/date tracks keep every virtual row aligned with the column headings.
 const columnClasses =
-  'grid grid-cols-[1rem_minmax(0,1fr)_5.5rem] gap-x-2 px-4 @[48rem]:grid-cols-[1rem_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_9rem]'
+  'grid grid-cols-[1rem_minmax(0,1fr)_5.5rem] gap-x-2 px-4 @[48rem]:grid-cols-[1rem_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,0.9fr)_9rem]'
 const timeBoundaries = $derived(changelogTimeBoundaries(entries, now))
 const checkBoundary = $derived(
   changelogCheckBoundary(entries, lastCheckedAt, nextCursor !== null),
@@ -221,6 +221,32 @@ function changeFieldLabel(entry: ChangelogEntry, path: readonly string[]): strin
   return fieldLabel(path)
 }
 
+/** Summarize distinct top-level fields without hiding additional changes.
+ * @param entry Authorized changelog entry.
+ * @returns Compact visible label and complete field list for the tooltip.
+ */
+function entryFields(entry: ChangelogEntry): { label: string; full: string } {
+  const fields = [
+    ...new Set(
+      entry.changes.map(change =>
+        change.path.length
+          ? entry.resourceType === 'property'
+            ? changeFieldLabel(entry, change.path.slice(0, 1))
+            : fieldLabel(change.path.slice(0, 1))
+          : 'Record',
+      ),
+    ),
+  ]
+  const full = fields.join(', ') || '—'
+  return {
+    label:
+      fields.length > 2
+        ? `${fields.slice(0, 2).join(', ')} +${fields.length - 2} more`
+        : full,
+    full,
+  }
+}
+
 /** Format a timestamp using the selected locale.
  * @param value Immutable change time.
  * @returns Local date and time.
@@ -294,6 +320,9 @@ $effect(() => {
           </div>
           <Skeleton class="h-3 w-4/5 @[48rem]:hidden" />
         </div>
+        <Skeleton
+          class="col-start-2 my-1 h-3 w-20 max-w-full @[48rem]:col-start-auto"
+        />
         <Skeleton
           class="col-start-2 my-1 h-3 w-24 max-w-full @[48rem]:col-start-auto"
         />
@@ -424,9 +453,10 @@ $effect(() => {
   >
     <span aria-hidden="true"></span>
     <span data-changelog-column="resource">
-      <span class="@[48rem]:hidden">Resource · Action · Actor</span>
+      <span class="@[48rem]:hidden">Resource · Field · Action · Actor</span>
       <span class="hidden @[48rem]:inline">Resource</span>
     </span>
+    <span data-changelog-column="field" class="hidden @[48rem]:block">Field</span>
     <span data-changelog-column="action" class="hidden @[48rem]:block">Action</span>
     <span data-changelog-column="actor" class="hidden @[48rem]:block">Actor</span>
     <span data-changelog-column="changed" class="text-right">Changed</span>
@@ -448,6 +478,7 @@ $effect(() => {
           }}
         >
           {#snippet children(entry)}
+            {@const fields = entryFields(entry)}
             {#if checkBoundary?.position === 'before' &&
               checkBoundary.key === entry.key}
               {@render lastCheckedBar()}
@@ -493,6 +524,12 @@ $effect(() => {
                   ><span class="text-muted-foreground mr-2 text-xs capitalize"
                     >{entry.resourceType}</span
                   ><span class="font-medium">{entry.name}</span></span
+                >
+                <span
+                  data-changelog-cell="field"
+                  data-tooltip={fields.full}
+                  class="text-muted-foreground col-start-2 min-w-0 text-xs break-words whitespace-normal @[48rem]:col-start-auto @[48rem]:text-sm"
+                  >{fields.label}</span
                 >
                 <span
                   data-changelog-cell="action"

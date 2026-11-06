@@ -24,10 +24,14 @@ for (const [name, engine] of [
             ),
           }),
     )
-    await page.goto('http://127.0.0.1:4173/__changelog-images.html?images')
+    await page.goto(
+      `${process.env.CHANGELOG_CHECK_URL ?? 'http://127.0.0.1:4173'}/__changelog-images.html?images`,
+    )
     const row = page.locator('details[data-change-key="first-0"]')
     await row.locator(':scope > summary').click()
     await row.getByText('Historical image unavailable', { exact: true }).waitFor()
+    await row.getByText('Cover', { exact: true }).waitFor()
+    await row.getByText('Full · Cast Edges', { exact: true }).waitFor()
     const previews = row.getByRole('img', { name: 'Updated image', exact: true })
     assert.equal(await previews.count(), 2)
     assert.ok(

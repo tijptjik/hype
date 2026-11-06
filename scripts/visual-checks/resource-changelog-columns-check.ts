@@ -39,7 +39,7 @@ for (const [name, engine] of [
         }
         const columns =
           width >= 768
-            ? ['resource', 'action', 'actor', 'changed']
+            ? ['resource', 'field', 'action', 'actor', 'changed']
             : ['resource', 'changed']
         for (const column of columns) {
           const heading = await headings

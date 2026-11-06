@@ -2,6 +2,8 @@
 import { sql } from 'drizzle-orm'
 // REVISIONS
 import { diffRevisionValues } from '#lib/revisions/diff.js'
+// SERVICES
+import { readResourceLogoChanges } from './resourceLogoChanges'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
@@ -51,7 +53,41 @@ export function historicalLogo(content: string | null): HistoricalLogo | null {
   const imageId = snapshot?.record?.imageId
   if (typeof imageId !== 'string' || !imageId) return null
   const pin = snapshot.logo
-  return { imageId, imageRevisionId: pin?.imageId === imageId && typeof pin.imageRevisionId === 'string' ? pin.imageRevisionId : null }
+  return {
+    imageId,
+    imageRevisionId:
+      pin?.imageId === imageId && typeof pin.imageRevisionId === 'string'
+        ? pin.imageRevisionId
+        : null,
+  }
+}
+
+/** Compare authorized snapshots and their pinned logo display metadata.
+ * @param db Request database.
+ * @param previous Previous immutable snapshot, if available.
+ * @param content Current immutable snapshot.
+ * @returns Field differences including historically recorded display modes.
+ */
+async function profileChanges(
+  db: Database,
+  previous: string | null,
+  content: string,
+): Promise<OrganisationHistoryPage['entries'][number]['changes']> {
+  if (previous === null) return []
+  const before = JSON.parse(previous)
+  const after = JSON.parse(content)
+  const changes = diffRevisionValues(
+    { present: true, value: before },
+    { present: true, value: after },
+  )
+  // Legacy installations without exact logo storage keep their original comparison.
+  if (before.logo && after.logo) {
+    const storage = await db.get<{ n: number }>(
+      sql`SELECT count(*) n FROM sqlite_master WHERE type='table' AND name='imageRevision'`,
+    )
+    if (storage?.n) changes.push(...(await readResourceLogoChanges(db, before, after)))
+  }
+  return changes
 }
 
 /** A bounded history page containing immutable attribution and comparison evidence. */
@@ -125,32 +161,31 @@ export async function listOrganisationHistory(
     .limit(11)
   return {
     available: true,
-    entries: rows.slice(0, 10).map(row => ({
-      id: row.id,
-      actorId: row.actorId,
-      actor:
-        row.actorProfileId === null
-          ? null
-          : {
-              name: row.actorName,
-              username: row.actorUsername,
-              displayUsername: row.actorDisplayUsername,
-              image: row.actorImage,
-            },
-      origin: row.origin,
-      reason: row.reason,
-      createdAt: row.createdAt,
-      initial: row.previous === null,
-      previousCreatedAt: row.previousCreatedAt,
-      logo: { before: historicalLogo(row.previous), after: historicalLogo(row.content) },
-      changes:
-        row.previous === null
-          ? []
-          : diffRevisionValues(
-              { present: true, value: JSON.parse(row.previous) },
-              { present: true, value: JSON.parse(row.content) },
-            ),
-    })),
+    entries: await Promise.all(
+      rows.slice(0, 10).map(async row => ({
+        id: row.id,
+        actorId: row.actorId,
+        actor:
+          row.actorProfileId === null
+            ? null
+            : {
+                name: row.actorName,
+                username: row.actorUsername,
+                displayUsername: row.actorDisplayUsername,
+                image: row.actorImage,
+              },
+        origin: row.origin,
+        reason: row.reason,
+        createdAt: row.createdAt,
+        initial: row.previous === null,
+        previousCreatedAt: row.previousCreatedAt,
+        logo: {
+          before: historicalLogo(row.previous),
+          after: historicalLogo(row.content),
+        },
+        changes: await profileChanges(db, row.previous, row.content),
+      })),
+    ),
     nextCursor: rows.length > 10 ? rows[9].cursor : null,
   }
 }
@@ -222,32 +257,31 @@ export async function listAdminResourceHistory(
   return {
     available: true,
     recordingEnabled: Boolean(rollout?.enabled),
-    entries: rows.slice(0, 10).map(row => ({
-      id: row.id,
-      actorId: row.actorId,
-      actor:
-        row.actorProfileId === null
-          ? null
-          : {
-              name: row.actorName,
-              username: row.actorUsername,
-              displayUsername: row.actorDisplayUsername,
-              image: row.actorImage,
-            },
-      origin: row.origin,
-      reason: row.reason,
-      createdAt: row.createdAt,
-      previousCreatedAt: row.previousCreatedAt,
-      logo: { before: historicalLogo(row.previous), after: historicalLogo(row.content) },
-      initial: row.previous === null,
-      changes:
-        row.previous === null
-          ? []
-          : diffRevisionValues(
-              { present: true, value: JSON.parse(row.previous) },
-              { present: true, value: JSON.parse(row.content) },
-            ),
-    })),
+    entries: await Promise.all(
+      rows.slice(0, 10).map(async row => ({
+        id: row.id,
+        actorId: row.actorId,
+        actor:
+          row.actorProfileId === null
+            ? null
+            : {
+                name: row.actorName,
+                username: row.actorUsername,
+                displayUsername: row.actorDisplayUsername,
+                image: row.actorImage,
+              },
+        origin: row.origin,
+        reason: row.reason,
+        createdAt: row.createdAt,
+        previousCreatedAt: row.previousCreatedAt,
+        logo: {
+          before: historicalLogo(row.previous),
+          after: historicalLogo(row.content),
+        },
+        initial: row.previous === null,
+        changes: await profileChanges(db, row.previous, row.content),
+      })),
+    ),
     nextCursor: rows.length > 10 ? rows[9].cursor : null,
   }
 }

@@ -4,6 +4,7 @@ import type { RevisionDifference } from '#lib/revisions/diff.js'
 const labels: Record<string, string> = {
   record: 'Settings',
   logo: 'Logo',
+  presentationMode: 'Display mode',
   imageRevisionId: 'Exact image version',
   imageId: 'Image identity',
   i18n: 'Translations',

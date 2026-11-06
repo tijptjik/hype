@@ -1,6 +1,7 @@
 <script lang="ts">
 // COMPONENTS
 import HistoryValue from './HistoryValue.svelte'
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 // TYPES
 import type { ChangelogEntry } from '#lib/revisions/changelog.js'
 import type { RevisionDifference } from '#lib/revisions/diff.js'
@@ -66,18 +67,33 @@ const src = $derived(
     : null,
 )
 let failedSource = $state<string | null>(null)
+let loadedSource = $state<string | null>(null)
 </script>
 
 {#if src && failedSource !== src}
-  <img
-    {src}
-    alt={side === 'before' ? 'Previous image' : 'Updated image'}
-    class="border-border/50 max-h-64 max-w-full rounded-md border object-contain"
-    loading="lazy"
-    onerror={() => {
-      failedSource = src
-    }}
-  >
+  {#key src}
+    <div
+      class="border-border/50 relative h-64 w-96 max-w-full overflow-hidden rounded-md border"
+      aria-busy={loadedSource !== src}
+    >
+      {#if loadedSource !== src}
+        <Skeleton class="absolute inset-0 size-full" />
+      {/if}
+      <img
+        {src}
+        alt={side === 'before' ? 'Previous image' : 'Updated image'}
+        class="relative size-full object-contain"
+        class:opacity-0={loadedSource !== src}
+        loading="lazy"
+        onload={() => {
+          loadedSource = src
+        }}
+        onerror={() => {
+          failedSource = src
+        }}
+      >
+    </div>
+  {/key}
   <details class="text-muted-foreground mt-2 text-xs">
     <summary class="w-fit cursor-pointer">Image reference</summary>
     <div class="mt-2"><HistoryValue {slot} /></div>
@@ -88,5 +104,5 @@ let failedSource = $state<string | null>(null)
       {src ? 'Historical image unavailable' : 'Exact historical preview unavailable'}
     </p>
   {/if}
-  <HistoryValue {slot} />
+  <HistoryValue {slot} path={change.path} />
 {/if}

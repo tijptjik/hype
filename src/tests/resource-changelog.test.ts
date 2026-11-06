@@ -128,6 +128,61 @@ function read(
 }
 
 describe('hierarchy changelog', () => {
+  it('shows display-mode changes from pinned logo revisions without rewriting snapshots', async () => {
+    fixture.sqlite.exec(
+      'CREATE TABLE imageRevision(id TEXT PRIMARY KEY,imageId TEXT,metadata TEXT)',
+    )
+    profile('organisation', 'o', 'before')
+    profile('organisation', 'o', 'after', 'before')
+    for (const [id, mode] of [
+      ['before', 'cover'],
+      ['after', 'cast-edges'],
+    ]) {
+      fixture.sqlite
+        .prepare('UPDATE organisationRevision SET content=? WHERE id=?')
+        .run(JSON.stringify({ logo: { imageId: 'logo', imageRevisionId: id } }), id)
+      fixture.sqlite
+        .prepare('INSERT INTO imageRevision VALUES(?,?,?)')
+        .run(
+          id,
+          'logo',
+          JSON.stringify({ presentationMode: mode, privateMetadata: 'not exposed' }),
+        )
+    }
+    const entry = (await read()).entries.find(entry => entry.key.includes('after'))!
+    expect(entry.changes).toContainEqual({
+      path: ['logo', 'presentationMode'],
+      before: { present: true, value: 'cover' },
+      after: { present: true, value: 'cast-edges' },
+    })
+    expect(JSON.stringify(entry)).not.toContain('privateMetadata')
+    expect(
+      (await read(scopes.organisation, { authorize: () => false })).entries,
+    ).toEqual([])
+    fixture.sqlite.exec("UPDATE imageRevision SET imageId='unrelated' WHERE id='after'")
+    expect(
+      (await read()).entries
+        .flatMap(entry => entry.changes)
+        .some(change => change.path.includes('presentationMode')),
+    ).toBe(false)
+    fixture.sqlite.exec(
+      "UPDATE imageRevision SET imageId='logo',metadata='{}' WHERE id='after'",
+    )
+    expect(
+      (await read()).entries
+        .flatMap(entry => entry.changes)
+        .some(change => change.path.includes('presentationMode')),
+    ).toBe(false)
+    fixture.sqlite.exec(
+      `UPDATE imageRevision SET metadata='{"presentationMode":"cover"}' WHERE id='after'`,
+    )
+    expect(
+      (await read()).entries
+        .flatMap(entry => entry.changes)
+        .some(change => change.path.includes('presentationMode')),
+    ).toBe(false)
+  })
+
   it('links the initial Feature reviewer while preserving the migration operation actor', async () => {
     fixture.sqlite.exec(`ALTER TABLE feature ADD COLUMN contributorId TEXT;
       CREATE TABLE task(id TEXT,featureId TEXT,type TEXT,contributorId TEXT,reviewerId TEXT,isReviewed INTEGER,reviewOutcome TEXT,reviewAction TEXT);

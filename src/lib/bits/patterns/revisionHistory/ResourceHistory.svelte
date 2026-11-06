@@ -135,7 +135,7 @@ function isLogoChange(
     (change.path[0] === 'record' &&
       change.path.length === 2 &&
       change.path[1] === 'imageId') ||
-    change.path[0] === 'logo'
+    (change.path[0] === 'logo' && change.path[1] !== 'presentationMode')
   )
 }
 
@@ -420,11 +420,15 @@ $effect(() => {
               <dl class={styles.values}>
                 <div class={styles.before}>
                   <dt class={styles.label}>Before</dt>
-                  <dd class="min-w-0"><HistoryValue slot={field.change.before} /></dd>
+                  <dd class="min-w-0">
+                    <HistoryValue slot={field.change.before} path={field.change.path} />
+                  </dd>
                 </div>
                 <div class={styles.after}>
                   <dt class={styles.label}>After</dt>
-                  <dd class="min-w-0"><HistoryValue slot={field.change.after} /></dd>
+                  <dd class="min-w-0">
+                    <HistoryValue slot={field.change.after} path={field.change.path} />
+                  </dd>
                 </div>
               </dl>
             </section>

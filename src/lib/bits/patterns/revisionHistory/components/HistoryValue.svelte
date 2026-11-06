@@ -1,10 +1,12 @@
 <script lang="ts">
+// I18N
+import * as m from '#lib/paraglide/messages.js'
 // COMPONENTS
 import HistoryValueNode from './HistoryValueNode.svelte'
 // TYPES
 import type { RevisionSlot } from '#lib/revisions/value.js'
 
-let { slot }: { slot: RevisionSlot } = $props()
+let { slot, path = [] }: { slot: RevisionSlot; path?: readonly string[] } = $props()
 const structured = $derived(
   slot.present && slot.value !== null && typeof slot.value === 'object',
 )
@@ -23,7 +25,14 @@ function display(value: RevisionSlot): string {
   if (!value.present) return 'Not set'
   if (value.value === null) return 'Empty'
   if (typeof value.value === 'boolean') return value.value ? 'Enabled' : 'Disabled'
-  if (typeof value.value === 'string') return value.value || 'Empty text'
+  if (typeof value.value === 'string') {
+    if (path.at(-1) === 'presentationMode') {
+      if (value.value === 'cover') return m.gallery__presentation_cover()
+      if (value.value === 'contain') return m.gallery__presentation_blur()
+      if (value.value === 'cast-edges') return m.gallery__presentation_edges()
+    }
+    return value.value || 'Empty text'
+  }
   return String(value.value)
 }
 </script>

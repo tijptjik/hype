@@ -140,6 +140,11 @@ async function loadPage(
                 before: { present: false },
                 after: { present: true, value: 'unavailable-revision' },
               },
+              {
+                path: ['logo', 'presentationMode'],
+                before: { present: true, value: 'cover' },
+                after: { present: true, value: 'cast-edges' },
+              },
             ]
           : translation && index + i === 0
             ? [
