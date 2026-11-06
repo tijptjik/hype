@@ -947,7 +947,7 @@ const updatePropertyBase = (
 // Update property i18n fields for a locale.
 const updatePropertyI18n = (
   propertyId: Id,
-  locale: Locale,
+  locale: string,
   key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
   value: string | boolean,
 ): void => {
@@ -961,7 +961,7 @@ const addPropertyValue = (propertyId: Id): void => {
   revalidateAfterProgrammaticChange()
 }
 
-const sortPropertyValuesAlphabetically = (propertyId: Id, locale: Locale): void => {
+const sortPropertyValuesAlphabetically = (propertyId: Id, locale: string): void => {
   sortProjectPropertyValuesAlphabetically(
     projectPropertyFormAdapter,
     propertyId,
@@ -991,7 +991,7 @@ const movePropertyValue = (propertyId: Id, valueId: Id, targetIndex: number): vo
 const updatePropertyValueI18n = (
   propertyId: Id,
   valueId: Id,
-  locale: Locale,
+  locale: string,
   key: 'value',
   value: string,
 ): void => {
@@ -2106,7 +2106,7 @@ async function onTranslatePropertyLocale(
   return translated
 }
 
-function onResetPropertyLocale(propertyId: Id, targetLocale: Locale): void {
+function onResetPropertyLocale(propertyId: Id, targetLocale: string): void {
   resetProjectPropertyLocale(projectPropertyFormAdapter, propertyId, targetLocale)
   revalidateAfterProgrammaticChange()
 }

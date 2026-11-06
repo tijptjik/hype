@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
 import type { CompactAncestorRow } from '#lib/api/services/resourcePage.types.js'
 // IDENTITY
@@ -297,11 +299,11 @@ const toProfileResponseShape = async (
     userRoles: normalizedUserRoles,
     properties: (properties ?? []).map(property => ({
       ...property,
-      i18n: transformI18nSafely(property.i18n as never),
+      i18n: propertyLocalesToForm(property.i18n),
       values:
         property.values?.map(value => ({
           ...value,
-          i18n: transformI18nSafely(value.i18n as never),
+          i18n: propertyLocalesToForm(value.i18n),
         })) || [],
     })),
     layers: (row.layers ?? []).map(layer => ({
