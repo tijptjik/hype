@@ -2,6 +2,8 @@
 // COMPONENTS
 import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 // BITS COMPONENTS
+import { Select } from '#lib/bits/core/index.js'
+import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
 import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
@@ -30,11 +32,9 @@ import {
   resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
-  resetLocaleFields,
   syncAdminFacetFromHash,
   toFormLevelIssueMessages,
   toUniqueIssueMessages,
-  translateLocaleIntoEmptyFields,
   updateFormData,
 } from '#lib/client/services/form.js'
 
@@ -60,6 +60,7 @@ import {
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
+import { translateContentField } from '#lib/api/translation.remote.js'
 import {
   archiveLayer,
   getLayer,
@@ -68,6 +69,8 @@ import {
   publishLayer,
 } from '#lib/api/layer.remote.js'
 import { getProjects } from '#lib/api/project.remote.js'
+import { getLayerRelocationPolicy } from '#lib/api/layerLocationPolicy.remote.js'
+import LayerRelocationPolicyPanel from '#lib/bits/patterns/forms/locationUpdatePolicy/LayerRelocationPolicyPanel.svelte'
 import { getProjectProperties } from '#lib/api/property.remote.js'
 import {
   resolveLayerProjectSelectionScope,
@@ -89,14 +92,13 @@ import FormCardStyleSection from '#lib/bits/patterns/forms/formCardStyleSection/
 import { isCardStyleCode, DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import type { CardStyleCode } from '#lib/features/cardStyle.js'
 import {
-  FormI18nDescriptorFields,
-  FormI18nSection,
   FormParentSection,
   FormMapStyleSection,
   LayerPropertyCard,
   Main,
 } from '#lib/bits/index.js'
-import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import { Card, Switch } from '#lib/bits/custom/index.js'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // MAP STYLES
 import {
   REGISTERED_MAP_STYLE_CATALOG,
@@ -137,7 +139,6 @@ import type {
 import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
 import type { MapStyleSelectionItem } from '#lib/bits/patterns/forms/formMapStyleSection/formMapStyleSection.types.js'
-import type { Locale } from '#lib/types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -209,8 +210,6 @@ import type { Locale } from '#lib/types.js'
 // - revalidateAfterProgrammaticChange
 //
 // FORM ACTIONS
-// - onTranslate
-// - onResetLocale
 // - onReplaceParentProject
 // - syncProjectPropertiesIntoLayerForm
 // - onSearchParentProjects
@@ -259,6 +258,7 @@ let contentsElement: HTMLFormElement | undefined = $state()
 let lastSyncedFacetHash = $state('')
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
+let profileResetVersion = $state(0)
 let suppressFormLevelIssues = $state(false)
 let hasAutoEnteredEditForNew = $state(false)
 let lastMergedProjectId = $state<string | null>(null)
@@ -375,6 +375,8 @@ const buildFacetNavAction = createFacetNavActionBuilder<LayerFacet>({
 $effect(() => {
   const currentHash = page.url.hash
   if (currentHash === lastSyncedFacetHash) return
+  // Parent data loads asynchronously; retry deep links when its extra tabs become available.
+  if (!layerFacetOrder.includes(currentHash.slice(1) as LayerFacet)) return
   lastSyncedFacetHash = currentHash
   syncAdminFacetFromHash({
     hash: currentHash,
@@ -412,7 +414,6 @@ const isCurrentRefLoaded = $derived.by(() => {
 })
 
 const isCurrentRefSettled = $derived(isNewLayerRef || settledLayerRef === layerRef)
-const translatableI18nFields = ['name', 'nameShort', 'description'] as const
 
 type LayerEditorFormInput = ReturnType<typeof toLayerFormInput>
 type LayerRemoteFormInput = LayerEditorFormInput
@@ -491,7 +492,7 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
     headerCtrl,
     resourceType: FirstClassResource.layer,
     getEntity: () => layer,
-    refreshResource: async ({ success, result }) => {
+    refreshResource: async ({ success, result, data }) => {
       if (isNewLayerRef && success) {
         const createdId = (result as { data?: { id?: unknown } } | null)?.data?.id
         if (typeof createdId === 'string' && createdId.trim().length > 0) {
@@ -512,6 +513,9 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
 
       const refreshed = await refreshLayer()
       commitSettledLayerState(refreshed)
+      if (success && data.data?.relocationUpdatePolicy && refreshed?.data?.id) {
+        await getLayerRelocationPolicy({ layerId: refreshed.data.id }).refresh()
+      }
       if (refreshed?.data) {
         formCtx.form.fields.set(toLayerFormInput(refreshed.data))
       }
@@ -523,10 +527,82 @@ const formCtx = $derived(configuredLayerForm())
 const formDataUpdater = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<LayerFormPayload>,
 )
+const isDefaultVisible = $derived(
+  Boolean(formCtx.form.fields.value().data?.isDefaultVisible),
+)
+const defaultVisibleInputAttrs = $derived(
+  formCtx.form.fields.data.isDefaultVisible.as(
+    'hidden',
+    isDefaultVisible ? 'true' : 'false',
+  ),
+)
+
+/**
+ * Stages whether the layer is selected automatically with its parent Project.
+ * @param value - The requested default visibility.
+ * @returns Nothing; the enclosing Layer form persists the change on save.
+ */
+function onDefaultVisibleChange(value: boolean): void {
+  updateFormData(formDataUpdater, data => {
+    data.isDefaultVisible = value
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+const stagedRelocationPolicy = $derived.by(() => {
+  const value = formCtx.form.fields.value().data?.relocationUpdatePolicy
+  return typeof value === 'string' ? value : undefined
+})
+
+/**
+ * Register the optional relocation draft on the existing Layer remote form.
+ * @returns Native hidden input attributes for the JSON transport.
+ */
+function hiddenRelocationPolicyAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.relocationUpdatePolicy as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
+  return as('hidden', stagedRelocationPolicy ?? '')
+}
+
+/**
+ * Stage the Layer override without persisting independently of other form edits.
+ * @param value Revision-fenced policy JSON, or undefined to remove the draft.
+ * @returns Nothing; the normal Layer save/cancel flow owns persistence.
+ */
+function onRelocationPolicyChange(value: string | undefined): void {
+  updateFormData(formDataUpdater, data => {
+    if (value === undefined) delete data.relocationUpdatePolicy
+    else data.relocationUpdatePolicy = value
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+/** Update one Feature authoring override; an empty choice follows the Project.
+ * @param key Authoring preference. @param value Inherit, enabled or disabled.
+ * @returns Nothing; the Layer form owns persistence and cancellation.
+ */
+function setFeaturePolicyOverride(
+  key: 'allowFeatureDescriptions' | 'locationBasedFeatureNames',
+  value: string,
+): void {
+  updateFormData(formDataUpdater, data => {
+    data.metadata = { ...data.metadata }
+    if (!value) delete data.metadata[key]
+    else data.metadata[key] = value === 'true'
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 // Metadata retains arbitrary JSON keys; expose its known string controls through
 // SvelteKit's field contract instead of treating their .as method as a JSON key.
 const layerPresentationFields = $derived(
   formCtx.form.fields.data.metadata as unknown as RemoteFormFields<{
+    allowFeatureDescriptions?: boolean | null
+    locationBasedFeatureNames?: boolean | null
     mapStyleCode?: string
     cardStyleCode?: string
     markerStyleCode?: string
@@ -734,9 +810,12 @@ const layerPermissions = $derived.by(() => {
 
 const canEditLayerCore = $derived(layerPermissions.canEditI18n)
 const canEditLayerFields = $derived(layerPermissions.canEditFields)
-const canSetParentProject = $derived(canEditLayerFields)
+const isHistoricalLayer = $derived.by(() =>
+  Boolean(layer?.data?.historicalSourceLayerId),
+)
+const canSetParentProject = $derived(canEditLayerFields && !isHistoricalLayer)
 const canPublishLayer = $derived(layerPermissions.canPublish)
-const canDeleteLayer = $derived(layerPermissions.canArchive)
+const canDeleteLayer = $derived(layerPermissions.canArchive && !isHistoricalLayer)
 const canSubmitLayer = $derived(isCoreFacet ? canEditLayerCore : canEditLayerFields)
 
 /********************
@@ -814,29 +893,7 @@ function revalidateAfterProgrammaticChange(): void {
  *  FORM ACTIONS
  ************/
 
-// I18N actions
-async function onTranslate(
-  sourceLocale: Locale,
-  targetLocale: Locale,
-): Promise<boolean> {
-  const translated = await translateLocaleIntoEmptyFields({
-    form: formCtx.form,
-    sourceLocale,
-    targetLocale,
-    fields: [...translatableI18nFields],
-  })
-  if (translated) revalidateAfterProgrammaticChange()
-  return translated
-}
-
-function onResetLocale(targetLocale: Locale): void {
-  resetLocaleFields({
-    form: formCtx.form,
-    targetLocale,
-    fields: [...translatableI18nFields],
-  })
-  revalidateAfterProgrammaticChange()
-}
+// I18N actions are owned by the shared multilingual descriptor profile.
 
 // Parent project actions
 function onReplaceParentProject(project: ParentSectionProjectItem): void {
@@ -1169,6 +1226,7 @@ async function onDeleteToggle(): Promise<void> {
 }
 
 function onReset(): void {
+  profileResetVersion += 1
   suppressFormLevelIssues = true
   formCtx.clearSubmitAttemptState()
   if (committedLayer?.data) {
@@ -1429,28 +1487,23 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
-        <FormI18nSection
-          title="Descriptions"
-          subtitle="Names and descriptions in each language"
-          {locales}
-          {onTranslate}
-          {onResetLocale}
-          {isEditing}
-        >
-          {#snippet center()}
-            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-          {/snippet}
-
-          {#snippet children(locale)}
-            <FormI18nDescriptorFields
-              form={formCtx.form}
-              fields={formCtx.form.fields.data.i18n[locale]}
-              {locale}
-              isEditing={isEditing && canEditLayerCore}
-              {isRequiredInPreflight}
-            />
-          {/snippet}
-        </FormI18nSection>
+        <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+        <FormI18nDescriptorProfile
+          form={formCtx.form}
+          fields={formCtx.form.fields.data.i18n}
+          defaultLocales={locales}
+          recordKey={layerRef}
+          resetVersion={profileResetVersion}
+          isEditing={isEditing && canEditLayerCore}
+          {isRequiredInPreflight}
+          stickyToolbar
+          stickyFieldHeaders={['description']}
+          showPrimaryLocaleHeader={false}
+          localeHeaderPlacement="gutter"
+          translate={(source, target, text) =>
+            translateContentField({ source, target, text })}
+          onChange={revalidateAfterProgrammaticChange}
+        />
 
         <div class={`${formSectionDividerStyles} grid grid-cols-1 xl:grid-cols-3`}>
           <div class="min-w-0">
@@ -1498,25 +1551,69 @@ $effect(() => {
               onSelect={onSelectLayerCardStyle}
             />
           </div>
-          <div class="border-border min-w-0 border-t xl:col-span-3">
-            <FormParentSection
-              class={formSelectionSectionStyles}
-              title={m.admin__forms_layer_parent_project_title()}
-              subtitle={m.admin__forms_layer_parent_project_subtitle()}
-              issues={parentProjectIssues}
-              parent={selectedParentProject}
-              fallbackImage={selectedParentProject
-                ? `/api/mapRenders/projects/${selectedParentProject.id}/asset`
-                : null}
-              hiddenInputAttrs={hiddenParentProjectInputAttrs}
-              closeOnParentChange={true}
-              isEditing={isEditing && canSetParentProject}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewLayerRef}
-              onSearch={onSearchParentProjects}
-              onReplaceParent={onReplaceParentProject}
-            />
+          <div
+            class="border-border grid min-w-0 grid-cols-1 border-t xl:col-span-3 xl:grid-cols-2"
+          >
+            <div class="min-w-0">
+              <FormParentSection
+                class={formSelectionSectionStyles}
+                title={m.admin__forms_layer_parent_project_title()}
+                subtitle={m.admin__forms_layer_parent_project_subtitle()}
+                issues={parentProjectIssues}
+                parent={selectedParentProject}
+                fallbackImage={selectedParentProject
+                  ? `/api/mapRenders/projects/${selectedParentProject.id}/asset`
+                  : null}
+                hiddenInputAttrs={hiddenParentProjectInputAttrs}
+                closeOnParentChange={true}
+                isEditing={isEditing && canSetParentProject}
+                isSubmitting={formCtx.submitting}
+                isSubmitRequested={formCtx.isSubmitRequested}
+                startInAddingMode={isNewLayerRef}
+                onSearch={onSearchParentProjects}
+                onReplaceParent={onReplaceParentProject}
+              />
+            </div>
+            <div class="border-border min-w-0 border-t xl:border-t-0 xl:border-l">
+              <section
+                class={`${formSelectionSectionStyles} flex min-h-0 flex-col gap-4`}
+              >
+                <SectionHeader
+                  title={m.admin__forms_layer_project_default_title()}
+                  description={m.admin__forms_layer_project_default_subtitle()}
+                />
+                <div class="ml-6">
+                  <Card.Root
+                    size="md"
+                    class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
+                  >
+                    <label
+                      for="layer-default-shown"
+                      class="flex min-w-0 flex-1 items-center px-5 py-3 text-sm font-semibold"
+                    >
+                      {m.admin__forms_layer_default_shown()}
+                    </label>
+                    <Card.Actions
+                      padding="none"
+                      bg="none"
+                      class="border-border/60 w-auto! min-w-0! shrink-0 border-l px-12!"
+                    >
+                      <Switch
+                        id="layer-default-shown"
+                        checked={isDefaultVisible}
+                        disabled={!isEditing ||
+                          !canEditLayerFields ||
+                          formCtx.submitting}
+                        size="sm"
+                        onCheckedChange={value =>
+                          onDefaultVisibleChange(value === true)}
+                      />
+                    </Card.Actions>
+                  </Card.Root>
+                </div>
+              </section>
+              <input {...defaultVisibleInputAttrs}>
+            </div>
           </div>
         </div>
       </FormSurface>
@@ -1558,6 +1655,92 @@ $effect(() => {
         </div>
       </FormSurface>
     </Main.Facet>
+    <Main.Facet
+      isVisible={activeFacet === 'advanced'}
+      transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('advanced', 'previous')}
+      nextAction={buildFacetNavAction('advanced', 'next')}
+      class="right-0! left-0!"
+      attrs={{ 'data-facet-id': 'advanced' }}
+    >
+      <FormSurface>
+        <section class="flex min-h-0 flex-col gap-6 pb-6">
+          <SectionHeader title={m.project_advanced()} />
+          <div
+            class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-8"
+          >
+            {#each [
+              {
+                key: 'allowFeatureDescriptions',
+                label: m.feature_policy_descriptions(),
+              },
+              {
+                key: 'locationBasedFeatureNames',
+                label: m.feature_policy_location_names(),
+              },
+            ] as setting (setting.key)}
+              {@const policyValue =
+                formCtx.form.fields.value().data?.metadata?.[setting.key]}
+              <div
+                class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-xl border border-[var(--form-control-border)] bg-[var(--form-control-edit-fill)] px-5 py-3"
+              >
+                <h3 class="min-w-0 text-sm font-semibold break-words whitespace-normal">
+                  {setting.label}
+                </h3>
+                <Select
+                  class="w-auto! min-w-0! justify-self-end"
+                  reserveTriggerSpace
+                  displayClass="px-3! [&>div]:p-0!"
+                  triggerClass="relative shrink-0 cursor-pointer gap-2 bg-background/50! border-[var(--form-control-border)]!"
+                  placeholder={setting.label}
+                  value={policyValue == null ? 'inherit' : String(policyValue)}
+                  items={[
+                    { value: 'inherit', label: m.location_policy_inherit() },
+                    { value: 'true', label: m.feature_policy_enabled() },
+                    { value: 'false', label: m.feature_policy_disabled() },
+                  ]}
+                  isEditing={isEditing && canEditLayerFields}
+                  disabled={formCtx.submitting}
+                  triggerAttrs={{ 'aria-label': setting.label }}
+                  onValueChange={value =>
+                    setFeaturePolicyOverride(
+                      setting.key as
+                        | 'allowFeatureDescriptions'
+                        | 'locationBasedFeatureNames',
+                      value === 'inherit' ? '' : value,
+                    )}
+                />
+              </div>
+            {/each}
+          </div>
+        </section>
+        {#if committedLayer?.data?.id}
+          {#key committedLayer.data.id}
+            <LayerRelocationPolicyPanel
+              layerId={committedLayer.data.id}
+              staged={stagedRelocationPolicy}
+              isEditing={isEditing && canEditLayerFields}
+              saving={formCtx.submitting}
+              onChange={onRelocationPolicyChange}
+            />
+          {/key}
+        {/if}
+      </FormSurface>
+    </Main.Facet>
+    {#each ['allowFeatureDescriptions', 'locationBasedFeatureNames'] as key}
+      {@const value = formCtx.form.fields.value().data?.metadata?.[key]}
+      {#if typeof value === 'boolean'}
+        <input
+          {...layerPresentationFields[
+            key as 'allowFeatureDescriptions' | 'locationBasedFeatureNames'
+          ].as('hidden', value)}
+        >
+      {/if}
+    {/each}
+    {#if stagedRelocationPolicy}
+      <input {...hiddenRelocationPolicyAttrs()}>
+    {/if}
   </Main.Form>
   <Main.Facet
     isVisible={activeFacet === 'features'}
@@ -1569,7 +1752,7 @@ $effect(() => {
   >
     {#if activeFacet === 'features' && layer?.data?.id}
       {#key layer.data.id}
-        <ScopedFeatureIndex resourceType="layer" resourceId={layer.data.id} />
+        <ScopedFeatureIndex embedded resourceType="layer" resourceId={layer.data.id} />
       {/key}
     {/if}
   </Main.Facet>
