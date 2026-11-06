@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // ROLE POLICY
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // DRIZZLE
@@ -234,10 +236,10 @@ const toProfileResponseShape = async (
     userRoles: organisation.userRoles,
     properties: rawProperties.map(property => ({
       ...property,
-      i18n: transformI18nSafely(property.i18n),
+      i18n: propertyLocalesToForm(property.i18n),
       values: (property.values ?? []).map(value => ({
         ...value,
-        i18n: transformI18nSafely(value.i18n),
+        i18n: propertyLocalesToForm(value.i18n),
       })),
     })),
     image: organisation.image
