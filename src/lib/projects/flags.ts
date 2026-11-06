@@ -6,6 +6,9 @@ export const ProjectFlagsSchema = z
   .object({
     autoPublishClassifiedImages: z.boolean().optional(),
     autoFeatureFirstImage: z.boolean().optional(),
+    showHistoricalLayers: z.boolean().optional(),
+    allowFeatureDescriptions: z.boolean().optional(),
+    locationBasedFeatureNames: z.boolean().optional(),
     show3dAddressOptions: z.boolean().optional(),
   })
   .catchall(z.boolean())

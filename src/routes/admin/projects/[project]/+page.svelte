@@ -5,6 +5,8 @@ import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResour
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import { ProjectFlagsSchema, show3dAddressOptions } from '#lib/projects/flags.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
+import InfoIcon from 'virtual:icons/proicons/info'
 import { getLocationUpdatePolicy } from '#lib/api/location.remote.js'
 import LocationPolicyPanel from '#lib/bits/patterns/forms/locationUpdatePolicy/LocationPolicyPanel.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
@@ -694,7 +696,7 @@ function getHiddenLocaleSettingsAttrs(): Record<string, unknown> {
   }
   return as('hidden', JSON.stringify(localeSettingsPatch))
 }
-// All locale controls edit one project-wide naming policy.
+// All locale controls edit the same Project authoring and presentation preferences.
 const projectFlags = $derived(
   ProjectFlagsSchema.parse(formCtx.form.fields.value().data?.flags ?? {}),
 )
@@ -719,7 +721,12 @@ function setShow3dAddressOptions(checked: boolean | null): void {
  * @returns Nothing; updates and revalidates the form draft.
  */
 function setImagePublicationFlag(
-  key: 'autoPublishClassifiedImages' | 'autoFeatureFirstImage',
+  key:
+    | 'autoPublishClassifiedImages'
+    | 'autoFeatureFirstImage'
+    | 'showHistoricalLayers'
+    | 'allowFeatureDescriptions'
+    | 'locationBasedFeatureNames',
   checked: boolean | null,
 ): void {
   updateFormData(projectEntityUpdaterForm, data => {
@@ -2932,6 +2939,21 @@ $effect(() => {
 })
 </script>
 
+{#snippet settingHelp(label: string, description: string)}
+  <SimpleTooltip contentProps={{ role: 'tooltip' }} triggerClass="flex items-center">
+    {#snippet trigger()}
+      <button
+        type="button"
+        class="text-muted-foreground hover:text-foreground focus-visible:outline-ring mr-3 inline-flex size-7 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-2"
+        aria-label={label}
+      >
+        <InfoIcon class="size-4" aria-hidden="true" />
+      </button>
+    {/snippet}
+    <span class="block max-w-xs text-sm leading-5">{description}</span>
+  </SimpleTooltip>
+{/snippet}
+
 <Main.Root
   onDimensionsChange={(width, height) =>
     adminCtx.view.layout.setMainDimensions(width, height)}
@@ -3275,10 +3297,7 @@ $effect(() => {
     >
       <FormSurface>
         <section class="flex min-h-0 flex-col gap-6 pb-6">
-          <SectionHeader
-            title={m.project_advanced()}
-            description={m.project_3d_address_options_help()}
-          />
+          <SectionHeader title={m.project_advanced()} />
           <div
             class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-x-8 gap-y-3"
           >
@@ -3292,6 +3311,10 @@ $effect(() => {
               >
                 {m.project_show_3d_address_options()}
               </label>
+              {@render settingHelp(
+                m.project_show_3d_address_options(),
+                m.project_3d_address_options_help(),
+              )}
               <Card.Actions
                 padding="md"
                 bg="none"
@@ -3306,6 +3329,48 @@ $effect(() => {
                 />
               </Card.Actions>
             </Card.Root>
+            {#each [
+              {
+                key: 'allowFeatureDescriptions',
+                label: m.feature_policy_descriptions(),
+              },
+              {
+                key: 'locationBasedFeatureNames',
+                label: m.feature_policy_location_names(),
+              },
+            ] as setting (setting.key)}
+              <Card.Root
+                size="md"
+                class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
+              >
+                <label
+                  for={`project-${setting.key}`}
+                  class="flex min-w-0 flex-1 items-center px-5 py-3 text-sm font-semibold"
+                  >{setting.label}</label
+                >
+                <Card.Actions
+                  padding="md"
+                  bg="none"
+                  class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
+                >
+                  <Switch
+                    id={`project-${setting.key}`}
+                    checked={setting.key === 'allowFeatureDescriptions'
+                      ? projectFlags.allowFeatureDescriptions !== false
+                      : projectFlags.locationBasedFeatureNames === true}
+                    disabled={!isEditing || formCtx.submitting}
+                    size="sm"
+                    onCheckedChange={checked =>
+                      setImagePublicationFlag(
+                        setting.key as
+                          | 'allowFeatureDescriptions'
+                          | 'locationBasedFeatureNames',
+                        checked,
+                      )}
+                  />
+                </Card.Actions>
+              </Card.Root>
+            {/each}
             {#each [
               {
                 key: 'autoPublishClassifiedImages',
@@ -3346,6 +3411,35 @@ $effect(() => {
                 </Card.Actions>
               </Card.Root>
             {/each}
+            <Card.Root
+              size="md"
+              class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
+            >
+              <label
+                for="project-historical-layers"
+                class="flex min-w-0 flex-1 items-center px-5 py-3 text-sm font-semibold"
+              >
+                {m.project_show_historical_layers()}
+              </label>
+              {@render settingHelp(
+                m.project_show_historical_layers(),
+                m.project_show_historical_layers_description(),
+              )}
+              <Card.Actions
+                padding="md"
+                bg="none"
+                class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
+              >
+                <Switch
+                  id="project-historical-layers"
+                  checked={projectFlags.showHistoricalLayers === true}
+                  disabled={!isEditing || formCtx.submitting}
+                  size="sm"
+                  onCheckedChange={checked =>
+                    setImagePublicationFlag('showHistoricalLayers', checked)}
+                />
+              </Card.Actions>
+            </Card.Root>
           </div>
         </section>
         <section class="flex min-h-0 flex-col gap-6 pb-6">
