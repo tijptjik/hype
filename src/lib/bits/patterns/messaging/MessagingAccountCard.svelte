@@ -87,7 +87,7 @@ async function submitChallenge(kind: 'code' | 'password'): Promise<void> {
 </script>
 
 <section
-  class="border-border bg-foreground/2 flex min-w-0 flex-col gap-3 rounded-xl border p-4"
+  class="border-border bg-foreground/2 flex w-full max-w-[var(--messaging-settings-card-width,360px)] min-w-0 flex-col gap-3 rounded-xl border p-4"
   aria-label={`${name} account`}
 >
   <div class="flex flex-wrap items-center justify-between gap-3">

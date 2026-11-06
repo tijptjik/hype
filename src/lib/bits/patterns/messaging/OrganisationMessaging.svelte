@@ -13,13 +13,28 @@ import MessagingAccountCard from './MessagingAccountCard.svelte'
 import ChatBackgroundSettings from './ChatBackgroundSettings.svelte'
 // TYPES
 import type { MessagingPlatform } from '#lib/messaging/types.js'
-let { organisationId }: { organisationId: string } = $props()
+import type { ChatAppearance } from '#lib/messaging/appearance.js'
+let {
+  organisationId,
+  appearance,
+  appearanceDisabled = true,
+  appearanceIssues = [],
+  onAppearanceChange,
+}: {
+  organisationId: string
+  appearance: ChatAppearance
+  appearanceDisabled?: boolean
+  appearanceIssues?: string[]
+  onAppearanceChange: (appearance: ChatAppearance) => void
+} = $props()
 // The route keys this component by organisation, keeping leases and login fields isolated.
 const model = untrack(() => useOrganisationMessagingModel(organisationId))
 const platforms: MessagingPlatform[] = ['whatsapp', 'telegram']
 </script>
 
-<FormSurface class="mb-0! flex min-w-0 flex-col">
+<FormSurface
+  class="mb-0! flex min-w-0 flex-col [--messaging-settings-card-width:360px]"
+>
   <SectionHeader
     icon={ChatIcon}
     title="Messaging"
@@ -38,9 +53,7 @@ const platforms: MessagingPlatform[] = ['whatsapp', 'telegram']
     {#if model.loading}
       <p role="status">Loading messaging accounts…</p>
     {:else}
-      <div
-        class="grid min-w-0 grid-cols-1 items-stretch gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))]"
-      >
+      <div class="flex min-w-0 flex-wrap items-stretch gap-4">
         {#each platforms as platform (platform)}
           {@const account = model.accounts.find(
             account => account.platform === platform,
@@ -59,5 +72,10 @@ const platforms: MessagingPlatform[] = ['whatsapp', 'telegram']
       </div>
     {/if}
   </div>
-  <ChatBackgroundSettings {organisationId} />
+  <ChatBackgroundSettings
+    {appearance}
+    disabled={appearanceDisabled}
+    issues={appearanceIssues}
+    onChange={onAppearanceChange}
+  />
 </FormSurface>

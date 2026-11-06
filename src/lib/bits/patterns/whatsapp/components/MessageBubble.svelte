@@ -35,6 +35,7 @@ interface Props {
   attachmentPending?: boolean
   showHeader?: boolean
   showTime?: boolean
+  showActions?: boolean
   sendState?: 'pending' | 'submitted' | 'uncertain' | 'failed'
   transitionName?: string
   organisationName?: string
@@ -66,6 +67,7 @@ let {
   attachmentPending = false,
   showTime = true,
   showHeader = true,
+  showActions = true,
   sendState,
   transitionName,
   platformLabel = 'WhatsApp',
@@ -227,13 +229,13 @@ const operatorDetail = $derived(
           role="img"
           aria-label="Edited"
           title={`Edited ${new Date(message.editedAt).toLocaleString()}`}
-          class="inline-flex text-muted-foreground"
+          class="text-muted-foreground inline-flex"
           ><EditIcon class="size-3" aria-hidden="true" /></span
         >
       {/if}
       {#if showTime}
         <time
-          class="whitespace-nowrap text-[11px] text-muted-foreground"
+          class="text-muted-foreground text-[11px] whitespace-nowrap"
           datetime={new Date(message.timestamp).toISOString()}
           title={new Date(message.timestamp).toLocaleString()}
           >{messageClockTime(message.timestamp)}</time
@@ -250,7 +252,7 @@ const operatorDetail = $derived(
           : 'text-muted-foreground'}"
       >
         {#if sendState === 'failed' || sendState === 'uncertain'}
-          <AlertIcon class="size-3.5 text-error" aria-hidden="true" />
+          <AlertIcon class="text-error size-3.5" aria-hidden="true" />
         {:else if sendState === 'pending'}
           <CheckIcon
             class="size-3.5 opacity-40 motion-safe:animate-pulse"
@@ -275,7 +277,7 @@ const operatorDetail = $derived(
     bind:this={bubble}
     data-message-key={messageMediaKey(message)}
     data-quote-target={highlighted ? '' : undefined}
-    style={`--message-actions-width: ${actionCount * 2.25 + 0.875}rem`}
+    style={`--message-actions-width: ${showActions ? actionCount * 2.25 + 0.875 : 0}rem`}
     tabindex="-1"
     onpointerdown={event => {
       if (event.pointerType === 'touch')
@@ -296,7 +298,7 @@ const operatorDetail = $derived(
         <Avatar name={authorName} src={authorPhoto} class="size-8!" />
         <div class="min-w-0 leading-4">
           <span
-            class="break-words font-medium text-base-content [overflow-wrap:anywhere]"
+            class="text-base-content font-medium [overflow-wrap:anywhere] break-words"
             >{authorName}</span
           >
           {#if authorUsername}
@@ -318,17 +320,17 @@ const operatorDetail = $derived(
             aria-busy={quoteLoading}
             title="Go to the original message"
             disabled={quoteLoading}
-            class="block w-full min-w-0 rounded-lg p-3 text-left transition-colors hover:bg-[var(--chat-quote-hover,var(--theme-raised))] focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
+            class="focus-visible:outline-focus block w-full min-w-0 rounded-lg p-3 text-left transition-colors hover:bg-[var(--chat-quote-hover,var(--theme-raised))] focus-visible:outline-2 disabled:cursor-wait disabled:opacity-60"
             onclick={() => void onOpenQuote?.()}
           >
-            <span class="mb-1 block break-words font-medium"
+            <span class="mb-1 block font-medium break-words"
               >Reply to
               {quoteName ||
                 message.content.quoted.senderName ||
                 message.content.quoted.sender ||
                 'message'}</span
             >
-            <span class="block whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+            <span class="block [overflow-wrap:anywhere] break-words whitespace-pre-wrap"
               >{previewLoading && !quoteOriginal && !message.content.quoted.text
                 ? 'Loading original…'
                 : previewText}</span
@@ -336,7 +338,7 @@ const operatorDetail = $derived(
           </button>
         {:else}
           <div class="p-3">
-            <p class="mb-1 break-words font-medium">
+            <p class="mb-1 font-medium break-words">
               Reply to
               {quoteName ||
                 message.content.quoted.senderName ||
@@ -388,7 +390,7 @@ const operatorDetail = $derived(
             bind:this={editInput}
             aria-label="Edit message text"
             aria-keyshortcuts="Control+Enter"
-            class="min-h-20 w-full rounded-lg border border-border bg-panel p-2"
+            class="border-border bg-panel min-h-20 w-full rounded-lg border p-2"
             maxlength="16384"
             bind:value={editText}
             disabled={saving}
@@ -422,7 +424,7 @@ const operatorDetail = $derived(
           {/if}
         </form>
       {:else if message.content?.text || message.text}
-        <div bind:this={messageBody} class="min-w-0 max-w-full" data-selectable-message>
+        <div bind:this={messageBody} class="max-w-full min-w-0" data-selectable-message>
           <MessageText
             text={message.content?.text || message.text || ''}
             trailing={reactions.length ? undefined : metadata}
@@ -432,7 +434,7 @@ const operatorDetail = $derived(
     {/if}
     {#if confirmingDelete}
       <fieldset
-        class="flex flex-col gap-2 rounded-lg border border-border p-2"
+        class="border-border flex flex-col gap-2 rounded-lg border p-2"
         aria-label="Confirm message deletion"
       >
         <p>Delete this message for everyone?</p>
@@ -476,23 +478,23 @@ const operatorDetail = $derived(
       <div class="flex items-end justify-between gap-3">
         <section class="flex min-w-0 flex-wrap gap-1" aria-label="Reactions">
           {#each reactions as reaction}
-            <span class="rounded-full border border-border bg-surface px-2 py-1"
+            <span class="border-border bg-surface rounded-full border px-2 py-1"
               >{reaction.emoji}
-              <span class="text-xs text-muted-foreground">{reaction.count}</span></span
+              <span class="text-muted-foreground text-xs">{reaction.count}</span></span
             >
           {/each}
         </section>
         <div class="shrink-0">{@render metadata()}</div>
       </div>
     {/if}
-    {#if !sendState}
+    {#if showActions && !sendState}
       <div
         class={`${messageActionsClass} ${message.fromMe ? 'right-full translate-x-2 pr-2' : 'left-full -translate-x-2 pl-2'}`}
         data-open={reactionOpen || selectionQuote ? '' : undefined}
       >
         <fieldset
           aria-label="Message actions"
-          class="flex w-max shrink-0 flex-row flex-nowrap items-center gap-1 rounded-full border border-border bg-panel p-1 shadow-sm"
+          class="border-border bg-panel flex w-max shrink-0 flex-row flex-nowrap items-center gap-1 rounded-full border p-1 shadow-sm"
         >
           <Button
             text={replyLabel}

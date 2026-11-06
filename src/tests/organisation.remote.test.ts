@@ -922,6 +922,104 @@ describe('organisation.remote authz', () => {
     },
   )
 
+  it('saves chat appearance through the organisation form revision with other settings', async () => {
+    const services = await import('#lib/db/services/organisation.js')
+    const { ContentLocaleSettingsSchema } = await import(
+      '#lib/content-locales/settings.js'
+    )
+    const appearance = {
+      image: '/messaging/toastie-and-friends.png',
+      opacity: 0.08,
+      size: 440,
+    }
+    vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+      id: 'org-1',
+      code: 'org-code',
+      hubId: 'hub-a',
+      modifiedAt: 'before',
+      settings: ContentLocaleSettingsSchema.parse({
+        contentLocales: ['en'],
+        future: { keep: true },
+      }),
+    })
+    vi.mocked(services.updateOrganisationByIdWithConcurrency).mockResolvedValue({
+      id: 'org-1',
+      modifiedAt: 'after',
+    })
+    await remote.organisationForm({
+      meta: { id: 'org-1', mode: 'update', updatedAt: 'before' },
+      data: {
+        code: 'org-code',
+        url: '',
+        i18n: { en: {}, zhHans: {}, zhHant: {} },
+        userRoles: [{ userId: 'u-1', role: 'owner' }],
+        settings: { multilingualContent: true, messagingAppearance: appearance },
+      },
+    })
+    expect(services.updateOrganisationByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        updatedAt: 'before',
+        data: expect.objectContaining({
+          settings: {
+            contentLocales: ['en'],
+            future: { keep: true },
+            multilingualContent: true,
+            messagingAppearance: appearance,
+          },
+        }),
+      }),
+    )
+    expect(mockAuthorizeOrganisationUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({
+          settings: expect.objectContaining({ messagingAppearance: appearance }),
+        }),
+      }),
+    )
+  })
+
+  it.each(['invalid', 'unauthorized', 'stale'])(
+    'does not persist %s chat appearance submissions',
+    async mode => {
+      const services = await import('#lib/db/services/organisation.js')
+      vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+        id: 'org-1',
+        code: 'org-code',
+        hubId: 'hub-a',
+        modifiedAt: 'before',
+      })
+      if (mode === 'unauthorized')
+        mockAuthorizeOrganisationUpdateForSubmission.mockReturnValue({
+          allowed: false,
+          code: 'INSUFFICIENT_ROLE',
+        })
+      await expect(
+        remote.organisationForm({
+          meta: {
+            id: 'org-1',
+            mode: 'update',
+            updatedAt: mode === 'stale' ? 'old' : 'before',
+          },
+          data: {
+            code: 'org-code',
+            url: '',
+            i18n: { en: {}, zhHans: {}, zhHant: {} },
+            userRoles: [{ userId: 'u-1', role: 'owner' }],
+            settings: {
+              messagingAppearance: {
+                image: mode === 'invalid' ? 'javascript:alert(1)' : '',
+                opacity: 0.08,
+                size: 440,
+              },
+            },
+          },
+        }),
+      ).rejects.toThrow()
+      expect(services.updateOrganisationByIdWithConcurrency).not.toHaveBeenCalled()
+    },
+  )
+
   it('rejects unauthorized Organisation locale writes before persistence', async () => {
     const services = await import('#lib/db/services/organisation.js')
     vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({

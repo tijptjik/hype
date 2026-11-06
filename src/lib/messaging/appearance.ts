@@ -1,17 +1,18 @@
 // VALIDATION
 import { z } from 'zod'
 
-// Only raster data or same-origin/static and HTTPS images can become CSS backgrounds.
+export const TOASTIE_CHAT_BACKGROUND = '/messaging/toastie-and-friends.png'
+
+// Only stored raster uploads and the bundled preset can become CSS backgrounds.
 const image = z
   .string()
   .max(400_000)
   .refine(
     value =>
       !value ||
-      /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value) ||
-      /^\/(?!\/)[^\s"'()\\]+$/.test(value) ||
-      /^https:\/\/[^\s"'()\\]+$/.test(value),
-    'Choose a PNG, JPEG or WebP image, or an HTTPS image URL',
+      value === TOASTIE_CHAT_BACKGROUND ||
+      /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value),
+    'Upload a PNG, JPEG or WebP image, or choose a built-in background',
   )
 export const ChatAppearanceSchema = z
   .object({
@@ -21,7 +22,6 @@ export const ChatAppearanceSchema = z
   })
   .strict()
 export type ChatAppearance = z.infer<typeof ChatAppearanceSchema>
-export const TOASTIE_CHAT_BACKGROUND = '/messaging/toastie-and-friends.png'
 export const DEFAULT_CHAT_APPEARANCE: ChatAppearance = {
   image: '',
   opacity: 0.06,

@@ -4,8 +4,8 @@ import { propertyLocalesToForm } from '#lib/properties/locales.js'
 import { DEFAULT_ORGANISATION_USER_POLICY } from '#lib/organisation-users/policy.js'
 // ROLE POLICY
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
-// CONTENT LOCALES
-import { toContentLocaleSettingsForm } from '#lib/content-locales/settings.js'
+// ORGANISATION SETTINGS
+import { toOrganisationSettingsForm } from '#lib/organisations/settings.js'
 // CAPABILITIES
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '#lib/capabilities.js'
 // I18N
@@ -158,7 +158,7 @@ export function toOrganisationFormInput(
       userPolicy: { ...(data.userPolicy ?? DEFAULT_ORGANISATION_USER_POLICY) },
       code: data.code ?? '',
       url: data.url ?? '',
-      settings: toContentLocaleSettingsForm(data.settings),
+      settings: toOrganisationSettingsForm(data.settings),
       capabilities: normalizeOrganisationCapabilities(data.capabilities),
       defaultLocationVisibility: data.defaultLocationVisibility ?? 'shared',
       permitUserDetailsEdit: data.permitUserDetailsEdit === true,

@@ -6,9 +6,15 @@ import OrganisationMessaging from '#lib/bits/patterns/messaging/OrganisationMess
 import OrganisationCapabilities from '#lib/bits/patterns/capabilities/organisationCapabilities/OrganisationCapabilities.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import Members from './FormUserRolesSectionFixture.svelte'
+// MESSAGING
+import {
+  DEFAULT_CHAT_APPEARANCE,
+  type ChatAppearance,
+} from '#lib/messaging/appearance.js'
 setResponsiveCtx()
 let editing = $state(false)
 let tab = $state('messaging')
+let appearance = $state<ChatAppearance>({ ...DEFAULT_CHAT_APPEARANCE })
 </script>
 
 <div class="bits-theme bg-background text-foreground min-h-screen">
@@ -21,7 +27,14 @@ let tab = $state('messaging')
     <button type="button" onclick={() => (editing = !editing)}>Toggle editing</button>
   </nav>
   {#if tab === 'messaging'}
-    <OrganisationMessaging organisationId="synthetic-organisation" />
+    <OrganisationMessaging
+      organisationId="synthetic-organisation"
+      {appearance}
+      appearanceDisabled={!editing}
+      onAppearanceChange={value => {
+        appearance = value
+      }}
+    />
   {:else if tab === 'members'}
     <FormSurface><Members isEditing={editing} /></FormSurface>
   {:else}

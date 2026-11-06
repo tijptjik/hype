@@ -1514,6 +1514,12 @@ const toFacetFromIssuePath = (
   facetFieldNames: Map<FacetType, Set<string>>,
 ): FacetType => {
   const segments = toIssuePathSegments(issue)
+  if (segments[0] === 'data' && segments[1] === 'settings') {
+    // Shared JSON settings are serialized once outside their individual editors.
+    if (segments[2] === 'messagingAppearance' && supportedFacets.has('messaging'))
+      return 'messaging'
+    if (supportedFacets.has('advanced')) return 'advanced'
+  }
   if (
     supportedFacets.has('layers') &&
     segments[0] === 'data' &&

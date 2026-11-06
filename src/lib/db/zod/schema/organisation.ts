@@ -3,10 +3,8 @@ import {
   OrganisationUserPolicySchema,
   OrganisationUserPolicyFormSchema,
 } from '#lib/organisation-users/policy.js'
-import {
-  ContentLocaleSettingsSchema,
-  ContentLocaleSettingsFormSchema,
-} from '#lib/content-locales/settings.js'
+import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
+import { OrganisationSettingsFormSchema } from '#lib/organisations/settings.js'
 // I18N
 import { m } from '#lib/i18n.js'
 import type {
@@ -250,7 +248,7 @@ export const OrganisationUserRolesFormData = z.preprocess(
 
 export const OrganisationEntityFormData = z.object({
   userPolicy: OrganisationUserPolicyFormSchema,
-  settings: ContentLocaleSettingsFormSchema,
+  settings: OrganisationSettingsFormSchema,
   code: z
     .string()
     .min(1, { message: m.field_is_required({ field: m.field_code() }) })

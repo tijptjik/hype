@@ -1,14 +1,11 @@
 // VALIDATION
 import { z } from 'zod'
-// DRIZZLE
-import { eq, sql } from 'drizzle-orm'
 // API
-import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
+import { guardedQuery } from '#lib/api/server/guarded.js'
 // DB
-import { organisation } from '#lib/db/schema/organisation.js'
 import { authorizeMessagingOrganisation } from '#lib/db/services/messaging.js'
 // MESSAGING
-import { ChatAppearanceSchema, readChatAppearance } from '#lib/messaging/appearance.js'
+import { readChatAppearance } from '#lib/messaging/appearance.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -16,7 +13,6 @@ import { ChatAppearanceSchema, readChatAppearance } from '#lib/messaging/appeara
 // ═══════════════════════
 // 1. ORGANISATION CHAT APPEARANCE
 // - getMessagingAppearance
-// - setMessagingAppearance
 // ---
 
 const input = z.object({
@@ -33,25 +29,5 @@ export const getMessagingAppearance = guardedQuery(
   async ({ organisationId }, ctx) => {
     const target = await authorizeMessagingOrganisation(ctx, organisationId)
     return readChatAppearance(target.settings)
-  },
-)
-
-/** Update only messaging appearance, preserving unrelated organisation settings.
- * @param params Organisation identity and bounded appearance values.
- * @returns The saved background.
- * @remarks Uses the same membership policy as shared messaging account configuration.
- */
-export const setMessagingAppearance = guardedCommand(
-  input.extend({ appearance: ChatAppearanceSchema }),
-  async ({ organisationId, appearance }, ctx) => {
-    await authorizeMessagingOrganisation(ctx, organisationId)
-    // Patch one JSON path in SQL so concurrent locale changes are not overwritten.
-    await ctx.db
-      .update(organisation)
-      .set({
-        settings: sql`json_set(coalesce(${organisation.settings}, '{}'), '$.messagingAppearance', json(${JSON.stringify(appearance)}))`,
-      })
-      .where(eq(organisation.id, organisationId))
-    return appearance
   },
 )

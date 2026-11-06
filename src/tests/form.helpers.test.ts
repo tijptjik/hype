@@ -154,6 +154,24 @@ describe('form helpers', () => {
     expect(validate).toHaveBeenCalledTimes(1)
   })
 
+  it.each([
+    ['messagingAppearance', 'messaging'],
+    ['contentLocales', 'advanced'],
+  ] as const)('maps shared settings errors for %s to %s', (key, expected) => {
+    const result = resolveFacetTabsWithIssues({
+      issues: [
+        { path: ['data', 'settings', key, 'image'], message: 'Invalid setting' },
+      ],
+      facets: new Map([
+        ['core', { label: 'Core' }],
+        ['messaging', { label: 'Messaging' }],
+        ['advanced', { label: 'Advanced' }],
+      ]),
+    })
+    expect(result.facetIssueSummary.firstFacetWithIssues).toBe(expected)
+    expect(result.facetTabsWithIssues.get(expected)?.hasIssues).toBe(true)
+  })
+
   it('maps data.layers issues onto the layers facet', () => {
     const facets = new Map<'core' | 'layers' | 'fields', { label: string }>([
       ['core', { label: 'Core' }],

@@ -25,10 +25,7 @@ import {
   previewMessagingMedia,
   stageMessagingMedia,
 } from '#lib/api/messaging.remote.js'
-import {
-  getMessagingAppearance,
-  setMessagingAppearance,
-} from '#lib/api/messagingAppearance.remote.js'
+import { getMessagingAppearance } from '#lib/api/messagingAppearance.remote.js'
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 import type { MessagingAccount } from '#lib/db/services/messaging.js'
 import type { BridgeMessage } from '#lib/messaging/types.js'
@@ -245,55 +242,31 @@ function identityRevision(userId: string, platform: string): number {
   ).updatedAt
 }
 
-it('persists shared chat appearance without replacing locale settings or crossing organisations', async () => {
-  sqlite
-    .prepare('UPDATE organisation SET settings=? WHERE id=?')
-    .run(
-      JSON.stringify({ contentLocales: ['en', 'zh-hant'], multilingualContent: true }),
-      'org-a',
-    )
+it('reads only committed organisation chat appearance within the authorized workspace', async () => {
   const appearance = {
     image: '/messaging/toastie-and-friends.png',
     opacity: 0.06,
     size: 480,
   }
-  await setMessagingAppearance({ meta, organisationId: 'org-a', appearance })
+  // The organisation form owns writes; inbox readers consume the committed settings only.
+  sqlite
+    .prepare('UPDATE organisation SET settings=? WHERE id=?')
+    .run(
+      JSON.stringify({ contentLocales: ['en'], messagingAppearance: appearance }),
+      'org-a',
+    )
   expect(await getMessagingAppearance({ meta, organisationId: 'org-a' })).toEqual(
     appearance,
   )
-  const row = sqlite
-    .prepare('SELECT settings FROM organisation WHERE id=?')
-    .get('org-a') as { settings: string }
-  expect(JSON.parse(row.settings)).toEqual({
-    contentLocales: ['en', 'zh-hant'],
-    multilingualContent: true,
-    messagingAppearance: appearance,
-  })
-  await expect(
-    setMessagingAppearance({ meta, organisationId: 'org-b', appearance }),
-  ).rejects.toMatchObject({ status: 403 })
   await expect(
     getMessagingAppearance({ meta, organisationId: 'org-b' }),
   ).rejects.toMatchObject({ status: 403 })
-  await expect(
-    setMessagingAppearance({
-      meta,
-      organisationId: 'org-a',
-      appearance: { ...appearance, image: 'javascript:alert(1)' },
+  sqlite.prepare('UPDATE organisation SET settings=? WHERE id=?').run(
+    JSON.stringify({
+      messagingAppearance: { ...appearance, image: 'javascript:alert(1)' },
     }),
-  ).rejects.toThrow()
-  await expect(
-    setMessagingAppearance({
-      meta,
-      organisationId: 'org-a',
-      appearance: { ...appearance, opacity: 1 },
-    }),
-  ).rejects.toThrow()
-  await setMessagingAppearance({
-    meta,
-    organisationId: 'org-a',
-    appearance: { ...appearance, image: '' },
-  })
+    'org-a',
+  )
   expect((await getMessagingAppearance({ meta, organisationId: 'org-a' })).image).toBe(
     '',
   )

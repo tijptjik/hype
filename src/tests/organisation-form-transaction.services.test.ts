@@ -15,6 +15,8 @@ import {
 } from '#lib/db/services/organisation.js'
 import { publicationSqlite } from './fixtures/publicationSqlite.js'
 import { createOrganisationUserTables } from './fixtures/organisationUserTables.js'
+// SETTINGS
+import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -72,6 +74,43 @@ function snapshot(sqlite: ReturnType<typeof fixture>['sqlite']) {
 }
 
 describe('organisation form revision transaction', () => {
+  it.each(['success', 'stale', 'failure'])(
+    'commits chat appearance with the same organisation revision: %s',
+    async mode => {
+      const { db, sqlite } = fixture()
+      try {
+        if (mode === 'failure')
+          sqlite.exec(
+            "CREATE TRIGGER fail_translation BEFORE INSERT ON organisationI18n BEGIN SELECT RAISE(ABORT,'injected failure'); END",
+          )
+        const before = snapshot(sqlite)
+        const settings = ContentLocaleSettingsSchema.parse({
+          contentLocales: ['en'],
+          messagingAppearance: { image: '', opacity: 0.08, size: 440 },
+        })
+        const saving = updateOrganisationByIdWithConcurrency(db, {
+          ...patch,
+          updatedAt: mode === 'stale' ? 'stale' : 'before',
+          data: { ...patch.data, settings },
+        })
+        if (mode === 'success') {
+          expect(await saving).toMatchObject({ id: 'o' })
+          const row = sqlite
+            .prepare("SELECT code, settings FROM organisation WHERE id='o'")
+            .get()
+          expect(row?.code).toBe('new')
+          expect(JSON.parse(String(row?.settings))).toEqual(settings)
+        } else {
+          if (mode === 'stale') expect(await saving).toBeNull()
+          else await expect(saving).rejects.toThrow()
+          expect(snapshot(sqlite)).toEqual(before)
+        }
+      } finally {
+        sqlite.close()
+      }
+    },
+  )
+
   it.each(['success', 'translation', 'role', 'collision'])(
     'creates the organisation and initial roles atomically: %s',
     async mode => {

@@ -14,6 +14,8 @@ import { runRemoteQuery } from '#lib/remote/index.js'
 // MESSAGING
 import OrganisationMessaging from '#lib/bits/patterns/messaging/OrganisationMessaging.svelte'
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
+import { readChatAppearance, type ChatAppearance } from '#lib/messaging/appearance.js'
+import { readOrganisationSettingsForm } from '#lib/organisations/settings.js'
 // PROFILE
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 import { translateContentField } from '#lib/api/translation.remote.js'
@@ -126,10 +128,7 @@ import MultilingualDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults
 import type { MultilingualSettingKey } from '#lib/content-locales/settings.js'
 // CONTENT LOCALES
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
-import {
-  readContentLocaleForm,
-  contentLocaleFormIssues,
-} from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
+import { contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { resolveContentLocales } from '#lib/content-locales/resolve.js'
 // BITS COMPONENTS
@@ -387,9 +386,28 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
 const formCtx = $derived(configuredOrganisationForm())
 // Shared authoring defaults remain distinct from the descriptor form's UI locales.
 const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
-const localeSettingsPatch = $derived(
-  readContentLocaleForm(formCtx.form.fields.value().data?.settings),
+const organisationSettingsPatch = $derived(
+  readOrganisationSettingsForm(formCtx.form.fields.value().data?.settings),
 )
+const messagingAppearance = $derived(
+  organisationSettingsPatch.messagingAppearance ?? readChatAppearance(undefined),
+)
+
+/** Stage the background in the organisation form without issuing a separate write.
+ * @param appearance Background being previewed in the Messaging facet.
+ * @returns Nothing; the main Save, cancel and revision guard own this draft.
+ */
+function setMessagingAppearance(appearance: ChatAppearance): void {
+  if (!isEditing || formCtx.submitting || !canSubmitOrganisation) return
+  updateFormData(
+    formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
+    data => {
+      data.settings = { ...organisationSettingsPatch, messagingAppearance: appearance }
+      return data
+    },
+  )
+  revalidateAfterProgrammaticChange()
+}
 const inheritedContentLocales = $derived(
   resolveContentLocales({ userLocale: getLocaleKey() }),
 )
@@ -404,7 +422,7 @@ function setContentLocales(locales: string[] | undefined): void {
     formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
     data => {
       data.settings = {
-        ...localeSettingsPatch,
+        ...organisationSettingsPatch,
         contentLocales: locales ? normalizeContentLocales(locales) : null,
       }
       return data
@@ -422,21 +440,21 @@ function setMultilingualDefaults(
   updateFormData(
     formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
     data => {
-      data.settings = { ...localeSettingsPatch, ...patch }
+      data.settings = { ...organisationSettingsPatch, ...patch }
       return data
     },
   )
   revalidateAfterProgrammaticChange()
 }
 
-/** Register JSON settings without copying the resolved user default.
+/** Register shared settings for every facet without copying resolved defaults.
  * @returns Hidden field attributes for the existing settings transport.
  */
-function getHiddenLocaleSettingsAttrs(): Record<string, unknown> {
+function getHiddenOrganisationSettingsAttrs(): Record<string, unknown> {
   const { as } = formCtx.form.fields.data.settings as unknown as {
     as(type: 'hidden', value: string): Record<string, unknown>
   }
-  return as('hidden', JSON.stringify(localeSettingsPatch))
+  return as('hidden', JSON.stringify(organisationSettingsPatch))
 }
 // User settings share the committed form baseline, dirty tracking, cancel and submission.
 const userPolicy = $derived.by((): OrganisationUserPolicy => {
@@ -1674,6 +1692,7 @@ $effect(() => {
       </Main.Facet>
     {/snippet}
     <input {...getHiddenUserPolicyAttrs()}>
+    <input {...getHiddenOrganisationSettingsAttrs()}>
     <Main.Facet
       isVisible={activeFacet === 'advanced'}
       transition="fade"
@@ -1699,7 +1718,7 @@ $effect(() => {
                   getLocaleKey()
                 ]?.nameShort || getNameForToast(organisation, 'nameShort')}
                 {...{ scope: 'organisation' as const }}
-                value={localeSettingsPatch.contentLocales ?? undefined}
+                value={organisationSettingsPatch.contentLocales ?? undefined}
                 inheritedLocales={inheritedContentLocales.locales}
                 inheritedOrigin="user-default"
                 options={localeOptions}
@@ -1709,12 +1728,11 @@ $effect(() => {
               />
               <MultilingualDefaults
                 {...{ scope: 'organisation' as const }}
-                value={localeSettingsPatch}
+                value={organisationSettingsPatch}
                 disabled={!isEditing || formCtx.submitting}
                 onChange={setMultilingualDefaults}
               />
             </div>
-            <input {...getHiddenLocaleSettingsAttrs()}>
           </div>
           <h2 class="mx-6 mt-2 text-base font-semibold">
             {m.content_visibility_heading()}
@@ -2004,7 +2022,15 @@ $effect(() => {
   >
     {#if isMessagingFacet && canManageMessaging && optimisticOrganisationData}
       {#key optimisticOrganisationData.id}
-        <OrganisationMessaging organisationId={optimisticOrganisationData.id} />
+        <OrganisationMessaging
+          organisationId={optimisticOrganisationData.id}
+          appearance={messagingAppearance}
+          appearanceDisabled={!isEditing ||
+            formCtx.submitting ||
+            !canSubmitOrganisation}
+          appearanceIssues={contentLocaleFormIssues(visibleAllIssues)}
+          onAppearanceChange={setMessagingAppearance}
+        />
       {/key}
     {/if}
   </Main.Facet>

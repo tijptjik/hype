@@ -1,5 +1,5 @@
-// CONTENT LOCALES
-import { applyContentLocaleSettingsPatch } from '#lib/content-locales/settings.js'
+// ORGANISATION SETTINGS
+import { applyOrganisationSettingsPatch } from '#lib/organisations/settings.js'
 import type { RemoteQuery } from '$app/server'
 import { error } from '@sveltejs/kit'
 
@@ -472,7 +472,7 @@ export const organisationForm = guardedForm(
           code: normalizedCode,
           url: data.url.trim() === '' ? null : data.url.trim(),
           hubId: activeHubId,
-          settings: applyContentLocaleSettingsPatch(undefined, data.settings),
+          settings: applyOrganisationSettingsPatch(undefined, data.settings),
           defaultLocationVisibility: data.defaultLocationVisibility,
           ...(user.superAdmin === true && data.permitUserDetailsEdit !== undefined
             ? { permitUserDetailsEdit: data.permitUserDetailsEdit }
@@ -588,7 +588,7 @@ export const organisationForm = guardedForm(
           code: normalizedCode,
           ...(data.settings !== undefined
             ? {
-                settings: applyContentLocaleSettingsPatch(
+                settings: applyOrganisationSettingsPatch(
                   current.settings,
                   data.settings,
                 ),
