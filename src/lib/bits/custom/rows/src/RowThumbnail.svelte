@@ -11,6 +11,7 @@ import type { RowThumbnailProps } from '../row.types'
 let {
   image = null,
   imageSrc,
+  imageFallbackSrcs = [],
   alt = 'Resource image',
   onClick,
 }: RowThumbnailProps = $props()
@@ -23,6 +24,36 @@ const resolvedSrc = $derived(
       })
     : imageSrc,
 )
+
+// Keep the same failure sequence as cards, without retrying identical model URLs.
+let failedSources = $state<string[]>([])
+const sourceKey = $derived(JSON.stringify([resolvedSrc, ...imageFallbackSrcs]))
+$effect(() => {
+  sourceKey
+  failedSources = []
+})
+const displayedSrc = $derived(
+  [resolvedSrc, ...imageFallbackSrcs].find(
+    (src): src is string =>
+      typeof src === 'string' && src.length > 0 && !failedSources.includes(src),
+  ),
+)
+
+/**
+ * Advances a failed thumbnail to its next source, ignoring errors from old URLs.
+ * @param event Native image failure.
+ * @returns Nothing.
+ */
+function handleImageError(event: Event): void {
+  const element = event.currentTarget as HTMLImageElement
+  if (!displayedSrc) return
+  if (
+    element.currentSrc &&
+    element.currentSrc !== new URL(displayedSrc, document.baseURI).href
+  )
+    return
+  failedSources = [...failedSources, displayedSrc]
+}
 
 function handleClick(event: Event): void {
   if (!onClick) {
@@ -47,8 +78,13 @@ function handleClick(event: Event): void {
   onclick={handleClick}
   tabindex="-1"
 >
-  {#if resolvedSrc}
-    <img src={resolvedSrc} alt="" class={rowThumbnailImageClass}>
+  {#if displayedSrc}
+    <img
+      src={displayedSrc}
+      alt=""
+      class={rowThumbnailImageClass}
+      onerror={handleImageError}
+    >
   {:else}
     <div class={rowThumbnailFallbackClass}>
       <span class={rowThumbnailFallbackTextClass}></span>

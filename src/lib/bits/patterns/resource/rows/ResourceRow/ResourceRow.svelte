@@ -23,6 +23,7 @@ let {
   title,
   description,
   imageSrc,
+  imageFallbackSrcs,
   imageAlt,
   footerStatus = null,
   breadcrumbs = [],
@@ -98,6 +99,7 @@ const statusTone = $derived.by(() => {
   onclick={event => handleNavigate(event)}
   onkeydown={handleRowKeyDown}
   {imageSrc}
+  {imageFallbackSrcs}
   alt={imageAlt}
   onImageClick={onImageClick ? handleImageClick : undefined}
   {title}

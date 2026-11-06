@@ -5,6 +5,7 @@ export type ResourceRowProps = Pick<
   | 'title'
   | 'description'
   | 'imageSrc'
+  | 'imageFallbackSrcs'
   | 'imageAlt'
   | 'footerStatus'
   | 'breadcrumbs'

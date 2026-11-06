@@ -21,6 +21,7 @@ export type RowRootProps = {
 export type RowThumbnailProps = {
   image?: unknown
   imageSrc?: string
+  imageFallbackSrcs?: string[]
   alt?: string
   onClick?: RowImageClickHandler
 }
@@ -28,6 +29,7 @@ export type RowThumbnailProps = {
 export type RowTitleProps = {
   image?: unknown
   imageSrc?: string
+  imageFallbackSrcs?: string[]
   alt?: string
   onImageClick?: RowImageClickHandler
   title?: string

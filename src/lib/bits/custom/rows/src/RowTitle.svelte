@@ -7,6 +7,7 @@ import type { RowTitleProps } from '../row.types'
 let {
   image,
   imageSrc,
+  imageFallbackSrcs,
   alt = 'Resource image',
   onImageClick,
   title = '',
@@ -17,7 +18,7 @@ let {
 </script>
 
 <div class={rowTitleClass}>
-  <RowThumbnail {image} {imageSrc} {alt} onClick={onImageClick} />
+  <RowThumbnail {image} {imageSrc} {imageFallbackSrcs} {alt} onClick={onImageClick} />
   <div class={rowTitleContentClass}>
     <TextTitle text={title} onClick={onTitleClick} tabIndex={-1} />
     <TextDescription text={description} onClick={onDescriptionClick} tabIndex={-1} />

@@ -14,6 +14,7 @@ let {
   class: className = '',
   image,
   imageSrc,
+  imageFallbackSrcs,
   alt = 'Resource image',
   onImageClick,
   title = '',
@@ -39,6 +40,7 @@ let {
     <RowPrimitive.RowTitleSection
       {image}
       {imageSrc}
+      {imageFallbackSrcs}
       {alt}
       {onImageClick}
       {title}
