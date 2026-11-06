@@ -134,7 +134,7 @@ const rootClass = $derived(
       />
     {/snippet}
 
-    {#snippet right({ showButtonText })}
+    {#snippet right({ showButtonText, isMeasuring })}
       <div class="mr-4 flex min-w-0 flex-1 items-center justify-end gap-0">
         {#if showFacets || showTaskActions}
           <div
@@ -144,6 +144,7 @@ const rootClass = $derived(
           >
             {#if showFacets}
               <HeaderPrimitive.Facets
+                {isMeasuring}
                 items={facetItems}
                 active={facets.active}
                 hideLabel={!showButtonText}
