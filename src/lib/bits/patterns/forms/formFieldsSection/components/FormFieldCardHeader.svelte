@@ -182,16 +182,9 @@ function onReorderKey(event: KeyboardEvent): void {
         </SimpleTooltip>
       {/if}
       {#if sourceTag.label}
-        <SimpleTooltip
-          disabled={!sourceTag.title || sourceTag.title === sourceTag.label}
-        >
-          {#snippet trigger()}
-            <span class={sourceTagLabelClass}>
-              {sourceTag.label}
-            </span>
-          {/snippet}
-          {sourceTag.title}
-        </SimpleTooltip>
+        <span class={sourceTagLabelClass}>
+          {sourceTag.label}
+        </span>
       {/if}
     {/if}
   </div>
