@@ -109,6 +109,7 @@ let viewportHeight = $state(0)
 let isMounted: boolean = $state(false)
 
 let resizeObserver: ResizeObserver | null = null
+let refreshVersion = 0
 
 const renderedItems: Array<{ id: number | string; data: T; index: number }> = $derived(
   items.slice(renderStart, renderEnd).map((data, offset) => {
@@ -165,14 +166,11 @@ const totalContentHeight = $derived.by(() => {
     return items.length * (itemHeight || DEFAULT_ITEM_HEIGHT) + padding * 2
   }
 
-  const mappedHeight = heightMap.reduce(
-    (sum, value) => sum + (value || averageHeight || DEFAULT_ITEM_HEIGHT),
-    0,
-  )
-  const unmappedCount = Math.max(0, items.length - heightMap.length)
-  const unmappedHeight = unmappedCount * (averageHeight || DEFAULT_ITEM_HEIGHT)
-
-  return mappedHeight + unmappedHeight + padding * 2
+  // Sparse cache slots are unmeasured rows, and must still contribute to the track.
+  const knownHeights = heightMap.filter(value => value > 0)
+  const mappedHeight = knownHeights.reduce((sum, value) => sum + value, 0)
+  const unmappedCount = Math.max(0, items.length - knownHeights.length)
+  return mappedHeight + unmappedCount * averageHeight + padding * 2
 })
 
 function clearSecondaryRenderTimeout(): void {
@@ -252,105 +250,92 @@ function updateFixedRange(): void {
     getBottomOverflow()
 }
 
+/**
+ * Measures mounted rows and derives the variable-height window from one height model.
+ * @param items Current list, including newly appended pages.
+ * @param viewportHeight Available scroll viewport height.
+ * @param itemHeight Optional fixed row stride.
+ * @returns Completion after the new window is mounted and observed.
+ * @remarks Measured heights take precedence over estimates in both range selection
+ * and spacers. Overscan rows are measured too, including after disclosure changes.
+ */
 async function refresh(
   items: Array<T>,
   viewportHeight: number,
   itemHeight?: number,
 ): Promise<void> {
+  const version = ++refreshVersion
   const currentViewport = viewport
   const currentRenderedRows = renderedRows
 
-  if (!currentViewport || !currentRenderedRows) {
-    return
-  }
+  if (!currentViewport || !currentRenderedRows) return
 
   if (!canResize) {
     updateFixedRange()
     return
   }
 
-  if (items.length === 0) {
-    start = 0
-    end = 0
-    top = 0
-    bottom = 0
-    heightMap = []
-    averageHeight = itemHeight || DEFAULT_ITEM_HEIGHT
-    currentScrollTop = 0
-    return
-  }
-
-  const { scrollTop } = currentViewport
   await tick()
 
   // The bound elements can disappear during the async tick while routes or portals update.
-  if (viewport !== currentViewport || renderedRows !== currentRenderedRows) {
+  if (
+    version !== refreshVersion ||
+    viewport !== currentViewport ||
+    renderedRows !== currentRenderedRows
+  )
     return
-  }
 
-  let contentHeight = scrollTop - top
-  let index = start
-
-  while (contentHeight < viewportHeight && index < items.length) {
-    let row = currentRenderedRows[index - renderStart]
-
-    if (!row) {
-      end = index + 1
-      await tick()
-
-      if (viewport !== currentViewport || renderedRows !== currentRenderedRows) {
-        return
-      }
-
-      row = currentRenderedRows[index - renderStart]
-    }
-
-    const rowHeight =
-      itemHeight || (row && (row as HTMLElement).offsetHeight) || DEFAULT_ITEM_HEIGHT
-    heightMap[index] = rowHeight
-    contentHeight += rowHeight
-    index += 1
-  }
-
-  end = index
-
-  const knownHeights = heightMap.filter(value => value > 0)
-  averageHeight =
-    knownHeights.length > 0
-      ? knownHeights.reduce((sum, value) => sum + value, 0) / knownHeights.length
-      : itemHeight || DEFAULT_ITEM_HEIGHT
-
-  top = heightMap
-    .slice(0, renderStart)
-    .reduce((sum, value) => sum + (value || averageHeight), 0)
-
-  const remaining = items.length - renderEnd
-  const bottomOverflow = getBottomOverflow()
-  bottom = remaining * averageHeight + bottomOverflow
-
+  // Refresh every mounted height, not just visible rows whose old size is unknown.
   heightMap.length = items.length
-
-  const totalHeight = canResize
-    ? heightMap.reduce((sum, value) => sum + (value || averageHeight), 0)
-    : items.length * (itemHeight || DEFAULT_ITEM_HEIGHT)
-
-  if (scrollTop + viewportHeight > totalHeight + bottomOverflow) {
-    const maxScroll = Math.max(0, totalHeight + bottomOverflow - viewportHeight)
-
-    if (scrollTop > maxScroll) {
-      currentViewport.scrollTo(0, maxScroll)
-    }
+  for (let offset = 0; offset < currentRenderedRows.length; offset++) {
+    const index = renderStart + offset
+    if (index >= items.length) break
+    const row = currentRenderedRows[offset] as HTMLElement
+    heightMap[index] = itemHeight || row.offsetHeight || DEFAULT_ITEM_HEIGHT
   }
+  const knownHeights = heightMap.filter(value => value > 0)
+  averageHeight = knownHeights.length
+    ? knownHeights.reduce((sum, value) => sum + value, 0) / knownHeights.length
+    : itemHeight || DEFAULT_ITEM_HEIGHT
 
+  // Use identical offsets for the visible window, both spacers, and scroll clamping.
+  const offsets = [0]
+  for (let index = 0; index < items.length; index++) {
+    offsets.push(offsets[index] + (heightMap[index] || averageHeight))
+  }
+  const totalHeight = offsets[items.length]
+  const maxScroll = Math.max(
+    0,
+    totalHeight + padding * 2 + getBottomOverflow() - viewportHeight,
+  )
+  const scrollTop = Math.min(currentViewport.scrollTop, maxScroll)
+  const visibleTop = Math.max(0, scrollTop - padding)
+  const visibleBottom = scrollTop + viewportHeight - padding
+  let first = 0
+  while (first < items.length && offsets[first + 1] <= visibleTop) first++
+  let last = first
+  while (last < items.length && offsets[last] < visibleBottom) last++
+
+  start = first
+  end = last
+  top = offsets[Math.max(0, first - bufferBefore)]
+  bottom =
+    totalHeight -
+    offsets[Math.min(items.length, last + bufferAfter)] +
+    getBottomOverflow()
+
+  await tick()
+  if (
+    version !== refreshVersion ||
+    viewport !== currentViewport ||
+    renderedRows !== currentRenderedRows
+  )
+    return
+
+  // Observe newly mounted overscan rows so their estimates settle before scrolling.
+  for (const row of currentRenderedRows) resizeObserver?.observe(row)
+  if (currentViewport.scrollTop > maxScroll) currentViewport.scrollTop = maxScroll
   currentScrollTop = currentViewport.scrollTop
-
-  if (canResize) {
-    for (const row of currentRenderedRows) {
-      if (row) {
-        resizeObserver?.observe(row)
-      }
-    }
-  }
 }
 
 /**
@@ -385,108 +370,12 @@ function handleScroll(): void {
   })
 }
 
+/**
+ * Reconciles scroll position using the same measured offsets as resize updates.
+ * @returns Completion after the visible range and spacers agree.
+ */
 async function handleScrollImmediate(): Promise<void> {
-  if (!viewport || !renderedRows) {
-    return
-  }
-
-  if (!canResize) {
-    updateFixedRange()
-    return
-  }
-
-  const { scrollTop } = viewport
-  currentScrollTop = scrollTop
-  const oldRenderStart = renderStart
-  const oldRenderEnd = renderEnd
-
-  if (canResize) {
-    for (
-      let renderedIndex = 0;
-      renderedIndex < renderedRows.length;
-      renderedIndex += 1
-    ) {
-      const element = renderedRows[renderedIndex] as HTMLElement
-      const actualIndex = renderStart + renderedIndex
-
-      if (element && actualIndex < items.length) {
-        if (
-          !heightMap[actualIndex] ||
-          actualIndex < oldRenderStart ||
-          actualIndex >= oldRenderEnd
-        ) {
-          heightMap[actualIndex] = element.offsetHeight
-        }
-      }
-    }
-  }
-
-  let index = 0
-  let y = 0
-
-  while (index < items.length) {
-    const rowHeight =
-      (canResize ? averageHeight || heightMap[index] : itemHeight) ||
-      DEFAULT_ITEM_HEIGHT
-
-    if (y + rowHeight > scrollTop) {
-      start = index
-      top = y
-      break
-    }
-
-    y += rowHeight
-    index += 1
-  }
-
-  while (index < items.length) {
-    const rowHeight =
-      (canResize ? averageHeight || heightMap[index] : itemHeight) ||
-      DEFAULT_ITEM_HEIGHT
-
-    y += rowHeight
-    index += 1
-
-    if (y > scrollTop + viewportHeight) {
-      break
-    }
-  }
-
-  end = index
-
-  if (canResize && end > 0) {
-    const newAverage = y / end || itemHeight || DEFAULT_ITEM_HEIGHT
-    averageHeight = averageHeight ? averageHeight * 0.8 + newAverage * 0.2 : newAverage
-  } else {
-    averageHeight = itemHeight || DEFAULT_ITEM_HEIGHT
-  }
-
-  if (canResize) {
-    const nextRenderStart = Math.max(0, start - bufferBefore)
-    const nextRenderEnd = Math.min(items.length, end + bufferAfter)
-
-    for (let fillIndex = nextRenderStart; fillIndex < nextRenderEnd; fillIndex += 1) {
-      if (!heightMap[fillIndex]) {
-        heightMap[fillIndex] = averageHeight
-      }
-    }
-  }
-
-  const nextRenderStart = Math.max(0, start - bufferBefore)
-
-  if (canResize) {
-    top = heightMap
-      .slice(0, nextRenderStart)
-      .reduce((sum, value) => sum + (value || averageHeight), 0)
-  } else {
-    top = nextRenderStart * (itemHeight || DEFAULT_ITEM_HEIGHT)
-  }
-
-  const nextRenderEnd = Math.min(items.length, end + bufferAfter)
-  const remaining = items.length - nextRenderEnd
-  const estimatedHeight = canResize ? averageHeight : itemHeight || DEFAULT_ITEM_HEIGHT
-
-  bottom = remaining * estimatedHeight + getBottomOverflow()
+  await refresh(items, viewportHeight, itemHeight)
 }
 
 function handleHeightChange(): void {
