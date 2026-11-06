@@ -3,6 +3,7 @@
 import { onMount, untrack } from 'svelte'
 // COMPONENTS
 import ChangelogValue from './components/ChangelogValue.svelte'
+import HistoryTimestamp from './components/HistoryTimestamp.svelte'
 import ChangelogEntryHeader from './components/ChangelogEntryHeader.svelte'
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import ChangelogFiltersBar from './components/ChangelogFilters.svelte'
@@ -179,22 +180,6 @@ function toggleEntry(event: MouseEvent, key: string): void {
   expanded[key] = !(expanded[key] ?? expandByDefault)
 }
 
-/** Collapse an open record from its content without intercepting embedded controls.
- * @param event Bubbled click from the record.
- * @param key Immutable changelog entry identity.
- * @returns Nothing; the summary remains the keyboard disclosure control.
- */
-function collapseFromContent(event: MouseEvent, key: string): void {
-  if (event.defaultPrevented || !(event.target instanceof Element)) return
-  if (
-    event.target.closest(
-      'summary, a, button, input, select, textarea, [role="button"], [contenteditable="true"]',
-    )
-  )
-    return
-  expanded[key] = false
-}
-
 /** Summarize known operations once each while retaining all differences on expansion.
  * @param entry Authorized immutable entry.
  * @returns Compact operation labels.
@@ -316,7 +301,7 @@ $effect(() => {
       data-last-checked
       role="separator"
       aria-label={`Last checked ${timestamp(lastCheckedAt)}`}
-      title={timestamp(lastCheckedAt)}
+      data-tooltip={timestamp(lastCheckedAt)}
       class="flex items-center gap-2 border-y border-blue-500/50 bg-blue-500/15 px-4 py-2 text-xs font-medium text-blue-700 dark:text-blue-300"
     >
       <span
@@ -468,7 +453,6 @@ $effect(() => {
             <details
               class="group border-border w-full border-b"
               data-change-key={entry.key}
-              onclick={event => collapseFromContent(event, entry.key)}
               open={expanded[entry.key] ?? expandByDefault}
             >
               <!-- biome-ignore lint/a11y/noStaticElementInteractions: Native summary is the keyboard-operable disclosure control. -->
@@ -507,13 +491,13 @@ $effect(() => {
                 >
                   <ChangelogActor {entry} />
                 </span>
-                <time
+                <HistoryTimestamp
                   data-changelog-cell="changed"
                   class="text-muted-foreground col-start-3 row-start-1 min-w-0 text-right text-xs break-words whitespace-normal @[48rem]:col-start-auto @[48rem]:row-start-auto"
-                  datetime={entry.createdAt}
-                  title={timestamp(entry.createdAt)}
-                  >{relative(entry.createdAt)}</time
-                >
+                  value={entry.createdAt}
+                  exact={timestamp(entry.createdAt)}
+                  label={relative(entry.createdAt)}
+                />
               </summary>
               {#if expanded[entry.key] ?? expandByDefault}
                 <div class="border-border bg-muted/15 border-t text-sm">

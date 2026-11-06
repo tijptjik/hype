@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import HistoryActorIdentity from './HistoryActorIdentity.svelte'
 // TYPES
 import type { ChangelogEntry } from '#lib/revisions/changelog.js'
 
@@ -27,28 +29,20 @@ const labels: Record<string, string> = {
 }
 </script>
 
-{#if isUser && actor.actorUsername}
-  <a
-    href={`/admin/users/${encodeURIComponent(actor.actorUsername)}`}
-    class="{prominent
-      ? 'text-foreground text-sm font-medium'
-      : 'text-muted-foreground text-xs'} hover:text-primary focus-visible:outline-primary min-w-0 rounded-sm break-words hover:underline focus-visible:outline-2"
-    title={actor.actorName ? `${actor.actorName} · ${actor.actorId}` : actor.actorId}
-    onclick={event => event.stopPropagation()}
-    >@{actor.actorDisplayUsername || actor.actorUsername}</a
-  >
-{:else}
-  <span
-    class="{prominent
-      ? 'text-foreground text-sm font-medium'
-      : 'text-muted-foreground text-xs'} min-w-0 break-words"
-    title={actor.actorId}
-  >
-    {isUser
-      ? actor.actorName || actor.actorId
-      : (labels[entry.origin] ?? actor.actorId)}
-  </span>
-{/if}
+<HistoryActorIdentity
+  username={isUser ? actor.actorUsername : undefined}
+  label={isUser
+    ? actor.actorUsername
+      ? `@${actor.actorDisplayUsername || actor.actorUsername}`
+      : actor.actorName || actor.actorId
+    : (labels[entry.origin] ?? actor.actorId)}
+  tooltip={isUser && actor.actorName
+    ? `${actor.actorName} · ${actor.actorId}`
+    : actor.actorId}
+  class={prominent
+    ? 'text-foreground text-sm font-medium'
+    : 'text-muted-foreground text-xs'}
+/>
 
 {#if entry.baselineActor}
   <span class="text-muted-foreground text-xs"

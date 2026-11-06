@@ -7,6 +7,7 @@ import { Button } from '#lib/bits/core/index.js'
 // ICONS
 import MetadataIcon from 'virtual:icons/proicons/database'
 // COMPONENTS
+import HistoryTimestamp from './HistoryTimestamp.svelte'
 import ChangelogActor from './ChangelogActor.svelte'
 // TYPES
 import type { ChangelogEntry } from '#lib/revisions/changelog.js'
@@ -69,13 +70,12 @@ const reasonLabel = $derived(entry.baseline ? 'Legacy baseline' : entry.reason)
     <div class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1">
       <dt class={labelClass}>Changed</dt>
       <dd>
-        <time
-          datetime={entry.createdAt}
-          title={exactTime}
+        <HistoryTimestamp
+          value={entry.createdAt}
+          exact={exactTime}
+          label={relativeTime}
           class="block text-sm font-medium"
-        >
-          {relativeTime}
-        </time>
+        />
       </dd>
     </div>
     <div class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1">

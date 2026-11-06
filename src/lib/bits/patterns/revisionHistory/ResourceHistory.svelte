@@ -9,7 +9,8 @@ import { groupChanges } from './presentation'
 // COMPONENTS
 import HistoryValue from './components/HistoryValue.svelte'
 // BITS COMPONENTS
-import Avatar from '#lib/bits/core/avatar/Avatar.svelte'
+import HistoryActorIdentity from './components/HistoryActorIdentity.svelte'
+import HistoryTimestamp from './components/HistoryTimestamp.svelte'
 import { Button } from '#lib/bits/core/index.js'
 import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
 import Header from '#lib/bits/custom/header/Header.svelte'
@@ -320,12 +321,12 @@ $effect(() => {
               <div class="min-w-0 space-y-1">
                 <dt class={styles.label}>Changed</dt>
                 <dd>
-                  <time
+                  <HistoryTimestamp
                     class="text-foreground text-sm"
-                    datetime={entry.createdAt}
-                    title={new Date(entry.createdAt).toLocaleString()}
-                    >{relative(entry.createdAt)}</time
-                  >
+                    value={entry.createdAt}
+                    exact={new Date(entry.createdAt).toLocaleString()}
+                    label={relative(entry.createdAt)}
+                  />
                 </dd>
               </div>
               <div class="max-w-full min-w-0 space-y-1">
@@ -333,34 +334,21 @@ $effect(() => {
                 <dd class="min-w-0">
                   {#if entry.origin === 'user' && entry.actor}
                     {@const actor = entry.actor}
-                    {#snippet identity()}
-                      <span aria-hidden="true">
-                        <Avatar
-                          name={actor.name || actor.username}
-                          src={actor.image}
-                          class="size-5!"
-                        />
-                      </span>
-                      <span class="min-w-0 [overflow-wrap:anywhere] whitespace-normal">
-                        {actor.username
-                          ? `@${actor.displayUsername || actor.username}`
-                          : actor.name || 'User unavailable'}
-                      </span>
-                    {/snippet}
-                    {#if actor.username}
-                      <a
-                        href={`/admin/users/${encodeURIComponent(actor.username)}`}
-                        class="text-foreground hover:text-primary focus-visible:outline-primary inline-flex max-w-full min-w-0 items-center gap-2 rounded-sm text-sm hover:underline focus-visible:outline-2"
-                        >{@render identity()}</a
-                      >
-                    {:else}
-                      <span
-                        class="text-foreground inline-flex max-w-full min-w-0 items-center gap-2 text-sm"
-                        >{@render identity()}</span
-                      >
-                    {/if}
+                    <HistoryActorIdentity
+                      username={actor.username}
+                      label={actor.username
+                        ? `@${actor.displayUsername || actor.username}`
+                        : actor.name || 'User unavailable'}
+                      image={actor.image}
+                      avatarName={actor.name || actor.username || ''}
+                      showAvatar
+                      class="text-foreground text-sm"
+                    />
                   {:else}
-                    <span class="text-muted-foreground text-sm" title={entry.actorId}>
+                    <span
+                      class="text-muted-foreground text-sm"
+                      data-tooltip={entry.actorId}
+                    >
                       {entry.origin === 'migration'
                         ? 'Author unknown'
                         : entry.origin === 'system'

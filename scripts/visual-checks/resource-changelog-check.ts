@@ -1,4 +1,5 @@
 // NODE
+import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 // PLAYWRIGHT
 import { chromium, firefox } from 'playwright'
@@ -46,7 +47,7 @@ for (const [name, engine] of [
       const age = await summary.locator('time').innerText()
       if (
         !/ago|yesterday|last|now/.test(age) ||
-        !(await summary.locator('time').getAttribute('title'))
+        !(await summary.locator('time').getAttribute('data-tooltip'))
       )
         throw new Error('Relative age or exact timestamp is missing')
       const system = page
@@ -95,6 +96,31 @@ for (const [name, engine] of [
       await first.locator(':scope > summary').focus()
       await page.keyboard.press('Enter')
       await first.locator('text=Changed name').waitFor({ state: 'visible' })
+      // Only the summary owns collapse; selecting evidence must keep it available to copy.
+      const before = first.getByText('Previous name', { exact: true })
+      const textBounds = (await before.boundingBox())!
+      await page.mouse.move(textBounds.x + 2, textBounds.y + textBounds.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(
+        textBounds.x + Math.min(textBounds.width - 2, 110),
+        textBounds.y + textBounds.height / 2,
+        { steps: 12 },
+      )
+      const selection = await page.evaluate(() => window.getSelection()?.toString())
+      await page.mouse.up()
+      assert.equal(selection, 'Previous name')
+      assert.equal((await first.getAttribute('open')) !== null, true)
+      assert.equal(
+        await page.evaluate(() => window.getSelection()?.toString()),
+        selection,
+      )
+      await before.click()
+      assert.equal((await first.getAttribute('open')) !== null, true)
+      await summary.click({ position: { x: 8, y: 8 } })
+      assert.equal(await first.getAttribute('open'), null)
+      await summary.focus()
+      await page.keyboard.press('Enter')
+      assert.equal((await first.getAttribute('open')) !== null, true)
       await page.screenshot({
         path: `${directory}/${name}-${width}-expanded.png`,
         fullPage: true,
