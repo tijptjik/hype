@@ -3,6 +3,8 @@
 import Button from '#lib/bits/core/button/Button.svelte'
 import { Popover } from '#lib/bits/core/popover/index.js'
 import Search from '#lib/bits/custom/search/Search.svelte'
+// UTILS
+import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 // ICONS
 import SearchIcon from 'virtual:icons/proicons/search'
 import ClearIcon from 'virtual:icons/proicons/cancel'
@@ -74,7 +76,7 @@ async function searchActors(query: string): Promise<Actor[]> {
       excludeIds={excluded}
       getItemId={actor => JSON.stringify([actor.origin, actor.id])}
       resultMap={{
-        image: () => null,
+        image: actor => resolveAvatarImageSrc(actor.image),
         title: actor => actor.name || actor.label,
         descriminator: actor =>
           actor.username ? `@${actor.displayUsername || actor.username}` : null,

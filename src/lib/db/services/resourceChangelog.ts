@@ -58,6 +58,7 @@ export type ChangelogCandidate = {
   actorName: string | null
   actorUsername: string | null
   actorDisplayUsername: string | null
+  actorImage: string | null
   origin: string
   reason: string | null
   isArchived: number
@@ -252,7 +253,7 @@ export async function listResourceChangelog(
       COALESCE(${legacyActor},c.actorId) AS displayActorId,
       CASE WHEN ${legacyActor} IS NOT NULL THEN 'user' ELSE c.origin END AS displayActorOrigin,
       COALESCE(actor.name,actor.displayUsername,actor.username) AS actorName,
-      NULLIF(actor.username,'') AS actorUsername,NULLIF(actor.displayUsername,'') AS actorDisplayUsername,c.origin,c.reason
+      NULLIF(actor.username,'') AS actorUsername,NULLIF(actor.displayUsername,'') AS actorDisplayUsername,actor.image AS actorImage,c.origin,c.reason
       FROM ${ancestry(resource)} JOIN ${revision} r ON ${rJoin}
       ${category === 'maintenance' ? sql`JOIN featureRevision a ON a.id=r.revisionId AND a.featureId=r.featureId` : sql``}
       JOIN revisionChangeSet c ON c.id=${changeSet}
@@ -287,16 +288,21 @@ export async function listResourceChangelog(
     type FacetRow = ChangelogSubject &
       Pick<
         ChangelogCandidate,
-        'actorId' | 'origin' | 'actorName' | 'actorUsername' | 'actorDisplayUsername'
+        | 'actorId'
+        | 'origin'
+        | 'actorName'
+        | 'actorUsername'
+        | 'actorDisplayUsername'
+        | 'actorImage'
       > & { firstAt: string; lastAt: string }
     const facets = await Promise.allSettled(
       groups.map(group =>
         db.all<FacetRow>(sql`
       SELECT ownerType,ownerId,category,organisationId,projectId,layerId,hubId,isArchived,
-        displayActorId AS actorId,displayActorOrigin AS origin,actorName,actorUsername,actorDisplayUsername,MIN(createdAt) AS firstAt,MAX(createdAt) AS lastAt
+        displayActorId AS actorId,displayActorOrigin AS origin,actorName,actorUsername,actorDisplayUsername,actorImage,MIN(createdAt) AS firstAt,MAX(createdAt) AS lastAt
       FROM (${sql.join(group, sql` UNION ALL `)})
       GROUP BY ownerType,ownerId,category,organisationId,projectId,layerId,hubId,isArchived,
-        displayActorId,displayActorOrigin,actorName,actorUsername,actorDisplayUsername`),
+        displayActorId,displayActorOrigin,actorName,actorUsername,actorDisplayUsername,actorImage`),
       ),
     )
     const actors = new Map<string, ChangelogFilterOptions['actors'][number]>()
@@ -324,6 +330,7 @@ export async function listResourceChangelog(
           name: row.actorName,
           username: row.actorUsername,
           displayUsername: row.actorDisplayUsername,
+          image: row.actorImage,
         })
         const period = filterOptions.period
         filterOptions.period = {

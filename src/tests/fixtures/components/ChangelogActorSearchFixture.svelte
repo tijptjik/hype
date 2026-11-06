@@ -19,6 +19,7 @@ let value = $state<ChangelogFilters['actor']>()
         username: 'example.editor',
         displayUsername: 'Example.Editor',
         label: 'Example editor',
+        image: 'https://lh3.googleusercontent.com/example-avatar',
       },
       {
         id: 'system',

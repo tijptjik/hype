@@ -19,12 +19,24 @@ for (const [name, engine] of [
         body: '<html data-theme="breadline-light"><head><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/changelogActorSearchCheck.ts"></script></body></html>',
       }),
     )
+    await page.route('**/proxy/avatar?*', route =>
+      route.fulfill({
+        contentType: 'image/svg+xml',
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="teal"/></svg>',
+      }),
+    )
     await page.goto(`${origin}/__actor-search.html`)
     await page.getByRole('button', { name: 'Search actors', exact: true }).click()
     const input = page.getByPlaceholder('Search actors by name or username')
     await input.fill('example')
     const result = page.getByRole('button', { name: /Example editor.*Example.Editor/ })
     await result.waitFor()
+    const avatar = result.locator('img')
+    await avatar.waitFor()
+    assert.match((await avatar.getAttribute('src')) ?? '', /^\/proxy\/avatar\?url=/)
+    await avatar.evaluate(async image => {
+      await (image as HTMLImageElement).decode()
+    })
     const layout = await result.evaluate(element => {
       const results = element.closest('.bits-search__results-wrapper')!
       const root = element.closest('.bits-search')!
@@ -45,7 +57,9 @@ for (const [name, engine] of [
     await page.getByRole('button', { name: 'Clear actor', exact: true }).click()
     assert.equal(await page.locator('[data-selected]').innerText(), 'none')
     assert.deepEqual(errors, [])
-    console.log(`${name}: inline actor search, keyboard selection and clear passed`)
+    console.log(
+      `${name}: avatar loading, inline actor search, keyboard selection and clear passed`,
+    )
   } finally {
     await browser.close()
   }

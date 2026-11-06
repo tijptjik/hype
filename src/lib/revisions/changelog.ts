@@ -63,6 +63,7 @@ export type ChangelogFilterOptions = {
     name?: string | null
     username?: string | null
     displayUsername?: string | null
+    image?: string | null
   }[]
   period: { from: string; to: string } | null
 }

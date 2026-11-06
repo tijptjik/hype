@@ -45,7 +45,7 @@ beforeEach(() => {
     CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT,isArchived INTEGER);
     CREATE TABLE layer(id TEXT PRIMARY KEY,organisationId TEXT,projectId TEXT,isArchived INTEGER);
     CREATE TABLE feature(id TEXT PRIMARY KEY,organisationId TEXT,projectId TEXT,layerId TEXT,isArchived INTEGER);
-    CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,displayUsername TEXT,username TEXT);
+    CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,displayUsername TEXT,username TEXT,image TEXT);
     CREATE TABLE revisionChangeSet(id TEXT PRIMARY KEY,createdAt TEXT,actorId TEXT,origin TEXT,reason TEXT);
     CREATE TABLE featureRevision(id TEXT PRIMARY KEY,featureId TEXT,previousRevisionId TEXT,changeSetId TEXT,content TEXT);
     CREATE TABLE featureRevisionPublication(id TEXT PRIMARY KEY,featureId TEXT,previousRevisionId TEXT,revisionId TEXT,generation INTEGER,changeSetId TEXT);
@@ -56,7 +56,7 @@ beforeEach(() => {
     INSERT INTO project VALUES('p','o',0),('sibling','o',0),('outside','outside',0);
     INSERT INTO layer VALUES('l','o','p',0),('sibling','o','sibling',0),('outside','outside','outside',0);
     INSERT INTO feature VALUES('f','o','p','l',0),('outside','outside','outside','outside',0);
-    INSERT INTO user VALUES('editor','Editor',NULL,NULL);
+    INSERT INTO user VALUES('editor','Editor',NULL,NULL,'https://example.com/editor.png');
   `)
   for (const resource of ['organisation', 'project', 'layer', 'feature']) {
     fixture.sqlite.exec(
@@ -235,6 +235,7 @@ describe('hierarchy changelog', () => {
           name: 'Editor',
           username: null,
           displayUsername: null,
+          image: 'https://example.com/editor.png',
         },
       ],
       period: { from: '2026-11-06T12:00:00.000Z', to: '2026-11-06T12:00:00.000Z' },
