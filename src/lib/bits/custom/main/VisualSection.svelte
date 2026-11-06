@@ -24,6 +24,7 @@ let {
 }: MainVisualSectionProps = $props()
 
 let measuredHeight = $state(0)
+let measuredContentHeight = $state(0)
 $effect(() => {
   if (measuredHeight > 0) onHeightChange?.(measuredHeight)
 })
@@ -46,7 +47,9 @@ onDestroy(() => clearTimeout(settleTimer))
 
 const visualId = $props.id()
 const maximumHeight = 1200
+let automaticResize = $state(false)
 let customHeight = $state<number | null>(null)
+let heightBeforeFit: number | null = null
 let drag = $state<{ pointerId: number; startY: number; startHeight: number } | null>(
   null,
 )
@@ -57,8 +60,60 @@ const height = $derived(Math.max(minimumHeight, customHeight ?? expandedHeight))
  * @returns Nothing.
  */
 function resize(value: number): void {
+  automaticResize = false
   markResizeActivity()
   customHeight = Math.max(minimumHeight, Math.min(maximumHeight, value))
+}
+
+/** Retain the map height before any explicit selection starts review or address editing.
+ * @returns Nothing; repeated selections do not overwrite the original height.
+ */
+export function rememberHeight(): void {
+  heightBeforeFit ??= isCollapsed ? collapsedHeight : height
+}
+
+/** Balance adjacent content and the map without overriding an active drag.
+ * @param overflow Hidden content height, or negative spare body space, in CSS pixels.
+ * @returns Nothing; the minimum map height and the user's ability to drag it back remain intact.
+ * @remarks Measured height offsets the changing viewport during animation, preventing repeated shrink requests from accumulating.
+ */
+export function makeRoom(overflow: number): void {
+  // Ignore queued content measurements during a manual resize, including its settling frame.
+  if (
+    drag ||
+    (!automaticResize && resizing) ||
+    isCollapsed ||
+    !Number.isFinite(overflow) ||
+    Math.abs(overflow) <= 1
+  )
+    return
+  // Short proposal cards return unused space to the map; long reviews retain a readable map strip.
+  const ceiling =
+    overflow < 0
+      ? Math.max(height, Math.min(maximumHeight, window.innerHeight * 0.65))
+      : height
+  const next = Math.max(
+    minimumHeight,
+    Math.min(ceiling, Math.ceil(measuredContentHeight - overflow)),
+  )
+  if (Math.abs(next - height) <= 1) return
+  heightBeforeFit ??= height
+  automaticResize = true
+  markResizeActivity()
+  customHeight = next
+}
+
+/** Slide the map back to its pre-review height when returning to discovery results.
+ * @param targetHeight Explicit return height; otherwise restore the saved selection snapshot.
+ * @returns Nothing; the caller can consistently restore a proportion of the visible viewport.
+ */
+export function restoreAfterFit(targetHeight?: number): void {
+  const previous = targetHeight ?? heightBeforeFit ?? undefined
+  if (previous === undefined) return
+  heightBeforeFit = null
+  automaticResize = true
+  markResizeActivity()
+  customHeight = Math.max(minimumHeight, Math.min(maximumHeight, previous))
 }
 
 /** Captures the pointer so the separator can be dragged outside its hit area.
@@ -93,7 +148,9 @@ const rootClass = $derived(
   [
     'bits-theme bits-feature-visual',
     isCollapsed ? 'bits-feature-visual--collapsed' : '',
-    resizeLabel ? 'transition-none!' : '',
+    resizeLabel && !automaticResize
+      ? 'transition-none!'
+      : 'transition-[height,min-height] duration-200 motion-reduce:transition-none',
     className,
   ]
     .filter(Boolean)
@@ -106,6 +163,7 @@ const rootStyle = $derived(
 
 <section
   bind:offsetHeight={measuredHeight}
+  bind:clientHeight={measuredContentHeight}
   id={visualId}
   class={rootClass}
   style={rootStyle}
@@ -147,7 +205,11 @@ const rootStyle = $derived(
   {/if}
 
   <div class="bits-feature-visual__body">
-    <div class="bits-feature-visual__map {showImage ? '' : 'p-0!'}">
+    <div
+      class="bits-feature-visual__map {showImage ? '' : 'p-0!'} {automaticResize
+        ? 'transition-[height] duration-200 motion-reduce:transition-none'
+        : ''}"
+    >
       {@render map?.()}
     </div>
 

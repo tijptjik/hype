@@ -8,6 +8,7 @@ export type FormFeatureVisualSectionContributor = {
 }
 
 export type FormFeatureVisualSectionProps = {
+  minimumHeight?: number
   expandedHeight?: number
   showImage?: boolean
   showControls?: boolean

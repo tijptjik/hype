@@ -1246,3 +1246,82 @@ Opening Edit does not create an override; a changed ordered list exposes reset. 
 language remains visible at the end of the locale toolbar. Boolean reset controls
 reserve their space to avoid moving switches when overrides change. See the acceptance
 report for browser coverage and remaining persistence checks.
+
+## Location association review (Refs #194, parent #180)
+
+The Feature association review presents the original Address on the left and the
+Location record on the right. Components run from street and number through complex,
+phase, building, block, level, unit and access hints. Corrections edit the selected cell
+in place and remain Feature-owned; switching sides discards that correction. English UI
+labels use **Complex**, while the stored `premises` kind and source keys stay stable.
+Reselection uses an accessible icon button with a tooltip. A separate marker row repeats
+the discovery map's marker numbers/colours with the same direction switch and distance
+between positions; it defaults to the candidate pin when available, with an explicit
+choice to keep the original coordinates. Hover/focus on each compact marker card
+highlights its map marker. The map retains at least 128 usable pixels while the review
+scrolls independently. Review sizing uses intrinsic content height: long comparisons can
+shrink the map, while compact proposals return spare body space to it, capped at 65% of
+the viewport. Manual resizing remains authoritative until the content requirements
+change. Change triggers a fresh layout calculation, reserving a bounded
+candidate-results area rather than letting streaming result counts repeatedly resize the
+map. Comparison framing includes only these two markers, with 20% margins plus the
+marker radius, and refits after resize. The unnumbered blue marker uses a location-pin
+icon. This avoids creating two extra map canvases for the comparison.
+
+The specificity selector fills a recessed strip flush beneath the header. Its content is
+vertically centered with expansion and ring-legend buttons at the far right; the
+collapsed view retains only titles and the compact track. Selecting a record collapses
+it. The legend explains address evidence, available matches, the selected level and
+lookup state. The outer green ring pulses during lookup, then shows the strongest
+candidate's evidence strength as an arc once it reaches 60/100. An exact match or the
+original published record fills the ring. This is a heuristic score, not a probability:
+exact names contribute 55, distinctive contained names 45, distance contributes up to
+25, street and number agreement 10 each, and overlapping contradictions subtract 15
+each. Missing components are unknown, not contradictions. Partial scores cap at 95 and
+never trigger automatic selection. Exact inference retains the name, street, number,
+proximity and complete address agreement gate. The nearby theatre example scores 70/100;
+proximity alone cannot reach the threshold. Establishment discovery also runs for an
+initial Building so those candidates can draw attention before the user switches kinds.
+The ring does not encode selection. Keyboard focus outlines only the notch. Reselecting
+the active level preserves its comparison and unsaved corrections. Switching levels and
+returning restores the selected record and review for that level. Notches have opaque
+backgrounds and a single solid centre dot for the selected level only. Evidence is
+encoded by the rings. Hovering an unselected notch previews the choice with a semiopaque
+primary dot; leaving removes it. Hover never scales the notch. Search begins the
+following section.
+
+When comparing different records, the original selection and candidate each have a
+column header with their own kind icon and full name. The candidate header retains the
+name editor and reselection action. It is highlighted as the selected identity, while
+the original is visually unselected; a fixed, noninteractive arrow points right. The
+address component rows remain independently selectable and aligned under both
+identities. Populated candidate fields are the default, with original values filling
+missing fields; explicit normalized clears remain deliberate. Additional details expand
+and collapse with reduced-motion-aware transitions. Map-position descriptors are
+centered in their respective columns. Multilingual shares the comparison heading row,
+allowing the title to wrap within its column.
+
+A single-record proposal uses an emphasized card with a kind icon, record name,
+kind/sync metadata and any supporting address (without repeating a Building's name). The
+primary Use action includes a checkmark; the secondary Change action includes the
+reselection icon. An inline pencil edits the establishment name. This proposal does not
+offer address-part editing; component disambiguation remains in the two-record
+comparison. Acceptance controls live on the proposal instead of being duplicated in the
+footer. There is no Cancel button in association review; the header back action supplies
+navigation. Back from the accepted editor first reopens the proposal, preserving the
+accepted identity and reviewed address. Its header restores the association heading and
+hides address/sync/visibility form controls until Use returns to the editor; a further
+back action returns to discovery results.
+
+The selected identity and establishment-name editor share one field card. Corrections
+return to clickable text on blur, retaining their primary-colour override dots; Wrapped
+names edit in an autosizing textarea whose minimum height matches the displayed name;
+component labels retain their space during editing. Reset is offered only for a real
+value difference (including unconfirmed street text), and restores the chosen source
+value and Edit action. Outside pointer clicks finish before the field switches
+presentation, so wrapped text cannot move an action away from the pointer. Multilingual
+adds native locale prefixes beside the other languages; the active user's language has
+no label, and each field opens independently. Street numbers, levels and flat/unit
+identifiers are shared and have no translation rows. Level and Flat / Unit corrections
+use the regular address editor's type vocabulary, reference parsers and semantic
+setters, keeping type and reference separate.
