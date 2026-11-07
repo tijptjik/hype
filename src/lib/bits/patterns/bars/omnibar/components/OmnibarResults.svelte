@@ -9,13 +9,14 @@ import type { OmnibarResultsProps } from './omnibarPrimitives.types'
 let { sections }: OmnibarResultsProps = $props()
 </script>
 
+<!-- biome-ignore lint/a11y/useSemanticElements: Search results group independent actions rather than form fields. -->
 <div
-  class="z-50 flex min-h-0 select-none flex-col divide-y divide-border overscroll-contain bg-panel caret-transparent"
-  role="listbox"
+  class="divide-border bg-panel z-50 flex min-h-0 flex-col divide-y overscroll-contain caret-transparent select-none"
+  role="group"
   tabindex="-1"
 >
   {#if sections.every(section => section.results.length === 0)}
-    <div class="p-4 text-center text-base-content/60">
+    <div class="text-base-content/60 p-4 text-center">
       {sections.some(section => section.loading)
         ? m.resource_loading()
         : m.omni__no_results()}

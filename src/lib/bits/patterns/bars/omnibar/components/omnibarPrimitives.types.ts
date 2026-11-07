@@ -2,8 +2,8 @@ import type {
   Feature,
   FeatureFromCollection,
 } from '#lib/db/zod/schema/feature.types.js'
-import type { OmniCollection, OmniMode } from '#lib/enums.js'
-import type { SearchResult } from '#lib/context/omni.types.js'
+import type { OmniMode } from '#lib/enums.js'
+import type { SearchResult, OmniSearchCollection } from '#lib/context/omni.types.js'
 import type { Snippet } from 'svelte'
 import type {
   OmnibarNavigationProps,
@@ -25,7 +25,7 @@ export type OmnibarSurfaceProps = {
 }
 
 export type OmnibarSectionProps = {
-  collectionType: OmniCollection
+  collectionType: OmniSearchCollection
   results: SearchResult[]
   limit: number
   totalCount?: number | null
@@ -39,7 +39,7 @@ export type OmnibarSectionProps = {
 export type OmnibarSectionHeaderProps = {
   onclick?: () => void
   loading?: boolean
-  collectionType: OmniCollection
+  collectionType: OmniSearchCollection
   totalCount?: number | null
 }
 

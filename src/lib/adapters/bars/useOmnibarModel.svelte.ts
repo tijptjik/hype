@@ -1,8 +1,14 @@
+// CONTEXT
+import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
+// SEARCH
+import { matchesResourceIndexSearch } from '#lib/resources/indexQuery.js'
+// UI
+import { toast } from 'svelte-sonner'
 // SERVICES
 import { initAddNewFeature } from '#lib/client/services/feature.js'
 // CONTEXT
 import type { AppCtx } from '#lib/context/app.svelte.js'
-import { dismissActiveFeatureNavigation } from '#lib/navigation/index.js'
+import { dismissActiveFeatureNavigation, navigate } from '#lib/navigation/index.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
@@ -17,7 +23,7 @@ import type {
   OmnibarProps,
   OmnibarResultSection,
 } from '#lib/bits/patterns/bars/omnibar/index.js'
-import type { DeepPartial, Locale, LocaleKey } from '#lib/types.js'
+import type { DeepPartial, Locale, LocaleKey, Resource } from '#lib/types.js'
 import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
 // UTILS
 import { getOmnibarAvailableViewportHeight } from '#lib/bits/patterns/bars/omnibar/omnibar.utils.js'
@@ -40,6 +46,109 @@ export function useOmnibarModel(
 ): {
   getOmnibarProps: () => OmnibarProps
 } {
+  const resourceTypes = ['layer', 'project', 'organisation'] as const
+  const resourceLists = resourceTypes.map(type =>
+    usePanelResources(
+      appCtx.view,
+      type,
+      () => omniCtx.state.searchTerm,
+      'panel',
+      () => omniCtx.state.isTrayOpen && Boolean(omniCtx.state.searchTerm.trim()),
+    ),
+  )
+
+  /**
+   * Applies the resource panel's activation or filter action from a search row.
+   * @param type Resource hierarchy level.
+   * @param id Selected resource identity.
+   * @param control Whether the separate filter/target control was pressed.
+   * @returns Completion after the scope and its dependent queries update.
+   */
+  async function selectResource(
+    type: (typeof resourceTypes)[number],
+    id: string,
+    control = false,
+  ): Promise<void> {
+    const scope = appCtx.view.scope
+    try {
+      if (type === 'layer') {
+        if (control) await scope.isolateLayer(id)
+        else await scope.toggleLayer(id)
+      } else if (type === 'project') {
+        if (control) await scope.toggleProject(id)
+        else if (scope.isProjectDefaultLayersActive(id))
+          await scope.deactivateProjectLayers(id)
+        else await scope.addProjectDefaultLayers(id)
+      } else {
+        if (control) await scope.toggleOrganisation(id)
+        else if (scope.isOrganisationDefaultLayersActive(id))
+          await scope.deactivateOrganisationLayers(id)
+        else await scope.addOrganisationDefaultLayers(id)
+      }
+      const feature = appCtx.getActiveFeature()
+      if (feature && !scope.prisms.layer.includes(feature.layerId)) {
+        navigate('/')
+        omniCtx.setMode(OmniMode.search)
+      }
+    } catch (error) {
+      console.error('[Omni search] Resource action failed:', error)
+      toast.error(m.resource_action_failed())
+    }
+  }
+
+  /**
+   * Projects matching authorized resource rows in specific-to-broad order.
+   * @returns At most two matches per resource level, with independent controls.
+   */
+  function getResourceSections(): OmnibarResultSection[] {
+    if (!omniCtx.state.searchTerm.trim()) return []
+    const scope = appCtx.view.scope
+    return resourceTypes.map((type, index) => ({
+      collectionType: type,
+      limit: 2,
+      loading: resourceLists[index].list.loading,
+      onSelection: (id: string) => void selectResource(type, id),
+      results: resourceLists[index].rows
+        .filter(
+          row =>
+            !row.isArchived &&
+            matchesResourceIndexSearch(row, omniCtx.state.searchTerm),
+        )
+        .slice(0, 2)
+        .map(row => {
+          const name = getI18n(
+            row as Resource,
+            'name',
+            appCtx.view.getUserPreferences(),
+          )
+          const selected = scope.prisms[type].includes(row.id)
+          return {
+            ref: row.id,
+            name,
+            count: 0,
+            collectionType: type,
+            enabled:
+              type === 'layer'
+                ? selected
+                : type === 'project'
+                  ? scope.isProjectDefaultLayersActive(row.id)
+                  : scope.isOrganisationDefaultLayersActive(row.id),
+            control: {
+              kind: type === 'layer' ? ('target' as const) : ('filter' as const),
+              label:
+                type === 'layer'
+                  ? m.panel__isolate_layer({ name })
+                  : selected
+                    ? m.panel__unpin({ name })
+                    : m.panel__pin({ name }),
+              pressed: type === 'layer' ? undefined : selected,
+              onClick: () => void selectResource(type, row.id, true),
+            },
+          }
+        }),
+    }))
+  }
+
   type FeatureNavigationSource =
     | Feature
     | import('#lib/db/zod/schema/feature.types.js').FeatureFromCollection
@@ -225,6 +334,7 @@ export function useOmnibarModel(
         onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.feature),
         onSelection: omniCtx.searchHandlers.feature,
       },
+      ...getResourceSections(),
       {
         collectionType: OmniCollection.neighbourhood,
         results: omniCtx.searchResults.neighbourhood ?? [],
@@ -280,7 +390,11 @@ export function useOmnibarModel(
           onSearchTermChange: handleSearchTermChange,
           onOpenTray: () => omniCtx.openTray(),
           onCloseTray: () => omniCtx.closeTray(),
-          onSelectFirstResult: () => omniCtx.selectFirstResult(),
+          onSelectFirstResult: () => {
+            const sections = getSearchSections()
+            const section = sections.find(section => section.results.length > 0)
+            if (section) section.onSelection(section.results[0].ref)
+          },
           onClearSearchOrCloseTray: () => omniCtx.clearSearchOrCloseTray(),
           onCreateFeature: event =>
             void initAddNewFeature(appCtx.view, omniCtx, event, { getMapCenter }),

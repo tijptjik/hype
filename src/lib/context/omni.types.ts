@@ -1,11 +1,24 @@
 // TYPES
 import type { OmniCollection } from '#lib/enums.js'
 
+export type OmniSearchCollection =
+  | `${OmniCollection}`
+  | 'layer'
+  | 'project'
+  | 'organisation'
+
 export type SearchResult = {
   name: string
   count: number
-  collectionType: OmniCollection
+  collectionType: OmniSearchCollection
   ref: string
+  enabled?: boolean
+  control?: {
+    kind: 'filter' | 'target'
+    label: string
+    pressed?: boolean
+    onClick: () => void
+  }
 }
 
 export type OmniCollectionDescriptor = {

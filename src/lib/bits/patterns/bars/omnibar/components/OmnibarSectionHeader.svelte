@@ -2,10 +2,13 @@
 // BITS
 import { Icon } from '#lib/bits/index.js'
 // ENUMS
-import { OmniCollection } from '#lib/enums.js'
+import type { OmniSearchCollection } from '#lib/context/omni.types.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
+import Layers from 'virtual:icons/proicons/layers'
+import Grid from 'virtual:icons/proicons/grid'
+import Users from 'virtual:icons/proicons/person-multiple'
 import Building from 'virtual:icons/proicons/bank'
 import MapIcon from 'virtual:icons/proicons/map'
 import MapPin from 'virtual:icons/proicons/location'
@@ -16,12 +19,18 @@ let { collectionType, totalCount, loading, onclick }: OmnibarSectionHeaderProps 
   $props()
 
 const collectionIcons = {
+  layer: Layers,
+  project: Grid,
+  organisation: Users,
   walk: MapIcon,
   neighbourhood: Building,
   feature: MapPin,
 }
 
-const collectionTitles: Record<OmniCollection, string> = {
+const collectionTitles: Record<OmniSearchCollection, string> = {
+  layer: m.maps__layers(),
+  project: m.maps__projects(),
+  organisation: m.maps__organisations(),
   walk: m.omni__title_walks(),
   neighbourhood: m.filters__divisions(),
   feature: m.omni__title_features(),
@@ -30,17 +39,19 @@ const collectionTitles: Record<OmniCollection, string> = {
 
 <button
   type="button"
-  class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-base-content/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
+  class="group flex w-full items-center justify-between px-4 py-2 text-left focus-visible:outline-none disabled:opacity-50"
   disabled={loading}
   aria-busy={loading}
   {onclick}
 >
-  <span class="text-xs uppercase tracking-widest text-base-content/60">
+  <span
+    class="text-base-content/60 group-hover:text-primary group-focus-visible:text-primary text-xs tracking-widest uppercase"
+  >
     {collectionTitles[collectionType]}{totalCount == null ? '' : ` (${totalCount})`}
   </span>
   <Icon
     src={collectionIcons[collectionType]}
-    class="h-4 w-4 text-base-content/60"
+    class="text-base-content/60 h-4 w-4"
     theme="solid"
   />
 </button>
