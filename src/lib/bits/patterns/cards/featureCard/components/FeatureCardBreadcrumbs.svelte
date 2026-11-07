@@ -1,8 +1,10 @@
 <script lang="ts">
 // BITS
 import FeatureCardBreadcrumbTrail from './FeatureCardBreadcrumbTrail.svelte'
+import FeatureCardShareAction from './FeatureCardShareAction.svelte'
 import { Dropdown, Icon } from '#lib/bits/index.js'
 // I18N
+import { sharingText } from '#lib/sharing/text.js'
 import { m } from '#lib/i18n.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
@@ -16,7 +18,6 @@ import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { ResourceContext } from '#lib/types.js'
 // ICONS
 import Camera from 'virtual:icons/proicons/camera'
-import MoreHorizontal from 'virtual:icons/proicons/more'
 import MenuIcon from 'virtual:icons/lucide/menu'
 import PencilSquare from 'virtual:icons/proicons/compose'
 import Squares2x2 from 'virtual:icons/proicons/grid'
@@ -25,9 +26,11 @@ import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
 let {
   feature,
   onEditSelection,
+  showShare = true,
   offsetMenu = false,
 }: {
   feature: Feature
+  showShare?: boolean
   offsetMenu?: boolean
   onEditSelection?: (() => void) | null
 } = $props()
@@ -91,13 +94,14 @@ function getDistinctScopeLabel(
 ): string | null {
   if (!label || !hasParent) return label
 
-  return label
-    .trim()
-    .localeCompare(m.filters__all().trim(), undefined, { sensitivity: 'base' }) === 0
+  return label.trim().localeCompare(m.filters__all().trim(), undefined, {
+    sensitivity: 'base',
+  }) === 0
     ? null
     : label
 }
 
+const text = $derived(sharingText())
 const actionItems = [
   {
     label: m.such_that_rabbit_pull(),
@@ -149,19 +153,22 @@ const actionItems = [
           <Icon src={PencilSquare} class="h-4 w-4" />
         </button>
       {:else}
-        <Dropdown
-          ariaLabel={m.antsy_patient_moth_taste()}
-          attached={offsetMenu}
-          triggerClass={offsetMenu
-            ? 'h-11 w-11 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content hover:bg-base-content/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary translate-x-[14px] -translate-y-0.5'
-            : 'h-5 w-5 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content/60 hover:bg-transparent hover:text-neutral-content'}
-          triggerIcon={offsetMenu ? MenuIcon : MoreHorizontal}
-          triggerIconClass={offsetMenu ? 'h-5 w-5' : 'h-4 w-4'}
-          contentSide="top"
-          contentAlignOffset={-12}
-          contentAlign="end"
-          items={actionItems}
-        />
+        <div class="flex shrink-0 items-center gap-1">
+          {#if showShare}
+            <FeatureCardShareAction {feature} isIconOnly />
+          {/if}
+          <Dropdown
+            ariaLabel={text.menu}
+            attached={offsetMenu}
+            triggerClass={`h-11 w-11 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content hover:bg-base-content/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${offsetMenu ? 'translate-x-[14px] -translate-y-0.5' : ''}`}
+            triggerIcon={MenuIcon}
+            triggerIconClass="h-5 w-5"
+            contentSide="top"
+            contentAlignOffset={-12}
+            contentAlign="end"
+            items={actionItems}
+          />
+        </div>
       {/if}
     </div>
   {:else}
@@ -184,19 +191,22 @@ const actionItems = [
           <Icon src={PencilSquare} class="h-4 w-4" />
         </button>
       {:else}
-        <Dropdown
-          ariaLabel={m.antsy_patient_moth_taste()}
-          attached={offsetMenu}
-          triggerClass={offsetMenu
-            ? 'h-11 w-11 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content hover:bg-base-content/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary translate-x-[14px] -translate-y-0.5'
-            : 'h-5 w-5 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content/60 hover:bg-transparent hover:text-neutral-content'}
-          triggerIcon={offsetMenu ? MenuIcon : MoreHorizontal}
-          triggerIconClass={offsetMenu ? 'h-5 w-5' : 'h-4 w-4'}
-          contentSide="top"
-          contentAlignOffset={-12}
-          contentAlign="end"
-          items={actionItems}
-        />
+        <div class="flex shrink-0 items-center gap-1">
+          {#if showShare}
+            <FeatureCardShareAction {feature} isIconOnly />
+          {/if}
+          <Dropdown
+            ariaLabel={text.menu}
+            attached={offsetMenu}
+            triggerClass={`h-11 w-11 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content hover:bg-base-content/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${offsetMenu ? 'translate-x-[14px] -translate-y-0.5' : ''}`}
+            triggerIcon={MenuIcon}
+            triggerIconClass="h-5 w-5"
+            contentSide="top"
+            contentAlignOffset={-12}
+            contentAlign="end"
+            items={actionItems}
+          />
+        </div>
       {/if}
     </div>
   {/if}

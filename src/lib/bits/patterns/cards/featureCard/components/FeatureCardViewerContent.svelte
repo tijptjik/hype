@@ -2,6 +2,7 @@
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 import { getURLfromImage } from '#lib/client/services/image.js'
 import { CameraViewer } from '#lib/bits/patterns/images/index.js'
+import FeatureCardShare from './FeatureCardShare.svelte'
 import Viewer from '#lib/bits/patterns/images/components/Viewer.svelte'
 import {
   VIEWER_TRANSITION_MS,
@@ -37,10 +38,14 @@ let {
   onOverlayHeightChange?: (height: number) => void
 } = $props()
 
+let shareContentHeight = $state(0)
 let attributionContentHeight = $state(0)
-$effect(() => onOverlayHeightChange?.(attributionContentHeight))
+const overlayContentHeight = $derived(
+  Math.max(shareContentHeight, attributionContentHeight),
+)
+$effect(() => onOverlayHeightChange?.(overlayContentHeight))
 const viewerBlockMinHeightPx = $derived(
-  Math.max(minHeightPx, attributionContentHeight) + topPaddingPx + paddingPx,
+  Math.max(minHeightPx, overlayContentHeight) + topPaddingPx + paddingPx,
 )
 const isContributionMode = $derived(
   cardCtx.isMissingMode || cardCtx.isAddPhotoMode || cardCtx.isNewMode,
@@ -196,7 +201,18 @@ const viewerStyle = $derived.by(() => {
   ontouchmove={stopViewerEvent}
   ontouchend={stopViewerEvent}
 >
-  {#if isContributionMode}
+  {#if cardCtx.shareTarget}
+    <FeatureCardShare
+      target={cardCtx.shareTarget}
+      onHeightChange={height => {
+        shareContentHeight = height
+      }}
+      onClose={() => {
+        cardCtx.shareTarget = null
+        document.querySelector<HTMLButtonElement>('#feature-share-trigger')?.focus()
+      }}
+    />
+  {:else if isContributionMode}
     <CameraViewer
       items={stagedItems}
       activeId={stagedActiveId}

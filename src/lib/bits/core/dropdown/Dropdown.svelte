@@ -12,6 +12,9 @@ import type { DropdownProps } from './dropdown.types'
 
 let {
   ariaLabel,
+  triggerId,
+  triggerLabel,
+  onCloseAutoFocus,
   disabled = false,
   triggerClass = '',
   triggerIcon: TriggerIcon = null,
@@ -36,15 +39,16 @@ const resolvedTriggerClass = $derived(
 )
 
 const resolvedTriggerIconClass = $derived(cx('h-5 w-5', triggerIconClass))
+// The menu container receives transient focus; its items provide the visible focus highlight.
 const resolvedContentClass = $derived(
   cx(
-    'z-[1200] min-w-[12rem] rounded-2xl border border-border-input bg-(--theme-panel) p-2 text-base-content shadow-2xl backdrop-blur-xl',
+    'z-[1200] min-w-[12rem] rounded-2xl border border-border-input bg-(--theme-panel) p-2 text-base-content shadow-2xl outline-none backdrop-blur-xl',
     contentClass,
   ),
 )
 const resolvedItemClass = $derived(
   cx(
-    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-base-content outline-none transition hover:bg-base-200 data-[highlighted]:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-35',
+    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-base-content outline-none transition hover:bg-base-200 focus-visible:bg-base-200 data-[highlighted]:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-35',
     itemClass,
   ),
 )
@@ -60,7 +64,16 @@ const resolvedItemClass = $derived(
       {#if item.icon}
         <item.icon class={cx('h-4 w-4 shrink-0', item.iconClass)} />
       {/if}
-      <span>{item.label}</span>
+      {#if item.eyebrow}
+        <span class="flex min-w-0 flex-col gap-0.5 break-words whitespace-normal">
+          <span class="text-muted-foreground text-[11px] leading-4"
+            >{item.eyebrow}</span
+          >
+          <span>{item.label}</span>
+        </span>
+      {:else}
+        <span>{item.label}</span>
+      {/if}
     </DropdownMenu.Item>
   {/each}
 {/snippet}
@@ -68,12 +81,16 @@ const resolvedItemClass = $derived(
 <DropdownMenu.Root bind:open>
   <DropdownMenu.Trigger
     data-attached-menu-open={attached && open ? true : undefined}
+    id={triggerId}
     class={resolvedTriggerClass}
     aria-label={ariaLabel}
     {disabled}
   >
     {#if TriggerIcon}
       <TriggerIcon class={resolvedTriggerIconClass} />
+    {/if}
+    {#if triggerLabel}
+      <span>{triggerLabel}</span>
     {/if}
   </DropdownMenu.Trigger>
 
@@ -104,6 +121,7 @@ const resolvedItemClass = $derived(
   {:else}
     <DropdownMenu.Portal>
       <DropdownMenu.Content
+        {onCloseAutoFocus}
         class={resolvedContentClass}
         side={contentSide}
         sideOffset={contentSideOffset}

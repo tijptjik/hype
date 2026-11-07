@@ -38,7 +38,7 @@ let {
     <FeatureCardContentPortal {feature} size={portalSize} roundedSurface />
   </div>
   <div class="min-w-0 py-1" style={`padding-right: ${portalSize + 24}px;`}>
-    <FeatureCardBreadcrumbs {feature} offsetMenu />
+    <FeatureCardBreadcrumbs {feature} showShare={false} offsetMenu />
     <FeatureCardTitle {feature} />
   </div>
 </div>

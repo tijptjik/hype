@@ -2,10 +2,13 @@
 import { setContext, getContext } from 'svelte'
 // ENUMS
 import { FeatureCardMode } from '#lib/enums.js'
+// SHARING
+import type { ShareTarget } from '#lib/sharing/resource.js'
 // TYPES
 import type { UploadedPhoto } from '#lib/db/zod/schema/image.types.js'
 
 export class CardCtx {
+  shareTarget = $state<ShareTarget | null>(null)
   state = $state({
     mode: FeatureCardMode.Display,
     submissionLabel: '',
@@ -19,6 +22,7 @@ export class CardCtx {
   isSubmitting = $state(false)
 
   setMode(mode: FeatureCardMode) {
+    this.shareTarget = null
     this.state.mode = mode
   }
 

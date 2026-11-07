@@ -2,6 +2,7 @@ import type { Component } from 'svelte'
 
 export type DropdownItem = {
   label: string
+  eyebrow?: string
   onSelect?: () => void
   icon?: Component | null
   class?: string
@@ -11,6 +12,9 @@ export type DropdownItem = {
 
 export type DropdownProps = {
   ariaLabel: string
+  triggerId?: string
+  triggerLabel?: string
+  onCloseAutoFocus?: (event: Event) => void
   disabled?: boolean
   triggerClass?: string
   triggerIcon?: Component | null

@@ -4,6 +4,7 @@ import BreadlineCardContent from './components/BreadlineCardContent.svelte'
 import OrganisationOnboarding from '#lib/bits/patterns/organisationUsers/OrganisationOnboarding.svelte'
 import type { BreadlineRunPresentation } from '#lib/features/breadlineCard.js'
 // BITS
+import FeatureCardShareAction from './components/FeatureCardShareAction.svelte'
 import FeatureCardAddPhotoBody from './components/FeatureCardAddPhotoBody.svelte'
 import FeatureCardActions from './components/FeatureCardActions.svelte'
 import FeatureCardBreadcrumbs from './components/FeatureCardBreadcrumbs.svelte'
@@ -446,7 +447,9 @@ $effect(() => {
             />
           </div>
         {:else if cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode}
-          <div bind:this={breadcrumbsElement}><FeatureCardBreadcrumbs {feature} /></div>
+          <div bind:this={breadcrumbsElement}>
+            <FeatureCardBreadcrumbs {feature} showShare={!cardCtx.isDisplayMode} />
+          </div>
           <div
             bind:this={titleElement}
             class="relative z-40 transition-[margin-bottom] motion-reduce:transition-none"
@@ -532,6 +535,9 @@ $effect(() => {
         {/snippet}
         {#snippet rightActions()}
           {#if mode === FeatureCardMode.Display}
+            <div class={isFeatureActionIconOnly ? '' : 'mr-1'}>
+              <FeatureCardShareAction {feature} isIconOnly={isFeatureActionIconOnly} />
+            </div>
             <FeatureCardActionPrimitive.DirectionsAction
               {feature}
               isIconOnly={isFeatureActionIconOnly}
