@@ -63,7 +63,7 @@ type TaskSearchRelation = { id?: string; code?: string; i18n?: unknown }
 export function matchesTaskIndexSearch(
   row: {
     id: string
-    featureId?: string
+    featureId?: string | null
     message?: string | null
     contributor?: { name?: string | null } | null
     feature?: TaskSearchRelation | null
