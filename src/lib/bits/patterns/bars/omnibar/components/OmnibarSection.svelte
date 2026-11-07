@@ -17,7 +17,10 @@ let {
 }: OmnibarSectionProps = $props()
 </script>
 
-<div class="flex shrink-0 select-none flex-col pb-2 pt-2">
+<div
+  data-omni-section={collectionType}
+  class="flex shrink-0 flex-col pt-2 pb-2 select-none"
+>
   <OmnibarSectionHeader {collectionType} {totalCount} {loading} onclick={onLoadMore} />
   <OmnibarSectionEntries {collectionType} {results} {limit} {onSelection} {onPreview} />
 </div>

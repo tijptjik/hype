@@ -1,6 +1,7 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 // ACTIONS
+import { fitSearchTray } from '../fitSearchTray'
 import {
   clickOutside,
   focusOnSlash,
@@ -89,14 +90,22 @@ const surfaceClasses = $derived(
     <div class="pointer-events-none absolute inset-x-0 top-full z-40">
       <div
         class={resultsClasses}
+        data-omni-tray
+        use:fitSearchTray={{
+          viewport: search.viewport,
+          expanded: search.expanded,
+          sections: search.sections,
+        }}
         style="max-height: calc(var(--omni-available-height, 100dvh) - 4rem);"
         in:slide={{ duration: 200 }}
         out:slide={{ duration: 160 }}
       >
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div data-omni-scroll class="min-h-0 flex-1 overflow-y-auto">
           <OmnibarResults sections={search.sections} {updating} />
         </div>
-        <OmnibarNewFeature onCreateFeature={search.onCreateFeature} />
+        <div data-omni-footer class="shrink-0">
+          <OmnibarNewFeature onCreateFeature={search.onCreateFeature} />
+        </div>
       </div>
     </div>
   {/if}

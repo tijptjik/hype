@@ -23,6 +23,8 @@ export type OmnibarCollectionItem = {
 
 export type OmnibarSearchProps = {
   updating?: boolean
+  viewport?: { height: number; offsetTop: number }
+  expanded?: boolean
   term: string
   isTrayOpen: boolean
   sections: OmnibarResultSection[]

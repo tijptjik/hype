@@ -25,6 +25,8 @@ import type {
 } from '#lib/bits/patterns/bars/omnibar/index.js'
 import type { DeepPartial, Locale, LocaleKey, Resource } from '#lib/types.js'
 import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
+// SEARCH POLICY
+import { OMNIBAR_SEARCH_POLICY } from '#lib/bits/patterns/bars/omnibar/searchBudget.js'
 // UTILS
 import { getOmnibarAvailableViewportHeight } from '#lib/bits/patterns/bars/omnibar/omnibar.utils.js'
 
@@ -99,14 +101,13 @@ export function useOmnibarModel(
 
   /**
    * Projects matching authorized resource rows in specific-to-broad order.
-   * @returns At most two matches per resource level, with independent controls.
+   * @returns Matching resource rows with independent controls; the shared policy allocates previews.
    */
-  function getResourceSections(): OmnibarResultSection[] {
+  function getResourceSections(): Omit<OmnibarResultSection, 'limit'>[] {
     if (!omniCtx.searchQueryTerm.trim()) return []
     const scope = appCtx.view.scope
     return resourceTypes.map((type, index) => ({
       collectionType: type,
-      limit: 2,
       loading: resourceLists[index].searchPending,
       onSelection: (id: string) => void selectResource(type, id),
       results: resourceLists[index].rows
@@ -114,7 +115,6 @@ export function useOmnibarModel(
           row =>
             !row.isArchived && matchesResourceIndexSearch(row, omniCtx.searchQueryTerm),
         )
-        .slice(0, 2)
         .map(row => {
           const name = getI18n(
             row as Resource,
@@ -323,11 +323,10 @@ export function useOmnibarModel(
   }
 
   function getSearchSections(): OmnibarResultSection[] {
-    const sections: OmnibarResultSection[] = [
+    const sections: Omit<OmnibarResultSection, 'limit'>[] = [
       {
         collectionType: OmniCollection.feature,
         results: omniCtx.searchResults.feature ?? [],
-        limit: Math.max(omniCtx.limits.feature ?? 0, omniCtx.searchFeatureLimit),
         totalCount: appCtx.view.resources.featureQueries.search.totalCount,
         hasMore: appCtx.view.resources.featureQueries.search.hasMore,
         loading: omniCtx.searchPending,
@@ -338,7 +337,6 @@ export function useOmnibarModel(
       {
         collectionType: OmniCollection.neighbourhood,
         results: omniCtx.searchResults.neighbourhood ?? [],
-        limit: omniCtx.limits.neighbourhood ?? 0,
         onLoadMore: () =>
           void omniCtx.expandSearchSection(OmniCollection.neighbourhood),
         onSelection: omniCtx.searchHandlers.neighbourhood,
@@ -348,12 +346,17 @@ export function useOmnibarModel(
         collectionType: OmniCollection.walk,
         loading: omniCtx.searchPending,
         results: omniCtx.searchResults.walk ?? [],
-        limit: omniCtx.limits.walk ?? 0,
         onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.walk),
         onSelection: omniCtx.searchHandlers.walk,
       },
     ]
-    return sections
+    return OMNIBAR_SEARCH_POLICY.filter(policy =>
+      sections.some(section => section.collectionType === policy.type),
+    )
+      .map(policy => ({
+        ...sections.find(section => section.collectionType === policy.type)!,
+        limit: policy.limit as number,
+      }))
       .filter(
         section =>
           !omniCtx.searchSection || section.collectionType === omniCtx.searchSection,
@@ -385,6 +388,11 @@ export function useOmnibarModel(
           appCtx.view.layout.menuClearanceHeight,
         ),
         search: {
+          viewport: {
+            height: responsiveCtx.visibleWindowHeight,
+            offsetTop: responsiveCtx.viewport?.offsetTop ?? 0,
+          },
+          expanded: Boolean(omniCtx.searchSection),
           term: omniCtx.state.searchTerm,
           updating:
             omniCtx.state.searchTerm !== omniCtx.searchQueryTerm ||

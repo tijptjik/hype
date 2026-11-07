@@ -83,16 +83,16 @@ function setup() {
   }
 }
 
-it('orders specific resources first and excludes nonmatching pins', () => {
+it('orders all categories by policy and excludes nonmatching pins', () => {
   const { search, featureSelect } = setup()
   const sections = search().sections
   expect(sections.map(section => section.collectionType)).toEqual([
     'feature',
-    'layer',
-    'project',
-    'organisation',
-    'neighbourhood',
     'walk',
+    'project',
+    'layer',
+    'neighbourhood',
+    'organisation',
   ])
   for (const section of sections.filter(section =>
     ['project', 'layer', 'organisation'].includes(section.collectionType),
@@ -101,8 +101,10 @@ it('orders specific resources first and excludes nonmatching pins', () => {
     expect(section.results.map(row => row.ref)).toEqual([
       `${section.collectionType}-0`,
       `${section.collectionType}-1`,
+      `${section.collectionType}-2`,
     ])
   }
+  expect(search().viewport).toEqual({ height: 700, offsetTop: 0 })
   search().onSelectFirstResult()
   expect(featureSelect).toHaveBeenCalledWith('feature')
 })
@@ -127,17 +129,17 @@ it('uses normal activation for rows and independent isolate/prism actions for co
   expect(scope.toggleOrganisation).toHaveBeenCalledExactlyOnceWith('organisation-0')
 })
 
-it('selects the first layer when no feature matches and omits resource groups for blank searches', () => {
+it('selects the first project when no feature or walk matches and omits resource groups for blank searches', () => {
   const { search, omni, scope } = setup()
   omni.searchResults.feature = []
   search().onSelectFirstResult()
-  expect(scope.toggleLayer).toHaveBeenCalledWith('layer-0')
+  expect(scope.addProjectDefaultLayers).toHaveBeenCalledWith('project-0')
   omni.state.searchTerm = ' '
   omni.searchQueryTerm = ' '
   expect(search().sections.map(section => section.collectionType)).toEqual([
     'feature',
-    'neighbourhood',
     'walk',
+    'neighbourhood',
   ])
 })
 
