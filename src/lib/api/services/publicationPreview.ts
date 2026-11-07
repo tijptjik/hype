@@ -7,7 +7,10 @@ import { applyQueryFilters } from '#lib/api/index.js'
 // DB
 import { applyPrismConstraints } from '#lib/db/index.js'
 import { organisation, project, layer, feature } from '#lib/db/schema/index.js'
-import { descendantPublicationState, featurePublicationEligibility } from '#lib/db/services/publication.js'
+import {
+  descendantPublicationState,
+  featurePublicationEligibility,
+} from '#lib/db/services/publication.js'
 // PUBLICATION
 import { canPreviewPublication } from '#lib/publication/permissions.js'
 // ENUMS
@@ -47,13 +50,41 @@ import type { Prisms, QueryParams } from '#lib/types.js'
 export async function resolvePublicationPreview(
   ctx: GuardedQueryContext,
   preview: PublicationPreview,
-): Promise<PublicationTarget & { ref: string }> {
+): Promise<PublicationTarget & { ref: string; layerId?: string }> {
   const { db, user, userRoles, event } = ctx
   if (!user.id || user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
   let ref = preview.id
   let projectId: string | null = null
   let organisationId: string
-  if (preview.type === 'layer') {
+  let layerId: string | undefined
+  if (preview.type === 'feature') {
+    const row = await db.query.feature.findFirst({
+      where: eq(feature.id, preview.id),
+      columns: {
+        organisationId: true,
+        projectId: true,
+        layerId: true,
+        isArchived: true,
+        isDraft: true,
+      },
+    })
+    if (!row || row.isArchived || row.isDraft) throw error(404, 'PREVIEW_NOT_AVAILABLE')
+    organisationId = row.organisationId
+    projectId = row.projectId
+    layerId = row.layerId
+    // Resolve the saved parent rather than trusting hierarchy passed by the caller.
+    const parentLayer = await db.query.layer.findFirst({
+      where: eq(layer.id, layerId),
+      columns: { organisationId: true, projectId: true, isArchived: true },
+    })
+    if (
+      !parentLayer ||
+      parentLayer.isArchived ||
+      parentLayer.organisationId !== organisationId ||
+      parentLayer.projectId !== projectId
+    )
+      throw error(404, 'PREVIEW_NOT_AVAILABLE')
+  } else if (preview.type === 'layer') {
     const row = await db.query.layer.findFirst({
       where: eq(layer.id, preview.id),
       columns: { organisationId: true, projectId: true, isArchived: true },
@@ -77,13 +108,13 @@ export async function resolvePublicationPreview(
   })
   if (!parent || parent.isArchived) throw error(404, 'PREVIEW_NOT_AVAILABLE')
   if (preview.type === 'organisation') ref = parent.code
-  const target = { organisationId, projectId, hubId: parent.hubId, ref }
+  const target = { organisationId, projectId, hubId: parent.hubId, ref, layerId }
   if (!canPreviewPublication(user, userRoles, target))
     throw error(403, 'INSUFFICIENT_ROLE')
   // Hub filtering is also applied by the normal DB services; this gate prevents cross-hub previews.
   if (!event.locals.hub.isCore && parent.hubId !== event.locals.hub.id)
     throw error(403, 'INSUFFICIENT_ROLE')
-  if (preview.type === 'layer') {
+  if (preview.type === 'layer' || preview.type === 'feature') {
     const parentProject = await db.query.project.findFirst({
       where: eq(project.id, projectId!),
       columns: { organisationId: true, isArchived: true },
@@ -135,21 +166,26 @@ export async function publicationPreviewConditions(
     )
   if (resource === 'layer')
     conditions.push(
-      preview.type === 'layer'
-        ? eq(layer.id, preview.id)
-        : preview.type === 'project'
-          ? eq(layer.projectId, preview.id)
-          : eq(layer.organisationId, preview.id),
+      preview.type === 'feature'
+        ? eq(layer.id, target.layerId!)
+        : preview.type === 'layer'
+          ? eq(layer.id, preview.id)
+          : preview.type === 'project'
+            ? eq(layer.projectId, preview.id)
+            : eq(layer.organisationId, preview.id),
     )
   if (resource === 'feature')
     conditions.push(
-      preview.type === 'layer'
-        ? eq(feature.layerId, preview.id)
-        : preview.type === 'project'
-          ? eq(feature.projectId, preview.id)
-          : eq(feature.organisationId, preview.id),
+      preview.type === 'feature'
+        ? eq(feature.id, preview.id)
+        : preview.type === 'layer'
+          ? eq(feature.layerId, preview.id)
+          : preview.type === 'project'
+            ? eq(feature.projectId, preview.id)
+            : eq(feature.organisationId, preview.id),
       eq(feature.isDraft, false),
-      await featurePublicationEligibility(ctx.db),
+      // A direct saved-feature preview simulates publishing only this identity.
+      preview.type === 'feature' ? sql`1` : await featurePublicationEligibility(ctx.db),
     )
   const depth = { organisation: 0, project: 1, layer: 2, feature: 3 }
   if (depth[resource] > depth[preview.type] && resource !== 'organisation') {

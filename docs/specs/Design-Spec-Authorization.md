@@ -591,6 +591,13 @@ children. Archived rows and unsaved feature drafts remain excluded. Previewing a
 includes unpublished ancestors as hierarchy context only. It does not include sibling
 resources, grant upward editing rights, or write parent publication state.
 
+The admin app icon opens published Features through the normal public URL. For an
+unpublished saved Feature it enters a feature-scoped preview with full navigation. This
+preview includes only that Feature and its persisted ancestors, using the same
+management-role checks. It simulates publication without requiring an existing published
+revision or changing saved publication state; archived rows and unsaved drafts remain
+unavailable.
+
 Preview intent participates in retained entity scopes, query identities and cursors.
 Native remote responses are `private, no-store`. Entering and exiting use full
 navigation to dispose the previous map state. Private previews never regenerate public

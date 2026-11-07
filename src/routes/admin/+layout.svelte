@@ -180,7 +180,17 @@ const headerProps = $derived({
       adminCtx.activeResourceType === 'task' && adminCtx.activeResourceRef
         ? view.cache.task.get(adminCtx.activeResourceRef)
         : null,
+      adminCtx.activeResourceType === 'feature' && adminCtx.activeResourceRef
+        ? view.cache.feature.get(adminCtx.activeResourceRef)
+        : null,
     ),
+    // Dispose admin retention before entering an authorized publication preview.
+    reload:
+      adminCtx.activeResourceType === 'feature' &&
+      Boolean(
+        adminCtx.activeResourceRef &&
+          view.cache.feature.get(adminCtx.activeResourceRef)?.isPublished === false,
+      ),
     label: 'HYPE — Back to map',
   },
 })

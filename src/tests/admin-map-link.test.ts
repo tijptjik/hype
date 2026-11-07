@@ -1,6 +1,7 @@
 // THIRD-PARTY
 import { describe, expect, it } from 'vitest'
 // NAVIGATION
+import { parsePublicationPreview } from '#lib/publication/preview.js'
 import { getAdminMapHref, getMapPrisms } from '#lib/navigation/adminMapLink.js'
 
 describe('admin map navigation', () => {
@@ -55,3 +56,23 @@ describe('admin map navigation', () => {
     expect(getMapPrisms(new URLSearchParams())).toBeNull()
   })
 })
+
+it.each([true, false])(
+  'uses preview only for an unpublished saved feature (%s)',
+  isPublished => {
+    const url = new URL(
+      getAdminMapHref(
+        { organisation: [], project: [], layer: [] },
+        'feature',
+        'saved',
+        null,
+        { id: 'saved', isPublished },
+      ),
+      'https://hype.test',
+    )
+    expect(url.pathname).toBe('/features/saved')
+    expect(parsePublicationPreview(url.searchParams)).toEqual(
+      isPublished ? null : { type: 'feature', id: 'saved', publishChildren: false },
+    )
+  },
+)

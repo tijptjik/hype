@@ -14,7 +14,7 @@ const rows = sqliteTable('rows', {
 
 describe('publication preview intent', () => {
   test('round trips each resource and descendant choice', () => {
-    for (const type of ['organisation', 'project', 'layer'] as const)
+    for (const type of ['organisation', 'project', 'layer', 'feature'] as const)
       for (const publishChildren of [false, true]) {
         const intent = { type, id: 'saved-resource', publishChildren }
         expect(
@@ -28,7 +28,7 @@ describe('publication preview intent', () => {
     expect(parsePublicationPreview(new URLSearchParams())).toBeNull()
     for (const query of [
       'previewId=x',
-      'previewType=feature&previewId=x&previewChildren=true',
+      'previewType=task&previewId=x&previewChildren=true',
       'previewType=layer&previewId=x&previewChildren=maybe',
     ])
       expect(() => parsePublicationPreview(new URLSearchParams(query))).toThrow(

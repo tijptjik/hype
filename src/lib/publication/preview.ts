@@ -1,6 +1,6 @@
 /** Saved publication intent; the server resolves ancestry and authorizes every read. */
 export type PublicationPreview = {
-  type: 'organisation' | 'project' | 'layer'
+  type: 'organisation' | 'project' | 'layer' | 'feature'
   id: string
   publishChildren: boolean
 }
@@ -16,7 +16,9 @@ export function publicationPreviewUrl(preview: PublicationPreview): string {
     previewId: preview.id,
     previewChildren: String(preview.publishChildren),
   })
-  return `/?${params}`
+  const path =
+    preview.type === 'feature' ? `/features/${encodeURIComponent(preview.id)}` : '/'
+  return `${path}?${params}`
 }
 
 /**
@@ -34,7 +36,10 @@ export function parsePublicationPreview(
   const id = params.get('previewId')
   const children = params.get('previewChildren')
   if (
-    (type !== 'organisation' && type !== 'project' && type !== 'layer') ||
+    (type !== 'organisation' &&
+      type !== 'project' &&
+      type !== 'layer' &&
+      type !== 'feature') ||
     !id?.trim() ||
     id.length > 128 ||
     (children !== 'true' && children !== 'false')

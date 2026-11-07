@@ -278,3 +278,41 @@ test('maintainers cannot read or edit archived features, owners can', () => {
     ).toBe(name === 'owner')
   }
 })
+
+test('direct feature preview includes only the saved target and its ancestors without publishing', async () => {
+  const { sqlite, db, ctx } = fixture()
+  try {
+    const before = sqlite.prepare('SELECT total_changes() AS changes').get()
+    const preview = { type: 'feature' as const, id: 'draft', publishChildren: false }
+    for (const [resource, expected] of [
+      ['organisation', 'org'],
+      ['project', 'project'],
+      ['layer', 'layer'],
+      ['feature', 'draft'],
+    ] as const) {
+      const { conditions } = await publicationPreviewConditions(ctx, preview, resource)
+      const table = schema[resource]
+      expect(
+        await db
+          .select({ id: table.id })
+          .from(table)
+          .where(and(...conditions))
+          .all(),
+      ).toEqual([{ id: expected }])
+    }
+    expect(sqlite.prepare('SELECT total_changes() AS changes').get()).toEqual(before)
+    for (const id of ['archived', 'unsaved', 'missing'])
+      await expect(
+        resolvePublicationPreview(ctx, { ...preview, id }),
+      ).rejects.toMatchObject({ status: 404 })
+    await expect(
+      resolvePublicationPreview({ ...ctx, userRoles: [] }, preview),
+    ).rejects.toMatchObject({ status: 403 })
+    sqlite.exec("UPDATE layer SET isArchived=1 WHERE id='layer'")
+    await expect(resolvePublicationPreview(ctx, preview)).rejects.toMatchObject({
+      status: 404,
+    })
+  } finally {
+    sqlite.close()
+  }
+})

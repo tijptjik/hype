@@ -147,6 +147,7 @@ export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> 
     src: string
     alt: string
     monochrome?: boolean
+    reload?: boolean
     href?: string
     label?: string
   }

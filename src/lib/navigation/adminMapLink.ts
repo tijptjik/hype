@@ -1,3 +1,5 @@
+// PUBLICATION
+import { publicationPreviewUrl } from '#lib/publication/preview.js'
 // TYPES
 import type { Prisms } from '#lib/types.js'
 
@@ -13,6 +15,7 @@ export const MAP_PRISM_PARAMS = [
  * @param resourceType Current admin resource type.
  * @param resourceRef Current persisted resource reference, or false on indexes.
  * @param task Loaded task association when the current resource is a task.
+ * @param feature Saved active feature publication state.
  * @returns A feature detail URL or map URL carrying the hierarchy selection.
  * @remarks Admin-only facets and panels are deliberately excluded.
  */
@@ -21,6 +24,7 @@ export function getAdminMapHref(
   resourceType: string | false,
   resourceRef: string | false,
   task?: { featureId?: string | null; feature?: { id?: string | null } | null } | null,
+  feature?: { id: string; isPublished?: boolean | null } | null,
 ): string {
   const params = new URLSearchParams({ mapPrisms: '1' })
   const selection = {
@@ -50,6 +54,13 @@ export function getAdminMapHref(
         ? task?.featureId || task?.feature?.id
         : null
     : null
+  // Unpublished saved features enter the authorized preview before map hydration.
+  if (featureId && feature?.id === featureId && feature.isPublished === false)
+    return publicationPreviewUrl({
+      type: 'feature',
+      id: featureId,
+      publishChildren: false,
+    })
   const path = featureId ? `/features/${encodeURIComponent(featureId)}` : '/'
   return `${path}?${params}`
 }

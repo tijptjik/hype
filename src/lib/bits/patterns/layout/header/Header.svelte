@@ -88,6 +88,7 @@ const rootClass = $derived(
         <svelte:element
           this={brand.href ? 'a' : 'div'}
           href={brand.href}
+          data-sveltekit-reload={brand.reload || undefined}
           aria-label={brand.href ? (brand.label ?? brand.alt) : undefined}
           tabindex={isMeasuring && brand.href ? -1 : undefined}
           class="focus-visible:outline-focus flex size-10 shrink-0 items-center justify-center p-0.5 focus-visible:outline-2"
