@@ -22,7 +22,10 @@ import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte
 // ICONS
 import HistoryIcon from 'virtual:icons/proicons/history'
 // DOMAIN
-import { featureReviewLabel, featureReviewValue } from '#lib/revisions/featureReviewDisplay.js'
+import {
+  featureReviewLabel,
+  featureReviewValue,
+} from '#lib/revisions/featureReviewDisplay.js'
 // TYPES
 import type { FeatureRevisionWorkspace } from '#lib/db/services/featureRevisionWorkspace.js'
 import type { RevisionConflict, RevisionResolution } from '#lib/revisions/merge.js'
@@ -55,8 +58,16 @@ let title = $state('')
 let description = $state('')
 let editing = $state<FeatureRevisionWorkspace['proposals'][number] | null>(null)
 let rejectionReasons = $state<Record<string, string>>({})
-let formReviews = $state<Record<string, { candidateRevisionId: string; changes: RevisionDifference[];
-  images: { imageId: string; before: string | null; after: string | null }[] }>>({})
+let formReviews = $state<
+  Record<
+    string,
+    {
+      candidateRevisionId: string
+      changes: RevisionDifference[]
+      images: { imageId: string; before: string | null; after: string | null }[]
+    }
+  >
+>({})
 let loadedFor = ''
 let conflicts = $state<RevisionConflict[]>([])
 let conflictProposal = $state<string | null>(null)
@@ -68,7 +79,13 @@ let loadSequence = 0
 async function load(): Promise<void> {
   const requestedId = featureId
   const sequence = ++loadSequence
-  const result = await refreshRemoteQuery(getFeatureRevisionWorkspace({ featureId: requestedId, taskId, meta: { isAdminRequest: true } }))
+  const result = await refreshRemoteQuery(
+    getFeatureRevisionWorkspace({
+      featureId: requestedId,
+      taskId,
+      meta: { isAdminRequest: true },
+    }),
+  )
   if (featureId !== requestedId || sequence !== loadSequence) return
   workspace = result
   if (!locale || !workspace.translations[locale])
@@ -115,10 +132,11 @@ async function save(): Promise<void> {
     message = 'No translation changes to save.'
     return
   }
-  const saved = await saveFeatureTranslationDraft({
+  await saveFeatureTranslationDraft({
     featureId,
     meta: { isAdminRequest: true },
     baseRevisionId: editing?.baseRevisionId ?? workspace.comparisonRevisionId,
+    expectedGeneration: workspace.generation,
     ...(editing
       ? {
           draft: {
@@ -130,10 +148,9 @@ async function save(): Promise<void> {
     patch: { translations: { [locale]: patch } },
   })
   await load()
-  selectDraft(
-    workspace.proposals.find(proposal => proposal.id === saved.proposalId) ?? null,
-  )
-  message = 'Draft saved. Published content has not changed.'
+  selectDraft(null)
+  await onPublished()
+  message = 'Translation changes saved.'
 }
 
 /** Publish the exact inspected draft/proposal and retain conflict choices against that head. */
@@ -141,12 +158,14 @@ async function publish(
   proposal: FeatureRevisionWorkspace['proposals'][number],
 ): Promise<void> {
   if (!workspace?.comparisonRevisionId) return
-  const resolutions: RevisionResolution[] | undefined = conflictProposal === proposal.id
-    ? conflicts.map(conflict => {
-        const choice = choices[JSON.stringify(conflict.path)]
-        if (!choice) throw new Error('Choose a value for every conflict.')
-        return { path: conflict.path, result: conflict[choice] }
-      }) : undefined
+  const resolutions: RevisionResolution[] | undefined =
+    conflictProposal === proposal.id
+      ? conflicts.map(conflict => {
+          const choice = choices[JSON.stringify(conflict.path)]
+          if (!choice) throw new Error('Choose a value for every conflict.')
+          return { path: conflict.path, result: conflict[choice] }
+        })
+      : undefined
   const input = {
     featureId,
     meta: { isAdminRequest: true },
@@ -156,17 +175,35 @@ async function publish(
     expectedComparisonRevisionId: workspace.comparisonRevisionId,
     expectedGeneration: workspace.generation,
   }
-  if (!proposal.translationOnly && formReviews[proposal.id]?.candidateRevisionId !== proposal.candidateRevisionId)
+  if (
+    !proposal.translationOnly &&
+    formReviews[proposal.id]?.candidateRevisionId !== proposal.candidateRevisionId
+  )
     throw new Error('Review this saved draft before publishing.')
   const result = proposal.translationOnly
-    ? await publishFeatureTranslationRevision({ ...input, ownDraft: proposal.status === 'draft',
+    ? await publishFeatureTranslationRevision({
+        ...input,
+        ownDraft: proposal.status === 'draft',
         resolutions: resolutions?.map(resolution => {
-          if (!resolution.result.present) throw new Error('Translation removal is not supported')
-          return { path: resolution.path, result: { present: true as const,
-            value: resolution.result.value as { value: string | null; generated: boolean } } }
+          if (!resolution.result.present)
+            throw new Error('Translation removal is not supported')
+          return {
+            path: resolution.path,
+            result: {
+              present: true as const,
+              value: resolution.result.value as {
+                value: string | null
+                generated: boolean
+              },
+            },
+          }
         }),
       })
-    : await publishFeatureFormRevision({ ...input, ownDraft: proposal.status === 'draft', resolutions })
+    : await publishFeatureFormRevision({
+        ...input,
+        ownDraft: proposal.status === 'draft',
+        resolutions,
+      })
   if (result.status === 'conflict') {
     conflicts = result.conflicts
     conflictProposal = proposal.id
@@ -197,8 +234,10 @@ function conflictText(
   conflict: RevisionConflict,
   choice: 'current' | 'proposed',
 ): string {
-  return featureReviewValue({ path: [...conflict.path], before: conflict.current, after: conflict.proposed },
-    choice === 'current' ? 'before' : 'after')
+  return featureReviewValue(
+    { path: [...conflict.path], before: conflict.current, after: conflict.proposed },
+    choice === 'current' ? 'before' : 'after',
+  )
 }
 
 // Read-only hydration must still run while a successful form save is settling its dirty state.
@@ -215,55 +254,83 @@ $effect(() => {
       editing = null
       message = ''
     }
-    void load().then(() => {
-      if (featureId === requestedId) selectDraft(null)
-    }).catch(cause => {
-      if (featureId === requestedId) message = cause instanceof Error ? cause.message : 'Could not load Feature revisions'
-    })
+    void load()
+      .then(() => {
+        if (featureId === requestedId) selectDraft(null)
+      })
+      .catch(cause => {
+        if (featureId === requestedId)
+          message =
+            cause instanceof Error ? cause.message : 'Could not load Feature revisions'
+      })
   })
 })
 </script>
 
-<section
-  class="w-full min-w-0 space-y-4 pb-12"
-  aria-label="Feature revisions"
->
+<section class="w-full min-w-0 space-y-4 pb-12" aria-label="Feature revisions">
   <FormSurface class="mb-0!">
     <SectionHeader>
       {#snippet left()}
-        <Header text={reviewMode ? 'Review proposed changes' : 'History'} description="Changes to this feature · newest first" icon={HistoryIcon} size="sm" class="bits-form__section-header-heading w-auto! min-w-0" />
+        <Header
+          text={reviewMode ? 'Review proposed changes' : 'History'}
+          description="Changes to this feature · newest first"
+          icon={HistoryIcon}
+          size="sm"
+          class="bits-form__section-header-heading w-auto! min-w-0"
+        />
       {/snippet}
       {#snippet right()}
-        <button type="button" class="rounded-md border border-border px-3 py-1.5 text-sm disabled:opacity-50" {disabled} onclick={() => run(load)}>Refresh</button>
+        <button
+          type="button"
+          class="border-border rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
+          {disabled}
+          onclick={() => run(load)}
+        >
+          Refresh
+        </button>
       {/snippet}
     </SectionHeader>
   </FormSurface>
   {#if message}
-    <p role="status" class="whitespace-normal break-words text-sm">{message}</p>
+    <p role="status" class="text-sm break-words whitespace-normal">{message}</p>
   {/if}
   {#if isDirty}
-    <p class="text-sm text-muted-foreground">
+    <p class="text-muted-foreground text-sm">
       Save or discard the open form changes before using revision actions.
     </p>
   {/if}
   {#if workspace && !workspace.enabled}
-    <p class="text-sm text-muted-foreground">
+    <p class="text-muted-foreground text-sm">
       Revision recording is not enabled for this Feature yet.
     </p>
   {:else if workspace?.enabled}
     {#if workspace.state !== 'active'}
-      <p class="text-sm text-muted-foreground">
-        This Feature was {workspace.state === 'merged' ? 'merged into another Feature' : 'split into successor Features'}.
-        Its earlier publications remain available below.
+      <p class="text-muted-foreground text-sm">
+        This Feature was
+        {workspace.state === 'merged'
+          ? 'merged into another Feature'
+          : 'split into successor Features'}. Its earlier publications remain available
+        below.
       </p>
     {:else if workspace.initialContribution}
-      <p class="text-sm text-muted-foreground">This new Feature and its photos are reviewed together in the task queue.</p>
+      <p class="text-muted-foreground text-sm">
+        This new Feature and its photos are reviewed together in the task queue.
+      </p>
       {#if workspace.initialTaskId}
-        <a class="text-sm underline" href={`/admin/tasks/${encodeURIComponent(workspace.initialTaskId)}`}>Open contribution task</a>
+        <a
+          class="text-sm underline"
+          href={`/admin/tasks/${encodeURIComponent(workspace.initialTaskId)}`}
+          >Open contribution task</a
+        >
       {/if}
     {/if}
-    {#each workspace.proposals.filter(proposal => reviewMode && proposal.status === 'submitted') as proposal (proposal.id)}
-      <article data-proposal-id={proposal.id} class="space-y-3 rounded-lg border border-border p-4">
+    {#each workspace.proposals.filter(
+      proposal => reviewMode && proposal.status === 'submitted',
+    ) as proposal (proposal.id)}
+      <article
+        data-proposal-id={proposal.id}
+        class="border-border space-y-3 rounded-lg border p-4"
+      >
         <p class="text-sm font-medium">
           {proposal.status}
           · {proposal.own ? 'Your proposal' : proposal.contributorId}
@@ -277,10 +344,10 @@ $effect(() => {
                   {language}
                   · {key === 'title' ? 'Name' : 'Description'}
                 </p>
-                <p class="whitespace-pre-wrap break-words text-muted-foreground">
+                <p class="text-muted-foreground break-words whitespace-pre-wrap">
                   Before: {proposal.before[language]?.[key] ?? ''}
                 </p>
-                <p class="whitespace-pre-wrap break-words">
+                <p class="break-words whitespace-pre-wrap">
                   Proposed: {row[key] ?? ''}
                 </p>
               </div>
@@ -288,24 +355,53 @@ $effect(() => {
           {/each}
         {/each}
         {#if !proposal.translationOnly}
-          {#if workspace.canPublish && ((proposal.own && proposal.status === 'draft') || proposal.status === 'submitted')}
-            <button type="button" class="rounded-md border border-border px-3 py-2 text-sm" {disabled}
-              onclick={() => run(async () => {
-                const review = await getFeatureFormRevisionReview({ featureId, meta: { isAdminRequest: true }, proposalId: proposal.id,
-                  expectedCandidateRevisionId: proposal.candidateRevisionId })
-                formReviews[proposal.id] = { ...review, candidateRevisionId: proposal.candidateRevisionId }
-              })}>Review saved Feature changes</button>
+          {#if workspace.canPublish &&
+            ((proposal.own && proposal.status === 'draft') ||
+              proposal.status === 'submitted')}
+            <button
+              type="button"
+              class="border-border rounded-md border px-3 py-2 text-sm"
+              {disabled}
+              onclick={() =>
+                run(async () => {
+                  const review = await getFeatureFormRevisionReview({
+                    featureId,
+                    meta: { isAdminRequest: true },
+                    proposalId: proposal.id,
+                    expectedCandidateRevisionId: proposal.candidateRevisionId,
+                  })
+                  formReviews[proposal.id] = {
+                    ...review,
+                    candidateRevisionId: proposal.candidateRevisionId,
+                  }
+                })}
+            >
+              Review saved Feature changes
+            </button>
           {/if}
-          {#if formReviews[proposal.id]?.candidateRevisionId === proposal.candidateRevisionId}
+          {#if formReviews[proposal.id]?.candidateRevisionId ===
+            proposal.candidateRevisionId}
             {#each formReviews[proposal.id].images as photo (photo.imageId)}
               <div class="grid min-w-0 grid-cols-2 gap-3">
-                {#each [{ label: 'Before', id: photo.before }, { label: 'Proposed', id: photo.after }] as version}
+                {#each [
+                  { label: 'Before', id: photo.before },
+                  { label: 'Proposed', id: photo.after },
+                ] as version}
                   <figure class="min-w-0">
-                    <figcaption class="mb-1 text-sm text-muted-foreground">{version.label}</figcaption>
+                    <figcaption class="text-muted-foreground mb-1 text-sm">
+                      {version.label}
+                    </figcaption>
                     {#if version.id}
-                      <img class="max-h-64 w-full rounded-md object-contain" alt={`${version.label} photo`}
-                        src={`/api/images/revisions/${encodeURIComponent(version.id)}?feature=${encodeURIComponent(featureId)}&t=c_fit,w_512,h_512`} />
-                    {:else}<p class="text-sm">{version.label === 'Before' ? 'New photo' : 'Removed'}</p>{/if}
+                      <img
+                        class="max-h-64 w-full rounded-md object-contain"
+                        alt={`${version.label} photo`}
+                        src={`/api/images/revisions/${encodeURIComponent(version.id)}?feature=${encodeURIComponent(featureId)}&t=c_fit,w_512,h_512`}
+                      >
+                    {:else}
+                      <p class="text-sm">
+                        {version.label === 'Before' ? 'New photo' : 'Removed'}
+                      </p>
+                    {/if}
                   </figure>
                 {/each}
               </div>
@@ -313,8 +409,12 @@ $effect(() => {
             {#each formReviews[proposal.id].changes as change}
               <div class="grid min-w-0 gap-1 text-sm">
                 <p class="font-medium break-words">{featureReviewLabel(change.path)}</p>
-                <p class="whitespace-pre-wrap break-words text-muted-foreground">Before: {featureReviewValue(change, 'before')}</p>
-                <p class="whitespace-pre-wrap break-words">Proposed: {featureReviewValue(change, 'after')}</p>
+                <p class="text-muted-foreground break-words whitespace-pre-wrap">
+                  Before: {featureReviewValue(change, 'before')}
+                </p>
+                <p class="break-words whitespace-pre-wrap">
+                  Proposed: {featureReviewValue(change, 'after')}
+                </p>
               </div>
             {/each}
           {/if}
@@ -323,14 +423,14 @@ $effect(() => {
           {#each conflicts as conflict}
             <label class="grid min-w-0 gap-2 text-sm"
               >{featureReviewLabel(conflict.path)}
-              <span class="whitespace-pre-wrap break-words"
+              <span class="break-words whitespace-pre-wrap"
                 >Current: {conflictText(conflict, 'current')}</span
               >
-              <span class="whitespace-pre-wrap break-words"
+              <span class="break-words whitespace-pre-wrap"
                 >Proposed: {conflictText(conflict, 'proposed')}</span
               >
               <select
-                class="rounded-md border border-border bg-background p-2"
+                class="border-border bg-background rounded-md border p-2"
                 bind:value={choices[JSON.stringify(conflict.path)]}
                 {disabled}
               >
@@ -342,103 +442,109 @@ $effect(() => {
           {/each}
         {/if}
         {#if workspace.state === 'active' && !workspace.initialContribution}
-        <div class="flex flex-wrap gap-2">
-          {#if proposal.own && proposal.status === 'draft' && proposal.translationOnly}
+          <div class="flex flex-wrap gap-2">
+            {#if proposal.own &&
+              proposal.status === 'draft' &&
+              proposal.translationOnly}
+              <button
+                type="button"
+                class="border-border rounded-md border px-3 py-2 text-sm"
+                {disabled}
+                onclick={() => selectDraft(proposal)}
+              >
+                Edit draft
+              </button>
+              <button
+                type="button"
+                class="border-border rounded-md border px-3 py-2 text-sm"
+                {disabled}
+                onclick={() =>
+                  run(async () => {
+                    await submitFeatureTranslationDraft({
+                      featureId,
+                      meta: { isAdminRequest: true },
+                      proposalId: proposal.id,
+                      expectedCandidateRevisionId: proposal.candidateRevisionId,
+                    })
+                    editing = null
+                    await load()
+                    selectDraft(null)
+                  })}
+              >
+                Submit for review
+              </button>
+            {/if}
+            {#if workspace.canPublish &&
+              !workspace.initialContribution &&
+              (proposal.translationOnly ||
+                formReviews[proposal.id]?.candidateRevisionId ===
+                  proposal.candidateRevisionId) &&
+              ((proposal.own && proposal.status === 'draft') ||
+                (proposal.status === 'submitted' && workspace.publishedRevisionId))}
+              <button
+                type="button"
+                class="border-border rounded-md border px-3 py-2 text-sm"
+                {disabled}
+                onclick={() => run(() => publish(proposal))}
+              >
+                {proposal.status === 'draft' ? 'Publish draft' : 'Accept and publish'}
+              </button>
+            {/if}
+            {#if proposal.own &&
+              !workspace.initialContribution &&
+              (proposal.status === 'draft' || proposal.status === 'submitted')}
+              <button
+                type="button"
+                class="border-border rounded-md border px-3 py-2 text-sm"
+                {disabled}
+                onclick={() =>
+                  run(async () => {
+                    await decideFeatureTranslationRevision({
+                      featureId,
+                      meta: { isAdminRequest: true },
+                      proposalId: proposal.id,
+                      expectedCandidateRevisionId: proposal.candidateRevisionId,
+                      action: 'withdraw',
+                      reason: 'Withdrawn by author',
+                    })
+                    editing = null
+                    await load()
+                    selectDraft(null)
+                  })}
+              >
+                Withdraw
+              </button>
+            {/if}
+          </div>
+          {#if workspace.canPublish && proposal.status === 'submitted'}
+            <label class="grid gap-1 text-sm"
+              >Reason for rejection
+              <input
+                class="border-border bg-background rounded-md border p-2"
+                bind:value={rejectionReasons[proposal.id]}
+                {disabled}
+              >
+            </label>
             <button
               type="button"
-              class="rounded-md border border-border px-3 py-2 text-sm"
-              {disabled}
-              onclick={() => selectDraft(proposal)}
-            >
-              Edit draft
-            </button>
-            <button
-              type="button"
-              class="rounded-md border border-border px-3 py-2 text-sm"
-              {disabled}
-              onclick={() =>
-                run(async () => {
-                  await submitFeatureTranslationDraft({
-                    featureId,
-    meta: { isAdminRequest: true },
-                    proposalId: proposal.id,
-                    expectedCandidateRevisionId: proposal.candidateRevisionId,
-                  })
-                  editing = null
-                  await load()
-                  selectDraft(null)
-                })}
-            >
-              Submit for review
-            </button>
-          {/if}
-          {#if workspace.canPublish && !workspace.initialContribution &&
-            (proposal.translationOnly || formReviews[proposal.id]?.candidateRevisionId === proposal.candidateRevisionId) &&
-            ((proposal.own && proposal.status === 'draft') ||
-              (proposal.status === 'submitted' && workspace.publishedRevisionId))}
-            <button
-              type="button"
-              class="rounded-md border border-border px-3 py-2 text-sm"
-              {disabled}
-              onclick={() => run(() => publish(proposal))}
-            >
-              {proposal.status === 'draft' ? 'Publish draft' : 'Accept and publish'}
-            </button>
-          {/if}
-          {#if proposal.own && !workspace.initialContribution &&
-            (proposal.status === 'draft' || proposal.status === 'submitted')}
-            <button
-              type="button"
-              class="rounded-md border border-border px-3 py-2 text-sm"
-              {disabled}
+              class="border-border rounded-md border px-3 py-2 text-sm disabled:opacity-50"
+              disabled={disabled || !rejectionReasons[proposal.id]?.trim()}
               onclick={() =>
                 run(async () => {
                   await decideFeatureTranslationRevision({
                     featureId,
-    meta: { isAdminRequest: true },
+                    meta: { isAdminRequest: true },
                     proposalId: proposal.id,
                     expectedCandidateRevisionId: proposal.candidateRevisionId,
-                    action: 'withdraw',
-                    reason: 'Withdrawn by author',
+                    action: 'reject',
+                    reason: rejectionReasons[proposal.id],
                   })
-                  editing = null
                   await load()
-                  selectDraft(null)
                 })}
             >
-              Withdraw
+              Reject proposal
             </button>
           {/if}
-        </div>
-        {#if workspace.canPublish && proposal.status === 'submitted'}
-          <label class="grid gap-1 text-sm"
-            >Reason for rejection
-            <input
-              class="rounded-md border border-border bg-background p-2"
-              bind:value={rejectionReasons[proposal.id]}
-              {disabled}
-            >
-          </label>
-          <button
-            type="button"
-            class="rounded-md border border-border px-3 py-2 text-sm disabled:opacity-50"
-            disabled={disabled || !rejectionReasons[proposal.id]?.trim()}
-            onclick={() =>
-              run(async () => {
-                await decideFeatureTranslationRevision({
-                  featureId,
-    meta: { isAdminRequest: true },
-                  proposalId: proposal.id,
-                  expectedCandidateRevisionId: proposal.candidateRevisionId,
-                  action: 'reject',
-                  reason: rejectionReasons[proposal.id],
-                })
-                await load()
-              })}
-          >
-            Reject proposal
-          </button>
-        {/if}
         {/if}
       </article>
     {/each}
@@ -447,15 +553,28 @@ $effect(() => {
         <FeaturePublicationHistory
           label="Changes recorded while unpublished"
           privateHistory
-          entries={workspace.privateHistory.map((entry, index) => ({ ...entry, generation: -index - 1 }))}
+          entries={workspace.privateHistory.map((entry, index) => ({
+            ...entry,
+            generation: -index - 1,
+          }))}
           canReview={workspace.canPublish}
-          loadReview={entry => getFeaturePrivateReview({ featureId, revisionId: entry.revisionId!, meta: { isAdminRequest: true } })}
+          loadReview={entry =>
+            getFeaturePrivateReview({
+              featureId,
+              revisionId: entry.revisionId!,
+              meta: { isAdminRequest: true },
+            })}
         />
       {/if}
       <FeaturePublicationHistory
         entries={workspace.history}
         canReview={workspace.canPublish}
-        loadReview={entry => getFeaturePublicationReview({ featureId, generation: entry.generation, meta: { isAdminRequest: true } })}
+        loadReview={entry =>
+          getFeaturePublicationReview({
+            featureId,
+            generation: entry.generation,
+            meta: { isAdminRequest: true },
+          })}
       />
     {/key}
   {/if}

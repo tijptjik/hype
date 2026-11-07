@@ -41,7 +41,9 @@ const common = { featureId: 'f', actorId: 'author', guard: sql`1` }
 export function lifecycleFixture(linked = false, catalogueCascades = false) {
   const connection = publicationSqlite({})
   const { sqlite } = connection
-  sqlite.exec('CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,username TEXT,displayUsername TEXT,attribution TEXT)')
+  sqlite.exec(
+    'CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,username TEXT,displayUsername TEXT,attribution TEXT)',
+  )
   sqlite.exec('PRAGMA foreign_keys=ON')
   sqlite.exec(`CREATE TABLE organisation(id TEXT PRIMARY KEY,hubId TEXT,isPublished INTEGER,isArchived INTEGER);
     CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT,isPublished INTEGER,isArchived INTEGER);
@@ -137,6 +139,9 @@ export function lifecycleFixture(linked = false, catalogueCascades = false) {
   seed(featureLocationMembership, source.locationMemberships)
   sqlite.exec(readFileSync('migrations/pending/feature-lifecycle/target.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0172_image_revisions.sql', 'utf8'))
+  sqlite.exec(
+    readFileSync('migrations/pending/feature-lifecycle/idle-windows.sql', 'utf8'),
+  )
   sqlite.exec(`CREATE TABLE task(id TEXT PRIMARY KEY, featureId TEXT,proposalId TEXT REFERENCES featureRevisionProposal(id),projectId TEXT,organisationId TEXT,
     contributorId TEXT,isDraft INTEGER,isReviewed INTEGER,modifiedAt TEXT,type TEXT,
     reviewerId TEXT,reviewReason TEXT,reviewOutcome TEXT,reviewAction TEXT,message TEXT,createdAt TEXT);

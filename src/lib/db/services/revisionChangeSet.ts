@@ -12,6 +12,8 @@ export type RevisionCommand = {
   // Optional live account link for legacy public attribution; audit actors also include jobs.
   publisherUserId?: string | null
   reason?: string
+  /** Explicit submission, review, publication or identity operation; seals the edit window. */
+  revisionBoundary?: boolean
   // Server-built current authorization, ancestry and projection-drift predicates.
   guard: SQL
 }
@@ -40,4 +42,3 @@ export function prepareRevisionChangeSet(
     }),
   }
 }
-

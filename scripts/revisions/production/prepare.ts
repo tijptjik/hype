@@ -15,6 +15,7 @@ import { enrollResourceLogo } from '../../../src/lib/db/services/resourceLogoRev
 // ROLLOUT
 import { rehearseFeatureLifecycle } from '../../dev/feature-lifecycle/rehearse'
 import { prepareLifecycleSchemaGroup } from './lifecycle-schema'
+import { prepareRevisionIdlePolicy } from './revision-idle-policy'
 import {
   prepareLegacyDraftConversion,
   applyLegacyDraftConversion,
@@ -436,7 +437,10 @@ function prepareCurrentLifecycleRelease(
         .get()
     )
       d.sqlite.exec('UPDATE _revisionDeployment SET writable=1')
-    const groups = prepareLegacyDraftConversion(d.sqlite)
+    const groups = [
+      ...prepareRevisionIdlePolicy(d.sqlite),
+      ...prepareLegacyDraftConversion(d.sqlite),
+    ]
     for (const group of groups) {
       if (
         group.statements.length + 4 > 950 ||

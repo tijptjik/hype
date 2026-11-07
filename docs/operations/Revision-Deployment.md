@@ -105,38 +105,38 @@ enrollment or remote D1 execution evidence.
 
 ### Unfinished Feature contributions after lifecycle conversion
 
-New contribution acceptance creates an **unpublished** Feature. Reviewers clean up
-that record through the regular editors and publish separately. Publication is not
-part of accepting the task, including after migration.
+New contribution acceptance creates an **unpublished** Feature. Reviewers clean up that
+record through the regular editors and publish separately. Publication is not part of
+accepting the task, including after migration.
 
 `scripts/dev/feature-lifecycle/convert-drafts.ts` converts unfinished legacy
 contributions into the ordinary creation-proposal workflow. The task and initial
-proposal IDs remain stable. Proposed content includes the exact retained upload
-pins; asset versions, image revisions, original files and task-image links are not
-copied or deleted. The converter removes the redundant provisional Feature and its
-private projection/history rows only after recording their complete before-images
-in an immutable `revisionChangeSet.legacyEvidence` receipt with format
+proposal IDs remain stable. Proposed content includes the exact retained upload pins;
+asset versions, image revisions, original files and task-image links are not copied or
+deleted. The converter removes the redundant provisional Feature and its private
+projection/history rows only after recording their complete before-images in an
+immutable `revisionChangeSet.legacyEvidence` receipt with format
 `legacy-creation-conversion/v1`. This includes original proposal/review rows and
 Feature-image pins, so cleanup does not erase attribution or historical evidence.
 
 Cleanup is deliberately conservative. Public history, reviewed proposals, additional
 tasks, social links, Location associations, identity lineage, foreign revision
-references, ambiguous photo evidence, or oversized evidence abort preparation.
-These cases require a separate reviewed migration; they are never silently discarded.
+references, ambiguous photo evidence, or oversized evidence abort preparation. These
+cases require a separate reviewed migration; they are never silently discarded.
 
 The lifecycle rehearsal runs this conversion on its private copy. For an already
-converted database, the managed release planner detects `feature.currentRevisionId`
-and produces one atomic cleanup group per draft, using the existing maintenance
-fence, exact source fingerprints, durable cursor, final verification and activation
-protocol. The group temporarily removes only the relevant immutable-history guards
-inside the same transaction and reinstalls their exact definitions before commit.
-It never removes deployment fences. A failed group rolls back its data, guards and
-cursor together. Replanning after a completed conversion produces no duplicate work.
+converted database, the managed release planner detects `feature.currentRevisionId` and
+produces one atomic cleanup group per draft, using the existing maintenance fence, exact
+source fingerprints, durable cursor, final verification and activation protocol. The
+group temporarily removes only the relevant immutable-history guards inside the same
+transaction and reinstalls their exact definitions before commit. It never removes
+deployment fences. A failed group rolls back its data, guards and cursor together.
+Replanning after a completed conversion produces no duplicate work.
 
-This cleanup plan expects the lifecycle schema cutover and normal resource/logo
-baseline enrollment to be complete. It does not replace either stage or weaken
-activation checks. Preparing or rehearsing a plan does not apply it to development
-or production. The app has no separate legacy draft editor after conversion.
+This cleanup plan expects the lifecycle schema cutover and normal resource/logo baseline
+enrollment to be complete. It does not replace either stage or weaken activation checks.
+Preparing or rehearsing a plan does not apply it to development or production. The app
+has no separate legacy draft editor after conversion.
 
 ### Managed lifecycle schema transition
 
@@ -145,15 +145,15 @@ schemas, the planner first completes numbered migrations and resource/logo enrol
 then prepares a lifecycle target on an isolated copy. A dedicated portable schema group
 replays that target with foreign keys enabled and deferred checks. Referencing tables
 are included in the rebuild to preserve rows affected by CASCADE or SET NULL; Feature
-and change-set identities receive additive columns without replacing their rows.
-Exact target rows and foreign-key integrity are checked before draft cleanup begins.
+and change-set identities receive additive columns without replacing their rows. Exact
+target rows and foreign-key integrity are checked before draft cleanup begins.
 
-Only the leading numbered-schema groups belong to the initial migration/re-export
-phase. The lifecycle schema group follows enrollment, with maintenance fences restored
-in the same transaction. A failure rolls back the group and leaves its resume cursor
-unchanged. Activation of the current schema does not access the removed legacy creation
-policy table. Local contract tests cover both the legacy and current activation paths;
-they do not establish that a live D1 release has occurred.
+Only the leading numbered-schema groups belong to the initial migration/re-export phase.
+The lifecycle schema group follows enrollment, with maintenance fences restored in the
+same transaction. A failure rolls back the group and leaves its resume cursor unchanged.
+Activation of the current schema does not access the removed legacy creation policy
+table. Local contract tests cover both the legacy and current activation paths; they do
+not establish that a live D1 release has occurred.
 
 Managed enrollment requests only media referenced by Feature galleries, task evidence,
 resource logos or existing immutable image history. Unreferenced image rows remain
@@ -163,3 +163,27 @@ agree. The cache records that revision ID and revalidates it on reuse. Enrollmen
 the exact existing pin when byte size, media type, metadata and current presentation
 also agree, preserving prior recovery provenance. This does not authorize new empty
 metadata recovery or removal of old files.
+
+## Editing-window policy rollout
+
+Apply `0203_revision_edit_windows.sql` before enabling the coalescing writers. It is
+additive for window/selection storage and replaces only snapshot mutation guards;
+existing snapshots have no editable window and stay frozen. No historical payloads are
+rewritten. The lifecycle rehearsal installs its matching `idle-windows.sql` extension
+and seals pre-cutover Feature windows.
+
+Before deployment, run the focused revision persistence and idle-window tests. Verify
+that a same-actor edit inside five minutes retains its snapshot ID, that its concurrency
+token advances, that no-op saves preserve the timer, and that five idle minutes or a
+workflow boundary produces a new snapshot. Check gallery/logo pins and transaction
+marker cleanup after both successful and deliberately failed saves. History feeds must
+order a coalesced entry by its latest edit time so unread checkpoints remain correct.
+
+Old application code remains append-only on the new schema. Reverting to it is safe: its
+inserts advance heads and supersede editable revisions. Do not restore unconditional
+immutable triggers while coalescing application code is still serving requests.
+
+For an already-converted lifecycle database, use the managed rollout: its
+`revision-idle-policy` group installs the shared guards and lifecycle extension
+atomically, then records migration 0203. Do not run the compatibility Feature SQL
+directly against a database whose accepted head lives on `feature.currentRevisionId`.

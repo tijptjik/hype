@@ -180,11 +180,13 @@ export const getFeaturePublicationReview = guardedQuery(
 /**
  * Saves a small translation patch on a server-loaded snapshot, preserving all hidden content.
  * @param input Exact base/candidate identifiers and allowed text changes.
- * @returns Saved proposal/candidate IDs; public content remains unchanged.
+ * @returns Accepted revision ID; existing publication visibility is preserved.
+ * @remarks The legacy endpoint name is retained for callers; authorised staff saves do not create drafts.
  */
 export const saveFeatureTranslationDraft = guardedCommand(
   identity.extend({
     baseRevisionId: z.string().min(1),
+    expectedGeneration: z.number().int().nonnegative(),
     patch: FeatureTranslationPatchSchema,
     draft: z
       .object({ proposalId: z.string().min(1), candidateRevisionId: z.string().min(1) })
@@ -192,46 +194,63 @@ export const saveFeatureTranslationDraft = guardedCommand(
   }),
   async (input, ctx) => {
     const command = await scope(ctx, input.featureId)
-    const reference = input.draft?.candidateRevisionId ?? input.baseRevisionId
-    // A draft token is private to its author; never turn a guessed candidate ID into a base read.
-    const ownership = input.draft
-      ? sql`EXISTS (SELECT 1 FROM featureRevisionProposal
-    WHERE id=${input.draft.proposalId} AND featureId=${input.featureId} AND contributorId=${ctx.user.id}
-      AND status='draft' AND candidateRevisionId=${reference})`
-      : sql`1`
+    // This endpoint already requires staff translation authority; it must not queue a proposal.
+    if (input.draft)
+      error(409, 'Reopen the regular editor to save against current accepted content')
+    const workspace = await readFeatureRevisionWorkspace(ctx.db, command)
+    if (
+      !workspace.enabled ||
+      workspace.comparisonRevisionId !== input.baseRevisionId ||
+      workspace.generation !== input.expectedGeneration
+    )
+      error(409, 'STALE_REVISION')
     const row = await ctx.db.get<{
       content: string
     }>(sql`SELECT content FROM featureRevision
-    WHERE featureId=${input.featureId} AND id=${reference} AND (${command.guard}) AND (${ownership})`)
+      WHERE featureId=${input.featureId} AND id=${input.baseRevisionId} AND (${command.guard})`)
     if (!row) error(409, 'STALE_REVISION')
-    const base = FeatureRevisionContentSchema.parse(JSON.parse(row.content))
-    const permission = {
-      locales: Object.keys(base.translations),
+    const previous = FeatureRevisionContentSchema.parse(JSON.parse(row.content))
+    const content = applyFeatureTranslationPatch(previous, input.patch, {
+      locales: Object.keys(previous.translations),
       fields: command.fields,
-    }
-    let result: { proposalId: string; candidateRevisionId: string } | null
-    if (command.canPublish) {
-      const content = applyFeatureTranslationPatch(base, input.patch, permission)
-      result = await saveFeatureStaffDraft(ctx.db, { ...command, ...input, content })
-    } else if (input.draft) {
-      const id = await saveFeatureTranslationProposal(ctx.db, {
-        ...command,
-        permission,
-        patch: input.patch,
-        proposalId: input.draft.proposalId,
-        expectedCandidateRevisionId: input.draft.candidateRevisionId,
-      })
-      result = id
-        ? { proposalId: input.draft.proposalId, candidateRevisionId: id }
-        : null
-    } else
-      result = await createFeatureTranslationProposal(ctx.db, {
-        ...command,
-        ...input,
-        permission,
-      })
-    if (!result) error(409, 'STALE_REVISION')
-    return result
+    })
+    const errors = command.validateResult(previous, content)
+    if (errors.length) error(400, errors.join('; '))
+    const source = await readFeatureRevisionSource(
+      ctx.db,
+      input.featureId,
+      command.guard,
+    )
+    if (!source) error(409, 'STALE_REVISION')
+    const capture = await prepareFeatureAcceptedCapture(ctx.db, {
+      ...command,
+      reason: 'Feature translations edited',
+      derive: current => {
+        if (!equalRevisionValue(current, previous)) throw new Error('STALE_REVISION')
+        return content
+      },
+    })
+    if (!capture.revisionId) error(409, 'STALE_REVISION')
+    const projection = prepareFeatureEditorialProjection(ctx.db, {
+      featureId: input.featureId,
+      source,
+      previous,
+      content,
+    })
+    // Commit authorized text and immutable history together, preserving current visibility.
+    const saved = await executeRevisionBatch(
+      ctx.db,
+      sql`(${command.guard}) AND (${source.unchanged})`,
+      [
+        ...capture.before,
+        ...projection.statements,
+        ...(projection.afterPublication ?? []),
+        ...capture.after,
+        prepareRevisionCheck(ctx.db, projection.verify),
+      ],
+    )
+    if (!saved) error(409, 'STALE_REVISION')
+    return { revisionId: capture.revisionId }
   },
 )
 

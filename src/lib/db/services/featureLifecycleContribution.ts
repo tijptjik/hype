@@ -21,7 +21,14 @@ import {
 import { prepareFeatureEdit } from './featureLifecycle'
 import { prepareNewLifecycleFeature } from './featureLifecycleIdentity'
 import { prepareRevisionChangeSet } from './revisionChangeSet'
-import { executeRevisionBatch } from './revisionBatch'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
+import {
+  hasRevisionEditWindows,
+  editableRevision,
+  revisionEditTime,
+} from './revisionEditWindow'
+import { revisionEditWindow, revisionEditSelection } from '../schema/revisionEditWindow'
+import { equalRevisionValue } from '#lib/revisions/merge.js'
 // TYPES
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
@@ -126,10 +133,11 @@ export async function saveFeatureContributionDraft(
   AND version=${input.expectedVersion} AND contributorId=${input.actorId} AND status='draft')`
   const proposal = await db.get<{
     kind: string
+    changes: string
     featureId: string | null
     baseRevisionId: string | null
   }>(
-    sql`SELECT kind,featureId,baseRevisionId FROM featureRevisionProposal WHERE id=${input.proposalId} AND (${guard})`,
+    sql`SELECT kind,changes,featureId,baseRevisionId FROM featureRevisionProposal WHERE id=${input.proposalId} AND (${guard})`,
   )
   if (!proposal) return null
   let payload: FeatureChanges | z.infer<typeof creationSchema>,
@@ -150,24 +158,76 @@ export async function saveFeatureContributionDraft(
   } else throw new Error('Identity proposals require their specific review flow')
   const errors = await input.validate(content)
   if (errors.length) throw new Error(errors.join('; '))
+  const idleWindows = await hasRevisionEditWindows(db, 'featureDraft')
+  if (
+    idleWindows &&
+    !input.submit &&
+    equalRevisionValue(JSON.parse(proposal.changes), payload)
+  )
+    return (await executeRevisionBatch(db, guard, input.completion ?? []))
+      ? input.expectedVersion
+      : null
+  const recent =
+    idleWindows && !input.submit && (input.origin ?? 'user') === 'user'
+      ? await db.get<{ id: string; changeSetId: string }>(sql`
+    SELECT r.id,r.changeSetId FROM featureRevisionReview r WHERE r.proposalId=${input.proposalId} AND r.action='saved'
+      AND r.rowid=(SELECT max(latest.rowid) FROM featureRevisionReview latest WHERE latest.proposalId=r.proposalId)
+      AND (${editableRevision('featureDraft', sql`r.id`, { actorId: input.actorId })})`)
+      : null
   const version = crypto.randomUUID(),
-    change = prepareRevisionChangeSet(db, input),
-    changes = JSON.stringify(payload)
+    changes = JSON.stringify(payload),
+    token = crypto.randomUUID()
+  const change = recent ? null : prepareRevisionChangeSet(db, input)
+  const reviewId = recent?.id ?? crypto.randomUUID()
+  const history: BatchItem<'sqlite'>[] = recent
+    ? [
+        prepareRevisionCheck(
+          db,
+          editableRevision('featureDraft', sql`${reviewId}`, {
+            actorId: input.actorId,
+          }),
+        ),
+        db.insert(revisionEditSelection).values({ token, revisionId: reviewId }),
+        db
+          .update(partialFeatureReview)
+          .set({ proposalVersion: version, changes })
+          .where(eq(partialFeatureReview.id, reviewId)),
+        db.delete(revisionEditSelection).where(eq(revisionEditSelection.token, token)),
+      ]
+    : [
+        change!.statement,
+        db.insert(partialFeatureReview).values({
+          id: reviewId,
+          featureId: proposal.featureId,
+          proposalId: input.proposalId,
+          proposalVersion: version,
+          changes,
+          action: input.submit ? 'submitted' : 'saved',
+          changeSetId: change!.id,
+        }),
+      ]
+  if (idleWindows && !input.submit)
+    history.push(
+      db
+        .insert(revisionEditWindow)
+        .values({
+          resource: 'featureDraft',
+          revisionId: reviewId,
+          actorId: input.actorId,
+          origin: input.origin ?? 'user',
+          lastEditedAt: revisionEditTime,
+        })
+        .onConflictDoUpdate({
+          target: [revisionEditWindow.resource, revisionEditWindow.revisionId],
+          set: { lastEditedAt: revisionEditTime },
+        }),
+    )
   return (await executeRevisionBatch(db, guard, [
-    change.statement,
     db
       .update(partialFeatureProposal)
       .set({ version, changes, status: input.submit ? 'submitted' : 'draft' })
       .where(eq(partialFeatureProposal.id, input.proposalId)),
-    db.insert(partialFeatureReview).values({
-      id: crypto.randomUUID(),
-      featureId: proposal.featureId,
-      proposalId: input.proposalId,
-      proposalVersion: version,
-      changes,
-      action: input.submit ? 'submitted' : 'saved',
-      changeSetId: change.id,
-    }),
+    ...history,
     ...(input.completion ?? []),
   ]))
     ? version
@@ -221,6 +281,7 @@ export async function acceptFeatureCreationProposal(
     acceptanceGuard = imageReview.guard
   if (input.duplicate) {
     const edit = await prepareFeatureEdit(db, {
+      revisionBoundary: true,
       ...input.duplicate,
       actorId: input.actorId,
       origin: input.origin,

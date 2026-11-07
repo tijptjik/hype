@@ -1,6 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // SERVICES
+import { hasRevisionEditWindows, revisionActivityTime } from './revisionEditWindow'
 import { historicalFeatureVisibility } from './historicalLayers'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -33,6 +34,7 @@ export async function readFeatureLifecycleHistory(
     state: FeatureLifecycleState | null
   }[]
 > {
+  const idleWindows = await hasRevisionEditWindows(db)
   const rows = await db.all<{
     revisionId: string
     version: number
@@ -45,7 +47,7 @@ export async function readFeatureLifecycleHistory(
     createdAt: string
     recordState: string | null
   }>(sql`
-  SELECT r.id revisionId,r.sequence version,c.actorId,u.name actorName,NULLIF(u.username,'') actorUsername,NULLIF(u.displayUsername,'') actorDisplayUsername,c.origin,c.reason,c.createdAt,r.recordState
+  SELECT r.id revisionId,r.sequence version,c.actorId,u.name actorName,NULLIF(u.username,'') actorUsername,NULLIF(u.displayUsername,'') actorDisplayUsername,c.origin,c.reason,${revisionActivityTime(idleWindows, 'feature', sql`r.id`, sql`c.createdAt`)} createdAt,r.recordState
   FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId LEFT JOIN user u ON u.id=c.actorId
   WHERE r.featureId=${input.featureId} AND r.sequence IS NOT NULL AND (${input.guard})
     AND (${input.beforeVersion ?? null} IS NULL OR r.sequence<${input.beforeVersion ?? null})

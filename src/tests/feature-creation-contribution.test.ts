@@ -205,3 +205,50 @@ describe('creation proposals without provisional Features', () => {
     ).toBeNull()
   })
 })
+
+it('coalesces draft-save evidence while keeping submission frozen', async () => {
+  const f = await fixture()
+  for (const title of ['first draft', 'complete draft']) {
+    const content = structuredClone(f.input.content)
+    content.translations.en.title.value = title
+    await saveFeatureCreationTaskDraft(f.db, {
+      ...f.input,
+      taskId: f.draft.task.id,
+      content,
+    })
+  }
+  expect(
+    f.sqlite
+      .prepare("SELECT count(*) n FROM featureRevisionReview WHERE action='saved'")
+      .get()?.n,
+  ).toBe(1)
+  const saved = f.sqlite
+    .prepare("SELECT id,changes FROM featureRevisionReview WHERE action='saved'")
+    .get()!
+  expect(JSON.parse(String(saved.changes)).content.translations.en.title.value).toBe(
+    'complete draft',
+  )
+  await saveFeatureCreationUpload(f.db, {
+    taskId: f.draft.task.id,
+    actorId: 'author',
+    storageNamespace: 'local',
+    storageKey: 'idle-proof',
+    mediaType: 'image/jpeg',
+    bytes: new Uint8Array([1, 2, 3]).buffer,
+    metadata: { version: 1 },
+  })
+  await submitFeatureCreationTask(f.db, { taskId: f.draft.task.id, actorId: 'author' })
+  expect(
+    f.sqlite
+      .prepare(
+        "SELECT closedAt FROM revisionEditWindow WHERE resource='featureDraft' AND revisionId=?",
+      )
+      .get(saved.id)?.closedAt,
+  ).not.toBeNull()
+  expect(() =>
+    f.sqlite
+      .prepare('UPDATE featureRevisionReview SET changes=? WHERE id=?')
+      .run('{}', saved.id),
+  ).toThrow(/immutable/)
+  expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+})

@@ -13,7 +13,7 @@ import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 // SERVICES
 import { hasFeatureLifecycleStorage, prepareLifecycleCapture } from './featureLifecycle'
 import { prepareFeatureRevisionWriteScope } from './featureRevisionWriteScope'
-import { prepareRevisionChangeSet } from './featureRevision'
+import { prepareFeatureIdleRevision } from './featureRevisionIdleWindow'
 import { prepareRevisionCheck } from './revisionBatch'
 import { readFeatureRevisionSource } from './featureRevisionSource'
 import { featureContentProjectionMatches } from './featureRevisionProjection'
@@ -74,26 +74,55 @@ export async function prepareFeatureAcceptedCapture(
       after: [],
       revisionId: null,
     }
-  if (head.state === 'active' && !head.publishedRevisionId && head.generation === 0 && !input.unpublish) {
+  if (
+    head.state === 'active' &&
+    !head.publishedRevisionId &&
+    head.generation === 0 &&
+    !input.unpublish
+  ) {
     const initial = await prepareInitialFeatureCapture(db, input)
     if (initial) return initial
   }
-  if (head.state !== 'active') throw new Error('Retired Features cannot receive content changes')
+  if (head.state !== 'active')
+    throw new Error('Retired Features cannot receive content changes')
   const isPrivate = head.publishedRevisionId === null
   let comparisonId = head.publishedRevisionId
-  const privateComparison = await privateFeatureComparison(db, sql`${input.featureId}`, sql`${head.generation}`)
-  const privateToken = isPrivate ? await db.get<{ id: string | null }>(sql`SELECT ${privateComparison} id`) : null
+  const privateComparison = await privateFeatureComparison(
+    db,
+    sql`${input.featureId}`,
+    sql`${head.generation}`,
+  )
+  const privateToken = isPrivate
+    ? await db.get<{ id: string | null }>(sql`SELECT ${privateComparison} id`)
+    : null
   if (isPrivate) {
-    const storage = await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featurePrivateCapture' AND type='table'`)
-    if (!storage?.n) throw new Error('Unpublished Feature capture requires its migration')
-    const initialStorage = await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featureInitialRevision' AND type='table'`)
-    if (initialStorage?.n && await db.get(sql`SELECT 1 FROM featureInitialRevision WHERE featureId=${input.featureId} AND mode='contribution'`))
+    const storage = await db.get<{ n: number }>(
+      sql`SELECT count(*) n FROM sqlite_master WHERE name='featurePrivateCapture' AND type='table'`,
+    )
+    if (!storage?.n)
+      throw new Error('Unpublished Feature capture requires its migration')
+    const initialStorage = await db.get<{ n: number }>(
+      sql`SELECT count(*) n FROM sqlite_master WHERE name='featureInitialRevision' AND type='table'`,
+    )
+    if (
+      initialStorage?.n &&
+      (await db.get(
+        sql`SELECT 1 FROM featureInitialRevision WHERE featureId=${input.featureId} AND mode='contribution'`,
+      ))
+    )
       throw new Error('Submitted initial contributions are frozen for task review')
-    const reservedStorage = await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featureIdentityReservation' AND type='table'`)
-    if (reservedStorage?.n && await db.get(sql`SELECT 1 FROM featureIdentityReservation r WHERE r.featureId=${input.featureId}
+    const reservedStorage = await db.get<{ n: number }>(
+      sql`SELECT count(*) n FROM sqlite_master WHERE name='featureIdentityReservation' AND type='table'`,
+    )
+    if (
+      reservedStorage?.n &&
+      (await db.get(sql`SELECT 1 FROM featureIdentityReservation r WHERE r.featureId=${input.featureId}
       AND NOT EXISTS (SELECT 1 FROM featureIdentityProposalDecision d WHERE d.proposalId=r.proposalId AND d.outcome='accepted')`))
+    )
       throw new Error('Reserved identity outputs are frozen for review')
-    const row = await db.get<{ id: string | null }>(sql`SELECT COALESCE(${privateComparison},p.previousRevisionId,
+    const row = await db.get<{
+      id: string | null
+    }>(sql`SELECT COALESCE(${privateComparison},p.previousRevisionId,
       (SELECT r.id FROM featureRevision r JOIN featureRevisionPublication baseline
         ON baseline.featureId=r.featureId AND baseline.changeSetId=r.changeSetId AND baseline.generation=0
         WHERE r.featureId=${input.featureId} AND r.previousRevisionId IS NULL)) id
@@ -111,15 +140,23 @@ export async function prepareFeatureAcceptedCapture(
   const source = await readFeatureRevisionSource(db, input.featureId, input.guard)
   if (!source) throw new Error('Feature revision scope changed')
   const content = FeatureRevisionContentSchema.parse(
-    await input.derive(previous, source),
+    await input.derive(structuredClone(previous), source),
   )
   const record = parseFeatureRevisionSource(source.snapshot).record
-  const resultingLayer = previous.profile.isIntangible === content.profile.isIntangible
-    ? sql`${record.layerId}` : featureLayerAfterStatus(String(record.layerId), content.profile.isIntangible)
+  const resultingLayer =
+    previous.profile.isIntangible === content.profile.isIntangible
+      ? sql`${record.layerId}`
+      : featureLayerAfterStatus(String(record.layerId), content.profile.isIntangible)
   const retainedScope = sql`EXISTS (SELECT 1 FROM feature WHERE id=${input.featureId}
     AND organisationId IS ${record.organisationId} AND projectId IS ${record.projectId} AND layerId IS ${resultingLayer})`
-  const id = crypto.randomUUID(),
-    change = prepareRevisionChangeSet(db, input)
+  const idle = await prepareFeatureIdleRevision(db, {
+    ...input,
+    previousRevisionId: comparisonId,
+    previous,
+    content,
+    boundary: Boolean(input.unpublish),
+  })
+  const id = idle.revisionId
   const writeScope = await prepareFeatureRevisionWriteScope(db, input.featureId)
   const before = [
     ...writeScope.before,
@@ -137,38 +174,74 @@ export async function prepareFeatureAcceptedCapture(
       db,
       sql`(${retainedScope}) AND (${featureContentProjectionMatches(input.featureId, content)})`,
     ),
-    change.statement,
-    db
-      .insert(featureRevision)
-      .values({
-        id,
-        featureId: input.featureId,
-        previousRevisionId: comparisonId,
-        changeSetId: change.id,
-        content,
-      }),
-    ...(isPrivate ? [db.insert(featurePrivateCapture).values({ featureId: input.featureId, revisionId: id, generation: head.generation })] : [db
-      .update(featureRevisionHead)
-      .set({ publishedRevisionId: id, generation: head.generation + 1 })
-      .where(eq(featureRevisionHead.featureId, input.featureId)),
-    db
-      .insert(featureRevisionPublication)
-      .values({
-        id: crypto.randomUUID(),
-        featureId: input.featureId,
-        previousRevisionId: head.publishedRevisionId,
-        revisionId: id,
-        generation: head.generation + 1,
-        changeSetId: change.id,
-      })]),
+    ...idle.write,
+    ...(idle.noop
+      ? []
+      : isPrivate
+        ? idle.reuse
+          ? [
+              db
+                .update(featureRevisionHead)
+                .set({ generation: head.generation + 1 })
+                .where(eq(featureRevisionHead.featureId, input.featureId)),
+              db
+                .update(featurePrivateCapture)
+                .set({ generation: head.generation + 1 })
+                .where(eq(featurePrivateCapture.revisionId, id)),
+            ]
+          : [
+              db.insert(featurePrivateCapture).values({
+                featureId: input.featureId,
+                revisionId: id,
+                generation: head.generation,
+              }),
+            ]
+        : [
+            db
+              .update(featureRevisionHead)
+              .set({ publishedRevisionId: id, generation: head.generation + 1 })
+              .where(eq(featureRevisionHead.featureId, input.featureId)),
+            ...(idle.reuse
+              ? [
+                  db
+                    .update(featureRevisionPublication)
+                    .set({ generation: head.generation + 1 })
+                    .where(
+                      sql`${featureRevisionPublication.featureId}=${input.featureId} AND ${featureRevisionPublication.generation}=${head.generation}`,
+                    ),
+                ]
+              : [
+                  db.insert(featureRevisionPublication).values({
+                    id: crypto.randomUUID(),
+                    featureId: input.featureId,
+                    previousRevisionId: head.publishedRevisionId,
+                    revisionId: id,
+                    generation: head.generation + 1,
+                    changeSetId: idle.changeSetId!,
+                  }),
+                ]),
+          ]),
   ]
   // A missing-report decision may change content and immediately withdraw it in the same transaction.
-  if (input.unpublish && !isPrivate) after.push(
-    db.update(feature).set({ isPublished: false, localIsPublished: false }).where(eq(feature.id, input.featureId)),
-    db.update(featureRevisionHead).set({ publishedRevisionId: null, generation: head.generation + 2 }).where(eq(featureRevisionHead.featureId, input.featureId)),
-    db.insert(featureRevisionPublication).values({ id: crypto.randomUUID(), featureId: input.featureId,
-      previousRevisionId: id, revisionId: null, generation: head.generation + 2, changeSetId: change.id }),
-  )
-  after.push(...writeScope.after)
+  if (input.unpublish && !isPrivate)
+    after.push(
+      db
+        .update(feature)
+        .set({ isPublished: false, localIsPublished: false })
+        .where(eq(feature.id, input.featureId)),
+      db
+        .update(featureRevisionHead)
+        .set({ publishedRevisionId: null, generation: head.generation + 2 })
+        .where(eq(featureRevisionHead.featureId, input.featureId)),
+      db.insert(featureRevisionPublication).values({
+        id: crypto.randomUUID(),
+        featureId: input.featureId,
+        previousRevisionId: id,
+        revisionId: null,
+        generation: head.generation + 2,
+        changeSetId: idle.changeSetId!,
+      }),
+    )
+  after.push(...idle.finish, ...writeScope.after)
   return { before, after, revisionId: id }
 }

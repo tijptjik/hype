@@ -1,5 +1,8 @@
 // IMAGE INTENT POLICY
-import { readFeatureImageIntentPolicy, resolvePolicyImageIntent } from './imageIntentPolicy'
+import {
+  readFeatureImageIntentPolicy,
+  resolvePolicyImageIntent,
+} from './imageIntentPolicy'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -19,16 +22,25 @@ import type { Database } from '#lib/types.js'
  * @remarks New uploads use independent proposals. This path handles only retained legacy task
  * evidence; missing gallery pins cannot be invented during task acceptance.
  */
-export async function prepareLegacyFeatureTaskImageReview(db: Database, input: {
-  featureId: string; taskId: string; actorId: string; guard: SQL
-  action: 'acceptAll' | 'acceptClassified' | 'reject'
-  rows: { imageId: string; featureId: string | null; intent: string | null }[]
-}): Promise<Awaited<ReturnType<typeof prepareFeatureAcceptedCapture>>> {
+export async function prepareLegacyFeatureTaskImageReview(
+  db: Database,
+  input: {
+    featureId: string
+    taskId: string
+    actorId: string
+    guard: SQL
+    action: 'acceptAll' | 'acceptClassified' | 'reject'
+    rows: { imageId: string; featureId: string | null; intent: string | null }[]
+  },
+): Promise<Awaited<ReturnType<typeof prepareFeatureAcceptedCapture>>> {
   const policy = await readFeatureImageIntentPolicy(db, input.featureId)
   const ids = JSON.stringify(input.rows.map(row => row.imageId))
   const published: string[] = []
   let inputGuard: SQL = sql`1`
-  const capture = await prepareFeatureAcceptedCapture(db, { ...input, reason: 'Legacy photo task reviewed',
+  const capture = await prepareFeatureAcceptedCapture(db, {
+    ...input,
+    revisionBoundary: true,
+    reason: 'Legacy photo task reviewed',
     derive: async previous => {
       const content = structuredClone(previous)
       const shared = await db.all<{ imageId: string; taskId: string }>(sql`
@@ -44,13 +56,27 @@ export async function prepareLegacyFeatureTaskImageReview(db: Database, input: {
       for (const row of input.rows) {
         const entry = content.gallery.entries[row.imageId]
         const intent = row.intent ?? 'undefined'
-        const assignment = resolvePolicyImageIntent(policy, intent, input.action === 'acceptAll')
-        const accept = input.action !== 'reject' && assignment.isPublished && (input.action === 'acceptAll' || intent !== 'undefined')
-        const remove = input.action === 'reject' || (input.action === 'acceptClassified' && intent === 'undefined')
+        const assignment = resolvePolicyImageIntent(
+          policy,
+          intent,
+          input.action === 'acceptAll',
+        )
+        const accept =
+          input.action !== 'reject' &&
+          assignment.isPublished &&
+          (input.action === 'acceptAll' || intent !== 'undefined')
+        const remove =
+          input.action === 'reject' ||
+          (input.action === 'acceptClassified' && intent === 'undefined')
         if (accept) {
-          if (!entry || row.featureId !== input.featureId) throw new Error('Task photo requires a verified Feature gallery revision')
-          if (entry.intent === 'canonical') for (const [id, other] of Object.entries(content.gallery.entries))
-            if (id !== row.imageId && other.intent === 'canonical') { other.intent = 'general'; other.isPublished = true }
+          if (!entry || row.featureId !== input.featureId)
+            throw new Error('Task photo requires a verified Feature gallery revision')
+          if (entry.intent === 'canonical')
+            for (const [id, other] of Object.entries(content.gallery.entries))
+              if (id !== row.imageId && other.intent === 'canonical') {
+                other.intent = 'general'
+                other.isPublished = true
+              }
           Object.assign(entry, assignment)
           published.push(row.imageId)
         } else if (remove && !sharedIds.has(row.imageId) && entry) {
@@ -64,8 +90,18 @@ export async function prepareLegacyFeatureTaskImageReview(db: Database, input: {
   capture.before.unshift(prepareRevisionCheck(db, policy.guard))
   if (capture.revisionId) {
     capture.before.push(prepareRevisionCheck(db, inputGuard))
-    if (published.length) capture.after.unshift(db.update(featureImage).set({ localIsPublished: true }).where(and(
-      eq(featureImage.featureId, input.featureId), sql`imageId IN (SELECT value FROM json_each(${JSON.stringify(published)}))`)))
+    if (published.length)
+      capture.after.unshift(
+        db
+          .update(featureImage)
+          .set({ localIsPublished: true })
+          .where(
+            and(
+              eq(featureImage.featureId, input.featureId),
+              sql`imageId IN (SELECT value FROM json_each(${JSON.stringify(published)}))`,
+            ),
+          ),
+      )
   }
   return capture
 }

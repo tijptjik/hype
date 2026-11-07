@@ -120,7 +120,8 @@ export async function rehearseFeatureLifecycle(
     const evidence = new Map<string, Record<string, Row[]>>()
     const preserve = (changeSetId: string, kind: string, row: Row): void => {
       const entry = evidence.get(changeSetId) ?? {}
-      ;(entry[kind] ??= []).push(row)
+      entry[kind] ??= []
+      entry[kind].push(row)
       evidence.set(changeSetId, entry)
     }
     const identityProposals = new Map(
@@ -375,6 +376,9 @@ export async function rehearseFeatureLifecycle(
         }
       }
       db.exec(target.slice(triggerStart))
+      db.exec(
+        readFileSync('migrations/pending/feature-lifecycle/idle-windows.sql', 'utf8'),
+      )
       for (const object of schema.filter(
         object => object.type === 'trigger' && object.tbl_name === 'revisionChangeSet',
       ))

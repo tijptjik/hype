@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 // REVISIONS
 import { diffRevisionValues } from '#lib/revisions/diff.js'
 // SERVICES
+import { hasRevisionEditWindows, revisionActivityTime } from './revisionEditWindow'
 import { readResourceLogoChanges } from './resourceLogoChanges'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -128,6 +129,7 @@ export async function listOrganisationHistory(
   db: Database,
   input: { organisationId: string; hubId: string | null; before?: number },
 ): Promise<OrganisationHistoryPage> {
+  const idleWindows = await hasRevisionEditWindows(db)
   if (!(await hasHistoryStorage(db, 'organisation')))
     return { available: false, entries: [], nextCursor: null }
   const rows = await db
@@ -144,8 +146,18 @@ export async function listOrganisationHistory(
       actorImage: sql<string | null>`actor.image`.as('actorImage'),
       origin: sql<string>`c.origin`,
       reason: sql<string | null>`c.reason`,
-      createdAt: sql<string>`c.createdAt`,
-      previousCreatedAt: sql<string | null>`pc.createdAt`.as('previousCreatedAt'),
+      createdAt: revisionActivityTime(
+        idleWindows,
+        'organisation',
+        sql`r.id`,
+        sql`c.createdAt`,
+      ).as('createdAt'),
+      previousCreatedAt: revisionActivityTime(
+        idleWindows,
+        'organisation',
+        sql`p.id`,
+        sql`pc.createdAt`,
+      ).as('previousCreatedAt'),
       content: sql<string>`r.content`,
       previous: sql<string | null>`p.content`.as('previous'),
     })
@@ -208,6 +220,7 @@ export async function listAdminResourceHistory(
     before?: number
   },
 ): Promise<OrganisationHistoryPage> {
+  const idleWindows = await hasRevisionEditWindows(db)
   if (!(await hasHistoryStorage(db, input.resource)))
     return { available: false, entries: [], nextCursor: null }
   const rollout = await db
@@ -239,8 +252,18 @@ export async function listAdminResourceHistory(
       actorImage: sql<string | null>`actor.image`.as('actorImage'),
       origin: sql<string>`c.origin`,
       reason: sql<string | null>`c.reason`,
-      createdAt: sql<string>`c.createdAt`,
-      previousCreatedAt: sql<string | null>`pc.createdAt`.as('previousCreatedAt'),
+      createdAt: revisionActivityTime(
+        idleWindows,
+        input.resource,
+        sql`r.id`,
+        sql`c.createdAt`,
+      ).as('createdAt'),
+      previousCreatedAt: revisionActivityTime(
+        idleWindows,
+        input.resource,
+        sql`p.id`,
+        sql`pc.createdAt`,
+      ).as('previousCreatedAt'),
       content: sql<string>`r.content`,
       previous: sql<string | null>`p.content`.as('previous'),
     })
@@ -342,6 +365,7 @@ export async function listPropertyCatalogHistory(
   guard: SQL,
   before?: number,
 ): Promise<OrganisationHistoryPage> {
+  const idleWindows = await hasRevisionEditWindows(db)
   if (!(await hasHistoryStorage(db, 'propertyCatalog')))
     return { available: false, entries: [], nextCursor: null }
   const rows = await db
@@ -358,8 +382,18 @@ export async function listPropertyCatalogHistory(
       actorImage: sql<string | null>`actor.image`.as('actorImage'),
       origin: sql<string>`c.origin`,
       reason: sql<string | null>`c.reason`,
-      createdAt: sql<string>`c.createdAt`,
-      previousCreatedAt: sql<string | null>`pc.createdAt`.as('previousCreatedAt'),
+      createdAt: revisionActivityTime(
+        idleWindows,
+        'propertyCatalog',
+        sql`r.id`,
+        sql`c.createdAt`,
+      ).as('createdAt'),
+      previousCreatedAt: revisionActivityTime(
+        idleWindows,
+        'propertyCatalog',
+        sql`p.id`,
+        sql`pc.createdAt`,
+      ).as('previousCreatedAt'),
       content: sql<string>`r.content`,
       previous: sql<string | null>`p.content`.as('previous'),
     })

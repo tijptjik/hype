@@ -806,46 +806,91 @@ import { taskLifecycleScopeCondition } from '#lib/db/services/task-scope.js'
 import { hasFeatureTaskTransfer } from '#lib/db/services/featureUploadEvidence.js'
 import { reviewInitialFeatureContribution } from '#lib/db/services/featureInitialReview.js'
 import { getTaskHubFilter } from '#lib/db/services/hub.js'
-it.each([true, false])('reviews migrated initial contributions atomically (accept=%s)', async accept => {
-  const f = await fixture(false), proposed = structuredClone(f.initial.content)
-  proposed.translations.en.title.value = 'Initial contribution'
-  const proposal = (await createPartialFeatureProposal(f.db, {
-    ...command, baseRevisionId: f.initial.revisionId,
-    changes: buildFeatureChanges(f.initial.content, proposed), submit: false,
-    attachTask: proposalId => prepareFeatureContributionTask(f.db, {
-      taskId: 'legacy-task', proposalId, featureId: 'f', organisationId: 'org', projectId: 'project',
-      actorId: 'editor', type: 'newFeature', submitted: false,
-    }),
-  }))!
-  f.sqlite.prepare("UPDATE featureRevisionProposal SET creationScope=?,status='submitted' WHERE id=?").run(
-    JSON.stringify({ legacyInitial: { mode: 'contribution' } }), proposal.proposalId,
-  )
-  f.sqlite.exec("UPDATE task SET isDraft=0 WHERE id='legacy-task'")
-  await saveFeatureEdit(f.db, {
-    ...command, expectedRevisionId: f.initial.revisionId, expectedVersion: 0,
-    derive: content => { content.translations.en.description.value = 'Later staff edit'; return content },
-  })
-  const task = f.sqlite.prepare("SELECT * FROM task WHERE id='legacy-task'").get()!
-  const input = {
-    ...command, taskId: 'legacy-task', accept, reason: 'Reviewed initial contribution',
-    completion: prepareFeatureContributionTaskCompletion(f.db, {
-      taskId: 'legacy-task', proposalId: proposal.proposalId, expectedModifiedAt: String(task.modifiedAt),
-      actorId: 'editor', guard: sql`1`, featureId: 'f', outcome: accept ? 'accepted' : 'rejected',
-      action: accept ? 'added-feature' : 'ignored', reason: 'Reviewed initial contribution',
-    }),
-  }
-  expect(await reviewInitialFeatureContribution(f.db, { ...input, guard: sql`0` })).toBe(false)
-  expect(await reviewInitialFeatureContribution(f.db, input)).toBe(true)
-  expect(await reviewInitialFeatureContribution(f.db, input)).toBe(false)
-  expect(await readCurrentFeatureRevision(f.db, command)).toMatchObject({
-    state: { isPublished: false, isArchived: !accept },
-    content: { translations: { en: {
-      title: { value: accept ? 'Initial contribution' : f.initial.content.translations.en.title.value },
-      description: { value: 'Later staff edit' },
-    } } },
-  })
-  expect(f.sqlite.prepare("SELECT isReviewed FROM task WHERE id='legacy-task'").get()?.isReviewed).toBe(1)
-})
+it.each([true, false])(
+  'reviews migrated initial contributions atomically (accept=%s)',
+  async accept => {
+    const f = await fixture(false),
+      proposed = structuredClone(f.initial.content)
+    proposed.translations.en.title.value = 'Initial contribution'
+    const proposal = (await createPartialFeatureProposal(f.db, {
+      ...command,
+      baseRevisionId: f.initial.revisionId,
+      changes: buildFeatureChanges(f.initial.content, proposed),
+      submit: false,
+      attachTask: proposalId =>
+        prepareFeatureContributionTask(f.db, {
+          taskId: 'legacy-task',
+          proposalId,
+          featureId: 'f',
+          organisationId: 'org',
+          projectId: 'project',
+          actorId: 'editor',
+          type: 'newFeature',
+          submitted: false,
+        }),
+    }))!
+    f.sqlite
+      .prepare(
+        "UPDATE featureRevisionProposal SET creationScope=?,status='submitted' WHERE id=?",
+      )
+      .run(
+        JSON.stringify({ legacyInitial: { mode: 'contribution' } }),
+        proposal.proposalId,
+      )
+    f.sqlite.exec("UPDATE task SET isDraft=0 WHERE id='legacy-task'")
+    await saveFeatureEdit(f.db, {
+      ...command,
+      expectedRevisionId: f.initial.revisionId,
+      expectedVersion: 0,
+      derive: content => {
+        content.translations.en.description.value = 'Later staff edit'
+        return content
+      },
+    })
+    const task = f.sqlite.prepare("SELECT * FROM task WHERE id='legacy-task'").get()!
+    const input = {
+      ...command,
+      taskId: 'legacy-task',
+      accept,
+      reason: 'Reviewed initial contribution',
+      completion: prepareFeatureContributionTaskCompletion(f.db, {
+        taskId: 'legacy-task',
+        proposalId: proposal.proposalId,
+        expectedModifiedAt: String(task.modifiedAt),
+        actorId: 'editor',
+        guard: sql`1`,
+        featureId: 'f',
+        outcome: accept ? 'accepted' : 'rejected',
+        action: accept ? 'added-feature' : 'ignored',
+        reason: 'Reviewed initial contribution',
+      }),
+    }
+    expect(
+      await reviewInitialFeatureContribution(f.db, { ...input, guard: sql`0` }),
+    ).toBe(false)
+    expect(await reviewInitialFeatureContribution(f.db, input)).toBe(true)
+    expect(await reviewInitialFeatureContribution(f.db, input)).toBe(false)
+    expect(await readCurrentFeatureRevision(f.db, command)).toMatchObject({
+      state: { isPublished: false, isArchived: !accept },
+      content: {
+        translations: {
+          en: {
+            title: {
+              value: accept
+                ? 'Initial contribution'
+                : f.initial.content.translations.en.title.value,
+            },
+            description: { value: 'Later staff edit' },
+          },
+        },
+      },
+    })
+    expect(
+      f.sqlite.prepare("SELECT isReviewed FROM task WHERE id='legacy-task'").get()
+        ?.isReviewed,
+    ).toBe(1)
+  },
+)
 it('routes a creation proposal through a task without a provisional Feature row', async () => {
   const f = await fixture(),
     current = (await readCurrentFeatureRevision(f.db, command))!
@@ -874,17 +919,46 @@ it('routes a creation proposal through a task without a provisional Feature row'
   expect(task.featureId).toBeNull()
   expect(task.proposalId).toBe(proposal.proposalId)
   const scopeCondition = await taskLifecycleScopeCondition(f.db)
-  expect(await f.db.get(sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition})`)).toBeTruthy()
-  const coreHub = getTaskHubFilter(f.db, { isCore: true, i18n: {}, isSuperAdmin: false, isAdminRequest: false })!
-  expect(await f.db.get(sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition}) AND (${coreHub})`)).toBeTruthy()
-  f.sqlite.exec("UPDATE organisation SET hubId='private-hub',isHubExclusive=1 WHERE id='org'")
-  expect(await f.db.get(sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition}) AND (${coreHub})`)).toBeFalsy()
+  expect(
+    await f.db.get(
+      sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition})`,
+    ),
+  ).toBeTruthy()
+  const coreHub = getTaskHubFilter(f.db, {
+    isCore: true,
+    i18n: {},
+    isSuperAdmin: false,
+    isAdminRequest: false,
+  })!
+  expect(
+    await f.db.get(
+      sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition}) AND (${coreHub})`,
+    ),
+  ).toBeTruthy()
+  f.sqlite.exec(
+    "UPDATE organisation SET hubId='private-hub',isHubExclusive=1 WHERE id='org'",
+  )
+  expect(
+    await f.db.get(
+      sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition}) AND (${coreHub})`,
+    ),
+  ).toBeFalsy()
   f.sqlite.exec("UPDATE organisation SET hubId=NULL,isHubExclusive=0 WHERE id='org'")
   // A task cannot borrow another proposal's owner or a mismatched parent chain.
-  for (const [field, value] of [['contributorId', 'intruder'], ['projectId', 'other'], ['organisationId', 'other']]) {
+  for (const [field, value] of [
+    ['contributorId', 'intruder'],
+    ['projectId', 'other'],
+    ['organisationId', 'other'],
+  ]) {
     f.sqlite.prepare(`UPDATE task SET ${field}=? WHERE id='new-task'`).run(value)
-    expect(await f.db.get(sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition})`)).toBeFalsy()
-    f.sqlite.prepare(`UPDATE task SET ${field}=? WHERE id='new-task'`).run(task[field] as string)
+    expect(
+      await f.db.get(
+        sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition})`,
+      ),
+    ).toBeFalsy()
+    f.sqlite
+      .prepare(`UPDATE task SET ${field}=? WHERE id='new-task'`)
+      .run(task[field] as string)
   }
   const accepted = await acceptFeatureCreationProposal(f.db, {
     ...command,
@@ -919,10 +993,14 @@ it('routes a creation proposal through a task without a provisional Feature row'
 it('keeps migrated task transfer restrictions after removing the transfer table', async () => {
   const f = await fixture()
   expect(await hasFeatureTaskTransfer(f.db, 'moved-task')).toBe(false)
-  f.sqlite.prepare(`INSERT INTO revisionChangeSet(id,actorId,origin,createdAt,legacyEvidence)
-    VALUES ('transfer-proof','editor','user','2026-11-07',?)`).run(
-    JSON.stringify({ taskTransfers: [{ taskId: 'moved-task', sourceFeatureId: 'old' }] }),
-  )
+  f.sqlite
+    .prepare(`INSERT INTO revisionChangeSet(id,actorId,origin,createdAt,legacyEvidence)
+    VALUES ('transfer-proof','editor','user','2026-11-07',?)`)
+    .run(
+      JSON.stringify({
+        taskTransfers: [{ taskId: 'moved-task', sourceFeatureId: 'old' }],
+      }),
+    )
   expect(await hasFeatureTaskTransfer(f.db, 'moved-task')).toBe(true)
   expect(await hasFeatureTaskTransfer(f.db, 'unrelated-task')).toBe(false)
 })
@@ -1258,55 +1336,212 @@ it('accepts staff uploads directly and replays the same acceptance without makin
   ).toMatchObject({ ...replacement, replayed: true })
 })
 
-import {applyCurrentFeatureIdentitySelection} from '#lib/db/services/featureLifecycleIdentityAdapter.js'
-it('applies the existing dialog selectors without persisted preparation or reserved child records',async()=>{
- const f=await fixture(),allowedInternalIds=new Set(Object.keys(f.initial.content.properties))
- const split=await applyCurrentFeatureIdentitySelection(f.db,{...command,allowedInternalIds,selection:{kind:'split',
-  inputs:[{featureId:'f',revisionId:f.initial.revisionId,generation:0}],
-  outputs:[{featureId:null,sourceFeatureId:'f',titles:{en:'First'}},{featureId:null,sourceFeatureId:'f',titles:{en:'Second'}}],
-  redirectOutputIndex:null,reason:'Split in the ordinary editor'}})
- expect(split).not.toBeNull()
- const sources=await Promise.all(split!.outputs.map(featureId=>readCurrentFeatureRevision(f.db,{featureId,guard:sql`1`})))
- const merge=await applyCurrentFeatureIdentitySelection(f.db,{...command,allowedInternalIds,selection:{kind:'merge',
-  inputs:sources.map(source=>({featureId:source!.featureId,revisionId:source!.revisionId,generation:source!.version})),
-  outputs:[{featureId:sources[0]!.featureId,sourceFeatureId:sources[0]!.featureId,titles:{en:'Combined'}}],reason:'Merged in the ordinary editor'}})
- expect(merge?.outputs).toEqual([sources[0]!.featureId])
- expect(f.sqlite.prepare('SELECT count(*) n FROM featureRevisionProposal').get()?.n).toBe(0)
- expect(f.sqlite.prepare("SELECT count(*) n FROM sqlite_master WHERE type='table' AND name IN ('featureIdentityProposal','featureIdentityReservation')").get()?.n).toBe(0)
- expect(await readCurrentFeatureRevision(f.db,{featureId:sources[0]!.featureId,guard:sql`1`})).toMatchObject({state:{isPublished:false},content:{translations:{en:{title:{value:'Combined'}}}}})
+import { applyCurrentFeatureIdentitySelection } from '#lib/db/services/featureLifecycleIdentityAdapter.js'
+it('applies the existing dialog selectors without persisted preparation or reserved child records', async () => {
+  const f = await fixture(),
+    allowedInternalIds = new Set(Object.keys(f.initial.content.properties))
+  const split = await applyCurrentFeatureIdentitySelection(f.db, {
+    ...command,
+    allowedInternalIds,
+    selection: {
+      kind: 'split',
+      inputs: [{ featureId: 'f', revisionId: f.initial.revisionId, generation: 0 }],
+      outputs: [
+        { featureId: null, sourceFeatureId: 'f', titles: { en: 'First' } },
+        { featureId: null, sourceFeatureId: 'f', titles: { en: 'Second' } },
+      ],
+      redirectOutputIndex: null,
+      reason: 'Split in the ordinary editor',
+    },
+  })
+  expect(split).not.toBeNull()
+  const sources = await Promise.all(
+    split!.outputs.map(featureId =>
+      readCurrentFeatureRevision(f.db, { featureId, guard: sql`1` }),
+    ),
+  )
+  const merge = await applyCurrentFeatureIdentitySelection(f.db, {
+    ...command,
+    allowedInternalIds,
+    selection: {
+      kind: 'merge',
+      inputs: sources.map(source => ({
+        featureId: source!.featureId,
+        revisionId: source!.revisionId,
+        generation: source!.version,
+      })),
+      outputs: [
+        {
+          featureId: sources[0]!.featureId,
+          sourceFeatureId: sources[0]!.featureId,
+          titles: { en: 'Combined' },
+        },
+      ],
+      reason: 'Merged in the ordinary editor',
+    },
+  })
+  expect(merge?.outputs).toEqual([sources[0]!.featureId])
+  expect(
+    f.sqlite.prepare('SELECT count(*) n FROM featureRevisionProposal').get()?.n,
+  ).toBe(0)
+  expect(
+    f.sqlite
+      .prepare(
+        "SELECT count(*) n FROM sqlite_master WHERE type='table' AND name IN ('featureIdentityProposal','featureIdentityReservation')",
+      )
+      .get()?.n,
+  ).toBe(0)
+  expect(
+    await readCurrentFeatureRevision(f.db, {
+      featureId: sources[0]!.featureId,
+      guard: sql`1`,
+    }),
+  ).toMatchObject({
+    state: { isPublished: false },
+    content: { translations: { en: { title: { value: 'Combined' } } } },
+  })
 })
 
 it('pins current galleries and records gallery removal after legacy storage is removed', async () => {
   const f = await fixture(true)
-  const { applyFeatureGalleryPins } = await import('#lib/db/services/featureGalleryRead.js')
-  const { removeAcceptedFeatureImage } = await import('#lib/db/services/featureGalleryCommands.js')
-  const rows = [{ id: 'f', images: f.initial.content.gallery.order.map(imageId => ({ imageId, isPublished: true, image: { id: imageId } })) }]
+  const { applyFeatureGalleryPins } = await import(
+    '#lib/db/services/featureGalleryRead.js'
+  )
+  const { removeAcceptedFeatureImage } = await import(
+    '#lib/db/services/featureGalleryCommands.js'
+  )
+  const rows = [
+    {
+      id: 'f',
+      images: f.initial.content.gallery.order.map(imageId => ({
+        imageId,
+        isPublished: true,
+        image: { id: imageId },
+      })),
+    },
+  ]
   const pinned = await applyFeatureGalleryPins(f.db, rows)
-  expect(pinned[0].images[0].image).toHaveProperty('imageRevisionId', f.initial.content.gallery.entries[pinned[0].images[0].imageId].imageRevisionId)
-  expect(await removeAcceptedFeatureImage(f.db, { ...command, imageId: 'photo' })).toBe('removed')
+  expect(pinned[0].images[0].image).toHaveProperty(
+    'imageRevisionId',
+    f.initial.content.gallery.entries[pinned[0].images[0].imageId].imageRevisionId,
+  )
+  expect(await removeAcceptedFeatureImage(f.db, { ...command, imageId: 'photo' })).toBe(
+    'removed',
+  )
   const current = await readCurrentFeatureRevision(f.db, command)
   expect(current?.content.gallery.order).not.toContain('photo')
-  expect(f.sqlite.prepare("SELECT count(*) n FROM imageRevision WHERE imageId='photo'").get()?.n).toBeGreaterThan(0)
+  expect(
+    f.sqlite.prepare("SELECT count(*) n FROM imageRevision WHERE imageId='photo'").get()
+      ?.n,
+  ).toBeGreaterThan(0)
   expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
 })
 
 it('keeps unpublished accepted Features out of ancestor publication', async () => {
   const f = await fixture(false)
-  const { featurePublicationEligibility } = await import('#lib/db/services/publication.js')
+  const { featurePublicationEligibility } = await import(
+    '#lib/db/services/publication.js'
+  )
   const eligible = await featurePublicationEligibility(f.db)
   expect(await f.db.get(sql`SELECT id FROM feature WHERE ${eligible}`)).toBeUndefined()
-  await saveFeatureEdit(f.db, { ...command, expectedRevisionId: f.initial.revisionId, expectedVersion: 0, state: { isPublished: true }, derive: content => content })
-  expect(await f.db.get(sql`SELECT id FROM feature WHERE ${eligible}`)).toMatchObject({ id: 'f' })
+  await saveFeatureEdit(f.db, {
+    ...command,
+    expectedRevisionId: f.initial.revisionId,
+    expectedVersion: 0,
+    state: { isPublished: true },
+    derive: content => content,
+  })
+  expect(await f.db.get(sql`SELECT id FROM feature WHERE ${eligible}`)).toMatchObject({
+    id: 'f',
+  })
 })
-
 
 it('resolves accepted history actors from current profiles and retains missing-user evidence', async () => {
   const f = await fixture()
-  f.sqlite.exec("INSERT INTO user(id,name,username,displayUsername) VALUES ('author','History Author','history.author','History.Author')")
+  f.sqlite.exec(
+    "INSERT INTO user(id,name,username,displayUsername) VALUES ('author','History Author','history.author','History.Author')",
+  )
   const request = { ...command, canPublish: true }
   const workspace = await readFeatureRevisionWorkspace(f.db, request)
-  expect(workspace.history[0]).toMatchObject({ actorId: 'author', actorName: 'History Author', actorUsername: 'history.author', actorDisplayUsername: 'History.Author' })
+  expect(workspace.history[0]).toMatchObject({
+    actorId: 'author',
+    actorName: 'History Author',
+    actorUsername: 'history.author',
+    actorDisplayUsername: 'History.Author',
+  })
   f.sqlite.exec("DELETE FROM user WHERE id='author'")
-  expect((await readFeatureRevisionWorkspace(f.db, request)).history[0]).toMatchObject({ actorId: 'author', actorName: null, actorUsername: null, actorDisplayUsername: null })
-  expect((await readFeatureRevisionWorkspace(f.db, { ...request, guard: sql`0` })).history).toEqual([])
+  expect((await readFeatureRevisionWorkspace(f.db, request)).history[0]).toMatchObject({
+    actorId: 'author',
+    actorName: null,
+    actorUsername: null,
+    actorDisplayUsername: null,
+  })
+  expect(
+    (await readFeatureRevisionWorkspace(f.db, { ...request, guard: sql`0` })).history,
+  ).toEqual([])
+})
+
+describe('accepted editing windows', () => {
+  it('keeps one snapshot through successive edits while advancing the concurrency version', async () => {
+    const f = await fixture()
+    const save = async (title: string) => {
+      const current = (await readCurrentFeatureRevision(f.db, command))!
+      return saveFeatureEdit(f.db, {
+        ...command,
+        expectedRevisionId: current.revisionId,
+        expectedVersion: current.version,
+        derive: content => {
+          content.translations.en.title.value = title
+          return content
+        },
+      })
+    }
+    const first = await save('first'),
+      second = await save('second')
+    expect(second).toBe(first)
+    expect((await readCurrentFeatureRevision(f.db, command))?.version).toBe(2)
+    expect(f.sqlite.prepare('SELECT count(*) n FROM featureRevision').get()?.n).toBe(2)
+    expect(await save('second')).toBe(first)
+    expect((await readCurrentFeatureRevision(f.db, command))?.version).toBe(2)
+    expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+  })
+})
+
+it('rolls back snapshot, projection, version and timer when a coalesced batch fails late', async () => {
+  const f = await fixture()
+  const id = await saveFeatureEdit(f.db, {
+    ...command,
+    expectedRevisionId: f.initial.revisionId,
+    expectedVersion: 0,
+    derive: c => {
+      c.translations.en.title.value = 'Before failure'
+      return c
+    },
+  })
+  const snapshot = () =>
+    ['featureRevision', 'feature', 'featureI18n', 'revisionEditWindow'].map(table =>
+      f.sqlite.prepare(`SELECT * FROM ${table}`).all(),
+    )
+  const before = snapshot()
+  f.sqlite.exec(
+    "CREATE TRIGGER fail_window_close BEFORE DELETE ON featureRevisionWriteScope BEGIN SELECT RAISE(ABORT,'late failure'); END",
+  )
+  await expect(
+    saveFeatureEdit(f.db, {
+      ...command,
+      expectedRevisionId: id!,
+      expectedVersion: 1,
+      derive: c => {
+        c.translations.en.title.value = 'Must roll back'
+        return c
+      },
+    }),
+  ).rejects.toThrow(/late failure/)
+  expect(snapshot()).toEqual(before)
+  expect(
+    f.sqlite.prepare('SELECT count(*) n FROM featureRevisionWriteScope').get()?.n,
+  ).toBe(0)
+  expect(
+    f.sqlite.prepare('SELECT count(*) n FROM revisionEditSelection').get()?.n,
+  ).toBe(0)
 })

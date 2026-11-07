@@ -17,6 +17,13 @@ import {
 import { isAdminResourceRevisionRecordingEnabled } from './adminResourceRevision'
 import { rowSnapshot } from './revisionSnapshot'
 import { prepareRevisionCheck } from './revisionBatch'
+// IDLE WINDOWS
+import {
+  hasRevisionEditWindows,
+  editableRevision,
+  revisionEditTime,
+} from './revisionEditWindow'
+import { revisionEditWindow, revisionEditSelection } from '../schema/revisionEditWindow'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
@@ -131,6 +138,25 @@ export async function preparePropertyCatalogCapture(
   const noHead = sql`NOT EXISTS (SELECT 1 FROM propertyCatalogRevisionHead WHERE scope=${target.scope} AND resourceId=${target.id})`
   const same = sql`EXISTS (SELECT 1 FROM propertyCatalogRevisionHead h JOIN propertyCatalogRevision r ON r.id=h.currentRevisionId
     WHERE h.scope=${target.scope} AND h.resourceId=${target.id} AND r.content=${snapshot})`
+  const idleWindows = await hasRevisionEditWindows(db, 'propertyCatalog')
+  const selectedId = idleWindows
+    ? sql`COALESCE((SELECT revisionId FROM revisionEditSelection WHERE token=${token}),${id})`
+    : sql`${id}`
+  const coalesce: BatchItem<'sqlite'>[] = idleWindows
+    ? [
+        db
+          .insert(revisionEditSelection)
+          .select(sql`SELECT ${token},h.currentRevisionId FROM propertyCatalogRevisionHead h
+      WHERE h.scope=${target.scope} AND h.resourceId=${target.id} AND NOT ${same}
+        AND (${editableRevision('propertyCatalog', sql`h.currentRevisionId`, actor)})`),
+        db
+          .update(revision)
+          .set({ content: snapshot })
+          .where(
+            sql`${revision.id}=(SELECT revisionId FROM revisionEditSelection WHERE token=${token})`,
+          ),
+      ]
+    : []
   return {
     before: [
       db.insert(marker).values({ scope: target.scope, resourceId: target.id, token }),
@@ -150,6 +176,7 @@ export async function preparePropertyCatalogCapture(
       prepareRevisionCheck(db, same),
     ],
     after: [
+      ...coalesce,
       db
         .insert(revisionChangeSet)
         .select(
@@ -161,13 +188,29 @@ export async function preparePropertyCatalogCapture(
         FROM propertyCatalogRevisionHead h WHERE h.scope=${target.scope} AND h.resourceId=${target.id} AND NOT ${same}`),
       db
         .update(head)
-        .set({ currentRevisionId: id, generation: sql`${head.generation}+1` })
+        .set({ currentRevisionId: selectedId, generation: sql`${head.generation}+1` })
         .where(
           and(
             scope,
-            sql`EXISTS (SELECT 1 FROM propertyCatalogRevision WHERE id=${id})`,
+            sql`EXISTS (SELECT 1 FROM propertyCatalogRevision WHERE id=${selectedId})`,
           ),
         ),
+      ...(idleWindows
+        ? [
+            db
+              .insert(revisionEditWindow)
+              .select(sql`SELECT 'propertyCatalog',r.id,c.actorId,c.origin,${revisionEditTime},NULL
+          FROM propertyCatalogRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId
+          WHERE r.id=${selectedId} AND c.origin='user'`)
+              .onConflictDoUpdate({
+                target: [revisionEditWindow.resource, revisionEditWindow.revisionId],
+                set: { lastEditedAt: revisionEditTime },
+              }),
+            db
+              .delete(revisionEditSelection)
+              .where(eq(revisionEditSelection.token, token)),
+          ]
+        : []),
       db
         .delete(marker)
         .where(

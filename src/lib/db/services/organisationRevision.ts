@@ -12,8 +12,12 @@ import {
 import { revisionChangeSet } from '../schema/featureRevision'
 // REVISIONS
 // SERVICES
-import { hasResourceLogoStorage, withResourceLogoSnapshot } from './resourceLogoSnapshot'
+import {
+  hasResourceLogoStorage,
+  withResourceLogoSnapshot,
+} from './resourceLogoSnapshot'
 import { rowSnapshot } from './revisionSnapshot'
+import { prepareAggregateRevisionWindow } from './revisionEditWindow'
 import { prepareRevisionCheck } from './revisionBatch'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -169,7 +173,18 @@ export async function prepareOrganisationRevisionCapture(
       sql`NOT EXISTS (SELECT 1 FROM organisationRevisionWrite w JOIN organisationRevisionHead h ON h.organisationId=w.organisationId JOIN organisationRevision r ON r.id=h.currentRevisionId WHERE w.token=${token} AND r.content IS NOT (${current}))`,
     ),
   ]
+  const window = await prepareAggregateRevisionWindow(db, {
+    resource: 'organisation',
+    revision: organisationRevision,
+    head: organisationRevisionHead,
+    write: organisationRevisionWrite,
+    token,
+    actor,
+    current,
+    changed,
+  })
   const after: BatchItem<'sqlite'>[] = [
+    ...window.before,
     prepareRevisionCheck(
       db,
       sql`NOT EXISTS (SELECT 1 FROM organisationRevisionWrite w WHERE w.token=${token} AND NOT EXISTS (SELECT 1 FROM organisation WHERE id=w.organisationId))`,
@@ -210,6 +225,7 @@ export async function prepareOrganisationRevisionCapture(
             ),
         ]
       : []),
+    ...window.after,
     db
       .delete(organisationRevisionWrite)
       .where(eq(organisationRevisionWrite.token, token)),

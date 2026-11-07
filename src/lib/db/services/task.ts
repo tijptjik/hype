@@ -837,6 +837,7 @@ export const commitTaskFeatureReview = async (
     : await prepareFeatureAcceptedCapture(db, {
         featureId: input.feature.id,
         actorId: input.reviewerId,
+        revisionBoundary: true,
         reason: input.reason?.trim() || 'Missing report reviewed',
         guard: sql`EXISTS (SELECT 1 FROM task WHERE ${taskReviewPendingCondition(input)})`,
         unpublish: input.action === 'setUnpublished' || input.action === 'setArchived',

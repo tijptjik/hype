@@ -13,8 +13,12 @@ import * as hubHistory from '../schema/hubRevision'
 import { revisionChangeSet } from '../schema/featureRevision'
 // REVISIONS
 // SERVICES
-import { hasResourceLogoStorage, withResourceLogoSnapshot } from './resourceLogoSnapshot'
+import {
+  hasResourceLogoStorage,
+  withResourceLogoSnapshot,
+} from './resourceLogoSnapshot'
 import { rowSnapshot } from './revisionSnapshot'
+import { prepareAggregateRevisionWindow } from './revisionEditWindow'
 import { prepareRevisionCheck } from './revisionBatch'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -85,7 +89,10 @@ function collection(table: SQLiteTable, owner: string, key: string, parent: SQL)
  * enter revision payloads. Effective visibility is retained for now, so hierarchy
  * writers must join capture before this staged migration can be enabled.
  */
-export function adminResourceSnapshot(resource: AdminRevisionResource, logoStorage = false): SQL {
+export function adminResourceSnapshot(
+  resource: AdminRevisionResource,
+  logoStorage = false,
+): SQL {
   const { table, i18n, property } = contracts[resource]
   const owner = `${resource}Id`
   const id = sql`${table.id}`
@@ -105,7 +112,13 @@ export function adminResourceSnapshot(resource: AdminRevisionResource, logoStora
   const content = sql`json_object('record',json(${record}),
     'i18n',${collection(i18n, owner, 'locale', id)},
     'properties',${collection(property, owner, 'propertyId', id)}${extra})`
-  return resource === 'layer' ? content : withResourceLogoSnapshot(content, sql`${contracts[resource].table.imageId}`, logoStorage)
+  return resource === 'layer'
+    ? content
+    : withResourceLogoSnapshot(
+        content,
+        sql`${contracts[resource].table.imageId}`,
+        logoStorage,
+      )
 }
 
 /**
@@ -208,7 +221,18 @@ export async function prepareAdminResourceRevisionCapture(
       sql`NOT EXISTS (SELECT 1 FROM ${write} w JOIN ${head} h ON h.${owner}=w.${owner} JOIN ${revision} r ON r.id=h.currentRevisionId WHERE w.token=${token} AND r.content IS NOT (${current}))`,
     ),
   ]
+  const window = await prepareAggregateRevisionWindow(db, {
+    resource,
+    revision,
+    head,
+    write,
+    token,
+    actor,
+    current,
+    changed,
+  })
   const after: BatchItem<'sqlite'>[] = [
+    ...window.before,
     prepareRevisionCheck(
       db,
       sql`NOT EXISTS (SELECT 1 FROM ${write} w WHERE w.token=${token} AND NOT EXISTS (SELECT 1 FROM ${table} WHERE id=w.${owner}))`,
@@ -249,6 +273,7 @@ export async function prepareAdminResourceRevisionCapture(
             ),
         ]
       : []),
+    ...window.after,
     db.delete(write).where(sql`${write.token}=${token}`),
   ]
   return { before, after }

@@ -4,8 +4,10 @@ import { sql } from 'drizzle-orm'
 import { matchesChangelogFilters } from '#lib/revisions/changelogFilters.js'
 import { diffRevisionValues } from '#lib/revisions/diff.js'
 // SERVICES
-import { readResourceLogoChanges } from './resourceLogoChanges'
+import { revisionActivityTime } from './revisionEditWindow'
+import { hasFeatureLifecycleStorage } from './featureLifecycle'
 import { userChangelogGuard } from './userChangelogScope'
+import { readResourceLogoChanges } from './resourceLogoChanges'
 import {
   readFeaturePublicationChanges,
   readFeaturePrivateChanges,
@@ -137,6 +139,7 @@ export async function listResourceChangelog(
     sql`SELECT name FROM sqlite_master WHERE type='table'`,
   )
   const tables = new Set(storage.map(row => row.name))
+  const lifecycle = await hasFeatureLifecycleStorage(db)
   const unavailable: string[] = []
   const branches: SQL[] = []
   const userScope = input.scope.resource === 'user' ? input.scope : null
@@ -252,9 +255,9 @@ export async function listResourceChangelog(
       json_extract(COALESCE(${content},${previous}),'$.record.key'),field.key)`
     branches.push(sql`SELECT ${key} AS key,${category === 'fields' ? 'property' : resource} AS resourceType,
       ${category === 'fields' ? sql`field.key` : sql`x.id`} AS resourceId,${resource} AS ownerType,x.id AS ownerId,${category} AS category,
-      c.createdAt,c.id AS changeSetId,${resource === 'hub' ? sql`''` : sql`o.id`} AS organisationId,${resource === 'hub' || resource === 'organisation' ? sql`NULL` : sql`p.id`} AS projectId,
+      ${revisionActivityTime(tables.has('revisionEditWindow'), category === 'fields' ? 'propertyCatalog' : resource, category === 'maintenance' || category === 'publication' ? sql`r.revisionId` : sql`r.id`, sql`c.createdAt`)} AS createdAt,c.id AS changeSetId,${resource === 'hub' ? sql`''` : sql`o.id`} AS organisationId,${resource === 'hub' || resource === 'organisation' ? sql`NULL` : sql`p.id`} AS projectId,
       ${resource === 'hub' || resource === 'organisation' || resource === 'project' ? sql`NULL` : sql`l.id`} AS layerId,${resource === 'hub' ? sql`x.id` : sql`o.hubId`} AS hubId,
-      ${isFeature ? sql`r.generation` : sql`0`} AS generation,${revisionId} AS revisionId,${category === 'fields' ? fieldName : nameFor(resource)} AS name,
+      ${isFeature ? (lifecycle ? sql`r.sequence` : sql`r.generation`) : sql`0`} AS generation,${revisionId} AS revisionId,${category === 'fields' ? fieldName : nameFor(resource)} AS name,
       ${content} AS content,${previous} AS previous,x.isArchived,c.actorId,
       ${legacyActor} AS baselineActorId,
       ${hasLegacyActor ? sql`CASE WHEN legacy.reviewerId IS NOT NULL THEN 'reviewer' WHEN legacy.contributorId IS NOT NULL THEN 'contributor' END` : sql`NULL`} AS baselineActorRole,
@@ -269,6 +272,7 @@ export async function listResourceChangelog(
       LEFT JOIN user actor ON actor.id=COALESCE(${legacyActor},c.actorId) AND (c.origin='user' OR ${legacyActor} IS NOT NULL) ${predecessor}
       ${category === 'fields' ? sql`JOIN json_each(json_patch(COALESCE(b.content,'{}'),r.content)) field` : sql``}
       WHERE ${userScope ? userChangelogGuard(userScope, resource) : guard}
+      ${isFeature && lifecycle ? sql`AND r.sequence IS NOT NULL` : sql``}
       ${
         userScope
           ? sql`AND COALESCE(${legacyActor},c.actorId)=${userScope.id}
@@ -290,8 +294,11 @@ export async function listResourceChangelog(
     add('project', 'fields')
   }
   add('layer', 'profile')
-  add('feature', 'publication')
-  add('feature', 'maintenance')
+  if (lifecycle) add('feature', 'profile')
+  else {
+    add('feature', 'publication')
+    add('feature', 'maintenance')
+  }
   if (!branches.length) return { entries: [], nextCursor: null, unavailable }
   const filters = input.filters ?? {}
   const cursor = input.before
@@ -432,7 +439,7 @@ export async function listResourceChangelog(
         allowedInternalIds: input.allowedInternalIds,
       }
       const result =
-        row.category === 'publication'
+        lifecycle || row.category === 'publication'
           ? await readFeaturePublicationChanges(db, {
               ...common,
               generation: row.generation,
@@ -444,7 +451,7 @@ export async function listResourceChangelog(
       if (!result) continue
       changes = result.changes
       redacted = result.redacted
-      baseline = row.category === 'publication' && row.generation === 0
+      baseline = (lifecycle || row.category === 'publication') && row.generation === 0
       unpublished = 'unpublished' in result && result.unpublished === true
       initial = 'baseline' in result && result.baseline === true
     } else if (row.category === 'fields') {

@@ -197,9 +197,56 @@ test('the managed planner detects current lifecycle storage and verifies its cle
     d.sqlite.exec(
       'CREATE TABLE resourceLogoImageHead(imageId TEXT); CREATE TABLE propertyCatalogRevisionHead(scope TEXT,resourceId TEXT); CREATE TABLE propertyCatalogRevisionWrite(id TEXT); CREATE TABLE featureRevisionWriteScope(featureId TEXT); CREATE TABLE d1_migrations(name TEXT)',
     )
+    // This planner test represents an enrolled lifecycle database awaiting the additive idle policy.
+    for (const resource of ['organisation', 'project', 'layer', 'hub']) {
+      d.sqlite.exec(`CREATE TABLE ${resource}Revision(id TEXT PRIMARY KEY,${resource}Id TEXT,previousRevisionId TEXT,changeSetId TEXT,content TEXT,schemaVersion INTEGER);
+        ALTER TABLE ${resource}RevisionHead ADD COLUMN currentRevisionId TEXT;
+        ALTER TABLE ${resource}RevisionWrite ADD COLUMN ${resource}Id TEXT;
+        ALTER TABLE ${resource}RevisionWrite ADD COLUMN revisionId TEXT;
+        CREATE TRIGGER ${resource}_revision_immutable_update BEFORE UPDATE ON ${resource}Revision BEGIN SELECT RAISE(ABORT,'immutable'); END;`)
+      if (resource !== 'layer')
+        d.sqlite.exec(`CREATE TABLE ${resource}RevisionLogo(revisionId TEXT,imageId TEXT,imageRevisionId TEXT);
+        CREATE TRIGGER ${resource}_revision_logo_no_delete BEFORE DELETE ON ${resource}RevisionLogo BEGIN SELECT RAISE(ABORT,'immutable'); END;`)
+    }
+    d.sqlite.exec(`CREATE TABLE propertyCatalogRevision(id TEXT,scope TEXT,resourceId TEXT,previousRevisionId TEXT,changeSetId TEXT,content TEXT);
+      ALTER TABLE propertyCatalogRevisionHead ADD COLUMN currentRevisionId TEXT;
+      ALTER TABLE propertyCatalogRevisionWrite ADD COLUMN scope TEXT;
+      ALTER TABLE propertyCatalogRevisionWrite ADD COLUMN resourceId TEXT;
+      ALTER TABLE propertyCatalogRevisionWrite ADD COLUMN token TEXT;
+      CREATE TRIGGER property_catalog_revision_update BEFORE UPDATE ON propertyCatalogRevision BEGIN SELECT RAISE(ABORT,'immutable'); END;
+      CREATE TABLE imageIntentPolicyRevision(id TEXT,scopeType TEXT,scopeId TEXT,actorId TEXT,createdAt TEXT,previous TEXT,current TEXT);
+      CREATE TRIGGER image_intent_history_no_update BEFORE UPDATE ON imageIntentPolicyRevision BEGIN SELECT RAISE(ABORT,'immutable'); END;
+      CREATE TABLE featureIdentityOperationMember(revisionId TEXT);
+      CREATE TRIGGER feature_revision_no_update BEFORE UPDATE ON featureRevision BEGIN SELECT RAISE(ABORT,'immutable'); END;
+      CREATE TRIGGER feature_review_no_update BEFORE UPDATE ON featureRevisionReview BEGIN SELECT RAISE(ABORT,'immutable'); END;
+      CREATE TRIGGER featureRevisionImage_immutable_delete BEFORE DELETE ON featureRevisionImage BEGIN SELECT RAISE(ABORT,'immutable'); END;`)
+    for (const [table, columns] of Object.entries({
+      featureRevision: [
+        'previousRevisionId',
+        'mergedFromRevisionId',
+        'changeSetId',
+        'schemaVersion',
+        'legacyEvidence',
+        'baselineAttribution',
+      ],
+      featureRevisionReview: [
+        'proposalId',
+        'proposalVersion',
+        'changes',
+        'comparedRevisionId',
+        'resultingRevisionId',
+        'context',
+        'resolutions',
+        'action',
+        'changeSetId',
+      ],
+      featureRevisionImage: ['imageRevisionId', 'position', 'intent'],
+    }))
+      for (const column of columns)
+        d.sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`)
     const plan = await prepareRelease(path, join(root, 'release'), 'local:test')
     expect(plan.featureLifecycle).toBe('current')
-    expect(plan.groups).toHaveLength(1)
+    expect(plan.groups).toHaveLength(2)
     await pause(d.binding, plan)
     await applyGroups(d.binding, plan)
     await markVerified(d.binding, plan)

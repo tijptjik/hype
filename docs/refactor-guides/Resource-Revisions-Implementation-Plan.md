@@ -2,13 +2,13 @@
 
 ## Objective and agreed scope
 
-Give organisations, projects, layers and features stable identities with immutable
-content revisions and attributable editing history. Organisations, projects and layers
-are admin-edited and have one current revision; saves take effect immediately subject to
-existing visibility gates. Only features have unpublished proposal revisions, a
-published head and user contributions. Acceptance merges and publishes atomically.
-Feature review stores references and decisions, not a second copy of the proposed
-content.
+Give organisations, projects, layers and features stable identities with content
+revisions sealed after the editing window and attributable editing history.
+Organisations, projects and layers are admin-edited and have one current revision; saves
+take effect immediately subject to existing visibility gates. Only features have
+unpublished proposal revisions, a published head and user contributions. Acceptance
+merges and publishes atomically. Feature review stores references and decisions, not a
+second copy of the proposed content.
 
 The priority is knowing who changed what and reviewing changes before publication.
 Project release manifests, historical application playback, bitemporal queries and
@@ -21,6 +21,46 @@ issues); use a separately scoped issue for cross-resource work if needed. Do not
 a leaf issue association. Link relevant technical changes back to
 `spec/breadline/proposal/`, particularly `01-places-features.md` for feature/location
 integration. No implementation or rollout is claimed by this document.
+
+## Five-minute editing windows
+
+Ordinary user edits now share a sliding five-minute revision window. Each real edit
+updates the current snapshot in place and restarts the timer. At exactly five minutes
+without edits, the snapshot is sealed; the next edit appends a new revision. Reads and
+no-op saves do not extend the window. Existing history is never reopened or compacted.
+
+The window belongs to one resource and one actor. Changing actor or origin, submitting
+or reviewing a contribution, explicit publication/unpublication, archive changes and
+identity operations start a new immutable boundary. Pinning a Feature as a proposal base
+also seals it, so later edits cannot rewrite a three-way comparison. Source and
+exact-media evidence retain their immutable identities; their enclosing editable
+resource snapshots follow this policy without changing the pinned evidence.
+
+Capture covers Organisation, Hub, Project and Layer profiles/configuration, owned
+property catalogues, accepted Feature content and initial contribution drafts. The
+lifecycle target also coalesces contributor draft-save evidence while preserving each
+submission and decision. Image-intent label settings use the same window; publication
+policy changes form a boundary. Shared Location source/adoption records and exact image
+versions remain retained evidence, rather than editable aggregate snapshots.
+
+Concurrency remains independent of snapshot identity: head generations, lifecycle
+versions, form timestamps and contributor version tokens advance on edits. Translation
+saves now require the inspected generation as well as the revision ID. A stable revision
+ID alone must not authorize replacement of an editable snapshot. Reuse eligibility,
+projection updates, snapshot content, gallery/logo pins, history and timer updates share
+one guarded D1 batch. A failed batch rolls them all back; a prepared edit whose window
+expires fails stale rather than modifying sealed history.
+
+`revisionEditWindow` retains the original actor and last real edit time. History feeds
+use that edit time for ordering and unread cutoffs, including after submission closes a
+window. Original change-set attribution is retained. There is no timer job: eligibility
+is checked against the database clock at write time.
+
+Migration `0203_revision_edit_windows.sql` enables the compatibility-schema policy. The
+lifecycle rehearsal additionally installs
+`migrations/pending/feature-lifecycle/idle-windows.sql` after the target and image
+schema; cutover seals prior Feature windows. Installing application code alone leaves
+old schema writers append-only. These changes do not authorize or perform a deployment.
 
 ## Design decisions
 

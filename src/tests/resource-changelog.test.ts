@@ -535,3 +535,44 @@ it('requires agreeing layer and project ancestry in the changelog checkpoint gua
     await db.get(sql`SELECT ${buildChangelogRootGuard(scopes.layer)} AS allowed`),
   ).toEqual({ allowed: 0 })
 })
+
+it('reads one accepted Feature history after the publication and private journals are removed', async () => {
+  fixture.sqlite.exec(`ALTER TABLE feature ADD COLUMN currentRevisionId TEXT;
+    ALTER TABLE featureRevision ADD COLUMN sequence INTEGER;
+    ALTER TABLE featureRevision ADD COLUMN recordState TEXT;
+    DROP TABLE featureRevisionHead; DROP TABLE featureRevisionPublication; DROP TABLE featurePrivateCapture;
+    INSERT INTO revisionChangeSet VALUES('change','2026-11-07T00:00:00Z','editor','user','Direct edit');`)
+  const content = featureRevisionContentFixture()
+  fixture.sqlite
+    .prepare(
+      'INSERT INTO featureRevision(id,featureId,changeSetId,content,sequence,recordState) VALUES(?,?,?,?,?,?)',
+    )
+    .run(
+      'accepted',
+      'f',
+      'change',
+      JSON.stringify(content),
+      0,
+      JSON.stringify({ isPublished: false, isArchived: false }),
+    )
+  fixture.sqlite.exec("UPDATE feature SET currentRevisionId='accepted' WHERE id='f'")
+  const result = await read()
+  expect(
+    result.entries.filter(entry => entry.resourceType === 'feature'),
+  ).toMatchObject([{ category: 'profile', resourceId: 'f', reason: 'Direct edit' }])
+  expect(result.unavailable).not.toContain('feature publication')
+})
+
+it('orders a coalesced revision by its latest edit even after its window closes', async () => {
+  profile('project', 'p', 'early')
+  profile('project', 'p', 'other', 'early')
+  fixture.sqlite.exec(
+    'CREATE TABLE revisionEditWindow(resource TEXT,revisionId TEXT,lastEditedAt INTEGER,closedAt INTEGER)',
+  )
+  const editedAt = '2026-11-06T12:04:00.000Z'
+  fixture.sqlite
+    .prepare('INSERT INTO revisionEditWindow VALUES(?,?,?,?)')
+    .run('project', 'other', Date.parse(editedAt), Date.parse(editedAt) + 1)
+  const page = await read()
+  expect(page.entries[0].createdAt).toBe(editedAt)
+})

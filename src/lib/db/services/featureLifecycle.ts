@@ -31,6 +31,7 @@ import {
   prepareFeatureEditorialProjection,
 } from './featureRevisionProjection'
 import { prepareRevisionChangeSet } from './revisionChangeSet'
+import { prepareFeatureIdleRevision } from './featureRevisionIdleWindow'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -234,10 +235,20 @@ export async function prepareFeatureEdit(
   const state = { ...current.state, ...input.state }
   if (input.state?.isPublished !== undefined)
     state.localIsPublished = input.state.isPublished
-  const revisionId = crypto.randomUUID(),
+  const idle = await prepareFeatureIdleRevision(db, {
+    ...input,
+    previousRevisionId: current.revisionId,
+    previous: current.content,
+    content,
+    boundary: input.state !== undefined || Boolean(input.identity),
+    lifecycle: {
+      sequence: current.version + 1,
+      recordState: recordState(input.featureId),
+    },
+  })
+  const revisionId = idle.revisionId,
     token = crypto.randomUUID(),
     version = current.version + 1
-  const change = prepareRevisionChangeSet(db, input)
   const projection = input.prepareProjection
     ? await input.prepareProjection({
         previous: current.content,
@@ -271,20 +282,16 @@ export async function prepareFeatureEdit(
         isArchived: Number(state.isArchived),
       })
       .where(eq(lifecycleFeature.id, input.featureId)),
-    change.statement,
-    db.insert(acceptedFeatureRevision).values({
-      id: revisionId,
-      featureId: input.featureId,
-      previousRevisionId: current.revisionId,
-      changeSetId: change.id,
-      content: JSON.stringify(content),
-      recordState: recordState(input.featureId),
-      sequence: version,
-    }),
-    db
-      .update(lifecycleFeature)
-      .set({ currentRevisionId: revisionId, revisionVersion: version })
-      .where(eq(lifecycleFeature.id, input.featureId)),
+    ...idle.write,
+    ...(!idle.noop
+      ? [
+          db
+            .update(lifecycleFeature)
+            .set({ currentRevisionId: revisionId, revisionVersion: version })
+            .where(eq(lifecycleFeature.id, input.featureId)),
+        ]
+      : []),
+    ...idle.finish,
     ...(projection.afterPublication ?? []),
     prepareRevisionCheck(db, featureContentProjectionMatches(input.featureId, content)),
     db
@@ -457,6 +464,7 @@ export async function acceptPartialFeatureProposal(
   if (result.status === 'conflict') return result
   const prepared = await prepareFeatureEdit(db, {
     ...input,
+    revisionBoundary: true,
     guard: imageReview.guard,
     derive: () => result.content,
   })
@@ -572,9 +580,19 @@ export async function prepareLifecycleCapture(
   const content = FeatureRevisionContentSchema.parse(
     await input.derive(structuredClone(current.content), source),
   )
+  const idle = await prepareFeatureIdleRevision(db, {
+    ...input,
+    previousRevisionId: current.revisionId,
+    previous: current.content,
+    content,
+    boundary: Boolean(input.unpublish) || input.visibility !== undefined,
+    lifecycle: {
+      sequence: current.version + 1,
+      recordState: recordState(input.featureId),
+    },
+  })
   const token = crypto.randomUUID(),
-    revisionId = crypto.randomUUID(),
-    change = prepareRevisionChangeSet(db, input)
+    revisionId = idle.revisionId
   const guard = sql`(${input.guard}) AND (${source.unchanged}) AND (${featureContentProjectionMatches(input.featureId, current.content)})
     AND EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND currentRevisionId=${current.revisionId} AND revisionVersion=${current.version})
     AND NOT EXISTS(SELECT 1 FROM featureIdentityOperationMember i WHERE i.featureId=${input.featureId} AND i.role='input'
@@ -599,20 +617,19 @@ export async function prepareLifecycleCapture(
         sql`(${featureContentProjectionMatches(input.featureId, content)}) AND EXISTS(SELECT 1 FROM feature
       WHERE id=${input.featureId} AND isPublished=${Number(input.unpublish ? false : (input.visibility ?? current.state.isPublished))})`,
       ),
-      change.statement,
-      db.insert(acceptedFeatureRevision).values({
-        id: revisionId,
-        featureId: input.featureId,
-        previousRevisionId: current.revisionId,
-        changeSetId: change.id,
-        content: JSON.stringify(content),
-        recordState: recordState(input.featureId),
-        sequence: current.version + 1,
-      }),
-      db
-        .update(lifecycleFeature)
-        .set({ currentRevisionId: revisionId, revisionVersion: current.version + 1 })
-        .where(eq(lifecycleFeature.id, input.featureId)),
+      ...idle.write,
+      ...(!idle.noop
+        ? [
+            db
+              .update(lifecycleFeature)
+              .set({
+                currentRevisionId: revisionId,
+                revisionVersion: current.version + 1,
+              })
+              .where(eq(lifecycleFeature.id, input.featureId)),
+          ]
+        : []),
+      ...idle.finish,
       db
         .delete(lifecycleWriteScope)
         .where(

@@ -45,3 +45,4 @@ export * from './imageRevision'
 export * from './resourceLogoRevision'
 
 export * from './imageIntentPolicy'
+export * from './revisionEditWindow'
