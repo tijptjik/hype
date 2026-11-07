@@ -1387,7 +1387,6 @@ const createImageInContext = async (params: {
     }
   }
 
-
   throw error(400, `Unsupported image context: ${params.imageData.ctxType}`)
 }
 
@@ -1465,9 +1464,9 @@ export const getImagesForContext = guardedQuery(
     )) as Image[]
 
     if (isLogoContext(params.ctxType) && (await hasResourceLogoStorage(db))) {
-      for(const row of images){
-        const head=await readResourceLogoHead(db,row.id)
-        if(head)Object.assign(row,{imageRevisionId:head.imageRevisionId})
+      for (const row of images) {
+        const head = await readResourceLogoHead(db, row.id)
+        if (head) Object.assign(row, { imageRevisionId: head.imageRevisionId })
       }
     }
     return toImageListResponseShape(
@@ -1669,12 +1668,12 @@ export const getMetadata = guardedQuery(
             toImageAccessActor(ctx.user, ctx.userRoles),
             true,
           )
-          if(context && isLogoContext(context.ctxType)){
+          if (context && isLogoContext(context.ctxType)) {
             pin = await readResourceLogoPreview(ctx.db, params.imageRevisionId, {
               user: ctx.user,
               userRoles: ctx.userRoles,
             })
-            if(pin)break
+            if (pin) break
           }
           if (!context || context.ctxType !== ImageContextResource.feature) continue
           pin = await readImageRevisionDelivery(
@@ -1703,11 +1702,11 @@ export const getMetadata = guardedQuery(
     }
     await authorizeMetadataRead(params, ctx)
     // Current logo metadata comes from its immutable journal, even if a compatibility mirror is delayed.
-    if(await hasResourceLogoStorage(ctx.db)){
+    if (await hasResourceLogoStorage(ctx.db)) {
       const selected = await ctx.db.get<{
         imageId: string
       }>(sql`SELECT i.id imageId FROM image i JOIN resourceLogoImageHead h ON h.imageId=i.id
-        WHERE i.publicId=${normalizeMetadataPublicId(params.publicId)} AND (${params.env??null} IS NULL OR i.env=${params.env??null}) AND (${params.version??null} IS NULL OR i.version=${params.version??null})`)
+        WHERE i.publicId=${normalizeMetadataPublicId(params.publicId)} AND (${params.env ?? null} IS NULL OR i.env=${params.env ?? null}) AND (${params.version ?? null} IS NULL OR i.version=${params.version ?? null})`)
       if (selected) {
         const head = await readResourceLogoHead(ctx.db, selected.imageId)
         if (head)
@@ -1921,8 +1920,8 @@ export const finalizeImageUpload = guardedCommand(
 
     const featureScope =
       !payload.replaceImageId && payload.ctxType === 'feature'
-      ? await getFeatureImageCreationScope(db, payload.ctxId)
-      : undefined
+        ? await getFeatureImageCreationScope(db, payload.ctxId)
+        : undefined
     const revisionUpload =
       payload.ctxType === 'feature' && (await hasFeatureRevisionHead(db, payload.ctxId))
     const revisionScope = revisionUpload
@@ -1956,16 +1955,16 @@ export const finalizeImageUpload = guardedCommand(
     let logoBaseline: ResourceLogoHead | null = null
     const logoUpload =
       isLogoContext(payload.ctxType) && (await hasResourceLogoStorage(db))
-    if(logoUpload){
-      const oldId=payload.replaceImageId??previousResourceImage?.id
-      if(oldId){
+    if (logoUpload) {
+      const oldId = payload.replaceImageId ?? previousResourceImage?.id
+      if (oldId) {
         const snapshot = await getImageMutationSnapshot(
           db,
           payload.ctxType as ImageContextType,
           payload.ctxId,
           oldId,
         )
-        if(!snapshot)throw error(409,'Logo selection changed')
+        if (!snapshot) throw error(409, 'Logo selection changed')
         logoBaseline = await ensureLogoBaseline(
           ctx,
           oldId,
@@ -2026,7 +2025,10 @@ export const finalizeImageUpload = guardedCommand(
       updatedAt: timestamp,
     }
 
-    if ((revisionUpload && revisionScope) || creationAccess === 'creation-contribution') {
+    if (
+      (revisionUpload && revisionScope) ||
+      creationAccess === 'creation-contribution'
+    ) {
       if (payload.replaceImageId) {
         if (!payload.replaceImageRevisionId)
           throw error(409, 'Refresh the image before replacing it')
@@ -2065,56 +2067,75 @@ export const finalizeImageUpload = guardedCommand(
         throw error(409, 'Uploaded image bytes are unavailable')
       if (creationAccess === 'creation-contribution' && payload.replaceImageId)
         throw error(400, 'Creation contribution photos cannot replace accepted images')
-      const draft = creationAccess === 'creation-contribution'
-        ? await saveFeatureCreationUpload(db, {
-            taskId: payload.ctxId, actorId: userId, storageNamespace: stage, storageKey: payload.publicId,
-            mediaType: payload.contentType, bytes, metadata: { ...baseMetadataDocument, version, presentationMode: DEFAULT_UPLOAD_IMAGE_PRESENTATION },
-          })
-        : await saveFeatureImageUploadDraft(db, {
-        featureId: payload.ctxId,
-        actorId: userId,
-        reason: payload.replaceImageId
-          ? 'Image replacement saved for review'
-          : 'Image upload saved for review',
-        guard: buildFeatureCommandScopeGuard(db, payload.ctxId, revisionScope!),
-        storageNamespace: stage,
-        storageKey: payload.publicId,
-        mediaType: payload.contentType,
-        bytes,
-        taskIds: (params.persist?.links ?? []).map(link => link.taskId),
-        draftContributor: creationAccess === 'draft-contribution',
-        intent: z
-          .enum(['canonical', 'closeUp', 'context', 'general', 'research', 'undefined'])
-          .parse(
-            creationAccess === 'draft-contribution'
-              ? 'undefined'
-              : (params.persist?.featureImage?.intent ?? 'undefined'),
-          ),
-        replacement: payload.replaceImageId
-          ? {
-              imageId: payload.replaceImageId,
-              imageRevisionId: payload.replaceImageRevisionId!,
-            }
-          : undefined,
-        deriveMetadata: previous => ({
-          ...(previous
-            ? buildReplacementMetadataDocument({
-                existingDocument: previous,
-                incomingDocument: baseMetadataDocument,
+      const draft =
+        creationAccess === 'creation-contribution'
+          ? await saveFeatureCreationUpload(db, {
+              taskId: payload.ctxId,
+              actorId: userId,
+              storageNamespace: stage,
+              storageKey: payload.publicId,
+              mediaType: payload.contentType,
+              bytes,
+              metadata: {
+                ...baseMetadataDocument,
                 version,
-                timestamp,
-                editorUserId: user.id,
-                editorName: editorUser?.name ?? null,
-                editorAttribution: editorUser?.attribution ?? null,
-                source: payload.replacementSnapshot!.source!,
-              })
-            : baseMetadataDocument),
-          version,
-          presentationMode: previous
-            ? (previous.presentationMode ?? 'contain')
-            : DEFAULT_UPLOAD_IMAGE_PRESENTATION,
-        }),
-      })
+                presentationMode: DEFAULT_UPLOAD_IMAGE_PRESENTATION,
+              },
+            })
+          : await saveFeatureImageUploadDraft(db, {
+              featureId: payload.ctxId,
+              actorId: userId,
+              reason: payload.replaceImageId
+                ? 'Feature gallery photo replaced'
+                : creationAccess === 'draft-contribution'
+                  ? 'Contribution photo saved for review'
+                  : 'Photo added to Feature gallery',
+              guard: buildFeatureCommandScopeGuard(db, payload.ctxId, revisionScope!),
+              storageNamespace: stage,
+              storageKey: payload.publicId,
+              mediaType: payload.contentType,
+              bytes,
+              taskIds: (params.persist?.links ?? []).map(link => link.taskId),
+              draftContributor: creationAccess === 'draft-contribution',
+              intent: z
+                .enum([
+                  'canonical',
+                  'closeUp',
+                  'context',
+                  'general',
+                  'research',
+                  'undefined',
+                ])
+                .parse(
+                  creationAccess === 'draft-contribution'
+                    ? 'undefined'
+                    : (params.persist?.featureImage?.intent ?? 'undefined'),
+                ),
+              replacement: payload.replaceImageId
+                ? {
+                    imageId: payload.replaceImageId,
+                    imageRevisionId: payload.replaceImageRevisionId!,
+                  }
+                : undefined,
+              deriveMetadata: previous => ({
+                ...(previous
+                  ? buildReplacementMetadataDocument({
+                      existingDocument: previous,
+                      incomingDocument: baseMetadataDocument,
+                      version,
+                      timestamp,
+                      editorUserId: user.id,
+                      editorName: editorUser?.name ?? null,
+                      editorAttribution: editorUser?.attribution ?? null,
+                      source: payload.replacementSnapshot!.source!,
+                    })
+                  : baseMetadataDocument),
+                version,
+                presentationMode: previous
+                  ? (previous.presentationMode ?? 'contain')
+                  : DEFAULT_UPLOAD_IMAGE_PRESENTATION,
+              }),
+            })
       if (draft.status === 'legacy') throw error(409, 'Feature enrollment changed')
       const stored = await db.get<{
         metadata: string
@@ -2127,20 +2148,40 @@ export const finalizeImageUpload = guardedCommand(
       const storedImage = await loadImageById(db, [eq(image.id, draft.imageId)])
       if (!stored || !storedImage) throw error(409, 'Upload receipt unavailable')
       const retained = JSON.parse(stored.metadata)
+      const acceptedAssignment =
+        draft.status === 'accepted'
+          ? await db
+              .select()
+              .from(featureImage)
+              .where(
+                and(
+                  eq(featureImage.featureId, payload.ctxId),
+                  eq(featureImage.imageId, draft.imageId),
+                ),
+              )
+              .get()
+          : null
       const data = toImageEntityResponseShape(
         {
           ...storedImage,
-          featureId: creationAccess === 'creation-contribution' ? undefined : payload.ctxId,
-          publishedAt: undefined,
-          intent: undefined,
-          isPublished: draft.status==='accepted'&&params.persist?.featureImage?.intent!=='research',
+          featureId:
+            creationAccess === 'creation-contribution' ? undefined : payload.ctxId,
+          publishedAt: acceptedAssignment?.publishedAt ?? undefined,
+          intent: acceptedAssignment?.intent ?? undefined,
+          isPublished: acceptedAssignment?.isPublished ?? false,
           publicId: stored.storageKey,
           env: stored.storageNamespace,
           contentHash: stored.contentHash,
           version: retained.version,
           presentationMode: retained.presentationMode,
         },
-        { ctxType: creationAccess === 'creation-contribution' ? ImageContextResourceExtended.task : ImageContextResource.feature, ctxId: payload.ctxId },
+        {
+          ctxType:
+            creationAccess === 'creation-contribution'
+              ? ImageContextResourceExtended.task
+              : ImageContextResource.feature,
+          ctxId: payload.ctxId,
+        },
         'detail',
       ).data
       if (!data) throw error(500, 'Failed to shape upload receipt')
@@ -2148,10 +2189,14 @@ export const finalizeImageUpload = guardedCommand(
         data: {
           ...data,
           image: { ...data.image, imageRevisionId: draft.imageRevisionId },
-          ...(draft.status==='accepted'?{revisionAccepted:{revisionId:draft.revisionId}}:{revisionDraft: {
-            proposalId: draft.proposalId,
-            candidateRevisionId: draft.candidateRevisionId,
-          }}),
+          ...(draft.status === 'accepted'
+            ? { revisionAccepted: { revisionId: draft.revisionId } }
+            : {
+                revisionDraft: {
+                  proposalId: draft.proposalId,
+                  candidateRevisionId: draft.candidateRevisionId,
+                },
+              }),
         },
       }
     }
@@ -2388,8 +2433,8 @@ export const createImage = guardedCommand(async (input, ctx) => {
       : undefined
   const featureScope =
     imageData.ctxType === 'feature'
-    ? await getFeatureImageCreationScope(db, imageData.ctxId)
-    : undefined
+      ? await getFeatureImageCreationScope(db, imageData.ctxId)
+      : undefined
   await assertPermissionsToCreateImage(
     db,
     user,
@@ -2461,21 +2506,84 @@ export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx)
     if (draft.status === 'accepted') return { data: null, revisionAccepted: draft }
     if (draft.status === 'saved') return { data: null, revisionDraft: draft }
   }
-  if(isLogoContext(params.ctxType) && await hasResourceLogoStorage(db)){
-    await assertPermissionsToUpdateImage(db,user,ctx.isAdminRequest,{id:params.id} as ImageDBFlat,userRoles,params.id,params.ctxId,params.ctxType)
-    const snapshot=await getImageMutationSnapshot(db,params.ctxType,params.ctxId,params.id)
-    if(!snapshot)throw error(409,'Logo changed')
-    const head=await ensureLogoBaseline(ctx,params.id,createImageMutationGuards(db,params.ctxType,params.ctxId,snapshot).before)
-    const previous=head.metadata as Record<string,unknown>
-    const patch=ImageMetadataFullSchema.pick({credit:true,capturedAt:true,capture:true}).extend({presentationMode:z.enum(IMAGE_PRESENTATION_MODES).optional()}).strict().parse(params.data)
-    const version=Math.max(Date.now(),Number(previous.version??0)+1)
-    const metadata={...previous,...patch,version,modifiedAt:new Date(version).toISOString()}
-    const guard=await authorizeLogoOwners(ctx,params.id)
-    const updated=await updateImageForContext({db,user,userId,userRoles,event,isAdminRequest:ctx.isAdminRequest,id:params.id,ctxType:params.ctxType,ctxId:params.ctxId,expectedSnapshot:snapshot,
-      data:{version,...(patch.presentationMode?{presentationMode:patch.presentationMode}:{})},
-      logoRevision:{asset:head.asset,metadata:metadata as LogoRevisionEvidence['metadata'],guard,expectedRevisionId:params.imageRevisionId}})
-    await persistOriginalMetadataSidecars({bucket:getOriginalsBucketForStage(event.locals.platform,toImageStage(head.asset.storageNamespace)),publicId:head.asset.storageKey,version,
-      metadataDocument:metadata as ImageMetadataDocument,manifestDocument:{publicId:head.asset.storageKey,version,updatedAt:new Date(version).toISOString()},stage:toImageStage(head.asset.storageNamespace),event}).catch(cause => {
+  if (isLogoContext(params.ctxType) && (await hasResourceLogoStorage(db))) {
+    await assertPermissionsToUpdateImage(
+      db,
+      user,
+      ctx.isAdminRequest,
+      { id: params.id } as ImageDBFlat,
+      userRoles,
+      params.id,
+      params.ctxId,
+      params.ctxType,
+    )
+    const snapshot = await getImageMutationSnapshot(
+      db,
+      params.ctxType,
+      params.ctxId,
+      params.id,
+    )
+    if (!snapshot) throw error(409, 'Logo changed')
+    const head = await ensureLogoBaseline(
+      ctx,
+      params.id,
+      createImageMutationGuards(db, params.ctxType, params.ctxId, snapshot).before,
+    )
+    const previous = head.metadata as Record<string, unknown>
+    const patch = ImageMetadataFullSchema.pick({
+      credit: true,
+      capturedAt: true,
+      capture: true,
+    })
+      .extend({ presentationMode: z.enum(IMAGE_PRESENTATION_MODES).optional() })
+      .strict()
+      .parse(params.data)
+    const version = Math.max(Date.now(), Number(previous.version ?? 0) + 1)
+    const metadata = {
+      ...previous,
+      ...patch,
+      version,
+      modifiedAt: new Date(version).toISOString(),
+    }
+    const guard = await authorizeLogoOwners(ctx, params.id)
+    const updated = await updateImageForContext({
+      db,
+      user,
+      userId,
+      userRoles,
+      event,
+      isAdminRequest: ctx.isAdminRequest,
+      id: params.id,
+      ctxType: params.ctxType,
+      ctxId: params.ctxId,
+      expectedSnapshot: snapshot,
+      data: {
+        version,
+        ...(patch.presentationMode ? { presentationMode: patch.presentationMode } : {}),
+      },
+      logoRevision: {
+        asset: head.asset,
+        metadata: metadata as LogoRevisionEvidence['metadata'],
+        guard,
+        expectedRevisionId: params.imageRevisionId,
+      },
+    })
+    await persistOriginalMetadataSidecars({
+      bucket: getOriginalsBucketForStage(
+        event.locals.platform,
+        toImageStage(head.asset.storageNamespace),
+      ),
+      publicId: head.asset.storageKey,
+      version,
+      metadataDocument: metadata as ImageMetadataDocument,
+      manifestDocument: {
+        publicId: head.asset.storageKey,
+        version,
+        updatedAt: new Date(version).toISOString(),
+      },
+      stage: toImageStage(head.asset.storageNamespace),
+      event,
+    }).catch(cause => {
       console.warn('Logo saved, but metadata mirrors could not refresh', cause)
     })
     return updated
@@ -2618,7 +2726,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     if (draft.status === 'accepted') return { data: null, revisionAccepted: draft }
     if (draft.status === 'saved') return { data: null, revisionDraft: draft }
   }
-  
+
   const logoHead =
     isLogoContext(params.ctxType) && (await hasResourceLogoStorage(db))
       ? await ensureLogoBaseline(
@@ -2627,7 +2735,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
           createImageMutationGuards(db, params.ctxType, params.ctxId, snapshot).before,
         )
       : null
-  const logoGuard=logoHead?await authorizeLogoOwners(ctx,params.id):undefined
+  const logoGuard = logoHead ? await authorizeLogoOwners(ctx, params.id) : undefined
   const env = toImageStage(
     existing.env ?? event.locals.platform?.env.ENVIRONMENT ?? ImageEnv.local,
   )
@@ -2642,7 +2750,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
         publicId: existing.publicId,
         version: existing.version ?? undefined,
         fetchFn: event.fetch,
-    })
+      })
 
   const originalsBucket = getOriginalsBucketForStage(event.locals.platform, resolvedEnv)
   // Legacy imports may have a source without sidecars; verify it before creating rotation metadata.
@@ -2659,11 +2767,11 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     | ImageMetadataDocument
     | undefined) ??
     storedDocument ?? {
-    rotation: 0,
-    sourceRotation: 0,
-    renderRotation: 0,
-    uploadedAt: existing.createdAt,
-  }
+      rotation: 0,
+      sourceRotation: 0,
+      renderRotation: 0,
+      uploadedAt: existing.createdAt,
+    }
 
   // Rotation changes delivery metadata only; the stored source and public identity are immutable.
   const publicId = logoHead?.asset.storageKey ?? existing.publicId
@@ -2802,7 +2910,7 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
       params.ctxId,
       params.id,
     )
-    if(!logoSnapshot)throw error(409,'Logo changed')
+    if (!logoSnapshot) throw error(409, 'Logo changed')
     await ensureLogoBaseline(
       ctx,
       params.id,
