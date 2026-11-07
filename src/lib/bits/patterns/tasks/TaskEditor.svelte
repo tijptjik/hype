@@ -6,6 +6,7 @@ import { getFPI18n, getI18n, getLocaleKey, m } from '#lib/i18n.js'
 import * as TaskPrimitive from './components'
 import { ResourceViewer } from '#lib/bits/index.js'
 // COMPONENTS
+import TaskImageReview from './components/TaskImageReview.svelte'
 import {
   displayedLocales,
   shortLocaleLabel,
@@ -16,7 +17,7 @@ import { FormFeatureVisualSection } from '#lib/bits/custom/form/src/formFeatureV
 import FormI18nInlineRow from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nInlineRow.svelte'
 import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles.js'
 // UTILS
-import { calculateDistance } from '#lib/map/index.js'
+import { calculateDistance } from '#lib/utils/geocoding.js'
 import { getMetadata } from '#lib/api/image.remote.js'
 // THEME
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
@@ -35,6 +36,9 @@ let {
   isLayerBusy = false,
   class: className = '',
   onReassignLayer,
+  onImageReviewChange,
+  onImageAcceptActionChange,
+  onImagesAccepted,
   localeState: controlledLocaleState,
   onLocaleStateChange,
 }: TaskEditorProps = $props()
@@ -170,13 +174,19 @@ const reportDistance = $derived.by(() => {
   const latitude = Number.parseFloat(imageMetadata.latitude)
   const longitude = Number.parseFloat(imageMetadata.longitude)
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    Math.abs(latitude) > 90 ||
+    Math.abs(longitude) > 180
+  ) {
     return '-'
   }
 
+  // GeoJSON stores longitude first; the geodesic helper accepts latitude first and returns metres.
   const distance = calculateDistance(
-    featureCoordinates[0],
     featureCoordinates[1],
+    featureCoordinates[0],
     latitude,
     longitude,
   )
@@ -193,6 +203,8 @@ $effect(() => {
     return
   }
 
+  let cancelled = false
+  imageMetadata = null
   void getMetadata({
     publicId: image.publicId,
     env: image.env ?? undefined,
@@ -204,11 +216,14 @@ $effect(() => {
     },
   })
     .then(response => {
-      imageMetadata = response?.data ?? null
+      if (!cancelled) imageMetadata = response?.data ?? null
     })
     .catch(() => {
-      imageMetadata = null
+      if (!cancelled) imageMetadata = null
     })
+  return () => {
+    cancelled = true
+  }
 })
 </script>
 
@@ -219,7 +234,10 @@ $effect(() => {
   hasAside={false}
 >
   {#if isNewFeature || isReportedMissing}
-    <section class="flex min-h-full min-w-0 flex-col bg-panel" aria-label={m.task__feature()}>
+    <section
+      class="bg-panel flex min-h-full min-w-0 flex-col"
+      aria-label={m.task__feature()}
+    >
       <!-- Text keeps its natural height; desktop visuals absorb the remaining review space. -->
       <FormFeatureVisualSection
         class={String.raw`${visualCollapsed ? 'shrink-0' : 'min-[901px]:flex-1'} [&_.bits-feature-visual\_\_map]:p-0! [&_.bits-feature-visual\_\_image]:p-0! max-[900px]:[&_.bits-feature-visual\_\_body]:h-auto! max-[900px]:[&_.bits-feature-visual\_\_image]:flex-none!`}
@@ -235,7 +253,7 @@ $effect(() => {
         showNavigationControls={false}
         contributorId={isReportedMissing
           ? task.contributorId
-          : task.feature?.contributorId ?? task.contributorId}
+          : (task.feature?.contributorId ?? task.contributorId)}
         createdAt={task.createdAt}
         isIntangible={task.creationProposal?.content.profile.isIntangible ??
           Boolean(task.feature?.isIntangible)}
@@ -273,130 +291,159 @@ $effect(() => {
           <div
             class="relative flex h-[var(--bits-feature-visual-expanded-height)] min-h-0 w-full flex-col overflow-hidden min-[901px]:h-full"
           >
-            <TaskPrimitive.TaskImageEditor
-              multilingualExpanded={localeState.expanded}
-              onMultilingualExpandedChange={expanded =>
-                onLocaleStateChange?.({ ...localeState, expanded })}
-              featureId={task.featureId ?? task.feature?.id}
-              layout="top"
-              readonly={isReviewed ||
-                task.revisionReviewRequired ||
-                task.identityTransferred}
-              intentReadonly={isReviewed || task.identityTransferred || !task.featureId}
-              {isReviewed}
-            />
+            {#if isNewFeature &&
+              task.revisionReviewRequired &&
+              !task.identityTransferred}
+              {#key task.id}
+                <TaskImageReview
+                  taskId={task.id}
+                  initialReport={isNewFeature}
+                  readonly={isReviewed}
+                  reviewAction={task.reviewAction}
+                  onChange={onImageReviewChange}
+                  onAcceptActionChange={onImageAcceptActionChange}
+                  onAccepted={onImagesAccepted}
+                />
+              {/key}
+            {:else}
+              <TaskPrimitive.TaskImageEditor
+                multilingualExpanded={localeState.expanded}
+                onMultilingualExpandedChange={expanded =>
+                  onLocaleStateChange?.({ ...localeState, expanded })}
+                featureId={task.featureId ?? task.feature?.id}
+                layout="top"
+                readonly={isReviewed ||
+                  task.revisionReviewRequired ||
+                  task.identityTransferred}
+                intentReadonly={isReviewed ||
+                  task.identityTransferred ||
+                  !task.featureId}
+                researchOutcome={task.reviewAction === 'set-intangible' &&
+                task.reviewOutcome === 'accepted'
+                  ? 'accepted'
+                  : undefined}
+                {isReviewed}
+              />
+            {/if}
           </div>
         {/snippet}
       </FormFeatureVisualSection>
 
       <div class="shrink-0" data-task-review-details>
-      {#if task.identityTransferred && !isReviewed}
-        <div class="border-border grid gap-2 border-b p-6 text-sm">
-          <p>
-            This task was reassigned in a reviewed merge or split. Its original evidence
-            and contributor are retained.
-          </p>
-          <p>
-            Review any photo proposals first. Completing or rejecting this contribution
-            does not publish or archive the destination Feature.
-          </p>
-          {#if task.revisionReviewRequired}
-            <a class="underline" href="#task-proposal-review">Review photo proposals</a>
-          {/if}
-        </div>
-      {/if}
+        {#if task.identityTransferred && !isReviewed}
+          <div class="border-border grid gap-2 border-b p-6 text-sm">
+            <p>
+              This task was reassigned in a reviewed merge or split. Its original
+              evidence and contributor are retained.
+            </p>
+            <p>
+              Review any photo proposals first. Completing or rejecting this
+              contribution does not publish or archive the destination Feature.
+            </p>
+          </div>
+        {/if}
 
-      {#if isReportedMissing}
-        <div class="grid min-w-0 gap-8 p-6 @min-[48rem]/task:grid-cols-2">
-          <section class="min-w-0">
-            <h3 class={fieldLabelStyles}>{m.noisy_lime_tuna_charm()}</h3>
-            <p class="mt-4 whitespace-pre-wrap break-words text-base leading-relaxed">{normalizeDisplayValue(task.message)}</p>
-          </section>
-          <section class="min-w-0 rounded-xl border border-border bg-foreground/[0.03] p-6">
-            <h3 class={fieldLabelStyles}>{m.house_watery_jaguar_edit()}</h3>
-            <p class="mt-4 text-3xl font-semibold tabular-nums">{reportDistance}</p>
-            <dl class="mt-5 grid gap-3 border-t border-border/50 pt-4 text-sm">
-              <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-4">
-                <dt class="text-foreground/60">{m.bland_tasty_lizard_rest()}</dt>
-                <dd class="m-0 text-right font-medium tabular-nums">{reportDate}</dd>
-              </div>
-              <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-4">
-                <dt class="text-foreground/60">{m.weary_bad_dog_revive()}</dt>
-                <dd class="m-0 text-right font-medium tabular-nums">{captureDate}</dd>
-              </div>
-            </dl>
-          </section>
-        </div>
-      {:else}
-      <div
-        class="@min-[48rem]/task:[&>section+section]:border-border/50 grid min-w-0 gap-y-6 py-8 @min-[48rem]/task:grid-cols-3 @min-[48rem]/task:[&>section+section]:border-l"
-      >
-        <section class="min-w-0 px-6">
-          <h3 class={fieldLabelStyles}>{m.feature__title()}</h3>
-          <div class="mt-4">
-            {#each shownLocales as locale (locale)}
-              <FormI18nInlineRow
-                value={preview?.i18n?.[contentFormKey(locale)]?.title || '-'}
-                prefix={localeState.expanded ? shortLocaleLabel(locale) : ''}
-                label={m.feature__title()}
-                editable={false}
-                showVerification={false}
-                attrs={{}}
-                issues={undefined}
-                required={false}
-                onStart={() => {}}
-                onCancel={() => {}}
-                onClear={() => {}}
-              />
-            {/each}
+        {#if isReportedMissing}
+          <div class="grid min-w-0 gap-8 p-6 @min-[48rem]/task:grid-cols-2">
+            <section class="min-w-0">
+              <h3 class={fieldLabelStyles}>{m.noisy_lime_tuna_charm()}</h3>
+              <p class="mt-4 text-base leading-relaxed break-words whitespace-pre-wrap">
+                {normalizeDisplayValue(task.message)}
+              </p>
+            </section>
+            <section
+              class="border-border bg-foreground/[0.03] min-w-0 rounded-xl border p-6"
+            >
+              <h3 class={fieldLabelStyles}>{m.house_watery_jaguar_edit()}</h3>
+              <p class="mt-4 text-3xl font-semibold tabular-nums">{reportDistance}</p>
+              <dl class="border-border/50 mt-5 grid gap-3 border-t pt-4 text-sm">
+                <div
+                  class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-4"
+                >
+                  <dt class="text-foreground/60">{m.bland_tasty_lizard_rest()}</dt>
+                  <dd class="m-0 text-right font-medium tabular-nums">{reportDate}</dd>
+                </div>
+                <div
+                  class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-4"
+                >
+                  <dt class="text-foreground/60">{m.weary_bad_dog_revive()}</dt>
+                  <dd class="m-0 text-right font-medium tabular-nums">{captureDate}</dd>
+                </div>
+              </dl>
+            </section>
           </div>
-        </section>
-        <section class="min-w-0 px-6">
-          <h3 class={fieldLabelStyles}>{m.feature__description()}</h3>
-          <div class="mt-4">
-            {#each shownLocales as locale (locale)}
-              <FormI18nInlineRow
-                value={preview?.i18n?.[contentFormKey(locale)]?.description || '-'}
-                prefix={localeState.expanded ? shortLocaleLabel(locale) : ''}
-                label={m.feature__description()}
-                multiline
-                editable={false}
-                showVerification={false}
-                attrs={{}}
-                issues={undefined}
-                required={false}
-                onStart={() => {}}
-                onCancel={() => {}}
-                onClear={() => {}}
+        {:else}
+          <div
+            class="@min-[48rem]/task:[&>section+section]:border-border/50 grid min-w-0 gap-y-6 py-8 @min-[48rem]/task:grid-cols-3 @min-[48rem]/task:[&>section+section]:border-l"
+          >
+            <section class="min-w-0 px-6">
+              <h3 class={fieldLabelStyles}>{m.feature__title()}</h3>
+              <div class="mt-4">
+                {#each shownLocales as locale (locale)}
+                  <FormI18nInlineRow
+                    value={preview?.i18n?.[contentFormKey(locale)]?.title || '-'}
+                    prefix={localeState.expanded ? shortLocaleLabel(locale) : ''}
+                    label={m.feature__title()}
+                    editable={false}
+                    showVerification={false}
+                    attrs={{}}
+                    issues={undefined}
+                    required={false}
+                    onStart={() => {}}
+                    onCancel={() => {}}
+                    onClear={() => {}}
+                  />
+                {/each}
+              </div>
+            </section>
+            <section class="min-w-0 px-6">
+              <h3 class={fieldLabelStyles}>{m.feature__description()}</h3>
+              <div class="mt-4">
+                {#each shownLocales as locale (locale)}
+                  <FormI18nInlineRow
+                    value={preview?.i18n?.[contentFormKey(locale)]?.description || '-'}
+                    prefix={localeState.expanded ? shortLocaleLabel(locale) : ''}
+                    label={m.feature__description()}
+                    multiline
+                    editable={false}
+                    showVerification={false}
+                    attrs={{}}
+                    issues={undefined}
+                    required={false}
+                    onStart={() => {}}
+                    onCancel={() => {}}
+                    onClear={() => {}}
+                  />
+                {/each}
+              </div>
+            </section>
+            <section class="min-w-0 px-6">
+              <TaskPrimitive.TaskLayer
+                title={m.resource__layer_singular()}
+                currentLayerId={effectiveLayerId}
+                options={assignableLayers}
+                isBusy={isLayerBusy}
+                disabled={isReviewed || !canReassignLayer}
+                onLayerChange={onReassignLayer}
+                class="border-0 bg-transparent py-0"
               />
-            {/each}
+              <div class="mt-6">
+                <h3 class={fieldLabelStyles}>{m.feature__address()}</h3>
+                <p
+                  class="mt-4 text-base leading-relaxed break-words whitespace-pre-wrap"
+                >
+                  {featureAddress}
+                </p>
+              </div>
+            </section>
           </div>
-        </section>
-        <section class="min-w-0 px-6">
-          <TaskPrimitive.TaskLayer
-            title={m.resource__layer_singular()}
-            currentLayerId={effectiveLayerId}
-            options={assignableLayers}
-            isBusy={isLayerBusy}
-            disabled={isReviewed || !canReassignLayer}
-            onLayerChange={onReassignLayer}
-            class="border-0 bg-transparent py-0"
+        {/if}
+        {#if isNewFeature && featureFields.length > 0}
+          <TaskPrimitive.TaskFields
+            title={m.admin__forms_common_fields()}
+            items={featureFields}
           />
-        </section>
-      </div>
-      <section class="border-border/50 border-t px-6 py-8">
-        <h3 class={fieldLabelStyles}>{m.feature__address()}</h3>
-        <p class="mt-4 text-base leading-relaxed break-words whitespace-pre-wrap">
-          {featureAddress}
-        </p>
-      </section>
-      {/if}
-      {#if isNewFeature && featureFields.length > 0}
-        <TaskPrimitive.TaskFields
-          title={m.admin__forms_common_fields()}
-          items={featureFields}
-        />
-      {/if}
+        {/if}
       </div>
     </section>
   {:else}
@@ -408,36 +455,44 @@ $effect(() => {
               This task was reassigned in a reviewed merge or split. Its original
               evidence and contributor are retained.
             </p>
-            {#if task.revisionReviewRequired && !isNewPhoto}
-              <a class="underline" href="#task-proposal-review"
-                >Review photo proposals</a
-              >
-            {/if}
           </div>
         {/if}
         {#if isNewPhoto}
-          {#if task.revisionReviewRequired}
-            <div class="border-border grid gap-2 border-b p-4 text-sm">
-              <p>
-                Review each photo proposal in this task. Accepting a proposal publishes
-                that photo; rejecting it leaves the gallery unchanged. The task
-                completes when every photo has been reviewed.
-              </p>
-              <a class="font-medium underline" href="#task-proposal-review"
-                >Review photo proposals</a
-              >
-            </div>
+          {#if !task.revisionReviewRequired && !task.images?.length && !isReviewed}
+            <p role="status" class="border-border text-warning border-b p-4 text-sm">
+              This task has no attached photo submission. The gallery below contains
+              existing Feature images only. There are no new photos to accept.
+            </p>
           {/if}
-          <TaskPrimitive.TaskImageEditor
-            featureId={task.featureId ?? task.feature?.id}
-            multilingualExpanded={localeState.expanded}
-            onMultilingualExpandedChange={expanded =>
-              onLocaleStateChange?.({ ...localeState, expanded })}
-            readonly={isReviewed ||
-              task.revisionReviewRequired ||
-              task.identityTransferred}
-            {isReviewed}
-          />
+          {#if task.revisionReviewRequired}
+            {#key task.id}
+              <TaskImageReview
+                taskId={task.id}
+                initialReport={isNewFeature}
+                readonly={isReviewed}
+                reviewAction={task.reviewAction}
+                onChange={onImageReviewChange}
+                onAcceptActionChange={onImageAcceptActionChange}
+                onAccepted={onImagesAccepted}
+              />
+            {/key}
+          {:else}
+            <TaskPrimitive.TaskImageEditor
+              multilingualExpanded={localeState.expanded}
+              onMultilingualExpandedChange={expanded =>
+                onLocaleStateChange?.({ ...localeState, expanded })}
+              featureId={task.featureId ?? task.feature?.id}
+              readonly={isReviewed ||
+                !task.images?.length ||
+                task.revisionReviewRequired ||
+                task.identityTransferred}
+              researchOutcome={task.reviewAction === 'set-intangible' &&
+              task.reviewOutcome === 'accepted'
+                ? 'accepted'
+                : undefined}
+              {isReviewed}
+            />
+          {/if}
         {:else}
           <ResourceViewer
             flush
@@ -453,6 +508,5 @@ $effect(() => {
         {/if}
       </div>
     </TaskPrimitive.TaskMain>
-
   {/if}
 </TaskPrimitive.TaskRoot>
