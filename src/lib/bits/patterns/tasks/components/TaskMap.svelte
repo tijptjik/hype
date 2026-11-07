@@ -15,6 +15,9 @@ type StartViewTransitionCapableDocument = Document & {
 
 let {
   coordinates,
+  initialZoom,
+  showFullscreen = true,
+  label = 'Detailed location map',
   addressMeta,
   mapStyleCode = null,
   class: className = '',
@@ -70,6 +73,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 <svelte:window onkeydown={handleWindowKeydown} />
 
 <section
+  aria-label={label}
   class={cx(
     'relative min-h-[18rem] flex-1 overflow-hidden bg-surface',
     isFullscreen && 'fixed inset-0 z-[999] rounded-none border-0',
@@ -79,24 +83,27 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 >
   <Maplet
     {coordinates}
+    {initialZoom}
     draggable={false}
     {addressMeta}
     {mapStyleCode}
     onMapReady={handleTaskMapReady}
   />
 
-  <button
-    type="button"
-    class="absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-panel/95 text-foreground transition hover:bg-panel/90"
-    onclick={() => {
-      void toggleFullscreen()
-    }}
-    aria-label={isFullscreen ? 'Exit fullscreen map' : 'Open fullscreen map'}
-  >
-    {#if isFullscreen}
-      <ShrinkIcon class="h-5 w-5" />
-    {:else}
-      <ExpandIcon class="h-5 w-5" />
-    {/if}
-  </button>
+  {#if showFullscreen}
+    <button
+      type="button"
+      class="border-border bg-panel/95 text-foreground hover:bg-panel/90 absolute right-4 bottom-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border transition"
+      onclick={() => {
+        void toggleFullscreen()
+      }}
+      aria-label={isFullscreen ? 'Exit fullscreen map' : 'Open fullscreen map'}
+    >
+      {#if isFullscreen}
+        <ShrinkIcon class="h-5 w-5" />
+      {:else}
+        <ExpandIcon class="h-5 w-5" />
+      {/if}
+    </button>
+  {/if}
 </section>

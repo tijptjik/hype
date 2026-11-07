@@ -16,6 +16,7 @@ import { featureImage, image } from '#lib/db/schema/image.js'
 import { prepareFeatureDuplicateReview } from '#lib/db/services/featureDuplicateReview.js'
 import {
   inspectFeatureIdentitySource,
+  buildSelectedFeatureIdentityContent,
   createFeatureIdentityProposal,
   readFeatureIdentityProposal,
   decideFeatureIdentityProposal,
@@ -141,7 +142,7 @@ const expectedScope = {
 
 /** Build isolated compatibility tables with real child constraints and revision migrations. */
 function fixture(linked = false, catalogueCascades = false) {
-  const connection = publicationSqlite({})
+  const connection = publicationSqlite({ property })
   connections.push(connection)
   const { sqlite } = connection
   sqlite.exec(
@@ -2703,6 +2704,131 @@ describe('reviewed Feature merge and split integration', () => {
     const input = { featureId: 'f', revisionId: baseline.revisionId, generation: 0 }
     return { ...f, baseline, command, input }
   }
+  it('retains inspected image pins while applying selected photo intents', async () => {
+    const f = await identityFixture()
+    const original = structuredClone(f.baseline.content)
+    const images = original.gallery.order.map(imageId => ({
+      sourceFeatureId: 'f',
+      imageId,
+      intent: 'research' as const,
+    }))
+    const content = await buildSelectedFeatureIdentityContent(f.db, {
+      kind: 'merge',
+      featureId: 'f',
+      layerId: 'layer',
+      allowedInternalIds: new Set(['private']),
+      sources: new Map([['f', { content: original }]]),
+      output: { featureId: 'f', sourceFeatureId: 'f', images },
+    })
+    for (const image of images) {
+      expect(content.gallery.entries[image.imageId].intent).toBe('research')
+      expect(content.gallery.entries[image.imageId].isPublished).toBe(false)
+      expect(content.gallery.entries[image.imageId].imageRevisionId).toBe(
+        original.gallery.entries[image.imageId].imageRevisionId,
+      )
+    }
+    expect(f.baseline.content).toEqual(original)
+    await expect(
+      buildSelectedFeatureIdentityContent(f.db, {
+        kind: 'merge',
+        featureId: 'f',
+        layerId: 'layer',
+        allowedInternalIds: new Set(['private']),
+        sources: new Map([['f', { content: original }]]),
+        output: {
+          featureId: 'f',
+          sourceFeatureId: 'f',
+          images: [{ sourceFeatureId: 'f', imageId: 'uninspected', intent: 'general' }],
+        },
+      }),
+    ).rejects.toThrow('Invalid or duplicate image selection')
+  })
+  it('selects a catalogue option outside the two snapshots and rejects unavailable options', async () => {
+    const f = await identityFixture()
+    f.sqlite.exec(
+      "INSERT INTO propertyValue(id,propertyId,rank,value) VALUES ('third-option','choice',9,'New catalogue option'); INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES ('third-option','en','Third choice',0)",
+    )
+    const original = structuredClone(f.baseline.content)
+    const input = {
+      kind: 'merge' as const,
+      featureId: 'f',
+      layerId: 'layer',
+      allowedInternalIds: new Set(['private']),
+      sources: new Map([['f', { content: original }]]),
+    }
+    const content = await buildSelectedFeatureIdentityContent(f.db, {
+      ...input,
+      output: {
+        featureId: 'f',
+        sourceFeatureId: 'f',
+        propertyOptionEdits: { choice: 'third-option' },
+      },
+    })
+    expect(content.properties.choice.selection.propertyValueId).toBe('third-option')
+    expect(
+      content.properties.choice.selection.definition.selectedOption?.translations.en
+        .value,
+    ).toBe('Third choice')
+    expect(f.baseline.content).toEqual(original)
+    await expect(
+      buildSelectedFeatureIdentityContent(f.db, {
+        ...input,
+        output: {
+          featureId: 'f',
+          sourceFeatureId: 'f',
+          propertyOptionEdits: { choice: 'missing-option' },
+        },
+      }),
+    ).rejects.toThrow('does not belong to this category')
+    const cleared = await buildSelectedFeatureIdentityContent(f.db, {
+      ...input,
+      output: {
+        featureId: 'f',
+        sourceFeatureId: 'f',
+        propertyOptionEdits: { choice: null },
+      },
+    })
+    expect(cleared.properties.choice.selection.propertyValueId).toBeNull()
+    expect(cleared.properties.choice.selection.definition.selectedOption).toBeNull()
+  })
+  it('validates translated field edits without replacing the inspected definition', async () => {
+    const f = await identityFixture()
+    const original = structuredClone(f.baseline.content)
+    const content = await buildSelectedFeatureIdentityContent(f.db, {
+      kind: 'merge',
+      featureId: 'f',
+      layerId: 'layer',
+      allowedInternalIds: new Set(['private']),
+      sources: new Map([['f', { content: original }]]),
+      output: {
+        featureId: 'f',
+        sourceFeatureId: 'f',
+        propertyTranslationEdits: { private: { en: 'Reviewed translation' } },
+      },
+    })
+    expect(content.properties.private.translations.en).toEqual({
+      value: 'Reviewed translation',
+      generated: false,
+    })
+    expect(content.properties.private.selection.definition).toEqual(
+      original.properties.private.selection.definition,
+    )
+    expect(f.baseline.content).toEqual(original)
+    await expect(
+      buildSelectedFeatureIdentityContent(f.db, {
+        kind: 'merge',
+        featureId: 'f',
+        layerId: 'layer',
+        allowedInternalIds: new Set(['private']),
+        sources: new Map([['f', { content: original }]]),
+        output: {
+          featureId: 'f',
+          sourceFeatureId: 'f',
+          propertyTranslationEdits: { choice: { en: 'Forged option' } },
+        },
+      }),
+    ).rejects.toThrow('Edit this field through its regular editor')
+  })
   it('publishes the reviewed cover without changing source image pins and rejects an unselected cover', async () => {
     const f = await identityFixture()
     const gallery = f.baseline.content.gallery

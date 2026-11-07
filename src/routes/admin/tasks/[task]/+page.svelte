@@ -6,7 +6,6 @@ import { goto } from '$app/navigation'
 // ADAPTERS
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
-import { Dialog } from 'bits-ui'
 import FeatureRevisionWorkspace from '#lib/bits/patterns/revisionHistory/FeatureRevisionWorkspace.svelte'
 import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIdentityDialog.svelte'
 import { TaskEditor } from '#lib/bits/index.js'
@@ -46,6 +45,7 @@ import { toast } from 'svelte-sonner'
 // ICONS
 import CheckBadgeIcon from 'virtual:icons/proicons/checkmark-starburst'
 import CheckIcon from 'virtual:icons/proicons/checkmark-circle'
+import DuplicateIcon from 'virtual:icons/lucide/circle-equal'
 import EyeOffIcon from 'virtual:icons/proicons/eye-off'
 import GhostIcon from 'virtual:icons/lucide/ghost'
 import InfoIcon from 'virtual:icons/proicons/info'
@@ -111,7 +111,7 @@ let reviewReason = $state('')
 let pendingRejectAction = $state<TaskReviewUiAction | null>(null)
 let isReviewBusy = $state(false)
 let duplicateOpen = $state(false)
-let duplicateMergeOpen = $state(false)
+let reviewDialogTrigger = $state<HTMLElement | null>(null)
 let isLayerBusy = $state(false)
 let taskState = $state<Task | null>(null)
 let lastSyncedTaskSignature = $state('')
@@ -227,6 +227,14 @@ function createReviewTaskAction(config: {
   color: NonNullable<HeaderButtonActionConfig['color']>
 }): HeaderButtonActionConfig {
   return {
+    attrs: {
+      onpointerdown: (event: PointerEvent) => {
+        reviewDialogTrigger = event.currentTarget as HTMLElement
+      },
+      onkeydown: (event: KeyboardEvent) => {
+        reviewDialogTrigger = event.currentTarget as HTMLElement
+      },
+    },
     text: config.text,
     icon: config.icon,
     onClick:
@@ -256,7 +264,7 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
 
   const common = [
     createReviewTaskAction({
-      text: m.quiet_late_worm_startle(),
+      text: task.type === 'newFeature' ? 'Reject' : m.quiet_late_worm_startle(),
       icon: XCircleIcon,
       onClick: openRejectDialog,
       color: 'error',
@@ -266,9 +274,16 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
   if (task.type === 'newFeature') {
     return [
       ...common,
-      createReviewTaskAction({ text: 'Duplicate', icon: CheckIcon, color: 'neutral', onClick: () => { duplicateOpen = true } }),
       createReviewTaskAction({
-        text: task.lifecycleReview ? 'Accept contribution' : task.revisionReviewRequired ? 'Accept and publish' : m.quiet_late_worm_startle_accept(),
+        text: 'Resolve duplicate',
+        icon: DuplicateIcon,
+        color: 'neutral',
+        onClick: () => {
+          duplicateOpen = true
+        },
+      }),
+      createReviewTaskAction({
+        text: 'Accept',
         icon: CheckIcon,
         action: 'accept',
         color: 'success',
@@ -277,10 +292,19 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
   }
 
   if (task.type === 'newPhoto') {
-    if (task.revisionReviewRequired) return [...common, createReviewTaskAction({
-      text: 'Review photo proposals', icon: CheckIcon, color: 'success',
-      onClick: () => document.getElementById('task-proposal-review')?.scrollIntoView({block:'start'}),
-    })]
+    if (task.revisionReviewRequired)
+      return [
+        ...common,
+        createReviewTaskAction({
+          text: 'Review photo proposals',
+          icon: CheckIcon,
+          color: 'success',
+          onClick: () =>
+            document
+              .getElementById('task-proposal-review')
+              ?.scrollIntoView({ block: 'start' }),
+        }),
+      ]
     return [
       ...common,
       createReviewTaskAction({
@@ -348,7 +372,13 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
     (resolvedFeature
       ? getI18n(resolvedFeature as never, 'title', preferences)
       : undefined) ||
-    getI18n((task.creationProposal ? featureCreationPreview(task.creationProposal.content) : task.feature) as never, 'title', preferences) ||
+    getI18n(
+      (task.creationProposal
+        ? featureCreationPreview(task.creationProposal.content)
+        : task.feature) as never,
+      'title',
+      preferences,
+    ) ||
     ''
   const featureId = resolvedFeature?.id ?? task.featureId ?? null
   const layerName =
@@ -402,8 +432,13 @@ function showReviewToast(action: TaskReviewUiAction): void {
   if (!task) return
 
   const featureTitle =
-    getI18n((task.creationProposal ? featureCreationPreview(task.creationProposal.content) : task.feature) as never, 'title', adminCtx.view.getUserPreferences()) ??
-    task.id
+    getI18n(
+      (task.creationProposal
+        ? featureCreationPreview(task.creationProposal.content)
+        : task.feature) as never,
+      'title',
+      adminCtx.view.getUserPreferences(),
+    ) ?? task.id
 
   toast.success(`${featureTitle} ${getTaskReviewActionToastLabel(action)}`)
 }
@@ -586,7 +621,10 @@ const imageProviderProps = $derived.by(() => {
             ctxIdSecondary: task.id,
           }
         : isValid && task?.creationProposal
-          ? { ctxTypeSecondary: ImageContextResourceExtended.task, ctxIdSecondary: task.id }
+          ? {
+              ctxTypeSecondary: ImageContextResourceExtended.task,
+              ctxIdSecondary: task.id,
+            }
           : undefined,
   }
 })
@@ -597,29 +635,30 @@ const imageProviderModel = useImageProviderModel(
 )
 </script>
 
-<Dialog.Root bind:open={duplicateOpen}>
-  <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/50" />
-    <Dialog.Content class="fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 gap-5 rounded-2xl border border-border bg-background p-6 text-foreground shadow-xl">
-      <Dialog.Title class="text-xl font-semibold">Duplicate Feature</Dialog.Title>
-      <Dialog.Description class="text-sm text-muted-foreground">Merge useful information and photos into an existing Feature, or discard this contribution.</Dialog.Description>
-      <button class="rounded-lg bg-primary px-4 py-3 text-primary-content" onclick={() => { duplicateOpen = false; duplicateMergeOpen = true }}>Merge with existing</button>
-      <button class="rounded-lg border border-border px-4 py-3" disabled={isReviewBusy} onclick={async () => { if (await handleReview('reject','Duplicate contribution discarded')) duplicateOpen = false }}>Discard</button>
-      <Dialog.Close class="text-sm text-muted-foreground">Cancel</Dialog.Close>
-    </Dialog.Content>
-  </Dialog.Portal>
-</Dialog.Root>
 {#if task && (task.featureId || task.creationProposal) && effectiveLayerId}
-  <FeatureIdentityDialog bind:open={duplicateMergeOpen} kind="merge" featureId={task.featureId ?? ''} creationProposal={Boolean(task.creationProposal && !task.featureId)} layerId={effectiveLayerId} duplicateTaskId={task.id}
-    onApplied={async ids => { await adminCtx.invalidateAndRefresh(FirstClassResource.task); await goto(`/admin/features/${encodeURIComponent(ids[0])}`) }} />
+  <FeatureIdentityDialog
+    bind:open={duplicateOpen}
+    duplicateChoice
+    source={reviewDialogTrigger}
+    onDiscard={() => handleReview('reject', 'Duplicate contribution discarded')}
+    kind="merge"
+    featureId={task.featureId ?? ''}
+    creationProposal={Boolean(task.creationProposal && !task.featureId)}
+    layerId={effectiveLayerId}
+    duplicateTaskId={task.id}
+    onApplied={async ids => {
+      await adminCtx.invalidateAndRefresh(FirstClassResource.task)
+      await goto(`/admin/features/${encodeURIComponent(ids[0])}`)
+    }}
+  />
 {/if}
-
 
 {#if task}
   <TaskInfoDialog bind:open={isInfoOpen} type={task.type as TaskType} />
 {/if}
 <TaskRejectDialog
   bind:open={isRejectDialogOpen}
+  source={reviewDialogTrigger}
   bind:value={reviewReason}
   isBusy={isReviewBusy}
   onConfirm={handleConfirmReject}
@@ -628,8 +667,18 @@ const imageProviderModel = useImageProviderModel(
 <ImageProvider model={imageProviderModel}>
   {#if task}
     {#if task.type === 'newPhoto' && task.revisionReviewRequired && task.featureId}
-      <div id="task-proposal-review"><FeatureRevisionWorkspace featureId={task.featureId} taskId={task.id} reviewMode={true}
-        onPublished={async () => { const fresh = await refreshRemoteQuery(getEditorRequest()); taskState = structuredClone(fresh.data) as Task | null; if (taskState?.isReviewed) goToNextTask(adminCtx) }} /></div>
+      <div id="task-proposal-review">
+        <FeatureRevisionWorkspace
+          featureId={task.featureId}
+          taskId={task.id}
+          reviewMode={true}
+          onPublished={async () => {
+            const fresh = await refreshRemoteQuery(getEditorRequest())
+            taskState = structuredClone(fresh.data) as Task | null
+            if (taskState?.isReviewed) goToNextTask(adminCtx)
+          }}
+        />
+      </div>
     {/if}
     <TaskEditor
       {task}

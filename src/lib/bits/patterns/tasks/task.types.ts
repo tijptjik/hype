@@ -67,6 +67,9 @@ export type TaskLayerProps = {
 }
 
 export type TaskMapProps = {
+  initialZoom?: number
+  showFullscreen?: boolean
+  label?: string
   coordinates: [number, number]
   addressMeta: AddressMeta | null
   mapStyleCode?: string | null

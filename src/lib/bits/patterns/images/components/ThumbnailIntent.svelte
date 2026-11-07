@@ -18,8 +18,12 @@ let {
   contentSide = 'left',
   disabled = false,
   class: className = '',
+  contentClass = '',
+  label,
 }: ThumbnailIntentSelectorProps & {
   class?: string
+  contentClass?: string
+  label?: string
 } = $props()
 let open = $state(false)
 const currentIntent = $derived((item.intent ?? 'general') as Intent)
@@ -53,7 +57,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
             ? 'bg-primary text-primary-content hover:bg-primary/85'
             : 'border border-border-input bg-(--theme-panel) text-base-content hover:bg-base-200',
       )}
-      aria-label={m.gallery__change_image_intent()}
+      aria-label={label ?? m.gallery__change_image_intent()}
       data-tooltip={intentErrorMessage ?? undefined}
     >
       <span class="overflow-hidden text-ellipsis whitespace-nowrap"
@@ -66,7 +70,10 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
         side={contentSide}
         align="center"
         sideOffset={10}
-        class="bits-theme z-[200] flex w-40 flex-col gap-1 overflow-hidden rounded-xl border border-border-input bg-(--theme-panel) p-1.5 text-base-content shadow-xl backdrop-blur-sm"
+        class={cx(
+          'bits-theme z-[200] flex w-40 flex-col gap-1 overflow-hidden rounded-xl border border-border-input bg-(--theme-panel) p-1.5 text-base-content shadow-xl backdrop-blur-sm',
+          contentClass,
+        )}
       >
         {#each orderedIntentOptions as option}
           <button

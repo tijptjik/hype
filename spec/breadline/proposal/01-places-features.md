@@ -1352,3 +1352,13 @@ loading. Once both parents are available, their current settings take precedence
 navigation does not wait for those independent reads. Core Profile does not fetch the
 full Location association; Location editing still loads that detailed model. The minimal
 `compact` identity response does not carry naming data. Refs #194.
+
+### Contribution and duplicate review (Refs #194, #213)
+
+Contribution review presentation (Refs #194, #213): new Feature reviews reuse the
+Profile visual and description layout, with inline photo selection and a separate
+contributed address. Resolve duplicate opens one button-origin dialog that morphs from
+compact search into a Discard / Keep comparison. Categories load their allowed catalogue
+options, while translated field edits and per-photo intents are validated server-side
+before the existing atomic merge. The kept identity remains explicit on the right; photo
+movement retains immutable revision pins and attribution.
