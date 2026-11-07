@@ -66,9 +66,12 @@ let layerId = $state('current')
 const task = $derived({
   id: 'review-fixture',
   featureId: 'review-fixture',
-  type: 'newFeature',
-  revisionReviewRequired: true,
-  contributorId: null,
+  type: new URLSearchParams(window.location.search).has('missing') ? 'reportedMissing' : 'newFeature',
+  message: new URLSearchParams(window.location.search).has('long')
+    ? 'Building got cleaned up and sign removed. '.repeat(100)
+    : 'Building got cleaned up and sign removed',
+  revisionReviewRequired: !new URLSearchParams(window.location.search).has('legacy'),
+  contributorId: new URLSearchParams(window.location.search).has('missing') ? 'report-submitter' : null,
   createdAt: '2026-11-07',
   images,
   feature: {
@@ -80,8 +83,9 @@ const task = $derived({
       zhHant: { title: '兒童復康中心', description: '支援兒童及家庭。' },
       en: {
         title: 'Rotary ReHabAid Centre for Children',
-        description:
-          '<p>A community centre supporting children and their families.</p><p>Review the <strong>submitted photos</strong> and contributed location below.</p>',
+        description: new URLSearchParams(window.location.search).has('long')
+          ? '<p>A longer submitted description that must remain fully readable during review.</p>'.repeat(40)
+          : '<p>A community centre supporting children and their families.</p><p>Review the <strong>submitted photos</strong> and contributed location below.</p>',
         displayAddress: '5–7 Sha Wan Drive, Sandy Bay',
       },
     },
@@ -101,8 +105,8 @@ onDestroy(() => {
 })
 </script>
 
-<div class="bits-theme bg-panel h-screen">
-  <div class="flex h-16 items-center justify-end px-3" data-task-header>
+<div class="bits-theme flex h-screen flex-col bg-panel">
+  <div class="flex h-16 shrink-0 items-center justify-end px-3" data-task-header>
     <HeaderTaskActions
       actions={[{ text: 'Reject', onClick: () => {} }]}
       content={{

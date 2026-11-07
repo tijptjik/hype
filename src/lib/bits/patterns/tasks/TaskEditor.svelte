@@ -26,7 +26,7 @@ import { featureCreationPreview } from '#lib/revisions/featureCreationPreview.js
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // TYPES
 import type { Point } from 'geojson'
-import type { TaskEditorProps, TaskFieldItem, TaskDescriptorItem } from './task.types'
+import type { TaskEditorProps, TaskFieldItem } from './task.types'
 
 let {
   task,
@@ -186,46 +186,6 @@ const reportDistance = $derived.by(() => {
     : '-'
 })
 
-const missingReportDescriptors = $derived([
-  {
-    title: m.away_honest_anaconda_honor(),
-    items: [
-      {
-        label: m.noisy_lime_tuna_charm(),
-        value: normalizeDisplayValue(task.message),
-        wrap: true,
-      },
-      {
-        label: m.bland_tasty_lizard_rest(),
-        value: normalizeDisplayValue(reportDate),
-      },
-    ],
-  },
-  {
-    title: m.true_equal_polecat_surge(),
-    items: [
-      {
-        label: m.weary_bad_dog_revive(),
-        value: normalizeDisplayValue(captureDate),
-      },
-      {
-        label: m.house_watery_jaguar_edit(),
-        value: normalizeDisplayValue(reportDistance),
-      },
-    ],
-  },
-  {
-    title: m.loose_grassy_snake_hug(),
-    items: [
-      {
-        label: m.male_silly_jannes_feel(),
-        value: featureAddress,
-        wrap: true,
-      },
-    ],
-  },
-] satisfies Array<{ title: string; items: TaskDescriptorItem[] }>)
-
 $effect(() => {
   const image = task.images?.[0]?.image
   if (!image?.publicId || !isReportedMissing) {
@@ -255,14 +215,14 @@ $effect(() => {
 <svelte:window bind:innerHeight={viewportHeight} bind:innerWidth={viewportWidth} />
 
 <TaskPrimitive.TaskRoot
-  class={`${className} ${isNewFeature || isNewPhoto ? 'p-0!' : ''}`}
-  hasAside={isReportedMissing}
+  class={`${className} ${isNewFeature || isNewPhoto || isReportedMissing ? 'p-0!' : ''}`}
+  hasAside={false}
 >
-  {#if isNewFeature}
-    <section class="bg-panel min-w-0" aria-label={m.task__feature()}>
-      <!-- Stacked profile panes use content height instead of a percentage flex basis. -->
+  {#if isNewFeature || isReportedMissing}
+    <section class="flex min-h-full min-w-0 flex-col bg-panel" aria-label={m.task__feature()}>
+      <!-- Text keeps its natural height; desktop visuals absorb the remaining review space. -->
       <FormFeatureVisualSection
-        class={String.raw`[&_.bits-feature-visual\_\_map]:p-0! [&_.bits-feature-visual\_\_image]:p-0! max-[900px]:[&_.bits-feature-visual\_\_body]:h-auto! max-[900px]:[&_.bits-feature-visual\_\_image]:flex-none!`}
+        class={String.raw`${visualCollapsed ? 'shrink-0' : 'min-[901px]:flex-1'} [&_.bits-feature-visual\_\_map]:p-0! [&_.bits-feature-visual\_\_image]:p-0! max-[900px]:[&_.bits-feature-visual\_\_body]:h-auto! max-[900px]:[&_.bits-feature-visual\_\_image]:flex-none!`}
         expandedHeight={Math.min(
           1200,
           viewportHeight * (viewportWidth <= 900 ? 0.4 : 0.65),
@@ -273,7 +233,9 @@ $effect(() => {
         splitResizeLabel={m.feature_visual_resize()}
         showCenterControls={false}
         showNavigationControls={false}
-        contributorId={task.feature?.contributorId ?? task.contributorId}
+        contributorId={isReportedMissing
+          ? task.contributorId
+          : task.feature?.contributorId ?? task.contributorId}
         createdAt={task.createdAt}
         isIntangible={task.creationProposal?.content.profile.isIntangible ??
           Boolean(task.feature?.isIntangible)}
@@ -327,6 +289,7 @@ $effect(() => {
         {/snippet}
       </FormFeatureVisualSection>
 
+      <div class="shrink-0" data-task-review-details>
       {#if task.identityTransferred && !isReviewed}
         <div class="border-border grid gap-2 border-b p-6 text-sm">
           <p>
@@ -343,6 +306,28 @@ $effect(() => {
         </div>
       {/if}
 
+      {#if isReportedMissing}
+        <div class="grid min-w-0 gap-8 p-6 @min-[48rem]/task:grid-cols-2">
+          <section class="min-w-0">
+            <h3 class={fieldLabelStyles}>{m.noisy_lime_tuna_charm()}</h3>
+            <p class="mt-4 whitespace-pre-wrap break-words text-base leading-relaxed">{normalizeDisplayValue(task.message)}</p>
+          </section>
+          <section class="min-w-0 rounded-xl border border-border bg-foreground/[0.03] p-6">
+            <h3 class={fieldLabelStyles}>{m.house_watery_jaguar_edit()}</h3>
+            <p class="mt-4 text-3xl font-semibold tabular-nums">{reportDistance}</p>
+            <dl class="mt-5 grid gap-3 border-t border-border/50 pt-4 text-sm">
+              <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-4">
+                <dt class="text-foreground/60">{m.bland_tasty_lizard_rest()}</dt>
+                <dd class="m-0 text-right font-medium tabular-nums">{reportDate}</dd>
+              </div>
+              <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-4">
+                <dt class="text-foreground/60">{m.weary_bad_dog_revive()}</dt>
+                <dd class="m-0 text-right font-medium tabular-nums">{captureDate}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+      {:else}
       <div
         class="@min-[48rem]/task:[&>section+section]:border-border/50 grid min-w-0 gap-y-6 py-8 @min-[48rem]/task:grid-cols-3 @min-[48rem]/task:[&>section+section]:border-l"
       >
@@ -405,12 +390,14 @@ $effect(() => {
           {featureAddress}
         </p>
       </section>
-      {#if featureFields.length > 0}
+      {/if}
+      {#if isNewFeature && featureFields.length > 0}
         <TaskPrimitive.TaskFields
           title={m.admin__forms_common_fields()}
           items={featureFields}
         />
       {/if}
+      </div>
     </section>
   {:else}
     <TaskPrimitive.TaskMain class={isNewPhoto ? 'rounded-none border-0' : ''}>
@@ -467,29 +454,5 @@ $effect(() => {
       </div>
     </TaskPrimitive.TaskMain>
 
-    {#if !isNewPhoto}
-      <TaskPrimitive.TaskAside>
-        {#if isReportedMissing}
-          <div class="flex shrink-0 flex-col">
-            {#each missingReportDescriptors as descriptor (descriptor.title)}
-              <TaskPrimitive.TaskDescriptors
-                title={descriptor.title}
-                items={descriptor.items}
-                class="max-h-full shrink-0"
-              />
-            {/each}
-          </div>
-
-          {#if featureCoordinates}
-            <TaskPrimitive.TaskMap
-              coordinates={featureCoordinates}
-              addressMeta={task.feature?.addressMeta ?? null}
-              {mapStyleCode}
-              class="min-h-[14rem] flex-1"
-            />
-          {/if}
-        {/if}
-      </TaskPrimitive.TaskAside>
-    {/if}
   {/if}
 </TaskPrimitive.TaskRoot>
