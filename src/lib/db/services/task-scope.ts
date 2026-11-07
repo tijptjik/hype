@@ -35,7 +35,8 @@ export const taskFeatureScopeCondition = (): SQL<unknown> => sql`exists (
 export async function taskLifecycleScopeCondition(db: Database): Promise<SQL> {
   const existing = taskFeatureScopeCondition()
   if (!await hasFeatureLifecycleStorage(db)) return existing
-  return sql`(${existing}) OR EXISTS (
+  // Keep both ancestry branches inside the caller's identity and authorization filters.
+  return sql`((${existing}) OR EXISTS (
     SELECT 1 FROM main.task creation_task
     JOIN featureRevisionProposal proposal ON proposal.id=creation_task.proposalId
     JOIN layer creation_layer ON creation_layer.id=json_extract(proposal.creationScope,'$.layerId')
@@ -49,7 +50,7 @@ export async function taskLifecycleScopeCondition(db: Database): Promise<SQL> {
       AND creation_layer.organisationId=creation_org.id
       AND json_extract(proposal.creationScope,'$.projectId')=creation_project.id
       AND json_extract(proposal.creationScope,'$.organisationId')=creation_org.id
-  )`
+  ))`
 }
 
 /**
