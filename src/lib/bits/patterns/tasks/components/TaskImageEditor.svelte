@@ -25,6 +25,8 @@ const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx, { publishFromIntent: false })
 let {
   featureId,
+  pendingItemCount = 0,
+  researchOutcome,
   layout = 'sidebar',
   readonly = false,
   intentReadonly = readonly,
@@ -33,6 +35,8 @@ let {
   onMultilingualExpandedChange,
 }: {
   featureId?: string | null
+  pendingItemCount?: number
+  researchOutcome?: 'accepted' | 'rejected' | null
   layout?: 'sidebar' | 'bottom' | 'top'
   readonly?: boolean
   intentReadonly?: boolean
@@ -45,6 +49,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
 </script>
 
 <ImageEditor
+  {pendingItemCount}
   isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   {layout}
   showNavButtons={false}

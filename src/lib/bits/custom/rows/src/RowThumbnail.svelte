@@ -79,9 +79,13 @@ function handleClick(event: Event): void {
   tabindex="-1"
 >
   {#if displayedSrc}
+    <!-- Virtual-list overscan must not compete with navigation for image requests. -->
     <img
       src={displayedSrc}
       alt=""
+      loading="lazy"
+      decoding="async"
+      fetchpriority="low"
       class={rowThumbnailImageClass}
       onerror={handleImageError}
     >

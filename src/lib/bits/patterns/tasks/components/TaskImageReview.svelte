@@ -43,6 +43,8 @@ let {
   taskId,
   projectId,
   initialReport,
+  layout,
+  pendingItemCount = 0,
   readonly = false,
   reviewAction,
   onChange,
@@ -52,6 +54,8 @@ let {
   taskId: string
   projectId?: string | null
   initialReport?: boolean
+  layout?: 'top' | 'bottom' | 'sidebar'
+  pendingItemCount?: number
   readonly?: boolean
   reviewAction?: string | null
   onAcceptActionChange?: (
@@ -531,7 +535,9 @@ onMount(() => {
         pendingReviews.length <= 1}
       canSort={canEdit && !hasExistingImages && pendingReviews.length <= 1}
       onSortChange={sortReview}
-      layout={initialReport ? 'top' : galleryWidth < 640 ? 'bottom' : 'sidebar'}
+      layout={layout ??
+        (initialReport ? 'top' : galleryWidth < 640 ? 'bottom' : 'sidebar')}
+      {pendingItemCount}
       {items}
       {activeId}
       fit="fit"

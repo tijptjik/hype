@@ -1,4 +1,4 @@
-import type { RemoteQuery } from '@sveltejs/kit'
+import type { RemoteQuery } from '$app/server'
 import type { Task } from '#lib/db/zod/schema/task.types.js'
 
 export const route = $state({

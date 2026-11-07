@@ -1,4 +1,7 @@
 <script lang="ts">
+// SVELTE
+import { onMount } from 'svelte'
+import { preloadCode } from '$app/navigation'
 // CONTEXT
 import { useAdminIndexQuery } from '#lib/adapters/useAdminIndexQuery.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -86,6 +89,11 @@ const sortables = createSortables([
 // CONTEXT
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
+
+// Warm the editor modules while the queue is visible, before a task is selected.
+onMount(() => {
+  void preloadCode('/admin/tasks/[task]').catch(() => {})
+})
 adminCtx.setFacet(false, false, FirstClassResource.task)
 
 // ELEMENTS

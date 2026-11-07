@@ -2,6 +2,8 @@
 import { tick } from 'svelte'
 import { cx } from '#lib/bits/utils.js'
 import Maplet from '#lib/bits/patterns/maps/Maplet.svelte'
+import MapLoading from '#lib/bits/patterns/maps/MapLoading.svelte'
+import { m } from '#lib/i18n.js'
 import type { TaskMapProps } from '../task.types'
 import type { MapController } from '#lib/map/controller.js'
 import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
@@ -15,6 +17,8 @@ type StartViewTransitionCapableDocument = Document & {
 
 let {
   coordinates,
+  loading = false,
+  comparison = null,
   initialZoom = 19,
   showFullscreen = true,
   expandOnClick = false,
@@ -82,19 +86,31 @@ function handleWindowKeydown(event: KeyboardEvent): void {
   )}
   style={isFullscreen ? 'view-transition-name: task-map-stage;' : undefined}
 >
-  <Maplet
-    {coordinates}
-    {initialZoom}
-    draggable={false}
-    {addressMeta}
-    {mapStyleCode}
-    onMapReady={handleTaskMapReady}
-  />
+  {#if coordinates}
+    <Maplet
+      {comparison}
+      showMarker={!comparison}
+      {coordinates}
+      {initialZoom}
+      draggable={false}
+      {addressMeta}
+      {mapStyleCode}
+      onMapReady={handleTaskMapReady}
+    />
+  {:else if loading}
+    <MapLoading />
+  {:else}
+    <p
+      class="text-muted-foreground flex h-full items-center justify-center p-4 text-sm"
+    >
+      {m.location_map_unavailable()}
+    </p>
+  {/if}
 
-  {#if expandOnClick && !isFullscreen}
+  {#if coordinates && expandOnClick && !isFullscreen}
     <button
       type="button"
-      class="absolute inset-0 z-20 cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+      class="focus-visible:outline-accent absolute inset-0 z-20 cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2"
       aria-label="Open fullscreen map"
       onclick={() => {
         void toggleFullscreen()
@@ -102,10 +118,10 @@ function handleWindowKeydown(event: KeyboardEvent): void {
     ></button>
   {/if}
 
-  {#if (showFullscreen && !expandOnClick) || isFullscreen}
+  {#if coordinates && ((showFullscreen && !expandOnClick) || isFullscreen)}
     <button
       type="button"
-      class="absolute bottom-4 left-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-panel/95 text-foreground transition hover:bg-panel/90"
+      class="border-border bg-panel/95 text-foreground hover:bg-panel/90 absolute bottom-4 left-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border transition"
       onclick={() => {
         void toggleFullscreen()
       }}

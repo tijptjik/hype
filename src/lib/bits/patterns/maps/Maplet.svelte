@@ -18,6 +18,7 @@ import {
 import { freezeMapForResize, holdMapSizeDuringFlight } from '#lib/map/resizeSnapshot.js'
 import { createMapController, type MapController } from '#lib/map/controller.js'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
+import MapLoading from './MapLoading.svelte'
 import { VISUAL_TRANSITION_MS } from '#lib/bits/custom/main/visualTransition.js'
 // ICONS
 import ArrowsPointingIn from 'virtual:icons/proicons/full-screen-minimize'
@@ -555,11 +556,9 @@ $effect(() => {
       </button>
     {/if}
   </div>
-  <!-- Loading Spinner -->
+  <!-- Loading stays inside the final map pane until the map is ready. -->
   {#if !isMapLoaded}
-    <div class="bg-base-300 absolute inset-0 flex items-center justify-center">
-      <div class="loading loading-ring loading-lg text-primary"></div>
-    </div>
+    <MapLoading />
   {/if}
 
   <!-- Map Container -->

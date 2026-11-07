@@ -228,6 +228,8 @@ export type ImageEditorProps = {
   canDownloadActiveImage?: boolean
   isEditBusy?: boolean
   isReadonly?: boolean
+  /** Known attachment count reserves the final thumbnail rail while evidence loads. */
+  pendingItemCount?: number
   /** Image evidence is still being fetched; an empty list is not an upload prompt. */
   isLoading?: boolean
   isIntentDisabled?: boolean

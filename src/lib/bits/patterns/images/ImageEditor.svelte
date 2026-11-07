@@ -12,6 +12,7 @@ import ThumbnailWrapper from './ThumbnailWrapper.svelte'
 import ImageBackdrop from './components/ImageBackdrop.svelte'
 import { getGalleryBackgroundSrc } from '#lib/client/services/image.js'
 import ImageSkeleton from './components/ImageSkeleton.svelte'
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 // IMAGE ORDER
 import { orderGalleryForReview } from '#lib/images/galleryOrder.js'
 import { ImageIntentCatalogueSchema } from '#lib/images/intents.js'
@@ -50,6 +51,7 @@ let {
   isReadonly = false,
   showSortControls = !isReadonly,
   isLoading = false,
+  pendingItemCount = 0,
   isIntentDisabled = false,
   viewerControlsOffsetClass = 'bottom-4',
   getIsHighlighted,
@@ -78,16 +80,30 @@ let {
 }: ImageEditorProps = $props()
 
 // Keep the latest local arrangement visible while older revision saves reconcile.
-let optimisticSort = $state<{ mode: 'automatic' | 'manual'; order: string[] } | null>(null)
+let optimisticSort = $state<{ mode: 'automatic' | 'manual'; order: string[] } | null>(
+  null,
+)
 const sortMode = $derived(optimisticSort?.mode ?? savedSortMode)
 const items = $derived.by<ViewerRenderable[]>(() => {
   if (!optimisticSort) return savedItems
   const positions = new Map(optimisticSort.order.map((id, index) => [id, index]))
-  const ordered = [...savedItems].sort((a, b) =>
-    (positions.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (positions.get(b.id) ?? Number.MAX_SAFE_INTEGER))
+  const ordered = [...savedItems].sort(
+    (a, b) =>
+      (positions.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+      (positions.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+  )
   if (optimisticSort.mode === 'manual') return ordered
-  const intentOrder = ImageIntentCatalogueSchema.safeParse(savedItems[0]?.meta?.intentOptions).data?.map(intent => intent.id)
-  return orderGalleryForReview(ordered.map(item => ({ ...item, createdAt: item.createdAt ?? item.status?.sortCreatedAt })), 'automatic', intentOrder)
+  const intentOrder = ImageIntentCatalogueSchema.safeParse(
+    savedItems[0]?.meta?.intentOptions,
+  ).data?.map(intent => intent.id)
+  return orderGalleryForReview(
+    ordered.map(item => ({
+      ...item,
+      createdAt: item.createdAt ?? item.status?.sortCreatedAt,
+    })),
+    'automatic',
+    intentOrder,
+  )
 })
 let sortBusy = $state(false)
 let sortMessage = $state('')
@@ -102,7 +118,9 @@ let pendingSort: Promise<boolean> | null = null
 let sortRequest = 0
 let confirmedPreviousSort: typeof previousSort = null
 let disposed = false
-onDestroy(() => { disposed = true })
+onDestroy(() => {
+  disposed = true
+})
 
 /** Apply each drag immediately and persist only the newest order still waiting to be sent.
  * @param mode Desired mode. @param order Explicit drag order, or the latest visible order for Automatic.
@@ -122,7 +140,8 @@ async function changeSort(
   if (!predecessor) confirmedPreviousSort = previousSort
   const nextOrder = [...(order ?? items.map(item => item.id))]
   const previous = { mode: sortMode, order: items.map(item => item.id) }
-  const nextUndo = !undo && mode === 'automatic' && previous.mode === 'manual' ? previous : null
+  const nextUndo =
+    !undo && mode === 'automatic' && previous.mode === 'manual' ? previous : null
   optimisticSort = { mode, order: nextOrder }
   previousSort = nextUndo
   sortBusy = true
@@ -141,7 +160,8 @@ async function changeSort(
       return true
     } catch (cause) {
       if (!disposed && sortScope === requestedScope)
-        sortMessage = cause instanceof Error ? cause.message : 'Could not save gallery order.'
+        sortMessage =
+          cause instanceof Error ? cause.message : 'Could not save gallery order.'
       return false
     }
   })()
@@ -153,7 +173,10 @@ async function changeSort(
     optimisticSort = null
     previousSort = confirmedPreviousSort
     undoState = `${savedSortMode}:${savedItems.map(item => item.id).join('|')}`
-    sortMembership = savedItems.map(item => item.id).sort().join('|')
+    sortMembership = savedItems
+      .map(item => item.id)
+      .sort()
+      .join('|')
     pendingSort = null
     sortBusy = false
     if (!disposed) onSortPendingChange?.(null)
@@ -194,17 +217,12 @@ let thumbnailFollowActiveRequestKey = $state(0)
 let thumbnailFollowActiveRequestId = $state<string | null>(null)
 const isStackedLayout = $derived(layout !== 'sidebar')
 const activeItem = $derived(items.find(item => item.id === activeId) ?? items[0])
-const hasItems = $derived(items.length > 0)
+const loadingItems = $derived(isLoading && !items.length)
+const displayedItemCount = $derived(loadingItems ? pendingItemCount : items.length)
+const hasItems = $derived(displayedItemCount > 0)
 const adminThumbnailSize = 192
 const verticalRailPaddingLeftPx = 16
 const verticalRailPaddingRightPx = 16
-const hasGalleryActions = $derived(Boolean(onAddFiles || onDelete || hasSortControls))
-const verticalRailBottomBarHeightPx = $derived(hasGalleryActions ? 79 : 0)
-const verticalRailWidthPx =
-  adminThumbnailSize + verticalRailPaddingLeftPx + verticalRailPaddingRightPx
-const viewerFit = $derived.by<'fit' | 'cover'>(() =>
-  presentationMode === 'cover' ? 'cover' : fit,
-)
 const hasSortControls = $derived(
   Boolean(
     showSortControls &&
@@ -213,9 +231,14 @@ const hasSortControls = $derived(
       (sortMode === 'manual' || sortBusy || previousSort?.mode === 'manual'),
   ),
 )
-const railWidth = $derived(
-  hasItems ? `${verticalRailWidthPx}px` : '0px',
+const hasGalleryActions = $derived(Boolean(onAddFiles || onDelete || hasSortControls))
+const verticalRailBottomBarHeightPx = $derived(hasGalleryActions ? 79 : 0)
+const verticalRailWidthPx =
+  adminThumbnailSize + verticalRailPaddingLeftPx + verticalRailPaddingRightPx
+const viewerFit = $derived.by<'fit' | 'cover'>(() =>
+  presentationMode === 'cover' ? 'cover' : fit,
 )
+const railWidth = $derived(hasItems ? `${verticalRailWidthPx}px` : '0px')
 const railVisibilityClass = $derived(
   hasItems
     ? 'translate-x-0 opacity-100'
@@ -286,7 +309,7 @@ $effect(() => {
         />
       {/if}
 
-      {#if !isStackedLayout}
+      {#if !isStackedLayout && !loadingItems}
         <div
           class="pointer-events-none absolute inset-x-0 bottom-4 z-40 flex justify-center"
         >
@@ -351,43 +374,51 @@ $effect(() => {
           class="min-h-0 flex-1"
           style={`padding-bottom: ${verticalRailBottomBarHeightPx}px;`}
         >
-          <ThumbnailWrapper
-            {items}
-            onReorder={onSortChange ? ids => changeSort('manual', ids) : undefined}
-            reorderDisabled={!canSort || isDeleteMode}
-            {activeId}
-            followActiveIdRequestKey={thumbnailFollowActiveRequestKey}
-            followActiveIdRequestId={thumbnailFollowActiveRequestId}
-            variant="admin"
-            orientation="vertical"
-            trackClass="pt-4!"
-            class="h-full min-h-0"
-            size={adminThumbnailSize}
-            {fit}
-            prefetchFit={viewerFit}
-            {isDeleteMode}
-            {getIsHighlighted}
-            {highlightClass}
-            {getBadgeLabel}
-            {getBadgeClass}
-            {getIsBlurred}
-            {getIsGreyscale}
-            {getIsLoading}
-            {getIsUploading}
-            {isIntentDisabled}
-            {onIntentChange}
-            {onDelete}
-            {onRetryUpload}
-            onLoad={onThumbnailLoad}
-            onError={onThumbnailError}
-            onSelect={item => {
-              onActiveIdChange?.(item.id)
-            }}
-            onHover={item => {
-              if (disableHoverPreview) return
-              onActiveIdChange?.(item.id)
-            }}
-          />
+          {#if loadingItems}
+            <div class="flex flex-col gap-4 p-4" aria-hidden="true">
+              {#each Array.from({ length: Math.min(displayedItemCount, 6) }) as _}
+                <Skeleton class="size-48 shrink-0 rounded-xl" />
+              {/each}
+            </div>
+          {:else}
+            <ThumbnailWrapper
+              {items}
+              onReorder={onSortChange ? ids => changeSort('manual', ids) : undefined}
+              reorderDisabled={!canSort || isDeleteMode}
+              {activeId}
+              followActiveIdRequestKey={thumbnailFollowActiveRequestKey}
+              followActiveIdRequestId={thumbnailFollowActiveRequestId}
+              variant="admin"
+              orientation="vertical"
+              trackClass="pt-4!"
+              class="h-full min-h-0"
+              size={adminThumbnailSize}
+              {fit}
+              prefetchFit={viewerFit}
+              {isDeleteMode}
+              {getIsHighlighted}
+              {highlightClass}
+              {getBadgeLabel}
+              {getBadgeClass}
+              {getIsBlurred}
+              {getIsGreyscale}
+              {getIsLoading}
+              {getIsUploading}
+              {isIntentDisabled}
+              {onIntentChange}
+              {onDelete}
+              {onRetryUpload}
+              onLoad={onThumbnailLoad}
+              onError={onThumbnailError}
+              onSelect={item => {
+                onActiveIdChange?.(item.id)
+              }}
+              onHover={item => {
+                if (disableHoverPreview) return
+                onActiveIdChange?.(item.id)
+              }}
+            />
+          {/if}
         </div>
 
         <div
@@ -451,10 +482,16 @@ $effect(() => {
     data-image-thumbnail-strip
     class={cx(
       'shrink-0 overflow-hidden transition-[height,opacity] duration-300 ease-out motion-reduce:transition-none',
-      items.length > 1 ? 'h-32 opacity-100' : 'h-0 opacity-0',
+      displayedItemCount > 1 ? 'h-32 opacity-100' : 'h-0 opacity-0',
     )}
   >
-    {#if items.length > 1}
+    {#if loadingItems && displayedItemCount > 1}
+      <div class="flex h-32 gap-2 px-3 py-2" aria-hidden="true">
+        {#each Array.from({ length: Math.min(displayedItemCount, 8) }) as _}
+          <Skeleton class="size-28 shrink-0 rounded-xl" />
+        {/each}
+      </div>
+    {:else if items.length > 1}
       {@render thumbnailTrack()}
     {/if}
   </div>
@@ -499,7 +536,7 @@ $effect(() => {
       type="button"
       aria-label="Restore manual image order"
       title="Restore manual image order"
-      class="flex size-12 items-center justify-center border-0 bg-transparent text-base-content/88 shadow-none hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-35"
+      class="text-base-content/88 hover:text-base-content focus-visible:outline-primary flex size-12 items-center justify-center border-0 bg-transparent shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-35"
       disabled={!canSort && !sortBusy}
       onclick={() =>
         previousSort && void changeSort(previousSort.mode, previousSort.order, true)}
@@ -512,7 +549,7 @@ $effect(() => {
       aria-label="Automatic image sorting"
       aria-pressed={sortMode === 'automatic'}
       title={sortMode === 'manual' ? 'Restore automatic order' : 'Automatic order'}
-      class="flex size-12 items-center justify-center border-0 bg-transparent text-base-content/88 shadow-none hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-35"
+      class="text-base-content/88 hover:text-base-content focus-visible:outline-primary flex size-12 items-center justify-center border-0 bg-transparent shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-35"
       class:text-primary={sortMode === 'automatic'}
       disabled={(!canSort && !sortBusy) || (sortMode === 'automatic' && !sortBusy)}
       onclick={() => void changeSort('automatic')}

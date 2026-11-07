@@ -58,6 +58,7 @@ export type TaskFieldsProps = {
 }
 
 export type TaskLayerProps = {
+  loading?: boolean
   title?: string | null
   currentLayerId: string | null
   options: TaskEditorLayerOption[]
@@ -72,16 +73,34 @@ export type TaskMapProps = {
   showFullscreen?: boolean
   expandOnClick?: boolean
   label?: string
-  coordinates: [number, number]
+  coordinates: [number, number] | null
+  loading?: boolean
+  comparison?: { before: [number, number]; after: [number, number] } | null
   addressMeta: AddressMeta | null
   mapStyleCode?: string | null
   class?: string
 }
 
 export type TaskEditorProps = {
+  onImageAcceptActionChange?: (
+    action:
+      | {
+          taskId: string
+          disabled: boolean
+          accept: (mode?: 'acceptAll' | 'acceptClassified') => Promise<void>
+        }
+      | undefined,
+  ) => void
+  onImagesAccepted?: () => Promise<void>
+  onImageReviewChange?: (
+    value:
+      | { taskId: string; reviewId: string | null; proposalVersion: string }
+      | undefined,
+    busy: boolean,
+  ) => void
   localeState?: ProfileLocaleState
   onLocaleStateChange?: (state: ProfileLocaleState) => void
-  task: Task
+  task: Task | null
   assignableLayers?: TaskEditorLayerOption[]
   canReassignLayer?: boolean
   isLayerBusy?: boolean

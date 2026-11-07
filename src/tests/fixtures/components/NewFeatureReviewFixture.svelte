@@ -63,15 +63,22 @@ const layers = ['Current', 'Other'].map(name => ({
   i18n: { en: { name } },
 })) as TaskEditorLayerOption[]
 let layerId = $state('current')
+let loading = $state(new URLSearchParams(location.search).has('pending'))
 const task = $derived({
   id: 'review-fixture',
   featureId: 'review-fixture',
-  type: new URLSearchParams(window.location.search).has('missing') ? 'reportedMissing' : 'newFeature',
+  type:
+    new URLSearchParams(location.search).get('type') ??
+    (new URLSearchParams(window.location.search).has('missing')
+      ? 'reportedMissing'
+      : 'newFeature'),
   message: new URLSearchParams(window.location.search).has('long')
     ? 'Building got cleaned up and sign removed. '.repeat(100)
     : 'Building got cleaned up and sign removed',
   revisionReviewRequired: !new URLSearchParams(window.location.search).has('legacy'),
-  contributorId: new URLSearchParams(window.location.search).has('missing') ? 'report-submitter' : null,
+  contributorId: new URLSearchParams(window.location.search).has('missing')
+    ? 'report-submitter'
+    : null,
   createdAt: '2026-11-07',
   images,
   feature: {
@@ -84,7 +91,9 @@ const task = $derived({
       en: {
         title: 'Rotary ReHabAid Centre for Children',
         description: new URLSearchParams(window.location.search).has('long')
-          ? '<p>A longer submitted description that must remain fully readable during review.</p>'.repeat(40)
+          ? '<p>A longer submitted description that must remain fully readable during review.</p>'.repeat(
+              40,
+            )
           : '<p>A community centre supporting children and their families.</p><p>Review the <strong>submitted photos</strong> and contributed location below.</p>',
         displayAddress: '5–7 Sha Wan Drive, Sandy Bay',
       },
@@ -105,8 +114,11 @@ onDestroy(() => {
 })
 </script>
 
-<div class="bits-theme flex h-screen flex-col bg-panel">
+<div class="bits-theme bg-panel flex h-screen flex-col">
   <div class="flex h-16 shrink-0 items-center justify-end px-3" data-task-header>
+    {#if new URLSearchParams(location.search).has('pending')}
+      <button type="button" onclick={() => (loading = false)}>Resolve task</button>
+    {/if}
     <HeaderTaskActions
       actions={[{ text: 'Reject', onClick: () => {} }]}
       content={{
@@ -123,8 +135,12 @@ onDestroy(() => {
   </div>
   <TaskEditor
     {localeState}
-    onLocaleStateChange={state => { localeState = state }}
-    {task}
+    onLocaleStateChange={state => {
+      localeState = state
+    }}
+    task={loading ? null : task}
+    previewTask={task}
+    {loading}
     canReassignLayer
     assignableLayers={layers}
     onReassignLayer={id => {

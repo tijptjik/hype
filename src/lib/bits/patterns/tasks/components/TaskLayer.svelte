@@ -1,11 +1,13 @@
 <script lang="ts">
 import { Select } from '#lib/bits/core/index.js'
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import { cx } from '#lib/bits/utils.js'
 import { m, getI18n } from '#lib/i18n.js'
 import type { TaskLayerProps } from '../task.types'
 
 let {
   title = m.resource__layer_singular(),
+  loading = false,
   currentLayerId,
   options,
   disabled = false,
@@ -36,16 +38,20 @@ const items = $derived(
     {/if}
   </div>
 
-  <Select
-    value={currentLayerId ?? undefined}
-    {items}
-    placeholder={m.resource__layer_singular()}
-    disabled={disabled || isBusy}
-    triggerClass="w-full border-border bg-panel! text-foreground"
-    contentClass="border-foreground/12 bg-panel text-foreground text-md"
-    onValueChange={value => {
-      if (!value || value === currentLayerId) return
-      void onLayerChange?.(value)
-    }}
-  />
+  {#if loading}
+    <Skeleton class="h-12 w-full" />
+  {:else}
+    <Select
+      value={currentLayerId ?? undefined}
+      {items}
+      placeholder={m.resource__layer_singular()}
+      disabled={disabled || isBusy}
+      triggerClass="w-full border-border bg-panel! text-foreground"
+      contentClass="border-foreground/12 bg-panel text-foreground text-md"
+      onValueChange={value => {
+        if (!value || value === currentLayerId) return
+        void onLayerChange?.(value)
+      }}
+    />
+  {/if}
 </section>

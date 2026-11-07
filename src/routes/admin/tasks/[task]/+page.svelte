@@ -6,9 +6,9 @@ import { goto } from '$app/navigation'
 // ADAPTERS
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
-import FeatureRevisionWorkspace from '#lib/bits/patterns/revisionHistory/FeatureRevisionWorkspace.svelte'
 import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIdentityDialog.svelte'
 import { TaskEditor } from '#lib/bits/index.js'
+import { locationTaskLabel } from '#lib/locations/tasks.js'
 import type {
   HeaderButtonActionConfig,
   HeaderCrumb,
@@ -65,6 +65,7 @@ import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // REMOTE
 import { getTask, reassignTaskLayer, reviewTask } from '#lib/api/tasks.remote.js'
 // TYPES
+import type { RemoteQuery } from '$app/server'
 import type { Id } from '#lib/types.js'
 import type { Task } from '#lib/db/zod/schema/task.types.js'
 import type { TaskType } from '#lib/api/services/taskReview.js'
@@ -109,8 +110,16 @@ const typeDisplay: Record<TaskType, string> = {
   reportedMissing: m.noble_zany_crow_dance(),
   newPhoto: m.aware_sea_goose_nail(),
   newFeature: m.smart_crazy_cuckoo_play(),
+  locationFacts: locationTaskLabel('locationFacts'),
+  locationPosition: locationTaskLabel('locationPosition'),
+  locationIdentity: locationTaskLabel('locationIdentity'),
+  locationMerge: locationTaskLabel('locationMerge'),
 }
 
+let locationActions = $state<{
+  taskId: string
+  actions: HeaderButtonActionConfig[]
+} | null>(null)
 let isInfoOpen = $state(false)
 let isRejectDialogOpen = $state(false)
 let reviewReason = $state('')
@@ -126,18 +135,30 @@ let lastSyncedTaskSignature = $state('')
  * Fetches the task editor payload for the current admin route.
  * @returns Remote query request for the current task editor state
  */
-function getEditorRequest() {
+function getEditorRequest(): RemoteQuery<{ data: Task | null }> {
   return getTask({
     id: page.params.task ?? '',
     meta: {
       ...adminCtx.view.resources.queryMeta,
       profile: 'admin',
     },
-  })
+  }) as RemoteQuery<{ data: Task | null }>
 }
 
-const editorResult = $derived(await getEditorRequest()) as { data: Task | null }
-const task = $derived(taskState ?? editorResult.data) as Task | null
+// Observe the native query without suspending navigation on the editor round trip.
+const editorRequest = $derived(getEditorRequest())
+const editorResult = $derived(editorRequest.current)
+const task = $derived(
+  editorResult?.data?.id === page.params.task
+    ? taskState?.id === page.params.task
+      ? taskState
+      : (editorResult?.data ?? null)
+    : null,
+)
+// Queue data supplies presentation only; actions require the fresh editor response.
+const queuedTask = $derived(
+  adminCtx.view.cache.task.get(page.params.task ?? '') as Task | undefined,
+)
 let localeSelection = $state<{ taskId: string; state: ProfileLocaleState } | null>(null)
 const localePreview = $derived(
   task?.creationProposal
@@ -160,8 +181,8 @@ function updateTaskLocales(state: ProfileLocaleState): void {
   if (task) localeSelection = { taskId: task.id, state }
 }
 
-const assignableLayers = $derived(editorResult.data?.assignableLayers ?? [])
-const canReassignLayer = $derived(editorResult.data?.canReassignLayer ?? false)
+const assignableLayers = $derived(editorResult?.data?.assignableLayers ?? [])
+const canReassignLayer = $derived(editorResult?.data?.canReassignLayer ?? false)
 const taskTitle = $derived(task ? typeDisplay[task.type as TaskType] : '')
 const resolvedFeature = $derived.by((): Feature | null =>
   task
@@ -180,7 +201,7 @@ const taskSyncSignature = $derived(
 
 // Clone the remote task into local state so review and reassignment updates stay editable.
 $effect(() => {
-  taskState = structuredClone(editorResult.data) as Task | null
+  taskState = editorResult?.data ? (structuredClone(editorResult.data) as Task) : null
 })
 
 // Keep the admin caches and current facet aligned with the latest task state.
@@ -215,6 +236,7 @@ $effect(() => {
  * @returns Header action button configuration
  */
 function getActionButtons(): HeaderButtonActionConfig[] {
+  if (task?.locationTask) return []
   return [
     {
       text: 'Info',
@@ -253,6 +275,7 @@ function createReviewTaskAction(config: {
   action?: TaskReviewUiAction
   onClick?: () => void
   color: NonNullable<HeaderButtonActionConfig['color']>
+  disabled?: boolean
 }): HeaderButtonActionConfig {
   return {
     attrs: {
@@ -271,7 +294,7 @@ function createReviewTaskAction(config: {
         if (!config.action) return
         void handleReview(config.action)
       }),
-    disabled: isReviewBusy || isLayerBusy,
+    disabled: config.disabled || isReviewBusy || isLayerBusy || imageReviewBusy,
     color: config.color,
     style: 'ghost',
   }
@@ -282,6 +305,8 @@ function createReviewTaskAction(config: {
  * @returns Header review action buttons for the current task type
  */
 function getTaskActionButtons(): HeaderButtonActionConfig[] {
+  if (task?.locationTask)
+    return locationActions?.taskId === task.id ? locationActions.actions : []
   if (!task) {
     return []
   }
@@ -323,15 +348,23 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
     if (task.revisionReviewRequired)
       return [
         ...common,
-        createReviewTaskAction({
-          text: 'Review photo proposals',
-          icon: CheckIcon,
-          color: 'success',
-          onClick: () =>
-            document
-              .getElementById('task-proposal-review')
-              ?.scrollIntoView({ block: 'start' }),
-        }),
+        ...(['acceptAll', 'acceptClassified'] as const).map(mode =>
+          createReviewTaskAction({
+            text:
+              mode === 'acceptAll'
+                ? m.each_funny_cow_radiate()
+                : m.shy_sunny_hare_revive(),
+            icon: mode === 'acceptAll' ? CheckIcon : CheckBadgeIcon,
+            color: 'success',
+            disabled:
+              imageAcceptAction?.taskId !== task.id ||
+              (imageAcceptAction?.disabled ?? true),
+            onClick: () => {
+              if (imageAcceptAction && imageAcceptAction.taskId === task?.id)
+                void imageAcceptAction.accept(mode)
+            },
+          }),
+        ),
       ]
     return [
       ...common,
@@ -339,12 +372,14 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
         text: m.each_funny_cow_radiate(),
         icon: CheckIcon,
         action: 'acceptAll',
+        disabled: !task.images?.length,
         color: 'success',
       }),
       createReviewTaskAction({
         text: m.shy_sunny_hare_revive(),
         icon: CheckBadgeIcon,
         action: 'acceptClassified',
+        disabled: !task.images?.length,
         color: 'success',
       }),
     ]
@@ -375,17 +410,24 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
 
 /**
  * Builds the task breadcrumb trail from the current hierarchy context.
+ * @param subject Task whose known hierarchy should be shown, including queue previews.
  * @returns Ordered admin breadcrumb list for the current task
  */
-function getTaskBreadcrumbs(): HeaderCrumb[] {
+function getTaskBreadcrumbs(subject: Task | null = task): HeaderCrumb[] {
+  const task = subject
   if (!task) {
     return []
   }
 
+  const breadcrumbFeature = mergeResolvedTaskFeature(
+    task,
+    adminCtx.view.cache.feature as Map<Id, Feature>,
+  ) as Feature | null
+  const breadcrumbLayerId = getEffectiveTaskLayerId(task, breadcrumbFeature)
   const preferences = adminCtx.view.getUserPreferences()
   const selectedLayer = getSelectedTaskLayer(
     assignableLayers,
-    effectiveLayerId,
+    breadcrumbLayerId,
     adminCtx.view.cache.layer,
   )
   const organisationName =
@@ -397,8 +439,8 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
     getI18n(task.project as never, 'name', preferences) ||
     ''
   const featureTitle =
-    (resolvedFeature
-      ? getI18n(resolvedFeature as never, 'title', preferences)
+    (breadcrumbFeature
+      ? getI18n(breadcrumbFeature as never, 'title', preferences)
       : undefined) ||
     getI18n(
       (task.creationProposal
@@ -408,7 +450,7 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
       preferences,
     ) ||
     ''
-  const featureId = resolvedFeature?.id ?? task.featureId ?? null
+  const featureId = breadcrumbFeature?.id ?? task.featureId ?? null
   const layerName =
     (selectedLayer && 'projectId' in selectedLayer
       ? getI18n(selectedLayer, 'nameShort', preferences) ||
@@ -435,10 +477,10 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
     })
   }
 
-  if (layerName && effectiveLayerId) {
+  if (layerName && breadcrumbLayerId) {
     crumbs.push({
       name: layerName,
-      href: `/admin/${ResourcePath[FirstClassResource.layer]}/${effectiveLayerId}`,
+      href: `/admin/${ResourcePath[FirstClassResource.layer]}/${breadcrumbLayerId}`,
     })
   }
 
@@ -480,7 +522,27 @@ function showReviewToast(action: TaskReviewUiAction): void {
 
 // Rebuild the admin header whenever task state or review metadata changes.
 $effect(() => {
-  if (!task?.id) return
+  if (!task?.id) {
+    headerCtrl.setHeaderForEntity(
+      queuedTask ? typeDisplay[queuedTask.type as TaskType] : m.navbar__tasks(),
+      TaskIcon,
+      new Map(),
+    )
+    headerCtrl.setCrumbs(getTaskBreadcrumbs(queuedTask ?? null))
+    headerCtrl.state.visibility = {
+      showNew: false,
+      showFilter: false,
+      showFacets: false,
+      showViewActions: false,
+      showFormActions: false,
+    }
+    headerCtrl.setViewActions([])
+    headerCtrl.setTaskActions([])
+    headerCtrl.setTaskActionContent(null, {})
+    headerCtrl.clearControlBar()
+    headerCtrl.clearFooter()
+    return
+  }
 
   headerCtrl.setHeaderForEntity(taskTitle, TaskIcon, new Map())
   headerCtrl.setCrumbs(getTaskBreadcrumbs())
@@ -530,6 +592,18 @@ $effect(() => {
  ************/
 // +++ Task Mutations
 
+let imageReview = $state<{
+  taskId: string
+  reviewId: string | null
+  proposalVersion: string
+}>()
+let imageReviewBusy = $state(false)
+let imageAcceptAction = $state<{
+  taskId: string
+  disabled: boolean
+  accept: (mode?: 'acceptAll' | 'acceptClassified') => Promise<void>
+}>()
+
 /**
  * Reviews the current task and handles the resulting navigation flow.
  * @param action - Review action to submit
@@ -540,7 +614,8 @@ async function handleReview(
   action: TaskReviewUiAction,
   explicitReviewReason?: string,
 ): Promise<boolean> {
-  if (!task?.id || task.isReviewed || isReviewBusy || isLayerBusy) return false
+  if (!task?.id || task.isReviewed || isReviewBusy || isLayerBusy || imageReviewBusy)
+    return false
 
   isReviewBusy = true
 
@@ -548,6 +623,7 @@ async function handleReview(
     // Refresh the editor query too so Back cannot restore its pre-review task snapshot.
     const result = await reviewTask({
       id: task.id,
+      imageReview,
       action,
       reviewReason: explicitReviewReason,
       meta: {
@@ -646,7 +722,7 @@ async function handleReassignLayer(layerId: string): Promise<void> {
 // +++ Image Provider State
 
 const imageProviderProps = $derived.by(() => {
-  const isValid = task?.id === page.params.task
+  const isValid = task?.id === page.params.task && !task?.locationTask
   const hierarchySource = resolvedFeature ?? task
 
   return {
@@ -703,40 +779,60 @@ const imageProviderModel = useImageProviderModel(
   />
 {/if}
 
-{#if task}
+{#if task && !task.locationTask}
   <TaskInfoDialog bind:open={isInfoOpen} type={task.type as TaskType} />
 {/if}
 <TaskRejectDialog
   bind:open={isRejectDialogOpen}
   source={reviewDialogTrigger}
   bind:value={reviewReason}
-  isBusy={isReviewBusy}
+  isBusy={isReviewBusy || imageReviewBusy}
   onConfirm={handleConfirmReject}
 />
 
+{#if editorRequest.error}
+  <div role="alert" class="p-6">
+    <span>{m.resource_action_failed()}</span>
+    <button
+      type="button"
+      class="ml-3 underline"
+      onclick={() => void editorRequest.refresh().catch(() => {})}
+    >
+      {m.bootstrap__retry()}
+    </button>
+  </div>
+{:else if editorRequest.ready && !task}
+  <div role="status" class="p-6">{m.resource_action_failed()}</div>
+{/if}
+
 <ImageProvider model={imageProviderModel}>
-  {#if task}
-    {#if task.type === 'newPhoto' && task.revisionReviewRequired && task.featureId}
-      <div id="task-proposal-review">
-        <FeatureRevisionWorkspace
-          featureId={task.featureId}
-          taskId={task.id}
-          reviewMode={true}
-          onPublished={async () => {
-            const fresh = await refreshRemoteQuery(getEditorRequest())
-            taskState = structuredClone(fresh.data) as Task | null
-            if (taskState?.isReviewed) goToNextTask(adminCtx)
-          }}
-        />
-      </div>
-    {/if}
+  {#if !editorRequest.error && (!editorRequest.ready || task)}
     <TaskEditor
+      previewTask={queuedTask ?? null}
+      loading={!editorRequest.ready}
+      onLocationActionsChange={actions => {
+        if (task) locationActions = { taskId: task.id, actions }
+      }}
+      onLocationCommitted={async () => {
+        await adminCtx.invalidateAndRefresh(FirstClassResource.task)
+        navigateOnAdmin(adminCtx, FirstClassResource.task)
+      }}
+      onImageAcceptActionChange={action => (imageAcceptAction = action)}
+      onImagesAccepted={async () => {
+        const fresh = await refreshRemoteQuery(getEditorRequest())
+        taskState = structuredClone(fresh.data) as Task | null
+        if (taskState?.isReviewed) goToNextTask(adminCtx)
+      }}
+      onImageReviewChange={(value, busy) => {
+        imageReview = value
+        imageReviewBusy = busy
+      }}
       {localeState}
       onLocaleStateChange={updateTaskLocales}
       {task}
       {assignableLayers}
       {canReassignLayer}
-      isLayerBusy={isLayerBusy || isReviewBusy}
+      isLayerBusy={isLayerBusy || isReviewBusy || imageReviewBusy}
       onReview={async action => {
         await handleReview(action)
       }}

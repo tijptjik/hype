@@ -346,6 +346,32 @@ Compact project responses retain flags for the Feature parent selection flow. Ch
 use the normal project form, write authorization, and optimistic concurrency checks.
 Migration `0126_project_flags.sql` adds the JSON column and must precede deployment.
 
+## Task review workspace
+
+The task route owns the native editor query, review mutations, header actions and image
+context. Observe the query's `current`, `ready` and `error` state instead of awaiting it
+before mounting the workspace. Queue data is a read-only presentation preview; review
+controls require the authoritative editor response. Pending headers must clear previous
+form actions while preserving known task hierarchy.
+
+`TaskEditor` composes one persistent `TaskReviewLayout` for every task type. The layout
+owns responsive pane sizing, split resizing and the details slot. Photo submissions use
+the full-width gallery; Feature and missing reports use overview/detail maps; Location
+reviews use a comparison map. Location-specific review fields belong in
+`LocationTaskDetails`, not a second page layout.
+
+`TaskReviewImages` selects the revision or legacy review controller, with a shared
+gallery layout and known attachment count. `ImageEditor` owns its pending viewport and
+thumbnail rail, reserving the same rail dimensions before image evidence arrives.
+`TaskMap` and `Maplet` share their in-place pending presentation. Do not introduce a
+parallel page skeleton that duplicates map/image geometry. Known queue coordinates and
+text can render immediately, independently of the editor query or image decoding.
+
+`TaskReviewDetails` uses the real field rows for pending and ready content;
+`useTaskReviewDetails` owns field derivation and cancellable report metadata loading.
+Layout checks must cover pending-to-ready transitions, retained split size, thumbnail
+rail geometry, all task types and narrow viewports, in addition to navigation latency.
+
 ## Handler Placement
 
 - Local UI handlers:
