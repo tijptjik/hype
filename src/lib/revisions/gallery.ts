@@ -13,6 +13,7 @@ export type RevisionGalleryEntry = {
 export type RevisionGallery = {
   entries: Record<string, RevisionGalleryEntry>
   order: string[]
+  sortMode?: 'automatic' | 'manual'
 }
 
 /**

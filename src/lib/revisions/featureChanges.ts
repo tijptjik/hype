@@ -60,6 +60,10 @@ const operations = z.discriminatedUnion('op', [
     changes: galleryEntry.partial(),
   }),
   z.strictObject({ op: z.literal('orderImages'), imageIds: z.array(key).max(1000) }),
+  z.strictObject({
+    op: z.literal('setGallerySortMode'),
+    mode: z.enum(['automatic', 'manual']),
+  }),
 ])
 /** Server-built partial changes. Referenced catalogue definitions and image pins still require authorization. */
 export const FeatureChangesSchema = z.strictObject({
@@ -193,6 +197,13 @@ export function buildFeatureChanges(
   ]
   if (!equalRevisionValue(natural, after.gallery.order))
     result.operations.push({ op: 'orderImages', imageIds: after.gallery.order })
+  if (
+    (before.gallery.sortMode ?? 'automatic') !== (after.gallery.sortMode ?? 'automatic')
+  )
+    result.operations.push({
+      op: 'setGallerySortMode',
+      mode: after.gallery.sortMode ?? 'automatic',
+    })
   return FeatureChangesSchema.parse(result)
 }
 
@@ -303,6 +314,9 @@ export function applyFeatureChanges(
           })
         break
       }
+      case 'setGallerySortMode':
+        update(['gallery', 'sortMode'], { present: true, value: operation.mode })
+        break
       case 'orderImages':
         break
     }

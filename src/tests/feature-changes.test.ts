@@ -203,3 +203,35 @@ describe('partial Feature proposals', () => {
     ).toThrow('Overlapping')
   })
 })
+
+describe('gallery sort mode revisions', () => {
+  it('round-trips an explicit manual mode without changing image content', () => {
+    const base = content(),
+      proposed = content()
+    proposed.gallery.sortMode = 'manual'
+    const changes = buildFeatureChanges(base, proposed)
+    expect(changes.operations).toEqual([{ op: 'setGallerySortMode', mode: 'manual' }])
+    const result = applyFeatureChanges(base, base, changes)
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready')
+      expect(result.content.gallery).toEqual(proposed.gallery)
+  })
+  it('appends newly accepted images without overriding a concurrent manual gallery', () => {
+    const base = content(),
+      proposed = content(),
+      current = content()
+    proposed.gallery.entries.new = image
+    proposed.gallery.order.push('new')
+    current.gallery.sortMode = 'manual'
+    const result = applyFeatureChanges(
+      base,
+      current,
+      buildFeatureChanges(base, proposed),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.content.gallery.sortMode).toBe('manual')
+      expect(result.content.gallery.order).toEqual(['original', 'new'])
+    }
+  })
+})
