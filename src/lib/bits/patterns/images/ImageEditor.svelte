@@ -106,7 +106,6 @@ $effect(() => {
     <div
       class={cx(
         'relative min-h-0 min-w-0 flex-1',
-        !isStackedLayout && 'pt-2',
         className,
       )}
     >
@@ -211,6 +210,7 @@ $effect(() => {
             followActiveIdRequestId={thumbnailFollowActiveRequestId}
             variant="admin"
             orientation="vertical"
+            trackClass="pt-0!"
             class="h-full min-h-0"
             size={adminThumbnailSize}
             {fit}

@@ -48,7 +48,7 @@ let {
 
 {#if isUnpublished && !isDeleteMode && !isConfirmingDelete && !isUploadError}
   <div
-    class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center rounded-[inherit]"
+    class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[inherit]"
   >
     <span class="text-white/50"> <EyeOffIcon class="h-20 w-20 opacity-70" /> </span>
   </div>

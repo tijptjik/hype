@@ -255,7 +255,7 @@ $effect(() => {
 <svelte:window bind:innerHeight={viewportHeight} bind:innerWidth={viewportWidth} />
 
 <TaskPrimitive.TaskRoot
-  class={`${className} ${isNewFeature ? 'p-0!' : ''}`}
+  class={`${className} ${isNewFeature || isNewPhoto ? 'p-0!' : ''}`}
   hasAside={isReportedMissing}
 >
   {#if isNewFeature}
@@ -412,8 +412,8 @@ $effect(() => {
       {/if}
     </section>
   {:else}
-    <TaskPrimitive.TaskMain>
-      <div class="min-h-0 flex-1">
+    <TaskPrimitive.TaskMain class={isNewPhoto ? 'rounded-none border-0' : ''}>
+      <div class="flex min-h-0 flex-1 flex-col">
         {#if task.identityTransferred && !isReviewed}
           <div class="border-border grid gap-2 border-b p-4 text-sm">
             <p>

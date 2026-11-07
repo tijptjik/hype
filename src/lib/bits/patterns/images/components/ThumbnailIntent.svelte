@@ -50,7 +50,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
     <Popover.Trigger
       {disabled}
       class={cx(
-        'inline-flex h-[26px] max-w-[6.25rem] items-center rounded-md px-2 text-[10px] font-medium uppercase tracking-[0.14em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed',
+        'inline-flex h-[26px] max-w-[calc(100%_-_0.5rem)] items-center rounded-md px-1.5 text-[10px] font-medium uppercase tracking-[0.06em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed',
         hasIntentError
           ? 'bg-error text-error-content hover:bg-error'
           : currentIntent === 'canonical'
