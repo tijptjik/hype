@@ -3,6 +3,8 @@
 import { onMount } from 'svelte'
 // BITS-UI
 import { Popover } from 'bits-ui'
+// TOOLTIP POLICY
+import { repeatsVisibleTooltipLabel } from './tooltipLabel.js'
 
 const uid = $props.id()
 const contentId = `${uid}-tooltip`
@@ -25,23 +27,12 @@ function dismiss(): void {
  * @param target Event target. @returns The tooltip anchor, if any.
  */
 function findAnchor(target: EventTarget | null): HTMLElement | null {
-  return target instanceof Element
-    ? target.closest<HTMLElement>('[data-tooltip]')
-    : null
-}
-
-/** Check whether the help only repeats a fully visible label.
- * @param target Tooltip anchor. @param label Proposed help. @returns Whether help is redundant.
- * @remarks Keep labels for icon-only and clipped controls; innerText excludes hidden labels.
- */
-function repeatsVisibleLabel(target: HTMLElement, label: string): boolean {
-  const normalize = (value: string): string => value.replace(/\s+/g, ' ').trim()
-  if (normalize(target.innerText ?? '') !== normalize(label)) return false
-  return ![target, ...target.querySelectorAll<HTMLElement>('*')].some(
-    element =>
-      element.scrollWidth > element.clientWidth ||
-      element.scrollHeight > element.clientHeight,
-  )
+  if (!(target instanceof Element)) return null
+  // Older markup must not produce a second, native copy of its visible label.
+  const native = target.closest<HTMLElement>('[title]')
+  if (native && repeatsVisibleTooltipLabel(native, native.getAttribute('title') ?? ''))
+    native.removeAttribute('title')
+  return target.closest<HTMLElement>('[data-tooltip]')
 }
 
 /** Show the shared themed help for a control without adding a layout wrapper.
@@ -55,7 +46,7 @@ function show(target: HTMLElement | null): void {
     !label ||
     target.closest('.bits-tooltip__trigger') ||
     target.getAttribute('aria-expanded') === 'true' ||
-    repeatsVisibleLabel(target, label)
+    repeatsVisibleTooltipLabel(target, label)
   ) {
     dismiss()
     return
@@ -94,7 +85,7 @@ $effect(() => {
     if (
       !label ||
       target.getAttribute('aria-expanded') === 'true' ||
-      repeatsVisibleLabel(target, label)
+      repeatsVisibleTooltipLabel(target, label)
     )
       dismiss()
     else text = label

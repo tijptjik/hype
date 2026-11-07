@@ -8,6 +8,7 @@ export type SimpleTooltipProps = Omit<Popover.RootProps, 'open'> & {
   trigger: Snippet
   children?: Snippet
   disabled?: boolean
+  showArrow?: boolean
   triggerProps?: WithoutChild<Popover.TriggerProps>
   triggerClass?: string
   contentProps?: WithoutChild<Popover.ContentProps>

@@ -1,6 +1,8 @@
 <script lang="ts">
 // BITS-UI
 import { Popover as PopoverPrimitive } from 'bits-ui'
+// TOOLTIP POLICY
+import { repeatsVisibleTooltipLabel } from './tooltipLabel.js'
 // TYPES
 import type { SimpleTooltipProps } from './tooltip.types'
 
@@ -9,6 +11,7 @@ let {
   trigger,
   children,
   disabled = false,
+  showArrow = false,
   triggerProps = {},
   triggerClass = '',
   contentProps = {},
@@ -18,6 +21,25 @@ let {
 const uid = $props.id()
 const contentId = $derived(contentProps.id ?? `${uid}-content`)
 let triggerElement = $state<HTMLDivElement>()
+let contentElement = $state<HTMLDivElement | null>(null)
+let contentIsRedundant = $state(false)
+
+// Apply the same redundancy policy to snippet-based help before its first paint.
+$effect(() => {
+  if ((contentProps.role ?? 'tooltip') !== 'tooltip') {
+    contentIsRedundant = false
+    return
+  }
+  if (!open || !triggerElement || !contentElement) return
+  const redundant =
+    !contentElement.querySelector(
+      'a, button, input, select, textarea, [role="button"]',
+    ) && repeatsVisibleTooltipLabel(triggerElement, contentElement.textContent ?? '')
+  contentIsRedundant = redundant
+  if (!redundant) return
+  open = false
+  restProps.onOpenChange?.(false)
+})
 
 // A scroll invalidates the visible anchor; help must not follow a row out of view.
 $effect(() => {
@@ -48,7 +70,14 @@ const triggerClasses = $derived(
 )
 
 const contentClasses = $derived(
-  ['bits-theme', 'bits-tooltip__content', contentClass].filter(Boolean).join(' '),
+  [
+    'bits-theme',
+    'bits-tooltip__content',
+    showArrow ? 'overflow-visible' : '',
+    contentClass,
+  ]
+    .filter(Boolean)
+    .join(' '),
 )
 </script>
 
@@ -86,6 +115,9 @@ const contentClasses = $derived(
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
         {...contentProps}
+        bind:ref={contentElement}
+        hidden={contentIsRedundant || contentProps.hidden}
+        aria-hidden={contentIsRedundant ? true : contentProps['aria-hidden']}
         id={contentId}
         role={contentProps.role ?? 'tooltip'}
         class={contentClasses}
@@ -106,6 +138,9 @@ const contentClasses = $derived(
         }}
       >
         {@render children?.()}
+        {#if showArrow}
+          <PopoverPrimitive.Arrow width={20} height={10} class="text-surface" />
+        {/if}
       </PopoverPrimitive.Content>
     </PopoverPrimitive.Portal>
   </PopoverPrimitive.Root>
