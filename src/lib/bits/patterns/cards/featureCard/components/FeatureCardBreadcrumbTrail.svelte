@@ -1,4 +1,7 @@
 <script lang="ts">
+// SVELTE
+import { onDestroy, tick } from 'svelte'
+import { prefersReducedMotion } from 'svelte/motion'
 // BITS COMPONENTS
 import { Icon } from '#lib/bits/index.js'
 // ICONS
@@ -17,17 +20,67 @@ let {
 
 type Scope = 'organisation' | 'project' | 'layer'
 let expanded = $state<Scope | null>(null)
+let trail: HTMLDivElement
+let animations: Animation[] = []
+let transitionVersion = 0
+
+onDestroy(() => {
+  transitionVersion += 1
+  for (const animation of animations) animation.cancel()
+})
+
 /**
  * Give one breadcrumb the available width, or restore the compact trail.
  * @param scope - Label selected by pointer or keyboard.
- * @returns Nothing.
+ * @returns Resolves after measuring the new layout and starting its transition.
  */
-function toggle(scope: Scope): void {
+async function toggle(scope: Scope): Promise<void> {
+  const version = ++transitionVersion
+  const previousHeight = trail.getBoundingClientRect().height
+  const previousPositions = new Map(
+    Array.from(trail.querySelectorAll('button'))
+      .filter(button => button.offsetWidth > 0)
+      .map(button => [button, button.getBoundingClientRect().left]),
+  )
+  for (const animation of animations) animation.cancel()
+  animations = []
   expanded = expanded === scope ? null : scope
+  await tick()
+  if (version !== transitionVersion || prefersReducedMotion.current) return
+
+  // Animate the row's height and slide labels into place without scaling their text.
+  const timing = { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+  animations.push(
+    trail.animate(
+      [
+        { height: `${previousHeight}px` },
+        { height: `${trail.getBoundingClientRect().height}px` },
+      ],
+      timing,
+    ),
+  )
+  for (const button of trail.querySelectorAll('button')) {
+    if (!button.offsetWidth) continue
+    const previousLeft = previousPositions.get(button)
+    const offset =
+      previousLeft === undefined
+        ? 6
+        : previousLeft - button.getBoundingClientRect().left
+    animations.push(
+      button.animate(
+        [
+          { opacity: 0.25, transform: `translateX(${offset}px)` },
+          { opacity: 1, transform: 'translateX(0)' },
+        ],
+        timing,
+      ),
+    )
+  }
 }
 </script>
 
 <div
+  bind:this={trail}
   class="text-neutral-content flex min-h-11 min-w-0 flex-1 items-center gap-2 font-mono text-xs uppercase"
   data-feature-breadcrumb-trail
 >

@@ -83,9 +83,35 @@ for (const [name, engine] of [
     }
     await page.setViewportSize({ width: 800, height: 600 })
     assert.equal(await layer.isVisible(), true)
+    // Check both directions and reversal while a transition is still running.
+    const trail = page.locator('[data-feature-breadcrumb-trail]')
+    for (const expected of ['true', 'false', 'true']) {
+      await project.evaluate(button => button.click())
+      await page.evaluate(() => new Promise(requestAnimationFrame))
+      assert.equal(await project.getAttribute('aria-expanded'), expected)
+      assert(
+        await trail.evaluate(el =>
+          el
+            .getAnimations({ subtree: true })
+            .some(animation => animation.playState === 'running'),
+        ),
+      )
+    }
+    await trail.evaluate(el =>
+      Promise.all(
+        el.getAnimations({ subtree: true }).map(animation => animation.finished),
+      ),
+    )
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await project.click()
+    assert.equal(await project.getAttribute('aria-expanded'), 'false')
+    assert.equal(
+      await trail.evaluate(el => el.getAnimations({ subtree: true }).length),
+      0,
+    )
     assert.deepEqual(errors, [])
     console.log(
-      `${name}: label toggles, hidden-layer disclosure, keyboard, feature reset, viewport bounds passed`,
+      `${name}: label toggles, hidden-layer disclosure, keyboard, feature reset, viewport bounds, animated toggles and reduced motion passed`,
     )
   } finally {
     await browser.close()
