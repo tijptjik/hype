@@ -34,7 +34,7 @@ export async function prepareFeatureGalleryAssignmentCapture(
       const entry = content.gallery.entries[input.imageId]
       if (!entry) throw new Error('Image is not in the accepted Feature gallery')
       if (input.intent === 'canonical') for (const [id, other] of Object.entries(content.gallery.entries)) {
-        if (id !== input.imageId && other.intent === 'canonical') other.intent = 'undefined'
+        if (id !== input.imageId && other.intent === 'canonical') { other.intent = 'general'; other.isPublished = true }
       }
       if (input.intent !== undefined) entry.intent = FeatureRevisionContentSchema.shape.gallery.shape.entries.valueType.shape.intent.parse(input.intent)
       if (input.isPublished !== undefined) entry.isPublished = input.isPublished

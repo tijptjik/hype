@@ -1,3 +1,5 @@
+// IMAGE INTENT POLICY
+import { readFeatureImageIntentPolicy, resolvePolicyImageIntent, prepareImageIntentGalleryChange } from './imageIntentPolicy'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 // DRIZZLE
@@ -234,12 +236,15 @@ export const updateFeatureImage = async (
   imageId: string,
   actorId = 'system:image-assignment',
 ): Promise<FeatureImageDB> => {
+  const policy = await readFeatureImageIntentPolicy(db, modifiedFeatureImage.featureId)
+  if (modifiedFeatureImage.intent != null) Object.assign(modifiedFeatureImage, resolvePolicyImageIntent(policy, modifiedFeatureImage.intent))
+  else if (modifiedFeatureImage.isPublished != null) throw error(400, 'Choose an image intent to control publication')
   const mutation = prepareFeatureImageMutation(db, modifiedFeatureImage, imageId)
   const capture = await prepareFeatureGalleryAssignmentCapture(db, {
     featureId: modifiedFeatureImage.featureId, imageId, actorId, guard: mutation.guard,
     intent: modifiedFeatureImage.intent ?? undefined, isPublished: modifiedFeatureImage.isPublished ?? undefined,
   })
-  const result = await executeRevisionBatch(db, mutation.guard, [
+  const result = await executeRevisionBatch(db, sql`(${mutation.guard}) AND (${policy.guard})`, [
     ...capture.before,
     ...prepareTaskEvidenceRevision(db, mutation.affectedTasks),
     ...mutation.statements,
@@ -286,7 +291,7 @@ function prepareFeatureImageMutation(
     statements.push(
       db
         .update(featureImage)
-        .set({ intent: 'undefined' })
+        .set({ intent: 'general', isPublished: true, localIsPublished: true })
         .where(
           and(
             eq(featureImage.featureId, modifiedFeatureImage.featureId),
@@ -378,6 +383,9 @@ export async function updateImageWithFeatureImage(
   if (data.id !== undefined && data.id !== imageId)
     throw error(400, 'IMAGE_ID_MISMATCH')
   if (replay && (!data.publicId || !data.env)) throw error(400, 'INVALID_IMAGE_REPLACEMENT')
+  const policy = assignment ? await readFeatureImageIntentPolicy(db, assignment.featureId) : null
+  if (assignment?.intent != null && policy) Object.assign(assignment, resolvePolicyImageIntent(policy, assignment.intent))
+  else if (assignment?.isPublished != null) throw error(400, 'Choose an image intent to control publication')
   const { id: _id, ...fields } = data
   const current = db.select().from(image).where(eq(image.id, imageId))
   const mutation = assignment
@@ -419,14 +427,14 @@ export async function updateImageWithFeatureImage(
   )!
   const featureCapture = assignment && (assignment.intent != null || assignment.isPublished != null)
     ? await prepareFeatureGalleryAssignmentCapture(db, {
-        featureId: assignment.featureId, imageId, actorId, guard: and(exists(current), mutation?.guard, guards?.before)!,
+        featureId: assignment.featureId, imageId, actorId, guard: and(exists(current), mutation?.guard, guards?.before, policy?.guard)!,
         intent: assignment.intent ?? undefined, isPublished: assignment.isPublished ?? undefined,
       }) : { before: [], after: [] }
   const capture = { before: [...logoCapture.before,...featureCapture.before], after: [...logoCapture.after,...featureCapture.after] }
   // Validate both targets before writes and both resulting records before committing.
   const result = await executeRevisionBatch(
     db,
-    and(exists(current), mutation?.guard, guards?.before)!,
+    and(exists(current), mutation?.guard, guards?.before, policy?.guard)!,
     [
       ...capture.before,
       ...prepareTaskEvidenceRevision(
@@ -544,35 +552,10 @@ export const publishAllFeatureImagesExceptResearch = async (
   publisherId: Id,
   expectedScope: Omit<FeatureCommandProbe, 'id'>,
 ): Promise<boolean> => {
-  // Publish only direct, public-facing image assignments that still have an active source image.
-  const publish = db
-    .update(featureImage)
-    .set({
-      isPublished: true,
-      localIsPublished: null,
-      publishedAt: new Date().toISOString(),
-      publisherId,
-    })
-    .where(
-      and(
-        eq(featureImage.featureId, featureId),
-        eq(featureImage.isPublished, false),
-        ne(featureImage.intent, 'research'),
-        exists(
-          db
-            .select({ id: image.id })
-            .from(image)
-            .where(and(eq(image.id, featureImage.imageId), eq(image.isArchived, false))),
-        ),
-      ),
-    )
-  // Keep the authorization scope assertion and image write in the same D1 transaction.
-  const result = await executeRevisionBatch(
-    db,
-    buildFeatureCommandScopeGuard(db, featureId, expectedScope),
-    [publish],
-  )
-  return result !== null
+  const policy = await readFeatureImageIntentPolicy(db, featureId)
+  const guard = sql`(${buildFeatureCommandScopeGuard(db, featureId, expectedScope)}) AND (${policy.guard})`
+  const statements = await prepareImageIntentGalleryChange(db, { featureId, actorId: publisherId, guard, policy, classify: true })
+  return (await executeRevisionBatch(db, guard, statements)) !== null
 }
 
 // ═══════════════════════
@@ -751,7 +734,7 @@ export const getImagesForFeature = async (
   const lifecycle = await hasFeatureLifecycleStorage(db)
   const currentMembership = sql`EXISTS(SELECT 1 FROM feature f JOIN featureRevision r ON r.id=f.currentRevisionId AND r.featureId=f.id
     JOIN featureRevisionImage pin ON pin.featureRevisionId=r.id WHERE f.id=${featureImage.featureId} AND pin.imageId=${image.id}
-      AND (${Number(!publishedOnly)} OR (f.isPublished=1 AND f.isArchived=0 AND pin.intent<>'research' AND EXISTS(
+      AND (${Number(!publishedOnly)} OR (f.isPublished=1 AND f.isArchived=0 AND EXISTS(
         SELECT 1 FROM json_each(r.content,'$.gallery.entries') entry WHERE entry.key=${image.id} AND json_extract(entry.value,'$.isPublished')=1))))`
   const pinnedOrder = lifecycle ? sql`COALESCE((SELECT pin.position FROM feature f JOIN featureRevisionImage pin ON pin.featureRevisionId=f.currentRevisionId
     WHERE f.id=${featureImage.featureId} AND pin.imageId=${image.id}),2147483647)` : storage?.n ? sql`COALESCE((SELECT pin.position FROM featureRevisionHead h
@@ -772,7 +755,7 @@ export const getImagesForFeature = async (
     .where(and(...conditions, lifecycle ? currentMembership : storage?.n ? sql`(NOT EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=${featureImage.featureId})
       OR EXISTS (SELECT 1 FROM featureRevisionHead h JOIN featureRevisionImage pin ON pin.featureRevisionId=${revisionSelection}
         WHERE h.featureId=${featureImage.featureId} AND h.state='active' AND pin.imageId=${image.id}
-        AND (${Number(!publishedOnly)} OR (pin.intent<>'research' AND EXISTS (
+        AND (${Number(!publishedOnly)} OR (EXISTS (
           SELECT 1 FROM featureRevision r,json_each(r.content,'$.gallery.entries') entry
           WHERE r.id=h.publishedRevisionId AND entry.key=${image.id} AND json_extract(entry.value,'$.isPublished')=1)))))` : undefined))
     .orderBy(pinnedOrder, orderBy)
@@ -1147,7 +1130,7 @@ const adminIntentOrder = [
  * @returns The sorted input array.
  */
 export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false) {
-  const intentOrderToUse = isAdmin ? adminIntentOrder : intentOrder
+  const intentOrderToUse: readonly string[] = isAdmin ? adminIntentOrder : intentOrder
 
   return images.sort((a, b) => {
     if ('galleryPosition' in a && typeof a.galleryPosition === 'number' &&

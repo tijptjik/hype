@@ -551,9 +551,10 @@ export function prepareFeatureEditorialProjection(
       db
         .update(featureImage)
         .set({
-          isPublished: sql`EXISTS (SELECT 1 FROM json_each(${JSON.stringify(content.gallery.entries)}) entry
-        WHERE entry.key=${featureImage.imageId} AND json_extract(entry.value,'$.isPublished')=1
-          AND json_extract(entry.value,'$.intent')!='research')`,
+          isPublished: sql`EXISTS(SELECT 1 FROM feature f WHERE f.id=${input.featureId} AND f.isPublished=1 AND f.isArchived=0)
+          AND EXISTS(SELECT 1 FROM image i WHERE i.id=featureImage.imageId AND i.isArchived=0)
+          AND EXISTS (SELECT 1 FROM json_each(${JSON.stringify(content.gallery.entries)}) entry
+        WHERE entry.key=${featureImage.imageId} AND json_extract(entry.value,'$.isPublished')=1)`,
         })
         .where(eq(featureImage.featureId, input.featureId)),
     ],

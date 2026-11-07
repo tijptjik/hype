@@ -43,3 +43,5 @@ export * from './featureBaselineAttribution'
 
 export * from './imageRevision'
 export * from './resourceLogoRevision'
+
+export * from './imageIntentPolicy'

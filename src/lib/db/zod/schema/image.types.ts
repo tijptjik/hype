@@ -77,13 +77,7 @@ export type ImageListByProfile<P extends ImageProfile> = P extends 'list'
       ? ImageDetailProfile
       : ImageAdminProfile
 
-export type Intent =
-  | 'canonical'
-  | 'closeUp'
-  | 'context'
-  | 'general'
-  | 'research'
-  | 'undefined'
+export type Intent = string
 
 export type ImageContextType = ImageContextResource | ImageContextResourceExtended
 
@@ -97,6 +91,7 @@ export type ImageContextEnvelope<P extends ImageProfile = 'list'> = {
 }
 
 export type ImageCtxEnvelope = Omit<ImageContextEnvelope<'detail'>, 'image'> & {
+  intentLabel?: string
   revisionDraft?: { proposalId: string; candidateRevisionId: string }
   image: Image & Pick<z.infer<typeof ImageListProfileAPI>, 'imageRevisionId' | 'galleryPosition' | 'galleryCaption' | 'galleryAlt'> & {
     preview?: string

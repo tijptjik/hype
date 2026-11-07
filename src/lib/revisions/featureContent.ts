@@ -1,3 +1,5 @@
+// IMAGE INTENTS
+import { ImageIntentIdSchema } from '#lib/images/intents.js'
 // VALIDATION
 import { z } from 'zod'
 // DOMAIN
@@ -221,15 +223,8 @@ const property = z.strictObject({
 
 const galleryEntry = z.strictObject({
   imageRevisionId: id,
-  intent: z.enum([
-    'canonical',
-    'closeUp',
-    'context',
-    'general',
-    'research',
-    'undefined',
-  ]),
-  // Authored local visibility, distinct from current ancestor gates and image moderation.
+  intent: ImageIntentIdSchema,
+  // Publication derived from the effective intent policy; retained in historical snapshots.
   isPublished: z.boolean(),
   caption: z.record(id, z.string()),
   alt: z.record(id, z.string()),
@@ -262,20 +257,11 @@ export const FeatureRevisionContentSchema = z
     gallery: z.strictObject({
       entries: z.record(id, galleryEntry),
       order: z.array(id),
-      // Omission preserves historical hashes and means automatic intent ordering.
-      sortMode: z.enum(['automatic', 'manual']).optional(),
     }),
   })
   .superRefine((content, ctx) => {
     for (const message of validateRevisionGallery(content.gallery))
       ctx.addIssue({ code: 'custom', path: ['gallery'], message })
-    for (const [imageId, entry] of Object.entries(content.gallery.entries))
-      if (entry.intent === 'research' && entry.isPublished)
-        ctx.addIssue({
-          code: 'custom',
-          path: ['gallery', 'entries', imageId],
-          message: 'Research images cannot be published',
-        })
     if (content.placement.location && content.detachedBrands !== null)
       ctx.addIssue({
         code: 'custom',

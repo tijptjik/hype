@@ -1,3 +1,6 @@
+// IMAGE INTENT POLICY
+import { readFeatureImageIntentPolicy, normalizeAcceptedGalleryIntents } from './imageIntentPolicy'
+import { FeatureRevisionContentSchema as ImagePolicyContentSchema } from '#lib/revisions/featureContent.js'
 // SHARED ATTRIBUTION
 import { prepareRevisionChangeSet, type RevisionCommand } from './revisionChangeSet'
 export { prepareRevisionChangeSet, type RevisionCommand } from './revisionChangeSet'
@@ -427,12 +430,22 @@ export async function acceptFeatureRevisionProposal(
     validate: input.validate,
   })
   if (prepared.status !== 'ready') return prepared
-  const result = prepared.plan.result
+  let result = prepared.plan.result
+  const galleryContent = ImagePolicyContentSchema.safeParse(result.content)
+  let imagePolicyGuard: SQL = sql`1`
+  if (galleryContent.success) {
+    const policy = await readFeatureImageIntentPolicy(db, input.featureId)
+    imagePolicyGuard = policy.guard
+    const normalized = await normalizeAcceptedGalleryIntents(db, input.featureId, galleryContent.data, policy)
+    if (JSON.stringify(normalized) !== JSON.stringify(result.content)) result = {
+      kind: 'merge', content: normalized, mainlineParentRevisionId: comparison.id, proposalParentRevisionId: submitted.id,
+    }
+  }
   const revisionId = result.kind === 'promote' ? result.revisionId : crypto.randomUUID()
   const change = prepareRevisionChangeSet(db, input)
   const projection = await input.project(result.content, revisionId)
   const publishedAt = new Date().toISOString()
-  const guard = sql`(${input.guard}) AND EXISTS (SELECT 1 FROM featureRevisionHead WHERE featureId=${input.featureId} AND state='active' AND publishedRevisionId IS ${input.expectedPublishedRevisionId} AND generation=${input.expectedGeneration}) AND EXISTS (SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId} AND status=${expectedProposalStatus} AND candidateRevisionId=${input.expectedCandidateRevisionId} AND (${Number(!input.acceptOwnDraft)} OR contributorId=${input.actorId}))`
+  const guard = sql`(${input.guard}) AND (${imagePolicyGuard}) AND EXISTS (SELECT 1 FROM featureRevisionHead WHERE featureId=${input.featureId} AND state='active' AND publishedRevisionId IS ${input.expectedPublishedRevisionId} AND generation=${input.expectedGeneration}) AND EXISTS (SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId} AND status=${expectedProposalStatus} AND candidateRevisionId=${input.expectedCandidateRevisionId} AND (${Number(!input.acceptOwnDraft)} OR contributorId=${input.actorId}))`
   const writeScope = await prepareFeatureRevisionWriteScope(db, input.featureId)
   const statements: BatchItem<'sqlite'>[] = [prepareRevisionCheck(db, comparisonGuard), ...writeScope.before, change.statement]
   // Staff Publish records submission and acceptance in the same transaction. Preserve

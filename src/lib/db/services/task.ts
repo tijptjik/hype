@@ -1,3 +1,5 @@
+// IMAGE INTENT POLICY
+import { readFeatureImageIntentPolicy, resolvePolicyImageIntent } from './imageIntentPolicy'
 // INDEX SEARCH
 import { taskIndexSearchCondition } from './taskIndexFilters.js'
 // SVELTEKIT
@@ -392,7 +394,9 @@ const buildCompetingCanonicalDemotion = (
   return db
     .update(featureImage)
     .set({
-      intent: 'undefined',
+      intent: 'general',
+      isPublished: true,
+      localIsPublished: true,
     })
     .where(
       and(
@@ -510,10 +514,9 @@ const prepareTaskImagePublications = async (
 
     // Missing feature assignments have null intent and must not be accepted as classified.
     // Filter images based on skipUndefined parameter.
-    const eligibleImages = taskImages.filter(ti => ti.intent !== 'research')
-    const imagesToProcess = skipUndefined
-      ? eligibleImages.filter(ti => (ti.intent ?? 'undefined') !== 'undefined')
-      : eligibleImages
+    const policies = new Map<string, Awaited<ReturnType<typeof readFeatureImageIntentPolicy>>>()
+    for (const row of taskImages) if (row.featureId && !policies.has(row.featureId)) policies.set(row.featureId, await readFeatureImageIntentPolicy(db, row.featureId))
+    const imagesToProcess = taskImages.filter(row => row.featureId && (!skipUndefined || (row.intent ?? 'undefined') !== 'undefined')).map(row => ({ ...row, ...resolvePolicyImageIntent(policies.get(row.featureId!)!, row.intent ?? 'undefined', !skipUndefined) })).filter(row => row.isPublished)
 
     // Prepare every image change before committing the publication operation atomically.
     const statements = imagesToProcess.flatMap(ti => {
@@ -566,7 +569,7 @@ const prepareTaskImagePublications = async (
         return [publication]
       }
     })
-    return { statements, processedCount: imagesToProcess.length }
+    return { statements: [...[...policies.values()].filter(policy => policy.hubVersion >= 0).map(policy => prepareRevisionCheck(db, policy.guard)), ...statements], processedCount: imagesToProcess.length }
   } catch (error) {
     console.error('Failed to publish images:', error)
     throw error

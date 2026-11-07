@@ -1,3 +1,5 @@
+// IMAGE INTENTS
+import { DEFAULT_IMAGE_INTENTS } from '#lib/images/intents.js'
 // DRIZZLE
 import { eq, sql, type SQL, type SQLWrapper } from 'drizzle-orm'
 // DB
@@ -39,8 +41,7 @@ export function descendantPublicationState(
  * @param scope Feature or ancestor scope; identifiers are bound SQL parameters.
  * @param publisherId Actor responsible for publishing the image assignments.
  * @returns Resolves after classification and publication complete atomically.
- * @remarks Existing Featured choices and research-only images are preserved.
- * First means earliest uploaded eligible image, with image ID breaking ties.
+ * @remarks Existing Featured choices are preserved. Unclassified images require an explicit classification choice.
  */
 export async function publishScopedFeatureImages(
   db: Database,
@@ -55,13 +56,13 @@ export async function publishScopedFeatureImages(
  * @param db Database receiving the publication command.
  * @param scope Authorized feature or ancestor scope.
  * @param publisherId Publishing actor.
- * @returns Ordered classification and publication statements, without executing them.
+ * @returns Intent-driven publication statements, without executing them.
  */
 export async function buildScopedFeatureImagePublication(
   db: Database,
   scope: { kind: 'feature' | 'layer' | 'project' | 'organisation'; id: Id },
   publisherId: Id | null = null,
-): Promise<[BatchItem<'sqlite'>, BatchItem<'sqlite'>]> {
+): Promise<[BatchItem<'sqlite'>]> {
   const column = {
     feature: 'id',
     layer: 'layerId',
@@ -75,29 +76,26 @@ export async function buildScopedFeatureImagePublication(
     WHERE f.${sql.raw(column)} = ${scope.id}
       AND f.isPublished = 1 AND f.isArchived = 0 AND (${legacy})`
 
-  // Classify at most one eligible image per feature without replacing editorial choices.
-  const classify = db.update(featureImage).set({ intent: 'canonical' })
-    .where(sql`featureId IN (${eligible}
-      AND coalesce(json_extract(p.flags, '$.autoFeatureFirstImage'), 1) = 1)
-      AND NOT EXISTS (SELECT 1 FROM featureImage existing
-        WHERE existing.featureId = featureImage.featureId AND existing.intent = 'canonical')
-      AND imageId = (SELECT candidate.imageId FROM featureImage candidate
-        JOIN image i ON i.id = candidate.imageId
-        WHERE candidate.featureId = featureImage.featureId AND i.isArchived = 0
-          AND candidate.intent IN ('undefined', 'general', 'context', 'closeUp')
-        ORDER BY i.createdAt ASC, i.id ASC LIMIT 1)`)
-
-  // Publish only public classifications, retaining the original attribution on retries.
+  const policyStorage = await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='hubImageIntentPolicy' AND type='table'`)
+  const definitions = policyStorage?.n ? sql`COALESCE(
+    (SELECT ip.intents FROM projectImageIntentPolicy ip WHERE ip.projectId=p.id),
+    (SELECT hp.intents FROM hubImageIntentPolicy hp JOIN hub h ON h.id=hp.hubId
+      WHERE h.id=COALESCE((SELECT o.hubId FROM organisation o WHERE o.id=p.organisationId),(SELECT id FROM hub WHERE code='core'))),
+    ${JSON.stringify(DEFAULT_IMAGE_INTENTS)})` : sql`${JSON.stringify(DEFAULT_IMAGE_INTENTS)}`
+  // Intent is authoritative; unclassified images require the explicit follow-up choice.
   const publish = db.update(featureImage).set({
     isPublished: true,
-    localIsPublished: null,
-    publishedAt: new Date().toISOString(),
-    publisherId,
+    localIsPublished: true,
+    publishedAt: sql`COALESCE(publishedAt,${new Date().toISOString()})`,
+    publisherId: sql`COALESCE(publisherId,${publisherId})`,
   }).where(sql`featureId IN (${eligible}
-      AND coalesce(json_extract(p.flags, '$.autoPublishClassifiedImages'), 1) = 1)
-      AND isPublished = 0 AND intent IN ('canonical', 'general', 'context', 'closeUp')
-      AND imageId IN (SELECT id FROM image WHERE isArchived = 0)`)
-  return [classify, publish]
+      AND EXISTS(SELECT 1 FROM json_each(${definitions}) definition
+        WHERE json_extract(definition.value,'$.id')=featureImage.intent AND json_extract(definition.value,'$.isPublished')=1))
+      AND intent<>'undefined' AND isPublished=0
+      AND imageId IN (SELECT id FROM image WHERE isArchived=0)
+      AND NOT EXISTS(SELECT 1 FROM taskImage ti JOIN task t ON t.id=ti.taskId
+        WHERE ti.imageId=featureImage.imageId AND t.featureId=featureImage.featureId AND t.isReviewed=0)`)
+  return [publish]
 }
 
 /**

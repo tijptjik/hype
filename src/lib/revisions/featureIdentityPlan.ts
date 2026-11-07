@@ -1,3 +1,5 @@
+// IMAGE INTENTS
+import { ImageIntentIdSchema } from '#lib/images/intents.js'
 // VALIDATION
 import { z } from 'zod'
 
@@ -46,15 +48,7 @@ export const FeatureIdentitySelectionSchema = z.object({
             z.object({
               sourceFeatureId: z.string().min(1),
               imageId: z.string().min(1),
-              intent: z
-                .enum([
-                  'canonical',
-                  'closeUp',
-                  'context',
-                  'general',
-                  'research',
-                  'undefined',
-                ])
+              intent: ImageIntentIdSchema
                 .optional(),
             }),
           )

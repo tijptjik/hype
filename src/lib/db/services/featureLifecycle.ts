@@ -1,3 +1,5 @@
+// IMAGE INTENT POLICY
+import { readFeatureImageIntentPolicy, normalizeAcceptedGalleryIntents } from './imageIntentPolicy'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -219,6 +221,8 @@ export async function prepareFeatureEdit(
   )
   const errors = await input.validate(current.content, content)
   if (errors.length) throw new Error(errors.join('; '))
+  const imagePolicy = await readFeatureImageIntentPolicy(db, input.featureId)
+  await normalizeAcceptedGalleryIntents(db, input.featureId, content, imagePolicy)
   const state = { ...current.state, ...input.state }
   if (input.state?.isPublished !== undefined)
     state.localIsPublished = input.state.isPublished
@@ -241,7 +245,7 @@ export async function prepareFeatureEdit(
         gallery: { actorId: input.actorId, attachmentGuard: input.attachmentGuard },
         identity: input.identity,
       })
-  const guard = sql`(${input.guard}) AND (${source.unchanged}) AND (${featureContentProjectionMatches(input.featureId, current.content)})
+  const guard = sql`(${input.guard}) AND (${imagePolicy.guard}) AND (${source.unchanged}) AND (${featureContentProjectionMatches(input.featureId, current.content)})
     AND EXISTS (SELECT 1 FROM feature WHERE id=${input.featureId} AND currentRevisionId=${current.revisionId} AND revisionVersion=${current.version})
     AND NOT EXISTS (SELECT 1 FROM featureIdentityOperationMember i WHERE i.featureId=${input.featureId} AND i.role='input'
       AND NOT EXISTS (SELECT 1 FROM featureIdentityOperationMember o WHERE o.operationId=i.operationId AND o.featureId=i.featureId AND o.role='output'))`

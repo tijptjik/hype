@@ -85,9 +85,7 @@ export const featureImage = sqliteTable(
     imageId: text('imageId')
       .notNull()
       .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    intent: text('intent', {
-      enum: Object.values(ImageIntent) as [string, ...string[]],
-    })
+    intent: text('intent')
       .default(ImageIntent.undefined)
       .notNull(),
     isPublished: integer('isPublished', { mode: 'boolean' }).default(false).notNull(),

@@ -1,3 +1,5 @@
+// IMAGE INTENTS
+import { ImageIntentIdSchema } from '#lib/images/intents.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -109,8 +111,7 @@ export const ImageUpdate = createUpdateSchema(image)
 export const FeatureImageBase = createSelectSchema(featureImage)
 export const FeatureImageInsert = createInsertSchema(featureImage).extend({
   featureId: z.string(),
-  intent: z
-    .enum(Object.values(ImageIntent) as [string, ...string[]])
+  intent: ImageIntentIdSchema
     .prefault(ImageIntent.undefined),
   isPublished: z.boolean().prefault(false),
   publishedAt: z.string().nullish(),
@@ -136,7 +137,7 @@ export const ImageContextEnvelopeAPI = z.object({
   ]),
   ctxId: z.string(),
   image: z.lazy(() => z.union([ImageListProfileAPI, ImageAdminProfileAPI])),
-  intent: z.enum(ImageIntent).nullish(),
+  intent: ImageIntentIdSchema.nullish(),
   isPublished: z.boolean().nullish(),
   publishedAt: z.string().nullish(),
 })
@@ -154,8 +155,7 @@ export const ImageAPI = ImageBase.extend({
   altText: z.string().nullish(),
   featureId: z.string().optional(),
   attribution: z.string().nullish(),
-  intent: z
-    .enum(Object.values(ImageIntent) as [string, ...string[]])
+  intent: ImageIntentIdSchema
     .prefault(ImageIntent.undefined)
     .optional(),
   isPublished: z.boolean().prefault(false).optional(),
@@ -238,7 +238,7 @@ export const ImageMetadataProfileSchema = z.enum(['basic', 'full', 'auto', 'admi
 export const ImageFlat = ImageBase.extend({
   featureId: z.string().nullish(),
   attribution: z.string().nullish(),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
+  intent: ImageIntentIdSchema.nullish(),
   isPublished: z.boolean().nullish(),
   publishedAt: z.string().nullish(),
 })
@@ -247,7 +247,7 @@ export const ImageFlatUpdate = ImageUpdate.extend({
   featureId: z.string(),
   imageId: z.string(),
   attribution: z.string().nullish(),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
+  intent: ImageIntentIdSchema.nullish(),
   isPublished: z.boolean().nullish(),
   publishedAt: z.string().nullish(),
 })
@@ -369,14 +369,7 @@ export const SetImageIntentSchema = z.object({
   id: z.string().min(1),
   ctxType: ImageContextTypeExtendedSchema,
   ctxId: z.string().min(1),
-  intent: z.enum([
-    'canonical',
-    'closeUp',
-    'context',
-    'general',
-    'research',
-    'undefined',
-  ]),
+  intent: ImageIntentIdSchema,
   featureId: z.string().optional(),
   isPublished: z.boolean().optional(),
   meta: ImageRequestMetaSchema,

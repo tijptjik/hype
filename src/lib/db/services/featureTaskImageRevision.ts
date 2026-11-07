@@ -1,3 +1,5 @@
+// IMAGE INTENT POLICY
+import { readFeatureImageIntentPolicy, resolvePolicyImageIntent } from './imageIntentPolicy'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -22,6 +24,7 @@ export async function prepareLegacyFeatureTaskImageReview(db: Database, input: {
   action: 'acceptAll' | 'acceptClassified' | 'reject'
   rows: { imageId: string; featureId: string | null; intent: string | null }[]
 }): Promise<Awaited<ReturnType<typeof prepareFeatureAcceptedCapture>>> {
+  const policy = await readFeatureImageIntentPolicy(db, input.featureId)
   const ids = JSON.stringify(input.rows.map(row => row.imageId))
   const published: string[] = []
   let inputGuard: SQL = sql`1`
@@ -41,13 +44,14 @@ export async function prepareLegacyFeatureTaskImageReview(db: Database, input: {
       for (const row of input.rows) {
         const entry = content.gallery.entries[row.imageId]
         const intent = row.intent ?? 'undefined'
-        const accept = input.action !== 'reject' && intent !== 'research' && (input.action === 'acceptAll' || intent !== 'undefined')
+        const assignment = resolvePolicyImageIntent(policy, intent, input.action === 'acceptAll')
+        const accept = input.action !== 'reject' && assignment.isPublished && (input.action === 'acceptAll' || intent !== 'undefined')
         const remove = input.action === 'reject' || (input.action === 'acceptClassified' && intent === 'undefined')
         if (accept) {
           if (!entry || row.featureId !== input.featureId) throw new Error('Task photo requires a verified Feature gallery revision')
           if (entry.intent === 'canonical') for (const [id, other] of Object.entries(content.gallery.entries))
-            if (id !== row.imageId && other.intent === 'canonical') other.intent = 'undefined'
-          entry.isPublished = true
+            if (id !== row.imageId && other.intent === 'canonical') { other.intent = 'general'; other.isPublished = true }
+          Object.assign(entry, assignment)
           published.push(row.imageId)
         } else if (remove && !sharedIds.has(row.imageId) && entry) {
           delete content.gallery.entries[row.imageId]
@@ -57,6 +61,7 @@ export async function prepareLegacyFeatureTaskImageReview(db: Database, input: {
       return content
     },
   })
+  capture.before.unshift(prepareRevisionCheck(db, policy.guard))
   if (capture.revisionId) {
     capture.before.push(prepareRevisionCheck(db, inputGuard))
     if (published.length) capture.after.unshift(db.update(featureImage).set({ localIsPublished: true }).where(and(

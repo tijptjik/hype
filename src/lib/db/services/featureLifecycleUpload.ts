@@ -1,3 +1,5 @@
+// IMAGE INTENT POLICY
+import { readFeatureImageIntentPolicy, resolvePolicyImageIntent } from './imageIntentPolicy'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // VALIDATION
@@ -127,8 +129,11 @@ export async function saveDirectFeatureUpload(
   const assetVersionId = crypto.randomUUID(),
     imageRevisionId = crypto.randomUUID(),
     change = prepareRevisionChangeSet(db, input)
+  const imagePolicy = await readFeatureImageIntentPolicy(db, input.featureId)
+  const assignment = resolvePolicyImageIntent(imagePolicy, input.intent, imagePolicy.autoPublishUnclassified)
   const prepared = await prepareFeatureEdit(db, {
     ...input,
+    guard: sql`(${input.guard}) AND (${imagePolicy.guard})`,
     attachmentGuard: input.guard,
     validate: () => [],
     derive: content => {
@@ -137,12 +142,11 @@ export async function saveDirectFeatureUpload(
       else {
         if (input.intent === 'canonical')
           for (const entry of Object.values(content.gallery.entries))
-            if (entry.intent === 'canonical') entry.intent = 'undefined'
+            if (entry.intent === 'canonical') { entry.intent = 'general'; entry.isPublished = true }
         content.gallery.order.push(imageId)
         content.gallery.entries[imageId] = {
           imageRevisionId,
-          intent: input.intent,
-          isPublished: input.intent !== 'research',
+          ...assignment,
           caption: {},
           alt: {},
         }

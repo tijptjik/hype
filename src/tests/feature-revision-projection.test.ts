@@ -1281,7 +1281,7 @@ describe('accepted gallery read projection', () => {
     const content = JSON.parse(String(row.content))
     expect(row.previousRevisionId).toBe(initial.revisionId)
     expect(row.actorId).toBe('gallery-editor')
-    expect(content.gallery.entries.photo.intent).toBe('undefined')
+    expect(content.gallery.entries.photo.intent).toBe('general')
     expect(content.gallery.entries.research).toMatchObject({
       intent: 'canonical',
       isPublished: true,
