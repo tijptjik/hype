@@ -374,7 +374,7 @@ export const getTaskReviewActionLabel = (reviewAction?: string | null): string =
     case 'added-classified-photos':
       return m.task__review_action_added_selected_photos()
     case 'merged-feature':
-      return 'Merged with existing Feature'
+      return '+ Merge'
     case 'added-feature':
       return m.task__review_action_added_feature()
     default:
