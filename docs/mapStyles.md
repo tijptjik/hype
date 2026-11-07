@@ -78,6 +78,29 @@ That means a style becomes project-assignable only after both are true:
 - It is registered in `REGISTERED_MAP_STYLE_CATALOG`.
 - The relevant `db:sync:map:styles:*` command has been run against the target database.
 
+## Quercus
+
+Quercus is a light, globally selectable botanical field map for ancient-tree collections.
+It pairs with Milque while differing from Day Runner's paper-and-peach city map:
+chalk-coloured land carries fine paper grain, sage parks use stipple and woodland uses
+broken hatching. Buildings have quiet outlines, local streets are fine ink lines and
+walking paths use dashed olive strokes. Motorways, their ramps, bridges, tunnels,
+route shields and one-way arrows are omitted; local street names, footbridges and
+walking tunnels remain. Ordinary POIs and administrative boundaries are omitted so
+tree photos provide the map's visual detail. It uses the
+shared light marker treatment, whose plum outline separates pale or transparent tree
+images from the map.
+
+Texture sprites ship at 1x and 2x under `static/mapSprites/quercus`. Their authored SVG
+sources and deterministic generator (`bun scripts/generate-quercus-textures.ts`) make
+the patterns inspectable and reproducible. Texture is attached to geographic fills,
+including label-free renders, rather than placed over the screen or photographs.
+
+Choose **Milque** for the UI and **Quercus** for the map in appearance settings.
+Selecting a map independently disables UI/map synchronization; Milque's synchronized
+Breadline map remains Day Runner. Quercus includes a bundled picker preview and can
+be assigned to a project after catalog sync, without uploading preview images to R2.
+
 ## Project-only styles
 
 Set `projectCode` on a catalog entry to restrict assignment to that project's code.

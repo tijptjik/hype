@@ -1,3 +1,5 @@
+// MAP
+import { buildQuercusStyle } from './definitions/quercus'
 import { buildNoclit26Style } from './definitions/noclit26'
 import { buildMidnightStyle } from './definitions/midnight'
 import { buildBreadlineDarkStyle } from './definitions/breadlineDark'
@@ -40,6 +42,7 @@ export type MapStyleCatalogKey =
   | 'breadline'
   | 'breadline-light'
   | 'breadline-dark'
+  | 'quercus'
   | 'midnight'
   | 'noclit26'
   | 'protomaps-light'
@@ -129,6 +132,7 @@ export const MAP_STYLE_CATALOG = [
     name: getMapStyleCatalogCopy('hype-dark', 'en').name,
     description: getMapStyleCatalogCopy('hype-dark', 'en').description,
     buildStyle: buildHyperStyle,
+    bundledPreviewPath: '/mapStylePreviews/hype-dark.png',
     basemapVariant: 'dark',
     markerTheme: 'etch-dark',
     showSymbols: true,
@@ -138,6 +142,7 @@ export const MAP_STYLE_CATALOG = [
     name: getMapStyleCatalogCopy('hype-light', 'en').name,
     description: getMapStyleCatalogCopy('hype-light', 'en').description,
     buildStyle: buildHyperLightStyle,
+    bundledPreviewPath: '/mapStylePreviews/hype-light.png',
     basemapVariant: 'light',
     markerTheme: 'etch-light',
     showSymbols: true,
@@ -274,6 +279,15 @@ export const MAP_STYLE_CATALOG = [
     showSymbols: true,
   },
   {
+    key: 'quercus',
+    ...getMapStyleCatalogCopy('quercus', 'en'),
+    buildStyle: buildQuercusStyle,
+    bundledPreviewPath: '/mapStylePreviews/quercus.png',
+    basemapVariant: 'light',
+    markerTheme: 'light',
+    showSymbols: true,
+  },
+  {
     key: 'midnight',
     ...getMapStyleCatalogCopy('midnight', 'en'),
     buildStyle: buildMidnightStyle,
@@ -317,6 +331,7 @@ export const FEATURED_MAP_STYLE_KEYS = [
   'hype-light',
   'breadline-light',
   'breadline-dark',
+  'quercus',
   'hyperpop',
   'midnight',
 ] as const satisfies readonly MapStyleCatalogKey[]

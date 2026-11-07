@@ -4,6 +4,16 @@
     "publicPath": "/mapStyles/noclit26.488ef9b5b60d.json",
     "hash": "488ef9b5b60d10a9dd4cba69c398fd4399ec06583b221cc2689a4c8d3e042956"
   },
+  "hype-dark": {
+    "fileName": "hype-dark.fbb9213ca0f4.json",
+    "publicPath": "/mapStyles/hype-dark.fbb9213ca0f4.json",
+    "hash": "fbb9213ca0f4d8de057862e4f7a1c68d09bdfd427c5f4678f7785b87da745497"
+  },
+  "hype-light": {
+    "fileName": "hype-light.ffddb1729de6.json",
+    "publicPath": "/mapStyles/hype-light.ffddb1729de6.json",
+    "hash": "ffddb1729de652ddd27662bbc86ffc0fb0f864d62f3deb7a97763284d120001b"
+  },
   "hyper": {
     "fileName": "hyper.fbb9213ca0f4.json",
     "publicPath": "/mapStyles/hyper.fbb9213ca0f4.json",
@@ -68,6 +78,11 @@
     "fileName": "breadline-dark.d70a38838309.json",
     "publicPath": "/mapStyles/breadline-dark.d70a38838309.json",
     "hash": "d70a388383092d37789bb9d4581a7a09231df344af4630aaf81541fe95e2ce1b"
+  },
+  "quercus": {
+    "fileName": "quercus.aa9021c91f36.json",
+    "publicPath": "/mapStyles/quercus.aa9021c91f36.json",
+    "hash": "aa9021c91f361eb49b4ed74949147a6aab4459c7db1d4794db7c21ec55b9d926"
   },
   "midnight": {
     "fileName": "midnight.1a633e0c0dfa.json",

@@ -134,6 +134,11 @@ export const resolveMapStyleRenderPathForKey = async (
   environment: string | null | undefined,
   key: MapStyleKey,
 ): Promise<string> => {
+  const bundledPreview = REGISTERED_MAP_STYLE_CATALOG.find(
+    entry => entry.key === key,
+  )?.bundledPreviewPath
+  if (bundledPreview) return bundledPreview
+
   // Canonical names share the unchanged legacy style JSON and existing render assets.
   const assetKey =
     key === 'hype-dark' ? 'hyper' : key === 'hype-light' ? 'hyperLight' : key
