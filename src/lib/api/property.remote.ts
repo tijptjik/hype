@@ -13,6 +13,8 @@ import {
 } from '#lib/api/services/property.js'
 import {
   authorizeHubUpdateForSubmission,
+  authorizeHubReadForProbe,
+  authorizeOrganisationReadForProbe,
   authorizeOrganisationUpdateForSubmission,
   authorizeProjectReadForProbe,
   authorizeProjectUpdateForSubmission,
@@ -28,6 +30,8 @@ import {
   createPropertyValues,
 } from '#lib/db/services/property.js'
 import { probeProjectQuery } from '#lib/db/services/project.js'
+import { probeHubQuery } from '#lib/db/services/hub.js'
+import { probeOrganisationQuery } from '#lib/db/services/organisation.js'
 import { retryBusyRead } from '#lib/db/services/sqlite.js'
 // SCHEMA
 import {
@@ -465,32 +469,42 @@ const getPropertiesQuery = guardedQuery(ListQueryParamsSchema, async (params, ct
 export const getProperties = getPropertiesQuery
 
 /**
- * Returns a role-aware single property record for guarded remote callers.
+ * Returns a single field after authorizing reads against its persisted owner.
+ * @param params Field identity and request metadata.
+ * @param ctx Authenticated request context.
+ * @returns The field and catalogue choices, or null for a missing owner or field.
+ * @remarks Shared hub and organisation fields have no projectId. Authorize their
+ * actual owner before hydrating values, just as project-local fields do.
  */
 const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) => {
   const { db, user, userRoles } = ctx
 
   const propertyScope = await probePropertyScope(db, params.id)
-  if (!propertyScope) {
-    return {
-      data: null,
-    }
-  }
-  if (
-    typeof propertyScope.projectId !== 'string' ||
-    propertyScope.projectId.length === 0
-  ) {
-    return {
-      data: null,
-    }
-  }
+  if (!propertyScope) return { data: null }
 
-  const readDecision = await toProjectReadDecision({
-    db,
-    projectId: propertyScope.projectId,
-    user,
-    userRoles,
-  })
+  // Resolve only the persisted owner; shared fields must not require a project ID.
+  let readDecision: ReturnType<typeof authorizeProjectReadForProbe> | null = null
+  if (propertyScope.scope === 'project' && propertyScope.projectId) {
+    readDecision = await toProjectReadDecision({
+      db,
+      projectId: propertyScope.projectId,
+      user,
+      userRoles,
+    })
+  } else if (
+    propertyScope.scope === 'organisation' && propertyScope.organisationId
+  ) {
+    const probe = await probeOrganisationQuery(db, {
+      ref: propertyScope.organisationId, refKey: 'id',
+    })
+    if (probe)
+      readDecision = authorizeOrganisationReadForProbe({ user, userRoles, probe })
+  } else if (propertyScope.scope === 'hub' && propertyScope.hubId) {
+    const probe = await probeHubQuery(db, {
+      ref: propertyScope.hubId, refKey: 'id',
+    })
+    if (probe) readDecision = authorizeHubReadForProbe({ user, userRoles, probe })
+  }
   if (!readDecision) {
     return {
       data: null,
@@ -500,7 +514,7 @@ const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) =
     throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
-  // Hydrate property values only after the owning project passes read authorization.
+  // Hydrate property values only after the owning resource passes read authorization.
   const result = await loadProperty(db, propertyCollectionWithRelations, [
     eq(property.id, params.id),
   ])

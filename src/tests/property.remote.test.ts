@@ -19,6 +19,10 @@ const {
   mockAuthorizeProjectUpdateForSubmission,
   mockAuthorizeOrganisationUpdateForSubmission,
   mockAuthorizeHubUpdateForSubmission,
+  mockProbeHubQuery,
+  mockProbeOrganisationQuery,
+  mockAuthorizeHubReadForProbe,
+  mockAuthorizeOrganisationReadForProbe,
   mockGuardedContext,
   mockProjectProbeRows,
   mockPropertyScopeRows,
@@ -49,6 +53,10 @@ const {
   mockAuthorizeHubUpdateForSubmission: vi.fn(
     (): { allowed: boolean; code?: string } => ({ allowed: true }),
   ),
+  mockProbeHubQuery: vi.fn(),
+  mockProbeOrganisationQuery: vi.fn(),
+  mockAuthorizeHubReadForProbe: vi.fn(),
+  mockAuthorizeOrganisationReadForProbe: vi.fn(),
   mockGuardedContext: vi.fn(),
   mockProjectProbeRows: vi.fn(async (): Promise<unknown[]> => []),
   mockPropertyScopeRows: vi.fn(async (): Promise<unknown[]> => []),
@@ -96,6 +104,8 @@ vi.mock('#lib/api/services/property.js', () => ({
 
 vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeProjectReadForProbe: mockAuthorizeProjectReadForProbe,
+  authorizeHubReadForProbe: mockAuthorizeHubReadForProbe,
+  authorizeOrganisationReadForProbe: mockAuthorizeOrganisationReadForProbe,
   authorizeProjectUpdateForSubmission: mockAuthorizeProjectUpdateForSubmission,
   authorizeOrganisationUpdateForSubmission:
     mockAuthorizeOrganisationUpdateForSubmission,
@@ -112,6 +122,9 @@ vi.mock('#lib/db/services/property.js', () => ({
   listResolvedProjectProperties: mockListResolvedProjectProperties,
   getProperty: mockLoadProperty,
 }))
+
+vi.mock('#lib/db/services/hub.js', () => ({ probeHubQuery: mockProbeHubQuery }))
+vi.mock('#lib/db/services/organisation.js', () => ({ probeOrganisationQuery: mockProbeOrganisationQuery }))
 
 vi.mock('#lib/db/services/project.js', () => ({
   probeProjectQuery: mockProbeProjectQuery,
@@ -321,6 +334,45 @@ describe('property.remote', () => {
       status: 403,
     })
     expect(mockLoadProperty).not.toHaveBeenCalled()
+  })
+
+  describe.each(['hub', 'organisation'] as const)('%s-owned category reads', owner => {
+    const setup = () => {
+      mockPropertyScopeRows.mockResolvedValue([{
+        id: 'shared-category', scope: owner, projectId: null,
+        hubId: owner === 'hub' ? 'hub-1' : null,
+        organisationId: owner === 'organisation' ? 'org-1' : null,
+      }])
+      const probe = owner === 'hub' ? mockProbeHubQuery : mockProbeOrganisationQuery
+      const authorize = owner === 'hub' ? mockAuthorizeHubReadForProbe : mockAuthorizeOrganisationReadForProbe
+      probe.mockResolvedValue({ id: owner === 'hub' ? 'hub-1' : 'org-1', isPublished: true, isArchived: false })
+      authorize.mockReturnValue({ allowed: true })
+      return { probe, authorize }
+    }
+
+    it('loads shared choices without a projectId after checking the actual owner', async () => {
+      const { authorize } = setup()
+      const row = { id: 'shared-category', values: [{ id: 'choice-1' }] }
+      mockLoadProperty.mockResolvedValue(row)
+      await expect(remote.getProperty({ id: 'shared-category' })).resolves.toEqual({ data: { row } })
+      expect(authorize).toHaveBeenCalled()
+      expect(mockProbeProjectQuery).not.toHaveBeenCalled()
+      expect(mockLoadProperty).toHaveBeenCalledOnce()
+    })
+
+    it('does not hydrate choices when owner read permission is denied', async () => {
+      const { authorize } = setup()
+      authorize.mockReturnValue({ allowed: false, code: 'INSUFFICIENT_ROLE' })
+      await expect(remote.getProperty({ id: 'shared-category' })).rejects.toMatchObject({ status: 403 })
+      expect(mockLoadProperty).not.toHaveBeenCalled()
+    })
+
+    it('returns null without hydrating choices when the owner is missing', async () => {
+      const { probe } = setup()
+      probe.mockResolvedValue(null)
+      await expect(remote.getProperty({ id: 'shared-category' })).resolves.toEqual({ data: null })
+      expect(mockLoadProperty).not.toHaveBeenCalled()
+    })
   })
 
   it('checks append access from the property scope probe without loading relations', async () => {
