@@ -1,15 +1,15 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
-import UsersIcon from 'virtual:icons/lucide/users'
 import FormInputIcon from 'virtual:icons/proicons/button'
+import UsersIcon from 'virtual:icons/lucide/users'
 import StoreIcon from 'virtual:icons/lucide/store'
 import ChatIcon from 'virtual:icons/lucide/message-circle'
 import FileTextIcon from 'virtual:icons/proicons/file-text'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import Layers3Icon from 'virtual:icons/proicons/layers'
-import UpdatesIcon from 'virtual:icons/proicons/arrow-sync'
 import MapPinIcon from 'virtual:icons/proicons/location'
+import UpdatesIcon from 'virtual:icons/proicons/arrow-sync'
 import SettingsIcon from 'virtual:icons/proicons/settings'
 import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
 import TagIcon from 'virtual:icons/proicons/tag'
@@ -24,7 +24,7 @@ export const ADMIN_FACETS = {
   capabilities: 'capabilities',
   messaging: 'messaging',
   users: 'users',
-  address: 'address',
+  location: 'location',
   updates: 'updates',
   images: 'images',
   fields: 'fields',
@@ -56,7 +56,6 @@ export type ProjectFacet =
 export type LayerFacet = 'features' | 'core' | 'fields' | 'advanced'
 
 export const ADMIN_FACET_DEFINITIONS = {
-  [ADMIN_FACETS.updates]: { label: () => 'History', icon: UpdatesIcon },
   [ADMIN_FACETS.users]: { label: () => 'Users', icon: UsersIcon },
   [ADMIN_FACETS.messaging]: { label: () => 'Messaging', icon: ChatIcon },
   [ADMIN_FACETS.features]: { label: () => m.omni__title_features(), icon: MapPinIcon },
@@ -69,10 +68,11 @@ export const ADMIN_FACET_DEFINITIONS = {
     label: () => m.resources__capabilities(),
     icon: ShieldCheckIcon,
   },
-  [ADMIN_FACETS.address]: {
-    label: () => m.feature__address(),
+  [ADMIN_FACETS.location]: {
+    label: () => m.feature_location_title(),
     icon: MapPinIcon,
   },
+  [ADMIN_FACETS.updates]: { label: () => m.feature_updates_title(), icon: UpdatesIcon },
   [ADMIN_FACETS.images]: {
     label: () => m.organisation__images(),
     icon: ImageIcon,
@@ -92,14 +92,14 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
-  [ADMIN_FACETS.updates]: () => 'History',
   [ADMIN_FACETS.users]: () => 'Users',
   [ADMIN_FACETS.messaging]: () => 'Messaging',
   [ADMIN_FACETS.features]: () => m.omni__title_features(),
   [ADMIN_FACETS.advanced]: () => m.project_advanced(),
   [ADMIN_FACETS.core]: () => m.admin__forms_common_descriptors(),
   [ADMIN_FACETS.capabilities]: () => m.resources__capabilities(),
-  [ADMIN_FACETS.address]: () => m.feature__address(),
+  [ADMIN_FACETS.location]: () => m.feature_location_title(),
+  [ADMIN_FACETS.updates]: () => m.feature_updates_title(),
   [ADMIN_FACETS.images]: () => m.feature__images(),
   [ADMIN_FACETS.fields]: () => m.admin__forms_common_fields(),
   [ADMIN_FACETS.layers]: () => m.maps__layers(),
@@ -111,8 +111,11 @@ export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 > = {
   organisation: { updates: () => 'History' },
   project: { updates: () => 'History' },
+  layer: { updates: () => 'History' },
+  hub: { updates: () => 'History' },
   feature: {
-    address: () => m.feature_location_title(),
+    updates: () => 'History',
+    location: () => m.feature_location_title(),
     images: () => m.feature__images(),
   },
 }
@@ -122,9 +125,12 @@ export const ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 > = {
   organisation: { updates: () => 'History' },
   project: { updates: () => 'History' },
+  layer: { updates: () => 'History' },
+  hub: { updates: () => 'History' },
   feature: {
+    updates: () => 'History',
     core: () => m.resources__profile(),
-    address: () => m.feature_location_title(),
+    location: () => m.feature_location_title(),
     fields: () => m.feature__fields_title(),
   },
 }
@@ -170,9 +176,10 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   feature: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.address,
+    ADMIN_FACETS.location,
     ADMIN_FACETS.fields,
     ADMIN_FACETS.images,
+    ADMIN_FACETS.updates,
   ],
   task: [ADMIN_FACETS.core],
 }

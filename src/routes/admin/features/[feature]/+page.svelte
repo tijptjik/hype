@@ -203,7 +203,7 @@ const noopHeaderAction = (): void => {}
 // INTERNAL NAVIGATION STATE
 // - isCoreFacet
 // - isFieldsFacet
-// - isAddressFacet
+// - isLocationFacet
 // - isImagesFacet
 //
 // INTERNAL NAVIGATION ACTIONS
@@ -436,7 +436,7 @@ const featureFacetOrder = $derived.by(() =>
 const isCoreFacet = $derived(activeFacet === 'core')
 
 const isFieldsFacet = $derived(activeFacet === 'fields')
-const isAddressFacet = $derived(activeFacet === 'address')
+const isLocationFacet = $derived(activeFacet === 'location')
 const isImagesFacet = $derived(activeFacet === 'images')
 
 /********************
@@ -523,7 +523,7 @@ $effect(() => {
 $effect(() => {
   activeFacet
   contentsElement
-  if (activeFacet === 'address' && isNewFeatureRef && locationFocusRequest > 0) return
+  if (activeFacet === 'location' && isNewFeatureRef && locationFocusRequest > 0) return
   focusFacetFromHash(contentsElement, activeFacet)
 })
 
@@ -608,10 +608,12 @@ let pinHighlightRequest = $state(0)
 let visitedLocationRef = $state<string | null>(null)
 let visitedImagesRef = $state<string | null>(null)
 $effect(() => {
-  if (isAddressFacet) visitedLocationRef = featureRef
+  if (isLocationFacet) visitedLocationRef = featureRef
   if (isImagesFacet) visitedImagesRef = featureRef
 })
-const mountLocationFacet = $derived(isAddressFacet || visitedLocationRef === featureRef)
+const mountLocationFacet = $derived(
+  isLocationFacet || visitedLocationRef === featureRef,
+)
 
 let draftSearch:
   | { backToResults: () => void; addManualLocation: () => void }
@@ -626,7 +628,7 @@ function recoverDraftSearchHistory(): void {
   void tick().then(() => {
     if (
       isNewFeatureRef &&
-      isAddressFacet &&
+      isLocationFacet &&
       draftSelectionBefore &&
       page.state.draftLocationResult !== draftResultHistoryId
     )
@@ -656,14 +658,14 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (isNewFeatureRef && isAddressFacet) namingChosen = true
+  if (isNewFeatureRef && isLocationFacet) namingChosen = true
 })
 
 /** Open draft Location discovery and request focus after the facet becomes visible.
  * @returns Nothing.
  */
 function startLocationSearch(): void {
-  goToFacet('address')
+  goToFacet('location')
   locationFocusRequest++
 }
 
@@ -907,7 +909,7 @@ function dropDraftPin(): boolean {
  */
 function ensureDraftPin(): boolean {
   if (!isNewFeatureRef || draftHasPin) return true
-  goToFacet('address')
+  goToFacet('location')
   toast.error(m.feature_start_choose_position())
   return false
 }
@@ -932,7 +934,7 @@ const isEditing = $derived(headerCtrl.state.isEditing)
 
 // § Sections
 // Only keep the visual section mounted on facets that actually render it.
-const showsVisualSection = $derived(isCoreFacet || isFieldsFacet || isAddressFacet)
+const showsVisualSection = $derived(isCoreFacet || isFieldsFacet || isLocationFacet)
 
 let isVisualSectionCollapsed = $state(
   adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
@@ -2726,8 +2728,8 @@ $effect(() => () => clearVisualSectionReopenState())
     {#if showsVisualSection}
       <FormFeatureVisualSection
         expandedHeight={Math.min(1200, editorViewportHeight * 0.5)}
-        showImage={!isAddressFacet}
-        showControls={!isAddressFacet}
+        showImage={!isLocationFacet}
+        showControls={!isLocationFacet}
         onHeightChange={height => (visualSectionHeight = height)}
         {hasPresentedCanonicalImageSizing}
         {isCanonicalImagePending}
@@ -2758,7 +2760,7 @@ $effect(() => () => clearVisualSectionReopenState())
               <FormMapSection
                 {pinHighlightRequest}
                 onMapReady={controller => (draftMapController = controller)}
-                locationCandidates={isAddressFacet ? locationSearchMarkers : []}
+                locationCandidates={isLocationFacet ? locationSearchMarkers : []}
                 onLocationCandidateSelect={selectLocationMarker}
                 showMarker={!isNewFeatureRef || draftHasPin}
                 initialCenter={isNewFeatureRef ? DRAFT_MAP_CENTER : initialMapCenter}
@@ -2771,7 +2773,7 @@ $effect(() => () => clearVisualSectionReopenState())
                 draggable={isEditing}
                 onCoordinateChange={handlePinDrop}
               />
-              {#if isAddressFacet && draftSearchFilterPanel}
+              {#if isLocationFacet && draftSearchFilterPanel}
                 <div
                   class="absolute inset-0 z-20 flex items-end justify-center overflow-hidden bg-black/15"
                   data-location-filter-panel
@@ -2779,7 +2781,7 @@ $effect(() => () => clearVisualSectionReopenState())
                   {@render draftSearchFilterPanel()}
                 </div>
               {/if}
-              {#if isAddressFacet && sharedLocationMapControls}
+              {#if isLocationFacet && sharedLocationMapControls}
                 <div class="absolute top-3 right-3 z-10" data-location-map-controls>
                   {@render sharedLocationMapControls()}
                 </div>
@@ -2990,12 +2992,12 @@ $effect(() => () => clearVisualSectionReopenState())
     </Main.Facet>
 
     <Main.Facet
-      isVisible={isAddressFacet}
+      isVisible={isLocationFacet}
       transition="fade"
       fillHeight={true}
       contentClass="h-full overflow-hidden"
       class={getFeatureEditorFacetClass({
-        isVisible: isAddressFacet,
+        isVisible: isLocationFacet,
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
@@ -3005,8 +3007,8 @@ $effect(() => () => clearVisualSectionReopenState())
             text: m.feature_start_back_results(),
             onClick: () => draftSearch?.backToResults(),
           }
-        : buildFacetNavAction('address', 'previous')}
-      nextAction={buildFacetNavAction('address', 'next')}
+        : buildFacetNavAction('location', 'previous')}
+      nextAction={buildFacetNavAction('location', 'next')}
       centerAction={isNewFeatureRef && (draftSearchHasResults || draftLocationAccepted)
         ? {
             id: 'draft-manual-entry',
@@ -3016,7 +3018,7 @@ $effect(() => () => clearVisualSectionReopenState())
             onClick: startManualLocation,
           }
         : null}
-      attrs={{ 'data-facet-id': 'address' }}
+      attrs={{ 'data-facet-id': 'location' }}
     >
       {#if mountLocationFacet}
         <FormSurface class="mb-0! flex h-full min-h-0 flex-col overflow-hidden">
@@ -3177,7 +3179,7 @@ $effect(() => () => clearVisualSectionReopenState())
                   button.focus()
                   return document.activeElement === button
                 }}
-                active={isAddressFacet}
+                active={isLocationFacet}
                 focusRequest={locationFocusRequest}
                 onSelect={selectDraftLocation}
                 onPreview={previewDraftLocation}
