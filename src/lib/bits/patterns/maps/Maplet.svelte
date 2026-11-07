@@ -557,16 +557,14 @@ $effect(() => {
   </div>
   <!-- Loading Spinner -->
   {#if !isMapLoaded}
-    <div
-      class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300"
-    >
+    <div class="bg-base-300 absolute inset-0 flex items-center justify-center">
       <div class="loading loading-ring loading-lg text-primary"></div>
     </div>
   {/if}
 
   <!-- Map Container -->
   <div
-    class="map h-full w-full grow rounded-lg bg-base-300"
+    class="map bg-base-300 h-full w-full grow"
     class:opacity-0={!isMapLoaded}
     class:opacity-100={isMapLoaded}
     data-testid="map"
