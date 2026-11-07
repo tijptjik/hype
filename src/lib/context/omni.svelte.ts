@@ -3,6 +3,7 @@ import { browser } from '$app/env'
 import { getContext, setContext, tick, untrack, onDestroy } from 'svelte'
 // LIB
 import { isMobile } from '#lib'
+import { getFeaturePointCoordinates } from '#lib/map/featureSpatial.js'
 import { searchAllAsync } from '#lib/map/data.js'
 import { createBoundedDebounce } from '#lib/utils/boundedDebounce.js'
 // I18N
@@ -811,11 +812,49 @@ export class OmniCtx {
     this.resetCardTransition()
   }
 
+  /**
+   * Resolves a selected feature's marker origin for non-pointer entry points such as search.
+   * @returns Nothing; missing map geometry leaves the normal no-origin fallback intact.
+   * @remarks Explicit toggle and marker-click origins remain authoritative.
+   */
+  private prepareSelectedFeatureCardTransition(): void {
+    if (!browser || this.cardTransition.sourceKind !== 'none') return
+    const feature = this.appCtx.getActiveFeature()
+    if (!feature) return
+    const marker = [
+      ...document.querySelectorAll<HTMLElement>(
+        '[data-type="marker"][data-feature-id]',
+      ),
+    ].find(element => element.dataset.featureId === feature.id)
+    if (marker) {
+      this.prepareCardTransitionFromMarker(
+        marker.querySelector<HTMLElement>('.marker-inner') ?? marker,
+      )
+      if (this.cardTransition.sourceRect) return
+    }
+    // Canvas-only and not-yet-loaded photo markers share the same geographic origin.
+    const coordinates = getFeaturePointCoordinates(feature.geometry)
+    const point = coordinates
+      ? this.appCtx.mapController?.projectToViewport?.(coordinates)
+      : null
+    if (!point) return
+    this.cardTransition.sourceKind = 'marker'
+    this.cardTransition.sourceRect = {
+      left: point.left - 12,
+      top: point.top - 12,
+      width: 24,
+      height: 24,
+    }
+    this.cardTransition.sourceRadiusPx = 12
+  }
+
+  /** Opens the card using its explicit origin or the selected feature's map position. @returns Nothing. */
   openCard() {
     if (this.state.isCardOpen) {
       return
     }
 
+    this.prepareSelectedFeatureCardTransition()
     this.cardTransition.phase = this.cardTransition.sourceRect ? 'opening' : 'idle'
     this.state.isCardOpen = true
   }

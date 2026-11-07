@@ -18,6 +18,7 @@ import {
   featureQuerySignature,
   queryFeaturePage,
 } from '#lib/db/services/featureQuery.js'
+import * as galleryPins from '#lib/db/services/featureGalleryRead.js'
 import { listFeatures } from '#lib/db/services/feature.js'
 import { applyPrismConstraints } from '#lib/db/index.js'
 import { HierarchicalResource } from '#lib/enums.js'
@@ -1236,4 +1237,29 @@ it('filters versioned date/time intervals by overlap with matching counts and mi
   )
   const unfiltered = await queryFeaturePage(db, input(), base, hub)
   expect(reset.data.map(row => row.id)).toEqual(unfiltered.data.map(row => row.id))
+})
+
+it('projects accepted gallery pins before returning collection previews', async () => {
+  const { db } = setup()
+  const pin = vi
+    .spyOn(galleryPins, 'applyFeatureGalleryPins')
+    .mockImplementation(async (_db, rows) =>
+      rows.map(row => ({
+        ...row,
+        images: [{ image: { id: 'photo', imageRevisionId: 'accepted-revision' } }],
+      })),
+    )
+  try {
+    const page = await queryFeaturePage(db, input({ limit: 1 }), base, hub)
+    expect(pin).toHaveBeenCalledWith(db, expect.any(Array), {
+      publishedOnly: true,
+      publicationPreview: false,
+    })
+    expect(page.data).toHaveLength(1)
+    expect(page.data[0]).toMatchObject({
+      images: [{ image: { imageRevisionId: 'accepted-revision' } }],
+    })
+  } finally {
+    pin.mockRestore()
+  }
 })

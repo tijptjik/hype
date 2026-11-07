@@ -7,6 +7,9 @@ import type {
 } from 'maplibre-gl'
 
 export type MapController = {
+  projectToViewport?: (
+    coordinates: [number, number],
+  ) => { left: number; top: number } | null
   getBuildingAt?: (point: [number, number]) => Promise<SelectedBuilding | null>
   getCamera: () => {
     center: [number, number]
@@ -42,6 +45,14 @@ export const createMapController = (
   }
 
   return {
+    /** Projects a geographic marker into viewport pixels. @param coordinates Marker longitude and latitude. @returns Position including the map element offset, or null before mount. */
+    projectToViewport: coordinates => {
+      const map = getMap()
+      if (!map) return null
+      const point = map.project(coordinates)
+      const rect = map.getContainer().getBoundingClientRect()
+      return { left: rect.left + point.x, top: rect.top + point.y }
+    },
     getBuildingAt: async point => {
       const map = getMap()
       if (!map) throw new Error('Map unavailable')

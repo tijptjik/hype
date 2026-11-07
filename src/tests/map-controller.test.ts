@@ -99,3 +99,16 @@ describe('map controller', () => {
     expect(cancelAnimationFrame).toHaveBeenCalledWith(2)
   })
 })
+
+it('projects marker coordinates into viewport space including the map offset', () => {
+  const map = {
+    project: vi.fn(() => ({ x: 100, y: 200 })),
+    getContainer: () => ({ getBoundingClientRect: () => ({ left: 35, top: 60 }) }),
+  }
+  const controller = createMapController(() => map as never)
+  expect(controller.projectToViewport?.([114.17, 22.32])).toEqual({
+    left: 135,
+    top: 260,
+  })
+  expect(map.project).toHaveBeenCalledWith([114.17, 22.32])
+})

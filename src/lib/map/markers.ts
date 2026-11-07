@@ -317,6 +317,8 @@ function createFeatureMarkerElement(
     const marker = createMarkerElement()
     marker.classList.add(`marker-theme--${markerTheme}`)
     marker.dataset.markerSignature = `dot:${markerTheme}`
+    marker.dataset.markerPresentation = 'dot'
+    marker.dataset.markerTheme = markerTheme
     return marker
   }
 
@@ -325,12 +327,17 @@ function createFeatureMarkerElement(
     const marker = createMarkerElement()
     marker.classList.add(`marker-theme--${markerTheme}`)
     marker.dataset.markerSignature = `dot:${markerTheme}`
+    marker.dataset.markerPresentation = 'dot'
+    marker.dataset.markerTheme = markerTheme
     return marker
   }
 
   const container = document.createElement('div')
-  container.className = `marker-container marker-container--feature marker-theme--${markerTheme} marker-fade-in`
+  container.className = `marker-container marker-container--feature marker-theme--${markerTheme}`
+  container.style.visibility = 'hidden'
   container.dataset.type = 'marker'
+  container.dataset.markerPresentation = `${imageSrc}${markerStyle === 'image-bw' ? ':bw' : ''}`
+  container.dataset.markerTheme = markerTheme
   container.dataset.markerSignature = `${imageSrc}:${markerTheme}${markerStyle === 'image-bw' ? ':bw' : ''}`
 
   const innerContainer = document.createElement('div')
@@ -338,8 +345,7 @@ function createFeatureMarkerElement(
   innerContainer.dataset.type = 'marker'
 
   const image = document.createElement('img')
-  image.className =
-    'marker-image opacity-0 transition-opacity duration-200 motion-reduce:transition-none'
+  image.className = 'marker-image opacity-0'
   image.alt = ''
   if (markerStyle === 'image-bw') image.style.filter = 'grayscale(1)'
   // MapLibre positions markers outside normal document flow, so native lazy loading
@@ -349,14 +355,25 @@ function createFeatureMarkerElement(
   image.draggable = false
   image.dataset.type = 'marker'
 
-  // Keep progressive image bytes hidden until decoding finishes; the marker hit
-  // target and frame remain available throughout loading and on request failure.
+  // Keep the entire photo, frame and hit target hidden until decoding finishes.
+  // Failed requests reveal a static placeholder so the feature remains selectable.
   const skeleton = document.createElement('div')
   skeleton.className =
     'pointer-events-none absolute inset-0 rounded-full bg-base-300 animate-pulse motion-reduce:animate-none'
   skeleton.setAttribute('aria-hidden', 'true')
   innerContainer.dataset.imageState = 'loading'
   if (diagnostics) diagnostics.created += 1
+
+  /** Reveals the complete marker once; retained nodes never replay their entry animation. @returns Nothing. */
+  const reveal = (): void => {
+    container.style.visibility = ''
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    container.classList.add('marker-fade-in')
+    container.addEventListener('animationend', event => {
+      if (event.target === container && event.animationName === 'markerFadeIn')
+        container.classList.remove('marker-fade-in')
+    })
+  }
 
   image.addEventListener(
     'load',
@@ -379,6 +396,7 @@ function createFeatureMarkerElement(
       innerContainer.dataset.imageState = 'ready'
       image.classList.replace('opacity-0', 'opacity-100')
       skeleton.remove()
+      reveal()
     },
     { once: true },
   )
@@ -387,6 +405,7 @@ function createFeatureMarkerElement(
     () => {
       innerContainer.dataset.imageState = 'error'
       skeleton.classList.remove('animate-pulse')
+      reveal()
       if (diagnostics) {
         diagnostics.failed += 1
         logMarkerBootstrap('marker image request failed', {
@@ -844,6 +863,22 @@ export function createMarkerRenderer(
         if (!retention && !work && detached.delete(feature.id)) {
           existingMarker.addTo(map)
           onElementChange?.(feature.id, element)
+        }
+        // Palette changes only affect CSS; retain the decoded photo and its native node.
+        const imageSrc =
+          effectiveStyle === 'dot' ? null : getFeatureMarkerImageSrc(feature)
+        const presentation = imageSrc
+          ? `${imageSrc}${effectiveStyle === 'image-bw' ? ':bw' : ''}`
+          : 'dot'
+        if (
+          !custom &&
+          element.dataset.markerPresentation === presentation &&
+          element.dataset.markerTheme !== markerTheme
+        ) {
+          element.classList.remove(`marker-theme--${element.dataset.markerTheme}`)
+          element.classList.add(`marker-theme--${markerTheme}`)
+          element.dataset.markerTheme = markerTheme
+          element.dataset.markerSignature = nextSignature
         }
         if (element.dataset.markerSignature === nextSignature) {
           applyMarkerState(element, feature.id, markerState)

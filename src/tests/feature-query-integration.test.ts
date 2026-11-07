@@ -2,6 +2,8 @@
 import { AccountState } from '#lib/context/account.svelte.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync } from 'svelte'
+import { render } from '@testing-library/svelte/pure'
+import OmniContextFixture from './fixtures/components/OmniContextFixture.svelte'
 import {
   createFeatureQueryEffectRoot,
   createFeatureQueryPageSignal,
@@ -10,7 +12,7 @@ import type { RemoteQuery } from '$app/server'
 import { withRemoteMeta } from './remote-function-mock'
 import { AppCtx } from '#lib/context/app.svelte.js'
 import { OmniCollection } from '#lib/enums.js'
-import { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import { DivisionCtx } from '#lib/context/division.svelte.js'
 import { getFeaturePage } from '#lib/api/featureQueries.remote.js'
 import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
@@ -143,11 +145,13 @@ function createApp(): AppCtx {
 
 function createOmni(app: AppCtx): OmniCtx {
   let omni!: OmniCtx
-  cleanups.push(
-    createFeatureQueryEffectRoot(() => {
-      omni = new OmniCtx(app)
-    }),
-  )
+  const fixture = render(OmniContextFixture, {
+    app,
+    onReady: value => {
+      omni = value
+    },
+  })
+  cleanups.push(() => fixture.unmount())
   cleanups.push(() => omni.eventCleanup?.())
   flushSync()
   return omni
@@ -363,8 +367,10 @@ describe('map query integration', () => {
     vi.mocked(getFeaturePage).mockReturnValue(first.query)
     const omni = createOmni(app)
 
-    omni.state.isTrayOpen = true
+    // Resolve the draft before opening; debounce timing is tested separately.
     omni.setSearchTerm('mong')
+    flushSync()
+    omni.state.isTrayOpen = true
     flushSync()
     await vi.advanceTimersByTimeAsync(150)
 
@@ -600,5 +606,34 @@ describe('paginated collection activation', () => {
       'filtered',
     ])
     expect(app.selection.feature?.id).toBe('filtered')
+  })
+})
+
+it('opens an Omnibar feature from its projected marker position when its photo is not mounted', async () => {
+  const app = createApp()
+  const feature = row('search-marker')
+  app.view.cache.feature.set(feature.id, feature)
+  app.mapController = { projectToViewport: () => ({ left: 420, top: 360 }) } as never
+  const omni = createOmni(app)
+  await omni.initFeature(feature.id, { focus: false, openCardDelay: 0 })
+  await vi.advanceTimersByTimeAsync(0)
+  expect(omni.cardTransition).toMatchObject({
+    phase: 'opening',
+    sourceKind: 'marker',
+    sourceRect: { left: 408, top: 348, width: 24, height: 24 },
+  })
+})
+
+it('preserves the explicit toggle origin when opening a selected feature', () => {
+  const app = createApp()
+  const omni = createOmni(app)
+  const toggle = document.createElement('button')
+  toggle.getBoundingClientRect = () =>
+    ({ left: 20, top: 30, width: 40, height: 40 }) as DOMRect
+  omni.prepareCardTransitionFromToggle(toggle)
+  omni.openCard()
+  expect(omni.cardTransition).toMatchObject({
+    sourceKind: 'toggle',
+    sourceRect: { left: 20, top: 30 },
   })
 })

@@ -61,7 +61,7 @@ export function useOmnibarModel(
   )
 
   /**
-   * Applies the resource panel's activation or filter action from a search row.
+   * Activates a search result or applies its independent filter control.
    * @param type Resource hierarchy level.
    * @param id Selected resource identity.
    * @param control Whether the separate filter/target control was pressed.
@@ -76,23 +76,22 @@ export function useOmnibarModel(
     try {
       if (type === 'layer') {
         if (control) await scope.isolateLayer(id)
-        else await scope.toggleLayer(id)
+        else if (!scope.prisms.layer.includes(id)) await scope.toggleLayer(id)
       } else if (type === 'project') {
         if (control) await scope.toggleProject(id)
-        else if (scope.isProjectDefaultLayersActive(id))
-          await scope.deactivateProjectLayers(id)
-        else await scope.addProjectDefaultLayers(id)
+        else if (!scope.isProjectDefaultLayersActive(id))
+          await scope.activateProjectWithDefaultLayers(id)
       } else {
         if (control) await scope.toggleOrganisation(id)
-        else if (scope.isOrganisationDefaultLayersActive(id))
-          await scope.deactivateOrganisationLayers(id)
-        else await scope.addOrganisationDefaultLayers(id)
+        else if (!scope.isOrganisationDefaultLayersActive(id))
+          await scope.activateOrganisationWithDefaultLayers(id)
       }
       const feature = appCtx.getActiveFeature()
       if (feature && !scope.prisms.layer.includes(feature.layerId)) {
         navigate('/')
         omniCtx.setMode(OmniMode.search)
       }
+      if (!control) omniCtx.closeTray()
     } catch (error) {
       console.error('[Omni search] Resource action failed:', error)
       toast.error(m.resource_action_failed())

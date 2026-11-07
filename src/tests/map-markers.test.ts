@@ -248,7 +248,7 @@ describe('map markers', () => {
     expect(renderer.getElement(row.id)).not.toBe(original)
   })
 
-  it('keeps marker images hidden behind a skeleton until decoding finishes', async () => {
+  it('hides the entire photo marker until decoded and fades it in only once', async () => {
     const renderer = createMarkerRenderer(map, markerFactory)
     renderer.sync([feature('loading')])
     const marker = renderer.getElement('loading')!
@@ -256,6 +256,8 @@ describe('map markers', () => {
     const image = marker.querySelector<HTMLImageElement>('img')!
     const decoded = Promise.withResolvers<void>()
     image.decode = vi.fn(() => decoded.promise)
+    expect(marker.style.visibility).toBe('hidden')
+    expect(marker).not.toHaveClass('marker-fade-in')
     expect(inner.dataset.imageState).toBe('loading')
     expect(image).toHaveClass('opacity-0')
     expect(inner.querySelector('.animate-pulse')).not.toBeNull()
@@ -265,6 +267,14 @@ describe('map markers', () => {
     expect(image).toHaveClass('opacity-0')
     decoded.resolve()
     await Promise.resolve()
+    expect(marker.style.visibility).toBe('')
+    expect(marker).toHaveClass('marker-fade-in')
+    const entered = new Event('animationend')
+    Object.defineProperty(entered, 'animationName', { value: 'markerFadeIn' })
+    marker.dispatchEvent(entered)
+    renderer.sync([feature('loading')])
+    expect(renderer.getElement('loading')).toBe(marker)
+    expect(marker).not.toHaveClass('marker-fade-in')
     expect(inner.dataset.imageState).toBe('ready')
     expect(image).toHaveClass('opacity-100')
     expect(inner.querySelector('.animate-pulse')).toBeNull()
@@ -278,6 +288,7 @@ describe('map markers', () => {
     const inner = marker.querySelector<HTMLElement>('.marker-inner')!
     const image = marker.querySelector<HTMLImageElement>('img')!
     image.dispatchEvent(new Event('error'))
+    expect(marker.style.visibility).toBe('')
     expect(inner.dataset.imageState).toBe('error')
     expect(image).toHaveClass('opacity-0')
     expect(inner.querySelector('.bg-base-300')).not.toBeNull()
@@ -359,7 +370,7 @@ describe('map markers', () => {
     expect(renderer.getElement(row.id)).toHaveClass('marker-theme--neon')
   })
 
-  it('rebuilds image markers when their map-style theme changes', () => {
+  it('restyles image markers in place when their map-style theme changes', () => {
     const renderer = createMarkerRenderer(map, markerFactory)
     renderer.sync([feature('feature-1')], {
       markerThemesByProjectId: new Map([['project-1', 'dark']]),
@@ -368,7 +379,8 @@ describe('map markers', () => {
     renderer.sync([feature('feature-1')], {
       markerThemesByProjectId: new Map([['project-1', 'hyperpop']]),
     })
-    expect(firstMarker?.removed).toBe(true)
+    expect(firstMarker?.removed).toBe(false)
+    expect(renderer.getElement('feature-1')).toBe(firstMarker?.element)
     expect(renderer.getElement('feature-1')).toHaveClass('marker-theme--hyperpop')
   })
 
@@ -766,4 +778,24 @@ describe('marker retention policy', () => {
     expect(isWithinMarkerRetentionPerimeter(retentionMap, [361, 1])).toBe(true)
     expect(isWithinMarkerRetentionPerimeter(retentionMap, [1, -193])).toBe(false)
   })
+})
+
+it('updates palette without replacing or decoding a surviving photo again', () => {
+  const renderer = createMarkerRenderer(retentionMap, markerFactory)
+  const row = feature('stable-photo', [1, 1])
+  renderer.sync([row], {
+    markerTheme: 'etch-dark',
+    retention: { scope: 'first', budget: 1000 },
+  })
+  const element = renderer.getElement(row.id)!
+  const image = element.querySelector('img')
+  renderer.sync([row], {
+    markerTheme: 'etch-light',
+    retention: { scope: 'second', budget: 1000 },
+  })
+  expect(renderer.getElement(row.id)).toBe(element)
+  expect(element.querySelector('img')).toBe(image)
+  expect(element).toHaveClass('marker-theme--etch-light')
+  expect(element).not.toHaveClass('marker-theme--etch-dark')
+  renderer.clear()
 })

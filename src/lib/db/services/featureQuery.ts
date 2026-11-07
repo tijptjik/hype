@@ -36,6 +36,7 @@ import { featureLocationLifecycleSQL } from './locationLifecycleProjection'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 import { getFeatureQueryCounts } from './featureCounts'
+import { applyFeatureGalleryPins } from './featureGalleryRead'
 // UTILS
 import { chunkedInArray } from '#lib/utils/batch-query.js'
 // TYPES
@@ -526,9 +527,15 @@ export async function queryFeaturePage(
         }),
       )
     : []
+  // Collection previews must use the same accepted image revisions as detail cards.
+  // Otherwise route hydration replaces a mutable preview with another source and fades twice.
+  const pinned = await applyFeatureGalleryPins(db, raw, {
+    publishedOnly: !input.meta.isAdminRequest,
+    publicationPreview: Boolean(input.meta.publicationPreview),
+  })
   const { data } = await toListResponseShape(
     {
-      data: raw.sort(
+      data: pinned.sort(
         (left, right) => pageIds.indexOf(left.id) - pageIds.indexOf(right.id),
       ) as unknown as FeatureListDBRaw[],
       totalCount: 0,

@@ -220,7 +220,7 @@ function startCrossfade(nextScene: SceneSnapshot): void {
     return
   }
 
-  previousScene = displayedScene ? cloneSceneSnapshot(displayedScene) : null
+  previousScene = visibleScene ? cloneSceneSnapshot(visibleScene) : null
   incomingScene = cloneSceneSnapshot(nextScene)
   crossfadeActive = false
   clearPendingScene()
@@ -362,112 +362,60 @@ onDestroy(() => {
     {/each}
   {/if}
 
-  {#if previousScene}
-    {#if showBackdrop &&
-      previousScene.fit === 'fit' &&
-      getGalleryBackgroundSrc(previousScene.item)}
-      <div
-        class="viewer-backdrop absolute inset-0"
-        style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`}
-      >
+  <!-- Keep each decoded scene mounted while its role changes from incoming to settled. -->
+  {#each incomingScene
+    ? [...(previousScene ? [previousScene] : []), incomingScene]
+    : displayedScene
+      ? [displayedScene]
+      : [] as scene (scene.key)}
+    {@const transitioning = Boolean(incomingScene)}
+    {@const opacity = !transitioning
+      ? 1
+      : scene.key === incomingScene?.key
+        ? crossfadeActive
+          ? 1
+          : 0
+        : crossfadeActive
+          ? 0
+          : 1}
+    {@const transitionStyle = transitioning
+      ? `opacity: ${opacity}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`
+      : 'opacity: 1;'}
+    {#if showBackdrop && scene.fit === 'fit' && getGalleryBackgroundSrc(scene.item)}
+      <div class="viewer-backdrop absolute inset-0" style={transitionStyle}>
         <ImageBackdrop
-          src={getGalleryBackgroundSrc(previousScene.item)!}
-          mode={previousScene.item.presentationMode === 'cast-edges' ? 'edges' : 'blur'}
-          rotationDegrees={previousScene.item.presentationMode === 'cast-edges'
-            ? (previousScene.item.rotationDegrees ?? 0)
+          src={getGalleryBackgroundSrc(scene.item)!}
+          mode={scene.item.presentationMode === 'cast-edges' ? 'edges' : 'blur'}
+          rotationDegrees={scene.item.presentationMode === 'cast-edges'
+            ? (scene.item.rotationDegrees ?? 0)
             : 0}
         />
-        {#if previousScene.item.presentationMode !== 'cast-edges'}
+        {#if scene.item.presentationMode !== 'cast-edges'}
           <div class="viewer-backdrop-tint absolute inset-0"></div>
         {/if}
       </div>
     {/if}
 
-    <div
-      class="viewer-scene absolute inset-0"
-      style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`}
-    >
-      {#if !shouldRenderImageSurface(previousScene.item)}
+    <div class="viewer-scene absolute inset-0" style={transitionStyle}>
+      {#if !shouldRenderImageSurface(scene.item)}
         <div
           class="viewer-layer absolute inset-0"
-          style={getLayerTransitionStyle(previousScene.key)}
+          style={getLayerTransitionStyle(scene.key)}
         >
           <div class="absolute inset-0 flex items-center justify-center">
             <ImageForeground
-              fit={previousScene.fit}
-              trimRim={previousScene.fit === 'fit' &&
-                previousScene.item.presentationMode === 'cast-edges'}
-              src={getGalleryForegroundSrc(previousScene.item)}
-              alt={previousScene.item.alt ?? ''}
-              style={getGalleryForegroundRotationStyle(previousScene.item)}
+              fit={scene.fit}
+              trimRim={scene.fit === 'fit' &&
+                scene.item.presentationMode === 'cast-edges'}
+              src={getGalleryForegroundSrc(scene.item)}
+              alt={scene.item.alt ?? ''}
+              style={getGalleryForegroundRotationStyle(scene.item)}
               class={`absolute inset-0 h-full w-full ${
-                previousScene.fit === 'cover' ? 'object-cover' : 'object-contain'
-              } ${getForegroundRotationClass(previousScene.item)}`}
-            />
-          </div>
-        </div>
-      {:else}
-        <div
-          class="viewer-layer absolute inset-0"
-          style={getLayerTransitionStyle(previousScene.key)}
-        >
-          <ImageSurface
-            item={previousScene.item}
-            fit={previousScene.fit}
-            class="h-full w-full"
-            showBackdrop={false}
-            enableSourceTransition={false}
-            animateLoading={false}
-            isLoading={false}
-          />
-        </div>
-      {/if}
-    </div>
-  {/if}
-
-  {#if displayedScene && !previousScene && !incomingScene}
-    {#if showBackdrop &&
-      displayedScene.fit === 'fit' &&
-      getGalleryBackgroundSrc(displayedScene.item)}
-      <div class="viewer-backdrop absolute inset-0">
-        <ImageBackdrop
-          src={getGalleryBackgroundSrc(displayedScene.item)!}
-          mode={displayedScene.item.presentationMode === 'cast-edges'
-            ? 'edges'
-            : 'blur'}
-          rotationDegrees={displayedScene.item.presentationMode === 'cast-edges'
-            ? (displayedScene.item.rotationDegrees ?? 0)
-            : 0}
-        />
-        {#if displayedScene.item.presentationMode !== 'cast-edges'}
-          <div class="viewer-backdrop-tint absolute inset-0"></div>
-        {/if}
-      </div>
-    {/if}
-
-    <div
-      class="viewer-scene absolute inset-0"
-      style="opacity: 1; transform: translateX(0);"
-    >
-      {#if !shouldRenderImageSurface(displayedScene.item)}
-        <div
-          class="viewer-layer absolute inset-0"
-          style={getLayerTransitionStyle(displayedScene.key)}
-        >
-          <div class="absolute inset-0 flex items-center justify-center">
-            <ImageForeground
-              fit={displayedScene.fit}
-              trimRim={displayedScene.fit === 'fit' &&
-                displayedScene.item.presentationMode === 'cast-edges'}
-              src={getGalleryForegroundSrc(displayedScene.item)}
-              alt={displayedScene.item.alt ?? ''}
-              style={getGalleryForegroundRotationStyle(displayedScene.item)}
-              class={`absolute inset-0 h-full w-full ${
-                displayedScene.fit === 'cover' ? 'object-cover' : 'object-contain'
-              } ${getForegroundRotationClass(displayedScene.item)}`}
+                scene.fit === 'cover' ? 'object-cover' : 'object-contain'
+              } ${getForegroundRotationClass(scene.item)}`}
               onload={() => {
-                if (displayedScene) {
-                  onCurrentItemLoad?.(displayedScene.item)
+                if (scene.key === (incomingScene ?? displayedScene)?.key) {
+                  onCurrentItemLoad?.(scene.item)
                 }
               }}
             />
@@ -476,97 +424,25 @@ onDestroy(() => {
       {:else}
         <div
           class="viewer-layer absolute inset-0"
-          style={getLayerTransitionStyle(displayedScene.key)}
+          style={getLayerTransitionStyle(scene.key)}
         >
           <ImageSurface
-            item={displayedScene.item}
-            fit={displayedScene.fit}
+            item={scene.item}
+            fit={scene.fit}
             class="h-full w-full"
             showBackdrop={false}
             enableSourceTransition={false}
             animateLoading={false}
             onLoad={() => {
-              if (displayedScene) {
-                onCurrentItemLoad?.(displayedScene.item)
+              if (scene.key === (incomingScene ?? displayedScene)?.key) {
+                onCurrentItemLoad?.(scene.item)
               }
             }}
           />
         </div>
       {/if}
     </div>
-  {/if}
-
-  {#if incomingScene}
-    {#if showBackdrop &&
-      incomingScene.fit === 'fit' &&
-      getGalleryBackgroundSrc(incomingScene.item)}
-      <div
-        class="viewer-backdrop absolute inset-0"
-        style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`}
-      >
-        <ImageBackdrop
-          src={getGalleryBackgroundSrc(incomingScene.item)!}
-          mode={incomingScene.item.presentationMode === 'cast-edges' ? 'edges' : 'blur'}
-          rotationDegrees={incomingScene.item.presentationMode === 'cast-edges'
-            ? (incomingScene.item.rotationDegrees ?? 0)
-            : 0}
-        />
-        {#if incomingScene.item.presentationMode !== 'cast-edges'}
-          <div class="viewer-backdrop-tint absolute inset-0"></div>
-        {/if}
-      </div>
-    {/if}
-
-    <div
-      class="viewer-scene absolute inset-0"
-      style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`}
-    >
-      {#if !shouldRenderImageSurface(incomingScene.item)}
-        <div
-          class="viewer-layer absolute inset-0"
-          style={getLayerTransitionStyle(incomingScene.key)}
-        >
-          <div class="absolute inset-0 flex items-center justify-center">
-            <ImageForeground
-              fit={incomingScene.fit}
-              trimRim={incomingScene.fit === 'fit' &&
-                incomingScene.item.presentationMode === 'cast-edges'}
-              src={getGalleryForegroundSrc(incomingScene.item)}
-              alt={incomingScene.item.alt ?? ''}
-              style={getGalleryForegroundRotationStyle(incomingScene.item)}
-              class={`absolute inset-0 h-full w-full ${
-                incomingScene.fit === 'cover' ? 'object-cover' : 'object-contain'
-              } ${getForegroundRotationClass(incomingScene.item)}`}
-              onload={() => {
-                if (incomingScene) {
-                  onCurrentItemLoad?.(incomingScene.item)
-                }
-              }}
-            />
-          </div>
-        </div>
-      {:else}
-        <div
-          class="viewer-layer absolute inset-0"
-          style={getLayerTransitionStyle(incomingScene.key)}
-        >
-          <ImageSurface
-            item={incomingScene.item}
-            fit={incomingScene.fit}
-            class="h-full w-full"
-            showBackdrop={false}
-            enableSourceTransition={false}
-            animateLoading={false}
-            onLoad={() => {
-              if (incomingScene) {
-                onCurrentItemLoad?.(incomingScene.item)
-              }
-            }}
-          />
-        </div>
-      {/if}
-    </div>
-  {/if}
+  {/each}
 </div>
 
 <style>

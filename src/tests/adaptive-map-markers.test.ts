@@ -288,7 +288,7 @@ describe('adaptive public map markers', () => {
       retention: { scope: 'different-user:layers', budget: 1000 },
       selectedId: 'old-0',
     })
-    expect(points.sync.mock.calls[0]?.[0]).toEqual([])
+    expect(points.sync).toHaveBeenCalledTimes(1)
     expect(new Set(pointRows().map(point => point.id))).toEqual(
       new Set(replacement.map(row => row.id)),
     )
@@ -304,7 +304,7 @@ describe('adaptive public map markers', () => {
     renderer.sync(active, retained)
     points.sync.mockClear()
     renderer.sync(active, { ...retained, markerStyle: 'dot' })
-    expect(points.sync.mock.calls[0]?.[0]).toEqual([])
+    expect(points.sync).toHaveBeenCalledTimes(1)
     expect(pointRows()).toHaveLength(40)
     expect(nativeRows()).toEqual([])
     expect(native.sync.mock.calls.at(-1)?.[1]?.markerStyle).toBe('dot')
@@ -373,4 +373,20 @@ describe('adaptive public map markers', () => {
     expect(native.sync).not.toHaveBeenCalled()
     expect(points.sync).not.toHaveBeenCalled()
   })
+})
+
+it('preserves surviving photo slots across a filter change during a camera flight', () => {
+  const { renderer, nativeRows, points, state } = fixture()
+  const existing = rows(200)
+  renderer.sync(existing, retained)
+  const chosen = nativeRows().map(row => row.id)
+  points.sync.mockClear()
+  state.moving = true
+  renderer.sync([...existing.toReversed(), ...rows(20, 'new')], {
+    retention: { scope: 'expanded-project-selection', budget: 1000 },
+  })
+  expect(new Set(nativeRows().map(row => row.id))).toEqual(new Set(chosen))
+  expect(points.sync).toHaveBeenCalledTimes(1)
+  expect(points.sync.mock.calls[0][0]).toHaveLength(220)
+  renderer.clear()
 })

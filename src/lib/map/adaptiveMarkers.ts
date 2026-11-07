@@ -271,8 +271,10 @@ export function createAdaptiveMarkerRenderer(
       const nextScope = presentationScope(nextOptions)
       if (scope !== nextScope || !nextOptions.retention) {
         records.clear()
-        chosenPhotos.clear()
-        points.sync([])
+        // Discard cached payloads at scope boundaries, but preserve photo slots for
+        // identities explicitly supplied by the new authorized result, even mid-flight.
+        const incomingIds = new Set(features.map(row => row.id))
+        chosenPhotos = new Set([...chosenPhotos].filter(id => incomingIds.has(id)))
       }
       scope = nextScope
       options = nextOptions

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from '@testing-library/svelte/pure'
+import { cleanup, render, waitFor } from '@testing-library/svelte/pure'
 import { afterEach, expect, it, vi } from 'vitest'
 import Fixture from './fixtures/components/OmnibarModelFixture.svelte'
 import type { AppCtx } from '#lib/context/app.svelte.js'
@@ -30,14 +30,19 @@ vi.mock('#lib/context/panel-resources.svelte.js', () => ({
 afterEach(cleanup)
 
 function setup() {
+  vi.useRealTimers()
   const scope = {
-    prisms: { layer: [], project: [], organisation: [] },
+    prisms: {
+      layer: [] as string[],
+      project: [] as string[],
+      organisation: [] as string[],
+    },
     isProjectDefaultLayersActive: () => false,
     isOrganisationDefaultLayersActive: () => false,
     toggleLayer: vi.fn(),
     isolateLayer: vi.fn(),
-    addProjectDefaultLayers: vi.fn(),
-    addOrganisationDefaultLayers: vi.fn(),
+    activateProjectWithDefaultLayers: vi.fn(),
+    activateOrganisationWithDefaultLayers: vi.fn(),
     toggleProject: vi.fn(),
     toggleOrganisation: vi.fn(),
   }
@@ -53,6 +58,7 @@ function setup() {
   } as unknown as AppCtx
   const featureSelect = vi.fn()
   const omni = {
+    closeTray: vi.fn(),
     searchQueryTerm: 'neon',
     state: { searchTerm: 'neon', isTrayOpen: true, mode: 'search' },
     searchResults: {
@@ -121,9 +127,11 @@ it('uses normal activation for rows and independent isolate/prism actions for co
   await Promise.resolve()
   expect(scope.toggleLayer).toHaveBeenCalledExactlyOnceWith('layer-0')
   expect(scope.isolateLayer).toHaveBeenCalledExactlyOnceWith('layer-0')
-  expect(scope.addProjectDefaultLayers).toHaveBeenCalledExactlyOnceWith('project-0')
+  expect(scope.activateProjectWithDefaultLayers).toHaveBeenCalledExactlyOnceWith(
+    'project-0',
+  )
   expect(scope.toggleProject).toHaveBeenCalledExactlyOnceWith('project-0')
-  expect(scope.addOrganisationDefaultLayers).toHaveBeenCalledExactlyOnceWith(
+  expect(scope.activateOrganisationWithDefaultLayers).toHaveBeenCalledExactlyOnceWith(
     'organisation-0',
   )
   expect(scope.toggleOrganisation).toHaveBeenCalledExactlyOnceWith('organisation-0')
@@ -133,7 +141,7 @@ it('selects the first project when no feature or walk matches and omits resource
   const { search, omni, scope } = setup()
   omni.searchResults.feature = []
   search().onSelectFirstResult()
-  expect(scope.addProjectDefaultLayers).toHaveBeenCalledWith('project-0')
+  expect(scope.activateProjectWithDefaultLayers).toHaveBeenCalledWith('project-0')
   omni.state.searchTerm = ' '
   omni.searchQueryTerm = ' '
   expect(search().sections.map(section => section.collectionType)).toEqual([
@@ -167,4 +175,45 @@ it('keeps completed matches while the draft advances and shows activity immediat
   ).toEqual(completed)
   omni.state.searchTerm = 'neon'
   expect(search().updating).toBe(false)
+})
+
+it.each(['project', 'layer', 'organisation'] as const)(
+  'closes search after activating a %s without toggling an active result off',
+  async type => {
+    const { search, scope, omni } = setup()
+    const section = search().sections.find(section => section.collectionType === type)!
+    section.onSelection(`${type}-0`)
+    await Promise.resolve()
+    await waitFor(() => expect(omni.closeTray).toHaveBeenCalledTimes(1))
+    scope.prisms.layer = ['layer-0']
+    scope.isProjectDefaultLayersActive = () => true
+    scope.isOrganisationDefaultLayersActive = () => true
+    section.onSelection(`${type}-0`)
+    await Promise.resolve()
+    await waitFor(() => expect(omni.closeTray).toHaveBeenCalledTimes(2))
+    const activate =
+      type === 'layer'
+        ? scope.toggleLayer
+        : type === 'project'
+          ? scope.activateProjectWithDefaultLayers
+          : scope.activateOrganisationWithDefaultLayers
+    expect(activate).toHaveBeenCalledTimes(1)
+  },
+)
+
+it('keeps search open when activation fails or an independent control is used', async () => {
+  const { search, scope, omni } = setup()
+  const section = search().sections.find(
+    section => section.collectionType === 'project',
+  )!
+  section.results[0].control?.onClick()
+  await Promise.resolve()
+  expect(omni.closeTray).not.toHaveBeenCalled()
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  scope.activateProjectWithDefaultLayers.mockRejectedValueOnce(new Error('failed'))
+  section.onSelection('project-0')
+  await Promise.resolve()
+  await waitFor(() => expect(log).toHaveBeenCalled())
+  expect(omni.closeTray).not.toHaveBeenCalled()
+  log.mockRestore()
 })

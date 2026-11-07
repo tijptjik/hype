@@ -104,6 +104,19 @@ try {
     Boolean((window as unknown as CheckWindow).maplibregl),
   )
   await page.addScriptTag({ content: bundle })
+  // Hold real image decoding to verify that frames do not flash ahead of photos.
+  await page.evaluate(() => {
+    const original = HTMLImageElement.prototype.decode
+    let release!: () => void
+    const gate = new Promise<void>(resolve => {
+      release = resolve
+    })
+    Object.assign(window, { releaseMarkerDecode: release })
+    HTMLImageElement.prototype.decode = async function () {
+      await original.call(this)
+      await gate
+    }
+  })
   await page.evaluate(async () => {
     const w = window as unknown as CheckWindow
     const map = new w.maplibregl.Map({
@@ -217,10 +230,69 @@ try {
       state.map.isStyleLoaded()
     )
   })
+  assert.equal(
+    await page
+      .locator('.maplibregl-marker img.marker-image')
+      .evaluateAll(images =>
+        images.every(
+          image =>
+            getComputedStyle(image.closest('.marker-container')!).visibility ===
+            'hidden',
+        ),
+      ),
+    true,
+  )
+  await page.evaluate(() =>
+    (window as unknown as { releaseMarkerDecode: () => void }).releaseMarkerDecode(),
+  )
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('.maplibregl-marker img.marker-image')].every(
+      image => {
+        const marker = image.closest('.marker-container')!
+        return (
+          getComputedStyle(marker).visibility === 'visible' &&
+          !marker.classList.contains('marker-fade-in')
+        )
+      },
+    ),
+  )
   const initial = await page.evaluate(() => {
     const state = (window as unknown as CheckWindow).adaptiveMarkerCheck
     return { photos: state.photoCount(), points: state.gpuIds().length }
   })
+  // A new project/filter scope must retain the surviving photo and image nodes mid-flight.
+  const survivingPhotos = await page.evaluate(() => {
+    const state = (window as unknown as CheckWindow).adaptiveMarkerCheck
+    const previous = state.rows.flatMap(row => {
+      const element = state.renderer.getElement(row.id)
+      return element
+        ? [{ id: row.id, element, image: element.querySelector('img') }]
+        : []
+    })
+    const center = state.map.getCenter()
+    state.map.easeTo({
+      center: [center.lng + 0.00001, center.lat],
+      duration: 1000,
+      essential: true,
+    })
+    state.scope = 'expanded-projects'
+    state.rows = state.rows.toReversed()
+    state.sync()
+    return {
+      count: previous.length,
+      retained: previous.filter(
+        ({ id, element, image }) =>
+          state.renderer.getElement(id) === element &&
+          element.querySelector('img') === image,
+      ).length,
+    }
+  })
+  assert.equal(survivingPhotos.count, 150)
+  assert.equal(survivingPhotos.retained, survivingPhotos.count)
+  await page.waitForFunction(
+    () => !(window as unknown as CheckWindow).adaptiveMarkerCheck.map.isMoving(),
+  )
+
   const target = await page.evaluate(() => {
     const state = (window as unknown as CheckWindow).adaptiveMarkerCheck
     for (const row of state.rows) {
