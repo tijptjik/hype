@@ -9,6 +9,7 @@ import { applyRuntimeBasemapSource, getConfiguredBasemapAccessToken } from './so
 //
 // 1. STYLE REQUESTS
 //    - hideSymbolLayers
+//    - resolveMapStyleSpriteUrls
 //    - resolveRuntimeMapStyle
 // 2. STYLE PRESENTATION
 //    - getMapStyleSeaColor
@@ -39,6 +40,33 @@ export const hideSymbolLayers = (style: StyleSpecification): StyleSpecification 
         }
       : layer,
   ),
+})
+
+/**
+ * Resolves sprite URLs before passing an inline style to MapLibre.
+ *
+ * @param style - Fetched or locally built style specification.
+ * @param baseUrl - Style URL or application origin used for relative URLs.
+ * @returns A style copy with absolute sprite URLs, preserving sprite namespaces.
+ */
+export const resolveMapStyleSpriteUrls = (
+  style: StyleSpecification,
+  baseUrl: string = typeof window === 'undefined'
+    ? 'http://localhost'
+    : window.location.origin,
+): StyleSpecification => ({
+  ...style,
+  ...(style.sprite === undefined
+    ? {}
+    : {
+        sprite:
+          typeof style.sprite === 'string'
+            ? new URL(style.sprite, baseUrl).toString()
+            : style.sprite.map(sprite => ({
+                ...sprite,
+                url: new URL(sprite.url, baseUrl).toString(),
+              })),
+      }),
 })
 
 /**
@@ -86,14 +114,8 @@ export const resolveRuntimeMapStyle = async (
       }
       const style = (await response.json()) as StyleSpecification
       // Inline styles have no document URL for MapLibre to resolve local sprites.
-      if (Array.isArray(style.sprite)) {
-        style.sprite = style.sprite.map(sprite => ({
-          ...sprite,
-          url: new URL(sprite.url, url.origin).toString(),
-        }))
-      }
       const resolvedStyle = applyRuntimeBasemapSource(
-        style,
+        resolveMapStyleSpriteUrls(style, response.url || url.toString()),
         getConfiguredBasemapAccessToken(),
       )
       return options.noLabels ? hideSymbolLayers(resolvedStyle) : resolvedStyle
