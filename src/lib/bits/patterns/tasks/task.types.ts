@@ -97,6 +97,7 @@ export type TaskEditorProps = {
       | { taskId: string; reviewId: string | null; proposalVersion: string }
       | undefined,
     busy: boolean,
+    waitForOrder: () => Promise<boolean>,
   ) => void
   localeState?: ProfileLocaleState
   onLocaleStateChange?: (state: ProfileLocaleState) => void

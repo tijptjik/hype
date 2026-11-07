@@ -73,6 +73,7 @@ let {
       | { taskId: string; reviewId: string | null; proposalVersion: string }
       | undefined,
     busy: boolean,
+    waitForOrder: () => Promise<boolean>,
   ) => void
 } = $props()
 let intentOptions = $state<ImageIntentDefinition[]>([...DEFAULT_IMAGE_INTENTS])
@@ -86,6 +87,8 @@ onDestroy(() => {
   disposed = true
 })
 let busy = $state(true)
+let pendingSort = $state<Promise<boolean> | null>(null)
+let accepting = $state(false)
 let pendingRotation = $state<{
   imageId: string
   rotation: number
@@ -156,7 +159,7 @@ const textDirty = $derived(textOpen)
 const canEdit = $derived(canSave && !textDirty && !pendingRotation)
 const canAccept = $derived(
   !readonly &&
-    !busy &&
+    (!busy || pendingSort !== null) &&
     !textDirty &&
     !pendingRotation &&
     pendingReviews.length > 0 &&
@@ -252,6 +255,7 @@ function failureMessage(cause: unknown, fallback: string): string {
 }
 
 function notify(): void {
+  if (disposed) return
   const creation =
     reviews.find(r => initialReport && r.initialProposal) ??
     reviews.find(r => !r.featureId)
@@ -263,8 +267,20 @@ function notify(): void {
           proposalVersion: creation.proposalVersion,
         }
       : undefined,
-    busy || textDirty || Boolean(pendingRotation),
+    accepting || (busy && !pendingSort) || textDirty || Boolean(pendingRotation),
+    waitForOrder,
   )
+}
+
+/** Wait for every order requested before a review action, without crossing task lifetimes.
+ * @returns Whether all queued order saves succeeded and this task is still mounted.
+ */
+async function waitForOrder(): Promise<boolean> {
+  const requestedTask = taskId
+  while (pendingSort) {
+    if (!(await pendingSort)) return false
+  }
+  return !disposed && taskId === requestedTask
 }
 
 async function load(): Promise<void> {
@@ -447,7 +463,12 @@ onDestroy(() => clearTimeout(rotationTimer))
 async function accept(
   mode: 'acceptAll' | 'acceptClassified' = 'acceptAll',
 ): Promise<void> {
-  if (!canAccept) return
+  if (!canAccept || accepting) return
+  accepting = true
+  if (!(await waitForOrder()) || !canAccept) {
+    accepting = false
+    return
+  }
   busy = true
   notify()
   try {
@@ -468,6 +489,7 @@ async function accept(
   } catch (cause) {
     message = failureMessage(cause, 'Could not accept image review.')
   } finally {
+    accepting = false
     busy = false
     notify()
   }
@@ -478,7 +500,7 @@ $effect(() => notify())
 $effect(() => {
   onAcceptActionChange?.(
     !initialReport && pendingReviews.length > 0
-      ? { taskId, disabled: !canAccept, accept }
+      ? { taskId, disabled: !canAccept || accepting, accept }
       : undefined,
   )
 })
@@ -533,7 +555,14 @@ onMount(() => {
       showSortControls={reviewEditable &&
         !hasExistingImages &&
         pendingReviews.length <= 1}
-      canSort={canEdit && !hasExistingImages && pendingReviews.length <= 1}
+      canSort={(canEdit ||
+        (reviewEditable && pendingSort !== null && !textDirty && !pendingRotation)) &&
+        !hasExistingImages &&
+        pendingReviews.length <= 1}
+      onSortPendingChange={pending => {
+        pendingSort = pending
+        notify()
+      }}
       onSortChange={sortReview}
       layout={layout ??
         (initialReport ? 'top' : galleryWidth < 640 ? 'bottom' : 'sidebar')}

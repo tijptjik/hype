@@ -264,6 +264,23 @@ function openRejectDialog(): void {
   isRejectDialogOpen = true
 }
 
+/** Open duplicate resolution only after the latest thumbnail order is saved.
+ * @returns Completion after the order settles or the action is cancelled.
+ */
+async function openDuplicateDialog(): Promise<void> {
+  const requestedTask = task?.id
+  if (!requestedTask) return
+  if (imageOrderWait?.taskId === requestedTask && !(await imageOrderWait.wait())) return
+  if (
+    task?.id === requestedTask &&
+    !task.isReviewed &&
+    !isReviewBusy &&
+    !isLayerBusy &&
+    !imageReviewBusy
+  )
+    duplicateOpen = true
+}
+
 /**
  * Creates a task review header action button with shared busy and style settings.
  * @param config - Text, icon, review action, and button styling details
@@ -332,7 +349,7 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
         icon: DuplicateIcon,
         color: 'warning',
         onClick: () => {
-          duplicateOpen = true
+          void openDuplicateDialog()
         },
       }),
       createReviewTaskAction({
@@ -610,6 +627,19 @@ let imageAcceptAction = $state<{
  * @param explicitReviewReason - Optional review reason for rejected tasks
  * @returns Whether the review completed successfully
  */
+let imageReview = $state<{
+  taskId: string
+  reviewId: string | null
+  proposalVersion: string
+}>()
+let imageReviewBusy = $state(false)
+let imageOrderWait = $state<{ taskId: string; wait: () => Promise<boolean> }>()
+let imageAcceptAction = $state<{
+  taskId: string
+  disabled: boolean
+  accept: (mode?: 'acceptAll' | 'acceptClassified') => Promise<void>
+}>()
+
 async function handleReview(
   action: TaskReviewUiAction,
   explicitReviewReason?: string,
@@ -617,9 +647,13 @@ async function handleReview(
   if (!task?.id || task.isReviewed || isReviewBusy || isLayerBusy || imageReviewBusy)
     return false
 
+  const requestedTask = task.id
   isReviewBusy = true
 
   try {
+    if (imageOrderWait?.taskId === requestedTask && !(await imageOrderWait.wait()))
+      return false
+    if (task?.id !== requestedTask || imageReviewBusy || isLayerBusy) return false
     // Refresh the editor query too so Back cannot restore its pre-review task snapshot.
     const result = await reviewTask({
       id: task.id,
@@ -825,7 +859,8 @@ const imageProviderModel = useImageProviderModel(
         taskState = structuredClone(fresh.data) as Task | null
         if (taskState?.isReviewed) goToNextTask(adminCtx)
       }}
-      onImageReviewChange={(value, busy) => {
+      onImageReviewChange={(value, busy, waitForOrder) => {
+        imageOrderWait = task ? { taskId: task.id, wait: waitForOrder } : undefined
         imageReview = value
         imageReviewBusy = busy
       }}
