@@ -662,7 +662,7 @@ export async function importBreadlineFeatureRevisions(
       const row = domain.sqlite
         .query('SELECT isPublished FROM feature WHERE id=?')
         .get(id) as { isPublished: number }
-      const prepared = prepareFeatureRevisionInitialization(domain.db, {
+      const prepared = await prepareFeatureRevisionInitialization(domain.db, {
         featureId: id,
         content,
         published: Boolean(row.isPublished),

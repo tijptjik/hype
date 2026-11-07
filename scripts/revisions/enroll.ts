@@ -242,7 +242,7 @@ async function enrollFeature(
     candidate.gallery.entries[photo.id] = entry
     if (!candidate.gallery.order.includes(photo.id))
       candidate.gallery.order.push(photo.id)
-    const proposal = prepareFeatureRevisionProposal(db, {
+    const proposal = await prepareFeatureRevisionProposal(db, {
       featureId: id,
       baseRevisionId: baseline,
       content: candidate,
@@ -279,7 +279,7 @@ async function enrollFeature(
     const contributor = initialTasks[0]?.contributorId ?? parsed.record.contributorId
     if (initialTasks.length && !contributor)
       throw new Error('Initial contribution has no author')
-    const proposal = prepareFeatureRevisionProposal(db, {
+    const proposal = await prepareFeatureRevisionProposal(db, {
       featureId: id,
       baseRevisionId: baseline,
       content: initialContent,
