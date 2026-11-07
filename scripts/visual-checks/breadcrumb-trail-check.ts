@@ -34,6 +34,10 @@ for (const [name, engine] of [
       console.error('Page errors:', errors)
       throw error
     })
+    const iconSlot = page.locator('[data-breadcrumb-icon]')
+    const initialIconBox = await iconSlot.boundingBox()
+    assert(initialIconBox)
+    assert.equal(await iconSlot.getAttribute('data-breadcrumb-icon'), 'grid')
     for (const width of [320, 375, 430]) {
       await page.setViewportSize({ width, height: 600 })
       assert.equal(await layer.isVisible(), false)
@@ -45,6 +49,10 @@ for (const [name, engine] of [
         assert(await label.evaluate(el => el.scrollWidth > el.clientWidth))
         await label.click()
         assert.equal(await label.getAttribute('aria-expanded'), 'true')
+        assert.equal(
+          await iconSlot.getAttribute('data-breadcrumb-icon'),
+          label === organisation ? 'organisation' : 'project',
+        )
         assert(await label.evaluate(el => el.scrollWidth <= el.clientWidth + 1))
         const box = await label.boundingBox()
         assert(box && box.x >= 0 && box.x + box.width <= width)
@@ -54,6 +62,7 @@ for (const [name, engine] of [
       }
       await chevron.click()
       assert.equal(await layer.isVisible(), true)
+      assert.equal(await iconSlot.getAttribute('data-breadcrumb-icon'), 'layer')
       assert.equal(await chevron.getAttribute('aria-expanded'), 'true')
       assert(await layer.evaluate(el => el.scrollWidth <= el.clientWidth + 1))
       const afterMenu = await page
@@ -67,6 +76,18 @@ for (const [name, engine] of [
             el.getAnimations({ subtree: true }).map(animation => animation.finished),
           ),
         )
+      assert.equal(
+        await iconSlot
+          .locator('[data-resource-icon="layer"]')
+          .evaluate(el => getComputedStyle(el).opacity),
+        '1',
+      )
+      assert.equal(
+        await iconSlot
+          .locator('[data-resource-icon="grid"]')
+          .evaluate(el => getComputedStyle(el).opacity),
+        '0',
+      )
       await page.screenshot({
         path: `output/playwright/breadcrumb-layer-${name}-${width}.png`,
       })
@@ -102,6 +123,24 @@ for (const [name, engine] of [
         el.getAnimations({ subtree: true }).map(animation => animation.finished),
       ),
     )
+    assert.equal(
+      await iconSlot
+        .locator('[data-resource-icon="project"]')
+        .evaluate(el => getComputedStyle(el).opacity),
+      '1',
+    )
+    assert.equal(
+      await iconSlot
+        .locator('[data-resource-icon="grid"]')
+        .evaluate(el => getComputedStyle(el).opacity),
+      '0',
+    )
+    const iconBox = await iconSlot.boundingBox()
+    assert(
+      iconBox &&
+        iconBox.width === initialIconBox.width &&
+        iconBox.height === initialIconBox.height,
+    )
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await project.click()
     assert.equal(await project.getAttribute('aria-expanded'), 'false')
@@ -109,9 +148,22 @@ for (const [name, engine] of [
       await trail.evaluate(el => el.getAnimations({ subtree: true }).length),
       0,
     )
+    assert.equal(await iconSlot.getAttribute('data-breadcrumb-icon'), 'grid')
+    assert.equal(
+      await iconSlot
+        .locator('[data-resource-icon="grid"]')
+        .evaluate(el => getComputedStyle(el).opacity),
+      '1',
+    )
+    assert.equal(
+      await iconSlot
+        .locator('[data-resource-icon="project"]')
+        .evaluate(el => getComputedStyle(el).opacity),
+      '0',
+    )
     assert.deepEqual(errors, [])
     console.log(
-      `${name}: label toggles, hidden-layer disclosure, keyboard, feature reset, viewport bounds, animated toggles and reduced motion passed`,
+      `${name}: label toggles, hidden-layer disclosure, keyboard, feature reset, viewport bounds, animated toggles, resource icons and reduced motion passed`,
     )
   } finally {
     await browser.close()

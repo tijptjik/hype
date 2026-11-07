@@ -7,6 +7,9 @@ import { Icon } from '#lib/bits/index.js'
 // ICONS
 import ChevronRight from 'virtual:icons/proicons/chevron-right'
 import Squares2x2 from 'virtual:icons/proicons/grid'
+import OrganisationIcon from 'virtual:icons/lucide/building-2'
+import ProjectIcon from 'virtual:icons/lucide/map'
+import LayerIcon from 'virtual:icons/lucide/layers'
 
 let {
   organisationName,
@@ -17,6 +20,13 @@ let {
   projectName: string | null
   layerName: string | null
 } = $props()
+
+const resourceIcons = {
+  grid: Squares2x2,
+  organisation: OrganisationIcon,
+  project: ProjectIcon,
+  layer: LayerIcon,
+} as const
 
 type Scope = 'organisation' | 'project' | 'layer'
 let expanded = $state<Scope | null>(null)
@@ -84,7 +94,21 @@ async function toggle(scope: Scope): Promise<void> {
   class="text-neutral-content flex min-h-11 min-w-0 flex-1 items-center gap-2 font-mono text-xs uppercase"
   data-feature-breadcrumb-trail
 >
-  <Icon src={Squares2x2} class="h-5 w-5 shrink-0" />
+  <!-- A fixed icon slot crossfades without shifting the breadcrumb labels. -->
+  <span
+    class="relative h-5 w-5 shrink-0"
+    aria-hidden="true"
+    data-breadcrumb-icon={expanded ?? 'grid'}
+  >
+    {#each Object.entries(resourceIcons) as [scope, icon] (scope)}
+      <span
+        class={`absolute inset-0 transition-opacity duration-[180ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${scope === (expanded ?? 'grid') ? 'opacity-100' : 'opacity-0'}`}
+        data-resource-icon={scope}
+      >
+        <Icon src={icon} class="h-5 w-5" />
+      </span>
+    {/each}
+  </span>
   {#if organisationName}
     <button
       type="button"
