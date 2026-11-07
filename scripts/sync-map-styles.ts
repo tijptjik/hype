@@ -51,19 +51,24 @@ const shouldWrapInTransaction = (target: SyncTarget): boolean => target === 'loc
 /**
  * Render the checked-in map-style catalog for a selected environment.
  * @param target Explicit destination; local output includes an atomic transaction.
+ * @param wrapInTransaction Whether to own the transaction; false when called inside a rebuild transaction.
  * @returns Escaped SQL reusable by the local bootstrap without invoking Wrangler.
  */
-export const buildSyncSql = (target: SyncTarget): string => {
+export const buildSyncSql = (
+  target: SyncTarget,
+  wrapInTransaction = shouldWrapInTransaction(target),
+): string => {
   const statements: string[] = []
 
-  if (shouldWrapInTransaction(target)) {
+  if (wrapInTransaction) {
     statements.push('BEGIN TRANSACTION;')
   }
 
   // Upsert persisted map-style rows from the checked-in catalog.
   for (const entry of REGISTERED_MAP_STYLE_CATALOG) {
     const mapStyleId = toStableMapStyleId(entry.key)
-    statements.push(`
+    statements.push(
+      `
 INSERT INTO "mapStyles" ("id", "code", "organisationId", "hubId", "previewImagePath")
 VALUES (
   ${toSqlLiteral(mapStyleId)},
@@ -76,11 +81,13 @@ ON CONFLICT("code") DO UPDATE SET
   "id" = excluded."id",
   "organisationId" = excluded."organisationId",
   "hubId" = excluded."hubId",
-  "previewImagePath" = NULL;`.trim())
+  "previewImagePath" = NULL;`.trim(),
+    )
 
     const localizedCopy = getMapStyleCatalogI18n(entry.key)
     for (const [locale, copy] of Object.entries(localizedCopy)) {
-      statements.push(`
+      statements.push(
+        `
 INSERT INTO "mapStyleI18n" (
   "mapStyleId",
   "locale",
@@ -101,11 +108,12 @@ ON CONFLICT("mapStyleId", "locale") DO UPDATE SET
   "name" = excluded."name",
   "nameGen" = 0,
   "description" = excluded."description",
-  "descriptionGen" = 0;`.trim())
+  "descriptionGen" = 0;`.trim(),
+      )
     }
   }
 
-  if (shouldWrapInTransaction(target)) {
+  if (wrapInTransaction) {
     statements.push('COMMIT;')
   }
 
@@ -130,7 +138,15 @@ const main = async (): Promise<void> => {
     await Bun.write(sqlFile, buildSyncSql(target))
 
     const wranglerProcess = Bun.spawn(
-      ['bunx', 'wrangler', 'd1', 'execute', databaseName, ...wranglerArgs, `--file=${sqlFile}`],
+      [
+        'bunx',
+        'wrangler',
+        'd1',
+        'execute',
+        databaseName,
+        ...wranglerArgs,
+        `--file=${sqlFile}`,
+      ],
       {
         stdout: 'inherit',
         stderr: 'inherit',
