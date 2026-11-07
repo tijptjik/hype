@@ -113,6 +113,7 @@ import {
   prepareRevisionCheck,
 } from '#lib/db/services/revisionBatch.js'
 // FIXTURES
+import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
 import { publicationSqlite } from './fixtures/publicationSqlite'
 import {
   featureRevisionSourceFixture,
@@ -142,7 +143,7 @@ const expectedScope = {
 
 /** Build isolated compatibility tables with real child constraints and revision migrations. */
 function fixture(linked = false, catalogueCascades = false) {
-  const connection = publicationSqlite({ property })
+  const connection = publicationSqlite({ property }, 100)
   connections.push(connection)
   const { sqlite } = connection
   sqlite.exec(
@@ -1112,6 +1113,7 @@ describe('existing form revision routing', () => {
     )
     const saved = await saveFeatureFormRevision(f.db, {
       ...common,
+      guard: buildFeatureCommandScopeGuard(f.db, common.featureId, expectedScope),
       expectedScope,
       updatedAt: 'token',
       data: { ...form(initial.content), isVisitable: false },
@@ -1160,6 +1162,7 @@ describe('existing form revision routing', () => {
     )
     const saved = await saveFeatureFormRevision(f.db, {
       ...common,
+      guard: buildFeatureCommandScopeGuard(f.db, common.featureId, expectedScope),
       expectedScope,
       updatedAt: 'token',
       data: { ...form(initial.content), isVisitable: false },

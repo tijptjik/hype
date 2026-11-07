@@ -165,7 +165,8 @@ export async function saveFeatureFormRevision(
   const fields: ('title' | 'description')[] = input.allowDescriptions ? ['title', 'description'] : ['title']
   if (input.canPublish) {
     const projection = prepareFeatureEditorialProjection(db, { featureId: input.featureId, source, previous, content })
-    const capture = await prepareFeatureAcceptedCapture(db, { ...input, guard, derive: () => content })
+    // Capture rechecks its own source; the complete form guard runs first in the atomic batch.
+    const capture = await prepareFeatureAcceptedCapture(db, { ...input, derive: () => content })
     if (!capture.revisionId) throw new Error('Feature revision changed; refresh the editor')
     // Apply the form and its attributed history together without changing visibility.
     const applied = await executeRevisionBatch(db, guard, [
