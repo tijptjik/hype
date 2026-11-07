@@ -1,17 +1,18 @@
 <script lang="ts">
-import { Dialog } from 'bits-ui'
 import { m } from '#lib/i18n.js'
-import XIcon from 'virtual:icons/proicons/cancel'
+import MorphDialog from '#lib/bits/core/dialog/MorphDialog.svelte'
 
 let {
   open: isOpen = $bindable(false),
   value = $bindable(''),
   isBusy = false,
+  source = null,
   onConfirm,
 }: {
   open?: boolean
   value?: string
   isBusy?: boolean
+  source?: HTMLElement | null
   onConfirm?: () => void | Promise<void>
 } = $props()
 
@@ -25,65 +26,42 @@ function handleReasonKeydown(event: KeyboardEvent): void {
 }
 </script>
 
-<Dialog.Root bind:open={isOpen}>
-  <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm" />
-    <Dialog.Content
-      onEscapeKeydown={event => {
-        if (isBusy) event.preventDefault()
+<MorphDialog
+  bind:open={isOpen}
+  busy={isBusy}
+  {source}
+  title={m.north_level_niklas_tap()}
+  closeLabel="Close rejection dialog"
+>
+  <textarea
+    bind:value
+    aria-label={m.north_level_niklas_tap()}
+    disabled={isBusy}
+    class="border-foreground/12 bg-surface text-foreground focus:border-foreground/28 h-32 w-full rounded-lg border px-4 py-3 text-sm transition outline-none"
+    placeholder={m.placeholder__internal_use_only()}
+    onkeydown={handleReasonKeydown}
+  ></textarea>
+
+  {#snippet footer()}
+    <button
+      type="button"
+      class="border-foreground/12 text-foreground/78 hover:bg-foreground/[0.06] hover:text-foreground inline-flex h-11 items-center rounded-lg border px-4 text-sm transition"
+      disabled={isBusy}
+      onclick={() => {
+        isOpen = false
       }}
-      onInteractOutside={event => {
-        if (isBusy) event.preventDefault()
-      }}
-      class="fixed left-1/2 top-1/2 z-[1001] w-[min(92vw,36rem)] -translate-x-1/2 -translate-y-1/2 max-h-[90dvh] overflow-y-auto rounded-xl border border-border bg-panel p-6 text-foreground shadow-2xl"
     >
-      <div class="flex items-start justify-between gap-6">
-        <div>
-          <Dialog.Title class="text-lg font-semibold tracking-tight text-foreground">
-            {m.north_level_niklas_tap()}
-          </Dialog.Title>
-        </div>
-
-        <Dialog.Close
-          class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-foreground/10 bg-foreground/[0.04] text-foreground/72 transition hover:bg-foreground/[0.08] hover:text-foreground"
-          disabled={isBusy}
-          aria-label="Close rejection dialog"
-        >
-          <XIcon class="h-5 w-5" />
-        </Dialog.Close>
-      </div>
-
-      <textarea
-        bind:value
-        aria-label={m.north_level_niklas_tap()}
-        disabled={isBusy}
-        class="mt-5 h-32 w-full rounded-lg border border-foreground/12 bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-foreground/28"
-        placeholder={m.placeholder__internal_use_only()}
-        onkeydown={handleReasonKeydown}
-      ></textarea>
-
-      <div class="mt-5 flex justify-end gap-3">
-        <button
-          type="button"
-          class="inline-flex h-11 items-center rounded-lg border border-foreground/12 px-4 text-sm text-foreground/78 transition hover:bg-foreground/[0.06] hover:text-foreground"
-          disabled={isBusy}
-          onclick={() => {
-            isOpen = false
-          }}
-        >
-          {m.cancel()}
-        </button>
-        <button
-          type="button"
-          class="inline-flex h-11 items-center rounded-lg bg-error px-5 text-sm font-medium text-error-content transition hover:bg-error/90 disabled:cursor-not-allowed disabled:opacity-45"
-          disabled={isBusy}
-          onclick={() => {
-            void onConfirm?.()
-          }}
-        >
-          {m.alive_north_albatross_lead()}
-        </button>
-      </div>
-    </Dialog.Content>
-  </Dialog.Portal>
-</Dialog.Root>
+      {m.cancel()}
+    </button>
+    <button
+      type="button"
+      class="bg-error text-error-content hover:bg-error/90 inline-flex h-11 items-center rounded-lg px-5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-45"
+      disabled={isBusy}
+      onclick={() => {
+        void onConfirm?.()
+      }}
+    >
+      {m.alive_north_albatross_lead()}
+    </button>
+  {/snippet}
+</MorphDialog>
