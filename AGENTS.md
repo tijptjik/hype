@@ -73,14 +73,22 @@
 
 - Use the installed `playwright` package directly with Bun for manual UI checks; do not
   add a dependency solely for this.
-- Call it directly with
-  `bun -e "import { chromium } from 'playwright'; /* launch, inspect, screenshot, close */"`
-  when the `playwright-cli` wrapper cannot resolve this checkout's dependencies.
+- Run every browser check through `dev-check`, including headless Chrome/Chromium,
+  Firefox, WebKit, inline `bun -e` checks, temporary scripts and Playwright CLI
+  commands. Browser child processes inherit the launcher's memory scope; launching them
+  directly from Zed charges their RAM to the editor and can stall it.
+- Use `dev-check bun scripts/visual-checks/<check>.ts` for saved checks, or
+  `dev-check bun -e "import { chromium } from 'playwright'; /* launch, inspect, screenshot, close */"`
+  when the `playwright-cli` wrapper cannot resolve this checkout's dependencies. If the
+  user systemd bus is blocked by the sandbox, request execution with bus access; do not
+  retry without `dev-check` or set `DOTJIK_DEV_CHECK` manually.
 - For admin UI verification, use the user's existing authenticated browser session. A
   redirect from a fresh unauthenticated Playwright context does not establish that no
   admin session is available.
 - Start the app with `bun run dev -- --host 127.0.0.1 --port 4173`, then stop it after
-  the check.
+  the check. Package Vite launchers use `dev-server` to keep server memory outside Zed.
+  Wrap direct or temporary Vite launches with `dev-server` too; long-lived servers must
+  not hold the `dev-check` validation lock.
 - Launch Chromium with `args: ['--disable-web-security']` for local map verification:
   the development origin otherwise cannot load the external map tiles because of CORS.
 
