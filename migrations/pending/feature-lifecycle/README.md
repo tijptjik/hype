@@ -79,8 +79,9 @@ enabled. It then converts unfinished drafts in resumable cleanup groups. Incomin
 foreign-key dependents are rebuilt together; existing Feature and change-set identities
 stay in place. The offline converter's `foreign_keys=OFF` SQL is never replayed on D1.
 
-Still required before application: verified media evidence for the development-data
-baseline, authenticated end-to-end browser verification and a fresh deployment
-rehearsal. This directory remains outside numbered migrations: the managed planner
+The development snapshot now prepares with 2,117 verified baseline images, including
+exact retained metadata where legacy sidecars are missing. Unreferenced image rows
+remain unchanged. Still required before application: authenticated end-to-end browser
+verification, a clean release typecheck and the final deployment rehearsal. This directory remains outside numbered migrations: the managed planner
 owns the schema transition and enforces baseline completeness. No successful local
 rehearsal authorizes live application.

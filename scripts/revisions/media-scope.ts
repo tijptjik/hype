@@ -4,6 +4,8 @@ import type { MediaLocator } from './cache-media'
 
 export type LegacyMediaOptions = {
   featureIds?: readonly string[]
+  /** Enroll only gallery, task, historical image and resource-logo dependencies. */
+  baselineOnly?: boolean
   /** Explicit user-approved reason; permits empty metadata only for missing exact sidecars. */
   emptyMetadataReason?: string
 }
@@ -38,14 +40,31 @@ export function validateMediaScope(db: Database, options: LegacyMediaOptions): v
 
 /** Reads exact image locators, optionally restricted to a Feature gallery and pending evidence.
  * @param db Local source connection. @param featureIds Validated optional Feature scope.
+ * @param baselineOnly Restrict the default scope to revision dependencies.
  * @returns Deterministically ordered locators; JSON membership uses one binding per scope.
  */
 export function scopedMediaRows(
   db: Database,
   featureIds?: readonly string[],
+  baselineOnly = false,
 ): MediaLocator[] {
   const columns = 'SELECT id,cdn,env,publicId,version,modifiedAt,contentHash FROM image'
-  if (!featureIds) return db.query(columns + ' ORDER BY id').all() as MediaLocator[]
+  if (!featureIds) {
+    if (!baselineOnly) return db.query(columns + ' ORDER BY id').all() as MediaLocator[]
+    // Preserve unused image rows without requiring unrelated assets to join a revision baseline.
+    const sources = [
+      'SELECT imageId FROM featureImage',
+      'SELECT imageId FROM taskImage',
+      'SELECT imageId FROM organisation',
+      'SELECT imageId FROM project',
+      'SELECT imageId FROM hub',
+      'SELECT imageId FROM imageAssetVersion',
+      'SELECT imageId FROM imageRevision',
+    ]
+    return db
+      .query(columns + ' WHERE id IN (' + sources.join(' UNION ') + ') ORDER BY id')
+      .all() as MediaLocator[]
+  }
   return db
     .query(
       columns +

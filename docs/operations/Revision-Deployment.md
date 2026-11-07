@@ -154,3 +154,12 @@ in the same transaction. A failure rolls back the group and leaves its resume cu
 unchanged. Activation of the current schema does not access the removed legacy creation
 policy table. Local contract tests cover both the legacy and current activation paths;
 they do not establish that a live D1 release has occurred.
+
+Managed enrollment requests only media referenced by Feature galleries, task evidence,
+resource logos or existing immutable image history. Unreferenced image rows remain
+unchanged. A missing versioned sidecar may use an unambiguous immutable image revision
+only when image identity, asset namespace/key, metadata version and original-file hash
+agree. The cache records that revision ID and revalidates it on reuse. Enrollment reuses
+the exact existing pin when byte size, media type, metadata and current presentation
+also agree, preserving prior recovery provenance. This does not authorize new empty
+metadata recovery or removal of old files.

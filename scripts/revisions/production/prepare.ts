@@ -21,6 +21,7 @@ import {
 } from '../../dev/feature-lifecycle/convert-drafts'
 import { enrollLegacyRevisions } from '../enroll'
 import { cacheRevisionMedia, mediaCacheKey } from '../cache-media'
+import { verifiedRetainedPin } from '../retained-media'
 import {
   atomic,
   completeness,
@@ -168,7 +169,7 @@ export async function prepareRelease(
     throw new Error('Migration rehearsal failed; inspect private migrations.log')
   const groups = JSON.parse(readFileSync(schemaFile, 'utf8')) as Group[]
   const media = join(directory, 'media')
-  const cached = await cacheMedia(database, media)
+  const cached = await cacheMedia(database, media, { baselineOnly: true })
   if (cached.blocked)
     throw new Error(
       `${cached.blocked} images require explicit source repair before rollout`,
@@ -197,6 +198,7 @@ export async function prepareRelease(
       media,
       join(directory, 'feature-enrollment.json'),
       d,
+      { baselineOnly: true },
     )
     if (enrollment.blocked)
       throw new Error(
@@ -216,20 +218,27 @@ export async function prepareRelease(
         throw new Error('Logo evidence unavailable')
       const i = row.locator,
         base = join(media, mediaCacheKey(i))
-      const pin = await registerImageRevisionBaseline(d.db, {
-        imageId: id,
-        actorId: 'system:revision-rollout',
-        origin: 'migration',
-        guard: sql`1`,
-        expectedModifiedAt: i.modifiedAt,
-        expectedVersion: i.version,
-        storageNamespace: i.env,
-        storageKey: i.publicId,
-        bytes: Uint8Array.from(readFileSync(base + '.image')).buffer,
-        mediaType: row.mediaType,
-        metadata: JSON.parse(readFileSync(base + '.json', 'utf8')),
-        captureCurrentPresentation: true,
-      })
+      const pin =
+        verifiedRetainedPin(d.sqlite, i, {
+          contentHash: row.contentHash,
+          byteSize: readFileSync(base + '.image').length,
+          mediaType: row.mediaType,
+          metadata: JSON.parse(readFileSync(base + '.json', 'utf8')),
+        }) ??
+        (await registerImageRevisionBaseline(d.db, {
+          imageId: id,
+          actorId: 'system:revision-rollout',
+          origin: 'migration',
+          guard: sql`1`,
+          expectedModifiedAt: i.modifiedAt,
+          expectedVersion: i.version,
+          storageNamespace: i.env,
+          storageKey: i.publicId,
+          bytes: Uint8Array.from(readFileSync(base + '.image')).buffer,
+          mediaType: row.mediaType,
+          metadata: JSON.parse(readFileSync(base + '.json', 'utf8')),
+          captureCurrentPresentation: true,
+        }))
       if (
         !pin ||
         !(await enrollResourceLogo(d.db, {

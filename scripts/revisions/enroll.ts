@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm'
 import { openSqliteDomain } from '../locations/lib/sqlite-domain'
 import { mediaCacheKey } from './cache-media'
 import { scopedMediaRows, validateMediaScope } from './media-scope'
+import { retainedMetadata, verifiedRetainedPin } from './retained-media'
 import { registerImageRevisionBaseline } from '../../src/lib/db/services/imageRevisionBaseline'
 import { readFeatureRevisionSource } from '../../src/lib/db/services/featureRevisionSource'
 import {
@@ -165,8 +166,10 @@ async function enrollFeature(
   if (initialTasks.length > 1 || (initialTasks.length && published))
     throw new Error('Ambiguous initial contribution state')
   const photos = sqlite
-    .query(`SELECT DISTINCT i.id,i.contributorId FROM image i JOIN taskImage ti ON ti.imageId=i.id
-    JOIN task t ON t.id=ti.taskId WHERE t.featureId=? AND t.isReviewed=0 ORDER BY i.id`)
+    .query(
+      `SELECT DISTINCT i.id,i.contributorId FROM image i JOIN taskImage ti ON ti.imageId=i.id
+    JOIN task t ON t.id=ti.taskId WHERE t.featureId=? AND t.isReviewed=0 ORDER BY i.id`,
+    )
     .all(id) as { id: string; contributorId: string | null }[]
   const required = new Set([
     ...parsed.galleryLinks.map(link => String(link.imageId)),
@@ -328,7 +331,11 @@ export async function enrollLegacyRevisions(
   let features = 0
   try {
     validateMediaScope(domain.sqlite, options)
-    const rows = scopedMediaRows(domain.sqlite, options.featureIds)
+    const rows = scopedMediaRows(
+      domain.sqlite,
+      options.featureIds,
+      options.baselineOnly,
+    )
     for (const row of rows) {
       try {
         const base = join(cache, mediaCacheKey(row)),
@@ -355,26 +362,44 @@ export async function enrollLegacyRevisions(
           createHash('sha256').update(metadata).digest('hex') !== evidence.metadataHash
         )
           throw new Error('Cached evidence changed')
-        const pin = await registerImageRevisionBaseline(domain.db, {
-          imageId: row.id,
-          actorId,
-          guard: sql`1`,
-          origin: 'migration',
-          expectedModifiedAt: row.modifiedAt,
-          storageNamespace: row.env as 'local' | 'preview' | 'production',
-          storageKey: row.publicId,
-          expectedVersion: row.version,
-          bytes: bytes.buffer.slice(
-            bytes.byteOffset,
-            bytes.byteOffset + bytes.byteLength,
-          ) as ArrayBuffer,
-          mediaType: evidence.mediaType!,
-          metadata: JSON.parse(metadata.toString()),
-          metadataRecovery: evidence.metadataRecovery,
-          reason: evidence.metadataRecovery
-            ? `Empty metadata recovery: ${evidence.metadataRecovery.reason}`
-            : undefined,
-        })
+        if (evidence.retainedImageRevisionId) {
+          const retained = retainedMetadata(domain.sqlite, row)
+          if (
+            !retained ||
+            retained.imageRevisionId !== evidence.retainedImageRevisionId ||
+            retained.metadata !== metadata.toString() ||
+            retained.contentHash !== evidence.contentHash
+          )
+            throw new Error('Retained metadata evidence changed')
+        }
+        const pin =
+          verifiedRetainedPin(domain.sqlite, row, {
+            contentHash: evidence.contentHash!,
+            byteSize: bytes.length,
+            mediaType: evidence.mediaType!,
+            metadata: JSON.parse(metadata.toString()),
+          }) ??
+          (await registerImageRevisionBaseline(domain.db, {
+            imageId: row.id,
+            actorId,
+            guard: sql`1`,
+            origin: 'migration',
+            expectedModifiedAt: row.modifiedAt,
+            storageNamespace: row.env as 'local' | 'preview' | 'production',
+            storageKey: row.publicId,
+            expectedVersion: row.version,
+            bytes: bytes.buffer.slice(
+              bytes.byteOffset,
+              bytes.byteOffset + bytes.byteLength,
+            ) as ArrayBuffer,
+            mediaType: evidence.mediaType!,
+            metadata: JSON.parse(metadata.toString()),
+            metadataRecovery: evidence.metadataRecovery,
+            captureCurrentPresentation: true,
+            reason: evidence.metadataRecovery
+              ? `Empty metadata recovery: ${evidence.metadataRecovery.reason}`
+              : undefined,
+          }))
         if (!pin) throw new Error('Image changed since capture')
         pins.set(row.id, pin)
       } catch (error) {

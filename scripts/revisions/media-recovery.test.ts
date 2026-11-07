@@ -63,3 +63,25 @@ test('recovery is limited to explicitly named Features and their pending evidenc
     db.close()
   }
 })
+
+test('baseline scope includes all revision dependencies and leaves orphans untouched', () => {
+  const db = new Database(':memory:')
+  try {
+    db.exec(`CREATE TABLE image(id TEXT,cdn TEXT,env TEXT,publicId TEXT,version INTEGER,modifiedAt TEXT,contentHash TEXT);
+      CREATE TABLE featureImage(imageId TEXT); CREATE TABLE taskImage(imageId TEXT);
+      CREATE TABLE organisation(imageId TEXT); CREATE TABLE project(imageId TEXT); CREATE TABLE hub(imageId TEXT);
+      CREATE TABLE imageAssetVersion(imageId TEXT); CREATE TABLE imageRevision(imageId TEXT);
+      INSERT INTO image(id) VALUES('gallery'),('task'),('logo'),('history'),('orphan');
+      INSERT INTO featureImage VALUES('gallery'); INSERT INTO taskImage VALUES('task');
+      INSERT INTO hub VALUES('logo'); INSERT INTO imageRevision VALUES('history');`)
+    expect(scopedMediaRows(db, undefined, true).map(row => row.id)).toEqual([
+      'gallery',
+      'history',
+      'logo',
+      'task',
+    ])
+    expect(db.query('SELECT count(*) n FROM image').get()).toEqual({ n: 5 })
+  } finally {
+    db.close()
+  }
+})

@@ -6,6 +6,8 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 // SCOPE
 import { scopedMediaRows, validateMediaScope } from './media-scope'
+import { retainedMetadata } from './retained-media'
+import type { RetainedMetadata } from './retained-media'
 // TYPES
 import type { LegacyMediaOptions } from './media-scope'
 import type { ImageMetadataRecovery } from '../../src/lib/db/services/imageRevisionBaseline'
@@ -26,6 +28,7 @@ export type MediaEvidence = {
   status: 'verified' | 'blocked'
   reason?: string
   metadataRecovery?: ImageMetadataRecovery
+  retainedImageRevisionId?: string
   contentHash?: string
   metadataHash?: string
   mediaType?: string
@@ -75,9 +78,14 @@ export async function cacheRevisionMedia(
   mkdirSync(directory, { recursive: true, mode: 0o700 })
   const db = new Database(database, { readonly: true })
   let rows: MediaLocator[]
+  const retained = new Map<string, RetainedMetadata>()
   try {
     validateMediaScope(db, options)
-    rows = scopedMediaRows(db, options.featureIds)
+    rows = scopedMediaRows(db, options.featureIds, options.baselineOnly)
+    for (const row of rows) {
+      const evidence = retainedMetadata(db, row)
+      if (evidence) retained.set(row.id, evidence)
+    }
   } finally {
     db.close()
   }
@@ -114,6 +122,9 @@ export async function cacheRevisionMedia(
             ) as MediaEvidence
             if (
               prior.status === 'verified' &&
+              (!prior.retainedImageRevisionId ||
+                prior.retainedImageRevisionId ===
+                  retained.get(row.id)?.imageRevisionId) &&
               JSON.stringify(prior.locator) === JSON.stringify(row) &&
               (!prior.metadataRecovery ||
                 prior.metadataRecovery.reason === options.emptyMetadataReason) &&
@@ -126,7 +137,10 @@ export async function cacheRevisionMedia(
                 createHash('sha256').update(bytes).digest('hex') ===
                   prior.contentHash &&
                 createHash('sha256').update(metadata).digest('hex') ===
-                  prior.metadataHash
+                  prior.metadataHash &&
+                (!prior.retainedImageRevisionId ||
+                  (metadata.toString() === retained.get(row.id)?.metadata &&
+                    prior.contentHash === retained.get(row.id)?.contentHash))
               ) {
                 evidence.push(prior)
                 continue
@@ -146,11 +160,16 @@ export async function cacheRevisionMedia(
             url(`${row.publicId}.v${row.version}.json`),
             { method: 'GET', signal: AbortSignal.timeout(60000) },
           )
-          const { bytes: metadataBytes, recovery } = await readMetadataEvidence(
-            metadataResponse,
-            row.version!,
-            options.emptyMetadataReason,
-          )
+          // Exact immutable database evidence can replace a missing sidecar, never a failed authorization response.
+          const source =
+            metadataResponse.status === 404 ? retained.get(row.id) : undefined
+          const { bytes: metadataBytes, recovery } = source
+            ? { bytes: new TextEncoder().encode(source.metadata), recovery: undefined }
+            : await readMetadataEvidence(
+                metadataResponse,
+                row.version!,
+                options.emptyMetadataReason,
+              )
           const metadata = ImageMetadataFullSchema.parse(
             JSON.parse(new TextDecoder().decode(metadataBytes)),
           )
@@ -165,7 +184,7 @@ export async function cacheRevisionMedia(
             throw new Error('Unsupported original media')
           const contentHash = createHash('sha256').update(bytes).digest('hex')
           if (
-            [row.contentHash, metadata.contentHash].some(
+            [row.contentHash, metadata.contentHash, source?.contentHash].some(
               hash => hash && hash.toLowerCase() !== contentHash,
             )
           )
@@ -176,6 +195,7 @@ export async function cacheRevisionMedia(
             locator: row,
             status: 'verified',
             ...(recovery ? { metadataRecovery: recovery } : {}),
+            ...(source ? { retainedImageRevisionId: source.imageRevisionId } : {}),
             contentHash,
             metadataHash: createHash('sha256').update(metadataBytes).digest('hex'),
             mediaType,
