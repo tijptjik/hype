@@ -17,6 +17,7 @@ let {
   coordinates,
   initialZoom = 19,
   showFullscreen = true,
+  expandOnClick = false,
   label = 'Detailed location map',
   addressMeta,
   mapStyleCode = null,
@@ -90,10 +91,21 @@ function handleWindowKeydown(event: KeyboardEvent): void {
     onMapReady={handleTaskMapReady}
   />
 
-  {#if showFullscreen}
+  {#if expandOnClick && !isFullscreen}
     <button
       type="button"
-      class="border-border bg-panel/95 text-foreground hover:bg-panel/90 absolute bottom-4 left-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border transition"
+      class="absolute inset-0 z-20 cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+      aria-label="Open fullscreen map"
+      onclick={() => {
+        void toggleFullscreen()
+      }}
+    ></button>
+  {/if}
+
+  {#if (showFullscreen && !expandOnClick) || isFullscreen}
+    <button
+      type="button"
+      class="absolute bottom-4 left-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-panel/95 text-foreground transition hover:bg-panel/90"
       onclick={() => {
         void toggleFullscreen()
       }}

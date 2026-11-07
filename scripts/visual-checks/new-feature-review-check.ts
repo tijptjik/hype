@@ -255,18 +255,29 @@ for (const [name, engine] of [
         .evaluate(node => getComputedStyle(node).padding)
       if (inset !== '0px') throw Error(`Unexpected task panel gutter: ${inset}`)
       const contextMap = page.getByRole('region', { name: 'Location context map' })
-      await contextMap.getByRole('button', { name: 'Open fullscreen map' }).click()
+      if (await contextMap.getByRole('button', { name: 'Open fullscreen map' }).count())
+        throw Error('Context map must not show maximize control')
+      const detailMap = page.getByRole('region', { name: 'Detailed location map' })
+      const openMap = detailMap.getByRole('button', { name: 'Open fullscreen map' })
+      await openMap.click()
       await page.waitForFunction(() => {
-        const map = document.querySelector('[aria-label="Location context map"]')
+        const map = document.querySelector('[aria-label="Detailed location map"]')
         return map && Math.abs(map.getBoundingClientRect().height - innerHeight) < 2
       })
       await page.keyboard.press('Escape')
-      await page.waitForFunction(
-        () =>
-          document
-            .querySelector('[aria-label="Location context map"]')
-            ?.getBoundingClientRect().height === 128,
-      )
+      await openMap.waitFor()
+      await openMap.focus()
+      await openMap.press('Enter')
+      await detailMap.getByRole('button', { name: 'Exit fullscreen map' }).click()
+      await openMap.waitFor()
+      await page.evaluate(async () => {
+        await Promise.allSettled(
+          document.getAnimations().map(animation => animation.finished),
+        )
+      })
+      await page.locator('[data-form-surface]').evaluate(node => {
+        node.scrollTop = 0
+      })
       await page.locator('[data-task-header]').scrollIntoViewIfNeeded()
       const language = await page
         .getByRole('button', { name: 'Multilingual', exact: true })

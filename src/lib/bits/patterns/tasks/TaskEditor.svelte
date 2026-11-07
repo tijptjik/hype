@@ -289,6 +289,7 @@ $effect(() => {
                 addressMeta={null}
                 {mapStyleCode}
                 initialZoom={11}
+                showFullscreen={false}
                 label="Location context map"
                 class="border-border/40 h-32 min-h-0! flex-none! border-b"
               />
@@ -299,6 +300,7 @@ $effect(() => {
                   null}
                 {mapStyleCode}
                 showFullscreen={false}
+                expandOnClick
                 class="min-h-0!"
               />
             </div>
