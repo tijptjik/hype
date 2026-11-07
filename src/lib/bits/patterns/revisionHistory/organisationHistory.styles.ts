@@ -29,7 +29,7 @@ export const historyStyles = {
   group: 'grid min-w-0 gap-3',
   comparison: 'border-border/60 bg-panel min-w-0 overflow-hidden rounded-md border',
   fieldHeading:
-    'border-border/50 bg-muted/30 flex min-w-0 flex-wrap gap-x-8 gap-y-2 border-b px-4 py-3',
+    'border-border/50 bg-muted/30 grid min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start gap-x-8 gap-y-2 border-b px-4 py-3',
   values:
     'divide-border/40 grid min-w-0 divide-y @[36rem]:grid-cols-2 @[36rem]:divide-x @[36rem]:divide-y-0',
   before: cx(cell, 'text-muted-foreground'),

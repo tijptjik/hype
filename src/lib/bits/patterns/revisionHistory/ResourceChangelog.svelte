@@ -604,12 +604,11 @@ $effect(() => {
                         >
                           <div class="relative">
                             <dl
-                              class="border-border bg-muted/30 flex min-w-0 flex-wrap gap-y-2 border-b px-4 py-3 pr-14"
-                              style:column-gap="48px"
+                              class="border-border bg-muted/30 grid min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start gap-x-8 gap-y-2 border-b px-4 py-3 pr-14"
                               data-changelog-change-heading
                             >
                               <div
-                                class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1"
+                                class="min-w-0 space-y-1"
                               >
                                 <dt class="text-muted-foreground text-xs font-medium">
                                   Field
@@ -624,7 +623,7 @@ $effect(() => {
                                 </dd>
                               </div>
                               <div
-                                class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1"
+                                class="min-w-0 space-y-1"
                               >
                                 <dt class="text-muted-foreground text-xs font-medium">
                                   Action

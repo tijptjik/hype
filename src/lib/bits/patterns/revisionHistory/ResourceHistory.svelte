@@ -433,7 +433,7 @@ $effect(() => {
                     </dd>
                   </div>
                 {/if}
-                <div class="min-w-0 space-y-1">
+                <div class="col-start-2 min-w-0 space-y-1">
                   <dt class={styles.label}>Action</dt>
                   <dd class="text-sm font-medium">{field.operation}</dd>
                 </div>

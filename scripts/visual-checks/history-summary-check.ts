@@ -63,6 +63,27 @@ for (const [name, engine] of [
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         'Page must not overflow',
       )
+      // Open unequal field labels and verify their secondary headers share column tracks.
+      for (const header of await headers.all()) {
+        await header.getByRole('button', { name: 'View changes', exact: true }).click()
+      }
+      await history.getByRole('table').first().waitFor()
+      const actions = history
+        .locator('section > dl')
+        .filter({ has: page.locator('dt').filter({ hasText: /^Action$/ }) })
+      const actionBounds = await Promise.all(
+        (await actions.all()).map(heading =>
+          heading
+            .locator('dt')
+            .filter({ hasText: /^Action$/ })
+            .boundingBox(),
+        ),
+      )
+      assert.equal(actionBounds.length, 6)
+      assert.ok(
+        actionBounds.every(box => box && Math.abs(box.x - actionBounds[0]!.x) < 1),
+        'Secondary Action columns must align across field labels',
+      )
       assert.deepEqual(errors, [])
       await history.screenshot({ path: `${directory}/${name}-${width}.png` })
       console.log(
