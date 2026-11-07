@@ -22,6 +22,7 @@ import type {
  * @param type - Hierarchy resource being rendered.
  * @param search - Reactive search text getter.
  * @param slot - Panel selection or index filtering/count semantics.
+ * @param active - Whether this consumer needs requests and focus refreshes.
  * @returns Reactive rows, traversal state and retry action.
  */
 export function usePanelResources(
@@ -29,6 +30,7 @@ export function usePanelResources(
   type: PanelResourceType,
   search: () => string,
   slot: 'panel' | 'index' = 'panel',
+  active: () => boolean = () => true,
 ) {
   const navigation = getSurfaceNavigation()
   const list = app.resources.createCollection(type)
@@ -66,8 +68,12 @@ export function usePanelResources(
           ]),
         ],
   )
-  const pins = $derived(selected.map(id => app.cacheCtx.pin(type, id, input.meta)))
+  // Reading a native pin creates its query, so hidden panels must defer reads too.
+  const pins = $derived(
+    active() ? selected.map(id => app.cacheCtx.pin(type, id, input.meta)) : [],
+  )
   $effect(() => {
+    if (!active()) return
     const ids = selected
     const meta = input.meta
     const release = untrack(() => ids.map(id => app.cacheCtx.retainPin(type, id, meta)))
@@ -77,6 +83,7 @@ export function usePanelResources(
       })
   })
   $effect(() => {
+    if (!active()) return
     const next = input
     const timer = setTimeout(
       () => {
@@ -93,6 +100,7 @@ export function usePanelResources(
    * @returns Nothing; native query errors remain available to reactive consumers.
    */
   function refreshResources(force = false): void {
+    if (!active()) return
     const next = input
     // Refresh only this panel's current pins; Kit coalesces shared native query requests.
     void Promise.allSettled([

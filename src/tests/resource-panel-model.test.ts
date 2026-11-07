@@ -51,6 +51,7 @@ function setup(
   active = 'b',
   options: {
     mode?: 'admin' | 'prisms'
+    open?: boolean
     layers?: string[]
     organisationMember?: string
     pinError?: () => unknown
@@ -78,6 +79,10 @@ function setup(
     revalidate: vi.fn().mockResolvedValue(undefined),
   }
   const app = {
+    panels: {
+      isPanelOpen: () => options.open ?? true,
+      isPanelOpenVisually: () => false,
+    },
     account: {
       user: {
         id: 'operator',
@@ -143,6 +148,7 @@ function setup(
     },
   })
   return {
+    list,
     rows: model.sections[0].rows,
     sections: model.sections,
     app,
@@ -397,4 +403,12 @@ it('handles rejected pin refreshes without dropping transient previews', async (
   await vi.waitFor(() => expect(refreshPin).toHaveBeenCalledOnce())
   flushSync()
   expect(sections[0].rows.map(row => row.id)).toContain('outside')
+})
+
+it('does not load or refresh a closed public resource panel on window focus', async () => {
+  const { list } = setup([], 'b', { mode: 'prisms', open: false })
+  window.dispatchEvent(new Event('focus'))
+  await vi.advanceTimersByTimeAsync(250)
+  expect(list.load).not.toHaveBeenCalled()
+  expect(list.revalidate).not.toHaveBeenCalled()
 })

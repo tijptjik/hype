@@ -25,12 +25,14 @@ export type SavedFeatureRow = {
  * @param app - Application resource/cache context owned by the route.
  * @param omni - Route-owned map/search navigation context.
  * @param kind - Saved-feature collection to query.
+ * @param active - Whether the owning panel currently needs its queries.
  * @returns Search, paging, row and navigation state for a render-only section.
  */
 export function useSavedFeatureListModel(
   app: ResourceViewCtx,
   omni: OmniCtx,
   kind: 'wishlist' | 'visited',
+  active: () => boolean = () => true,
 ) {
   const query = app.resources.featureQueries[kind]
   let searchTerm = $state('')
@@ -48,11 +50,12 @@ export function useSavedFeatureListModel(
 
   // Keep the shared feature query current without coupling the section to ResourceViewCtx.
   $effect(() => {
+    const enabled = active()
     const userId = app.user?.id
     const input = queryInput()
     untrack(() => {
       if (!userId) query.clear()
-      else void app.queries.loadFeatureQuery(kind, input).catch(() => {})
+      else if (enabled) void app.queries.loadFeatureQuery(kind, input).catch(() => {})
     })
   })
 

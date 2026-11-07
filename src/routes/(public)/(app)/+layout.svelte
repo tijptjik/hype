@@ -34,6 +34,7 @@ import { toast } from 'svelte-sonner'
 // ANALYTICS
 import { ProductUsageObserver } from '#lib/analytics/clientProductUsage.js'
 // COMPONENTS
+import DeferredPanel from '#lib/bits/patterns/panels/DeferredPanel.svelte'
 import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -49,12 +50,7 @@ import {
   getActiveMapStyleIdentity,
 } from '#lib/client/services/map.js'
 import MapCanvas from '#lib/bits/patterns/maps/MapCanvas.svelte'
-import Filters from '#lib/bits/patterns/filtersPanel/FiltersPanel.svelte'
-import { ResourcePanel } from '#lib/bits/patterns/resourcePanel/index.js'
 import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
-import Stars from '#lib/bits/patterns/starsPanel/StarsPanel.svelte'
-import NavigationPanel from '#lib/bits/patterns/navigationPanel/NavigationPanel.svelte'
-import Hub from '#lib/bits/patterns/hubPanel/HubPanel.svelte'
 // import Plan from '#lib/bits/patterns/planPanel/PlanPanel.svelte'
 // import Passport from '#lib/bits/patterns/passportPanel/PassportPanel.svelte'
 // import EventCompanion from '#lib/bits/patterns/eventCompanionPanel/EventCompanionPanel.svelte'
@@ -211,8 +207,18 @@ $effect(() => {
 })
 const profileModel = useProfilePanelModel(appCtx.view, omniCtx)
 const starsModel = {
-  wishlist: useSavedFeatureListModel(appCtx.view, omniCtx, 'wishlist'),
-  visited: useSavedFeatureListModel(appCtx.view, omniCtx, 'visited'),
+  wishlist: useSavedFeatureListModel(
+    appCtx.view,
+    omniCtx,
+    'wishlist',
+    () => starsShell.open,
+  ),
+  visited: useSavedFeatureListModel(
+    appCtx.view,
+    omniCtx,
+    'visited',
+    () => starsShell.open,
+  ),
   get isGuestAccount() {
     return $session.data?.user?.isAnonymous === true
   },
@@ -621,19 +627,54 @@ $effect(() => {
         }}
       />
       <!-- Panels -->
-      <ResourcePanel model={prismsModel} />
-      <Stars shell={starsShell} model={starsModel} />
-      <Hub
-        shell={hubShell}
-        preferences={appCtx.view.getUserPreferences()}
-        {hub}
-        showSubscription={subscriptionVisibility.showHubPanelSubscription}
-        subscriptionProps={hubPanelSubscriptionProps}
-        {privacyPolicyDialogProps}
-        {termsOfServiceDialogProps}
-      />
-      <Filters shell={filtersShell} model={filtersModel} />
-      <NavigationPanel shell={navigationShell} model={navigationModel} />
+      <DeferredPanel
+        active={prismsModel.open}
+        load={() => import('#lib/bits/patterns/resourcePanel/ResourcePanel.svelte')}
+      >
+        {#snippet children(ResourcePanel)}
+          <ResourcePanel model={prismsModel} />
+        {/snippet}
+      </DeferredPanel>
+      <DeferredPanel
+        active={starsShell.open}
+        load={() => import('#lib/bits/patterns/starsPanel/StarsPanel.svelte')}
+      >
+        {#snippet children(Stars)}
+          <Stars shell={starsShell} model={starsModel} />
+        {/snippet}
+      </DeferredPanel>
+      <DeferredPanel
+        active={hubShell.open}
+        load={() => import('#lib/bits/patterns/hubPanel/HubPanel.svelte')}
+      >
+        {#snippet children(Hub)}
+          <Hub
+            shell={hubShell}
+            preferences={appCtx.view.getUserPreferences()}
+            {hub}
+            showSubscription={subscriptionVisibility.showHubPanelSubscription}
+            subscriptionProps={hubPanelSubscriptionProps}
+            {privacyPolicyDialogProps}
+            {termsOfServiceDialogProps}
+          />
+        {/snippet}
+      </DeferredPanel>
+      <DeferredPanel
+        active={filtersShell.open}
+        load={() => import('#lib/bits/patterns/filtersPanel/FiltersPanel.svelte')}
+      >
+        {#snippet children(Filters)}
+          <Filters shell={filtersShell} model={filtersModel} />
+        {/snippet}
+      </DeferredPanel>
+      <DeferredPanel
+        active={navigationShell.open}
+        load={() => import('#lib/bits/patterns/navigationPanel/NavigationPanel.svelte')}
+      >
+        {#snippet children(NavigationPanel)}
+          <NavigationPanel shell={navigationShell} model={navigationModel} />
+        {/snippet}
+      </DeferredPanel>
       <!-- <Plan /> -->
       <!-- <Passport /> -->
       <!-- <EventCompanion /> -->

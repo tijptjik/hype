@@ -108,6 +108,19 @@ describe.each([
     render(Component, { model, panel: {} as PanelProps })
   }
 
+  it('does not query a hidden saved-place panel', async () => {
+    disposeModel = createFeatureQueryEffectRoot(() => {
+      useSavedFeatureListModel(
+        mocks.app as unknown as ResourceViewCtx,
+        {} as OmniCtx,
+        channel,
+        () => false,
+      )
+    })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(mocks.app.queries.loadFeatureQuery).not.toHaveBeenCalled()
+  })
+
   it('renders server rows beyond map membership and exposes pagination using the server total', async () => {
     renderPanel()
     expect(screen.getByText('Server-only feature')).toBeTruthy()

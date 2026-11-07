@@ -68,7 +68,18 @@ export function useResourcePanelModel(
     tall = window.innerHeight > 1000
   })
   const types = ['organisation', 'project', 'layer'] as const
-  const lists = types.map(type => usePanelResources(app, type, () => search[type]))
+  const lists = types.map(type =>
+    usePanelResources(
+      app,
+      type,
+      () => search[type],
+      'panel',
+      () =>
+        mode === 'admin' ||
+        app.panels.isPanelOpen(panelType) ||
+        app.panels.isPanelOpenVisually(panelType),
+    ),
+  )
 
   // Compact panel rows omit hub ownership; use the server-authorised list shared with the inbox.
   $effect(() => {
