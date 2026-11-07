@@ -183,7 +183,7 @@ const fallbackFeatureCredit = $derived(
     data-tooltip={m.image_attribution_title()}
     class="{open
       ? 'pointer-events-none opacity-0'
-      : ''} inline-flex size-12 items-center justify-center rounded-full border border-transparent bg-panel/95 text-white shadow-sm backdrop-blur-sm transition hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-white"
+      : ''} inline-flex size-12 items-center justify-center rounded-full border border-transparent bg-panel/95 text-primary shadow-sm backdrop-blur-sm transition hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-primary"
     ><InfoIcon class="size-6" aria-hidden="true" /></Popover.Trigger
   >
   <Popover.Portal>
