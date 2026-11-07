@@ -32,6 +32,7 @@ function handleReasonKeydown(event: KeyboardEvent): void {
   {source}
   title={m.north_level_niklas_tap()}
   closeLabel="Close rejection dialog"
+  footerDivider={false}
 >
   <textarea
     bind:value

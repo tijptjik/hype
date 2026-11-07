@@ -18,6 +18,7 @@ let {
   children,
   footer,
   showFooter = true,
+  footerDivider = true,
   closeLabel = 'Close',
 }: {
   open?: boolean
@@ -28,6 +29,7 @@ let {
   description?: string
   children?: Snippet
   showFooter?: boolean
+  footerDivider?: boolean
   footer?: Snippet
   closeLabel?: string
 } = $props()
@@ -115,7 +117,7 @@ $effect(() => {
       </div>
       {#if footer && showFooter}
         <footer
-          class="border-border flex shrink-0 justify-end gap-3 border-t px-6 py-5"
+          class={`flex shrink-0 justify-end gap-3 px-6 py-5 ${footerDivider ? 'border-border border-t' : ''}`}
         >
           {@render footer()}
         </footer>
