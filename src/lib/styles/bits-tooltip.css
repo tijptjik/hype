@@ -19,7 +19,7 @@
     border-radius: var(--radius-input);
     background: var(--color-panel);
     color: var(--color-foreground);
-    box-shadow: 0 8px 24px color-mix(in oklab, var(--color-foreground) 16%, transparent);
+    box-shadow: 0 4px 12px color-mix(in oklab, var(--color-foreground) 6%, transparent);
     font-size: 0.875rem;
     line-height: 1.45;
     padding: 12px;
