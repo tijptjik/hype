@@ -3,6 +3,8 @@
 import { untrack } from 'svelte'
 // COMPONENTS
 import OmnibarSection from './OmnibarSection.svelte'
+// LAYOUT
+import { OMNIBAR_SEARCH_DISPLAY_ORDER } from '../searchBudget'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
@@ -37,7 +39,12 @@ function retainPendingResults(
 const visibleSections = $derived(
   sections
     .map(section => retainPendingResults(section, previousSections))
-    .filter(section => section.results.length > 0),
+    .filter(section => section.results.length > 0)
+    .sort(
+      (a, b) =>
+        OMNIBAR_SEARCH_DISPLAY_ORDER.indexOf(a.collectionType) -
+        OMNIBAR_SEARCH_DISPLAY_ORDER.indexOf(b.collectionType),
+    ),
 )
 $effect(() => {
   const previous = untrack(() => previousSections)

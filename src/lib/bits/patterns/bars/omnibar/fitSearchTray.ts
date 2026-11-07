@@ -1,5 +1,9 @@
 // LAYOUT
-import { allocateSearchRows, getSearchTrayHeight } from './searchBudget'
+import {
+  allocateSearchRows,
+  getSearchTrayHeight,
+  OMNIBAR_SEARCH_POLICY,
+} from './searchBudget'
 // TYPES
 import type { OmnibarSearchProps } from './omnibar.types'
 
@@ -36,7 +40,10 @@ export function fitSearchTray(
    */
   function fit(): void {
     frame = 0
-    const sections = [...node.querySelectorAll<HTMLElement>('[data-omni-section]')]
+    // Measure in allocation priority even though the DOM follows visual reading order.
+    const sections = OMNIBAR_SEARCH_POLICY.flatMap(({ type }) => [
+      ...node.querySelectorAll<HTMLElement>(`[data-omni-section="${type}"]`),
+    ])
     const rows = sections.map(section => [
       ...section.querySelectorAll<HTMLElement>('[data-omni-entry]'),
     ])

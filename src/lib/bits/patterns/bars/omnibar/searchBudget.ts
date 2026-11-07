@@ -11,6 +11,16 @@ export const OMNIBAR_SEARCH_POLICY = [
   { type: 'organisation', limit: 2 },
 ] as const satisfies ReadonlyArray<{ type: OmniSearchCollection; limit: number }>
 
+/** Visual reading order, independent of the preview allocation priority above. */
+export const OMNIBAR_SEARCH_DISPLAY_ORDER: readonly OmniSearchCollection[] = [
+  'feature',
+  'neighbourhood',
+  'layer',
+  'project',
+  'organisation',
+  'walk',
+]
+
 export const OMNIBAR_SEARCH_VIEWPORT_FRACTION = 0.6
 
 /**

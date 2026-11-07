@@ -30,13 +30,27 @@ for (const [name, engine] of [
         )
     assert.deepEqual(await visibleTypes(), [
       'feature',
-      'walk',
-      'project',
-      'layer',
       'neighbourhood',
+      'layer',
+      'project',
       'organisation',
+      'walk',
     ])
     assert.equal(await page.locator('[data-omni-entry]:visible').count(), 15)
+
+    // Find a constrained budget that admits walks but excludes lower-priority divisions.
+    let walksWinBudget = false
+    for (const height of [1400, 1200, 1000, 800]) {
+      await page.setViewportSize({ width: 375, height })
+      await page.waitForTimeout(100)
+      const types = await visibleTypes()
+      if (types.includes('walk') && !types.includes('neighbourhood')) {
+        assert.equal(types.at(-1), 'walk')
+        walksWinBudget = true
+        break
+      }
+    }
+    assert.ok(walksWinBudget, 'Walks must receive space before divisions')
 
     await page.setViewportSize({ width: 375, height: 800 })
     await page.waitForTimeout(100)
