@@ -278,11 +278,9 @@ const ReadLocationLifecycle = z.preprocess(
 )
 const ReadFeatureAuthoring = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
-  z
-    .object({
-      nameMode: z.enum(['inherit', 'independent']),
-    })
-    .optional(),
+  z.object({
+    nameMode: z.enum(['inherit', 'independent']),
+  }).optional(),
 )
 const ReadLocationNames = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
@@ -348,7 +346,9 @@ export const FeatureAdminRow = FeatureBase.extend({
 // ═══════════════════════
 
 export const FeatureI18nFormData = z.object({
-  title: z.string().max(128, { message: m.admin__validation_lte_128_chars() }),
+  title: z
+    .string()
+    .max(128, { message: m.admin__validation_lte_128_chars() }),
   titleGen: FormBoolean.default(false),
   description: z
     .string()
@@ -384,9 +384,7 @@ export const FeaturePropertyI18nFormData = z.object({
   valueGen: FormBoolean.default(false),
 })
 
-export const FeaturePropertyI18nByLocaleFormData = contentLocaleMap(
-  FeaturePropertyI18nFormData,
-)
+export const FeaturePropertyI18nByLocaleFormData = contentLocaleMap(FeaturePropertyI18nFormData)
 
 export const FeaturePropertyFormData = z.object({
   propertyId: z.string().min(1),
@@ -404,9 +402,7 @@ export const FeatureI18nByLocaleFormData = contentLocaleMap(FeatureI18nFormData)
   { message: m.field_is_required({ field: m.feature__title() }) },
 )
 
-export const FeatureDraftI18nByLocaleFormData = contentLocaleMap(
-  FeatureDraftI18nFormData,
-)
+export const FeatureDraftI18nByLocaleFormData = contentLocaleMap(FeatureDraftI18nFormData)
 
 export const FeatureEntityFormData = z.object({
   locationNameMode: z.enum(['inherit', 'independent']).optional(),
@@ -520,17 +516,13 @@ export const FeatureProfile = z.enum([
 ])
 
 export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
-  i18n: contentLocaleMap(
-    FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true }),
-  ).nullish(),
+  i18n: contentLocaleMap(FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true })).nullish(),
   property: PropertyDetailProfileAPI.optional(),
   propertyValue: PropertyValueDetailProfileAPI.nullish(),
 })
 
 export const FeaturePropertyAPI = FeaturePropertyBase.extend({
-  i18n: contentLocaleMap(
-    FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true }),
-  ).nullish(),
+  i18n: contentLocaleMap(FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true })).nullish(),
   property: PropertyAdminProfileAPI.optional(),
   propertyValue: PropertyValueAdminProfileAPI.nullish(),
 })

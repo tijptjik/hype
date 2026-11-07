@@ -37,6 +37,7 @@ function setup(type: TaskFeatureReviewCommit['task']['type'] = 'newFeature') {
       type === 'newFeature' ? 0 : 1,
     )
   const db = drizzle({} as never) as Database
+  vi.spyOn(db, 'get').mockResolvedValue({ n: 0 } as never)
   vi.spyOn(db, 'batch').mockImplementation(async statements => {
     sqlite.exec('BEGIN')
     try {

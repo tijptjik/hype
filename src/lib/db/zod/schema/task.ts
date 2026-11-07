@@ -1,5 +1,6 @@
 // FEATURE CONTENT LOCALES
 import { contentLocaleMap } from '#lib/i18n/contentRecords.js'
+import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -72,6 +73,11 @@ import { getLocales } from '..'
 // ═══════════════════════
 
 export const TaskBase = createSelectSchema(task).extend({
+  featureId: z.string().nullable(),
+  creationProposal: z.object({
+    id: z.string(), version: z.string(), content: FeatureRevisionContentSchema,
+    scope: z.object({ organisationId: z.string(), projectId: z.string(), layerId: z.string() }),
+  }).optional(),
   type: z.enum(Object.values(TaskType) as [string, ...string[]]),
 })
 export const TaskInsert = createInsertSchema(task).extend({
@@ -148,6 +154,9 @@ export const TaskBaseRaw = TaskBase.extend({
 export const TaskProfile = z.enum(['list', 'card', 'detail', 'admin'])
 
 export const TaskListProfileAPI = TaskBase.extend({
+  revisionReviewRequired: z.boolean().optional(),
+  lifecycleReview: z.boolean().optional(),
+  identityTransferred: z.boolean().optional(),
   organisation: OrganisationBase.extend({
     i18n: getLocales(OrganisationI18nBase),
   }),
@@ -156,11 +165,11 @@ export const TaskListProfileAPI = TaskBase.extend({
   }),
   feature: FeatureBase.extend({
     i18n: contentLocaleMap(FeatureI18nBase).nullish(),
-  }),
+  }).nullable(),
   images: z
     .array(
       TaskImageBase.extend({
-        image: ImageBase,
+        image: ImageBase.extend({ imageRevisionId: z.string().optional() }),
       }),
     )
     .optional(),
@@ -180,6 +189,9 @@ export const TaskEditorLayerOptionSchema = z.object({
 })
 
 export const TaskAdminProfileAPI = TaskBase.extend({
+  revisionReviewRequired: z.boolean().optional(),
+  lifecycleReview: z.boolean().optional(),
+  identityTransferred: z.boolean().optional(),
   organisation: OrganisationBase.extend({
     i18n: getLocales(OrganisationI18nBase),
   }),
@@ -200,11 +212,11 @@ export const TaskAdminProfileAPI = TaskBase.extend({
           .nullable(),
       }),
     ),
-  }),
+  }).nullable(),
   images: z
     .array(
       TaskImageBase.extend({
-        image: ImageBase.optional().nullable(),
+        image: ImageBase.extend({ imageRevisionId: z.string().optional() }).optional().nullable(),
       }),
     )
     .optional(),
@@ -278,14 +290,9 @@ export const GetTasksSchema = ListQueryParamsSchema.extend({
     .object({
       isDraft: z.boolean().nullable().optional(),
       isReviewed: z.boolean().nullable().optional(),
-      reviewAction: z
-        .enum(Object.values(TaskReviewAction) as [string, ...string[]])
-        .nullable()
-        .optional(),
-      reviewOutcome: z
-        .enum(Object.values(TaskReviewOutcome) as [string, ...string[]])
-        .nullable()
-        .optional(),
+      reviewAction: z.enum(Object.values(TaskReviewAction) as [string, ...string[]]).nullable().optional(),
+      reviewOutcome: z.enum(Object.values(TaskReviewOutcome) as [string, ...string[]]).nullable().optional(),
+      featureId: z.string().min(1).optional(),
       type: z
         .enum(Object.values(TaskType) as [string, ...string[]])
         .nullable()

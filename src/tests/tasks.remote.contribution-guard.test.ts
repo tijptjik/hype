@@ -1,10 +1,14 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+vi.mock('#lib/db/services/featureLifecycle.js', () => ({ hasFeatureLifecycleStorage: vi.fn().mockResolvedValue(false) }))
+vi.mock('#lib/db/services/featureLifecycleCreationTask.js', () => ({ submitFeatureCreationTask: vi.fn() }))
 
 const reviewMocks = vi.hoisted(() => ({
   loadTask: vi.fn(),
+  hasFeatureTaskTransfer: vi.fn(),
   probeTaskQuery: vi.fn(),
   authorizeTaskReadForProbe: vi.fn(),
+  authorizeFeaturePublishForSubmission: vi.fn(),
   updateTask: vi.fn(),
   archiveImages: vi.fn(),
   publishImages: vi.fn(),
@@ -49,6 +53,7 @@ vi.mock('#lib/i18n.js', () => ({ getLocale: vi.fn() }))
 vi.mock('#lib/api/index.js', () => ({ getValidQueryParams: vi.fn() }))
 vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeTaskReadForProbe: reviewMocks.authorizeTaskReadForProbe,
+  authorizeFeaturePublishForSubmission: reviewMocks.authorizeFeaturePublishForSubmission,
 }))
 vi.mock('#lib/db/zod/schema/task.js', () => ({
   BeginMissingReportDraftSchema: {},
@@ -63,6 +68,7 @@ vi.mock('#lib/db/zod/schema/task.js', () => ({
   SubmitNewFeatureSchema: {},
   SubmitNewPhotosSchema: {},
 }))
+vi.mock('#lib/db/services/featureUploadEvidence.js',()=>({hasFeatureTaskTransfer:reviewMocks.hasFeatureTaskTransfer}))
 vi.mock('#lib/db/services/task.js', () => reviewMocks)
 vi.mock('#lib/db/services/feature.js', () => reviewMocks)
 vi.mock('#lib/db/services/layer.js', () => reviewMocks)
@@ -152,6 +158,7 @@ const createPublicScopeDb = (task: unknown) => {
   scopeQuery.where.mockReturnValue(scopeQuery)
 
   return {
+    get: vi.fn().mockResolvedValue({ n: 0 }),
     select: vi.fn().mockReturnValue(scopeQuery),
     query: {
       task: {
@@ -193,6 +200,7 @@ describe('completed task write guard', () => {
     reviewMocks.commitTaskImageReview.mockResolvedValue(true)
     reviewMocks.commitTaskFeatureReview.mockResolvedValue(true)
     reviewMocks.authorizeTaskReadForProbe.mockReturnValue({ allowed: true })
+    reviewMocks.authorizeFeaturePublishForSubmission.mockReturnValue({ allowed: true })
   })
 
   it.each(['newFeature', 'newPhoto', 'reportedMissing'])(
@@ -250,6 +258,16 @@ describe('completed task write guard', () => {
     })
     expect(reviewMocks.updateTask).not.toHaveBeenCalled()
     expect(reviewMocks.publishImages).not.toHaveBeenCalled()
+  })
+
+  it('requires Feature publication authority before accepting an initial contribution', async () => {
+    reviewMocks.loadTask.mockResolvedValue({ id: 'task', featureId: 'feature', type: 'newFeature', isDraft: false, isReviewed: false })
+    reviewMocks.probeFeatureForUpdate.mockResolvedValue({ id: 'feature', modifiedAt: 'v1' })
+    reviewMocks.authorizeFeaturePublishForSubmission.mockReturnValue({ allowed: false, code: 'INSUFFICIENT_ROLE' })
+    await expect(reviewHandler({ id: 'task', action: 'accept' }, {
+      db: 'db', user: {}, userId: 'reviewer', event: { locals: { hub: {} } },
+    })).rejects.toMatchObject({ status: 403 })
+    expect(reviewMocks.commitTaskFeatureReview).not.toHaveBeenCalled()
   })
 
   it.each(['newFeature', 'reportedMissing'] as const)(
@@ -347,17 +365,25 @@ describe('task draft finalization recovery', () => {
         images: [{ imageId: 'image' }],
         message: 'Missing here',
       }
+      const writeDataPoint = vi.fn()
       const ctx = {
         user: { id: 'contributor', isAnonymous: false },
         userId: 'contributor',
-        event: { locals: {} },
-        db: { query: { task: { findFirst: vi.fn(async () => draft) } } },
+        event: {
+          locals: {
+            platform: {
+              env: { ENVIRONMENT: 'production', PRODUCT_USAGE: { writeDataPoint } },
+            },
+          },
+        },
+        db: { get: vi.fn().mockResolvedValue({ n: 0 }), query: { task: { findFirst: vi.fn(async () => draft) } } },
       }
       reviewMocks.commitTaskDraftFinalization.mockResolvedValue(undefined)
       await expect(finalizeHandler({ id: 'task' }, ctx)).rejects.toMatchObject({
         status: 409,
         message: 'STALE_TASK_DRAFT',
       })
+      expect(writeDataPoint).not.toHaveBeenCalled()
       expect(reviewMocks.updateTask).not.toHaveBeenCalled()
       reviewMocks.commitTaskDraftFinalization.mockResolvedValue({
         ...draft,
@@ -366,6 +392,10 @@ describe('task draft finalization recovery', () => {
       await expect(finalizeHandler({ id: 'task' }, ctx)).resolves.toMatchObject({
         data: { isDraft: false },
       })
+      expect(writeDataPoint).toHaveBeenCalledTimes(1)
+      draft.isDraft = false
+      await finalizeHandler({ id: 'task' }, ctx)
+      expect(writeDataPoint).toHaveBeenCalledTimes(1)
       expect(reviewMocks.commitTaskDraftFinalization).toHaveBeenLastCalledWith(
         ctx.db,
         draft,
@@ -384,11 +414,19 @@ describe('task draft finalization recovery', () => {
         isDraft: true,
         images: [{ imageId: 'image' }],
       }
+      const writeDataPoint = vi.fn()
       const ctx = {
         user: { id: 'contributor', isAnonymous: false },
         userId: 'contributor',
-        event: { locals: { hub: {} } },
-        db: { query: { task: { findFirst: vi.fn(async () => ({ ...draft })) } } },
+        event: {
+          locals: {
+            hub: {},
+            platform: {
+              env: { ENVIRONMENT: 'production', PRODUCT_USAGE: { writeDataPoint } },
+            },
+          },
+        },
+        db: { get: vi.fn().mockResolvedValue({ n: 0 }), query: { task: { findFirst: vi.fn(async () => ({ ...draft })) } } },
       }
       reviewMocks.updateTask.mockImplementation(async (_db, patch) => {
         Object.assign(draft, patch)
@@ -406,6 +444,7 @@ describe('task draft finalization recovery', () => {
       }
 
       await expect(finalizeHandler({ id: 'task' }, ctx)).rejects.toThrow()
+      expect(writeDataPoint).not.toHaveBeenCalled()
       expect(reviewMocks.updateTask).not.toHaveBeenCalled()
       expect(draft.isDraft).toBe(true)
 
@@ -430,6 +469,9 @@ describe('task draft finalization recovery', () => {
         },
       )
       expect(draft.isDraft).toBe(false)
+      expect(writeDataPoint).toHaveBeenCalledTimes(1)
+      await finalizeHandler({ id: 'task' }, ctx)
+      expect(writeDataPoint).toHaveBeenCalledTimes(1)
     },
   )
 })

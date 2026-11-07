@@ -1,10 +1,14 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
 import { error } from '@sveltejs/kit'
+// LIFECYCLE
+import { hasFeatureLifecycleStorage } from '#lib/db/services/featureLifecycle.js'
+import { submitFeatureCreationTask, readFeatureCreationTask, reviewFeatureCreationTask, featureCreationTaskFormData } from '#lib/db/services/featureLifecycleCreationTask.js'
+import { saveUserContributedCreationTask } from '#lib/api/services/feature.js'
 // I18N
 import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 // ANALYTICS
 import { recordTaskContribution } from '#lib/analytics/productUsage.server.js'
 // API
@@ -14,6 +18,8 @@ import {
   authorizeTaskListForContext,
   authorizeTaskReadForProbe,
   authorizeTaskReassignForProbe,
+  authorizeFeaturePublishForSubmission,
+  authorizeFeatureCreateForSubmission,
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
 import {
@@ -23,7 +29,8 @@ import {
   project,
   task as taskTable,
 } from '#lib/db/schema/index.js'
-import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
+import { hasFeatureTaskTransfer } from '#lib/db/services/featureUploadEvidence.js'
+import { taskLifecycleScopeCondition } from '#lib/db/services/task-scope.js'
 import {
   BeginMissingReportDraftSchema,
   BeginNewFeatureDraftSchema,
@@ -386,7 +393,7 @@ const getTaskQuery = guardedQuery(GetTaskEditorDataSchema, async (params, ctx) =
   }
 
   const canReassignLayer =
-    rawTask.type === 'newFeature' &&
+    rawTask.type === 'newFeature' && Boolean(rawTask.featureId) && !await hasFeatureTaskTransfer(db,rawTask.id) &&
     authorizeTaskReassignForProbe({
       user,
       userRoles,
@@ -467,11 +474,21 @@ export const beginNewFeatureDraft = guardedCommand(
       contributorId: ctx.userId,
     }
 
+    if (await hasFeatureLifecycleStorage(ctx.db)) {
+      const existing = input.task.taskId
+        ? await ctx.db.get<{ featureId: string | null }>(sql`SELECT featureId FROM task WHERE id=${input.task.taskId} AND contributorId=${ctx.userId}`)
+        : null
+      if (input.task.taskId && !existing) throw error(404, 'TASK_NOT_FOUND')
+      if (!existing?.featureId) return { data: await saveUserContributedCreationTask(ctx.db, {
+        feature: draftFeature, actorId: ctx.userId, taskId: input.task.taskId,
+      }, region, subscriptionKey) }
+    }
+
     if (input.task.taskId) {
       const existingTask = await ctx.db.query.task.findFirst({
         where: and(
           eq(taskTable.id, input.task.taskId as Id),
-          taskFeatureScopeCondition(),
+          await taskLifecycleScopeCondition(ctx.db),
         ),
       })
 
@@ -482,6 +499,8 @@ export const beginNewFeatureDraft = guardedCommand(
       if (existingTask.contributorId !== ctx.userId) {
         throw error(403, 'TASK_DRAFT_FORBIDDEN')
       }
+
+      if (await hasFeatureTaskTransfer(ctx.db,existingTask.id)) throw error(409,'TASK_MOVED_REVIEW_DESTINATION')
 
       // Submitted contributions must not be reset to drafts by a stale editor.
       if (!existingTask.isDraft || existingTask.isReviewed) {
@@ -585,7 +604,7 @@ export const finalizeTaskDraft = guardedCommand(
       with: {
         images: true,
       },
-      where: and(eq(taskTable.id, params.id as Id), taskFeatureScopeCondition()),
+      where: and(eq(taskTable.id, params.id as Id), await taskLifecycleScopeCondition(ctx.db)),
     })
 
     if (!draftTask) {
@@ -611,6 +630,12 @@ export const finalizeTaskDraft = guardedCommand(
       throw error(400, 'TASK_REASON_TOO_SHORT')
     }
 
+    if (draftTask.type === 'newFeature' && !draftTask.featureId && await hasFeatureLifecycleStorage(ctx.db)) {
+      if (!await submitFeatureCreationTask(ctx.db, { taskId: draftTask.id, actorId: ctx.userId }))
+        throw error(409, 'STALE_TASK_DRAFT')
+      return { data: { ...draftTask, isDraft: false } }
+    }
+
     if (draftTask.type === 'newFeature' && draftTask.featureId) {
       const featureProbe = await probeFeatureForUpdate(
         ctx.db,
@@ -622,7 +647,7 @@ export const finalizeTaskDraft = guardedCommand(
       }
 
       // Validate content after capturing its revision so edits during validation conflict.
-      await assertUserContributedFeatureDraftIsSubmittable(
+      if (!await hasFeatureTaskTransfer(ctx.db,draftTask.id)) await assertUserContributedFeatureDraftIsSubmittable(
         ctx.db,
         draftTask.featureId as Id,
       )
@@ -838,7 +863,25 @@ export const reviewTask = guardedCommand(
       throw error(409, 'TASK_NOT_SUBMITTED')
     }
 
-    if (rawTask.type === 'newFeature') {
+    if (rawTask.type === 'newFeature' && !rawTask.featureId && await hasFeatureLifecycleStorage(ctx.db)) {
+      if (params.action !== 'accept' && params.action !== 'reject') throw error(400, 'INVALID_TASK_ACTION')
+      const proposed = await readFeatureCreationTask(ctx.db, { taskId, guard: sql`1` })
+      if (!proposed) throw error(409, 'STALE_TASK_REVIEW')
+      const scope = await probeLayerForUpdate(ctx.db, proposed.scope.layerId)
+      if (!scope) throw error(409, 'STALE_TASK_REVIEW')
+      const decision = authorizeFeatureCreateForSubmission({ user: ctx.user, userRoles: ctx.userRoles,
+        resource: { ...proposed.scope, resourceHubId: scope.hubId }, submittedData: featureCreationTaskFormData(proposed) })
+      if (!decision.allowed) throw error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+      const persisted = await reviewFeatureCreationTask(ctx.db, {
+        taskId, proposalId: proposed.proposalId, expectedVersion: proposed.version, expectedModifiedAt: rawTask.modifiedAt,
+        actorId: ctx.userId, accept: params.action === 'accept', reason: params.reviewReason?.trim() || 'Creation contribution reviewed',
+        guard: sql`EXISTS(SELECT 1 FROM layer l JOIN project p ON p.id=l.projectId JOIN organisation o ON o.id=p.organisationId
+          WHERE l.id=${proposed.scope.layerId} AND l.projectId=${probe.projectId} AND l.organisationId=${probe.organisationId}
+          AND p.organisationId=${probe.organisationId} AND o.hubId IS ${probe.resourceHubId})`,
+      })
+      if (!persisted) throw error(409, 'STALE_TASK_REVIEW')
+      if (persisted.featureId) scheduleFeatureMtr(ctx.event.locals.platform, persisted.featureId)
+    } else if (rawTask.type === 'newFeature') {
       if (!rawTask.featureId) throw error(400, 'TASK_FEATURE_REQUIRED')
       if (params.action !== 'reject' && params.action !== 'accept') {
         throw error(400, 'INVALID_TASK_ACTION')
@@ -846,6 +889,11 @@ export const reviewTask = guardedCommand(
 
       const featureProbe = await probeFeatureForUpdate(ctx.db, rawTask.featureId as Id)
       if (!featureProbe) throw error(404, 'FEATURE_NOT_FOUND')
+      // Initial revision acceptance publishes the selected content and therefore needs publication authority.
+      if (params.action === 'accept') {
+        const publish = authorizeFeaturePublishForSubmission({ user: ctx.user, userRoles: ctx.userRoles, resource: featureProbe })
+        if (!publish.allowed) throw error(403, publish.code ?? 'INSUFFICIENT_ROLE')
+      }
 
       const persisted = await commitTaskFeatureReview(ctx.db, {
         task: rawTask,
@@ -1008,6 +1056,8 @@ export const reassignTaskLayer = guardedCommand(
     if (targetLayer.projectId !== rawTask.projectId) {
       throw error(400, 'TASK_LAYER_PROJECT_MISMATCH')
     }
+
+    if (await hasFeatureTaskTransfer(ctx.db,rawTask.id)) throw error(409,'TASK_MOVED_REVIEW_DESTINATION')
 
     const featureProbe = await probeFeatureForUpdate(ctx.db, rawTask.featureId as Id)
     if (!featureProbe) {

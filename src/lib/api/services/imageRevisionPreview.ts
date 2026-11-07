@@ -2,7 +2,10 @@
 import { sql } from 'drizzle-orm'
 // AUTHORIZATION
 import { authorizeFeatureAdminReadForProbe } from './authz/feature'
+import { authorizeTaskReadForProbe } from './authz/task'
+import { taskLifecycleScopeCondition } from '#lib/db/services/task-scope.js'
 // SERVICES
+import { hasFeatureLifecycleStorage } from '#lib/db/services/featureLifecycle.js'
 import { featureUploadEvidenceSource } from '#lib/db/services/featureUploadEvidence.js'
 import { probeFeatureQuery } from '#lib/db/services/feature.js'
 import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
@@ -28,12 +31,28 @@ export async function readFeatureImageRevisionPreview(db: Database, revisionId: 
 }, adminOnly = false): Promise<PinnedImageDelivery | null> {
   const publicPin = await readImageRevisionDelivery(db, revisionId)
   if (publicPin && !adminOnly) return publicPin
-  if (!featureId || !actor) return null
+  if (!actor) return null
+  if (!featureId) return readCreationImagePreview(db, revisionId, actor, adminOnly)
   const probe = await probeFeatureQuery(db, { ref: featureId as Id, refKey: 'id' })
   if (!probe) return null
   const admin = authorizeFeatureAdminReadForProbe({ user: actor.user, userRoles: actor.userRoles, probe }).allowed
   if (adminOnly && !admin) return null
   const scope = buildFeatureCommandScopeGuard(db, featureId, probe)
+  if(await hasFeatureLifecycleStorage(db)) {
+    const history=sql`EXISTS(SELECT 1 FROM featureRevision r JOIN featureRevisionImage pin ON pin.featureRevisionId=r.id
+      WHERE r.featureId=${featureId} AND r.sequence IS NOT NULL AND pin.imageId=i.id AND pin.imageRevisionId=${revisionId})`
+    const tasks=sql`EXISTS(SELECT 1 FROM featureUploadEvidence u JOIN json_each(u.taskIds) j
+      JOIN task t ON t.id=j.value AND t.featureId=u.featureId JOIN taskImage ti ON ti.taskId=t.id AND ti.imageId=u.imageId
+      JOIN feature f ON f.id=t.featureId WHERE u.featureId=${featureId} AND u.imageId=i.id AND u.imageRevisionId=${revisionId}
+      AND t.organisationId=f.organisationId AND t.projectId=f.projectId
+      AND ((${Number(admin)} AND t.isDraft=0) OR t.contributorId=${actor.user.id}))`
+    const proposal=sql`EXISTS(SELECT 1 FROM featureRevisionProposal p JOIN json_each(p.changes,'$.operations') op
+      WHERE p.featureId=${featureId} AND (p.status IN ('submitted','accepted','rejected') OR p.contributorId=${actor.user.id})
+        AND json_extract(op.value,'$.imageId')=i.id
+        AND ((json_extract(op.value,'$.op')='addImage' AND json_extract(op.value,'$.entry.imageRevisionId')=${revisionId})
+          OR (json_extract(op.value,'$.op')='editImage' AND json_extract(op.value,'$.changes.imageRevisionId')=${revisionId})))`
+    return readImageRevisionDelivery(db,revisionId,sql`(${scope}) AND ((${Number(admin)} AND ((${history}) OR (${proposal}))) OR (${tasks}))`)
+  }
   const privateComparison = admin ? await privateFeatureComparison(db, sql`h.featureId`, sql`h.generation`) : sql`NULL`
   const privateStorage = admin && await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featurePrivateCapture' AND type='table'`)
   // Approved private maintenance remains inspectable after a later capture or publication.
@@ -71,3 +90,45 @@ export async function readFeatureImageRevisionPreview(db: Database, revisionId: 
               AND t.projectId=f.projectId AND t.organisationId=f.organisationId)))))`)
 }
 
+
+/**
+ * Resolves proposal-only photo evidence under the task's current ancestry.
+ * @param db Request database.
+ * @param revisionId Exact immutable upload revision.
+ * @param actor Authenticated viewer and current roles.
+ * @param adminOnly Require staff authority for full metadata.
+ * @returns Authorized retained pin, or null.
+ * @remarks Rechecks ancestry and visibility in the delivery query after authorization.
+ */
+async function readCreationImagePreview(db: Database, revisionId: string,
+  actor: NonNullable<Parameters<typeof readFeatureImageRevisionPreview>[3]>,
+  adminOnly: boolean): Promise<PinnedImageDelivery | null> {
+  if (!await hasFeatureLifecycleStorage(db)) return null
+  const scope = await taskLifecycleScopeCondition(db)
+  const evidence = sql`u.featureId IS NULL AND u.proposalId=t.proposalId
+    AND u.imageRevisionId=${revisionId}
+    AND EXISTS(SELECT 1 FROM json_each(u.taskIds) WHERE value=t.id)
+    AND EXISTS(SELECT 1 FROM main.task AS task WHERE task.id=t.id AND (${scope}))`
+  const tasks = await db.all<{ id: string; contributorId: string; organisationId: string;
+    projectId: string; resourceHubId: string | null; isDraft: number }>(sql`
+    SELECT t.id,t.contributorId,t.organisationId,t.projectId,o.hubId resourceHubId,t.isDraft
+    FROM featureUploadEvidence u JOIN task t ON t.proposalId=u.proposalId
+    JOIN taskImage ti ON ti.taskId=t.id AND ti.imageId=u.imageId
+    JOIN organisation o ON o.id=t.organisationId WHERE ${evidence}`)
+  for (const probe of tasks) {
+    const admin = authorizeTaskReadForProbe({ ...actor, probe, isAdminRequest: true }).allowed
+    if (adminOnly && !admin) continue
+    if (!(admin && !probe.isDraft) && probe.contributorId !== actor.user.id) continue
+    // Bind the delivery grant to the exact authorized task and parent chain.
+    const pin = await readImageRevisionDelivery(db, revisionId, sql`EXISTS(
+      SELECT 1 FROM featureUploadEvidence u JOIN task t ON t.proposalId=u.proposalId
+      JOIN taskImage ti ON ti.taskId=t.id AND ti.imageId=u.imageId
+      JOIN organisation o ON o.id=t.organisationId
+      WHERE (${evidence}) AND u.imageId=i.id AND t.id=${probe.id}
+        AND t.projectId=${probe.projectId} AND t.organisationId=${probe.organisationId}
+        AND o.hubId IS ${probe.resourceHubId}
+        AND ((${Number(admin)} AND t.isDraft=0) OR t.contributorId=${actor.user.id}))`)
+    if (pin) return pin
+  }
+  return null
+}

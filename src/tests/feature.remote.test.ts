@@ -36,6 +36,7 @@ const {
   mockProbeLayerForUpdate,
   mockListFeatures,
   mockLoadFeature,
+  mockSaveFeatureFormRevision,
   mockSaveUnlinkedFeatureForm,
   mockSaveLinkedFeatureForm,
   mockCreateFeatureForm,
@@ -90,6 +91,7 @@ const {
     totalCount: 0,
   })),
   mockLoadFeature: vi.fn(async (): Promise<unknown> => null),
+  mockSaveFeatureFormRevision: vi.fn<(...args: unknown[]) => Promise<{ status: 'legacy' } | { status: 'saved'; proposalId: string; candidateRevisionId: string }>>(async () => ({ status: 'legacy' })),
   mockSaveUnlinkedFeatureForm: vi.fn(
     async (): Promise<unknown> => ({
       id: 'feature-1',
@@ -283,6 +285,9 @@ vi.mock('#lib/api/services/authz/index.js', async importOriginal => ({
   toIssueDetailMessage: (code: string) => code,
 }))
 
+vi.mock('#lib/db/services/featureFormRevision.js', () => ({ saveFeatureFormRevision: mockSaveFeatureFormRevision }))
+vi.mock('#lib/db/services/featureCommandScope.js', () => ({ buildFeatureCommandScopeGuard: vi.fn(() => true) }))
+
 vi.mock('#lib/db/services/featureFormSave.js', () => ({
   createFeatureForm: mockCreateFeatureForm,
   saveUnlinkedFeatureForm: mockSaveUnlinkedFeatureForm,
@@ -372,6 +377,7 @@ describe('feature.remote authz matrix', () => {
       allowDescriptions: true,
       locationBasedNames: false,
     })
+    mockSaveFeatureFormRevision.mockResolvedValue({ status: 'legacy' })
     mockSaveLinkedFeatureForm.mockResolvedValue({ status: 'unlinked' })
 
     mockAuthorizeFeatureListForContext.mockReturnValue({ allowed: true })
@@ -393,7 +399,7 @@ describe('feature.remote authz matrix', () => {
     mockToListResponseShape.mockImplementation(async (value: unknown) => value)
 
     mockGuardedContext.mockResolvedValue({
-      db: { query: { property: { findMany: vi.fn().mockResolvedValue([]) } } },
+      db: { get: vi.fn(async () => ({ n: 0 })), query: { property: { findMany: vi.fn().mockResolvedValue([]) } } },
       user: { id: 'u-1', isAnonymous: false, superAdmin: false },
       userRoles: [],
       isAdminRequest: true,
@@ -510,6 +516,7 @@ describe('feature.remote authz matrix', () => {
       conditions: { isPublished: false, isArchived: false },
       meta: { isAdminRequest: true },
     })
+    expect(mockListFeatures.mock.calls.at(-1)?.[3]).toMatchObject({ isAdminRequest: true })
 
     expect(mockToQueryConditions).toHaveBeenCalledWith(
       expect.any(Object),
@@ -783,6 +790,37 @@ describe('feature.remote authz matrix', () => {
         },
       }),
     )
+  })
+
+  it('enrolled form saves return a draft token without running either live writer', async () => {
+    mockSaveFeatureFormRevision.mockResolvedValueOnce({ status: 'saved', proposalId: 'proposal', candidateRevisionId: 'candidate' })
+    const result = await remote.featureForm(
+      {
+        meta: {
+          id: 'feature-1',
+          mode: 'update',
+          updatedAt: '2026-03-18T00:00:00.000Z',
+        },
+        data: {
+          organisationId: 'org-1',
+          projectId: 'project-1',
+          layerId: 'layer-1',
+          contributorId: null,
+          i18n: { en: { name: 'Feature 2' } },
+          properties: [],
+          geometry: { type: 'Point', coordinates: [114.2, 22.4] },
+          addressMeta: { street: 'Changed' },
+          isIntangible: true,
+          isVisitable: false,
+          isPendingReview: true,
+        },
+      },
+      throwingInvalid,
+    )
+
+    expect(result).toEqual({ data: { id: 'feature-1', modifiedAt: '2026-03-18T00:00:00.000Z' }, revisionDraft: { proposalId: 'proposal', candidateRevisionId: 'candidate' } })
+    expect(mockSaveLinkedFeatureForm).not.toHaveBeenCalled()
+    expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
   })
 
   it('featureForm update allows changed field submission', async () => {

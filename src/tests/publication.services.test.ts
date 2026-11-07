@@ -28,6 +28,7 @@ const createDbMock = (): {
   const updateCalls: UpdateCall[] = []
 
   const db = {
+    get: vi.fn(async () => ({ n: 0 })),
     batch: vi.fn(async (statements: Promise<unknown>[]) => Promise.all(statements)),
     update: vi.fn((table: unknown) => ({
       set: vi.fn((values: Record<string, unknown>) => ({
@@ -214,8 +215,8 @@ it.each([
       publisherId: 'actor-1',
     } as never)
     expect(updateCalls).toHaveLength(count)
-    for (const { values } of updateCalls) {
-      expect(values.isPublished).toBe(true)
+    for (const { table, values } of updateCalls) {
+      expect(isSqlExpression(values.isPublished)).toBe(true)
       expect(values.localIsPublished).toBeNull()
       expect(values.publisherId).toBe('actor-1')
       expect(values.publishedAt).toEqual(expect.any(String))

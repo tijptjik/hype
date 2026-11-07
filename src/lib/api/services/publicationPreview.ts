@@ -7,7 +7,7 @@ import { applyQueryFilters } from '#lib/api/index.js'
 // DB
 import { applyPrismConstraints } from '#lib/db/index.js'
 import { organisation, project, layer, feature } from '#lib/db/schema/index.js'
-import { descendantPublicationState } from '#lib/db/services/publication.js'
+import { descendantPublicationState, featurePublicationEligibility } from '#lib/db/services/publication.js'
 // PUBLICATION
 import { canPreviewPublication } from '#lib/publication/permissions.js'
 // ENUMS
@@ -149,6 +149,7 @@ export async function publicationPreviewConditions(
           ? eq(feature.projectId, preview.id)
           : eq(feature.organisationId, preview.id),
       eq(feature.isDraft, false),
+      await featurePublicationEligibility(ctx.db),
     )
   const depth = { organisation: 0, project: 1, layer: 2, feature: 3 }
   if (depth[resource] > depth[preview.type] && resource !== 'organisation') {

@@ -20,6 +20,8 @@ import { recordContribution } from '#lib/analytics/productUsage.server.js'
 import { getLocale } from '#lib/i18n.js'
 // UTILS
 import { nanoid } from 'nanoid'
+// SERVICES
+import { updateFeatureRevisionState } from '#lib/db/services/featureStateRevision.js'
 // ADDRESS
 import { projectFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
@@ -63,6 +65,8 @@ import {
 } from '#lib/db/services/featureFormSave.js'
 import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/locationEdit.js'
+import { saveFeatureFormRevision } from '#lib/db/services/featureFormRevision.js'
+import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
 import { getInternalPropertyAccess } from '#lib/properties/audience.server.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import {
@@ -233,9 +237,7 @@ async function readFeatureList(
   params: z.infer<typeof ListQueryParamsSchema>,
   ctx: GuardedQueryContext,
   idsOnly = false,
-): Promise<
-  ListResponse<FeatureListByProfile<FeatureProfile>> | ListResponse<{ id: string }>
-> {
+): Promise<ListResponse<FeatureListByProfile<FeatureProfile>> | ListResponse<{ id: string }>> {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'list')
 
@@ -277,9 +279,9 @@ async function readFeatureList(
       )
   const result = await listFeatures(
     db,
-    idsOnly ? {} : (getFeatureWithRelations(profile) as never),
+    idsOnly ? {} : getFeatureWithRelations(profile) as never,
     conditions,
-    event.locals.hub,
+    { ...event.locals.hub, isAdminRequest: isAdminRequest && !params.meta?.publicationPreview },
     params.pagination,
     params.sorting,
     { q: params.q, filtersToApply, locale: getLocale(), idsOnly },
@@ -308,20 +310,11 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, (params, ctx) =>
  * @remarks Every page uses the ordinary list authorization and hub predicates.
  */
 export const getFeatureIds = guardedQuery(ListQueryParamsSchema, async (params, ctx) =>
-  readFeatureList(
-    {
-      ...params,
-      pagination: {
-        ...params.pagination,
-        limit: Math.min(params.pagination?.limit ?? 250, 250),
-      },
-    },
-    ctx,
-    true,
-  ),
-) as unknown as (
-  params: FeatureListParamsByProfile<'card'>,
-) => RemoteQuery<ListResponse<{ id: string }>>
+  readFeatureList({
+    ...params,
+    pagination: { ...params.pagination, limit: Math.min(params.pagination?.limit ?? 250, 250) },
+  }, ctx, true),
+) as unknown as (params: FeatureListParamsByProfile<'card'>) => RemoteQuery<ListResponse<{ id: string }>>
 
 export const getFeatures = getFeaturesQuery as unknown as <
   P extends FeatureProfile = 'list',
@@ -395,7 +388,7 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     db,
     getFeatureWithRelations(profile) as never,
     conditions,
-    event.locals.hub,
+    { ...event.locals.hub, isAdminRequest: isAdminRequest && !params.meta?.publicationPreview },
   )
 
   return toEntityResponseShape(result as never, profile)
@@ -455,7 +448,7 @@ export const getFeatureForImport = guardedBatchByIdQuery<
       db,
       getFeatureWithRelations('admin') as never,
       [inArray(feature.id, readableIdBatch as Id[])],
-      event.locals.hub,
+      { ...event.locals.hub, isAdminRequest: true },
       {
         limit: readableIdBatch.length,
         offset: 0,
@@ -519,6 +512,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     ...params.data,
     geometry: normalizeFeatureFormGeometry(params.data.geometry),
   })
+
 
   const featureId = meta?.id?.trim()
   const mode = meta?.mode
@@ -593,6 +587,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       for (const row of Object.values(data.i18n)) row.description = ''
     }
     const created = await createFeatureForm(db, {
+      revisionActor: { actorId: user.id, mode: 'staff' },
       data: {
         ...data,
         id: featureId || nanoid(12),
@@ -786,6 +781,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     }
   }
 
+
   const saveInput = {
     featureId: current.id,
     projectId: current.projectId,
@@ -811,6 +807,29 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       : data.locationNameMode,
     authorizeLocationCorrection: () =>
       requireLocationOrganisationManager(ctx, current.organisationId),
+  }
+  // Staff saves update accepted content directly; contributor edits remain isolated proposals.
+  try {
+    const revision = await saveFeatureFormRevision(db, {
+      ...saveInput,
+      data: { ...data, properties: submittedProperties },
+      expectedScope: current,
+      guard: buildFeatureCommandScopeGuard(db, current.id, current),
+      canPublish: authorizeFeaturePublishForSubmission({ user, userRoles, resource: current }).allowed,
+      allowDescriptions: presentationPolicy.allowDescriptions,
+      allowedInternalIds: (await getInternalPropertyAccess(ctx)).allowed,
+    })
+    if (revision.status === 'applied') {
+      if (!currentWithRelations.isDraft) recordContribution(ctx.event.locals, 'contribution.edit', current.id)
+      if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, current.id)
+      return { data: { id: current.id }, revisionApplied: revision.revisionId }
+    }
+    if (revision.status === 'saved') return {
+      data: { id: current.id, modifiedAt: current.modifiedAt },
+      revisionDraft: { proposalId: revision.proposalId, candidateRevisionId: revision.candidateRevisionId },
+    }
+  } catch (cause) {
+    invalid(issue(cause instanceof Error ? cause.message : 'Feature changes could not be saved'))
   }
   const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')
@@ -919,12 +938,7 @@ export const publishFeatureImages = guardedCommand(
       toIssueDetailMessage,
     )
 
-    const published = await publishAllFeatureImagesExceptResearch(
-      db,
-      featureId,
-      user.id as Id,
-      probed,
-    )
+    const published = await publishAllFeatureImagesExceptResearch(db, featureId, user.id as Id, probed)
     if (!published) throw error(409, 'STALE_FEATURE_PUBLICATION_SCOPE')
     return { data: { id: featureId } }
   },
@@ -1019,6 +1033,13 @@ async function applyFeatureStatePatch(
     throw error(403, toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
+  const revisionState = await updateFeatureRevisionState(db, {
+    featureId: params.id, updatedAt: current.modifiedAt, data: params.data, actorId: user.id,
+    guard: buildFeatureCommandScopeGuard(db, params.id, current),
+  })
+  if (revisionState.status === 'updated') return requireValue(revisionState.feature, () => {
+    throw error(409, 'STALE_WRITE')
+  })
   const persisted = requireValue(
     await updateFeatureByIdWithConcurrency(db, {
       id: params.id as Id,
@@ -1197,22 +1218,21 @@ export const updateFeatureState = guardedCommand(
  */
 export const updateFeatureBulkState = guardedCommand(
   z.array(BulkFeatureStateSchema).min(1).max(100),
-  async (updates, ctx): Promise<FeatureBulkStateResult[]> =>
-    Promise.all(
-      updates.map(async params => {
-        try {
-          const data = await applyFeatureBulkStateField(params, {
-            ...ctx,
-            isAdminRequest: params.meta?.isAdminRequest === true,
-          })
-          return { id: params.id as Id, ok: true, data }
-        } catch (err) {
-          return {
-            id: params.id as Id,
-            ok: false,
-            error: toFeatureBulkStateErrorMessage(err),
-          }
+  async (updates, ctx): Promise<FeatureBulkStateResult[]> => Promise.all(
+    updates.map(async params => {
+      try {
+        const data = await applyFeatureBulkStateField(params, {
+          ...ctx,
+          isAdminRequest: params.meta?.isAdminRequest === true,
+        })
+        return { id: params.id as Id, ok: true, data }
+      } catch (err) {
+        return {
+          id: params.id as Id,
+          ok: false,
+          error: toFeatureBulkStateErrorMessage(err),
         }
-      }),
-    ),
+      }
+    }),
+  ),
 )

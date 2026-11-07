@@ -35,7 +35,9 @@ function setup() {
     INSERT INTO featureImage VALUES ('feature', 'selected', 'general', 0, null, null, null),
       ('feature', 'unclassified', 'undefined', 0, null, null, null);`)
   const prepare = vi.fn((sql: string) => ({
+    all: async () => ({ results: sqlite.prepare(sql).all() }),
     bind: (...params: unknown[]) => ({
+      all: async () => ({ results: sqlite.prepare(sql).all(...(params as never[])) }),
       raw: async () => {
         const statement = sqlite.prepare(sql)
         statement.setReturnArrays(true)
@@ -162,7 +164,8 @@ describe('atomic task image review', () => {
         ])
       }
       expect(db.batch).toHaveBeenCalledOnce()
-      expect(prepare).toHaveBeenCalledOnce()
+      // Eligibility is read before preparation; the image set itself is still loaded only once.
+      expect(prepare.mock.calls.filter(([query]) => query.includes('from "taskImage"'))).toHaveLength(1)
     },
   )
 
