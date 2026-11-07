@@ -875,7 +875,7 @@ it('routes a creation proposal through a task without a provisional Feature row'
   expect(task.proposalId).toBe(proposal.proposalId)
   const scopeCondition = await taskLifecycleScopeCondition(f.db)
   expect(await f.db.get(sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition})`)).toBeTruthy()
-  const coreHub = getTaskHubFilter(f.db, { isCore: true })!
+  const coreHub = getTaskHubFilter(f.db, { isCore: true, i18n: {}, isSuperAdmin: false, isAdminRequest: false })!
   expect(await f.db.get(sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition}) AND (${coreHub})`)).toBeTruthy()
   f.sqlite.exec("UPDATE organisation SET hubId='private-hub',isHubExclusive=1 WHERE id='org'")
   expect(await f.db.get(sql`SELECT id FROM task WHERE id='new-task' AND (${scopeCondition}) AND (${coreHub})`)).toBeFalsy()
@@ -1115,7 +1115,7 @@ it('carries contributed upload evidence through task review without candidate Fe
     taskIds: ['photo-task'],
     draftContributor: true,
     intent: 'general',
-    deriveMetadata: () => ({ version: 1 }),
+    deriveMetadata: () => ({ version: 1, presentationMode: 'cover' as const }),
   })
   expect(uploaded.status).toBe('saved')
   if (uploaded.status !== 'saved') throw new Error('Upload was not retained')
@@ -1220,7 +1220,7 @@ it('accepts staff uploads directly and replays the same acceptance without makin
     taskIds: [],
     draftContributor: false,
     intent: 'general' as const,
-    deriveMetadata: () => ({ version: 1 }),
+    deriveMetadata: () => ({ version: 1, presentationMode: 'cover' as const }),
   }
   const first = await saveFeatureImageUploadDraft(f.db, input)
   expect(first.status).toBe('accepted')

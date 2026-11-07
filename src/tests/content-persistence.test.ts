@@ -252,7 +252,7 @@ describe('dynamic Feature content persistence', () => {
     const state = restoreProfileLocales(defaults.locales, values)
     expect(state.selectedLocales[0]).toBe('ja')
     state.visibleLocales = ['en']
-    const translate = createProfileTranslator({
+    const translate = createProfileTranslator<'title' | 'description'>({
       values: () => values,
       context: () => 'f',
       locked: () => false,

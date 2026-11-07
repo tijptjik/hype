@@ -28,7 +28,7 @@ export const withRemoteMeta = <T extends (...args: never[]) => unknown>(
 /** Handler signatures installed by the guardedForm test mock. */
 export type MockedRemoteModule<T> = {
   [K in keyof T]: T[K] extends RemoteForm<infer Input, infer Output>
-    ? (input: unknown, invalid?: (message: string) => unknown) => Promise<Output>
+    ? (input: unknown, invalid?: ((message: string) => unknown) | ((...issues: Array<{ message: string; path: Array<string | number> }>) => unknown)) => Promise<Output>
     : T[K]
 }
 

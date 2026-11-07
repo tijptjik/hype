@@ -84,7 +84,7 @@ const {
   mockResolveFeatureCommandProbe: vi.fn(),
   mockProbeFeatureForUpdate: vi.fn(async (): Promise<unknown> => null),
   mockProbeLayerForUpdate: vi.fn(async (): Promise<unknown> => null),
-  mockListFeatures: vi.fn(async () => ({
+  mockListFeatures: vi.fn(async (..._args: unknown[]) => ({
     data: [],
     limit: 20,
     offset: 0,

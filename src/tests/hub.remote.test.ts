@@ -451,7 +451,7 @@ describe('hub.remote form image handling', () => {
             userRoles: [{ userId: 'u-1', role: 'admin' }],
           },
         },
-        message => {
+        (message: string) => {
           throw new Error(String(message))
         },
       )
@@ -485,7 +485,7 @@ describe('hub.remote form image handling', () => {
             userRoles: [{ userId: 'u-1', role: 'admin' }],
           },
         },
-        message => {
+        (message: string) => {
           throw new Error(String(message))
         },
       ),
@@ -514,7 +514,7 @@ describe('hub.remote form image handling', () => {
             userRoles: [{ userId: 'u-1', role: 'admin' }],
           },
         },
-        message => {
+        (message: string) => {
           throw new Error(String(message))
         },
       ),

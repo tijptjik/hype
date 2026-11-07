@@ -24,7 +24,7 @@ function createForm<T>(data: T): {
   form: {
     fields: {
       value: () => FormState<T>
-      set: (next: FormState<T>) => void
+      set: (next: Partial<FormState<T>>) => void
     }
   }
   getData: () => T
@@ -36,7 +36,7 @@ function createForm<T>(data: T): {
       fields: {
         value: () => state,
         set: next => {
-          state = next
+          if (next.data !== undefined) state = { data: next.data }
         },
       },
     },

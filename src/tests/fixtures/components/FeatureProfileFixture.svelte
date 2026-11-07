@@ -99,7 +99,7 @@ function fields(locale: string) {
         {retainContent}
         {localeState}
         onLocaleStateChange={value => (localeState = value)}
-        {values}
+        values={values as import('#lib/bits/patterns/forms/featureLocation/profileTranslation.js').ProfileValues}
         contextKey={`fixture:${context}`}
         recordKey={String(context)}
         {inherited}

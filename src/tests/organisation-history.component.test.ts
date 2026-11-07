@@ -62,7 +62,7 @@ it('shows comparisons, loads older entries and clears evidence after access fail
   await screen.findByText('Initial capture')
   expect(query).toHaveBeenLastCalledWith({ organisationId: 'o', before: 5 })
   await fireEvent.click(
-    screen.getByRole('button', { name: 'Field definitions', exact: true }),
+    screen.getByRole('button', { name: 'Field definitions' }),
   )
   await screen.findByRole('alert')
   expect(screen.queryByText('Translation corrected')).toBeNull()
@@ -76,7 +76,7 @@ it('distinguishes unavailable tracking from empty recorded history', async () =>
   render(OrganisationHistory, { organisationId: 'o' })
   await screen.findByText('History tracking is not yet enabled.')
   await fireEvent.click(
-    screen.getByRole('button', { name: 'Field definitions', exact: true }),
+    screen.getByRole('button', { name: 'Field definitions' }),
   )
   await screen.findByText('No recorded changes yet. Earlier edits are not available.')
 })
@@ -127,7 +127,7 @@ it('switches to field definitions without retaining profile entries', async () =
   render(OrganisationHistory, { organisationId: 'o' })
   await screen.findByText('Translation corrected')
   await fireEvent.click(
-    screen.getByRole('button', { name: 'Field definitions', exact: true }),
+    screen.getByRole('button', { name: 'Field definitions' }),
   )
   await screen.findByText('Field definitions updated')
   expect(screen.queryByText('Translation corrected')).toBeNull()
@@ -138,7 +138,7 @@ it('switches to field definitions without retaining profile entries', async () =
   })
   expect(
     screen
-      .getByRole('button', { name: 'Field definitions', exact: true })
+      .getByRole('button', { name: 'Field definitions' })
       .getAttribute('aria-pressed'),
   ).toBe('true')
 })

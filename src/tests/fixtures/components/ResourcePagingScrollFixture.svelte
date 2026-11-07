@@ -38,7 +38,7 @@ setContext(ADMINCTX_KEY, {
     }}
   >
     {#snippet row(entity, index)}
-      <Row {index} title={`Feature ${entity.id}`} description="A feature address" />
+      <Row onclick={() => {}} onkeydown={() => {}} {index} title={`Feature ${entity.id}`} description="A feature address" />
     {/snippet}
   </ResourceIndex>
 </div>

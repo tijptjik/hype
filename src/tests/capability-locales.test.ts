@@ -25,8 +25,9 @@ describe('capability content languages', () => {
     const reloaded = toOrganisationFormInput({
       capabilities: capabilityDefinitionsToStorage(form),
     })
-    expect(reloaded.data.capabilities?.manageBakeries?.i18n?.ja).toBe('寄付者')
-    expect(reloaded.data.capabilities?.manageBakeries?.i18n?.$locale_pt_BR).toBe(
+    const reloadedCapabilities = CapabilityRoot.parse(reloaded.data.capabilities)
+    expect(reloadedCapabilities.manageBakeries?.i18n?.ja).toBe('寄付者')
+    expect(reloadedCapabilities.manageBakeries?.i18n?.$locale_pt_BR).toBe(
       'Doadores',
     )
   })

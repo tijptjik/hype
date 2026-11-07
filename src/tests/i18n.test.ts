@@ -317,6 +317,7 @@ describe('getFPI18n', () => {
     i18n: null,
     property: {
       id: 'property-1',
+      i18n: {},
       scope: 'project',
       organisationId: null,
       hubId: null,
@@ -385,6 +386,7 @@ describe('getFPI18n', () => {
         value: '',
         property: {
           id: 'property-2',
+          i18n: {},
           scope: 'project',
           organisationId: null,
           hubId: null,

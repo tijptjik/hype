@@ -39,7 +39,7 @@ const profile = (count: number, id = 'user'): UserProfile =>
   }) as UserProfile
 let model: UserContributionsModel
 let intersect: (() => void) | undefined
-let disconnect: ReturnType<typeof vi.fn>
+let disconnect: ReturnType<typeof vi.fn<() => void>>
 
 async function readyForContinuation(): Promise<void> {
   await waitFor(() => expect(intersect).toBeDefined())
