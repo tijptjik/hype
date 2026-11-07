@@ -20,6 +20,7 @@ import {
   withMessagingOperators,
 } from '#lib/db/services/messaging.js'
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
+import { canEditAdminUser } from '#lib/api/services/authz/adminUser.js'
 import { canUpdateUserProfile } from '#lib/api/services/authz/user.js'
 import { findQuotedMessage, validTextQuote } from '#lib/messaging/quoted-message.js'
 import { messagingAvailability } from '#lib/messaging/availability.js'
@@ -29,6 +30,7 @@ import {
   messagingIdentityLookups,
   normalizeMessagingIdentity,
 } from '#lib/messaging/identity.js'
+import type { ContactValidation } from '#lib/messaging/contactValidation.js'
 import { normalizeTelephone } from '#lib/utils/telephone.js'
 import { isCoreHubAdmin } from '#lib/api/services/authz/hub.js'
 // I18N
@@ -1632,7 +1634,10 @@ async function authorizeMessagingUser(
       {
         userId: ctx.user.id,
         isAuthenticated: true,
-        superAdmin: ctx.user.superAdmin === true || isCoreHubAdmin(ctx.userRoles),
+        superAdmin:
+          ctx.user.id === userId
+            ? false
+            : await canEditAdminUser(ctx.db, ctx.user, userId),
       },
       userId,
     )
@@ -1669,6 +1674,7 @@ export const getUserMessagingSettings = guardedQuery(
         phoneNumber: userMessagingIdentity.phoneNumber,
         username: userMessagingIdentity.username,
         nativeId: userMessagingIdentity.nativeId,
+        validation: userMessagingIdentity.validation,
         verifiedAt: userMessagingIdentity.verifiedAt,
         updatedAt: userMessagingIdentity.updatedAt,
       })
@@ -1756,6 +1762,7 @@ export const setUserMessagingIdentity = guardedCommand(
           target: [userMessagingIdentity.userId, userMessagingIdentity.platform],
           set: {
             ...normalized,
+            validation: null,
             sourceTelephone: null,
             verifiedAt: null,
             verifiedBy: null,
@@ -1780,8 +1787,8 @@ export const setUserMessagingIdentity = guardedCommand(
 /** Check whether a saved contact exists without granting it ownership verification.
  * @param params User, platform and the exact saved claim revision to check.
  * @returns Confirmation or a safe warning, without exposing provider profile data.
- * @remarks Only an already accessible organisation account may perform the lookup.
- * No message is sent and no verified identity, alias or routing state is written.
+ * @remarks Provider confirmation is deferred until feat/chat is integrated.
+ * Authorization and revision checks remain active; no provider or stored evidence is changed.
  */
 export const checkUserMessagingIdentity = guardedCommand(
   z.object({
@@ -1789,13 +1796,7 @@ export const checkUserMessagingIdentity = guardedCommand(
     platform: z.enum(['whatsapp', 'telegram']),
     expectedUpdatedAt: z.number().int().nonnegative(),
   }),
-  async (
-    { userId, platform, expectedUpdatedAt },
-    ctx,
-  ): Promise<{
-    status: 'confirmed' | 'not-found' | 'unavailable'
-    message: string
-  }> => {
+  async ({ userId, platform, expectedUpdatedAt }, ctx): Promise<ContactValidation> => {
     const target = await authorizeMessagingUser(ctx, userId ?? ctx.user.id)
     const key = and(
       eq(userMessagingIdentity.userId, target),
@@ -1808,96 +1809,12 @@ export const checkUserMessagingIdentity = guardedCommand(
       .where(key)
       .limit(1)
     if (!claim) throw error(409, 'The contact details changed; check them again')
-    const label = platform === 'telegram' ? 'Telegram' : 'WhatsApp'
-    if (!claim.phoneNumber && !claim.nativeId && platform === 'whatsapp')
-      return {
-        status: 'unavailable',
-        message:
-          'Saved. WhatsApp username confirmation is unavailable; use a phone number to confirm the account.',
-      }
-
-    // Select the provider account on the server, respecting existing organisation access.
-    const candidates = await ctx.db
-      .select({ account: messagingAccount, organisation })
-      .from(messagingAccount)
-      .innerJoin(organisation, eq(organisation.id, messagingAccount.organisationId))
-      .where(
-        and(
-          eq(messagingAccount.platform, platform),
-          eq(messagingAccount.enabled, true),
-          isNotNull(messagingAccount.externalAccountId),
-          eq(organisation.isArchived, false),
-        ),
-      )
-      .orderBy(asc(messagingAccount.id))
-    const account = candidates.find(row =>
-      canManageOrganisationMessaging(
-        { ...ctx.user, roles: ctx.userRoles },
-        row.organisation,
-      ),
-    )?.account
-    if (!account)
-      return {
-        status: 'unavailable',
-        message:
-          'Saved. Account confirmation is currently unavailable. Try again later.',
-      }
-
-    // Provider existence is deliberately separate from the administrator's ownership check.
-    try {
-      const service = messagingService(ctx, platform)
-      let nativeId: string
-      if (claim.phoneNumber) {
-        const result = await service.lookupPhone(
-          account.bridgeAccountId,
-          claim.phoneNumber,
-        )
-        if (result.status !== 'registered')
-          return result.status === 'not_found'
-            ? {
-                status: 'not-found',
-                message: `No ${label} account was found for this number. Check the details.`,
-              }
-            : {
-                status: 'unavailable',
-                message: `Saved. ${label} could not confirm this number right now; it may be private or temporarily unavailable.`,
-              }
-        nativeId = result.address
-      } else {
-        const address = claim.username ? `@${claim.username}` : claim.nativeId
-        if (!address)
-          return {
-            status: 'not-found',
-            message: 'Add a phone number or username first.',
-          }
-        const profile = await service.profile(account.bridgeAccountId, address)
-        nativeId = profile.jid
-      }
-      if (!isMessagingNativeId(platform, nativeId))
-        return {
-          status: 'not-found',
-          message: `Enter a personal ${label} account, not a group or channel.`,
-        }
-      // A late response must never confirm a claim that changed while the provider was checking it.
-      const [current] = await ctx.db
-        .select({ userId: userMessagingIdentity.userId })
-        .from(userMessagingIdentity)
-        .where(key)
-        .limit(1)
-      if (!current) throw error(409, 'The contact details changed; check them again')
-      return { status: 'confirmed', message: `Saved. ${label} account confirmed.` }
-    } catch (cause) {
-      if (
-        cause &&
-        typeof cause === 'object' &&
-        'status' in cause &&
-        cause.status === 409
-      )
-        throw cause
-      return {
-        status: 'unavailable',
-        message: `Saved. ${label} could not confirm this account. Check the details or try again.`,
-      }
+    // Provider confirmation is deferred to feat/chat; saves remain independent of workers.
+    return {
+      status: 'unavailable',
+      message: 'Saved. Automatic account confirmation is a forthcoming feature.',
+      checkedAt: Date.now(),
+      accountId: null,
     }
   },
 )
@@ -2121,6 +2038,7 @@ export const openUserMessagingConversation = guardedCommand(
                 username: sql`null`.as('username'),
                 nativeId: sql`${resolved.address}`.as('nativeId'),
                 sourceTelephone: user.telephone,
+                validation: sql`null`.as('validation'),
                 verifiedAt: sql`${now}`.as('verifiedAt'),
                 verifiedBy: sql`null`.as('verifiedBy'),
                 updatedAt: sql`${now}`.as('updatedAt'),

@@ -2,7 +2,6 @@
 import { onMount } from 'svelte'
 // API
 import {
-  checkUserMessagingIdentity,
   getMessagingAccounts,
   getMessagingOrganisations,
   getUserMessagingSettings,
@@ -32,6 +31,7 @@ interface UserMessagingSettingsModel {
   readonly busy: boolean
   readonly loading: boolean
   readonly error: string
+  useDefaultPhone: (phone: string) => Promise<void>
   isDirty: (platform: MessagingPlatform) => boolean
   updateContact: (platform: MessagingPlatform, value: string) => void
   blurContact: (platform: MessagingPlatform) => void
@@ -42,6 +42,7 @@ interface UserMessagingSettingsModel {
 
 /** Edit private recipient preferences separately from organisation account registration.
  * @param userId Target user, or undefined for the current account.
+ * @param initialSettings Saved private data already loaded with the profile.
  * @param canVerify Whether the UI should offer global-admin verification controls.
  * @returns Reactive contact fields, debounced saves and server-authorized actions.
  * @remarks Provider confirmation never grants ownership verification. Each field
@@ -50,6 +51,7 @@ interface UserMessagingSettingsModel {
 export function useUserMessagingSettingsModel(
   userId?: string,
   canVerify = false,
+  initialSettings?: MessagingSettings,
 ): UserMessagingSettingsModel {
   const platforms = ['whatsapp', 'telegram'] as const
   let settings = $state<MessagingSettings>({
@@ -70,7 +72,7 @@ export function useUserMessagingSettingsModel(
     telegram: false,
   })
   let actionBusy = $state(false)
-  let loading = $state(true)
+  let loading = $state(!initialSettings)
   let failure = $state('')
   let active = false
   const revisions = { whatsapp: 0, telegram: 0 }
@@ -129,49 +131,6 @@ export function useUserMessagingSettingsModel(
       : parsed.identity.username !== saved.username
   }
 
-  /** Confirm only the exact saved revision while retaining independent ownership controls.
-   * @param platform Platform being checked.
-   * @param revision Editor revision that requested the lookup.
-   * @returns Nothing; obsolete results are discarded.
-   */
-  async function checkIdentity(
-    platform: MessagingPlatform,
-    revision: number,
-  ): Promise<void> {
-    const identity = settings.identities.find(row => row.platform === platform)
-    if (!identity || !active || revisions[platform] !== revision) return
-    states[platform] = { kind: 'checking', message: 'Checking account…' }
-    try {
-      const result = await checkUserMessagingIdentity({
-        userId,
-        platform,
-        expectedUpdatedAt: identity.updatedAt,
-      })
-      if (
-        !active ||
-        revisions[platform] !== revision ||
-        settings.identities.find(row => row.platform === platform)?.updatedAt !==
-          identity.updatedAt
-      )
-        return
-      states[platform] =
-        result.status === 'confirmed'
-          ? { kind: 'confirmed', message: result.message }
-          : {
-              kind: 'warning',
-              message: result.message,
-              invalid: result.status === 'not-found',
-            }
-    } catch {
-      if (active && revisions[platform] === revision)
-        states[platform] = {
-          kind: 'warning',
-          message: 'Saved. Account confirmation failed. Select to try again.',
-          invalid: false,
-        }
-    }
-  }
-
   /** Retain form values on failure and reload authoritative verification after success.
    * @param platform Platform whose draft has stopped changing.
    * @param revision Editor revision captured after the debounce.
@@ -208,8 +167,11 @@ export function useUserMessagingSettingsModel(
         return
       }
       inputs[platform] = parsed.value
-      // Provider latency must not hold up the next debounced save for this field.
-      void checkIdentity(platform, revision)
+      // Contact saving stays independent of provider confirmation until feat/chat is integrated.
+      states[platform] = {
+        kind: 'waiting',
+        message: 'Saved. Automatic account confirmation is a forthcoming feature.',
+      }
     } catch (cause) {
       if (active && revisions[platform] === revision)
         states[platform] = {
@@ -336,18 +298,66 @@ export function useUserMessagingSettingsModel(
     }
   }
 
+  /** Seed missing services only after an explicit profile save.
+   * @param phone Saved profile phone; explicit service overrides remain untouched.
+   * @returns When the claims are saved; provider confirmation continues in the background.
+   */
+  async function useDefaultPhone(phone: string): Promise<void> {
+    if (loading || !phone) return
+    for (const platform of platforms) {
+      if (inputs[platform].trim()) continue
+      inputs[platform] = phone
+      clearTimeout(timers[platform])
+      const revision = ++revisions[platform]
+      writes[platform] = writes[platform].then(() => saveContact(platform, revision))
+      await writes[platform]
+    }
+  }
+
+  // Hydrate saved profile data immediately; organisation connections load independently.
+  if (initialSettings) {
+    settings = initialSettings
+    for (const platform of platforms) {
+      const identity = initialSettings.identities.find(row => row.platform === platform)
+      inputs[platform] = displayMessagingContact(identity)
+      if (identity?.validation)
+        states[platform] =
+          identity.validation.status === 'confirmed'
+            ? { kind: 'confirmed', message: identity.validation.message }
+            : {
+                kind: 'warning',
+                message: identity.validation.message,
+                invalid: identity.validation.status === 'not-found',
+              }
+    }
+  }
+
   onMount(() => {
     active = true
     void (async () => {
-      const value = await readSettings()
+      const value = initialSettings ?? (await readSettings())
       if (!active) return
       settings = value
       for (const platform of platforms) {
         inputs[platform] = displayMessagingContact(
           value.identities.find(row => row.platform === platform),
         )
-        void checkIdentity(platform, revisions[platform])
+        const validation = value.identities.find(
+          row => row.platform === platform,
+        )?.validation
+        if (validation)
+          states[platform] =
+            validation.status === 'confirmed'
+              ? { kind: 'confirmed', message: validation.message }
+              : {
+                  kind: 'warning',
+                  message: validation.message,
+                  invalid: validation.status === 'not-found',
+                }
+        else if (inputs[platform])
+          states[platform] = { kind: 'waiting', message: 'Not checked yet' }
       }
+      loading = false
       if (!canVerify) return
       const meta = { isAdminRequest: true as const }
       const available = []
@@ -406,6 +416,7 @@ export function useUserMessagingSettingsModel(
     get error() {
       return failure
     },
+    useDefaultPhone,
     isDirty,
     updateContact,
     blurContact,

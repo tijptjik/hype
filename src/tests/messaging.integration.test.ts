@@ -10,6 +10,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 // DB
 import * as schema from '#lib/db/schema/messaging.js'
+import { user } from '#lib/db/schema/user.js'
 import { organisation } from '#lib/db/schema/organisation.js'
 import {
   dispatchMessagingSend,
@@ -120,6 +121,9 @@ beforeEach(() => {
   sqlite.exec(
     'CREATE TABLE organisationI18n (organisationId TEXT, locale TEXT, name TEXT)',
   )
+  sqlite.exec(
+    'CREATE TABLE organisationRole(organisationId TEXT, userId TEXT, role TEXT); CREATE TABLE hubRole(hubId TEXT, userId TEXT, role TEXT)',
+  )
   const config = getTableConfig(organisation)
   sqlite.exec(
     `CREATE TABLE organisation (${config.columns.map(column => `"${column.name}" ${column.getSQLType()}${column.primary ? ' PRIMARY KEY' : ''}`).join(',')})`,
@@ -181,7 +185,7 @@ beforeEach(() => {
       }
     },
   }
-  const db = drizzle(client as never, { schema: { ...schema, organisation } })
+  const db = drizzle(client as never, { schema: { ...schema, organisation, user } })
   state.ctx = {
     db,
     user: { id: 'operator-a', isAnonymous: false, superAdmin: false },
@@ -2584,71 +2588,6 @@ it('uses the user preference for new outreach, supports explicit selection and f
   })
 })
 
-it('confirms a saved username without granting ownership, storing aliases or sending messages', async () => {
-  sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
-  await setUserMessagingIdentity({
-    platform: 'telegram',
-    identity: identityFields({ username: 'synthetic' }),
-  })
-  bridge.profile.mockResolvedValue({
-    jid: '77',
-    username: 'synthetic',
-    name: 'Private provider name',
-  })
-  const result = await checkUserMessagingIdentity({
-    platform: 'telegram',
-    expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
-  })
-  expect(result).toEqual({
-    status: 'confirmed',
-    message: 'Saved. Telegram account confirmed.',
-  })
-  expect(bridge.profile).toHaveBeenCalledWith('bridge-org-a', '@synthetic')
-  expect(
-    sqlite
-      .prepare(
-        "SELECT nativeId, verifiedAt FROM userMessagingIdentity WHERE userId='operator-a'",
-      )
-      .get(),
-  ).toEqual({ nativeId: null, verifiedAt: null })
-  expect(
-    sqlite
-      .prepare(
-        "SELECT count(*) AS count FROM userMessagingIdentityAlias WHERE userId='operator-a'",
-      )
-      .get(),
-  ).toEqual({ count: 0 })
-  expect(bridge.send).not.toHaveBeenCalled()
-})
-
-it.each(['registered', 'not_found', 'unresolved', 'unavailable'] as const)(
-  'reports %s phone lookup truthfully',
-  async status => {
-    sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
-    await setUserMessagingIdentity({
-      platform: 'telegram',
-      identity: identityFields({ phoneNumber: '+85291234567' }),
-    })
-    bridge.lookupPhone.mockResolvedValue(
-      status === 'registered' ? { status, address: '77' } : { status },
-    )
-    const result = await checkUserMessagingIdentity({
-      platform: 'telegram',
-      expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
-    })
-    expect(result.status).toBe(
-      status === 'registered'
-        ? 'confirmed'
-        : status === 'not_found'
-          ? 'not-found'
-          : 'unavailable',
-    )
-    expect(bridge.lookupPhone).toHaveBeenCalledWith('bridge-org-a', '+85291234567')
-    expect(bridge.profile).not.toHaveBeenCalled()
-    expect(bridge.send).not.toHaveBeenCalled()
-  },
-)
-
 it('does not borrow another organisation account or disclose another user contact', async () => {
   sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
   await setUserMessagingIdentity({
@@ -2679,27 +2618,6 @@ it('does not borrow another organisation account or disclose another user contac
   expect(bridge.profile).not.toHaveBeenCalled()
 })
 
-it('rejects a confirmation that finishes after the saved claim changes', async () => {
-  sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
-  await setUserMessagingIdentity({
-    platform: 'telegram',
-    identity: identityFields({ username: 'synthetic' }),
-  })
-  bridge.profile.mockImplementation(async () => {
-    await setUserMessagingIdentity({
-      platform: 'telegram',
-      identity: identityFields({ username: 'different' }),
-    })
-    return { jid: '77' }
-  })
-  await expect(
-    checkUserMessagingIdentity({
-      platform: 'telegram',
-      expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
-    }),
-  ).rejects.toMatchObject({ status: 409 })
-})
-
 it('retains WhatsApp usernames without pretending its bridge can confirm them', async () => {
   await setUserMessagingIdentity({
     platform: 'whatsapp',
@@ -2713,44 +2631,6 @@ it('retains WhatsApp usernames without pretending its bridge can confirm them', 
   ).toMatchObject({ status: 'unavailable' })
   expect(bridge.profile).not.toHaveBeenCalled()
   expect(bridge.lookupPhone).not.toHaveBeenCalled()
-})
-
-it('confirms WhatsApp phones through the accessible WhatsApp account', async () => {
-  sqlite.exec(
-    "INSERT INTO messagingAccount(id,organisationId,platform,bridgeAccountId,externalAccountId,enabled,createdAt,updatedAt) VALUES ('account-wa','org-a','whatsapp','bridge-wa','connected-wa',1,1,1)",
-  )
-  await setUserMessagingIdentity({
-    platform: 'whatsapp',
-    identity: identityFields({ phoneNumber: '+85291234567' }),
-  })
-  bridge.lookupPhone.mockResolvedValue({
-    status: 'registered',
-    address: '85291234567@s.whatsapp.net',
-  })
-  expect(
-    await checkUserMessagingIdentity({
-      platform: 'whatsapp',
-      expectedUpdatedAt: identityRevision('operator-a', 'whatsapp'),
-    }),
-  ).toEqual({ status: 'confirmed', message: 'Saved. WhatsApp account confirmed.' })
-  expect(bridge.lookupPhone).toHaveBeenCalledWith('bridge-wa', '+85291234567')
-  expect(bridge.send).not.toHaveBeenCalled()
-})
-
-it('rejects provider group IDs instead of displaying a confirmation checkmark', async () => {
-  sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
-  await setUserMessagingIdentity({
-    platform: 'telegram',
-    identity: identityFields({ username: 'synthetic' }),
-  })
-  bridge.profile.mockResolvedValue({ jid: '-1001234' })
-  expect(
-    await checkUserMessagingIdentity({
-      platform: 'telegram',
-      expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
-    }),
-  ).toMatchObject({ status: 'not-found' })
-  expect(bridge.send).not.toHaveBeenCalled()
 })
 
 it.each(['telegram', 'whatsapp'] as const)(
@@ -3146,3 +3026,38 @@ it('keeps suspended Telegram watches inert and blocks provider actions without c
     expect.objectContaining({ id: account.id, enabled: true }),
   ])
 })
+
+it.each(['telegram', 'whatsapp'] as const)(
+  'saves %s contacts while confirmation is deferred without touching providers or evidence',
+  async platform => {
+    sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
+    await setUserMessagingIdentity({
+      platform,
+      identity: identityFields({ phoneNumber: '+85291234567' }),
+    })
+    const input = {
+      platform,
+      expectedUpdatedAt: identityRevision('operator-a', platform),
+    }
+    const result = await checkUserMessagingIdentity(input)
+    expect(result).toMatchObject({
+      status: 'unavailable',
+      accountId: null,
+      message: expect.stringContaining('forthcoming'),
+    })
+    expect((await getUserMessagingSettings({})).identities[0]).toMatchObject({
+      phoneNumber: '+85291234567',
+      validation: null,
+      verifiedAt: null,
+    })
+    await expect(
+      checkUserMessagingIdentity({
+        ...input,
+        expectedUpdatedAt: input.expectedUpdatedAt + 1,
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+    expect(bridge.lookupPhone).not.toHaveBeenCalled()
+    expect(bridge.profile).not.toHaveBeenCalled()
+    expect(bridge.send).not.toHaveBeenCalled()
+  },
+)

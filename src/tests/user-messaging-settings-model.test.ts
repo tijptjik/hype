@@ -43,6 +43,7 @@ function persist(input: {
     saved.identities.push({
       platform: input.platform,
       ...input.identity,
+      validation: null,
       verifiedAt: null,
       updatedAt: ++revision,
     })
@@ -109,12 +110,8 @@ it('waits 400 ms after the last keystroke and never saves an invalid phone', asy
     identity: { phoneNumber: '+85291234568', username: null, nativeId: null },
   })
   expect(model.inputs.whatsapp).toBe('+85291234568')
-  expect(mock.check).toHaveBeenCalledWith({
-    userId: undefined,
-    platform: 'whatsapp',
-    expectedUpdatedAt: 1,
-  })
-  expect(model.states.whatsapp.kind).toBe('confirmed')
+  expect(mock.check).not.toHaveBeenCalled()
+  expect(model.states.whatsapp.kind).toBe('waiting')
 })
 
 it('keeps both drafts while saving the platforms independently', async () => {
@@ -128,7 +125,7 @@ it('keeps both drafts while saving the platforms independently', async () => {
     whatsapp: '+85291234567',
     telegram: '@synthetic_user',
   })
-  expect(model.states.telegram.kind).toBe('confirmed')
+  expect(model.states.telegram.kind).toBe('waiting')
   model.updateContact('whatsapp', '')
   await vi.advanceTimersByTimeAsync(400)
   expect(model.settings.identities.map(row => row.platform)).toEqual(['telegram'])
@@ -154,28 +151,10 @@ it('serializes rapid edits and never restores the text from an older save', asyn
   expect(mock.save).toHaveBeenCalledTimes(2)
   expect(saved.identities[0].username).toBe('newest_user')
   expect(model.inputs.telegram).toBe('@newest_user')
-  expect(mock.check).toHaveBeenCalledTimes(1)
+  expect(mock.check).not.toHaveBeenCalled()
 })
 
-it('does not show a stale checkmark after the person changes the field', async () => {
-  const { model } = await setup()
-  const lookup = deferred<{ status: string; message: string }>()
-  mock.check.mockImplementationOnce(() => lookup.promise)
-  model.updateContact('telegram', 'first_user')
-  await vi.advanceTimersByTimeAsync(400)
-  expect(model.states.telegram.kind).toBe('checking')
-  model.updateContact('telegram', '@bad')
-  lookup.resolve({ status: 'confirmed', message: 'Old account exists' })
-  await vi.advanceTimersByTimeAsync(400)
-  expect(model.inputs.telegram).toBe('@bad')
-  expect(model.states.telegram.kind).toBe('waiting')
-  model.blurContact('telegram')
-  await vi.advanceTimersByTimeAsync(0)
-  expect(model.states.telegram).toMatchObject({ kind: 'warning', invalid: true })
-  expect(mock.save).toHaveBeenCalledTimes(1)
-})
-
-it('retains failed drafts, supports retry and distinguishes unavailable checks from confirmation', async () => {
+it('retains failed drafts and retries saves while provider confirmation is deferred', async () => {
   const { model } = await setup()
   mock.save.mockRejectedValueOnce(new Error('Save failed'))
   model.updateContact('telegram', '@synthetic')
@@ -192,10 +171,10 @@ it('retains failed drafts, supports retry and distinguishes unavailable checks f
   })
   model.retry('telegram')
   await vi.advanceTimersByTimeAsync(0)
-  expect(model.states.telegram).toMatchObject({ kind: 'warning', invalid: false })
+  expect(model.states.telegram.kind).toBe('waiting')
   model.retry('telegram')
   await vi.advanceTimersByTimeAsync(0)
-  expect(model.states.telegram.kind).toBe('confirmed')
+  expect(model.states.telegram.kind).toBe('waiting')
   expect(mock.save).toHaveBeenCalledTimes(2)
 })
 
@@ -217,40 +196,6 @@ it('cancels unsent saves and ignores pending work after unmount', async () => {
   expect(mock.save).not.toHaveBeenCalled()
   expect(mock.check).not.toHaveBeenCalled()
 })
-
-it('saves newer input while an older provider lookup is still pending', async () => {
-  const { model } = await setup()
-  const lookup = deferred<{ status: string; message: string }>()
-  mock.check.mockImplementationOnce(() => lookup.promise)
-  model.updateContact('telegram', 'first_user')
-  await vi.advanceTimersByTimeAsync(400)
-  model.updateContact('telegram', 'newest_user')
-  await vi.advanceTimersByTimeAsync(400)
-  expect(mock.save).toHaveBeenCalledTimes(2)
-  expect(saved.identities[0].username).toBe('newest_user')
-  expect(model.states.telegram.kind).toBe('confirmed')
-  lookup.resolve({ status: 'not-found', message: 'Old lookup failed' })
-  await vi.advanceTimersByTimeAsync(0)
-  expect(model.inputs.telegram).toBe('@newest_user')
-  expect(model.states.telegram.kind).toBe('confirmed')
-})
-
-it.each(['whatsapp', 'telegram'] as const)(
-  'keeps short %s numbers quiet until blur',
-  async platform => {
-    const { model } = await setup()
-    model.updateContact(platform, '914')
-    await vi.advanceTimersByTimeAsync(2000)
-    expect(model.states[platform]).toEqual({ kind: 'waiting', message: '' })
-    expect(mock.save).not.toHaveBeenCalled()
-    expect(mock.check).not.toHaveBeenCalled()
-    model.blurContact(platform)
-    await vi.advanceTimersByTimeAsync(0)
-    expect(model.states[platform]).toMatchObject({ kind: 'warning', invalid: true })
-    expect(mock.save).not.toHaveBeenCalled()
-    expect(mock.check).not.toHaveBeenCalled()
-  },
-)
 
 it('starts username feedback at four characters, excluding @, and permits early blur', async () => {
   const { model } = await setup()
@@ -278,16 +223,67 @@ it('flushes the debounce on blur once and cancels checks after backspacing below
   model.blurContact('whatsapp')
   await vi.advanceTimersByTimeAsync(0)
   expect(mock.save).toHaveBeenCalledTimes(1)
-  expect(mock.check).toHaveBeenCalledTimes(1)
+  expect(mock.check).not.toHaveBeenCalled()
   model.blurContact('whatsapp')
   await vi.advanceTimersByTimeAsync(500)
   expect(mock.save).toHaveBeenCalledTimes(1)
-  expect(mock.check).toHaveBeenCalledTimes(1)
+  expect(mock.check).not.toHaveBeenCalled()
   model.updateContact('whatsapp', '91234568')
   await vi.advanceTimersByTimeAsync(200)
   model.updateContact('whatsapp', '914')
   await vi.advanceTimersByTimeAsync(1000)
   expect(model.states.whatsapp).toEqual({ kind: 'waiting', message: '' })
   expect(mock.save).toHaveBeenCalledTimes(1)
-  expect(mock.check).toHaveBeenCalledTimes(1)
+  expect(mock.check).not.toHaveBeenCalled()
+})
+
+it('loads saved validation without contacting providers when opening a profile', async () => {
+  persist({
+    platform: 'telegram',
+    identity: { phoneNumber: '+85291234567', username: null, nativeId: null },
+  })
+  saved.identities[0].validation = {
+    status: 'confirmed',
+    checkedAt: 1000,
+    accountId: 'account',
+    message: 'Previously found',
+  }
+  const { model } = await setup()
+  expect(model.states.telegram).toEqual({
+    kind: 'confirmed',
+    message: 'Previously found',
+  })
+  expect(mock.check).not.toHaveBeenCalled()
+  expect(mock.save).not.toHaveBeenCalled()
+})
+
+it('fills missing services after explicit save without replacing an override', async () => {
+  persist({
+    platform: 'telegram',
+    identity: { phoneNumber: null, username: 'override', nativeId: null },
+  })
+  const { model } = await setup()
+  await model.useDefaultPhone('91234567')
+  expect(model.inputs.whatsapp).toBe('+85291234567')
+  expect(model.inputs.telegram).toBe('@override')
+  expect(mock.save).toHaveBeenCalledTimes(1)
+})
+
+it('renders preloaded identities immediately without a duplicate settings request', async () => {
+  persist({
+    platform: 'telegram',
+    identity: { phoneNumber: null, username: 'saved_user', nativeId: null },
+  })
+  let model!: Model
+  render(Fixture, {
+    initialSettings: saved,
+    onModel: value => {
+      model = value
+    },
+  })
+  expect(model.loading).toBe(false)
+  expect(model.inputs.telegram).toBe('@saved_user')
+  await vi.advanceTimersByTimeAsync(0)
+  expect(mock.read).not.toHaveBeenCalled()
+  expect(mock.check).not.toHaveBeenCalled()
 })
