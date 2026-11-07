@@ -1,0 +1,70 @@
+/* Public startup only; ordinary navigation and panel transitions keep their owners. */
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-app-intro="waiting"] [data-app-intro-item] {
+      visibility: hidden;
+    }
+
+    [data-app-intro="entering"] [data-app-intro-item] {
+      --app-intro-x: 0px;
+      --app-intro-y: 0px;
+      animation: app-entrance-reveal 340ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
+    }
+
+    [data-app-intro="entering"] [data-app-intro-item="search"] {
+      --app-intro-y: -16px;
+    }
+
+    [data-app-intro="entering"] [data-app-intro-item="nav"] {
+      --app-intro-y: 24px;
+    }
+
+    [data-app-intro="entering"] [data-app-intro-item="panel-left"] {
+      --app-intro-x: -24px;
+    }
+
+    [data-app-intro="entering"] [data-app-intro-item="panel-right"] {
+      --app-intro-x: 24px;
+    }
+
+    /* Overlay placement can already use translate (for example, -translate-x-1/2). */
+    [data-app-intro="entering"] [data-app-intro-item="overlay"] {
+      animation-name: app-entrance-fade;
+    }
+  }
+
+  /* Independent translate preserves search offsets and the fixed nav's centering. */
+  @keyframes app-entrance-reveal {
+    from {
+      opacity: 0;
+      visibility: hidden;
+      translate: var(--app-intro-x) var(--app-intro-y);
+    }
+
+    1% {
+      visibility: visible;
+    }
+
+    to {
+      opacity: 1;
+      visibility: visible;
+      translate: none;
+    }
+  }
+
+  @keyframes app-entrance-fade {
+    from {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    1% {
+      visibility: visible;
+    }
+
+    to {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+}

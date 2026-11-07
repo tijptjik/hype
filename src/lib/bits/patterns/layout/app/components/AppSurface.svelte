@@ -6,9 +6,10 @@ type AppSurfaceProps = {
   children: import('svelte').Snippet
   class?: string
   style?: string
+  intro?: 'waiting' | 'entering' | 'complete'
 }
 
-let { children, class: className = '', style = '' }: AppSurfaceProps = $props()
+let { children, class: className = '', style = '', intro }: AppSurfaceProps = $props()
 </script>
 
 <div
@@ -17,6 +18,7 @@ let { children, class: className = '', style = '' }: AppSurfaceProps = $props()
     className,
   )}
   {style}
+  data-app-intro={intro}
 >
   {@render children()}
 </div>

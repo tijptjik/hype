@@ -53,6 +53,7 @@ $effect(() => {
   {@render children(component)}
 {:else if active}
   <div
+    data-app-intro-item="overlay"
     role="status"
     class="bg-panel pointer-events-auto absolute top-24 left-1/2 z-50 -translate-x-1/2 rounded-xl p-4 shadow-lg"
   >

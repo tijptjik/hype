@@ -66,7 +66,10 @@ const hasVisibleControls = $derived(hasCardToggleTarget)
 >
   {#snippet center()}
     {#if hasCardToggleTarget}
-      <div transition:fade={{ duration: 150, delay: isCardToggleVisible ? 150 : 0 }}>
+      <div
+        data-app-intro-item="overlay"
+        transition:fade={{ duration: 150, delay: isCardToggleVisible ? 150 : 0 }}
+      >
         {@render openCardButton()}
       </div>
     {/if}

@@ -319,9 +319,7 @@ function handleClickOutside(event: MouseEvent): void {
 }
 </script>
 
-{#snippet cardChrome(
-  cardStyle: string,
-)}
+{#snippet cardChrome(cardStyle: string)}
   <div
     bind:this={shellElement}
     id="feature-card-shell"
@@ -350,6 +348,7 @@ function handleClickOutside(event: MouseEvent): void {
 
 {#if omniCtx.state.isCardOpen}
   <div
+    data-app-intro-item="overlay"
     class="pointer-events-none relative z-20 mx-auto flex h-full w-full"
     style={shellStyle}
     use:clickOutside={handleClickOutside}

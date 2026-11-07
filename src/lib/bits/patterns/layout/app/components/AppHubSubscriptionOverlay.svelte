@@ -30,6 +30,7 @@ let isTermsOfServiceOpen = $state(false)
 
 {#if isVisible}
   <div
+    data-app-intro-item="overlay"
     class={cx(
       'pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4 py-6 transition-transform duration-260 ease-[ease] md:px-6',
       className,

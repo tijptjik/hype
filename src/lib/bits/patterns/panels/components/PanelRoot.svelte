@@ -36,16 +36,18 @@ let shouldShowOverlay = $derived(!inline && isOpen)
 const expandedWidth = `${PANEL_WIDTH}px`
 </script>
 
+<!-- Global transitions also run when a deferred parent first mounts an already-open panel. -->
 {#if shouldShowInline}
   <div
     id="{position}-panel"
-    class="bits-theme flex h-full max-w-full border-border shrink-0 select-none flex-col bg-panel shadow-xl transition-[width] duration-500 motion-reduce:transition-none"
+    data-app-intro-item="panel-{position}"
+    class="bits-theme border-border bg-panel flex h-full max-w-full shrink-0 flex-col shadow-xl transition-[width] duration-500 select-none motion-reduce:transition-none"
     class:overflow-x-hidden={preserveContentWidth}
     class:border-r={position === 'left'}
     class:border-l={position === 'right'}
     class:left-0={position === 'left'}
     style:width={isNarrow ? `${PANEL_NARROW_WIDTH}px` : expandedWidth}
-    transition:slide={{
+    transition:slide|global={{
       duration: prefersReducedMotion.current ? 0 : 500,
       easing: cubicInOut,
       axis: 'x',
@@ -66,11 +68,12 @@ const expandedWidth = `${PANEL_WIDTH}px`
 {:else if shouldShowOverlay}
   <div
     id="{position}-panel"
-    class="bits-theme absolute top-0 z-50 flex h-full w-full select-none flex-col bg-panel shadow-xl md:w-(--panel-width)"
+    data-app-intro-item="panel-{position}"
+    class="bits-theme bg-panel absolute top-0 z-50 flex h-full w-full flex-col shadow-xl select-none md:w-(--panel-width)"
     style:--panel-width={expandedWidth}
     class:left-0={position === 'left'}
     class:right-0={position === 'right'}
-    transition:fly={{
+    transition:fly|global={{
       duration: prefersReducedMotion.current ? 0 : 150,
       easing: cubicInOut,
       x: position === 'left' ? -PANEL_WIDTH : PANEL_WIDTH,

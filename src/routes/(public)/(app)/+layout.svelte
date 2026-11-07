@@ -35,6 +35,7 @@ import { toast } from 'svelte-sonner'
 import { ProductUsageObserver } from '#lib/analytics/clientProductUsage.js'
 // COMPONENTS
 import DeferredPanel from '#lib/bits/patterns/panels/DeferredPanel.svelte'
+import AppEntrance from '#lib/bits/patterns/layout/app/components/AppEntrance.svelte'
 import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -61,7 +62,6 @@ import {
   AppMain,
   AppNav,
   AppShell,
-  AppSurface,
   Omnibar,
 } from '#lib/bits/index.js'
 // ENUMS
@@ -123,6 +123,8 @@ const navigationShell = usePanelShellModel(appCtx.view, Panel.navigation)
 const navigationModel = useNavigationPanelModel(appCtx, () => omniCtx.closeCard())
 const responsiveCtx = getResponsiveCtx()
 const surfaceLayout = appCtx.view.layout
+let isMapVisualReady = $state(false)
+let hasCompletedMapIntro = $state(false)
 
 type SettingsPanelComponent =
   typeof import('#lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
@@ -615,8 +617,18 @@ $effect(() => {
 
 <AppShell>
   {#if !$session.isPending && $session.data && appCtx.view.isInitialised}
-    <AppSurface>
+    <AppEntrance
+      ready={isMapVisualReady}
+      enabled={!hasCompletedMapIntro}
+      onComplete={() => {
+        hasCompletedMapIntro = true
+      }}
+    >
       <MapCanvas
+        intro={!hasCompletedMapIntro}
+        onVisualReady={() => {
+          isMapVisualReady = true
+        }}
         highlightedSegment={navigationModel.highlightedSegment}
         journey={navigationModel.state.phase === 'ready'
           ? navigationModel.state.journey
@@ -682,6 +694,7 @@ $effect(() => {
         <SettingsPanel model={settingsModel} />
       {:else if settingsModel.open}
         <div
+          data-app-intro-item="panel-right"
           class="bits-theme bg-panel absolute top-0 right-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center shadow-xl"
           role="status"
           aria-label={m.resource_loading()}
@@ -711,6 +724,7 @@ $effect(() => {
         />
       {:else if profileShell.open && profileModel.username}
         <div
+          data-app-intro-item="panel-right"
           class="bits-theme bg-panel absolute top-0 right-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center shadow-xl"
           role="status"
           aria-label={m.resource_loading()}
@@ -795,7 +809,7 @@ $effect(() => {
           }}
         />
       </AppMain>
-    </AppSurface>
+    </AppEntrance>
   {:else if appCtx.view.publicationPreview}
     <LoadScreen
       label={m.publication_preview__preparing()}

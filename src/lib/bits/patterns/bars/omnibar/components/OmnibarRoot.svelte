@@ -15,6 +15,6 @@ const widthContainerClasses = $derived(
 )
 </script>
 
-<div class={className} {style} {onkeydown}>
+<div class={className} {style} {onkeydown} data-app-intro-item="search">
   <div class={widthContainerClasses}>{@render children?.()}</div>
 </div>

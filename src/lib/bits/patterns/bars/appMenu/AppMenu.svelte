@@ -167,7 +167,7 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
   />
 {/snippet}
 
-<nav class={navClasses} style={navStyles}>
+<nav class={navClasses} style={navStyles} data-app-intro-item="nav">
   <div class={navPanelClasses}>
     <div class={itemGridClasses}>
       {#each mobileItems as item (item.label)}
