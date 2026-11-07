@@ -229,7 +229,7 @@ const rootStyle = $derived(
       aria-valuemin={minimumHeight}
       aria-valuemax={maximumHeight}
       aria-valuenow={height}
-      class="hover:bg-primary/15 focus-visible:bg-primary/20 absolute inset-x-0 bottom-[-6px] z-10 flex h-3 cursor-ns-resize touch-none items-center justify-end pr-32 outline-none"
+      class="hover:bg-primary/15 focus-visible:bg-primary/20 absolute inset-x-0 bottom-[-6px] z-10 flex h-3 cursor-ns-resize touch-none items-center justify-end pr-48 outline-none"
       onpointerdown={startResize}
       onpointermove={event => {
         if (drag?.pointerId === event.pointerId)
