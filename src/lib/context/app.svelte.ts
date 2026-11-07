@@ -718,7 +718,7 @@ export class AppCtx {
         layer => layer.id,
       )
     } else this.view.scope.applyInitialLayerPrisms(expectedRoleScope)
-    await this.view.loadPinnedLayers(expectedRoleScope)
+    // Reconciliation owns pin hydration; repeating it adds a second serial traversal.
     await this.view.postLayerMutation(false, false, expectedRoleScope)
 
     if (!this.view.isExpectedRoleScopeCurrent(expectedRoleScope)) return
