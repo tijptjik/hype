@@ -1,5 +1,6 @@
 <script lang="ts">
 // BITS
+import FeatureCardBreadcrumbTrail from './FeatureCardBreadcrumbTrail.svelte'
 import { Dropdown, Icon } from '#lib/bits/index.js'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -15,7 +16,6 @@ import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { ResourceContext } from '#lib/types.js'
 // ICONS
 import Camera from 'virtual:icons/proicons/camera'
-import ChevronRight from 'virtual:icons/proicons/chevron-right'
 import MoreHorizontal from 'virtual:icons/proicons/more'
 import MenuIcon from 'virtual:icons/lucide/menu'
 import PencilSquare from 'virtual:icons/proicons/compose'
@@ -134,39 +134,11 @@ const actionItems = [
       Boolean(organisationName || projectName),
     )}
     <div
-      class="pointer-events-auto flex w-full items-center justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
+      class="pointer-events-auto flex w-full items-start justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
-      <div
-        class="text-neutral-content flex min-w-0 items-center gap-2 font-mono text-xs uppercase"
-      >
-        <Icon src={Squares2x2} class="h-5 w-5 shrink-0" />
-        <span class="!block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-          >{organisationName}</span
-        >
-        {#if projectName}
-          {#if organisationName}
-            <Icon
-              src={ChevronRight}
-              class="text-neutral-content/55 h-3.5 w-3.5 shrink-0"
-              aria-hidden="true"
-            />
-          {/if}
-          <span class="!block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-            >{projectName}</span
-          >
-        {/if}
-        {#if (organisationName || projectName) && layerName}
-          <Icon
-            src={ChevronRight}
-            class="text-neutral-content/55 h-3.5 w-3.5 shrink-0"
-            aria-hidden="true"
-          />
-          <span
-            class="w-120:inline hidden overflow-hidden text-ellipsis whitespace-nowrap"
-            >{layerName}</span
-          >
-        {/if}
-      </div>
+      {#key feature.id}
+        <FeatureCardBreadcrumbTrail {organisationName} {projectName} {layerName} />
+      {/key}
       {#if cardCtx.isNewMode && onEditSelection}
         <button
           type="button"
