@@ -75,6 +75,7 @@ let rejected = $state(0)
   kind="merge"
   featureId="candidate"
   layerId="layer"
+  sourceGeometry={{ type: 'Point', coordinates: [114, 22] }}
   duplicateTaskId="task"
   creationProposal
   duplicateChoice

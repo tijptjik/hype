@@ -771,6 +771,8 @@ const imageProviderModel = useImageProviderModel(
     featureId={task.featureId ?? ''}
     creationProposal={Boolean(task.creationProposal && !task.featureId)}
     layerId={effectiveLayerId}
+    sourceGeometry={task.creationProposal?.content.placement.geometry ??
+      task.feature?.geometry}
     duplicateTaskId={task.id}
     onApplied={async ids => {
       await adminCtx.invalidateAndRefresh(FirstClassResource.task)

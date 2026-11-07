@@ -43,6 +43,15 @@ export const FeatureIndexFiltersSchema = z
 
 export const FeatureIndexQuerySchema = ListQueryParamsSchema.extend({
   filters: FeatureIndexFiltersSchema.optional(),
+  nearby: z
+    .object({
+      coordinates: z.tuple([
+        z.number().min(-180).max(180),
+        z.number().min(-90).max(90),
+      ]),
+      excludeId: z.string().optional(),
+    })
+    .optional(),
   q: z.string().trim().max(200).optional(),
   includeCount: z.boolean().default(true),
   idsOnly: z.boolean().default(false),

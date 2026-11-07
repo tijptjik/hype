@@ -149,13 +149,19 @@ for (const [name, engine] of [
                 const next = document.querySelector('[role="dialog"]')
                 snapshot.after = next?.getAttribute('style') ?? null
                 snapshot.afterBox = next?.getBoundingClientRect().toJSON()
-                snapshot.sameScrim = Boolean(scrim && scrim === document.querySelector('[data-review-scrim]'))
+                snapshot.sameScrim = Boolean(
+                  scrim && scrim === document.querySelector('[data-review-scrim]'),
+                )
               })
               void transition.ready.then(
                 () => {
                   snapshot.ready = true
-                  snapshot.rootCapture = getComputedStyle(document.documentElement).viewTransitionName
-                  snapshot.scrimCapture = scrim ? getComputedStyle(scrim).viewTransitionName : 'none'
+                  snapshot.rootCapture = getComputedStyle(
+                    document.documentElement,
+                  ).viewTransitionName
+                  snapshot.scrimCapture = scrim
+                    ? getComputedStyle(scrim).viewTransitionName
+                    : 'none'
                 },
                 () => {
                   snapshot.ready = false
@@ -200,7 +206,7 @@ for (const [name, engine] of [
         await page.route('**/src/lib/api/featureIndex.remote.ts*', route =>
           route.fulfill({
             contentType: 'text/javascript',
-            body: `export async function getFeatureIndexPage(){return {data:[{id:'primary',image:{ctxType:'feature',ctxId:'primary',image:{id:'primary-photo',publicId:'review-dialog/primary',cdn:'cloudflareR2',env:'local',version:1}},i18n:{en:{title:'Existing community centre',displayAddress:'5–7 Sha Wan Drive, Sandy Bay'}}}]}}`,
+            body: `export async function getFeatureIndexPage(){return {data:[{id:'primary',geometry:{type:'Point',coordinates:[114,22]},image:{ctxType:'feature',ctxId:'primary',image:{id:'primary-photo',publicId:'review-dialog/primary',cdn:'cloudflareR2',env:'local',version:1}},i18n:{en:{title:'Existing community centre',displayAddress:'5–7 Sha Wan Drive, Sandy Bay'}}}]}}`,
           }),
         )
         await page.route('**/src/lib/api/featureCreationDuplicate.remote.ts*', route =>
@@ -295,17 +301,27 @@ for (const [name, engine] of [
         await page.screenshot({
           path: `${directory}/${name}-${theme}-${width}-duplicate.png`,
         })
-        const sampleScrim = name === 'chromium' && width === 1280 && theme === 'breadline-light'
-        if (sampleScrim) await page.screenshot({ path: `${directory}/scrim-before.png`, clip: { x: 4, y: 4, width: 24, height: 24 } })
+        const sampleScrim =
+          name === 'chromium' && width === 1280 && theme === 'breadline-light'
+        if (sampleScrim)
+          await page.screenshot({
+            path: `${directory}/scrim-before.png`,
+            clip: { x: 4, y: 4, width: 24, height: 24 },
+          })
         await dialog
           .getByRole('button', { name: 'Merge with existing', exact: true })
           .click()
         if (sampleScrim) {
           for (let frame = 0; frame < 4; frame++) {
-            await page.screenshot({ path: `${directory}/scrim-morph-${frame}.png`, clip: { x: 4, y: 4, width: 24, height: 24 } })
+            await page.screenshot({
+              path: `${directory}/scrim-morph-${frame}.png`,
+              clip: { x: 4, y: 4, width: 24, height: 24 },
+            })
             await page.waitForTimeout(35)
           }
         }
+        await dialog.getByLabel('Nearby features', { exact: true }).waitFor()
+        await dialog.getByText('0 m away', { exact: false }).first().waitFor()
         await dialog.getByLabel('Find the existing Feature').fill('community')
         const result = page.locator('[data-entity-id="primary"]')
         await result.waitFor()
@@ -328,6 +344,8 @@ for (const [name, engine] of [
         if (Math.abs((await dialog.boundingBox())!.width - choiceWidth) > 1)
           throw Error('Search did not retain compact width')
         if (await dialog.locator('footer').count()) throw Error('Search has a footer')
+        await dialog.getByLabel('Find the existing Feature').fill('')
+        await dialog.getByLabel('Nearby features', { exact: true }).waitFor()
         await result.focus()
         await result.press('Enter')
         await dialog
@@ -342,6 +360,8 @@ for (const [name, engine] of [
         await dialog
           .getByRole('button', { name: 'Replace kept Feature', exact: true })
           .click()
+        await dialog.getByLabel('Nearby features', { exact: true }).waitFor()
+        await dialog.getByText('0 m away', { exact: false }).first().waitFor()
         await dialog.getByLabel('Find the existing Feature').fill('community')
         await result.click()
         await dialog
@@ -360,7 +380,8 @@ for (const [name, engine] of [
           .getByRole('region', { name: 'Keep location', exact: true })
           .waitFor()
         await dialog
-          .getByRole('group', { name: 'Distance between locations', exact: true }).getByText('8.4 km', { exact: true })
+          .getByRole('group', { name: 'Distance between locations', exact: true })
+          .getByText('8.4 km', { exact: true })
           .waitFor()
         await page.waitForFunction(() => {
           const markers = [...document.querySelectorAll('.maplibregl-marker')]
@@ -493,8 +514,20 @@ for (const [name, engine] of [
         )
           throw Error('Gallery choices were lost')
         const snapshots = await page.evaluate(() => (window as any).__dialogSnapshots)
-        const sizeChanges = snapshots.filter((snapshot: any) => snapshot.ready && snapshot.before === 'DIV' && snapshot.after?.includes('feature-review-dialog'))
-        if (sizeChanges.some((snapshot: any) => !snapshot.sameScrim || snapshot.rootCapture !== 'none' || snapshot.scrimCapture !== 'none'))
+        const sizeChanges = snapshots.filter(
+          (snapshot: any) =>
+            snapshot.ready &&
+            snapshot.before === 'DIV' &&
+            snapshot.after?.includes('feature-review-dialog'),
+        )
+        if (
+          sizeChanges.some(
+            (snapshot: any) =>
+              !snapshot.sameScrim ||
+              snapshot.rootCapture !== 'none' ||
+              snapshot.scrimCapture !== 'none',
+          )
+        )
           throw Error('Dialog size changes must keep the page and scrim live')
         if (
           (await page.evaluate(() => Boolean(document.startViewTransition))) &&

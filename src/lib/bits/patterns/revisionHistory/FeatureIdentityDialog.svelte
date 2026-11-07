@@ -21,6 +21,7 @@ import { refreshRemoteQuery } from '#lib/remote/index.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // DOMAIN
+import { featurePoint, featureDistance } from '#lib/features/nearby.js'
 import FeatureMergeReview from './FeatureMergeReview.svelte'
 import { identityTitle } from './featureIdentity.types'
 // TYPES
@@ -35,11 +36,13 @@ let {
   layerId,
   duplicateTaskId,
   creationProposal,
+  sourceGeometry,
   onApplied,
   duplicateChoice = false,
   source = null,
   onDiscard,
 }: {
+  sourceGeometry?: import('geojson').GeometryObject | null
   duplicateChoice?: boolean
   source?: HTMLElement | null
   onDiscard?: () => Promise<boolean>
@@ -63,6 +66,9 @@ let names = $state(['', ''])
 let redirect = $state('none')
 let search = $state('')
 let matches = $state<Feature[]>([])
+let nearby = $state<Feature[]>([])
+let nearbyLoading = $state(false)
+const origin = $derived(featurePoint(sourceGeometry))
 let choosing = $state(false)
 let busy = $state(false),
   message = $state('')
@@ -219,9 +225,43 @@ $effect(() => {
   })
 })
 $effect(() => {
+  const point = origin,
+    shown = open && !choosing && !candidate && kind === 'merge',
+    layer = layerId,
+    excluded = featureId
+  nearby = []
+  nearbyLoading = false
+  if (!shown || !point) return
+  let cancelled = false
+  nearbyLoading = true
+  void refreshRemoteQuery(
+    getFeatureIndexPage({
+      nearby: { coordinates: point, excludeId: excluded },
+      prisms: { layer: [layer] },
+      conditions: mergeCandidateConditions,
+      pagination: { limit: 5, offset: 0 },
+      includeCount: false,
+      meta: { ...view.resources.queryMeta, isAdminRequest: true, profile: 'admin' },
+    }),
+  )
+    .then(result => {
+      if (!cancelled) nearby = result.data as Feature[]
+    })
+    .catch(() => {
+      if (!cancelled) message = 'Nearby features unavailable. Search by name instead.'
+    })
+    .finally(() => {
+      if (!cancelled) nearbyLoading = false
+    })
+  return () => {
+    cancelled = true
+  }
+})
+$effect(() => {
   const text = search.trim(),
     shown = open,
     layer = layerId
+  matches = []
   if (!shown || !text || kind !== 'merge') return
   let cancelled = false
   const timer = setTimeout(async () => {
@@ -318,7 +358,9 @@ async function apply(): Promise<void> {
       ? 'Create two Features from this one, then edit them separately.'
       : candidate
         ? 'Move useful details and photos from Discard to Keep. Check the result on the right before merging.'
-        : 'Find the Feature you want to keep.'}
+        : origin
+          ? 'Select a nearby Feature to keep, or search by name.'
+          : 'Find the Feature you want to keep.'}
 >
   <div class="grid min-w-0 gap-6">
     {#if choosing}
@@ -387,9 +429,21 @@ async function apply(): Promise<void> {
               placeholder="Search by name"
             >
           </label>
-          {#if search.trim()}
-            <section class="grid min-w-0 gap-2" aria-label="Matching Features">
-              {#each matches as match, index (match.id)}
+          {#if !search.trim() && origin}
+            <p class="text-muted-foreground text-sm">
+              {nearbyLoading
+                ? 'Loading nearby features…'
+                : nearby.length
+                  ? 'Nearby features'
+                  : 'No nearby features available. Search by name instead.'}
+            </p>
+          {/if}
+          {#if search.trim() || nearby.length}
+            <section
+              class="grid min-w-0 gap-2"
+              aria-label={search.trim() ? 'Matching Features' : 'Nearby features'}
+            >
+              {#each search.trim() ? matches : nearby as match, index (match.id)}
                 <Row
                   {index}
                   entityId={match.id}
@@ -410,13 +464,20 @@ async function apply(): Promise<void> {
                     match.id,
                     true,
                   )}
-                  description={getI18n(
-                    match,
-                    'displayAddress',
-                    view.getUserPreferences(),
-                    '',
-                    true,
-                  )}
+                  description={[
+                    getI18n(
+                      match,
+                      'displayAddress',
+                      view.getUserPreferences(),
+                      '',
+                      true,
+                    ),
+                    !search.trim() && origin && featurePoint(match.geometry)
+                      ? `${Math.round(featureDistance(origin, featurePoint(match.geometry)!))} m away`
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                   onclick={() => {
                     if (!busy)
                       void load(

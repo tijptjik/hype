@@ -23,6 +23,7 @@ import { featureAuthoringSQL } from './featureAuthoringProjection.js'
 import { featureLocationBrandsSQL } from './locationBrandProjection.js'
 import { featureLocationLifecycleSQL } from './locationLifecycleProjection.js'
 // SEARCH
+import { rankNearbyFeatures } from '#lib/features/nearby.js'
 import { foldFeatureSearchText } from '#lib/features/search.js'
 // I18N
 import { contentStorageTag } from '#lib/i18n/contentRecords.js'
@@ -86,6 +87,42 @@ export async function queryFeatureIndex(
     hub,
   )
   if (input.q) conditions.push(featureIndexSearchCondition(input.q, locale))
+  // Nearby ranking scans only authorized IDs and geometry; hydrate the bounded page below.
+  if (input.nearby) {
+    const origin = input.nearby.coordinates
+    const placements = await retryBusyRead(() =>
+      db
+        .select({ id: feature.id, geometry: feature.geometry })
+        .from(feature)
+        .where(and(...conditions)),
+    )
+    const ranked = rankNearbyFeatures(placements, origin, input.nearby.excludeId)
+    const page = ranked.slice(
+      input.pagination?.offset ?? 0,
+      (input.pagination?.offset ?? 0) + (input.pagination?.limit ?? 5),
+    )
+    conditions.push(
+      sql`${feature.id} in (select value from json_each(${JSON.stringify(page.map(row => row.id))}))`,
+    )
+    // Preserve exact geographic order without relying on SQLite trigonometry extensions.
+    const result = await queryFeatureIndex(
+      db,
+      {
+        ...input,
+        nearby: undefined,
+        pagination: { limit: input.pagination?.limit ?? 5, offset: 0 },
+        includeCount: false,
+      },
+      conditions,
+      hub,
+      locale,
+    )
+    result.data.sort(
+      (a, b) =>
+        page.findIndex(row => row.id === a.id) - page.findIndex(row => row.id === b.id),
+    )
+    return { ...result, hasMore: false, nextOffset: null }
+  }
   const source = sql`${feature}`
   const limit = input.pagination?.limit ?? 50
   const offset = input.pagination?.offset ?? 0
