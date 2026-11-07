@@ -30,6 +30,7 @@ const model = useImageEditorGalleryModel(getImageCtx())
   canRotateActiveImage={model.state.canRotateActiveImage}
   canEditActiveImage={!!model.state.activeId}
   canReplaceActiveImage={model.state.canReplaceActiveImage}
+  canDeleteActiveImage={model.state.canMutateActiveImage}
   canDownloadActiveImage={model.state.canDownloadActiveImage}
   isEditBusy={model.state.isRotatePending}
   getIsLoading={model.status.isLoading}
