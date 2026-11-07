@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { DEFAULT_IMAGE_INTENTS } from '#lib/images/intents.js'
 // @vitest-environment node
 // DRIZZLE
 import { getTableColumns, getTableName } from 'drizzle-orm'
@@ -259,4 +261,34 @@ describe('hub form transactions', () => {
       }
     },
   )
+})
+
+
+describe('image intents in the Hub form transaction', () => {
+  for (const fail of [false, true]) it(fail ? 'rolls back parent edits when policy persistence fails' : 'commits the parent and policy in one batch', async () => {
+    const { db, sqlite } = fixture()
+    try {
+      sqlite.exec(`CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT);
+        CREATE TABLE feature(id TEXT PRIMARY KEY,projectId TEXT);
+        CREATE TABLE featureImage(featureId TEXT,imageId TEXT,intent TEXT,isPublished INTEGER,localIsPublished INTEGER);`)
+      sqlite.exec(readFileSync('migrations/0200_image_intent_policies.sql', 'utf8'))
+      if (fail) sqlite.exec("CREATE TRIGGER reject_image_policy BEFORE INSERT ON imageIntentPolicyRevision BEGIN SELECT RAISE(ABORT,'policy failure'); END")
+      const before = snapshot(sqlite)
+      const batch = vi.spyOn(db, 'batch')
+      const operation = updateHubByIdWithConcurrency(db, { ...patch, actorId: 'editor', imageIntentSettings: {
+        version: 0, hubVersion: 0, intents: DEFAULT_IMAGE_INTENTS.map(intent => ({ ...intent, label: intent.id === 'general' ? 'Photos' : intent.label })),
+        autoPublishUnclassified: true, reassignments: {},
+      } })
+      if (fail) {
+        await expect(operation).rejects.toThrow('policy failure')
+        expect(snapshot(sqlite)).toEqual(before)
+        expect(sqlite.prepare("SELECT version FROM hubImageIntentPolicy WHERE hubId='h'").get()?.version).toBe(0)
+      } else {
+        expect(await operation).toMatchObject({ id: 'h' })
+        expect(batch).toHaveBeenCalledTimes(1)
+        expect(sqlite.prepare("SELECT version FROM hubImageIntentPolicy WHERE hubId='h'").get()?.version).toBe(1)
+        expect(sqlite.prepare("SELECT code FROM hub WHERE id='h'").get()?.code).toBe('new')
+      }
+    } finally { sqlite.close() }
+  })
 })

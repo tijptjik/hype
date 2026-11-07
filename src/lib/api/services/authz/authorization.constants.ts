@@ -63,6 +63,7 @@ export const organisationAuthorizationFields = [
 ] as const
 
 export const projectAuthorizationFields = [
+  'imageIntentSettings',
   'settings',
   'flags',
   'locationUpdatePolicy',
@@ -82,6 +83,7 @@ export const projectAuthorizationFields = [
 ] as const
 
 export const hubAuthorizationFields = [
+  'imageIntentSettings',
   'code',
   'domain',
   'i18n',

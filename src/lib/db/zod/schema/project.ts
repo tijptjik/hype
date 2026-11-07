@@ -1,3 +1,5 @@
+// IMAGE INTENT POLICY
+import { ImageIntentSettingsFormData } from '#lib/images/intents.js'
 // CONTENT LOCALES
 import {
   ContentLocaleSettingsSchema,
@@ -342,6 +344,7 @@ export const ProjectLocationPolicyFormData = z.preprocess(
 
 export const ProjectEntityFormData = z.object({
   settings: ContentLocaleSettingsFormSchema,
+  imageIntentSettings: ImageIntentSettingsFormData,
   locationUpdatePolicy: ProjectLocationPolicyFormData,
   cardStyleCode: z.enum(CARD_STYLE_CODES).default(DEFAULT_CARD_STYLE),
   markerStyleCode: z

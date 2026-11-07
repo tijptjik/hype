@@ -1,4 +1,6 @@
 <script lang="ts">
+// IMAGE INTENTS
+import ImageIntentSettings from '#lib/bits/patterns/images/ImageIntentSettings.svelte'
 // COMPONENTS
 import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 // BITS COMPONENTS
@@ -174,6 +176,7 @@ import type { UserCapabilityMatrixRow } from '#lib/bits/patterns/capabilities/us
 import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ICONS
 import LanguagesIcon from 'virtual:icons/lucide/languages'
+import DataModelIcon from 'virtual:icons/lucide/database'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import MembersIcon from 'virtual:icons/proicons/person-multiple'
 // ADAPTERS
@@ -642,6 +645,8 @@ const configuredProjectForm = configureForm(() => ({
       const submittedCode = data.data?.code?.trim() ?? ''
       const refreshed = await refreshProject(shouldRedirect ? submittedCode : undefined)
       commitSettledProjectState(refreshed)
+      profileResetVersion += 1
+      window.dispatchEvent(new CustomEvent('refreshImages'))
       if (data.data?.locationUpdatePolicy && activeCommittedProjectData?.id) {
         await getLocationUpdatePolicy({
           projectId: activeCommittedProjectData.id,
@@ -722,8 +727,6 @@ function setShow3dAddressOptions(checked: boolean | null): void {
  */
 function setImagePublicationFlag(
   key:
-    | 'autoPublishClassifiedImages'
-    | 'autoFeatureFirstImage'
     | 'showHistoricalLayers'
     | 'allowFeatureDescriptions'
     | 'locationBasedFeatureNames',
@@ -768,6 +771,20 @@ function setUseAllInOrgContext(checked: boolean): void {
 const isRequiredInPreflight = createSchemaRequiredInferer(ProjectPreflightFormData)
 // Dirty flag exposed to header actions.
 const isDirty = $derived(Boolean(formCtx.dirty))
+/** Stages image policy edits in the normal resource form. */
+function onImageIntentSettingsChange(value: string | undefined): void {
+  const current = formCtx.form.fields.value()
+  if (current.data?.imageIntentSettings === value) return
+  formCtx.form.fields.set({ ...current, data: { ...current.data, imageIntentSettings: value } })
+}
+
+/** Returns native JSON transport attributes for the staged image policy. */
+function imageIntentInputAttrs(): Record<string, unknown> {
+  return (formCtx.form.fields.data.imageIntentSettings as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }).as('hidden', String(formCtx.form.fields.value().data?.imageIntentSettings))
+}
+
 
 // Narrowed form adapter for property-only mutators.
 const projectPropertyFormAdapter = $derived(
@@ -2963,6 +2980,9 @@ $effect(() => {
     attrs={formCtx.attributes}
     isReady={Boolean(formCtx.form?.fields)}
   >
+    {#if formCtx.form.fields.value().data?.imageIntentSettings !== undefined}
+      <input {...imageIntentInputAttrs()} />
+    {/if}
     <Main.Facet
       isVisible={isCoreFacet}
       extraScroll={320}
@@ -3297,7 +3317,11 @@ $effect(() => {
     >
       <FormSurface>
         <section class="flex min-h-0 flex-col gap-6 pb-6">
-          <SectionHeader title={m.project_advanced()} />
+          <SectionHeader
+            title="Data Model"
+            icon={DataModelIcon}
+            description="Configure feature addresses, names, descriptions and historical layers."
+          />
           <div
             class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-x-8 gap-y-3"
           >
@@ -3371,46 +3395,7 @@ $effect(() => {
                 </Card.Actions>
               </Card.Root>
             {/each}
-            {#each [
-              {
-                key: 'autoPublishClassifiedImages',
-                label: m.project_auto_publish_classified_images(),
-              },
-              {
-                key: 'autoFeatureFirstImage',
-                label: m.project_auto_feature_first_image(),
-              },
-            ] as setting (setting.key)}
-              <Card.Root
-                size="md"
-                class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
-              >
-                <label
-                  for={`project-${setting.key}`}
-                  class="flex min-w-0 flex-1 items-center px-5 py-3 text-sm font-semibold"
-                  >{setting.label}</label
-                >
-                <Card.Actions
-                  padding="md"
-                  bg="none"
-                  class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
-                >
-                  <Switch
-                    id={`project-${setting.key}`}
-                    checked={projectFlags[setting.key] !== false}
-                    disabled={!isEditing || formCtx.submitting}
-                    size="sm"
-                    onCheckedChange={checked =>
-                      setImagePublicationFlag(
-                        setting.key as
-                          | 'autoPublishClassifiedImages'
-                          | 'autoFeatureFirstImage',
-                        checked,
-                      )}
-                  />
-                </Card.Actions>
-              </Card.Root>
-            {/each}
+
             <Card.Root
               size="md"
               class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
@@ -3481,6 +3466,9 @@ $effect(() => {
             <input {...getHiddenLocaleSettingsAttrs()}>
           </div>
         </section>
+        {#if project?.data?.id}
+          <ImageIntentSettings scopeType="project" scopeId={project.data.id} disabled={!isEditing || formCtx.submitting} resetVersion={profileResetVersion} onChange={onImageIntentSettingsChange} />
+        {/if}
         {#if activeCommittedProjectData?.id}
           {#key activeCommittedProjectData.id}
             <LocationPolicyPanel

@@ -1,3 +1,5 @@
+// IMAGE INTENT POLICY
+import { ImageIntentSettingsFormData } from '#lib/images/intents.js'
 // DOMAIN
 import { HUB_CODE_PATTERN } from '#lib/hub-domains.js'
 // I18N
@@ -284,6 +286,7 @@ export const HubEntityFormData = z
     userRoles: HubUserRolesFormData,
     organisations: z.array(HubOrganisationFormData).default([]),
     layerDefaults: z.array(HubLayerFormData).default([]),
+    imageIntentSettings: ImageIntentSettingsFormData,
     properties: z.array(ProjectPropertyFormData).default([]),
   })
   .superRefine((data, ctx) => {

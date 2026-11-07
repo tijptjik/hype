@@ -324,6 +324,7 @@ export const toProjectSubmittedFields = (
   data: Partial<Record<ProjectAuthorizationField, unknown>>,
 ): ProjectAuthorizationField[] => {
   const fields: ProjectAuthorizationField[] = []
+  if (data.imageIntentSettings !== undefined) fields.push('imageIntentSettings')
   if (data.settings !== undefined) fields.push('settings')
   if ('locationUpdatePolicy' in data) fields.push('locationUpdatePolicy')
   if ('organisationId' in data) fields.push('organisationId')

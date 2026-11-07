@@ -1,3 +1,6 @@
+// IMAGE INTENT POLICY
+import { prepareImageIntentPolicySave } from './imageIntentPolicy'
+import type { ImageIntentSettingsPatch } from '#lib/images/intents.js'
 // INDEX QUERY
 import {
   resourceIndexFilterConditions,
@@ -869,6 +872,7 @@ export const updateHubByIdWithConcurrency = async (
   params: HubRelations & {
     id: Id
     actorId?: string
+    imageIntentSettings?: ImageIntentSettingsPatch
     updatedAt: string
     data: Partial<
       Pick<HubDB, 'code' | 'domain' | 'legalContactAddress' | 'isSubscriptionAvailable'>
@@ -892,6 +896,12 @@ export const updateHubByIdWithConcurrency = async (
   const guard = exists(db.select({ id: hub.id }).from(hub).where(revisionGuard))
   const writes = prepareHubRelations(db, params.id, params, guard)
 
+  if (params.imageIntentSettings && !params.actorId) throw new Error('Image settings require an attributed actor')
+  // Include policy and gallery changes in the parent form's guarded transaction.
+  const imageSettings = params.imageIntentSettings
+    ? await prepareImageIntentPolicySave(db, { ...params.imageIntentSettings, scope: { type: 'hub', id: params.id }, actorId: params.actorId!, guard: guard })
+    : []
+  if (imageSettings === null) return null
   const actor = params.actorId ? { actorId: params.actorId } : undefined
   const ownCapture = await prepareAdminResourceRevisionCapture(
     db,
@@ -922,6 +932,7 @@ export const updateHubByIdWithConcurrency = async (
   // Check the old revision before catalogue writes; advance the parent token after all relations.
   // Preserve the hub and each changed organisation assignment in the same guarded transaction.
   const before = [
+    ...imageSettings,
     ...ownCapture.before,
     ...capture.before,
     ...(catalog?.statements ?? []),

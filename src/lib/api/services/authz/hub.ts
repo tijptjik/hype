@@ -290,6 +290,7 @@ export const toHubSubmittedFields = (
   data: Partial<Record<HubAuthorizationField, unknown>>,
 ): HubAuthorizationField[] => {
   const fields: HubAuthorizationField[] = []
+  if (data.imageIntentSettings !== undefined) fields.push('imageIntentSettings')
   if ('code' in data) fields.push('code')
   if ('domain' in data) fields.push('domain')
   if ('i18n' in data) fields.push('i18n')

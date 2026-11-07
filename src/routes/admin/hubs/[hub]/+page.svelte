@@ -1,4 +1,6 @@
 <script lang="ts">
+// IMAGE INTENTS
+import ImageIntentSettings from '#lib/bits/patterns/images/ImageIntentSettings.svelte'
 // COMPONENTS
 import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 // ROLE HIERARCHY
@@ -383,6 +385,8 @@ const configuredHubForm = configureForm<HubFormInput>(() => ({
       const submittedCode = data.data?.code?.trim() ?? ''
       const refreshed = await refreshHub(shouldRedirect ? submittedCode : undefined)
       commitSettledHubState(refreshed)
+      profileResetVersion += 1
+      window.dispatchEvent(new CustomEvent('refreshImages'))
       if (refreshed?.data) {
         formCtx.form.fields.set(toHubFormInput(refreshed.data))
       }
@@ -393,6 +397,20 @@ const configuredHubForm = configureForm<HubFormInput>(() => ({
 const formCtx = $derived(configuredHubForm())
 const isRequiredInPreflight = createSchemaRequiredInferer(HubPreflightFormData)
 const isDirty = $derived(Boolean(formCtx.dirty))
+/** Stages image policy edits in the normal resource form. */
+function onImageIntentSettingsChange(value: string | undefined): void {
+  const current = formCtx.form.fields.value()
+  if (current.data?.imageIntentSettings === value) return
+  formCtx.form.fields.set({ ...current, data: { ...current.data, imageIntentSettings: value } })
+}
+
+/** Returns native JSON transport attributes for the staged image policy. */
+function imageIntentInputAttrs(): Record<string, unknown> {
+  return (formCtx.form.fields.data.imageIntentSettings as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }).as('hidden', String(formCtx.form.fields.value().data?.imageIntentSettings))
+}
+
 
 const visibleAllIssues = $derived.by((): unknown[] =>
   suppressFormLevelIssues ? [] : (formCtx.allIssues ?? []),
@@ -1624,6 +1642,9 @@ $effect(() => {
     attrs={formCtx.attributes}
     isReady={Boolean(formCtx.form?.fields && (hub?.data || isNewHubRef))}
   >
+    {#if formCtx.form.fields.value().data?.imageIntentSettings !== undefined}
+      <input {...imageIntentInputAttrs()} />
+    {/if}
     <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
@@ -1923,6 +1944,15 @@ $effect(() => {
             />
           {/snippet}
         </FormI18nDescriptorProfile>
+      </FormSurface>
+    </Main.Facet>
+    <Main.Facet isVisible={activeFacet === 'advanced'} class="right-0! left-0!" transition="fade" previousAction={buildFacetNavAction('advanced', 'previous')} nextAction={buildFacetNavAction('advanced', 'next')} attrs={{ 'data-facet-id': 'advanced' }}>
+      <FormSurface>
+        {#if hub?.data?.id}
+          <div class="flex min-w-0 flex-col pb-6">
+            <ImageIntentSettings scopeType="hub" scopeId={hub.data.id} disabled={!isEditing || formCtx.submitting} resetVersion={profileResetVersion} onChange={onImageIntentSettingsChange} />
+          </div>
+        {/if}
       </FormSurface>
     </Main.Facet>
   </Main.Form>

@@ -34,7 +34,7 @@ export const ADMIN_FACETS = {
   advanced: 'advanced',
 } as const satisfies Record<FacetType, FacetType>
 
-export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies'
+export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies' | 'advanced'
 export type OrganisationFacet =
   | 'updates'
   | 'users'
@@ -145,6 +145,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.policies,
     ADMIN_FACETS.images,
     ADMIN_FACETS.updates,
+    ADMIN_FACETS.advanced,
   ],
   organisation: [
     ADMIN_FACETS.core,
