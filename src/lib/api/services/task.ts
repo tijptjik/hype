@@ -1,5 +1,6 @@
 // FEATURE CONTENT LOCALES
 import { contentRowsToForm } from '#lib/i18n/contentRecords.js'
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // DRIZZLE
 import { and, eq, inArray, or, type SQL, sql } from 'drizzle-orm'
 // API
@@ -210,12 +211,12 @@ export const toResponseShape = async <P extends TaskProfile = TaskProfile>(
             ...prop,
             property: {
               ...prop.property,
-              i18n: transformI18nSafely(prop.property.i18n),
+              i18n: propertyLocalesToForm(prop.property.i18n),
             },
             propertyValue: prop.propertyValue
               ? {
                   ...prop.propertyValue,
-                  i18n: transformI18nSafely(prop.propertyValue.i18n),
+                  i18n: propertyLocalesToForm(prop.propertyValue.i18n),
                 }
               : null,
           })) || [],
