@@ -21,7 +21,6 @@ import { IMAGE_METADATA_BUTTON_CLASSES } from '#lib/bits/patterns/images/compone
 import CameraIcon from 'virtual:icons/proicons/camera'
 import { ImageMetadataFullSchema } from '#lib/db/zod/schema/image.js'
 import ImageEditor from '#lib/bits/patterns/images/ImageEditor.svelte'
-import ImageSkeleton from '#lib/bits/patterns/images/components/ImageSkeleton.svelte'
 import FeatureGalleryRevisionEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryRevisionEditor.svelte'
 // IMAGE ORDER
 import {
@@ -498,14 +497,10 @@ onMount(() => {
       {/if}
     </div>
   {/if}
-  <div class="min-h-0 flex-1">
-    {#if busy && items.length === 0}
-      <!-- Wait for image evidence before presenting an empty upload state. -->
-      <div class="relative h-full w-full" aria-busy="true" data-task-image-loading>
-        <ImageSkeleton />
-      </div>
-    {:else}
+  <div class="min-h-0 flex-1" data-task-image-loading={busy && items.length === 0 ? true : undefined}>
+      <!-- Keep the editor mounted so image evidence can expand its thumbnail strip. -->
       <ImageEditor
+        isLoading={busy && items.length === 0}
         sortScope={review?.proposalId}
         sortMode={(original ? review?.submitted.gallery : review?.content.gallery)
           ?.sortMode ?? 'automatic'}
@@ -637,6 +632,5 @@ onMount(() => {
           />
         {/snippet}
       </ImageEditor>
-    {/if}
   </div>
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
 import { errorOverlayClass } from './imageSurface.styles'
+import ImageSkeleton from './ImageSkeleton.svelte'
 
 let {
   showSkeleton = false,
@@ -12,8 +13,8 @@ let {
 } = $props()
 </script>
 
-{#if showSkeleton && !hasLoaded}
-  <div class="gallery-skeleton absolute inset-0"></div>
+{#if showSkeleton && !hasLoaded && !hasError}
+  <ImageSkeleton />
 {/if}
 
 {#if hasError}

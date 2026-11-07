@@ -186,8 +186,8 @@ $effect(() => {
         {sortMessage}
       </p>
     {/if}
-    {#if layout === 'top' && items.length > 1}
-      {@render thumbnailTrack()}
+    {#if layout === 'top'}
+      {@render expandingThumbnailTrack()}
     {/if}
     <div class={cx('relative min-h-0 min-w-0 flex-1', className)}>
       {#if isLoading && !items.length}
@@ -271,8 +271,8 @@ $effect(() => {
     </div>
 
     {#if isStackedLayout}
-      {#if layout === 'bottom' && items.length > 1}
-        {@render thumbnailTrack()}
+      {#if layout === 'bottom'}
+        {@render expandingThumbnailTrack()}
       {/if}
     {:else}
       <div
@@ -384,6 +384,20 @@ $effect(() => {
     {onReplaceFiles}
     {onDownload}
   />
+{/snippet}
+
+{#snippet expandingThumbnailTrack()}
+  <div
+    data-image-thumbnail-strip
+    class={cx(
+      'shrink-0 overflow-hidden transition-[height,opacity] duration-300 ease-out motion-reduce:transition-none',
+      items.length > 1 ? 'h-32 opacity-100' : 'h-0 opacity-0',
+    )}
+  >
+    {#if items.length > 1}
+      {@render thumbnailTrack()}
+    {/if}
+  </div>
 {/snippet}
 
 {#snippet thumbnailTrack()}

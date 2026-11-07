@@ -14,6 +14,7 @@ import {
 import ImageSurface from './ImageSurface.svelte'
 import ImageBackdrop from './ImageBackdrop.svelte'
 import ImageForeground from './ImageForeground.svelte'
+import ImageSkeleton from './ImageSkeleton.svelte'
 // TYPES
 import type { ViewerStageProps } from './imagePrimitives.types'
 import type { ViewerRenderable } from '../images.types'
@@ -332,11 +333,7 @@ onDestroy(() => {
   class={`relative h-full w-full overflow-hidden ${showBackdrop ? 'bg-black/5' : ''} ${rounded} ${className}`}
 >
   {#if currentItem && !displayedScene && !previousScene}
-    <div
-      aria-hidden="true"
-      data-image-skeleton
-      class="bg-base-300 pointer-events-none absolute inset-0 animate-pulse motion-reduce:animate-none"
-    ></div>
+    <ImageSkeleton />
   {/if}
   {#if pendingScene}
     {#each pendingSceneAssetUrls as url (url)}
