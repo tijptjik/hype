@@ -56,6 +56,7 @@ import {
   toIssueDetailMessage,
 } from '#lib/api/services/authz/index.js'
 // DB
+import { readFeaturePresentationPolicy } from '#lib/db/services/featurePresentationPolicy.js'
 import {
   createFeatureForm,
   saveUnlinkedFeatureForm,
@@ -587,6 +588,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       )
     }
 
+    const presentationPolicy = await readFeaturePresentationPolicy(db, data.layerId)
+    if (!presentationPolicy.allowDescriptions) {
+      for (const row of Object.values(data.i18n)) row.description = ''
+    }
     const created = await createFeatureForm(db, {
       data: {
         ...data,
@@ -700,6 +705,15 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     (await toEntityResponseShape(currentWithRelations, 'admin')).data,
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
+  // Disabled description authoring retains existing content instead of erasing it.
+  const presentationPolicy = await readFeaturePresentationPolicy(db, current.layerId)
+  if (!presentationPolicy.allowDescriptions) {
+    for (const [locale, row] of Object.entries(data.i18n)) {
+      const previous = currentEntity.i18n?.[locale as keyof typeof currentEntity.i18n]
+      row.description = previous?.description ?? ''
+      row.descriptionGen = previous?.descriptionGen ?? true
+    }
+  }
   const i18nChanged =
     JSON.stringify(data.i18n) !== JSON.stringify(currentEntity.i18n ?? {})
   const propertiesChanged =
@@ -718,7 +732,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)
   const submittedDataForUpdate: Record<string, unknown> = {}
 
-  if (i18nChanged || data.locationReset?.names.length)
+  if (i18nChanged || data.locationReset?.names.length || data.locationNameMode)
     submittedDataForUpdate.i18n = data.i18n
   if (propertiesChanged || data.locationBrandEdit || data.locationReset?.phoneNumber)
     submittedDataForUpdate.properties = submittedProperties
@@ -792,6 +806,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     properties: propertiesChanged ? submittedProperties : undefined,
     locationBrandEdit: data.locationBrandEdit,
     locationReset: data.locationReset,
+    locationNameMode: presentationPolicy.locationBasedNames
+      ? ('inherit' as const)
+      : data.locationNameMode,
     authorizeLocationCorrection: () =>
       requireLocationOrganisationManager(ctx, current.organisationId),
   }

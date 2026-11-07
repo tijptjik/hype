@@ -12,6 +12,7 @@ import {
   authorizeFeatureUpdateForSubmission,
 } from '#lib/api/services/authz/index.js'
 // DB
+import { readFeaturePresentationPolicy } from '#lib/db/services/featurePresentationPolicy.js'
 import { rejectedFeatureLocationSourceIds } from '#lib/db/services/locationIdentityRejection.js'
 import { probeProjectQuery } from '#lib/db/services/project.js'
 import { probeFeatureQuery } from '#lib/db/services/feature.js'
@@ -355,6 +356,7 @@ export const getFeatureLocationDiscoveryDetails = guardedQuery(
 export const linkFeatureLocation = guardedCommand(
   z.strictObject({
     featureId: z.string().min(1),
+    nameMode: z.enum(['independent', 'inherit']).optional(),
     locationId: z.string().min(1),
     revisionId: z.string().min(1),
     expectedFeatureModifiedAt: z.string().min(1),
@@ -377,8 +379,10 @@ export const linkFeatureLocation = guardedCommand(
       },
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    const policy = await readFeaturePresentationPolicy(ctx.db, probe.layerId)
     const result = await linkInitialFeatureLocation(ctx.db, {
       ...input,
+      ...(policy.locationBasedNames ? { nameMode: 'inherit' as const } : {}),
       projectId: probe.projectId,
       actorId: ctx.user.id,
       authorizeLocationCorrection: () =>
@@ -571,6 +575,7 @@ export const searchFeatureLocalLocations = guardedQuery(
 export const relinkFeatureLocation = guardedCommand(
   z.strictObject({
     featureId: z.string().min(1),
+    nameMode: z.enum(['independent', 'inherit']).optional(),
     locationId: z.string().min(1),
     revisionId: z.string().min(1),
     expectedFeatureModifiedAt: z.string().min(1),
@@ -594,8 +599,10 @@ export const relinkFeatureLocation = guardedCommand(
       },
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    const policy = await readFeaturePresentationPolicy(ctx.db, probe.layerId)
     const result = await persistFeatureRelink(ctx.db, {
       ...input,
+      ...(policy.locationBasedNames ? { nameMode: 'inherit' as const } : {}),
       projectId: probe.projectId,
       actorId: ctx.user.id,
       authorizeLocationCorrection: () =>

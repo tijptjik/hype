@@ -1,3 +1,5 @@
+import { AddressAssociationSchema } from '#lib/locations/association.js'
+import { LocalLocationAddressSchema } from './localLocationAddress.js'
 import { UnitDetailsSchema, formatFloor, formatUnit } from './address3d.js'
 import { AddressDivisionOverridesSchema } from './divisions.js'
 // VALIDATION
@@ -56,6 +58,14 @@ const fields = z.partialRecord(
 )
 const featureAddressBase = z.strictObject({
   version: z.literal(1),
+  association: AddressAssociationSchema.optional(),
+  canonical: z
+    .strictObject({
+      addressId: z.string().min(1),
+      revisionId: z.string().min(1),
+      content: LocalLocationAddressSchema,
+    })
+    .optional(),
   source: LocationFactsSchema.shape.location.shape.address,
   coordinates: z
     .tuple([
@@ -83,12 +93,12 @@ export const FeatureAddressSchema = featureAddressBase.superRefine(
           id: z.string(),
           attributes: z.object({ snapshotId: z.string().optional() }),
         })
-        .safeParse(address.source.records.data)
+        .safeParse(address.source.rawSource.data)
       if (
         !resource.success ||
         resource.data.id !== address.source.address2dId ||
-        (address.source.addressSnapshotId &&
-          resource.data.attributes.snapshotId !== address.source.addressSnapshotId)
+        (address.source.snapshotId &&
+          resource.data.attributes.snapshotId !== address.source.snapshotId)
       )
         context.addIssue({
           code: 'custom',
@@ -156,8 +166,8 @@ export function emptyFeatureAddress(
       address2dId: null,
       address3dId: null,
       address3dUnitId: null,
-      addressSnapshotId: null,
-      records: {},
+      snapshotId: null,
+      rawSource: {},
       fallbackDisplay,
     },
   }
@@ -168,7 +178,7 @@ export function getAddressLocale(
   address: FeatureAddress,
   locale: LocaleKey,
 ): Partial<Record<AddressField, string | boolean | null>> {
-  const data = address.source.records.data as
+  const data = address.source.rawSource.data as
     | { attributes?: { i18n?: Record<string, unknown> } }
     | undefined
   const parsed = z
@@ -395,7 +405,7 @@ export function getAddressUnits(
       }),
       included: z.array(z.unknown()),
     })
-    .safeParse(address.source.records)
+    .safeParse(address.source.rawSource)
   if (!parsed.success) return []
   const coverage = parsed.data.data.attributes.address3dCoverage
   if (
@@ -438,7 +448,7 @@ export function getAddressUnits(
     if (
       !inventory.success ||
       inventory.data.id !== coverage.address3dId ||
-      inventory.data.attributes.snapshotId !== address.source.addressSnapshotId ||
+      inventory.data.attributes.snapshotId !== address.source.snapshotId ||
       inventory.data.attributes.address2dId !== coverage.ownerAddress2dId
     )
       continue

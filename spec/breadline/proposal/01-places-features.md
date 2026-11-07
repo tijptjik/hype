@@ -1325,3 +1325,30 @@ no label, and each field opens independently. Street numbers, levels and flat/un
 identifiers are shared and have no translation rows. Level and Flat / Unit corrections
 use the regular address editor's type vocabulary, reference parsers and semantic
 setters, keeping type and reference separate.
+
+#### Feature authoring presentation policy (Refs #194, parent #180)
+
+Project flags `allowFeatureDescriptions` (default true) and `locationBasedFeatureNames`
+(default false) control Feature authoring. Layer metadata can explicitly override either
+flag; absent/null means inherit. Turning off description authoring hides its Profile
+fields and retains existing stored descriptions on save. It does not delete historical
+content.
+
+Location naming uses the existing record-level
+`featureLocation.acceptancePolicy.nameMode`, not a second ownership model. Profile
+offers Location naming when every title is empty. Inherited titles follow edited
+Location translations, become read-only in Profile and link to **Edit Location**. When
+parent policy permits it, the Feature can return to independent naming. Link/relink and
+normal saves persist that intent; parent-required inheritance wins over submitted
+independent intent. These settings apply during authoring and linking; this change does
+not bulk rewrite existing Features when a Project setting changes.
+
+Hydrated Feature list and admin responses include an `authoring.nameMode` read
+projection of association ownership. Parent policy is not copied into Features: the
+editor resolves Project flags and Layer metadata from the app's shared,
+authorization-scoped ResourceDetail/CacheCtx. A small policy projection on the
+authorized Feature read covers its first editable frame while either parent is still
+loading. Once both parents are available, their current settings take precedence;
+navigation does not wait for those independent reads. Core Profile does not fetch the
+full Location association; Location editing still loads that detailed model. The minimal
+`compact` identity response does not carry naming data. Refs #194.

@@ -37,11 +37,35 @@ export const NaturalDetailsSchema = z.strictObject({
     .optional(),
 })
 
-/** Unclassified legacy entities may retain contacts/lifecycle without inventing a classification. */
-export const UnknownDetailsSchema = z.strictObject({
-  brands: LocationBrandsSchema.optional(),
-  operatingStatus: OperatingStatusSchema.nullable().optional(),
-  buildingStatus: BuildingStatusSchema.nullable().optional(),
+/** Unknown entities carry no facts that would establish a more specific kind. */
+export const UnknownDetailsSchema = z.strictObject({})
+
+export const PremisesDetailsSchema = z.strictObject({
+  type: z.enum(['site', 'complex']).nullable().optional(),
+  kind: z
+    .enum([
+      'estate',
+      'mall',
+      'office',
+      'hotel',
+      'school',
+      'university',
+      'hospital',
+      'airport',
+      'railway',
+      'bus',
+      'ferry',
+      'industrial',
+      'logistics',
+      'depot',
+      'park',
+      'sports',
+      'religious',
+      'cemetery',
+      'government',
+    ])
+    .nullable()
+    .optional(),
 })
 
 export const LocationEntitySchema = z.discriminatedUnion('kind', [
@@ -53,6 +77,7 @@ export const LocationEntitySchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('natural'), details: NaturalDetailsSchema }),
   z.strictObject({ kind: z.literal('address'), details: z.strictObject({}) }),
   z.strictObject({ kind: z.literal('unknown'), details: UnknownDetailsSchema }),
+  z.strictObject({ kind: z.literal('premises'), details: PremisesDetailsSchema }),
 ])
 export type LocationEntity = z.infer<typeof LocationEntitySchema>
 export type BuildingDetails = z.infer<typeof BuildingDetailsSchema>

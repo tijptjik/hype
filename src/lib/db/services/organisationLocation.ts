@@ -1,3 +1,4 @@
+import { classifyLocationFactsKind } from '#lib/locations/factsKind.js'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // IDENTITY
@@ -27,6 +28,7 @@ import type { SQL } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { FeatureLocationOverrides, LocationFacts } from '#lib/locations/model.js'
 import type { EffectiveLocationFacts } from '#lib/locations/resolve.js'
+import type { LocationKind } from '#lib/locations/kinds.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -55,11 +57,14 @@ export async function readOrganisationLocation(
       and(
         eq(organisationLocation.organisationId, organisationId),
         eq(organisationLocation.locationId, locationId),
+        revision
+          ? eq(organisationLocation.revision, revision)
+          : sql`NOT EXISTS(SELECT 1 FROM organisationLocation successor WHERE successor.previousRevisionId=${organisationLocation.revision})`,
       ),
     )
     .get()
   if (!row) return null
-  const selected = revision ? row.history.find(item => item.revision === revision) : row
+  const selected = row
   return selected
     ? {
         revision: selected.revision,
@@ -92,6 +97,7 @@ export async function prepareOrganisationLocationWrite(
       and(
         eq(organisationLocation.organisationId, input.organisationId),
         eq(organisationLocation.locationId, input.locationId),
+        sql`NOT EXISTS(SELECT 1 FROM organisationLocation successor WHERE successor.previousRevisionId=${organisationLocation.revision})`,
       ),
     )
     .get()
@@ -101,52 +107,25 @@ export async function prepareOrganisationLocationWrite(
       queries: [],
       revision: current?.revision ?? null,
       guard: current
-        ? sql`EXISTS(SELECT 1 FROM organisationLocation WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${current.revision})`
-        : sql`NOT EXISTS(SELECT 1 FROM organisationLocation WHERE organisationId=${input.organisationId} AND locationId=${input.locationId})`,
+        ? sql`EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${current.revision})`
+        : sql`NOT EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId})`,
     }
   const revision = nanoid(12),
     now = new Date().toISOString()
-  const entry = {
-    revision,
-    overrides,
-    actorId: input.actorId,
-    createdAt: now,
-    ...(input.provenance ? { provenance: input.provenance } : {}),
-  }
   const headGuard = current
-    ? sql`revision=${current.revision}`
-    : sql`NOT EXISTS(SELECT 1 FROM organisationLocation WHERE organisationId=${input.organisationId} AND locationId=${input.locationId})`
-  const queries: BatchItem<'sqlite'>[] = current
-    ? [
-        db
-          .update(organisationLocation)
-          .set({
-            revision,
-            overrides,
-            history: [...current.history, entry],
-            actorId: input.actorId,
-            updatedAt: now,
-          })
-          .where(
-            and(
-              eq(organisationLocation.organisationId, input.organisationId),
-              eq(organisationLocation.locationId, input.locationId),
-              headGuard,
-              input.guard,
-            ),
-          ),
-      ]
-    : [
-        db
-          .insert(organisationLocation)
-          .select(
-            sql`SELECT ${input.organisationId},${input.locationId},${revision},${JSON.stringify(overrides)},${JSON.stringify([entry])},${input.actorId},${now},${now} WHERE ${input.guard} AND ${headGuard}`,
-          ),
-      ]
+    ? sql`EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${current.revision})`
+    : sql`NOT EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId})`
+  const queries: BatchItem<'sqlite'>[] = [
+    db
+      .insert(organisationLocation)
+      .select(
+        sql`SELECT ${revision},${input.organisationId},${input.locationId},${current?.revision ?? null},${JSON.stringify(overrides)},${input.provenance ? JSON.stringify(input.provenance) : null},${input.actorId},${now} WHERE ${input.guard} AND ${headGuard}`,
+      ),
+  ]
   return {
     queries,
     revision,
-    guard: sql`EXISTS(SELECT 1 FROM organisationLocation WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${revision})`,
+    guard: sql`EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${revision})`,
   }
 }
 
@@ -169,6 +148,7 @@ export async function prepareLocationCorrection(
     reset?: boolean
     desiredOverrides?: FeatureLocationOverrides
     provenance?: Record<string, unknown>
+    kindChange?: { before: LocationKind; after: LocationKind }
     expectedBaselineRevisionId?: string
     expectedOrganisationRevision?: string | null
     guard: SQL
@@ -191,7 +171,20 @@ export async function prepareLocationCorrection(
     (owner.state === 'manual' && owner.ownerOrganisationId !== input.organisationId)
   )
     throw new Error('Location unavailable')
-  validateLocationStatusKind(owner.kind, input.after)
+  const capturedKind = classifyLocationFactsKind(
+    input.kindChange?.after ?? owner.kind,
+    {
+      ...input.after,
+      brands: input.after.brands ?? [],
+    },
+  )
+  const inferredKindChange = !input.kindChange && capturedKind !== owner.kind
+  if (
+    inferredKindChange &&
+    (owner.ssId !== null || owner.ownerOrganisationId !== input.organisationId)
+  )
+    throw new Error('Location kind correction requires baseline ownership')
+  validateLocationStatusKind(capturedKind, input.after)
   // An explicit successor must exist in the caller's visible scope; never expose a private ID.
   if (input.after.successorLocationId) {
     if (input.after.successorLocationId === input.locationId)
@@ -251,7 +244,7 @@ export async function prepareLocationCorrection(
   // Ownership controls baseline authority, independently of shared unmatched visibility.
   if (
     !input.reset &&
-    !equalLocationValue(input.before, input.after) &&
+    (!equalLocationValue(input.before, input.after) || input.kindChange) &&
     owner.ssId === null &&
     owner.ownerOrganisationId === input.organisationId
   ) {
@@ -259,7 +252,7 @@ export async function prepareLocationCorrection(
       .select()
       .from(locationRevision)
       .where(eq(locationRevision.locationId, input.locationId))
-      .orderBy(sql`sequence DESC`)
+      .orderBy(sql`version DESC`)
       .get()
     if (
       !baseline ||
@@ -271,6 +264,9 @@ export async function prepareLocationCorrection(
     const value = resolveFeatureLocation(baseline.facts, baseline.facts.location, delta)
     const facts = LocationFactsSchema.parse({
       ...value,
+      ...(input.kindChange && value.entity?.kind !== input.kindChange.after
+        ? { entity: undefined }
+        : {}),
       names: Object.fromEntries(
         Object.entries(value.names).filter(([, v]) => v !== null),
       ),
@@ -278,21 +274,40 @@ export async function prepareLocationCorrection(
       brands: value.brands ?? [],
     })
     const id = nanoid(12)
-    const payload = {
+    const rawSource = {
       kind: 'organisation-baseline-edit',
       actorId: input.actorId,
       organisationId: input.organisationId,
       previousRevisionId: baseline.id,
       ...(input.provenance ? { provenance: input.provenance } : {}),
+      ...(input.kindChange || inferredKindChange
+        ? {
+            typeChange: input.kindChange ?? { before: owner.kind, after: capturedKind },
+          }
+        : {}),
     }
-    const predecessor = sql`EXISTS(SELECT 1 FROM location p JOIN locationRevision r ON r.locationId=p.id WHERE p.id=${input.locationId} AND p.ssId IS NULL AND p.state IN ('manual','unresolved') AND p.ownerOrganisationId=${input.organisationId} AND r.id=${baseline.id} AND r.sequence=(SELECT max(sequence) FROM locationRevision WHERE locationId=p.id)) AND ${head ? sql`EXISTS(SELECT 1 FROM organisationLocation WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${head.revision})` : sql`NOT EXISTS(SELECT 1 FROM organisationLocation WHERE organisationId=${input.organisationId} AND locationId=${input.locationId})`}`
+    const predecessor = sql`EXISTS(SELECT 1 FROM location p JOIN locationRevision r ON r.locationId=p.id WHERE p.id=${input.locationId} AND p.ssId IS NULL AND p.state IN ('manual','unresolved') AND p.ownerOrganisationId=${input.organisationId} AND r.id=${baseline.id} AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id)) AND ${head ? sql`EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${head.revision})` : sql`NOT EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId})`}`
     queries.push(
       db
         .insert(locationRevision)
         .select(
-          sql`SELECT ${id},${input.locationId},${baseline.sequence + 1},'local',NULL,NULL,NULL,NULL,${id},${JSON.stringify(payload)},${serializeLocationFacts(facts, owner.kind)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${authoringGuard} AND ${predecessor}`,
+          sql`SELECT ${id},${input.locationId},${baseline.version + 1},'local',NULL,NULL,NULL,NULL,${id},${JSON.stringify(rawSource)},${serializeLocationFacts(facts, capturedKind)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${authoringGuard} AND ${predecessor}`,
         ),
     )
+    // Inferred classification and its first concrete revision commit together.
+    if (inferredKindChange)
+      queries.push(
+        db
+          .update(locationTable)
+          .set({ kind: capturedKind })
+          .where(
+            and(
+              eq(locationTable.id, input.locationId),
+              eq(locationTable.kind, owner.kind),
+              sql`EXISTS(SELECT 1 FROM locationRevision WHERE id=${id})`,
+            ),
+          ),
+      )
     baselineRevision = { id, facts }
     guard = sql`${authoringGuard} AND EXISTS(SELECT 1 FROM locationRevision WHERE id=${id})`
     // Preserve pre-existing local differences while moving the edited fields into the owner's baseline.

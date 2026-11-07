@@ -1,3 +1,6 @@
+// SNAPSHOT CONTRACT
+import { classifyLocationFactsKind } from '#lib/locations/factsKind.js'
+import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
@@ -13,8 +16,6 @@ import { nanoid } from 'nanoid'
 import { location as locationTable, locationRevision } from '../schema/location'
 // SHARED PARSER
 import { parseAddressContent } from '@saanseoi/address'
-// SNAPSHOT CONTRACT
-import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 // VALIDATION
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import {
@@ -27,7 +28,6 @@ import {
   type OperatingStatus,
   type BuildingStatus,
 } from '#lib/locations/lifecycle.js'
-
 import { LocationNamesEditSchema } from '#lib/locations/validation.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
@@ -38,6 +38,7 @@ import {
 import { resolveFeatureLocation } from '#lib/locations/resolve.js'
 // TYPES
 import type { AddressDivisionOverrides } from '#lib/addresses/divisions.js'
+import { LocationKindSchema, type LocationKind } from '#lib/locations/kinds.js'
 import type { Database } from '#lib/types.js'
 
 /**
@@ -46,6 +47,7 @@ import type { Database } from '#lib/types.js'
  * @param organisationId Persisted, authorized owning organisation.
  * @param input Local facts, the manual/unresolved distinction and explicit sharing preference.
  * @param actorId Authenticated author retained in baseline provenance.
+ * @param verified Verified server-side import identity and provenance; never client-supplied facts.
  * @returns Stable local Location identity and initial revision identity.
  * @remarks The caller must authorize organisation management. No Feature is linked or
  * rewritten; canonical identities and addresses require separate verified workflows.
@@ -57,6 +59,10 @@ export async function createLocalLocation(
   organisationId: string,
   input: unknown,
   actorId: string,
+  verified?: {
+    locationId: string
+    buildingSource: import('#lib/locations/buildingSource.js').BuildingSource
+  },
 ): Promise<{ locationId: string; revisionId: string }> {
   const parsed = LocalLocationInputSchema.parse(input)
   // A newly authored historic record may point only to a visible existing successor.
@@ -75,18 +81,26 @@ export async function createLocalLocation(
     if (!successor || (parsed.state !== 'manual' && successor.state === 'manual'))
       throw new Error('Successor Location unavailable')
   }
-  if (parsed.facts.location.address.authored)
+  if (parsed.facts.location.address.authored) {
     parsed.facts.location.address.authored = markerDerivedAddressContent(
       parsed.facts.location.address.authored,
     )
+    if (parsed.kind === 'building')
+      parsed.facts.location.address.authored = {
+        ...parsed.facts.location.address.authored,
+        unit: null,
+        unitI18n: {},
+      }
+  }
   await validateAddressDivisionOverrides(db, {
     ...authoredDivisionOverrides(parsed.facts.location.address.authored),
     ...parsed.facts.location.address.divisionOverrides,
   })
-  const locationId = nanoid(12)
+  const locationId = verified?.locationId ?? nanoid(12)
   const revisionId = nanoid(12)
-  const payload = {
-    kind: 'local-baseline',
+  const rawSource = {
+    kind: verified ? 'building-export-baseline' : 'local-baseline',
+    ...(verified ? { buildingSource: verified.buildingSource } : {}),
     actorId,
     organisationId,
     input: parsed,
@@ -101,7 +115,7 @@ export async function createLocalLocation(
   }
   const digest = await crypto.subtle.digest(
     'SHA-256',
-    new TextEncoder().encode(JSON.stringify(payload)),
+    new TextEncoder().encode(JSON.stringify(rawSource)),
   )
   const contentHash = Array.from(new Uint8Array(digest), byte =>
     byte.toString(16).padStart(2, '0'),
@@ -112,7 +126,6 @@ export async function createLocalLocation(
         AND successor.state!='redirect' AND (successor.state!='manual' OR successor.ownerOrganisationId=${organisationId})
         AND (${Number(parsed.state === 'manual')} OR successor.state!='manual'))`
     : sql`1`
-  // An atomic batch cannot leave an identity behind if its baseline insert fails.
   // These SELECTs follow the schema column order, including generated timestamps.
   const result = await db.batch([
     db
@@ -123,7 +136,7 @@ export async function createLocalLocation(
     db
       .insert(locationRevision)
       .select(sql`SELECT ${revisionId},${locationId},1,'local',NULL,NULL,NULL,NULL,
-      ${contentHash},${JSON.stringify(payload)},${serializeLocationFacts(parsed.facts, parsed.kind)},
+      ${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(parsed.facts, parsed.kind)},
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE EXISTS(SELECT 1 FROM location WHERE id=${locationId})`),
   ])
   if (!result[0].length) throw new Error('Successor Location unavailable')
@@ -149,6 +162,8 @@ export async function updateLocalLocationAddress(
     buildingStatus?: BuildingStatus | null
     successorLocationId?: string | null
     names?: Record<string, string>
+    kind?: LocationKind
+    expectedKind?: LocationKind
     address?: unknown
     coordinates?: [number, number]
     divisionOverrides?: AddressDivisionOverrides
@@ -162,7 +177,7 @@ export async function updateLocalLocationAddress(
     .parse(input.footprint)
   const names =
     input.names === undefined ? undefined : LocationNamesEditSchema.parse(input.names)
-  const address =
+  let address =
     input.address === undefined
       ? undefined
       : markerDerivedAddressContent(LocalLocationAddressSchema.parse(input.address))
@@ -179,11 +194,17 @@ export async function updateLocalLocationAddress(
         eq(locationTable.id, input.locationId),
         eq(locationRevision.id, input.expectedRevisionId),
         sql`${locationTable.state}!='redirect' AND (${locationTable.state}!='manual' OR ${locationTable.ownerOrganisationId}=${input.organisationId})`,
-        sql`${locationRevision.sequence}=(SELECT max(sequence) FROM locationRevision r WHERE r.locationId=${input.locationId} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
+        sql`${locationRevision.version}=(SELECT max(version) FROM locationRevision r WHERE r.locationId=${input.locationId} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
       ),
     )
     .get()
   if (!baseline) return null
+  let kind =
+    input.kind === undefined
+      ? baseline.location.kind
+      : LocationKindSchema.parse(input.kind)
+  if (input.expectedKind !== undefined && input.expectedKind !== baseline.location.kind)
+    return null
   const current = await readOrganisationLocation(
     db,
     input.organisationId,
@@ -211,7 +232,15 @@ export async function updateLocalLocationAddress(
     ...(buildingStatus !== undefined ? { buildingStatus } : {}),
     ...(successorLocationId !== undefined ? { successorLocationId } : {}),
   }
-  validateLocationStatusKind(baseline.location.kind, status)
+  kind = classifyLocationFactsKind(kind, { ...status, brands: before.brands ?? [] })
+  if (
+    kind !== baseline.location.kind &&
+    (baseline.location.ssId !== null ||
+      baseline.location.ownerOrganisationId !== input.organisationId)
+  )
+    return null
+  if (address && kind === 'building') address = { ...address, unit: null, unitI18n: {} }
+  validateLocationStatusKind(kind, status)
   // Save name and location groups together while retaining untouched canonical address evidence.
   const after = {
     ...before,
@@ -232,8 +261,8 @@ export async function updateLocalLocationAddress(
             address2dId: null,
             address3dId: null,
             address3dUnitId: null,
-            addressSnapshotId: null,
-            records: {},
+            snapshotId: null,
+            rawSource: {},
             fallbackDisplay: {},
             authored: address,
           }
@@ -262,14 +291,32 @@ export async function updateLocalLocationAddress(
           },
         }
       : {}),
+    kindChange:
+      kind !== baseline.location.kind
+        ? { before: baseline.location.kind, after: kind }
+        : undefined,
     expectedBaselineRevisionId: input.expectedRevisionId,
     expectedOrganisationRevision: current?.revision ?? null,
     guard: sql`EXISTS(SELECT 1 FROM location p JOIN locationRevision r ON r.locationId=p.id
       WHERE p.id=${input.locationId} AND p.state=${baseline.location.state} AND p.ssId IS ${baseline.location.ssId}
-      AND p.ownerOrganisationId IS ${baseline.location.ownerOrganisationId} AND r.id=${input.expectedRevisionId}
-      AND (${Number(baseline.location.ssId === null && baseline.location.ownerOrganisationId === input.organisationId)} OR r.sequence=(SELECT max(sequence) FROM locationRevision WHERE locationId=p.id AND (p.state!='linked' OR origin='saanseoi'))))
+      AND p.ownerOrganisationId IS ${baseline.location.ownerOrganisationId} AND p.kind IN (${baseline.location.kind},${kind}) AND r.id=${input.expectedRevisionId}
+      AND (${Number(baseline.location.ssId === null && baseline.location.ownerOrganisationId === input.organisationId)} OR r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id AND (p.state!='linked' OR origin='saanseoi'))))
 `,
   })
+  // Type changes share the new local baseline's guard and commit in the same batch as its facts.
+  if (kind !== baseline.location.kind)
+    correction.queries.push(
+      db
+        .update(locationTable)
+        .set({ kind })
+        .where(
+          and(
+            eq(locationTable.id, input.locationId),
+            eq(locationTable.kind, baseline.location.kind),
+            correction.guard,
+          ),
+        ),
+    )
   if (correction.queries.length)
     await db.batch(
       correction.queries as [

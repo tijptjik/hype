@@ -1,9 +1,11 @@
 // VALIDATION
 import { z } from 'zod'
+import { classifyLocationFactsKind } from './factsKind'
 import { validateLocationStatusKind } from './lifecycle'
 import { LocationFactsSchema } from './validation'
 import { LocationKindSchema } from './kinds'
 import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
+import { streetNumberIssue } from '#lib/addresses/streetNumber.js'
 
 /** Local baselines cannot claim unverified canonical Address identities. */
 export const LocalLocationInputSchema = z
@@ -30,13 +32,33 @@ export const LocalLocationInputSchema = z
         })
       }
       const address = facts.location.address
+      // Newly authored number fields must have valid syntax and ordered endpoints.
+      for (const [locale, fields] of Object.entries(address.authored?.i18n ?? {})) {
+        const issue = streetNumberIssue(fields)
+        if (issue)
+          context.addIssue({
+            code: 'custom',
+            path: [
+              'location',
+              'address',
+              'authored',
+              'i18n',
+              locale,
+              'buildingNumberExpression',
+            ],
+            message:
+              issue === 'descending'
+                ? 'The last street number must not be lower than the first.'
+                : 'Invalid street number expression.',
+          })
+      }
       if (
         address.status !== 'unresolved' ||
         address.address2dId ||
         address.address3dId ||
         address.address3dUnitId ||
-        address.addressSnapshotId ||
-        Object.keys(address.records).length
+        address.snapshotId ||
+        Object.keys(address.rawSource).length
       ) {
         context.addIssue({
           code: 'custom',
@@ -64,6 +86,7 @@ export const LocalLocationInputSchema = z
   })
   .superRefine((input, context) => {
     try {
+      input.kind = classifyLocationFactsKind(input.kind, input.facts)
       validateLocationStatusKind(input.kind, input.facts)
     } catch {
       context.addIssue({

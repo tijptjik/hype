@@ -20,6 +20,13 @@ export type FeatureLocationAssociationWrite = {
   actorId: string
   factsOrganisationRevision?: string | null
   locationOrganisationRevision?: string | null
+  occupancyRevisionId?: string | null
+  addressRevisionId?: string | null
+  membershipRevisionIds?: string[]
+  placementOverrides?: { accessHints?: Record<string, string | null> }
+  acceptedGeometry?: import('geojson').Point
+  acceptancePolicy?: Record<string, unknown>
+  acceptanceProposalId?: string
   additionalGuard?: SQL
 }
 
@@ -50,9 +57,9 @@ export function prepareFeatureLocationAssociationWrite(
   ]) {
     if (!value) throw new Error('Incomplete Feature Location association')
   }
-  if (input.expectedRevision === '') throw new Error('Invalid association revision')
+  if (input.expectedRevision === '') throw new Error('Invalid association version')
   const overrides = FeatureLocationOverridesSchema.parse(input.overrides)
-  const revision = crypto.randomUUID()
+  const version = crypto.randomUUID()
   // The persisted Feature guard closes the gap between baseline reads and the write.
   const featureGuard = sql`EXISTS (SELECT 1 FROM feature
     WHERE id = ${input.featureId} AND projectId = ${input.projectId}
@@ -63,13 +70,13 @@ export function prepareFeatureLocationAssociationWrite(
     const query = db
       .insert(featureLocation)
       .select(sql`
-      SELECT ${input.featureId},${input.locationId},${revision},${input.actorId},
-        ${input.factsRevisionId},${input.locationRevisionId},${JSON.stringify(overrides)},${input.factsOrganisationRevision ?? null},${input.locationOrganisationRevision ?? null}
+      SELECT ${input.featureId},${input.locationId},${version},${input.actorId},
+        ${input.factsRevisionId},${input.locationRevisionId},${JSON.stringify(overrides)},${input.factsOrganisationRevision ?? null},${input.locationOrganisationRevision ?? null},${input.occupancyRevisionId ?? null},${input.addressRevisionId ?? null},${JSON.stringify(input.membershipRevisionIds ?? [])},${JSON.stringify(input.placementOverrides ?? {})},${input.acceptedGeometry ? JSON.stringify(input.acceptedGeometry) : null},${input.acceptancePolicy ? JSON.stringify(input.acceptancePolicy) : null},${input.acceptanceProposalId ?? null}
       WHERE ${featureGuard} AND NOT EXISTS
         (SELECT 1 FROM featureLocation WHERE featureId = ${input.featureId})
     `)
-      .returning({ revision: featureLocation.revision })
-    return { revision, query }
+      .returning({ version: featureLocation.version })
+    return { version, query, input }
   }
   const query = db
     .update(featureLocation)
@@ -84,11 +91,34 @@ export function prepareFeatureLocationAssociationWrite(
       ...(input.locationOrganisationRevision === undefined
         ? {}
         : { locationOrganisationRevision: input.locationOrganisationRevision }),
-      revision,
+      version,
       actorId: input.actorId,
+      acceptedGeometry:
+        input.acceptedGeometry ??
+        sql`CASE WHEN locationId=${input.locationId} THEN acceptedGeometry ELSE NULL END`,
+      // Keep Feature name ownership across adoption, placement and ordinary saves.
+      acceptancePolicy: input.acceptancePolicy
+        ? sql`json_patch(COALESCE(acceptancePolicy,'{}'),${JSON.stringify(input.acceptancePolicy)})`
+        : sql`CASE WHEN locationId=${input.locationId} THEN acceptancePolicy ELSE NULL END`,
+      acceptanceProposalId: input.acceptanceProposalId ?? null,
+      occupancyRevisionId:
+        input.occupancyRevisionId === undefined
+          ? sql`CASE WHEN locationId=${input.locationId} THEN occupancyRevisionId ELSE NULL END`
+          : input.occupancyRevisionId,
+      addressRevisionId:
+        input.addressRevisionId === undefined
+          ? sql`CASE WHEN locationId=${input.locationId} THEN addressRevisionId ELSE NULL END`
+          : input.addressRevisionId,
+      membershipRevisionIds:
+        input.membershipRevisionIds === undefined
+          ? sql`CASE WHEN locationId=${input.locationId} THEN membershipRevisionIds ELSE '[]' END`
+          : input.membershipRevisionIds,
+      placementOverrides:
+        input.placementOverrides ??
+        sql`CASE WHEN locationId=${input.locationId} THEN placementOverrides ELSE '{}' END`,
     })
     .where(sql`${featureLocation.featureId} = ${input.featureId}
-    AND ${featureLocation.revision} = ${input.expectedRevision} AND ${featureGuard}`)
-    .returning({ revision: featureLocation.revision })
-  return { revision, query }
+    AND ${featureLocation.version} = ${input.expectedRevision} AND ${featureGuard}`)
+    .returning({ version: featureLocation.version })
+  return { version, query, input }
 }

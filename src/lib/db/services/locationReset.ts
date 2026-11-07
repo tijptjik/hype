@@ -101,7 +101,7 @@ export async function prepareLocationPhoneReset(
   if (definitions.length !== 1)
     throw new Error('Universal phone property is unavailable or ambiguous')
   const propertyId = definitions[0].id
-  const guard = sql`EXISTS (SELECT 1 FROM featureLocation WHERE featureId=${featureId} AND revision=${revision})`
+  const guard = sql`EXISTS (SELECT 1 FROM featureLocation WHERE featureId=${featureId} AND version=${revision})`
   // Delete before insert avoids dialect-dependent INSERT SELECT upsert parsing.
   return [
     db

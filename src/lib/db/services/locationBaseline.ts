@@ -309,6 +309,10 @@ export async function readFeatureLocationBaseline(
       geometry: row.geometry,
       address: {
         ...sourceEvidence,
+        ...(address.canonical ? { canonical: address.canonical } : {}),
+        ...(address.divisionOverrides
+          ? { divisionOverrides: address.divisionOverrides }
+          : {}),
         fallbackDisplay,
         ...(Object.keys(displayOverrides).length ? { displayOverrides } : {}),
         ...(authored ? { authored } : {}),

@@ -15,7 +15,7 @@ import type {
 /**
  * Prepare replacement relations conditional on a successful Location association save.
  * @param db Request-local database.
- * @param featureId Authorized Feature identity; payload identities are ignored.
+ * @param featureId Authorized Feature identity; rawSource identities are ignored.
  * @param revision Unique new association token returned by the preceding write plan.
  * @param translations Validated full locale map from the Feature form.
  * @param properties Validated, phone-normalized property snapshot, or undefined to retain it.
@@ -39,8 +39,15 @@ export function prepareFeatureLocationRelations(
 ): BatchItem<'sqlite'>[] {
   if (!featureId || !revision) throw new Error('Feature association token is required')
   const guard = sql`EXISTS (SELECT 1 FROM featureLocation
-    WHERE featureId = ${featureId} AND revision = ${revision})`
-  return prepareFeatureFormRelations(db, featureId, guard, translations, properties)
+    WHERE featureId = ${featureId} AND version = ${revision})`
+  return prepareFeatureFormRelations(
+    db,
+    featureId,
+    guard,
+    translations,
+    properties,
+    !editIndependentNames,
+  )
 }
 
 /**
@@ -75,12 +82,23 @@ export function prepareFeatureFormRelations(
     const updateValues = {
       title: sql`CASE WHEN ${keepNames} THEN ${featureI18n.title} ELSE ${value.title === undefined ? featureI18n.title : value.title} END`,
       titleGen: sql`CASE WHEN ${keepNames} THEN ${featureI18n.titleGen} ELSE ${value.titleGen === undefined ? featureI18n.titleGen : Number(value.titleGen)} END`,
-      description: value.description, descriptionGen: value.descriptionGen,
-      displayAddress: value.displayAddress, displayAddressGen: value.displayAddressGen,
+      description: value.description,
+      descriptionGen: value.descriptionGen,
+      displayAddress: value.displayAddress,
+      displayAddressGen: value.displayAddressGen,
       addressProperties: value.addressProperties,
     }
     queries.push(
-      db.update(featureI18n).set(updateValues).where(and(eq(featureI18n.featureId, featureId), eq(featureI18n.locale, locale as LocaleKey), guard)),
+      db
+        .update(featureI18n)
+        .set(updateValues)
+        .where(
+          and(
+            eq(featureI18n.featureId, featureId),
+            eq(featureI18n.locale, locale as LocaleKey),
+            guard,
+          ),
+        ),
       db.insert(featureI18n).select(sql`SELECT
       ${featureId}, ${locale}, CASE WHEN ${keepNames} THEN '' ELSE ${value.title ?? ''} END, ${Number(value.titleGen ?? true)},
       ${value.description ?? null}, ${Number(value.descriptionGen ?? true)},
@@ -98,10 +116,14 @@ export function prepareFeatureFormRelations(
   queries.push(
     db
       .delete(featurePropertyI18n)
-      .where(and(eq(featurePropertyI18n.featureId, featureId), guard, replaceable, removed)),
+      .where(
+        and(eq(featurePropertyI18n.featureId, featureId), guard, replaceable, removed),
+      ),
     db
       .delete(featureProperty)
-      .where(and(eq(featureProperty.featureId, featureId), guard, replaceable, removed)),
+      .where(
+        and(eq(featureProperty.featureId, featureId), guard, replaceable, removed),
+      ),
   )
   for (const property of properties) {
     let propertyValueId = property.propertyValueId || null
@@ -112,15 +134,36 @@ export function prepareFeatureFormRelations(
       propertyValueId = null
     }
     queries.push(
-      db.update(featureProperty).set({ propertyValueId, value, valueJson: property.valueJson || null }).where(and(eq(featureProperty.featureId, featureId), eq(featureProperty.propertyId, property.propertyId), guard)),
+      db
+        .update(featureProperty)
+        .set({ propertyValueId, value, valueJson: property.valueJson || null })
+        .where(
+          and(
+            eq(featureProperty.featureId, featureId),
+            eq(featureProperty.propertyId, property.propertyId),
+            guard,
+          ),
+        ),
       db.insert(featureProperty).select(sql`SELECT
       ${featureId}, ${property.propertyId}, ${propertyValueId}, ${value}, ${property.valueJson || null} WHERE ${guard}
       AND NOT EXISTS(SELECT 1 FROM featureProperty WHERE featureId=${featureId} AND propertyId=${property.propertyId})`),
     )
-    for (const [locale, translation] of Object.entries(contentMapToStorage(property.i18n ?? {}))) {
+    for (const [locale, translation] of Object.entries(
+      contentMapToStorage(property.i18n ?? {}),
+    )) {
       if (!translation) continue
       queries.push(
-        db.update(featurePropertyI18n).set({ value: translation.value, valueGen: translation.valueGen }).where(and(eq(featurePropertyI18n.featureId, featureId), eq(featurePropertyI18n.propertyId, property.propertyId), eq(featurePropertyI18n.locale, locale), guard)),
+        db
+          .update(featurePropertyI18n)
+          .set({ value: translation.value, valueGen: translation.valueGen })
+          .where(
+            and(
+              eq(featurePropertyI18n.featureId, featureId),
+              eq(featurePropertyI18n.propertyId, property.propertyId),
+              eq(featurePropertyI18n.locale, locale),
+              guard,
+            ),
+          ),
         db.insert(featurePropertyI18n).select(sql`SELECT
         ${featureId}, ${property.propertyId}, ${locale},
         ${translation.value ?? null}, ${Number(translation.valueGen ?? false)} WHERE ${guard}

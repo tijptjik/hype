@@ -4,8 +4,10 @@ import { z } from 'zod'
 /** Entity kind is independent of whether its identity is manual, unresolved or sourced. */
 export const LOCATION_KINDS = [
   'unknown',
+  'premises',
   'establishment',
   'building',
+  'address',
   'natural',
 ] as const
 export const LocationKindSchema = z.enum(LOCATION_KINDS)
@@ -25,6 +27,17 @@ export const DEFAULT_DISCOVERY_TYPES: AvailableDiscoveryType[] = [
   'establishment',
   'address',
 ]
+
+/** Select discovery families from the entity being authored, independently of matching state.
+ * @param kind Authored Location type. @returns Ordered search families, including unavailable adapters.
+ * @remarks A building/address result supplies address evidence for an establishment, never its identity.
+ */
+export function locationDiscoveryTypes(kind: LocationKind): LocationDiscoveryType[] {
+  if (kind === 'address') return ['address']
+  if (kind === 'building') return ['building', 'address']
+  if (kind === 'natural') return ['natural']
+  return ['establishment', 'building', 'address']
+}
 
 /** Only the existing SaanSeoi Places adapter can currently supply canonical identities. */
 export type LocationSourceReference = {

@@ -1,4 +1,25 @@
 <script lang="ts">
+// PROFILE POLICY
+import FeatureProfileEditor from '#lib/bits/patterns/forms/featureLocation/FeatureProfileEditor.svelte'
+import { resolveFeaturePresentationPolicy } from '#lib/features/presentationPolicy.js'
+// PROFILE CONTENT
+import {
+  contentFormKey,
+  canonicalContentTag,
+  adaptContentMap,
+} from '#lib/i18n/contentRecords.js'
+import {
+  resolveContentLocales,
+  resolveMultilingualDefaults,
+} from '#lib/content-locales/resolve.js'
+import { getContentLocaleRecord } from '#lib/content-locales/catalogue.js'
+import {
+  restoreProfileLocales,
+  type ProfileLocaleState,
+} from '#lib/bits/patterns/forms/featureLocation/profileLocales.js'
+import type { ProfileField } from '#lib/bits/patterns/forms/featureLocation/profileTranslation.js'
+import { translateContentField } from '#lib/api/translation.remote.js'
+
 import { isRangeProperty } from '#lib/properties/range.js'
 import { show3dAddressOptions } from '#lib/projects/flags.js'
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
@@ -684,6 +705,17 @@ function startManualLocation(): void {
 }
 
 let draftLocationAccepted = $state(false)
+let draftLocalKind = $state<
+  | 'establishment'
+  | 'building'
+  | 'address'
+  | 'premises'
+  | 'unknown'
+  | 'natural'
+  | undefined
+>()
+let draftLocationNames = $state<Record<string, string>>({})
+let draftLocalNameMode = $state<'independent' | 'inherit'>('inherit')
 let draftPlaceSource = $state<{
   ssId: string
   resourceReleaseId: string
@@ -789,9 +821,14 @@ function selectDraftLocation(result: {
     nameMode?: 'independent' | 'inherit'
   }
 }): void {
+  draftLocalKind = result.kind
+  draftLocationNames = { ...result.names }
+  draftLocalNameMode = featurePresentationPolicy.locationBasedNames
+    ? 'inherit'
+    : (result.nameMode ?? 'independent')
   draftPlaceSource =
     result.kind === 'establishment' && result.source
-      ? { ...result.source, nameMode: result.nameMode ?? 'independent' }
+      ? { ...result.source, nameMode: draftLocalNameMode }
       : null
   draftResultHistoryId = crypto.randomUUID()
   pushState(page.url.href, { ...page.state, draftLocationResult: draftResultHistoryId })
@@ -1234,6 +1271,76 @@ $effect(() => {
   featureFormSource = nextSeed
 })
 
+// Profile order/visibility belongs to this account and record, independently of UI languages.
+let profileLocaleDraft = $state<{ key: string; state: ProfileLocaleState } | null>(null)
+let profileEpoch = $state(0)
+const profileScope = $derived(
+  `${adminCtx.view.user?.id ?? ''}:${currentFeatureId ?? featureRef}`,
+)
+// Reuse independently hydrated parent settings instead of requesting a second admin graph.
+const profileProject = $derived.by(() =>
+  adminCtx.view.cache.project.get(projectIdValue),
+)
+const profileOrganisation = $derived.by(() =>
+  adminCtx.view.cache.organisation.get(organisationIdValue),
+)
+const profileDefaults = $derived(
+  resolveContentLocales({
+    userLocale: getLocaleKey(),
+    projectSettings: profileProject?.settings,
+    organisationSettings: profileOrganisation?.settings,
+  }).locales,
+)
+const multilingualDefaults = $derived(
+  resolveMultilingualDefaults({
+    projectSettings: profileProject?.settings,
+    organisationSettings: profileOrganisation?.settings,
+  }),
+)
+const multilingualAccount = $derived(adminCtx.view.user?.id ?? '')
+const multilingualChoice = $derived(
+  adminCtx.featureMultilingual.get(multilingualAccount),
+)
+const profileLocaleState = $derived.by(() => {
+  const saved =
+    profileLocaleDraft?.key === profileScope ? profileLocaleDraft.state : undefined
+  return {
+    ...restoreProfileLocales(profileDefaults, currentFeatureData.i18n, saved),
+    expanded: multilingualChoice ?? saved?.expanded ?? multilingualDefaults.content,
+  }
+})
+
+/** Accept form-local toolbar choices without changing shared settings or content.
+ * @param state Ordered selection and visibility. @returns Nothing.
+ */
+function setProfileLocaleState(state: ProfileLocaleState): void {
+  if (state.expanded !== profileLocaleState.expanded)
+    adminCtx.featureMultilingual.set(multilingualAccount, state.expanded)
+  profileLocaleDraft = { key: profileScope, state }
+}
+
+/** Apply only a successful field translation; the Profile controller guards stale responses.
+ * @param field Translated field. @param locale Canonical target. @param text Provider result.
+ * @returns Nothing; other fields and verification flags are preserved.
+ */
+function applyProfileTranslation(
+  field: ProfileField,
+  locale: string,
+  text: string,
+): void {
+  const key = contentFormKey(locale)
+  updateFeatureData(
+    data => ({
+      ...data,
+      i18n: {
+        ...data.i18n,
+        [key]: { ...data.i18n[key], [field]: text, [`${field}Gen`]: true },
+      },
+    }),
+    { revalidate: true },
+  )
+}
+
 /********************
  *  SECTION : CORE STATE
  ************/
@@ -1278,14 +1385,148 @@ const title = $derived(
     NEW_TITLE,
 )
 
-const featureDescriptorFieldConfigs = [
-  { key: 'title', label: m.feature__title(), kind: 'input' },
+// Parent records own policy. The Feature's tiny read projection covers the first editable frame.
+const featurePresentationPolicy = $derived.by(() => {
+  const flags =
+    adminCtx.view.cache.project.get(projectIdValue)?.flags ?? selectedProject?.flags
+  const metadata =
+    adminCtx.view.cache.layer.get(layerIdValue)?.metadata ?? selectedLayer?.metadata
+  const sameParents =
+    projectIdValue === feature?.data?.projectId &&
+    layerIdValue === feature?.data?.layerId
+  if (
+    (flags === undefined || metadata === undefined) &&
+    sameParents &&
+    feature?.data?.presentationPolicy
+  )
+    return feature.data.presentationPolicy
+  return resolveFeaturePresentationPolicy(flags, metadata)
+})
+const acceptedNameSource = $derived(
+  currentFeatureId && isLocationFacet
+    ? getFeatureLocation({ featureId: currentFeatureId })
+    : null,
+)
+let savedLocationNameDraft = $state<{
+  featureId: string
+  names: Record<string, string>
+} | null>(null)
+const profileLocationNames = $derived.by(() => {
+  const names: Record<string, string> =
+    isNewFeatureRef || draftLocalKind || draftPlaceSource
+      ? draftLocationNames
+      : savedLocationNameDraft?.featureId === currentFeatureId
+        ? savedLocationNameDraft.names
+        : Object.fromEntries(
+            Object.entries(
+              acceptedNameSource?.current?.effective.names ??
+                feature?.data?.locationNames ??
+                {},
+            ).map(([locale, name]) => [locale, name ?? '']),
+          )
+  if (Object.values(names).some(name => name.trim())) return names
+  if (draftLocalKind === 'address' || acceptedNameSource?.current?.kind === 'address') {
+    return Object.fromEntries(
+      Object.entries(ADDRESS_LOCALES).map(([locale, tag]) => [
+        tag,
+        getAddressDisplay(editorAddress, locale as keyof typeof ADDRESS_LOCALES),
+      ]),
+    )
+  }
+  return names
+})
+const profileNameMode = $derived(
+  featurePresentationPolicy.locationBasedNames
+    ? 'inherit'
+    : isNewFeatureRef
+      ? draftLocalNameMode
+      : (currentFeatureData.locationNameMode ??
+        feature?.data?.authoring?.nameMode ??
+        acceptedNameSource?.current?.nameMode ??
+        'independent'),
+)
+const profileNamesLocked = $derived(profileNameMode === 'inherit')
+// Existing independent titles must not hide the explicit option to inherit the Location name.
+const canOfferLocationName = $derived(
+  !profileNamesLocked && Object.values(profileLocationNames).some(name => name.trim()),
+)
+
+/** Copy Location names into Feature titles while recording explicit inheritance intent.
+ * @param names The current Location translations. @returns Nothing; normal form save persists titles.
+ */
+function inheritLocationNames(names: Record<string, string>): void {
+  const byKey = adaptContentMap(names)
+  const keys = [
+    ...new Set([...Object.keys(currentFeatureData.i18n), ...Object.keys(byKey)]),
+  ]
+  const storedMode =
+    currentFeatureData.locationNameMode ??
+    (isNewFeatureRef
+      ? draftLocalNameMode
+      : (feature?.data?.authoring?.nameMode ?? acceptedNameSource?.current?.nameMode))
+  if (
+    storedMode === 'inherit' &&
+    keys.every(
+      key => (currentFeatureData.i18n[key]?.title ?? '') === (byKey[key] ?? ''),
+    )
+  )
+    return
+  updateFeatureData(data => ({
+    ...data,
+    locationNameMode: 'inherit',
+    i18n: Object.fromEntries(
+      keys.map(key => [
+        key,
+        {
+          ...data.i18n[key],
+          title: byKey[key] ?? '',
+          titleGen:
+            data.i18n[key]?.title === (byKey[key] ?? '')
+              ? (data.i18n[key]?.titleGen ?? false)
+              : false,
+        },
+      ]),
+    ),
+  }))
+}
+/** Choose Location naming for this Feature without changing its Location identity.
+ * @returns Nothing; the association save stores the selected mode.
+ */
+function useLocationName(): void {
+  draftLocalNameMode = 'inherit'
+  if (draftPlaceSource) draftPlaceSource = { ...draftPlaceSource, nameMode: 'inherit' }
+  inheritLocationNames(profileLocationNames)
+}
+/** Keep the current title while returning naming ownership to this Feature.
+ * @returns Nothing; the normal form save persists the explicit record choice.
+ */
+function useIndependentFeatureName(): void {
+  draftLocalNameMode = 'independent'
+  if (draftPlaceSource)
+    draftPlaceSource = { ...draftPlaceSource, nameMode: 'independent' }
+  updateFeatureData(data => ({ ...data, locationNameMode: 'independent' }))
+}
+// New drafts follow their Location selection. Saved records change only through explicit naming actions,
+// never merely by entering edit mode or resolving an asynchronous read.
+$effect(() => {
+  const names = profileLocationNames
+  const locked = profileNamesLocked
+  const editing = isEditing
+  if (isNewFeatureRef && locked && editing && Object.keys(names).length)
+    untrack(() => inheritLocationNames(names))
+})
+
+const featureDescriptorFieldConfigs = $derived([
   {
-    key: 'description',
-    label: m.feature__description(),
-    kind: 'textarea',
+    key: 'title',
+    label: m.feature__title(),
+    kind: 'input',
+    readonly: profileNamesLocked,
   },
-] as const
+  ...(featurePresentationPolicy.allowDescriptions
+    ? [{ key: 'description', label: m.feature__description(), kind: 'textarea' }]
+    : []),
+])
 
 const featureDescriptorTranslatableFields = ['title', 'description'] as const
 
@@ -2401,7 +2642,10 @@ function revalidateAfterProgrammaticChange(): void {
  * @param ref Feature reference captured at the start of navigation.
  * @returns The loaded Feature; superseded navigation never changes the active form.
  */
-async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState> {
+async function refreshFeature(
+  ref: string = featureRef,
+  options: { adoptCreated?: boolean } = {},
+): Promise<FeatureGetState> {
   if (ref === NEW_REF) {
     const emptyState: FeatureGetState = null
     commitSettledFeatureState(emptyState)
@@ -2410,16 +2654,17 @@ async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState
     return emptyState
   }
 
+  const expectedRef = options.adoptCreated ? NEW_REF : ref
   const result = (await getFeature({
     ref,
     refKey: 'id',
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)) as FeatureGetState
 
-  // Parent cards hydrate through the independent parent effects below.
+  // Parent cards and policy hydrate through the independent parent effects below.
   // Commit the requested record immediately; a slow parent must never hold the form inert.
   // Slow responses from a previous Next/Previous navigation must not replace this form.
-  if (ref !== featureRef) return result
+  if (expectedRef !== featureRef) return result
   commitSettledFeatureState(result)
   if (result?.data) {
     const nextFormSource = toFeatureFormInput(result.data)
@@ -2725,6 +2970,14 @@ $effect(() => () => clearVisualSectionReopenState())
     isReady={true}
     class={FEATURE_EDITOR_FORM_CLASS}
   >
+    {#if currentFeatureData.locationNameMode}
+      <input
+        {...formCtx.form.fields.data.locationNameMode.as(
+          'hidden',
+          currentFeatureData.locationNameMode,
+        )}
+      >
+    {/if}
     <HiddenInputs inputs={programmaticFeatureInputEntries} />
 
     {#if showsVisualSection}
@@ -2852,25 +3105,51 @@ $effect(() => () => clearVisualSectionReopenState())
           </div>
         {:else}
           <div in:slide={{ duration: prefersReducedMotion.current ? 0 : 280 }}>
-            <FormI18nSection
-              class={FEATURE_EDITOR_CONTENT_SECTION_CLASS}
-              {locales}
-              onTranslate={onTranslateDescriptorLocale}
-              onResetLocale={onResetDescriptorLocale}
-              sectionKey="descriptor"
+            <FeatureProfileEditor
+              localeState={profileLocaleState}
+              onLocaleStateChange={setProfileLocaleState}
+              values={currentFeatureData.i18n}
+              contextKey={`${profileScope}:${profileEpoch}:${profileNameMode}:${isEditing}`}
               {isEditing}
+              loading={!isCurrentRefSettled}
+              retainContent={Boolean(currentFeatureId)}
+              recordKey={currentFeatureId ?? ''}
+              allowDescriptions={featurePresentationPolicy.allowDescriptions}
+              inherited={profileNamesLocked}
+              policyRequired={featurePresentationPolicy.locationBasedNames}
+              offerName={canOfferLocationName}
+              locationNames={profileLocationNames}
+              onUseName={useLocationName}
+              onIndependentName={useIndependentFeatureName}
+              onEditLocation={() => goToFacet('location')}
+              translate={(source, target, text) =>
+                translateContentField({ source, target, text })}
+              onTranslated={applyProfileTranslation}
             >
-              {#snippet children(locale)}
+              {#snippet children(field, locale, onEditStart, prefix)}
+                {@const key = contentFormKey(locale)}
+                {@const language = getContentLocaleRecord(locale, getLocaleKey())}
+                {@const config = featureDescriptorFieldConfigs.find(
+                  config => config.key === field,
+                )!}
                 <FormI18nDescriptorFields
                   form={formCtx.form}
-                  fields={formCtx.form.fields.data.i18n[locale]}
-                  {locale}
+                  fields={formCtx.form.fields.data.i18n[key]}
+                  locale={key}
                   {isEditing}
-                  fieldConfigs={featureDescriptorFieldConfigs as never}
+                  inline
+                  {onEditStart}
+                  fieldConfigs={[
+                    {
+                      ...config,
+                      label: prefix,
+                      ariaLabel: `${config.label} · ${language.name}`,
+                    },
+                  ] as never}
                   {isRequiredInPreflight}
                 />
               {/snippet}
-            </FormI18nSection>
+            </FeatureProfileEditor>
           </div>
         {/if}
 

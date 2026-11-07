@@ -4,6 +4,7 @@ import {
   contentStorageTag,
   adaptContentMap,
 } from '#lib/i18n/contentRecords.js'
+import { AddressCorrectionSchema } from './placement'
 // VALIDATION
 import { z } from 'zod'
 import { LocationEntitySchema } from './factsDetails'
@@ -40,11 +41,18 @@ const location = z.strictObject({
       divisionOverrides: AddressDivisionOverridesSchema.optional(),
       status: z.enum(['resolved', 'unresolved']),
       authored: LocalLocationAddressSchema.optional(),
+      canonical: z
+        .strictObject({
+          addressId: z.string().min(1),
+          revisionId: z.string().min(1),
+          content: LocalLocationAddressSchema,
+        })
+        .optional(),
       address2dId: z.string().min(1).nullable(),
       address3dId: z.string().min(1).nullable(),
       address3dUnitId: z.string().min(1).nullable(),
-      addressSnapshotId: z.string().min(1).nullable(),
-      records: z.record(z.string(), z.unknown()),
+      snapshotId: z.string().min(1).nullable(),
+      rawSource: z.record(z.string(), z.unknown()),
       fallbackDisplay: names,
       displayOverrides: names.optional(),
     })
@@ -55,14 +63,14 @@ const location = z.strictObject({
           !address.address2dId &&
           !address.address3dId &&
           !address.address3dUnitId &&
-          !address.addressSnapshotId &&
-          !Object.keys(address.records).length),
+          !address.snapshotId &&
+          !Object.keys(address.rawSource).length),
       'Authored addresses cannot claim canonical publication evidence',
     )
     .refine(
       address =>
         address.status !== 'resolved' ||
-        (address.addressSnapshotId !== null &&
+        (address.snapshotId !== null &&
           Boolean(
             address.address2dId || address.address3dId || address.address3dUnitId,
           )),
@@ -97,6 +105,7 @@ export const LocationFactsSchema = z.strictObject({
 }) satisfies z.ZodType<LocationFacts>
 
 export const FeatureLocationOverridesSchema = z.strictObject({
+  address: AddressCorrectionSchema.optional(),
   footprint: override(LocationFootprintSchema).optional(),
   operatingStatus: z
     .discriminatedUnion('mode', [

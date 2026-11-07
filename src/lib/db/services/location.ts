@@ -1,3 +1,5 @@
+import { addressRevision } from '../schema/locationRelationships'
+import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 // DRIZZLE
 import { and, eq, isNull, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
@@ -115,7 +117,8 @@ export async function saveProjectLocationSettings(
 }
 
 export type AcceptedFeatureLocation = {
-  revision: string
+  nameMode?: 'inherit' | 'independent'
+  version: string
   locationId: string
   ssId: string | null
   kind: LocationKind
@@ -123,6 +126,12 @@ export type AcceptedFeatureLocation = {
   state: 'linked' | 'unresolved' | 'manual'
   factsRevisionId: string
   locationRevisionId: string
+  factsOrganisationRevision: string | null
+  locationOrganisationRevision: string | null
+  occupancyRevisionId: string | null
+  addressRevisionId: string | null
+  membershipRevisionIds: string[]
+  placementOverrides: { accessHints?: Record<string, string | null> }
   brandMode: 'inherit' | 'override' | 'clear'
   effective: EffectiveLocationFacts
 }
@@ -145,7 +154,8 @@ export async function getAcceptedFeatureLocation(
   // Scope private baselines even if an invalid cross-project link was inserted out of band.
   const row = await db
     .select({
-      revision: featureLocation.revision,
+      acceptancePolicy: featureLocation.acceptancePolicy,
+      version: featureLocation.version,
       locationId: locationTable.id,
       ssId: locationTable.ssId,
       kind: sql<
@@ -154,6 +164,13 @@ export async function getAcceptedFeatureLocation(
       state: locationTable.state,
       factsRevisionId: featureLocation.factsRevisionId,
       locationRevisionId: featureLocation.locationRevisionId,
+      factsOrganisationRevision: featureLocation.factsOrganisationRevision,
+      locationOrganisationRevision: featureLocation.locationOrganisationRevision,
+      occupancyRevisionId: featureLocation.occupancyRevisionId,
+      addressRevisionId: featureLocation.addressRevisionId,
+      membershipRevisionIds: featureLocation.membershipRevisionIds,
+      placementOverrides: featureLocation.placementOverrides,
+      acceptedGeometry: featureLocation.acceptedGeometry,
       facts: acceptedFacts.facts,
       location: acceptedLocation.facts,
       overrides: featureLocation.overrides,
@@ -193,17 +210,35 @@ export async function getAcceptedFeatureLocation(
     )
     .get()
   if (!row || row.state === 'redirect') return null
-  const { facts, location, overrides, ...identity } = row
+  const { facts, location, overrides, acceptancePolicy, ...identity } = row
+  const effective = resolveFeatureLocation(
+    LocationFactsSchema.parse(facts),
+    LocationFactsSchema.parse(location).location,
+    FeatureLocationOverridesSchema.parse(overrides),
+  )
+  if (row.acceptedGeometry && effective.location)
+    effective.location.geometry =
+      LocationFactsSchema.shape.location.shape.geometry.parse(row.acceptedGeometry)
+  if (row.addressRevisionId && effective.location) {
+    const canonical = await db
+      .select()
+      .from(addressRevision)
+      .where(eq(addressRevision.id, row.addressRevisionId))
+      .get()
+    if (canonical)
+      effective.location.address.canonical = {
+        addressId: canonical.addressId,
+        revisionId: canonical.id,
+        content: LocalLocationAddressSchema.parse(canonical.components),
+      }
+  }
   return {
     ...identity,
+    nameMode: acceptancePolicy?.nameMode === 'independent' ? 'independent' : 'inherit',
     sourceReference: locationSourceReference(row.ssId),
     state: row.state,
     brandMode:
       FeatureLocationOverridesSchema.parse(overrides).brands?.mode ?? 'inherit',
-    effective: resolveFeatureLocation(
-      LocationFactsSchema.parse(facts),
-      LocationFactsSchema.parse(location).location,
-      FeatureLocationOverridesSchema.parse(overrides),
-    ),
+    effective,
   }
 }

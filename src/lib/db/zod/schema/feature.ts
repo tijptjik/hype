@@ -284,6 +284,10 @@ const ReadFeatureAuthoring = z.preprocess(
     })
     .optional(),
 )
+const ReadLocationNames = z.preprocess(
+  value => (typeof value === 'string' ? JSON.parse(value) : value),
+  LocationFactsSchema.shape.names.nullish(),
+)
 const ReadLocationBrands = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
   LocationFactsSchema.shape.brands.nullish(),
@@ -291,6 +295,7 @@ const ReadLocationBrands = z.preprocess(
 
 export const FeatureListRow = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
+  locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
   divisionMemberships: z
@@ -319,6 +324,7 @@ export const FeatureCardRow = FeatureListRow.extend({
 
 export const FeatureAdminRow = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
+  locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
   i18n: z.array(FeatureI18nBase).nullish(),
@@ -403,6 +409,7 @@ export const FeatureDraftI18nByLocaleFormData = contentLocaleMap(
 )
 
 export const FeatureEntityFormData = z.object({
+  locationNameMode: z.enum(['inherit', 'independent']).optional(),
   locationReset: z.preprocess(decodeLocationFormValue, LocationResetSchema).optional(),
   locationBrandEdit: z
     .preprocess(decodeLocationFormValue, LocationBrandEditSchema)
@@ -428,6 +435,7 @@ export const FeatureEntityFormData = z.object({
 })
 
 export const FeatureDraftEntityFormData = z.object({
+  locationNameMode: z.enum(['inherit', 'independent']).optional(),
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })
     .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
@@ -563,6 +571,7 @@ const FeatureListFields = FeatureBase.pick({
 
 export const FeatureListProfileAPI = FeatureListFields.extend({
   locationBrands: ReadLocationBrands,
+  locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
   divisionMemberships: z
@@ -585,7 +594,18 @@ export const FeatureDetailProfileAPI = FeatureCardProfileAPI.extend({
 })
 
 export const FeatureAdminProfileAPI = FeatureBase.extend({
+  // First-frame policy is a read projection, never accepted as editable parent authority.
+  presentationPolicy: z.preprocess(
+    value => (typeof value === 'string' ? JSON.parse(value) : value),
+    z
+      .object({
+        allowDescriptions: z.coerce.boolean(),
+        locationBasedNames: z.coerce.boolean(),
+      })
+      .nullish(),
+  ),
   locationBrands: ReadLocationBrands,
+  locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
   i18n: contentLocaleMap(FeatureI18nBase.partial({ featureId: true })).nullish(),

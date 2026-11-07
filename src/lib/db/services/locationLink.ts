@@ -20,6 +20,8 @@ import {
 } from './organisationLocation'
 import { readProjectLocationOwner } from './locationScope'
 import { prepareLinkedLocationProjection } from './locationLinkProjection'
+import { prepareFeatureLocationAssociationCapture } from './featureLocationAssociationRevision'
+import { executeRevisionBatch } from './revisionBatch'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { LocationBaselineResult } from './locationBaseline'
@@ -48,6 +50,7 @@ export async function linkInitialFeatureLocation(
     revisionId: string
     expectedFeatureModifiedAt: string
     actorId: string
+    nameMode?: 'independent' | 'inherit'
     authorizeLocationCorrection?: () => Promise<void>
   },
 ): Promise<InitialLocationLinkResult> {
@@ -98,6 +101,11 @@ export async function linkInitialFeatureLocation(
   const overrides =
     corrections?.overrides ??
     preserveFeatureLocationBaseline(baseline.baseline.effective, facts, facts.location)
+  // Reviewed association addresses belong to this Feature, never the shared Location.
+  const independentPlacement = Boolean(baseline.baseline.address.association)
+  if (independentPlacement && !corrections) delete overrides.location
+  // Explicit name choices belong to this Feature, never to Organisation corrections.
+  if (!corrections && input.nameMode) delete overrides.names
   if (!corrections && Object.keys(overrides).length)
     await input.authorizeLocationCorrection?.()
   // Seed preserved values once at Organisation scope; subsequent Features reuse that head.
@@ -112,6 +120,22 @@ export async function linkInitialFeatureLocation(
   const write = prepareFeatureLocationAssociationWrite(db, {
     ...input,
     expectedRevision: null,
+    ...(input.nameMode || independentPlacement
+      ? {
+          acceptancePolicy: {
+            nameMode: input.nameMode ?? 'independent',
+            ...(independentPlacement ? { locationMode: 'independent' } : {}),
+          },
+        }
+      : {}),
+    ...(independentPlacement && baseline.baseline.address.coordinates
+      ? {
+          acceptedGeometry: {
+            type: 'Point' as const,
+            coordinates: baseline.baseline.address.coordinates,
+          },
+        }
+      : {}),
     factsRevisionId: input.revisionId,
     locationRevisionId: input.revisionId,
     overrides,
@@ -119,24 +143,32 @@ export async function linkInitialFeatureLocation(
     locationOrganisationRevision: correction.revision,
     additionalGuard: correction.guard,
   })
-  const projections = corrections
-    ? await prepareLinkedLocationProjection(db, {
-        ...input,
-        revision: write.revision,
-        facts,
-        overrides,
-      })
-    : []
-  const results = await db.batch([
+  const projections =
+    corrections || input.nameMode
+      ? await prepareLinkedLocationProjection(db, {
+          ...input,
+          revision: write.version,
+          facts,
+          overrides,
+        })
+      : undefined
+  const capture = await prepareFeatureLocationAssociationCapture(db, {
+    association: write.input,
+    version: write.version,
+    projection: projections?.projection,
+    guard: fence,
+  })
+  const results = await executeRevisionBatch(db, fence, [
+    ...capture.before,
     ...correction.queries,
     write.query,
-    ...projections,
-  ] as [
-    import('drizzle-orm/batch').BatchItem<'sqlite'>,
-    ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
+    ...(projections?.queries ?? []),
+    ...capture.after,
   ])
-  const rows = results[correction.queries.length] as Array<{ revision: string }>
-  return rows.length
-    ? { status: 'linked', revision: write.revision }
+  const rows = results?.[capture.before.length + correction.queries.length] as
+    | Array<{ version: string }>
+    | undefined
+  return rows?.length
+    ? { status: 'linked', revision: write.version }
     : { status: 'conflict' }
 }

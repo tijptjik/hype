@@ -24,6 +24,8 @@ import {
 } from './organisationLocation'
 import { readProjectLocationOwner } from './locationScope'
 import { prepareLinkedLocationProjection } from './locationLinkProjection'
+import { prepareFeatureLocationAssociationCapture } from './featureLocationAssociationRevision'
+import { executeRevisionBatch } from './revisionBatch'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { InitialLocationLinkResult } from './locationLink'
@@ -48,11 +50,12 @@ export async function relinkFeatureLocation(
     expectedFeatureModifiedAt: string
     expectedRevision: string
     actorId: string
+    nameMode?: 'inherit' | 'independent'
     authorizeLocationCorrection?: () => Promise<void>
   },
 ): Promise<InitialLocationLinkResult> {
   const current = await getAcceptedFeatureLocation(db, input.featureId, input.projectId)
-  if (!current || current.revision !== input.expectedRevision)
+  if (!current || current.version !== input.expectedRevision)
     return { status: 'conflict' }
   const association = await db
     .select({ overrides: featureLocation.overrides })
@@ -60,7 +63,7 @@ export async function relinkFeatureLocation(
     .where(
       and(
         eq(featureLocation.featureId, input.featureId),
-        eq(featureLocation.revision, input.expectedRevision),
+        eq(featureLocation.version, input.expectedRevision),
       ),
     )
     .get()
@@ -130,11 +133,14 @@ export async function relinkFeatureLocation(
     organisationId,
     input.locationId,
   )
+  const independentPlacement = Boolean(baseline.baseline.address.association)
+  if (independentPlacement) delete overrides.location
+  if (input.nameMode && !corrections) delete overrides.names
   if (corrections) overrides = corrections.overrides
   if (!corrections && Object.keys(overrides).length)
     await input.authorizeLocationCorrection?.()
   // Seed preserved values once at Organisation scope; subsequent Features reuse that head.
-  const fence = sql`EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND projectId=${input.projectId} AND modifiedAt=${input.expectedFeatureModifiedAt}) AND EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${input.featureId} AND revision=${input.expectedRevision})`
+  const fence = sql`EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND projectId=${input.projectId} AND modifiedAt=${input.expectedFeatureModifiedAt}) AND EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${input.featureId} AND version=${input.expectedRevision})`
   const correction = await prepareOrganisationLocationWrite(db, {
     organisationId,
     locationId: input.locationId,
@@ -144,6 +150,23 @@ export async function relinkFeatureLocation(
   })
   const write = prepareFeatureLocationAssociationWrite(db, {
     ...input,
+    ...(independentPlacement
+      ? {
+          acceptancePolicy: {
+            nameMode: input.nameMode ?? current.nameMode ?? 'independent',
+            locationMode: 'independent',
+          },
+          acceptedGeometry: baseline.baseline.address.coordinates
+            ? {
+                type: 'Point' as const,
+                coordinates: baseline.baseline.address.coordinates,
+              }
+            : undefined,
+        }
+      : {}),
+    ...(!independentPlacement && (input.nameMode ?? current.nameMode)
+      ? { acceptancePolicy: { nameMode: input.nameMode ?? current.nameMode } }
+      : {}),
     factsRevisionId: input.revisionId,
     locationRevisionId: input.revisionId,
     overrides,
@@ -151,24 +174,32 @@ export async function relinkFeatureLocation(
     locationOrganisationRevision: correction.revision,
     additionalGuard: correction.guard,
   })
-  const projections = corrections
-    ? await prepareLinkedLocationProjection(db, {
-        ...input,
-        revision: write.revision,
-        facts,
-        overrides,
-      })
-    : []
-  const results = await db.batch([
+  const projections =
+    corrections || input.nameMode
+      ? await prepareLinkedLocationProjection(db, {
+          ...input,
+          revision: write.version,
+          facts,
+          overrides,
+        })
+      : undefined
+  const capture = await prepareFeatureLocationAssociationCapture(db, {
+    association: write.input,
+    version: write.version,
+    projection: projections?.projection,
+    guard: fence,
+  })
+  const results = await executeRevisionBatch(db, fence, [
+    ...capture.before,
     ...correction.queries,
     write.query,
-    ...projections,
-  ] as [
-    import('drizzle-orm/batch').BatchItem<'sqlite'>,
-    ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
+    ...(projections?.queries ?? []),
+    ...capture.after,
   ])
-  const rows = results[correction.queries.length] as Array<{ revision: string }>
-  return rows.length
-    ? { status: 'linked', revision: write.revision }
+  const rows = results?.[capture.before.length + correction.queries.length] as
+    | Array<{ version: string }>
+    | undefined
+  return rows?.length
+    ? { status: 'linked', revision: write.version }
     : { status: 'conflict' }
 }

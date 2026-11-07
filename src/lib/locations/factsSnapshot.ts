@@ -1,6 +1,7 @@
 // VALIDATION
 import { z } from 'zod'
 import { LocationFactsSchema } from './validation'
+import { classifyLocationFactsKind } from './factsKind'
 import { LocationEntitySchema } from './factsDetails'
 // TYPES
 import type { LocationFacts } from './model'
@@ -32,6 +33,7 @@ export const LocationFactsSnapshotSchema = z.discriminatedUnion('kind', [
   LocationEntitySchema.options[2].extend(envelope),
   LocationEntitySchema.options[3].extend(envelope),
   LocationEntitySchema.options[4].extend(envelope),
+  LocationEntitySchema.options[5].extend(envelope),
 ])
 export type LocationFactsSnapshot = z.infer<typeof LocationFactsSnapshotSchema>
 
@@ -45,23 +47,22 @@ export function createLocationFactsSnapshot(
   facts: LocationFacts,
   kind: LocationFactsKind,
 ): LocationFactsSnapshot {
-  if (facts.entity && facts.entity.kind !== kind)
+  kind = classifyLocationFactsKind(kind, facts)
+  if (facts.entity && facts.entity.kind !== 'unknown' && facts.entity.kind !== kind)
     throw new Error('Location details do not match the captured kind')
   const entity = facts.entity
   const details: Record<string, unknown> = { ...entity?.details }
-  if (kind === 'establishment' || kind === 'unknown') {
-    if (kind === 'establishment' || facts.brands.length) details.brands = facts.brands
+  if (kind === 'establishment') {
+    details.brands = facts.brands
     if (facts.operatingStatus !== undefined)
       details.operatingStatus = facts.operatingStatus
   } else if (facts.brands.length || facts.operatingStatus != null)
-    throw new Error(
-      'Establishment facts require an establishment or unclassified snapshot',
-    )
-  if (kind === 'building' || kind === 'unknown') {
+    throw new Error('Establishment facts require an establishment snapshot')
+  if (kind === 'building') {
     if (facts.buildingStatus !== undefined)
       details.buildingStatus = facts.buildingStatus
   } else if (facts.buildingStatus != null)
-    throw new Error('Building status requires a building or unclassified snapshot')
+    throw new Error('Building status requires a building snapshot')
   return LocationFactsSnapshotSchema.parse({
     schemaVersion: 1,
     kind,
@@ -97,8 +98,8 @@ export function readLocationFacts(value: unknown): LocationFacts {
     address2dId: null,
     address3dId: null,
     address3dUnitId: null,
-    addressSnapshotId: null,
-    records: {},
+    snapshotId: null,
+    rawSource: {},
     fallbackDisplay: {},
   }
   const details = entity.details
@@ -120,7 +121,11 @@ export function readLocationFacts(value: unknown): LocationFacts {
       ? { buildingStatus: details.buildingStatus }
       : {}),
     // Existing projections retain their stable shape; additional typed building/natural facts round-trip intact.
-    ...(entity.kind === 'building' || entity.kind === 'natural' ? { entity } : {}),
+    ...(entity.kind === 'building' ||
+    entity.kind === 'natural' ||
+    entity.kind === 'premises'
+      ? { entity }
+      : {}),
   })
 }
 

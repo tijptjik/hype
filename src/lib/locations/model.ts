@@ -22,14 +22,16 @@ export type LocationAddress = {
   divisionOverrides?: import('#lib/addresses/divisions.js').AddressDivisionOverrides
   /** Locally authored SaanSeoi content; never a claim of upstream publication. */
   authored?: LocalLocationAddress
+  /** Immutable retained publisher content; never locally authored. */
+  canonical?: { addressId: string; revisionId: string; content: LocalLocationAddress }
   status: 'resolved' | 'unresolved'
   address2dId: string | null
   address3dId: string | null
   address3dUnitId: string | null
-  addressSnapshotId: string | null
-  records: Record<string, unknown>
+  snapshotId: string | null
+  rawSource: Record<string, unknown>
   fallbackDisplay: Record<string, string>
-  /** Explicit complete labels; empty strings suppress display. */
+  /** Explicit complete labels in an effective local projection; empty strings suppress display. */
   displayOverrides?: Record<string, string>
 }
 
@@ -57,6 +59,7 @@ export type LocationFacts = {
 }
 
 export type FeatureLocationOverrides = {
+  address?: import('./placement').AddressCorrection
   footprint?: LocationOverride<LocationFootprint>
   operatingStatus?:
     | { mode: 'inherit' }

@@ -16,7 +16,7 @@ import type { BatchItem } from 'drizzle-orm/batch'
 /** Materialize an explicitly selected Location plus the Organisation's existing corrections.
  * @param db Request-local database.
  * @param input Authorized Feature, new association token and selected baseline/corrections.
- * @returns Guarded projection statements for the association's atomic batch.
+ * @returns Guarded statements and their deterministic content for the association's atomic batch.
  * @remarks Reusing a Location must reuse the Organisation's corrections, including for another Project.
  */
 export async function prepareLinkedLocationProjection(
@@ -28,7 +28,10 @@ export async function prepareLinkedLocationProjection(
     facts: LocationFacts
     overrides: FeatureLocationOverrides
   },
-): Promise<BatchItem<'sqlite'>[]> {
+): Promise<{
+  queries: BatchItem<'sqlite'>[]
+  projection: ReturnType<typeof materializeEffectiveLocation>
+}> {
   const parent = await db
     .select()
     .from(feature)
@@ -46,27 +49,30 @@ export async function prepareLinkedLocationProjection(
     data: { geometry: parent.geometry, addressMeta: parent.addressMeta ?? {} },
     i18n: Object.fromEntries(translations.map(row => [row.locale, row])),
   })
-  const guard = sql`EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${input.featureId} AND revision=${input.revision})`
-  return [
-    db
-      .update(feature)
-      .set({
-        geometry: projection.data.geometry,
-        addressMeta: projection.data.addressMeta,
-        spatialIndex: createFeatureSpatialIndex(projection.data.geometry!),
-      })
-      .where(and(eq(feature.id, input.featureId), guard)),
-    ...prepareFeatureLocationRelations(
-      db,
-      input.featureId,
-      input.revision,
-      projection.i18n,
-    ),
-    ...(await prepareLocationPhoneReset(
-      db,
-      input.featureId,
-      input.revision,
-      projection.phones ?? [],
-    )),
-  ]
+  const guard = sql`EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${input.featureId} AND version=${input.revision})`
+  return {
+    projection,
+    queries: [
+      db
+        .update(feature)
+        .set({
+          geometry: projection.data.geometry,
+          addressMeta: projection.data.addressMeta,
+          spatialIndex: createFeatureSpatialIndex(projection.data.geometry!),
+        })
+        .where(and(eq(feature.id, input.featureId), guard)),
+      ...prepareFeatureLocationRelations(
+        db,
+        input.featureId,
+        input.revision,
+        projection.i18n,
+      ),
+      ...(await prepareLocationPhoneReset(
+        db,
+        input.featureId,
+        input.revision,
+        projection.phones ?? [],
+      )),
+    ],
+  }
 }
