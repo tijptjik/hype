@@ -16,12 +16,14 @@ let lockedViewerHeight = $state<number | null>(null)
 let viewerRoot: HTMLDivElement | null = null
 
 let {
+  showImagePips = false,
   scrollable = false,
   minHeightPx = 320,
   paddingPx = 0,
   topPaddingPx = 0,
   targetHeightPx = null,
 }: {
+  showImagePips?: boolean
   scrollable?: boolean
   minHeightPx?: number
   paddingPx?: number
@@ -167,7 +169,7 @@ const viewerStyle = $derived.by(() => {
 <!-- biome-ignore lint/a11y/noStaticElementInteractions: The viewer shell stops bubbling pointer events from activating the enclosing card. -->
 <div
   bind:this={viewerRoot}
-  class={`pointer-events-auto w-full select-none bg-base-200 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] duration-[240ms] ease-out motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
+  class={`relative pointer-events-auto w-full select-none bg-base-200 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] duration-[240ms] ease-out motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
   style={`${viewerStyle ?? ''}${viewerStyle ? ' ' : ''}min-height: ${viewerBlockMinHeightPx}px;`}
   onclick={stopViewerEvent}
   onkeydown={stopViewerEvent}
@@ -213,10 +215,27 @@ const viewerStyle = $derived.by(() => {
       railPadding={3}
       centerAction="fullscreen"
       {leftRail}
-      {rightRail}
+      rightRail={showImagePips ? undefined : rightRail}
       {emptyState}
       onActiveIdChange={model.actions.select}
       onCurrentItemLoad={handleCurrentItemLoad}
     />
+    {#if showImagePips && model.state.items.length > 1}
+      <!-- Keep the compact card's image count clear of the raised portal. -->
+      <div
+        class="pointer-events-none absolute inset-x-3 top-3 z-20 flex justify-center"
+        data-feature-card-image-pips
+      >
+        <div class="flex max-w-full flex-wrap justify-center gap-1.5 rounded-xl bg-black/40 px-2 py-1.5 backdrop-blur-sm">
+          <span class="sr-only" aria-live="polite">{Math.max(loadedIndex, 0) + 1} / {model.state.items.length}</span>
+          {#each model.state.items as item, index (item.id)}
+            <span
+              aria-hidden="true"
+              class={`size-1.5 shrink-0 rounded-full transition-opacity motion-reduce:transition-none ${index === loadedIndex ? 'bg-white' : 'bg-white/35'} ${index === pendingIndex ? 'animate-pulse motion-reduce:animate-none' : ''}`}
+            ></span>
+          {/each}
+        </div>
+      </div>
+    {/if}
   {/if}
 </div>
