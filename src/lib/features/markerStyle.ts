@@ -1,9 +1,21 @@
 /** Persisted presentation choices; custom renderers are registered outside MapLibre. */
-export const MARKER_STYLE_CODES = ['image', 'dot', 'pin', 'flag', 'breadline'] as const
+export const MARKER_STYLE_CODES = [
+  'image',
+  'image-bw',
+  'dot',
+  'pin',
+  'flag',
+  'breadline',
+] as const
 export type MarkerStyleCode = (typeof MARKER_STYLE_CODES)[number]
 export const DEFAULT_MARKER_STYLE: MarkerStyleCode = 'image'
 export const MARKER_STYLE_CATALOG = [
   { code: 'image', name: 'Photo', description: 'Circular feature photograph.' },
+  {
+    code: 'image-bw',
+    name: 'Black/White',
+    description: 'Circular feature photograph in black and white.',
+  },
   { code: 'dot', name: 'Dot', description: 'Small, simple map point.' },
   {
     code: 'flag',

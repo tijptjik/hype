@@ -314,7 +314,7 @@ function createFeatureMarkerElement(
   const container = document.createElement('div')
   container.className = `marker-container marker-container--feature marker-theme--${markerTheme} marker-fade-in`
   container.dataset.type = 'marker'
-  container.dataset.markerSignature = `${imageSrc}:${markerTheme}`
+  container.dataset.markerSignature = `${imageSrc}:${markerTheme}${markerStyle === 'image-bw' ? ':bw' : ''}`
 
   const innerContainer = document.createElement('div')
   innerContainer.className = 'marker-inner marker-inner--feature'
@@ -324,6 +324,7 @@ function createFeatureMarkerElement(
   image.className =
     'marker-image opacity-0 transition-opacity duration-200 motion-reduce:transition-none'
   image.alt = ''
+  if (markerStyle === 'image-bw') image.style.filter = 'grayscale(1)'
   // MapLibre positions markers outside normal document flow, so native lazy loading
   // can indefinitely defer their first uncached image request.
   image.loading = 'eager'
@@ -385,6 +386,8 @@ function createFeatureMarkerElement(
   const frame = document.createElement('div')
   frame.className = 'marker-image-frame'
   frame.dataset.type = 'marker'
+  // Monochrome photos keep a black edge across map palettes and interaction states.
+  if (markerStyle === 'image-bw') frame.style.borderColor = '#000000'
 
   innerContainer.appendChild(skeleton)
   innerContainer.appendChild(image)
@@ -631,7 +634,7 @@ export function createMarkerRenderer(
         ? customMarkerSignature(custom)
         : effectiveStyle === 'dot'
           ? `dot:${markerTheme}`
-          : `${getFeatureMarkerImageSrc(feature) ?? 'dot'}:${markerTheme}`
+          : `${getFeatureMarkerImageSrc(feature) ?? 'dot'}:${markerTheme}${effectiveStyle === 'image-bw' && getFeatureMarkerImageSrc(feature) ? ':bw' : ''}`
 
       if (existingMarker) {
         const element = existingMarker.getElement()
