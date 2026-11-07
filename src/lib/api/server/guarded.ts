@@ -54,6 +54,7 @@ function registerQuery<Input, Output>(
  * @param write - Authorized mutation handler.
  * @returns The mutation result; native query updates travel in the same response.
  * @remarks No unrequested query runs. Validation failures never refresh collections.
+ * Post-commit refresh registration failures are logged without replacing the write outcome.
  */
 async function withRequestedRefreshes<T>(write: () => Promise<T>): Promise<T> {
   let committed = false
