@@ -54,7 +54,8 @@ const previewMerged = $derived(toFeatureResolutionPreview(result.merged))
             type="button"
             class="inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
             onclick={() => onCopy(previewExisting, `existing-${index}`)}
-            title={m.feature_import__resolution_copy_title()}
+            aria-label={m.feature_import__resolution_copy_title()}
+              data-tooltip={m.feature_import__resolution_copy_title()}
           >
             <Icon
               src={copiedKey === `existing-${index}` ? CheckCircle : ClipboardDocument}
@@ -114,7 +115,8 @@ const previewMerged = $derived(toFeatureResolutionPreview(result.merged))
             type="button"
             class="inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
             onclick={() => onCopy(previewMerged, `merged-${index}`)}
-            title={m.feature_import__resolution_copy_title()}
+            aria-label={m.feature_import__resolution_copy_title()}
+              data-tooltip={m.feature_import__resolution_copy_title()}
           >
             <Icon
               src={copiedKey === `merged-${index}` ? CheckCircle : ClipboardDocument}
@@ -151,7 +153,8 @@ const previewMerged = $derived(toFeatureResolutionPreview(result.merged))
             type="button"
             class="inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
             onclick={() => onCopy(result.submitted, `submitted-${index}`)}
-            title={m.feature_import__resolution_copy_title()}
+            aria-label={m.feature_import__resolution_copy_title()}
+              data-tooltip={m.feature_import__resolution_copy_title()}
           >
             <Icon
               src={copiedKey === `submitted-${index}` ? CheckCircle : ClipboardDocument}
@@ -173,7 +176,8 @@ const previewMerged = $derived(toFeatureResolutionPreview(result.merged))
             type="button"
             class="inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
             onclick={() => onCopy(result.enriched, `enriched-${index}`)}
-            title={m.feature_import__resolution_copy_title()}
+            aria-label={m.feature_import__resolution_copy_title()}
+              data-tooltip={m.feature_import__resolution_copy_title()}
           >
             <Icon
               src={copiedKey === `enriched-${index}` ? CheckCircle : ClipboardDocument}

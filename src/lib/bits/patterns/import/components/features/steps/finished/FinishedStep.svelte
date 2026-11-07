@@ -22,7 +22,8 @@ let { canDownloadResults, downloadResultsAction }: Props = $props()
         type="button"
         class="rounded-full border border-primary/20 bg-primary/10 p-6 text-primary transition-colors hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30"
         onclick={downloadResultsAction}
-        title={m.feature_import__finished_download_title()}
+        aria-label={m.feature_import__finished_download_title()}
+              data-tooltip={m.feature_import__finished_download_title()}
       >
         <Icon src={ArrowDownTray} class="h-12 w-12" />
       </button>

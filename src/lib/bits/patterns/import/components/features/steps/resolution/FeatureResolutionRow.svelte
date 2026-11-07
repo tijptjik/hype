@@ -185,7 +185,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
             event.stopPropagation()
             onShowPreview(index)
           }}
-          title={m.feature_import__resolution_inspect_title()}
+          data-tooltip={m.feature_import__resolution_inspect_title()}
         >
           <Icon src={FileDiff} class="h-4 w-4" />
           {m.feature_import__resolution_inspect()}
@@ -197,7 +197,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
             target="_blank"
             rel="noreferrer"
             class="inline-flex items-center gap-2 border-l border-base-content/10 px-3 py-2 text-sm text-base-content/75 transition-colors hover:bg-base-content/10 hover:text-primary"
-            title={m.feature_import__resolution_see_current_title()}
+            data-tooltip={m.feature_import__resolution_see_current_title()}
             onclick={event => event.stopPropagation()}
           >
             <Icon src={MapPin} class="h-4 w-4" />
@@ -206,7 +206,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
         {:else}
           <span
             class="inline-flex cursor-not-allowed items-center gap-2 border-l border-base-content/10 px-3 py-2 text-sm text-base-content/30"
-            title={m.feature_import__resolution_no_current_title()}
+            data-tooltip={m.feature_import__resolution_no_current_title()}
           >
             <Icon src={MapPin} class="h-4 w-4" />
             {m.feature_import__resolution_see_current()}
@@ -224,7 +224,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
             event.stopPropagation()
             onSkip(index)
           }}
-          title={m.feature_import__resolution_skip_title()}
+          data-tooltip={m.feature_import__resolution_skip_title()}
         >
           {m.skip()}
         </button>
@@ -236,7 +236,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
             event.stopPropagation()
             onInclude(index)
           }}
-          title={m.feature_import__resolution_include_title()}
+          data-tooltip={m.feature_import__resolution_include_title()}
         >
           {m.feature_import__resolution_include()}
         </button>
@@ -248,7 +248,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
             event.stopPropagation()
             onRetry(index)
           }}
-          title={m.feature_import__resolution_retry_title()}
+          data-tooltip={m.feature_import__resolution_retry_title()}
         >
           {m.retry()}
         </button>

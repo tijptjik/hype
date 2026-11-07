@@ -604,7 +604,7 @@ async function handlePasswordResetRequest(): Promise<void> {
               class="flex h-10 w-10 items-center justify-center rounded-lg border border-border transition hover:border-foreground/40 hover:bg-foreground hover:text-canvas disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
               aria-label={m.account__email()}
-              title={m.account__email()}
+              data-tooltip={m.account__email()}
               disabled={isBusy}
               onclick={openEmailAuth}
             >

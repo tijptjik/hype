@@ -762,7 +762,7 @@ async function link(): Promise<void> {
         text={m.location_find_nearby()}
         iconComponent={SearchIcon}
         hideLabelBelow={1000}
-        attrs={{ title: m.location_find_nearby() }}
+        attrs={{ 'data-tooltip': m.location_find_nearby() }}
         size="sm"
         style="outline"
         class="min-h-11 shrink-0 rounded-lg border-border bg-panel px-3 text-sm font-normal text-foreground"
@@ -781,7 +781,7 @@ async function link(): Promise<void> {
         text={m.feature_location_find()}
         iconComponent={SearchIcon}
         hideLabelBelow={1000}
-        attrs={{ title: m.feature_location_find() }}
+        attrs={{ 'data-tooltip': m.feature_location_find() }}
         size="sm"
         style="outline"
         class="min-h-11 shrink-0 rounded-lg border-border bg-panel px-3 text-sm font-normal text-foreground"
@@ -802,7 +802,7 @@ async function link(): Promise<void> {
             text={m.feature_location_create()}
             iconComponent={CreateLocationIcon}
             hideLabelBelow={1000}
-            attrs={{ title: m.feature_location_create() }}
+            attrs={{ 'data-tooltip': m.feature_location_create() }}
             size="sm"
             style="outline"
             class="min-h-11 shrink-0 rounded-lg border-border bg-panel px-3 text-sm font-normal text-foreground"
@@ -1049,7 +1049,7 @@ async function link(): Promise<void> {
                       </span>
                       <span
                         class="shrink-0 text-sm tabular-nums text-muted-foreground"
-                        title={m.feature_location_distance_direct()}
+                        data-tooltip={m.feature_location_distance_direct()}
                         >{Math.round(
                           locationDistance(
                             coordinates,

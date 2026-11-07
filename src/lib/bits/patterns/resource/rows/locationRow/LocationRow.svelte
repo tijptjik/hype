@@ -88,17 +88,17 @@ function open(): void {
       <a
         {href}
         class="block truncate font-semibold"
-        title={name}
+        data-tooltip={name}
         onclick={event => event.stopPropagation()}
         >{name}</a
       >
-      <p class="truncate text-sm text-muted-foreground" title={description}>
+      <p class="truncate text-sm text-muted-foreground" data-tooltip={description}>
         {description}
       </p>
     </div>
     <div
       class="hidden min-w-0 max-w-48 flex-col text-right text-xs text-muted-foreground @min-[800px]/grid:flex"
-      title={owner ?? state}
+      data-tooltip={owner ?? state}
     >
       <span class="truncate">{owner || state}</span>
       {#if source}

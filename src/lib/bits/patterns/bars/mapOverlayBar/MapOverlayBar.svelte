@@ -53,7 +53,7 @@ const hasVisibleControls = $derived(hasCardToggleTarget)
       color="primary"
       style="none"
       class="z-130 shadow-lg dark:[--color-primary-content:#fff]"
-      attrs={{ title: m.mapbar__show_card() }}
+      attrs={{ 'data-tooltip': m.mapbar__show_card() }}
       onClick={onOpenCard}
     />
   </div>

@@ -101,24 +101,49 @@ it('bridges dynamically created library controls and their changing native label
 it('suppresses repeated visible labels but retains clipped and icon-only labels', async () => {
   render(TooltipProvider)
   const button = control()
-  Object.defineProperty(button, 'innerText', {
-    configurable: true,
-    value: '  Synced  ',
-  })
+  button.textContent = '  Synced  '
   await fireEvent.pointerOver(button)
   expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull()
   await fireEvent.focusIn(button)
   expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull()
   Object.defineProperty(button, 'scrollWidth', { configurable: true, value: 100 })
   Object.defineProperty(button, 'clientWidth', { configurable: true, value: 40 })
+  button.style.overflowX = 'hidden'
   await fireEvent.pointerOver(button)
   expect((await screen.findByRole('tooltip', { hidden: true })).textContent).toBe(
     'Synced',
   )
   await fireEvent.keyDown(button, { key: 'Escape' })
-  Object.defineProperty(button, 'innerText', { configurable: true, value: '' })
+  button.textContent = ''
   await fireEvent.pointerOver(button)
   expect((await screen.findByRole('tooltip', { hidden: true })).textContent).toBe(
     'Synced',
   )
+})
+
+it('ignores scrolling clones and zero-width inline boxes when comparing labels', async () => {
+  render(TooltipProvider)
+  const button = control()
+  button.innerHTML = '<span>Synced</span><span aria-hidden="true"> • Synced</span>'
+  const label = button.firstElementChild!
+  Object.defineProperty(label, 'scrollWidth', { configurable: true, value: 100 })
+  Object.defineProperty(label, 'clientWidth', { configurable: true, value: 0 })
+  await fireEvent.pointerOver(label)
+  expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull()
+  await fireEvent.focusIn(button)
+  expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull()
+})
+
+it('removes redundant native titles without removing icon-only descriptions', async () => {
+  render(TooltipProvider)
+  const button = control()
+  delete button.dataset.tooltip
+  button.textContent = 'Synced'
+  button.title = 'Synced'
+  await fireEvent.pointerOver(button)
+  expect(button.hasAttribute('title')).toBe(false)
+  button.textContent = ''
+  button.title = 'Synced'
+  await fireEvent.pointerOver(button)
+  expect(button.title).toBe('Synced')
 })

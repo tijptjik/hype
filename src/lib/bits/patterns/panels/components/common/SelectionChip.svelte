@@ -24,7 +24,7 @@ const color = $derived(
   type="button"
   class="rounded-full px-3 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-focus {color}"
   aria-label={removeLabel}
-  title={removeLabel}
+  data-tooltip={removeLabel}
   onclick={onRemove}
 >
   {label} <span aria-hidden="true">×</span>

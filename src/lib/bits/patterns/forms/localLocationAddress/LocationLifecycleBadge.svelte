@@ -13,7 +13,7 @@ const status = $derived(lifecycleStatus(value))
 {#if status !== 'unknown'}
   <span
     class="inline-flex rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-    title={m.location_lifecycle_title()}
+    data-tooltip={m.location_lifecycle_title()}
     >{lifecycleLabel(status)}</span
   >
 {/if}

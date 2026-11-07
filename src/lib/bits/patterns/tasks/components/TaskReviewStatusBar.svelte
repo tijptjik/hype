@@ -91,7 +91,7 @@ const connectorClass =
     {:else}
       <div
         class="max-w-[20rem] rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-xs uppercase tracking-[0.18em] text-foreground/60"
-        title={reviewReason}
+        data-tooltip={reviewReason}
       >
         <ScrollableText
           text={reviewReason}

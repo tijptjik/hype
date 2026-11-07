@@ -367,7 +367,7 @@ $effect(() => {
                     hideLabelInstantly={true}
                     class="bits-admin-menu__button"
                     attrs={{
-                      title: entry.item.label,
+                      'data-tooltip': entry.item.label,
                       'aria-current': active ? 'page' : undefined,
                     }}
                   />

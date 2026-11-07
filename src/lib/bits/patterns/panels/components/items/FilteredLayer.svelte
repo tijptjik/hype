@@ -81,7 +81,7 @@ const layerName = $derived(
     type="button"
     class="inline-flex shrink-0 items-center justify-center text-base-content/45 hover:text-base-content/80 focus-visible:text-base-content/80"
     aria-label={m.panel__isolate_layer({ name: layerName })}
-    title={m.panel__isolate_layer({ name: layerName })}
+    data-tooltip={m.panel__isolate_layer({ name: layerName })}
     onclick={onIsolate}
   >
     <Icon src={Crosshair} class="h-5 w-5" aria-hidden="true" />

@@ -24,7 +24,7 @@ let {
   size="sm"
   modifier="circle"
   class={`bits-resource-filter-bar__reset ${className}`.trim()}
-  attrs={{ title: m.filters__reset() }}
+  attrs={{ 'data-tooltip': m.filters__reset() }}
   {disabled}
   {onClick}
 />

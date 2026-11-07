@@ -66,7 +66,7 @@ const icons = {
     {/if}
     {#each parts as part (part.text)}
       {@const PartIcon = icons[part.kind]}
-      <span class="inline-flex min-w-0 items-center gap-1.5" class:font-semibold={Boolean(primaryName) && part.kind === 'building'} class:text-foreground={Boolean(primaryName) && part.kind === 'building'} data-address-part={part.kind} data-division-class={part.localityClass}>
+      <span class="inline-flex min-w-0 items-center gap-1.5" class:font-semibold={Boolean(primaryName) && part.kind === 'building'} class:text-foreground={Boolean(primaryName) && part.kind === 'building'} data-tooltip={part.text} data-address-part={part.kind} data-division-class={part.localityClass}>
         {#if !(primaryName && part.kind === 'building')}<PartIcon class="size-4 shrink-0" aria-hidden="true" />{/if}
         <span>{part.text}</span>
       </span>

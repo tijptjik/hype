@@ -180,7 +180,7 @@ function handleUsernameAction(): void {
         hideLabelInstantly={true}
         class="min-h-0 h-4 w-4 rounded-none border-0 p-0 text-base-content/80 shadow-none [--btn-size:1rem] [--btn-icon-ratio:1] hover:text-base-content focus-visible:text-base-content"
         attrs={{
-          title: isEditingUsername ? 'Save username' : 'Edit username',
+          'data-tooltip': isEditingUsername ? 'Save username' : 'Edit username',
         }}
       />
     {/if}

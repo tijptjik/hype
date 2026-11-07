@@ -94,7 +94,7 @@ function handleReorderKey(event: KeyboardEvent): void {
       }}
       class="absolute left-[32px] top-1/2 z-10 flex size-6 -translate-x-1/2 -translate-y-1/2 touch-none cursor-grab items-center justify-center rounded text-secondary opacity-0 group-hover/layer:opacity-100 group-focus-within/layer:opacity-100 active:cursor-grabbing focus-override focus-visible:outline-2 focus-visible:outline-focus"
       aria-label={m.panel__reorder_layer({ name: row.name })}
-      title={m.panel__reorder_layer({ name: row.name })}
+      data-tooltip={m.panel__reorder_layer({ name: row.name })}
       onkeydown={handleReorderKey}
       onclick={event => event.stopPropagation()}
     >
@@ -180,7 +180,7 @@ function handleReorderKey(event: KeyboardEvent): void {
           : 'text-base-content/45'}"
         aria-label={row.toggleLabel}
         aria-pressed={row.selected}
-        title={row.toggleLabel}
+        data-tooltip={row.toggleLabel}
         onclick={row.onToggle}
       >
         <Funnel

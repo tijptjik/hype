@@ -36,6 +36,7 @@ let {
       value={value ?? ''}
       {disabled}
       placeholder={m.location_visibility()}
+      triggerAttrs={{ 'data-tooltip': value === 'exclusive' ? m.location_visibility_exclusive() : value === 'shared' ? m.location_visibility_shared() : m.location_visibility() }}
       items={[
         { value: 'shared', label: m.location_visibility_shared() },
         { value: 'exclusive', label: m.location_visibility_exclusive() },

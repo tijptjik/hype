@@ -14,7 +14,7 @@ let { column }: Props = $props()
 <h4 class="text-sm font-medium">{column.header}</h4>
 <div class="mt-1 text-xs text-base-content/70">
   {#each column.sampleValues.slice(0, 3) as sample}
-    <span class="mr-2 inline-block" title={sample}>
+    <span class="mr-2 inline-block" data-tooltip={sample}>
       {sample.length > 25 ? `${sample.substring(0, 25)}...` : sample}
     </span>
   {/each}

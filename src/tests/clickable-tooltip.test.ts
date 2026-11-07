@@ -14,6 +14,14 @@ import VisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationV
 beforeEach(() => vi.useRealTimers())
 afterEach(cleanup)
 
+it('suppresses snippet help that only repeats its visible trigger label', async () => {
+  render(Fixture, { repeatedText: true })
+  await fireEvent.click(screen.getByRole('button', { name: 'Help' }))
+  await waitFor(() =>
+    expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull(),
+  )
+})
+
 it('opens on click, toggles closed, and supports keyboard activation and Escape', async () => {
   render(Fixture)
   const trigger = screen.getByRole('button', { name: 'Help' })

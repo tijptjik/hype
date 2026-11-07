@@ -54,7 +54,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
             : 'border border-border-input bg-(--theme-panel) text-base-content hover:bg-base-200',
       )}
       aria-label={m.gallery__change_image_intent()}
-      title={intentErrorMessage ?? undefined}
+      data-tooltip={intentErrorMessage ?? undefined}
     >
       <span class="overflow-hidden text-ellipsis whitespace-nowrap"
         >{intentDisplay[currentIntent]}</span

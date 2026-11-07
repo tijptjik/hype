@@ -37,7 +37,7 @@ function providerIcon(providerId: AuthProviderId) {
     class:text-black={!compact && provider.enabled}
     type="button"
     aria-label={provider.label}
-    title={provider.enabled
+    data-tooltip={provider.enabled
       ? provider.label
       : `${provider.label} · ${m.guest__coming_soon()}`}
     disabled={!provider.enabled || disabled}

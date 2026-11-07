@@ -125,7 +125,7 @@ $effect(() => {
     size="sm"
     class="bits-resource-sort__trigger opacity-70 transition-opacity duration-300 hover:opacity-100"
     attrs={{
-      title: m.sort__sort_by(),
+      'data-tooltip': m.sort__sort_by(),
     }}
     onClick={toggleMenu}
   />
@@ -155,7 +155,7 @@ $effect(() => {
         modifier="square"
         class="bits-resource-sort__direction w-[var(--btn-size)] shrink-0 opacity-80 transition-opacity duration-300 hover:opacity-100"
         attrs={{
-          title: sortDirectionLabel,
+          'data-tooltip': sortDirectionLabel,
         }}
         onClick={handleSortOrderToggle}
       />

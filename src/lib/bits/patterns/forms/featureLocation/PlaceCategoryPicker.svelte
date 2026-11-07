@@ -80,7 +80,7 @@ function select(next?: string): void {
         {#each matches.slice(0, limit) as option (option)}
           <button
             type="button"
-            title={option}
+            data-tooltip={option}
             aria-pressed={value === option}
             onclick={() => select(option)}
             class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-muted aria-pressed:bg-primary/15 aria-pressed:text-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"

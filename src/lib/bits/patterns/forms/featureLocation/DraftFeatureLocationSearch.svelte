@@ -622,7 +622,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               style:--search-color={locationSearchColor(kind)}
               aria-label={label}
               aria-pressed={enabled}
-              title={kind === 'building' && findMode === 'pin'
+              data-tooltip={kind === 'building' && findMode === 'pin'
                 ? m.feature_search_buildings_name_only()
                 : label}
               disabled={kind === 'building' && findMode === 'pin'}
@@ -688,7 +688,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             aria-label={searched || rows.length
               ? m.feature_search_clear()
               : m.feature_search_submit()}
-            title={searched || rows.length
+            data-tooltip={searched || rows.length
               ? m.feature_search_clear()
               : m.feature_search_submit()}
             disabled={!searched && !rows.length && (!query.trim() || !hasSearchTypes)}
@@ -726,7 +726,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         bind:this={filterButton}
         type="button"
         aria-label={m.feature_search_filters()}
-        title={m.feature_search_filters()}
+        data-tooltip={m.feature_search_filters()}
         aria-expanded={filtersOpen}
         disabled={!includeShops}
         onclick={() => (filtersOpen = !filtersOpen)}

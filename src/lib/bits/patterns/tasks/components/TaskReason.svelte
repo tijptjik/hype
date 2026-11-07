@@ -21,7 +21,7 @@ let { reason }: { reason: string } = $props()
       class="h-9 w-9 border border-foreground/10 bg-foreground/[0.04] text-foreground/70 hover:bg-foreground/[0.08] hover:text-foreground"
       iconComponent={CircleHelpIcon}
       hideLabel={true}
-      attrs={{ title: reason }}
+      attrs={{ 'data-tooltip': reason }}
     />
   {/snippet}
 

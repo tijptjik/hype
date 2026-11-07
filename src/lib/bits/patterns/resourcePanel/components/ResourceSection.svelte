@@ -188,7 +188,7 @@ const reorder = $derived(
           : m.panel__expand({ name: section.title })}
       aria-expanded={open}
       aria-controls={id}
-      title={section.title}
+      data-tooltip={section.title}
       onclick={handleNarrowClick}
     >
       {#if section.id === 'organisation'}

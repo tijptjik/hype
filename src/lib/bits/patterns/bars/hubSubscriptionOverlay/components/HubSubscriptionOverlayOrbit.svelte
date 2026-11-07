@@ -161,7 +161,7 @@ function handleCardCirclePointerLeave(): void {
       isExpanded: isCardSurfaceExpanded,
     })}
     aria-label={dismissText}
-    title={dismissText}
+    data-tooltip={dismissText}
     disabled={isDisabled || isLoading}
     onclick={() => onDismiss?.()}
   >

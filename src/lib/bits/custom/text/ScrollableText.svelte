@@ -3,6 +3,7 @@ import { onMount } from 'svelte'
 
 type ScrollableTextProps = {
   text: string
+  title?: string
   separator?: string
   padding?: number
   class?: string
@@ -12,6 +13,7 @@ type ScrollableTextProps = {
 
 let {
   text,
+  title,
   separator = '•',
   padding = 24,
   class: className = '',
@@ -235,7 +237,7 @@ onMount(() => {
   data-leading-fade={hasLeadingFade}
   data-trailing-fade={hasTrailingFade}
   style={rootStyle}
-  title={text}
+  data-tooltip={title?.trim() && title.trim() !== text.trim() ? title : undefined}
   onpointerenter={handlePointerEnter}
   onpointerleave={handlePointerLeave}
   onpointerdown={handlePointerDown}

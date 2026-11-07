@@ -2,7 +2,7 @@
 // COMPONENTS
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 
-let { disabled = false }: { disabled?: boolean } = $props()
+let { disabled = false, repeatedText = false }: { disabled?: boolean; repeatedText?: boolean } = $props()
 let activations = $state(0)
 let submissions = $state(0)
 let notice = $state(false)
@@ -11,7 +11,7 @@ let notice = $state(false)
 <form onsubmit={event => { event.preventDefault(); submissions++ }}>
   <SimpleTooltip {disabled} triggerProps={{ 'aria-label': 'Help', role: 'button' }}>
     {#snippet trigger()}<span>Help</span>{/snippet}
-    Useful help
+    {repeatedText ? 'Help' : 'Useful help'}
   </SimpleTooltip>
   <SimpleTooltip>
     {#snippet trigger()}

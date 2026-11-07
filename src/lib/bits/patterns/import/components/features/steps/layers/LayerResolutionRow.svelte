@@ -147,7 +147,7 @@ function handleLayerResolutionSearchFocus(): void {
               </code>
               <span
                 class="overflow-hidden text-ellipsis whitespace-nowrap font-mono"
-                title={part.value}
+                data-tooltip={part.value}
                 >{part.value}</span
               >
             </div>

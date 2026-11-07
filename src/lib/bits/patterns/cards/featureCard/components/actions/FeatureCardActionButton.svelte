@@ -150,7 +150,7 @@ const resolvedTitle = $derived(isIconOnly ? (title ?? text) : undefined)
   hideLabel={isIconOnly}
   class={rootClasses}
   labelClasses={resolvedLabelClasses}
-  attrs={{ title: resolvedTitle }}
+  attrs={{ 'data-tooltip': resolvedTitle }}
   {disabled}
   {onClick}
   {onMouseEnter}

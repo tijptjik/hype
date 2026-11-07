@@ -37,7 +37,12 @@ let {
             : 'bits-feature-stat__pip--pending'
       }`}
       {#if tooltipMode === 'native'}
-        <span class={pipClass} title={label} role="img" aria-label={label}></span>
+        <span
+          class={pipClass}
+          data-tooltip={label}
+          role="img"
+          aria-label={label}
+        ></span>
       {:else}
         <SimpleTooltip>
           {#snippet trigger()}

@@ -131,7 +131,7 @@ function handleResolutionReset(): void {
         <Icon src={XCircle} class="h-4 w-4 shrink-0 text-error" />
         <span
           class="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm"
-          title={invalidValue}
+          data-tooltip={invalidValue}
         >
           {invalidValue}
         </span>

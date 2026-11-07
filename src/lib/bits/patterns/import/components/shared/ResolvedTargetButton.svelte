@@ -19,7 +19,7 @@ let { children, title, changeLabel, onReset }: Props = $props()
   type="button"
   class="flex w-full items-center justify-between rounded p-3 text-left transition-colors focus:outline-none"
   onclick={onReset}
-  {title}
+  data-tooltip={title}
 >
   <div class="flex min-w-0 items-center gap-3">
     {@render children()}

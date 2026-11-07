@@ -142,7 +142,7 @@ function editEndpoint(index: number, text: string): void {
           class="flex size-8 items-center justify-center rounded text-muted-foreground hover:bg-primary/10 hover:text-primary disabled:opacity-30"
           disabled={!hasValue || disabled}
           aria-label="Reset range value"
-          title="Reset range"
+          data-tooltip="Reset range"
           onclick={onReset}
         >
           <ResetIcon class="size-4" />
@@ -155,7 +155,7 @@ function editEndpoint(index: number, text: string): void {
         aria-label={definition.dataType === 'dateRange'
           ? 'Toggle date inputs'
           : 'Toggle time inputs'}
-        title={definition.dataType === 'dateRange' ? 'Choose dates' : 'Enter times'}
+        data-tooltip={definition.dataType === 'dateRange' ? 'Choose dates' : 'Enter times'}
         aria-expanded={showInputs}
         aria-controls={inputId}
         onclick={() => (showInputs = !showInputs)}
@@ -167,7 +167,7 @@ function editEndpoint(index: number, text: string): void {
           bind:open={showSettings}
           triggerProps={{
             'aria-label': 'Time snapping',
-            title: 'Time snapping',
+            'data-tooltip': 'Time snapping',
             role: 'button',
             tabindex: 0,
           }}

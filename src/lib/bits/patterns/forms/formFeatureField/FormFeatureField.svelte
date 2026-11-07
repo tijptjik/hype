@@ -129,7 +129,7 @@ const fieldClass = $derived(
             type="button"
             class="text-primary hover:bg-primary/10 flex size-9 items-center justify-center rounded disabled:opacity-30"
             aria-label={linksCollapsed ? 'Expand links' : 'Collapse links'}
-            title={linksCollapsed ? 'Expand links' : 'Collapse links'}
+            data-tooltip={linksCollapsed ? 'Expand links' : 'Collapse links'}
             disabled={!linkControl?.hasItems()}
             aria-expanded={!linksCollapsed}
             onclick={() => (linksCollapsed = !linksCollapsed)}

@@ -114,7 +114,7 @@ const fallbackFeatureCredit = $derived(
 <Popover.Root bind:open>
   <Popover.Trigger
     aria-label={m.image_attribution_title()}
-    title={m.image_attribution_title()}
+    data-tooltip={m.image_attribution_title()}
     class="inline-flex size-10 items-center justify-center rounded-full border border-border bg-panel/95 text-foreground shadow-sm backdrop-blur-sm transition hover:bg-primary hover:text-primary-content focus-visible:outline-2 focus-visible:outline-primary"
     ><InfoIcon class="size-4" aria-hidden="true" /></Popover.Trigger
   >

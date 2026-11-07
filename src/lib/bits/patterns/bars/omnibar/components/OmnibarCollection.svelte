@@ -181,7 +181,7 @@ $effect(() => {
         iconComponent={XMark}
         iconClasses="h-5 w-5"
         class="text-base-content/70"
-        attrs={{ title: m.admin__project_license_close() }}
+        attrs={{ 'data-tooltip': m.admin__project_license_close() }}
         onClick={handleCloseTrayClick}
       />
     </div>

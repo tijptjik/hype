@@ -209,7 +209,7 @@ $effect(() => {
       <button
         type="button"
         aria-label={m.admin__geo_lookup_address_at_location()}
-        title={m.admin__geo_lookup_address_at_location()}
+        data-tooltip={m.admin__geo_lookup_address_at_location()}
         disabled={!isEditing || isLoading || Boolean(coordinateError)}
         onclick={() => onLookup()}
         class="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:text-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-35"
@@ -269,7 +269,7 @@ $effect(() => {
       aria-label={copiedCoordinates
         ? m.feature_address_coordinates_copied()
         : m.feature_address_copy_coordinates()}
-      title={m.feature_address_copy_coordinates()}
+      data-tooltip={m.feature_address_copy_coordinates()}
       class="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
     >
       {#if copiedCoordinates}
