@@ -24,6 +24,11 @@ integration. No implementation or rollout is claimed by this document.
 
 ## Design decisions
 
+The [hierarchy changelog design](../specs/Design-Spec-Resource-Changelog.md) defines the
+read-only Layer, Project and Organisation rollup, affected-field entries, current-scope
+authorization and stable paging. It consumes accepted revision evidence and excludes
+tasks and unaccepted drafts.
+
 ### Identities and content
 
 Use resource-specific tables: `organisationRevision`, `projectRevision`, `layerRevision`
@@ -718,26 +723,221 @@ The focused Svelte check still reports 12 pre-existing errors and two warnings; 
 service typing retains the existing D1 adapter and layer translation-shape errors. No
 clean repository-wide validation or remote rollout is claimed.
 
-### Feature editorial backend integration
+### Feature application integration
 
-The strict `feature-content/v1` schema, baseline source adapter and guarded editorial
-projection are implemented. The
-[Feature write-boundary guide](./Feature-Revisions-Write-Boundaries.md#editorial-content-and-projection-implementation)
-defines included related records, atomic merge groups and currently refused writes.
-Server-owned translation proposals remain isolated from public rows; acceptance of an
-authorized proposal updates an already-published Feature atomically. Explicit initial
-publication and system attribution are supported by storage primitives. Unpublished
-staff Save/Publish and policy-approved Location automation remain distinct application
-integrations; shared Location corrections require separate review.
+The strict `feature-content/v1` schema and guarded forward projection now back enrolled
+Feature editing, separate staff Save/Publish, contributor review, immutable image and
+gallery changes, task evidence, approved Location adoption, separate shared Location
+corrections, catalogue cascades and merge/split review. The
+[Feature write-boundary guide](./Feature-Revisions-Write-Boundaries.md#application-integration-and-activation-boundary)
+details the supported writers and activation limits.
 
-Validation: 116 focused tests pass across 11 suites. The existing disposable local
-database copy converts all 219 image-free Features and passes real-trigger acceptance
-and late-failure rollback scenarios, with rehearsal mutations rolled back. Focused
-typing still reports only the existing two D1 adapter diagnostics and Layer property
-translation-shape diagnostic. Feature enrollment remains disabled; no live Feature
-heads, image baselines, new migration, remote/UI cutover or browser proof is claimed for
-this increment. Immutable media delivery, dedicated Location/gallery/brand writers,
-cascades/imports, application workflows and merge/split integration remain required.
+Ordinary contributor acceptance updates an already-published Feature. New contributions
+have their own atomic task review and initial publication. Approved maintenance of an
+unpublished Feature is attributed in a private capture journal without publishing it.
+Merge/split acceptance publishes all outputs and redirects/retirements together, fences
+input heads and relationship evidence, and removes active projections from retired
+identities. The UI supports survivor selection, retained/new split identities, field
+source selection and gallery ordering. Reviewers assign every open task to an output
+(merge defaults to the survivor; split requires a choice). Task transfer receipts,
+photo-proposal forwarding and merge wishlist deduplication commit with publication.
+Draft photo tasks stay private, and forwarded proposals preserve the uploader's
+attribution without copying unrelated source content. Visits and completed tasks stay on
+their original identities. Split wishlists keep their original links with successor
+guidance. Import crosswalks are unchanged, even when their Feature is merged or split.
+
+Migrations 0184–0191 are additive, with Feature creation disabled by default. The
+attributed offline importer, exact-media enrollment, source-preserving Location
+rehearsal and atomic local activation command are now implemented. The real-data
+rehearsal enrolls 1,647 Features and 2,093 images without altering existing content or
+task projections; 23 missing exact metadata files leave four Features unenrolled. The
+activation command passed on the disposable browser database and was then applied to the
+primary local database after refresh coordination. New-Feature revision recording is
+enabled. Subsequent user-approved empty-metadata recovery enrolled the four previously
+blocked Features, including the book: seven missing sidecars now have explicitly marked
+empty baselines with verified original bytes. No local Feature remains unenrolled.
+Publication/review state and normalized projections are unchanged; the synthetic
+verification Feature remains unpublished/archived. Production is unchanged. See the
+[verified enrollment commands and evidence](./Feature-Revisions-Write-Boundaries.md#verified-local-enrollment-tooling-6-november-2026-refs-194--180--213)
+for the precise rollout boundary and exception handling.
+
+### Exact organisation, project and hub logo history (2026-11-06)
+
+Migration `0197_resource_logo_revisions.sql` adds `resourceLogoImageHead` and immutable
+resource-revision logo pins. Resource snapshots retain the exact `imageRevisionId`
+alongside `imageId`; old snapshots are never rewritten or resolved to today's image. The
+selected image revision retains original bytes by immutable object key and retains
+metadata independently of the current sidecars.
+
+Verified upload finalization, file replacement, rotation and authored metadata edits
+capture the image revision and every current logo owner's resource revision in one
+guarded transaction. Shared-image mutations require permission for every owner and fence
+the owner set. Detachment retains image revisions and bytes. Legacy creation without
+verified upload evidence fails closed after migration. Compatibility sidecar refresh
+failures do not report a committed metadata edit as failed; exact delivery reads the
+journal through the existing app-owned transformer.
+
+Existing logos enroll lazily before their next edit, replacement or removal. This
+requires exact original bytes and the exact versioned metadata sidecar; missing metadata
+returns a repair-required conflict. No empty logo metadata is invented. Baseline
+enrichment preserves resource edit tokens. Upload retries preserve the selected image
+revision and subsequent authored metadata.
+
+History displays exact before/after logo previews. Legacy identity-only entries say
+"Exact historical version unavailable". Historical delivery requires current resource
+editing authority, repeats ancestry checks, and respects image moderation. Only a
+currently selected publicly visible logo pin is publicly deliverable.
+
+Local migration rehearsal and application preserved all 139 pre-existing data tables and
+passed foreign-key/integrity checks. Evidence and backup are under
+`.local/resource-logo-revisions-20261106/`. No historical logo backfill or remote write
+was performed. Headless Chromium/Firefox checked the actual History component with
+synthetic responses at 1280px and 390px; screenshots are under
+`output/playwright/resource-logo-history/`. This is component verification, not an
+authenticated end-to-end upload session. Existing unrelated TypeScript/Svelte errors
+remain outside this change.
+
+Final focused validation: 282 tests pass across 11 image API, upload, delivery, resource
+history and logo revision suites. Scoped TypeScript reports only the existing D1 adapter
+errors (`auth.ts`, `db/index.ts`) and layer translation shape error
+(`db/services/layer.ts`). The broader Svelte dependency traversal also reports unrelated
+existing component/type errors; it reports none in the changed History UI.
+
+### Local logo audit and acceptance follow-up (2026-11-06)
+
+The current local database was rechecked rather than relying on earlier activation
+receipts. Project, layer and hub recording switches were off; guarded enrollment
+restored all three after rehearsal. All 1,652 local Features have revision heads.
+Untouched admin resources still enroll lazily on their first edit; a missing head on an
+untouched resource is not evidence of a missing implementation.
+
+`scripts/revisions/audit-resource-logos.ts` independently checks exact originals and
+versioned metadata, validates metadata and hashes, and writes private local receipts. It
+never writes remote objects or invents empty metadata. Of 18 current logo images, eight
+passed: seven were enrolled locally and one was already enrolled. The guarded
+application preserved current projections and passed foreign-key checks. Evidence,
+source hashes, rehearsal, pre-application backup and application receipt are under
+`.local/logo-acceptance-20261106/`.
+
+Ten logo images remain blocked:
+
+- Original and exact sidecar absent at their recorded storage keys: organisation
+  `cgczhk`; projects `hkghostsigns`, `eln`, `breadline`.
+- Original available but exact sidecar absent: organisation `cityrecorder`; hubs
+  `dimgaai`, `mappinghk`, `breadline`, `core`, `hkghostsigns`.
+
+These are storage exceptions, not permission to synthesize metadata. Repair requires
+verified source recovery or a separately agreed, explicitly attributed recovery
+baseline. Derived renditions or older external originals may still exist.
+
+The audit also exposed a legacy presentation-only difference. Logo enrollment may append
+an attributed migration revision over identical verified original bytes when only the
+current presentation setting differs; it retains the earlier metadata. Feature
+enrollment remains strict. Logo writes now fail closed if an owning project's or hub's
+recording switch is disabled. Browser testing exposed and fixed a stale viewer pin after
+immediate metadata saves, which previously blocked replacement.
+
+### Remaining scope against the original plan
+
+The local implementation covers organisation/project/layer/hub immediate revisions,
+field-catalog history, Feature staff drafts and publication, contributor proposals and
+conflict-aware acceptance, image/gallery evolution, separate shared Location review,
+attributed automatic adoption, and merge/split identity handling. Historical
+visits/completed tasks and import crosswalks retain their original Feature identity.
+
+The original plan is not yet closed operationally:
+
+- Complete consolidated acceptance evidence for every writer and public reader in the
+  Feature boundary inventory, including private drafts, map/search/filter/count
+  projections, imports/jobs, concurrency and interruption/retry scenarios. Individual
+  suites and earlier browser checks do not constitute a single final cutover proof.
+- Resolve the ten logo storage exceptions above. Credit/capture-date display exists, but
+  dedicated editing controls were not found in the logo UI; current browser metadata
+  coverage is presentation editing.
+- Establish clean validation across the integration checkout and reconcile the
+  refresh/rebuild procedure with recording-switch and baseline preservation. The
+  observed disabled switches show why activation must be verified after a refresh; the
+  cause of this particular state has not been established.
+- Rehearse and execute production migrations/enrollment, validate production reads and
+  writes, and deploy under separately scoped authorization. Local completion and
+  development uploads are not evidence of production cutover.
+
+Release manifests, historical playback and eager revision copies for inherited settings
+remain intentionally out of scope. Overwritten pre-tracking versions cannot be recovered
+from the new journal.
+
+Authenticated acceptance used real Better Auth admin-persona sessions against an
+isolated database, with actual development-R2 uploads for organisation, project and hub
+fixtures. Each completed upload, rotation, presentation edit, replacement, removal and
+history inspection. Replacement retained one image identity and two immutable assets per
+resource; all owner snapshots retain exact pins and authored changes identify the admin.
+Database integrity/FKs passed with no leaked write scopes. All 26 historical
+before/after thumbnails decoded; anonymous historical requests for these unpublished
+fixtures returned 404. Receipts are `browser-receipt.json` and `database-receipt.json`
+in the evidence directory. Screenshots are under
+`output/playwright/resource-logo-history/*-authenticated.png`.
+
+The isolated origin is not allowed by bucket CORS, so the harness forwarded signed PUTs
+to development R2 and added the response CORS header locally; native upload CORS was not
+verified or changed. Exact test bytes were hash-checked and cached into the isolated
+local R2 binding. Production objects were read only for the audit. The real admin shell
+blocks widths below 1,200px, so 390px screenshots show its existing guard, not mobile
+workflow acceptance. Earlier Firefox/narrow History checks remain component fixture
+evidence only.
+
+Expanding History exposed transient worker saturation: simultaneous thumbnail transforms
+could return 503 and leave a blank preview. Exact delivery now retries at most twice,
+and only for the private worker's explicit 503/Retry-After: 2 response; it reuses
+verified bytes and retained rotation without bypassing worker capacity. The final
+browser rerun passed. Focused validation passed 160 tests across 11 suites; after the
+capacity fix, its two affected suites passed 23 tests, including bounded retry and
+sustained saturation. Expanded TypeScript traversal still reports D1 adapter, layer
+translation, user-contribution/resource-filter shape, and generated environment module
+errors outside these changes; a clean integration type check remains open.
+
+### Production logo storage repair (2026-11-06)
+
+User-authorized direct production D1/R2 verification supersedes the ten exceptions
+above. The current 19 logo assignments use 18 distinct images; HK Ghost Signs already
+uses its newer shared organisation/project artwork. Direct signed production bucket
+reads confirmed three missing original keys and ten missing exact sidecars, rather than
+a failure of the local remote binding. Seven of those ten already had originals.
+
+For `cgczhk`, `eln` and project `breadline`, retained `.raw` bytes matched the legacy
+Cloudinary originals byte-for-byte. Conditional creates restored the missing original
+keys without changing artwork or image identities. Ten exact metadata files and nine
+missing current aliases were created from verified original dimensions, format and
+SHA-256. Their `metadata.recoveryKind = verified-original-baseline` provenance records
+the recovery time/source and explicitly leaves prior authored metadata unknown. The
+existing newer HKFoodWorks metadata alias was preserved; it was not copied backwards and
+presented as historical metadata.
+
+All 22 new objects passed SHA-256 readback. An independent audit verified all 18
+original/sidecar pairs with zero blockers; production delivery returned HTTP 200 and
+decodable images for all 18. No existing object was overwritten and no production D1
+row, migration or application deployment was changed by this repair. Private input,
+plan, per-object receipts and verification are retained under
+`.local/logo-production-repair-20261106/`. These recovered metadata baselines describe
+known source properties today; they do not reconstruct lost historical edits.
+
+Fresh read-only HYPE/Breadline exports were then retained in rebuild
+`2026-11-06T10-51-58.511Z-013e795c-d36d-4e49-8eb1-03e45abbb040`. Its real-data stages
+passed, but optional local latent-user fixture seeding conflicted with current users.
+Replaying those same fresh inputs with `--no-mocks` completed successfully in
+`2026-11-06T10-56-47.915Z-484d55c5-4fc7-491e-8be8-15fdbf2526b8`: 84 pending migrations
+applied through `0197_resource_logo_revisions.sql`, user reconciliation replay had zero
+mutations/exceptions, and 330 Breadline Features were imported with zero additional
+creations on replay. The prepared database contains 1,651 Features, 1,343 Locations and
+14,310 retained Breadline user crosswalks.
+
+A new direct R2 audit against that prepared database verified all 18 logos. Their
+baselines were enrolled using the domain services, with project/layer/hub recording
+enabled, unchanged resource/image projections and passing foreign-key checks. Private
+enrollment/replay receipts remain in the production-logo repair directory. This prepared
+file has not replaced the active development database: existing local revision history
+must be preserved/reconciled, Feature enrollment/activation must be re-established, and
+writer coordination must precede installation. Production D1 migrations and application
+deployment were not performed.
 
 ### Managed deployment workflow
 

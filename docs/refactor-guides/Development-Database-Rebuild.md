@@ -9,9 +9,11 @@ maintain a separate acceptance database for this workflow.
 
 Prerequisites: the configured Cloudflare read credentials and Breadline source
 connection in `.dev.vars`, plus the reviewed private inputs
-`.local/breadline/user-decisions.json` and `.local/breadline/local-users.json`. The
-local identity seed is created once and retained across rebuilds. These private inputs
-are copied into each rebuild receipt directory; they are not production mocks.
+`.local/breadline/users/production/accepted-sync.json` and
+`.local/breadline/local-users.json`. The production manifest selects the accepted source
+state and reviewed user decisions, including distinct-person phone overrides. The local
+identity seed is created once and retained across rebuilds. These private inputs are
+copied into each rebuild receipt directory; they are not production mocks.
 
 Stop the development server, then run:
 
@@ -31,14 +33,24 @@ The sequence is:
 2. Export the complete Breadline source into a new private SQLite mirror.
 3. Apply pending migrations using the D1 ledger. Before `0152`, execute the reviewed
    historical-layer setup required by that migration. Verify history/media retention and
-   replay; do not bypass its guard.
+   replay; do not bypass its guard. Local preparation of `0169` preserves the known
+   production default with empty fallback locales by adapting both its exact default
+   guard and recreated column in a retained local SQL copy. Shared migrations remain
+   unchanged; receipts retain the original and applied hashes. Unknown defaults or
+   changed migration SQL still stop preparation.
 4. Split eligible existing HYPE Features into unresolved Locations through the existing
    preservation planner, without changing their effective facts. Verify application and
    replay against a before-image. Drafts and intangible records remain explicit
-   exclusions. Import Breadline user identities using the persisted local ID seed and
-   reviewed decisions. Import eligible donors and dropoffs through the existing reviewed
-   Feature converter. Retain exclusions and unresolved user cases in the receipt;
-   changed accepted source hashes or target identity conflicts stop the rebuild.
+   exclusions. Reconcile Breadline users against the mirrored HYPE users using the
+   production manifest's accepted source state, reviewed decisions and persisted local
+   ID seed. The source checkpoint is copied to the local target; production's accepted
+   state is untouched. Apply nonconflicting new users, source-owned profile updates,
+   identity changes, source membership grants and related-record fingerprints. Preserve
+   established HYPE owners, credentials, runtime claims and independent profile edits.
+   Require zero exceptions and a zero-write replay before proceeding. Import eligible
+   donors and dropoffs through the existing reviewed Feature converter. Retain reviewed
+   exclusions and any blocked identity cases in private evidence; a failed
+   reconciliation stops the rebuild before installation.
 5. Apply the reviewed dataset Location kinds and six exact relocation policies and sync
    local map styles.
 6. Seed reserved development personas and ingest development-only latent-user fixtures
@@ -56,6 +68,16 @@ The sequence is:
 Private exports, plans, input hashes, conflicts, counts and the before-image live in
 `.local/dev-rebuilds/<timestamp>-<id>/`. Keep these artifacts private. The identity seed
 and user decisions are inputs too: losing the seed can change imported IDs.
+
+User reconciliation is a required refresh stage, including when recovering a failed
+refresh manually. `receipt.userReconciliation.status` must be `passed`, with a
+zero-write replay, before the refreshed data is reported as ready. Its plan, original
+source baseline, accepted local source state and aggregate counts are retained with the
+rebuild. A copied production user table or a completed donor/dropoff import does not
+establish that users were reconciled. When resuming a partial refresh, rehearse the same
+reconciliation stage against a current local backup and apply its guarded plan to the
+live local target; do not reinstall an older prepared database over newer development
+work. Retain the accepted source state for subsequent local syncs.
 
 For preparation without installing, or to reuse explicitly retained exports:
 
