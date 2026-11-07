@@ -1047,6 +1047,8 @@ onMount(() => {
 $effect(() => {
   if (activeFacet !== 'fields') return
   if (!isCurrentRefSettled) return
+  // The resource settles before configureForm hydrates its fields; wait for this form's identity.
+  if (!isNewFeatureRef && currentFormValue.meta?.id !== featureRef) return
   if (hasSelectedLayer) return
   untrack(() => {
     adminCtx.setFacet('core', featureRef, FirstClassResource.feature)
