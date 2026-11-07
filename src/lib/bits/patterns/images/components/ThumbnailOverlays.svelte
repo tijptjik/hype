@@ -73,7 +73,7 @@ let {
         onClick={() => onCancelDelete?.()}
       />
       <Button
-        text={m.forms__delete()}
+        text={m.ok()}
         color="error"
         size="sm"
         onClick={() => onConfirmDelete?.()}
