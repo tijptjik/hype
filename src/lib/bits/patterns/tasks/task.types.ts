@@ -1,3 +1,4 @@
+import type { ProfileLocaleState } from '#lib/bits/patterns/forms/featureLocation/profileLocales.js'
 import type { Task } from '#lib/db/zod/schema/task.types.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 import type { TaskEditorLayerOption as TaskEditorLayerOptionSchema } from '#lib/db/zod/schema/task.types.js'
@@ -77,6 +78,7 @@ export type TaskMapProps = {
 }
 
 export type TaskEditorProps = {
+  localeState?: ProfileLocaleState
   task: Task
   assignableLayers?: TaskEditorLayerOption[]
   canReassignLayer?: boolean

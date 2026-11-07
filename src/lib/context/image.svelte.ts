@@ -2663,13 +2663,18 @@ export class ImageCtx {
    *
    * @param imageId The image being updated.
    * @param newIntent The new intent value to persist.
+   * @param publishFromIntent Whether intent also controls publication; task classification preserves it.
    * @returns Resolves after local state has been refreshed.
    */
-  async handleSetIntent(imageId: Id, newIntent: Intent) {
+  async handleSetIntent(
+    imageId: Id,
+    newIntent: Intent,
+    publishFromIntent = true,
+  ): Promise<void> {
     const publicIntents = ['canonical', 'closeUp', 'context', 'general'] as const
-    const isPublished = publicIntents.includes(
-      newIntent as (typeof publicIntents)[number],
-    )
+    const isPublished = publishFromIntent
+      ? publicIntents.includes(newIntent as (typeof publicIntents)[number])
+      : undefined
     const ctx = this.getCtx()
     const featureId = ctx.ctxType === 'feature' ? ctx.ctxId : undefined
     const contextAtStart = this.state.context
@@ -2692,7 +2697,8 @@ export class ImageCtx {
       await this.reconcileImageMutation(contextAtStart)
       if (this.state.context !== contextAtStart) return
       this.setForImage(imageId, 'intent', newIntent)
-      this.setForImage(imageId, 'isPublished', isPublished)
+      if (isPublished !== undefined)
+        this.setForImage(imageId, 'isPublished', isPublished)
       await this.refreshImages()
       if (this.state.context !== contextAtStart) return
       this.sortImagesInternal() // Calls the private sortImages method

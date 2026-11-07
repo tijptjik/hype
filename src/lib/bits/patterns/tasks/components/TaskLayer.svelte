@@ -30,7 +30,7 @@ const items = $derived(
 >
   <div class="pb-1.5">
     {#if title}
-      <div class="text-xs font-semibold text-muted-foreground">
+      <div class="text-muted-foreground text-xs font-semibold">
         {title}
       </div>
     {/if}
@@ -41,7 +41,7 @@ const items = $derived(
     {items}
     placeholder={m.resource__layer_singular()}
     disabled={disabled || isBusy}
-    triggerClass="w-full border-border bg-surface text-foreground"
+    triggerClass="w-full border-border bg-panel! text-foreground"
     contentClass="border-foreground/12 bg-panel text-foreground text-md"
     onValueChange={value => {
       if (!value || value === currentLayerId) return

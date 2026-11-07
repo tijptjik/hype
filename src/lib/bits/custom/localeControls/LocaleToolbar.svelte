@@ -15,7 +15,11 @@ import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
 import { localeOverflow } from './localeOverflow'
 // LOCAL
 import LocaleSearch from './LocaleSearch.svelte'
-import { defaultLocaleControlLabels, shortLocaleLabel } from './localeControls.js'
+import {
+  defaultLocaleControlLabels,
+  displayedLocales,
+  shortLocaleLabel,
+} from './localeControls.js'
 import { languageFont } from '#lib/bits/custom/localeControls/localeFont.js'
 // TYPES
 import type { LocaleChange, LocaleToolbarProps } from './localeControls.types.js'
@@ -32,6 +36,7 @@ let {
   mode = 'visibility',
   alwaysExpanded = false,
   horizontal = false,
+  contentLocales = [],
   labels = defaultLocaleControlLabels,
   class: className = '',
 }: LocaleToolbarProps = $props()
@@ -52,6 +57,14 @@ let addButton = $state<HTMLButtonElement>()
 let quietAddFocus = $state(false)
 let root: HTMLDivElement
 const isExpanded = $derived(alwaysExpanded || expanded)
+const hasHiddenContent = $derived(
+  contentLocales.some(
+    locale =>
+      !displayedLocales({ selectedLocales, visibleLocales }, isExpanded).includes(
+        locale,
+      ),
+  ),
+)
 let reducedMotion = $state(false)
 onMount(() => {
   const preference = window.matchMedia?.('(prefers-reduced-motion: reduce)')
@@ -418,6 +431,14 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
       >
         <LanguagesIcon class="size-4" />
         <span data-control-label>{labels.multilingual}</span>
+        {#if hasHiddenContent}
+          <span
+            role="img"
+            aria-label="Hidden multilingual content"
+            title="Hidden multilingual content"
+            class="size-1.5 shrink-0 rounded-full bg-current"
+          ></span>
+        {/if}
       </button>
     {/if}
   </div>

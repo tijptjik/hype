@@ -8,6 +8,7 @@ import type { MainVisualSectionProps } from './main.types'
 let {
   class: className = '',
   resizeLabel,
+  splitResizeLabel,
   onHeightChange,
   isCollapsed = false,
   expandedHeight = 520,
@@ -53,6 +54,59 @@ let heightBeforeFit: number | null = null
 let drag = $state<{ pointerId: number; startY: number; startHeight: number } | null>(
   null,
 )
+// Keep the whole map and gallery columns together, including their context strips.
+let mapShare = $state(50)
+let visualBody = $state<HTMLDivElement>()
+let splitDrag = $state<{
+  pointerId: number
+  startX: number
+  startShare: number
+  width: number
+} | null>(null)
+
+/** Resize the columns while retaining usable space on each side.
+ * @param value Requested map percentage. @returns Nothing.
+ */
+function resizeSplit(value: number): void {
+  markResizeActivity()
+  mapShare = Math.max(20, Math.min(80, value))
+}
+
+/** Capture the separator without shifting the split on pointer-down.
+ * @param event Pointer start event. @returns Nothing.
+ */
+function startSplitResize(
+  event: PointerEvent & { currentTarget: HTMLDivElement },
+): void {
+  if (event.button !== 0 || !visualBody?.clientWidth) return
+  event.preventDefault()
+  event.currentTarget.setPointerCapture(event.pointerId)
+  splitDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startShare: mapShare,
+    width: visualBody.clientWidth,
+  }
+  markResizeActivity()
+}
+
+/** Provide arrow, endpoint and reset alternatives to pointer dragging.
+ * @param event Separator keyboard event. @returns Nothing.
+ */
+function resizeSplitWithKeyboard(event: KeyboardEvent): void {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(event.key)) return
+  event.preventDefault()
+  resizeSplit(
+    event.key === 'Home'
+      ? 20
+      : event.key === 'End'
+        ? 80
+        : event.key === 'Enter'
+          ? 50
+          : mapShare + (event.key === 'ArrowRight' ? 5 : -5),
+  )
+}
+
 const height = $derived(Math.max(minimumHeight, customHeight ?? expandedHeight))
 
 /** Sets the expanded height within the same bounds as the address map.
@@ -157,7 +211,7 @@ const rootClass = $derived(
     .join(' '),
 )
 const rootStyle = $derived(
-  `--bits-feature-visual-expanded-height:${height}px; --bits-feature-visual-collapsed-height:${collapsedHeight}px; --bits-feature-visual-image-ratio:${imageAspectRatio ?? 1}; --bits-feature-visual-transition-duration:${prefersReducedMotion.current ? 0 : VISUAL_TRANSITION_MS}ms;`,
+  `--bits-feature-visual-expanded-height:${height}px; --bits-feature-visual-collapsed-height:${collapsedHeight}px; --bits-feature-visual-image-ratio:${imageAspectRatio ?? 1}; --bits-feature-visual-image-width:${100 - mapShare}%; --bits-feature-visual-transition-duration:${prefersReducedMotion.current ? 0 : VISUAL_TRANSITION_MS}ms;`,
 )
 </script>
 
@@ -204,8 +258,9 @@ const rootStyle = $derived(
     </div>
   {/if}
 
-  <div class="bits-feature-visual__body">
+  <div bind:this={visualBody} class="bits-feature-visual__body">
     <div
+      id={`${visualId}-map`}
       class="bits-feature-visual__map {showImage ? '' : 'p-0!'} {automaticResize
         ? 'transition-[height] duration-200 motion-reduce:transition-none'
         : ''}"
@@ -214,9 +269,56 @@ const rootStyle = $derived(
     </div>
 
     {#if showImage}
-      <div class="bits-feature-visual__image">{@render image?.()}</div>
+      <div
+        id={`${visualId}-image`}
+        class="bits-feature-visual__image {splitResizeLabel
+          ? 'min-[901px]:basis-[var(--bits-feature-visual-image-width)]! min-[901px]:w-[var(--bits-feature-visual-image-width)]! min-[901px]:max-w-[var(--bits-feature-visual-image-width)]! transition-none!'
+          : ''}"
+      >
+        {@render image?.()}
+      </div>
     {/if}
   </div>
+  {#if splitResizeLabel && showImage && !isCollapsed}
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
+    <!-- biome-ignore lint/a11y/useSemanticElements: This focusable separator supports keyboard and pointer resizing. -->
+    <div
+      role="separator"
+      tabindex="0"
+      aria-label={splitResizeLabel}
+      aria-orientation="vertical"
+      aria-controls={`${visualId}-map ${visualId}-image`}
+      aria-valuemin={20}
+      aria-valuemax={80}
+      aria-valuenow={Math.round(mapShare)}
+      aria-valuetext={`${Math.round(mapShare)}% / ${Math.round(100 - mapShare)}%`}
+      class="group hover:bg-primary/15 focus-visible:bg-primary/20 absolute inset-y-0 z-50 hidden w-3 -translate-x-1/2 cursor-col-resize touch-none items-center justify-center outline-none min-[901px]:flex"
+      style:left={`${mapShare}%`}
+      onpointerdown={startSplitResize}
+      onpointermove={event => {
+        if (splitDrag?.pointerId === event.pointerId)
+          resizeSplit(
+            splitDrag.startShare +
+              ((event.clientX - splitDrag.startX) / splitDrag.width) * 100,
+          )
+      }}
+      onpointerup={event => {
+        if (splitDrag?.pointerId === event.pointerId) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+          splitDrag = null
+        }
+      }}
+      onpointercancel={() => (splitDrag = null)}
+      onlostpointercapture={() => (splitDrag = null)}
+      onkeydown={resizeSplitWithKeyboard}
+      ondblclick={() => resizeSplit(50)}
+    >
+      <span
+        aria-hidden="true"
+        class="bg-foreground/35 group-hover:bg-primary group-focus-visible:bg-primary h-10 w-1 rounded-full"
+      ></span>
+    </div>
+  {/if}
   {#if resizeLabel && !isCollapsed}
     <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
     <!-- biome-ignore lint/a11y/useSemanticElements: This focusable splitter supports keyboard and pointer resizing. -->

@@ -24,6 +24,9 @@ let {
   minimumHeight = 64,
   showImage = true,
   showControls = true,
+  splitResizeLabel,
+  showCenterControls = true,
+  showNavigationControls = true,
   hasPresentedCanonicalImageSizing = false,
   isCanonicalImagePending = false,
   imageAspectRatio = null,
@@ -85,6 +88,7 @@ export function rememberHeight(): void {
   {minimumHeight}
   showImage={!isNewFeature && showImage}
   {showControls}
+  {splitResizeLabel}
   {onHeightChange}
   class={rootClass}
   {imageAspectRatio}
@@ -129,131 +133,135 @@ export function rememberHeight(): void {
   {/snippet}
 
   {#snippet centerControls()}
-    <div
-      class="bg-panel text-foreground inline-flex min-h-11 items-center gap-1 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] px-2.5 py-1 backdrop-blur-[14px]"
-    >
-      <SimpleTooltip>
-        {#snippet trigger()}
-          <div class="inline-flex h-11 w-11 min-w-10 items-center justify-center">
-            <SwapField
-              checked={Boolean(isIntangible)}
-              disabled={!isEditing}
-              size="sm"
-              class="[&_[data-ui=swap][data-state=checked]]:bg-primary! [&_[data-ui=swap][data-state=checked]]:text-primary-content! inline-flex h-10 w-10 min-w-10 transform-none items-center justify-center [&_.bits-swap-field]:inline-flex [&_.bits-swap-field]:h-10 [&_.bits-swap-field]:w-10 [&_.bits-swap-field]:items-center [&_.bits-swap-field]:justify-center [&_[data-ui=swap]]:h-10 [&_[data-ui=swap]]:min-h-10 [&_[data-ui=swap]]:w-10 [&_[data-ui=swap]]:min-w-10 [&_[data-ui=swap]]:border-none [&_[data-ui=swap]]:bg-transparent [&_[data-ui=swap]]:p-0 [&_[data-ui=swap]]:shadow-none [&_[data-ui=swap]:disabled]:border-none [&_[data-ui=swap]:disabled]:bg-transparent [&_[data-ui=swap]:disabled]:shadow-none [&_[data-ui=swap][data-state=checked]]:border-none [&_[data-ui=swap][data-state=checked]]:opacity-100! [&_[data-ui=swap][data-state=checked]]:shadow-none"
-              label={m.feature__intangible()}
-              onColor="accent"
-              offColor="dark"
-              onIcon={GhostIcon}
-              offIcon={GhostIcon}
-              onCheckedChange={value => onIntangibleChange?.(value)}
-            />
-          </div>
-        {/snippet}
-        {m.feature__intangible()}
-      </SimpleTooltip>
-
-      <SimpleTooltip>
-        {#snippet trigger()}
-          <div class="inline-flex h-11 w-11 min-w-10 items-center justify-center">
-            <SwapField
-              checked={!isVisitable}
-              disabled={!isEditing}
-              size="sm"
-              class="[&_[data-ui=swap][data-state=checked]]:bg-error! [&_[data-ui=swap][data-state=checked]]:text-error-content! inline-flex h-10 w-10 min-w-10 transform-none items-center justify-center [&_.bits-swap-field]:inline-flex [&_.bits-swap-field]:h-10 [&_.bits-swap-field]:w-10 [&_.bits-swap-field]:items-center [&_.bits-swap-field]:justify-center [&_[data-ui=swap]]:h-10 [&_[data-ui=swap]]:min-h-10 [&_[data-ui=swap]]:w-10 [&_[data-ui=swap]]:min-w-10 [&_[data-ui=swap]]:border-none [&_[data-ui=swap]]:bg-transparent [&_[data-ui=swap]]:p-0 [&_[data-ui=swap]]:shadow-none [&_[data-ui=swap]:disabled]:border-none [&_[data-ui=swap]:disabled]:bg-transparent [&_[data-ui=swap]:disabled]:shadow-none [&_[data-ui=swap][data-state=checked]]:border-none [&_[data-ui=swap][data-state=checked]]:opacity-100! [&_[data-ui=swap][data-state=checked]]:shadow-none"
-              label={m.feature__cannot_visit()}
-              onColor="error"
-              offColor="dark"
-              onIcon={OctagonMinusIcon}
-              offIcon={OctagonMinusIcon}
-              onCheckedChange={value => onVisitableChange?.(!value)}
-            />
-          </div>
-        {/snippet}
-        {m.feature__cannot_visit()}
-      </SimpleTooltip>
-
-      <Separator
-        orientation="vertical"
-        decorative={true}
-        class="mx-0 mx-2 my-0 block h-6 bg-[color:color-mix(in_oklab,var(--color-foreground)_30%,transparent)]"
-      />
-
-      <InfoDialog
-        title={m.antsy_patient_moth_taste()}
-        triggerText=""
-        triggerIconComponent={InfoIcon}
-        triggerIconClasses="h-[22px] w-[22px] text-foreground hover:text-primary"
+    {#if showCenterControls}
+      <div
+        class="bg-panel text-foreground inline-flex min-h-11 items-center gap-1 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] px-2.5 py-1 backdrop-blur-[14px]"
       >
-        <section>
-          <h3 class="font-bold">{m.antsy_patient_moth_taste()}</h3>
-          <p>{@html m.home_legal_trout_hurl()}</p>
-        </section>
-        <section>
-          <h3 class="font-bold">{m.feature__classification()}</h3>
-          <p>{m.weak_main_earthworm_thrive()}</p>
-        </section>
-        <section>
-          <h3 class="font-bold">{m.feature__specification()}</h3>
-          <p>{m.less_new_crocodile_dust()}</p>
-        </section>
-      </InfoDialog>
+        <SimpleTooltip>
+          {#snippet trigger()}
+            <div class="inline-flex h-11 w-11 min-w-10 items-center justify-center">
+              <SwapField
+                checked={Boolean(isIntangible)}
+                disabled={!isEditing}
+                size="sm"
+                class="[&_[data-ui=swap][data-state=checked]]:bg-primary! [&_[data-ui=swap][data-state=checked]]:text-primary-content! inline-flex h-10 w-10 min-w-10 transform-none items-center justify-center [&_.bits-swap-field]:inline-flex [&_.bits-swap-field]:h-10 [&_.bits-swap-field]:w-10 [&_.bits-swap-field]:items-center [&_.bits-swap-field]:justify-center [&_[data-ui=swap]]:h-10 [&_[data-ui=swap]]:min-h-10 [&_[data-ui=swap]]:w-10 [&_[data-ui=swap]]:min-w-10 [&_[data-ui=swap]]:border-none [&_[data-ui=swap]]:bg-transparent [&_[data-ui=swap]]:p-0 [&_[data-ui=swap]]:shadow-none [&_[data-ui=swap]:disabled]:border-none [&_[data-ui=swap]:disabled]:bg-transparent [&_[data-ui=swap]:disabled]:shadow-none [&_[data-ui=swap][data-state=checked]]:border-none [&_[data-ui=swap][data-state=checked]]:opacity-100! [&_[data-ui=swap][data-state=checked]]:shadow-none"
+                label={m.feature__intangible()}
+                onColor="accent"
+                offColor="dark"
+                onIcon={GhostIcon}
+                offIcon={GhostIcon}
+                onCheckedChange={value => onIntangibleChange?.(value)}
+              />
+            </div>
+          {/snippet}
+          {m.feature__intangible()}
+        </SimpleTooltip>
 
-      <Button
-        text={isCollapsed
-          ? m.admin__forms_common_expand()
-          : m.admin__forms_common_collapse()}
-        iconComponent={isCollapsed ? ExpandIcon : ShrinkIcon}
-        color="dark"
-        style="transparent"
-        size="sm"
-        hideLabel={true}
-        hideLabelInstantly={true}
-        iconClasses="h-5.5 w-5.5 hover:text-primary"
-        class="-ml-2 pr-3"
-        attrs={{ 'aria-expanded': !isCollapsed }}
-        onClick={() => {
-          if (isCollapsed) {
-            onExpand?.()
-            return
-          }
+        <SimpleTooltip>
+          {#snippet trigger()}
+            <div class="inline-flex h-11 w-11 min-w-10 items-center justify-center">
+              <SwapField
+                checked={!isVisitable}
+                disabled={!isEditing}
+                size="sm"
+                class="[&_[data-ui=swap][data-state=checked]]:bg-error! [&_[data-ui=swap][data-state=checked]]:text-error-content! inline-flex h-10 w-10 min-w-10 transform-none items-center justify-center [&_.bits-swap-field]:inline-flex [&_.bits-swap-field]:h-10 [&_.bits-swap-field]:w-10 [&_.bits-swap-field]:items-center [&_.bits-swap-field]:justify-center [&_[data-ui=swap]]:h-10 [&_[data-ui=swap]]:min-h-10 [&_[data-ui=swap]]:w-10 [&_[data-ui=swap]]:min-w-10 [&_[data-ui=swap]]:border-none [&_[data-ui=swap]]:bg-transparent [&_[data-ui=swap]]:p-0 [&_[data-ui=swap]]:shadow-none [&_[data-ui=swap]:disabled]:border-none [&_[data-ui=swap]:disabled]:bg-transparent [&_[data-ui=swap]:disabled]:shadow-none [&_[data-ui=swap][data-state=checked]]:border-none [&_[data-ui=swap][data-state=checked]]:opacity-100! [&_[data-ui=swap][data-state=checked]]:shadow-none"
+                label={m.feature__cannot_visit()}
+                onColor="error"
+                offColor="dark"
+                onIcon={OctagonMinusIcon}
+                offIcon={OctagonMinusIcon}
+                onCheckedChange={value => onVisitableChange?.(!value)}
+              />
+            </div>
+          {/snippet}
+          {m.feature__cannot_visit()}
+        </SimpleTooltip>
 
-          onCollapse?.()
-        }}
-      />
-    </div>
+        <Separator
+          orientation="vertical"
+          decorative={true}
+          class="mx-0 mx-2 my-0 block h-6 bg-[color:color-mix(in_oklab,var(--color-foreground)_30%,transparent)]"
+        />
+
+        <InfoDialog
+          title={m.antsy_patient_moth_taste()}
+          triggerText=""
+          triggerIconComponent={InfoIcon}
+          triggerIconClasses="h-[22px] w-[22px] text-foreground hover:text-primary"
+        >
+          <section>
+            <h3 class="font-bold">{m.antsy_patient_moth_taste()}</h3>
+            <p>{@html m.home_legal_trout_hurl()}</p>
+          </section>
+          <section>
+            <h3 class="font-bold">{m.feature__classification()}</h3>
+            <p>{m.weak_main_earthworm_thrive()}</p>
+          </section>
+          <section>
+            <h3 class="font-bold">{m.feature__specification()}</h3>
+            <p>{m.less_new_crocodile_dust()}</p>
+          </section>
+        </InfoDialog>
+
+        <Button
+          text={isCollapsed
+            ? m.admin__forms_common_expand()
+            : m.admin__forms_common_collapse()}
+          iconComponent={isCollapsed ? ExpandIcon : ShrinkIcon}
+          color="dark"
+          style="transparent"
+          size="sm"
+          hideLabel={true}
+          hideLabelInstantly={true}
+          iconClasses="h-5.5 w-5.5 hover:text-primary"
+          class="-ml-2 pr-3"
+          attrs={{ 'aria-expanded': !isCollapsed }}
+          onClick={() => {
+            if (isCollapsed) {
+              onExpand?.()
+              return
+            }
+
+            onCollapse?.()
+          }}
+        />
+      </div>
+    {/if}
   {/snippet}
 
   {#snippet rightControls()}
-    <div
-      class="bg-panel text-foreground inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] px-2.5 py-1 backdrop-blur-[14px]"
-    >
-      <Button
-        text={m.slimy_helpful_shad_vent()}
-        iconComponent={ChevronLeftIcon}
-        color="dark"
-        style="transparent"
-        size="sm"
-        hideLabel={true}
-        hideLabelInstantly={true}
-        disabled={!hasPrevious}
-        iconClasses="h-5.5 w-5.5"
-        class="h-10 w-6 !border-0 !bg-transparent p-0 text-[var(--color-foreground)] shadow-none transition-[background-color,opacity] duration-180 ease-out disabled:opacity-35"
-        onClick={() => onNavigatePrevious?.()}
-      />
-      <Button
-        text={m.curly_flaky_panther_mop()}
-        iconComponent={ChevronRightIcon}
-        color="dark"
-        style="transparent"
-        size="sm"
-        hideLabel={true}
-        hideLabelInstantly={true}
-        disabled={!hasNext}
-        iconClasses="h-5.5 w-5.5"
-        class="h-10 w-6 hover:text-white disabled:opacity-35"
-        onClick={() => onNavigateNext?.()}
-      />
-    </div>
+    {#if showNavigationControls}
+      <div
+        class="bg-panel text-foreground inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] px-2.5 py-1 backdrop-blur-[14px]"
+      >
+        <Button
+          text={m.slimy_helpful_shad_vent()}
+          iconComponent={ChevronLeftIcon}
+          color="dark"
+          style="transparent"
+          size="sm"
+          hideLabel={true}
+          hideLabelInstantly={true}
+          disabled={!hasPrevious}
+          iconClasses="h-5.5 w-5.5"
+          class="h-10 w-6 !border-0 !bg-transparent p-0 text-[var(--color-foreground)] shadow-none transition-[background-color,opacity] duration-180 ease-out disabled:opacity-35"
+          onClick={() => onNavigatePrevious?.()}
+        />
+        <Button
+          text={m.curly_flaky_panther_mop()}
+          iconComponent={ChevronRightIcon}
+          color="dark"
+          style="transparent"
+          size="sm"
+          hideLabel={true}
+          hideLabelInstantly={true}
+          disabled={!hasNext}
+          iconClasses="h-5.5 w-5.5"
+          class="h-10 w-6 hover:text-white disabled:opacity-35"
+          onClick={() => onNavigateNext?.()}
+        />
+      </div>
+    {/if}
   {/snippet}
 
   {#snippet map()}

@@ -6,7 +6,7 @@ export const IMAGE_CHROME_SURFACE_CLASSES =
 
 export const IMAGE_METADATA_BUTTON_CLASSES = cx(
   IMAGE_CHROME_SURFACE_CLASSES,
-  'inline-flex h-11 w-11 items-center justify-center transition hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+  'inline-flex h-11 w-11 items-center justify-center transition bg-panel! hover:bg-panel! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
 )
 
 export const IMAGE_ATTRIBUTION_CLASSES = cx(

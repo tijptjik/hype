@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy } from 'svelte'
+import { onDestroy, type Component } from 'svelte'
 // CONTEXT
 import { setAdminCtx } from '#lib/context/admin.svelte.js'
 import { AccountState } from '#lib/context/account.svelte.js'
@@ -12,6 +12,12 @@ import { setThemeModel } from '#lib/themes/theme.svelte.js'
 import { setImageCtx } from '#lib/context/image.svelte.js'
 // COMPONENTS
 import TaskEditor from '#lib/bits/patterns/tasks/TaskEditor.svelte'
+import TaskLocaleActions from '#lib/bits/patterns/tasks/components/TaskLocaleActions.svelte'
+import HeaderTaskActions from '#lib/bits/patterns/layout/header/components/HeaderTaskActions.svelte'
+import {
+  restoreProfileLocales,
+  type ProfileLocaleState,
+} from '#lib/bits/patterns/forms/featureLocation/profileLocales.js'
 // TYPES
 import type { Task, TaskEditorLayerOption } from '#lib/db/zod/schema/task.types.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
@@ -82,6 +88,13 @@ const task = $derived({
     properties: [],
   },
 } as unknown as Task)
+let localeState = $state(
+  restoreProfileLocales(['en'], {
+    en: { title: 'English' },
+    'zh-Hans': { title: '中文' },
+    'zh-Hant': { title: '中文' },
+  }),
+)
 onDestroy(() => {
   imageCtx.dispose()
   view.dispose()
@@ -89,7 +102,23 @@ onDestroy(() => {
 </script>
 
 <div class="bits-theme bg-panel h-screen">
+  <div class="flex h-16 items-center justify-end px-3" data-task-header>
+    <HeaderTaskActions
+      actions={[{ text: 'Reject', onClick: () => {} }]}
+      content={{
+        component: TaskLocaleActions as unknown as Component<Record<string, unknown>>,
+        props: {
+          localeState,
+          content: task.feature?.i18n ?? {},
+          onChange: (state: ProfileLocaleState) => {
+            localeState = state
+          },
+        },
+      }}
+    />
+  </div>
   <TaskEditor
+    {localeState}
     {task}
     canReassignLayer
     assignableLayers={layers}

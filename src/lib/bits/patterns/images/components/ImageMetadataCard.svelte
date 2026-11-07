@@ -281,7 +281,7 @@ $effect(() => {
 </script>
 
 <div
-  class="border-border bg-base-100 text-base-content max-h-[min(28rem,calc(100dvh-6rem))] w-80 max-w-[calc(100vw-3rem)] min-w-0 overflow-y-auto rounded-xl border p-3 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+  class="border-border bg-panel text-base-content max-h-[min(28rem,calc(100dvh-6rem))] w-max max-w-[min(20rem,calc(100vw-3rem))] min-w-0 overflow-y-auto rounded-xl border p-3 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
 >
   <div class="flex min-w-0 flex-col gap-2">
     {#if metadataRows.length > 0}

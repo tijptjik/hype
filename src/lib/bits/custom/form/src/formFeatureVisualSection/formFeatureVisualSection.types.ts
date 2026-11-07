@@ -12,6 +12,9 @@ export type FormFeatureVisualSectionProps = {
   expandedHeight?: number
   showImage?: boolean
   showControls?: boolean
+  splitResizeLabel?: string
+  showCenterControls?: boolean
+  showNavigationControls?: boolean
   onHeightChange?: (height: number) => void
   class?: string
   hasPresentedCanonicalImageSizing?: boolean

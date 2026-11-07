@@ -14,6 +14,7 @@ let {
   rounded = 'rounded-2xl',
   wrapNavigation = true,
   showNavButtons = true,
+  showBackdrop = true,
   leftRail,
   centerRail,
   rightRail,
@@ -54,6 +55,7 @@ let {
       {viewerFit}
       {wrapNavigation}
       {showNavButtons}
+      {showBackdrop}
       {leftRail}
       {centerRail}
       {rightRail}

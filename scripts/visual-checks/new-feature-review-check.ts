@@ -32,6 +32,18 @@ for (const [name, engine] of [
           body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/newFeatureReviewCheck.ts"></script></body></html>',
         }),
       )
+      await page.route('**/src/lib/api/featureRevisions.remote.*', route =>
+        route.fulfill({
+          contentType: 'application/javascript',
+          body: `
+          export async function getFeatureGalleryRevisionEditor() {
+            return { enabled: true, comparisonRevisionId: 'fixture', locales: ['en', 'zh-Hant'],
+              gallery: { order: ['first', 'second'], entries: Object.fromEntries(['first', 'second'].map(id => [id, { caption: { en: 'Photo caption', 'zh-Hant': '相片說明' }, alt: {} }])) } };
+          }
+          ${['getFeatureRevisionWorkspace', 'getFeaturePublicationReview', 'saveFeatureTranslationDraft', 'submitFeatureTranslationDraft', 'publishFeatureTranslationRevision', 'decideFeatureTranslationRevision', 'getFeatureFormRevisionReview', 'publishFeatureFormRevision', 'saveFeatureGalleryRevision', 'getFeaturePrivateReview'].map(name => `export async function ${name}() { return { enabled: false }; }`).join('\n')}
+        `,
+        }),
+      )
       await page.route('**/review-fixture/**', route => {
         if (
           !route.request().url().includes('first') &&
@@ -69,7 +81,7 @@ for (const [name, engine] of [
       if (await page.getByText('Accepting publishes', { exact: false }).count())
         throw Error('Removed explanation remains')
       const thumbnails = page.locator('[data-gallery-thumb-id] button[aria-pressed]')
-      await thumbnails.nth(1).click()
+      await thumbnails.nth(1).hover()
       await page.waitForFunction(
         () =>
           document
@@ -149,7 +161,9 @@ for (const [name, engine] of [
         }),
       )
       if (errors.length) throw Error(errors.join('\n'))
-      const splitter = page.locator('[role="separator"][aria-orientation="vertical"]')
+      const splitter = page.locator(
+        '[role="separator"][aria-orientation="vertical"][aria-label="Resize map and image section"]',
+      )
       if (width > 900) {
         await splitter.focus()
         await splitter.press('ArrowRight')
@@ -166,18 +180,18 @@ for (const [name, engine] of [
         await page.mouse.up()
         const share = Number(await splitter.getAttribute('aria-valuenow'))
         if (Math.abs(share - 30) > 1)
-          throw Error('Pointer split resize failed: ' + share)
+          throw Error(`Pointer split resize failed: ${share}`)
         const bounds = await page.evaluate(() => {
           const widthOf = (selector: string) =>
-            document.querySelector(selector)!.getBoundingClientRect().width
+            document.querySelector(selector)?.getBoundingClientRect().width
           return {
             map: widthOf('.bits-feature-visual__map'),
             image: widthOf('.bits-feature-visual__image'),
             overview: widthOf('[aria-label="Location context map"]'),
             detail: widthOf('[aria-label="Detailed location map"]'),
             track: document
-              .querySelector('[aria-label="Gallery thumbnails"]')!
-              .parentElement!.parentElement!.getBoundingClientRect().width,
+              .querySelector('[aria-label="Gallery thumbnails"]')
+              ?.parentElement?.parentElement?.getBoundingClientRect().width,
           }
         })
         if (
@@ -186,7 +200,7 @@ for (const [name, engine] of [
           Math.abs(bounds.detail - bounds.map) > 2 ||
           Math.abs(bounds.track - bounds.image) > 2
         )
-          throw Error('Pane contents did not follow split: ' + JSON.stringify(bounds))
+          throw Error(`Pane contents did not follow split: ${JSON.stringify(bounds)}`)
         if ((await activePhoto.getAttribute('aria-pressed')) !== 'true')
           throw Error('Resizing changed image selection')
         await page.screenshot({
@@ -239,7 +253,7 @@ for (const [name, engine] of [
       const inset = await page
         .locator('[data-form-surface]')
         .evaluate(node => getComputedStyle(node).padding)
-      if (inset !== '0px') throw Error('Unexpected task panel gutter: ' + inset)
+      if (inset !== '0px') throw Error(`Unexpected task panel gutter: ${inset}`)
       const contextMap = page.getByRole('region', { name: 'Location context map' })
       await contextMap.getByRole('button', { name: 'Open fullscreen map' }).click()
       await page.waitForFunction(() => {
@@ -253,13 +267,57 @@ for (const [name, engine] of [
             .querySelector('[aria-label="Location context map"]')
             ?.getBoundingClientRect().height === 128,
       )
+      await page.locator('[data-task-header]').scrollIntoViewIfNeeded()
       const language = await page
         .getByRole('button', { name: 'Multilingual', exact: true })
         .boundingBox()
-      if (!language || language.y < overview.y + overview.height)
-        throw Error('Language bar must follow the visual section')
+      const reject = await page
+        .getByRole('button', { name: 'Reject', exact: true })
+        .boundingBox()
+      const separator = await page
+        .locator('[data-task-header] [role="separator"]')
+        .boundingBox()
+      if (
+        !language ||
+        !reject ||
+        !separator ||
+        language.y >=
+          (
+            await page
+              .getByRole('region', { name: 'Location context map' })
+              .boundingBox()
+          )?.y ||
+        language.x >= reject.x ||
+        separator.x < language.x + language.width ||
+        separator.x >= reject.x
+      )
+        throw Error(
+          `Separator must sit between language control and Reject: ${JSON.stringify({ language, reject, separator })}`,
+        )
+      const hiddenContentDot = page.getByRole('img', {
+        name: 'Hidden multilingual content',
+      })
+      await hiddenContentDot.waitFor()
       await page.getByRole('button', { name: 'Multilingual', exact: true }).click()
+      await hiddenContentDot.waitFor({ state: 'detached' })
+      await page.locator('[data-task-header] [data-locale="zh-Hant"]').click()
+      await hiddenContentDot.waitFor()
+      await page.locator('[data-task-header] [data-locale="zh-Hant"]').click()
+      await hiddenContentDot.waitFor({ state: 'detached' })
+      // The fixture's Simplified Chinese fields are empty and must not raise the indicator.
+      await page.locator('[data-task-header] [data-locale="zh-Hans"]').click()
+      await hiddenContentDot.waitFor({ state: 'detached' })
+      await page.locator('[data-task-header] [data-locale="zh-Hans"]').click()
+
       await page.getByText('兒童復康中心', { exact: true }).waitFor()
+      if (width > 900) {
+        const languages = page.locator('[data-task-header] [data-locale-scroll]')
+        await page.waitForTimeout(250)
+        const clipped = await languages.evaluate(
+          node => node.scrollWidth > node.clientWidth + 1,
+        )
+        if (clipped) throw Error('Header clips the three submitted language chips')
+      }
       const track = await page
         .getByRole('region', { name: 'Gallery thumbnails' })
         .boundingBox()
@@ -268,6 +326,39 @@ for (const [name, engine] of [
         .boundingBox()
       if (!track || !toolbar || track.y + track.height > toolbar.y)
         throw Error('Thumbnail track must sit above the image toolbar')
+      const overlay = await page
+        .getByRole('button', { name: 'Edit image text', exact: true })
+        .evaluate(node => {
+          const chrome = node.closest('.pointer-events-none')
+          const viewer = chrome?.parentElement
+          const bounds = viewer?.getBoundingClientRect()
+          const controls = node.getBoundingClientRect()
+          return {
+            position: chrome ? getComputedStyle(chrome).position : '',
+            inside:
+              !!bounds && controls.y >= bounds.y && controls.bottom <= bounds.bottom,
+          }
+        })
+      if (overlay.position !== 'absolute' || !overlay.inside)
+        throw Error('Toolbar must overlay the full-height image viewer')
+      const camera = page.getByRole('button', {
+        name: 'Open image metadata',
+        exact: true,
+      })
+      const solidCamera = await camera.evaluate(node => {
+        const probe = document.createElement('span')
+        probe.style.backgroundColor = 'var(--color-panel)'
+        node.appendChild(probe)
+        const expected = getComputedStyle(probe).backgroundColor
+        probe.remove()
+        return (
+          getComputedStyle(node).backgroundColor === expected &&
+          getComputedStyle(node).opacity === '1'
+        )
+      })
+      if (!solidCamera)
+        throw Error('Camera background must match the opaque toolbar panel')
+      await page.screenshot({ path: `${directory}/${name}-${width}-toolbar.png` })
       await page.goto(`${base}/__new-feature-review.html?single`)
       await page
         .getByText('Rotary ReHabAid Centre for Children', { exact: true })

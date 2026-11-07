@@ -115,6 +115,7 @@ export type ImageProps = {
 }
 
 export type ViewerProps = {
+  showBackdrop?: boolean
   rounded?: string
   items: ViewerRenderable[]
   activeId?: string | null
@@ -188,6 +189,8 @@ export type ThumbnailWrapperProps = {
 }
 
 export type ImageEditorProps = {
+  layout?: 'sidebar' | 'bottom' | 'top'
+  showNavButtons?: boolean
   textControls?: Snippet
   items: ViewerRenderable[]
   class?: string

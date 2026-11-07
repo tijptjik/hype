@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import FeatureGalleryRevisionEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryRevisionEditor.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // ADAPTERS
@@ -6,6 +8,7 @@ import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS
 import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
 import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadataCard.svelte'
+import { IMAGE_METADATA_BUTTON_CLASSES } from '#lib/bits/patterns/images/components/imageChrome.styles.js'
 // IMAGE
 import {
   getTaskImageBadgeClass,
@@ -19,12 +22,18 @@ import CameraIcon from 'virtual:icons/proicons/camera'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
 
 const imageCtx = getImageCtx()
-const model = useImageEditorGalleryModel(imageCtx)
+const model = useImageEditorGalleryModel(imageCtx, { publishFromIntent: false })
 let {
+  featureId,
+  layout = 'sidebar',
   readonly = false,
+  intentReadonly = readonly,
   isReviewed = false,
 }: {
+  featureId?: string | null
+  layout?: 'sidebar' | 'bottom' | 'top'
   readonly?: boolean
+  intentReadonly?: boolean
   isReviewed?: boolean
 } = $props()
 let isMetadataOpen = $state(false)
@@ -32,7 +41,8 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
 </script>
 
 <ImageEditor
-  class="pb-4"
+  {layout}
+  showNavButtons={false}
   items={model.state.items}
   activeId={model.state.activeId}
   fit="fit"
@@ -47,8 +57,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
   canDownloadActiveImage={model.state.canDownloadActiveImage}
   isEditBusy={model.state.isRotatePending}
   isReadonly={readonly}
-  isIntentDisabled={readonly}
-  viewerControlsOffsetClass="bottom-9"
+  isIntentDisabled={intentReadonly}
   getIsLoading={model.status.isLoading}
   getIsUploading={model.status.isUploading}
   getIsHighlighted={item =>
@@ -79,24 +88,32 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
   onIntentChange={model.actions.setIntent}
   onRetryUpload={model.actions.retryUpload}
 >
-  {#snippet leftRail(
-    _item,
-  )}
+  {#snippet textControls()}
+    {#if featureId}
+      <FeatureGalleryRevisionEditor
+        {featureId}
+        imageId={model.state.activeImage?.image.id ?? null}
+        onSaved={() => {
+          void imageCtx.refreshImages()
+        }}
+      />
+    {/if}
+  {/snippet}
+
+  {#snippet leftRail(_item)}
     {#if model.state.activeImage}
       <UserAttributionCard
         userId={model.state.activeImage.image.contributorId}
         date={model.state.activeImage.image.createdAt || undefined}
         type="imageContributor"
         openDirection="right"
-        isOpen={true}
-        class="[&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9"
+        isOpen={false}
+        class="[&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9 [&:not(:hover):not(:has(:focus-visible))_.bits-feature-attribution-shell__panel]:pointer-events-none! [&:not(:hover):not(:has(:focus-visible))_.bits-feature-attribution-shell__panel]:opacity-0!"
       />
     {/if}
   {/snippet}
 
-  {#snippet rightRail(
-    _item,
-  )}
+  {#snippet rightRail(_item)}
     {#if model.state.activeImage}
       <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
       <div
@@ -118,7 +135,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
       >
         <button
           type="button"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-panel/70 text-foreground transition hover:bg-panel/85"
+          class={IMAGE_METADATA_BUTTON_CLASSES}
           aria-label={m.image__metadata_open()}
           onclick={() => {
             isMetadataOpen = !isMetadataOpen
@@ -135,11 +152,11 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
         </button>
 
         <div
-          class="pointer-events-none absolute bottom-0 right-0 origin-bottom-right transition-opacity duration-150"
+          class="pointer-events-none absolute right-0 bottom-0 origin-bottom-right transition-opacity duration-150"
           class:opacity-0={!isMetadataOpen}
           class:opacity-100={isMetadataOpen}
         >
-          <div class="pointer-events-auto">
+          <div class={isMetadataOpen ? 'pointer-events-auto' : 'pointer-events-none'}>
             {#if model.state.hasLoadedMetadata && !model.state.isMetadataLoading}
               <ImageMetadataCard
                 image={model.state.activeImage.image}

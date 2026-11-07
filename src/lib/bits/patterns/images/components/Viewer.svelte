@@ -26,6 +26,7 @@ let {
   enableStageViewTransitions = true,
   wrapNavigation = true,
   showNavButtons = true,
+  showBackdrop = true,
   railPadding = 6,
   leftRail,
   centerRail,
@@ -334,6 +335,7 @@ onDestroy(() => {
       ontouchend={handleTouchEnd}
     >
       <ViewerStage
+        {showBackdrop}
         {rounded}
         {currentItem}
         activeId={currentSceneActiveId}

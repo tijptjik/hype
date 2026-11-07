@@ -15,7 +15,7 @@ type StartViewTransitionCapableDocument = Document & {
 
 let {
   coordinates,
-  initialZoom,
+  initialZoom = 19,
   showFullscreen = true,
   label = 'Detailed location map',
   addressMeta,
@@ -76,7 +76,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
   aria-label={label}
   class={cx(
     'relative min-h-[18rem] flex-1 overflow-hidden bg-surface',
-    isFullscreen && 'fixed inset-0 z-[999] rounded-none border-0',
+    isFullscreen && 'fixed inset-0 z-[999] h-auto! rounded-none border-0',
     className,
   )}
   style={isFullscreen ? 'view-transition-name: task-map-stage;' : undefined}
@@ -93,7 +93,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
   {#if showFullscreen}
     <button
       type="button"
-      class="border-border bg-panel/95 text-foreground hover:bg-panel/90 absolute right-4 bottom-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border transition"
+      class="border-border bg-panel/95 text-foreground hover:bg-panel/90 absolute bottom-4 left-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border transition"
       onclick={() => {
         void toggleFullscreen()
       }}

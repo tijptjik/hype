@@ -196,16 +196,17 @@ function markSceneAssetReady(url: string): void {
 function startCrossfade(nextScene: SceneSnapshot): void {
   clearTransitionTimers()
   const visibleScene = incomingScene ?? displayedScene
-  const sameImage = visibleScene &&
+  const sameImage =
+    visibleScene &&
     getGallerySceneKey(visibleScene.item, visibleScene.item.id) ===
       getGallerySceneKey(nextScene.item, nextScene.item.id)
   const visibleSrc = visibleScene ? getGalleryForegroundSrc(visibleScene.item) : null
   const nextSrc = getGalleryForegroundSrc(nextScene.item)
-  const isUploadHandoff = sameImage && (
-    visibleSrc === nextSrc ||
-    visibleSrc === nextScene.item.sourceFallbackSrc ||
-    (visibleSrc?.startsWith('blob:') && !nextSrc.startsWith('blob:'))
-  )
+  const isUploadHandoff =
+    sameImage &&
+    (visibleSrc === nextSrc ||
+      visibleSrc === nextScene.item.sourceFallbackSrc ||
+      (visibleSrc?.startsWith('blob:') && !nextSrc.startsWith('blob:')))
 
   // Preview-to-final delivery and renderer cleanup reuse the settled picture.
   // The caller has already decoded its assets; only a new picture needs a fade.
@@ -328,7 +329,7 @@ onDestroy(() => {
 </script>
 
 <div
-  class={`relative h-full w-full overflow-hidden bg-black/5 ${rounded} ${className}`}
+  class={`relative h-full w-full overflow-hidden ${showBackdrop ? 'bg-black/5' : ''} ${rounded} ${className}`}
 >
   {#if currentItem && !displayedScene && !previousScene}
     <div

@@ -1,11 +1,17 @@
 <script lang="ts">
 // I18N
 import { formatDistanceToNow } from 'date-fns'
-import { getFPI18n, getI18n, m } from '#lib/i18n.js'
+import { getFPI18n, getI18n, getLocaleKey, m } from '#lib/i18n.js'
 // BITS
 import * as TaskPrimitive from './components'
 import { ResourceViewer } from '#lib/bits/index.js'
 // COMPONENTS
+import {
+  displayedLocales,
+  shortLocaleLabel,
+} from '#lib/bits/custom/localeControls/localeControls.js'
+import { restoreProfileLocales } from '#lib/bits/patterns/forms/featureLocation/profileLocales.js'
+import { canonicalContentTag, contentFormKey } from '#lib/i18n/contentRecords.js'
 import { FormFeatureVisualSection } from '#lib/bits/custom/form/src/formFeatureVisualSection/index.js'
 import FormI18nInlineRow from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nInlineRow.svelte'
 import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles.js'
@@ -14,7 +20,6 @@ import { calculateDistance } from '#lib/map/index.js'
 import { getMetadata } from '#lib/api/image.remote.js'
 // THEME
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
-import { THEME_MAP_STYLES } from '#lib/themes/themes.js'
 // DOMAIN
 import { featureCreationPreview } from '#lib/revisions/featureCreationPreview.js'
 // CONTEXT
@@ -30,6 +35,7 @@ let {
   isLayerBusy = false,
   class: className = '',
   onReassignLayer,
+  localeState: controlledLocaleState,
 }: TaskEditorProps = $props()
 
 const appCtx = getSurfaceCtx()
@@ -63,17 +69,16 @@ const preview = $derived(
     ? featureCreationPreview(task.creationProposal.content)
     : task.feature,
 )
+const localeState = $derived(
+  controlledLocaleState ??
+    restoreProfileLocales([canonicalContentTag(getLocaleKey())], preview?.i18n ?? {}),
+)
+const shownLocales = $derived(displayedLocales(localeState, localeState.expanded))
 const isNewFeature = $derived(task.type === 'newFeature')
 const isNewPhoto = $derived(task.type === 'newPhoto')
 const isReportedMissing = $derived(task.type === 'reportedMissing')
 const isReviewed = $derived(Boolean(task.isReviewed))
-// Review must expose submitted text even when the viewer hides generated translations.
-const featureTitle = $derived(
-  getI18n(preview ?? undefined, 'title', appCtx.getUserPreferences(), '-', true),
-)
-const featureDescription = $derived(
-  getI18n(preview ?? undefined, 'description', appCtx.getUserPreferences(), '-', true),
-)
+// Review exposes submitted translations independently of generated-text preferences.
 const featureAddress = $derived(
   getI18n(
     preview ?? undefined,
@@ -86,8 +91,8 @@ const featureAddress = $derived(
 const effectiveLayerId = $derived(
   task.creationProposal?.scope.layerId ?? task.feature?.layerId ?? null,
 )
-// Review maps follow the user's UI palette rather than the submitted project's basemap.
-const mapStyleCode = $derived(THEME_MAP_STYLES[theme.selected])
+// Both review maps follow the user's effective map preference, including independent style choices.
+const mapStyleCode = $derived(theme.resolvedMapStyle)
 const featureCoordinates = $derived(
   ((
     (task.creationProposal?.content.placement.geometry ?? task.feature?.geometry) as
@@ -248,12 +253,15 @@ $effect(() => {
 
 <svelte:window bind:innerHeight={viewportHeight} bind:innerWidth={viewportWidth} />
 
-<TaskPrimitive.TaskRoot class={className} hasAside={isReportedMissing}>
+<TaskPrimitive.TaskRoot
+  class={`${className} ${isNewFeature ? 'p-0!' : ''}`}
+  hasAside={isReportedMissing}
+>
   {#if isNewFeature}
     <section class="bg-panel min-w-0" aria-label={m.task__feature()}>
       <!-- Stacked profile panes use content height instead of a percentage flex basis. -->
       <FormFeatureVisualSection
-        class={String.raw`max-[900px]:[&_.bits-feature-visual\_\_body]:h-auto! max-[900px]:[&_.bits-feature-visual\_\_image]:flex-none!`}
+        class={String.raw`[&_.bits-feature-visual\_\_map]:p-0! [&_.bits-feature-visual\_\_image]:p-0! max-[900px]:[&_.bits-feature-visual\_\_body]:h-auto! max-[900px]:[&_.bits-feature-visual\_\_image]:flex-none!`}
         expandedHeight={Math.min(
           1200,
           viewportHeight * (viewportWidth <= 900 ? 0.4 : 0.65),
@@ -261,6 +269,9 @@ $effect(() => {
         minimumHeight={160}
         isCollapsed={visualCollapsed}
         isEditing={false}
+        splitResizeLabel={m.feature_visual_resize()}
+        showCenterControls={false}
+        showNavigationControls={false}
         contributorId={task.feature?.contributorId ?? task.contributorId}
         createdAt={task.createdAt}
         isIntangible={task.creationProposal?.content.profile.isIntangible ??
@@ -272,42 +283,40 @@ $effect(() => {
       >
         {#snippet map()}
           {#if featureCoordinates}
-            <TaskPrimitive.TaskMap
-              coordinates={featureCoordinates}
-              addressMeta={task.creationProposal?.content.placement.addressMeta ??
-                task.feature?.addressMeta ??
-                null}
-              {mapStyleCode}
-              class="h-full min-h-0!"
-            />
+            <div class="flex h-full min-h-0 w-full flex-col">
+              <TaskPrimitive.TaskMap
+                coordinates={featureCoordinates}
+                addressMeta={null}
+                {mapStyleCode}
+                initialZoom={11}
+                label="Location context map"
+                class="border-border/40 h-32 min-h-0! flex-none! border-b"
+              />
+              <TaskPrimitive.TaskMap
+                coordinates={featureCoordinates}
+                addressMeta={task.creationProposal?.content.placement.addressMeta ??
+                  task.feature?.addressMeta ??
+                  null}
+                {mapStyleCode}
+                showFullscreen={false}
+                class="min-h-0!"
+              />
+            </div>
           {/if}
         {/snippet}
         {#snippet image()}
           <div
             class="relative flex h-[var(--bits-feature-visual-expanded-height)] min-h-0 w-full flex-col overflow-hidden min-[901px]:h-full"
           >
-            <div class="min-h-0 flex-1">
-              <ResourceViewer
-                flush
-                canEditPresentationMode={!task.revisionReviewRequired &&
-                  !task.identityTransferred}
-                canEditDropzone={!isReviewed &&
-                  !task.revisionReviewRequired &&
-                  !task.identityTransferred}
-                isReadonly={isReviewed ||
-                  task.revisionReviewRequired ||
-                  task.identityTransferred}
-              />
-            </div>
-            {#if !visualCollapsed}
-              <TaskPrimitive.TaskFooter
-                compact
-                readonly={isReviewed ||
-                  task.revisionReviewRequired ||
-                  task.identityTransferred}
-                class="border-border bg-panel/90 absolute top-3 left-3 z-20 max-w-[calc(100%-1.5rem)] rounded-xl border"
-              />
-            {/if}
+            <TaskPrimitive.TaskImageEditor
+              featureId={task.featureId ?? task.feature?.id}
+              layout="top"
+              readonly={isReviewed ||
+                task.revisionReviewRequired ||
+                task.identityTransferred}
+              intentReadonly={isReviewed || task.identityTransferred || !task.featureId}
+              {isReviewed}
+            />
           </div>
         {/snippet}
       </FormFeatureVisualSection>
@@ -334,36 +343,42 @@ $effect(() => {
         <section class="min-w-0 px-6">
           <h3 class={fieldLabelStyles}>{m.feature__title()}</h3>
           <div class="mt-4">
-            <FormI18nInlineRow
-              value={featureTitle}
-              label={m.feature__title()}
-              editable={false}
-              showVerification={false}
-              attrs={{}}
-              issues={undefined}
-              required={false}
-              onStart={() => {}}
-              onCancel={() => {}}
-              onClear={() => {}}
-            />
+            {#each shownLocales as locale (locale)}
+              <FormI18nInlineRow
+                value={preview?.i18n?.[contentFormKey(locale)]?.title || '-'}
+                prefix={localeState.expanded ? shortLocaleLabel(locale) : ''}
+                label={m.feature__title()}
+                editable={false}
+                showVerification={false}
+                attrs={{}}
+                issues={undefined}
+                required={false}
+                onStart={() => {}}
+                onCancel={() => {}}
+                onClear={() => {}}
+              />
+            {/each}
           </div>
         </section>
         <section class="min-w-0 px-6">
           <h3 class={fieldLabelStyles}>{m.feature__description()}</h3>
           <div class="mt-4">
-            <FormI18nInlineRow
-              value={featureDescription}
-              label={m.feature__description()}
-              multiline
-              editable={false}
-              showVerification={false}
-              attrs={{}}
-              issues={undefined}
-              required={false}
-              onStart={() => {}}
-              onCancel={() => {}}
-              onClear={() => {}}
-            />
+            {#each shownLocales as locale (locale)}
+              <FormI18nInlineRow
+                value={preview?.i18n?.[contentFormKey(locale)]?.description || '-'}
+                prefix={localeState.expanded ? shortLocaleLabel(locale) : ''}
+                label={m.feature__description()}
+                multiline
+                editable={false}
+                showVerification={false}
+                attrs={{}}
+                issues={undefined}
+                required={false}
+                onStart={() => {}}
+                onCancel={() => {}}
+                onClear={() => {}}
+              />
+            {/each}
           </div>
         </section>
         <section class="min-w-0 px-6">

@@ -19,6 +19,12 @@ import {
   TaskRejectDialog,
   TaskReviewStatusBar,
 } from '#lib/bits/patterns/tasks/components/index.js'
+import TaskLocaleActions from '#lib/bits/patterns/tasks/components/TaskLocaleActions.svelte'
+import {
+  restoreProfileLocales,
+  type ProfileLocaleState,
+} from '#lib/bits/patterns/forms/featureLocation/profileLocales.js'
+import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 // CLIENT SERVICES
 import {
   getEffectiveTaskLayerId,
@@ -40,7 +46,7 @@ import {
 } from '#lib/enums.js'
 import { featureCreationPreview } from '#lib/revisions/featureCreationPreview.js'
 // I18N
-import { getI18n, m } from '#lib/i18n.js'
+import { getI18n, getLocaleKey, m } from '#lib/i18n.js'
 import { toast } from 'svelte-sonner'
 // ICONS
 import CheckBadgeIcon from 'virtual:icons/proicons/checkmark-starburst'
@@ -132,6 +138,28 @@ function getEditorRequest() {
 
 const editorResult = $derived(await getEditorRequest()) as { data: Task | null }
 const task = $derived(taskState ?? editorResult.data) as Task | null
+let localeSelection = $state<{ taskId: string; state: ProfileLocaleState } | null>(null)
+const localePreview = $derived(
+  task?.creationProposal
+    ? featureCreationPreview(task.creationProposal.content)
+    : task?.feature,
+)
+const localeState = $derived(
+  localeSelection && localeSelection.taskId === task?.id
+    ? localeSelection.state
+    : restoreProfileLocales(
+        [canonicalContentTag(getLocaleKey())],
+        localePreview?.i18n ?? {},
+      ),
+)
+/** Update the current task's visible translations.
+ * @param state Header locale selection.
+ * @returns Nothing.
+ */
+function updateTaskLocales(state: ProfileLocaleState): void {
+  if (task) localeSelection = { taskId: task.id, state }
+}
+
 const assignableLayers = $derived(editorResult.data?.assignableLayers ?? [])
 const canReassignLayer = $derived(editorResult.data?.canReassignLayer ?? false)
 const taskTitle = $derived(task ? typeDisplay[task.type as TaskType] : '')
@@ -277,7 +305,7 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
       createReviewTaskAction({
         text: 'Resolve duplicate',
         icon: DuplicateIcon,
-        color: 'neutral',
+        color: 'warning',
         onClick: () => {
           duplicateOpen = true
         },
@@ -458,7 +486,22 @@ $effect(() => {
   headerCtrl.setViewActions(getActionButtons())
   headerCtrl.setTaskActions(getTaskActionButtons())
 
-  if (task.isReviewed) {
+  if (task.type === 'newFeature') {
+    headerCtrl.setTaskActionContent(TaskLocaleActions, {
+      localeState,
+      content: localePreview?.i18n ?? {},
+      onChange: updateTaskLocales,
+      review: task.isReviewed
+        ? {
+            reviewerId: task.reviewer?.id ?? null,
+            reviewedAt: task.modifiedAt ?? task.createdAt ?? null,
+            reviewOutcome: task.reviewOutcome ?? null,
+            reviewAction: task.reviewAction ?? null,
+            reviewReason: task.reviewReason ?? null,
+          }
+        : undefined,
+    })
+  } else if (task.isReviewed) {
     headerCtrl.setTaskActionContent(TaskReviewStatusBar, {
       reviewerId: task.reviewer?.id ?? null,
       reviewedAt: task.modifiedAt ?? task.createdAt ?? null,
@@ -681,6 +724,7 @@ const imageProviderModel = useImageProviderModel(
       </div>
     {/if}
     <TaskEditor
+      {localeState}
       {task}
       {assignableLayers}
       {canReassignLayer}

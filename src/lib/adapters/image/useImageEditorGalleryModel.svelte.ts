@@ -157,10 +157,12 @@ function buildPersistedStatus(input: {
  * Adapter that projects `ImageCtx` state and actions into the contract consumed by `ImageEditor`.
  *
  * @param imageCtx Domain image store backing the current feature editor.
+ * @param options Whether classification should also change publication, as in the gallery.
  * @returns Editor-facing gallery model with normalized items, derived status, and actions.
  */
 export function useImageEditorGalleryModel(
   imageCtx: ImageCtx,
+  options: { publishFromIntent?: boolean } = {},
 ): ImageEditorGalleryModel {
   const metadataRequests = new Map<string, Promise<ImageMetadataFull | null>>()
   const rotationTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -174,7 +176,14 @@ export function useImageEditorGalleryModel(
   /** Identifies exact selected media so an older metadata response cannot label a newer revision. */
   function metadataPin(imageId: Id): string {
     const image = imageCtx.getImage(imageId)?.image
-    return image ? JSON.stringify([image.env, image.publicId, image.version, image.imageRevisionId]) : ''
+    return image
+      ? JSON.stringify([
+          image.env,
+          image.publicId,
+          image.version,
+          image.imageRevisionId,
+        ])
+      : ''
   }
   let metadataStatusByImageId = $state<Record<string, 'idle' | 'loading' | 'loaded'>>(
     {},
@@ -560,8 +569,13 @@ export function useImageEditorGalleryModel(
               : null),
           thumbnailSrc: resolvedThumbnailSrc,
           blurSrc: replacementPreviewSrc ?? getEditorViewerSrc(resolvedImage),
-          presentationMode: normalizeImagePresentation(resolvedImage.image.presentationMode),
-          alt: galleryText(resolvedImage.image.galleryAlt, getLocaleKey()) || resolvedImage.intent || m.admin__project_license_media_image(),
+          presentationMode: normalizeImagePresentation(
+            resolvedImage.image.presentationMode,
+          ),
+          alt:
+            galleryText(resolvedImage.image.galleryAlt, getLocaleKey()) ||
+            resolvedImage.intent ||
+            m.admin__project_license_media_image(),
           galleryPosition: resolvedImage.image.galleryPosition,
           fallbackSeed: resolvedImage.image.publicId ?? resolvedImage.image.id,
           intent: resolvedImage.intent ?? 'undefined',
@@ -717,7 +731,10 @@ export function useImageEditorGalleryModel(
     imageId: Id,
   ): Promise<ImageMetadataFull | null> {
     const requestedPin = metadataPin(imageId)
-    if (metadataPinByImageId.has(imageId) && metadataPinByImageId.get(imageId) !== requestedPin)
+    if (
+      metadataPinByImageId.has(imageId) &&
+      metadataPinByImageId.get(imageId) !== requestedPin
+    )
       resetMetadataForImage(imageId)
     metadataPinByImageId.set(imageId, requestedPin)
     const currentStatus = metadataStatusByImageId[imageId] ?? 'idle'
@@ -753,7 +770,8 @@ export function useImageEditorGalleryModel(
       getMetadata({
         publicId: currentImage.publicId,
         imageRevisionId: currentImage.imageRevisionId,
-        featureId: imageCtx.getCtx().ctxType === 'feature' ? imageCtx.getCtx().ctxId : undefined,
+        featureId:
+          imageCtx.getCtx().ctxType === 'feature' ? imageCtx.getCtx().ctxId : undefined,
         env: currentImage.env ?? undefined,
         version: currentImage.version ?? undefined,
         profile: imageCtx.appCtx.isAdmin() ? 'admin' : 'basic',
@@ -1100,7 +1118,11 @@ export function useImageEditorGalleryModel(
         }
 
         try {
-          await imageCtx.handleSetIntent(imageId, intent)
+          await imageCtx.handleSetIntent(
+            imageId,
+            intent,
+            options.publishFromIntent ?? true,
+          )
         } catch (error) {
           const message =
             error instanceof Error && error.message.trim().length > 0
