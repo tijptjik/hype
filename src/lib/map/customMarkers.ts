@@ -85,7 +85,7 @@ export function createCustomMarkerElement(model: CustomMarkerModel): HTMLDivElem
   root.className = 'marker-container marker-container--feature marker-fade-in'
   root.dataset.markerSignature = customMarkerSignature(model)
   root.dataset.markerKind = model.kind
-  root.title = model.label
+  root.dataset.tooltip = model.label
   root.setAttribute('aria-label', model.label)
   const frame = document.createElement('div')
   frame.className =
