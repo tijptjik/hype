@@ -68,7 +68,7 @@ function scheduleShow(target: HTMLElement | null): void {
   openTimer = setTimeout(() => {
     pendingAnchor = null
     if (target.isConnected) show(target)
-  }, 500)
+  }, 1200)
 }
 
 // Keep existing accessible descriptions intact and remove only our own reference.

@@ -33,9 +33,10 @@ it('describes dynamically inserted controls on focus and preserves existing desc
   const view = render(TooltipProvider)
   const button = control()
   await fireEvent.focusIn(button)
-  expect((await screen.findByRole('tooltip', { hidden: true })).textContent).toBe(
-    'Synced',
-  )
+  expect(
+    (await screen.findByRole('tooltip', { hidden: true }, { timeout: 2000 }))
+      .textContent,
+  ).toBe('Synced')
   expect(button.getAttribute('aria-describedby')).toMatch(/^existing-description .+/)
   await fireEvent.keyDown(button, { key: 'Escape' })
   await waitFor(() =>
@@ -43,7 +44,7 @@ it('describes dynamically inserted controls on focus and preserves existing desc
   )
   expect(button.getAttribute('aria-describedby')).toBe('existing-description')
   await fireEvent.focusIn(button)
-  await screen.findByRole('tooltip', { hidden: true })
+  await screen.findByRole('tooltip', { hidden: true }, { timeout: 2000 })
   view.unmount()
   expect(button.getAttribute('aria-describedby')).toBe('existing-description')
 })
@@ -52,7 +53,7 @@ it('refreshes changed labels and dismisses help when the underlying menu opens',
   render(TooltipProvider)
   const button = control()
   await fireEvent.pointerOver(button)
-  await screen.findByRole('tooltip', { hidden: true })
+  await screen.findByRole('tooltip', { hidden: true }, { timeout: 2000 })
   button.dataset.tooltip = 'Unsynced'
   await waitFor(() =>
     expect(screen.getByRole('tooltip', { hidden: true }).textContent).toBe('Unsynced'),
@@ -69,7 +70,7 @@ it('dismisses on scrolling and does not duplicate rich tooltip triggers', async 
   render(TooltipProvider)
   const button = control()
   await fireEvent.pointerOver(button)
-  await screen.findByRole('tooltip', { hidden: true })
+  await screen.findByRole('tooltip', { hidden: true }, { timeout: 2000 })
   await fireEvent.scroll(document)
   await waitFor(() =>
     expect(screen.queryByRole('tooltip', { hidden: true })).toBeNull(),
@@ -110,15 +111,17 @@ it('suppresses repeated visible labels but retains clipped and icon-only labels'
   Object.defineProperty(button, 'clientWidth', { configurable: true, value: 40 })
   button.style.overflowX = 'hidden'
   await fireEvent.pointerOver(button)
-  expect((await screen.findByRole('tooltip', { hidden: true })).textContent).toBe(
-    'Synced',
-  )
+  expect(
+    (await screen.findByRole('tooltip', { hidden: true }, { timeout: 2000 }))
+      .textContent,
+  ).toBe('Synced')
   await fireEvent.keyDown(button, { key: 'Escape' })
   button.textContent = ''
   await fireEvent.pointerOver(button)
-  expect((await screen.findByRole('tooltip', { hidden: true })).textContent).toBe(
-    'Synced',
-  )
+  expect(
+    (await screen.findByRole('tooltip', { hidden: true }, { timeout: 2000 }))
+      .textContent,
+  ).toBe('Synced')
 })
 
 it('ignores scrolling clones and zero-width inline boxes when comparing labels', async () => {
