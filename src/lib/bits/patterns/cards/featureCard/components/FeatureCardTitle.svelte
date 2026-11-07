@@ -30,14 +30,8 @@ let titleInput = $state<HTMLInputElement | undefined>()
 
 let {
   feature,
-  expanded = false,
-  showDescriptionToggle = false,
-  onToggleDescription,
 }: {
   feature: Feature | UserContributedFeature
-  expanded?: boolean
-  showDescriptionToggle?: boolean
-  onToggleDescription?: (expanded: boolean) => void
 } = $props()
 
 const appCtx = getSurfaceCtx()
@@ -124,17 +118,6 @@ function handleGradeSelect(newGrade: number): void {
     value: newGrade.toString(),
   })
 }
-
-/**
- * Toggles the content description between collapsed and expanded states.
- *
- * @param event Trigger event.
- */
-function handleDescriptionToggle(event: Event): void {
-  event.preventDefault()
-  event.stopPropagation()
-  onToggleDescription?.(!expanded)
-}
 </script>
 
 <div
@@ -145,7 +128,7 @@ function handleDescriptionToggle(event: Event): void {
       <div class="flex w-full items-center gap-2">
         <input
           type="text"
-          class="input input-bordered w-full bg-(--theme-panel) caret-base-content focus:outline-none"
+          class="input input-bordered caret-base-content w-full bg-(--theme-panel) focus:outline-none"
           bind:value={title}
           bind:this={titleInput}
           placeholder={m.fluffy_wide_ladybug_file()}
@@ -159,7 +142,7 @@ function handleDescriptionToggle(event: Event): void {
         >
         <button
           type="button"
-          class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
+          class="btn btn-ghost btn-sm hover:bg-base-300 active:bg-base-200 rounded-none rounded-l-lg px-3 py-1 active:scale-100"
           onclick={handleTitleSubmit}
           disabled={!title.trim()}
         >
@@ -173,14 +156,14 @@ function handleDescriptionToggle(event: Event): void {
         onclick={handleEditMode}
       >
         <span
-          class="w-full overflow-visible text-lg text-base-content"
+          class="text-base-content w-full overflow-visible text-lg"
           class:text-muted-foreground={!title.trim()}
           class:font-bold={!title.trim()}
         >
           {title || m.empty_lofty_meerkat_support()}
         </span>
         <span
-          class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
+          class="btn btn-ghost btn-sm hover:bg-base-300 active:bg-base-200 rounded-none rounded-l-lg px-3 py-1 active:scale-100"
         >
           <Icon src={PencilSquare} class="h-5 w-5" />
         </span>
@@ -202,31 +185,17 @@ function handleDescriptionToggle(event: Event): void {
   {/if}
 
   <div class="m-0 flex items-start gap-3 caret-transparent">
-    {#if expanded && showDescriptionToggle}
-      <div class="flex h-6 shrink-0 items-start justify-end">
-        <div class="sticky top-0 z-40 self-start">
-          <button
-            type="button"
-            class="inline-flex h-6 items-start justify-end whitespace-nowrap bg-(--theme-panel) pl-3 pr-0 pt-0 font-mono text-right text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
-            onclick={handleDescriptionToggle}
-          >
-            {m.common__read_less()}
-          </button>
-        </div>
-      </div>
-    {/if}
-
     {#if cardCtx.isNewMode && hasGradeProperty}
       <div class="mt-1 flex gap-1">
         {#each Array(5) as _, index}
           <button
             type="button"
-            class="group btn btn-ghost btn-sm p-1 focus:text-primary focus:outline-none"
+            class="group btn btn-ghost btn-sm focus:text-primary p-1 focus:outline-none"
             onclick={() => handleGradeSelect(index + 1)}
           >
             <Icon
               src={Star}
-              class={`h-6 w-6 group-hover:text-primary group-focus:text-primary ${
+              class={`group-hover:text-primary group-focus:text-primary h-6 w-6 ${
                 Number(grade) > index ? 'text-primary' : 'text-neutral-content'
               }`}
               theme="solid"

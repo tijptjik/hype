@@ -1,6 +1,9 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { onMount, tick } from 'svelte'
+import { fly } from 'svelte/transition'
+import { cubicOut } from 'svelte/easing'
+import { MediaQuery } from 'svelte/reactivity'
 // THIRD PARTY
 import {
   layoutNextLine,
@@ -27,6 +30,10 @@ import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { FeatureCardPortalObstacle } from '#lib/context/featureCard.types.js'
 import type { PropertyLayoutResult } from '../featureCard.types'
 // LOCAL
+import {
+  VIEWER_TRANSITION_MS,
+  VIEWER_TRANSITION_EASING,
+} from '#lib/bits/patterns/images/images.motion'
 import {
   fitFeaturePropertyLayoutInRegion,
   getFeatureCardCollapsedDescriptionLineCount,
@@ -68,9 +75,16 @@ const PORTAL_CLEARANCE_PX = 4
 const PORTAL_VISUAL_TOP_OFFSET_PX = 0
 const PORTAL_LEFT_OCCLUSION_OVERDRAW_PX = 2
 const PORTAL_RADIUS_RATIO = 0.5
-const TOGGLE_FONT = '400 12px "IBM Plex Mono"'
-const COLLAPSED_MORE_GAP_PX = 0
-const TRUNCATION_ELLIPSIS = '...'
+const DESCRIPTION_TOGGLE_GAP_PX = 8
+let toggleWidth = $state(80)
+let collapsedLastTextWidth = $state(0)
+let expandedLastTextWidth = $state(0)
+const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)')
+let motionFeatureId = $state<string | null>(null)
+let toggleElement: HTMLButtonElement | undefined = $state()
+let toggleAnimation: Animation | undefined
+let toggleGeneration = 0
+const TRUNCATION_ELLIPSIS = '…'
 const EXPANDED_DESCRIPTION_BOTTOM_BUFFER_PX = 12
 const LINE_START_CURSOR: LayoutCursor = { segmentIndex: 0, graphemeIndex: 0 }
 
@@ -78,7 +92,6 @@ let {
   feature,
   expanded = false,
   onToggle,
-  onToggleVisibility,
   titleInsetPx = 0,
   onTitleSpaceChange,
   onLayoutReadyChange,
@@ -86,11 +99,73 @@ let {
   feature: Feature
   expanded?: boolean
   onToggle?: (expanded: boolean) => void
-  onToggleVisibility?: (visible: boolean) => void
   titleInsetPx?: number
   onTitleSpaceChange?: (width: number) => void
   onLayoutReadyChange?: (ready: boolean) => void
 } = $props()
+
+// Motion belongs to an explicit toggle on this feature, never navigation or sizing.
+const motionDuration = $derived(
+  !reducedMotion.current && motionFeatureId === feature.id ? VIEWER_TRANSITION_MS : 0,
+)
+const descriptionMotion = $derived({
+  y: -12,
+  duration: motionDuration,
+  easing: cubicOut,
+})
+
+/**
+ * Fades the trigger in place, then reveals it at the settled inline destination.
+ * @returns Resolves after the same-feature toggle animation completes.
+ * @remarks Navigation cancels pending work; reduced motion changes state immediately.
+ */
+async function toggleDescription(): Promise<void> {
+  if (toggleAnimation) return
+  if (reducedMotion.current || !toggleElement) {
+    onToggle?.(!expanded)
+    return
+  }
+  const generation = ++toggleGeneration
+  const button = toggleElement
+  try {
+    toggleAnimation = button.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 90,
+      fill: 'forwards',
+      easing: 'ease-out',
+    })
+    await toggleAnimation.finished
+    if (generation !== toggleGeneration) return
+
+    motionFeatureId = feature.id
+    onToggle?.(!expanded)
+    await tick()
+    // Keep the trigger invisible while the body moves and final text widths settle.
+    await new Promise(resolve => setTimeout(resolve, VIEWER_TRANSITION_MS + 30))
+    if (generation !== toggleGeneration || !button.isConnected) return
+    motionFeatureId = null
+    toggleAnimation.cancel()
+    toggleAnimation = button.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 140,
+      easing: 'ease-out',
+    })
+    await toggleAnimation.finished
+  } catch {
+    // Canceling a Web Animation during navigation rejects its finished promise.
+  } finally {
+    if (generation === toggleGeneration) {
+      toggleAnimation?.cancel()
+      toggleAnimation = undefined
+    }
+  }
+}
+
+$effect(() => {
+  feature.id
+  motionFeatureId = null
+  toggleGeneration += 1
+  toggleAnimation?.cancel()
+  toggleAnimation = undefined
+})
 
 const appCtx = getSurfaceCtx()
 const responsiveCtx = getResponsiveCtx()
@@ -191,10 +266,6 @@ const expandedFullWidthLines = $derived.by(() => {
 const truncationEllipsisWidth = $derived.by(() =>
   measurePreparedTextWidth(TRUNCATION_ELLIPSIS, DESCRIPTION_FONT),
 )
-const collapsedMoreLabel = $derived('more')
-const collapsedMoreWidth = $derived.by(() =>
-  measurePreparedTextWidth(collapsedMoreLabel, TOGGLE_FONT),
-)
 const adjacentPropertyRegionWidth = $derived(
   Math.max(collapsedPortalGeometry.visualLeft - PORTAL_FIELD_GAP_PX, 0),
 )
@@ -249,6 +320,14 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
     )
     const adjacentItems = featurePropertyItems.slice(0, adjacentFit.fitCount)
     const overflowItems = featurePropertyItems.slice(adjacentFit.fitCount)
+    // Relax the title gap only into unused space beside the portal, without
+    // increasing the card height or pushing any properties into overflow.
+    const adjacentTop = Math.max(portalTop, titleInsetPx)
+    const spareHeight = Math.max(
+      0,
+      portalBottom - adjacentTop - (adjacentFit.layout?.totalHeight ?? 0),
+    )
+    const titleGapExtra = Math.min(CONTENT_GAP_PX, spareHeight)
     const overflowLayout =
       overflowItems.length > 0
         ? resolveOverflowFeaturePropertyLayout(
@@ -270,7 +349,7 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
       adjacentPlacement: {
         items: adjacentItems,
         layout: adjacentFit.layout,
-        top: Math.max(portalTop, titleInsetPx),
+        top: adjacentTop + titleGapExtra,
         width: adjacentPropertyRegionWidth,
       },
       overflowPlacement: {
@@ -331,6 +410,13 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
     shortAdjacentFit.fitCount === featurePropertyItems.length
 
   if (isShortComposition) {
+    // Give a complete description breathing room before its properties when
+    // the portal leaves spare height, preserving the existing card budget.
+    const spareHeight = Math.max(
+      0,
+      shortAdjacentHeight - (shortAdjacentFit.layout?.totalHeight ?? 0),
+    )
+    const descriptionGapExtra = Math.min(CONTENT_GAP_PX, spareHeight)
     return {
       descriptionLayout: fullDescriptionLayout,
       descriptionInteractiveHeight: fullDescriptionBottom,
@@ -338,7 +424,7 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
       adjacentPlacement: {
         items: featurePropertyItems,
         layout: shortAdjacentFit.layout,
-        top: shortAdjacentTop,
+        top: shortAdjacentTop + descriptionGapExtra,
         width: adjacentPropertyRegionWidth,
       },
       overflowPlacement: {
@@ -400,7 +486,6 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
       }),
       preparedDescription,
       truncationEllipsisWidth,
-      collapsedMoreWidth + COLLAPSED_MORE_GAP_PX,
     )
 
     if (candidateDescription.lines.length < 2) continue
@@ -424,7 +509,6 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
       }),
       preparedDescription,
       truncationEllipsisWidth,
-      collapsedMoreWidth + COLLAPSED_MORE_GAP_PX,
     )
   const adjacentItems = featurePropertyItems.slice(0, adjacentCount)
   const overflowItems = featurePropertyItems.slice(adjacentCount)
@@ -469,6 +553,9 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
     ),
   }
 })
+const lastTextWidth = $derived(
+  expanded ? expandedLastTextWidth : collapsedLastTextWidth,
+)
 const collapsedDescriptionLayout = $derived(collapsedContentPlan.descriptionLayout)
 const visibleCollapsedDescriptionLines = $derived.by(() =>
   collapsedDescriptionLayout.lines.filter(line => line.text.trim().length > 0),
@@ -480,46 +567,6 @@ function measurePreparedTextWidth(text: string, font: string): number {
   return measureNaturalWidth(prepare(text, font, { whiteSpace: 'pre-wrap' }))
 }
 
-const collapsedMoreButtonPosition = $derived.by(() => {
-  if (!hasCollapsedOverflow || !collapsedDescriptionLayout.hasMore) return null
-
-  const lastLine = visibleCollapsedDescriptionLines.at(-1)
-  if (!lastLine) return null
-
-  const lastLineTextWidth = measurePreparedTextWidth(lastLine.text, DESCRIPTION_FONT)
-  const inlineLeft =
-    contentSidePaddingPx +
-    CONTENT_DESCRIPTION_LEFT_OFFSET_PX +
-    lastLineTextWidth +
-    COLLAPSED_MORE_GAP_PX
-  const inlineRight = inlineLeft + collapsedMoreWidth
-  const lineLimit =
-    contentSidePaddingPx +
-    getRoutedLineWidth(
-      lastLine.top,
-      descriptionContentWidth,
-      collapsedPortalGeometry.obstacle,
-    )
-
-  if (inlineRight > lineLimit) {
-    return {
-      top: CONTENT_TOP_PADDING_PX + lastLine.top + DESCRIPTION_LINE_HEIGHT,
-      left: contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX,
-      inline: false,
-    }
-  }
-
-  return {
-    top: CONTENT_TOP_PADDING_PX + lastLine.top,
-    left: inlineLeft,
-    inline: true,
-  }
-})
-const collapsedInlineMoreLineTop = $derived(
-  collapsedMoreButtonPosition?.inline
-    ? collapsedMoreButtonPosition.top - CONTENT_TOP_PADDING_PX
-    : null,
-)
 const collapsedDescriptionFieldOffsetPx = $derived(hasDescription ? -10 : 0)
 const topPropertyRegionTop = $derived(collapsedContentPlan.adjacentPlacement.top)
 const topPropertyRegionWidth = $derived(collapsedContentPlan.adjacentPlacement.width)
@@ -537,12 +584,45 @@ const expandedFullDescriptionLayout = $derived.by(() => {
     expandedPortalGeometry.obstacle.diameter / DESCRIPTION_LINE_HEIGHT,
   )
 
-  return layoutRoutedDescriptionLines({
+  const result = layoutRoutedDescriptionLines({
     prepared: preparedDescriptionSegments,
     contentWidth: descriptionContentWidth,
     obstacle: expandedPortalGeometry.obstacle,
     maxLines: fullWidthLineCount + portalPenaltyLines + 4,
   })
+  // Reflow the final words when the inline control needs room; retain every
+  // cursor segment so expanding never drops or rewrites description text.
+  const lines = [...result.lines]
+  while (lines.length && !lines.at(-1)?.text.trim()) lines.pop()
+  const last = lines.at(-1)
+  if (!last) return result
+  const reserved = toggleWidth + DESCRIPTION_TOGGLE_GAP_PX
+  if (
+    measurePreparedTextWidth(last.text.trimEnd(), DESCRIPTION_FONT) + reserved <=
+    last.width
+  ) {
+    return { ...result, lines }
+  }
+  lines.pop()
+  let cursor = last.start
+  let top = last.top
+  while (true) {
+    const width = getRoutedLineWidth(
+      top,
+      descriptionContentWidth,
+      expandedPortalGeometry.obstacle,
+    )
+    const next = layoutNextLine(
+      preparedDescriptionSegments,
+      Math.max(1, width - reserved),
+      cursor,
+    )
+    if (!next) break
+    lines.push({ text: next.text, top, width, start: cursor, end: next.end })
+    cursor = next.end
+    top += DESCRIPTION_LINE_HEIGHT
+  }
+  return { ...result, lines }
 })
 const expandedDescriptionContentHeight = $derived.by(() =>
   expandedFullDescriptionLayout.lines.length === 0
@@ -732,7 +812,6 @@ function appendTruncationEllipsis(
   routedLayout: RoutedDescriptionLayout,
   prepared: PreparedTextWithSegments,
   ellipsisWidth: number,
-  trailingReservedWidth = 0,
 ): RoutedDescriptionLayout {
   if (!routedLayout.hasMore || routedLayout.lines.length === 0) return routedLayout
 
@@ -745,7 +824,7 @@ function appendTruncationEllipsis(
 
     const truncatedLineWidth = Math.max(
       1,
-      line.width - ellipsisWidth - trailingReservedWidth,
+      line.width - ellipsisWidth - toggleWidth - DESCRIPTION_TOGGLE_GAP_PX,
     )
     const truncatedLine = layoutNextLine(prepared, truncatedLineWidth, line.start)
     const truncatedText = truncatedLine?.text.trim() ?? ''
@@ -784,13 +863,11 @@ onMount(() => {
   if (contentElement) observer.observe(contentElement)
 
   return () => {
+    toggleGeneration += 1
+    toggleAnimation?.cancel()
     if (contentMeasureFrame) cancelAnimationFrame(contentMeasureFrame)
     observer.disconnect()
   }
-})
-
-$effect(() => {
-  onToggleVisibility?.(showToggle)
 })
 
 // Reserve a rectangular title slot beside the circle, including its wrap gap.
@@ -809,8 +886,8 @@ $effect(() => {
 
 <div
   bind:this={contentElement}
-  class="pointer-events-none relative min-h-0 w-full flex-1 overflow-hidden"
-  style={`height: ${activeContentHeight}px; min-height: ${activeContentHeight}px;`}
+  class="pointer-events-none relative min-h-0 w-full flex-1 overflow-hidden transition-[height,min-height] motion-reduce:transition-none"
+  style={`height: ${activeContentHeight}px; min-height: ${activeContentHeight}px; transition-duration: ${motionDuration}ms; transition-timing-function: ${VIEWER_TRANSITION_EASING};`}
 >
   <div class="pointer-events-none relative h-full w-full overflow-hidden">
     <div
@@ -838,46 +915,40 @@ $effect(() => {
     </div>
 
     {#if hasDescription && !expanded}
-      <button
-        type="button"
-        class="focus-visible:outline-primary pointer-events-none absolute inset-x-0 top-0 z-30 border-0 bg-transparent p-0 text-left focus-visible:outline focus-visible:outline-2"
+      <div
+        transition:fly={descriptionMotion}
+        class="pointer-events-none absolute inset-x-0 top-0 z-30"
         style={`height: ${collapsedContentPlan.descriptionInteractiveHeight}px;`}
-        aria-label={m.common__read_more()}
-        aria-expanded="false"
-        disabled={!showToggle}
-        onclick={event => {
-          event.stopPropagation()
-          onToggle?.(true)
-        }}
       >
         {#each visibleCollapsedDescriptionLines as line, index (`collapsed-${index}-${line.top}`)}
           <span
-            class={`text-muted-foreground absolute left-0 h-[22px] overflow-hidden text-[0.9375rem] leading-[22px] font-light tracking-tight break-words whitespace-pre-wrap ${showToggle ? 'pointer-events-auto cursor-pointer' : ''}`}
+            class="text-muted-foreground absolute left-0 h-[22px] overflow-hidden text-[0.9375rem] leading-[22px] font-light tracking-tight break-words whitespace-pre-wrap"
             style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; left: ${contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX}px; width: ${line.width}px;`}
           >
-            {line.text}
-            {line.appendEllipsis && collapsedInlineMoreLineTop !== line.top
-              ? TRUNCATION_ELLIPSIS
-              : ''}
+            {#if index === visibleCollapsedDescriptionLines.length - 1}
+              <span class="inline-block" bind:clientWidth={collapsedLastTextWidth}
+                >{line.text.trimEnd()}{line.appendEllipsis
+                  ? TRUNCATION_ELLIPSIS
+                  : ''}</span
+              >
+            {:else}
+              {line.text}
+            {/if}
           </span>
         {/each}
-      </button>
-
-      {#if collapsedMoreButtonPosition}
-        <button
-          type="button"
-          class="text-primary pointer-events-auto absolute z-40 bg-transparent font-mono text-sm leading-[23px] whitespace-nowrap transition-opacity hover:opacity-80"
-          style={`top: ${collapsedMoreButtonPosition.top}px; left: ${collapsedMoreButtonPosition.left}px;`}
-          aria-label={collapsedMoreLabel}
-          onclick={() => onToggle?.(true)}
-        >
-          {collapsedMoreLabel}
-        </button>
-      {/if}
+      </div>
     {/if}
 
     {#if !expanded && topPropertyItems.length > 0}
       <div
+        transition:fly={{
+          ...descriptionMotion,
+          y:
+            expandedPropertiesTop -
+            CONTENT_TOP_PADDING_PX -
+            topPropertyRegionTop -
+            collapsedDescriptionFieldOffsetPx,
+        }}
         class="pointer-events-none absolute z-30"
         style={`top: ${CONTENT_TOP_PADDING_PX + topPropertyRegionTop + collapsedDescriptionFieldOffsetPx}px; left: 0; width: ${topPropertyRegionWidth}px;`}
       >
@@ -887,6 +958,7 @@ $effect(() => {
 
     {#if !expanded && bottomPropertyItems.length > 0}
       <div
+        transition:fly={descriptionMotion}
         class="pointer-events-none absolute inset-x-0 z-30"
         style={`top: ${collapsedBottomPropertiesTop}px;`}
       >
@@ -897,6 +969,14 @@ $effect(() => {
 
   {#if expanded && featurePropertyItems.length > 0}
     <div
+      transition:fly={{
+        ...descriptionMotion,
+        y:
+          CONTENT_TOP_PADDING_PX +
+          topPropertyRegionTop +
+          collapsedDescriptionFieldOffsetPx -
+          expandedPropertiesTop,
+      }}
       class="pointer-events-none absolute inset-x-0 z-30"
       style={`top: ${expandedPropertiesTop}px;`}
     >
@@ -906,6 +986,7 @@ $effect(() => {
 
   {#if expanded && hasDescription}
     <div
+      transition:fly={descriptionMotion}
       class="pointer-events-none absolute inset-0 z-30"
       style={`padding-left: ${contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX}px; padding-right: ${contentSidePaddingPx}px;`}
     >
@@ -922,11 +1003,31 @@ $effect(() => {
               class="text-muted-foreground pointer-events-none absolute left-0 h-[22px] overflow-hidden text-[0.9375rem] leading-[22px] font-light tracking-tight break-words whitespace-pre-wrap"
               style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; width: ${line.width}px;`}
             >
-              {line.text}
+              {#if index === expandedDescriptionLines.length - 1}
+                <span class="inline-block" bind:clientWidth={expandedLastTextWidth}
+                  >{line.text.trimEnd()}</span
+                >
+              {:else}
+                {line.text}
+              {/if}
             </div>
           {/each}
         </div>
       </div>
     </div>
+  {/if}
+  {#if showToggle}
+    <!-- Reserve inline width during layout and anchor to the rendered final words. -->
+    <button
+      type="button"
+      bind:this={toggleElement}
+      bind:clientWidth={toggleWidth}
+      class="text-primary focus-visible:outline-primary pointer-events-auto absolute z-40 flex h-[22px] items-center rounded-sm text-sm font-medium whitespace-nowrap underline decoration-current/50 underline-offset-4 hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2"
+      style={`top: ${CONTENT_TOP_PADDING_PX + ((expanded ? expandedDescriptionLines : visibleCollapsedDescriptionLines).at(-1)?.top ?? 0)}px; left: ${contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX + lastTextWidth + DESCRIPTION_TOGGLE_GAP_PX}px;`}
+      aria-expanded={expanded}
+      onclick={toggleDescription}
+    >
+      {expanded ? m.common__read_less() : m.common__read_more()}
+    </button>
   {/if}
 </div>

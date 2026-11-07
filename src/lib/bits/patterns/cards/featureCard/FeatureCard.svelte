@@ -89,7 +89,6 @@ const bandPortalSize = $derived(cardContentWidth < 480 ? 120 : 160)
 // The circle ends at the title row; it must not add space above the actions.
 const bandPortalCenterY = $derived(portalBandHeight - bandPortalSize / 2 - 4)
 let isDescriptionExpanded = $state(false)
-let showDescriptionToggle = $state(false)
 let viewerShellElement = $state<HTMLDivElement | null>(null)
 let breadcrumbsElement = $state<HTMLDivElement | null>(null)
 let titleElement = $state<HTMLDivElement | null>(null)
@@ -321,15 +320,6 @@ function handleDescriptionToggle(expanded: boolean): void {
   }
 }
 
-/**
- * Mirrors whether the content layout currently requires a description toggle.
- *
- * @param visible Whether the toggle should be shown.
- */
-function handleDescriptionToggleVisibility(visible: boolean): void {
-  showDescriptionToggle = visible
-}
-
 function handleRootContentVisibilityChange(visible: boolean): void {
   if (!visible) return
 
@@ -455,12 +445,7 @@ $effect(() => {
             class="relative z-40 transition-[margin-bottom] motion-reduce:transition-none"
             style={`transition-duration: ${VIEWER_TRANSITION_MS}ms; transition-timing-function: ${VIEWER_TRANSITION_EASING}; margin-bottom: -${committedTitleOverlapPx}px; ${titleOverlapPx > 0 ? `width: ${titleSpaceWidthPx}px;` : ''}`}
           >
-            <FeatureCardTitle
-              {feature}
-              expanded={isDescriptionExpanded}
-              {showDescriptionToggle}
-              onToggleDescription={handleDescriptionToggle}
-            />
+            <FeatureCardTitle {feature} />
             <!-- The title narrows before its shared-row spacing finishes moving.
                  Fill the full-width strip above the incoming portal throughout
                  that motion, with 1px of overlap to cover fractional rounding
@@ -487,7 +472,6 @@ $effect(() => {
                 }}
                 expanded={isDescriptionExpanded}
                 onToggle={handleDescriptionToggle}
-                onToggleVisibility={handleDescriptionToggleVisibility}
               />
             {/if}
           </div>
