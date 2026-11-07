@@ -537,11 +537,7 @@ const handle_dev_persona: Handle = async ({ event, resolve }) => {
 /**
  * This is the main hook that is used to sequence the other hooks.
  */
-const handle = sequence(
-  handle_worker_bindings,
-  handleRevisionDeployment,
-  handle_scanner_probe,
-  handle_cors,
+const handle_application = sequence(
   handle_dev_persona,
   handle_hub,
   handle_auth,
@@ -550,6 +546,25 @@ const handle = sequence(
   handle_auth_redirect,
   handle_hub_enrichment,
   translation,
+)
+
+/**
+ * Keeps opaque image delivery independent of hub discovery and session initialization.
+ * @param input Current request and route resolver.
+ * @returns Image response directly, or the ordinary authenticated application pipeline.
+ */
+const handle_discovery_delivery: Handle = input =>
+  input.event.route.id === '/api/images/revisions/[revision]' &&
+  ['GET', 'HEAD'].includes(input.event.request.method)
+    ? input.resolve(input.event)
+    : handle_application(input)
+
+const handle = sequence(
+  handle_worker_bindings,
+  handleRevisionDeployment,
+  handle_scanner_probe,
+  handle_cors,
+  handle_discovery_delivery,
 )
 
 export { handle }

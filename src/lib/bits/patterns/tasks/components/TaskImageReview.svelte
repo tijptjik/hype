@@ -2,7 +2,8 @@
 // SVELTE
 import { onMount, onDestroy } from 'svelte'
 // API
-import { getImageIntentOptions } from '#lib/api/image.remote.js'
+import { loadImageIntentOptions } from '#lib/client/services/imageIntentOptions.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import {
   DEFAULT_IMAGE_INTENTS,
   type ImageIntentDefinition,
@@ -40,6 +41,7 @@ import type { ImageReviewPatchSchema } from '#lib/db/services/featureImageReview
 
 let {
   taskId,
+  projectId,
   initialReport,
   readonly = false,
   reviewAction,
@@ -48,6 +50,7 @@ let {
   onAccepted,
 }: {
   taskId: string
+  projectId?: string | null
   initialReport?: boolean
   readonly?: boolean
   reviewAction?: string | null
@@ -73,6 +76,11 @@ let reviews = $state<FeatureImageReview[]>([])
 let activeId = $state<string | null>(null)
 let galleryWidth = $state(0)
 const original = false
+const appCtx = getSurfaceCtx()
+let disposed = false
+onDestroy(() => {
+  disposed = true
+})
 let busy = $state(true)
 let pendingRotation = $state<{
   imageId: string
@@ -174,7 +182,12 @@ const items = $derived.by<ViewerRenderable[]>(() => {
       return {
         id,
         src,
-        thumbnailSrc: src,
+        thumbnailSrc: url(
+          item.imageRevisionId,
+          review.featureId,
+          false,
+          'c_fill,h_256,w_256',
+        ),
         renderKey: item.imageRevisionId,
         rotationDegrees:
           pendingRotation?.imageId === id
@@ -203,8 +216,13 @@ const items = $derived.by<ViewerRenderable[]>(() => {
 })
 
 /** Build an exact private revision preview URL. */
-function url(id: string, featureId: string | null, raw = false): string {
-  const params = new URLSearchParams(raw ? {} : { t: 'c_fit,w_1200,h_1200' })
+function url(
+  id: string,
+  featureId: string | null,
+  raw = false,
+  transformation = 'c_fit,h_1024,w_1024',
+): string {
+  const params = new URLSearchParams(raw ? {} : { t: transformation })
   if (featureId) params.set('feature', featureId)
   return `/api/images/revisions/${encodeURIComponent(id)}?${params}`
 }
@@ -249,15 +267,14 @@ async function load(): Promise<void> {
   busy = true
   notify()
   try {
-    intentOptions = (
-      await refreshRemoteQuery(
-        getImageIntentOptions({
-          ctxType: 'task',
-          ctxId: taskId,
-          meta: { isAdminRequest: true },
-        }),
-      )
-    ).intents
+    const scope = appCtx.resources.scopeKey
+    // Policy presentation is cached by project and cannot hold up review image downloads.
+    void loadImageIntentOptions(appCtx, { ctxType: 'task', ctxId: taskId }, projectId)
+      .then(policy => {
+        if (!disposed && appCtx.resources.scopeKey === scope)
+          intentOptions = policy.intents
+      })
+      .catch(cause => console.warn('Could not load image intent options', cause))
     reviews = await refreshRemoteQuery(
       getTaskImageReviews({ taskId, meta: { isAdminRequest: true } }),
     )

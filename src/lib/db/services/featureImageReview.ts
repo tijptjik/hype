@@ -206,27 +206,42 @@ export async function readFeatureImageReview(
       JSON.stringify(baseline.gallery.entries[id]) !==
         JSON.stringify(submitted.gallery.entries[id]),
   )
+  // Load exact displayed and submitted pins together, with one JSON binding for any gallery size.
+  const requestedPins = Object.entries(content.gallery.entries).map(
+    ([imageId, entry]) => ({
+      imageId,
+      revisionId: entry.imageRevisionId,
+      originalRevisionId:
+        submitted.gallery.entries[imageId]?.imageRevisionId ?? entry.imageRevisionId,
+    }),
+  )
+  const pins = requestedPins.length
+    ? await db.all<{
+        imageId: string
+        metadata: string
+        originalMetadata: string | null
+        originalRevisionId: string
+        createdAt: string
+        contributorId: string | null
+      }>(sql`SELECT i.id imageId,r.metadata,i.createdAt,i.contributorId,
+      original.metadata originalMetadata,json_extract(j.value,'$.originalRevisionId') originalRevisionId
+    FROM json_each(${JSON.stringify(requestedPins)}) j
+    JOIN imageRevision r ON r.id=json_extract(j.value,'$.revisionId')
+      AND r.imageId=json_extract(j.value,'$.imageId')
+    JOIN image i ON i.id=r.imageId
+    LEFT JOIN imageRevision original ON original.id=json_extract(j.value,'$.originalRevisionId')
+      AND original.imageId=i.id`)
+    : []
+  if (pins.length !== requestedPins.length)
+    throw new Error('Review image revision is unavailable')
   const images: FeatureImageReview['images'] = {}
-  for (const [imageId, entry] of Object.entries(content.gallery.entries)) {
-    const pin = await db.get<{
-      metadata: string
-      createdAt: string
-      contributorId: string | null
-    }>(
-      sql`SELECT r.metadata,i.createdAt,i.contributorId FROM imageRevision r JOIN image i ON i.id=r.imageId WHERE r.id=${entry.imageRevisionId} AND r.imageId=${imageId}`,
-    )
-    if (!pin) throw new Error('Review image revision is unavailable')
-    const originalRevisionId =
-      submitted.gallery.entries[imageId]?.imageRevisionId ?? entry.imageRevisionId
-    const original = await db.get<{ metadata: string }>(
-      sql`SELECT metadata FROM imageRevision WHERE id=${originalRevisionId} AND imageId=${imageId}`,
-    )
-    images[imageId] = {
+  for (const pin of pins) {
+    images[pin.imageId] = {
       createdAt: pin.createdAt,
       contributorId: pin.contributorId,
       metadata: JSON.parse(pin.metadata),
-      originalMetadata: JSON.parse(original?.metadata ?? pin.metadata),
-      originalRevisionId,
+      originalMetadata: JSON.parse(pin.originalMetadata ?? pin.metadata),
+      originalRevisionId: pin.originalRevisionId,
     }
   }
   const comparisonGuard =

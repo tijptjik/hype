@@ -1,53 +1,37 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
 // API
-import { readResourceLogoPreview } from '#lib/api/services/resourceLogoPreview.js'
 import { getDatabaseWithoutAuth } from '#lib/api/index.js'
-// AUTHORIZATION
-import { readFeatureImageRevisionPreview } from '#lib/api/services/imageRevisionPreview.js'
-import { getUserRoles } from '#lib/db/services/user.js'
 // SERVICES
 import {
   verifyImageRevisionBytes,
+  readImageRevisionAddress,
 } from '#lib/db/services/imageRevisionDelivery.js'
 import {
   getOriginalsBucketForStage,
+  getDerivedBucketForStage,
   toMetadataProfilePayload,
 } from '#lib/images/storage.js'
 // VALIDATION
 import { ImageMetadataFullSchema } from '#lib/db/zod/schema/image.js'
+import { revisionDerivativeKey } from '#lib/images/revisionDerivative.js'
 import { transformImageRevision } from '#lib/images/revisionTransform.js'
 // TYPES
 import type { RequestHandler } from './$types'
-import type { Database, Id } from '#lib/types.js'
 
 /**
- * Checks public delivery or an independently authorized current Feature gallery preview.
- * @param db Request database.
- * @param locals Current authenticated request, when present.
- * @param revisionId Exact requested image revision.
- * @param featureId Optional preview context; never an authorization grant itself.
- * @returns Visible pin, or null without disclosing private metadata or storage keys.
- */
-async function visiblePin(db: Database, locals: App.Locals, revisionId: string, featureId: string | null) {
-  const actor = locals.user && locals.session ? { user: locals.user,
-    userRoles: locals.user.isAnonymous ? [] : await getUserRoles(db, locals.user.id as Id) } : undefined
-  return await readFeatureImageRevisionPreview(db, revisionId, featureId, actor) ?? await readResourceLogoPreview(db, revisionId, actor)
-}
-
-/**
- * Delivers exact published image bytes or their public metadata after live visibility checks.
+ * Delivers an exact image by its opaque address, independently of the viewer's session.
  * @param event Request containing the immutable image revision ID.
- * @returns Verified original bytes or the public metadata profile; never a latest fallback.
- * @remarks Private/no-store responses preserve moderation revocation. Transforms use
- * verified bytes and retained metadata; public metadata never includes full EXIF.
+ * @returns Publicly cacheable exact-version derivatives, originals or basic metadata.
+ * @remarks Task/feature APIs control discovery. Known image addresses grant delivery;
+ * cached derivatives bypass original processing, and source misses never use latest bytes.
  */
 export const GET: RequestHandler = async ({ params, locals, url }) => {
   const { db } = await getDatabaseWithoutAuth(locals.platform)
-  const pin = await visiblePin(db, locals, params.revision, url.searchParams.get('feature'))
+  const pin = await readImageRevisionAddress(db, params.revision)
   if (!pin) throw error(404, 'Image revision not available')
   const headers = {
-    'cache-control': 'private, no-store',
+    'cache-control': 'public, max-age=31536000, immutable',
     'x-content-type-options': 'nosniff',
   }
   if (url.searchParams.get('metadata') === '1') {
@@ -61,6 +45,31 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
     pin.storageNamespace !== 'production'
   )
     throw error(409, 'Image storage requires migration')
+  // Use the same versioned derivatives as the asset Worker before touching original bytes.
+  let derivativeKey: string | null
+  try {
+    derivativeKey = revisionDerivativeKey(pin, url)
+  } catch (cause) {
+    throw error(
+      400,
+      cause instanceof Error ? cause.message : 'Invalid image transformation',
+    )
+  }
+  if (derivativeKey) {
+    const cached = await getDerivedBucketForStage(
+      locals.platform,
+      pin.storageNamespace,
+    ).get(derivativeKey)
+    if (cached)
+      return new Response(cached.body as unknown as ReadableStream<Uint8Array>, {
+        headers: {
+          ...headers,
+          'content-type': cached.httpMetadata?.contentType ?? 'image/webp',
+          'content-length': String(cached.size),
+          'x-image-cache': 'r2-derived-hit',
+        },
+      })
+  }
   const bucket = getOriginalsBucketForStage(locals.platform, pin.storageNamespace)
   const object = await bucket.get(pin.storageKey)
   if (!object) throw error(404, 'Image revision object not available')
@@ -73,13 +82,21 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
   const bytes = await object.arrayBuffer()
   if (!(await verifyImageRevisionBytes(pin, bytes)))
     throw error(409, 'Image revision integrity mismatch')
-  // Recheck moderation/publication after storage I/O, including requests racing a takedown.
-  const transformed = await transformImageRevision(locals.platform?.env?.ASSET_TRANSFORMER, bytes, pin.mediaType, pin.metadata, url)
-  if (!(await visiblePin(db, locals, params.revision, url.searchParams.get('feature'))))
-    throw error(404, 'Image revision not available')
-  if (transformed) return new Response(transformed.body, {
-    headers: { ...headers, 'content-type': transformed.headers.get('content-type') ?? 'image/webp' },
-  })
+  // Render only cache misses from the retained source and immutable metadata.
+  const transformed = await transformImageRevision(
+    locals.platform?.env?.ASSET_TRANSFORMER,
+    bytes,
+    pin.mediaType,
+    pin.metadata,
+    url,
+  )
+  if (transformed)
+    return new Response(transformed.body, {
+      headers: {
+        ...headers,
+        'content-type': transformed.headers.get('content-type') ?? 'image/webp',
+      },
+    })
   return new Response(bytes, {
     headers: {
       ...headers,

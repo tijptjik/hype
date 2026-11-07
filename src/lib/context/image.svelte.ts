@@ -3,7 +3,7 @@ import {
   DEFAULT_IMAGE_INTENTS,
   type ImageIntentDefinition,
 } from '#lib/images/intents.js'
-import { getImageIntentOptions } from '#lib/api/image.remote.js'
+import { loadImageIntentOptions } from '#lib/client/services/imageIntentOptions.js'
 // SVELTE
 import { getContext, setContext } from 'svelte'
 import { SvelteSet, SvelteMap } from 'svelte/reactivity'
@@ -335,7 +335,10 @@ export class ImageCtx {
   private handleRefreshImagesEvent = (event: Event) => {
     const customEvent = event as CustomEvent
     // Catalogue saves invalidate every mounted gallery, including inherited Project policies.
-    if (!customEvent.detail) { void this.refreshImages(); return }
+    if (!customEvent.detail) {
+      void this.refreshImages()
+      return
+    }
     // Only refresh if we have a context that matches the published resource
     if (this.state.context?.ctxType && this.state.context?.ctxId) {
       const { resourceType, resourceId } = customEvent.detail
@@ -1943,8 +1946,13 @@ export class ImageCtx {
     this.state.isFetchingImages = true
 
     try {
-      // Get the images for the primary resource
-      const images = await this.imagesQueryFn()
+      // Get the primary gallery when present; proposal-only tasks have secondary evidence only.
+      const [images, extendedImages] = await Promise.all([
+        this.state.context.ctxType && this.state.context.ctxId
+          ? this.imagesQueryFn()
+          : [],
+        this.state.context.ctxTypeSecondary ? this.extendedImagesQueryFn() : [],
+      ])
 
       // Validate context hasn't changed during async operation
       if (this.imageRefreshSerial !== refreshSerial) {
@@ -1955,15 +1963,8 @@ export class ImageCtx {
       const validImages = images.filter(isValidImageEnvelope)
       const imageIds = validImages.map((image: ImageCtxEnvelope) => image.image.id)
 
-      // Get the images for the secondary resource
+      // Merge the secondary resource after both reads pass the context validation above.
       if (this.state.context.ctxTypeSecondary) {
-        const extendedImages = await this.extendedImagesQueryFn()
-
-        // Validate context again after second async operation
-        if (this.imageRefreshSerial !== refreshSerial) {
-          return
-        }
-
         // Filter out null/undefined extended images too
         const validExtendedImages = extendedImages.filter(isValidImageEnvelope)
 
@@ -2042,16 +2043,23 @@ export class ImageCtx {
     }
 
     const context = this.state.context
-    const policy = await refreshRemoteQuery(
-      getImageIntentOptions({
+    const scope = this.appCtx.resources.scopeKey
+    // Catalogue reads never delay image data; the session cache is shared by project.
+    void loadImageIntentOptions(
+      this.appCtx,
+      {
         ctxType: context.ctxType!,
         ctxId: context.ctxId!,
-        meta: this.isAdminMode ? { isAdminRequest: true } : undefined,
-      }),
+      },
+      context.project?.id,
     )
-    if (this.state.context !== context) return []
-    this.intentOptions = policy.intents
-    this.autoPublishUnclassified = policy.autoPublishUnclassified
+      .then(policy => {
+        if (this.state.context !== context || this.appCtx.resources.scopeKey !== scope)
+          return
+        this.intentOptions = policy.intents
+        this.autoPublishUnclassified = policy.autoPublishUnclassified
+      })
+      .catch(cause => console.warn('Could not load image intent options', cause))
     const result = await this.fetchImagesFromCache(
       this.state.context.ctxType,
       this.state.context.ctxId,

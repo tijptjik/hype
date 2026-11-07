@@ -297,6 +297,7 @@ $effect(() => {
               {#key task.id}
                 <TaskImageReview
                   taskId={task.id}
+                  projectId={task.projectId}
                   initialReport={isNewFeature}
                   readonly={isReviewed}
                   reviewAction={task.reviewAction}
@@ -468,6 +469,7 @@ $effect(() => {
             {#key task.id}
               <TaskImageReview
                 taskId={task.id}
+                projectId={task.projectId}
                 initialReport={isNewFeature}
                 readonly={isReviewed}
                 reviewAction={task.reviewAction}

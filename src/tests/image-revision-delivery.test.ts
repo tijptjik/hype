@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm'
 // SERVICES
 import {
   readImageRevisionDelivery,
+  readImageRevisionAddress,
   verifyImageRevisionBytes,
 } from '#lib/db/services/imageRevisionDelivery.js'
 import { createImageAssetRevision } from '#lib/db/services/imageRevision.js'
@@ -150,5 +151,23 @@ describe('exact image revision delivery', () => {
       await verifyImageRevisionBytes(pin, new TextEncoder().encode('abd').buffer),
     ).toBe(false)
     expect(await verifyImageRevisionBytes({ ...pin, byteSize: 4 }, bytes)).toBe(false)
+  })
+})
+
+describe('discovery-based image addresses', () => {
+  it('delivers an exact known revision independently of publication and archive flags', async () => {
+    const f = await fixture()
+    f.sqlite.exec(
+      'UPDATE feature SET isPublished=0,isArchived=1; UPDATE image SET isArchived=1; DELETE FROM featureImage;',
+    )
+    expect(await readImageRevisionAddress(f.db, f.asset.imageRevisionId)).toMatchObject(
+      {
+        revisionId: f.asset.imageRevisionId,
+        storageKey: 'immutable/photo',
+      },
+    )
+    expect(await readImageRevisionAddress(f.db, 'unknown-address')).toBeNull()
+    // Permission-aware discovery callers keep their existing visibility rules.
+    expect(await readImageRevisionDelivery(f.db, f.asset.imageRevisionId)).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { sql } from 'drizzle-orm'
 import { lifecycleFixture } from './fixtures/featureLifecycle'
 import {
@@ -28,7 +28,7 @@ const connections: ReturnType<typeof lifecycleFixture>[] = []
 afterEach(() => {
   for (const f of connections.splice(0)) f.sqlite.close()
 })
-async function fixture() {
+async function fixture(imageCount = 1) {
   const f = lifecycleFixture()
   connections.push(f)
   const initial = await f.initialize(false),
@@ -49,6 +49,17 @@ async function fixture() {
     bytes: new Uint8Array([1, 2, 3]).buffer,
     metadata: { version: 1 },
   })
+  for (let index = 1; index < imageCount; index++) {
+    await saveFeatureCreationUpload(f.db, {
+      taskId: draft.task.id,
+      actorId: 'author',
+      storageNamespace: 'local',
+      storageKey: `submission-${index}`,
+      mediaType: 'image/png',
+      bytes: new Uint8Array([1, 2, index]).buffer,
+      metadata: { version: 1 },
+    })
+  }
   await submitFeatureCreationTask(f.db, { taskId: draft.task.id, actorId: 'author' })
   const task = (await readFeatureCreationTask(f.db, {
     taskId: draft.task.id,
@@ -356,4 +367,24 @@ it('stores explicit sorting in the review snapshot without changing the submissi
   expect(review.content.gallery.sortMode).toBe('manual')
   expect(review.submitted.gallery.sortMode).toBeUndefined()
   expect(review.content.gallery.order).toEqual([f.upload.imageId])
+})
+
+it('loads a large gallery with a constant query count and exact immutable pins', async () => {
+  const small = await fixture()
+  const large = await fixture(105)
+  const counts: number[] = []
+  for (const f of [small, large]) {
+    const get = vi.spyOn(f.db, 'get')
+    const all = vi.spyOn(f.db, 'all')
+    const review = await readFeatureImageReview(f.db, f.scope)
+    expect(Object.keys(review!.images)).toHaveLength(f === small ? 1 : 105)
+    for (const [id, entry] of Object.entries(review!.content.gallery.entries)) {
+      expect(review!.images[id].originalRevisionId).toBe(entry.imageRevisionId)
+      expect(review!.images[id].metadata).toEqual(review!.images[id].originalMetadata)
+    }
+    counts.push(get.mock.calls.length + all.mock.calls.length)
+    get.mockRestore()
+    all.mockRestore()
+  }
+  expect(counts[1]).toBe(counts[0])
 })

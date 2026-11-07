@@ -630,41 +630,45 @@ expose profile snapshots, not role grants or subscription credentials.
 
 ### Admin contribution visibility
 
-Admin user profiles include non-draft, non-archived contributions on unpublished Features
-or layers when the viewer has live management authority through the relevant hub Admin,
-organisation Owner, or project Owner/Maintainer role. Core hub Admin remains global.
-Private records require consistent, non-archived layer/project/organisation ancestry;
-Member/User roles and profile-edit permission alone do not grant this access. Public
-contributions retain their existing hub visibility. Public profiles remain published-only.
+Admin user profiles include non-draft, non-archived contributions on unpublished
+Features or layers when the viewer has live management authority through the relevant
+hub Admin, organisation Owner, or project Owner/Maintainer role. Core hub Admin remains
+global. Private records require consistent, non-archived layer/project/organisation
+ancestry; Member/User roles and profile-edit permission alone do not grant this access.
+Public contributions retain their existing hub visibility. Public profiles remain
+published-only.
 
 Profile counts, paginated Feature/photo lists and recent preview strips use the same
-scope. Unpublished photo assignments additionally require management authority over their
-parent Feature. Counts are labelled contributed Features/photos, and unpublished Feature
-rows carry a status label. Unsubmitted tasks and draft Features are excluded.
+scope. Unpublished photo assignments additionally require management authority over
+their parent Feature. Counts are labelled contributed Features/photos, and unpublished
+Feature rows carry a status label. Unsubmitted tasks and draft Features are excluded.
 
 ### User change log
 
 The admin user profile's Change log tab requires the subject to be a current,
-non-anonymous, non-archived admin-panel user. Removing their last qualifying staff
-role hides the tab and denies subsequent history requests; immutable resource history
-is retained. Baseline organisation/project `user` membership never grants admin access.
+non-anonymous, non-archived admin-panel user. Removing their last qualifying staff role
+hides the tab and denies subsequent history requests; immutable resource history is
+retained. Baseline organisation/project `user` membership never grants admin access.
 Admin entry explicitly recognizes hub Admin, organisation Owner/Member, and project
 Owner/Maintainer/Translator/Member roles; unknown role values fail closed.
 
 History visibility belongs to the viewer, independently of profile-edit permission:
 organisation Owners see their organisation and descendants; project Owners/Maintainers
 see their project and descendants; hub Admins see their hub and descendants. Existing
-core-hub administration (the session-derived SuperAdmin flag) remains global. Organisation
-Members/Users and project Members/Users/Translators grant no history scope. Project
-Maintainers cannot inspect archived resources. A delegated history capability is deferred.
+core-hub administration (the session-derived SuperAdmin flag) remains global.
+Organisation Members/Users and project Members/Users/Translators grant no history scope.
+Project Maintainers cannot inspect archived resources. A delegated history capability is
+deferred.
 
 Each user-feed SQL branch repeats live subject eligibility, viewer roles and consistent
-current ancestry before pagination and filter metadata. User/restore changes attributed to the subject participate, alongside migration
-baselines whose retained reviewer/contributor matches the same actor identity used by
-the resource changelog. Baselines keep their migration origin, initial-snapshot label
-and contributor/reviewer attribution; the enrollment job is not presented as their edit. Accepted profile, field-catalogue, Feature publication
-and private-maintenance journals supply the feed. Feature comparisons retain current
-internal-field privacy. Unaccepted drafts and edits predating those journals are excluded.
+current ancestry before pagination and filter metadata. User/restore changes attributed
+to the subject participate, alongside migration baselines whose retained
+reviewer/contributor matches the same actor identity used by the resource changelog.
+Baselines keep their migration origin, initial-snapshot label and contributor/reviewer
+attribution; the enrollment job is not presented as their edit. Accepted profile,
+field-catalogue, Feature publication and private-maintenance journals supply the feed.
+Feature comparisons retain current internal-field privacy. Unaccepted drafts and edits
+predating those journals are excluded.
 
 ### Direct assignments
 
@@ -681,3 +685,13 @@ resources whose roles they can manage, evaluated against persisted ancestry. Pro
 edit permission does not expose unrelated memberships. Hidden assignments and their
 counts are omitted from the response. The overview is read-only; existing resource
 editors retain assignment and capability mutation authority.
+
+## Image URL delivery
+
+Image bytes use discovery-based access. Task, Feature and image-list APIs enforce
+permissions when revealing image URLs; possession of an opaque immutable image revision
+URL grants delivery without a session, role or publication check. This includes retained
+proposal, historical and archived image addresses. Successful delivery is publicly
+cacheable; hiding or archiving a record removes discovery, not access to an
+already-known image URL. Image edits, review decisions and full metadata APIs retain
+their authorization.

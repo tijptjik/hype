@@ -7,6 +7,7 @@ import type { getFeaturePage } from '#lib/api/featureQueries.remote.js'
 import { ResourceList } from './resource-list.svelte'
 import type { FeatureQuery, FeatureQueryRetention } from './feature-query.svelte'
 // SERVICES
+import { ImageIntentOptionsCache } from '#lib/images/intentOptionsCache.js'
 import {
   OptimisticRecords,
   projectResourcePatch,
@@ -43,6 +44,7 @@ function createEntityStore(): Cache {
 
 /** Session-local domain retention. SvelteKit owns active page payloads and request deduplication. */
 export class CacheCtx {
+  readonly imageIntentOptions = new ImageIntentOptionsCache()
   private readonly optimisticRecords = new OptimisticRecords()
   featureCollection: FeatureCollectionHandle | undefined = $state.raw()
   featureCollectionScope: string | undefined
@@ -605,6 +607,9 @@ export class CacheCtx {
    * @returns Completion of current-view refreshes; inactive views remain invalidated.
    */
   async reconcile(type: string): Promise<void> {
+    // Project overrides and Hub inheritance change only when their owners are saved.
+    if (['project', 'hub', 'organisation'].includes(type))
+      this.imageIntentOptions.clear()
     const featureRefreshes: Promise<void>[] = []
     if (type === 'image') {
       // Native updates already refreshed affected pages; discard detached previews only.
@@ -647,6 +652,7 @@ export class CacheCtx {
 
   /** Clears every retained scope-sensitive record and page before an identity transition. */
   clear(): void {
+    this.imageIntentOptions.clear()
     this.epoch++
     this.optimisticRecords.clear()
     this.featureCollection = undefined

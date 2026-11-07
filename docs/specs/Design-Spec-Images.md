@@ -552,13 +552,28 @@ This is currently expressed through adapters rather than direct package-owned st
 ## Image intent publication policies
 
 Image intent determines publication eligibility; there is no separate per-image
-publication switch. Effective public visibility also requires a published,
-non-archived Feature and a non-archived image. Contributor photos retain their
-approval boundary.
+publication switch. Effective public visibility also requires a published, non-archived
+Feature and a non-archived image. Contributor photos retain their approval boundary.
 
 Hub Advanced owns an ordered intent catalogue. New hubs copy the core hub's current
 catalogue independently. Project Advanced defaults to **Inherit from Hub**; disabling
 inheritance starts with a copy that can be customised for that Project.
+
+Viewers cache effective intent options per Project and account access scope for the
+session. Project, Hub or Organisation saves invalidate the cache, as do account
+transitions. Failed reads remain retryable. Catalogue loading does not block image
+loading; image edits and acceptance always validate against the current server policy.
+Task review metadata loads displayed and submitted revision pins together, without
+per-image database round trips. Primary and task galleries load concurrently. Task
+previews request the existing 256px thumbnail and 1024px viewer prerenders. Image
+delivery follows discovery-based access: possession of an opaque revision URL grants
+access to its bytes, including historical, unpublished and archived images. Task and
+Feature APIs retain authorization for discovering these URLs and editing data. Delivery
+does not initialize a viewer session or recheck roles/publication; successful responses
+are publicly cacheable for one year because revision addresses are immutable. Revision
+delivery reads the exact retained version from the asset derivative bucket before
+reading any original. Cache hits stream directly; missing derivatives and review
+rotations retain exact-source rendering. No mutable latest-version lookup is used.
 
 Three stable roles cannot be deleted, but their display labels can be renamed:
 
@@ -569,31 +584,33 @@ Three stable roles cannot be deleted, but their display labels can be renamed:
 
 Other intents have editable labels, publication eligibility and order. Removing an
 intent offers reassignment, returning its images to Unclassified, or renaming instead.
-Removal aliases preserve interpretation of older proposals; historical snapshots are
-not rewritten. Image intent edits are staged in the normal Hub or Project form and use its Save
-and Reset actions. The parent record, settings and affected live galleries are saved
-atomically with attributed revision history and concurrency checks. The editor has no
-separate Save or Reset buttons; role labels and image counts appear inline with each
-intent, without row divider lines. Intent rows share aligned columns and use the
-Layers grip-based drag-and-drop pattern for ordering; deletion uses a labelled trash
-icon. Reordering remains staged until the main form is saved. Retired identities retain their snapshots.
+Removal aliases preserve interpretation of older proposals; historical snapshots are not
+rewritten. Image intent edits are staged in the normal Hub or Project form and use its
+Save and Reset actions. The parent record, settings and affected live galleries are
+saved atomically with attributed revision history and concurrency checks. The editor has
+no separate Save or Reset buttons; role labels and image counts appear inline with each
+intent, without row divider lines. Intent rows share aligned columns and use the Layers
+grip-based drag-and-drop pattern for ordering; deletion uses a labelled trash icon.
+Reordering remains staged until the main form is saved. Retired identities retain their
+snapshots.
 
-The Project switch **Automatically publish all unclassified images** defaults to on.
-New staff uploads are classified as Catch-All; disabling it leaves uploads Unclassified.
-No image is automatically made Featured. After publishing a Feature, Layer, Project or
+The Project switch **Automatically publish all unclassified images** defaults to on. New
+staff uploads are classified as Catch-All; disabling it leaves uploads Unclassified. No
+image is automatically made Featured. After publishing a Feature, Layer, Project or
 Organisation, a follow-up dialog offers to classify the remaining active Unclassified
 images as each Project's Catch-All. Keeping them Unclassified leaves them private.
 Private classified images and pending contributions are excluded from this offer.
 
 Migration `0200_image_intent_policies.sql` creates and seeds policy storage. It does not
 rewrite historical revisions or bulk-publish existing images. Existing assignments are
-reconciled when intent eligibility or assignment changes, or through an accepted
-gallery edit, preserving revision history; enabling automation governs new uploads rather than silently classifying the
-existing backlog. Apply the migration before enabling the settings editor. This source
-change does not itself apply the migration to local or production databases.
+reconciled when intent eligibility or assignment changes, or through an accepted gallery
+edit, preserving revision history; enabling automation governs new uploads rather than
+silently classifying the existing backlog. Apply the migration before enabling the
+settings editor. This source change does not itself apply the migration to local or
+production databases.
 
 Order-only catalogue saves update the stored order and concurrency version without
 scanning galleries or creating intent/gallery history entries. Renaming also avoids
 gallery scans but retains policy history. Reconciliation is required when an existing
-intent is removed or its publication eligibility changes; presentation-only edits do
-not repair unrelated historical publication state.
+intent is removed or its publication eligibility changes; presentation-only edits do not
+repair unrelated historical publication state.

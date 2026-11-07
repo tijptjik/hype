@@ -34,15 +34,18 @@ export async function readImageRevisionDelivery(
   revisionId: string,
   previewGuard: SQL = sql`0`,
 ): Promise<PinnedImageDelivery | null> {
-  const logoPublic = await hasResourceLogoStorage(db) ? sql`EXISTS (
+  const logoPublic = (await hasResourceLogoStorage(db))
+    ? sql`EXISTS (
     SELECT 1 FROM resourceLogoImageHead logo WHERE logo.imageId=i.id AND logo.imageRevisionId=ir.id AND (
       EXISTS(SELECT 1 FROM organisation o WHERE o.imageId=i.id AND o.isPublished=1 AND o.isArchived=0)
       OR EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.imageId=i.id AND p.isPublished=1 AND p.isArchived=0 AND o.isPublished=1 AND o.isArchived=0)
-      OR EXISTS(SELECT 1 FROM hub h WHERE h.imageId=i.id AND h.isPublished=1 AND h.isArchived=0)))` : sql`0`
-  const accepted=await hasFeatureLifecycleStorage(db)?sql`featureRevisionImage pin
+      OR EXISTS(SELECT 1 FROM hub h WHERE h.imageId=i.id AND h.isPublished=1 AND h.isArchived=0)))`
+    : sql`0`
+  const accepted = (await hasFeatureLifecycleStorage(db))
+    ? sql`featureRevisionImage pin
       JOIN feature f ON f.currentRevisionId=pin.featureRevisionId
-      JOIN featureRevision r ON r.id=f.currentRevisionId AND r.featureId=f.id`:
-    sql`featureRevisionImage pin JOIN featureRevisionHead h ON h.publishedRevisionId=pin.featureRevisionId AND h.state='active'
+      JOIN featureRevision r ON r.id=f.currentRevisionId AND r.featureId=f.id`
+    : sql`featureRevisionImage pin JOIN featureRevisionHead h ON h.publishedRevisionId=pin.featureRevisionId AND h.state='active'
       JOIN featureRevision r ON r.id=h.publishedRevisionId AND r.featureId=h.featureId JOIN feature f ON f.id=h.featureId`
   const row = await db.get<
     Omit<PinnedImageDelivery, 'metadata'> & { metadata: string }
@@ -66,6 +69,28 @@ export async function readImageRevisionDelivery(
         AND l.isPublished=1 AND l.isArchived=0 AND p.isPublished=1 AND p.isArchived=0
         AND o.isPublished=1 AND o.isArchived=0
     ))`)
+  return row ? { ...row, metadata: JSON.parse(row.metadata) as RevisionValue } : null
+}
+
+/**
+ * Resolves bytes by their opaque immutable address without a viewer permission lookup.
+ * @param db Request database.
+ * @param revisionId Discovered image revision address.
+ * @returns Exact retained source and metadata, or null for an unknown address.
+ * @remarks Discovery APIs enforce task/feature access; possession of an image URL grants
+ * delivery, including historical and archived images. No mutable latest fallback is used.
+ */
+export async function readImageRevisionAddress(
+  db: Database,
+  revisionId: string,
+): Promise<PinnedImageDelivery | null> {
+  const row = await db.get<
+    Omit<PinnedImageDelivery, 'metadata'> & { metadata: string }
+  >(sql`
+    SELECT ir.imageId,ir.id revisionId,av.storageNamespace,av.storageKey,
+      av.contentHash,av.mediaType,av.byteSize,ir.metadata
+    FROM imageRevision ir JOIN imageAssetVersion av ON av.id=ir.assetVersionId AND av.imageId=ir.imageId
+    WHERE ir.id=${revisionId}`)
   return row ? { ...row, metadata: JSON.parse(row.metadata) as RevisionValue } : null
 }
 

@@ -8,6 +8,7 @@ import {
   rotateImage,
   updateImage,
   getImagesForContext,
+  getImageIntentOptions,
 } from '#lib/api/image.remote.js'
 import { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
 import type { ImageCtxEnvelope, ImageUpload } from '#lib/db/zod/schema/image.types.js'
@@ -52,6 +53,9 @@ vi.mock('#lib/client/services/image.js', async importOriginal => ({
 
 vi.mock('#lib/api/image.remote.js', async importOriginal => ({
   ...(await importOriginal<typeof import('#lib/api/image.remote.js')>()),
+  getImageIntentOptions: vi
+    .fn()
+    .mockResolvedValue({ intents: [], autoPublishUnclassified: true }),
   deleteImage: vi.fn(),
   setImagePublished: vi.fn(),
   setImageIntent: vi.fn(),
@@ -184,10 +188,17 @@ describe('image refresh ownership', () => {
   it('advances the displayed logo pin after immediate metadata saves', async () => {
     const ctx = new ImageCtx({}, createImageResources())
     vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)
-    await ctx.setContext({ context: { ctxType: ImageContextResource.organisation, ctxId: 'org' } })
-    const image = { image: { id: 'image', imageRevisionId: 'before', presentationMode: 'contain' } } as ImageCtxEnvelope
-    const saved = { image: { id: 'image', imageRevisionId: 'after', presentationMode: 'cast-edges' } } as ImageCtxEnvelope
-    await ctx.setImages([image]); ctx.setActiveImage(image)
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.organisation, ctxId: 'org' },
+    })
+    const image = {
+      image: { id: 'image', imageRevisionId: 'before', presentationMode: 'contain' },
+    } as ImageCtxEnvelope
+    const saved = {
+      image: { id: 'image', imageRevisionId: 'after', presentationMode: 'cast-edges' },
+    } as ImageCtxEnvelope
+    await ctx.setImages([image])
+    ctx.setActiveImage(image)
     vi.spyOn(ctx.appCtx.resources, 'reconcile').mockResolvedValue(undefined)
     vi.spyOn(ctx, 'refreshImages').mockResolvedValue(undefined)
     vi.mocked(updateImage).mockResolvedValue({ data: saved } as never)
@@ -1243,6 +1254,26 @@ describe('image refresh ownership', () => {
     expect(ctx.state.isFetchingImages).toBe(false)
   })
 
+  it('returns images while the intent policy is still pending', async () => {
+    const ctx = new ImageCtx({}, createImageResources())
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'feature' },
+    })
+    let resolvePolicy!: (policy: {
+      intents: []
+      autoPublishUnclassified: boolean
+    }) => void
+    vi.mocked(getImageIntentOptions).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolvePolicy = resolve
+      }) as never,
+    )
+    vi.mocked(getImagesForContext).mockResolvedValueOnce({ data: [] } as never)
+    await expect(ctx.imagesQueryFn()).resolves.toEqual([])
+    resolvePolicy({ intents: [], autoPublishUnclassified: false })
+    await vi.waitFor(() => expect(ctx.autoPublishUnclassified).toBe(false))
+  })
+
   it('invalidates pending reads when only the secondary task changes', async () => {
     const ctx = new ImageCtx({}, createImageResources())
     await ctx.setContext({
@@ -1273,7 +1304,8 @@ describe('image refresh ownership', () => {
     resolve([])
     await pending
 
-    expect(secondary).not.toHaveBeenCalled()
+    // Both requests start together, but neither may commit after the task changes.
+    expect(secondary).toHaveBeenCalledOnce()
     expect(setImages).not.toHaveBeenCalled()
   })
 })
