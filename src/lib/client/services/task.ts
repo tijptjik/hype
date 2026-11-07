@@ -267,7 +267,9 @@ const uploadTaskDraftImages = async (params: {
   onStatusChange?: (label: string) => void
 }): Promise<void> => {
   const uploadCtx = {
-    ctxType: params.featureId ? ImageContextResource.feature : ImageContextResourceExtended.task,
+    ctxType: params.featureId
+      ? ImageContextResource.feature
+      : ImageContextResourceExtended.task,
     ctxId: params.featureId ?? params.taskId,
     organisation: { id: params.organisationId } as OrganisationDB,
     project: { id: params.projectId } as ProjectDB,
@@ -369,7 +371,6 @@ export const getTaskReviewActionLabel = (reviewAction?: string | null): string =
       return m.bad_swift_cheetah_surge()
     case 'added-all-photos':
       return m.task__review_action_added_photos()
-    case 'added-all-photos-with-intent':
     case 'added-classified-photos':
       return m.task__review_action_added_selected_photos()
     case 'merged-feature':
@@ -420,7 +421,11 @@ export const mergeResolvedTaskFeature = (
 export const getEffectiveTaskLayerId = (
   task: Pick<Task, 'feature' | 'creationProposal'>,
   resolvedFeature?: Pick<Feature, 'layerId'> | null,
-): Id | null => (resolvedFeature?.layerId ?? task.creationProposal?.scope.layerId ?? task.feature?.layerId ?? null) as Id | null
+): Id | null =>
+  (resolvedFeature?.layerId ??
+    task.creationProposal?.scope.layerId ??
+    task.feature?.layerId ??
+    null) as Id | null
 
 /**
  * Resolves the currently selected layer from assignable options first, then cache fallback.

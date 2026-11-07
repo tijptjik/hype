@@ -138,7 +138,7 @@ export async function loadPrivateContributions(
       ),
       isArchived: row.isArchived,
       isRejectedByPartialReview:
-        row.isArchived && review?.reviewAction === 'added-all-photos-with-intent',
+        row.isArchived && review?.reviewAction === 'added-classified-photos',
       review,
     })
     if (status === 'published' || (row.isArchived && status !== 'rejected')) continue

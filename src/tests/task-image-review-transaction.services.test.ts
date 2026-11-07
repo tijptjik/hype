@@ -151,7 +151,7 @@ describe('atomic task image review', () => {
           isReviewed: 1,
           reviewerId: 'reviewer',
           reviewReason: 'accepted',
-          reviewAction: 'added-all-photos-with-intent',
+          reviewAction: 'added-classified-photos',
         })
         expect(
           sqlite.prepare('SELECT imageId, isPublished FROM featureImage').all(),
@@ -165,7 +165,9 @@ describe('atomic task image review', () => {
       }
       expect(db.batch).toHaveBeenCalledOnce()
       // Eligibility is read before preparation; the image set itself is still loaded only once.
-      expect(prepare.mock.calls.filter(([query]) => query.includes('from "taskImage"'))).toHaveLength(1)
+      expect(
+        prepare.mock.calls.filter(([query]) => query.includes('from "taskImage"')),
+      ).toHaveLength(1)
     },
   )
 

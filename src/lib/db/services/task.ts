@@ -1071,7 +1071,7 @@ export const commitTaskImageReview = async (
           ? 'ignored'
           : input.action === 'acceptAll'
             ? 'added-all-photos'
-            : 'added-all-photos-with-intent',
+            : 'added-classified-photos',
     })
     .where(pending)
     .returning({ id: task.id })
