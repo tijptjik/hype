@@ -314,9 +314,9 @@ $effect(() => {
         >
           <!-- Keep profile navigation independent of the comparison disclosure. -->
           <header
-            class="bg-primary/3 flex min-w-0 flex-wrap items-start gap-x-8 gap-y-3 p-4"
+            class={styles.resourceSummary}
           >
-            <div class="max-w-[min(100%,480px)] min-w-0 flex-none">
+            <div class="col-span-full min-w-0 @[64rem]:col-span-1">
               <div class="mb-1 flex flex-wrap items-center gap-2 text-xs">
                 <span class="text-muted-foreground">
                   {entry.initial ? 'Baseline' : 'Revision'}
@@ -397,7 +397,7 @@ $effect(() => {
             {#if !entry.initial}
               <button
                 type="button"
-                class={styles.disclosure}
+                class="{styles.disclosure} col-span-full @[64rem]:col-span-1"
                 aria-expanded={!!expanded[entry.id]}
                 aria-controls={`changes-${entry.id}`}
                 onclick={() => {

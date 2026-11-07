@@ -64,10 +64,9 @@ const reasonLabel = $derived(entry.baseline ? 'Legacy baseline' : entry.reason)
     }}
   />
   <dl
-    class="flex min-w-0 flex-wrap items-start justify-start gap-y-3 pr-12"
-    style:column-gap="48px"
+    class="grid min-w-0 grid-cols-2 items-start gap-x-6 gap-y-3 pr-12 @[48rem]:grid-cols-[8rem_minmax(0,1fr)_5rem_minmax(0,2fr)]"
   >
-    <div class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1">
+    <div class="min-w-0 space-y-1">
       <dt class={labelClass}>Changed</dt>
       <dd>
         <HistoryTimestamp
@@ -78,18 +77,18 @@ const reasonLabel = $derived(entry.baseline ? 'Legacy baseline' : entry.reason)
         />
       </dd>
     </div>
-    <div class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1">
+    <div class="min-w-0 space-y-1">
       <dt class={labelClass}>Actor</dt>
       <dd class="min-w-0 break-words"><ChangelogActor {entry} prominent /></dd>
     </div>
-    <div class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1">
+    <div class="min-w-0 space-y-1">
       <dt class={labelClass}>Source</dt>
       <dd class="text-sm font-medium break-words">
         {sources[entry.origin] ?? entry.origin}
       </dd>
     </div>
     {#if reasonLabel}
-      <div class="max-w-[min(100%,480px)] min-w-0 flex-none space-y-1">
+      <div class="min-w-0 space-y-1">
         <dt class={labelClass}>Reason</dt>
         <dd class="break-words whitespace-pre-wrap">{reasonLabel}</dd>
       </div>

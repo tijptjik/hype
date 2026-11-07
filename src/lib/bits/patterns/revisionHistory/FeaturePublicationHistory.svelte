@@ -155,9 +155,9 @@ function relative(value: string): string {
           onclick={event => toggleSurface(event, entry)}
         >
           <header
-            class="bg-primary/3 flex min-w-0 flex-wrap items-start gap-x-8 gap-y-3 p-4"
+            class={styles.featureSummary}
           >
-            <div class="max-w-[min(100%,480px)] min-w-0 flex-none">
+            <div class="col-span-full min-w-0 @[56rem]:col-span-1">
               <div class="mb-1 flex flex-wrap items-center gap-2 text-xs">
                 <span class="text-muted-foreground"
                   >{privateHistory
@@ -217,7 +217,7 @@ function relative(value: string): string {
             {#if canReview}
               <button
                 type="button"
-                class={styles.disclosure}
+                class="{styles.disclosure} col-span-full @[56rem]:col-span-1"
                 aria-expanded={!!expanded[entry.generation]}
                 aria-controls={`feature-changes-${entry.generation}`}
                 onclick={() => toggle(entry)}

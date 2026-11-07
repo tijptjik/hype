@@ -19,6 +19,11 @@ export const historyStyles = {
     focus,
   ),
   entry: 'border-border/60 min-w-0 overflow-hidden rounded-lg border',
+  // Fixed grid tracks keep summary fields aligned across independently sized records.
+  featureSummary:
+    'bg-primary/3 grid min-w-0 grid-cols-2 items-start gap-x-6 gap-y-3 p-4 @[56rem]:grid-cols-[minmax(0,2fr)_8rem_minmax(0,1fr)_5rem_9rem]',
+  resourceSummary:
+    'bg-primary/3 grid min-w-0 grid-cols-2 items-start gap-x-6 gap-y-3 p-4 @[64rem]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_8rem_minmax(0,1fr)_5rem_9rem]',
   metadata: 'contents',
   label: 'text-muted-foreground text-xs font-medium',
   group: 'grid min-w-0 gap-3',
