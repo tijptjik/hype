@@ -4,7 +4,10 @@ import { untrack } from 'svelte'
 // THIRD-PARTY
 import { Dialog } from 'bits-ui'
 // API
-import { getFeatureGalleryRevisionEditor, saveFeatureGalleryRevision } from '#lib/api/featureRevisions.remote.js'
+import {
+  getFeatureGalleryRevisionEditor,
+  saveFeatureGalleryRevision,
+} from '#lib/api/featureRevisions.remote.js'
 import { translateContentField } from '#lib/api/translation.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // I18N
@@ -21,8 +24,30 @@ import type { FeatureRevisionContent } from '#lib/revisions/featureContent.js'
 import type { ProfileLocaleState } from '../forms/featureLocation/profileLocales'
 import type { ProfileValues } from '../forms/featureLocation/profileTranslation'
 
-let { featureId, imageId, isDirty = false, multilingualExpanded, onMultilingualExpandedChange, onSaved }: {
-  featureId: string
+let {
+  featureId = '',
+  imageId,
+  source,
+  onOpenChange,
+  isDirty = false,
+  multilingualExpanded,
+  onMultilingualExpandedChange,
+  onSaved,
+}: {
+  featureId?: string
+  source?: {
+    load: () => Promise<{
+      enabled: boolean
+      gallery: FeatureRevisionContent['gallery']
+      comparisonRevisionId: string
+      locales: string[]
+    }>
+    save: (
+      imageId: string,
+      text: { caption: Record<string, string>; alt: Record<string, string> },
+    ) => Promise<void>
+  }
+  onOpenChange?: (open: boolean) => void
   imageId: string | null
   isDirty?: boolean
   multilingualExpanded?: boolean
@@ -35,9 +60,16 @@ let gallery = $state<FeatureRevisionContent['gallery'] | null>(null)
 let baseRevisionId = $state('')
 let editingImageId = $state('')
 let values = $state<ProfileValues<Field>>({})
-let localeState = $state<ProfileLocaleState>({ selectedLocales: [], visibleLocales: [], expanded: false })
+let localeState = $state<ProfileLocaleState>({
+  selectedLocales: [],
+  visibleLocales: [],
+  expanded: false,
+})
 // Task and caption controls share expansion while retaining their own language selections.
-const effectiveLocaleState = $derived({ ...localeState, expanded: multilingualExpanded ?? localeState.expanded })
+const effectiveLocaleState = $derived({
+  ...localeState,
+  expanded: multilingualExpanded ?? localeState.expanded,
+})
 
 /** Updates caption languages and shares multilingual expansion with the task.
  * @param state Caption locale selection and expansion.
@@ -48,7 +80,6 @@ function updateCaptionLocales(state: ProfileLocaleState): void {
   localeState = state
   if (expansionChanged) onMultilingualExpandedChange?.(state.expanded)
 }
-
 
 let loading = $state(false)
 let busy = $state(false)
@@ -69,8 +100,22 @@ async function load(): Promise<void> {
   changed = false
   message = ''
   try {
-    const result = await refreshRemoteQuery(getFeatureGalleryRevisionEditor({ featureId: requested, meta: { isAdminRequest: true } }))
-    if (!open || requested !== featureId || selected !== imageId || sequence !== loadSequence) return
+    // Review adapters keep draft text on the proposal instead of publishing a Feature revision.
+    const result = source
+      ? await source.load()
+      : await refreshRemoteQuery(
+          getFeatureGalleryRevisionEditor({
+            featureId: requested,
+            meta: { isAdminRequest: true },
+          }),
+        )
+    if (
+      !open ||
+      requested !== featureId ||
+      selected !== imageId ||
+      sequence !== loadSequence
+    )
+      return
     if (!result.enabled || !selected || !result.gallery.entries[selected]) {
       message = m.image_text_unavailable()
       return
@@ -80,17 +125,29 @@ async function load(): Promise<void> {
     editingImageId = selected
     const entry = gallery.entries[selected]
     // Include stored text locales even when they are absent from the profile defaults.
-    const locales = [...new Set([...result.locales, ...Object.keys(entry.caption), ...Object.keys(entry.alt)]
-      .map(canonicalContentTag))]
+    const locales = [
+      ...new Set(
+        [
+          ...result.locales,
+          ...Object.keys(entry.caption),
+          ...Object.keys(entry.alt),
+        ].map(canonicalContentTag),
+      ),
+    ]
     if (!locales.length) locales.push(canonicalContentTag(getLocaleKey()))
     values = {}
     for (const [locale, caption] of Object.entries(entry.caption))
       values[contentFormKey(locale)] = { ...values[contentFormKey(locale)], caption }
     for (const [locale, alt] of Object.entries(entry.alt))
       values[contentFormKey(locale)] = { ...values[contentFormKey(locale)], alt }
-    localeState = { selectedLocales: locales, visibleLocales: [...locales], expanded: false }
+    localeState = {
+      selectedLocales: locales,
+      visibleLocales: [...locales],
+      expanded: false,
+    }
   } catch (cause) {
-    if (sequence === loadSequence) message = cause instanceof Error ? cause.message : m.image_text_load_failed()
+    if (sequence === loadSequence)
+      message = cause instanceof Error ? cause.message : m.image_text_load_failed()
   } finally {
     if (sequence === loadSequence) loading = false
   }
@@ -120,17 +177,28 @@ async function save(): Promise<void> {
     for (const field of ['caption', 'alt'] as const) {
       for (const [locale, row] of Object.entries(values)) {
         if (row?.[field] == null) continue
-        const stored = Object.keys(text[field]).find(tag => contentFormKey(tag) === locale)
+        const stored = Object.keys(text[field]).find(
+          tag => contentFormKey(tag) === locale,
+        )
         text[field][stored ?? canonicalContentTag(locale)] = row[field]
       }
     }
-    await saveFeatureGalleryRevision({ featureId, meta: { isAdminRequest: true }, baseRevisionId,
-      order: gallery.order, text: { [editingImageId]: text } })
+    if (source) await source.save(editingImageId, text)
+    else
+      await saveFeatureGalleryRevision({
+        featureId,
+        meta: { isAdminRequest: true },
+        baseRevisionId,
+        order: gallery.order,
+        text: { [editingImageId]: text },
+      })
     open = false
     onSaved()
   } catch (cause) {
     message = cause instanceof Error ? cause.message : m.image_text_save_failed()
-  } finally { busy = false }
+  } finally {
+    busy = false
+  }
 }
 
 /** Opens a fresh draft or dismisses it without saving.
@@ -140,57 +208,122 @@ function setOpen(next: boolean): void {
   if (busy) return
   open = next
   if (next) void load()
-  else { loadSequence++; loading = false; gallery = null }
+  else {
+    loadSequence++
+    loading = false
+    gallery = null
+  }
 }
+
+$effect(() => {
+  onOpenChange?.(open)
+})
 
 $effect(() => {
   featureId
   imageId
-  untrack(() => { if (open && !busy) setOpen(false) })
+  untrack(() => {
+    if (open && !busy) setOpen(false)
+  })
 })
 </script>
 
 <Dialog.Root {open} onOpenChange={setOpen}>
   <Dialog.Trigger type="button" disabled={disabled || !imageId}>
     {#snippet child({ props })}
-      <Button attrs={props} type="button" text={m.image_text_edit()} iconComponent={TextIcon}
-        iconClasses="h-[22px] w-[22px]" class={VIEWER_CONTROLS_BUTTON_CLASSES}
-        style="transparent" modifier="circle" hideLabel={true} disabled={disabled || !imageId}
-        onClick={event => { if (typeof props.onclick === 'function') props.onclick(event) }} />
+      <Button
+        attrs={props}
+        type="button"
+        text={m.image_text_edit()}
+        iconComponent={TextIcon}
+        iconClasses="h-[22px] w-[22px]"
+        class={VIEWER_CONTROLS_BUTTON_CLASSES}
+        style="transparent"
+        modifier="circle"
+        hideLabel={true}
+        disabled={disabled || !imageId}
+        onClick={event => {
+          if (typeof props.onclick === 'function') props.onclick(event)
+        }}
+      />
     {/snippet}
   </Dialog.Trigger>
   <Dialog.Portal>
     <Dialog.Overlay class="bits-dialog__overlay" />
-    <Dialog.Content class="fixed left-1/2 top-1/2 z-[71] flex max-h-[calc(100dvh-2rem)] w-[56rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-panel text-foreground shadow-xl bits-theme"
-      onEscapeKeydown={event => { if (busy) event.preventDefault() }}
-      onInteractOutside={event => { if (busy) event.preventDefault() }}>
-      <Dialog.Title class="px-6 pt-6 pb-4 text-lg font-semibold">{m.image_text_edit()}</Dialog.Title>
+    <Dialog.Content
+      class="border-border bg-panel text-foreground bits-theme fixed top-1/2 left-1/2 z-[71] flex max-h-[calc(100dvh-2rem)] w-[56rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border shadow-xl"
+      onEscapeKeydown={event => {
+        if (busy) event.preventDefault()
+      }}
+      onInteractOutside={event => {
+        if (busy) event.preventDefault()
+      }}
+    >
+      <Dialog.Title class="px-6 pt-6 pb-4 text-lg font-semibold"
+        >{m.image_text_edit()}</Dialog.Title
+      >
       <div class="min-h-0 overflow-y-auto" aria-busy={loading || busy}>
         {#if gallery && !loading}
-          <FeatureProfileEditor localeState={effectiveLocaleState} onLocaleStateChange={updateCaptionLocales}
-            {values} contextKey={`${featureId}:${editingImageId}:${open}`} isEditing={!disabled}
-            fieldConfigs={[{ key: 'caption', label: m.image_text_caption() }, { key: 'alt', label: m.image_text_alt() }]}
-            translate={(source, target, text) => translateContentField({ source, target, text })}
-            onTranslated={edit}>
+          <FeatureProfileEditor
+            localeState={effectiveLocaleState}
+            onLocaleStateChange={updateCaptionLocales}
+            {values}
+            contextKey={`${featureId}:${editingImageId}:${open}`}
+            isEditing={!disabled}
+            fieldConfigs={[
+              { key: 'caption', label: m.image_text_caption() },
+              { key: 'alt', label: m.image_text_alt() },
+            ]}
+            translate={(source, target, text) =>
+              translateContentField({ source, target, text })}
+            onTranslated={edit}
+          >
             {#snippet children(field, locale, onEditStart, prefix)}
               <label class="grid min-w-0 gap-2 text-sm">
-                <span class="sr-only">{field === 'caption' ? m.image_text_caption() : m.image_text_alt()} · {locale}</span>
-                {#if prefix}<span class="text-xs text-muted-foreground">{prefix}</span>{/if}
-                <textarea class="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-foreground outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
-                  lang={canonicalContentTag(locale)} disabled={disabled} maxlength={field === 'caption' ? 4000 : 2000}
+                <span class="sr-only"
+                  >{field === 'caption' ? m.image_text_caption() : m.image_text_alt()}
+                  · {locale}</span
+                >
+                {#if prefix}
+                  <span class="text-muted-foreground text-xs">{prefix}</span>
+                {/if}
+                <textarea
+                  class="border-border bg-background text-foreground focus-visible:border-primary focus-visible:ring-primary min-h-28 w-full resize-y rounded-md border px-3 py-2 outline-none focus-visible:ring-1"
+                  lang={canonicalContentTag(locale)}
+                  {disabled}
+                  maxlength={field === 'caption' ? 4000 : 2000}
                   value={values[contentFormKey(locale)]?.[field] ?? ''}
-                  oninput={event => { onEditStart(); edit(field, locale, event.currentTarget.value) }}></textarea>
+                  oninput={event => {
+                    onEditStart()
+                    edit(field, locale, event.currentTarget.value)
+                  }}
+                ></textarea>
               </label>
             {/snippet}
           </FeatureProfileEditor>
         {:else if loading}
-          <p role="status" class="px-6 pb-6 text-sm text-muted-foreground">{m.image__metadata_loading()}</p>
+          <p role="status" class="text-muted-foreground px-6 pb-6 text-sm">
+            {m.image__metadata_loading()}
+          </p>
         {/if}
-        {#if message}<p role="status" class="px-6 pb-4 text-sm text-error">{message}</p>{/if}
+        {#if message}
+          <p role="status" class="text-error px-6 pb-4 text-sm">{message}</p>
+        {/if}
       </div>
-      <div class="flex justify-end gap-2 border-t border-border px-6 py-4">
-        <Button type="button" text={m.cancel()} style="transparent" disabled={busy} onClick={() => setOpen(false)} />
-        <Button type="button" text={m.forms__save()} disabled={disabled || loading || !gallery || !changed} onClick={() => void save()} />
+      <div class="border-border flex justify-end gap-2 border-t px-6 py-4">
+        <Button
+          type="button"
+          text={m.cancel()}
+          style="transparent"
+          disabled={busy}
+          onClick={() => setOpen(false)}
+        />
+        <Button
+          type="button"
+          text={m.forms__save()}
+          disabled={disabled || loading || !gallery || !changed}
+          onClick={() => void save()}
+        />
       </div>
     </Dialog.Content>
   </Dialog.Portal>
