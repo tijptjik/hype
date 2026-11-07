@@ -127,6 +127,7 @@ export async function readUserContributedFeatures(
       toEntityResponseShape(
         {
           ...row,
+          addressMeta: row.addressMeta ?? {},
           imageCount: row.images.length,
           imagePublishedCount: row.images.filter(assignment => assignment.isPublished).length,
         },
