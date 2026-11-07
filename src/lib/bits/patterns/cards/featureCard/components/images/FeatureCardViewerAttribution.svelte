@@ -41,6 +41,10 @@ let {
 const gallery =
   untrack(() => providedGallery) ?? useImageEditorGalleryModel(getImageCtx())
 let open = $state(false)
+let detailsHeight = $state(0)
+$effect(() => {
+  if (!open) detailsHeight = 0
+})
 let contributorsLoading = $state(true)
 let licenseLoading = $state(true)
 let photoLoading = $state(true)
@@ -188,7 +192,10 @@ const fallbackFeatureCredit = $derived(
       align="start"
       sideOffset={-48}
       forceMount
-      class="bits-theme border-border bg-panel text-foreground relative z-[250] max-h-[calc(100dvh-2rem)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border p-4 shadow-xl"
+      class="bits-theme border-border bg-panel text-foreground relative z-[250] max-h-[calc(100dvh-2rem)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border p-4 shadow-xl transition-[height] duration-180 ease-out motion-reduce:transition-none"
+      style={{
+        height: detailsHeight ? `calc(${detailsHeight}px + 2rem + 2px)` : '19.625rem',
+      }}
     >
       {#snippet child({ props, wrapperProps, open: contentOpen })}
         {#if contentOpen}
@@ -207,28 +214,31 @@ const fallbackFeatureCredit = $derived(
               >
                 <CloseIcon class="size-6" aria-hidden="true" />
               </Popover.Close>
-              <FeatureCardAttributionDetails
-                {metadata}
-                {projectLicense}
-                loading={photoLoading ||
-                  metadataLoading ||
-                  contributorsLoading ||
-                  licenseLoading}
-                {imageUser}
-                {featureUser}
-                onOpenProfile={username => {
-                  surface.panels.setPanelCtx(Panel.profile, 'username', username)
-                  surface.panels.openPanel(Panel.profile)
-                  open = false
-                }}
-                imageCredit={imageUser?.attribution ||
-                  (imageUser && 'name' in imageUser ? imageUser.name : null) ||
-                  currentImage.image.attribution}
-                featureCredit={featureUser?.attribution ||
-                  (featureUser && 'name' in featureUser ? featureUser.name : null) ||
-                  fallbackFeatureCredit}
-                featureCreatedAt={feature?.createdAt}
-              />
+              <!-- Measure intrinsic content so the compact card grows only when needed. -->
+              <div class="min-h-[17.5rem]" bind:offsetHeight={detailsHeight}>
+                <FeatureCardAttributionDetails
+                  {metadata}
+                  {projectLicense}
+                  loading={photoLoading ||
+                    metadataLoading ||
+                    contributorsLoading ||
+                    licenseLoading}
+                  {imageUser}
+                  {featureUser}
+                  onOpenProfile={username => {
+                    surface.panels.setPanelCtx(Panel.profile, 'username', username)
+                    surface.panels.openPanel(Panel.profile)
+                    open = false
+                  }}
+                  imageCredit={imageUser?.attribution ||
+                    (imageUser && 'name' in imageUser ? imageUser.name : null) ||
+                    currentImage.image.attribution}
+                  featureCredit={featureUser?.attribution ||
+                    (featureUser && 'name' in featureUser ? featureUser.name : null) ||
+                    fallbackFeatureCredit}
+                  featureCreatedAt={feature?.createdAt}
+                />
+              </div>
             </div>
           </div>
         {/if}

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/svelte/pur
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import Attribution from '#lib/bits/patterns/cards/featureCard/components/images/FeatureCardViewerAttribution.svelte'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+const originalAnimate = Element.prototype.animate
 const mocks = vi.hoisted(() => ({
   credit: vi.fn(),
   ensure: vi.fn(),
@@ -41,11 +42,26 @@ vi.mock('#lib/adapters/image/index.js', () => ({
 beforeEach(() => {
   vi.useRealTimers()
   vi.clearAllMocks()
+  // Browser checks cover panel geometry; jsdom only needs the observer lifecycle.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
+  // JSDOM has no Web Animations API for the popover's existing fly transition.
+  Element.prototype.animate = () => ({ cancel() {} }) as Animation
   mocks.activeId = 'one'
   mocks.metadata = null
   mocks.ensure.mockResolvedValue(undefined)
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  Element.prototype.animate = originalAnimate
+  vi.unstubAllGlobals()
+})
 function envelope(id: string): ImageCtxEnvelope {
   return {
     ctxType: 'feature',
