@@ -257,6 +257,8 @@ export const FeatureRevisionContentSchema = z
     gallery: z.strictObject({
       entries: z.record(id, galleryEntry),
       order: z.array(id),
+      // Omission preserves historical hashes and means automatic intent ordering.
+      sortMode: z.enum(['automatic', 'manual']).optional(),
     }),
   })
   .superRefine((content, ctx) => {

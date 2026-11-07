@@ -74,10 +74,18 @@ import { getLocales } from '..'
 
 export const TaskBase = createSelectSchema(task).extend({
   featureId: z.string().nullable(),
-  creationProposal: z.object({
-    id: z.string(), version: z.string(), content: FeatureRevisionContentSchema,
-    scope: z.object({ organisationId: z.string(), projectId: z.string(), layerId: z.string() }),
-  }).optional(),
+  creationProposal: z
+    .object({
+      id: z.string(),
+      version: z.string(),
+      content: FeatureRevisionContentSchema,
+      scope: z.object({
+        organisationId: z.string(),
+        projectId: z.string(),
+        layerId: z.string(),
+      }),
+    })
+    .optional(),
   type: z.enum(Object.values(TaskType) as [string, ...string[]]),
 })
 export const TaskInsert = createInsertSchema(task).extend({
@@ -216,7 +224,9 @@ export const TaskAdminProfileAPI = TaskBase.extend({
   images: z
     .array(
       TaskImageBase.extend({
-        image: ImageBase.extend({ imageRevisionId: z.string().optional() }).optional().nullable(),
+        image: ImageBase.extend({ imageRevisionId: z.string().optional() })
+          .optional()
+          .nullable(),
       }),
     )
     .optional(),
@@ -290,8 +300,14 @@ export const GetTasksSchema = ListQueryParamsSchema.extend({
     .object({
       isDraft: z.boolean().nullable().optional(),
       isReviewed: z.boolean().nullable().optional(),
-      reviewAction: z.enum(Object.values(TaskReviewAction) as [string, ...string[]]).nullable().optional(),
-      reviewOutcome: z.enum(Object.values(TaskReviewOutcome) as [string, ...string[]]).nullable().optional(),
+      reviewAction: z
+        .enum(Object.values(TaskReviewAction) as [string, ...string[]])
+        .nullable()
+        .optional(),
+      reviewOutcome: z
+        .enum(Object.values(TaskReviewOutcome) as [string, ...string[]])
+        .nullable()
+        .optional(),
       featureId: z.string().min(1).optional(),
       type: z
         .enum(Object.values(TaskType) as [string, ...string[]])
@@ -310,6 +326,13 @@ export const GetTasksSchema = ListQueryParamsSchema.extend({
 })
 
 export const ReviewTaskSchema = z.object({
+  imageReview: z
+    .object({
+      taskId: z.string(),
+      reviewId: z.string().nullable(),
+      proposalVersion: z.string(),
+    })
+    .optional(),
   id: z.string().min(1),
   action: z.enum([
     'reject',

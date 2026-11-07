@@ -13,6 +13,10 @@ import {
 } from '#lib/revisions/featureChanges.js'
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 // SERVICES
+import {
+  prepareImageReviewAcceptance,
+  reviewedImageChanges,
+} from './featureImageReview'
 import { prepareFeatureEdit, readCurrentFeatureRevision } from './featureLifecycle'
 import { prepareRevisionChangeSet } from './revisionChangeSet'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
@@ -33,6 +37,7 @@ export async function reviewMigratedInitialContribution(
   input: {
     featureId: string
     taskId: string
+    imageReview?: { taskId: string; reviewId: string | null }
     actorId: string
     reason: string
     accept: boolean
@@ -55,10 +60,19 @@ export async function reviewMigratedInitialContribution(
       AND json_extract(p.creationScope,'$.legacyInitial.mode')='contribution' AND (${input.guard})`)
   const current = await readCurrentFeatureRevision(db, input)
   if (!initial || !current || current.retired) return false
+  const imageReview = input.accept
+    ? await prepareImageReviewAcceptance(db, initial.id, input.imageReview, input.guard)
+    : { review: null, guard: input.guard }
+  if (!imageReview) return false
   const proposed = applyFeatureChanges(
     FeatureRevisionContentSchema.parse(JSON.parse(initial.content)),
     current.content,
-    FeatureChangesSchema.parse(JSON.parse(initial.changes)),
+    imageReview.review
+      ? reviewedImageChanges(
+          FeatureRevisionContentSchema.parse(JSON.parse(initial.content)),
+          imageReview.review,
+        )
+      : FeatureChangesSchema.parse(JSON.parse(initial.changes)),
   )
   if (input.accept && proposed.status !== 'ready')
     throw new Error('Review conflicting changes before accepting this contribution')
@@ -77,6 +91,7 @@ export async function reviewMigratedInitialContribution(
       AND EXISTS(SELECT 1 FROM json_each(u.taskIds) WHERE value=${input.taskId})`)
   if (
     input.accept &&
+    !imageReview.review?.reviewId &&
     uploads.some(
       upload =>
         content.gallery.entries[upload.imageId]?.imageRevisionId !==
@@ -84,7 +99,14 @@ export async function reviewMigratedInitialContribution(
     )
   )
     throw new Error('Review all submitted photos before accepting the contribution')
-  const guard = sql`(${input.guard}) AND EXISTS(SELECT 1 FROM task WHERE id=${input.taskId}
+  const otherReview = sql`NOT EXISTS(SELECT 1 FROM featureRevisionReview r JOIN featureRevisionProposal p ON p.id=r.proposalId
+    JOIN featureUploadEvidence u ON u.proposalId=p.id WHERE p.id!=${initial.id} AND p.status='submitted'
+    AND json_extract(r.context,'$.kind')='image-review/v1' AND EXISTS(SELECT 1 FROM json_each(u.taskIds) WHERE value=${input.taskId}))`
+  if (input.accept && !(await db.get(sql`SELECT 1 WHERE ${otherReview}`)))
+    throw new Error(
+      'Accept the separately reviewed photo proposals before completing this report',
+    )
+  const guard = sql`(${imageReview.guard}) AND (${input.accept ? otherReview : sql`1`}) AND EXISTS(SELECT 1 FROM task WHERE id=${input.taskId}
     AND featureId=${input.featureId} AND proposalId=${initial.id} AND isDraft=0 AND isReviewed=0)
     AND EXISTS(SELECT 1 FROM featureRevisionProposal WHERE id=${initial.id} AND version=${initial.version} AND status='submitted')`
   const prepared = await prepareFeatureEdit(db, {
@@ -95,7 +117,9 @@ export async function reviewMigratedInitialContribution(
     state: input.accept ? undefined : { isArchived: true, isPublished: false },
     derive: () => content,
     validate: () => [],
-    attachmentGuard: sql`NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(content.gallery.entries)}) entry
+    attachmentGuard: imageReview.review?.reviewId
+      ? imageReview.guard
+      : sql`NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(content.gallery.entries)}) entry
       WHERE NOT EXISTS(SELECT 1 FROM featureRevisionImage pin WHERE pin.featureRevisionId=${current.revisionId}
         AND pin.imageId=entry.key AND pin.imageRevisionId=json_extract(entry.value,'$.imageRevisionId'))
       AND NOT EXISTS(SELECT 1 FROM featureUploadEvidence u JOIN taskImage ti ON ti.imageId=u.imageId AND ti.taskId=${input.taskId}
@@ -126,6 +150,9 @@ export async function reviewMigratedInitialContribution(
         proposalId: item.id,
         proposalVersion: item.version,
         changes: item.changes,
+        context: JSON.stringify({
+          imageReviewId: imageReview.review?.reviewId ?? null,
+        }),
         action,
         comparedRevisionId: current.revisionId,
         resultingRevisionId: input.accept ? prepared.revisionId : null,

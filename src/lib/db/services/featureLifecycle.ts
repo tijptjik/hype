@@ -1,5 +1,12 @@
 // IMAGE INTENT POLICY
-import { readFeatureImageIntentPolicy, normalizeAcceptedGalleryIntents } from './imageIntentPolicy'
+import {
+  readFeatureImageIntentPolicy,
+  normalizeAcceptedGalleryIntents,
+} from './imageIntentPolicy'
+import {
+  prepareImageReviewAcceptance,
+  reviewedImageChanges,
+} from './featureImageReview'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -14,6 +21,7 @@ import {
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 import {
   FeatureChangesSchema,
+  buildFeatureChanges,
   applyFeatureChanges,
 } from '#lib/revisions/featureChanges.js'
 // SERVICES
@@ -393,6 +401,9 @@ export async function acceptPartialFeatureProposal(
   input: Omit<FeatureEditCommand, 'derive' | 'state'> & {
     proposalId: string
     expectedProposalVersion: string
+    imageReview?: { taskId: string; reviewId: string | null }
+    /** Server-composed task gallery; protected by the complete task evidence guard. */
+    reviewedContent?: FeatureRevisionContent
     completion?: BatchItem<'sqlite'>[]
     resolutions?: readonly RevisionResolution[]
   },
@@ -419,15 +430,34 @@ export async function acceptPartialFeatureProposal(
     return { status: 'stale' }
   if (current.retired)
     throw new Error('Choose an active successor and review the proposed changes again')
+  const imageReview = await prepareImageReviewAcceptance(
+    db,
+    input.proposalId,
+    input.imageReview,
+    input.guard,
+  )
+  if (!imageReview) return { status: 'stale' }
+  const reviewedChanges = input.reviewedContent
+    ? buildFeatureChanges(
+        FeatureRevisionContentSchema.parse(JSON.parse(proposal.content)),
+        input.reviewedContent,
+      )
+    : imageReview.review
+      ? reviewedImageChanges(
+          FeatureRevisionContentSchema.parse(JSON.parse(proposal.content)),
+          imageReview.review,
+        )
+      : FeatureChangesSchema.parse(JSON.parse(proposal.changes))
   const result = applyFeatureChanges(
     FeatureRevisionContentSchema.parse(JSON.parse(proposal.content)),
     current.content,
-    FeatureChangesSchema.parse(JSON.parse(proposal.changes)),
+    reviewedChanges,
     input.resolutions,
   )
   if (result.status === 'conflict') return result
   const prepared = await prepareFeatureEdit(db, {
     ...input,
+    guard: imageReview.guard,
     derive: () => result.content,
   })
   if (!prepared) return { status: 'stale' }
@@ -446,6 +476,7 @@ export async function acceptPartialFeatureProposal(
       proposalVersion: proposal.version,
       changes: proposal.changes,
       resolutions: JSON.stringify(input.resolutions ?? []),
+      context: JSON.stringify({ imageReviewId: imageReview.review?.reviewId ?? null }),
       comparedRevisionId: current.revisionId,
       resultingRevisionId: prepared.revisionId,
       action: 'accepted',

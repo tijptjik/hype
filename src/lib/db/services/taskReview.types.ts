@@ -8,6 +8,7 @@ export type TaskReviewCommitContext = {
     TaskDB,
     'id' | 'featureId' | 'projectId' | 'organisationId' | 'modifiedAt' | 'type'
   >
+  imageReview?: { taskId: string; reviewId: string | null }
   resourceHubId: string | null
   reviewerId: Id
   reason?: string | null

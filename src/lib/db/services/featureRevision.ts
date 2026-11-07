@@ -1,5 +1,8 @@
 // IMAGE INTENT POLICY
-import { readFeatureImageIntentPolicy, normalizeAcceptedGalleryIntents } from './imageIntentPolicy'
+import {
+  readFeatureImageIntentPolicy,
+  normalizeAcceptedGalleryIntents,
+} from './imageIntentPolicy'
 import { FeatureRevisionContentSchema as ImagePolicyContentSchema } from '#lib/revisions/featureContent.js'
 // SHARED ATTRIBUTION
 import { prepareRevisionChangeSet, type RevisionCommand } from './revisionChangeSet'
@@ -17,13 +20,34 @@ import {
 } from '../schema/featureRevision'
 import { feature } from '../schema/feature'
 // DOMAIN
-import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
-import { buildFeatureChanges, applyFeatureChanges } from '#lib/revisions/featureChanges.js'
+import {
+  FeatureRevisionContentSchema,
+  type FeatureRevisionContent,
+} from '#lib/revisions/featureContent.js'
+import {
+  buildFeatureChanges,
+  applyFeatureChanges,
+} from '#lib/revisions/featureChanges.js'
 import { equalRevisionValue } from '#lib/revisions/merge.js'
 import { prepareFeatureAcceptance } from '#lib/revisions/acceptance.js'
 // SERVICES
-import { hasFeatureLifecycleStorage, prepareCurrentFeatureInitialization, rejectPartialFeatureProposal, readCurrentFeatureRevision, acceptPartialFeatureProposal } from './featureLifecycle'
-import { preparePartialFeatureProposal, readPartialFeatureProposal, transitionPartialFeatureProposal } from './featureLifecycleProposal'
+import { legacyImageReview } from '../schema/featureLifecycle.target'
+import {
+  prepareImageReviewAcceptance,
+  reviewedImageContent,
+} from './featureImageReview'
+import {
+  hasFeatureLifecycleStorage,
+  prepareCurrentFeatureInitialization,
+  rejectPartialFeatureProposal,
+  readCurrentFeatureRevision,
+  acceptPartialFeatureProposal,
+} from './featureLifecycle'
+import {
+  preparePartialFeatureProposal,
+  readPartialFeatureProposal,
+  transitionPartialFeatureProposal,
+} from './featureLifecycleProposal'
 import { saveFeatureContributionDraft } from './featureLifecycleContribution'
 import { prepareFeatureRevisionWriteScope } from './featureRevisionWriteScope'
 import { privateFeatureComparison } from './featurePrivateCapture'
@@ -32,7 +56,11 @@ import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
-import type { RevisionResolution, RevisionValue, RevisionMergePolicy } from '#lib/revisions/merge.js'
+import type {
+  RevisionResolution,
+  RevisionValue,
+  RevisionMergePolicy,
+} from '#lib/revisions/merge.js'
 import type { FeatureAcceptanceResult } from '#lib/revisions/acceptance.js'
 
 // ═══════════════════════
@@ -70,8 +98,13 @@ export async function initializeFeatureRevision(
     published: boolean
   },
 ): Promise<string | null> {
-  const prepared = await prepareFeatureRevisionInitialization(db, { ...input, origin: 'migration' })
-  return (await executeRevisionBatch(db, prepared.guard, prepared.statements)) ? prepared.revisionId : null
+  const prepared = await prepareFeatureRevisionInitialization(db, {
+    ...input,
+    origin: 'migration',
+  })
+  return (await executeRevisionBatch(db, prepared.guard, prepared.statements))
+    ? prepared.revisionId
+    : null
 }
 
 /**
@@ -82,10 +115,19 @@ export async function initializeFeatureRevision(
  * @remarks New identities use user attribution; existing enrollment uses migration attribution.
  * This never creates or changes compatibility rows and never chooses a pending draft.
  */
-export async function prepareFeatureRevisionInitialization(db: Database, input: RevisionCommand & {
-  featureId: string; content: RevisionValue; published: boolean
-}): Promise<{ revisionId: string; guard: SQL; statements: BatchItem<'sqlite'>[] }> {
-  if(await hasFeatureLifecycleStorage(db))return prepareCurrentFeatureInitialization(db,{...input,content:FeatureRevisionContentSchema.parse(input.content)})
+export async function prepareFeatureRevisionInitialization(
+  db: Database,
+  input: RevisionCommand & {
+    featureId: string
+    content: RevisionValue
+    published: boolean
+  },
+): Promise<{ revisionId: string; guard: SQL; statements: BatchItem<'sqlite'>[] }> {
+  if (await hasFeatureLifecycleStorage(db))
+    return prepareCurrentFeatureInitialization(db, {
+      ...input,
+      content: FeatureRevisionContentSchema.parse(input.content),
+    })
   const change = prepareRevisionChangeSet(db, input)
   const id = crypto.randomUUID()
   const guard = sql`(${input.guard}) AND NOT EXISTS (SELECT 1 FROM featureRevisionHead WHERE featureId=${input.featureId})`
@@ -129,7 +171,11 @@ export async function createFeatureRevisionProposal(
 ): Promise<{ proposalId: string; candidateRevisionId: string } | null> {
   const prepared = await prepareFeatureRevisionProposal(db, input)
   return (await executeRevisionBatch(db, prepared.guard, prepared.statements))
-    ? { proposalId: prepared.proposalId, candidateRevisionId: prepared.candidateRevisionId } : null
+    ? {
+        proposalId: prepared.proposalId,
+        candidateRevisionId: prepared.candidateRevisionId,
+      }
+    : null
 }
 
 /**
@@ -142,9 +188,23 @@ export async function createFeatureRevisionProposal(
  */
 export async function prepareFeatureRevisionProposal(
   db: Database,
-  input: RevisionCommand & { featureId: string; baseRevisionId: string; content: RevisionValue; contributorId?: string },
-): Promise<{ proposalId: string; candidateRevisionId: string; guard: SQL; statements: BatchItem<'sqlite'>[] }> {
-  if (await hasFeatureLifecycleStorage(db)) return preparePartialFeatureProposal(db,{...input,content:FeatureRevisionContentSchema.parse(input.content)})
+  input: RevisionCommand & {
+    featureId: string
+    baseRevisionId: string
+    content: RevisionValue
+    contributorId?: string
+  },
+): Promise<{
+  proposalId: string
+  candidateRevisionId: string
+  guard: SQL
+  statements: BatchItem<'sqlite'>[]
+}> {
+  if (await hasFeatureLifecycleStorage(db))
+    return preparePartialFeatureProposal(db, {
+      ...input,
+      content: FeatureRevisionContentSchema.parse(input.content),
+    })
   const change = prepareRevisionChangeSet(db, input)
   const proposalId = crypto.randomUUID(),
     candidateRevisionId = crypto.randomUUID()
@@ -194,11 +254,22 @@ export async function saveFeatureRevisionProposal(
     content: RevisionValue
   },
 ): Promise<string | null> {
-  if(await hasFeatureLifecycleStorage(db)) {
-    const proposal=await readPartialFeatureProposal(db,{...input,version:input.expectedCandidateRevisionId,status:'draft'})
-    if(!proposal||proposal.contributorId!==input.actorId)return null
-    return saveFeatureContributionDraft(db,{...input,expectedVersion:input.expectedCandidateRevisionId,
-      payload:buildFeatureChanges(proposal.base,FeatureRevisionContentSchema.parse(input.content)),validate:()=>[]})
+  if (await hasFeatureLifecycleStorage(db)) {
+    const proposal = await readPartialFeatureProposal(db, {
+      ...input,
+      version: input.expectedCandidateRevisionId,
+      status: 'draft',
+    })
+    if (!proposal || proposal.contributorId !== input.actorId) return null
+    return saveFeatureContributionDraft(db, {
+      ...input,
+      expectedVersion: input.expectedCandidateRevisionId,
+      payload: buildFeatureChanges(
+        proposal.base,
+        FeatureRevisionContentSchema.parse(input.content),
+      ),
+      validate: () => [],
+    })
   }
   const change = prepareRevisionChangeSet(db, input),
     id = crypto.randomUUID()
@@ -257,7 +328,12 @@ export async function submitFeatureRevisionProposal(
     expectedCandidateRevisionId: string
   },
 ): Promise<boolean> {
-  if(await hasFeatureLifecycleStorage(db)) return transitionPartialFeatureProposal(db,{...input,version:input.expectedCandidateRevisionId,action:'submitted'})
+  if (await hasFeatureLifecycleStorage(db))
+    return transitionPartialFeatureProposal(db, {
+      ...input,
+      version: input.expectedCandidateRevisionId,
+      action: 'submitted',
+    })
   const change = prepareRevisionChangeSet(db, input)
   const guard = sql`(${input.guard}) AND EXISTS (SELECT 1 FROM featureRevisionHead WHERE featureId=${input.featureId} AND state='active') AND EXISTS (SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId} AND contributorId=${input.actorId} AND candidateRevisionId=${input.expectedCandidateRevisionId} AND status='draft')`
   return (
@@ -291,6 +367,9 @@ export async function acceptFeatureRevisionProposal(
   db: Database,
   input: RevisionCommand & {
     proposalId: string
+    imageReview?: { taskId: string; reviewId: string | null }
+    /** Server-composed task gallery; protected by the complete task evidence guard. */
+    reviewedContent?: FeatureRevisionContent
     featureId: string
     expectedCandidateRevisionId: string
     expectedPublishedRevisionId: string | null
@@ -309,22 +388,48 @@ export async function acceptFeatureRevisionProposal(
     mergePolicy?: RevisionMergePolicy
     decisionStatements?: BatchItem<'sqlite'>[]
     validate: (content: RevisionValue) => readonly string[]
-    project: (content: RevisionValue, revisionId: string) => RevisionProjection | Promise<RevisionProjection>
+    project: (
+      content: RevisionValue,
+      revisionId: string,
+    ) => RevisionProjection | Promise<RevisionProjection>
   },
 ): Promise<PersistedFeatureAcceptance> {
-  if(await hasFeatureLifecycleStorage(db)) {
-    const current=await readCurrentFeatureRevision(db,input)
-    const inspected=input.expectedComparisonRevisionId??input.expectedPublishedRevisionId
-    if(!current||current.retired||current.version!==input.expectedGeneration||current.revisionId!==inspected)return {status:'stale'}
-    const proposal=await readPartialFeatureProposal(db,{...input,version:input.expectedCandidateRevisionId,status:'submitted'})
-    if(!proposal)return {status:'stale'}
-    const merged=applyFeatureChanges(proposal.base,current.content,buildFeatureChanges(proposal.base,proposal.content),input.resolutions)
-    if(merged.status==='conflict')return merged
-    const errors=input.validate(merged.content)
-    if(errors.length)return {status:'invalid',errors}
-    return acceptPartialFeatureProposal(db,{...input,expectedRevisionId:current.revisionId,expectedVersion:current.version,
-      expectedProposalVersion:input.expectedCandidateRevisionId,completion:input.decisionStatements,
-      validate:(_before,content)=>input.validate(content),prepareProjection:({content,revisionId})=>input.project(content,revisionId)})
+  if (await hasFeatureLifecycleStorage(db)) {
+    const current = await readCurrentFeatureRevision(db, input)
+    const inspected =
+      input.expectedComparisonRevisionId ?? input.expectedPublishedRevisionId
+    if (
+      !current ||
+      current.retired ||
+      current.version !== input.expectedGeneration ||
+      current.revisionId !== inspected
+    )
+      return { status: 'stale' }
+    const proposal = await readPartialFeatureProposal(db, {
+      ...input,
+      version: input.expectedCandidateRevisionId,
+      status: 'submitted',
+    })
+    if (!proposal) return { status: 'stale' }
+    const merged = applyFeatureChanges(
+      proposal.base,
+      current.content,
+      buildFeatureChanges(proposal.base, proposal.content),
+      input.resolutions,
+    )
+    if (merged.status === 'conflict') return merged
+    const errors = input.validate(merged.content)
+    if (errors.length) return { status: 'invalid', errors }
+    return acceptPartialFeatureProposal(db, {
+      ...input,
+      expectedRevisionId: current.revisionId,
+      expectedVersion: current.version,
+      expectedProposalVersion: input.expectedCandidateRevisionId,
+      completion: input.decisionStatements,
+      validate: (_before, content) => input.validate(content),
+      prepareProjection: ({ content, revisionId }) =>
+        input.project(content, revisionId),
+    })
   }
   // Reject stale or revoked review scope before returning any immutable comparison data.
   // This is only a read preflight; the same predicates are rechecked inside the batch.
@@ -370,11 +475,23 @@ export async function acceptFeatureRevisionProposal(
       .get()
   let comparisonRevisionId = input.expectedPublishedRevisionId
   let comparisonGuard = sql`1`
-  if (comparisonRevisionId === null && (input.publicationIntent === 'initial' || input.publicationIntent === 'republish')) {
-    if ((input.publicationIntent === 'initial' && input.expectedGeneration !== 0) ||
-      (input.publicationIntent === 'republish' && input.expectedGeneration < 1)) return { status: 'stale' }
-    const privateComparison = await privateFeatureComparison(db, sql`${input.featureId}`, sql`${input.expectedGeneration}`)
-    const current = await db.get<{ id: string | null }>(sql`SELECT ${privateComparison} id`)
+  if (
+    comparisonRevisionId === null &&
+    (input.publicationIntent === 'initial' || input.publicationIntent === 'republish')
+  ) {
+    if (
+      (input.publicationIntent === 'initial' && input.expectedGeneration !== 0) ||
+      (input.publicationIntent === 'republish' && input.expectedGeneration < 1)
+    )
+      return { status: 'stale' }
+    const privateComparison = await privateFeatureComparison(
+      db,
+      sql`${input.featureId}`,
+      sql`${input.expectedGeneration}`,
+    )
+    const current = await db.get<{ id: string | null }>(
+      sql`SELECT ${privateComparison} id`,
+    )
     comparisonGuard = sql`${privateComparison} IS ${current?.id ?? null}`
     if (current?.id) {
       if (input.expectedComparisonRevisionId !== current.id) return { status: 'stale' }
@@ -384,11 +501,20 @@ export async function acceptFeatureRevisionProposal(
   if (comparisonRevisionId === null && input.publicationIntent === 'republish') {
     if (!input.expectedComparisonRevisionId || input.expectedGeneration < 1)
       return { status: 'stale' }
-    const receipt = await db.select().from(featureRevisionPublication).where(and(
-      eq(featureRevisionPublication.featureId, input.featureId),
-      eq(featureRevisionPublication.generation, input.expectedGeneration),
-    )).get()
-    if (receipt?.revisionId !== null || receipt.previousRevisionId !== input.expectedComparisonRevisionId)
+    const receipt = await db
+      .select()
+      .from(featureRevisionPublication)
+      .where(
+        and(
+          eq(featureRevisionPublication.featureId, input.featureId),
+          eq(featureRevisionPublication.generation, input.expectedGeneration),
+        ),
+      )
+      .get()
+    if (
+      receipt?.revisionId !== null ||
+      receipt.previousRevisionId !== input.expectedComparisonRevisionId
+    )
       return { status: 'stale' }
     comparisonRevisionId = receipt.previousRevisionId
   }
@@ -403,14 +529,32 @@ export async function acceptFeatureRevisionProposal(
     return { status: 'stale' }
   // Only a never-published identity can use its baseline as the initial comparison.
   // Explicit republication uses the inspected last-publication receipt above.
-  if (comparisonRevisionId === null &&
-    (input.publicationIntent !== 'initial' || input.expectedGeneration !== 0 || base.previousRevisionId !== null))
+  if (
+    comparisonRevisionId === null &&
+    (input.publicationIntent !== 'initial' ||
+      input.expectedGeneration !== 0 ||
+      base.previousRevisionId !== null)
+  )
     return { status: 'stale' }
-  if (input.expectedPublishedRevisionId !== null && input.publicationIntent && input.publicationIntent !== 'update')
+  if (
+    input.expectedPublishedRevisionId !== null &&
+    input.publicationIntent &&
+    input.publicationIntent !== 'update'
+  )
     return { status: 'stale' }
   const comparison = published ?? base
-  if (input.expectedComparisonRevisionId && comparison.id !== input.expectedComparisonRevisionId)
+  if (
+    input.expectedComparisonRevisionId &&
+    comparison.id !== input.expectedComparisonRevisionId
+  )
     return { status: 'stale' }
+  const imageReview = await prepareImageReviewAcceptance(
+    db,
+    input.proposalId,
+    input.imageReview,
+    input.guard,
+  )
+  if (!imageReview) return { status: 'stale' }
   const prepared = prepareFeatureAcceptance({
     base: { featureId: input.featureId, revisionId: base.id, content: base.content },
     published: {
@@ -423,41 +567,77 @@ export async function acceptFeatureRevisionProposal(
       revisionId: submitted.id,
       proposalId: proposal.id,
       baseRevisionId: base.id,
-      content: submitted.content,
+      content:
+        input.reviewedContent ??
+        (imageReview.review
+          ? reviewedImageContent(
+              imageReview.review,
+              FeatureRevisionContentSchema.parse(base.content),
+            )
+          : submitted.content),
     },
     resolutions: input.resolutions,
     mergePolicy: input.mergePolicy,
     validate: input.validate,
   })
   if (prepared.status !== 'ready') return prepared
-  let result = prepared.plan.result
+  let result =
+    (input.reviewedContent || imageReview.review?.reviewId) &&
+    prepared.plan.result.kind === 'promote'
+      ? {
+          kind: 'merge' as const,
+          content: prepared.plan.result.content,
+          mainlineParentRevisionId: comparison.id,
+          proposalParentRevisionId: submitted.id,
+        }
+      : prepared.plan.result
   const galleryContent = ImagePolicyContentSchema.safeParse(result.content)
   let imagePolicyGuard: SQL = sql`1`
   if (galleryContent.success) {
     const policy = await readFeatureImageIntentPolicy(db, input.featureId)
     imagePolicyGuard = policy.guard
-    const normalized = await normalizeAcceptedGalleryIntents(db, input.featureId, galleryContent.data, policy)
-    if (JSON.stringify(normalized) !== JSON.stringify(result.content)) result = {
-      kind: 'merge', content: normalized, mainlineParentRevisionId: comparison.id, proposalParentRevisionId: submitted.id,
-    }
+    const normalized = await normalizeAcceptedGalleryIntents(
+      db,
+      input.featureId,
+      galleryContent.data,
+      policy,
+    )
+    if (JSON.stringify(normalized) !== JSON.stringify(result.content))
+      result = {
+        kind: 'merge',
+        content: normalized,
+        mainlineParentRevisionId: comparison.id,
+        proposalParentRevisionId: submitted.id,
+      }
   }
   const revisionId = result.kind === 'promote' ? result.revisionId : crypto.randomUUID()
   const change = prepareRevisionChangeSet(db, input)
   const projection = await input.project(result.content, revisionId)
   const publishedAt = new Date().toISOString()
-  const guard = sql`(${input.guard}) AND (${imagePolicyGuard}) AND EXISTS (SELECT 1 FROM featureRevisionHead WHERE featureId=${input.featureId} AND state='active' AND publishedRevisionId IS ${input.expectedPublishedRevisionId} AND generation=${input.expectedGeneration}) AND EXISTS (SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId} AND status=${expectedProposalStatus} AND candidateRevisionId=${input.expectedCandidateRevisionId} AND (${Number(!input.acceptOwnDraft)} OR contributorId=${input.actorId}))`
+  const guard = sql`(${imageReview.guard}) AND (${imagePolicyGuard}) AND EXISTS (SELECT 1 FROM featureRevisionHead WHERE featureId=${input.featureId} AND state='active' AND publishedRevisionId IS ${input.expectedPublishedRevisionId} AND generation=${input.expectedGeneration}) AND EXISTS (SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId} AND status=${expectedProposalStatus} AND candidateRevisionId=${input.expectedCandidateRevisionId} AND (${Number(!input.acceptOwnDraft)} OR contributorId=${input.actorId}))`
   const writeScope = await prepareFeatureRevisionWriteScope(db, input.featureId)
-  const statements: BatchItem<'sqlite'>[] = [prepareRevisionCheck(db, comparisonGuard), ...writeScope.before, change.statement]
+  const statements: BatchItem<'sqlite'>[] = [
+    prepareRevisionCheck(db, comparisonGuard),
+    ...writeScope.before,
+    change.statement,
+  ]
   // Staff Publish records submission and acceptance in the same transaction. Preserve
   // the proposal state machine without exposing a half-published submitted draft.
-  if (input.acceptOwnDraft) statements.push(
-    db.update(featureRevisionProposal).set({ status: 'submitted' })
-      .where(eq(featureRevisionProposal.id, input.proposalId)),
-    db.insert(featureRevisionReview).values({
-      id: crypto.randomUUID(), featureId: input.featureId, proposalId: input.proposalId,
-      candidateRevisionId: input.expectedCandidateRevisionId, action: 'submitted', changeSetId: change.id,
-    }),
-  )
+  if (input.acceptOwnDraft)
+    statements.push(
+      db
+        .update(featureRevisionProposal)
+        .set({ status: 'submitted' })
+        .where(eq(featureRevisionProposal.id, input.proposalId)),
+      db.insert(featureRevisionReview).values({
+        id: crypto.randomUUID(),
+        featureId: input.featureId,
+        proposalId: input.proposalId,
+        candidateRevisionId: input.expectedCandidateRevisionId,
+        action: 'submitted',
+        changeSetId: change.id,
+      }),
+    )
   if (result.kind === 'merge')
     statements.push(
       db.insert(featureRevision).values({
@@ -469,6 +649,17 @@ export async function acceptFeatureRevisionProposal(
         content: result.content,
       }),
     )
+  const acceptanceReview = {
+    id: crypto.randomUUID(),
+    featureId: input.featureId,
+    proposalId: input.proposalId,
+    candidateRevisionId: input.expectedCandidateRevisionId,
+    comparedRevisionId: comparison.id,
+    resultingRevisionId: revisionId,
+    action: 'accepted' as const,
+    changeSetId: change.id,
+    resolutions: input.resolutions ?? [],
+  }
   // Commit public data, provenance and pointers together; a failed verification rolls back all.
   statements.push(
     ...projection.statements,
@@ -498,17 +689,12 @@ export async function acceptFeatureRevisionProposal(
       .update(featureRevisionProposal)
       .set({ status: 'accepted' })
       .where(eq(featureRevisionProposal.id, input.proposalId)),
-    db.insert(featureRevisionReview).values({
-      id: crypto.randomUUID(),
-      featureId: input.featureId,
-      proposalId: input.proposalId,
-      candidateRevisionId: input.expectedCandidateRevisionId,
-      comparedRevisionId: comparison.id,
-      resultingRevisionId: revisionId,
-      action: 'accepted',
-      changeSetId: change.id,
-      resolutions: input.resolutions ?? [],
-    }),
+    imageReview.review
+      ? db.insert(legacyImageReview).values({
+          ...acceptanceReview,
+          context: JSON.stringify({ imageReviewId: imageReview.review.reviewId }),
+        })
+      : db.insert(featureRevisionReview).values(acceptanceReview),
     db.insert(featureRevisionPublication).values({
       id: crypto.randomUUID(),
       featureId: input.featureId,
@@ -518,7 +704,12 @@ export async function acceptFeatureRevisionProposal(
       changeSetId: change.id,
     }),
   )
-  statements.push(...(projection.afterPublication ?? []), ...(input.decisionStatements ?? []), prepareRevisionCheck(db, projection.verify), ...writeScope.after)
+  statements.push(
+    ...(projection.afterPublication ?? []),
+    ...(input.decisionStatements ?? []),
+    prepareRevisionCheck(db, projection.verify),
+    ...writeScope.after,
+  )
   return (await executeRevisionBatch(db, guard, statements))
     ? { status: 'accepted', revisionId }
     : { status: 'stale' }
@@ -540,9 +731,13 @@ export async function rejectFeatureRevisionProposal(
     decisionStatements?: BatchItem<'sqlite'>[]
   },
 ): Promise<boolean> {
-  if(await hasFeatureLifecycleStorage(db)) return rejectPartialFeatureProposal(db,{...input,
-    expectedProposalVersion:input.expectedCandidateRevisionId,completion:input.decisionStatements,
-    guard:sql`(${input.guard}) AND EXISTS(SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId})`})
+  if (await hasFeatureLifecycleStorage(db))
+    return rejectPartialFeatureProposal(db, {
+      ...input,
+      expectedProposalVersion: input.expectedCandidateRevisionId,
+      completion: input.decisionStatements,
+      guard: sql`(${input.guard}) AND EXISTS(SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId})`,
+    })
   if (!input.reason.trim()) throw new Error('A rejection reason is required')
   const change = prepareRevisionChangeSet(db, input)
   const guard = sql`(${input.guard}) AND EXISTS (SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId} AND status='submitted' AND candidateRevisionId=${input.expectedCandidateRevisionId})`
@@ -580,7 +775,12 @@ export async function withdrawFeatureRevisionProposal(
     expectedCandidateRevisionId: string
   },
 ): Promise<boolean> {
-  if(await hasFeatureLifecycleStorage(db)) return transitionPartialFeatureProposal(db,{...input,version:input.expectedCandidateRevisionId,action:'withdrawn'})
+  if (await hasFeatureLifecycleStorage(db))
+    return transitionPartialFeatureProposal(db, {
+      ...input,
+      version: input.expectedCandidateRevisionId,
+      action: 'withdrawn',
+    })
   const change = prepareRevisionChangeSet(db, input)
   const guard = sql`(${input.guard}) AND EXISTS (SELECT 1 FROM featureRevisionProposal WHERE id=${input.proposalId} AND featureId=${input.featureId} AND contributorId=${input.actorId} AND candidateRevisionId=${input.expectedCandidateRevisionId} AND status IN ('draft','submitted'))`
   return (
@@ -625,7 +825,8 @@ export async function unpublishFeatureRevision(
   const guard = sql`(${input.guard}) AND EXISTS (SELECT 1 FROM featureRevisionHead WHERE featureId=${input.featureId} AND state='active' AND publishedRevisionId=${input.expectedPublishedRevisionId} AND generation=${input.expectedGeneration})`
   return (
     (await executeRevisionBatch(db, guard, [
-      ...writeScope.before, change.statement,
+      ...writeScope.before,
+      change.statement,
       ...input.projection.statements,
       db
         .update(feature)
@@ -647,7 +848,8 @@ export async function unpublishFeatureRevision(
         generation,
         changeSetId: change.id,
       }),
-      prepareRevisionCheck(db, input.projection.verify), ...writeScope.after,
+      prepareRevisionCheck(db, input.projection.verify),
+      ...writeScope.after,
     ])) !== null
   )
 }

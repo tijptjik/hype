@@ -85,3 +85,20 @@ export const lifecycleUploadEvidence = sqliteTable('featureUploadEvidence', {
   actorId: text('actorId').notNull(),
   taskIds: text('taskIds', { mode: 'json' }).$type<string[]>().notNull(),
 })
+
+/** Additive review-image storage on the compatibility revision-head schema. */
+export const legacyImageReview = sqliteTable('featureRevisionReview', {
+  id: text('id').primaryKey(),
+  featureId: text('featureId').notNull(),
+  proposalId: text('proposalId').notNull(),
+  candidateRevisionId: text('candidateRevisionId').notNull(),
+  comparedRevisionId: text('comparedRevisionId'),
+  resultingRevisionId: text('resultingRevisionId'),
+  action: text('action').notNull(),
+  changeSetId: text('changeSetId').notNull(),
+  context: text('context').notNull(),
+  resolutions: text('resolutions', { mode: 'json' })
+    .$type<readonly import('#lib/revisions/merge.js').RevisionResolution[]>()
+    .notNull()
+    .default([]),
+})

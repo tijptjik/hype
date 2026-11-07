@@ -1,5 +1,8 @@
 // IMAGE INTENT POLICY
-import { readFeatureImageIntentPolicy, resolvePolicyImageIntent } from './imageIntentPolicy'
+import {
+  readFeatureImageIntentPolicy,
+  resolvePolicyImageIntent,
+} from './imageIntentPolicy'
 // INDEX SEARCH
 import { taskIndexSearchCondition } from './taskIndexFilters.js'
 // SVELTEKIT
@@ -24,14 +27,24 @@ import { update, del } from '../crud'
 import { getProjectForFeatureId } from './project'
 import { getOrganisationForProjectId } from './organisation'
 import { getTaskHubFilter } from './hub'
-import { taskSubmissionScopeCondition, taskFeatureScopeCondition, taskLifecycleScopeCondition } from './task-scope'
+import {
+  taskSubmissionScopeCondition,
+  taskFeatureScopeCondition,
+  taskLifecycleScopeCondition,
+} from './task-scope'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
-import { prepareFeatureUploadSubmission, prepareFeatureUploadTaskRejection } from './featureUploadTasks'
+import {
+  prepareFeatureUploadSubmission,
+  prepareFeatureUploadTaskRejection,
+} from './featureUploadTasks'
 import { prepareLegacyFeatureTaskImageReview } from './featureTaskImageRevision'
 import { prepareInitialFeatureSubmission } from './featureInitialDraft'
 import { reviewInitialFeatureContribution } from './featureInitialReview'
 import { featureRevisionCreationEnabled } from './featureCreationRevision'
-import { featureUploadEvidenceSource, hasFeatureTaskTransfer } from './featureUploadEvidence'
+import {
+  featureUploadEvidenceSource,
+  hasFeatureTaskTransfer,
+} from './featureUploadEvidence'
 import { hasFeatureRevisionHead } from './featureImageUploadRevision'
 import { prepareFeatureAcceptedCapture } from './featureAcceptedCapture'
 import { applyTaskUploadEvidence } from './featureUploadRead'
@@ -436,7 +449,11 @@ const prepareTaskImageArchives = async (
       ? taskImages.filter(ti => (ti.intent ?? 'undefined') === 'undefined')
       : taskImages
 
-    const storage = guard ? await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='imageRevision' AND type='table'`) : null
+    const storage = guard
+      ? await db.get<{ n: number }>(
+          sql`SELECT count(*) n FROM sqlite_master WHERE name='imageRevision' AND type='table'`,
+        )
+      : null
     // Prepare every image change before committing the archival operation atomically.
     const statements = imagesToProcess.flatMap(ti => {
       // Prepare the image update so removal and archival can commit together;
@@ -448,7 +465,9 @@ const prepareTaskImageArchives = async (
           and(
             eq(image.id, ti.imageId),
             guard,
-            storage?.n ? sql`NOT EXISTS (SELECT 1 FROM imageRevision WHERE imageId=${image.id})` : undefined,
+            storage?.n
+              ? sql`NOT EXISTS (SELECT 1 FROM imageRevision WHERE imageId=${image.id})`
+              : undefined,
             sql`not exists (select 1 from ${featureImage} where ${featureImage.imageId} = ${image.id})`,
             sql`not exists (select 1 from ${project} where ${project.imageId} = ${image.id})`,
             sql`not exists (select 1 from ${organisation} where ${organisation.imageId} = ${image.id})`,
@@ -514,9 +533,31 @@ const prepareTaskImagePublications = async (
 
     // Missing feature assignments have null intent and must not be accepted as classified.
     // Filter images based on skipUndefined parameter.
-    const policies = new Map<string, Awaited<ReturnType<typeof readFeatureImageIntentPolicy>>>()
-    for (const row of taskImages) if (row.featureId && !policies.has(row.featureId)) policies.set(row.featureId, await readFeatureImageIntentPolicy(db, row.featureId))
-    const imagesToProcess = taskImages.filter(row => row.featureId && (!skipUndefined || (row.intent ?? 'undefined') !== 'undefined')).map(row => ({ ...row, ...resolvePolicyImageIntent(policies.get(row.featureId!)!, row.intent ?? 'undefined', !skipUndefined) })).filter(row => row.isPublished)
+    const policies = new Map<
+      string,
+      Awaited<ReturnType<typeof readFeatureImageIntentPolicy>>
+    >()
+    for (const row of taskImages)
+      if (row.featureId && !policies.has(row.featureId))
+        policies.set(
+          row.featureId,
+          await readFeatureImageIntentPolicy(db, row.featureId),
+        )
+    const imagesToProcess = taskImages
+      .filter(
+        row =>
+          row.featureId &&
+          (!skipUndefined || (row.intent ?? 'undefined') !== 'undefined'),
+      )
+      .map(row => ({
+        ...row,
+        ...resolvePolicyImageIntent(
+          policies.get(row.featureId!)!,
+          row.intent ?? 'undefined',
+          !skipUndefined,
+        ),
+      }))
+      .filter(row => row.isPublished)
 
     // Prepare every image change before committing the publication operation atomically.
     const statements = imagesToProcess.flatMap(ti => {
@@ -569,7 +610,15 @@ const prepareTaskImagePublications = async (
         return [publication]
       }
     })
-    return { statements: [...[...policies.values()].filter(policy => policy.hubVersion >= 0).map(policy => prepareRevisionCheck(db, policy.guard)), ...statements], processedCount: imagesToProcess.length }
+    return {
+      statements: [
+        ...[...policies.values()]
+          .filter(policy => policy.hubVersion >= 0)
+          .map(policy => prepareRevisionCheck(db, policy.guard)),
+        ...statements,
+      ],
+      processedCount: imagesToProcess.length,
+    }
   } catch (error) {
     console.error('Failed to publish images:', error)
     throw error
@@ -687,30 +736,62 @@ export const commitTaskFeatureReview = async (
   )
 
   if (isNewFeature) {
-    const transferred = await hasFeatureTaskTransfer(db,input.task.id)
+    const transferred = await hasFeatureTaskTransfer(db, input.task.id)
     if (transferred) {
       // A moved contribution is work about the destination, never authority to archive it.
       const guard = sql`EXISTS(SELECT 1 FROM task WHERE ${taskReviewPendingCondition(input)}) AND EXISTS(SELECT 1 FROM feature WHERE ${featureSnapshot})`
-      const rejection = input.action === 'reject' ? await prepareFeatureUploadTaskRejection(db, {
-        taskId:input.task.id,featureId:input.feature.id,actorId:input.reviewerId,reason:input.reason?.trim() || 'Transferred contribution reviewed',guard,reject:true,
-      }) : null
-      if (rejection) return Boolean(await executeRevisionBatch(db,guard,rejection))
+      const rejection =
+        input.action === 'reject'
+          ? await prepareFeatureUploadTaskRejection(db, {
+              taskId: input.task.id,
+              featureId: input.feature.id,
+              actorId: input.reviewerId,
+              reason: input.reason?.trim() || 'Transferred contribution reviewed',
+              guard,
+              reject: true,
+            })
+          : null
+      if (rejection) return Boolean(await executeRevisionBatch(db, guard, rejection))
       const evidence = await featureUploadEvidenceSource(db)
       const noPending = sql`NOT EXISTS(SELECT 1 FROM ${evidence} u JOIN featureRevisionProposal p ON p.id=u.proposalId
         WHERE u.featureId=${input.feature.id} AND p.status IN('draft','submitted') AND EXISTS(SELECT 1 FROM json_each(u.taskIds) WHERE value=${input.task.id}))`
-      return Boolean(await executeRevisionBatch(db,sql`(${guard}) AND (${noPending})`,[
-        db.update(task).set({isReviewed:true,reviewerId:input.reviewerId,reviewReason:input.reason?.trim() || null,
-          reviewOutcome:input.action === 'accept' ? 'accepted' : 'rejected',reviewAction:input.action === 'accept' ? 'added-feature' : 'ignored'}).where(taskReviewPendingCondition(input)),
-        prepareRevisionCheck(db,sql`changes()=1`),
-      ]))
+      return Boolean(
+        await executeRevisionBatch(db, sql`(${guard}) AND (${noPending})`, [
+          db
+            .update(task)
+            .set({
+              isReviewed: true,
+              reviewerId: input.reviewerId,
+              reviewReason: input.reason?.trim() || null,
+              reviewOutcome: input.action === 'accept' ? 'accepted' : 'rejected',
+              reviewAction: input.action === 'accept' ? 'added-feature' : 'ignored',
+            })
+            .where(taskReviewPendingCondition(input)),
+          prepareRevisionCheck(db, sql`changes()=1`),
+        ]),
+      )
     }
-    const initial = await reviewInitialFeatureContribution(db, { featureId: input.feature.id, taskId: input.task.id,
-      actorId: input.reviewerId, reason: input.reason?.trim() || 'Initial Feature reviewed', accept: input.action === 'accept',
+    const initial = await reviewInitialFeatureContribution(db, {
+      imageReview: input.imageReview,
+      featureId: input.feature.id,
+      taskId: input.task.id,
+      actorId: input.reviewerId,
+      reason: input.reason?.trim() || 'Initial Feature reviewed',
+      accept: input.action === 'accept',
       guard: sql`EXISTS (SELECT 1 FROM task WHERE ${taskReviewPendingCondition(input)}) AND EXISTS (SELECT 1 FROM feature WHERE ${featureSnapshot})`,
-      completion: [db.update(task).set({ isReviewed: true, reviewerId: input.reviewerId,
-        reviewReason: input.reason?.trim() || null, reviewOutcome: input.action === 'accept' ? 'accepted' : 'rejected',
-        reviewAction: input.action === 'accept' ? 'added-feature' : 'ignored' }).where(taskReviewPendingCondition(input)),
-        prepareRevisionCheck(db, sql`changes()=1`)],
+      completion: [
+        db
+          .update(task)
+          .set({
+            isReviewed: true,
+            reviewerId: input.reviewerId,
+            reviewReason: input.reason?.trim() || null,
+            reviewOutcome: input.action === 'accept' ? 'accepted' : 'rejected',
+            reviewAction: input.action === 'accept' ? 'added-feature' : 'ignored',
+          })
+          .where(taskReviewPendingCondition(input)),
+        prepareRevisionCheck(db, sql`changes()=1`),
+      ],
     })
     if (initial !== null) return initial
   }
@@ -746,23 +827,38 @@ export const commitTaskFeatureReview = async (
     .where(and(featureSnapshot, sql`changes() = 1`))
     .returning({ id: feature.id })
 
-  const capture = isNewFeature ? { before: [], after: [], revisionId: null } : await prepareFeatureAcceptedCapture(db, {
-    featureId: input.feature.id, actorId: input.reviewerId, reason: input.reason?.trim() || 'Missing report reviewed',
-    guard: sql`EXISTS (SELECT 1 FROM task WHERE ${taskReviewPendingCondition(input)})`,
-    unpublish: input.action === 'setUnpublished' || input.action === 'setArchived',
-    derive: previous => {
-      const content = structuredClone(previous)
-      if (input.action === 'setIntangible') content.profile.isIntangible = true
-      else content.profile.visitability.isVisitable = false
-      return content
-    },
-  })
+  const capture = isNewFeature
+    ? { before: [], after: [], revisionId: null }
+    : await prepareFeatureAcceptedCapture(db, {
+        featureId: input.feature.id,
+        actorId: input.reviewerId,
+        reason: input.reason?.trim() || 'Missing report reviewed',
+        guard: sql`EXISTS (SELECT 1 FROM task WHERE ${taskReviewPendingCondition(input)})`,
+        unpublish: input.action === 'setUnpublished' || input.action === 'setArchived',
+        derive: previous => {
+          const content = structuredClone(previous)
+          if (input.action === 'setIntangible') content.profile.isIntangible = true
+          else content.profile.visitability.isVisitable = false
+          return content
+        },
+      })
   // Keep these statements adjacent: changes() must describe the task completion above.
-  const result = await executeRevisionBatch(db, sql`EXISTS (SELECT 1 FROM task WHERE ${taskReviewPendingCondition(input)})`, [
-    ...capture.before, completion, mutation, prepareRevisionCheck(db, sql`changes() = 1`), ...capture.after,
-  ])
-  return Boolean(result && (result[capture.before.length] as unknown[]).length === 1 &&
-    (result[capture.before.length + 1] as unknown[]).length === 1)
+  const result = await executeRevisionBatch(
+    db,
+    sql`EXISTS (SELECT 1 FROM task WHERE ${taskReviewPendingCondition(input)})`,
+    [
+      ...capture.before,
+      completion,
+      mutation,
+      prepareRevisionCheck(db, sql`changes() = 1`),
+      ...capture.after,
+    ],
+  )
+  return Boolean(
+    result &&
+      (result[capture.before.length] as unknown[]).length === 1 &&
+      (result[capture.before.length + 1] as unknown[]).length === 1,
+  )
 }
 
 /**
@@ -800,13 +896,22 @@ export async function commitTaskDraftFinalization(
   db: Database,
   expected: TaskFeatureDraftFinalizationCommit['task'] & Pick<TaskDB, 'type'>,
 ): Promise<TaskDB | undefined> {
-  if (!expected.featureId || (expected.type !== 'newPhoto' && expected.type !== 'reportedMissing')) return undefined
+  if (
+    !expected.featureId ||
+    (expected.type !== 'newPhoto' && expected.type !== 'reportedMissing')
+  )
+    return undefined
   const pending = taskDraftFinalizationCondition(expected, expected.type)
-  const proposals = await prepareFeatureUploadSubmission(db, { taskId: expected.id,
-    featureId: expected.featureId, actorId: expected.contributorId })
-  const result = await executeRevisionBatch(db, sql`EXISTS (SELECT 1 FROM task WHERE ${pending})`, [
-    ...proposals, db.update(task).set({ isDraft: false }).where(pending).returning(),
-  ])
+  const proposals = await prepareFeatureUploadSubmission(db, {
+    taskId: expected.id,
+    featureId: expected.featureId,
+    actorId: expected.contributorId,
+  })
+  const result = await executeRevisionBatch(
+    db,
+    sql`EXISTS (SELECT 1 FROM task WHERE ${pending})`,
+    [...proposals, db.update(task).set({ isDraft: false }).where(pending).returning()],
+  )
   return result ? (result.at(-1) as TaskDB[])[0] : undefined
 }
 
@@ -830,13 +935,20 @@ export const commitTaskFeatureDraftFinalization = async (
     eq(feature.isDraft, true),
   )
 
-  if (await hasFeatureTaskTransfer(db,input.task.id)) {
+  if (await hasFeatureTaskTransfer(db, input.task.id)) {
     // The destination is already published; submitting old work must not edit its profile.
-    const pending = taskDraftFinalizationCondition(input.task,'newFeature')
-    return Boolean(await executeRevisionBatch(db,sql`EXISTS(SELECT 1 FROM task WHERE ${pending})`,[
-      ...await prepareFeatureUploadSubmission(db,{taskId:input.task.id,featureId:input.feature.id,actorId:input.task.contributorId}),
-      db.update(task).set({isDraft:false}).where(pending),prepareRevisionCheck(db,sql`changes()=1`),
-    ]))
+    const pending = taskDraftFinalizationCondition(input.task, 'newFeature')
+    return Boolean(
+      await executeRevisionBatch(db, sql`EXISTS(SELECT 1 FROM task WHERE ${pending})`, [
+        ...(await prepareFeatureUploadSubmission(db, {
+          taskId: input.task.id,
+          featureId: input.feature.id,
+          actorId: input.task.contributorId,
+        })),
+        db.update(task).set({ isDraft: false }).where(pending),
+        prepareRevisionCheck(db, sql`changes()=1`),
+      ]),
+    )
   }
 
   // Claim task submission only while its linked feature remains the exact draft snapshot.
@@ -856,17 +968,35 @@ export const commitTaskFeatureDraftFinalization = async (
     .where(and(featureSnapshot, sql`changes() = 1`))
     .returning({ id: feature.id })
 
-  const proposals = await prepareFeatureUploadSubmission(db, { taskId: input.task.id,
-    featureId: input.feature.id, actorId: input.task.contributorId })
-  proposals.push(...await prepareInitialFeatureSubmission(db, { featureId: input.feature.id, actorId: input.task.contributorId, taskId: input.task.id,
-    guard: sql`EXISTS (SELECT 1 FROM task WHERE ${taskDraftFinalizationCondition(input.task, 'newFeature')})` }))
+  const proposals = await prepareFeatureUploadSubmission(db, {
+    taskId: input.task.id,
+    featureId: input.feature.id,
+    actorId: input.task.contributorId,
+  })
+  proposals.push(
+    ...(await prepareInitialFeatureSubmission(db, {
+      featureId: input.feature.id,
+      actorId: input.task.contributorId,
+      taskId: input.task.id,
+      guard: sql`EXISTS (SELECT 1 FROM task WHERE ${taskDraftFinalizationCondition(input.task, 'newFeature')})`,
+    })),
+  )
   // Keep these statements adjacent: changes() must describe task submission above.
-  const result = await executeRevisionBatch(db,
+  const result = await executeRevisionBatch(
+    db,
     sql`EXISTS (SELECT 1 FROM task WHERE ${taskDraftFinalizationCondition(input.task, 'newFeature')})`,
-    [...proposals, completion, featureFinalization, prepareRevisionCheck(db, sql`changes() = 1`)],
+    [
+      ...proposals,
+      completion,
+      featureFinalization,
+      prepareRevisionCheck(db, sql`changes() = 1`),
+    ],
   )
   if (!result) return false
-  return (result[proposals.length] as unknown[]).length === 1 && (result[proposals.length + 1] as unknown[]).length === 1
+  return (
+    (result[proposals.length] as unknown[]).length === 1 &&
+    (result[proposals.length + 1] as unknown[]).length === 1
+  )
 }
 
 /**
@@ -891,11 +1021,16 @@ export const commitTaskImageReview = async (
   const pending = taskReviewPendingCondition(input)
   const guard = sql`exists (select 1 from ${task} where ${pending})`
   // A completed/stale task has no reviewable source; the same predicate is fenced again at commit.
-  if (!await db.get(sql`SELECT 1 AS eligible WHERE ${guard}`)) return false
+  if (!(await db.get(sql`SELECT 1 AS eligible WHERE ${guard}`))) return false
 
-  const revisionDecision = await prepareFeatureUploadTaskRejection(db, { taskId: expected.id,
-    featureId: expected.featureId, actorId: input.reviewerId, reason: input.reason?.trim() || 'Photo contribution declined',
-    guard, reject: input.action === 'reject' })
+  const revisionDecision = await prepareFeatureUploadTaskRejection(db, {
+    taskId: expected.id,
+    featureId: expected.featureId,
+    actorId: input.reviewerId,
+    reason: input.reason?.trim() || 'Photo contribution declined',
+    guard,
+    reject: input.action === 'reject',
+  })
   if (revisionDecision) {
     const result = await executeRevisionBatch(db, guard, revisionDecision)
     return Boolean(result && (result.at(-1) as unknown[]).length === 1)
@@ -941,11 +1076,21 @@ export const commitTaskImageReview = async (
     .where(pending)
     .returning({ id: task.id })
 
-  const capture = await prepareLegacyFeatureTaskImageReview(db, { featureId: expected.featureId,
-    taskId: expected.id, actorId: input.reviewerId, action: input.action, rows, guard })
+  const capture = await prepareLegacyFeatureTaskImageReview(db, {
+    featureId: expected.featureId,
+    taskId: expected.id,
+    actorId: input.reviewerId,
+    action: input.action,
+    rows,
+    guard,
+  })
   // Complete last so the pending-version guard stays true throughout the winning batch.
   const results = await executeRevisionBatch(db, guard, [
-    ...capture.before, ...publications.statements, ...archives.statements, ...capture.after, completion,
+    ...capture.before,
+    ...publications.statements,
+    ...archives.statements,
+    ...capture.after,
+    completion,
   ])
   const completed = results?.at(-1)
   return Array.isArray(completed) && completed.length === 1
@@ -977,9 +1122,12 @@ export const createTaskWithDependencies = async (
   // Step 1 : Set contributor ID from session
   taskData = setContributorId(taskData, userId)
   // Older one-shot clients cannot freeze verified uploads and content together; modern clients use draft submission.
-  const requiresDraftSubmission = taskData.type === 'newFeature'
-    ? await featureRevisionCreationEnabled(db)
-    : Boolean(taskData.featureId && await hasFeatureRevisionHead(db, taskData.featureId))
+  const requiresDraftSubmission =
+    taskData.type === 'newFeature'
+      ? await featureRevisionCreationEnabled(db)
+      : Boolean(
+          taskData.featureId && (await hasFeatureRevisionHead(db, taskData.featureId)),
+        )
   if (requiresDraftSubmission) throw error(409, 'USE_TASK_DRAFT_SUBMISSION')
 
   // Step 2: Commit a new Feature and its review task together before uploading photos.

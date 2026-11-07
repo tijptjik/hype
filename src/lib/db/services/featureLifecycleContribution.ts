@@ -14,6 +14,10 @@ import {
   applyFeatureChanges,
 } from '#lib/revisions/featureChanges.js'
 // SERVICES
+import {
+  prepareImageReviewAcceptance,
+  reviewedImageContent,
+} from './featureImageReview'
 import { prepareFeatureEdit } from './featureLifecycle'
 import { prepareNewLifecycleFeature } from './featureLifecycleIdentity'
 import { prepareRevisionChangeSet } from './revisionChangeSet'
@@ -180,6 +184,7 @@ export async function acceptFeatureCreationProposal(
   input: RevisionCommand & {
     proposalId: string
     expectedVersion: string
+    imageReview?: { taskId: string; reviewId: string | null }
     validate: (
       content: FeatureRevisionContent,
     ) => readonly string[] | Promise<readonly string[]>
@@ -199,13 +204,21 @@ export async function acceptFeatureCreationProposal(
   if (!proposal) return null
   const creation = creationSchema.parse(JSON.parse(proposal.changes)),
     scope = creationScopeSchema.parse(JSON.parse(proposal.creationScope))
+  const imageReview = await prepareImageReviewAcceptance(
+    db,
+    input.proposalId,
+    input.imageReview,
+    guard,
+  )
+  if (!imageReview) return null
+  if (imageReview.review) creation.content = reviewedImageContent(imageReview.review)
   const errors = await input.validate(creation.content)
   if (errors.length) throw new Error(errors.join('; '))
   const change = prepareRevisionChangeSet(db, input)
   let featureId: string,
     revisionId: string,
     statements: BatchItem<'sqlite'>[],
-    acceptanceGuard = guard
+    acceptanceGuard = imageReview.guard
   if (input.duplicate) {
     const edit = await prepareFeatureEdit(db, {
       ...input.duplicate,
@@ -219,7 +232,7 @@ export async function acceptFeatureCreationProposal(
     featureId = input.duplicate.featureId
     revisionId = edit.revisionId
     statements = edit.statements
-    acceptanceGuard = sql`(${guard}) AND (${edit.guard})`
+    acceptanceGuard = sql`(${imageReview.guard}) AND (${edit.guard})`
   } else {
     const prepared = prepareNewLifecycleFeature(db, {
       ...input,
@@ -227,6 +240,7 @@ export async function acceptFeatureCreationProposal(
       featureId: crypto.randomUUID(),
       scope,
       content: creation.content,
+      guard: imageReview.guard,
     })
     featureId = prepared.featureId
     revisionId = prepared.revisionId
@@ -247,6 +261,7 @@ export async function acceptFeatureCreationProposal(
       changes: proposal.changes,
       action: 'accepted',
       comparedRevisionId: input.duplicate?.expectedRevisionId ?? null,
+      context: JSON.stringify({ imageReviewId: imageReview.review?.reviewId ?? null }),
       resultingRevisionId: revisionId,
       changeSetId: change.id,
     }),
