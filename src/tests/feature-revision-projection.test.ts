@@ -4159,6 +4159,53 @@ describe('reviewed Feature merge and split integration', () => {
 })
 
 describe('approved private Feature maintenance', () => {
+  it('captures edits when the private generation has no publication receipt', async () => {
+    const f = fixture()
+    f.sqlite.exec(readFileSync('migrations/0189_feature_private_capture.sql', 'utf8'))
+    f.sqlite.exec("UPDATE feature SET isPublished=0,localIsPublished=0 WHERE id='f'")
+    const baseline = await f.initialize(false)
+    // Private edit-window reuse advances the head without creating a publication receipt.
+    f.sqlite.exec("UPDATE featureRevisionHead SET generation=1 WHERE featureId='f'")
+    f.sqlite
+      .prepare(
+        'INSERT INTO featurePrivateCapture(featureId,revisionId,generation) VALUES(?,?,1)',
+      )
+      .run('f', baseline.revisionId)
+    const workspace = await readFeatureRevisionWorkspace(f.db, {
+      ...common,
+      canPublish: true,
+    })
+    expect(workspace.comparisonRevisionId).toBe(baseline.revisionId)
+    const capture = await prepareFeatureAcceptedCapture(f.db, {
+      ...common,
+      derive: previous => {
+        previous.profile.visitability.isVisitable = false
+        return previous
+      },
+    })
+    expect(
+      await executeRevisionBatch(f.db, sql`1`, [
+        ...capture.before,
+        f.db.update(feature).set({ isVisitable: false }).where(sql`id='f'`),
+        ...capture.after,
+      ]),
+    ).not.toBeNull()
+    expect(
+      f.sqlite
+        .prepare("SELECT isPublished,isVisitable FROM feature WHERE id='f'")
+        .get(),
+    ).toEqual({ isPublished: 0, isVisitable: 0 })
+    expect(
+      f.sqlite
+        .prepare('SELECT count(*) n FROM featureRevisionPublication WHERE generation=1')
+        .get(),
+    ).toEqual({ n: 0 })
+    expect(
+      (await readFeatureRevisionWorkspace(f.db, { ...common, canPublish: true }))
+        .comparisonRevisionId,
+    ).toBe(capture.revisionId)
+  })
+
   it.each([false, true])(
     'records automation without publication, then merges explicit staff Publish (previously published=%s)',
     async previouslyPublished => {

@@ -120,13 +120,15 @@ export async function prepareFeatureAcceptedCapture(
       AND NOT EXISTS (SELECT 1 FROM featureIdentityProposalDecision d WHERE d.proposalId=r.proposalId AND d.outcome='accepted')`))
     )
       throw new Error('Reserved identity outputs are frozen for review')
+    // Private edit generations need not have a publication receipt; resolve each fallback independently.
     const row = await db.get<{
       id: string | null
-    }>(sql`SELECT COALESCE(${privateComparison},p.previousRevisionId,
+    }>(sql`SELECT COALESCE(${privateComparison},
+      (SELECT p.previousRevisionId FROM featureRevisionPublication p
+        WHERE p.featureId=${input.featureId} AND p.generation=${head.generation}),
       (SELECT r.id FROM featureRevision r JOIN featureRevisionPublication baseline
         ON baseline.featureId=r.featureId AND baseline.changeSetId=r.changeSetId AND baseline.generation=0
-        WHERE r.featureId=${input.featureId} AND r.previousRevisionId IS NULL)) id
-      FROM featureRevisionPublication p WHERE p.featureId=${input.featureId} AND p.generation=${head.generation}`)
+        WHERE r.featureId=${input.featureId} AND r.previousRevisionId IS NULL)) id`)
     comparisonId = row?.id ?? null
   }
   if (!comparisonId) throw new Error('Feature comparison revision is unavailable')
