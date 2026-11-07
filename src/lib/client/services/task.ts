@@ -370,6 +370,7 @@ export const getTaskReviewActionLabel = (reviewAction?: string | null): string =
     case 'added-all-photos':
       return m.task__review_action_added_photos()
     case 'added-all-photos-with-intent':
+    case 'added-classified-photos':
       return m.task__review_action_added_selected_photos()
     case 'merged-feature':
       return 'Merged with existing Feature'

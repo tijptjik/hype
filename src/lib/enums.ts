@@ -216,6 +216,7 @@ export enum TaskReviewAction {
   setIntangible = 'set-intangible',
   setArchived = 'set-archived',
   addedAllPhotos = 'added-all-photos',
+  addedClassifiedPhotos = 'added-classified-photos',
   addedAllPhotosWithIntent = 'added-all-photos-with-intent',
   addedFeature = 'added-feature',
 }

@@ -9,6 +9,7 @@ export const reviewActions = [
   'set-intangible',
   'set-archived',
   'added-all-photos',
+  'added-classified-photos',
   'added-all-photos-with-intent',
   'added-feature',
 ] as const
