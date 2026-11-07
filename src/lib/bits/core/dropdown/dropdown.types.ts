@@ -15,6 +15,8 @@ export type DropdownProps = {
   triggerClass?: string
   triggerIcon?: Component | null
   triggerIconClass?: string
+  /** Render an inline panel above the nearest positioned card body. */
+  attached?: boolean
   contentClass?: string
   contentSide?: 'top' | 'right' | 'bottom' | 'left'
   contentSideOffset?: number

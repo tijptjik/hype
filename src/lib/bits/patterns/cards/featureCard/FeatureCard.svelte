@@ -181,7 +181,9 @@ function updateViewerBudget(): void {
     chromeBorderHeight +
     contributionHeightCompensationPx
   const viewerBlockMinHeightPx =
-    Math.max(layout.viewerMinHeightPx, overlayContentHeight) + layout.viewerTopPaddingPx + layout.viewerPaddingPx
+    Math.max(layout.viewerMinHeightPx, overlayContentHeight) +
+    layout.viewerTopPaddingPx +
+    layout.viewerPaddingPx
   // Compact cards may already overflow before expansion and never latch a height.
   // Use the viewer's minimum in that case so the expanded text still enables scrolling.
   const resolvedViewerTargetHeightPx = isDescriptionExpanded
@@ -314,7 +316,7 @@ $effect(() => {
 </script>
 
 <FeatureCardRoot onContentVisibilityChange={handleRootContentVisibilityChange}>
-  <div class="pointer-events-none flex min-h-0 flex-1 flex-col">
+  <div class="group/feature-card pointer-events-none flex min-h-0 flex-1 flex-col">
     <FeatureCardContainer bind:viewport scrollable={containerScrollable}>
       <div
         bind:this={viewerShellElement}
@@ -331,7 +333,9 @@ $effect(() => {
           paddingPx={layout.viewerPaddingPx}
           topPaddingPx={layout.viewerTopPaddingPx}
           targetHeightPx={viewerTargetHeightPx}
-          onOverlayHeightChange={height => { overlayContentHeight = height }}
+          onOverlayHeightChange={height => {
+            overlayContentHeight = height
+          }}
         />
       </div>
       <div

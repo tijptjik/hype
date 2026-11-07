@@ -1,4 +1,8 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition'
+import { cubicInOut } from 'svelte/easing'
+import { prefersReducedMotion } from 'svelte/motion'
 // BITS-UI
 import { DropdownMenu } from 'bits-ui'
 // BITS
@@ -13,6 +17,7 @@ let {
   triggerIcon: TriggerIcon = null,
   triggerIconClass = '',
   contentClass = '',
+  attached = false,
   contentSide = 'bottom',
   contentSideOffset = 8,
   contentAlign = 'center',
@@ -20,6 +25,8 @@ let {
   itemClass = '',
   items = [],
 }: DropdownProps = $props()
+
+let open = $state(false)
 
 const resolvedTriggerClass = $derived(
   cx(
@@ -43,33 +50,68 @@ const resolvedItemClass = $derived(
 )
 </script>
 
-<DropdownMenu.Root>
-  <DropdownMenu.Trigger class={resolvedTriggerClass} aria-label={ariaLabel} {disabled}>
+{#snippet menuItems()}
+  {#each items as item, index (`${item.label}-${index}`)}
+    <DropdownMenu.Item
+      class={cx(resolvedItemClass, item.class)}
+      disabled={item.disabled}
+      onSelect={() => item.onSelect?.()}
+    >
+      {#if item.icon}
+        <item.icon class={cx('h-4 w-4 shrink-0', item.iconClass)} />
+      {/if}
+      <span>{item.label}</span>
+    </DropdownMenu.Item>
+  {/each}
+{/snippet}
+
+<DropdownMenu.Root bind:open>
+  <DropdownMenu.Trigger
+    data-attached-menu-open={attached && open ? true : undefined}
+    class={resolvedTriggerClass}
+    aria-label={ariaLabel}
+    {disabled}
+  >
     {#if TriggerIcon}
       <TriggerIcon class={resolvedTriggerIconClass} />
     {/if}
   </DropdownMenu.Trigger>
 
-  <DropdownMenu.Portal>
-    <DropdownMenu.Content
-      class={resolvedContentClass}
-      side={contentSide}
-      sideOffset={contentSideOffset}
-      align={contentAlign}
-      alignOffset={contentAlignOffset}
+  {#if attached}
+    <!-- Keep the panel in the card stacking context, beneath its portal and labels. -->
+    <div
+      class="pointer-events-none absolute inset-x-0 bottom-full z-0 overflow-hidden pt-2"
+      style="mask-image: var(--feature-card-menu-mask);"
     >
-      {#each items as item, index (`${item.label}-${index}`)}
-        <DropdownMenu.Item
-          class={cx(resolvedItemClass, item.class)}
-          disabled={item.disabled}
-          onSelect={() => item.onSelect?.()}
-        >
-          {#if item.icon}
-            <item.icon class={cx('h-4 w-4 shrink-0', item.iconClass)} />
+      <DropdownMenu.ContentStatic forceMount>
+        {#snippet child({ props })}
+          {#if open}
+            <div
+              {...props}
+              class="text-base-content before:bg-border-input/40 pointer-events-auto relative bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-2 shadow-[0_-4px_8px_-4px_rgb(0_0_0/0.25)] outline-none before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px"
+              style="padding-right: var(--feature-card-menu-right-inset);"
+              transition:slide={{
+                duration: prefersReducedMotion.current ? 0 : 420,
+                easing: cubicInOut,
+              }}
+            >
+              {@render menuItems()}
+            </div>
           {/if}
-          <span>{item.label}</span>
-        </DropdownMenu.Item>
-      {/each}
-    </DropdownMenu.Content>
-  </DropdownMenu.Portal>
+        {/snippet}
+      </DropdownMenu.ContentStatic>
+    </div>
+  {:else}
+    <DropdownMenu.Portal>
+      <DropdownMenu.Content
+        class={resolvedContentClass}
+        side={contentSide}
+        sideOffset={contentSideOffset}
+        align={contentAlign}
+        alignOffset={contentAlignOffset}
+      >
+        {@render menuItems()}
+      </DropdownMenu.Content>
+    </DropdownMenu.Portal>
+  {/if}
 </DropdownMenu.Root>

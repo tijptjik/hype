@@ -55,7 +55,9 @@ $effect(() => {
   let height = 0
   if (open && fillsImage && mobilePanel) {
     const style = getComputedStyle(mobilePanel)
-    height = Math.ceil(detailsHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom))
+    height = Math.ceil(
+      detailsHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom),
+    )
   }
   onHeightChange?.(height)
 })
@@ -207,10 +209,7 @@ const fallbackFeatureCredit = $derived(
     <FeatureCardAttributionDetails
       {metadata}
       {projectLicense}
-      loading={photoLoading ||
-        metadataLoading ||
-        contributorsLoading ||
-        licenseLoading}
+      loading={photoLoading || metadataLoading || contributorsLoading || licenseLoading}
       {imageUser}
       {featureUser}
       onOpenProfile={username => {
@@ -230,21 +229,29 @@ const fallbackFeatureCredit = $derived(
 {/snippet}
 
 <Popover.Root bind:open>
-  <Popover.Trigger
-    aria-label={m.image_attribution_title()}
-    data-tooltip={mobile.current || open ? undefined : m.image_attribution_title()}
-    class="{open
-      ? 'pointer-events-none opacity-0'
-      : ''} inline-flex size-12 items-center justify-center rounded-full border border-transparent bg-panel/95 text-primary shadow-sm backdrop-blur-sm transition hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-primary"
-    ><InfoIcon class="size-6" aria-hidden="true" /></Popover.Trigger
+  <!-- The negative opening ease gives a small anticipatory lift before the control
+       tips away and falls behind the card; closing restores it with a softer landing. -->
+  <div
+    data-feature-info-motion
+    class="origin-bottom [transform:perspective(240px)_translate3d(0,0,0)_rotateX(0deg)_rotateZ(0deg)] transition-[transform,opacity] duration-[420ms,160ms] ease-out group-has-[[data-attached-menu-open]]/feature-card:[transform:perspective(240px)_translate3d(-12px,96px,-120px)_rotateX(75deg)_rotateZ(-18deg)] group-has-[[data-attached-menu-open]]/feature-card:opacity-0 group-has-[[data-attached-menu-open]]/feature-card:delay-[0ms,180ms] group-has-[[data-attached-menu-open]]/feature-card:duration-[520ms,220ms] group-has-[[data-attached-menu-open]]/feature-card:ease-[cubic-bezier(0.45,-0.35,0.8,0.5)] motion-reduce:transition-none"
   >
+    <Popover.Trigger
+      data-feature-info-trigger
+      aria-label={m.image_attribution_title()}
+      data-tooltip={mobile.current || open ? undefined : m.image_attribution_title()}
+      class="{open
+        ? 'pointer-events-none opacity-0'
+        : ''} inline-flex size-12 items-center justify-center rounded-full border border-transparent bg-panel/95 text-primary shadow-sm backdrop-blur-sm transition-colors motion-reduce:transition-none hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-primary"
+      ><InfoIcon class="size-6" aria-hidden="true" /></Popover.Trigger
+    >
+  </div>
   {#if fillsImage && overlayTarget}
     <Popover.Portal to={overlayTarget}>
       <Popover.ContentStatic
         role="dialog"
         bind:ref={mobilePanel}
         aria-label={m.image_attribution_title()}
-        class="bits-theme absolute inset-x-(--feature-card-viewer-padding,0px) top-(--feature-card-viewer-padding-top,0px) bottom-(--feature-card-viewer-padding,0px) z-30 rounded-xl bg-panel p-4 text-foreground"
+        class="bits-theme bg-panel text-foreground absolute inset-x-(--feature-card-viewer-padding,0px) top-(--feature-card-viewer-padding-top,0px) bottom-(--feature-card-viewer-padding,0px) z-30 rounded-xl p-4"
       >
         {@render details()}
       </Popover.ContentStatic>

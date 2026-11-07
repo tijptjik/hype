@@ -17,6 +17,7 @@ import type { ResourceContext } from '#lib/types.js'
 import Camera from 'virtual:icons/proicons/camera'
 import ChevronRight from 'virtual:icons/proicons/chevron-right'
 import MoreHorizontal from 'virtual:icons/proicons/more'
+import MenuIcon from 'virtual:icons/lucide/menu'
 import PencilSquare from 'virtual:icons/proicons/compose'
 import Squares2x2 from 'virtual:icons/proicons/grid'
 import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
@@ -24,8 +25,10 @@ import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
 let {
   feature,
   onEditSelection,
+  offsetMenu = false,
 }: {
   feature: Feature
+  offsetMenu?: boolean
   onEditSelection?: (() => void) | null
 } = $props()
 
@@ -134,7 +137,7 @@ const actionItems = [
       class="pointer-events-auto flex w-full items-center justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
       <div
-        class="flex min-w-0 items-center gap-2 font-mono text-xs uppercase text-neutral-content"
+        class="text-neutral-content flex min-w-0 items-center gap-2 font-mono text-xs uppercase"
       >
         <Icon src={Squares2x2} class="h-5 w-5 shrink-0" />
         <span class="!block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
@@ -144,7 +147,7 @@ const actionItems = [
           {#if organisationName}
             <Icon
               src={ChevronRight}
-              class="h-3.5 w-3.5 shrink-0 text-neutral-content/55"
+              class="text-neutral-content/55 h-3.5 w-3.5 shrink-0"
               aria-hidden="true"
             />
           {/if}
@@ -155,11 +158,11 @@ const actionItems = [
         {#if (organisationName || projectName) && layerName}
           <Icon
             src={ChevronRight}
-            class="h-3.5 w-3.5 shrink-0 text-neutral-content/55"
+            class="text-neutral-content/55 h-3.5 w-3.5 shrink-0"
             aria-hidden="true"
           />
           <span
-            class="hidden w-120:inline overflow-hidden text-ellipsis whitespace-nowrap"
+            class="w-120:inline hidden overflow-hidden text-ellipsis whitespace-nowrap"
             >{layerName}</span
           >
         {/if}
@@ -167,7 +170,7 @@ const actionItems = [
       {#if cardCtx.isNewMode && onEditSelection}
         <button
           type="button"
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-base-content/12 hover:text-neutral-content"
+          class="text-neutral-content/60 hover:bg-base-content/12 hover:text-neutral-content flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
           aria-label="Edit map selection"
           onclick={onEditSelection}
         >
@@ -176,9 +179,12 @@ const actionItems = [
       {:else}
         <Dropdown
           ariaLabel={m.antsy_patient_moth_taste()}
-          triggerClass="h-5 w-5 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content/60 hover:bg-transparent hover:text-neutral-content"
-          triggerIcon={MoreHorizontal}
-          triggerIconClass="h-4 w-4"
+          attached={offsetMenu}
+          triggerClass={offsetMenu
+            ? 'h-11 w-11 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content hover:bg-base-content/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary translate-x-[14px] -translate-y-0.5'
+            : 'h-5 w-5 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content/60 hover:bg-transparent hover:text-neutral-content'}
+          triggerIcon={offsetMenu ? MenuIcon : MoreHorizontal}
+          triggerIconClass={offsetMenu ? 'h-5 w-5' : 'h-4 w-4'}
           contentSide="top"
           contentAlignOffset={-12}
           contentAlign="end"
@@ -191,7 +197,7 @@ const actionItems = [
       class="pointer-events-auto flex w-full items-center justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
       <div
-        class="flex min-w-0 items-center gap-2 font-mono text-xs uppercase text-neutral-content"
+        class="text-neutral-content flex min-w-0 items-center gap-2 font-mono text-xs uppercase"
       >
         <Icon src={Squares2x2} class="h-5 w-5" />
         <span class="text-red-400">Error loading hierarchy</span>
@@ -199,7 +205,7 @@ const actionItems = [
       {#if cardCtx.isNewMode && onEditSelection}
         <button
           type="button"
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-base-content/12 hover:text-neutral-content"
+          class="text-neutral-content/60 hover:bg-base-content/12 hover:text-neutral-content flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition"
           aria-label="Edit map selection"
           onclick={onEditSelection}
         >
@@ -208,9 +214,12 @@ const actionItems = [
       {:else}
         <Dropdown
           ariaLabel={m.antsy_patient_moth_taste()}
-          triggerClass="h-5 w-5 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content/60 hover:bg-transparent hover:text-neutral-content"
-          triggerIcon={MoreHorizontal}
-          triggerIconClass="h-4 w-4"
+          attached={offsetMenu}
+          triggerClass={offsetMenu
+            ? 'h-11 w-11 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content hover:bg-base-content/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary translate-x-[14px] -translate-y-0.5'
+            : 'h-5 w-5 shrink-0 rounded-full border-none bg-transparent p-0 text-neutral-content/60 hover:bg-transparent hover:text-neutral-content'}
+          triggerIcon={offsetMenu ? MenuIcon : MoreHorizontal}
+          triggerIconClass={offsetMenu ? 'h-5 w-5' : 'h-4 w-4'}
           contentSide="top"
           contentAlignOffset={-12}
           contentAlign="end"
