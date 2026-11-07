@@ -39,9 +39,6 @@ const contentLocales = $derived(
 </script>
 
 <div class="flex min-w-0 items-center gap-2">
-  {#if review}
-    <TaskReviewStatusBar {...review} {isCompact} />
-  {/if}
   <LocaleToolbar
     allowAdd={false}
     horizontal
@@ -54,5 +51,8 @@ const contentLocales = $derived(
     onChange={selection => onChange({ ...localeState, ...selection })}
     class="max-w-[min(36rem,calc(100vw-10rem))]"
   />
+  {#if review}
+    <TaskReviewStatusBar {...review} {isCompact} />
+  {/if}
   <hr aria-orientation="vertical" class="bg-border mx-1 h-6 w-px shrink-0 border-0">
 </div>
