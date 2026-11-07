@@ -1,3 +1,4 @@
+import { ImageContextResource } from '#lib/enums.js'
 import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -438,7 +439,7 @@ describe('image.remote', () => {
 
     await expect(
       remote.getImagesForContext({
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature-1',
       }),
     ).rejects.toMatchObject({ status: 403 })
@@ -458,7 +459,7 @@ describe('image.remote', () => {
       })
       await expect(
         remote.getImagesForContext({
-          ctxType: 'feature',
+          ctxType: ImageContextResource.feature,
           ctxId: 'feature-1',
           ctxNarrowingType: 'task',
           ctxNarrowingId: 'task-1',
@@ -494,7 +495,7 @@ describe('image.remote', () => {
     mockGuardedContext.mockResolvedValue({ ...ctx, db })
     await expect(
       remote.getImagesForContext({
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature-1',
         ctxNarrowingType: 'task',
         ctxNarrowingId: 'deleted-task',
@@ -508,7 +509,7 @@ describe('image.remote', () => {
     async narrowing => {
       await expect(
         remote.getImagesForContext({
-          ctxType: 'feature',
+          ctxType: ImageContextResource.feature,
           ctxId: 'feature-1',
           ...narrowing,
         }),
@@ -528,7 +529,7 @@ describe('image.remote', () => {
       }),
     })
     await remote.getImagesForContext({
-      ctxType: 'feature',
+      ctxType: ImageContextResource.feature,
       ctxId: 'feature-1',
       ctxNarrowingType: 'task',
       ctxNarrowingId: 'task-1',
@@ -630,7 +631,7 @@ describe('image.remote', () => {
     await remote.getImageById({ id: 'image' })
     expect(mockToImageEntityResponseShape).toHaveBeenCalledWith(
       allowed,
-      { ctxType: 'feature', ctxId: 'readable' },
+      { ctxType: ImageContextResource.feature, ctxId: 'readable' },
       expect.anything(),
     )
   })
@@ -644,7 +645,7 @@ describe('image.remote', () => {
   it('createImage creates feature-context images', async () => {
     const result = await remote.createImage({
       data: {
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature-1',
         featureImage: {},
       },
@@ -664,7 +665,7 @@ describe('image.remote', () => {
     expect(result).toEqual({
       data: {
         data: { id: 'img-1', publicId: null },
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature-1',
       },
     })
@@ -676,7 +677,7 @@ describe('image.remote', () => {
       '#lib/db/services/imageUpload.js'
     )
     await remote.createImage({
-      data: { ctxType: 'feature', ctxId: 'feature-1', featureImage: {} },
+      data: { ctxType: ImageContextResource.feature, ctxId: 'feature-1', featureImage: {} },
     })
     expect(
       vi.mocked(getFeatureImageCreationScope).mock.invocationCallOrder[0],
@@ -695,13 +696,13 @@ describe('image.remote', () => {
     vi.mocked(getFeatureImageCreationScope).mockResolvedValueOnce(null)
     await expect(
       remote.createImage({
-        data: { ctxType: 'feature', ctxId: 'feature-1', featureImage: {} },
+        data: { ctxType: ImageContextResource.feature, ctxId: 'feature-1', featureImage: {} },
       }),
     ).rejects.toMatchObject({ status: 409 })
     expect(mockCreateUploadedFeatureImage).not.toHaveBeenCalled()
   })
 
-  it.each(['project', 'organisation', 'hub'] as const)(
+  it.each([ImageContextResource.project, ImageContextResource.organisation, ImageContextResource.hub] as const)(
     'creates a legacy %s image through the guarded pointer transaction',
     async ctxType => {
       const snapshot = {
@@ -742,7 +743,7 @@ describe('image.remote', () => {
     mockGetResourceUploadSnapshot.mockResolvedValueOnce(null)
     await expect(
       remote.createImage({
-        data: { ctxType: 'project', ctxId: 'missing', publicId: 'legacy-key' },
+        data: { ctxType: ImageContextResource.project, ctxId: 'missing', publicId: 'legacy-key' },
       }),
     ).rejects.toMatchObject({ status: 409 })
     expect(mockCreateUploadedResourceImage).not.toHaveBeenCalled()
@@ -753,7 +754,7 @@ describe('image.remote', () => {
     await expect(
       remote.setImageIntent({
         id: 'img-1',
-        ctxType: 'project',
+        ctxType: ImageContextResource.project,
         ctxId: 'project-1',
         intent: 'gallery' as never, // Deliberately invalid input exercises server validation.
       }),
@@ -767,7 +768,7 @@ describe('image.remote', () => {
       remote.deleteImage({
         id: 'img-1',
         ctxId: 'feature-1',
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
       }),
     ).rejects.toMatchObject({ status: 404 })
   })
@@ -799,7 +800,7 @@ describe('image.remote', () => {
     expect(mockAuthorizeImageRead).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature-a',
         projectId: 'project',
         organisationId: 'organisation',
@@ -871,7 +872,7 @@ describe('image.remote', () => {
     expect(mockAuthorizeImageRead).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        ctxType: 'project',
+        ctxType: ImageContextResource.project,
         ctxId: 'project',
         projectId: 'project',
         organisationId: 'organisation',
@@ -937,7 +938,7 @@ describe('image.remote', () => {
         const deletion = remote.deleteImage({
           id: 'img-1',
           ctxId: 'feature',
-          ctxType: 'feature',
+          ctxType: ImageContextResource.feature,
         })
         if (fail) {
           if (scenario === 'skip' || scenario === 'stale-scope')
@@ -980,7 +981,7 @@ describe('image.remote', () => {
     const result = await remote.authImageUpload({
       cdn: 'cloudflareR2',
       env: 'local',
-      ctxType: 'feature',
+      ctxType: ImageContextResource.feature,
       ctxId: 'feature-1',
       filename: 'image.jpg',
       contentType: 'image/jpeg',
@@ -997,7 +998,7 @@ describe('image.remote', () => {
     })
   })
 
-  it.each(['project', 'organisation', 'hub'] as const)(
+  it.each([ImageContextResource.project, ImageContextResource.organisation, ImageContextResource.hub] as const)(
     'authImageUpload signs the original %s state before authorization',
     async ctxType => {
       const snapshot = {
@@ -1037,7 +1038,7 @@ describe('image.remote', () => {
       remote.authImageUpload({
         cdn: 'cloudflareR2',
         env: 'local',
-        ctxType: 'project',
+        ctxType: ImageContextResource.project,
         ctxId: 'missing',
         filename: 'image.jpg',
         contentType: 'image/jpeg',
@@ -1047,7 +1048,7 @@ describe('image.remote', () => {
     expect(mockCreatePresignedR2UploadUrl).not.toHaveBeenCalled()
   })
 
-  it.each(['feature', 'project', 'organisation', 'hub'] as const)(
+  it.each([ImageContextResource.feature, ImageContextResource.project, ImageContextResource.organisation, ImageContextResource.hub] as const)(
     'authorizes a %s replacement on a fresh key with the original signed snapshot',
     async ctxType => {
       mockLoadImageById.mockResolvedValueOnce({
@@ -1112,7 +1113,7 @@ describe('image.remote', () => {
         mockVerifyUploadToken.mockResolvedValueOnce({
           publicId: 'new-key',
           env: 'local',
-          ctxType: 'feature',
+          ctxType: ImageContextResource.feature,
           ctxId: 'feature-1',
           replaceImageId: 'img-1',
           replacementSnapshot:
@@ -1254,7 +1255,7 @@ describe('image.remote', () => {
       mockVerifyUploadToken.mockResolvedValue({
         publicId: 'new-key',
         env: 'local',
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature-1',
         replaceImageId: 'img-1',
         replacementSnapshot: {
@@ -1316,7 +1317,7 @@ describe('image.remote', () => {
     await remote.authImageUpload({
       cdn: 'cloudflareR2',
       env: 'local',
-      ctxType: 'feature',
+      ctxType: ImageContextResource.feature,
       ctxId: 'feature-1',
       filename: 'image.jpg',
       contentType: 'image/jpeg',
@@ -1371,7 +1372,7 @@ describe('image.remote', () => {
     const result = await remote.authImageUpload({
       cdn: 'cloudflareR2',
       env: 'production',
-      ctxType: 'feature',
+      ctxType: ImageContextResource.feature,
       ctxId: 'feature-1',
       filename: 'image.jpg',
       contentType: 'image/jpeg',
@@ -1392,8 +1393,8 @@ describe('image.remote', () => {
     const draft = { status: 'saved', proposalId: 'p', candidateRevisionId: 'r', imageRevisionId: 'ir' }
     mockSaveFeatureImageMetadataDraft.mockResolvedValueOnce(draft)
     const result = kind === 'rotation'
-      ? await remote.rotateImage({ id: 'img-1', ctxType: 'feature', ctxId: 'feature-1', imageRevisionId: 'ir-base', rotation: 90 })
-      : await remote.updateImage({ id: 'img-1', ctxType: 'feature', ctxId: 'feature-1', imageRevisionId: 'ir-base', data: { presentationMode: 'cover' } })
+      ? await remote.rotateImage({ id: 'img-1', ctxType: ImageContextResource.feature, ctxId: 'feature-1', imageRevisionId: 'ir-base', rotation: 90 })
+      : await remote.updateImage({ id: 'img-1', ctxType: ImageContextResource.feature, ctxId: 'feature-1', imageRevisionId: 'ir-base', data: { presentationMode: 'cover' } })
     expect(result).toEqual({ data: null, revisionDraft: draft })
     expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
     expect(mockSaveFeatureImageMetadataDraft).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
@@ -1470,7 +1471,7 @@ describe('image.remote', () => {
       mockVerifyUploadToken.mockResolvedValue({
         publicId: 'h/features/feature-1/image-a',
         env: 'local',
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature-1',
         filename: 'image.jpg',
         contentType: 'image/jpeg',
@@ -1483,7 +1484,7 @@ describe('image.remote', () => {
       if (isRetry) {
         mockToImageEnvelope.mockReturnValueOnce({
           image: { id: 'img-1', version: 1000 },
-          ctxType: 'feature',
+          ctxType: ImageContextResource.feature,
           ctxId: 'feature-1',
         } as never)
         mockReadMetadataDocument.mockResolvedValue({
@@ -1616,7 +1617,7 @@ describe('image.remote', () => {
       expect(fetchSpy).not.toHaveBeenCalled()
       expect(result).toMatchObject({
         data: {
-          ctxType: 'feature',
+          ctxType: ImageContextResource.feature,
           ctxId: 'feature-1',
         },
       })
@@ -1637,7 +1638,7 @@ describe('image.remote', () => {
       { failDatabase: false, sameAsset: false, staleContext: true },
       { failDatabase: false, sameAsset: false, missingSnapshot: true },
     ].flatMap(scenario =>
-      (['project', 'organisation', 'hub'] as const).map(ctxType => ({
+      ([ImageContextResource.project, ImageContextResource.organisation, ImageContextResource.hub] as const).map(ctxType => ({
         ...scenario,
         ctxType,
       })),
@@ -2029,7 +2030,7 @@ describe('image.remote', () => {
     const owners = vi.spyOn(editing, 'authorizeLogoOwners').mockResolvedValue(undefined as never)
     try {
       const operation = remote.updateImage({
-        id: 'img-1', ctxType: 'project', ctxId: 'project-1',
+        id: 'img-1', ctxType: ImageContextResource.project, ctxId: 'project-1',
         imageRevisionId: stale ? 'old' : 'current', data: { presentationMode: 'contain' },
       })
       if (stale) await expect(operation).rejects.toMatchObject({ status: 409 })
@@ -2189,7 +2190,7 @@ describe('image.remote', () => {
         )
       const operation = remote.rotateImage({
         id: 'img-1',
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature-1',
         rotation: scenario === 'unchanged' ? 0 : 90,
       })
@@ -2248,7 +2249,7 @@ describe('image.remote', () => {
       expect(mockUpdateImageForContext).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'img-1',
-          ctxType: 'feature',
+          ctxType: ImageContextResource.feature,
           ctxId: 'feature-1',
           data: {
             publicId: 'h/features/feature-1/image-a',
@@ -2410,7 +2411,7 @@ describe('image.remote', () => {
     })
     const result = await remote.rotateImage({
       id: 'img-2',
-      ctxType: 'feature',
+      ctxType: ImageContextResource.feature,
       ctxId: 'feature-2',
       rotation: 90,
     })

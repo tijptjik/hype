@@ -519,11 +519,14 @@ describe('local project property value translations', () => {
         [
           {
             id: 'local',
+            scope: 'project',
+            isEnabled: true,
+            isDefaultEnabled: false,
             key: 'changed',
             component: 'SelectField',
-            i18n: { en: { label: 'Changed' } },
+            i18n: { en: { label: 'Changed', labelGen: false, placeholderGen: false } },
             values: [
-              { id: 'existing', value: 'changed', i18n: { en: { value: 'Rejected' } } },
+              { id: 'existing', value: 'changed', i18n: { en: { value: 'Rejected', valueGen: false } } },
             ],
           } as ProjectPropertyForm,
         ],
@@ -704,13 +707,16 @@ describe('local project property value translations', () => {
       [
         {
           id: 'local',
+          scope: 'project',
+          isEnabled: true,
+          isDefaultEnabled: false,
           key: 'local',
           component: 'SelectField',
           i18n: {},
           values: Array.from({ length: 250 }, (_, rank) => ({
             rank,
             value: `value-${rank}`,
-            i18n: { en: { value: `Translation ${rank}` } },
+            i18n: { en: { value: `Translation ${rank}`, valueGen: false } },
           })),
         } as ProjectPropertyForm,
       ],
@@ -727,6 +733,8 @@ describe('local project property value translations', () => {
       "INSERT INTO propertyValue (id, propertyId, rank, value) VALUES ('existing', 'local', 0, 'existing')",
     )
     const submitted = {
+      isEnabled: true,
+      isDefaultEnabled: false,
       id: 'local',
       scope: 'project',
       projectId: 'project',
