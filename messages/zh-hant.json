@@ -2170,5 +2170,11 @@
   "content_languages_reset": "重設為預設值",
   "content_multilingual_default": "預設顯示內容的多語言值",
   "address_multilingual_default": "預設顯示地址的多語言值",
-  "content_languages_help_named": "{name} 各編輯器中可用的語言及其排序。"
+  "content_languages_help_named": "{name} 各編輯器中可用的語言及其排序。",
+  "image_text_edit": "編輯圖片文字",
+  "image_text_caption": "圖片說明",
+  "image_text_alt": "替代文字",
+  "image_text_unavailable": "這張相片無法編輯文字。",
+  "image_text_load_failed": "無法載入圖片文字。請關閉後再試。",
+  "image_text_save_failed": "無法儲存圖片文字。"
 }

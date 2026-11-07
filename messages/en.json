@@ -2170,5 +2170,11 @@
   "content_languages_reset": "Reset to defaults",
   "content_multilingual_default": "Always show multilingual values for content",
   "address_multilingual_default": "Always show multilingual values for addresses",
-  "content_languages_help_named": "Availability and order of languages in the editors used across {name}."
+  "content_languages_help_named": "Availability and order of languages in the editors used across {name}.",
+  "image_text_edit": "Edit image text",
+  "image_text_caption": "Caption",
+  "image_text_alt": "Alt text",
+  "image_text_unavailable": "Text editing is unavailable for this photo.",
+  "image_text_load_failed": "Could not load image text. Close and try again.",
+  "image_text_save_failed": "Could not save image text."
 }
