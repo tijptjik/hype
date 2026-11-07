@@ -331,7 +331,7 @@ for (const [name, engine] of [
         await result.focus()
         await result.press('Enter')
         await dialog
-          .getByText('both maps use the same scale', { exact: false })
+          .getByRole('group', { name: 'Distance between locations', exact: true })
           .waitFor()
         if (await dialog.getByLabel('Find the existing Feature').count())
           throw Error('Search repeated in merge review')
@@ -345,7 +345,7 @@ for (const [name, engine] of [
         await dialog.getByLabel('Find the existing Feature').fill('community')
         await result.click()
         await dialog
-          .getByText('both maps use the same scale', { exact: false })
+          .getByRole('group', { name: 'Distance between locations', exact: true })
           .waitFor()
         await page.waitForFunction(() =>
           (window as any).__dialogSnapshots.every((snapshot: any) => snapshot.finished),
@@ -360,7 +360,7 @@ for (const [name, engine] of [
           .getByRole('region', { name: 'Keep location', exact: true })
           .waitFor()
         await dialog
-          .getByText('8.4 km apart · both maps use the same scale', { exact: true })
+          .getByRole('group', { name: 'Distance between locations', exact: true }).getByText('8.4 km', { exact: true })
           .waitFor()
         await page.waitForFunction(() => {
           const markers = [...document.querySelectorAll('.maplibregl-marker')]

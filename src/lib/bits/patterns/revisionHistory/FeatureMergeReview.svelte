@@ -20,6 +20,7 @@ import { identityTitle } from './featureIdentity.types'
 import { transitionReviewDialog } from '#lib/bits/core/dialog/dialogTransition.js'
 // ICONS
 import ReplaceIcon from 'virtual:icons/lucide/replace'
+import DistanceIcon from 'virtual:icons/lucide/move-horizontal'
 // TYPES
 import type { IdentitySource } from './featureIdentity.types'
 import type { FeatureIdentitySelection } from '#lib/revisions/featureIdentityPlan.js'
@@ -140,8 +141,8 @@ const separation = $derived.by(() => {
   if (!a || !b) return ''
   const metres = new LngLat(a[0], a[1]).distanceTo(new LngLat(b[0], b[1]))
   return metres >= 1000
-    ? `${(metres / 1000).toFixed(1)} km apart`
-    : `${Math.round(metres)} m apart`
+    ? `${(metres / 1000).toFixed(1)} km`
+    : `${Math.round(metres)} m`
 })
 
 /** Choose an allowed catalogue option while retaining the inspected field's identity.
@@ -246,21 +247,21 @@ function editProperty(
   <div
     class="bg-panel sticky top-0 z-10 col-span-3 grid grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] gap-x-2 pb-3 sm:gap-x-4"
   >
-    <header class="bg-muted/20 border-border/60 min-w-0 space-y-2 rounded-md border px-3 py-3 text-right sm:px-4">
+    <header class="border-border/50 bg-surface/40 min-w-0 space-y-2 rounded-lg border px-3 py-4 text-right sm:px-5">
       <span
-        class="text-foreground/80 block text-2xl leading-none font-medium tracking-tight sm:text-3xl"
+        class="text-foreground/70 block text-2xl leading-none font-normal tracking-[-0.035em] sm:text-3xl"
         >Discard</span
       >
-      <h3 class="text-sm leading-snug font-medium break-words whitespace-normal">
+      <h3 class="text-[13px] leading-snug font-medium break-words whitespace-normal">
         {identityTitle(discard)}
       </h3>
     </header>
     <span></span>
     <header
-      class="group/keep border-primary/40 bg-linear-to-br from-[color-mix(in_oklab,var(--color-primary)_40%,black)] to-[color-mix(in_oklab,var(--color-primary)_25%,black)] text-white relative min-w-0 space-y-2 rounded-md border px-3 py-3 sm:px-4"
+      class="group/keep border-primary/35 bg-[color-mix(in_oklab,var(--color-primary)_18%,#171923)] text-white relative min-w-0 space-y-2 rounded-lg border border-l-2 border-l-primary px-3 py-4 sm:px-5"
     >
       <span
-        class="block pr-7 text-2xl leading-none font-medium tracking-tight sm:text-3xl"
+        class="block pr-7 text-2xl leading-none font-normal tracking-[-0.035em] sm:text-3xl"
         >Keep</span
       >
       <button
@@ -272,12 +273,20 @@ function editProperty(
       >
         <ReplaceIcon class="size-4" />
       </button>
-      <h3 class="text-sm leading-snug font-medium break-words whitespace-normal">{identityTitle(keep)}</h3>
+      <h3 class="text-[13px] leading-snug font-medium break-words whitespace-normal">{identityTitle(keep)}</h3>
     </header>
   </div>
   {#each [discard, keep] as record, index}
     {#if index === 1}
-      <span></span>
+      {#if separation}
+        <div role="group" aria-label="Distance between locations"
+          class="text-muted-foreground flex min-w-0 flex-col items-center justify-center gap-1.5 self-stretch text-center text-[10px] font-medium sm:text-xs">
+          <span class="whitespace-nowrap tabular-nums">{separation}</span>
+          <DistanceIcon class="h-4 w-6 opacity-60" aria-hidden="true" />
+        </div>
+      {:else}
+        <span></span>
+      {/if}
     {/if}
     <div class="border-border min-w-0 overflow-hidden rounded-lg border">
       {#if coordinates(record)}
@@ -296,12 +305,6 @@ function editProperty(
       {/if}
     </div>
   {/each}
-  {#if separation}
-    <p class="text-muted-foreground col-span-3 text-center text-xs font-medium">
-      {separation}
-      · both maps use the same scale
-    </p>
-  {/if}
   {#if categoryError}
     <p role="status" class="text-error col-span-3 text-sm">{categoryError}</p>
   {/if}
