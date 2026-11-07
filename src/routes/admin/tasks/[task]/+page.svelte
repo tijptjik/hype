@@ -442,7 +442,8 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
     })
   }
 
-  if (featureTitle && featureId) {
+  // Pending creation tasks describe proposals, including legacy provisional Features.
+  if (featureTitle && featureId && !(task.type === 'newFeature' && !task.isReviewed)) {
     crumbs.push({
       name: featureTitle,
       href: `/admin/${ResourcePath[FirstClassResource.feature]}/${featureId}`,
