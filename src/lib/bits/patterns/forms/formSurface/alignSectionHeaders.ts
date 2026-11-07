@@ -10,7 +10,20 @@ const headerSelector = '.bits-form__section-header'
 export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
   let frame = 0
   let headers: HTMLElement[] = []
-  const previous = new Map<HTMLElement, string>()
+  const previous = new Map<HTMLElement, { value: string; priority: string }>()
+
+  /** Restore the authored inline minimum, including its cascade priority.
+   * @param header Header being measured or released.
+   * @returns Nothing.
+   */
+  function restoreMinimum(header: HTMLElement): void {
+    const minimum = previous.get(header)
+    header.style.setProperty(
+      'min-height',
+      minimum?.value ?? '',
+      minimum?.priority ?? '',
+    )
+  }
 
   /** Queue one measurement after the current DOM updates.
    * @returns Nothing.
@@ -24,7 +37,7 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
    */
   function align(): void {
     frame = 0
-    for (const header of headers) header.style.minHeight = previous.get(header) ?? ''
+    for (const header of headers) restoreMinimum(header)
     const rows: { top: number; height: number; headers: HTMLElement[] }[] = []
     for (const header of headers) {
       const box = header.getBoundingClientRect()
@@ -37,7 +50,10 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
     }
     for (const row of rows) {
       if (row.headers.length < 2) continue
-      for (const header of row.headers) header.style.minHeight = `${row.height}px`
+      // Shared search headers have important minimums; the measured row must win.
+      for (const header of row.headers) {
+        header.style.setProperty('min-height', `${row.height}px`, 'important')
+      }
     }
   }
 
@@ -50,15 +66,20 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
     headers = Array.from(surface.querySelectorAll<HTMLElement>(headerSelector)).filter(
       header => header.closest('[data-form-surface]') === surface,
     )
-    for (const [header, minimum] of previous) {
+    for (const [header] of previous) {
       if (!headers.includes(header)) {
-        header.style.minHeight = minimum
+        restoreMinimum(header)
         previous.delete(header)
       }
     }
     resize.observe(surface)
     for (const header of headers) {
-      if (!previous.has(header)) previous.set(header, header.style.minHeight)
+      if (!previous.has(header)) {
+        previous.set(header, {
+          value: header.style.getPropertyValue('min-height'),
+          priority: header.style.getPropertyPriority('min-height'),
+        })
+      }
       resize.observe(header)
       // Intrinsic content can shrink while the synchronized header stays tall.
       for (const child of header.children) resize.observe(child)
@@ -79,7 +100,7 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
       cancelAnimationFrame(frame)
       resize.disconnect()
       mutation.disconnect()
-      for (const [header, minimum] of previous) header.style.minHeight = minimum
+      for (const [header] of previous) restoreMinimum(header)
     },
   }
 }
