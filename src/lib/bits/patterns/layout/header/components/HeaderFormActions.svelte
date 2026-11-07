@@ -125,7 +125,8 @@ function resolveIconClasses(icon?: unknown): string {
       disabled={saveAction.disabled}
       onClick={() => saveAction.onClick?.()}
     />
-  {:else if publishAction}
+  {/if}
+  {#if publishAction}
     {#if publishAction.kind === 'button'}
       <Button
         size="sm"

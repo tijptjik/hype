@@ -7,6 +7,7 @@ import { publicationSqlite } from './fixtures/publicationSqlite'
 import { lifecycleFixture } from './fixtures/featureLifecycle'
 import {
   initializeFeatureRevision,
+  acceptFeatureRevisionProposal,
   createFeatureRevisionProposal,
   submitFeatureRevisionProposal,
 } from '#lib/db/services/featureRevision.js'
@@ -150,9 +151,73 @@ it('checks the task snapshot before projection while retaining reviewed-photo gu
     ).toBe(false)
     expect(await reviewInitialFeatureContribution(db, input)).toBe(true)
     expect(
+      f.sqlite
+        .prepare(
+          "SELECT isPublished,localIsPublished,publisherId,publishedAt FROM feature WHERE id='f'",
+        )
+        .get(),
+    ).toEqual({
+      isPublished: 0,
+      localIsPublished: 0,
+      publisherId: null,
+      publishedAt: null,
+    })
+    expect(
+      f.sqlite
+        .prepare(
+          "SELECT publishedRevisionId,generation FROM featureRevisionHead WHERE featureId='f'",
+        )
+        .get(),
+    ).toEqual({
+      publishedRevisionId: null,
+      generation: 1,
+    })
+    expect(
+      f.sqlite
+        .prepare(
+          'SELECT count(*) n FROM featureRevisionPublication WHERE revisionId IS NOT NULL',
+        )
+        .get()!.n,
+    ).toBe(0)
+    expect(
       f.sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='f'").get()!.modifiedAt,
     ).not.toBe('original')
     expect(await reviewInitialFeatureContribution(db, input)).toBe(false)
+    // A separate explicit publish can select the exact privately accepted content.
+    const acceptedId = f.sqlite
+      .prepare(
+        "SELECT previousRevisionId FROM featureRevisionPublication WHERE featureId='f' AND generation=1",
+      )
+      .get()!.previousRevisionId as string
+    const acceptedContent = JSON.parse(
+      f.sqlite
+        .prepare('SELECT content FROM featureRevision WHERE id=?')
+        .get(acceptedId)!.content as string,
+    )
+    const staffDraft = (await createFeatureRevisionProposal(db, {
+      ...command,
+      baseRevisionId: acceptedId,
+      content: acceptedContent,
+    }))!
+    expect(
+      await acceptFeatureRevisionProposal(db, {
+        ...command,
+        proposalId: staffDraft.proposalId,
+        expectedCandidateRevisionId: staffDraft.candidateRevisionId,
+        expectedPublishedRevisionId: null,
+        expectedComparisonRevisionId: acceptedId,
+        expectedGeneration: 1,
+        publicationIntent: 'republish',
+        acceptOwnDraft: true,
+        validate: () => [],
+        project: () => ({ statements: [], verify: sql`1` }),
+      }),
+    ).toMatchObject({ status: 'accepted' })
+    expect(
+      f.sqlite
+        .prepare("SELECT isPublished,localIsPublished FROM feature WHERE id='f'")
+        .get(),
+    ).toEqual({ isPublished: 1, localIsPublished: 1 })
     expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
   } finally {
     source.sqlite.close()

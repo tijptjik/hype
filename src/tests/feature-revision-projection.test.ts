@@ -2256,7 +2256,7 @@ describe('enrolled Feature projection guards', () => {
           .prepare("SELECT isPublished,isArchived FROM feature WHERE id='contribution'")
           .get(),
       ).toEqual({
-        isPublished: Number(action === 'accept'),
+        isPublished: 0,
         isArchived: Number(action === 'reject'),
       })
       expect(
@@ -2271,7 +2271,7 @@ describe('enrolled Feature projection guards', () => {
               "SELECT isPublished FROM featureImage WHERE featureId='contribution'",
             )
             .get()?.isPublished,
-        ).toBe(1)
+        ).toBe(0)
       expect(
         f.sqlite.prepare('SELECT count(*) n FROM featureRevisionWriteScope').get()?.n,
       ).toBe(0)

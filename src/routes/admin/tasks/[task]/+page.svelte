@@ -563,7 +563,12 @@ async function handleReview(
 
     if (action === 'accept' && updatedTask.featureId) {
       adminCtx.invalidateAndRefresh(FirstClassResource.task)
-      navigateOnAdmin(adminCtx, FirstClassResource.feature, updatedTask.featureId)
+      navigateOnAdmin(
+        adminCtx,
+        FirstClassResource.feature,
+        updatedTask.featureId,
+        'core',
+      )
       return true
     }
 

@@ -19,7 +19,7 @@ function setup(type: TaskFeatureReviewCommit['task']['type'] = 'newFeature') {
     organisationId TEXT, type TEXT, modifiedAt TEXT, isReviewed INTEGER, isDraft INTEGER,
     reviewerId TEXT, reviewReason TEXT, reviewOutcome TEXT, reviewAction TEXT);
     CREATE TABLE feature (id TEXT PRIMARY KEY, projectId TEXT, modifiedAt TEXT,
-      isPendingReview INTEGER, isArchived INTEGER, isIntangible INTEGER, isPublished INTEGER, isVisitable INTEGER);
+      isPendingReview INTEGER, isArchived INTEGER, isIntangible INTEGER, isPublished INTEGER, isVisitable INTEGER, localIsPublished INTEGER);
     CREATE TABLE project (id TEXT PRIMARY KEY, organisationId TEXT);
     CREATE TABLE organisation (id TEXT PRIMARY KEY, hubId TEXT);
     INSERT INTO project VALUES ('project', 'org');
@@ -28,7 +28,7 @@ function setup(type: TaskFeatureReviewCommit['task']['type'] = 'newFeature') {
     .prepare('INSERT INTO task VALUES (?, ?, ?, ?, ?, ?, 0, 0, null, null, null, null)')
     .run('task', 'feature', 'project', 'org', type, 'task-v1')
   sqlite
-    .prepare('INSERT INTO feature VALUES (?, ?, ?, ?, 0, 0, ?, 1)')
+    .prepare('INSERT INTO feature VALUES (?, ?, ?, ?, 0, 0, ?, 1, null)')
     .run(
       'feature',
       'project',
@@ -81,12 +81,12 @@ describe('atomic feature-changing task reviews', () => {
     {
       type: 'newFeature',
       action: 'accept',
-      patch: { isPendingReview: 0, isArchived: 0 },
+      patch: { isPendingReview: 0, isArchived: 0, isPublished: 0, localIsPublished: 0 },
     },
     {
       type: 'newFeature',
       action: 'reject',
-      patch: { isPendingReview: 0, isArchived: 1 },
+      patch: { isPendingReview: 0, isArchived: 1, isPublished: 0, localIsPublished: 0 },
     },
     { type: 'reportedMissing', action: 'setIntangible', patch: { isIntangible: 1 } },
     {

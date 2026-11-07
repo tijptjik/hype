@@ -881,7 +881,7 @@ export function useAdminHeaderModel(
     }
   })
   const publishAction = $derived.by((): HeaderActionConfig | null => {
-    if (isEditing || isDeleted || !showPublishAction) return null
+    if (isDeleted || !showPublishAction) return null
 
     if (canPublish) {
       return {

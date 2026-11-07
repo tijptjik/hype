@@ -356,12 +356,13 @@ export async function submitFeatureRevisionProposal(
 }
 
 /**
- * Accepts and publishes against exactly the comparison inspected by the reviewer.
+ * Accepts against exactly the comparison inspected by the reviewer, optionally deferring initial publication.
  * @param db Request database.
  * @param input Authorized publication scope, reviewed tokens, domain validation and projection builder.
  * @returns Accepted revision, explicit conflict/validation failure, or stale evidence.
  * @remarks Projection writes and verification share the transaction with both heads,
- * review evidence and publication history. This service is never a client-payload API.
+ * review evidence and publication history. Initial task acceptance can retain a private head.
+ * This service is never a client-payload API.
  */
 export async function acceptFeatureRevisionProposal(
   db: Database,
@@ -377,6 +378,8 @@ export async function acceptFeatureRevisionProposal(
     // Ordinary contributor acceptance updates an existing publication. Creating the
     // first publication requires a separately authorized, explicit publish command.
     publicationIntent?: 'update' | 'initial' | 'republish'
+    /** Accept initial task content privately; a later explicit command publishes it. */
+    deferInitialPublication?: boolean
     // Explicit republication compares against the last accepted revision, never a
     // contributor-selected old base or an arbitrary latest draft.
     expectedComparisonRevisionId?: string
@@ -431,6 +434,13 @@ export async function acceptFeatureRevisionProposal(
         input.project(content, revisionId),
     })
   }
+  if (
+    input.deferInitialPublication &&
+    (input.publicationIntent !== 'initial' ||
+      input.expectedPublishedRevisionId !== null ||
+      input.expectedGeneration !== 0)
+  )
+    return { status: 'stale' }
   // Reject stale or revoked review scope before returning any immutable comparison data.
   // This is only a read preflight; the same predicates are rechecked inside the batch.
   const inspectedHead = await db
@@ -660,18 +670,20 @@ export async function acceptFeatureRevisionProposal(
     changeSetId: change.id,
     resolutions: input.resolutions ?? [],
   }
-  // Commit public data, provenance and pointers together; a failed verification rolls back all.
+  // Commit accepted data, provenance and pointers together; a failed verification rolls back all.
   statements.push(
     ...projection.statements,
     db
       .update(feature)
       .set({
-        isPublished: true,
-        localIsPublished: true,
+        isPublished: !input.deferInitialPublication,
+        localIsPublished: !input.deferInitialPublication,
         isDraft: false,
         isPendingReview: false,
-        publisherId: input.publisherUserId ?? null,
-        publishedAt,
+        publisherId: input.deferInitialPublication
+          ? null
+          : (input.publisherUserId ?? null),
+        publishedAt: input.deferInitialPublication ? null : publishedAt,
         // Preserve the projection's edit fence even when two writes share a clock tick.
         modifiedAt: sql`CASE WHEN ${feature.modifiedAt} >= ${publishedAt}
           THEN COALESCE(strftime('%Y-%m-%dT%H:%M:%fZ',${feature.modifiedAt},'+0.001 seconds'),${publishedAt})
@@ -681,7 +693,7 @@ export async function acceptFeatureRevisionProposal(
     db
       .update(featureRevisionHead)
       .set({
-        publishedRevisionId: revisionId,
+        publishedRevisionId: input.deferInitialPublication ? null : revisionId,
         generation: input.expectedGeneration + 1,
       })
       .where(eq(featureRevisionHead.featureId, input.featureId)),
@@ -698,8 +710,11 @@ export async function acceptFeatureRevisionProposal(
     db.insert(featureRevisionPublication).values({
       id: crypto.randomUUID(),
       featureId: input.featureId,
-      previousRevisionId: input.expectedPublishedRevisionId,
-      revisionId,
+      // A private head retains the accepted comparison for the later publish command.
+      previousRevisionId: input.deferInitialPublication
+        ? revisionId
+        : input.expectedPublishedRevisionId,
+      revisionId: input.deferInitialPublication ? null : revisionId,
       generation: input.expectedGeneration + 1,
       changeSetId: change.id,
     }),

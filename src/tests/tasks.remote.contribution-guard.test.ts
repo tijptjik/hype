@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-vi.mock('#lib/db/services/featureLifecycle.js', () => ({ hasFeatureLifecycleStorage: vi.fn().mockResolvedValue(false) }))
-vi.mock('#lib/db/services/featureLifecycleCreationTask.js', () => ({ submitFeatureCreationTask: vi.fn() }))
+vi.mock('#lib/db/services/featureLifecycle.js', () => ({
+  hasFeatureLifecycleStorage: vi.fn().mockResolvedValue(false),
+}))
+vi.mock('#lib/db/services/featureLifecycleCreationTask.js', () => ({
+  submitFeatureCreationTask: vi.fn(),
+}))
 
 const reviewMocks = vi.hoisted(() => ({
   loadTask: vi.fn(),
@@ -53,7 +57,8 @@ vi.mock('#lib/i18n.js', () => ({ getLocale: vi.fn() }))
 vi.mock('#lib/api/index.js', () => ({ getValidQueryParams: vi.fn() }))
 vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeTaskReadForProbe: reviewMocks.authorizeTaskReadForProbe,
-  authorizeFeaturePublishForSubmission: reviewMocks.authorizeFeaturePublishForSubmission,
+  authorizeFeaturePublishForSubmission:
+    reviewMocks.authorizeFeaturePublishForSubmission,
 }))
 vi.mock('#lib/db/zod/schema/task.js', () => ({
   BeginMissingReportDraftSchema: {},
@@ -68,7 +73,9 @@ vi.mock('#lib/db/zod/schema/task.js', () => ({
   SubmitNewFeatureSchema: {},
   SubmitNewPhotosSchema: {},
 }))
-vi.mock('#lib/db/services/featureUploadEvidence.js',()=>({hasFeatureTaskTransfer:reviewMocks.hasFeatureTaskTransfer}))
+vi.mock('#lib/db/services/featureUploadEvidence.js', () => ({
+  hasFeatureTaskTransfer: reviewMocks.hasFeatureTaskTransfer,
+}))
 vi.mock('#lib/db/services/task.js', () => reviewMocks)
 vi.mock('#lib/db/services/feature.js', () => reviewMocks)
 vi.mock('#lib/db/services/layer.js', () => reviewMocks)
@@ -260,14 +267,35 @@ describe('completed task write guard', () => {
     expect(reviewMocks.publishImages).not.toHaveBeenCalled()
   })
 
-  it('requires Feature publication authority before accepting an initial contribution', async () => {
-    reviewMocks.loadTask.mockResolvedValue({ id: 'task', featureId: 'feature', type: 'newFeature', isDraft: false, isReviewed: false })
-    reviewMocks.probeFeatureForUpdate.mockResolvedValue({ id: 'feature', modifiedAt: 'v1' })
-    reviewMocks.authorizeFeaturePublishForSubmission.mockReturnValue({ allowed: false, code: 'INSUFFICIENT_ROLE' })
-    await expect(reviewHandler({ id: 'task', action: 'accept' }, {
-      db: 'db', user: {}, userId: 'reviewer', event: { locals: { hub: {} } },
-    })).rejects.toMatchObject({ status: 403 })
-    expect(reviewMocks.commitTaskFeatureReview).not.toHaveBeenCalled()
+  it('accepts initial content privately without requiring publication authority', async () => {
+    reviewMocks.loadTask.mockResolvedValue({
+      id: 'task',
+      featureId: 'feature',
+      type: 'newFeature',
+      isDraft: false,
+      isReviewed: false,
+    })
+    reviewMocks.probeFeatureForUpdate.mockResolvedValue({
+      id: 'feature',
+      modifiedAt: 'v1',
+    })
+    reviewMocks.authorizeFeaturePublishForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    await expect(
+      reviewHandler(
+        { id: 'task', action: 'accept' },
+        {
+          db: 'db',
+          user: {},
+          userId: 'reviewer',
+          event: { locals: { hub: {} } },
+        },
+      ),
+    ).resolves.toMatchObject({ id: 'task' })
+    expect(reviewMocks.commitTaskFeatureReview).toHaveBeenCalledOnce()
+    expect(reviewMocks.authorizeFeaturePublishForSubmission).not.toHaveBeenCalled()
   })
 
   it.each(['newFeature', 'reportedMissing'] as const)(
@@ -376,7 +404,10 @@ describe('task draft finalization recovery', () => {
             },
           },
         },
-        db: { get: vi.fn().mockResolvedValue({ n: 0 }), query: { task: { findFirst: vi.fn(async () => draft) } } },
+        db: {
+          get: vi.fn().mockResolvedValue({ n: 0 }),
+          query: { task: { findFirst: vi.fn(async () => draft) } },
+        },
       }
       reviewMocks.commitTaskDraftFinalization.mockResolvedValue(undefined)
       await expect(finalizeHandler({ id: 'task' }, ctx)).rejects.toMatchObject({
@@ -426,7 +457,10 @@ describe('task draft finalization recovery', () => {
             },
           },
         },
-        db: { get: vi.fn().mockResolvedValue({ n: 0 }), query: { task: { findFirst: vi.fn(async () => ({ ...draft })) } } },
+        db: {
+          get: vi.fn().mockResolvedValue({ n: 0 }),
+          query: { task: { findFirst: vi.fn(async () => ({ ...draft })) } },
+        },
       }
       reviewMocks.updateTask.mockImplementation(async (_db, patch) => {
         Object.assign(draft, patch)

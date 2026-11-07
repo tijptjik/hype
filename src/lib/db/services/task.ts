@@ -724,7 +724,12 @@ export const commitTaskFeatureReview = async (
     throw error(400, 'INVALID_TASK_ACTION')
   }
   const featureData = isNewFeature
-    ? { isPendingReview: false, isArchived: input.action === 'reject' }
+    ? {
+        isPendingReview: false,
+        isArchived: input.action === 'reject',
+        isPublished: false,
+        localIsPublished: false,
+      }
     : input.action === 'setIntangible'
       ? { isIntangible: true }
       : input.action === 'setUnpublished'

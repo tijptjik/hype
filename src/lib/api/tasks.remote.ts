@@ -23,7 +23,6 @@ import {
   authorizeTaskListForContext,
   authorizeTaskReadForProbe,
   authorizeTaskReassignForProbe,
-  authorizeFeaturePublishForSubmission,
   authorizeFeatureCreateForSubmission,
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
@@ -944,15 +943,7 @@ export const reviewTask = guardedCommand(
 
       const featureProbe = await probeFeatureForUpdate(ctx.db, rawTask.featureId as Id)
       if (!featureProbe) throw error(404, 'FEATURE_NOT_FOUND')
-      // Initial revision acceptance publishes the selected content and therefore needs publication authority.
-      if (params.action === 'accept') {
-        const publish = authorizeFeaturePublishForSubmission({
-          user: ctx.user,
-          userRoles: ctx.userRoles,
-          resource: featureProbe,
-        })
-        if (!publish.allowed) throw error(403, publish.code ?? 'INSUFFICIENT_ROLE')
-      }
+      // Acceptance retains private content; the editor owns explicit publication.
 
       const persisted = await commitTaskFeatureReview(ctx.db, {
         imageReview: params.imageReview,

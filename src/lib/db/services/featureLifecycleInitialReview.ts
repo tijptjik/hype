@@ -114,7 +114,9 @@ export async function reviewMigratedInitialContribution(
     guard,
     expectedRevisionId: current.revisionId,
     expectedVersion: current.version,
-    state: input.accept ? undefined : { isArchived: true, isPublished: false },
+    state: input.accept
+      ? { isPublished: false }
+      : { isArchived: true, isPublished: false },
     derive: () => content,
     validate: () => [],
     attachmentGuard: imageReview.review?.reviewId

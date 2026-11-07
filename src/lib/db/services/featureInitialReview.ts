@@ -34,7 +34,7 @@ import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
 
 /**
- * Reviews a new identity's frozen content and photo evidence as one explicit initial publication.
+ * Reviews a new identity's frozen content and photo evidence without publishing the accepted Feature.
  * @param db Request database.
  * @param input Authorized task reviewer, inspected source/task guard and task-completion statements.
  * @returns Null for a legacy identity, otherwise the guarded review outcome.
@@ -133,7 +133,7 @@ export async function reviewInitialFeatureContribution(
         candidateRevisionId: upload.candidateRevisionId,
         comparedRevisionId: initial.baseRevisionId,
         resultingRevisionId: input.accept
-          ? sql`(SELECT publishedRevisionId FROM featureRevisionHead WHERE featureId=${input.featureId})`
+          ? sql`(SELECT resultingRevisionId FROM featureRevisionReview WHERE proposalId=${initial.proposalId} AND action='accepted' ORDER BY rowid DESC LIMIT 1)`
           : null,
         action: input.accept ? 'accepted' : 'rejected',
         changeSetId: change.id,
@@ -169,7 +169,7 @@ export async function reviewInitialFeatureContribution(
   const gallery = parseFeatureRevisionSource(source.snapshot).galleryLinks
   previous.gallery.order = gallery.map(row => String(row.imageId))
   // Legacy submissions may already have private gallery links. Compare their actual
-  // visibility/intent before adopting the submitted photo candidate on publication.
+  // visibility/intent before adopting the submitted photo candidate on acceptance.
   previous.gallery.entries = Object.fromEntries(
     gallery.map(row => {
       const id = String(row.imageId),
@@ -196,6 +196,7 @@ export async function reviewInitialFeatureContribution(
     expectedComparisonRevisionId: initial.baseRevisionId,
     expectedGeneration: 0,
     publicationIntent: 'initial',
+    deferInitialPublication: true,
     mergePolicy: FEATURE_CONTENT_MERGE_POLICY,
     validate: value =>
       FeatureRevisionContentSchema.safeParse(value).success
