@@ -72,7 +72,11 @@ $effect(() => {
   }}
 >
   <Dialog.Portal>
-    <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm" />
+    <!-- The scrim stays live while only the dialog participates in size transitions. -->
+    <Dialog.Overlay
+      data-review-scrim
+      class="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm"
+    />
     <Dialog.Content
       style={`view-transition-name: ${shown ? REVIEW_DIALOG_TRANSITION : 'none'}`}
       onEscapeKeydown={event => {
@@ -119,3 +123,10 @@ $effect(() => {
     </Dialog.Content>
   </Dialog.Portal>
 </Dialog.Root>
+
+<style>
+/* Capture only the named dialog; page and scrim keep rendering continuously. */
+:global(:root[data-review-transition]) {
+  view-transition-name: none;
+}
+</style>

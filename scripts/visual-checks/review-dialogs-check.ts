@@ -138,6 +138,7 @@ for (const [name, engine] of [
               const current = document.querySelector(
                 '[style*="view-transition-name: feature-review-dialog"]',
               )
+              const scrim = document.querySelector('[data-review-scrim]')
               const snapshot: any = {
                 before: current?.tagName ?? null,
                 beforeBox: current?.getBoundingClientRect().toJSON(),
@@ -148,10 +149,13 @@ for (const [name, engine] of [
                 const next = document.querySelector('[role="dialog"]')
                 snapshot.after = next?.getAttribute('style') ?? null
                 snapshot.afterBox = next?.getBoundingClientRect().toJSON()
+                snapshot.sameScrim = Boolean(scrim && scrim === document.querySelector('[data-review-scrim]'))
               })
               void transition.ready.then(
                 () => {
                   snapshot.ready = true
+                  snapshot.rootCapture = getComputedStyle(document.documentElement).viewTransitionName
+                  snapshot.scrimCapture = scrim ? getComputedStyle(scrim).viewTransitionName : 'none'
                 },
                 () => {
                   snapshot.ready = false
@@ -291,9 +295,17 @@ for (const [name, engine] of [
         await page.screenshot({
           path: `${directory}/${name}-${theme}-${width}-duplicate.png`,
         })
+        const sampleScrim = name === 'chromium' && width === 1280 && theme === 'breadline-light'
+        if (sampleScrim) await page.screenshot({ path: `${directory}/scrim-before.png`, clip: { x: 4, y: 4, width: 24, height: 24 } })
         await dialog
           .getByRole('button', { name: 'Merge with existing', exact: true })
           .click()
+        if (sampleScrim) {
+          for (let frame = 0; frame < 4; frame++) {
+            await page.screenshot({ path: `${directory}/scrim-morph-${frame}.png`, clip: { x: 4, y: 4, width: 24, height: 24 } })
+            await page.waitForTimeout(35)
+          }
+        }
         await dialog.getByLabel('Find the existing Feature').fill('community')
         const result = page.locator('[data-entity-id="primary"]')
         await result.waitFor()
@@ -481,6 +493,9 @@ for (const [name, engine] of [
         )
           throw Error('Gallery choices were lost')
         const snapshots = await page.evaluate(() => (window as any).__dialogSnapshots)
+        const sizeChanges = snapshots.filter((snapshot: any) => snapshot.ready && snapshot.before === 'DIV' && snapshot.after?.includes('feature-review-dialog'))
+        if (sizeChanges.some((snapshot: any) => !snapshot.sameScrim || snapshot.rootCapture !== 'none' || snapshot.scrimCapture !== 'none'))
+          throw Error('Dialog size changes must keep the page and scrim live')
         if (
           (await page.evaluate(() => Boolean(document.startViewTransition))) &&
           !snapshots.some(
