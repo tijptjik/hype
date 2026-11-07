@@ -17,11 +17,14 @@ earlier checkpoints:
    publication.
 2. Staff Save applies accepted content immediately while preserving visibility. There
    are no staff draft proposals. Publish/unpublish only exposes or hides accepted
-   content. External proposed changes are reviewed in their task flow. The Feature
-   Updates tab is now read-only History. Split creates two unpublished successors; Merge
-   preserves the existing primary's identity and visibility. Duplicate task review
-   merges selected evidence and completes the task atomically, or discards it. Redirect
-   choices persist independently of current destination visibility.
+   content. Staff gallery uploads and replacements also apply immediately on both the
+   compatibility revision-head schema and the lifecycle schema, with immutable
+   asset/history pins and replay receipts; task contribution evidence stays in review.
+   External proposed changes are reviewed in their task flow. The Feature Updates tab is
+   now read-only History. Split creates two unpublished successors; Merge preserves the
+   existing primary's identity and visibility. Duplicate task review merges selected
+   evidence and completes the task atomically, or discards it. Redirect choices persist
+   independently of current destination visibility.
 3. Review shared Organisation/Location corrections separately from a contributor's
    Feature proposal. A linked-feature form currently can create such corrections via
    `saveLinkedFeatureForm`; this side effect must never occur while saving a proposal. A
