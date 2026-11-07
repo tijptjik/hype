@@ -1,3 +1,9 @@
+// IMAGE INTENT POLICY
+import {
+  DEFAULT_IMAGE_INTENTS,
+  type ImageIntentDefinition,
+} from '#lib/images/intents.js'
+import { getImageIntentOptions } from '#lib/api/image.remote.js'
 // SVELTE
 import { getContext, setContext } from 'svelte'
 import { SvelteSet, SvelteMap } from 'svelte/reactivity'
@@ -257,6 +263,8 @@ type SingleImageResourceCacheEntry = {
  * Central image-viewer state for context-aware image loading, uploads, staging, and mutations.
  */
 export class ImageCtx {
+  intentOptions = $state<ImageIntentDefinition[]>([...DEFAULT_IMAGE_INTENTS])
+  autoPublishUnclassified = $state(true)
   isAdminMode: boolean = false
   readonly appCtx: Pick<
     ResourceViewCtx,
@@ -326,6 +334,8 @@ export class ImageCtx {
 
   private handleRefreshImagesEvent = (event: Event) => {
     const customEvent = event as CustomEvent
+    // Catalogue saves invalidate every mounted gallery, including inherited Project policies.
+    if (!customEvent.detail) { void this.refreshImages(); return }
     // Only refresh if we have a context that matches the published resource
     if (this.state.context?.ctxType && this.state.context?.ctxId) {
       const { resourceType, resourceId } = customEvent.detail
@@ -899,7 +909,7 @@ export class ImageCtx {
         return {
           ctxType,
           ctxId,
-          intent: 'general',
+          intent: 'undefined',
           isPublished: false,
           publishedAt: null,
           image: {
@@ -2031,6 +2041,17 @@ export class ImageCtx {
       throw new Error('No context type or ID provided')
     }
 
+    const context = this.state.context
+    const policy = await refreshRemoteQuery(
+      getImageIntentOptions({
+        ctxType: context.ctxType!,
+        ctxId: context.ctxId!,
+        meta: this.isAdminMode ? { isAdminRequest: true } : undefined,
+      }),
+    )
+    if (this.state.context !== context) return []
+    this.intentOptions = policy.intents
+    this.autoPublishUnclassified = policy.autoPublishUnclassified
     const result = await this.fetchImagesFromCache(
       this.state.context.ctxType,
       this.state.context.ctxId,
@@ -2671,9 +2692,8 @@ export class ImageCtx {
     newIntent: Intent,
     publishFromIntent = true,
   ): Promise<void> {
-    const publicIntents = ['canonical', 'closeUp', 'context', 'general'] as const
     const isPublished = publishFromIntent
-      ? publicIntents.includes(newIntent as (typeof publicIntents)[number])
+      ? this.intentOptions.find(intent => intent.id === newIntent)?.isPublished
       : undefined
     const ctx = this.getCtx()
     const featureId = ctx.ctxType === 'feature' ? ctx.ctxId : undefined
@@ -2690,7 +2710,7 @@ export class ImageCtx {
         ctxId: ctx.ctxId,
         intent: newIntent,
         featureId,
-        ...(isPublished !== undefined ? { isPublished } : {}),
+
         meta: { isAdminRequest: true },
       })
       // Navigation must not redirect this mutation's refresh into another resource.
@@ -3106,6 +3126,7 @@ export class ImageCtx {
     const sortedApiImages = sortImages(
       apiImages.map(image => this.toSortableImage(image)),
       this.isAdminMode,
+      this.intentOptions.map(intent => intent.id),
     )
       .map(sorted => apiImages.find(item => item.image.id === sorted.id))
       .filter(isValidImageEnvelope)
@@ -3121,7 +3142,13 @@ export class ImageCtx {
     const map = new SvelteMap<Id, ImageCtxEnvelope>()
 
     for (const image of [...sortedApiImages, ...stagedImages]) {
-      map.set(image.image.id, image)
+      map.set(image.image.id, {
+        ...image,
+        intentLabel:
+          this.intentOptions.find(intent => intent.id === image.intent)?.label ??
+          image.intent ??
+          undefined,
+      })
     }
 
     return { map, sortedApiImages }

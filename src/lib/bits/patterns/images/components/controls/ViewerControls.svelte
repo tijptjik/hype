@@ -153,25 +153,6 @@ async function handlePresentationModeChange(
   )}
   aria-busy={freezeInteractions}
 >
-  {#if showPublishedToggle}
-    <Swap
-      checked={isPublished}
-      disabled={disabled || !canMutate}
-      class={disabled || !canMutate
-        ? VIEWER_CONTROLS_TOGGLE_DISABLED_CLASSES
-        : VIEWER_CONTROLS_TOGGLE_ENABLED_CLASSES}
-      label={isPublished ? m.gallery__unpublish_image() : m.gallery__publish_image()}
-      size="sm"
-      variant="transparent"
-      onColor="success"
-      offColor="dark"
-      onIcon={EyeIcon}
-      offIcon={EyeOffIcon}
-      onCheckedChange={() => {
-        onTogglePublished?.()
-      }}
-    />
-  {/if}
 
   {#if showPresentationModeToggle}
     <ImagePresentationPicker

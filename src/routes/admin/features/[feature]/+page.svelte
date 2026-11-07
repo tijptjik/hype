@@ -1,4 +1,7 @@
 <script lang="ts">
+// IMAGE PUBLICATION
+import { refreshRemoteQuery } from '#lib/remote/index.js'
+import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // FEATURE LIFECYCLE
 import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIdentityDialog.svelte'
 import FeatureGalleryRevisionEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryRevisionEditor.svelte'
@@ -101,7 +104,6 @@ import {
   getFeature,
   getFeatures,
   publishFeature,
-  publishFeatureImages,
 } from '#lib/api/feature.remote.js'
 import { getLayer, getLayers } from '#lib/api/layer.remote.js'
 import { getOrganisationsWhichHaveLayers } from '#lib/api/organisation.remote.js'
@@ -1686,137 +1688,6 @@ async function handleFeatureStateToggle(
     if (isCurrentAction()) setBusy(false)
   }
 }
-
-const shouldOfferImagePublication = $derived(
-  selectedProject?.flags?.autoFeatureFirstImage === false &&
-    (feature?.data?.images ?? []).some(
-      image => image.intent !== 'research' && !image.isPublished,
-    ),
-)
-
-/**
- * Applies the bulk-publication result to every active non-research image envelope.
- *
- * @param value Feature record whose gallery state should be projected locally.
- * @returns A Feature record with only publishable image assignments updated.
- */
-function withPublishedFeatureImages(value: Feature): Feature {
-  const markPublished = (
-    image: NonNullable<Feature['images']>[number],
-  ): NonNullable<Feature['images']>[number] =>
-    image.intent === 'research' || image.isPublished
-      ? image
-      : { ...image, isPublished: true }
-
-  return {
-    ...value,
-    image: value.image ? markPublished(value.image) : value.image,
-    images: value.images?.map(markPublished),
-  }
-}
-
-/** Publishes all active non-research photos after the editor explicitly opts in.
- * @returns Resolves when the Feature image state has been refreshed.
- */
-async function publishRemainingFeatureImages(): Promise<void> {
-  const current = feature?.data
-  const previousFeatureState = feature
-  if (!current || !previousFeatureState) return
-  const isCurrentAction = captureFeatureAction()
-  headerCtrl.setPublishing(true)
-  const optimisticFeature = withPublishedFeatureImages(current)
-  const optimisticFeatureState = { ...previousFeatureState, data: optimisticFeature }
-  const mutation = adminCtx.view.cacheCtx.beginMutation('feature', {
-    meta: { id: current.id },
-    data: {
-      image: optimisticFeature.image,
-      images: optimisticFeature.images,
-    },
-  })
-  // Keep the form and gallery in step with the shared cache while the command is in flight.
-  commitFeatureState(optimisticFeatureState)
-  // Svelte wraps the assigned record; compare the retained proxy rather than the input object.
-  const appliedFeatureState = feature
-  // Retain only changed publication fields, keyed by the actual assigned image proxies.
-  type GalleryImage = NonNullable<Feature['image']>
-  const publicationBefore = new Map<GalleryImage, GalleryImage['isPublished']>()
-  if (feature?.data?.image && current.image && feature.data.image !== current.image)
-    publicationBefore.set(feature.data.image, current.image.isPublished)
-  feature?.data?.images?.forEach((image, index) => {
-    const previous = current.images?.[index]
-    if (previous && image !== previous)
-      publicationBefore.set(image, previous.isPublished)
-  })
-  /**
-   * Reverts this action's publication field without replacing other image data.
-   * @param image Current image envelope, potentially edited while the command was pending.
-   * @returns The preserved envelope with only an owned publication change reverted.
-   */
-  const rollbackImage = (image: GalleryImage): GalleryImage =>
-    publicationBefore.has(image)
-      ? { ...image, isPublished: publicationBefore.get(image)! }
-      : image
-  try {
-    const detail = getFeature({
-      ref: current.id,
-      refKey: 'id',
-      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-    })
-    await publishFeatureImages({
-      id: current.id,
-      meta: { isAdminRequest: true },
-    }).updates(...mutation.updates, detail)
-    mutation.settle(true)
-    if (!isCurrentAction()) return
-    // Use the native refresh, retaining newer editor data if no detail was returned.
-    if (detail.current?.data?.id === current.id) {
-      commitSettledFeatureState(detail.current as FeatureGetState)
-    } else if (feature === appliedFeatureState) {
-      commitSettledFeatureState(feature)
-    }
-    toast.success(m.feature_images_published())
-  } catch {
-    mutation.settle(false)
-    if (!isCurrentAction()) return
-    // Preserve gallery membership and metadata edits while reverting owned publication fields.
-    if (feature?.data?.id === current.id) {
-      commitFeatureState({
-        ...feature,
-        data: {
-          ...feature.data,
-          image: feature.data.image
-            ? rollbackImage(feature.data.image)
-            : feature.data.image,
-          images: feature.data.images?.map(rollbackImage),
-        },
-      })
-    }
-    toast.error(m.long_crazy_peacock_care())
-  } finally {
-    if (isCurrentAction()) headerCtrl.setPublishing(false)
-  }
-}
-
-// Anchor the follow-up action to the publish control so it moves with the admin drawer without resizing content.
-$effect(() => {
-  const current = feature?.data
-  if (
-    !current?.isPublished ||
-    !shouldOfferImagePublication ||
-    imagePublicationPrompt?.featureId !== current.id ||
-    imagePublicationPrompt?.routeRef !== featureRef
-  ) {
-    headerCtrl.setFormActions({ publishPrompt: null })
-    return
-  }
-  headerCtrl.setFormActions({
-    publishPrompt: {
-      text: m.feature_unpublished_photos(),
-      actionText: m.publish_children__all(),
-      onClick: () => void publishRemainingFeatureImages(),
-    },
-  })
-})
 
 function onPublishToggle(): void {
   void handleFeatureStateToggle('isPublished')
@@ -3587,3 +3458,7 @@ $effect(() => () => clearVisualSectionReopenState())
     </Main.Facet>
   </Main.Form>
 </Main.Root>
+
+{#if feature?.data?.isPublished && imagePublicationPrompt?.featureId === feature.data.id && imagePublicationPrompt?.routeRef === featureRef}
+  <PublishUnclassifiedImagesDialog scopeType="feature" scopeId={feature.data.id} onDone={() => { imagePublicationPrompt = null; void refreshRemoteQuery(getFeature({ ref: featureRef, refKey: 'code', meta: { isAdminRequest: true, profile: 'admin' } })) }} />
+{/if}

@@ -549,20 +549,51 @@ This is currently expressed through adapters rather than direct package-owned st
 - Should `ResourceViewer` remain a specialized root, or should it collapse into a
   documented composition recipe once the gallery store exists?
 
-## Project publication policies
+## Image intent publication policies
 
-Project Advanced settings persist `autoPublishClassifiedImages` and
-`autoFeatureFirstImage` in `project.flags`; omitted keys default to enabled. Migration
-`0133_project_image_publication.sql` explicitly disables first-image classification for
-`hkghostsigns` and `independentBookstores`, preserving other saved preferences.
+Image intent determines publication eligibility; there is no separate per-image
+publication switch. Effective public visibility also requires a published,
+non-archived Feature and a non-archived image. Contributor photos retain their
+approval boundary.
 
-Publishing a feature, layer, project or organisation applies these policies to
-published, non-archived features in that scope. Automatic classification preserves an
-existing Featured (`canonical`) choice; otherwise it selects the earliest uploaded
-non-archived image with an unclassified or public intent, breaking timestamp ties by
-image ID. Research images are never promoted or automatically published. Classification
-runs before publication, so the selected cover can publish in the same operation. Each
-switch acts independently. Classification and image publication are a database batch;
-already published image attribution is retained on retries. Ancestor publishing respects
-each descendant feature's own project flags and the existing choice of whether to
-include draft descendants.
+Hub Advanced owns an ordered intent catalogue. New hubs copy the core hub's current
+catalogue independently. Project Advanced defaults to **Inherit from Hub**; disabling
+inheritance starts with a copy that can be customised for that Project.
+
+Three stable roles cannot be deleted, but their display labels can be renamed:
+
+- `undefined`: **Unclassified**, always private.
+- `canonical`: **Featured**, retains the unique cover-image role per Feature.
+- `general`: **General**, always eligible for publication. **Catch-All** is the
+  permanent-role label shown beside this renameable intent, not its default name.
+
+Other intents have editable labels, publication eligibility and order. Removing an
+intent offers reassignment, returning its images to Unclassified, or renaming instead.
+Removal aliases preserve interpretation of older proposals; historical snapshots are
+not rewritten. Image intent edits are staged in the normal Hub or Project form and use its Save
+and Reset actions. The parent record, settings and affected live galleries are saved
+atomically with attributed revision history and concurrency checks. The editor has no
+separate Save or Reset buttons; role labels and image counts appear inline with each
+intent, without row divider lines. Intent rows share aligned columns and use the
+Layers grip-based drag-and-drop pattern for ordering; deletion uses a labelled trash
+icon. Reordering remains staged until the main form is saved. Retired identities retain their snapshots.
+
+The Project switch **Automatically publish all unclassified images** defaults to on.
+New staff uploads are classified as Catch-All; disabling it leaves uploads Unclassified.
+No image is automatically made Featured. After publishing a Feature, Layer, Project or
+Organisation, a follow-up dialog offers to classify the remaining active Unclassified
+images as each Project's Catch-All. Keeping them Unclassified leaves them private.
+Private classified images and pending contributions are excluded from this offer.
+
+Migration `0200_image_intent_policies.sql` creates and seeds policy storage. It does not
+rewrite historical revisions or bulk-publish existing images. Existing assignments are
+reconciled when intent eligibility or assignment changes, or through an accepted
+gallery edit, preserving revision history; enabling automation governs new uploads rather than silently classifying the
+existing backlog. Apply the migration before enabling the settings editor. This source
+change does not itself apply the migration to local or production databases.
+
+Order-only catalogue saves update the stored order and concurrency version without
+scanning galleries or creating intent/gallery history entries. Renaming also avoids
+gallery scans but retains policy history. Reconciliation is required when an existing
+intent is removed or its publication eligibility changes; presentation-only edits do
+not repair unrelated historical publication state.

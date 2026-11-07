@@ -1,4 +1,6 @@
 <script lang="ts">
+// IMAGE PUBLICATION
+import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // IMAGE INTENTS
 import ImageIntentSettings from '#lib/bits/patterns/images/ImageIntentSettings.svelte'
 // COMPONENTS
@@ -2405,6 +2407,7 @@ async function handleProjectStateToggle({
     mutation.settle(true)
     if (!isCurrentMutation()) return
 
+    if (field === 'isPublished') pendingImagePublicationId = nextState ? projectData.id : null
     // Settle from the write acknowledgement, never from a possibly empty filtered read.
     if (
       projectRef === mutationRef &&
@@ -2486,10 +2489,12 @@ function onPreview(publishChildren?: boolean): void {
 }
 
 let pendingPublishId = $state<string | null>(null)
+let pendingImagePublicationId = $state<string | null>(null)
 
 // Dismiss pending publication when navigation changes the target resource.
 $effect(() => {
   projectRef
+  pendingImagePublicationId = null
   pendingPublishId = null
   pendingPreviewId = null
 })
@@ -3600,4 +3605,8 @@ $effect(() => {
       pendingPreviewId = null
     }}
   />
+{/if}
+
+{#if pendingImagePublicationId && pendingImagePublicationId === project?.data?.id}
+  <PublishUnclassifiedImagesDialog scopeType="project" scopeId={pendingImagePublicationId} onDone={() => pendingImagePublicationId = null} />
 {/if}

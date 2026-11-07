@@ -1,4 +1,6 @@
 <script lang="ts">
+// IMAGE PUBLICATION
+import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // COMPONENTS
 import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 // BITS COMPONENTS
@@ -1108,6 +1110,7 @@ async function handleLayerStateToggle({
     committed = true
     mutation.settle(true)
     if (!isCurrentMutation()) return
+    if (field === 'isPublished') pendingImagePublicationId = nextState ? current.id : null
     // The write acknowledgement settles this field without depending on another detail read.
     if (
       layerRef === mutationRef &&
@@ -1175,10 +1178,12 @@ function onPreview(publishChildren?: boolean): void {
 }
 
 let pendingPublishId = $state<string | null>(null)
+let pendingImagePublicationId = $state<string | null>(null)
 
 // Dismiss pending publication when navigation changes the target resource.
 $effect(() => {
   layerRef
+  pendingImagePublicationId = null
   pendingPublishId = null
   pendingPreviewId = null
 })
@@ -1791,4 +1796,8 @@ $effect(() => {
       pendingPreviewId = null
     }}
   />
+{/if}
+
+{#if pendingImagePublicationId && pendingImagePublicationId === layer?.data?.id}
+  <PublishUnclassifiedImagesDialog scopeType="layer" scopeId={pendingImagePublicationId} onDone={() => pendingImagePublicationId = null} />
 {/if}

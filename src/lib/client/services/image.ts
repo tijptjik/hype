@@ -556,9 +556,10 @@ export async function waitForThumbnailReadyEvent(params: {
  * the existing editorial intent ordering for persisted images.
  *
  * @param itemsToSort Gallery items to sort for the editor rail.
+ * @param configuredOrder Effective intent catalogue order.
  * @returns Sorted gallery items.
  */
-export function sortGalleryItems(itemsToSort: ViewerRenderable[]): ViewerRenderable[] {
+export function sortGalleryItems(itemsToSort: ViewerRenderable[], configuredOrder?: readonly string[]): ViewerRenderable[] {
   return [...itemsToSort].sort((a, b) => {
     // Accepted gallery order is editorial content; intent sorting belongs only to legacy rows.
     if (typeof a.galleryPosition === 'number' && typeof b.galleryPosition === 'number')
@@ -577,7 +578,7 @@ export function sortGalleryItems(itemsToSort: ViewerRenderable[]): ViewerRendera
       return a.isPublished ? -1 : 1
     }
 
-    const intentOrder = [
+    const intentOrder: readonly string[] = configuredOrder ?? [
       'undefined',
       'canonical',
       'general',
@@ -1054,8 +1055,8 @@ export function extendImageWithResource(image: Partial<ImageNew>, ctx: ImageUplo
 // 7. UTILS
 // ═══════════════════════
 
-export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false) {
-  const intentOrderToUse = isAdmin ? adminIntentOrder : intentOrder
+export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false, configuredOrder?: readonly string[]) {
+  const intentOrderToUse: readonly string[] = configuredOrder ?? (isAdmin ? adminIntentOrder : intentOrder)
   const sortedImages = images.sort((a, b) => {
     if (isAdmin) {
       // Priority 1: Unpublished with no intent (undefined) come first
@@ -1337,7 +1338,8 @@ export const intentDisplay: Record<Intent, string> = {
   canonical: m.intent__canonical(),
   closeUp: m.intent__closeUp(),
   context: m.intent__context(),
-  general: m.intent__general(),
+  general: 'General',
+  alternative: 'Alternative',
   research: m.intent__research(),
-  undefined: m.intent__undefined(),
+  undefined: 'Unclassified',
 }

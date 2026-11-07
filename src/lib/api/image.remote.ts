@@ -1,3 +1,6 @@
+// IMAGE INTENTS
+import { DEFAULT_IMAGE_INTENTS, ImageIntentIdSchema } from '#lib/images/intents.js'
+import { readImageIntentPolicy } from '#lib/db/services/imageIntentPolicy.js'
 // CREATION CONTRIBUTIONS
 import { saveFeatureCreationUpload } from '#lib/db/services/featureLifecycleCreationUpload.js'
 // SVELTEKIT
@@ -310,7 +313,7 @@ const updateFeatureImageFields = async (params: {
   ctxId: Id
   featureId?: Id
   data: {
-    intent?: 'canonical' | 'closeUp' | 'context' | 'general' | 'research' | 'undefined'
+    intent?: string
     isPublished?: boolean
   }
 }) => {
@@ -1480,6 +1483,25 @@ export const getImagesForContext = guardedQuery(
   },
 )
 
+/**
+ * Returns the effective intent catalogue for an authorized gallery, including empty galleries.
+ * @param params Persisted image context and request metadata.
+ * @returns Ordered intent choices and the Project upload default.
+ * @remarks Scope is resolved server-side; task evidence never grants access to unrelated galleries.
+ */
+export const getImageIntentOptions = guardedQuery(ImagesByContextSchema, async (params, ctx) => {
+  const context = await probeContextState(ctx.db, params.ctxType as ImageContextType, params.ctxId)
+  const decision = authorizeImageList(toImageAccessActor(ctx.user, ctx.userRoles), {
+    ctxType: params.ctxType as ImageContextType, ctxId: params.ctxId,
+    resourceHubId: context.resourceHubId, projectId: context.projectId, organisationId: context.organisationId,
+  }, context.requestedState, { isAdminRequest: ctx.isAdminRequest })
+  if (!decision.allowed) error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+  const scope = context.projectId ? { type: 'project' as const, id: context.projectId }
+    : context.resourceHubId ? { type: 'hub' as const, id: context.resourceHubId } : null
+  const policy = scope ? await readImageIntentPolicy(ctx.db, scope) : null
+  return { intents: policy?.intents ?? [...DEFAULT_IMAGE_INTENTS], autoPublishUnclassified: policy?.autoPublishUnclassified ?? true }
+})
+
 export const getImagesForContextByProfile =
   getImagesForContext as typeof getImagesForContext &
     (<P extends ImageProfile = 'list'>(
@@ -2097,15 +2119,7 @@ export const finalizeImageUpload = guardedCommand(
               bytes,
               taskIds: (params.persist?.links ?? []).map(link => link.taskId),
               draftContributor: creationAccess === 'draft-contribution',
-              intent: z
-                .enum([
-                  'canonical',
-                  'closeUp',
-                  'context',
-                  'general',
-                  'research',
-                  'undefined',
-                ])
+              intent: ImageIntentIdSchema
                 .parse(
                   creationAccess === 'draft-contribution'
                     ? 'undefined'

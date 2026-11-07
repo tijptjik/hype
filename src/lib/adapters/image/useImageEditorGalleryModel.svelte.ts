@@ -511,6 +511,7 @@ export function useImageEditorGalleryModel(
                 forceSourceTransition: getShouldForceSourceTransition(
                   resolvedImage.image.id,
                 ),
+                intentOptions: imageCtx.intentOptions,
                 intentError: Boolean(intentErrorByImageId[resolvedImage.image.id]),
                 intentErrorMessage:
                   intentErrorByImageId[resolvedImage.image.id] ?? null,
@@ -589,6 +590,7 @@ export function useImageEditorGalleryModel(
             forceSourceTransition: getShouldForceSourceTransition(
               resolvedImage.image.id,
             ),
+            intentOptions: imageCtx.intentOptions,
             intentError: Boolean(intentErrorByImageId[resolvedImage.image.id]),
             intentErrorMessage: intentErrorByImageId[resolvedImage.image.id] ?? null,
           },
@@ -610,7 +612,7 @@ export function useImageEditorGalleryModel(
         } satisfies ViewerRenderable
       })
 
-    return sortGalleryItems([...queueItems, ...imageItems])
+    return sortGalleryItems([...queueItems, ...imageItems], imageCtx.intentOptions.map(intent => intent.id))
   })
 
   const isProcessingUploads = $derived.by(() =>

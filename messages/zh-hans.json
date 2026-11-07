@@ -1002,7 +1002,7 @@
   "intent__context": "背景",
   "intent__general": "一般",
   "intent__research": "研究用途",
-  "intent__undefined": "未定义",
+  "intent__undefined": "未分类",
   "filters__reset_count_neighbourhoods": [
     {
       "declarations": [

@@ -6,7 +6,7 @@ import { cx } from '#lib/bits/utils.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // API
-import { adminIntentOrder } from '#lib/api/services/image.js'
+import { DEFAULT_IMAGE_INTENTS, ImageIntentCatalogueSchema } from '#lib/images/intents.js'
 import { intentDisplay } from '#lib/client/services/image.js'
 // TYPES
 import type { Intent } from '#lib/db/zod/schema/image.types.js'
@@ -26,17 +26,15 @@ let {
   label?: string
 } = $props()
 let open = $state(false)
-const currentIntent = $derived((item.intent ?? 'general') as Intent)
+const currentIntent = $derived((item.intent ?? 'undefined') as Intent)
+const intentOptions = $derived(ImageIntentCatalogueSchema.safeParse(item.meta?.intentOptions).data ?? DEFAULT_IMAGE_INTENTS)
 const hasIntentError = $derived(Boolean(item.meta?.intentError))
 const intentErrorMessage = $derived(
   typeof item.meta?.intentErrorMessage === 'string'
     ? item.meta.intentErrorMessage
     : null,
 )
-const orderedIntentOptions = $derived([
-  ...adminIntentOrder.filter(option => option !== 'undefined'),
-  'undefined',
-])
+const orderedIntentOptions = $derived(intentOptions.map(intent => intent.id))
 
 async function handleSelect(nextIntent: Intent): Promise<void> {
   if (disabled) return
@@ -50,7 +48,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
     <Popover.Trigger
       {disabled}
       class={cx(
-        'inline-flex h-[26px] max-w-[calc(100%_-_0.5rem)] items-center rounded-md px-1.5 text-[10px] font-medium uppercase tracking-[0.06em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed',
+        'inline-flex h-[26px] max-w-[6.25rem] items-center rounded-md px-2 text-[10px] font-medium uppercase tracking-[0.14em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed',
         hasIntentError
           ? 'bg-error text-error-content hover:bg-error'
           : currentIntent === 'canonical'
@@ -61,7 +59,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
       data-tooltip={intentErrorMessage ?? undefined}
     >
       <span class="overflow-hidden text-ellipsis whitespace-nowrap"
-        >{intentDisplay[currentIntent]}</span
+        >{intentOptions.find(intent => intent.id === currentIntent)?.label ?? intentDisplay[currentIntent] ?? currentIntent}</span
       >
     </Popover.Trigger>
 
@@ -86,7 +84,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
               void handleSelect(option as Intent)
             }}
           >
-            <span>{intentDisplay[option as Intent]}</span>
+            <span>{intentOptions.find(intent => intent.id === option)?.label ?? option}</span>
           </button>
         {/each}
       </Popover.Content>

@@ -1,4 +1,6 @@
 <script lang="ts">
+// IMAGE PUBLICATION
+import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // SVELTE
 import { page } from '$app/state'
 import { untrack } from 'svelte'
@@ -1139,6 +1141,7 @@ async function handleOrganisationStateToggle({
     committed = true
     mutation.settle(true)
     if (!isCurrentMutation()) return
+    if (field === 'isPublished') pendingImagePublicationId = nextState ? organisationData.id : null
     // Settle from the acknowledgement; an empty filtered read must not erase the editor.
     if (
       organisationRef === mutationRef &&
@@ -1218,10 +1221,12 @@ function onPreview(publishChildren?: boolean): void {
 }
 
 let pendingPublishId = $state<string | null>(null)
+let pendingImagePublicationId = $state<string | null>(null)
 
 // Dismiss pending publication when navigation changes the target resource.
 $effect(() => {
   organisationRef
+  pendingImagePublicationId = null
   pendingPublishId = null
   pendingPreviewId = null
 })
@@ -1934,4 +1939,8 @@ $effect(() => {
       pendingPreviewId = null
     }}
   />
+{/if}
+
+{#if pendingImagePublicationId && pendingImagePublicationId === organisation?.data?.id}
+  <PublishUnclassifiedImagesDialog scopeType="organisation" scopeId={pendingImagePublicationId} onDone={() => pendingImagePublicationId = null} />
 {/if}

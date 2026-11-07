@@ -1002,7 +1002,7 @@
   "intent__context": "Context",
   "intent__general": "General",
   "intent__research": "Research",
-  "intent__undefined": "Undefined",
+  "intent__undefined": "Unclassified",
   "filters__reset_count_neighbourhoods": [
     {
       "declarations": [

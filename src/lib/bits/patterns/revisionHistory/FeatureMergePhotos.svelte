@@ -1,4 +1,9 @@
 <script lang="ts">
+// IMAGE INTENTS
+import { getImageIntentOptions } from '#lib/api/image.remote.js'
+import { refreshRemoteQuery } from '#lib/remote/index.js'
+import { DEFAULT_IMAGE_INTENTS, type ImageIntentDefinition } from '#lib/images/intents.js'
+
 // COMPONENTS
 import ThumbnailIntent from '#lib/bits/patterns/images/components/ThumbnailIntent.svelte'
 // I18N
@@ -22,6 +27,13 @@ const photos = $derived.by(() => {
       .filter(id => !seen.has(id) && Boolean(seen.add(id)))
       .map(id => ({ id, source })),
   )
+})
+let intentOptions = $state<ImageIntentDefinition[]>([...DEFAULT_IMAGE_INTENTS])
+$effect(() => {
+  const featureId = sources[0]?.featureId
+  let active = true
+  if (featureId) void refreshRemoteQuery(getImageIntentOptions({ ctxType: 'feature', ctxId: featureId, meta: { isAdminRequest: true } })).then(policy => { if (active) intentOptions = policy.intents }).catch(cause => console.error('Could not load image intents', cause))
+  return () => { active = false }
 })
 let excludedIntents = $state<Record<string, Intent>>({})
 
@@ -120,6 +132,7 @@ function setIntent(id: string, intent: Intent): void {
                     id: photo.id,
                     src: identityPhoto(photo.source, photo.id),
                     intent,
+                    meta: { intentOptions },
                   }}
                   disabled={busy}
                   label={`Photo intent ${photo.id}`}
