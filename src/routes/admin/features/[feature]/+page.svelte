@@ -965,6 +965,9 @@ let lastHeaderKey = ''
 let identityOpen = $state(false)
 let identityKind = $state<'split' | 'merge'>('split')
 $effect(() => {
+  // Entity metadata refreshes reset custom actions; restore them after title or facet changes.
+  headerCtrl.state.meta.title
+  headerCtrl.state.meta.facets
   const available = Boolean(currentFeatureId && isCurrentRefLoaded && !feature?.data?.isArchived)
   headerCtrl.setTitleMenuItems(available ? [
     { label: 'Split', disabled: isDirty, onSelect: () => { identityKind = 'split'; identityOpen = true } },
@@ -2988,7 +2991,12 @@ $effect(() => () => clearVisualSectionReopenState())
 
 {#if currentFeatureId && feature?.data?.layerId}
   <FeatureIdentityDialog bind:open={identityOpen} kind={identityKind} featureId={currentFeatureId} layerId={feature.data.layerId}
-    onApplied={async ids => { await refreshFeature(); await goto(`/admin/features/${encodeURIComponent(ids[0])}`) }} />
+    onApplied={async ids => {
+      // Identity commands mutate accepted content outside this form's ordinary save flow.
+      await getFeature({ ref: currentFeatureId, refKey: 'id', meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' } }).refresh()
+      await refreshFeature()
+      if (ids[0] !== currentFeatureId) await goto(`/admin/features/${encodeURIComponent(ids[0])}`)
+    }} />
 {/if}
 
 
