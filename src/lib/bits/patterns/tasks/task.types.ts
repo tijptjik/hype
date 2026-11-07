@@ -38,6 +38,7 @@ export type TaskAsideProps = {
 }
 
 export type TaskFooterProps = {
+  compact?: boolean
   class?: string
   readonly?: boolean
 }

@@ -10,6 +10,7 @@ import type { TaskFooterProps } from '../task.types'
 let {
   class: className = '',
   readonly = false,
+  compact = false,
   children,
 }: TaskFooterProps & { children?: Snippet } = $props()
 
@@ -24,11 +25,11 @@ const model = useImageEditorGalleryModel(getImageCtx())
   <ThumbnailWrapper
     items={model.state.items}
     activeId={model.state.activeId}
-    variant="admin"
+    variant={compact ? 'default' : 'admin'}
     orientation="horizontal"
-    class="h-28"
+    class={compact ? 'h-12' : 'h-28'}
     trackClass="m-0 bg-transparent p-0"
-    size={112}
+    size={compact ? 48 : 112}
     fit="fit"
     getIsLoading={model.status.isLoading}
     getIsUploading={model.status.isUploading}
@@ -41,9 +42,11 @@ const model = useImageEditorGalleryModel(getImageCtx())
     onSelect={item => {
       model.actions.select(item.id)
     }}
-    onHover={item => {
-      model.actions.select(item.id)
-    }}
+    onHover={compact
+      ? undefined
+      : item => {
+          model.actions.select(item.id)
+        }}
   />
 
   {@render children?.()}
