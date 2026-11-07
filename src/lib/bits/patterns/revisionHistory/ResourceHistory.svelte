@@ -7,6 +7,8 @@ import { formatDistanceStrict } from 'date-fns'
 import { historyStyles as styles } from './organisationHistory.styles'
 import { fieldLabel, groupChanges } from './presentation'
 // COMPONENTS
+import HistoryLocaleValues from './components/HistoryLocaleValues.svelte'
+import { groupHistoryLocales } from '#lib/revisions/historyLocaleGroups.js'
 import HistoryValue from './components/HistoryValue.svelte'
 // BITS COMPONENTS
 import HistoryActorIdentity from './components/HistoryActorIdentity.svelte'
@@ -403,9 +405,9 @@ $effect(() => {
                 }}
               >
                 <span class="text-xs tabular-nums">
-                  {entry.changes.length}
+                  {groupHistoryLocales(entry.changes).length}
                   changed
-                  {entry.changes.length === 1 ? 'field' : 'fields'}
+                  {groupHistoryLocales(entry.changes).length === 1 ? 'field' : 'fields'}
                 </span>
                 <ChevronIcon
                   aria-hidden="true"
@@ -436,20 +438,26 @@ $effect(() => {
                   <dd class="text-sm font-medium">{field.operation}</dd>
                 </div>
               </dl>
-              <dl class={styles.values}>
-                <div class={styles.before}>
-                  <dt class={styles.label}>Before</dt>
-                  <dd class="min-w-0">
-                    <HistoryValue slot={field.change.before} path={field.change.path} />
-                  </dd>
-                </div>
-                <div class={styles.after}>
-                  <dt class={styles.label}>After</dt>
-                  <dd class="min-w-0">
-                    <HistoryValue slot={field.change.after} path={field.change.path} />
-                  </dd>
-                </div>
-              </dl>
+              {#if field.rows[0].locale !== null}
+                <HistoryLocaleValues rows={field.rows}>
+                  {#snippet value(row, side)}<HistoryValue {...{ slot: row[side] }} path={row.path} />{/snippet}
+                </HistoryLocaleValues>
+              {:else}
+                <dl class={styles.values}>
+                  <div class={styles.before}>
+                    <dt class={styles.label}>Before</dt>
+                    <dd class="min-w-0">
+                      <HistoryValue slot={field.change.before} path={field.change.path} />
+                    </dd>
+                  </div>
+                  <div class={styles.after}>
+                    <dt class={styles.label}>After</dt>
+                    <dd class="min-w-0">
+                      <HistoryValue slot={field.change.after} path={field.change.path} />
+                    </dd>
+                  </div>
+                </dl>
+              {/if}
             </section>
           {/snippet}
           {#snippet logoComparison()}

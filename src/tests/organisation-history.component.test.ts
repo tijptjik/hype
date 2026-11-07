@@ -142,3 +142,15 @@ it('switches to field definitions without retaining profile entries', async () =
       .getAttribute('aria-pressed'),
   ).toBe('true')
 })
+
+it('shows translated resource names together in a locale table', async () => {
+  query.mockResolvedValue({ available: true, nextCursor: null, entries: [{ ...entry, changes: [
+    entry.changes[0], { ...entry.changes[0], path: ['i18n', 'zh-Hant', 'name'], after: { present: true, value: '新名稱' } },
+  ] }] })
+  render(OrganisationHistory, { organisationId: 'org' })
+  expect(await screen.findByRole('button', { name: '1 changed field' })).toBeTruthy()
+  expect(screen.getAllByRole('table')).toHaveLength(1)
+  expect(screen.getByRole('rowheader', { name: 'en' })).toBeTruthy()
+  expect(screen.getByRole('rowheader', { name: 'zh-Hant' })).toBeTruthy()
+  expect(screen.getByText('新名稱')).toBeTruthy()
+})

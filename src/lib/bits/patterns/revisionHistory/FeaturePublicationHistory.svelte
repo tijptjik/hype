@@ -4,6 +4,8 @@ import { onMount } from 'svelte'
 // THIRD-PARTY
 import { formatDistanceStrict } from 'date-fns'
 // COMPONENTS
+import HistoryLocaleValues from './components/HistoryLocaleValues.svelte'
+import { groupHistoryLocales, localeGroupAction } from '#lib/revisions/historyLocaleGroups.js'
 import ChangelogActor from './components/ChangelogActor.svelte'
 import HistoryTimestamp from './components/HistoryTimestamp.svelte'
 import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
@@ -222,7 +224,7 @@ function relative(value: string): string {
               >
                 <span class="text-xs tabular-nums"
                   >{review
-                    ? `${review.changes.length} changed ${review.changes.length === 1 ? 'field' : 'fields'}`
+                    ? `${groupHistoryLocales(review.changes).length} changed ${groupHistoryLocales(review.changes).length === 1 ? 'field' : 'fields'}`
                     : 'View changes'}</span
                 >
                 <ChevronIcon
@@ -266,42 +268,45 @@ function relative(value: string): string {
                     Publication was stopped; the previous content is retained.
                   </p>
                 {/if}
-                {#each review.changes as change}
+                {#each groupHistoryLocales(review.changes) as group}
+                  {@const change = group.rows[0].change}
                   <section
                     class={styles.comparison}
-                    aria-label={featureReviewLabel(change.path)}
+                    aria-label={featureReviewLabel(group.path)}
                   >
                     <dl class={styles.fieldHeading}>
                       <div class="min-w-0 space-y-1">
                         <dt class={styles.label}>Field</dt>
                         <dd class="text-sm font-medium break-words">
-                          {featureReviewLabel(change.path)}
+                          {featureReviewLabel(group.path)}
                         </dd>
                       </div>
                       <div class="min-w-0 space-y-1">
                         <dt class={styles.label}>Action</dt>
                         <dd class="text-sm font-medium">
-                          {!change.before.present
-                            ? 'Added'
-                            : !change.after.present
-                              ? 'Removed'
-                              : 'Updated'}
+                          {localeGroupAction(group)}
                         </dd>
                       </div>
                     </dl>
-                    <dl class={styles.values}>
-                      {#each ['before', 'after'] as side}
-                        {@const key = side as 'before' | 'after'}
-                        <div class={key === 'before' ? styles.before : styles.after}>
-                          <dt class={styles.label}>
-                            {key === 'before' ? 'Before' : 'After'}
-                          </dt>
-                          <dd class="min-w-0 text-sm break-words whitespace-pre-wrap">
-                            {featureReviewValue(change, key)}
-                          </dd>
-                        </div>
-                      {/each}
-                    </dl>
+                    {#if group.rows[0].locale !== null}
+                      <HistoryLocaleValues rows={group.rows}>
+                        {#snippet value(row, side)}{featureReviewValue(row, side)}{/snippet}
+                      </HistoryLocaleValues>
+                    {:else}
+                      <dl class={styles.values}>
+                        {#each ['before', 'after'] as side}
+                          {@const key = side as 'before' | 'after'}
+                          <div class={key === 'before' ? styles.before : styles.after}>
+                            <dt class={styles.label}>
+                              {key === 'before' ? 'Before' : 'After'}
+                            </dt>
+                            <dd class="min-w-0 text-sm break-words whitespace-pre-wrap">
+                              {featureReviewValue(change, key)}
+                            </dd>
+                          </div>
+                        {/each}
+                      </dl>
+                    {/if}
                   </section>
                 {/each}
                 {#if !review.changes.length &&

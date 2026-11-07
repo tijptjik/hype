@@ -1,4 +1,10 @@
+// PRESENTATION
+import {
+  groupHistoryLocales,
+  localeGroupAction,
+} from '#lib/revisions/historyLocaleGroups.js'
 // TYPES
+import type { HistoryLocaleGroup } from '#lib/revisions/historyLocaleGroups.js'
 import type { RevisionDifference } from '#lib/revisions/diff.js'
 
 const labels: Record<string, string> = {
@@ -171,10 +177,15 @@ export function historyOperation(
 export type HistoryGroup = {
   key: string
   label: string
-  fields: { label: string | null; operation: string; change: RevisionDifference }[]
+  fields: {
+    label: string | null
+    operation: string
+    change: RevisionDifference
+    rows: HistoryLocaleGroup['rows']
+  }[]
 }
 
-/** Groups shared path prefixes so each scope and language is named only once.
+/** Groups shared path prefixes with translated fields shown as locale rows.
  * @param changes Immutable comparison evidence in server order.
  * @param fieldLabels Optional property identity labels retained with catalogue evidence.
  * @returns Ordered groups with field labels relative to their heading.
@@ -184,28 +195,31 @@ export function groupChanges(
   fieldLabels?: Record<string, string>,
 ): HistoryGroup[] {
   const groups = new Map<string, HistoryGroup>()
-  for (const change of changes) {
-    const depth = change.path[0] === 'i18n' && change.path.length > 2 ? 2 : 1
-    const prefix = change.path.slice(0, depth)
+  for (const localized of groupHistoryLocales(changes)) {
+    const change = localized.rows[0].change
+    const depth = 1
+    const prefix = localized.path.slice(0, depth)
     const key = JSON.stringify(prefix)
     let group = groups.get(key)
     if (!group) {
       group = {
         key,
-        label:
-          fieldLabels?.[prefix[0]] ??
-          (prefix[0] === 'i18n' && prefix[1]
-            ? fieldLabel([prefix[1]])
-            : fieldLabel(prefix)),
+        label: fieldLabels?.[prefix[0]] ?? fieldLabel(prefix),
         fields: [],
       }
       groups.set(key, group)
     }
     const operation = historyOperation(change, fieldLabels !== undefined)
     group.fields.push({
-      label: operation.wholeEntity ? null : historyPathLabel(change.path.slice(depth)),
-      operation: operation.label,
+      label: operation.wholeEntity
+        ? null
+        : historyPathLabel(localized.path.slice(depth)),
+      operation:
+        localized.rows[0].locale !== null
+          ? localeGroupAction(localized)
+          : operation.label,
       change,
+      rows: localized.rows,
     })
   }
   return [...groups.values()]

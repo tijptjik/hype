@@ -124,7 +124,7 @@ it('toggles the history surface without intercepting tree controls, profile link
   const disclosure = screen.getByRole('button', { name: '1 changed field' })
   await fireEvent.click(screen.getByText('Options updated'))
   expect(disclosure.getAttribute('aria-expanded')).toBe('false')
-  await fireEvent.click(screen.getByText('Preferred contact method', { selector: 'p' }))
+  await fireEvent.click(screen.getByText('Preferred contact method', { selector: 'h4' }))
   expect(disclosure.getAttribute('aria-expanded')).toBe('true')
   await fireEvent.click(screen.getByRole('button', { name: 'Expand en' }))
   expect(screen.getByText('Telegram')).toBeTruthy()

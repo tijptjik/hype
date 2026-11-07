@@ -105,3 +105,18 @@ it('falls back to the recorded ID when the user no longer exists', () => {
   expect(screen.getByText('editor')).toBeTruthy()
   expect(screen.queryByRole('link')).toBeNull()
 })
+
+it('renders multilingual photo metadata as two fields with locale comparison rows', async () => {
+  const changes = ['alt', 'caption'].flatMap(field => ['en', 'zh-Hans', 'zh-Hant'].map(locale => ({
+    path: ['gallery', 'entries', 'photo', field, locale],
+    before: { present: false as const },
+    after: { present: true as const, value: `${field} ${locale}` },
+  })))
+  render(FeaturePublicationHistory, { entries: [entry], canReview: true, loadReview: vi.fn().mockResolvedValue({ changes, redacted: false }) })
+  await fireEvent.click(screen.getByRole('button', { name: 'View changes' }))
+  expect(await screen.findByRole('button', { name: '2 changed fields' })).toBeTruthy()
+  expect(screen.getAllByRole('table')).toHaveLength(2)
+  expect(screen.getAllByRole('columnheader', { name: 'Locale' })).toHaveLength(2)
+  expect(screen.getAllByRole('rowheader', { name: 'zh-Hant' })).toHaveLength(2)
+  expect(screen.getByText('caption zh-Hant')).toBeTruthy()
+})

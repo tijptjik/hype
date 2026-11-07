@@ -22,6 +22,8 @@ import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
 import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 import RefreshIcon from 'virtual:icons/proicons/arrow-sync'
 // PRESENTATION
+import HistoryLocaleValues from './components/HistoryLocaleValues.svelte'
+import { groupHistoryLocales, localeGroupAction } from '#lib/revisions/historyLocaleGroups.js'
 import { fieldLabel, historyOperation } from './presentation'
 import { featureReviewLabel } from '#lib/revisions/featureReviewDisplay.js'
 import {
@@ -579,7 +581,8 @@ $effect(() => {
                           Some changes are hidden by current field permissions.
                         </p>
                       {/if}
-                      {#each entry.changes as change}
+                      {#each groupHistoryLocales(entry.changes) as group}
+                        {@const change = group.rows[0].change}
                         {@const metadataKey = JSON.stringify([entry.key, change.path])}
                         {@const metadataId =
                           metadataPrefix + encodeURIComponent(metadataKey)}
@@ -597,7 +600,7 @@ $effect(() => {
                           )}
                         <section
                           class="border-border bg-panel min-w-0 overflow-hidden rounded-md border"
-                          aria-label={changeFieldLabel(entry, change.path)}
+                          aria-label={changeFieldLabel(entry, group.path)}
                         >
                           <div class="relative">
                             <dl
@@ -617,7 +620,7 @@ $effect(() => {
                                     ? entry.resourceId
                                     : undefined}
                                 >
-                                  {changeFieldLabel(entry, change.path)}
+                                  {changeFieldLabel(entry, group.path)}
                                 </dd>
                               </div>
                               <div
@@ -627,8 +630,7 @@ $effect(() => {
                                   Action
                                 </dt>
                                 <dd class="font-medium break-words">
-                                  {historyOperation(change, entry.category === 'fields')
-                                    .label}
+                                  {group.rows[0].locale !== null ? localeGroupAction(group) : historyOperation(change, entry.category === 'fields').label}
                                 </dd>
                               </div>
                             </dl>
@@ -654,29 +656,35 @@ $effect(() => {
                               />
                             {/if}
                           </div>
-                          <div
-                            id={metadataId}
-                            class="grid min-w-0 items-start gap-4 p-4 @[36rem]:grid-cols-2"
-                          >
-                            <div class="min-w-0">
-                              <p class="text-muted-foreground mb-1 text-xs">Before</p>
-                              <ChangelogValue
-                                {entry}
-                                {change}
-                                side="before"
-                                metadataOpen={imageMetadata[metadataKey] ?? false}
-                              />
+                          {#if group.rows[0].locale !== null}
+                            <HistoryLocaleValues rows={group.rows}>
+                              {#snippet value(row, side)}<ChangelogValue {entry} change={row} {side} />{/snippet}
+                            </HistoryLocaleValues>
+                          {:else}
+                            <div
+                              id={metadataId}
+                              class="grid min-w-0 items-start gap-4 p-4 @[36rem]:grid-cols-2"
+                            >
+                              <div class="min-w-0">
+                                <p class="text-muted-foreground mb-1 text-xs">Before</p>
+                                <ChangelogValue
+                                  {entry}
+                                  {change}
+                                  side="before"
+                                  metadataOpen={imageMetadata[metadataKey] ?? false}
+                                />
+                              </div>
+                              <div class="min-w-0">
+                                <p class="text-muted-foreground mb-1 text-xs">After</p>
+                                <ChangelogValue
+                                  {entry}
+                                  {change}
+                                  side="after"
+                                  metadataOpen={imageMetadata[metadataKey] ?? false}
+                                />
+                              </div>
                             </div>
-                            <div class="min-w-0">
-                              <p class="text-muted-foreground mb-1 text-xs">After</p>
-                              <ChangelogValue
-                                {entry}
-                                {change}
-                                side="after"
-                                metadataOpen={imageMetadata[metadataKey] ?? false}
-                              />
-                            </div>
-                          </div>
+                          {/if}
                         </section>
                       {/each}
                     </div>
