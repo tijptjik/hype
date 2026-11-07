@@ -1,3 +1,4 @@
+import { historicalFeatureVisibility } from '#lib/db/services/historicalLayers.js'
 // DRIZZLE
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 // PRESENTATION
@@ -141,6 +142,7 @@ const getLayerFeatures = async (
         .where(
           and(
             eq(feature.isArchived, false),
+            ...(options.includeUnpublished ? [] : [historicalFeatureVisibility()]),
             ...(options.includeUnpublished ? [] : [eq(feature.isPublished, true)]),
             inArray(feature.layerId, layerIdChunk),
           ),
@@ -165,6 +167,7 @@ const getMapRenderFeatureRecords = async (
     async layerIdChunk => {
       const conditions = [
         eq(feature.isArchived, false),
+        ...(options.includeUnpublished ? [] : [historicalFeatureVisibility()]),
         ...(options.includeUnpublished ? [] : [eq(feature.isPublished, true)]),
         inArray(feature.layerId, layerIdChunk),
       ]
