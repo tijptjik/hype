@@ -27,6 +27,10 @@ import type { OmnibarSearchBarProps } from './omnibarPrimitives.types'
 
 let { search, hasElevatedChrome, effectiveAppMainWidth }: OmnibarSearchBarProps =
   $props()
+const updating = $derived(
+  search.isTrayOpen &&
+    (search.updating ?? search.sections.some(section => section.loading)),
+)
 const searchBarClasses = $derived(
   getOmnibarSearchBarClasses({ hasElevatedChrome, effectiveAppMainWidth }),
 )
@@ -56,12 +60,26 @@ const surfaceClasses = $derived(
         oninput={event =>
           search.onSearchTermChange((event.currentTarget as HTMLInputElement).value)}
         onfocus={search.onOpenTray}
-        class="h-12 min-w-0 w-full appearance-none rounded-lg border-0 bg-panel pl-6 pr-10 text-sm text-base-content caret-current placeholder:text-muted-foreground focus:outline-none"
+        class="bg-panel text-base-content placeholder:text-muted-foreground h-12 w-full min-w-0 appearance-none rounded-lg border-0 pr-20 pl-6 text-sm caret-current focus:outline-none"
         use:focusOnSlash={() => void null}
         use:selectOnEnter={search.onSelectFirstResult}
         use:handleEscape={search.onClearSearchOrCloseTray}
       >
-      <div class="absolute inset-y-0 right-2 flex items-center pr-3">
+      <div
+        class="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-3 pr-3"
+      >
+        <span
+          role="status"
+          class="flex size-4 items-center justify-center transition-opacity duration-150 motion-reduce:transition-none {updating
+            ? 'opacity-100'
+            : 'opacity-0'}"
+        >
+          <span
+            aria-hidden="true"
+            class="border-primary/20 border-t-primary size-3 rounded-full border-2 motion-safe:animate-spin"
+          ></span>
+          <span class="sr-only">{updating ? m.resource_loading() : ''}</span>
+        </span>
         <Icon src={MagnifyingGlass} tone="base" class="h-6 w-6" />
       </div>
     </div>
@@ -76,7 +94,7 @@ const surfaceClasses = $derived(
         out:slide={{ duration: 160 }}
       >
         <div class="min-h-0 flex-1 overflow-y-auto">
-          <OmnibarResults sections={search.sections} />
+          <OmnibarResults sections={search.sections} {updating} />
         </div>
         <OmnibarNewFeature onCreateFeature={search.onCreateFeature} />
       </div>

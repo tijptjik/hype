@@ -22,6 +22,7 @@ export type OmnibarCollectionItem = {
 }
 
 export type OmnibarSearchProps = {
+  updating?: boolean
   term: string
   isTrayOpen: boolean
   sections: OmnibarResultSection[]

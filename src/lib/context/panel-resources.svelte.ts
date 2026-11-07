@@ -23,6 +23,7 @@ import type {
  * @param search - Reactive search text getter.
  * @param slot - Panel selection or index filtering/count semantics.
  * @param active - Whether this consumer needs requests and focus refreshes.
+ * @param debounceMs Quiet period; use zero when the caller already schedules search updates.
  * @returns Reactive rows, traversal state and retry action.
  */
 export function usePanelResources(
@@ -31,6 +32,7 @@ export function usePanelResources(
   search: () => string,
   slot: 'panel' | 'index' = 'panel',
   active: () => boolean = () => true,
+  debounceMs = 200,
 ) {
   const navigation = getSurfaceNavigation()
   const list = app.resources.createCollection(type)
@@ -90,7 +92,7 @@ export function usePanelResources(
         submittedKey = viewKey
         void list.load(next).catch(() => {})
       },
-      next.q ? 200 : 0,
+      next.q ? debounceMs : 0,
     )
     return () => clearTimeout(timer)
   })
@@ -166,6 +168,10 @@ export function usePanelResources(
   })
   return {
     list,
+    // Include the debounce window so consumers do not mistake old rows for a completed search.
+    get searchPending(): boolean {
+      return active() && (submittedKey !== viewKey || list.loading)
+    },
     get error(): unknown {
       return list.error ?? pins.find(pin => pin.error)?.error
     },

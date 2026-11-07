@@ -64,6 +64,7 @@ export type OmnibarCollectionProps = {
 }
 
 export type OmnibarResultsProps = {
+  updating?: boolean
   sections: OmnibarResultSection[]
 }
 

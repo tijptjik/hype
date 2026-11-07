@@ -53,6 +53,7 @@ function setup() {
   } as unknown as AppCtx
   const featureSelect = vi.fn()
   const omni = {
+    searchQueryTerm: 'neon',
     state: { searchTerm: 'neon', isTrayOpen: true, mode: 'search' },
     searchResults: {
       feature: [
@@ -132,9 +133,36 @@ it('selects the first layer when no feature matches and omits resource groups fo
   search().onSelectFirstResult()
   expect(scope.toggleLayer).toHaveBeenCalledWith('layer-0')
   omni.state.searchTerm = ' '
+  omni.searchQueryTerm = ' '
   expect(search().sections.map(section => section.collectionType)).toEqual([
     'feature',
     'neighbourhood',
     'walk',
   ])
+})
+
+it('does not activate an incoming match with Enter while the displayed results are retained', () => {
+  const { search, omni, featureSelect } = setup()
+  Object.defineProperty(omni, 'searchPending', { value: true, configurable: true })
+  search().onSelectFirstResult()
+  expect(featureSelect).not.toHaveBeenCalled()
+  Object.defineProperty(omni, 'searchPending', { value: false })
+  search().onSelectFirstResult()
+  expect(featureSelect).toHaveBeenCalledWith('feature')
+})
+
+it('keeps completed matches while the draft advances and shows activity immediately', () => {
+  const { search, omni } = setup()
+  const completed = search()
+    .sections.find(section => section.collectionType === 'layer')
+    ?.results.map(row => row.ref)
+  omni.state.searchTerm = 'neon signs'
+  expect(search().updating).toBe(true)
+  expect(
+    search()
+      .sections.find(section => section.collectionType === 'layer')
+      ?.results.map(row => row.ref),
+  ).toEqual(completed)
+  omni.state.searchTerm = 'neon'
+  expect(search().updating).toBe(false)
 })

@@ -51,9 +51,10 @@ export function useOmnibarModel(
     usePanelResources(
       appCtx.view,
       type,
-      () => omniCtx.state.searchTerm,
+      () => omniCtx.searchQueryTerm,
       'panel',
-      () => omniCtx.state.isTrayOpen && Boolean(omniCtx.state.searchTerm.trim()),
+      () => omniCtx.state.isTrayOpen && Boolean(omniCtx.searchQueryTerm.trim()),
+      0,
     ),
   )
 
@@ -101,18 +102,17 @@ export function useOmnibarModel(
    * @returns At most two matches per resource level, with independent controls.
    */
   function getResourceSections(): OmnibarResultSection[] {
-    if (!omniCtx.state.searchTerm.trim()) return []
+    if (!omniCtx.searchQueryTerm.trim()) return []
     const scope = appCtx.view.scope
     return resourceTypes.map((type, index) => ({
       collectionType: type,
       limit: 2,
-      loading: resourceLists[index].list.loading,
+      loading: resourceLists[index].searchPending,
       onSelection: (id: string) => void selectResource(type, id),
       results: resourceLists[index].rows
         .filter(
           row =>
-            !row.isArchived &&
-            matchesResourceIndexSearch(row, omniCtx.state.searchTerm),
+            !row.isArchived && matchesResourceIndexSearch(row, omniCtx.searchQueryTerm),
         )
         .slice(0, 2)
         .map(row => {
@@ -330,7 +330,7 @@ export function useOmnibarModel(
         limit: Math.max(omniCtx.limits.feature ?? 0, omniCtx.searchFeatureLimit),
         totalCount: appCtx.view.resources.featureQueries.search.totalCount,
         hasMore: appCtx.view.resources.featureQueries.search.hasMore,
-        loading: appCtx.view.resources.featureQueries.search.loading,
+        loading: omniCtx.searchPending,
         onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.feature),
         onSelection: omniCtx.searchHandlers.feature,
       },
@@ -346,6 +346,7 @@ export function useOmnibarModel(
       },
       {
         collectionType: OmniCollection.walk,
+        loading: omniCtx.searchPending,
         results: omniCtx.searchResults.walk ?? [],
         limit: omniCtx.limits.walk ?? 0,
         onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.walk),
@@ -385,6 +386,9 @@ export function useOmnibarModel(
         ),
         search: {
           term: omniCtx.state.searchTerm,
+          updating:
+            omniCtx.state.searchTerm !== omniCtx.searchQueryTerm ||
+            getSearchSections().some(section => section.loading),
           isTrayOpen: omniCtx.state.isTrayOpen,
           sections: getSearchSections(),
           onSearchTermChange: handleSearchTermChange,
@@ -392,6 +396,8 @@ export function useOmnibarModel(
           onCloseTray: () => omniCtx.closeTray(),
           onSelectFirstResult: () => {
             const sections = getSearchSections()
+            // Pending rows still display the previous search, not these incoming matches.
+            if (sections.some(section => section.loading)) return
             const section = sections.find(section => section.results.length > 0)
             if (section) section.onSelection(section.results[0].ref)
           },

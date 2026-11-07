@@ -1,9 +1,10 @@
 // SVELTE
 import { browser } from '$app/env'
-import { getContext, setContext, tick, untrack } from 'svelte'
+import { getContext, setContext, tick, untrack, onDestroy } from 'svelte'
 // LIB
 import { isMobile } from '#lib'
 import { searchAllAsync } from '#lib/map/data.js'
+import { createBoundedDebounce } from '#lib/utils/boundedDebounce.js'
 // I18N
 import { getI18n } from '#lib/i18n.js'
 import { m } from '#lib/i18n.js'
@@ -131,18 +132,59 @@ export class OmniCtx {
     walk: [],
   })
 
+  searchQueryTerm = $state('')
+
+  private submittedSearchTerm = $state('')
+  private resolvedSearchTerm = $state('')
+
+  /** Whether remote search categories are debouncing or awaiting their queries. */
+  get searchPending(): boolean {
+    if (!this.appCtx.view.isInitialised || this.appCtx.view.isAdmin()) return false
+    return (
+      this.state.isTrayOpen &&
+      (this.submittedSearchTerm !== this.searchQueryTerm ||
+        this.resolvedSearchTerm !== this.searchQueryTerm ||
+        this.appCtx.view.resources.featureQueries.search.loading ||
+        this.appCtx.view.resources.featureQueries.searchWishlist.loading)
+    )
+  }
+
   // Constructor with appCtx
   constructor(appCtx: AppCtx) {
     this.appCtx = appCtx
 
+    // Submit the latest draft after a pause or at least once per continuous typing burst.
+    const searchScheduler = createBoundedDebounce()
+    onDestroy(() => searchScheduler.cancel())
+    $effect(() => {
+      const term = this.state.searchTerm
+      if (!this.state.isTrayOpen || !term.trim()) {
+        searchScheduler.cancel()
+        this.searchQueryTerm = term
+        return
+      }
+      // Let the active request publish before starting the latest queued draft.
+      if (
+        this.appCtx.view.resources.featureQueries.search.loading ||
+        this.appCtx.view.resources.featureQueries.searchWishlist.loading
+      ) {
+        searchScheduler.cancel()
+        return
+      }
+      searchScheduler.schedule(() => {
+        this.searchQueryTerm = term
+      })
+    })
+
     // Each search activates an independent cached query; changing text never drains all pages.
     $effect(() => {
       const input = this.appCtx.view.filters.featureQueryInput({
-        q: this.state.searchTerm,
+        q: this.searchQueryTerm,
       })
       if (!this.appCtx.view.isInitialised || this.appCtx.view.isAdmin()) return
       if (!this.state.isTrayOpen) return
       const timer = setTimeout(() => {
+        this.submittedSearchTerm = this.searchQueryTerm
         void this.appCtx.view.queries
           .loadFeatureQuery('search', input)
           .catch(console.error)
@@ -155,17 +197,20 @@ export class OmniCtx {
             })
             .catch(console.error)
         }
-      }, 120)
+      }, 0)
 
       return () => clearTimeout(timer)
     })
 
     // Explicitly track cached and returned pages so optimistic results appear before the network.
     $effect(() => {
-      const searchTerm = this.state.searchTerm
+      const searchTerm = this.searchQueryTerm
+      this.submittedSearchTerm
 
       this.appCtx.view.resources.featureQueries.search.rows
+      this.appCtx.view.resources.featureQueries.search.loading
       this.appCtx.view.resources.featureQueries.searchWishlist.totalCount
+      this.appCtx.view.resources.featureQueries.searchWishlist.loading
       this.appCtx.view.divisionCtx.divisionFeatureCounts.size
 
       const timer = setTimeout(() => this.updateSearchResults(searchTerm), 0)
@@ -388,11 +433,26 @@ export class OmniCtx {
   private async updateSearchResults(searchTerm: string): Promise<void> {
     try {
       const results = await searchAllAsync(searchTerm, this.appCtx.view)
-      if (searchTerm === this.state.searchTerm)
+      if (searchTerm === this.searchQueryTerm) {
         this.searchResults = this.toGroups(results)
+        if (
+          this.submittedSearchTerm === searchTerm &&
+          !this.appCtx.view.resources.featureQueries.search.loading &&
+          !this.appCtx.view.resources.featureQueries.searchWishlist.loading
+        )
+          this.resolvedSearchTerm = searchTerm
+      }
     } catch (error) {
       console.error('Error updating search results:', error)
-      this.searchResults = { feature: [], neighbourhood: [], walk: [] }
+      if (searchTerm === this.searchQueryTerm) {
+        this.searchResults = { feature: [], neighbourhood: [], walk: [] }
+        if (
+          this.submittedSearchTerm === searchTerm &&
+          !this.appCtx.view.resources.featureQueries.search.loading &&
+          !this.appCtx.view.resources.featureQueries.searchWishlist.loading
+        )
+          this.resolvedSearchTerm = searchTerm
+      }
     }
   }
 
