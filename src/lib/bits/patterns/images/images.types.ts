@@ -115,6 +115,7 @@ export type ImageProps = {
 }
 
 export type ViewerProps = {
+  rounded?: string
   items: ViewerRenderable[]
   activeId?: string | null
   retainedItem?: ViewerRenderable | null

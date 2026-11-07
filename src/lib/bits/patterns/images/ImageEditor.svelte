@@ -87,9 +87,10 @@ $effect(() => {
 </script>
 
 <div class={cx('h-full w-full select-none bg-base-100 px-0')}>
-  <div class="flex h-full w-full min-h-0">
+  <div class="flex h-full min-h-0 w-full">
     <div class={cx('relative min-h-0 min-w-0 flex-1 pt-2', className)}>
       <AdminViewer
+        rounded="rounded-none"
         {items}
         {activeId}
         bind:isFullscreen
@@ -166,7 +167,7 @@ $effect(() => {
           followActiveIdRequestId={thumbnailFollowActiveRequestId}
           variant="admin"
           orientation="vertical"
-          class="min-h-0 h-full"
+          class="h-full min-h-0"
           size={adminThumbnailSize}
           {fit}
           prefetchFit={viewerFit}
@@ -196,7 +197,7 @@ $effect(() => {
       </div>
 
       <div
-        class="pointer-events-none absolute inset-x-0 bottom-0 z-20 border-t border-border bg-base-100"
+        class="border-border bg-base-100 pointer-events-none absolute inset-x-0 bottom-0 z-20 border-t"
         style={`height: ${verticalRailBottomBarHeightPx}px;`}
       >
         <ImagePrimitive.ThumbnailControls

@@ -11,6 +11,7 @@ let {
   fullscreenRequestKey = 0,
   fit = 'fit',
   viewerFit = fit,
+  rounded = 'rounded-2xl',
   wrapNavigation = true,
   showNavButtons = true,
   leftRail,
@@ -43,6 +44,7 @@ let {
     />
   {:else}
     <Viewer
+      {rounded}
       {items}
       {activeId}
       {retainedItem}
