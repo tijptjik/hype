@@ -1280,6 +1280,8 @@
   "theme_map_automatic": "使用当前地图的样式",
   "map_style__breadline_light_name": "日行者",
   "map_style__breadline_light_description": "Milque 米白及蜜桃色地图，突出港铁出入口，衬托面包店及收集点标记。",
+  "map_style__quercus_name": "Quercus",
+  "map_style__quercus_description": "植物野外图鉴风格，配以纸张肌理、公园点描及林地细线纹理。以纤细街巷取代快速公路，突出古树照片。与 Milque 界面搭配。",
   "map_style__midnight_name": "午夜",
   "map_style__midnight_description": "山水午夜配色：青绿陆地、青色道路与紫色建筑。",
   "map_style__breadline_dark_name": "夜行者",

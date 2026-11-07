@@ -16,16 +16,18 @@ import {
 } from '#lib/map/styles/render.shared.js'
 
 describe('map render storage helpers', () => {
-  it('reuses existing previews for renamed map styles', async () => {
+  it('uses bundled current previews while retaining legacy asset routes', async () => {
     for (const [current, legacy] of [
       ['hype-dark', 'hyper'],
       ['hype-light', 'hyperLight'],
     ] as const) {
-      expect(getMapStyleRenderAssetPath(current)).toBe(
-        getMapStyleRenderAssetPath(legacy),
-      )
+      const bundledPreview = `/mapStylePreviews/${current}.png`
+      expect(getMapStyleRenderAssetPath(current)).toBe(bundledPreview)
       expect(await resolveMapStyleRenderPathForKey('production', current)).toBe(
-        await resolveMapStyleRenderPathForKey('production', legacy),
+        bundledPreview,
+      )
+      expect(getMapStyleRenderAssetPath(legacy)).toBe(
+        `/api/mapRenders/styles/${legacy}/asset`,
       )
     }
   })

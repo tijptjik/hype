@@ -32,6 +32,11 @@ export const getMapStyleCatalogCopy = (
   const locale = toLocaleKebab(localeKey)
 
   switch (key) {
+    case 'quercus':
+      return {
+        name: m.map_style__quercus_name({}, { locale }),
+        description: m.map_style__quercus_description({}, { locale }),
+      }
     case 'noclit26':
       return {
         name: "NocLit'26",

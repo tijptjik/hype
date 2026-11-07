@@ -1280,6 +1280,8 @@
   "theme_map_automatic": "Use Active Map Styles",
   "map_style__breadline_light_name": "Day Runner",
   "map_style__breadline_light_description": "Milque paper and peach with clear MTR exits and a quiet backdrop for bakery and drop-off markers.",
+  "map_style__quercus_name": "Quercus",
+  "map_style__quercus_description": "A botanical field map with paper grain, stippled parks and woodland hatching. Fine local streets replace motorway ribbons, keeping ancient-tree photographs in focus. Pairs with Milque.",
   "map_style__midnight_name": "Midnight",
   "map_style__midnight_description": "SaanSeoi’s midnight palette with teal land, cyan roads and violet buildings.",
   "map_style__breadline_dark_name": "Night Runner",
