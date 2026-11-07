@@ -28,6 +28,7 @@ async function fixture(fullContent = false) {
   connections.push(connection)
   const { sqlite } = connection,
     db = connection.db as unknown as Database
+  sqlite.exec('CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,username TEXT,displayUsername TEXT,attribution TEXT)')
   sqlite.exec(
     `PRAGMA foreign_keys=ON; CREATE TABLE feature(id TEXT PRIMARY KEY, isPublished INTEGER NOT NULL, localIsPublished INTEGER, isDraft INTEGER NOT NULL, modifiedAt TEXT,isPendingReview INTEGER NOT NULL DEFAULT 0,publisherId TEXT,publishedAt TEXT); INSERT INTO feature(id,isPublished,localIsPublished,isDraft,modifiedAt) VALUES ('a',1,NULL,0,'initial'),('b',1,NULL,0,'initial'),('c',0,NULL,1,'initial'),('d',0,NULL,1,'initial');`,
   )

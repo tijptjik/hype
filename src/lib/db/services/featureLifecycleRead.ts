@@ -24,6 +24,9 @@ export async function readFeatureLifecycleHistory(
     revisionId: string
     version: number
     actorId: string
+    actorName: string | null
+    actorUsername: string | null
+    actorDisplayUsername: string | null
     origin: string
     reason: string | null
     createdAt: string
@@ -34,13 +37,16 @@ export async function readFeatureLifecycleHistory(
     revisionId: string
     version: number
     actorId: string
+    actorName: string | null
+    actorUsername: string | null
+    actorDisplayUsername: string | null
     origin: string
     reason: string | null
     createdAt: string
     recordState: string | null
   }>(sql`
-  SELECT r.id revisionId,r.sequence version,c.actorId,c.origin,c.reason,c.createdAt,r.recordState
-  FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId
+  SELECT r.id revisionId,r.sequence version,c.actorId,u.name actorName,NULLIF(u.username,'') actorUsername,NULLIF(u.displayUsername,'') actorDisplayUsername,c.origin,c.reason,c.createdAt,r.recordState
+  FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId LEFT JOIN user u ON u.id=c.actorId
   WHERE r.featureId=${input.featureId} AND r.sequence IS NOT NULL AND (${input.guard})
     AND (${input.beforeVersion ?? null} IS NULL OR r.sequence<${input.beforeVersion ?? null})
   ORDER BY r.sequence DESC LIMIT 50`)

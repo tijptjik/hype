@@ -45,11 +45,14 @@ export type FeatureRevisionWorkspace = {
     revisionId: string | null
     generation: number
     actorId: string
+    actorName?: string | null
+    actorUsername?: string | null
+    actorDisplayUsername?: string | null
     origin: string
     reason: string | null
     createdAt: string
   }[]
-  privateHistory: { revisionId: string; actorId: string; origin: string; reason: string | null; createdAt: string }[]
+  privateHistory: { revisionId: string; actorId: string; actorName?: string | null; actorUsername?: string | null; actorDisplayUsername?: string | null; origin: string; reason: string | null; createdAt: string }[]
 }
 
 /**
@@ -160,8 +163,8 @@ export async function readFeatureRevisionWorkspace(
     })
   }
   const history = await db.all<FeatureRevisionWorkspace['history'][number] & { publicationId: string }>(sql`
-    SELECT p.id AS publicationId,p.revisionId,p.generation,cs.actorId,cs.origin,cs.reason,cs.createdAt
-    FROM featureRevisionPublication p JOIN revisionChangeSet cs ON cs.id=p.changeSetId
+    SELECT p.id AS publicationId,p.revisionId,p.generation,cs.actorId,u.name actorName,NULLIF(u.username,'') actorUsername,NULLIF(u.displayUsername,'') actorDisplayUsername,cs.origin,cs.reason,cs.createdAt
+    FROM featureRevisionPublication p JOIN revisionChangeSet cs ON cs.id=p.changeSetId LEFT JOIN user u ON u.id=cs.actorId
     WHERE p.featureId=${input.featureId} AND (${input.guard}) ORDER BY p.generation DESC LIMIT 50`)
   for (const entry of history) {
     if (entry.generation === 0 && entry.origin === 'migration')
@@ -170,8 +173,8 @@ export async function readFeatureRevisionWorkspace(
   const initialStorage = head.generation === 0 && await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featureInitialRevision' AND type='table'`)
   const privateStorage = await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featurePrivateCapture' AND type='table'`)
   const privateHistory = input.canPublish && privateStorage?.n ? await db.all<FeatureRevisionWorkspace['privateHistory'][number]>(sql`
-    SELECT r.id revisionId,c.actorId,c.origin,c.reason,c.createdAt FROM featurePrivateCapture capture
-    JOIN featureRevision r ON r.id=capture.revisionId AND r.featureId=capture.featureId JOIN revisionChangeSet c ON c.id=r.changeSetId
+    SELECT r.id revisionId,c.actorId,u.name actorName,NULLIF(u.username,'') actorUsername,NULLIF(u.displayUsername,'') actorDisplayUsername,c.origin,c.reason,c.createdAt FROM featurePrivateCapture capture
+    JOIN featureRevision r ON r.id=capture.revisionId AND r.featureId=capture.featureId JOIN revisionChangeSet c ON c.id=r.changeSetId LEFT JOIN user u ON u.id=c.actorId
     WHERE capture.featureId=${input.featureId} AND (${input.guard}) ORDER BY capture.sequence DESC LIMIT 50`) : []
   const initial = initialStorage && initialStorage.n ? await db.get<{ taskId: string | null }>(sql`
     SELECT (SELECT id FROM task WHERE featureId=i.featureId AND type='newFeature' AND isReviewed=0 ORDER BY id LIMIT 1) taskId

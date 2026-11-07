@@ -85,3 +85,23 @@ it('toggles the card surface while preserving controls and selected text', async
   }
   expect(loadReview).toHaveBeenCalledTimes(1)
 })
+
+
+it('resolves user actors to profile links without toggling the comparison', async () => {
+  const loadReview = vi.fn()
+  render(FeaturePublicationHistory, {
+    entries: [{ ...entry, actorName: 'History Editor', actorUsername: 'history.editor', actorDisplayUsername: 'History.Editor' }],
+    canReview: true,
+    loadReview,
+  })
+  const actor = screen.getByRole('link', { name: '@History.Editor' })
+  expect(actor.getAttribute('href')).toBe('/admin/users/history.editor')
+  await fireEvent.click(actor)
+  expect(loadReview).not.toHaveBeenCalled()
+})
+
+it('falls back to the recorded ID when the user no longer exists', () => {
+  render(FeaturePublicationHistory, { entries: [entry], canReview: false, loadReview: vi.fn() })
+  expect(screen.getByText('editor')).toBeTruthy()
+  expect(screen.queryByRole('link')).toBeNull()
+})

@@ -107,6 +107,7 @@ function fixture(linked = false, catalogueCascades = false) {
   const connection = publicationSqlite({})
   connections.push(connection)
   const { sqlite } = connection
+  sqlite.exec('CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,username TEXT,displayUsername TEXT,attribution TEXT)')
   sqlite.exec('PRAGMA foreign_keys=ON')
   sqlite.exec(`CREATE TABLE organisation(id TEXT PRIMARY KEY,hubId TEXT,isPublished INTEGER,isArchived INTEGER);
     CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT,isPublished INTEGER,isArchived INTEGER);
@@ -1034,11 +1035,13 @@ describe('existing form revision routing', () => {
   }
   it('applies staff form changes directly while preserving hidden content and visibility', async () => {
     const f = fixture(), initial = await f.initialize()
+    f.sqlite.exec("INSERT INTO user(id,name,username,displayUsername) VALUES ('author','History Author','history.author','History.Author')")
     const saved = await saveFeatureFormRevision(f.db, { ...common, expectedScope, updatedAt: 'token',
       data: { ...form(initial.content), isVisitable: false }, canPublish: true, allowDescriptions: true, allowedInternalIds: new Set() })
     expect(saved.status).toBe('applied')
     const workspace = await readFeatureRevisionWorkspace(f.db, { ...common, canPublish: true })
     expect(workspace.proposals).toHaveLength(0)
+    expect(workspace.history[0]).toMatchObject({ actorId: 'author', actorUsername: 'history.author', actorDisplayUsername: 'History.Author' })
     const candidate = FeatureRevisionContentSchema.parse(JSON.parse((f.sqlite.prepare('SELECT content FROM featureRevision WHERE id=?').get(workspace.comparisonRevisionId) as {content:string}).content))
     expect(candidate.properties.private).toEqual(initial.content.properties.private)
     expect(candidate.translations['zh-hant']).toEqual(initial.content.translations['zh-hant'])
@@ -1050,12 +1053,14 @@ describe('existing form revision routing', () => {
     f.sqlite.exec(readFileSync('migrations/0189_feature_private_capture.sql','utf8'))
     f.sqlite.exec("UPDATE feature SET isPublished=0,localIsPublished=0 WHERE id='f'")
     const initial = await f.initialize(false)
+    f.sqlite.exec("INSERT INTO user(id,name,username,displayUsername) VALUES ('author','History Author','history.author','History.Author')")
     const saved = await saveFeatureFormRevision(f.db, { ...common, expectedScope, updatedAt: 'token',
       data: { ...form(initial.content), isVisitable: false }, canPublish: true, allowDescriptions: true, allowedInternalIds: new Set() })
     expect(saved.status).toBe('applied')
     expect(f.sqlite.prepare("SELECT isVisitable,isPublished FROM feature WHERE id='f'").get()).toEqual({ isVisitable: 0, isPublished: 0 })
     const workspace = await readFeatureRevisionWorkspace(f.db, { ...common, canPublish: true })
     expect(workspace.proposals).toHaveLength(0)
+    expect(workspace.privateHistory[0]).toMatchObject({ actorId: 'author', actorUsername: 'history.author', actorDisplayUsername: 'History.Author' })
     expect(workspace.publishedRevisionId).toBeNull()
     expect(await routeFeatureRevisionPublication(f.db, { ...common, state: true })).toBe('updated')
     expect(f.sqlite.prepare("SELECT publishedRevisionId FROM featureRevisionHead WHERE featureId='f'").get()).toEqual({ publishedRevisionId: workspace.comparisonRevisionId })
@@ -1124,7 +1129,6 @@ describe('accepted gallery read projection', () => {
   it('returns retained accepted gallery pins through the admin list for an unpublished Feature', async () => {
     const f = fixture()
     await f.initialize(false)
-    f.sqlite.exec('CREATE TABLE user(id TEXT PRIMARY KEY, attribution TEXT)')
     const rows = await getImagesForFeature(f.db, [sql`featureImage.featureId='f'`], { limit: 10 })
     expect(rows.map(row => row.id)).toEqual(['photo','research'])
     expect(rows[0]).toMatchObject({ imageRevisionId: 'image-r1', publicId: 'immutable-photo' })
@@ -1325,7 +1329,6 @@ describe('revision publication controls and workspace privacy', () => {
   it('applies accepted gallery order and visibility before pagination', async () => {
     const f = fixture()
     await f.initialize()
-    f.sqlite.exec('CREATE TABLE user(id TEXT PRIMARY KEY,attribution TEXT)')
     const publicRows = await getImagesForFeature(f.db, [sql`featureImage.featureId='f'`], { limit: 1, offset: 0 }, undefined, true)
     expect(publicRows.map(row => row.id)).toEqual(['photo'])
     expect(publicRows[0]).toMatchObject({ publicId: 'immutable-photo', version: 1 })

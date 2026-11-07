@@ -198,9 +198,9 @@ function relative(value: string): string {
                     prominent
                     entry={{
                       ...entry,
-                      actorName: null,
-                      actorUsername: null,
-                      actorDisplayUsername: null,
+                      actorName: entry.actorName ?? null,
+                      actorUsername: entry.actorUsername ?? null,
+                      actorDisplayUsername: entry.actorDisplayUsername ?? null,
                     }}
                   />
                 </dd>

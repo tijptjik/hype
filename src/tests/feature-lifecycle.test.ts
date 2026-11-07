@@ -1298,3 +1298,15 @@ it('keeps unpublished accepted Features out of ancestor publication', async () =
   await saveFeatureEdit(f.db, { ...command, expectedRevisionId: f.initial.revisionId, expectedVersion: 0, state: { isPublished: true }, derive: content => content })
   expect(await f.db.get(sql`SELECT id FROM feature WHERE ${eligible}`)).toMatchObject({ id: 'f' })
 })
+
+
+it('resolves accepted history actors from current profiles and retains missing-user evidence', async () => {
+  const f = await fixture()
+  f.sqlite.exec("INSERT INTO user(id,name,username,displayUsername) VALUES ('author','History Author','history.author','History.Author')")
+  const request = { ...command, canPublish: true }
+  const workspace = await readFeatureRevisionWorkspace(f.db, request)
+  expect(workspace.history[0]).toMatchObject({ actorId: 'author', actorName: 'History Author', actorUsername: 'history.author', actorDisplayUsername: 'History.Author' })
+  f.sqlite.exec("DELETE FROM user WHERE id='author'")
+  expect((await readFeatureRevisionWorkspace(f.db, request)).history[0]).toMatchObject({ actorId: 'author', actorName: null, actorUsername: null, actorDisplayUsername: null })
+  expect((await readFeatureRevisionWorkspace(f.db, { ...request, guard: sql`0` })).history).toEqual([])
+})
