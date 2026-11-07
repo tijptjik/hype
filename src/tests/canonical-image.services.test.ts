@@ -31,6 +31,7 @@ function setup() {
   const db = drizzle({
     prepare: (sql: string) => ({
       bind: (...params: unknown[]) => ({
+        all: async () => ({ results: sqlite.prepare(sql).all(...(params as never[])) }),
         run: async () => {
           sqlite.prepare(sql).run(...(params as never[]))
           return { success: true }

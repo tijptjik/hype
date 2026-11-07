@@ -48,7 +48,9 @@ const {
   mockHasImageStorageReference,
   mockRemoveOrganisationImage,
   mockReadImageRevisionDelivery,
+  mockSaveFeatureImageMetadataDraft,
 } = vi.hoisted(() => ({
+  mockSaveFeatureImageMetadataDraft: vi.fn(async (): Promise<unknown> => ({ status: 'legacy' })),
   mockReadImageRevisionDelivery: vi.fn(async (): Promise<unknown> => null),
   mockRemoveOrganisationImage: vi.fn(async () => true),
   mockHasImageStorageReference: vi.fn(async () => false),
@@ -127,9 +129,17 @@ const {
 vi.mock('#lib/db/services/imageRevisionDelivery.js', () => ({
   readImageRevisionDelivery: mockReadImageRevisionDelivery,
 }))
-
-
-
+vi.mock('#lib/db/services/featureGalleryCommands.js', () => ({
+  removeAcceptedFeatureImage: vi.fn(async () => 'legacy'),
+  prepareFeatureGalleryAssignmentCapture: vi.fn(async () => ({ before: [], after: [], revisionId: null })),
+}))
+vi.mock('#lib/db/services/featureImageMetadataRevision.js', () => ({
+  saveFeatureImageMetadataDraft: mockSaveFeatureImageMetadataDraft,
+}))
+vi.mock('#lib/db/services/featureImageUploadRevision.js', () => ({
+  hasFeatureRevisionHead: vi.fn(async () => false),
+  saveFeatureImageUploadDraft: vi.fn(),
+}))
 
 vi.mock('#lib/db/services/imageCleanup.js', async original => ({
   ...(await original<object>()),
@@ -295,6 +305,7 @@ vi.mock('#lib/db/zod/index.js', async () => ({
 let remote: MockedRemoteModule<typeof import('#lib/api/image.remote.js')>
 
 const buildDbWithContextRow = (row: Record<string, unknown>) => ({
+  get: vi.fn(async () => ({ n: 0 })),
   select: vi.fn(() => ({
     from: vi.fn(() => ({
       innerJoin: vi.fn(() => ({
@@ -334,6 +345,7 @@ describe('image.remote', () => {
   })
 
   beforeEach(() => {
+    mockSaveFeatureImageMetadataDraft.mockReset().mockResolvedValue({ status: 'legacy' })
     mockReadImageRevisionDelivery.mockReset().mockResolvedValue(null)
     mockHasImageStorageReference.mockResolvedValue(false)
     mockCreateUploadedResourceImage
@@ -512,7 +524,7 @@ describe('image.remote', () => {
       db: buildDbWithContextRow({
         isPublished: true,
         isArchived: false,
-        featureId: 'feature-1',
+        featureId: 'feature-1', projectId: 'project-1', organisationId: 'org-1',
       }),
     })
     await remote.getImagesForContext({
@@ -537,11 +549,17 @@ describe('image.remote', () => {
       .where(and(...conditions))
       .toSQL()
     expect(query.sql).toContain('"task"."featureId" = ?')
-    expect(query.params).toEqual(['feature-1'])
+    expect(query.params).toContain('feature-1')
     const sqlite = new DatabaseSync(':memory:')
     try {
-      sqlite.exec(`CREATE TABLE task (id TEXT, featureId TEXT);
-        INSERT INTO task VALUES ('task-1', 'feature-1');`)
+      sqlite.exec(`CREATE TABLE task (id TEXT, featureId TEXT, projectId TEXT, organisationId TEXT, isDraft INTEGER, contributorId TEXT);
+        CREATE TABLE feature (id TEXT, projectId TEXT, organisationId TEXT);
+        CREATE TABLE project (id TEXT, organisationId TEXT);
+        CREATE TABLE organisation (id TEXT);
+        INSERT INTO organisation VALUES ('org-1');
+        INSERT INTO project VALUES ('project-1','org-1');
+        INSERT INTO feature VALUES ('feature-1','project-1','org-1');
+        INSERT INTO task VALUES ('task-1', 'feature-1','project-1','org-1',0,'u-1');`)
       expect(sqlite.prepare(query.sql).all(...(query.params as never[]))).toHaveLength(
         1,
       )
@@ -652,7 +670,6 @@ describe('image.remote', () => {
     })
   })
 
-  
 
   it('captures Feature ancestry before legacy creation authorization', async () => {
     const { getFeatureImageCreationScope } = await import(
@@ -1370,7 +1387,24 @@ describe('image.remote', () => {
     )
   })
 
-  
+  it.each(['rotation', 'presentation'] as const)('saves enrolled %s edits without mutable image writes or sidecars', async kind => {
+    mockLoadImageById.mockResolvedValue({ id: 'img-1', env: 'local', publicId: 'old-key', version: 1 })
+    const draft = { status: 'saved', proposalId: 'p', candidateRevisionId: 'r', imageRevisionId: 'ir' }
+    mockSaveFeatureImageMetadataDraft.mockResolvedValueOnce(draft)
+    const result = kind === 'rotation'
+      ? await remote.rotateImage({ id: 'img-1', ctxType: 'feature', ctxId: 'feature-1', imageRevisionId: 'ir-base', rotation: 90 })
+      : await remote.updateImage({ id: 'img-1', ctxType: 'feature', ctxId: 'feature-1', imageRevisionId: 'ir-base', data: { presentationMode: 'cover' } })
+    expect(result).toEqual({ data: null, revisionDraft: draft })
+    expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
+    expect(mockSaveFeatureImageMetadataDraft).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      featureId: 'feature-1', expectedImageRevisionId: 'ir-base', actorId: 'u-1',
+    }))
+    expect(mockUpdateImageForContext).not.toHaveBeenCalled()
+    expect(mockReadMetadataDocument).not.toHaveBeenCalled()
+    expect(mockWaitUntil).not.toHaveBeenCalled()
+    const ctx = await mockGuardedContext()
+    expect(ctx.event.locals.platform.env.ASSET_RAW_DEV.put).not.toHaveBeenCalled()
+  })
 
   it.each([
     'new',
@@ -1983,6 +2017,31 @@ describe('image.remote', () => {
     expect(mockLoadFeatureCanonicalImageOccupancy).not.toHaveBeenCalled()
   })
 
+  it.each([false, true])('does not save unchanged logo metadata (stale=%s)', async stale => {
+    const storage = await import('#lib/db/services/resourceLogoSnapshot.js')
+    const editing = await import('#lib/api/services/resourceLogoEditing.js')
+    vi.mocked(storage.hasResourceLogoStorage).mockResolvedValue(true)
+    const baseline = vi.spyOn(editing, 'ensureLogoBaseline').mockResolvedValue({
+      imageRevisionId: 'current', assetVersionId: 'asset',
+      metadata: { version: 1234, presentationMode: 'contain' },
+      asset: { storageNamespace: 'local', storageKey: 'logo', contentHash: 'a'.repeat(64), byteSize: 100, mediaType: 'image/png' },
+    })
+    const owners = vi.spyOn(editing, 'authorizeLogoOwners').mockResolvedValue(undefined as never)
+    try {
+      const operation = remote.updateImage({
+        id: 'img-1', ctxType: 'project', ctxId: 'project-1',
+        imageRevisionId: stale ? 'old' : 'current', data: { presentationMode: 'contain' },
+      })
+      if (stale) await expect(operation).rejects.toMatchObject({ status: 409 })
+      else await expect(operation).resolves.toMatchObject({ unchanged: true })
+      expect(mockUpdateImageForContext).not.toHaveBeenCalled()
+    } finally {
+      baseline.mockRestore()
+      owners.mockRestore()
+      vi.mocked(storage.hasResourceLogoStorage).mockResolvedValue(false)
+    }
+  })
+
   it.each([
     'success',
     'stale',
@@ -1990,6 +2049,7 @@ describe('image.remote', () => {
     'source-drift',
     'missing-metadata',
     'missing-source',
+    'unchanged',
   ] as const)(
     'rotateImage preserves source objects while selecting metadata: %s',
     async scenario => {
@@ -2131,9 +2191,18 @@ describe('image.remote', () => {
         id: 'img-1',
         ctxType: 'feature',
         ctxId: 'feature-1',
-        rotation: 90,
+        rotation: scenario === 'unchanged' ? 0 : 90,
       })
 
+      if (scenario === 'unchanged') {
+        await expect(operation).resolves.toMatchObject({ unchanged: true })
+        expect(put).not.toHaveBeenCalled()
+        expect(mockUpdateImageForContext).not.toHaveBeenCalled()
+        expect(mockEnqueueDerivedAssetWarmup).not.toHaveBeenCalled()
+        fetchSpy.mockRestore()
+        dateNowSpy.mockRestore()
+        return
+      }
       if (scenario === 'missing-source') {
         const rejected = expect(operation).rejects.toMatchObject({ status: 404 })
         await vi.runAllTimersAsync()

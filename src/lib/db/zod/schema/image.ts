@@ -327,7 +327,7 @@ export const FinalizeImageUploadLinkSchema = z.discriminatedUnion('type', [
 export const AuthImageUploadSchema = z.object({
   cdn: z.enum(Object.values(ImageCDN) as [string, ...string[]]),
   env: z.enum(Object.values(ImageEnv) as [string, ...string[]]),
-  ctxType: z.enum(Object.values(ImageContextResource) as [string, ...string[]]),
+  ctxType: z.union([z.enum(ImageContextResource), z.literal(ImageContextResourceExtended.task)]),
   ctxId: z.string().min(1),
   organisationId: z.string().optional(),
   projectId: z.string().optional(),

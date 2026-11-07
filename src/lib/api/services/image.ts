@@ -1,3 +1,6 @@
+// CREATION CONTRIBUTIONS
+import { hasFeatureLifecycleStorage } from '#lib/db/services/featureLifecycle.js'
+import { readFeatureCreationTask, creationContributionScopeGuard } from '#lib/db/services/featureLifecycleCreationTask.js'
 // LOGO REVISIONS
 import { readResourceLogoHead, prepareResourceLogoRevision } from '#lib/db/services/resourceLogoRevision.js'
 // AUTHORIZATION
@@ -351,7 +354,7 @@ export const assertPermissionsToCreateImage = async (
   user: SessionUser,
   requestOrIntent: Request | boolean,
   userRoles: UserRoleDisco[],
-  ctxType: ImageContextResource,
+  ctxType: ImageContextResource | ImageContextResourceExtended,
   ctxId: Id,
   links?: FinalizeImageUploadLink[],
 ) => {
@@ -360,6 +363,17 @@ export const assertPermissionsToCreateImage = async (
     (link): link is Extract<FinalizeImageUploadLink, { type: 'taskImage' }> =>
       link.type === 'taskImage',
   )
+
+  if (ctxType === ImageContextResourceExtended.task) {
+    if (!await hasFeatureLifecycleStorage(db) || taskLinks.length !== 1 || taskLinks[0].taskId !== ctxId)
+      throw error(403, 'IMAGE_TASK_CONTEXT_MISMATCH')
+    const draft = await readFeatureCreationTask(db, { taskId: ctxId, guard: sql`1` })
+    if (!draft || draft.contributorId !== user.id || !draft.isDraft || draft.isReviewed || draft.status !== 'draft')
+      throw error(403, 'TASK_DRAFT_FORBIDDEN')
+    if (!await db.get(sql`SELECT 1 WHERE ${creationContributionScopeGuard(draft.scope)}`))
+      throw error(403, 'FEATURE_NOT_AVAILABLE')
+    return 'creation-contribution' as const
+  }
 
   let canContributeToDraft = taskLinks.length > 0
   // Every requested link must belong to this feature, not just the first draft link.

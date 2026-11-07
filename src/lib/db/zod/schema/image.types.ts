@@ -176,7 +176,7 @@ export type UploadedPhoto = {
 }
 
 export type ImageUploadCtx = {
-  ctxType: ImageContextResource
+  ctxType: ImageContextResource | ImageContextResourceExtended
   ctxId: Id
   hub?: HubDB
   organisation?: OrganisationDB
