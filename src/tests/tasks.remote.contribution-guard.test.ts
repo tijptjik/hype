@@ -7,11 +7,16 @@ vi.mock('#lib/db/services/featureLifecycleCreationTask.js', () => ({
   submitFeatureCreationTask: vi.fn(),
 }))
 
+vi.mock('#lib/db/services/taskLayerAssignment.js', () => ({
+  assignInitialTaskHistoricalLayer: vi.fn().mockResolvedValue(null),
+}))
+
 const reviewMocks = vi.hoisted(() => ({
   loadTask: vi.fn(),
   hasFeatureTaskTransfer: vi.fn(),
   probeTaskQuery: vi.fn(),
   authorizeTaskReadForProbe: vi.fn(),
+  authorizeTaskReassignForProbe: vi.fn(),
   authorizeFeaturePublishForSubmission: vi.fn(),
   updateTask: vi.fn(),
   archiveImages: vi.fn(),
@@ -57,6 +62,7 @@ vi.mock('#lib/i18n.js', () => ({ getLocale: vi.fn() }))
 vi.mock('#lib/api/index.js', () => ({ getValidQueryParams: vi.fn() }))
 vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeTaskReadForProbe: reviewMocks.authorizeTaskReadForProbe,
+  authorizeTaskReassignForProbe: reviewMocks.authorizeTaskReassignForProbe,
   authorizeFeaturePublishForSubmission:
     reviewMocks.authorizeFeaturePublishForSubmission,
 }))
@@ -248,6 +254,46 @@ describe('completed task write guard', () => {
     expect(reviewMocks.probeLayerForUpdate).not.toHaveBeenCalled()
     expect(reviewMocks.probeFeatureForUpdate).not.toHaveBeenCalled()
   })
+
+  it.each([null, 'source-layer'])(
+    'applies historical status only for a derived destination (%s)',
+    async historicalSourceLayerId => {
+      const pendingTask = {
+        id: 'task',
+        type: 'newFeature',
+        isReviewed: false,
+        featureId: 'feature',
+        projectId: 'project',
+        organisationId: 'org',
+      }
+      reviewMocks.loadTask.mockResolvedValue(pendingTask)
+      reviewMocks.authorizeTaskReassignForProbe.mockReturnValue({ allowed: true })
+      reviewMocks.probeLayerForUpdate.mockResolvedValue({
+        id: 'destination',
+        projectId: 'project',
+        historicalSourceLayerId,
+      })
+      reviewMocks.hasFeatureTaskTransfer.mockResolvedValue(false)
+      reviewMocks.probeFeatureForUpdate.mockResolvedValue({
+        id: 'feature',
+        modifiedAt: 'version',
+      })
+      reviewMocks.updateFeatureByIdWithConcurrency.mockResolvedValue({ id: 'feature' })
+
+      await reassignHandler(
+        { id: 'task', layerId: 'destination' },
+        { db: 'db', user: {}, event: { locals: { hub: {} } } },
+      )
+
+      expect(reviewMocks.updateFeatureByIdWithConcurrency).toHaveBeenCalledWith('db', {
+        id: 'feature',
+        updatedAt: 'version',
+        data: historicalSourceLayerId
+          ? { layerId: 'destination', isIntangible: true }
+          : { layerId: 'destination' },
+      })
+    },
+  )
 
   it('still publishes images and records a review for a pending task', async () => {
     const pendingTask = { id: 'task', type: 'newPhoto', isReviewed: false }

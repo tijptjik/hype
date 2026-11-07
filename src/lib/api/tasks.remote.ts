@@ -74,6 +74,7 @@ import {
   updateUserContributedFeatureTaskDraft,
 } from '#lib/api/services/feature.js'
 // API SERVICES
+import { assignInitialTaskHistoricalLayer } from '#lib/db/services/taskLayerAssignment.js'
 import {
   getTaskWithRelations,
   toEntityResponseShape,
@@ -1116,13 +1117,28 @@ export const reassignTaskLayer = guardedCommand(
       throw error(404, 'FEATURE_NOT_FOUND')
     }
 
-    const persisted = await updateFeatureByIdWithConcurrency(ctx.db, {
-      id: featureProbe.id as Id,
-      updatedAt: featureProbe.modifiedAt,
-      data: {
-        layerId: targetLayer.id as Id,
-      },
-    })
+    const reviewedAssignment = targetLayer.historicalSourceLayerId
+      ? await assignInitialTaskHistoricalLayer(ctx.db, {
+          taskId: rawTask.id,
+          featureId: featureProbe.id,
+          layerId: targetLayer.id,
+          projectId: rawTask.projectId,
+          organisationId: rawTask.organisationId,
+          updatedAt: featureProbe.modifiedAt,
+          actorId: ctx.userId,
+        })
+      : null
+    const persisted =
+      reviewedAssignment ??
+      (await updateFeatureByIdWithConcurrency(ctx.db, {
+        id: featureProbe.id as Id,
+        updatedAt: featureProbe.modifiedAt,
+        data: {
+          layerId: targetLayer.id as Id,
+          // Historical membership requires its status in the same write as the destination.
+          ...(targetLayer.historicalSourceLayerId ? { isIntangible: true } : {}),
+        },
+      }))
     if (!persisted) {
       throw error(409, 'STALE_FEATURE_WRITE')
     }

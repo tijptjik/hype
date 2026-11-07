@@ -545,6 +545,7 @@ export const probeLayerForUpdate = async (
   layerId: Id,
 ): Promise<{
   id: string
+  historicalSourceLayerId: string | null
   organisationId: string
   projectId: string
   metadata: LayerMetadata | null

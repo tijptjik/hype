@@ -92,6 +92,13 @@ export async function reviewInitialFeatureContribution(
   const content = imageReview.review
     ? reviewedImageContent(imageReview.review)
     : submittedContent
+  // Layer assignment is an attributed review override; the submitted candidate stays frozen.
+  const assignment = await db.get<{ isIntangible: number }>(sql`
+    SELECT json_extract(context,'$.isIntangible') isIntangible FROM featureRevisionReview
+    WHERE proposalId=${initial.proposalId} AND candidateRevisionId=${initial.candidateRevisionId}
+      AND json_extract(context,'$.kind')='task-layer-assignment/v1'
+      AND json_extract(context,'$.taskId')=${input.taskId} ORDER BY rowid DESC LIMIT 1`)
+  if (assignment) content.profile.isIntangible = Boolean(assignment.isIntangible)
   const uploads = await db.all<{
     proposalId: string
     candidateRevisionId: string
@@ -166,6 +173,7 @@ export async function reviewInitialFeatureContribution(
   )
   if (!source) return false
   const previous = structuredClone(submittedContent)
+  if (assignment) previous.profile.isIntangible = Boolean(assignment.isIntangible)
   const gallery = parseFeatureRevisionSource(source.snapshot).galleryLinks
   previous.gallery.order = gallery.map(row => String(row.imageId))
   // Legacy submissions may already have private gallery links. Compare their actual
@@ -197,6 +205,7 @@ export async function reviewInitialFeatureContribution(
     expectedGeneration: 0,
     publicationIntent: 'initial',
     deferInitialPublication: true,
+    ...(assignment ? { reviewedContent: content } : {}),
     mergePolicy: FEATURE_CONTENT_MERGE_POLICY,
     validate: value =>
       FeatureRevisionContentSchema.safeParse(value).success

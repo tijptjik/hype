@@ -52,15 +52,25 @@ vi.mock('#lib/db/services/featureRevisionProjection.js', async importOriginal =>
   }),
 }))
 
-it('checks the task snapshot before projection while retaining reviewed-photo guards', async () => {
-  const source = lifecycleFixture(),
-    f = publicationSqlite({})
-  const db = f.db as unknown as Database
-  try {
-    const content = structuredClone((await source.initialize(false)).content)
-    vi.mocked(readFeatureRevisionSource).mockResolvedValue({ snapshot: '{}' } as never)
-    content.gallery = { entries: {}, order: [] }
-    f.sqlite.exec(`PRAGMA foreign_keys=ON;
+it.each([false, true])(
+  'checks task/photo guards and retains historical assignment %s on acceptance',
+  async historicalAssignment => {
+    const actualSource = await vi.importActual<
+      typeof import('#lib/db/services/featureRevisionSource.js')
+    >('#lib/db/services/featureRevisionSource.js')
+    vi.mocked(readFeatureRevisionSource).mockImplementation(
+      actualSource.readFeatureRevisionSource,
+    )
+    const source = lifecycleFixture(),
+      f = publicationSqlite({})
+    const db = f.db as unknown as Database
+    try {
+      const content = structuredClone((await source.initialize(false)).content)
+      vi.mocked(readFeatureRevisionSource).mockResolvedValue({
+        snapshot: '{}',
+      } as never)
+      content.gallery = { entries: {}, order: [] }
+      f.sqlite.exec(`PRAGMA foreign_keys=ON;
    CREATE TABLE feature(id TEXT PRIMARY KEY,isPublished INTEGER DEFAULT 0,localIsPublished INTEGER DEFAULT 0,isDraft INTEGER DEFAULT 0,isPendingReview INTEGER DEFAULT 1,publisherId TEXT,publishedAt TEXT,modifiedAt TEXT,layerId TEXT DEFAULT 'layer',projectId TEXT DEFAULT 'project',organisationId TEXT DEFAULT 'org',isArchived INTEGER DEFAULT 0);
    CREATE TABLE layer(id TEXT,projectId TEXT,isPublished INTEGER,isArchived INTEGER); INSERT INTO layer VALUES('layer','project',1,0);
    CREATE TABLE project(id TEXT,organisationId TEXT,isPublished INTEGER,isArchived INTEGER); INSERT INTO project VALUES('project','org',1,0);
@@ -71,156 +81,179 @@ it('checks the task snapshot before projection while retaining reviewed-photo gu
    CREATE TABLE taskImage(taskId TEXT,imageId TEXT);
    CREATE TABLE featureInitialRevision(featureId TEXT,proposalId TEXT,mode TEXT);
    CREATE TABLE featureImageUploadRevision(proposalId TEXT,taskIds TEXT,featureId TEXT,candidateRevisionId TEXT,imageId TEXT,imageRevisionId TEXT);`)
-    for (const migration of [
-      '0171_feature_revisions.sql',
-      '0172_image_revisions.sql',
-      '0201_task_image_review_context.sql',
-    ])
-      f.sqlite.exec(readFileSync('migrations/' + migration, 'utf8'))
-    const command = { featureId: 'f', actorId: 'reviewer', guard: sql`1` }
-    const base = (await initializeFeatureRevision(db, {
-      ...command,
-      content,
-      published: false,
-    }))!
-    const image = (await createImageAssetRevision(db, {
-      ...command,
-      imageId: 'photo',
-      storageNamespace: 'local',
-      storageKey: 'original',
-      contentHash: 'a'.repeat(64),
-      mediaType: 'image/png',
-      byteSize: 4,
-      metadata: { version: 1 },
-    }))!
-    content.gallery = {
-      order: ['photo'],
-      entries: {
-        photo: {
-          imageRevisionId: image.imageRevisionId,
-          intent: 'undefined',
-          isPublished: true,
-          caption: {},
-          alt: {},
-        },
-      },
-    }
-    const proposal = (await createFeatureRevisionProposal(db, {
-      ...command,
-      baseRevisionId: base,
-      content,
-    }))!
-    await submitFeatureRevisionProposal(db, {
-      ...command,
-      proposalId: proposal.proposalId,
-      expectedCandidateRevisionId: proposal.candidateRevisionId,
-    })
-    f.sqlite
-      .prepare("INSERT INTO featureInitialRevision VALUES('f',?,'contribution')")
-      .run(proposal.proposalId)
-    const scope = { taskId: 'task', proposalId: proposal.proposalId, guard: sql`1` }
-    const original = (await readFeatureImageReview(db, scope))!
-    expect(original.lifecycle).toBe(false)
-    const reviewId = await saveFeatureImageReview(db, {
-      ...scope,
-      actorId: 'reviewer',
-      proposalVersion: proposal.candidateRevisionId,
-      expectedReviewId: null,
-      expectedRevisionId: base,
-      expectedGeneration: 0,
-      patch: { imageId: 'photo', rotation: 90, caption: { en: 'Reviewed' } },
-    })
-    const input = {
-      ...command,
-      taskId: 'task',
-      actorId: 'reviewer',
-      reason: 'Review',
-      accept: true,
-      completion: [],
-      imageReview: { taskId: 'task', reviewId },
-      guard: sql`EXISTS(SELECT 1 FROM feature WHERE id='f' AND modifiedAt='original')`,
-    }
-    expect(
-      await reviewInitialFeatureContribution(db, { ...input, guard: sql`0` }),
-    ).toBe(false)
-    expect(
-      await reviewInitialFeatureContribution(db, {
-        ...input,
-        imageReview: { taskId: 'task', reviewId: 'stale' },
-      }),
-    ).toBe(false)
-    expect(await reviewInitialFeatureContribution(db, input)).toBe(true)
-    expect(
-      f.sqlite
-        .prepare(
-          "SELECT isPublished,localIsPublished,publisherId,publishedAt FROM feature WHERE id='f'",
-        )
-        .get(),
-    ).toEqual({
-      isPublished: 0,
-      localIsPublished: 0,
-      publisherId: null,
-      publishedAt: null,
-    })
-    expect(
-      f.sqlite
-        .prepare(
-          "SELECT publishedRevisionId,generation FROM featureRevisionHead WHERE featureId='f'",
-        )
-        .get(),
-    ).toEqual({
-      publishedRevisionId: null,
-      generation: 1,
-    })
-    expect(
-      f.sqlite
-        .prepare(
-          'SELECT count(*) n FROM featureRevisionPublication WHERE revisionId IS NOT NULL',
-        )
-        .get()!.n,
-    ).toBe(0)
-    expect(
-      f.sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='f'").get()!.modifiedAt,
-    ).not.toBe('original')
-    expect(await reviewInitialFeatureContribution(db, input)).toBe(false)
-    // A separate explicit publish can select the exact privately accepted content.
-    const acceptedId = f.sqlite
-      .prepare(
-        "SELECT previousRevisionId FROM featureRevisionPublication WHERE featureId='f' AND generation=1",
-      )
-      .get()!.previousRevisionId as string
-    const acceptedContent = JSON.parse(
-      f.sqlite
-        .prepare('SELECT content FROM featureRevision WHERE id=?')
-        .get(acceptedId)!.content as string,
-    )
-    const staffDraft = (await createFeatureRevisionProposal(db, {
-      ...command,
-      baseRevisionId: acceptedId,
-      content: acceptedContent,
-    }))!
-    expect(
-      await acceptFeatureRevisionProposal(db, {
+      for (const migration of [
+        '0171_feature_revisions.sql',
+        '0172_image_revisions.sql',
+        '0201_task_image_review_context.sql',
+      ])
+        f.sqlite.exec(readFileSync('migrations/' + migration, 'utf8'))
+      const command = { featureId: 'f', actorId: 'reviewer', guard: sql`1` }
+      const base = (await initializeFeatureRevision(db, {
         ...command,
-        proposalId: staffDraft.proposalId,
-        expectedCandidateRevisionId: staffDraft.candidateRevisionId,
-        expectedPublishedRevisionId: null,
-        expectedComparisonRevisionId: acceptedId,
-        expectedGeneration: 1,
-        publicationIntent: 'republish',
-        acceptOwnDraft: true,
-        validate: () => [],
-        project: () => ({ statements: [], verify: sql`1` }),
-      }),
-    ).toMatchObject({ status: 'accepted' })
-    expect(
+        content,
+        published: false,
+      }))!
+      const image = (await createImageAssetRevision(db, {
+        ...command,
+        imageId: 'photo',
+        storageNamespace: 'local',
+        storageKey: 'original',
+        contentHash: 'a'.repeat(64),
+        mediaType: 'image/png',
+        byteSize: 4,
+        metadata: { version: 1 },
+      }))!
+      content.gallery = {
+        order: ['photo'],
+        entries: {
+          photo: {
+            imageRevisionId: image.imageRevisionId,
+            intent: 'undefined',
+            isPublished: true,
+            caption: {},
+            alt: {},
+          },
+        },
+      }
+      const proposal = (await createFeatureRevisionProposal(db, {
+        ...command,
+        baseRevisionId: base,
+        content,
+      }))!
+      await submitFeatureRevisionProposal(db, {
+        ...command,
+        proposalId: proposal.proposalId,
+        expectedCandidateRevisionId: proposal.candidateRevisionId,
+      })
       f.sqlite
-        .prepare("SELECT isPublished,localIsPublished FROM feature WHERE id='f'")
-        .get(),
-    ).toEqual({ isPublished: 1, localIsPublished: 1 })
-    expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
-  } finally {
-    source.sqlite.close()
-    f.sqlite.close()
-  }
-})
+        .prepare("INSERT INTO featureInitialRevision VALUES('f',?,'contribution')")
+        .run(proposal.proposalId)
+      const scope = { taskId: 'task', proposalId: proposal.proposalId, guard: sql`1` }
+      const original = (await readFeatureImageReview(db, scope))!
+      expect(original.lifecycle).toBe(false)
+      const reviewId = await saveFeatureImageReview(db, {
+        ...scope,
+        actorId: 'reviewer',
+        proposalVersion: proposal.candidateRevisionId,
+        expectedReviewId: null,
+        expectedRevisionId: base,
+        expectedGeneration: 0,
+        patch: { imageId: 'photo', rotation: 90, caption: { en: 'Reviewed' } },
+      })
+      const input = {
+        ...command,
+        taskId: 'task',
+        actorId: 'reviewer',
+        reason: 'Review',
+        accept: true,
+        completion: [],
+        imageReview: { taskId: 'task', reviewId },
+        guard: sql`EXISTS(SELECT 1 FROM feature WHERE id='f' AND modifiedAt='original')`,
+      }
+      expect(
+        await reviewInitialFeatureContribution(db, { ...input, guard: sql`0` }),
+      ).toBe(false)
+      expect(
+        await reviewInitialFeatureContribution(db, {
+          ...input,
+          imageReview: { taskId: 'task', reviewId: 'stale' },
+        }),
+      ).toBe(false)
+      if (historicalAssignment) {
+        f.sqlite
+          .prepare(`INSERT INTO featureRevisionReview(id,featureId,proposalId,candidateRevisionId,action,changeSetId,context)
+        SELECT 'assignment','f',id,candidateRevisionId,'saved',createdChangeSetId,? FROM featureRevisionProposal WHERE id=?`)
+          .run(
+            JSON.stringify({
+              kind: 'task-layer-assignment/v1',
+              taskId: 'task',
+              isIntangible: true,
+            }),
+            proposal.proposalId,
+          )
+      }
+      expect(await reviewInitialFeatureContribution(db, input)).toBe(true)
+      if (historicalAssignment)
+        expect(
+          f.sqlite
+            .prepare(`SELECT json_extract(r.content,'$.profile.isIntangible') value
+      FROM featureRevisionReview v JOIN featureRevision r ON r.id=v.resultingRevisionId
+      WHERE v.proposalId=? AND v.action='accepted'`)
+            .get(proposal.proposalId),
+        ).toMatchObject({ value: 1 })
+      expect(
+        f.sqlite
+          .prepare(
+            "SELECT isPublished,localIsPublished,publisherId,publishedAt FROM feature WHERE id='f'",
+          )
+          .get(),
+      ).toEqual({
+        isPublished: 0,
+        localIsPublished: 0,
+        publisherId: null,
+        publishedAt: null,
+      })
+      expect(
+        f.sqlite
+          .prepare(
+            "SELECT publishedRevisionId,generation FROM featureRevisionHead WHERE featureId='f'",
+          )
+          .get(),
+      ).toEqual({
+        publishedRevisionId: null,
+        generation: 1,
+      })
+      expect(
+        f.sqlite
+          .prepare(
+            'SELECT count(*) n FROM featureRevisionPublication WHERE revisionId IS NOT NULL',
+          )
+          .get()!.n,
+      ).toBe(0)
+      expect(
+        f.sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='f'").get()!
+          .modifiedAt,
+      ).not.toBe('original')
+      expect(await reviewInitialFeatureContribution(db, input)).toBe(false)
+      // A separate explicit publish can select the exact privately accepted content.
+      const acceptedId = f.sqlite
+        .prepare(
+          "SELECT previousRevisionId FROM featureRevisionPublication WHERE featureId='f' AND generation=1",
+        )
+        .get()!.previousRevisionId as string
+      const acceptedContent = JSON.parse(
+        f.sqlite
+          .prepare('SELECT content FROM featureRevision WHERE id=?')
+          .get(acceptedId)!.content as string,
+      )
+      const staffDraft = (await createFeatureRevisionProposal(db, {
+        ...command,
+        baseRevisionId: acceptedId,
+        content: acceptedContent,
+      }))!
+      expect(
+        await acceptFeatureRevisionProposal(db, {
+          ...command,
+          proposalId: staffDraft.proposalId,
+          expectedCandidateRevisionId: staffDraft.candidateRevisionId,
+          expectedPublishedRevisionId: null,
+          expectedComparisonRevisionId: acceptedId,
+          expectedGeneration: 1,
+          publicationIntent: 'republish',
+          acceptOwnDraft: true,
+          validate: () => [],
+          project: () => ({ statements: [], verify: sql`1` }),
+        }),
+      ).toMatchObject({ status: 'accepted' })
+      expect(
+        f.sqlite
+          .prepare("SELECT isPublished,localIsPublished FROM feature WHERE id='f'")
+          .get(),
+      ).toEqual({ isPublished: 1, localIsPublished: 1 })
+      expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    } finally {
+      source.sqlite.close()
+      f.sqlite.close()
+    }
+  },
+)
