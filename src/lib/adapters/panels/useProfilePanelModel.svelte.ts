@@ -8,13 +8,15 @@ import { filterProfileContributions } from '#lib/contributions/presentation.js'
 import { createUserContributionsModel } from './userContributions'
 // ADAPTERS
 import { useProfileContributionPreferences } from './useProfileContributionPreferences.svelte'
-import { useProfileSectionModel } from './useProfileSectionModel.svelte'
+// AVATAR
+import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 // NAVIGATION
 import {
   navigateToContributedFeature,
   navigateToContributedImage,
 } from '#lib/navigation/index.js'
 // TYPES
+import type { ProfileSectionProps } from '#lib/bits/patterns/panels/sections/index.js'
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { Id } from '#lib/types.js'
@@ -40,10 +42,6 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
       contributionPreferences.showAll,
     ),
   )
-  const profile = useProfileSectionModel(app, () => ({
-    hideActions: true,
-    hideEditableFields: true,
-  }))
 
   return {
     // Get the username and profile loaded from URL navigation.
@@ -69,8 +67,25 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
     get accountUsername() {
       return app.account.user?.username ?? undefined
     },
-    get profileProps() {
-      return profile.getProfileProps()
+    get profileProps(): ProfileSectionProps {
+      // The profile subject owns this header; never fall back to the viewer's identity.
+      const viewedUser = visibleUserData
+      return {
+        hideActions: true,
+        hideEditableFields: true,
+        avatarSrc: resolveAvatarImageSrc(viewedUser?.image),
+        userDisplayName:
+          viewedUser?.displayUsername ||
+          viewedUser?.username ||
+          app.panels.state.profile.ctx?.username ||
+          null,
+        userAttribution: viewedUser?.attribution ?? null,
+        isGuest: Boolean(
+          viewedUser &&
+            viewedUser.id === app.account.user?.id &&
+            isGuestUser(session.current.data?.user),
+        ),
+      }
     },
     get isSingleOrganisation() {
       return (app.hub as Hub | undefined)?.organisations?.length === 1
