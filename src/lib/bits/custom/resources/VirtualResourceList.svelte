@@ -2,10 +2,13 @@
 // SVELTE
 import { untrack, type Snippet } from 'svelte'
 import { flip } from 'svelte/animate'
+import { prefersReducedMotion } from 'svelte/motion'
 // VIRTUALIZATION
 import { createVirtualizer } from '@tanstack/svelte-virtual'
 // I18N
 import { m } from '#lib/i18n.js'
+// TYPES
+import type { AnimationConfig } from 'svelte/animate'
 
 let {
   items,
@@ -82,6 +85,27 @@ $effect(() => {
 function measure(node: HTMLDivElement): void {
   $virtualizer.measureElement(node)
 }
+
+/**
+ * Animates vertical reordering without counteracting the containing panel's motion.
+ * @param node - Keyed row wrapper.
+ * @param rects - Viewport rectangles before and after the list update.
+ * @returns A vertical FLIP animation, disabled when motion is reduced or not requested.
+ * @remarks Panel travel and width changes must not translate or scale individual rows.
+ */
+function animateRow(
+  node: Element,
+  { from, to }: { from: DOMRect; to: DOMRect },
+): AnimationConfig {
+  if (!animateRows || prefersReducedMotion.current) return { duration: 0 }
+
+  // Keep the final row dimensions and horizontal position throughout the animation.
+  return flip(
+    node,
+    { from: new DOMRect(to.x, from.y, to.width, to.height), to },
+    { duration: 200 },
+  )
+}
 </script>
 
 <div
@@ -92,7 +116,7 @@ function measure(node: HTMLDivElement): void {
   <div class="py-1" bind:clientHeight={contentHeight}>
     {#if flow}
       {#each items as row (row.id)}
-        <div animate:flip={{ duration: 200 }}>{@render item(row)}</div>
+        <div animate:animateRow>{@render item(row)}</div>
       {/each}
     {:else}
       <div class="relative w-full" style:height={`${$virtualizer.getTotalSize()}px`}>
@@ -103,7 +127,7 @@ function measure(node: HTMLDivElement): void {
           <div
             data-index={row.index}
             use:measure
-            animate:flip={{ duration: animateRows ? 200 : 0 }}
+            animate:animateRow
             class="absolute left-0 w-full"
             style:top={`${row.start}px`}
           >

@@ -92,7 +92,11 @@ onDestroy(cancelLabelHide)
   </button>
 {/snippet}
 
-<PanelRoot {...model.panel} isOpen={model.open}>
+<PanelRoot
+  {...model.panel}
+  isOpen={model.open}
+  preserveContentWidth={!model.panel.isNarrow}
+>
   <div
     class="flex h-full min-h-0 flex-col bg-panel text-base-content"
     onscrollcapture={clearLabel}
