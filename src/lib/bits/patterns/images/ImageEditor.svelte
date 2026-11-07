@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { tick } from 'svelte'
+import { tick, onDestroy } from 'svelte'
 // ICONS
 import AutoSortIcon from 'virtual:icons/proicons/sparkle-2'
 import UndoIcon from 'virtual:icons/proicons/arrow-counterclockwise'
@@ -12,14 +12,19 @@ import ThumbnailWrapper from './ThumbnailWrapper.svelte'
 import ImageBackdrop from './components/ImageBackdrop.svelte'
 import { getGalleryBackgroundSrc } from '#lib/client/services/image.js'
 import ImageSkeleton from './components/ImageSkeleton.svelte'
-import type { ImageEditorProps } from './images.types'
+// IMAGE ORDER
+import { orderGalleryForReview } from '#lib/images/galleryOrder.js'
+import { ImageIntentCatalogueSchema } from '#lib/images/intents.js'
+// TYPES
+import type { ImageEditorProps, ViewerRenderable } from './images.types'
 
 let {
   sortScope,
-  sortMode = 'automatic',
+  sortMode: savedSortMode = 'automatic',
   canSort = false,
   onSortChange,
-  items,
+  onSortPendingChange,
+  items: savedItems,
   layout = 'sidebar',
   showNavButtons = true,
   class: className = '',
@@ -43,7 +48,7 @@ let {
   canDownloadActiveImage = false,
   isEditBusy = false,
   isReadonly = false,
-  showSortControls = !isReadonly && canSort,
+  showSortControls = !isReadonly,
   isLoading = false,
   isIntentDisabled = false,
   viewerControlsOffsetClass = 'bottom-4',
@@ -72,6 +77,18 @@ let {
   onThumbnailError,
 }: ImageEditorProps = $props()
 
+// Keep the latest local arrangement visible while older revision saves reconcile.
+let optimisticSort = $state<{ mode: 'automatic' | 'manual'; order: string[] } | null>(null)
+const sortMode = $derived(optimisticSort?.mode ?? savedSortMode)
+const items = $derived.by<ViewerRenderable[]>(() => {
+  if (!optimisticSort) return savedItems
+  const positions = new Map(optimisticSort.order.map((id, index) => [id, index]))
+  const ordered = [...savedItems].sort((a, b) =>
+    (positions.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (positions.get(b.id) ?? Number.MAX_SAFE_INTEGER))
+  if (optimisticSort.mode === 'manual') return ordered
+  const intentOrder = ImageIntentCatalogueSchema.safeParse(savedItems[0]?.meta?.intentOptions).data?.map(intent => intent.id)
+  return orderGalleryForReview(ordered.map(item => ({ ...item, createdAt: item.createdAt ?? item.status?.sortCreatedAt })), 'automatic', intentOrder)
+})
 let sortBusy = $state(false)
 let sortMessage = $state('')
 let previousSort = $state<{ mode: 'automatic' | 'manual'; order: string[] } | null>(
@@ -81,40 +98,77 @@ let sortMembership = $state('')
 let undoState = $state('')
 let lastSortScope = $state<string | undefined>()
 
-/** Persists a completed gesture or mode choice, retaining the last manual arrangement while Automatic is active in this session.
- * @param mode Desired mode. @param order Complete displayed membership. @param undo Whether to consume Undo.
- * @returns Completion after persistence or a visible recoverable error.
+let pendingSort: Promise<boolean> | null = null
+let sortRequest = 0
+let confirmedPreviousSort: typeof previousSort = null
+let disposed = false
+onDestroy(() => { disposed = true })
+
+/** Apply each drag immediately and persist only the newest order still waiting to be sent.
+ * @param mode Desired mode. @param order Explicit drag order, or the latest visible order for Automatic.
+ * @param undo Whether to consume Undo.
+ * @returns Completion after persistence or rollback to the latest confirmed gallery.
+ * @remarks Writes remain sequential so each save uses a fresh revision token; older responses never replace a newer local order.
  */
 async function changeSort(
   mode: 'automatic' | 'manual',
-  order = items.map(item => item.id),
+  order?: string[],
   undo = false,
 ): Promise<void> {
-  if (!onSortChange || !canSort || sortBusy) return
+  if (!onSortChange || (!canSort && !sortBusy)) return
   const requestedScope = sortScope
+  const request = ++sortRequest
+  const predecessor = pendingSort
+  if (!predecessor) confirmedPreviousSort = previousSort
+  const nextOrder = [...(order ?? items.map(item => item.id))]
   const previous = { mode: sortMode, order: items.map(item => item.id) }
+  const nextUndo = !undo && mode === 'automatic' && previous.mode === 'manual' ? previous : null
+  optimisticSort = { mode, order: nextOrder }
+  previousSort = nextUndo
   sortBusy = true
   sortMessage = ''
-  try {
-    await onSortChange(mode, order)
-    await tick()
-    if (sortScope !== requestedScope) return
-    previousSort =
-      !undo && mode === 'automatic' && previous.mode === 'manual' ? previous : null
-    undoState = `${sortMode}:${items.map(item => item.id).join('|')}`
-    sortMembership = [...order].sort().join('|')
-    // Successful changes are reflected by the toggle; only failures need a message.
-  } catch (cause) {
-    sortMessage =
-      cause instanceof Error ? cause.message : 'Could not save gallery order.'
-  } finally {
+  const operation = (async (): Promise<boolean> => {
+    // Publish the settlement handle before issuing a request, and coalesce superseded waiting gestures.
+    if (!(await (predecessor ?? Promise.resolve(true)))) return false
+    if (disposed || sortScope !== requestedScope) return false
+    if (request !== sortRequest) return true
+    if (!canSort || !onSortChange) return false
+    try {
+      await onSortChange(mode, nextOrder)
+      await tick()
+      if (disposed || sortScope !== requestedScope) return false
+      confirmedPreviousSort = nextUndo
+      return true
+    } catch (cause) {
+      if (!disposed && sortScope === requestedScope)
+        sortMessage = cause instanceof Error ? cause.message : 'Could not save gallery order.'
+      return false
+    }
+  })()
+  pendingSort = operation
+  onSortPendingChange?.(operation)
+  await operation
+  if (pendingSort === operation) {
+    // Only the newest request can clear the optimistic overlay or restore a failed save.
+    optimisticSort = null
+    previousSort = confirmedPreviousSort
+    undoState = `${savedSortMode}:${savedItems.map(item => item.id).join('|')}`
+    sortMembership = savedItems.map(item => item.id).sort().join('|')
+    pendingSort = null
     sortBusy = false
+    if (!disposed) onSortPendingChange?.(null)
   }
 }
 
 $effect(() => {
   if (lastSortScope !== sortScope) {
     lastSortScope = sortScope
+    pendingSort = null
+    sortRequest++
+    optimisticSort = null
+    confirmedPreviousSort = null
+    sortBusy = false
+    onSortPendingChange?.(null)
     previousSort = null
     sortMessage = ''
   }
@@ -144,7 +198,8 @@ const hasItems = $derived(items.length > 0)
 const adminThumbnailSize = 192
 const verticalRailPaddingLeftPx = 16
 const verticalRailPaddingRightPx = 16
-const verticalRailBottomBarHeightPx = 79
+const hasGalleryActions = $derived(Boolean(onAddFiles || onDelete || hasSortControls))
+const verticalRailBottomBarHeightPx = $derived(hasGalleryActions ? 79 : 0)
 const verticalRailWidthPx =
   adminThumbnailSize + verticalRailPaddingLeftPx + verticalRailPaddingRightPx
 const viewerFit = $derived.by<'fit' | 'cover'>(() =>
@@ -153,12 +208,13 @@ const viewerFit = $derived.by<'fit' | 'cover'>(() =>
 const hasSortControls = $derived(
   Boolean(
     showSortControls &&
+      (canSort || sortBusy) &&
       onSortChange &&
-      (sortMode === 'manual' || previousSort?.mode === 'manual'),
+      (sortMode === 'manual' || sortBusy || previousSort?.mode === 'manual'),
   ),
 )
 const railWidth = $derived(
-  hasItems ? `${verticalRailWidthPx + (hasSortControls ? 40 : 0)}px` : '0px',
+  hasItems ? `${verticalRailWidthPx}px` : '0px',
 )
 const railVisibilityClass = $derived(
   hasItems
@@ -296,10 +352,9 @@ $effect(() => {
           style={`padding-bottom: ${verticalRailBottomBarHeightPx}px;`}
         >
           <ThumbnailWrapper
-            trackControls={hasSortControls ? sortingControls : undefined}
             {items}
             onReorder={onSortChange ? ids => changeSort('manual', ids) : undefined}
-            reorderDisabled={!canSort || sortBusy || isDeleteMode}
+            reorderDisabled={!canSort || isDeleteMode}
             {activeId}
             followActiveIdRequestKey={thumbnailFollowActiveRequestKey}
             followActiveIdRequestId={thumbnailFollowActiveRequestId}
@@ -348,6 +403,7 @@ $effect(() => {
             )}
             {uploadSelectionMode}
             variant="footer"
+            leadingControls={hasSortControls ? sortingControls : undefined}
             disabled={isReadonly && !canDeleteActiveImage}
             disableUpload={isReadonly}
             disableDeleteMode={!canDeleteActiveImage}
@@ -413,7 +469,7 @@ $effect(() => {
       variant="admin"
       orientation="horizontal"
       onReorder={onSortChange ? ids => changeSort('manual', ids) : undefined}
-      reorderDisabled={!canSort || sortBusy || isDeleteMode}
+      reorderDisabled={!canSort || isDeleteMode}
       size={112}
       trackClass="m-0! gap-2 p-1! bg-transparent! [&_button[aria-pressed]>div]:bg-transparent!"
       {fit}
@@ -438,29 +494,30 @@ $effect(() => {
 {/snippet}
 
 {#snippet sortingControls()}
-  <button
-    type="button"
-    aria-label="Automatic image sorting"
-    aria-pressed={sortMode === 'automatic'}
-    title={sortMode === 'manual' ? 'Restore automatic order' : 'Automatic order'}
-    class="border-border bg-base-100/95 text-base-content flex size-8 items-center justify-center rounded-full border shadow-sm disabled:opacity-50"
-    class:text-primary={sortMode === 'automatic'}
-    disabled={!canSort || sortBusy || sortMode === 'automatic'}
-    onclick={() => void changeSort('automatic')}
-  >
-    <AutoSortIcon class="size-4" />
-  </button>
   {#if sortMode === 'automatic' && previousSort?.mode === 'manual'}
     <button
       type="button"
       aria-label="Restore manual image order"
       title="Restore manual image order"
-      class="border-border bg-base-100/95 text-base-content flex size-8 items-center justify-center rounded-full border shadow-sm disabled:opacity-50"
-      disabled={!canSort || sortBusy}
+      class="flex size-12 items-center justify-center border-0 bg-transparent text-base-content/88 shadow-none hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-35"
+      disabled={!canSort && !sortBusy}
       onclick={() =>
         previousSort && void changeSort(previousSort.mode, previousSort.order, true)}
     >
-      <UndoIcon class="size-4" />
+      <UndoIcon class="size-[1.71875rem]" />
+    </button>
+  {:else}
+    <button
+      type="button"
+      aria-label="Automatic image sorting"
+      aria-pressed={sortMode === 'automatic'}
+      title={sortMode === 'manual' ? 'Restore automatic order' : 'Automatic order'}
+      class="flex size-12 items-center justify-center border-0 bg-transparent text-base-content/88 shadow-none hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-35"
+      class:text-primary={sortMode === 'automatic'}
+      disabled={(!canSort && !sortBusy) || (sortMode === 'automatic' && !sortBusy)}
+      onclick={() => void changeSort('automatic')}
+    >
+      <AutoSortIcon class="size-[1.71875rem]" />
     </button>
   {/if}
 {/snippet}

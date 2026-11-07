@@ -23,6 +23,8 @@ export type ViewerRenderable = {
   thumbnailSrc?: string | null
   blurSrc?: string | null
   presentationMode?: ImagePresentation
+  /** Creation timestamp used by review galleries for automatic ordering. */
+  createdAt?: string | null
   alt?: string | null
   galleryPosition?: number
   gallerySortMode?: 'automatic' | 'manual'
@@ -198,6 +200,8 @@ export type ImageEditorProps = {
   canSort?: boolean
   /** Keep sorting controls mounted during temporary mutation locks. */
   showSortControls?: boolean
+  /** Latest queued sort result; false prevents dependent review actions after a failure. */
+  onSortPendingChange?: (pending: Promise<boolean> | null) => void
   onSortChange?: (mode: 'automatic' | 'manual', ids: string[]) => Promise<void>
   layout?: 'sidebar' | 'bottom' | 'top'
   showNavButtons?: boolean

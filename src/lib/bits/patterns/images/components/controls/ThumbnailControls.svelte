@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import type { Snippet } from 'svelte'
 // LIB
 import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 import { Button } from '#lib/bits/core/button/index.js'
@@ -20,9 +22,11 @@ let {
   disableUpload = disabled,
   variant = 'floating',
   uploadSelectionMode = 'multiple',
+  leadingControls,
   onToggleDeleteMode,
   onAddFiles,
 }: {
+  leadingControls?: Snippet
   class?: string
   isProcessingUploads?: boolean
   isDeleteMode?: boolean
@@ -82,6 +86,11 @@ const deleteModeButtonLabel = $derived(
     <div class="bits-admin-menu__track">
       <div class="bits-admin-menu__page">
         <div class="bits-admin-menu__list">
+          {#if leadingControls}
+            <div class="flex items-center gap-1">
+              {@render leadingControls()}
+            </div>
+          {/if}
           <div class="bits-admin-menu__item">
             <Button
               text={uploadButtonLabel}
