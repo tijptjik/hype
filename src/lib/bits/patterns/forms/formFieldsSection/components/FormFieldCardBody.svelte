@@ -36,7 +36,7 @@ import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelt
 import PropertyComponentPreview from './PropertyComponentPreview.svelte'
 import PropertySettingPreview from './PropertySettingPreview.svelte'
 // STYLES
-import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles.js'
 // TYPES
 import type { SelectItem } from '#lib/bits/core/select/select.types.js'
 import type { FormIssueLike } from '#lib/client/services/form.types.js'

@@ -3,7 +3,7 @@
 import FormI18nInlineRow from './FormI18nInlineRow.svelte'
 import FieldError from '#lib/bits/custom/form/src/label/components/Error.svelte'
 // STYLES
-import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles.js'
 
 let {
   label,

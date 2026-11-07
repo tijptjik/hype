@@ -4,7 +4,7 @@ import FormProjectLayersSection from '#lib/bits/patterns/forms/formProjectLayers
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 // TYPES
-import type { FormProjectLayersSectionItem } from '#lib/bits/patterns/forms/formProjectLayersSection/formProjectLayersSection.types'
+import type { FormProjectLayersSectionItem } from '#lib/bits/patterns/forms/formProjectLayersSection/formProjectLayersSection.types.js'
 
 let items = $state<FormProjectLayersSectionItem[]>([
   { id: 'open', projectNameShort: '', layerName: 'Open', isDefaultVisible: true },

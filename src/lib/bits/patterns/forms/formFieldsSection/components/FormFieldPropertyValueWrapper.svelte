@@ -8,7 +8,7 @@ import ListPlus from 'virtual:icons/lucide/list-plus'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // STYLES
-import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles.js'
 // TYPES
 import type { Snippet } from 'svelte'
 

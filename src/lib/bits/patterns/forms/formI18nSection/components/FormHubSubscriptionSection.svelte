@@ -16,7 +16,7 @@ import FormInlineField from './FormInlineField.svelte'
 import FeatureProfileEditor from '../../featureLocation/FeatureProfileEditor.svelte'
 import FormI18nDescriptorFields from './FormI18nDescriptorFields.svelte'
 // STYLES
-import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles.js'
 // SERVICES
 import { toUniqueIssueMessages } from '#lib/client/services/form.js'
 import { HubSubscriptionService } from '#lib/enums.js'

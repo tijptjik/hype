@@ -27,7 +27,7 @@ import {
 import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.svelte'
 import FormI18nTranslationStatus from '../formI18nSection/components/FormI18nTranslationStatus.svelte'
 // STYLES
-import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles'
+import { fieldLabelStyles } from '#lib/bits/custom/form/fieldTypography.styles.js'
 // TYPES
 import type { ProfileLocaleState } from './profileLocales'
 

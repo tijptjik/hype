@@ -83,7 +83,7 @@ import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
-import { createLayerPropertyTransfer } from '#lib/bits/patterns/cards/layerPropertyCard/layerPropertyCard.transitions'
+import { createLayerPropertyTransfer } from '#lib/bits/patterns/cards/layerPropertyCard/layerPropertyCard.transitions.js'
 import {
   formSectionDividerStyles,
   formSelectionSectionStyles,

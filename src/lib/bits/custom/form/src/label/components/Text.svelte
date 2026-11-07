@@ -2,7 +2,7 @@
 // BITS
 import { Label as BitsLabel } from 'bits-ui'
 // STYLES
-import { fieldLabelStyles } from '../../../fieldTypography.styles'
+import { fieldLabelStyles } from '../../../fieldTypography.styles.js'
 // TYPES
 import type { FormLabelTextProps } from '../types'
 
