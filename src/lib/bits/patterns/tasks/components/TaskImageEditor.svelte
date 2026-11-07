@@ -4,6 +4,7 @@ import FeatureGalleryRevisionEditor from '#lib/bits/patterns/revisionHistory/Fea
 // I18N
 import { m } from '#lib/i18n.js'
 // ADAPTERS
+import { useGalleryOrdering } from '#lib/adapters/image/useGalleryOrdering.svelte.js'
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS
 import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
@@ -44,12 +45,21 @@ let {
   multilingualExpanded?: boolean
   onMultilingualExpandedChange?: (expanded: boolean) => void
 } = $props()
+const ordering = useGalleryOrdering(
+  () => featureId,
+  () => model.state.items,
+  () => imageCtx.refreshImages(),
+)
 let isMetadataOpen = $state(false)
 const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveImage)
 </script>
 
 <ImageEditor
   {pendingItemCount}
+  sortScope={featureId ?? undefined}
+  sortMode={ordering.mode}
+  canSort={!readonly && ordering.enabled}
+  onSortChange={ordering.save}
   isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   {layout}
   showNavButtons={false}

@@ -2,6 +2,7 @@
 // SVELTE
 import type { Snippet } from 'svelte'
 // ADAPTERS
+import { useGalleryOrdering } from '#lib/adapters/image/useGalleryOrdering.svelte.js'
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
 import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
@@ -18,13 +19,25 @@ import { m } from '#lib/i18n.js'
 import CameraIcon from 'virtual:icons/proicons/camera'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
 
-let { textControls: imageTextControls }: { textControls?: Snippet<[string | null]> } = $props()
+let {
+  featureId,
+  textControls: imageTextControls,
+}: { featureId?: string; textControls?: Snippet<[string | null]> } = $props()
 
 const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx)
+const ordering = useGalleryOrdering(
+  () => featureId,
+  () => model.state.items,
+  () => imageCtx.refreshImages(),
+)
 </script>
 
 <ImageEditor
+  sortScope={featureId ?? undefined}
+  sortMode={ordering.mode}
+  canSort={ordering.enabled}
+  onSortChange={ordering.save}
   isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   items={model.state.items}
   activeId={model.state.activeId}

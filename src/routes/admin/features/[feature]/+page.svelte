@@ -536,7 +536,10 @@ $effect(() => {
         const currentFacet = adminCtx.activeFacet
         const nextFacet =
           currentFacet &&
-          !(nextRef === NEW_REF && (currentFacet === 'images' || currentFacet === 'updates')) &&
+          !(
+            nextRef === NEW_REF &&
+            (currentFacet === 'images' || currentFacet === 'updates')
+          ) &&
           resolvedFacetTabsSnapshot.has(currentFacet)
             ? currentFacet
             : 'core'
@@ -578,7 +581,9 @@ $effect(() => {
               },
         )
   )
-    .filter(facet => !isNewFeatureRef || (facet.ref !== 'images' && facet.ref !== 'updates'))
+    .filter(
+      facet => !isNewFeatureRef || (facet.ref !== 'images' && facet.ref !== 'updates'),
+    )
     .map(facet => ({
       ...facet,
       disabled: facet.ref === 'fields' ? !hasSelectedLayer : Boolean(facet.disabled),
@@ -970,14 +975,33 @@ $effect(() => {
   // Entity metadata refreshes reset custom actions; restore them after title or facet changes.
   headerCtrl.state.meta.title
   headerCtrl.state.meta.facets
-  const available = Boolean(currentFeatureId && isCurrentRefLoaded && !feature?.data?.isArchived)
-  headerCtrl.setTitleMenuItems(available ? [
-    { label: 'Split', disabled: isDirty, onSelect: () => { identityKind = 'split'; identityOpen = true } },
-    { label: 'Merge', disabled: isDirty, onSelect: () => { identityKind = 'merge'; identityOpen = true } },
-  ] : [])
+  const available = Boolean(
+    currentFeatureId && isCurrentRefLoaded && !feature?.data?.isArchived,
+  )
+  headerCtrl.setTitleMenuItems(
+    available
+      ? [
+          {
+            label: 'Split',
+            disabled: isDirty,
+            onSelect: () => {
+              identityKind = 'split'
+              identityOpen = true
+            },
+          },
+          {
+            label: 'Merge',
+            disabled: isDirty,
+            onSelect: () => {
+              identityKind = 'merge'
+              identityOpen = true
+            },
+          },
+        ]
+      : [],
+  )
   return () => headerCtrl.setTitleMenuItems([])
 })
-
 
 let revisionWorkspaceVersion = $state(0)
 let lastFormActionsSignature = ''
@@ -1230,13 +1254,23 @@ const configuredFeatureForm = configureForm(() => ({
     resourceType: FirstClassResource.feature,
     getEntity: () => feature,
     refreshResource: async ({ success, result }) => {
-      if (success && result && typeof result === 'object' && 'revisionApplied' in result) {
+      if (
+        success &&
+        result &&
+        typeof result === 'object' &&
+        'revisionApplied' in result
+      ) {
         await refreshFeature()
         hasProgrammaticDirtyChanges = false
         revisionWorkspaceVersion++
         return
       }
-      if (success && result && typeof result === 'object' && 'revisionDraft' in result) {
+      if (
+        success &&
+        result &&
+        typeof result === 'object' &&
+        'revisionDraft' in result
+      ) {
         await refreshFeature()
         hasProgrammaticDirtyChanges = false
         revisionWorkspaceVersion++
@@ -2861,15 +2895,24 @@ $effect(() => () => clearVisualSectionReopenState())
 </script>
 
 {#if currentFeatureId && feature?.data?.layerId}
-  <FeatureIdentityDialog bind:open={identityOpen} kind={identityKind} featureId={currentFeatureId} layerId={feature.data.layerId}
+  <FeatureIdentityDialog
+    bind:open={identityOpen}
+    kind={identityKind}
+    featureId={currentFeatureId}
+    layerId={feature.data.layerId}
     onApplied={async ids => {
       // Identity commands mutate accepted content outside this form's ordinary save flow.
-      await getFeature({ ref: currentFeatureId, refKey: 'id', meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' } }).refresh()
+      await getFeature({
+        ref: currentFeatureId,
+        refKey: 'id',
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+      }).refresh()
       await refreshFeature()
-      if (ids[0] !== currentFeatureId) await goto(`/admin/features/${encodeURIComponent(ids[0])}`)
-    }} />
+      if (ids[0] !== currentFeatureId)
+        await goto(`/admin/features/${encodeURIComponent(ids[0])}`)
+    }}
+  />
 {/if}
-
 
 <svelte:window
   bind:innerHeight={editorViewportHeight}
@@ -3426,8 +3469,15 @@ $effect(() => () => clearVisualSectionReopenState())
         !isNewFeatureRef &&
         (isUpdatesFacet || visitedUpdatesRef === featureRef)}
         {#key currentFeatureId}
-          <FeatureRevisionWorkspace featureId={currentFeatureId} {isDirty} refreshVersion={revisionWorkspaceVersion} onPublished={async () => { await refreshFeature(); revisionWorkspaceVersion++ }} />
-
+          <FeatureRevisionWorkspace
+            featureId={currentFeatureId}
+            {isDirty}
+            refreshVersion={revisionWorkspaceVersion}
+            onPublished={async () => {
+              await refreshFeature()
+              revisionWorkspaceVersion++
+            }}
+          />
         {/key}
       {/if}
     </Main.Facet>
@@ -3443,12 +3493,19 @@ $effect(() => () => clearVisualSectionReopenState())
       {#if featureImageProviderProps.isValid &&
         (isImagesFacet || visitedImagesRef === featureRef)}
         <ImageProvider model={featureImageProviderModel}>
-          <FeatureImageEditor>
+          <FeatureImageEditor featureId={currentFeatureId ?? undefined}>
             {#snippet textControls(imageId)}
               {#if currentFeatureId}
                 {#key currentFeatureId}
-                  <FeatureGalleryRevisionEditor featureId={currentFeatureId} {imageId} {isDirty}
-                    onSaved={() => { revisionWorkspaceVersion++; toast.success('Image text saved.') }} />
+                  <FeatureGalleryRevisionEditor
+                    featureId={currentFeatureId}
+                    {imageId}
+                    {isDirty}
+                    onSaved={() => {
+                      revisionWorkspaceVersion++
+                      toast.success('Image text saved.')
+                    }}
+                  />
                 {/key}
               {/if}
             {/snippet}
@@ -3459,6 +3516,21 @@ $effect(() => () => clearVisualSectionReopenState())
   </Main.Form>
 </Main.Root>
 
-{#if feature?.data?.isPublished && imagePublicationPrompt?.featureId === feature.data.id && imagePublicationPrompt?.routeRef === featureRef}
-  <PublishUnclassifiedImagesDialog scopeType="feature" scopeId={feature.data.id} onDone={() => { imagePublicationPrompt = null; void refreshRemoteQuery(getFeature({ ref: featureRef, refKey: 'code', meta: { isAdminRequest: true, profile: 'admin' } })) }} />
+{#if feature?.data?.isPublished &&
+  imagePublicationPrompt?.featureId === feature.data.id &&
+  imagePublicationPrompt?.routeRef === featureRef}
+  <PublishUnclassifiedImagesDialog
+    scopeType="feature"
+    scopeId={feature.data.id}
+    onDone={() => {
+      imagePublicationPrompt = null
+      void refreshRemoteQuery(
+        getFeature({
+          ref: featureRef,
+          refKey: 'code',
+          meta: { isAdminRequest: true, profile: 'admin' },
+        }),
+      )
+    }}
+  />
 {/if}
