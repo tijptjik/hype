@@ -2,12 +2,15 @@
  * Exercise real contribution upload and review against disposable local persona servers.
  * Run via dev-check with HYPE_LIFECYCLE_FIXTURE pointing to { state, database }.
  * Start ordinary-user and admin personas against that same state on ports 4184/4183.
- * All original-image PUTs are intercepted into local R2; remote transport is not tested.
+ * Local R2 is the default. Explicit HYPE_R2_TRANSPORT=remote tests real development R2
+ * with browser security enabled, then removes only its own hash-verified test original.
+ * Remote mode requires the R2 API environment and an allowed loopback origin (localhost:5173).
  */
 import { chromium } from 'playwright'
 import { getPlatformProxy } from 'wrangler'
 import sharp from 'sharp'
 import { Database } from 'bun:sqlite'
+import { createContributionUploadTransport } from './lib/contribution-upload-transport'
 const fixturePath = process.env.HYPE_LIFECYCLE_FIXTURE
 if (!fixturePath)
   throw Error('Set HYPE_LIFECYCLE_FIXTURE to a disposable fixture receipt')
@@ -22,7 +25,7 @@ if (
 const userOrigin = process.env.HYPE_CONTRIBUTOR_ORIGIN ?? 'http://127.0.0.1:4184'
 const adminOrigin = process.env.HYPE_REVIEWER_ORIGIN ?? 'http://127.0.0.1:4183'
 for (const origin of [userOrigin, adminOrigin])
-  if (new URL(origin).hostname !== '127.0.0.1')
+  if (!['127.0.0.1', 'localhost'].includes(new URL(origin).hostname))
     throw Error('Only loopback test servers are allowed')
 const artifacts = process.env.HYPE_BROWSER_ARTIFACTS ?? '/tmp/hype-contribution-browser'
 await Bun.$`mkdir -p ${artifacts}`
@@ -31,50 +34,25 @@ const proxy = await getPlatformProxy({
   remoteBindings: false,
   persist: { path: fixture.state },
 })
-const b = await chromium.launch({ headless: true, args: ['--disable-web-security'] })
+const mode = process.env.HYPE_R2_TRANSPORT ?? 'local'
+if (mode !== 'local' && mode !== 'remote') throw Error('Unknown R2 test transport')
+const transport = createContributionUploadTransport({
+  mode,
+  bucket: proxy.env.ASSET_RAW_DEV as Parameters<
+    typeof createContributionUploadTransport
+  >[0]['bucket'],
+  artifacts,
+})
+const b = await chromium.launch({
+  headless: true,
+  args: mode === 'remote' ? [] : ['--disable-web-security'],
+})
 const title = `Agent browser contribution ${Date.now()}`
-let puts = 0
 try {
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } })
   p.setDefaultTimeout(30000)
   p.on('pageerror', e => console.log('PAGEERROR', e.message))
-  await p.route('https://*.r2.cloudflarestorage.com/**', async route => {
-    const request = route.request()
-    const url = new URL(request.url())
-    if (request.method() === 'GET' || request.method() === 'HEAD')
-      return route.continue()
-    if (request.method() === 'OPTIONS')
-      return route.fulfill({
-        status: 204,
-        headers: {
-          'access-control-allow-origin': '*',
-          'access-control-allow-methods': 'PUT',
-          'access-control-allow-headers': '*',
-        },
-      })
-    if (request.method() !== 'PUT' || !url.pathname.startsWith('/hype-assets-raw-dev/'))
-      throw Error('Unexpected storage write blocked')
-    const bytes = request.postDataBuffer()
-    if (!bytes) throw Error('Missing upload bytes')
-    await (
-      proxy.env.ASSET_RAW_DEV as {
-        put(
-          key: string,
-          bytes: Uint8Array,
-          options: { httpMetadata: { contentType?: string } },
-        ): Promise<unknown>
-      }
-    ).put(
-      decodeURIComponent(url.pathname.slice('/hype-assets-raw-dev/'.length)),
-      bytes,
-      { httpMetadata: { contentType: request.headers()['content-type'] } },
-    )
-    puts++
-    await route.fulfill({
-      status: 200,
-      headers: { 'access-control-allow-origin': '*' },
-    })
-  })
+  await transport.install(p)
   await p.goto(userOrigin + '/features/new', { timeout: 90000 })
   await p
     .getByRole('button', { name: 'Find Other', exact: true })
@@ -103,14 +81,11 @@ try {
   })
     .jpeg()
     .toBuffer()
-  await p
-    .locator('input[type=file]:not([capture])')
-    .first()
-    .setInputFiles({
-      name: 'agent-contribution-r32.jpg',
-      mimeType: 'image/jpeg',
-      buffer: bytes,
-    })
+  await p.locator('input[type=file]:not([capture])').first().setInputFiles({
+    name: 'agent-contribution-r32.jpg',
+    mimeType: 'image/jpeg',
+    buffer: bytes,
+  })
   await p.waitForTimeout(1500)
   await p.screenshot({ path: artifacts + '/before-submit.png' })
   await p.getByRole('button', { name: 'Submit', exact: true }).click()
@@ -121,7 +96,7 @@ try {
       console.log('FAILED_SUBMIT', await p.locator('body').innerText())
       throw e
     })
-  if (puts !== 1) throw Error('Expected one local-only original upload')
+  const transportReceipt = await transport.verify()
   const db = new Database(fixture.database, { readonly: true })
   const row = db
     .query(
@@ -139,7 +114,7 @@ try {
     throw Error('Unexpected submitted contribution state')
   await Bun.write(
     artifacts + '/submitted.json',
-    JSON.stringify({ task: row, localOnlyPuts: puts, remoteWrites: false }, null, 2),
+    JSON.stringify({ task: row, ...transportReceipt }, null, 2),
   )
   console.log('SUBMITTED', row)
   await p.screenshot({ path: artifacts + '/submitted.png' })
@@ -195,8 +170,7 @@ try {
           gallery,
           evidence,
           foreignKeys,
-          localOnlyPuts: puts,
-          remoteWrites: false,
+          ...transportReceipt,
         },
         null,
         2,
@@ -208,5 +182,9 @@ try {
   }
 } finally {
   await b.close()
-  await proxy.dispose()
+  try {
+    await transport.cleanup()
+  } finally {
+    await proxy.dispose()
+  }
 }
