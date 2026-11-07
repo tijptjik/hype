@@ -6,8 +6,10 @@ import { join } from 'node:path'
 import { featureRevisionContentFixture } from '../../../src/tests/fixtures/featureRevisionContent'
 import { prepareLegacyDraftConversion } from './convert-drafts'
 import { openSqliteDomain } from '../../locations/lib/sqlite-domain'
+import { prepareRelease } from '../../revisions/production/prepare'
 import {
   applyGroups,
+  markVerified,
   pause,
   digest,
   fingerprint,
@@ -82,6 +84,7 @@ function fixture() {
   const d = openSqliteDomain(path)
   const plan: Plan = {
     version: 1,
+    featureLifecycle: 'current',
     sourceHash: 'test',
     target: 'test',
     initial,
@@ -179,6 +182,30 @@ test('rolls back a late cleanup failure and restores immutable triggers', async 
     expect(
       d.sqlite.query('SELECT nextGroup,writable FROM _revisionDeployment').get(),
     ).toEqual({ nextGroup: 0, writable: 0 })
+  } finally {
+    d.close()
+  }
+})
+
+test('the managed planner detects current lifecycle storage and verifies its cleanup plan', async () => {
+  const { d, path, root } = fixture()
+  try {
+    for (const resource of ['organisation', 'project', 'layer', 'hub'])
+      d.sqlite.exec(
+        `CREATE TABLE ${resource}(id TEXT,imageId TEXT); CREATE TABLE ${resource}RevisionHead(${resource}Id TEXT); CREATE TABLE ${resource}RevisionWrite(id TEXT)`,
+      )
+    d.sqlite.exec(
+      'CREATE TABLE resourceLogoImageHead(imageId TEXT); CREATE TABLE propertyCatalogRevisionHead(scope TEXT,resourceId TEXT); CREATE TABLE propertyCatalogRevisionWrite(id TEXT); CREATE TABLE featureRevisionWriteScope(featureId TEXT); CREATE TABLE d1_migrations(name TEXT)',
+    )
+    const plan = await prepareRelease(path, join(root, 'release'), 'local:test')
+    expect(plan.featureLifecycle).toBe('current')
+    expect(plan.groups).toHaveLength(1)
+    await pause(d.binding, plan)
+    await applyGroups(d.binding, plan)
+    await markVerified(d.binding, plan)
+    expect(
+      d.sqlite.query('SELECT phase,writable FROM _revisionDeployment').get(),
+    ).toEqual({ phase: 'verified', writable: 0 })
   } finally {
     d.close()
   }

@@ -17,6 +17,7 @@ export type Group = {
 export type Fingerprint = { rows: number; hash: string }
 export type Plan = {
   version: 1
+  featureLifecycle?: 'current'
   parentCursor?: number
   parentHash?: string
   target: string
@@ -225,13 +226,29 @@ export async function verifyRows(
       throw new Error(`Snapshot differs: ${table}`)
 }
 /** Enforce complete baseline coverage before deploying the revision app. @returns Activation assertions. */
-export function completeness(): Statement[] {
+export function completeness(currentLifecycle = false): Statement[] {
   return [
-    ...['organisation', 'project', 'layer', 'hub', 'feature'].map(resource =>
+    ...[
+      'organisation',
+      'project',
+      'layer',
+      'hub',
+      ...(currentLifecycle ? [] : ['feature']),
+    ].map(resource =>
       guard(
         `NOT EXISTS(SELECT 1 FROM ${resource} r LEFT JOIN ${resource}RevisionHead h ON h.${resource}Id=r.id WHERE h.${resource}Id IS NULL)`,
       ),
     ),
+    ...(currentLifecycle
+      ? [
+          guard(
+            'NOT EXISTS(SELECT 1 FROM feature f LEFT JOIN featureRevision r ON r.id=f.currentRevisionId AND r.featureId=f.id WHERE r.id IS NULL OR r.sequence<>f.revisionVersion)',
+          ),
+          guard(
+            "NOT EXISTS(SELECT 1 FROM task t JOIN featureRevisionProposal p ON p.id=t.proposalId WHERE t.isDraft=1 AND t.type='newFeature' AND t.featureId IS NOT NULL AND json_extract(p.creationScope,'$.legacyInitial.mode')='contribution')",
+          ),
+        ]
+      : []),
     ...['organisation', 'project', 'hub'].map(resource =>
       guard(
         `NOT EXISTS(SELECT 1 FROM ${resource} r LEFT JOIN resourceLogoImageHead h ON h.imageId=r.imageId WHERE r.imageId IS NOT NULL AND h.imageId IS NULL)`,
@@ -258,7 +275,7 @@ export async function markVerified(db: D1Database, plan: Plan): Promise<void> {
       `EXISTS(SELECT 1 FROM ${CONTROL} WHERE planHash=? AND nextGroup=? AND writable=0 AND phase IN ('paused','verified'))`,
       [digest(plan), plan.groups.length],
     ),
-    ...completeness(),
+    ...completeness(plan.featureLifecycle === 'current'),
     fenceCoverage(plan.tables),
     { sql: `UPDATE ${CONTROL} SET phase='verified' WHERE singleton=1`, params: [] },
   ])
@@ -270,7 +287,7 @@ export async function activate(db: D1Database, plan: Plan): Promise<void> {
       `EXISTS(SELECT 1 FROM ${CONTROL} WHERE planHash=? AND nextGroup=? AND phase='verified' AND writable=0)`,
       [digest(plan), plan.groups.length],
     ),
-    ...completeness(),
+    ...completeness(plan.featureLifecycle === 'current'),
     fenceCoverage(plan.tables),
     { sql: `UPDATE ${CONTROL} SET writable=1 WHERE singleton=1`, params: [] },
     {

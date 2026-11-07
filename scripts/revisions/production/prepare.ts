@@ -11,6 +11,10 @@ import { preparePropertyCatalogCapture } from '../../../src/lib/db/services/prop
 import { registerImageRevisionBaseline } from '../../../src/lib/db/services/imageRevisionBaseline'
 import { enrollResourceLogo } from '../../../src/lib/db/services/resourceLogoRevision'
 // ROLLOUT
+import {
+  prepareLegacyDraftConversion,
+  applyLegacyDraftConversion,
+} from '../../dev/feature-lifecycle/convert-drafts'
 import { enrollLegacyRevisions } from '../enroll'
 import { cacheRevisionMedia, mediaCacheKey } from '../cache-media'
 import {
@@ -131,7 +135,18 @@ export async function prepareRelease(
       ),
     ]),
   )
+  const currentLifecycle = (
+    d.sqlite.query("PRAGMA table_info('feature')").all() as { name: string }[]
+  ).some(column => column.name === 'currentRevisionId')
   d.close()
+  if (currentLifecycle)
+    return prepareCurrentLifecycleRelease(
+      database,
+      directory,
+      target,
+      initial,
+      initialSchema,
+    )
   const schemaFile = join(directory, 'schema-groups.json')
   const migration = spawnSync(
     'python3',
@@ -321,6 +336,115 @@ export async function prepareRelease(
         2,
       ) + '\n',
       { mode: 0o600 },
+    )
+    return plan
+  } finally {
+    d.close()
+  }
+}
+
+/** Prepare managed cleanup for an already converted lifecycle snapshot.
+ * @param database Isolated snapshot. @param directory Private release artifacts.
+ * @param target Explicit environment/database identity. @param initial Exact source fingerprints.
+ * @param initialSchema Exact source schema. @returns Rehearsed, journal-compatible release plan.
+ * @remarks Every cleanup group is atomic and preserves before-images; no live writes occur here.
+ */
+function prepareCurrentLifecycleRelease(
+  database: string,
+  directory: string,
+  target: string,
+  initial: Plan['initial'],
+  initialSchema: Plan['initialSchema'],
+): Plan {
+  const d = openSqliteDomain(database)
+  try {
+    if (
+      d.sqlite
+        .query("SELECT 1 FROM sqlite_master WHERE name='_revisionDeployment'")
+        .get()
+    )
+      d.sqlite.exec('UPDATE _revisionDeployment SET writable=1')
+    const groups = prepareLegacyDraftConversion(d.sqlite)
+    for (const group of groups) {
+      if (
+        group.statements.length + 4 > 950 ||
+        group.statements.some(
+          statement =>
+            Buffer.byteLength(statement.sql) > 95_000 || statement.params.length > 100,
+        )
+      )
+        throw new Error(`Oversized cleanup unit: ${group.label}`)
+      d.sqlite.exec('BEGIN')
+      try {
+        applyLegacyDraftConversion(d.sqlite, [group])
+        d.sqlite.exec('COMMIT')
+      } catch (error) {
+        d.sqlite.exec('ROLLBACK')
+        throw error
+      }
+    }
+    for (const check of completeness(true)) {
+      try {
+        d.sqlite.query(check.sql).all(...check.params)
+      } catch {
+        throw new Error(
+          'Lifecycle cleanup requires completed resource baseline enrollment: ' +
+            check.sql,
+        )
+      }
+    }
+    const expected = Object.fromEntries(
+      tables(d).map(table => [
+        table,
+        fingerprint(
+          d.sqlite.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
+            string,
+            unknown
+          >[],
+          true,
+        ),
+      ]),
+    )
+    const plan: Plan = {
+      version: 1,
+      featureLifecycle: 'current',
+      target,
+      sourceHash: releaseSourceHash(),
+      initial,
+      initialSchema,
+      expected,
+      expectedSchema: schemaFingerprint(
+        d.sqlite
+          .query(
+            'SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL',
+          )
+          .all() as Record<string, unknown>[],
+      ),
+      groups,
+      tables: tables(d),
+      migrations: (
+        d.sqlite.query('SELECT name FROM d1_migrations ORDER BY name').all() as {
+          name: string
+        }[]
+      ).map(row => row.name),
+    }
+    writeFileSync(join(directory, 'plan.json'), JSON.stringify(plan) + '\n', {
+      mode: 0o600,
+      flag: 'wx',
+    })
+    writeFileSync(
+      join(directory, 'receipt.json'),
+      JSON.stringify(
+        {
+          planHash: digest(plan),
+          target,
+          convertedLegacyDrafts: groups.length,
+          remoteWrites: false,
+        },
+        null,
+        2,
+      ) + '\n',
+      { mode: 0o600, flag: 'wx' },
     )
     return plan
   } finally {

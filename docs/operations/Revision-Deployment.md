@@ -102,3 +102,38 @@ November 6 production export through migration 0197, including schema parity and
 foreign-key checks. Its largest captured migration batch used 927 statements before the
 final coverage assertion. This is schema replay evidence, not full production-media
 enrollment or remote D1 execution evidence.
+
+### Unfinished Feature contributions after lifecycle conversion
+
+New contribution acceptance creates an **unpublished** Feature. Reviewers clean up
+that record through the regular editors and publish separately. Publication is not
+part of accepting the task, including after migration.
+
+`scripts/dev/feature-lifecycle/convert-drafts.ts` converts unfinished legacy
+contributions into the ordinary creation-proposal workflow. The task and initial
+proposal IDs remain stable. Proposed content includes the exact retained upload
+pins; asset versions, image revisions, original files and task-image links are not
+copied or deleted. The converter removes the redundant provisional Feature and its
+private projection/history rows only after recording their complete before-images
+in an immutable `revisionChangeSet.legacyEvidence` receipt with format
+`legacy-creation-conversion/v1`. This includes original proposal/review rows and
+Feature-image pins, so cleanup does not erase attribution or historical evidence.
+
+Cleanup is deliberately conservative. Public history, reviewed proposals, additional
+tasks, social links, Location associations, identity lineage, foreign revision
+references, ambiguous photo evidence, or oversized evidence abort preparation.
+These cases require a separate reviewed migration; they are never silently discarded.
+
+The lifecycle rehearsal runs this conversion on its private copy. For an already
+converted database, the managed release planner detects `feature.currentRevisionId`
+and produces one atomic cleanup group per draft, using the existing maintenance
+fence, exact source fingerprints, durable cursor, final verification and activation
+protocol. The group temporarily removes only the relevant immutable-history guards
+inside the same transaction and reinstalls their exact definitions before commit.
+It never removes deployment fences. A failed group rolls back its data, guards and
+cursor together. Replanning after a completed conversion produces no duplicate work.
+
+This cleanup plan expects the lifecycle schema cutover and normal resource/logo
+baseline enrollment to be complete. It does not replace either stage or weaken
+activation checks. Preparing or rehearsing a plan does not apply it to development
+or production. The app has no separate legacy draft editor after conversion.
