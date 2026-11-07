@@ -137,3 +137,20 @@ This cleanup plan expects the lifecycle schema cutover and normal resource/logo
 baseline enrollment to be complete. It does not replace either stage or weaken
 activation checks. Preparing or rehearsing a plan does not apply it to development
 or production. The app has no separate legacy draft editor after conversion.
+
+### Managed lifecycle schema transition
+
+The rollout snapshot explicitly selects the current Feature lifecycle. On legacy
+schemas, the planner first completes numbered migrations and resource/logo enrollment,
+then prepares a lifecycle target on an isolated copy. A dedicated portable schema group
+replays that target with foreign keys enabled and deferred checks. Referencing tables
+are included in the rebuild to preserve rows affected by CASCADE or SET NULL; Feature
+and change-set identities receive additive columns without replacing their rows.
+Exact target rows and foreign-key integrity are checked before draft cleanup begins.
+
+Only the leading numbered-schema groups belong to the initial migration/re-export
+phase. The lifecycle schema group follows enrollment, with maintenance fences restored
+in the same transaction. A failure rolls back the group and leaves its resume cursor
+unchanged. Activation of the current schema does not access the removed legacy creation
+policy table. Local contract tests cover both the legacy and current activation paths;
+they do not establish that a live D1 release has occurred.

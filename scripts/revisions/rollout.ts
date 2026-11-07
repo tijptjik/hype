@@ -220,6 +220,8 @@ export async function main(args: string[]): Promise<void> {
       join(snapshotDirectory, 'source.sqlite'),
       join(snapshotDirectory, 'release'),
       target,
+      undefined,
+      { featureLifecycle: 'current' },
     )
   }
   if (!existsSync(planPath)) await snapshot(join(directory, selected))

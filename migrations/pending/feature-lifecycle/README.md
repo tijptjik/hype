@@ -73,10 +73,14 @@ retain the removed provisional records and redundant upload proposals; all origi
 image assets, metadata versions and task-image links are conserved. Creation acceptance
 produces an unpublished Feature. The smoke command also accepts `--reject-creations`.
 
-Still required before application: complete the D1-compatible managed schema cutover,
-resource/logo baseline enrollment, authenticated end-to-end browser verification and a
-fresh deployment rehearsal. The offline converter currently uses `foreign_keys=OFF`
-while rebuilding tables; it must not be replayed as a D1 deployment group. The managed
-cleanup planner assumes the target schema is already installed and enforces baseline
-completeness. This directory remains outside numbered migrations until cutover checks
-are complete. No successful local rehearsal authorizes live application.
+The managed release planner now enrolls resource/logo baselines, prepares the target
+schema on a private copy, and replays a separate atomic schema group with foreign keys
+enabled. It then converts unfinished drafts in resumable cleanup groups. Incoming
+foreign-key dependents are rebuilt together; existing Feature and change-set identities
+stay in place. The offline converter's `foreign_keys=OFF` SQL is never replayed on D1.
+
+Still required before application: verified media evidence for the development-data
+baseline, authenticated end-to-end browser verification and a fresh deployment
+rehearsal. This directory remains outside numbered migrations: the managed planner
+owns the schema transition and enforces baseline completeness. No successful local
+rehearsal authorizes live application.

@@ -114,6 +114,14 @@ export function fenceCoverage(tables: readonly string[]): Statement {
     [JSON.stringify(tables.filter(t => t !== CONTROL))],
   )
 }
+/** Locate the initial numbered-migration prefix before domain enrollment.
+ * @param plan Ordered release groups. @returns Cursor at which the fenced snapshot must be refreshed.
+ * @remarks Later lifecycle schema replacement depends on enrolled evidence and belongs to the apply phase.
+ */
+export function schemaMigrationBoundary(plan: Pick<Plan, 'groups'>): number {
+  const boundary = plan.groups.findIndex(group => !group.tables)
+  return boundary < 0 ? plan.groups.length : boundary
+}
 /** Read the durable release journal. @param db Target binding. @returns Journal or null. */
 export async function journal(db: D1Database): Promise<Journal | null> {
   return db
@@ -158,7 +166,7 @@ export async function pause(db: D1Database, plan: Plan): Promise<void> {
   await atomic(db, [
     {
       sql: `INSERT INTO ${CONTROL} VALUES(1,?,0,'paused',0,NULL,0,?) ON CONFLICT(singleton) DO UPDATE SET previousHash=planHash,planHash=excluded.planHash,nextGroup=0,phase='paused',writable=0,irreversible=0,schemaBoundary=excluded.schemaBoundary WHERE ${CONTROL}.phase='active' AND ${CONTROL}.planHash<>excluded.planHash`,
-      params: [digest(plan), plan.groups.filter(g => g.tables).length],
+      params: [digest(plan), schemaMigrationBoundary(plan)],
     },
     guard(`EXISTS(SELECT 1 FROM ${CONTROL} WHERE planHash=? AND writable=0)`, [
       digest(plan),
@@ -290,10 +298,14 @@ export async function activate(db: D1Database, plan: Plan): Promise<void> {
     ...completeness(plan.featureLifecycle === 'current'),
     fenceCoverage(plan.tables),
     { sql: `UPDATE ${CONTROL} SET writable=1 WHERE singleton=1`, params: [] },
-    {
-      sql: 'UPDATE featureRevisionCreationPolicy SET enabled=1 WHERE singleton=1',
-      params: [],
-    },
+    ...(plan.featureLifecycle === 'current'
+      ? []
+      : [
+          {
+            sql: 'UPDATE featureRevisionCreationPolicy SET enabled=1 WHERE singleton=1',
+            params: [],
+          },
+        ]),
     { sql: 'UPDATE adminResourceRevisionRollout SET enabled=1', params: [] },
     {
       sql: `UPDATE ${CONTROL} SET writable=0,phase='active' WHERE singleton=1`,
@@ -329,7 +341,7 @@ export async function rebaseUnstarted(db: D1Database, plan: Plan): Promise<void>
     ),
     {
       sql: `UPDATE ${CONTROL} SET planHash=?,nextGroup=0,schemaBoundary=? WHERE singleton=1`,
-      params: [digest(plan), plan.groups.filter(g => g.tables).length],
+      params: [digest(plan), schemaMigrationBoundary(plan)],
     },
   ])
 }

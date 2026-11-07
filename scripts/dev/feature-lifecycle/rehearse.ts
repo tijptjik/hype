@@ -5,7 +5,10 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createHash } from 'node:crypto'
 // CONVERSION
-import { prepareLegacyDraftConversion, applyLegacyDraftConversion } from './convert-drafts'
+import {
+  prepareLegacyDraftConversion,
+  applyLegacyDraftConversion,
+} from './convert-drafts'
 import { inspectFeatureLifecycleConversion } from './inspect'
 import { inspectCurrentFeatureConversion } from './current'
 // TYPES
@@ -60,12 +63,14 @@ function insert(db: Database, table: string, row: Row): void {
 
 /** Rehearse lossless lifecycle conversion on a new private copy; never modifies the source database.
  * @param sourcePath Existing development database. @param destinationPath New, exclusive rehearsal file.
+ * @param options Skip draft cleanup when preparing the preceding managed schema unit.
  * @returns Conservation and integrity receipts; any unsupported legacy state aborts the copy transaction.
  * @remarks Successful rehearsal is not application cutover authority or evidence that remaining API/UI adapters are complete.
  */
 export async function rehearseFeatureLifecycle(
   sourcePath: string,
   destinationPath: string,
+  options: { cleanupDrafts?: boolean } = {},
 ): Promise<Record<string, unknown>> {
   if (resolve(sourcePath) === resolve(destinationPath))
     throw new Error('Rehearsal requires a separate destination')
@@ -348,9 +353,26 @@ export async function rehearseFeatureLifecycle(
           (object.type === 'trigger' || object.type === 'index') &&
           object.tbl_name === 'task',
       )) {
-        if (obsolete.test(object.sql))
-          throw new Error('Task trigger requires lifecycle conversion')
-        db.exec(object.sql)
+        if (object.name === 'feature_task_assignment_requires_receipt') {
+          // Historical tasks remain on their source; explicit proposal retargeting carries its own immutable review receipt.
+          db.exec(`CREATE TRIGGER feature_task_assignment_requires_receipt BEFORE UPDATE OF featureId ON task
+            WHEN NEW.featureId<>OLD.featureId AND
+              (EXISTS(SELECT 1 FROM feature WHERE id=OLD.featureId AND currentRevisionId IS NOT NULL)
+               OR EXISTS(SELECT 1 FROM feature WHERE id=NEW.featureId AND currentRevisionId IS NOT NULL))
+              AND NOT EXISTS(SELECT 1 FROM featureRevisionReview r JOIN featureRevisionProposal p ON p.id=NEW.proposalId
+                WHERE OLD.isReviewed=0 AND r.action='retargeted' AND r.proposalId=OLD.proposalId
+                  AND json_extract(r.context,'$.sourceFeatureId')=OLD.featureId
+                  AND json_extract(r.context,'$.targetFeatureId')=NEW.featureId
+                  AND json_extract(r.context,'$.targetProposalId')=NEW.proposalId
+                  AND p.featureId=NEW.featureId AND p.status='submitted')
+            BEGIN SELECT RAISE(ABORT,'Assign enrolled tasks through reviewed proposal retargeting'); END`)
+        } else {
+          if (obsolete.test(object.sql))
+            throw new Error(
+              'Task trigger requires lifecycle conversion: ' + object.name,
+            )
+          db.exec(object.sql)
+        }
       }
       db.exec(target.slice(triggerStart))
       for (const object of schema.filter(
@@ -390,11 +412,14 @@ export async function rehearseFeatureLifecycle(
         if (digest(after) !== digest(originalRows))
           throw new Error(`Original ${table} values changed`)
       }
-      const draftGroups = prepareLegacyDraftConversion(db)
+      const draftGroups =
+        options.cleanupDrafts === false ? [] : prepareLegacyDraftConversion(db)
       applyLegacyDraftConversion(db, draftGroups)
-      if (db.query('PRAGMA foreign_key_check').all().length) throw new Error('Draft cleanup foreign-key reconciliation failed')
-      for (const table of ['imageAssetVersion','imageRevision','taskImage'])
-        if (digest(rows(table)) !== digest(original[table])) throw new Error(`Draft cleanup changed retained ${table}`)
+      if (db.query('PRAGMA foreign_key_check').all().length)
+        throw new Error('Draft cleanup foreign-key reconciliation failed')
+      for (const table of ['imageAssetVersion', 'imageRevision', 'taskImage'])
+        if (digest(rows(table)) !== digest(original[table]))
+          throw new Error(`Draft cleanup changed retained ${table}`)
       const integrity = db.query('PRAGMA integrity_check').all()
       if (JSON.stringify(integrity) !== JSON.stringify([{ integrity_check: 'ok' }]))
         throw new Error('SQLite integrity check failed')
@@ -403,8 +428,18 @@ export async function rehearseFeatureLifecycle(
         features: current.current.length - draftGroups.length,
         convertedLegacyDrafts: draftGroups.length,
         legacyDraftEvidence: 'revisionChangeSet.legacyEvidence',
-        activeProposals: (db.query('SELECT count(*) n FROM featureRevisionProposal').get() as { n: number }).n,
-        archivedDraftImagePins: (db.query("SELECT COALESCE(sum(json_array_length(legacyEvidence,'$.before.featureRevisionImage')),0) n FROM revisionChangeSet WHERE id LIKE 'draft-conversion:%'").get() as { n: number }).n,
+        activeProposals: (
+          db.query('SELECT count(*) n FROM featureRevisionProposal').get() as {
+            n: number
+          }
+        ).n,
+        archivedDraftImagePins: (
+          db
+            .query(
+              "SELECT COALESCE(sum(json_array_length(legacyEvidence,'$.before.featureRevisionImage')),0) n FROM revisionChangeSet WHERE id LIKE 'draft-conversion:%'",
+            )
+            .get() as { n: number }
+        ).n,
         legacyEvents: eventCount,
         proposals: conversion.proposals.length,
         reviews: conversion.reviews.length,

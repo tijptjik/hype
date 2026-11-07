@@ -10,6 +10,7 @@ import {
   applyGroups,
   digest,
   journal,
+  schemaMigrationBoundary,
   markVerified,
   pause,
   verifyRows,
@@ -94,9 +95,7 @@ async function main(): Promise<void> {
       await applyGroups(
         db,
         plan,
-        operation === 'migrate'
-          ? plan.groups.filter(g => g.tables).length
-          : plan.groups.length,
+        operation === 'migrate' ? schemaMigrationBoundary(plan) : plan.groups.length,
       )
     }
     if (operation === 'verify') await markVerified(db, plan)

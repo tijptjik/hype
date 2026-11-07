@@ -1,3 +1,5 @@
+// SQLITE
+import { Database as SQLite } from 'bun:sqlite'
 // NODE
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -11,6 +13,8 @@ import { preparePropertyCatalogCapture } from '../../../src/lib/db/services/prop
 import { registerImageRevisionBaseline } from '../../../src/lib/db/services/imageRevisionBaseline'
 import { enrollResourceLogo } from '../../../src/lib/db/services/resourceLogoRevision'
 // ROLLOUT
+import { rehearseFeatureLifecycle } from '../../dev/feature-lifecycle/rehearse'
+import { prepareLifecycleSchemaGroup } from './lifecycle-schema'
 import {
   prepareLegacyDraftConversion,
   applyLegacyDraftConversion,
@@ -18,6 +22,7 @@ import {
 import { enrollLegacyRevisions } from '../enroll'
 import { cacheRevisionMedia, mediaCacheKey } from '../cache-media'
 import {
+  atomic,
   completeness,
   digest,
   fences,
@@ -98,12 +103,13 @@ function projections(d: Domain): Plan['expected'] {
       ]),
   )
 }
-/** Record a complete release from an isolated production export. @param source Restored production snapshot. @param directory New private artifact directory. @param target Explicit environment/database identity. @param cacheMedia Exact media downloader, injectable for offline rehearsal tests. @returns Immutable plan. @remarks No Breadline imports, personas, fixtures, R2 writes or live database writes occur here. Missing media fails closed. */
+/** Record a complete release from an isolated production export. @param source Restored production snapshot. @param directory New private artifact directory. @param target Explicit environment/database identity. @param cacheMedia Exact media downloader, injectable for offline rehearsal tests. @param options Explicit accepted-lifecycle schema cutover after baseline enrollment. @returns Immutable plan. @remarks No Breadline imports, personas, fixtures, R2 writes or live database writes occur here. Missing media fails closed. */
 export async function prepareRelease(
   source: string,
   directory: string,
   target: string,
   cacheMedia: typeof cacheRevisionMedia = cacheRevisionMedia,
+  options: { featureLifecycle?: 'current' } = {},
 ): Promise<Plan> {
   mkdirSync(directory, { mode: 0o700 })
   const database = join(directory, 'prepared.sqlite')
@@ -283,6 +289,60 @@ export async function prepareRelease(
             .join(','),
       )
     for (const check of completeness()) d.sqlite.query(check.sql).all(...check.params)
+    if (options.featureLifecycle === 'current') {
+      // Rehearse first, then replay the portable D1 group with foreign keys enabled.
+      const converted = join(directory, 'lifecycle-schema.sqlite')
+      await rehearseFeatureLifecycle(database, converted, { cleanupDrafts: false })
+      const targetSnapshot = new SQLite(converted, { readonly: true })
+      try {
+        const group = prepareLifecycleSchemaGroup(d.sqlite, targetSnapshot)
+        await atomic(d.binding, group.statements)
+        groups.push(group)
+        for (const table of tables(d)) {
+          const expectedRows = fingerprint(
+            targetSnapshot.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
+              string,
+              unknown
+            >[],
+          )
+          const actualRows = fingerprint(
+            d.sqlite.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
+              string,
+              unknown
+            >[],
+          )
+          if (digest(expectedRows) !== digest(actualRows))
+            throw new Error(`Lifecycle replay differs: ${table}`)
+        }
+      } finally {
+        targetSnapshot.close()
+      }
+      for (const group of prepareLegacyDraftConversion(d.sqlite)) {
+        await atomic(d.binding, group.statements)
+        groups.push(group)
+      }
+      for (const check of completeness(true))
+        d.sqlite.query(check.sql).all(...check.params)
+      // Preserve the existing projection contract and add exact lifecycle/media evidence.
+      // Unrelated resource journals mint their own SQL IDs during enrollment replay;
+      // their completeness checks remain mandatory instead of comparing rehearsal IDs.
+      Object.assign(expected, projections(d))
+      const finalTables = tables(d)
+      for (const table of finalTables.filter(name =>
+        /^(featureRevision|featureIdentityOperation|featureUploadEvidence|revisionChangeSet|imageRevision|imageAssetVersion)/.test(
+          name,
+        ),
+      ))
+        expected[table] = fingerprint(
+          d.sqlite.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
+            string,
+            unknown
+          >[],
+          true,
+        )
+      for (const table of Object.keys(expected))
+        if (!finalTables.includes(table)) delete expected[table]
+    }
     for (const group of groups) {
       const all = [
         ...group.statements,
@@ -296,6 +356,9 @@ export async function prepareRelease(
     }
     const plan: Plan = {
       version: 1,
+      ...(options.featureLifecycle
+        ? { featureLifecycle: options.featureLifecycle }
+        : {}),
       target,
       sourceHash: releaseSourceHash(),
       initialSchema,
