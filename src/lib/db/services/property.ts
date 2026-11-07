@@ -43,6 +43,7 @@ import {
 } from './organisationRevision.js'
 import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
 import { preparePropertyCatalogCapture } from './propertyCatalogRevision.js'
+import { prepareFeaturePropertyCascadeCapture } from './featurePropertyRevision.js'
 import type {
   OrganisationRevisionActor,
   OrganisationRevisionCapture,
@@ -796,11 +797,13 @@ export const updateI18n = async (
  * @remarks Parent linkage is server-owned. Updates and deletions recheck the target
  * property at write time rather than trusting the earlier ownership snapshot.
  * Deletions, creates, guarded updates, and readback share one atomic D1 batch.
+ * @param actor Trusted editor required when option deletion changes enrolled Features.
  */
 export const syncPropertyValues = async (
   db: Database,
   incomingValues: PropertyValue[], // Form shape with IDs for existing, potentially new ones without
   propertyId: string,
+  actor?: OrganisationRevisionActor,
 ): Promise<PropertyValueDB[]> => {
   const existingValues = await db.query.propertyValue.findMany({
     where: eq(propertyValue.propertyId, propertyId),
@@ -862,14 +865,19 @@ export const syncPropertyValues = async (
       })
   })
 
+  const removed = existingValues.filter(value => !incomingIds.includes(value.id)).map(value => value.id)
+  const capture = await prepareFeaturePropertyCascadeCapture(db, { propertyIds: [], optionIds: removed, actor })
+  // Fence the complete option set: a concurrent insertion must not become an unrecorded cascade.
+  const snapshot = JSON.stringify(existingValues.map(({ id, propertyId, rank, value }) => ({ id, propertyId, rank, value })).sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  const unchanged = sql`(SELECT json_group_array(json_object('id',id,'propertyId',propertyId,'rank',rank,'value',value))
+    FROM (SELECT id,propertyId,rank,value FROM propertyValue WHERE propertyId=${propertyId} ORDER BY id))=${snapshot}`
   try {
-    // Keep deletion, creates, guarded updates, and readback in one atomic transaction.
-    const results = await db.batch([
-      deletion,
-      ...creates,
-      ...updates,
+    // Keep deletion, creates, guarded updates, Feature history, and readback in one transaction.
+    const results = await executeRevisionBatch(db, unchanged, [
+      ...capture.before, deletion, ...creates, ...updates, ...capture.after,
       db.select().from(propertyValue).where(eq(propertyValue.propertyId, propertyId)),
     ])
+    if (!results) throw error(409, 'PROPERTY_VALUES_CHANGED')
     return results.at(-1) as PropertyValueDB[]
   } catch (cause) {
     if (isMissingPropertyValueOwnership(cause)) {
@@ -1273,6 +1281,13 @@ export const preparePropertyCatalog = async (
       ),
     )
   }
+  const removedPropertyIds = existingProperties.filter(row => row.audience === 'public' && !ids.includes(row.id)).map(row => row.id)
+  const removedOptionIds = prepared.flatMap(row => row.values
+    ? (row.existing?.values ?? []).filter(value => !row.values!.some(next => next.id === value.id)).map(value => value.id)
+    : [])
+  const affectedFeatures = await prepareFeaturePropertyCascadeCapture(db, {
+    propertyIds: removedPropertyIds, optionIds: removedOptionIds, actor,
+  })
   // Enclosing forms own overlapping captures; nested capture scopes retain their original preimage.
   return {
     statements: [
@@ -1280,8 +1295,10 @@ export const preparePropertyCatalog = async (
       ...affectedOrg.before,
       ...affected.flatMap(row => row.before),
       ...capture.before,
+      ...affectedFeatures.before,
       deletion,
       ...writes,
+      ...affectedFeatures.after,
       ...capture.after,
       ...affected.toReversed().flatMap(row => row.after),
       ...affectedOrg.after,

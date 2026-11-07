@@ -1,6 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // SERVICES
+import { hasFeatureLifecycleStorage } from './featureLifecycle'
 import { hasResourceLogoStorage } from './resourceLogoSnapshot'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -38,6 +39,11 @@ export async function readImageRevisionDelivery(
       EXISTS(SELECT 1 FROM organisation o WHERE o.imageId=i.id AND o.isPublished=1 AND o.isArchived=0)
       OR EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.imageId=i.id AND p.isPublished=1 AND p.isArchived=0 AND o.isPublished=1 AND o.isArchived=0)
       OR EXISTS(SELECT 1 FROM hub h WHERE h.imageId=i.id AND h.isPublished=1 AND h.isArchived=0)))` : sql`0`
+  const accepted=await hasFeatureLifecycleStorage(db)?sql`featureRevisionImage pin
+      JOIN feature f ON f.currentRevisionId=pin.featureRevisionId
+      JOIN featureRevision r ON r.id=f.currentRevisionId AND r.featureId=f.id`:
+    sql`featureRevisionImage pin JOIN featureRevisionHead h ON h.publishedRevisionId=pin.featureRevisionId AND h.state='active'
+      JOIN featureRevision r ON r.id=h.publishedRevisionId AND r.featureId=h.featureId JOIN feature f ON f.id=h.featureId`
   const row = await db.get<
     Omit<PinnedImageDelivery, 'metadata'> & { metadata: string }
   >(sql`
@@ -46,10 +52,7 @@ export async function readImageRevisionDelivery(
     FROM imageRevision ir JOIN image i ON i.id=ir.imageId
     JOIN imageAssetVersion av ON av.id=ir.assetVersionId AND av.imageId=i.id
     WHERE ir.id=${revisionId} AND i.isArchived=0 AND ((${previewGuard}) OR (${logoPublic}) OR EXISTS (
-      SELECT 1 FROM featureRevisionImage pin JOIN featureRevisionHead h
-        ON h.publishedRevisionId=pin.featureRevisionId AND h.state='active'
-      JOIN featureRevision r ON r.id=h.publishedRevisionId AND r.featureId=h.featureId
-      JOIN feature f ON f.id=h.featureId
+      SELECT 1 FROM ${accepted}
       JOIN layer l ON l.id=f.layerId AND l.projectId=f.projectId
       JOIN project p ON p.id=f.projectId AND p.organisationId=f.organisationId
       JOIN organisation o ON o.id=f.organisationId

@@ -1,5 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
+// SERVICES
+import { hasFeatureLifecycleStorage } from './featureLifecycle'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
@@ -11,6 +13,8 @@ import type { Database } from '#lib/types.js'
  * @remarks Callers still authorize the Feature and task; this relation alone grants no access.
  */
 export async function featureUploadEvidenceSource(db: Database): Promise<SQL> {
+  const current=await db.get<{n:number}>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featureUploadEvidence' AND type='table'`)
+  if(current?.n)return sql`(SELECT *,proposalVersion AS candidateRevisionId FROM featureUploadEvidence)`
   const migrated = await db.get<{ n: number }>(
     sql`SELECT count(*) n FROM sqlite_master WHERE name='featureTaskUploadEvidence' AND type='view'`,
   )
@@ -25,6 +29,12 @@ export async function hasFeatureTaskTransfer(
   db: Database,
   taskId: string,
 ): Promise<boolean> {
+  // Converted transfer receipts remain authoritative even after their old tables are removed.
+  if (await hasFeatureLifecycleStorage(db)) {
+    return Boolean(await db.get(sql`SELECT 1 FROM revisionChangeSet c,
+      json_each(c.legacyEvidence,'$.taskTransfers') transfer
+      WHERE json_extract(transfer.value,'$.taskId')=${taskId} LIMIT 1`))
+  }
   const storage = await db.get<{ n: number }>(
     sql`SELECT count(*) n FROM sqlite_master WHERE name='featureTaskTransfer' AND type='table'`,
   )

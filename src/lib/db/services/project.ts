@@ -1233,7 +1233,7 @@ export const updateProjectPublishedStateById = async (
       parentUpdate,
       // A skipped parent write must not commit descendant publication changes.
       prepareRevisionCheck(db, sql`changes() = 1`),
-      ...buildDescendantPublication(db, { kind: 'project', id: params.id }, params),
+      ...await buildDescendantPublication(db, { kind: 'project', id: params.id }, params),
       ...capture.after,
     ],
   )
@@ -1262,7 +1262,7 @@ export const cascadeProjectPublishedStateToDescendants = async (
   },
 ): Promise<void> => {
   await db.batch(
-    buildDescendantPublication(db, { kind: 'project', id: params.projectId }, params),
+    await buildDescendantPublication(db, { kind: 'project', id: params.projectId }, params),
   )
 }
 

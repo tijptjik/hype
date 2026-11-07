@@ -4,6 +4,8 @@ import { error } from '@sveltejs/kit'
 import { and, eq, sql, type SQL } from 'drizzle-orm'
 // DB
 import { feature, organisation, project, task } from '#lib/db/schema/index.js'
+// SERVICES
+import { hasFeatureLifecycleStorage } from './featureLifecycle'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { TaskNew } from '#lib/db/zod/schema/task.types.js'
@@ -24,6 +26,31 @@ export const taskFeatureScopeCondition = (): SQL<unknown> => sql`exists (
     and task_scope_feature."projectId" = ${task.projectId}
     and task_scope_project."organisationId" = ${task.organisationId}
 )`
+
+/** Resolve task ancestry for accepted Features and creation proposals without a Feature row.
+ * @param db Request database, used to select the installed lifecycle schema.
+ * @returns Correlated scope predicate; caller must also enforce actor and hub authorization.
+ * @remarks Creation tasks must match the proposal author and its complete live parent chain.
+ */
+export async function taskLifecycleScopeCondition(db: Database): Promise<SQL> {
+  const existing = taskFeatureScopeCondition()
+  if (!await hasFeatureLifecycleStorage(db)) return existing
+  return sql`(${existing}) OR EXISTS (
+    SELECT 1 FROM main.task creation_task
+    JOIN featureRevisionProposal proposal ON proposal.id=creation_task.proposalId
+    JOIN layer creation_layer ON creation_layer.id=json_extract(proposal.creationScope,'$.layerId')
+    JOIN project creation_project ON creation_project.id=creation_layer.projectId
+    JOIN organisation creation_org ON creation_org.id=creation_project.organisationId
+    WHERE creation_task.id=${task.id} AND creation_task.featureId IS NULL
+      AND creation_task.type='newFeature' AND proposal.kind='create' AND proposal.featureId IS NULL
+      AND creation_task.contributorId=proposal.contributorId
+      AND creation_task.projectId=creation_project.id
+      AND creation_task.organisationId=creation_org.id
+      AND creation_layer.organisationId=creation_org.id
+      AND json_extract(proposal.creationScope,'$.projectId')=creation_project.id
+      AND json_extract(proposal.creationScope,'$.organisationId')=creation_org.id
+  )`
+}
 
 /**
  * Rejects task submissions whose supplied scope does not match the persisted feature.

@@ -1,17 +1,9 @@
 // NANOID
 import { nanoid } from 'nanoid'
 // DRIZZLE
-import {
-  and,
-  eq,
-  exists,
-  gt,
-  or,
-  sql,
-  type InferInsertModel,
-  type SQL,
-} from 'drizzle-orm'
+import { and, eq, exists, gt, or, sql, type InferInsertModel, type SQL } from 'drizzle-orm'
 // DB
+import { applyFeatureGalleryPins } from './featureGalleryRead'
 import {
   firstOrNull,
   resolveRequiredProbe,
@@ -29,6 +21,7 @@ import {
   featurePropertyI18n,
 } from '../schema'
 import { featureAuthoringSQL } from './featureAuthoringProjection'
+import { featurePresentationPolicySQL } from './featurePresentationPolicy'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 import { featureLocationBrandsSQL } from './locationBrandProjection'
@@ -43,6 +36,8 @@ import { prepareFeatureFormRelations } from './locationRelations'
 import { buildScopedFeatureImagePublication } from './publication.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
 import { buildFeatureCommandScopeGuard } from './featureCommandScope.js'
+import { routeFeatureRevisionPublication, featureLegacyPublicationGuard } from './featureRevisionPublication'
+import { featureRevisionCreationEnabled } from './featureCreationRevision'
 // TYPES
 import type {
   Database,
@@ -118,13 +113,15 @@ import type {
 export const createFeature = async (
   db: Database,
   data: FeatureDBNew,
-): Promise<FeatureDB> =>
-  (await insert(db, feature, {
+): Promise<FeatureDB> => {
+  if (await featureRevisionCreationEnabled(db)) throw new Error('Use atomic Feature form creation with session attribution')
+  return (await insert(db, feature, {
     ...data,
     spatialIndex: createFeatureSpatialIndex(data.geometry),
     addressMeta: data.addressMeta ?? {},
     isPublished: data.isPublished ?? false,
   })) as FeatureDB
+}
 
 /**
  * Creates feature i18n rows for every submitted locale.
@@ -141,6 +138,7 @@ export const createI18n = async (
   i18n: Record<string, FeatureI18nNew>,
   featureId: Id,
 ) => {
+  await assertLegacyFeatureRelations(db, featureId)
   const normalizedI18n = contentMapToStorage(
     i18n as Record<string, FeatureI18nNew>,
   ) as Record<string, FeatureI18nNew>
@@ -179,15 +177,13 @@ const upsertFeaturePropertyI18n = async (
   propertyId: Id,
   i18n: Record<LocaleKey, { value?: string | null; valueGen?: boolean | null }>,
 ) => {
-  const i18nRecords = Object.entries(contentMapToStorage(i18n)).map(
-    ([locale, data]) => ({
-      featureId,
-      propertyId,
-      locale,
-      value: data.value ?? null,
-      valueGen: Boolean(data.valueGen),
-    }),
-  )
+  const i18nRecords = Object.entries(contentMapToStorage(i18n)).map(([locale, data]) => ({
+    featureId,
+    propertyId,
+    locale,
+    value: data.value ?? null,
+    valueGen: Boolean(data.valueGen),
+  }))
 
   for (const record of i18nRecords) {
     await db
@@ -272,6 +268,7 @@ export const createProperties = async (
   featureId: Id,
   properties: NewFeatureProperty[],
 ) => {
+  await assertLegacyFeatureRelations(db, featureId)
   properties = await validateFeaturePhoneProperties(db, properties)
   if (properties.length > 0) {
     for (const propertyRow of properties) {
@@ -350,7 +347,9 @@ export const createProperties = async (
  * @param withRelations - Optional Drizzle relation graph to hydrate.
  * @param conditions - SQL conditions already normalized by API services.
  * @param opts - Hub request scope used to apply hub-level filtering.
- * @param listOptions - Optional text query, sorting, and pagination controls.
+ * @param pagination - Optional bounded page or cursor.
+ * @param sorting - Stable field and direction for ordering.
+ * @param query - Text filters, locale and optional ID-only projection.
  * @returns A paginated feature row result.
  */
 export const listFeatures = async <TRow extends Record<string, unknown> = FeatureDB>(
@@ -369,7 +368,7 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
     q?: string | null
     filtersToApply?: QueryParams
     locale?: Locale
-    /** Return only traversal identities without hydrating relations. */
+    /** Return only traversal identities; never hydrate relation graphs or projections. */
     idsOnly?: boolean
   },
 ): Promise<ListResponse<TRow>> => {
@@ -437,20 +436,18 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
     db.query.feature.findMany({
       columns: query?.idsOnly ? { id: true } : undefined,
       with: query?.idsOnly ? {} : withRelations,
-      extras: query?.idsOnly
-        ? undefined
-        : {
-            locationBrands: featureLocationBrandsSQL().as('locationBrands'),
-            authoring: featureAuthoringSQL().as('authoring'),
-            locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
-          },
+      extras: query?.idsOnly ? undefined : {
+        locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+        authoring: featureAuthoringSQL().as('authoring'),
+        locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+      },
       where: whereClause,
       limit: pageLimit === undefined ? undefined : pageLimit + 1,
       offset: pagination?.offset ?? undefined,
       orderBy,
     }),
   )) as unknown as TRow[]
-  const data = pageLimit === undefined ? pageRows : pageRows.slice(0, pageLimit)
+  const data = await applyFeatureGalleryPins(db, pageLimit === undefined ? pageRows : pageRows.slice(0, pageLimit), { publishedOnly: !opts.isAdminRequest })
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(feature)
   const totalRows = await retryBusyRead(() =>
     countWhereClause ? countQuery.where(countWhereClause) : countQuery,
@@ -498,10 +495,11 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
     allConditions.push(hubFilter)
   }
 
-  return (await retryBusyRead(() =>
+  const row = (await retryBusyRead(() =>
     db.query.feature.findFirst({
       with: withRelations,
       extras: {
+        presentationPolicy: featurePresentationPolicySQL().as('presentationPolicy'),
         locationBrands: featureLocationBrandsSQL().as('locationBrands'),
         authoring: featureAuthoringSQL().as('authoring'),
         locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
@@ -509,6 +507,7 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
       where: allConditions.length > 0 ? and(...allConditions) : undefined,
     }),
   )) as unknown as TRow | undefined
+  return row ? (await applyFeatureGalleryPins(db, [row], { publishedOnly: !opts.isAdminRequest }))[0] : undefined
 }
 
 // ═══════════════════════
@@ -706,6 +705,9 @@ export const updateFeatureByIdWithConcurrency = async (
     data: FeatureDBPartial
   },
 ): Promise<FeatureDB | undefined> => {
+  // Content writes cannot race revision enrollment; ancestry-only reassignment remains a live control.
+  const identityOnly = Object.keys(params.data).every(key => ['layerId','projectId','organisationId'].includes(key))
+  const revisionGuard = identityOnly ? sql`1` : await featureLegacyPublicationGuard(db, params.id)
   const [updated] = await db
     .update(feature)
     // Persist geometry and its derived memberships together; triggers update lookup rows.
@@ -715,7 +717,7 @@ export const updateFeatureByIdWithConcurrency = async (
         ? {}
         : { spatialIndex: createFeatureSpatialIndex(params.data.geometry) }),
     })
-    .where(and(eq(feature.id, params.id), eq(feature.modifiedAt, params.updatedAt)))
+    .where(and(eq(feature.id, params.id), eq(feature.modifiedAt, params.updatedAt), revisionGuard))
     .returning()
 
   return updated as FeatureDB | undefined
@@ -739,6 +741,12 @@ export const updateFeaturePublishedStateById = async (
     publisherId?: Id | null
   },
 ): Promise<FeatureDB | undefined> => {
+  const revision = await routeFeatureRevisionPublication(db, {
+    featureId: params.id, actorId: params.publisherId ?? 'system:feature-publication',
+    state: params.state, guard: buildFeatureCommandScopeGuard(db, params.id, params.expectedScope),
+  })
+  if (revision !== 'legacy') return revision === 'updated'
+    ? (await db.select().from(feature).where(eq(feature.id, params.id)).get()) as FeatureDB | undefined : undefined
   const updateState = db
     .update(feature)
     .set({
@@ -752,16 +760,12 @@ export const updateFeaturePublishedStateById = async (
   // Recheck authorized ancestry for both states; assert the write before image policy runs.
   const results = await executeRevisionBatch(
     db,
-    buildFeatureCommandScopeGuard(db, params.id, params.expectedScope),
+    and(buildFeatureCommandScopeGuard(db, params.id, params.expectedScope), await featureLegacyPublicationGuard(db, params.id))!,
     [
       updateState,
       prepareRevisionCheck(db, sql`changes() = 1`),
       ...(params.state
-        ? buildScopedFeatureImagePublication(
-            db,
-            { kind: 'feature', id: params.id },
-            params.publisherId,
-          )
+        ? await buildScopedFeatureImagePublication(db, { kind: 'feature', id: params.id }, params.publisherId)
         : []),
     ],
   )
@@ -789,12 +793,7 @@ export const updateFeatureArchivedStateById = async (
     .set({
       isArchived: params.state,
     })
-    .where(
-      and(
-        eq(feature.id, params.id),
-        buildFeatureCommandScopeGuard(db, params.id, params.expectedScope),
-      ),
-    )
+    .where(and(eq(feature.id, params.id), buildFeatureCommandScopeGuard(db, params.id, params.expectedScope)))
     .returning()
 
   return updated as FeatureDB | undefined
@@ -819,10 +818,25 @@ export const updateI18n = async (
   i18n: Record<string, FeatureI18nPartial>,
   featureId: Id,
 ) => {
-  const queries = prepareFeatureFormRelations(db, featureId, sql`1`, i18n)
-  if (queries.length)
-    await db.batch(queries as [(typeof queries)[number], ...typeof queries])
+  const guard = await featureLegacyPublicationGuard(db, featureId)
+  const queries = prepareFeatureFormRelations(db, featureId, guard, i18n)
+  if (queries.length && !await executeRevisionBatch(db, guard, queries))
+    throw new Error('Feature translations require a revision draft')
   return db.select().from(featureI18n).where(eq(featureI18n.featureId, featureId))
+}
+
+/**
+ * Refuses obsolete direct relation helpers for identities owned by the revision workflow.
+ * @param db Request database.
+ * @param featureId Target identity.
+ * @returns Nothing when the legacy writer is eligible.
+ * @remarks Migration 0186 also fences enrollment racing a legacy write. New callers must use
+ * complete form drafts or an attributed accepted-capture transaction, never these helpers.
+ */
+async function assertLegacyFeatureRelations(db: Database, featureId: string): Promise<void> {
+  const guard = await featureLegacyPublicationGuard(db, featureId)
+  if (!await db.get(sql`SELECT 1 AS eligible WHERE ${guard}`))
+    throw new Error('Feature relations require a revision draft')
 }
 
 /**
@@ -840,6 +854,7 @@ export const updateProperties = async (
   properties: Array<NewFeatureProperty | FeatureProperty>,
   featureId: Id,
 ) => {
+  await assertLegacyFeatureRelations(db, featureId)
   properties = await validateFeaturePhoneProperties(db, properties)
   const existingProperties = await db
     .select({ propertyId: featureProperty.propertyId })

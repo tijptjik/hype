@@ -1518,7 +1518,10 @@ export function getImageHubFilter(
 }
 
 /**
- * Tasks inherit filtering from feature → layer → project → organisation
+ * Filter tasks by their canonical project and organisation, including unaccepted creation proposals.
+ * @param db Request database. @param opts Server-resolved hub and administrator context.
+ * @returns Hub predicate or undefined for a superadministrator.
+ * @remarks Callers also apply taskLifecycleScopeCondition to validate Feature or proposal ancestry.
  */
 export function getTaskHubFilter(
   db: Database,
@@ -1528,24 +1531,28 @@ export function getTaskHubFilter(
   if (opts.isSuperAdmin && opts.isAdminRequest) {
     return undefined
   }
+  // Existing identities retain their layer-chain check; proposal ancestry is checked by the task scope guard.
+  const featureChain = sql`(${task.featureId} IS NULL OR EXISTS(
+    SELECT 1 FROM feature task_hub_feature JOIN layer task_hub_layer ON task_hub_layer.id=task_hub_feature.layerId
+    WHERE task_hub_feature.id=${task.featureId} AND task_hub_layer.projectId=${project.id}))`
   if (opts.isCore) {
-    // Core: task's feature's layer's project's org has no hub OR org is not hub-exclusive
+    // Core: the scoped task organisation has no hub OR is not hub-exclusive
     return exists(
       db
-        .select()
-        .from(feature)
-        .innerJoin(layer, eq(layer.id, feature.layerId))
-        .innerJoin(project, eq(project.id, layer.projectId))
+        .select({ id: project.id })
+        .from(project)
         .innerJoin(organisation, eq(organisation.id, project.organisationId))
         .where(
           and(
-            eq(feature.id, task.featureId),
+            eq(project.id, task.projectId),
+            eq(organisation.id, task.organisationId),
+            featureChain,
             or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
           ),
         ),
     )
   } else {
-    // Specific hub: task's feature's layer's project's org belongs to this hub
+    // Specific hub: the scoped task organisation belongs to this hub
     const hubConditions: SQL<unknown>[] = []
 
     if (opts.code) {
@@ -1563,15 +1570,15 @@ export function getTaskHubFilter(
 
     return exists(
       db
-        .select()
-        .from(feature)
-        .innerJoin(layer, eq(layer.id, feature.layerId))
-        .innerJoin(project, eq(project.id, layer.projectId))
+        .select({ id: project.id })
+        .from(project)
         .innerJoin(organisation, eq(organisation.id, project.organisationId))
         .innerJoin(hub, eq(organisation.hubId, hub.id))
         .where(
           and(
-            eq(feature.id, task.featureId),
+            eq(project.id, task.projectId),
+            eq(organisation.id, task.organisationId),
+            featureChain,
             hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions),
           ),
         ),
