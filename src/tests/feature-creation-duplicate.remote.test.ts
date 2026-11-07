@@ -30,7 +30,7 @@ afterEach(() => {
   for (const f of connections.splice(0)) f.sqlite.close()
 })
 
-it('reviews proposal-only duplicates against the existing primary and rejects stale replay', async () => {
+it.each(['latest', 'keep', 'clear'] as const)('reviews proposal-only duplicates with %s last seen and rejects stale replay', async dateChoice => {
   const f = lifecycleFixture()
   connections.push(f)
   const initial = await f.initialize(false)
@@ -77,6 +77,7 @@ it('reviews proposal-only duplicates against the existing primary and rejects st
       {
         featureId: 'f',
         sourceFeatureId: 'f',
+        ...(dateChoice === 'latest' ? {} : { profileEdits: { asOf: dateChoice === 'clear' ? null : primary.content.profile.visitability.asOf } }),
         images: [
           ...primary.content.gallery.order.map(imageId => ({
             sourceFeatureId: 'f',
@@ -114,7 +115,9 @@ it('reviews proposal-only duplicates against the existing primary and rejects st
     sql`SELECT content FROM featureRevision WHERE id=(SELECT currentRevisionId FROM feature WHERE id='f')`,
   )
   expect(JSON.parse(latest!.content).gallery.order).toContain(photo.imageId)
-  expect(JSON.parse(latest!.content).profile.visitability.asOf).toBe('2026-11-07')
+  expect(JSON.parse(latest!.content).profile.visitability.asOf).toBe(
+    dateChoice === 'latest' ? '2026-11-07' : dateChoice === 'clear' ? null : primary.content.profile.visitability.asOf,
+  )
   await expect(applyCreationDuplicate(command)).rejects.toMatchObject({ status: 409 })
   expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
 })

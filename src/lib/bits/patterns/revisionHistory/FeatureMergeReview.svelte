@@ -80,14 +80,6 @@ const propertyGroups = $derived.by(() => {
       ids: ids.sort((a, b) => propertyLabel(a).localeCompare(propertyLabel(b))),
     }))
 })
-const latestDate = $derived(
-  sources
-    .map(source => source.content.profile.visitability.asOf)
-    .filter((date): date is string => Boolean(date))
-    .sort()
-    .at(-1) ?? '',
-)
-
 type CategoryOption = { id: string; label: string }
 let categoryOptions = $state<Record<string, CategoryOption[]>>({})
 let categoryError = $state('')
@@ -478,20 +470,24 @@ function editProperty(
     existing={keep.content.profile.visitability.asOf}
     current={output.profileEdits?.asOf}
     label="last seen"
-    disabled
-    onToggle={() => {}}
+    disabled={busy}
+    onToggle={importing => {
+      output.profileEdits ??= {}
+      output.profileEdits.asOf = importing
+        ? discard.content.profile.visitability.asOf
+        : keep.content.profile.visitability.asOf
+    }}
   />
   <input
     type="date"
     class={field}
     aria-label="Keep last seen"
-    min={latestDate}
     value={output.profileEdits?.asOf ?? ''}
     disabled={busy}
     oninput={event => (output.profileEdits!.asOf = event.currentTarget.value || null)}
   >
   <p class="text-muted-foreground col-span-3 text-center text-xs">
-    Last seen keeps the latest observation date.
+    Choose whether to bring over the last seen date.
   </p>
   <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">Location</h4>
   <p class="min-w-0 self-center text-right text-sm break-words whitespace-normal">

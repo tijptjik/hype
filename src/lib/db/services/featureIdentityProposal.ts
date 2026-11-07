@@ -840,7 +840,8 @@ export async function buildSelectedFeatureIdentityContent(
       input.layerId,
     )
   }
-  if (input.kind === 'merge') {
+  // Default to the latest observation only when the reviewer did not choose a date.
+  if (input.kind === 'merge' && output.profileEdits?.asOf === undefined) {
     const dates = [...sources.values()]
       .map(source => source.content.profile.visitability.asOf)
       .concat(content.profile.visitability.asOf)
