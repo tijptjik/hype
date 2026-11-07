@@ -16,16 +16,11 @@ import {
 } from '#lib/map/styles/render.shared.js'
 
 describe('map render storage helpers', () => {
-  it('uses current style codes for previews', async () => {
-    for (const key of ['hype-dark', 'hype-light'] as const) {
-      expect(getMapStyleRenderAssetPath(key)).toBe(
-        `/api/mapRenders/styles/${key}/asset`,
-      )
-      expect(await resolveMapStyleRenderPathForKey('production', key)).toMatch(
-        new RegExp(
-          String.raw`^https://assets\.hype\.hk/mapRender/styles/${key}/[a-f0-9]+\.png$`,
-        ),
-      )
+  it('uses bundled previews for Etch, Sketch and Quercus', async () => {
+    for (const key of ['hype-dark', 'hype-light', 'quercus'] as const) {
+      const path = `/mapStylePreviews/${key}.png`
+      expect(getMapStyleRenderAssetPath(key)).toBe(path)
+      expect(await resolveMapStyleRenderPathForKey('production', key)).toBe(path)
     }
   })
   it('maps runtime environments to render stages', () => {
@@ -65,8 +60,8 @@ describe('map render storage helpers', () => {
       ),
     ).toBe('/mapRender/styles/hype-dark/abc123.png')
 
-    expect(resolveMapStyleRenderUrl('local', 'hype-dark', 'abc123')).toBe(
-      '/api/mapRenders/styles/hype-dark/asset',
+    expect(resolveMapStyleRenderUrl('local', 'ghostery', 'abc123')).toBe(
+      '/api/mapRenders/styles/ghostery/asset',
     )
   })
 
@@ -75,12 +70,12 @@ describe('map render storage helpers', () => {
     expect(getMapRenderAssetBaseUrl('preview')).toBe('https://assets.preview.hype.hk')
     expect(getMapRenderAssetBaseUrl('production')).toBe('https://assets.hype.hk')
 
-    expect(resolveMapStyleRenderUrl('preview', 'hype-dark', 'abc123')).toBe(
-      'https://assets.preview.hype.hk/mapRender/styles/hype-dark/abc123.png',
+    expect(resolveMapStyleRenderUrl('preview', 'ghostery', 'abc123')).toBe(
+      'https://assets.preview.hype.hk/mapRender/styles/ghostery/abc123.png',
     )
 
-    expect(resolveMapStyleRenderUrl('production', 'hype-dark', 'abc123')).toBe(
-      'https://assets.hype.hk/mapRender/styles/hype-dark/abc123.png',
+    expect(resolveMapStyleRenderUrl('production', 'ghostery', 'abc123')).toBe(
+      'https://assets.hype.hk/mapRender/styles/ghostery/abc123.png',
     )
   })
 

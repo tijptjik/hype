@@ -19,12 +19,13 @@ describe('featured map styles', () => {
       expect(isMapStyleKey(key)).toBe(false)
     }
   })
-  it('presents the six requested choices in order', () => {
+  it('presents the featured choices in order', () => {
     expect(FEATURED_MAP_STYLE_KEYS).toEqual([
       'hype-dark',
       'hype-light',
       'breadline-light',
       'breadline-dark',
+      'quercus',
       'hyperpop',
       'midnight',
     ])

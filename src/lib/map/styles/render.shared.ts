@@ -134,6 +134,11 @@ export const resolveMapStyleRenderPathForKey = async (
   environment: string | null | undefined,
   key: MapStyleKey,
 ): Promise<string> => {
+  const bundledPreview = REGISTERED_MAP_STYLE_CATALOG.find(
+    entry => entry.key === key,
+  )?.bundledPreviewPath
+  if (bundledPreview) return bundledPreview
+
   // Resolve the preview with the registered style's own asset hash.
   const asset = await getMapStyleAssetRecord(key)
   return resolveMapStyleRenderUrl(environment, key, asset.hash)

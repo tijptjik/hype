@@ -88,5 +88,10 @@
     "fileName": "protomaps-black.34d1a98eabc5.json",
     "publicPath": "/mapStyles/protomaps-black.34d1a98eabc5.json",
     "hash": "34d1a98eabc5549d9bb9d8af3a8bad92d06aa5a3f3792ed2b639558b89816cfa"
+  },
+  "quercus": {
+    "fileName": "quercus.aa9021c91f36.json",
+    "publicPath": "/mapStyles/quercus.aa9021c91f36.json",
+    "hash": "aa9021c91f361eb49b4ed74949147a6aab4459c7db1d4794db7c21ec55b9d926"
   }
 }

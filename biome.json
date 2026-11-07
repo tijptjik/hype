@@ -85,6 +85,10 @@
   },
   "overrides": [
     {
+      "includes": ["static/mapStyles/*.json"],
+      "formatter": { "enabled": false }
+    },
+    {
       "includes": [
         "workers/telegram/worker-configuration.d.ts",
         "workers/telegram-calls/worker-configuration.d.ts"
