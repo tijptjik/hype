@@ -512,3 +512,59 @@ all admin resource activation had already been established for the refreshed DB.
 writers while migrations and Feature/image baselines are enrolled. Activation requires
 complete resource coverage and exact release health. This workflow is independent of
 Breadline imports and does not substitute a local rebuilt database for production.
+
+## Review-owned task image changes
+
+Task image editing keeps the submitted proposal and `featureUploadEvidence` pins
+immutable. Reviewer changes belong to append-only `featureRevisionReview` rows whose
+context is `image-review/v1`; each row references its preceding review, the exact
+proposal version and the accepted Feature revision used for comparison. This uses the
+existing review table rather than a provisional Feature or a second proposal. The
+compatibility revision-head schema adds the context column with
+`0201_task_image_review_context.sql`; the lifecycle schema already has it. New-Feature
+reports review the complete initial proposal, including all of its submitted photos,
+as one unit. The additive migration leaves those proposals and upload receipts unchanged.
+
+`featureImageReview.ts` saves the reviewed gallery, excluded-image decisions and new
+immutable image revisions. Rotation and presentation reuse the pinned asset;
+replacement verifies decodable bytes before storing a fresh immutable asset key.
+Caption/alt translations, intent, local visibility and order remain gallery choices.
+Excluding an image does not delete its submitted evidence. Original bytes and metadata
+remain available for comparison. Review responses expose only gallery data, not the
+proposal's unrelated internal fields.
+
+`TaskImageReview` previews saved reviewer versions in one gallery, with existing images
+as read-only context.
+Review saves never write accepted Feature projections. Pending saves and unsaved text
+block task acceptance in the editor. Server guards independently check the exact
+proposal, review and target revision, current task ancestry and unfinished task state.
+A changed accepted target requires an explicit comparison refresh; overlapping changes
+remain blocked for resolution rather than being silently overwritten.
+
+Creation acceptance adopts the reviewed gallery as the new Feature's baseline.
+Existing-Feature photo acceptance applies the reviewed changes through the normal
+conflict-aware revision writer. Duplicate inspection includes reviewed images and
+carries the inspected review ID through selection and acceptance. Migrated initial
+reports also fence their image review; separately edited photo proposals must be
+resolved before completing the report. Acceptance and task completion commit together,
+with the accepted decision referencing the image review ID. Existing visibility rules
+still apply: lifecycle creation proposals create unpublished Features, while the
+compatibility initial-review path retains its existing publication semantics.
+
+Photo-task headers provide Reject, Accept All and Accept Classified. Both acceptance
+actions fence the complete pending proposal set and publish one combined gallery in
+the same transaction as all proposal receipts and task completion. Accept All classifies
+unclassified additions as general; Accept Classified declines them. Intent policy still
+controls visibility, including private research images. If none qualify, the task is
+reviewed without changing the accepted gallery. Orphan tasks with no submitted photos
+show an explanation and disable acceptance.
+
+Rejection retains the proposal, review snapshots and image assets. Private review pins
+are delivered only under current staff task authority; neither anonymous access nor
+being the original contributor grants access to unapplied reviewer edits. Once adopted,
+normal accepted-image delivery rules apply.
+
+Regression coverage is in `feature-image-review.test.ts` and
+`task-image-review.remote.test.ts`; the headless editor check is
+`scripts/visual-checks/task-image-review-check.ts`. These are implementation checks,
+not evidence of a production rollout.

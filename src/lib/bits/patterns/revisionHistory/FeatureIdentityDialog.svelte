@@ -77,6 +77,7 @@ let creationTokens = $state<{
   proposalId: string
   version: string
   modifiedAt: string
+  imageReviewId: string | null
 } | null>(null)
 let request = 0
 const field =

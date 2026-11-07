@@ -9,6 +9,10 @@ import { guardedCommand, guardedQuery } from './server/guarded'
 import { authorizeTaskReadForProbe } from './services/authz/task'
 import { authorizeFeaturePublishForSubmission } from './services/authz/feature'
 // SERVICES
+import {
+  readFeatureImageReview,
+  reviewedImageContent,
+} from '#lib/db/services/featureImageReview.js'
 import { probeTaskQuery } from '#lib/db/services/task.js'
 import { probeFeatureForUpdate } from '#lib/db/services/feature.js'
 import { readFeatureCreationTask } from '#lib/db/services/featureLifecycleCreationTask.js'
@@ -41,6 +45,7 @@ async function inspect(
   input: z.infer<typeof request>,
 ): Promise<{
   proposal: CreationTaskDraft
+  imageReviewId: string | null
   primary: Awaited<ReturnType<typeof inspectFeatureIdentitySource>>
   guard: SQL
   allowedInternalIds: ReadonlySet<string>
@@ -90,15 +95,29 @@ async function inspect(
     allowedInternalIds: access.allowed,
     featureId: input.primaryId,
   })
-  return { proposal, primary, guard, allowedInternalIds: access.allowed }
+  const review = await readFeatureImageReview(ctx.db, {
+    taskId: input.taskId,
+    proposalId: proposal.proposalId,
+    guard,
+  })
+  if (review?.stale) error(409, 'Image review changed; inspect again')
+  if (review) proposal.content = reviewedImageContent(review)
+  return {
+    proposal,
+    primary,
+    guard,
+    allowedInternalIds: access.allowed,
+    imageReviewId: review?.reviewId ?? null,
+  }
 }
 
 /** Inspect a creation proposal beside an existing primary, without allocating a Feature.
  * @param input Task and primary identity. @returns Content choices and exact concurrency tokens.
  */
 export const inspectCreationDuplicate = guardedQuery(request, async (input, ctx) => {
-  const { proposal, primary } = await inspect(ctx, input)
+  const { proposal, primary, imageReviewId } = await inspect(ctx, input)
   return {
+    imageReviewId,
     proposalId: proposal.proposalId,
     version: proposal.version,
     modifiedAt: proposal.modifiedAt,
@@ -126,16 +145,19 @@ export const inspectCreationDuplicate = guardedQuery(request, async (input, ctx)
  */
 export const applyCreationDuplicate = guardedCommand(
   request.extend({
+    imageReviewId: z.string().nullable().optional(),
     proposalId: z.string(),
     version: z.string(),
     modifiedAt: z.string(),
     selection: FeatureIdentitySelectionSchema,
   }),
   async (input, ctx) => {
-    const { proposal, primary, guard, allowedInternalIds } = await inspect(ctx, input)
+    const { proposal, primary, guard, allowedInternalIds, imageReviewId } =
+      await inspect(ctx, input)
     const key = `proposal:${proposal.proposalId}`
     const selection = input.selection
     if (
+      (input.imageReviewId ?? null) !== imageReviewId ||
       input.proposalId !== proposal.proposalId ||
       input.version !== proposal.version ||
       input.modifiedAt !== proposal.modifiedAt ||
@@ -167,6 +189,7 @@ export const applyCreationDuplicate = guardedCommand(
       guard,
       proposalId: proposal.proposalId,
       expectedVersion: proposal.version,
+      imageReview: { taskId: input.taskId, reviewId: imageReviewId },
       reason: selection.reason,
       validate: () => [],
       duplicate: {
