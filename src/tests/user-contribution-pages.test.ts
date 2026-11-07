@@ -95,6 +95,31 @@ it('reads 20 map-compatible features in one statement with bounded parameters', 
   expect(statements[0].parameters).toBeLessThan(100)
 })
 
+it('preserves translated property definitions and options in contribution pages', async () => {
+  addFeature('translated')
+  sqlite.exec(`
+    INSERT INTO property
+      (id,scope,type,key,dataType,dateResolution,timeMaxHour,cardinality,presentation,audience,component,isTranslatable,isUserContributable,isDefaultEnabled,createdAt,modifiedAt)
+      VALUES ('category','project','classifier','category','text','day',24,'one','text','public','SelectField',1,1,1,'2026-01-01','2026-01-01');
+    INSERT INTO propertyI18n (propertyId,locale,label,labelGen,placeholderGen)
+      VALUES ('category','en','Category',0,0);
+    INSERT INTO propertyValue (id,propertyId,rank) VALUES ('bookshop','category',0);
+    INSERT INTO propertyValueI18n (propertyValueId,locale,value,valueGen)
+      VALUES ('bookshop','en','Bookshop',0);
+    INSERT INTO featureProperty (featureId,propertyId,propertyValueId)
+      VALUES ('translated','category','bookshop');
+  `)
+  const rows = await readUserContributedFeatures(db, { ...params, ids: ['translated'] })
+  expect(rows[0].properties?.[0]).toMatchObject({
+    property: {
+      i18n: { en: { label: 'Category' } },
+      values: [{ i18n: { en: { value: 'Bookshop' } } }],
+    },
+    propertyValue: { i18n: { en: { value: 'Bookshop' } } },
+  })
+  expect(statements).toHaveLength(1)
+})
+
 it('reads 24 photo envelopes in one statement and deduplicates assignments', async () => {
   addFeature('f0')
   addFeature('f1')

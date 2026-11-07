@@ -15,6 +15,7 @@ import { featureLocationLifecycleSQL } from '#lib/db/services/locationLifecycleP
 import { ImageListFields } from '#lib/db/zod/schema/imageList.js'
 import { ImageContextResource } from '#lib/enums.js'
 import { FeatureListRow } from '#lib/db/zod/schema/feature.js'
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // TYPES
 import type { Database, SessionUser, UserRoleDisco } from '#lib/types.js'
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
@@ -127,7 +128,30 @@ export async function readUserContributedFeatures(
     rows.map(row => {
       // Parse JSON projections while retaining the separately authorized image graph.
       const parsed = {
-        ...FeatureListRow.parse({ ...row, addressMeta: row.addressMeta ?? {} }),
+        ...FeatureListRow.parse({
+          ...row,
+          addressMeta: row.addressMeta ?? {},
+          // Nested definitions use API locale maps; Drizzle returns translation rows.
+          properties: row.properties?.map(assignment => ({
+            ...assignment,
+            property: assignment.property
+              ? {
+                  ...assignment.property,
+                  i18n: propertyLocalesToForm(assignment.property.i18n),
+                  values: assignment.property.values?.map(value => ({
+                    ...value,
+                    i18n: propertyLocalesToForm(value.i18n),
+                  })),
+                }
+              : undefined,
+            propertyValue: assignment.propertyValue
+              ? {
+                  ...assignment.propertyValue,
+                  i18n: propertyLocalesToForm(assignment.propertyValue.i18n),
+                }
+              : null,
+          })),
+        }),
         images: row.images,
         imageCount: row.images.length,
         imagePublishedCount: row.images.filter(assignment => assignment.isPublished).length,
