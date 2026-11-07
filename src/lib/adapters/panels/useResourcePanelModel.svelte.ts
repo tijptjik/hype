@@ -9,7 +9,7 @@ import { toast } from 'svelte-sonner'
 // ANALYTICS
 import { trackClientProductUsage } from '#lib/analytics/clientProductUsage.js'
 // LIB
-import { ADMIN_PATH } from '#lib/constants.js'
+import { ADMIN_PATH, isMobile } from '#lib/constants.js'
 // I18N
 import { getI18n, m } from '#lib/i18n.js'
 // LABELS
@@ -282,6 +282,7 @@ export function useResourcePanelModel(
                   runAction(async () => {
                     await app.scope.isolateLayer(resource.id)
                     closeExcludedFeature()
+                    if (isMobile()) app.panels.closePanel(panelType)
                   }),
               }
             : {}),
