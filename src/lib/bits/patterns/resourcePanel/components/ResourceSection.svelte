@@ -8,6 +8,7 @@ import { prefersReducedMotion } from 'svelte/motion'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import Users from 'virtual:icons/proicons/person-multiple'
 import Grid from 'virtual:icons/proicons/grid'
+import MapPin from 'virtual:icons/proicons/location'
 import Layers from 'virtual:icons/proicons/layers'
 // COMPONENTS
 import SelectionChip from '#lib/bits/patterns/panels/components/common/SelectionChip.svelte'
@@ -32,7 +33,7 @@ let headerHeight = $state(0)
 let searchHeight = $state(0)
 let contentHeight = $state(0)
 const hasSearch = $derived(
-  open && (section.rows.length >= 5 || Boolean(section.search)),
+  open && (section.searchable || section.rows.length >= 5 || Boolean(section.search)),
 )
 // Cap equal-share flex allocation at actual content height so other sections inherit spare room.
 const maxHeight = $derived(
@@ -195,12 +196,14 @@ const reorder = $derived(
         <Users class="size-6" />
       {:else if section.id === 'project'}
         <Grid class="size-6" />
+      {:else if section.id === 'feature'}
+        <MapPin class="size-6" />
       {:else}
         <Layers class="size-6" />
       {/if}
     </button>
     {#if headerAction}
-      <div class="absolute right-3 top-1/2 -translate-y-1/2">
+      <div class="absolute top-1/2 right-3 -translate-y-1/2">
         {@render headerAction()}
       </div>
     {/if}
@@ -238,9 +241,7 @@ const reorder = $derived(
         animateRows
         estimateSize={narrow ? 24 : section.id === 'organisation' ? 40 : 52}
       >
-        {#snippet item(
-          row,
-        )}
+        {#snippet item(row)}
           <ResourceRow
             {row}
             {tone}

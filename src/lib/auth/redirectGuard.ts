@@ -30,6 +30,7 @@ export function isPublicUnauthenticatedPath(
     safePathname.startsWith('/proxy/') ||
     safePathname.startsWith('/static/') ||
     safePathname.startsWith('/policy/') ||
+    safePathname === '/embed' ||
     safePathname === '/' ||
     safePathname === '' ||
     isAuthEntryPath(safePathname) ||

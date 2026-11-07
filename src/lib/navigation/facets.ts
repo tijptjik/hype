@@ -1,6 +1,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
+import ShareIcon from 'virtual:icons/proicons/share'
 import FormInputIcon from 'virtual:icons/proicons/button'
 import UsersIcon from 'virtual:icons/lucide/users'
 import StoreIcon from 'virtual:icons/lucide/store'
@@ -20,6 +21,7 @@ import type { FirstClassResource } from '#lib/enums.js'
 import type { FacetType } from '#lib/context/facets.js'
 
 export const ADMIN_FACETS = {
+  share: 'share',
   core: 'core',
   capabilities: 'capabilities',
   messaging: 'messaging',
@@ -34,8 +36,16 @@ export const ADMIN_FACETS = {
   advanced: 'advanced',
 } as const satisfies Record<FacetType, FacetType>
 
-export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies' | 'advanced'
+export type HubFacet =
+  | 'share'
+  | 'core'
+  | 'layers'
+  | 'fields'
+  | 'images'
+  | 'policies'
+  | 'advanced'
 export type OrganisationFacet =
+  | 'share'
   | 'updates'
   | 'users'
   | 'messaging'
@@ -46,6 +56,7 @@ export type OrganisationFacet =
   | 'fields'
   | 'images'
 export type ProjectFacet =
+  | 'share'
   | 'features'
   | 'advanced'
   | 'core'
@@ -53,9 +64,10 @@ export type ProjectFacet =
   | 'layers'
   | 'fields'
   | 'images'
-export type LayerFacet = 'features' | 'core' | 'fields' | 'advanced'
+export type LayerFacet = 'share' | 'features' | 'core' | 'fields' | 'advanced'
 
 export const ADMIN_FACET_DEFINITIONS = {
+  [ADMIN_FACETS.share]: { label: () => 'Share', icon: ShareIcon },
   [ADMIN_FACETS.users]: { label: () => 'Users', icon: UsersIcon },
   [ADMIN_FACETS.messaging]: { label: () => 'Messaging', icon: ChatIcon },
   [ADMIN_FACETS.features]: { label: () => m.omni__title_features(), icon: MapPinIcon },
@@ -92,6 +104,7 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  [ADMIN_FACETS.share]: () => 'Share',
   [ADMIN_FACETS.users]: () => 'Users',
   [ADMIN_FACETS.messaging]: () => 'Messaging',
   [ADMIN_FACETS.features]: () => m.omni__title_features(),
@@ -146,6 +159,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.images,
     ADMIN_FACETS.updates,
     ADMIN_FACETS.advanced,
+    ADMIN_FACETS.share,
   ],
   organisation: [
     ADMIN_FACETS.core,
@@ -157,6 +171,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.updates,
     ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
+    ADMIN_FACETS.share,
   ],
   project: [
     ADMIN_FACETS.core,
@@ -167,6 +182,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
     ADMIN_FACETS.updates,
+    ADMIN_FACETS.share,
   ],
   layer: [
     ADMIN_FACETS.core,
@@ -174,6 +190,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.fields,
     ADMIN_FACETS.advanced,
     ADMIN_FACETS.updates,
+    ADMIN_FACETS.share,
   ],
   feature: [
     ADMIN_FACETS.core,

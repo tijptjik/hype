@@ -8,12 +8,14 @@ import { m } from '#lib/i18n.js'
 import { getThemeName } from '#lib/themes/i18n.js'
 // TYPES
 import type { ThemeOptionProps } from './themePickerPrimitives.types'
-let { theme, selected, name, onSelect }: ThemeOptionProps = $props()
+let { theme, selected, name, onSelect, compact = false }: ThemeOptionProps = $props()
 </script>
 
 <label
   data-theme={theme.id}
-  class="relative flex cursor-pointer flex-col gap-4 rounded-2xl border-2 bg-panel p-4 text-base-content transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-focus {selected
+  class="relative flex cursor-pointer flex-col {compact
+    ? 'gap-2 rounded-xl p-3 text-sm'
+    : 'gap-4 rounded-2xl p-4'} border-2 bg-panel text-base-content transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-focus {selected
     ? 'border-primary'
     : 'border-border hover:border-primary/60'}"
 >
@@ -29,21 +31,26 @@ let { theme, selected, name, onSelect }: ThemeOptionProps = $props()
   <span class="flex items-center justify-between gap-2">
     <span class="font-semibold">{getThemeName(theme.id)}</span>
     {#if theme.mode === 'dark'}
-      <Moon class="size-4 text-muted-foreground" aria-hidden="true" />
+      <Moon class="text-muted-foreground size-4" aria-hidden="true" />
     {:else}
-      <Sun class="size-4 text-muted-foreground" aria-hidden="true" />
+      <Sun class="text-muted-foreground size-4" aria-hidden="true" />
     {/if}
   </span>
-  <span class="flex items-center gap-2 rounded-xl bg-canvas p-3" aria-hidden="true">
-    <span class="size-5 rounded-full bg-primary"></span>
-    <span class="size-5 rounded-full bg-secondary"></span>
-    <span class="size-5 rounded-full bg-tertiary"></span>
-    {#if selected}
-      <Check class="ml-auto size-4 text-primary" />
-    {/if}
-  </span>
-  <span class="text-xs text-muted-foreground"
-    >{theme.family}
-    · {theme.mode === 'dark' ? m.theme_dark() : m.theme_light()}</span
+  <span
+    class="flex items-center gap-2 rounded-xl bg-canvas {compact ? 'p-2' : 'p-3'}"
+    aria-hidden="true"
   >
+    <span class="{compact ? 'size-3.5' : 'size-5'} rounded-full bg-primary"></span>
+    <span class="{compact ? 'size-3.5' : 'size-5'} rounded-full bg-secondary"></span>
+    <span class="{compact ? 'size-3.5' : 'size-5'} rounded-full bg-tertiary"></span>
+    {#if selected}
+      <Check class="text-primary ml-auto size-4" />
+    {/if}
+  </span>
+  {#if !compact}
+    <span class="text-muted-foreground text-xs"
+      >{theme.family}
+      · {theme.mode === 'dark' ? m.theme_dark() : m.theme_light()}</span
+    >
+  {/if}
 </label>

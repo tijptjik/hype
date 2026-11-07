@@ -5,4 +5,5 @@ export type ThemePickerProps = {
   onSelect: (theme: ThemeId) => void
   class?: string
   label?: string
+  compact?: boolean
 }

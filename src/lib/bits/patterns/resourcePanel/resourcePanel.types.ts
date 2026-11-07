@@ -17,9 +17,13 @@ export type ResourcePanelRow = {
   onIsolate?: () => void | Promise<void>
   /** Organisation prism chooses exactly one inbox scope instead of toggling a filter. */
   exclusive?: boolean
+  /** A place opens details; it has no resource-filter toggle. */
+  actionOnly?: boolean
+  /** Allow essential labels to wrap in compact embedded layouts. */
+  multiline?: boolean
 }
 export type ResourcePanelSection = {
-  id: 'organisation' | 'project' | 'layer'
+  id: 'organisation' | 'project' | 'layer' | 'feature'
   title: string
   search: string
   rows: ResourcePanelRow[]
@@ -27,6 +31,8 @@ export type ResourcePanelSection = {
   error: boolean
   viewKey: string
   defaultOpen: boolean
+  /** Keep search available even for small embedded collections. */
+  searchable?: boolean
   onSearch: (value: string) => void
   onReset: () => void
   onNext: () => void | Promise<void>
@@ -43,6 +49,7 @@ export type ResourcePanelModel = {
   panel: PanelProps
   open: boolean
   title: string
+  showInfo?: boolean
   sections: ResourcePanelSection[]
   onClose: () => void
   loadingMessage?: string

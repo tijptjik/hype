@@ -14,6 +14,7 @@ const DEFAULT_CLASS =
 
 let {
   contentStart,
+  shareAction = null,
   query = $bindable(''),
   brand,
   title = {},
@@ -34,6 +35,7 @@ let {
 const facetItems = $derived(
   (facets.items ?? []).filter(
     item =>
+      (item.ref !== 'share' || !shareAction) &&
       (item.ref !== 'features' || !formActions.featuresAction) &&
       (item.ref !== 'users' || !formActions.usersAction),
   ),
@@ -164,11 +166,12 @@ const rootClass = $derived(
         {/if}
 
         <div class="ml-auto flex min-w-0 items-center">
-          {#if formActions.featuresAction || formActions.usersAction}
+          {#if formActions.featuresAction || formActions.usersAction || shareAction}
             <div class="mr-2 shrink-0">
               <HeaderPrimitive.FormActions
                 featuresAction={formActions.featuresAction}
                 usersAction={formActions.usersAction}
+                {shareAction}
                 hideLabel={!showButtonText}
               />
             </div>

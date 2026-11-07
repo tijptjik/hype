@@ -2,7 +2,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
-import { PanelRoot as Panel } from '#lib/bits/index.js'
+import Panel from '#lib/bits/patterns/panels/components/PanelRoot.svelte'
 // COMPONENTS
 import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
 import Info from '#lib/bits/patterns/panels/components/info/Filters.svelte'
@@ -60,7 +60,7 @@ const panelProps = $derived(shell.panel)
   />
   <Info isOpen={isInfoOpen} />
   <div class="flex flex-col pb-24">
-    <div class="grow flex max-h-[40vh] min-h-0 shrink-0 flex-col">
+    <div class="flex max-h-[40vh] min-h-0 shrink-0 grow flex-col">
       <Divisions {model} {...panelProps} />
     </div>
     <div class="flex min-h-0 shrink-0 flex-col">

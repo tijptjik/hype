@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onMount, untrack } from 'svelte'
+import { readable } from 'svelte/store'
 import { setThemeModel } from '#lib/themes/theme.svelte.js'
 import { useAccountThemePreferences } from '#lib/themes/useAccountThemePreferences.svelte.js'
 // SVELTEKIT
@@ -54,7 +55,11 @@ let { children, data }: LayoutProps = $props()
 
 // CONTEXT
 
-const session = useSession()
+// Embedded maps never subscribe to account state or create guest sessions.
+const isEmbed = page.url.pathname === '/embed'
+const session = isEmbed
+  ? readable({ data: null, isPending: false, refetch: async () => {} })
+  : useSession()
 const responsive = setResponsiveCtx()
 let hasMounted = false
 let isBootstrapping = false
@@ -157,6 +162,11 @@ $effect(() => {
 })
 
 async function initializeAuthenticatedApp(): Promise<void> {
+  if (isEmbed) {
+    root.sync(null, data.hub ?? null)
+    root.ready = true
+    return
+  }
   logMarkerBootstrap('application bootstrap started', {
     pathname: page.url.pathname,
     hasSessionUser: Boolean($session.data?.user),
@@ -212,6 +222,7 @@ async function retryBootstrap(): Promise<void> {
 }
 
 async function handleRequestedUpgrade(): Promise<void> {
+  if (isEmbed) return
   const requestedUpgrade = page.url.searchParams.get('upgrade')
   const currentUser = $session.data?.user
   if (!requestedUpgrade || (currentUser && currentUser.isAnonymous !== true)) return
@@ -282,7 +293,8 @@ onMount(() => {
 const localeKey = $derived(getLocaleKey())
 const isShelllessRoute = $derived(
   Boolean(
-    page.url.pathname === '/themes' ||
+    page.url.pathname === '/embed' ||
+      page.url.pathname === '/themes' ||
       page.url.pathname.startsWith('/themes/') ||
       page.route.id?.startsWith('/policy') ||
       page.route.id?.startsWith('/account'),
@@ -318,6 +330,8 @@ watch(
 watch(
   () => $session.data?.user,
   newUser => {
+    // Cookie-free embeds do not participate in account diagnostics or session storage.
+    if (isEmbed) return
     logMarkerBootstrap('session watcher observed user', {
       hasSessionUser: Boolean(newUser),
       isAnonymous: newUser?.isAnonymous ?? null,

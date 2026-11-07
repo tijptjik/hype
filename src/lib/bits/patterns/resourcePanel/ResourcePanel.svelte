@@ -74,7 +74,7 @@ onDestroy(cancelLabelHide)
     bind:this={sidebarToggleButton}
     type="button"
     data-sidebar-toggle
-    class="flex size-8 items-center justify-center rounded-lg text-base-content/60 hover:bg-surface hover:text-base-content focus-override focus-visible:outline-2 focus-visible:outline-focus"
+    class="text-base-content/60 hover:bg-surface hover:text-base-content focus-override focus-visible:outline-focus flex size-8 items-center justify-center rounded-lg focus-visible:outline-2"
     aria-label={model.panel.isNarrow
       ? m.panel__expand({ name: model.title })
       : m.panel__collapse({ name: model.title })}
@@ -98,7 +98,7 @@ onDestroy(cancelLabelHide)
   preserveContentWidth={!model.panel.isNarrow}
 >
   <div
-    class="flex h-full min-h-0 flex-col bg-panel text-base-content"
+    class="bg-panel text-base-content flex h-full min-h-0 flex-col"
     onscrollcapture={clearLabel}
   >
     {#if model.panel.isAdmin && model.panel.isNarrow}
@@ -114,14 +114,14 @@ onDestroy(cancelLabelHide)
           : 'justify-between px-4'}"
       >
         {#if !model.panel.isNarrow}
-          <h2 class="text-lg font-medium uppercase tracking-widest text-primary">
+          <h2 class="text-primary text-lg font-medium tracking-widest uppercase">
             {model.title}
           </h2>
         {/if}
-        {#if model.panel.panelType === 'prisms'}
+        {#if model.panel.panelType === 'prisms' && model.showInfo !== false}
           <button
             type="button"
-            class="ml-auto rounded-full p-2 text-muted-foreground hover:bg-surface"
+            class="text-muted-foreground hover:bg-surface ml-auto rounded-full p-2"
             aria-label={m.menu_about()}
             aria-expanded={isInfoOpen}
             onclick={() => (isInfoOpen = !isInfoOpen)}
@@ -131,7 +131,7 @@ onDestroy(cancelLabelHide)
         {/if}
         <button
           type="button"
-          class="rounded-full p-2 text-base-content hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus"
+          class="text-base-content hover:bg-surface focus-visible:outline-focus rounded-full p-2 focus-visible:outline-2"
           aria-label={m.panel__close()}
           onclick={model.onClose}
         >
@@ -155,21 +155,21 @@ onDestroy(cancelLabelHide)
       {/each}
     </div>
     {#if model.loadingMessage}
-      <p role="status" class="px-4 py-3 text-xs text-muted-foreground">
+      <p role="status" class="text-muted-foreground px-4 py-3 text-xs">
         {model.loadingMessage}
       </p>
     {/if}
     {#if model.loadError}
       <button
         type="button"
-        class="p-3 text-sm text-primary"
+        class="text-primary p-3 text-sm"
         onclick={model.onRetryFeatures}
       >
         {m.resource_retry()}
       </button>
     {/if}
     {#if footer}
-      <footer class="shrink-0 border-t border-border">{@render footer()}</footer>
+      <footer class="border-border shrink-0 border-t">{@render footer()}</footer>
     {/if}
   </div>
 </PanelRoot>

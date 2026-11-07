@@ -116,6 +116,7 @@ export interface HeaderFormActionsConfig {
   primaryAction?: HeaderButtonActionConfig | null
   featuresAction?: HeaderButtonActionConfig | null
   usersAction?: HeaderButtonActionConfig | null
+  shareAction?: HeaderButtonActionConfig | null
   saveAction?: HeaderButtonActionConfig | null
   deleteAction?: HeaderButtonActionConfig | null
   publishAction?: HeaderActionConfig | null
@@ -143,6 +144,7 @@ export interface HeaderLayoutRegionConfig {
 export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   /** Main-panel left edge, used to align desktop navigation with its content. */
   contentStart?: number
+  shareAction?: HeaderButtonActionConfig | null
   brand?: {
     src: string
     alt: string

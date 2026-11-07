@@ -2,6 +2,12 @@
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
 import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
+// EMBED SHARING
+import ShareIcon from 'virtual:icons/proicons/share'
+import { navigateOnAdmin } from '#lib/navigation/admin.js'
+import type { HeaderButtonActionConfig } from '#lib/bits/patterns/layout/header/header.types.js'
+import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
+import { getEmbedResources } from '#lib/api/embed.remote.js'
 import { page } from '$app/state'
 // AUTH
 import { canAccessAdminPanel } from '#lib/api/services/authz/user.js'
@@ -106,7 +112,8 @@ const adminCtx = setAdminCtx(view)
 adminCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'admin')
 $effect(() => adminCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'admin'))
 
-const settingsModel = useSettingsPanelModel(view, getThemeModel(), adminCtx)
+const themeModel = getThemeModel()
+const settingsModel = useSettingsPanelModel(view, themeModel, adminCtx)
 
 type SettingsPanelComponent =
   typeof import('#lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
@@ -167,8 +174,58 @@ const sidebarModel = useResourcePanelModel(view, 'admin', adminCtx)
 const headerCtrl = setHeaderCtrl()
 
 const headerModel = useAdminHeaderModel(view, adminCtx)
+let visitedShareTarget = $state('')
+const shareType = $derived(adminCtx.activeResourceType)
+// Detail pages own native queries; the share entry must not depend on the legacy cache.
+const shareTarget = $derived(
+  shareType &&
+    ['hub', 'organisation', 'project', 'layer'].includes(shareType) &&
+    adminCtx.activeResourceRef &&
+    adminCtx.activeResourceRef !== 'new'
+    ? adminCtx.activeResourceRef
+    : null,
+)
+const shareKey = $derived(`${shareType}:${shareTarget}`)
+const isShareFacet = $derived(Boolean(shareTarget && adminCtx.activeFacet === 'share'))
+// Keep the builder mounted across tab changes, but never carry choices to another resource.
+$effect(() => {
+  if (isShareFacet) visitedShareTarget = shareKey
+})
+const baseHeaderProps = $derived(headerModel.getHeaderProps())
+const shareAction = $derived<HeaderButtonActionConfig | null>(
+  shareTarget
+    ? {
+        text: 'Share map',
+        icon: ShareIcon,
+        style: isShareFacet ? 'soft' : 'outline',
+        color: isShareFacet ? 'primary' : 'neutral',
+        attrs: { 'aria-pressed': isShareFacet },
+        onClick: () => {
+          if (shareType && shareTarget)
+            void navigateOnAdmin(adminCtx, shareType, shareTarget, 'share')
+        },
+      }
+    : null,
+)
 const headerProps = $derived({
-  ...headerModel.getHeaderProps(),
+  ...baseHeaderProps,
+  shareAction,
+  // Sharing has its own controls; keep resource form actions on their editing tabs.
+  ...(isShareFacet
+    ? {
+        formActions: {
+          ...baseHeaderProps.formActions,
+          isVisible: false,
+          primaryAction: null,
+          saveAction: null,
+          deleteAction: null,
+          publishAction: null,
+          previewAction: null,
+        },
+        controlBar: null,
+        footer: null,
+      }
+    : {}),
   brand: {
     src: '/logos/hype-mark.svg',
     alt: 'HYPE',
@@ -290,5 +347,27 @@ afterNavigate(({ shallow }) => {
     {/if}
   {/snippet}
 
-  {@render children()}
+  <div class={isShareFacet ? 'hidden' : 'contents'}>
+    {@render children()}
+  </div>
+  {#key shareKey}
+    {#if shareTarget && shareType && visitedShareTarget === shareKey}
+      <div class={isShareFacet ? 'h-full min-h-0 w-full' : 'hidden'}>
+        <Deferred
+          load={() => import('#lib/bits/patterns/embed/ShareEmbedPanel.svelte')}
+        >
+          {#snippet children(module)}
+            <module.default
+              initialTheme={themeModel.selected}
+              initialMapStyle={themeModel.resolvedMapStyle}
+              targetType={shareType}
+              targetId={shareTarget}
+              loadResources={async () =>
+                await getEmbedResources({ meta: { isAdminRequest: true } })}
+            />
+          {/snippet}
+        </Deferred>
+      </div>
+    {/if}
+  {/key}
 </AdminShell>

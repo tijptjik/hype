@@ -166,7 +166,11 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   // Public hub resolution must remain one D1 read. Only the admin interface needs an
   // early session to see an unpublished hub before the regular session hook runs.
   let adminHubCodes = new Set<string>()
-  if (!isAuthEntryPath(event.url.pathname) && isAdminRequest(event.request)) {
+  if (
+    !['/embed', '/api/embed'].includes(event.url.pathname) &&
+    !isAuthEntryPath(event.url.pathname) &&
+    isAdminRequest(event.request)
+  ) {
     try {
       const auth = getAuthForRequest(event.request.headers, {
         ENVIRONMENT: event.locals.platform.env.ENVIRONMENT,
@@ -548,18 +552,46 @@ const handle_application = sequence(
   translation,
 )
 
+// Embeds resolve public hub identity and locale without the session/account pipeline.
+const handle_embed_public = sequence(handle_hub, translation)
+
 /**
  * Keeps opaque image delivery independent of hub discovery and session initialization.
  * @param input Current request and route resolver.
- * @returns Image response directly, or the ordinary authenticated application pipeline.
+ * @returns Image or public embed response, or the ordinary application pipeline.
  */
-const handle_discovery_delivery: Handle = input =>
-  input.event.route.id === '/api/images/revisions/[revision]' &&
-  ['GET', 'HEAD'].includes(input.event.request.method)
+const handle_discovery_delivery: Handle = input => {
+  if (['/embed', '/api/embed'].includes(input.event.url.pathname))
+    return handle_embed_public(input)
+  return input.event.route.id === '/api/images/revisions/[revision]' &&
+    ['GET', 'HEAD'].includes(input.event.request.method)
     ? input.resolve(input.event)
     : handle_application(input)
+}
+
+/** Applies framing policy only to documents; embeds may be framed on any website.
+ * @param input Request and resolver. @returns Response with route-specific framing headers.
+ */
+const handle_framing: Handle = async input => {
+  const response = await input.resolve(input.event)
+  if (!response.headers.get('content-type')?.includes('text/html')) return response
+  const result = new Response(response.body, response)
+  const embed = input.event.url.pathname === '/embed'
+  const csp = (result.headers.get('Content-Security-Policy') ?? '').replace(
+    /(?:^|;)\s*frame-ancestors[^;]*/gi,
+    '',
+  )
+  result.headers.set(
+    'Content-Security-Policy',
+    `${csp}${csp ? '; ' : ''}frame-ancestors ${embed ? '*' : "'self'"}`,
+  )
+  if (embed) result.headers.delete('X-Frame-Options')
+  else result.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  return result
+}
 
 const handle = sequence(
+  handle_framing,
   handle_worker_bindings,
   handleRevisionDeployment,
   handle_scanner_probe,

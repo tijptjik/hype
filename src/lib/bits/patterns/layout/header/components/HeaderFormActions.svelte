@@ -24,6 +24,7 @@ let {
   primaryAction = null,
   featuresAction = null,
   usersAction = null,
+  shareAction = null,
   saveAction = null,
   deleteAction = null,
   publishAction = null,
@@ -69,6 +70,22 @@ function resolveIconClasses(icon?: unknown): string {
       hideLabelInstantly
       disabled={usersAction.disabled}
       onClick={() => usersAction.onClick?.()}
+    />
+  {/if}
+
+  {#if shareAction}
+    <Button
+      size="sm"
+      text={shareAction?.text ?? ''}
+      attrs={shareAction?.attrs}
+      color={shareAction?.color ?? 'neutral'}
+      style={shareAction?.style ?? 'outline'}
+      iconComponent={shareAction?.icon}
+      class={resolveActionClass(shareAction?.class)}
+      hideLabel
+      hideLabelInstantly
+      disabled={shareAction?.disabled ?? !shareAction}
+      onClick={() => shareAction?.onClick?.()}
     />
   {/if}
 

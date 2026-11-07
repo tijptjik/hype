@@ -13,6 +13,7 @@ import Language from 'virtual:icons/tabler/language'
 import SettingsDisclosure from '#lib/bits/patterns/settingsPanel/components/SettingsDisclosure.svelte'
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
+import type { SimpleLanguageSettingsModel } from '#lib/bits/patterns/settingsPanel/settingsPanel.types.js'
 import type { useLanguageSettingsModel } from '#lib/adapters/panels/useLanguageSettingsModel.svelte.js'
 // ENUMS
 import {
@@ -32,28 +33,20 @@ import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 let {
   model,
   ...panelProps
-}: PanelProps & { model: ReturnType<typeof useLanguageSettingsModel> } = $props()
+}: PanelProps & {
+  model: ReturnType<typeof useLanguageSettingsModel> | SimpleLanguageSettingsModel
+} = $props()
 
 const languageId = $props.id()
 
 let additionalOpen = $state(false)
 let advancedOpen = $state(false)
-const userPreferences = $derived(model.userPreferences)
+const fullModel = $derived('userPreferences' in model ? model : null)
 const currentLocale = $derived(model.currentLocale)
 const currentLocaleKey = $derived(model.currentLocaleKey)
-const advancedSettings = $derived(model.advancedSettings)
 const pendingLocale = $derived(model.pendingLocale)
-const isSavingPreferences = $derived(model.isSavingPreferences)
 const handleLocaleChange = (...args: Parameters<typeof model.handleLocaleChange>) =>
   model.handleLocaleChange(...args)
-const updatePreferences = (...args: Parameters<typeof model.updatePreferences>) =>
-  model.updatePreferences(...args)
-const getNextFallbackPreferences = (
-  ...args: Parameters<typeof model.getNextFallbackPreferences>
-) => model.getNextFallbackPreferences(...args)
-const getNextAdvancedPreferences = (
-  ...args: Parameters<typeof model.getNextAdvancedPreferences>
-) => model.getNextAdvancedPreferences(...args)
 </script>
 
 <Section
@@ -62,26 +55,31 @@ const getNextAdvancedPreferences = (
   icon={Language}
   position="right"
   iconColorClass="text-base-content"
-  defaultOpen={false}
+  defaultOpen={!fullModel}
   iconVerticalPaddingClass="py-3 pr-4.5"
 >
   <div class="flex flex-col gap-4 px-6 pt-2 pb-6 caret-transparent">
     <!-- Primary Language Section -->
     <fieldset class="flex min-w-0 flex-col gap-2 pb-2">
-      <legend class="mb-3 text-xs font-medium text-muted-foreground">
+      <legend class="text-muted-foreground mb-3 text-xs font-medium">
         {m.settings_language_preferred()}
       </legend>
-      {#each supportedLocaleKeys as localeKey}
+      {#each supportedLocaleKeys.filter(
+        key =>
+          !('availableLocales' in model) ||
+          !model.availableLocales ||
+          model.availableLocales.includes(SupportedLocales[key]),
+      ) as localeKey}
         <label
-          class="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-surface has-[:checked]:bg-surface has-[:disabled]:cursor-wait"
+          class="hover:bg-surface has-[:checked]:bg-surface flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 has-[:disabled]:cursor-wait"
         >
           <span class="min-w-0">
-            <span class="block text-sm font-medium text-base-content"
+            <span class="text-base-content block text-sm font-medium"
               >{localeNames[localeKey][localeKey]}</span
             >
             {#if localeKey !== currentLocaleKey &&
               localeNames[currentLocaleKey][localeKey]}
-              <span class="block text-xs text-muted-foreground"
+              <span class="text-muted-foreground block text-xs"
                 >{localeNames[currentLocaleKey][localeKey]}</span
               >
             {/if}
@@ -90,7 +88,7 @@ const getNextAdvancedPreferences = (
             type="radio"
             name={languageId}
             value={SupportedLocales[localeKey]}
-            class="size-4 shrink-0 cursor-pointer accent-primary"
+            class="accent-primary size-4 shrink-0 cursor-pointer"
             checked={currentLocaleKey === localeKey}
             disabled={pendingLocale !== null}
             onchange={() => handleLocaleChange(SupportedLocales[localeKey])}
@@ -99,94 +97,99 @@ const getNextAdvancedPreferences = (
       {/each}
     </fieldset>
 
-    <!-- Additional Languages Section -->
-    <SettingsDisclosure
-      title={m.settings_language_additional()}
-      bind:open={additionalOpen}
-    >
-      <div class="flex flex-col gap-6 px-1 pt-3 pb-3">
-        {#each supportedLocales.filter(
-          locale => locale !== currentLocale,
-        ) as locale (locale)}
-          {@const localeKey = LocaleKeysMap[locale] as LocaleKey}
-          {@const isFallbackSelected =
-            userPreferences.fallbackLocales?.includes(locale) || false}
-          <div class="flex w-full flex-row items-start justify-between gap-4 py-1">
-            <label
-              for={`${languageId}-fallback-${locale}`}
-              class="flex min-w-0 grow cursor-pointer flex-col text-left"
-            >
-              <span class="text-sm font-medium text-base-content"
-                >{localeNames[localeKey][localeKey]}</span
-              >
-              {#if localeNames[currentLocaleKey][localeKey]}
-                <span class="text-xs leading-relaxed text-muted-foreground"
-                  >{localeNames[currentLocaleKey][localeKey]}</span
-                >
-              {/if}
-            </label>
-            <div class="flex h-5 shrink-0 items-center">
-              <Switch
-                id={`${languageId}-fallback-${locale}`}
-                class="shrink-0"
-                size="sm"
-                color="primary"
-                checked={isFallbackSelected}
-                disabled={isSavingPreferences}
-                onCheckedChange={checked =>
-                  void updatePreferences(
-                    getNextFallbackPreferences(locale, checked === true),
-                  )}
-              />
-            </div>
-          </div>
-        {/each}
-      </div>
-    </SettingsDisclosure>
-
-    <!-- Advanced Settings Section -->
-    <SettingsDisclosure title={m.settings_language_advanced()} bind:open={advancedOpen}>
-      <div class="flex flex-col gap-6 px-1 pt-3 pb-3">
-        {#each advancedSettings as setting (setting.code)}
-          <div class="flex w-full flex-row items-start justify-between gap-4 py-1">
-            <div class="min-w-0 grow flex flex-col gap-2">
+    {#if fullModel}
+      <!-- Additional Languages Section -->
+      <SettingsDisclosure
+        title={m.settings_language_additional()}
+        bind:open={additionalOpen}
+      >
+        <div class="flex flex-col gap-6 px-1 pt-3 pb-3">
+          {#each supportedLocales.filter(
+            locale => locale !== currentLocale,
+          ) as locale (locale)}
+            {@const localeKey = LocaleKeysMap[locale] as LocaleKey}
+            {@const isFallbackSelected =
+              fullModel.userPreferences.fallbackLocales?.includes(locale) || false}
+            <div class="flex w-full flex-row items-start justify-between gap-4 py-1">
               <label
-                for={`${languageId}-${setting.code}`}
-                class="cursor-pointer text-sm font-medium text-base-content"
-                >{setting.name}</label
+                for={`${languageId}-fallback-${locale}`}
+                class="flex min-w-0 grow cursor-pointer flex-col text-left"
               >
-              {#if setting.description}
-                <p class="text-xs leading-relaxed text-muted-foreground">
-                  {setting.description}
-                </p>
-              {/if}
+                <span class="text-base-content text-sm font-medium"
+                  >{localeNames[localeKey][localeKey]}</span
+                >
+                {#if localeNames[currentLocaleKey][localeKey]}
+                  <span class="text-muted-foreground text-xs leading-relaxed"
+                    >{localeNames[currentLocaleKey][localeKey]}</span
+                  >
+                {/if}
+              </label>
+              <div class="flex h-5 shrink-0 items-center">
+                <Switch
+                  id={`${languageId}-fallback-${locale}`}
+                  class="shrink-0"
+                  size="sm"
+                  color="primary"
+                  checked={isFallbackSelected}
+                  disabled={fullModel.isSavingPreferences}
+                  onCheckedChange={checked =>
+                    void fullModel.updatePreferences(
+                      fullModel.getNextFallbackPreferences(locale, checked === true),
+                    )}
+                />
+              </div>
             </div>
-            <div class="flex h-5 shrink-0 items-center">
-              <Switch
-                name={setting.code}
-                id={`${languageId}-${setting.code}`}
-                class="shrink-0"
-                size="sm"
-                color="primary"
-                checked={setting.currentValue}
-                disabled={isSavingPreferences}
-                onCheckedChange={checked =>
-                  void updatePreferences(
-                    getNextAdvancedPreferences(
-                      setting.code as keyof Pick<
-                        UserPreferences,
-                        | 'allowMachineTranslation'
-                        | 'isTranslateButtonVisible'
-                        | 'preferFallbackInCurrentLocale'
-                      >,
-                      checked === true,
-                    ),
-                  )}
-              />
+          {/each}
+        </div>
+      </SettingsDisclosure>
+
+      <!-- Advanced Settings Section -->
+      <SettingsDisclosure
+        title={m.settings_language_advanced()}
+        bind:open={advancedOpen}
+      >
+        <div class="flex flex-col gap-6 px-1 pt-3 pb-3">
+          {#each fullModel.advancedSettings as setting (setting.code)}
+            <div class="flex w-full flex-row items-start justify-between gap-4 py-1">
+              <div class="flex min-w-0 grow flex-col gap-2">
+                <label
+                  for={`${languageId}-${setting.code}`}
+                  class="text-base-content cursor-pointer text-sm font-medium"
+                  >{setting.name}</label
+                >
+                {#if setting.description}
+                  <p class="text-muted-foreground text-xs leading-relaxed">
+                    {setting.description}
+                  </p>
+                {/if}
+              </div>
+              <div class="flex h-5 shrink-0 items-center">
+                <Switch
+                  name={setting.code}
+                  id={`${languageId}-${setting.code}`}
+                  class="shrink-0"
+                  size="sm"
+                  color="primary"
+                  checked={setting.currentValue}
+                  disabled={fullModel.isSavingPreferences}
+                  onCheckedChange={checked =>
+                    void fullModel.updatePreferences(
+                      fullModel.getNextAdvancedPreferences(
+                        setting.code as keyof Pick<
+                          UserPreferences,
+                          | 'allowMachineTranslation'
+                          | 'isTranslateButtonVisible'
+                          | 'preferFallbackInCurrentLocale'
+                        >,
+                        checked === true,
+                      ),
+                    )}
+                />
+              </div>
             </div>
-          </div>
-        {/each}
-      </div>
-    </SettingsDisclosure>
+          {/each}
+        </div>
+      </SettingsDisclosure>
+    {/if}
   </div>
 </Section>

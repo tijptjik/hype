@@ -79,6 +79,7 @@ export function shouldBootstrapAnonymous(pathname: string): boolean {
     '/account',
     '/api',
     '/headless',
+    '/embed',
     '/signin',
     '/policy',
     '/proxy',

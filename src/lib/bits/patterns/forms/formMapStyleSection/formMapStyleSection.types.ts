@@ -16,6 +16,8 @@ export interface FormMapStyleSectionProps {
   subtitle?: string
   availableMapStyles: MapStyleSelectionItem[]
   selectedMapStyle?: MapStyleSelectionItem | null
+  /** Fixed public embeds cannot inherit account preferences. */
+  allowUserPreference?: boolean
   additionalMapStyles?: MapStyleSelectionItem[]
   hiddenMapStyleInputAttrs?: Array<Record<string, unknown>> | null
   isEditing?: boolean

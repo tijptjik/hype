@@ -7,9 +7,10 @@ import Theme from '#lib/bits/patterns/panels/sections/theme/ThemeSection.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
-import { PanelRoot as Panel, ProfileSection } from '#lib/bits/index.js'
+import Panel from '#lib/bits/patterns/panels/components/PanelRoot.svelte'
+import ProfileSection from '#lib/bits/patterns/panels/sections/ProfileSection.svelte'
 // ADAPTERS
-import type { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPanelModel.svelte.js'
+import type { SettingsPanelModel } from './settingsPanel.types'
 // AUTH
 
 // COMPONENTS
@@ -33,9 +34,10 @@ import { Panel as PanelEnum, PanelSide } from '#lib/enums.js'
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 // CONTEXT
-let { model }: { model: ReturnType<typeof useSettingsPanelModel> } = $props()
+let { model }: { model: SettingsPanelModel } = $props()
 const panelProps = $derived(model.panel)
-const isGuestAccount = $derived(model.isGuestAccount)
+const fullModel = $derived('mode' in model ? null : model)
+const isGuestAccount = $derived(fullModel?.isGuestAccount ?? false)
 
 // STATE
 let isInfoOpen = $state(false)
@@ -64,35 +66,35 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
   <Header
     onClose={model.onClose}
     title={m.menu_settings()}
-    onToggleInfo={e => {
-      handleToggleInfo(e)
-    }}
+    onToggleInfo={fullModel ? handleToggleInfo : undefined}
     {...panelProps}
   />
   <Info isOpen={isInfoOpen} />
 
-  <ProfileSection
-    {...model.profileProps}
-    onUpgrade={() => {
-      guestAuthMode = 'create'
-      isGuestUpgradeOpen = true
-    }}
-    onSignIn={() => {
-      guestAuthMode = 'sign-in'
-      isGuestUpgradeOpen = true
-    }}
-  />
-  {#if isGuestAccount && isGuestUpgradeOpen}
-    <div transition:slide={{ duration: 220 }}>
-      <LinkedAccounts isGuest startGuestUpgradeOpen {guestAuthMode} />
-    </div>
+  {#if fullModel}
+    <ProfileSection
+      {...fullModel.profileProps}
+      onUpgrade={() => {
+        guestAuthMode = 'create'
+        isGuestUpgradeOpen = true
+      }}
+      onSignIn={() => {
+        guestAuthMode = 'sign-in'
+        isGuestUpgradeOpen = true
+      }}
+    />
+    {#if isGuestAccount && isGuestUpgradeOpen}
+      <div transition:slide={{ duration: 220 }}>
+        <LinkedAccounts isGuest startGuestUpgradeOpen {guestAuthMode} />
+      </div>
+    {/if}
   {/if}
   <div class="flex flex-col">
-    {#if panelProps.isAdmin}
+    {#if fullModel && panelProps.isAdmin}
       <div class="shrink-0">
         <Admin
-          preferences={model.adminPreferences}
-          onPreference={model.onAdminPreference}
+          preferences={fullModel.adminPreferences}
+          onPreference={fullModel.onAdminPreference}
           {...panelProps}
         />
       </div>
@@ -100,21 +102,21 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
     <div class="shrink-0"><Language model={model.language} {...panelProps} /></div>
     <!-- Messaging settings are hidden until the messaging experience is ready. -->
     <div class="shrink-0"><Theme {model} {...panelProps} /></div>
-    {#if !panelProps.isAdmin}
+    {#if fullModel && !panelProps.isAdmin}
       {#if !isGuestAccount}
         <div class="shrink-0">
           <Contributor
-            attribution={model.attribution}
-            onAttribution={model.onAttribution}
+            attribution={fullModel.attribution}
+            onAttribution={fullModel.onAttribution}
             {...panelProps}
           />
         </div>
       {/if}
       <div class="shrink-0">
-        <DefaultMap model={model.defaultMap} {...panelProps} />
+        <DefaultMap model={fullModel.defaultMap} {...panelProps} />
       </div>
       <div class="shrink-0">
-        <Experimental model={model.experimental} {...panelProps} />
+        <Experimental model={fullModel.experimental} {...panelProps} />
       </div>
     {/if}
   </div>

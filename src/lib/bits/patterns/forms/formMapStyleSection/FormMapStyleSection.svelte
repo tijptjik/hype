@@ -26,6 +26,7 @@ let {
   availableMapStyles,
   selectedMapStyle = null,
   additionalMapStyles = [],
+  allowUserPreference = true,
   hiddenMapStyleInputAttrs = [],
   isEditing = true,
   isSubmitting = false,
@@ -71,7 +72,7 @@ const displayMapStyle = $derived(selectedMapStyle ?? userPreferenceStyle)
 // Inheritance choices stay first; explicit styles follow their style code.
 const sortedMapStyles = $derived([
   ...additionalMapStyles,
-  userPreferenceStyle,
+  ...(allowUserPreference ? [userPreferenceStyle] : []),
   ...resolvedMapStyles
     .filter(style => isMapStyleSelectable(style.code))
     .toSorted((a, b) => a.code.localeCompare(b.code)),

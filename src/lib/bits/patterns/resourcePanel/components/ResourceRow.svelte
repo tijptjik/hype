@@ -92,7 +92,7 @@ function handleReorderKey(event: KeyboardEvent): void {
         handle: '[data-layer-drag-handle]',
         attributes: { draggingClass: 'opacity-55' },
       }}
-      class="absolute left-[32px] top-1/2 z-10 flex size-6 -translate-x-1/2 -translate-y-1/2 touch-none cursor-grab items-center justify-center rounded text-secondary opacity-0 group-hover/layer:opacity-100 group-focus-within/layer:opacity-100 active:cursor-grabbing focus-override focus-visible:outline-2 focus-visible:outline-focus"
+      class="text-secondary focus-override focus-visible:outline-focus absolute top-1/2 left-[32px] z-10 flex size-6 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded opacity-0 group-focus-within/layer:opacity-100 group-hover/layer:opacity-100 focus-visible:outline-2 active:cursor-grabbing"
       aria-label={m.panel__reorder_layer({ name: row.name })}
       data-tooltip={m.panel__reorder_layer({ name: row.name })}
       onkeydown={handleReorderKey}
@@ -108,7 +108,14 @@ function handleReorderKey(event: KeyboardEvent): void {
       : 'py-2'} focus-override outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
     aria-label={row.primaryLabel}
     aria-current={row.active ? 'page' : undefined}
-    style:height={narrow ? '24px' : row.breadcrumbs.length ? '3.25rem' : '2.5rem'}
+    style:height={narrow
+      ? '24px'
+      : row.multiline
+        ? undefined
+        : row.breadcrumbs.length
+          ? '3.25rem'
+          : '2.5rem'}
+    style:min-height={!narrow && row.multiline ? '2.5rem' : undefined}
     onpointerenter={event => {
       if (narrow) onLabelShow?.(row.name, event.currentTarget)
     }}
@@ -126,14 +133,20 @@ function handleReorderKey(event: KeyboardEvent): void {
   >
     <!-- Keep text mounted with explicit dimensions: Firefox can collapse the intrinsic height of a clipped single-line label. -->
     <span
-      class="block w-[max(0px,calc(100%-8rem))] min-w-0 overflow-hidden mx-16 transition-opacity duration-500 motion-reduce:transition-none"
-      style:height={row.breadcrumbs.length ? '2.25rem' : '1.25rem'}
+      class="{row.multiline
+        ? 'grid grid-cols-[minmax(0,1fr)]'
+        : 'block'} w-[max(0px,calc(100%-8rem))] min-w-0 overflow-hidden mx-16 transition-opacity duration-500 motion-reduce:transition-none"
+      style:height={row.multiline
+        ? undefined
+        : row.breadcrumbs.length
+          ? '2.25rem'
+          : '1.25rem'}
       style:opacity={narrow ? 0 : 1}
       aria-hidden={narrow}
     >
       {#if row.breadcrumbs.length}
         <span
-          class="flex h-4 min-w-0 items-center gap-0.5 font-mono text-xs uppercase tracking-widest opacity-95"
+          class="flex h-4 min-w-0 items-center gap-0.5 font-mono text-xs tracking-widest uppercase opacity-95"
         >
           {#each row.breadcrumbs as breadcrumb, index}
             {#if index}
@@ -149,14 +162,17 @@ function handleReorderKey(event: KeyboardEvent): void {
           {/each}
         </span>
       {/if}
-      <!-- Clip at the outer wrapper; avoid truncate on the name itself (Firefox zero-size rendering). -->
-      <span class="block h-5 w-full whitespace-nowrap text-base font-light leading-5"
+      <!-- Compact rows clip at the outer wrapper; essential multiline labels wrap. Avoid truncate on the name itself (Firefox zero-size rendering). -->
+      <span
+        class="block min-w-0 w-full text-base font-light leading-5 {row.multiline
+          ? 'whitespace-normal break-words'
+          : 'h-5 whitespace-nowrap'}"
         >{row.name}</span
       >
     </span>
   </button>
   <div
-    class="absolute right-7 top-1/2 flex -translate-y-1/2 items-center transition-opacity duration-500 motion-reduce:transition-none"
+    class="absolute top-1/2 right-7 flex -translate-y-1/2 items-center transition-opacity duration-500 motion-reduce:transition-none"
     style:opacity={narrow ? 0 : 1}
     inert={narrow}
     aria-hidden={narrow}
@@ -164,7 +180,9 @@ function handleReorderKey(event: KeyboardEvent): void {
     {#if row.exclusive}
       <button
         type="button"
-        class="inline-flex size-6 shrink-0 items-center justify-center rounded-lg hover:bg-raised focus-override outline-none focus-visible:text-primary {row.selected ? color : 'text-base-content/45'}"
+        class="inline-flex size-6 shrink-0 items-center justify-center rounded-lg hover:bg-raised focus-override outline-none focus-visible:text-primary {row.selected
+          ? color
+          : 'text-base-content/45'}"
         aria-label={row.toggleLabel}
         aria-pressed={row.selected}
         data-tooltip={row.toggleLabel}
@@ -172,7 +190,7 @@ function handleReorderKey(event: KeyboardEvent): void {
       >
         <Crosshair class="size-5" />
       </button>
-    {:else if !row.onIsolate}
+    {:else if !row.onIsolate && !row.actionOnly}
       <button
         type="button"
         class="group/funnel inline-flex size-6 shrink-0 items-center justify-center rounded-lg focus-override outline-none hover:bg-raised focus-visible:text-primary {row.selected
@@ -198,7 +216,7 @@ function handleReorderKey(event: KeyboardEvent): void {
     {#if row.onIsolate}
       <button
         type="button"
-        class="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-base-content/45 hover:bg-raised focus-override outline-none focus-visible:text-primary"
+        class="text-base-content/45 hover:bg-raised focus-override focus-visible:text-primary inline-flex size-6 shrink-0 items-center justify-center rounded-lg outline-none"
         aria-label={m.panel__isolate_layer({ name: row.name })}
         onclick={row.onIsolate}
       >

@@ -17,6 +17,7 @@ const Facets = [
   'features',
   'policies',
   'advanced',
+  'share',
 ] as const
 
 export type FacetType = (typeof Facets)[number]
