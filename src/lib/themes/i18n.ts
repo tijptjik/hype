@@ -1,5 +1,5 @@
 // I18N
-import * as m from '../paraglide/messages.js'
+import * as m from '#lib/paraglide/messages.js'
 // TYPES
 import type { Locale } from '#lib/types.js'
 import type { ThemeId } from './themes.types'

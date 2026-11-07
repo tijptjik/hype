@@ -22,11 +22,6 @@
     @apply flex flex-col gap-0.5;
   }
 
-  .bits-theme .bits-form__label-text {
-    @apply text-sm font-bold;
-    color: var(--form-label);
-  }
-
   .bits-theme .bits-form__label-required {
     color: var(--color-error);
     margin-left: 0;
