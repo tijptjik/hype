@@ -29,51 +29,36 @@ it('keeps flights live with enough canvas for a growing pane and restores its si
   expect(map.resize).toHaveBeenCalledTimes(2)
 })
 
-it('holds a captured frame and restores styles only after the resized map renders', () => {
-  const container = document.createElement('div'),
-    canvas = document.createElement('canvas')
+it('keeps the original WebGL canvas visible while layout settles without copying its pixels', () => {
+  const container = document.createElement('div')
+  const canvas = document.createElement('canvas')
   container.style.cssText = 'height:100%;width:100%'
+  canvas.style.opacity = '0.8'
   const original = container.getAttribute('style')
   container.append(canvas)
   vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
     width: 500,
     height: 300,
   } as DOMRect)
-  const drawImage = vi.fn()
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-    drawImage,
-  } as never)
-  const listeners = new Map<string, Set<() => void>>()
+  const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
   const map = {
     getContainer: () => container,
-    getCanvas: () => canvas,
     stop: vi.fn(),
     resize: vi.fn(),
     triggerRepaint: vi.fn(),
-    once: (name: string, callback: () => void) => {
-      const set = listeners.get(name) ?? new Set()
-      set.add(callback)
-      listeners.set(name, set)
-    },
-    off: (name: string, callback: () => void) => listeners.get(name)?.delete(callback),
-  }
-  const emit = (name: string) => {
-    const callbacks = [...(listeners.get(name) ?? [])]
-    listeners.delete(name)
-    for (const callback of callbacks) callback()
   }
   const restore = freezeMapForResize(map as unknown as MapLibreMap)
+  expect(map.stop).toHaveBeenCalledOnce()
+  expect(container.style.width).toBe('500px')
   expect(container.style.height).toBe('300px')
-  emit('render')
-  expect(drawImage).toHaveBeenCalledWith(canvas, 0, 0)
-  expect(container.querySelector('[data-map-resize-snapshot]')).not.toBeNull()
-  expect(canvas.style.opacity).toBe('0')
+  expect(container.style.pointerEvents).toBe('none')
+  expect(container.querySelectorAll('canvas')).toHaveLength(1)
+  expect(container.firstElementChild).toBe(canvas)
+  expect(canvas.style.opacity).toBe('0.8')
+  expect(getContext).not.toHaveBeenCalled()
   restore()
   expect(container.getAttribute('style')).toBe(original)
-  expect(map.resize).toHaveBeenCalledTimes(1)
-  expect(canvas.style.opacity).toBe('0')
-  emit('render')
-  expect(canvas.style.opacity).toBe('')
-  expect(container.querySelector('[data-map-resize-snapshot]')).toBeNull()
-  expect(listeners.get('remove')?.size ?? 0).toBe(0)
+  expect(map.resize).toHaveBeenCalledOnce()
+  expect(map.triggerRepaint).toHaveBeenCalledOnce()
+  expect(canvas.style.opacity).toBe('0.8')
 })

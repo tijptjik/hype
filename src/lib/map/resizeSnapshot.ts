@@ -2,7 +2,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 
 /** Fixes the renderer's dimensions while its surrounding pane changes size.
  * @param map Renderer whose geographic centre must remain stable.
- * @param disableInteraction Whether a static snapshot will cover the renderer.
+ * @param disableInteraction Whether layout settling should temporarily block map interaction.
  * @param minimumWidth Extra canvas width to cover an expanding pane during a flight.
  * @returns Cleanup restoring the container's original inline styles.
  */
@@ -49,54 +49,19 @@ export function holdMapSizeDuringFlight(map: MapLibreMap): () => void {
   }
 }
 
-/** Holds the map at its original size and covers its canvas with a rendered snapshot.
+/** Holds the live map at its original size while its surrounding layout settles.
  * @param map Renderer being resized by its surrounding layout.
- * @returns Cleanup restoring layout and revealing the next complete map frame.
- * @remarks Markers remain in the fixed map container, above the canvas snapshot.
+ * @returns Cleanup restoring layout and resizing the original renderer.
+ * @remarks Markers and the WebGL canvas remain together in the fixed map container.
  */
 export function freezeMapForResize(map: MapLibreMap): () => void {
   map.stop()
-  const canvas = map.getCanvas()
-  const originalOpacity = canvas.style.opacity
-  const snapshot = document.createElement('canvas')
-  snapshot.setAttribute('aria-hidden', 'true')
-  snapshot.dataset.mapResizeSnapshot = ''
-  Object.assign(snapshot.style, {
-    position: 'absolute',
-    inset: '0',
-    width: '100%',
-    height: '100%',
-    pointerEvents: 'none',
-  })
+  // Keep the original WebGL surface: copying it to a 2D canvas can swap colour
+  // channels on GPU-backed browsers, flashing a different palette on return.
   const restore = holdMapSize(map, true)
-  let released = false
-  const capture = (): void => {
-    if (released) return
-    snapshot.width = canvas.width
-    snapshot.height = canvas.height
-    const context = snapshot.getContext('2d')
-    if (!context) return
-    context.drawImage(canvas, 0, 0)
-    canvas.after(snapshot)
-    canvas.style.opacity = '0'
-  }
-  // Read WebGL pixels during render; preserveDrawingBuffer is unnecessary.
-  map.once('render', capture)
-  map.triggerRepaint()
   return () => {
-    released = true
-    map.off('render', capture)
     restore()
-    const reveal = (): void => {
-      map.off('render', reveal)
-      map.off('remove', reveal)
-      snapshot.remove()
-      canvas.style.opacity = originalOpacity
-    }
-    map.once('render', reveal)
     map.resize()
     map.triggerRepaint()
-    // Also release resources when the map is removed before another frame is rendered.
-    map.once('remove', reveal)
   }
 }
