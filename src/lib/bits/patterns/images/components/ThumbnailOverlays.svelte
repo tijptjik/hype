@@ -68,7 +68,6 @@ let {
       <Button
         text={m.cancel()}
         color="dark"
-        style="soft"
         size="sm"
         onClick={() => onCancelDelete?.()}
       />
