@@ -625,6 +625,13 @@ ms of hover or keyboard focus and dismisses on Escape, activation, scrolling, or
 Keep an explicit `aria-label` on icon-only controls; tooltip text is a description, not
 a replacement for the control's accessible name.
 
+Tooltip content must add information. Do not repeat a visible title, description, or
+button label. Scrolling text does not create a tooltip from its own text; an explicit
+description may explain something additional. The shared providers suppress repeated
+labels while retaining explanations for icon-only controls and full text hidden by
+actual clipping. Hidden scrolling copies and inline text dimensions do not count as
+clipping.
+
 Use `SimpleTooltip` for rich help cards, interactive help, and tap-to-open info buttons.
 Do not add native HTML `title` tooltips. Component properties named `title` that render
 headings, document titles, and accessible SVG names retain their normal meaning.
