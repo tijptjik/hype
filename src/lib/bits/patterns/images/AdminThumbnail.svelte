@@ -88,7 +88,13 @@ async function handleDelete(): Promise<void> {
       />
     {/if}
 
-    {#if badgeLabel || isHighlighted}
+    {#if isHighlighted && (!badgeLabel || badgeLabel === m.gallery__new_badge())}
+      <span
+        role="img"
+        aria-label="Photo submitted with this report"
+        class="pointer-events-none absolute right-2 top-2 z-20 size-2.5 rounded-full bg-[#2A6FEC] ring-2 ring-white/90 shadow-sm"
+      ></span>
+    {:else if badgeLabel || isHighlighted}
       <div
         class={`pointer-events-none absolute right-2 top-2 z-20 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.32)] ${badgeClass || 'bg-[#2A6FEC]'}`}
       >

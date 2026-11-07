@@ -317,7 +317,7 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
 
   const common = [
     createReviewTaskAction({
-      text: task.type === 'newFeature' ? 'Reject' : m.quiet_late_worm_startle(),
+      text: m.alive_north_albatross_lead(),
       icon: XCircleIcon,
       onClick: openRejectDialog,
       color: 'error',
@@ -328,7 +328,7 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
     return [
       ...common,
       createReviewTaskAction({
-        text: 'Resolve duplicate',
+        text: m.task_resolve_duplicate_label(),
         icon: DuplicateIcon,
         color: 'warning',
         onClick: () => {
@@ -388,7 +388,7 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
   return [
     ...common,
     createReviewTaskAction({
-      text: m.awful_this_dingo_glow(),
+      text: m.task_mark_permanently_unavailable(),
       icon: GhostIcon,
       action: 'setIntangible',
       color: 'accent',
@@ -782,7 +782,7 @@ const imageProviderModel = useImageProviderModel(
 {/if}
 
 {#if task && !task.locationTask}
-  <TaskInfoDialog bind:open={isInfoOpen} type={task.type as TaskType} />
+  <TaskInfoDialog bind:open={isInfoOpen} type={task.type as TaskType} revisionReviewRequired={task.revisionReviewRequired} />
 {/if}
 <TaskRejectDialog
   bind:open={isRejectDialogOpen}

@@ -1,6 +1,7 @@
 <script lang="ts">
 import { Dialog } from 'bits-ui'
 import { m } from '#lib/i18n.js'
+import DuplicateIcon from 'virtual:icons/lucide/circle-equal'
 import XIcon from 'virtual:icons/proicons/cancel'
 import CheckIcon from 'virtual:icons/proicons/checkmark-circle'
 import CheckBadgeIcon from 'virtual:icons/proicons/checkmark-starburst'
@@ -24,43 +25,15 @@ type SectionDescriptor = {
   actions?: ActionDescriptor[]
 }
 
-type NewPhotoInfoTab = 'review' | 'guidance' | 'gallery'
-
 let {
   open = $bindable(false),
   type,
+  revisionReviewRequired = false,
 }: {
   open?: boolean
   type: TaskType
+  revisionReviewRequired?: boolean
 } = $props()
-let activeNewPhotoTab = $state<NewPhotoInfoTab>('review')
-
-const contentHeightClass = $derived.by(() => {
-  if (type === 'newFeature') return 'h-[min(92vh,28rem)]'
-  if (type === 'newPhoto') return 'h-[min(92vh,38rem)]'
-  return 'h-[min(92vh,52rem)]'
-})
-
-const newPhotoTabs: Array<{ id: NewPhotoInfoTab; label: string }> = [
-  { id: 'review', label: 'Review' },
-  { id: 'guidance', label: 'Tips' },
-  { id: 'gallery', label: 'Gallery' },
-]
-
-function getNewPhotoTabButtonClass(tabId: NewPhotoInfoTab): string {
-  return [
-    'rounded-xl px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] transition',
-    activeNewPhotoTab === tabId
-      ? 'bg-foreground text-panel'
-      : 'text-foreground opacity-65',
-  ].join(' ')
-}
-
-function getSectionTabId(index: number): NewPhotoInfoTab {
-  if (index === 0) return 'review'
-  if (index === 1) return 'guidance'
-  return 'gallery'
-}
 
 const sections = $derived.by((): SectionDescriptor[] => {
   if (type === 'newFeature') {
@@ -69,13 +42,19 @@ const sections = $derived.by((): SectionDescriptor[] => {
         bodyHtml: m.strong_next_zebra_quiz(),
         actions: [
           {
-            label: m.quiet_late_worm_startle(),
+            label: m.alive_north_albatross_lead(),
             descriptionHtml: m.awful_real_newt_lift(),
             icon: XCircleIcon,
             toneClass: 'text-error',
           },
           {
-            label: m.quiet_late_worm_startle_accept(),
+            label: m.task_resolve_duplicate_label(),
+            descriptionHtml: m.task_resolve_duplicate_help(),
+            icon: DuplicateIcon,
+            toneClass: 'text-warning',
+          },
+          {
+            label: m.direct_nimble_buzzard_reside(),
             descriptionHtml: m.careful_inner_grebe_skip(),
             icon: CheckIcon,
             toneClass: 'text-success',
@@ -91,51 +70,32 @@ const sections = $derived.by((): SectionDescriptor[] => {
         bodyHtml: m.few_sunny_wren_push(),
         actions: [
           {
-            label: m.quiet_late_worm_startle(),
+            label: m.alive_north_albatross_lead(),
             descriptionHtml: m.great_loose_gull_assure(),
             icon: XCircleIcon,
             toneClass: 'text-error',
           },
-          {
-            label: m.each_funny_cow_radiate(),
-            descriptionHtml: m.mild_deft_larva_absorb(),
-            icon: CheckIcon,
-            toneClass: 'text-success',
-          },
-          {
-            label: m.shy_sunny_hare_revive(),
-            descriptionHtml: m.blue_novel_owl_stab(),
-            icon: CheckBadgeIcon,
-            toneClass: 'text-success',
-          },
+          ...(revisionReviewRequired
+            ? [{
+                label: m.direct_nimble_buzzard_reside(),
+                descriptionHtml: m.task_photo_accept_help(),
+                icon: CheckIcon,
+                toneClass: 'text-success',
+              }]
+            : [{
+                label: m.each_funny_cow_radiate(),
+                descriptionHtml: m.mild_deft_larva_absorb(),
+                icon: CheckIcon,
+                toneClass: 'text-success',
+              }, {
+                label: m.shy_sunny_hare_revive(),
+                descriptionHtml: m.blue_novel_owl_stab(),
+                icon: CheckBadgeIcon,
+                toneClass: 'text-success',
+              }]),
         ],
       },
-      {
-        bodyHtml: m.happy_acidic_donkey_seek(),
-        actions: [
-          {
-            label: m.proof_keen_swan_dart(),
-            descriptionHtml: '',
-            icon: CheckBadgeIcon,
-            toneClass: 'text-foreground/72',
-          },
-          {
-            label: m.arable_clear_coyote_sing(),
-            descriptionHtml: '',
-            icon: CheckBadgeIcon,
-            toneClass: 'text-foreground/72',
-          },
-          {
-            label: m.zesty_same_cat_clip(),
-            descriptionHtml: '',
-            icon: CheckBadgeIcon,
-            toneClass: 'text-foreground/72',
-          },
-        ],
-      },
-      {
-        bodyHtml: m.calm_away_panther_propel(),
-      },
+      { bodyHtml: m.task_photo_tools_help() },
     ]
   }
 
@@ -144,20 +104,26 @@ const sections = $derived.by((): SectionDescriptor[] => {
       bodyHtml: m.weird_great_barbel_gaze(),
       actions: [
         {
-          label: m.next_main_gecko_heal(),
-          descriptionHtml: m.tired_quick_snake_enjoy(),
+          label: m.alive_north_albatross_lead(),
+          descriptionHtml: m.task_missing_reject_help(),
+          icon: XCircleIcon,
+          toneClass: 'text-error',
+        },
+        {
+          label: m.task_mark_permanently_unavailable(),
+          descriptionHtml: m.flat_direct_bobcat_praise(),
           icon: GhostIcon,
           toneClass: 'text-accent',
         },
         {
-          label: m.lime_house_pig_grasp(),
+          label: m.forms__unpublish(),
           descriptionHtml: m.great_sad_rook_cure(),
           icon: EyeOffIcon,
           toneClass: 'text-warning',
         },
         {
-          label: m.small_new_bear_ask(),
-          descriptionHtml: m.flat_direct_bobcat_praise(),
+          label: m.whole_deft_penguin_enchant(),
+          descriptionHtml: m.tired_quick_snake_enjoy(),
           icon: TrashIcon,
           toneClass: 'text-error',
         },
@@ -171,7 +137,7 @@ const sections = $derived.by((): SectionDescriptor[] => {
   <Dialog.Portal>
     <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm" />
     <Dialog.Content
-      class={`fixed left-1/2 top-1/2 z-[1001] ${contentHeightClass} w-[min(92vw,50rem)] -translate-x-1/2 -translate-y-1/2 max-h-[90dvh] overflow-y-auto rounded-xl border border-border bg-panel p-8 text-foreground shadow-2xl`}
+      class={`fixed left-1/2 top-1/2 z-[1001] w-[min(92vw,50rem)] -translate-x-1/2 -translate-y-1/2 max-h-[90dvh] overflow-y-auto rounded-xl border border-border bg-panel p-8 text-foreground shadow-2xl`}
     >
       <div class="flex items-start justify-between gap-6">
         <div class="flex min-w-0 items-center gap-4">
@@ -179,23 +145,7 @@ const sections = $derived.by((): SectionDescriptor[] => {
             {m.antsy_patient_moth_taste()}
           </Dialog.Title>
 
-          {#if type === 'newPhoto'}
-            <div
-              class="flex shrink-0 gap-1.5 rounded-lg border border-foreground/10 bg-foreground/[0.03] p-1.5"
-            >
-              {#each newPhotoTabs as tab (tab.id)}
-                <button
-                  type="button"
-                  class={getNewPhotoTabButtonClass(tab.id)}
-                  onclick={() => {
-                    activeNewPhotoTab = tab.id
-                  }}
-                >
-                  {tab.label}
-                </button>
-              {/each}
-            </div>
-          {/if}
+
         </div>
 
         <Dialog.Close
@@ -207,9 +157,8 @@ const sections = $derived.by((): SectionDescriptor[] => {
       </div>
 
       <div class="mt-6 space-y-6 text-base leading-8 text-foreground/82">
-        <div class="min-h-[24rem] space-y-4">
+        <div class="space-y-4">
           {#each sections as section, index (`${type}:${section.title ?? index}`)}
-            {#if type !== 'newPhoto' || activeNewPhotoTab === getSectionTabId(index)}
               <section class="space-y-4">
                 {#if section.title}
                   <h3 class="text-sm font-semibold text-muted-foreground">
@@ -245,7 +194,6 @@ const sections = $derived.by((): SectionDescriptor[] => {
                   </div>
                 {/if}
               </section>
-            {/if}
           {/each}
         </div>
       </div>
