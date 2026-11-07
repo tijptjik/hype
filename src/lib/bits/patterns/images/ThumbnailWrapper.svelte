@@ -51,7 +51,7 @@ let {
 
 const dragZoneId = $props.id()
 let dragItems = $state<ViewerRenderable[] | null>(null)
-let reorderPending = $state(false)
+let reorderPending = $state(0)
 const displayedItems = $derived(dragItems ?? items)
 
 /** Commits only a completed in-zone gesture, leaving selection unchanged.
@@ -70,14 +70,16 @@ async function finishReorder(next: ViewerRenderable[]): Promise<void> {
     dragItems = null
     return
   }
-  reorderPending = true
+  reorderPending++
   clearHoverDebounce()
   pendingHoverItem = null
+  // The editor owns the optimistic order after drop; a completed save must never clear a newer gesture.
   try {
-    await onReorder(ids)
-  } finally {
+    const saving = onReorder(ids)
     dragItems = null
-    reorderPending = false
+    await saving
+  } finally {
+    reorderPending--
   }
 }
 
@@ -515,7 +517,7 @@ onDestroy(() => {
         items: displayedItems,
         type: dragZoneId,
         flipDurationMs: 220,
-        dragDisabled: !onReorder || reorderDisabled || reorderPending,
+        dragDisabled: !onReorder || reorderDisabled,
         zoneTabIndex: -1,
         zoneItemTabIndex: onReorder && !reorderDisabled ? 0 : -1,
         dropFromOthersDisabled: true,
