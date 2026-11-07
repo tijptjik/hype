@@ -19,6 +19,22 @@ portal, or below the portal.
 
 - If there is no description and no fields, render only the portal.
 - The portal remains anchored on the right.
+- Feature navigation retains the last gallery height until the incoming body has
+  measured its width and resolved its portal/text layout. Gallery and body sizing
+  transition together using the feature crossfade's shared 260ms ease-out timing; any
+  temporary spare space above the actions uses the panel background. Reduced motion
+  disables the geometry transition.
+- Resolve title sharing and require consecutive matching body measurements before
+  committing the next gallery height. Animate the title's shared-row spacing and gallery
+  height together so their compensating changes cannot jolt the portal.
+- A collapsed display card may reduce the photo's preferred minimum height by up to 16px
+  to fit the complete body without scrolling. Larger deficits retain body scrolling;
+  content is not clipped to suppress the scrollbar.
+- On narrow standard display cards, a single-line title may share the portal's top row
+  when its rendered text, padding and trailing controls fit entirely to the left of the
+  portal. Long titles, multi-line title blocks and expanded descriptions retain a
+  separate full-width title row. Description text and adjacent fields reserve the shared
+  title's height before placing their content.
 - The region to the left of the portal is the adjacent content region.
 - The region below the portal is the overflow content region.
 - Description text is routed with Pretext around both:
@@ -152,20 +168,20 @@ Future structured links and numbered references are proposed separately in
 
 ## Mobile image attribution
 
-Below 640 CSS pixels, attribution replaces the full visible image area with an
-opaque panel aligned to the viewer's inner padding and rounded corners. Keep the
-close control available and suppress the info trigger's tooltip on mobile.
-At 640 pixels and above, retain the anchored compact attribution popover.
+Below 640 CSS pixels, attribution replaces the full visible image area with an opaque
+panel aligned to the viewer's inner padding and rounded corners. Keep the close control
+available and suppress the info trigger's tooltip on mobile. At 640 pixels and above,
+retain the anchored compact attribution popover.
 
 Measure the attribution content, including panel padding, after loading and when
-metadata expands or text wraps. Its intrinsic height is a minimum for the viewer
-and the card's overall layout calculation: grow the viewer and move the body down
-when necessary. Long content uses the card's normal scrolling flow rather than a
-second viewport-sized dialog. Closing, changing images, or leaving mobile layout
-releases the extra height. Sharing and attribution use the same overlay-height
-budget without shrinking the normal photo minimum.
+metadata expands or text wraps. Its intrinsic height is a minimum for the viewer and the
+card's overall layout calculation: grow the viewer and move the body down when
+necessary. Long content uses the card's normal scrolling flow rather than a second
+viewport-sized dialog. Closing, changing images, or leaving mobile layout releases the
+extra height. Sharing and attribution use the same overlay-height budget without
+shrinking the normal photo minimum.
 
 Camera metadata opens and closes with one content-height animation. While mobile
-attribution is open, the viewer follows each measured height without an additional
-CSS height transition, keeping the body synchronized with the disclosure. Reduced
-motion disables the disclosure animation.
+attribution is open, the viewer follows each measured height without an additional CSS
+height transition, keeping the body synchronized with the disclosure. Reduced motion
+disables the disclosure animation.

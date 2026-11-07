@@ -3,7 +3,10 @@ import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 import { getURLfromImage } from '#lib/client/services/image.js'
 import { CameraViewer } from '#lib/bits/patterns/images/index.js'
 import Viewer from '#lib/bits/patterns/images/components/Viewer.svelte'
-import { VIEWER_TRANSITION_MS, VIEWER_TRANSITION_EASING } from '#lib/bits/patterns/images/images.motion'
+import {
+  VIEWER_TRANSITION_MS,
+  VIEWER_TRANSITION_EASING,
+} from '#lib/bits/patterns/images/images.motion'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 import { getImageCtx } from '#lib/context/image.svelte.js'
 import * as ViewerPrimitive from './images'
@@ -115,6 +118,8 @@ function stopViewerEvent(event: Event): void {
   event.stopPropagation()
 }
 
+// Once the body is measured, move it with the gallery using the feature crossfade
+// timing. The container fills spare space while the retained geometry transitions.
 // Attribution animates its measured content; follow directly without a second easing.
 const viewerStyle = $derived.by(() => {
   if (targetHeightPx) {
@@ -148,9 +153,7 @@ const viewerStyle = $derived.by(() => {
 })
 </script>
 
-{#snippet rightRail(
-  _item: ViewerRenderable,
-)}
+{#snippet rightRail(_item: ViewerRenderable)}
   <ViewerPrimitive.Counter
     requestedIndex={activeIndex}
     {loadedIndex}
@@ -166,7 +169,9 @@ const viewerStyle = $derived.by(() => {
         currentImage={model.state.activeImage}
         gallery={model}
         overlayTarget={viewerRoot}
-        onHeightChange={height => { attributionContentHeight = height }}
+        onHeightChange={height => {
+          attributionContentHeight = height
+        }}
       />
     {/key}
   {/if}
@@ -179,7 +184,8 @@ const viewerStyle = $derived.by(() => {
 <!-- biome-ignore lint/a11y/noStaticElementInteractions: The viewer shell stops bubbling pointer events from activating the enclosing card. -->
 <div
   bind:this={viewerRoot}
-  class={`relative pointer-events-auto w-full select-none bg-base-200 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
+  data-feature-card-gallery
+  class={`bg-base-200 pointer-events-auto relative w-full [touch-action:manipulation] px-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) pb-(--feature-card-viewer-padding,0px) transition-[height,min-height,max-height,flex-basis] select-none motion-reduce:transition-none ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
   style={`transition-duration: ${attributionContentHeight > 0 ? 0 : VIEWER_TRANSITION_MS}ms; transition-timing-function: ${VIEWER_TRANSITION_EASING}; ${viewerStyle ?? ''}${viewerStyle ? ' ' : ''}min-height: ${viewerBlockMinHeightPx}px;`}
   onclick={stopViewerEvent}
   onkeydown={stopViewerEvent}
@@ -236,8 +242,13 @@ const viewerStyle = $derived.by(() => {
         class="pointer-events-none absolute inset-x-3 top-3 z-20 flex justify-center"
         data-feature-card-image-pips
       >
-        <div class="flex max-w-full flex-wrap justify-center gap-1.5 rounded-xl bg-black/40 px-2 py-1.5 backdrop-blur-sm">
-          <span class="sr-only" aria-live="polite">{Math.max(loadedIndex, 0) + 1} / {model.state.items.length}</span>
+        <div
+          class="flex max-w-full flex-wrap justify-center gap-1.5 rounded-xl bg-black/40 px-2 py-1.5 backdrop-blur-sm"
+        >
+          <span class="sr-only" aria-live="polite"
+            >{Math.max(loadedIndex, 0) + 1}
+            / {model.state.items.length}</span
+          >
           {#each model.state.items as item, index (item.id)}
             <span
               aria-hidden="true"

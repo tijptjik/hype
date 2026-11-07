@@ -15,11 +15,11 @@ import ImageSurface from './ImageSurface.svelte'
 import ImageBackdrop from './ImageBackdrop.svelte'
 import ImageForeground from './ImageForeground.svelte'
 import ImageSkeleton from './ImageSkeleton.svelte'
+import { VIEWER_TRANSITION_MS, VIEWER_TRANSITION_EASING } from '../images.motion'
 // TYPES
 import type { ViewerStageProps } from './imagePrimitives.types'
 import type { ViewerRenderable } from '../images.types'
 
-const VIEWER_TRANSITION_MS = 260
 const ROTATION_TRANSITION_MS = 240
 
 type SceneSnapshot = {
@@ -368,7 +368,7 @@ onDestroy(() => {
       getGalleryBackgroundSrc(previousScene.item)}
       <div
         class="viewer-backdrop absolute inset-0"
-        style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
+        style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`}
       >
         <ImageBackdrop
           src={getGalleryBackgroundSrc(previousScene.item)!}
@@ -385,7 +385,7 @@ onDestroy(() => {
 
     <div
       class="viewer-scene absolute inset-0"
-      style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
+      style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`}
     >
       {#if !shouldRenderImageSurface(previousScene.item)}
         <div
@@ -502,7 +502,7 @@ onDestroy(() => {
       getGalleryBackgroundSrc(incomingScene.item)}
       <div
         class="viewer-backdrop absolute inset-0"
-        style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
+        style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`}
       >
         <ImageBackdrop
           src={getGalleryBackgroundSrc(incomingScene.item)!}
@@ -519,7 +519,7 @@ onDestroy(() => {
 
     <div
       class="viewer-scene absolute inset-0"
-      style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
+      style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ${VIEWER_TRANSITION_EASING};`}
     >
       {#if !shouldRenderImageSurface(incomingScene.item)}
         <div

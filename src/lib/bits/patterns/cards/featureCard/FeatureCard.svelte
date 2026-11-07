@@ -8,6 +8,10 @@ import FeatureCardAddPhotoBody from './components/FeatureCardAddPhotoBody.svelte
 import FeatureCardActions from './components/FeatureCardActions.svelte'
 import FeatureCardBreadcrumbs from './components/FeatureCardBreadcrumbs.svelte'
 import FeatureCardContainer from './components/FeatureCardContainer.svelte'
+import {
+  VIEWER_TRANSITION_MS,
+  VIEWER_TRANSITION_EASING,
+} from '#lib/bits/patterns/images/images.motion'
 import FeatureCardContent from './components/FeatureCardContent.svelte'
 import FeatureCardPortalBand from './components/FeatureCardPortalBand.svelte'
 import FeatureCardMissingReportBody from './components/FeatureCardMissingReportBody.svelte'
@@ -67,6 +71,15 @@ const layout = $derived(
     responsiveWidth,
   }),
 )
+// Let narrow display cards give space back to the portal before scrolling. The
+// viewer still grows into the available budget on taller screens.
+const preferredViewerMinHeightPx = $derived(
+  cardCtx.isDisplayMode && responsiveWidth < 768 && !cardCtx.shareTarget
+    ? Math.min(layout.viewerMinHeightPx, 200)
+    : layout.viewerMinHeightPx,
+)
+let viewerFitReductionPx = $state(0)
+const viewerMinHeightPx = $derived(preferredViewerMinHeightPx - viewerFitReductionPx)
 
 let viewport = $state<HTMLElement>()
 let cardContentWidth = $state(0)
@@ -79,6 +92,11 @@ let showDescriptionToggle = $state(false)
 let viewerShellElement = $state<HTMLDivElement | null>(null)
 let breadcrumbsElement = $state<HTMLDivElement | null>(null)
 let titleElement = $state<HTMLDivElement | null>(null)
+let titleSpaceWidthPx = $state(0)
+let titleOverlapPx = $state(0)
+let committedTitleOverlapPx = $state(0)
+let pendingViewerBudgetKey = ''
+let contentLayoutReady = $state(false)
 let contentShellElement = $state<HTMLDivElement | null>(null)
 let validationElement = $state<HTMLDivElement | null>(null)
 let actionsElement = $state<HTMLDivElement | null>(null)
@@ -141,9 +159,13 @@ function updateViewerBudget(): void {
   const shouldMeasureDisplayChrome =
     cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode
 
+  // Standard content routes text around the portal after measuring its width.
+  // Hold the outgoing gallery until that real layout replaces the placeholder.
+  if (shouldMeasureDisplayChrome && cardType === 'standard' && !contentLayoutReady)
+    return
+
   if (!viewportElement || !viewerShell || !contentShell) {
-    containerScrollable = false
-    viewerTargetHeightPx = null
+    // Retain the last committed geometry while the next body is mounting.
     return
   }
 
@@ -152,8 +174,7 @@ function updateViewerBudget(): void {
     !isPortalBand &&
     (!breadcrumbsElement || !titleElement)
   ) {
-    containerScrollable = false
-    viewerTargetHeightPx = null
+    // Retain the last committed geometry while the next body is mounting.
     return
   }
 
@@ -161,9 +182,46 @@ function updateViewerBudget(): void {
   const bottomSpacerHeight = measureElementHeight(bottomSpacerElement)
   const breadcrumbsHeight = measureElementHeight(breadcrumbsElement)
   const titleHeight = measureElementHeight(titleElement)
+  // Only share the portal row when the actual rendered title and trailing controls
+  // fit in its left-hand slot. Badges and expanded descriptions keep a full row.
+  const titleText = titleElement?.querySelector<HTMLElement>(
+    '.bits-scrollable-text__content',
+  )
+  const titleRow = titleElement?.firstElementChild as HTMLElement | null
+  const titleControls = titleRow?.lastElementChild as HTMLElement | null
+  const titleStyle = titleRow ? getComputedStyle(titleRow) : null
+  const naturalTitleWidth =
+    titleText && titleStyle
+      ? titleText.scrollWidth +
+        (titleControls?.offsetWidth ?? 0) +
+        Number.parseFloat(titleStyle.paddingLeft) +
+        Number.parseFloat(titleStyle.paddingRight) +
+        8
+      : Number.POSITIVE_INFINITY
+  const nextTitleOverlapPx =
+    cardType === 'standard' &&
+    cardCtx.isDisplayMode &&
+    responsiveWidth < 768 &&
+    !isDescriptionExpanded &&
+    titleHeight <= 30 &&
+    naturalTitleWidth <= titleSpaceWidthPx
+      ? titleHeight
+      : 0
+  if (titleOverlapPx !== nextTitleOverlapPx) {
+    // Prepare text/field routing before committing the visible title and gallery
+    // geometry together; otherwise the margin jumps ahead of the gallery.
+    titleOverlapPx = nextTitleOverlapPx
+    scheduleViewerBudgetUpdate()
+    return
+  }
   const contentHeight = measureElementHeight(contentShell)
   const staticHeight =
-    breadcrumbsHeight + titleHeight + contentHeight + actionsHeight + bottomSpacerHeight
+    breadcrumbsHeight +
+    titleHeight -
+    nextTitleOverlapPx +
+    contentHeight +
+    actionsHeight +
+    bottomSpacerHeight
   const shellElement = document.getElementById('feature-card-shell')
   const shellStyle = shellElement ? getComputedStyle(shellElement) : null
   const chromeBorderHeight = shellStyle
@@ -180,8 +238,38 @@ function updateViewerBudget(): void {
     staticHeight -
     chromeBorderHeight +
     contributionHeightCompensationPx
+  // Require consecutive matching measurements so an intermediate body layout
+  // cannot start an animation that reverses on the following frame.
+  const budgetKey = [
+    feature.id,
+    mode,
+    availableHeight,
+    nextTitleOverlapPx,
+    overlayContentHeight,
+    preferredViewerMinHeightPx,
+    isDescriptionExpanded,
+  ].join(':')
+  if (pendingViewerBudgetKey !== budgetKey) {
+    pendingViewerBudgetKey = budgetKey
+    scheduleViewerBudgetUpdate()
+    return
+  }
+  // Absorb a small height deficit in the photo instead of creating a nearly
+  // motionless scrollbar. Keep larger overflow scrollable and sharing intact.
+  const canRelaxPhotoMinimum = cardCtx.isDisplayMode && !cardCtx.shareTarget
+  if (!canRelaxPhotoMinimum) {
+    viewerFitReductionPx = 0
+  } else if (!isDescriptionExpanded) {
+    const deficit =
+      preferredViewerMinHeightPx +
+      layout.viewerTopPaddingPx +
+      layout.viewerPaddingPx -
+      availableHeight
+    viewerFitReductionPx = deficit > 0 && deficit <= 16 ? deficit : 0
+  }
+  // Sharing and attribution may need more room than photos; let the body flow below its intrinsic height.
   const viewerBlockMinHeightPx =
-    Math.max(layout.viewerMinHeightPx, overlayContentHeight) +
+    Math.max(viewerMinHeightPx, overlayContentHeight) +
     layout.viewerTopPaddingPx +
     layout.viewerPaddingPx
   // Compact cards may already overflow before expansion and never latch a height.
@@ -208,8 +296,11 @@ function updateViewerBudget(): void {
     : collapsedScrollable
 
   containerScrollable = shouldScrollContainer
+  committedTitleOverlapPx = nextTitleOverlapPx
   viewerTargetHeightPx =
-    !isDescriptionExpanded && collapsedScrollable ? null : resolvedViewerTargetHeightPx
+    !isDescriptionExpanded && collapsedScrollable
+      ? viewerBlockMinHeightPx
+      : resolvedViewerTargetHeightPx
 }
 
 /**
@@ -263,6 +354,9 @@ $effect(() => {
 
 $effect(() => {
   const currentLayout = layout
+  viewerMinHeightPx
+  titleSpaceWidthPx
+  contentLayoutReady
   overlayContentHeight
   isPortalBand
   const viewportElement = viewport
@@ -273,8 +367,7 @@ $effect(() => {
   void currentLayout
 
   if (!viewportElement || !viewerShellElement || !contentShell) {
-    containerScrollable = false
-    viewerTargetHeightPx = null
+    // Retain the last committed geometry while the next body is mounting.
     return
   }
 
@@ -283,8 +376,7 @@ $effect(() => {
     !isPortalBand &&
     (!breadcrumbsElement || !titleElement)
   ) {
-    containerScrollable = false
-    viewerTargetHeightPx = null
+    // Retain the last committed geometry while the next body is mounting.
     return
   }
 
@@ -297,6 +389,8 @@ $effect(() => {
   observer.observe(contentShell)
   if (breadcrumbsElement) observer.observe(breadcrumbsElement)
   if (titleElement) observer.observe(titleElement)
+  const measuredTitle = titleElement?.querySelector('.bits-scrollable-text__content')
+  if (measuredTitle) observer.observe(measuredTitle)
   if (validationElement) observer.observe(validationElement)
   if (actionsElement) observer.observe(actionsElement)
   if (bottomSpacerElement) observer.observe(bottomSpacerElement)
@@ -329,7 +423,7 @@ $effect(() => {
         <FeatureCardViewerContent
           showImagePips={isPortalBand}
           scrollable={containerScrollable}
-          minHeightPx={layout.viewerMinHeightPx}
+          minHeightPx={viewerMinHeightPx}
           paddingPx={layout.viewerPaddingPx}
           topPaddingPx={layout.viewerTopPaddingPx}
           targetHeightPx={viewerTargetHeightPx}
@@ -353,13 +447,27 @@ $effect(() => {
           </div>
         {:else if cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode}
           <div bind:this={breadcrumbsElement}><FeatureCardBreadcrumbs {feature} /></div>
-          <div bind:this={titleElement}>
+          <div
+            bind:this={titleElement}
+            class="relative z-40 transition-[margin-bottom] motion-reduce:transition-none"
+            style={`transition-duration: ${VIEWER_TRANSITION_MS}ms; transition-timing-function: ${VIEWER_TRANSITION_EASING}; margin-bottom: -${committedTitleOverlapPx}px; ${titleOverlapPx > 0 ? `width: ${titleSpaceWidthPx}px;` : ''}`}
+          >
             <FeatureCardTitle
               {feature}
               expanded={isDescriptionExpanded}
               {showDescriptionToggle}
               onToggleDescription={handleDescriptionToggle}
             />
+            <!-- The title narrows before its shared-row spacing finishes moving.
+                 Fill the full-width strip above the incoming portal throughout
+                 that motion, with 1px of overlap to cover fractional rounding
+                 without painting over the circular map opening. -->
+            <div
+              aria-hidden="true"
+              data-feature-card-title-surface
+              class="pointer-events-none absolute top-0 left-0 -z-10 bg-(--theme-panel) transition-[height] motion-reduce:transition-none"
+              style={`width: ${cardContentWidth}px; height: calc(100% - ${committedTitleOverlapPx}px + 1px); transition-duration: ${VIEWER_TRANSITION_MS}ms; transition-timing-function: ${VIEWER_TRANSITION_EASING};`}
+            ></div>
           </div>
           <div bind:this={contentShellElement}>
             {#if cardType === 'breadline'}
@@ -367,6 +475,13 @@ $effect(() => {
             {:else}
               <FeatureCardContent
                 {feature}
+                titleInsetPx={titleOverlapPx}
+                onTitleSpaceChange={width => {
+                  titleSpaceWidthPx = width
+                }}
+                onLayoutReadyChange={ready => {
+                  contentLayoutReady = ready
+                }}
                 expanded={isDescriptionExpanded}
                 onToggle={handleDescriptionToggle}
                 onToggleVisibility={handleDescriptionToggleVisibility}

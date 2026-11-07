@@ -79,11 +79,17 @@ let {
   expanded = false,
   onToggle,
   onToggleVisibility,
+  titleInsetPx = 0,
+  onTitleSpaceChange,
+  onLayoutReadyChange,
 }: {
   feature: Feature
   expanded?: boolean
   onToggle?: (expanded: boolean) => void
   onToggleVisibility?: (visible: boolean) => void
+  titleInsetPx?: number
+  onTitleSpaceChange?: (width: number) => void
+  onLayoutReadyChange?: (ready: boolean) => void
 } = $props()
 
 const appCtx = getSurfaceCtx()
@@ -237,7 +243,7 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
     const adjacentFit = fitFeaturePropertyLayoutInRegion(
       featurePropertyItems,
       adjacentPropertyLayoutWidth,
-      portalHeight,
+      Math.max(0, portalHeight - titleInsetPx),
       featurePropertyItems.length,
       PROPERTY_GAP_PX,
     )
@@ -264,7 +270,7 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
       adjacentPlacement: {
         items: adjacentItems,
         layout: adjacentFit.layout,
-        top: portalTop,
+        top: Math.max(portalTop, titleInsetPx),
         width: adjacentPropertyRegionWidth,
       },
       overflowPlacement: {
@@ -351,7 +357,7 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
   const maxAdjacentFit = fitFeaturePropertyLayoutInRegion(
     featurePropertyItems,
     adjacentPropertyLayoutWidth,
-    portalHeight,
+    Math.max(0, portalHeight - titleInsetPx),
     featurePropertyItems.length,
     PROPERTY_GAP_PX,
   )
@@ -359,7 +365,7 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
   let adjacentCount = maxAdjacentFit.fitCount
   let adjacentLayout = maxAdjacentFit.layout
   let adjacentTop = adjacentLayout
-    ? Math.max(portalTop, portalBottom - adjacentLayout.totalHeight)
+    ? Math.max(portalTop, titleInsetPx, portalBottom - adjacentLayout.totalHeight)
     : portalBottom
   let collapsedLayout: RoutedDescriptionLayout | null = null
 
@@ -373,15 +379,18 @@ const collapsedContentPlan = $derived.by((): CollapsedContentPlan => {
           )
         : null
     const candidateTop = candidateLayout
-      ? Math.max(portalTop, portalBottom - candidateLayout.totalHeight)
+      ? Math.max(portalTop, titleInsetPx, portalBottom - candidateLayout.totalHeight)
       : portalBottom
     const maxTextBottom = candidateLayout
       ? candidateTop - CONTENT_GAP_PX - DESCRIPTION_BOTTOM_PADDING_PX
       : portalBottom
 
-    if (maxTextBottom < DESCRIPTION_LINE_HEIGHT * 2) continue
+    if (maxTextBottom - titleInsetPx < DESCRIPTION_LINE_HEIGHT * 2) continue
 
-    const maxLines = Math.max(2, Math.floor(maxTextBottom / DESCRIPTION_LINE_HEIGHT))
+    const maxLines = Math.max(
+      2,
+      Math.floor((maxTextBottom - titleInsetPx) / DESCRIPTION_LINE_HEIGHT),
+    )
     const candidateDescription = appendTruncationEllipsis(
       layoutRoutedDescriptionLines({
         prepared: preparedDescription,
@@ -670,7 +679,7 @@ function layoutRoutedDescriptionLines(params: {
     obstacle,
     startCursor = LINE_START_CURSOR,
     maxLines,
-    initialTop = 0,
+    initialTop = titleInsetPx,
     reservedRightWidth = 0,
     reserveLineCount = 0,
   } = params
@@ -783,6 +792,19 @@ onMount(() => {
 $effect(() => {
   onToggleVisibility?.(showToggle)
 })
+
+// Reserve a rectangular title slot beside the circle, including its wrap gap.
+$effect(() => {
+  onTitleSpaceChange?.(
+    contentSidePaddingPx + collapsedPortalGeometry.visualLeft - PORTAL_WRAP_GAP_PX,
+  )
+})
+
+// The first render uses a placeholder width; do not budget the gallery from it.
+$effect(() => {
+  onLayoutReadyChange?.(contentWidth > 0)
+  return () => onLayoutReadyChange?.(false)
+})
 </script>
 
 <div
@@ -796,7 +818,7 @@ $effect(() => {
       style={`height: ${CONTENT_TOP_PADDING_PX + activePortalGeometry.visualTop}px;`}
     ></div>
     <div
-      class="pointer-events-auto absolute right-0 top-0 z-20 bg-(--theme-panel)"
+      class="pointer-events-auto absolute top-0 right-0 z-20 bg-(--theme-panel)"
       style={`width: ${contentSidePaddingPx + activePortalGeometry.visualRight}px; height: ${activeContentHeight}px;`}
     ></div>
     <div
@@ -818,7 +840,7 @@ $effect(() => {
     {#if hasDescription && !expanded}
       <button
         type="button"
-        class="pointer-events-none absolute inset-x-0 top-0 z-30 border-0 bg-transparent p-0 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        class="focus-visible:outline-primary pointer-events-none absolute inset-x-0 top-0 z-30 border-0 bg-transparent p-0 text-left focus-visible:outline focus-visible:outline-2"
         style={`height: ${collapsedContentPlan.descriptionInteractiveHeight}px;`}
         aria-label={m.common__read_more()}
         aria-expanded="false"
@@ -830,7 +852,7 @@ $effect(() => {
       >
         {#each visibleCollapsedDescriptionLines as line, index (`collapsed-${index}-${line.top}`)}
           <span
-            class={`absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-muted-foreground ${showToggle ? 'pointer-events-auto cursor-pointer' : ''}`}
+            class={`text-muted-foreground absolute left-0 h-[22px] overflow-hidden text-[0.9375rem] leading-[22px] font-light tracking-tight break-words whitespace-pre-wrap ${showToggle ? 'pointer-events-auto cursor-pointer' : ''}`}
             style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; left: ${contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX}px; width: ${line.width}px;`}
           >
             {line.text}
@@ -844,7 +866,7 @@ $effect(() => {
       {#if collapsedMoreButtonPosition}
         <button
           type="button"
-          class="pointer-events-auto absolute z-40 whitespace-nowrap bg-transparent font-mono text-sm text-primary transition-opacity hover:opacity-80 leading-[23px]"
+          class="text-primary pointer-events-auto absolute z-40 bg-transparent font-mono text-sm leading-[23px] whitespace-nowrap transition-opacity hover:opacity-80"
           style={`top: ${collapsedMoreButtonPosition.top}px; left: ${collapsedMoreButtonPosition.left}px;`}
           aria-label={collapsedMoreLabel}
           onclick={() => onToggle?.(true)}
@@ -897,7 +919,7 @@ $effect(() => {
         >
           {#each expandedDescriptionLines as line, index (`expanded-${index}-${line.top}`)}
             <div
-              class="pointer-events-none absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-muted-foreground"
+              class="text-muted-foreground pointer-events-none absolute left-0 h-[22px] overflow-hidden text-[0.9375rem] leading-[22px] font-light tracking-tight break-words whitespace-pre-wrap"
               style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; width: ${line.width}px;`}
             >
               {line.text}

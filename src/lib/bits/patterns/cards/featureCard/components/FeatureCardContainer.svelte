@@ -63,7 +63,7 @@ $effect(() => {
       <svg
         id="left-cap"
         aria-hidden="true"
-        class="absolute left-0 top-0 block"
+        class="absolute top-0 left-0 block"
         style="z-index: 1; height: 16px; width: 16px;"
         viewBox="0 0 16 16"
         preserveAspectRatio="none"
@@ -73,7 +73,7 @@ $effect(() => {
       <svg
         id="right-cap"
         aria-hidden="true"
-        class="absolute right-0 top-0 block"
+        class="absolute top-0 right-0 block"
         style="z-index: 1; height: 16px; width: 16px;"
         viewBox="0 0 16 16"
         preserveAspectRatio="none"
@@ -86,6 +86,12 @@ $effect(() => {
       class="pointer-events-none flex min-h-full w-full flex-col items-stretch"
     >
       {@render children()}
+      <!-- Keep spare space opaque while the retained gallery waits for the next
+           body measurement; the portal itself must remain transparent. -->
+      <div
+        aria-hidden="true"
+        class="pointer-events-none min-h-0 flex-1 bg-(--theme-panel)"
+      ></div>
     </div>
   </div>
 

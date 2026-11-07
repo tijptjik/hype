@@ -46,7 +46,9 @@ const layout = $derived(
 
 <div class="pointer-events-auto shrink-0 bg-(--theme-panel)">
   {#if topActions}
-    <div class="flex justify-center px-[var(--feature-card-content-padding)] pt-2">
+    <div
+      class="flex justify-center px-[var(--feature-card-content-padding)] pt-2 [&:not(:has(*))]:hidden"
+    >
       {@render topActions()}
     </div>
   {/if}
@@ -58,9 +60,12 @@ const layout = $derived(
           ? 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3'
           : 'grid grid-cols-[1fr_auto_1fr] items-center gap-3'
         : 'flex items-center gap-3',
-      layout.hasElevatedChrome ? 'min-h-11' : 'min-h-16',
+      // Display actions need their 44px touch targets, not an extra padded row.
+      layout.hasElevatedChrome || leftActionsFillAvailableWidth
+        ? 'min-h-11'
+        : 'min-h-16',
       'px-[var(--feature-card-content-padding)]',
-      layout.hasElevatedChrome ? 'py-0' : 'py-2',
+      layout.hasElevatedChrome || leftActionsFillAvailableWidth ? 'py-0' : 'py-2',
     )}
   >
     <div

@@ -858,12 +858,29 @@ $effect(() => {
     schedulePortalRecenter()
   }
 
+  /**
+   * Recenters after gallery resizing moves the portal without resizing it.
+   * @param event Completed card transition.
+   * @returns Nothing.
+   */
+  const handleGalleryTransitionEnd = (event: TransitionEvent): void => {
+    if (
+      event.propertyName === 'height' &&
+      event.target instanceof HTMLElement &&
+      event.target.hasAttribute('data-feature-card-gallery')
+    ) {
+      schedulePortalRecenter()
+    }
+  }
+
   document.addEventListener('containerscrollend', handleScrollEnd)
+  featureCardElement.addEventListener('transitionend', handleGalleryTransitionEnd)
   schedulePortalRecenter()
 
   return () => {
     observer.disconnect()
     document.removeEventListener('containerscrollend', handleScrollEnd)
+    featureCardElement.removeEventListener('transitionend', handleGalleryTransitionEnd)
   }
 })
 
