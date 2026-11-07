@@ -473,6 +473,7 @@ export const ProjectCardProfileAPI = ProjectListProfileAPI.extend({
 })
 
 export const ProjectDetailProfileAPI = ProjectCardProfileAPI.extend({
+  license: ProjectLicenseBase,
   ...ProjectDetailFields.shape,
   mapStyle: MapStyleResolved.nullish(),
 })
