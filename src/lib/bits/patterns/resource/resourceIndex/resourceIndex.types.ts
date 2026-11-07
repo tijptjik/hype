@@ -39,6 +39,8 @@ export type GroupedResourceIndexProps<
 > = {
   resource: NavigableResource
   groupedEntities: GroupedResourceIndexGroup<T, G>[]
+  isLoading?: boolean
+  failed?: boolean
   card?: Snippet<[T, number]>
   row?: Snippet<[T, number]>
   listContainer?: HTMLElement | null

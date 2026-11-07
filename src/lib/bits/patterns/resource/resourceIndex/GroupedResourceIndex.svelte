@@ -1,10 +1,13 @@
 <script lang="ts" generics="T extends Resource, G extends Record<string, unknown>">
 // SVELTE
 import { untrack } from 'svelte'
+import { MediaQuery } from 'svelte/reactivity'
+import { fade } from 'svelte/transition'
 // COMPONENTS
 import GroupHeader from './components/GroupHeader.svelte'
 import ResourceCardRow from './components/ResourceCardRow.svelte'
 import ResourceEmptyState from './components/ResourceEmptyState.svelte'
+import ResourceLoadingState from './components/ResourceLoadingState.svelte'
 import ResourceTableRow from './components/ResourceTableRow.svelte'
 // BITS
 import { VirtualList } from '#lib/bits/custom/index/src/index.js'
@@ -53,6 +56,8 @@ type GroupedResourceIndexItem<T extends Resource, G extends Record<string, unkno
 let {
   resource,
   groupedEntities,
+  isLoading = false,
+  failed = false,
   card,
   row,
   listContainer = $bindable(),
@@ -60,6 +65,7 @@ let {
 }: GroupedResourceIndexProps<T, G> = $props()
 
 const adminCtx = getAdminCtx()
+const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)')
 
 let gridWidth = $state(0)
 let stableColumnCount = $state(1)
@@ -260,10 +266,7 @@ function getGroupId(group: Record<string, unknown>): string {
 }
 </script>
 
-{#snippet children(
-  item: GroupedResourceIndexItem<T, G>,
-  _index: number,
-)}
+{#snippet children(item: GroupedResourceIndexItem<T, G>, _index: number)}
   {#if item.kind === 'header'}
     <div class="pt-4 pb-2">
       <GroupHeader
@@ -311,8 +314,11 @@ function getGroupId(group: Record<string, unknown>): string {
         applyBottomOverflow={true}
       />
     </div>
-  {:else}
+  {:else if isLoading}
+    <ResourceLoadingState {isRowLayout} showGroupHeader />
+  {:else if !failed}
     <div
+      in:fade={{ duration: reducedMotion.current ? 0 : 160 }}
       class="bits-resource-index-wrapper bits-resource-index-wrapper--empty relative min-h-0 flex-1"
     >
       <ResourceEmptyState />

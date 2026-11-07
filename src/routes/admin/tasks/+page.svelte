@@ -273,6 +273,8 @@ function updateRowFocus(index: number) {
   <GroupedResourceIndex
     resource={FirstClassResource.task}
     {groupedEntities}
+    isLoading={indexQuery.countLoading}
+    failed={indexQuery.failed}
     bind:listContainer
     bind:scrollIndexByEntityId
   >
