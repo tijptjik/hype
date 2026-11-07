@@ -45,6 +45,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
 </script>
 
 <ImageEditor
+  isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   {layout}
   showNavButtons={false}
   items={model.state.items}

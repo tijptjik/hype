@@ -75,8 +75,7 @@ async function handleDelete(): Promise<void> {
       {onError}
     />
 
-    {#if onIntentChange &&
-      !isDeleteMode &&
+    {#if !isDeleteMode &&
       !isConfirmingDelete &&
       !isUploading &&
       !isUploadError}

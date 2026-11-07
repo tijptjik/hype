@@ -20,10 +20,12 @@ import LoaderCircle from 'virtual:icons/proicons/spinner'
 
 let { textControls: imageTextControls }: { textControls?: Snippet<[string | null]> } = $props()
 
-const model = useImageEditorGalleryModel(getImageCtx())
+const imageCtx = getImageCtx()
+const model = useImageEditorGalleryModel(imageCtx)
 </script>
 
 <ImageEditor
+  isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   items={model.state.items}
   activeId={model.state.activeId}
   fit="fit"

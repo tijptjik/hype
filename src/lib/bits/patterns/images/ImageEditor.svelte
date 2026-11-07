@@ -11,6 +11,7 @@ import AdminViewer from './AdminViewer.svelte'
 import ThumbnailWrapper from './ThumbnailWrapper.svelte'
 import ImageBackdrop from './components/ImageBackdrop.svelte'
 import { getGalleryBackgroundSrc } from '#lib/client/services/image.js'
+import ImageSkeleton from './components/ImageSkeleton.svelte'
 import type { ImageEditorProps } from './images.types'
 
 let {
@@ -42,6 +43,7 @@ let {
   canDownloadActiveImage = false,
   isEditBusy = false,
   isReadonly = false,
+  isLoading = false,
   isIntentDisabled = false,
   viewerControlsOffsetClass = 'bottom-4',
   getIsHighlighted,
@@ -188,6 +190,9 @@ $effect(() => {
       {@render thumbnailTrack()}
     {/if}
     <div class={cx('relative min-h-0 min-w-0 flex-1', className)}>
+      {#if isLoading && !items.length}
+        <div class="relative h-full w-full" aria-busy="true" data-image-editor-loading><ImageSkeleton /></div>
+      {:else}
       <AdminViewer
         rounded="rounded-none"
         {items}
@@ -209,13 +214,14 @@ $effect(() => {
           thumbnailFollowActiveRequestKey += 1
         }}
         {onCurrentItemLoad}
-        isEmptyUploadEnabled={true}
+        isEmptyUploadEnabled={Boolean(onAddFiles)}
         isEmptyUploadDisabled={isReadonly}
         isEmptyDropzoneEnabled={!isReadonly}
         onUploadFiles={onAddFiles}
         leftRail={isStackedLayout ? undefined : leftRail}
         rightRail={isStackedLayout ? undefined : rightRail}
       />
+      {/if}
 
       {#if !isStackedLayout}
         <div
@@ -295,7 +301,7 @@ $effect(() => {
             followActiveIdRequestId={thumbnailFollowActiveRequestId}
             variant="admin"
             orientation="vertical"
-            trackClass="pt-0!"
+            trackClass="pt-4!"
             class="h-full min-h-0"
             size={adminThumbnailSize}
             {fit}

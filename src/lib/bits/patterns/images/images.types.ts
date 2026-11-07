@@ -222,6 +222,8 @@ export type ImageEditorProps = {
   canDownloadActiveImage?: boolean
   isEditBusy?: boolean
   isReadonly?: boolean
+  /** Image evidence is still being fetched; an empty list is not an upload prompt. */
+  isLoading?: boolean
   isIntentDisabled?: boolean
   viewerControlsOffsetClass?: string
   getIsHighlighted?: (item: ViewerRenderable) => boolean
