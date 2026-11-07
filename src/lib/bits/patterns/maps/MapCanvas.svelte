@@ -35,6 +35,7 @@ import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
 import { installLocationHeading } from '#lib/map/locationHeading.js'
 import { installLocationTracking } from '#lib/map/locationTracking.js'
 import { getMarkerRetentionBudget } from '#lib/map/markerRetention.js'
+import { observeFirstMapFrame } from '#lib/map/firstFrame.js'
 import {
   canLoadFeatureViewport,
   installFeatureViewportScheduler,
@@ -86,6 +87,9 @@ type MapCanvasProps = {
   interactive?: boolean
   showControls?: boolean
   onMapReady?: (controller: MapController | null) => void
+  /** Fade the first visual frame on the public app's initial entrance. */
+  intro?: boolean
+  onVisualReady?: () => void
 }
 
 type GeolocateControlProps = {
@@ -108,10 +112,16 @@ let {
   interactive = true,
   showControls = true,
   onMapReady,
+  intro = false,
+  onVisualReady,
 }: MapCanvasProps = $props()
+
+// Keep a late first frame eligible to fade even if the controls used their fallback.
+const shouldFadeOnFirstFrame = untrack(() => intro)
 
 // ELEMENTS
 let mapContainer: HTMLDivElement
+let hasRendered = $state(false)
 
 // CONTEXT
 const appCtx = getAppCtx()
@@ -550,6 +560,15 @@ $effect(() => {
 
 $effect(() => {
   const map = activeMapInstance
+  if (!map || hasRendered) return
+  return observeFirstMapFrame(map, () => {
+    hasRendered = true
+    onVisualReady?.()
+  })
+})
+
+$effect(() => {
+  const map = activeMapInstance
   if (map) setupMap(map)
   return () => {
     if (map && mapListenersAttached) {
@@ -900,7 +919,11 @@ $effect(() => {
 
 <div
   id="map"
-  class="map absolute! inset-0 overflow-hidden caret-transparent"
+  class="map absolute! inset-0 overflow-hidden caret-transparent {shouldFadeOnFirstFrame
+    ? 'transition-opacity duration-420 ease-out motion-reduce:transition-none'
+    : ''}"
+  style:opacity={shouldFadeOnFirstFrame && !hasRendered ? 0 : undefined}
+  data-map-visual-ready={hasRendered}
   data-map-gesture-surface="true"
   data-testid="map"
   data-location-marker-tone={locationMarkerTone}
