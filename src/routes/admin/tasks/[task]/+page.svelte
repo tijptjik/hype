@@ -540,11 +540,12 @@ async function handleReview(
   action: TaskReviewUiAction,
   explicitReviewReason?: string,
 ): Promise<boolean> {
-  if (!task?.id || isReviewBusy || isLayerBusy) return false
+  if (!task?.id || task.isReviewed || isReviewBusy || isLayerBusy) return false
 
   isReviewBusy = true
 
   try {
+    // Refresh the editor query too so Back cannot restore its pre-review task snapshot.
     const result = await reviewTask({
       id: task.id,
       action,
@@ -552,7 +553,7 @@ async function handleReview(
       meta: {
         isAdminRequest: true,
       },
-    })
+    }).updates(getEditorRequest())
 
     // Apply the reviewed task immediately so cache, toast, and navigation use the same snapshot.
     const updatedTask = structuredClone(result.data)
