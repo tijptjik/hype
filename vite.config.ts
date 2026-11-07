@@ -1,3 +1,6 @@
+// NODE
+import { resolve } from 'node:path'
+// ADAPTERS
 import adapterStatic from '@sveltejs/adapter-static'
 import adapterCloudflare from '@sveltejs/adapter-cloudflare'
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'
@@ -12,7 +15,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 // LOCAL DEVELOPMENT
 import { getDevPersona } from './scripts/dev/config.ts'
-import { getDevOutput } from './scripts/dev/output.ts'
+import { getDevOutput, getParaglideOutput } from './scripts/dev/output.ts'
 import { manualBrowserUpdates } from './scripts/dev/manual-browser-updates.ts'
 // DATA
 // import seed from './src/lib/db/seed';
@@ -77,6 +80,11 @@ const selectAdapter = () => {
         process.env.HYPE_LOCAL_R2 === '1' ? './wrangler.local.toml' : './wrangler.toml',
       platformProxy: {
         environment: process.env.CLOUDFLARE_ENV,
+        // Allow local development while Cloudflare preview sessions are unavailable.
+        ...(process.env.HYPE_LOCAL_R2 === '1' &&
+        process.env.HYPE_REMOTE_BINDINGS === '0'
+          ? { remoteBindings: false }
+          : {}),
         ...(getDevPersona(process.env) && process.env.HYPE_DEV_STATE
           ? { persist: { path: process.env.HYPE_DEV_STATE } }
           : {}),
@@ -370,6 +378,12 @@ export default defineConfig(async ({ command }) => ({
     ),
   },
   envPrefix: ['VITE_', 'PUBLIC_'],
+  resolve: {
+    alias: {
+      // Keep the runtime and messages together, outside CLI-generated translations.
+      '#lib/paraglide': resolve(getParaglideOutput(process.argv, command)),
+    },
+  },
   environments: {
     hype_prod: {},
     hype_preview: {},
@@ -379,8 +393,9 @@ export default defineConfig(async ({ command }) => ({
     suppressOptimizedKyselyMigrationWarning(),
     paraglideVitePlugin({
       project: './project.inlang',
-      outdir: './src/lib/paraglide',
-      // Keep physical output for standalone scripts; v3 otherwise defaults to virtual modules.
+      // CLI scripts own src/lib/paraglide; each Vite process owns its translations.
+      outdir: getParaglideOutput(process.argv, command),
+      // Keep physical output; v3 otherwise defaults to virtual modules.
       // Group dev translations by locale to avoid Firefox linking a module per message.
       outputStructure: command === 'serve' ? 'locale-modules' : 'message-modules',
     }),

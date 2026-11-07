@@ -13,6 +13,7 @@
     "dev:cf:preview": "CLOUDFLARE_ENV=preview vite dev",
     "dev:cf:prod": "CLOUDFLARE_ENV=production vite dev",
     "dev:local": "HYPE_LOCAL_R2=1 vite dev",
+    "dev:offline": "HYPE_LOCAL_R2=1 HYPE_REMOTE_BINDINGS=0 vite dev",
     "dev:no-mullvad": "mullvad-exclude vite dev",
     "dev:asset-service:local": "bun wrangler dev -c workers/asset-service/wrangler.toml --persist-to .wrangler/state/asset-service --port 8790",
     "dev:asset-service:simulated": "bun wrangler dev -c workers/asset-service/wrangler.local.toml --local --persist-to .wrangler/state/asset-service --port 8790",
