@@ -31,6 +31,10 @@ import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
 import { installLocationHeading } from '#lib/map/locationHeading.js'
 import { installLocationTracking } from '#lib/map/locationTracking.js'
 import { getMarkerRetentionBudget } from '#lib/map/markerRetention.js'
+import {
+  canLoadFeatureViewport,
+  installFeatureViewportScheduler,
+} from '#lib/map/viewportScheduler.js'
 import { featureQueryKey } from '#lib/client/services/featureQuery.js'
 import {
   applyMapCanvasBackground,
@@ -640,7 +644,7 @@ $effect(() => {
   }
 })
 
-// Reveal cached markers on movement and refresh visible cells at a bounded cadence.
+// Reveal cached markers throughout movement; discover new rows at rest or during held pans.
 $effect(() => {
   const map = activeMapInstance
   if (!map) return
@@ -651,30 +655,13 @@ $effect(() => {
       map.getZoom(),
     )
   }
-  let movementTimer: ReturnType<typeof setTimeout> | undefined
-  const onMove = (): void => {
-    markerRenderer?.updateCamera()
-    if (movementTimer !== undefined) return
-    movementTimer = setTimeout(() => {
-      movementTimer = undefined
-      updateViewport()
-    }, 300)
-  }
-  const onMoveEnd = (): void => {
-    clearTimeout(movementTimer)
-    movementTimer = undefined
-    markerRenderer?.updateCamera(true)
-    updateViewport()
-  }
-  map.on('move', onMove)
-  map.on('moveend', onMoveEnd)
-  map.on('resize', updateViewport)
-  updateViewport()
+  const stopViewportScheduler = installFeatureViewportScheduler(map, {
+    publish: updateViewport,
+    isLoading: () => appCtx.view.resources.featureQueries.map.loading,
+    updateCamera: force => markerRenderer?.updateCamera(force),
+  })
   return () => {
-    clearTimeout(movementTimer)
-    map.off('move', onMove)
-    map.off('moveend', onMoveEnd)
-    map.off('resize', updateViewport)
+    stopViewportScheduler()
     appCtx.view.featureViewport = undefined
   }
 })
@@ -693,6 +680,8 @@ $effect(() => {
   }
 
   const timer = setTimeout(() => {
+    // A flight or pinch may begin during the debounce; its endpoint will publish again.
+    if (!activeMapInstance || !canLoadFeatureViewport(activeMapInstance)) return
     void appCtx.view.queries.loadFeatureQuery('map', input).catch(error => {
       console.error('[Map features] Query failed:', error)
     })
@@ -773,7 +762,6 @@ watch(
     layerMarkerThemes,
     appCtx.selection.featureId,
     appCtx.selection.collection?.items.map(item => item.id).join(','),
-    isAnimating,
   ],
   () => {
     if (markerRenderer) {
@@ -1013,12 +1001,12 @@ $effect(() => {
       <div
         class="group pointer-events-auto flex max-w-xs flex-col items-center gap-8 rounded-lg border-2 border-[#4987E2] bg-black p-8 px-8 font-mono shadow-[0_0_15px_rgba(0,0,255,0.5)]"
       >
-        <p class="text-lg text-base-content">{m.map__no_markers_without_layers()}</p>
+        <p class="text-base-content text-lg">{m.map__no_markers_without_layers()}</p>
         <Button
           text={m.map__select_layer()}
           style="outline"
           iconComponent={Square3Stack3d}
-          class="[--btn-color:#4987E2] [--btn-outline-fg:#4987E2] [--btn-hover-border:color-mix(in_oklab,var(--color-primary)_70%,transparent)] [--btn-hover-fg:color-mix(in_oklab,var(--color-primary)_70%,transparent)] bg-black font-bold uppercase ring-primary transition-all duration-300 group-hover:ring-2 group-hover:shadow-primary/70 group-hover:inset-shadow-lg"
+          class="ring-primary group-hover:shadow-primary/70 group-hover:inset-shadow-lg bg-black font-bold uppercase transition-all duration-300 [--btn-color:#4987E2] [--btn-hover-border:color-mix(in_oklab,var(--color-primary)_70%,transparent)] [--btn-hover-fg:color-mix(in_oklab,var(--color-primary)_70%,transparent)] [--btn-outline-fg:#4987E2] group-hover:ring-2"
           iconClasses="transition-all duration-300 group-hover:scale-125 group-hover:text-primary"
         />
       </div>
