@@ -74,15 +74,15 @@ function setIntent(id: string, intent: Intent): void {
 }
 </script>
 <section class="space-y-4">
-  <h4 class="border-border border-b pb-2 font-medium">Photos</h4>
-  <p class="text-muted-foreground text-sm">
+  <h4 class="border-border border-b pb-2 text-center font-medium">Photos</h4>
+  <p class="text-muted-foreground text-center text-sm">
     Click a photo to move it between Discard and Keep. Use the control on each photo to
     choose its purpose.
   </p>
   <div class="grid grid-cols-2 gap-4">
     {#each ['Discard', 'Keep'] as side}
       <section class="min-w-0 space-y-3" aria-label={`${side} photos`}>
-        <h5 class="text-sm font-semibold">{side}</h5>
+        <h5 class={`text-sm font-semibold ${side === 'Discard' ? 'text-right' : ''}`}>{side}</h5>
         <div class="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3">
           {#each photos.filter(
             photo =>
@@ -129,7 +129,7 @@ function setIntent(id: string, intent: Intent): void {
                 />
               </div>
               {#if sources[0].content.gallery.entries[photo.id]}
-                <span class="text-muted-foreground block text-xs"
+                <span class={`text-muted-foreground block text-xs ${side === 'Discard' ? 'text-right' : ''}`}
                   >Already in gallery</span
                 >
               {/if}

@@ -254,39 +254,33 @@ function editProperty(
   <div
     class="bg-panel sticky top-0 z-10 col-span-3 grid grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] gap-x-2 pb-3 sm:gap-x-4"
   >
-    <header class="min-w-0 space-y-2">
+    <header class="bg-muted/20 border-border/60 min-w-0 space-y-2 rounded-md border px-3 py-3 text-right sm:px-4">
       <span
-        class="text-muted-foreground inline-flex min-h-9 items-center text-xs font-bold tracking-wide"
+        class="text-foreground/80 block text-2xl leading-none font-medium tracking-tight sm:text-3xl"
         >Discard</span
       >
-      <h3 class="font-semibold break-words whitespace-normal">
+      <h3 class="text-sm leading-snug font-medium break-words whitespace-normal">
         {identityTitle(discard)}
       </h3>
-      <p class="text-muted-foreground text-sm break-words whitespace-normal">
-        {discard.content.translations[locale]?.address.value || 'No address supplied'}
-      </p>
     </header>
     <span></span>
     <header
-      class="group/keep border-primary/25 bg-panel relative min-w-0 space-y-2 rounded-lg border p-3"
+      class="group/keep border-primary/40 bg-linear-to-br from-[color-mix(in_oklab,var(--color-primary)_40%,black)] to-[color-mix(in_oklab,var(--color-primary)_25%,black)] text-white relative min-w-0 space-y-2 rounded-md border px-3 py-3 sm:px-4"
     >
       <span
-        class="text-primary inline-flex min-h-9 items-center text-xs font-bold tracking-wide"
+        class="block pr-7 text-2xl leading-none font-medium tracking-tight sm:text-3xl"
         >Keep</span
       >
       <button
         type="button"
-        class="border-border bg-panel focus-visible:outline-primary absolute top-2 right-2 flex size-9 items-center justify-center rounded-lg border opacity-0 transition-opacity group-hover/keep:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 [@media(hover:none)]:opacity-100"
+        class="border-white/30 bg-transparent text-white absolute top-2 right-2 flex size-7 items-center justify-center rounded-md border opacity-0 transition-opacity group-hover/keep:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-current [@media(hover:none)]:opacity-100"
         aria-label="Replace kept Feature"
         disabled={busy}
         onclick={onReplace}
       >
         <ReplaceIcon class="size-4" />
       </button>
-      <h3 class="font-semibold break-words whitespace-normal">{identityTitle(keep)}</h3>
-      <p class="text-muted-foreground text-sm break-words whitespace-normal">
-        {keep.content.translations[locale]?.address.value || 'No address supplied'}
-      </p>
+      <h3 class="text-sm leading-snug font-medium break-words whitespace-normal">{identityTitle(keep)}</h3>
     </header>
   </div>
   {#each [discard, keep] as record, index}
@@ -320,10 +314,11 @@ function editProperty(
     <p role="status" class="text-error col-span-3 text-sm">{categoryError}</p>
   {/if}
   <div
-    class="border-border col-span-3 mt-4 flex items-center justify-between gap-3 border-b pb-2"
+    class="border-border col-span-3 mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b pb-2"
   >
-    <h4 class="font-medium">Profile</h4>
+    <h4 class="col-start-2 text-center font-medium">Profile</h4>
     <LocaleToolbar
+      class="col-start-3 min-w-0 justify-self-end max-sm:[&_[data-control-label]]:hidden"
       selectedLocales={languages}
       visibleLocales={visibleLocales.length ? visibleLocales : languages}
       options={localeOptions}
@@ -340,7 +335,7 @@ function editProperty(
     />
   </div>
   {#each ['title', 'description'] as key}
-    <h5 class="text-muted-foreground col-span-3 mt-2 text-xs font-medium">
+    <h5 class="text-muted-foreground col-span-3 mt-2 text-center text-xs font-medium">
       {key === 'title' ? 'Name' : 'Description'}
     </h5>
     {#each shownLocales as language}
@@ -356,7 +351,7 @@ function editProperty(
         key === 'title'
           ? (output.titles?.[language] ?? '')
           : (output.descriptions?.[language] ?? '')}
-      <div class="flex min-w-0 items-start gap-2 py-2 text-sm">
+      <div class="flex min-w-0 flex-row-reverse items-start gap-2 py-2 text-right text-sm">
         {#if multilingual}
           <span
             class="text-muted-foreground shrink-0 font-mono text-xs whitespace-nowrap"
@@ -422,7 +417,7 @@ function editProperty(
       </div>
     {/each}
   {/each}
-  <h4 class="border-border col-span-3 mt-5 border-b pb-2 font-medium">Status</h4>
+  <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">Status</h4>
   {#each [
     {
       key: 'isIntangible',
@@ -441,8 +436,8 @@ function editProperty(
       no: 'Not visitable',
     },
   ] as row}
-    <h5 class="text-muted-foreground col-span-3 text-xs">{row.label}</h5>
-    <p class="self-center text-sm">{row.incoming ? row.yes : row.no}</p>
+    <h5 class="text-muted-foreground col-span-3 text-center text-xs">{row.label}</h5>
+    <p class="self-center text-right text-sm">{row.incoming ? row.yes : row.no}</p>
     <MergeImportControl
       incoming={row.incoming}
       existing={row.existing}
@@ -476,8 +471,8 @@ function editProperty(
       <option value="true">{row.yes}</option>
     </select>
   {/each}
-  <h5 class="text-muted-foreground col-span-3 text-xs">Last seen</h5>
-  <p class="self-center text-sm">{discard.content.profile.visitability.asOf ?? '—'}</p>
+  <h5 class="text-muted-foreground col-span-3 text-center text-xs">Last seen</h5>
+  <p class="self-center text-right text-sm">{discard.content.profile.visitability.asOf ?? '—'}</p>
   <MergeImportControl
     incoming={discard.content.profile.visitability.asOf}
     existing={keep.content.profile.visitability.asOf}
@@ -495,11 +490,11 @@ function editProperty(
     disabled={busy}
     oninput={event => (output.profileEdits!.asOf = event.currentTarget.value || null)}
   >
-  <p class="text-muted-foreground col-span-3 text-xs">
+  <p class="text-muted-foreground col-span-3 text-center text-xs">
     Last seen keeps the latest observation date.
   </p>
-  <h4 class="border-border col-span-3 mt-5 border-b pb-2 font-medium">Location</h4>
-  <p class="min-w-0 self-center text-sm break-words whitespace-normal">
+  <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">Location</h4>
+  <p class="min-w-0 self-center text-right text-sm break-words whitespace-normal">
     {discard.content.translations[locale]?.address.value || '—'}
   </p>
   <MergeImportControl
@@ -519,7 +514,7 @@ function editProperty(
       .translations[locale]?.address.value || '—'}
   </p>
   {#each propertyGroups as group}
-    <h4 class="border-border col-span-3 mt-5 border-b pb-2 font-medium">
+    <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
       {group.label}
     </h4>
     {#each group.ids as id}
@@ -540,11 +535,11 @@ function editProperty(
         !selected.valueJson &&
         ['text', 'number', 'date'].includes(definition.dataType) &&
         !(keep.content.placement.location && definition.component === 'PhoneField')}
-      <h5 class="text-muted-foreground col-span-3 text-xs font-medium">
+      <h5 class="text-muted-foreground col-span-3 text-center text-xs font-medium">
         {propertyLabel(id)}
       </h5>
       {#each translated ? shownLocales : [locale] as language}
-        <div class="flex min-w-0 gap-2 self-center text-sm">
+        <div class="flex min-w-0 flex-row-reverse gap-2 self-center text-right text-sm">
           {#if translated && multilingual}
             <span
               class="text-muted-foreground shrink-0 font-mono text-xs whitespace-nowrap"
