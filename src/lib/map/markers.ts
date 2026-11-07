@@ -93,6 +93,23 @@ type RetainedMarker = {
   attached: boolean
 }
 
+/** Opt-in work limits for public maps; synchronous embedded renderers omit this option. */
+export type MarkerRendererWorkOptions = {
+  /** Cold construction time per animation frame; defaults to four milliseconds. */
+  frameBudgetMs?: number
+  /** Pause cold construction during camera movement; defaults to true. */
+  deferWhileMoving?: boolean
+  /** Maximum attached native markers, optionally resolved again after a resize. */
+  maxAttached?: number | (() => number)
+  /** Whether nearby cached nodes can attach without entering the active row set. */
+  attachRetained?: boolean
+}
+
+type PendingMarkerCreation = {
+  coordinates: [number, number]
+  create: (attach: boolean) => void
+}
+
 /**
  * Instance-owned marker renderer for one MapLibre map.
  */
@@ -417,12 +434,16 @@ function cancelMarkerRemoval(marker: MarkerInstance): void {
  * @param map - Map instance that owns the markers.
  * @param maplibre - MapLibre namespace used to construct markers.
  * @param onElementChange - Optional transition handoff for marker DOM elements.
+ * @param work - Optional frame and attachment limits for progressive public maps.
  * @returns Renderer with declarative reconciliation and explicit element lookup.
+ * @remarks Existing state and scope removals remain synchronous. With work limits,
+ * only a newly selected near-view marker can bypass the cold creation queue.
  */
 export function createMarkerRenderer(
   map: MaplibreMap,
   maplibre: MapLibreMarkerFactory,
   onElementChange?: (featureId: Id, element: HTMLElement | null) => void,
+  work?: MarkerRendererWorkOptions,
 ): MarkerRenderer {
   const markers = new Map<Id, MarkerInstance>()
   const retained = new Map<Id, RetainedMarker>()
@@ -431,19 +452,175 @@ export function createMarkerRenderer(
   let lastCameraUpdate = -Infinity
   let retentionScope: string | undefined
   const diagnosticsTimers = new Set<number>()
+  const pendingCreations = new Map<Id, PendingMarkerCreation>()
+  let coldAdmission = new Set<Id>()
+  let creationFrame: number | undefined
+  let renderState: MarkerRenderState = {}
+  let currentRetentionBudget = 1000
   let disposed = false
+
+  /** Reads the configured live marker ceiling. @returns A finite positive marker count. */
+  const attachedLimit = (): number => {
+    const requested =
+      typeof work?.maxAttached === 'function'
+        ? work.maxAttached()
+        : (work?.maxAttached ?? 500)
+    return Number.isFinite(requested) ? Math.max(1, Math.floor(requested)) : 500
+  }
+
+  /** Gives selection first access to a constrained live slot. @param id Feature identity. @returns Stable priority group. */
+  const markerPriority = (id: Id): number =>
+    renderState.selectedId === id ? 0 : renderState.highlightedIds?.has(id) ? 1 : 2
+
+  /** Cancels a pending frame without discarding current row intentions. @returns Nothing. */
+  const cancelCreationFrame = (): void => {
+    if (creationFrame !== undefined) window.cancelAnimationFrame(creationFrame)
+    creationFrame = undefined
+  }
+
+  /** Prevents cold construction from competing with an animated camera. @returns Whether cold work must wait. */
+  const creationIsPaused = (): boolean =>
+    Boolean(work && work.deferWhileMoving !== false && map.isMoving())
+
+  /** Leaves an explicitly unpaused queue running through camera starts. @returns Nothing. */
+  const onMovementStart = (): void => {
+    if (work?.deferWhileMoving !== false) cancelCreationFrame()
+  }
+
+  /**
+   * Releases old native nodes only when the resident cache is full.
+   * @returns Nothing; active markers remain protected and distant cached nodes go first.
+   */
+  const evictRetained = (): void => {
+    const distant: Id[] = []
+    const nearby: Id[] = []
+    for (const [id, entry] of retained) (entry.attached ? nearby : distant).push(id)
+    // Oldest distant entries go first, then oldest nearby entries; active markers are protected.
+    for (const id of [...distant, ...nearby]) {
+      if (markers.size + retained.size <= currentRetentionBudget) break
+      retained.get(id)?.marker.remove()
+      retained.delete(id)
+      onElementChange?.(id, null)
+    }
+  }
+
+  /**
+   * Starts one frame only when a cold marker can enter the viewport.
+   * @returns Nothing; offscreen and moving queues sleep until a camera or row update.
+   */
+  const scheduleCreation = (): void => {
+    if (!work || disposed || creationFrame !== undefined || creationIsPaused()) return
+    if (!pendingCreations.size || !coldAdmission.size) return
+    const isNear = createMarkerVisibilityTest(map)
+    if (
+      ![...pendingCreations].some(
+        ([id, entry]) => coldAdmission.has(id) && isNear(entry.coordinates),
+      )
+    )
+      return
+    creationFrame = window.requestAnimationFrame(drainCreations)
+  }
+
+  /**
+   * Constructs a bounded batch while leaving stale or distant work unmaterialized.
+   * @returns Nothing after scheduling the next useful frame, if any.
+   */
+  const drainCreations = (): void => {
+    creationFrame = undefined
+    if (disposed || creationIsPaused()) return
+    const startedAt = performance.now()
+    const requestedBudget = work?.frameBudgetMs ?? 4
+    const frameBudget = Number.isFinite(requestedBudget)
+      ? Math.max(1, Math.min(8, requestedBudget))
+      : 4
+    const isNear = createMarkerVisibilityTest(map)
+    const liveLimit = attachedLimit()
+    let liveCount = markers.size - detached.size
+    for (const entry of retained.values()) if (entry.attached) liveCount++
+    let created = 0
+    // A count guard also yields on fast devices and coarsened performance clocks.
+    for (const [id, entry] of [...pendingCreations].sort(
+      ([left], [right]) => markerPriority(left) - markerPriority(right),
+    )) {
+      if (!coldAdmission.has(id) || !isNear(entry.coordinates)) continue
+      if (liveCount >= liveLimit) break
+      pendingCreations.delete(id)
+      // Admission reserves the slot before this frame; native attachment is timed too.
+      entry.create(true)
+      liveCount++
+      created++
+      if (created >= 16 || performance.now() - startedAt >= frameBudget) break
+    }
+    // Reconcile once per batch, never once per marker. New entries already own their
+    // native slot, so this pass does not defer their addTo/DOM work past the deadline.
+    updateCamera(true)
+    if (created) {
+      evictRetained()
+      if (isMarkerBootstrapDebugEnabled())
+        logMarkerBootstrap('progressive marker batch', {
+          created,
+          pending: pendingCreations.size,
+          elapsedMs: performance.now() - startedAt,
+        })
+    }
+    scheduleCreation()
+  }
 
   // Keep decoded nodes warm without giving offscreen markers per-frame MapLibre work.
   const updateCamera = (force = false): void => {
-    if (disposed || retentionScope === undefined) return
+    if (disposed || (retentionScope === undefined && !work)) return
     const now = performance.now()
     if (!force && now - lastCameraUpdate < 80) return
     lastCameraUpdate = now
     const isNear = createMarkerVisibilityTest(map)
-    for (const [id, coordinates] of positions) {
+    const liveLimit = attachedLimit()
+    const activePositions = [...positions]
+    if (work)
+      activePositions.sort(
+        ([left], [right]) => markerPriority(left) - markerPriority(right),
+      )
+    const admitted = new Set<Id>()
+    for (const [id, coordinates] of activePositions) {
+      if (
+        (markers.has(id) || (work && pendingCreations.has(id))) &&
+        (!work || admitted.size < liveLimit) &&
+        isNear(coordinates)
+      )
+        admitted.add(id)
+    }
+    // Reserve cold slots before construction, preventing cached work or lower-priority
+    // active nodes from pushing a timed attachment into a later unbounded camera pass.
+    coldAdmission = new Set([...admitted].filter(id => pendingCreations.has(id)))
+    // The query already caps active rows at 500. Cached presentation must not
+    // multiply that live rendering cost; keep a small advance guard for panning.
+    let available =
+      work?.attachRetained === false
+        ? 0
+        : Math.min(64, Math.max(0, liveLimit - admitted.size))
+    const admittedRetained = new Set<Id>()
+    for (const [id, entry] of [...retained].reverse()) {
+      if (available > 0 && isNear(entry.coordinates)) {
+        admittedRetained.add(id)
+        available--
+      }
+    }
+    // Release old slots before attaching newly selected or newly visible markers.
+    for (const [id, marker] of markers) {
+      if (admitted.has(id) || detached.has(id)) continue
+      marker.remove()
+      detached.add(id)
+      onElementChange?.(id, null)
+    }
+    for (const [id, entry] of retained) {
+      if (!entry.attached || admittedRetained.has(id)) continue
+      entry.marker.remove()
+      entry.attached = false
+      onElementChange?.(id, null)
+    }
+    for (const [id] of activePositions) {
       const marker = markers.get(id)
       if (!marker) continue
-      const near = isNear(coordinates)
+      const near = admitted.has(id)
       if (near === !detached.has(id)) continue
       if (near) {
         marker.addTo(map)
@@ -454,21 +631,24 @@ export function createMarkerRenderer(
       }
       onElementChange?.(id, near ? marker.getElement() : null)
     }
-    // The query already caps active rows at 500. Cached presentation must not
-    // multiply that live rendering cost; keep a small advance guard for panning.
-    let available = Math.min(64, Math.max(0, 500 - (markers.size - detached.size)))
-    for (const [id, entry] of [...retained].reverse()) {
-      const near = available > 0 && isNear(entry.coordinates)
-      if (near) available--
-      if (near === entry.attached) continue
-      if (near) entry.marker.addTo(map)
-      else entry.marker.remove()
-      entry.attached = near
-      onElementChange?.(id, near ? entry.marker.getElement() : null)
+    for (const id of admittedRetained) {
+      const entry = retained.get(id)
+      if (!entry || entry.attached) continue
+      entry.marker.addTo(map)
+      entry.attached = true
+      onElementChange?.(id, entry.marker.getElement())
     }
+    scheduleCreation()
   }
 
   const clear = (): void => {
+    cancelCreationFrame()
+    pendingCreations.clear()
+    coldAdmission.clear()
+    if (work) {
+      map.off('movestart', onMovementStart)
+      map.off('moveend', onMovementEnd)
+    }
     for (const timer of diagnosticsTimers) window.clearTimeout(timer)
     diagnosticsTimers.clear()
     for (const [id, marker] of markers) {
@@ -484,6 +664,17 @@ export function createMarkerRenderer(
     retained.clear()
     positions.clear()
     detached.clear()
+  }
+
+  /** Resumes useful cold work after the actual endpoint is known. @returns Nothing. */
+  const onMovementEnd = (): void => {
+    updateCamera(true)
+    scheduleCreation()
+  }
+
+  if (work) {
+    map.on('movestart', onMovementStart)
+    map.on('moveend', onMovementEnd)
   }
 
   const sync = (
@@ -505,6 +696,11 @@ export function createMarkerRenderer(
     } = {},
   ): void => {
     if (disposed) return
+    // Replace pending closures before any new scope, image or selection can be rendered.
+    cancelCreationFrame()
+    for (const id of pendingCreations.keys()) if (!markers.has(id)) positions.delete(id)
+    pendingCreations.clear()
+    coldAdmission.clear()
     const retention = options.retention
     const nextRetentionScope = retention
       ? JSON.stringify([
@@ -538,7 +734,7 @@ export function createMarkerRenderer(
       }
     }
     retentionScope = nextRetentionScope
-    const isNear = retention ? createMarkerVisibilityTest(map) : () => true
+    const isNear = retention || work ? createMarkerVisibilityTest(map) : () => true
     const markerStyle = options.markerStyle ?? 'image'
     const markerThemesByProjectId = options.markerThemesByProjectId ?? new Map()
     const markerThemesByLayerId = options.markerThemesByLayerId ?? new Map()
@@ -546,6 +742,7 @@ export function createMarkerRenderer(
       selectedId: options.selectedId,
       highlightedIds: options.highlightedIds,
     }
+    renderState = markerState
     const diagnostics = isMarkerBootstrapDebugEnabled()
       ? {
           created: 0,
@@ -644,7 +841,7 @@ export function createMarkerRenderer(
           previousCoordinates?.[1] !== coordinates[1]
         )
           existingMarker.setLngLat(coordinates)
-        if (!retention && detached.delete(feature.id)) {
+        if (!retention && !work && detached.delete(feature.id)) {
           existingMarker.addTo(map)
           onElementChange?.(feature.id, element)
         }
@@ -657,49 +854,59 @@ export function createMarkerRenderer(
         onElementChange?.(feature.id, null)
       }
 
-      const element = custom
-        ? createCustomMarkerElement(custom)
-        : createFeatureMarkerElement(feature, effectiveStyle, markerTheme, diagnostics)
-      const addDataToElements = (node: Element): void => {
-        node.setAttribute('data-type', 'marker')
-        node.setAttribute('data-feature-id', feature.id as string)
-        Array.from(node.children).forEach(addDataToElements)
+      /** Materializes this exact current presentation only after admission. @returns Nothing. */
+      const create = (attach = false): void => {
+        const element = custom
+          ? createCustomMarkerElement(custom)
+          : createFeatureMarkerElement(
+              feature,
+              effectiveStyle,
+              markerTheme,
+              diagnostics,
+            )
+        const addDataToElements = (node: Element): void => {
+          node.setAttribute('data-type', 'marker')
+          node.setAttribute('data-feature-id', feature.id as string)
+          Array.from(node.children).forEach(addDataToElements)
+        }
+        addDataToElements(element)
+        applyMarkerState(element, feature.id, markerState)
+        const marker = new maplibre.Marker({ element, anchor: 'center' }).setLngLat(
+          coordinates,
+        )
+        // Cold frame batches include addTo/DOM attachment within their measured work.
+        // Immediate replacements are admitted by the synchronous camera pass below.
+        const attached = attach || (!work && isNear(coordinates))
+        if (attached) {
+          marker.addTo(map)
+          detached.delete(feature.id)
+        } else detached.add(feature.id)
+        markers.set(feature.id, marker)
+        if (attached || !work) onElementChange?.(feature.id, attached ? element : null)
       }
-      addDataToElements(element)
-      applyMarkerState(element, feature.id, markerState)
-      const marker = new maplibre.Marker({ element, anchor: 'center' }).setLngLat(
-        coordinates,
-      )
-      const attached = isNear(coordinates)
-      if (attached) {
-        marker.addTo(map)
-        detached.delete(feature.id)
-      } else detached.add(feature.id)
-      markers.set(feature.id, marker)
-      onElementChange?.(feature.id, attached ? element : null)
+      if (
+        !work ||
+        existingMarker ||
+        (feature.id === options.selectedId && isNear(coordinates))
+      ) {
+        create()
+      } else {
+        // Do not start cold image requests merely to fill the warm retention cache.
+        pendingCreations.set(feature.id, { coordinates, create })
+      }
     }
 
     // Keep nearby cached presentation current; evict only when capacity requires it.
     updateCamera(true)
-    const distant: Id[] = []
-    const nearby: Id[] = []
     for (const [id, entry] of retained) {
-      const near = entry.attached
       applyMarkerState(entry.marker.getElement(), id, markerState)
-      const candidates = near ? nearby : distant
-      candidates.push(id)
     }
     const requestedBudget = retention?.budget ?? 0
-    const budget = Number.isFinite(requestedBudget)
+    currentRetentionBudget = Number.isFinite(requestedBudget)
       ? Math.max(500, Math.min(1500, Math.floor(requestedBudget)))
       : 1000
-    // Oldest distant entries go first, then oldest nearby entries; active markers are protected.
-    for (const id of [...distant, ...nearby]) {
-      if (markers.size + retained.size <= budget) break
-      retained.get(id)?.marker.remove()
-      retained.delete(id)
-      onElementChange?.(id, null)
-    }
+    evictRetained()
+    scheduleCreation()
 
     if (diagnostics?.created) {
       const reportMarkerImageState = (delayMs: number): void => {

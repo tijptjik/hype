@@ -441,6 +441,310 @@ describe('map markers', () => {
   })
 })
 
+describe('progressive native markers', () => {
+  beforeEach(() => {
+    TestMarker.instances = []
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  /** Builds controllable frames, native motion events and per-marker construction cost. @returns Progressive renderer fixture. */
+  function progressiveFixture(costMs = 2.1, attachMs = 0) {
+    let time = 0
+    let nextFrame = 0
+    let moving = false
+    let offsetX = 0
+    const frames = new Map<number, FrameRequestCallback>()
+    const listeners = new Map<string, Set<() => void>>()
+    vi.spyOn(performance, 'now').mockImplementation(() => time)
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frames.set(++nextFrame, callback)
+      return nextFrame
+    })
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id))
+    const camera = {
+      ...retentionMap,
+      isMoving: () => moving,
+      project: ([longitude, latitude]: [number, number]) => ({
+        x: longitude * 100 + offsetX,
+        y: latitude,
+      }),
+      on: (event: string, callback: () => void) => {
+        if (!listeners.has(event)) listeners.set(event, new Set())
+        listeners.get(event)?.add(callback)
+      },
+      off: (event: string, callback: () => void) =>
+        listeners.get(event)?.delete(callback),
+    } as unknown as MapLibreMap
+    class CostedMarker extends TestMarker {
+      constructor(options: { element: HTMLElement }) {
+        super(options)
+        time += costMs
+      }
+
+      addTo(): this {
+        super.addTo()
+        time += attachMs
+        return this
+      }
+    }
+    return {
+      camera,
+      factory: { Marker: CostedMarker } as never,
+      frames,
+      listeners,
+      moveTo: (offset: number): void => {
+        offsetX = offset
+      },
+      emit: (event: 'movestart' | 'moveend'): void => {
+        moving = event === 'movestart'
+        for (const callback of listeners.get(event) ?? []) callback()
+      },
+      frame: (): void => {
+        time += 16
+        const callbacks = [...frames.values()]
+        frames.clear()
+        for (const callback of callbacks) callback(time)
+      },
+    }
+  }
+
+  const retention = { scope: 'public', budget: 1000 }
+
+  it('yields cold construction between frames while preserving every requested marker', () => {
+    const fixture = progressiveFixture()
+    const renderer = createMarkerRenderer(fixture.camera, fixture.factory, undefined, {
+      frameBudgetMs: 4,
+    })
+    const rows = Array.from({ length: 5 }, (_, index) =>
+      feature(`row-${index}`, [1, 1]),
+    )
+    renderer.sync(rows, { retention })
+    expect(TestMarker.instances).toHaveLength(0)
+    expect(fixture.frames.size).toBe(1)
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(2)
+    expect(fixture.frames.size).toBe(1)
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(4)
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(5)
+    expect(rows.every(row => renderer.getElement(row.id))).toBe(true)
+    expect(fixture.frames.size).toBe(0)
+    renderer.clear()
+  })
+
+  it('pauses cold creation during motion without repeatedly requesting frames', () => {
+    const fixture = progressiveFixture()
+    const renderer = createMarkerRenderer(
+      fixture.camera,
+      fixture.factory,
+      undefined,
+      {},
+    )
+    renderer.sync([feature('waiting', [1, 1])], { retention })
+    fixture.emit('movestart')
+    expect(fixture.frames.size).toBe(0)
+    renderer.sync([feature('latest', [1, 1])], { retention })
+    renderer.updateCamera(true)
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(0)
+    expect(fixture.frames.size).toBe(0)
+    fixture.emit('moveend')
+    fixture.frame()
+    expect(renderer.getElement('latest')).not.toBeNull()
+    expect(renderer.getElement('waiting')).toBeNull()
+    renderer.clear()
+  })
+
+  it('includes native attachment cost in the frame deadline', () => {
+    const fixture = progressiveFixture(0.1, 2.1)
+    const renderer = createMarkerRenderer(fixture.camera, fixture.factory, undefined, {
+      frameBudgetMs: 4,
+    })
+    renderer.sync(
+      Array.from({ length: 5 }, (_, index) => feature(`attach-${index}`, [1, 1])),
+      { retention },
+    )
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(2)
+    expect(TestMarker.instances.every(marker => marker.attachments === 1)).toBe(true)
+    expect(fixture.frames.size).toBe(1)
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(4)
+    renderer.clear()
+  })
+
+  it('does not create cold images beyond the live allowance and wakes on a larger allowance', () => {
+    const fixture = progressiveFixture()
+    let limit = 2
+    const renderer = createMarkerRenderer(fixture.camera, fixture.factory, undefined, {
+      maxAttached: () => limit,
+    })
+    renderer.sync(
+      Array.from({ length: 5 }, (_, index) => feature(`limited-${index}`, [1, 1])),
+      { retention },
+    )
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(2)
+    expect(fixture.frames.size).toBe(0)
+    limit = 3
+    renderer.updateCamera(true)
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(3)
+    expect(fixture.frames.size).toBe(0)
+    renderer.clear()
+  })
+
+  it('does not create cold offscreen images and resumes only when they approach', () => {
+    const fixture = progressiveFixture()
+    const callback = vi.fn()
+    const renderer = createMarkerRenderer(fixture.camera, fixture.factory, callback, {})
+    renderer.sync([feature('distant', [50, 1])], { retention })
+    expect(fixture.frames.size).toBe(0)
+    expect(TestMarker.instances).toHaveLength(0)
+    expect(callback).not.toHaveBeenCalled()
+    fixture.moveTo(-4900)
+    renderer.updateCamera(true)
+    expect(fixture.frames.size).toBe(1)
+    fixture.frame()
+    const marker = renderer.getElement('distant')
+    expect(marker?.querySelector('img')?.loading).toBe('eager')
+    expect(callback).toHaveBeenCalledWith('distant', marker)
+    renderer.clear()
+  })
+
+  it('reuses a warm node during movement while retaining excluded rich nodes detached', () => {
+    const fixture = progressiveFixture()
+    const renderer = createMarkerRenderer(fixture.camera, fixture.factory, undefined, {
+      attachRetained: false,
+    })
+    const row = feature('warm', [1, 1])
+    renderer.sync([row], { retention })
+    fixture.frame()
+    const original = renderer.getElement(row.id)
+    const image = original?.querySelector('img')
+    fixture.emit('movestart')
+    renderer.sync([], { retention })
+    renderer.updateCamera(true)
+    expect(renderer.getElement(row.id)).toBeNull()
+    expect(fixture.frames.size).toBe(0)
+    renderer.sync([row], { retention })
+    expect(renderer.getElement(row.id)).toBe(original)
+    expect(renderer.getElement(row.id)?.querySelector('img')).toBe(image)
+    expect(TestMarker.instances).toHaveLength(1)
+    renderer.clear()
+  })
+
+  it('promotes a newly selected row during motion and keeps the attachment ceiling', () => {
+    const fixture = progressiveFixture()
+    const renderer = createMarkerRenderer(fixture.camera, fixture.factory, undefined, {
+      maxAttached: 1,
+      attachRetained: false,
+    })
+    const first = feature('first', [1, 1])
+    const selected = feature('selected', [2, 1])
+    renderer.sync([first], { retention })
+    fixture.frame()
+    fixture.emit('movestart')
+    renderer.sync([first, selected], { retention, selectedId: selected.id })
+    expect(renderer.getElement(first.id)).toBeNull()
+    expect(renderer.getElement(selected.id)).toHaveClass('active')
+    expect(TestMarker.instances).toHaveLength(2)
+    expect(fixture.frames.size).toBe(0)
+    renderer.clear()
+  })
+
+  it('resolves the current attachment limit and prioritizes highlighted active rows', () => {
+    const fixture = progressiveFixture()
+    let limit = 3
+    const renderer = createMarkerRenderer(fixture.camera, fixture.factory, undefined, {
+      maxAttached: () => limit,
+    })
+    const rows = [feature('a', [1, 1]), feature('b', [1, 1]), feature('c', [1, 1])]
+    renderer.sync(rows, { retention, highlightedIds: new Set(['c']) })
+    fixture.frame()
+    fixture.frame()
+    limit = 1
+    renderer.updateCamera(true)
+    expect(rows.filter(row => renderer.getElement(row.id)).map(row => row.id)).toEqual([
+      'c',
+    ])
+    renderer.clear()
+  })
+
+  it('replaces queued style and scope work before constructing any stale image', () => {
+    const fixture = progressiveFixture()
+    const renderer = createMarkerRenderer(
+      fixture.camera,
+      fixture.factory,
+      undefined,
+      {},
+    )
+    renderer.sync([feature('old', [1, 1])], { retention })
+    renderer.sync([feature('new', [1, 1])], {
+      retention: { scope: 'other-user', budget: 1000 },
+      markerStyle: 'dot',
+    })
+    renderer.sync([feature('new', [1, 1])], {
+      retention: { scope: 'other-user', budget: 1000 },
+      markerStyle: 'image-bw',
+    })
+    fixture.frame()
+    expect(TestMarker.instances).toHaveLength(1)
+    expect(renderer.getElement('old')).toBeNull()
+    expect(renderer.getElement('new')?.querySelector('img')?.style.filter).toBe(
+      'grayscale(1)',
+    )
+    renderer.sync([], { retention: { scope: 'third-user', budget: 1000 } })
+    expect(renderer.getElement('new')).toBeNull()
+    renderer.clear()
+  })
+
+  it('keeps existing geometry, style and state changes immediate during motion', () => {
+    const fixture = progressiveFixture()
+    const renderer = createMarkerRenderer(
+      fixture.camera,
+      fixture.factory,
+      undefined,
+      {},
+    )
+    renderer.sync([feature('changed', [1, 1])], { retention })
+    fixture.frame()
+    fixture.emit('movestart')
+    renderer.sync([feature('changed', [2, 1])], {
+      retention,
+      markerStyle: 'dot',
+      selectedId: 'changed',
+    })
+    expect(renderer.getElement('changed')).toHaveClass('active')
+    expect(renderer.getElement('changed')?.querySelector('img')).toBeNull()
+    expect(TestMarker.instances.at(-1)?.coordinates).toEqual([2, 1])
+    expect(fixture.frames.size).toBe(0)
+    renderer.clear()
+  })
+
+  it('cancels pending frames and motion listeners on disposal', () => {
+    const fixture = progressiveFixture()
+    const renderer = createMarkerRenderer(
+      fixture.camera,
+      fixture.factory,
+      undefined,
+      {},
+    )
+    renderer.sync([feature('never', [1, 1])], { retention })
+    renderer.clear()
+    expect(fixture.frames.size).toBe(0)
+    expect([...fixture.listeners.values()].every(group => !group.size)).toBe(true)
+    fixture.emit('moveend')
+    fixture.frame()
+    renderer.sync([feature('never', [1, 1])], { retention })
+    expect(TestMarker.instances).toHaveLength(0)
+  })
+})
+
 describe('marker retention policy', () => {
   it('uses conservative defaults and only raises the budget with both memory and CPU hints', () => {
     expect(getMarkerRetentionBudget()).toBe(1000)
