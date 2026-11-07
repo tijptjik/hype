@@ -1,6 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, tick } from 'svelte'
+import { prefersReducedMotion } from 'svelte/motion'
+import { fly } from 'svelte/transition'
+// MOTION
+import { VIEWER_TRANSITION_MS } from '#lib/bits/patterns/images/images.motion'
 // BITS
 import { cx } from '#lib/bits/utils.js'
 // SHARING
@@ -38,6 +42,7 @@ let {
 } = $props()
 let contentHeight = $state(0)
 let section: HTMLElement | undefined = $state()
+let exiting = $state(false)
 // Include actual padding so the minimum still fits when text or root sizing changes.
 $effect(() => {
   if (!section) return
@@ -234,7 +239,18 @@ async function download(): Promise<void> {
 
 <section
   bind:this={section}
-  class="text-base-content flex h-full min-h-0 w-full flex-col overflow-y-auto p-3"
+  transition:fly|global={{
+    duration: prefersReducedMotion.current ? 0 : VIEWER_TRANSITION_MS,
+    y: 6,
+  }}
+  onintrostart={() => {
+    exiting = false
+  }}
+  onoutrostart={() => {
+    exiting = true
+  }}
+  inert={exiting}
+  class="absolute inset-0 z-30 flex h-full min-h-0 w-full flex-col overflow-y-auto bg-base-200 p-3 text-base-content"
   aria-labelledby="feature-share-heading"
   onkeydown={event => {
     if (event.key === 'Escape') {
@@ -260,16 +276,19 @@ async function download(): Promise<void> {
         bind:this={heading}
         tabindex="-1"
         id="feature-share-heading"
-        class="grid min-w-0 flex-1 grid-cols-[auto_1rem_auto_minmax(0,1fr)] items-center gap-2 outline-none"
+        class="grid min-w-0 flex-1 grid-cols-[auto_1rem_minmax(0,1fr)] items-center gap-2 outline-none"
       >
-        <span class="text-lg font-semibold">{text.share}</span>
+        <span class="mr-3 text-lg font-semibold">{text.share}</span>
         <ResourceIcon class="text-muted-foreground size-4" aria-hidden="true" />
-        <span class="text-muted-foreground text-[11px] font-medium"
-          >{text[target.kind]}</span
-        >
-        <span class="min-w-0 text-sm font-medium break-words whitespace-normal"
-          >{target.title || resource?.title}</span
-        >
+        <span class="flex min-w-0 flex-col justify-center gap-0.5">
+          <span class="text-[10px] font-medium leading-3 text-muted-foreground"
+            >{text[target.kind]}</span
+          >
+          <span
+            class="min-w-0 whitespace-normal break-words text-sm font-medium leading-4"
+            >{target.title || resource?.title}</span
+          >
+        </span>
       </h2>
     </div>
     <div class="flex flex-col gap-3">
