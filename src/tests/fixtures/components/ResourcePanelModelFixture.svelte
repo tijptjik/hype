@@ -20,9 +20,9 @@ let {
   mode?: 'admin' | 'prisms'
   onModel: (model: ResourcePanelModel) => void
 } = $props()
-setSurfaceNavigation(admin.navigation)
+setSurfaceNavigation(untrack(() => admin.navigation))
 const model = untrack(() =>
   useResourcePanelModel(app, mode, mode === 'admin' ? admin : undefined),
 )
-onModel(model)
+untrack(() => onModel(model))
 </script>

@@ -30,7 +30,7 @@ let dialog: HTMLDialogElement
 let search: HTMLInputElement
 let enlarged = $state<MediaCatalogItem | null>(null)
 let source: HTMLButtonElement | undefined
-let closePreviewButton: HTMLButtonElement
+let closePreviewButton = $state<HTMLButtonElement>()
 let transitioning = false
 
 /** Animate the same media between its tile and the centered preview. */

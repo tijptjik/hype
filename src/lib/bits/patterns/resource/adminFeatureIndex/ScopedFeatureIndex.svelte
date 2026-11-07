@@ -38,7 +38,7 @@ const view = setSurfaceCtx(
   untrack(() => createScopedFeatureView(parent.view, resourceType, resourceId)),
 )
 const adminCtx = setAdminCtx(view)
-adminCtx.listUi.state.isControlBarVisible.feature = embedded
+adminCtx.listUi.state.isControlBarVisible.feature = untrack(() => embedded)
 const headerCtrl = setHeaderCtrl()
 const headerModel = useAdminHeaderModel(view, adminCtx)
 const headerProps = $derived(headerModel.getHeaderProps())

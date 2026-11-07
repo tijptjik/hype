@@ -515,10 +515,8 @@ onMount(() => {
                     <div class="flex justify-center">
                       <div class="relative h-30 w-30">
                         {#if stamp.flagCode && flagIconByCode[stamp.flagCode]}
-                          <svelte:component
-                            this={flagIconByCode[stamp.flagCode]}
-                            class="absolute inset-0 h-full w-full"
-                          />
+                          {@const FlagIcon = flagIconByCode[stamp.flagCode]}
+                          <FlagIcon class="absolute inset-0 h-full w-full" />
                         {:else}
                           <div
                             class="absolute inset-0 rounded-full bg-[linear-gradient(135deg,#2b313d_0%,#111827_100%)]"

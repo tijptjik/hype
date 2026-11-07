@@ -52,13 +52,13 @@ function onRoleChangeAfterSubmitAttempt(): void {
 </script>
 
 <form bind:this={formEl} data-testid="form"></form>
-<button type="button" data-testid="preflight-fail" on:click={simulatePreflightFailure}>
+<button type="button" data-testid="preflight-fail" onclick={simulatePreflightFailure}>
   Fail
 </button>
 <button
   type="button"
   data-testid="role-change"
-  on:click={onRoleChangeAfterSubmitAttempt}
+  onclick={onRoleChangeAfterSubmitAttempt}
 >
   Role
 </button>

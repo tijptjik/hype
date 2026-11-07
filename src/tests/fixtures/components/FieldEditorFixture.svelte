@@ -149,7 +149,7 @@ let data = $state<PropertyFormData>({
   ],
 })
 // Exercise section controls against independent field identities when requested.
-const properties = data.properties
+const properties = untrack(() => data.properties)
 if (!properties?.[0]) throw new Error('Missing fixture property')
 for (let index = 1; index < untrack(() => fieldCount); index++) {
   const property = structuredClone($state.snapshot(properties[0]))

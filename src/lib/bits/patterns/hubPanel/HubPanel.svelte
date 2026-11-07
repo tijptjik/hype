@@ -105,7 +105,7 @@ let isTermsOfServiceOpen = $state(false)
   {/if}
 </Panel>
 
-<style>
+<style lang="postcss">
 @reference "../../../styles/app.css";
 
 :global(.preformatted) {
