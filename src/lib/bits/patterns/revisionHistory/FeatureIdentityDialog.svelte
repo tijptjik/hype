@@ -83,7 +83,7 @@ $effect(() => {
   let cancelled = false
   const timer = setTimeout(async () => {
     try {
-      const result = await refreshRemoteQuery(getFeatureIndexPage({q:text,prisms:{layer:[layer]},conditions:{isArchived:false},
+      const result = await refreshRemoteQuery(getFeatureIndexPage({q:text,prisms:{layer:[layer]},conditions:{isArchived:false,isPublished:null},
         pagination:{limit:12,offset:0},includeCount:false,meta:{...view.resources.queryMeta,isAdminRequest:true,profile:'admin'}}))
       if (!cancelled) matches = (result.data as Feature[]).filter(row => row.id !== featureId).map(row => ({id:row.id,title:Object.values(row.i18n ?? {}).map(value => value?.title).find(Boolean) || row.id}))
     } catch (cause) { if (!cancelled) message = cause instanceof Error ? cause.message : 'Search unavailable' }
@@ -117,7 +117,7 @@ function propertyText(source: IdentitySource, id: string): string {
 <Dialog.Root bind:open>
   <Dialog.Portal>
     <Dialog.Overlay class="fixed inset-0 z-50 bg-black/50" />
-    <Dialog.Content class={`fixed left-1/2 top-1/2 z-50 grid max-h-[90dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 overflow-y-auto rounded-2xl border border-border bg-background p-6 text-foreground shadow-xl ${kind === 'merge' ? 'max-w-6xl' : 'max-w-xl'}`}>
+    <Dialog.Content class={`fixed left-1/2 top-1/2 z-50 grid max-h-[90dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 overflow-y-auto rounded-2xl border border-border bg-panel p-6 text-foreground shadow-xl ${kind === 'merge' ? 'max-w-6xl' : 'max-w-xl'}`}>
       <div class="flex items-start justify-between gap-4">
         <div class="space-y-2">
           <Dialog.Title class="text-xl font-semibold">{kind === 'split' ? 'Split Feature' : 'Merge Features'}</Dialog.Title>
