@@ -33,15 +33,22 @@ let {
 </script>
 
 <Dialog.Root bind:open {...restProps}>
-  <Dialog.Trigger>
-    <Button
-      text={triggerText}
-      iconComponent={triggerIconComponent}
-      iconClasses={triggerIconClasses}
-      modifier="circle"
-      style="ghost"
-      color="neutral"
-    />
+  <Dialog.Trigger type="button">
+    {#snippet child({ props })}
+      <Button
+        attrs={props}
+        onClick={event => {
+          if (typeof props.onclick === 'function') props.onclick(event)
+        }}
+        type="button"
+        text={triggerText || title}
+        iconComponent={triggerIconComponent}
+        iconClasses={triggerIconClasses}
+        modifier="circle"
+        style="ghost"
+        color="neutral"
+      />
+    {/snippet}
   </Dialog.Trigger>
   <Dialog.Portal>
     <Dialog.Overlay class="bits-dialog__overlay" {...overlayProps} />
