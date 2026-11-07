@@ -1,6 +1,6 @@
 <script lang="ts" generics="T = string">
 // COMPONENTS
-import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
+import { Button } from '#lib/bits/core/index.js'
 import { Icon } from '#lib/bits/custom/icon/index.js'
 import { cx } from '#lib/bits/utils.js'
 // CONTEXT
@@ -138,9 +138,7 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
 }
 </script>
 
-{#snippet menuButton(
-  item: AppMenuItem<T>,
-)}
+{#snippet menuButton(item: AppMenuItem<T>)}
   {#snippet itemIcon()}
     <Icon
       src={item.icon}
@@ -150,26 +148,23 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
       class="block self-center"
     />
   {/snippet}
-  <SimpleTooltip disabled={!item.hideLabel && !viewportState.isIconOnlyMenu}>
-    {#snippet trigger()}
-      <Button
-        text={item.label}
-        icon={itemIcon}
-        style="transparent"
-        color={item.color ??
-          (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
-        size="md"
-        hideLabel={item.hideLabel || viewportState.isIconOnlyMenu}
-        class={getItemButtonClasses()}
-        labelClasses={getItemLabelClasses(item)}
-        iconClasses={getItemIconClasses(item)}
-        onClick={event => handleSelect(item, event)}
-      />
-    {/snippet}
-    {#snippet children()}
-      {item.label}
-    {/snippet}
-  </SimpleTooltip>
+  <!-- Shared help keeps compact navigation to one tooltip without remounting its buttons. -->
+  <Button
+    text={item.label}
+    icon={itemIcon}
+    style="transparent"
+    color={item.color ?? (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
+    size="md"
+    hideLabel={item.hideLabel || viewportState.isIconOnlyMenu}
+    attrs={{
+      'data-tooltip':
+        item.hideLabel || viewportState.isIconOnlyMenu ? item.label : undefined,
+    }}
+    class={getItemButtonClasses()}
+    labelClasses={getItemLabelClasses(item)}
+    iconClasses={getItemIconClasses(item)}
+    onClick={event => handleSelect(item, event)}
+  />
 {/snippet}
 
 <nav class={navClasses} style={navStyles}>
