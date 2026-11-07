@@ -119,5 +119,5 @@ zoom 16. Building footprints, place names, ordinary POIs, minor street names, pa
 transport decoration are omitted so book covers and venue markers provide the detail.
 
 A catalog `bundledPreviewPath` can provide a checked-in preview when the style ships
-with the application. NocLit'26 uses this so its picker card does not depend on a
-separate R2 render upload.
+with the application. Etch, Sketch, Quercus and the NocLit styles use this so their
+picker cards do not depend on a separate R2 render upload.
