@@ -196,6 +196,8 @@ export type ImageEditorProps = {
   sortScope?: string
   sortMode?: 'automatic' | 'manual'
   canSort?: boolean
+  /** Keep sorting controls mounted during temporary mutation locks. */
+  showSortControls?: boolean
   onSortChange?: (mode: 'automatic' | 'manual', ids: string[]) => Promise<void>
   layout?: 'sidebar' | 'bottom' | 'top'
   showNavButtons?: boolean

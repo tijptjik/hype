@@ -2,7 +2,7 @@
 // SVELTE
 import { tick } from 'svelte'
 // ICONS
-import SortIcon from 'virtual:icons/proicons/arrow-swap'
+import AutoSortIcon from 'virtual:icons/proicons/sparkle-2'
 import UndoIcon from 'virtual:icons/proicons/arrow-counterclockwise'
 import { cx } from '#lib/bits/utils.js'
 import { m } from '#lib/i18n.js'
@@ -43,6 +43,7 @@ let {
   canDownloadActiveImage = false,
   isEditBusy = false,
   isReadonly = false,
+  showSortControls = !isReadonly && canSort,
   isLoading = false,
   isIntentDisabled = false,
   viewerControlsOffsetClass = 'bottom-4',
@@ -150,7 +151,11 @@ const viewerFit = $derived.by<'fit' | 'cover'>(() =>
   presentationMode === 'cover' ? 'cover' : fit,
 )
 const hasSortControls = $derived(
-  Boolean(onSortChange && (sortMode === 'manual' || previousSort?.mode === 'manual')),
+  Boolean(
+    showSortControls &&
+      onSortChange &&
+      (sortMode === 'manual' || previousSort?.mode === 'manual'),
+  ),
 )
 const railWidth = $derived(
   hasItems ? `${verticalRailWidthPx + (hasSortControls ? 40 : 0)}px` : '0px',
@@ -191,36 +196,38 @@ $effect(() => {
     {/if}
     <div class={cx('relative min-h-0 min-w-0 flex-1', className)}>
       {#if isLoading && !items.length}
-        <div class="relative h-full w-full" aria-busy="true" data-image-editor-loading><ImageSkeleton /></div>
+        <div class="relative h-full w-full" aria-busy="true" data-image-editor-loading>
+          <ImageSkeleton />
+        </div>
       {:else}
-      <AdminViewer
-        rounded="rounded-none"
-        {items}
-        {showNavButtons}
-        showBackdrop={!isStackedLayout}
-        {activeId}
-        bind:isFullscreen
-        fullscreenRequestKey={fullscreenRequestKey + viewerFullscreenRequestKey}
-        {fit}
-        {viewerFit}
-        {uploadSelectionMode}
-        centerAction="fullscreen"
-        centerActionLabel={isFullscreen
-          ? m.gallery__fullscreen_exit_viewer()
-          : m.gallery__fullscreen_view_image()}
-        {onActiveIdChange}
-        onNavigateToItem={itemId => {
-          thumbnailFollowActiveRequestId = itemId
-          thumbnailFollowActiveRequestKey += 1
-        }}
-        {onCurrentItemLoad}
-        isEmptyUploadEnabled={Boolean(onAddFiles)}
-        isEmptyUploadDisabled={isReadonly}
-        isEmptyDropzoneEnabled={!isReadonly}
-        onUploadFiles={onAddFiles}
-        leftRail={isStackedLayout ? undefined : leftRail}
-        rightRail={isStackedLayout ? undefined : rightRail}
-      />
+        <AdminViewer
+          rounded="rounded-none"
+          {items}
+          {showNavButtons}
+          showBackdrop={!isStackedLayout}
+          {activeId}
+          bind:isFullscreen
+          fullscreenRequestKey={fullscreenRequestKey + viewerFullscreenRequestKey}
+          {fit}
+          {viewerFit}
+          {uploadSelectionMode}
+          centerAction="fullscreen"
+          centerActionLabel={isFullscreen
+            ? m.gallery__fullscreen_exit_viewer()
+            : m.gallery__fullscreen_view_image()}
+          {onActiveIdChange}
+          onNavigateToItem={itemId => {
+            thumbnailFollowActiveRequestId = itemId
+            thumbnailFollowActiveRequestKey += 1
+          }}
+          {onCurrentItemLoad}
+          isEmptyUploadEnabled={Boolean(onAddFiles)}
+          isEmptyUploadDisabled={isReadonly}
+          isEmptyDropzoneEnabled={!isReadonly}
+          onUploadFiles={onAddFiles}
+          leftRail={isStackedLayout ? undefined : leftRail}
+          rightRail={isStackedLayout ? undefined : rightRail}
+        />
       {/if}
 
       {#if !isStackedLayout}
@@ -289,10 +296,7 @@ $effect(() => {
           style={`padding-bottom: ${verticalRailBottomBarHeightPx}px;`}
         >
           <ThumbnailWrapper
-            trackControls={onSortChange &&
-            (sortMode === 'manual' || previousSort?.mode === 'manual')
-              ? sortingControls
-              : undefined}
+            trackControls={hasSortControls ? sortingControls : undefined}
             {items}
             onReorder={onSortChange ? ids => changeSort('manual', ids) : undefined}
             reorderDisabled={!canSort || sortBusy || isDeleteMode}
@@ -403,10 +407,7 @@ $effect(() => {
 {#snippet thumbnailTrack()}
   <div class="bg-base-100 h-32 shrink-0 px-2 py-1">
     <ThumbnailWrapper
-      trackControls={onSortChange &&
-      (sortMode === 'manual' || previousSort?.mode === 'manual')
-        ? sortingControls
-        : undefined}
+      trackControls={hasSortControls ? sortingControls : undefined}
       {items}
       {activeId}
       variant="admin"
@@ -447,7 +448,7 @@ $effect(() => {
     disabled={!canSort || sortBusy || sortMode === 'automatic'}
     onclick={() => void changeSort('automatic')}
   >
-    <SortIcon class="size-4" />
+    <AutoSortIcon class="size-4" />
   </button>
   {#if sortMode === 'automatic' && previousSort?.mode === 'manual'}
     <button

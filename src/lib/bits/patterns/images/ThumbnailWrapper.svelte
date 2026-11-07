@@ -520,6 +520,9 @@ onDestroy(() => {
         zoneItemTabIndex: onReorder && !reorderDisabled ? 0 : -1,
         dropFromOthersDisabled: true,
         dropTargetStyle: {},
+        transformDraggedElement: element => {
+          element.style.outline = 'none'
+        },
         delayTouchStart: 200,
       }}
       onconsider={considerReorder}

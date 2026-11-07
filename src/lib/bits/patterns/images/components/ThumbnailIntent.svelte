@@ -43,9 +43,10 @@ function setOpen(next: boolean): void {
   open = next
 }
 
-const intentDisabled = $derived(
-  !onIntentChange || disabled || item.meta?.intentReadonly === true,
+const canSelectIntent = $derived(
+  Boolean(onIntentChange) && item.meta?.intentReadonly !== true,
 )
+const intentDisabled = $derived(!canSelectIntent || disabled)
 const currentIntent = $derived((item.intent ?? 'undefined') as Intent)
 const intentOptions = $derived(
   ImageIntentCatalogueSchema.safeParse(item.meta?.intentOptions).data ??
@@ -68,8 +69,8 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
 </script>
 
 <!-- Read-only images do not offer an intent selection control. -->
-{#if !intentDisabled && onIntentChange}
-  <!-- Only editable images expose the intent selection menu. -->
+{#if canSelectIntent}
+  <!-- Only editable images expose the intent selection menu; save locks retain its displayed value. -->
   <div
     class={cx(
       toolbar
@@ -103,7 +104,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
             intentDisplay[currentIntent] ??
             currentIntent}</span
         >
-        {#if toolbar && !intentDisabled}
+        {#if toolbar}
           <ChevronsUpDownIcon class="size-4 shrink-0" />
         {/if}
       </Popover.Trigger>

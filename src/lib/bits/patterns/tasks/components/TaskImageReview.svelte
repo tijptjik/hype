@@ -130,9 +130,11 @@ const displayMetadata = $derived(
 const hasPendingConflict = $derived(
   !readonly && review?.status === 'submitted' && review.stale,
 )
-const canReview = $derived(
-  !readonly && !busy && !original && !review?.stale && review?.status === 'submitted',
+// Editing availability stays stable while a save temporarily locks its controls.
+const reviewEditable = $derived(
+  !readonly && !original && !review?.stale && review?.status === 'submitted',
 )
+const canReview = $derived(reviewEditable && !busy)
 const isSubmittedImage = $derived(
   Boolean(activeId && (!review?.imageIds || review.imageIds.includes(activeId))),
 )
@@ -497,140 +499,144 @@ onMount(() => {
       {/if}
     </div>
   {/if}
-  <div class="min-h-0 flex-1" data-task-image-loading={busy && items.length === 0 ? true : undefined}>
-      <!-- Keep the editor mounted so image evidence can expand its thumbnail strip. -->
-      <ImageEditor
-        isLoading={busy && items.length === 0}
-        sortScope={review?.proposalId}
-        sortMode={(original ? review?.submitted.gallery : review?.content.gallery)
-          ?.sortMode ?? 'automatic'}
-        canSort={canEdit && !hasExistingImages && pendingReviews.length <= 1}
-        onSortChange={sortReview}
-        layout={initialReport ? 'top' : galleryWidth < 640 ? 'bottom' : 'sidebar'}
-        {items}
-        {activeId}
-        fit="fit"
-        class="min-h-0 flex-1"
-        isReadonly={!canEdit}
-        canMutateActiveImage={canEdit}
-        canRotateActiveImage={canSave && !textDirty}
-        canEditActiveImage={canEdit}
-        canReplaceActiveImage={canEdit}
-        canDeleteActiveImage={false}
-        canDownloadActiveImage={Boolean(entry)}
-        isEditBusy={busy}
-        isPublished={entry?.isPublished ?? false}
-        presentationMode={(metadata?.presentationMode ??
-          'contain') as ImagePresentation}
-        isIntentDisabled={!canEdit}
-        disableHoverPreview={busy || textDirty || Boolean(pendingRotation)}
-        onActiveIdChange={id => {
-          if (!busy && !textDirty && !pendingRotation) activeId = id
-        }}
-        highlightClass=""
-        getIsHighlighted={item =>
-          pendingReviews.some(row =>
-            (row.imageIds ?? row.content.gallery.order).includes(item.id),
-          )}
-        getBadgeLabel={item =>
-          taskPhotoDecisionLabel(galleryOwners.get(item.id), item.id, reviewAction)}
-        getBadgeClass={item => {
-          const label = taskPhotoDecisionLabel(
-            galleryOwners.get(item.id),
-            item.id,
-            reviewAction,
+  <div
+    class="min-h-0 flex-1"
+    data-task-image-loading={busy && items.length === 0 ? true : undefined}
+  >
+    <!-- Keep the editor mounted so image evidence can expand its thumbnail strip. -->
+    <ImageEditor
+      isLoading={busy && items.length === 0}
+      sortScope={review?.proposalId}
+      sortMode={(original ? review?.submitted.gallery : review?.content.gallery)
+        ?.sortMode ?? 'automatic'}
+      showSortControls={reviewEditable &&
+        !hasExistingImages &&
+        pendingReviews.length <= 1}
+      canSort={canEdit && !hasExistingImages && pendingReviews.length <= 1}
+      onSortChange={sortReview}
+      layout={initialReport ? 'top' : galleryWidth < 640 ? 'bottom' : 'sidebar'}
+      {items}
+      {activeId}
+      fit="fit"
+      class="min-h-0 flex-1"
+      isReadonly={!canEdit}
+      canMutateActiveImage={canEdit}
+      canRotateActiveImage={canSave && !textDirty}
+      canEditActiveImage={canEdit}
+      canReplaceActiveImage={canEdit}
+      canDeleteActiveImage={false}
+      canDownloadActiveImage={Boolean(entry)}
+      isEditBusy={busy}
+      isPublished={entry?.isPublished ?? false}
+      presentationMode={(metadata?.presentationMode ?? 'contain') as ImagePresentation}
+      isIntentDisabled={!canEdit}
+      disableHoverPreview={busy || textDirty || Boolean(pendingRotation)}
+      onActiveIdChange={id => {
+        if (!busy && !textDirty && !pendingRotation) activeId = id
+      }}
+      highlightClass=""
+      getIsHighlighted={item =>
+        pendingReviews.some(row =>
+          (row.imageIds ?? row.content.gallery.order).includes(item.id),
+        )}
+      getBadgeLabel={item =>
+        taskPhotoDecisionLabel(galleryOwners.get(item.id), item.id, reviewAction)}
+      getBadgeClass={item => {
+        const label = taskPhotoDecisionLabel(
+          galleryOwners.get(item.id),
+          item.id,
+          reviewAction,
+        )
+        return label === 'ACCEPTED'
+          ? 'bg-emerald-600'
+          : label === 'REJECTED'
+            ? 'bg-rose-600'
+            : undefined
+      }}
+      onRotateLeft={() => rotate(-90)}
+      onRotateRight={() => rotate(90)}
+      onPresentationModeChange={mode =>
+        activeId ? save({ imageId: activeId, presentationMode: mode }) : undefined}
+      onIntentChange={(item, intent) => setIntent(item.id, intent)}
+      onReplaceFiles={files => {
+        const file = Array.from(files)[0]
+        if (file && activeId) void save({ imageId: activeId }, file)
+      }}
+      onDownload={() => {
+        if (entry) {
+          const a = document.createElement('a')
+          a.href = url(
+            (
+              (original ? review.submitted.gallery.entries[activeId!] : undefined) ??
+              entry
+            ).imageRevisionId,
+            review.featureId,
+            true,
           )
-          return label === 'ACCEPTED'
-            ? 'bg-emerald-600'
-            : label === 'REJECTED'
-              ? 'bg-rose-600'
-              : undefined
-        }}
-        onRotateLeft={() => rotate(-90)}
-        onRotateRight={() => rotate(90)}
-        onPresentationModeChange={mode =>
-          activeId ? save({ imageId: activeId, presentationMode: mode }) : undefined}
-        onIntentChange={(item, intent) => setIntent(item.id, intent)}
-        onReplaceFiles={files => {
-          const file = Array.from(files)[0]
-          if (file && activeId) void save({ imageId: activeId }, file)
-        }}
-        onDownload={() => {
-          if (entry) {
-            const a = document.createElement('a')
-            a.href = url(
-              (
-                (original ? review.submitted.gallery.entries[activeId!] : undefined) ??
-                entry
-              ).imageRevisionId,
-              review.featureId,
-              true,
-            )
-            a.download = 'image'
-            a.click()
-          }
-        }}
-      >
-        {#snippet leftRail(_item)}
-          {#if activeImage?.contributorId}
-            <UserAttributionCard
-              userId={activeImage.contributorId}
-              date={activeImage.createdAt}
-              type="imageContributor"
-              openDirection="right"
-              isOpen={false}
-              class="[&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9 [&:not(:hover):not(:has(:focus-visible))_.bits-feature-attribution-shell__panel]:pointer-events-none! [&:not(:hover):not(:has(:focus-visible))_.bits-feature-attribution-shell__panel]:opacity-0!"
-            />
-          {/if}
-        {/snippet}
-        {#snippet rightRail(_item)}
-          {#if activeImage}
-            <!-- Show the inspected revision's metadata without fetching mutable image metadata. -->
-            <div class="relative">
-              <button
-                type="button"
-                class={IMAGE_METADATA_BUTTON_CLASSES}
-                aria-label={m.image__metadata_open()}
-                aria-expanded={metadataOpen}
-                onclick={() => (metadataOpen = !metadataOpen)}
-              >
-                <CameraIcon class="h-[22px] w-[22px]" />
-              </button>
-              {#if metadataOpen}
-                <section
-                  class="absolute right-0 bottom-12"
-                  aria-label={m.image__metadata_open()}
-                >
-                  <ImageMetadataCard metadata={displayMetadata} loading={false} />
-                </section>
-              {/if}
-            </div>
-          {/if}
-        {/snippet}
-        {#snippet textControls()}
-          <FeatureGalleryRevisionEditor
-            imageId={activeId}
-            isDirty={!canSave || Boolean(pendingRotation)}
-            hasText={Boolean(
-              entry &&
-                [...Object.values(entry.caption), ...Object.values(entry.alt)].some(
-                  text => text.trim(),
-                ),
-            )}
-            onOpenChange={open => (textOpen = open)}
-            source={{
-              load: async () => ({
-                enabled: canSave && !pendingRotation,
-                gallery: $state.snapshot(review.content.gallery),
-                comparisonRevisionId: review.reviewId ?? '',
-                locales: [locale],
-              }),
-              save: (imageId, text) =>
-                save({ imageId, ...text }, undefined, false, true),
-            }}
-            onSaved={() => {}}
+          a.download = 'image'
+          a.click()
+        }
+      }}
+    >
+      {#snippet leftRail(_item)}
+        {#if activeImage?.contributorId}
+          <UserAttributionCard
+            userId={activeImage.contributorId}
+            date={activeImage.createdAt}
+            type="imageContributor"
+            openDirection="right"
+            isOpen={false}
+            class="[&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9 [&:not(:hover):not(:has(:focus-visible))_.bits-feature-attribution-shell__panel]:pointer-events-none! [&:not(:hover):not(:has(:focus-visible))_.bits-feature-attribution-shell__panel]:opacity-0!"
           />
-        {/snippet}
-      </ImageEditor>
+        {/if}
+      {/snippet}
+      {#snippet rightRail(_item)}
+        {#if activeImage}
+          <!-- Show the inspected revision's metadata without fetching mutable image metadata. -->
+          <div class="relative">
+            <button
+              type="button"
+              class={IMAGE_METADATA_BUTTON_CLASSES}
+              aria-label={m.image__metadata_open()}
+              aria-expanded={metadataOpen}
+              onclick={() => (metadataOpen = !metadataOpen)}
+            >
+              <CameraIcon class="h-[22px] w-[22px]" />
+            </button>
+            {#if metadataOpen}
+              <section
+                class="absolute right-0 bottom-12"
+                aria-label={m.image__metadata_open()}
+              >
+                <ImageMetadataCard metadata={displayMetadata} loading={false} />
+              </section>
+            {/if}
+          </div>
+        {/if}
+      {/snippet}
+      {#snippet textControls()}
+        <FeatureGalleryRevisionEditor
+          imageId={activeId}
+          isDirty={!canSave || Boolean(pendingRotation)}
+          hasText={Boolean(
+            entry &&
+              [...Object.values(entry.caption), ...Object.values(entry.alt)].some(
+                text => text.trim(),
+              ),
+          )}
+          onOpenChange={open => (textOpen = open)}
+          source={{
+            load: async () => ({
+              enabled: canSave && !pendingRotation,
+              gallery: $state.snapshot(review.content.gallery),
+              comparisonRevisionId: review.reviewId ?? '',
+              locales: [locale],
+            }),
+            save: (imageId, text) => save({ imageId, ...text }, undefined, false, true),
+          }}
+          onSaved={() => {}}
+        />
+      {/snippet}
+    </ImageEditor>
   </div>
 </div>
