@@ -43,6 +43,9 @@ import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
 
 // TOAST
 import { toast } from 'svelte-sonner'
+// PUBLICATION
+import { canPreviewPublication } from '#lib/publication/permissions.js'
+import { publicationPreviewUrl } from '#lib/publication/preview.js'
 // ADAPTERS
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // I18N
@@ -391,6 +394,7 @@ const noopHeaderAction = (): void => {}
 // - handleCoordinateChange
 // - handleFeatureStateToggle
 // - onPublishToggle
+// - onPreview
 // - onDeleteToggle
 //
 // FORM ACTIONS
@@ -1120,14 +1124,14 @@ const nextFeatureRef = $derived(featureStepperRefs.nextRef)
  *  ON MOUNT
  ************/
 
-onMount(() => {
-  untrack(() => {
-    editorCtrl.wireHeaderHandlers({
-      reset: onReset,
-      submit: onSubmit,
-      togglePublish: onPublishToggle,
-      toggleDelete: onDeleteToggle,
-    })
+// Refresh preview availability when the saved feature or the actor's scope changes.
+$effect(() => {
+  editorCtrl.wireHeaderHandlers({
+    reset: onReset,
+    submit: onSubmit,
+    togglePublish: onPublishToggle,
+    preview: canPreview ? onPreview : null,
+    toggleDelete: onDeleteToggle,
   })
 })
 
@@ -1721,6 +1725,43 @@ async function handleFeatureStateToggle(
   } finally {
     if (isCurrentAction()) setBusy(false)
   }
+}
+
+const canPreview = $derived.by(() => {
+  const savedFeature = feature?.data
+  if (!currentUser || !savedFeature) return false
+  return (
+    isCurrentRefSettled &&
+    !isNewFeatureRef &&
+    savedFeature.id === featureRef &&
+    !savedFeature.isDraft &&
+    !savedFeature.isPublished &&
+    !savedFeature.isArchived &&
+    canPreviewPublication(currentUser, currentUser.roles ?? [], {
+      organisationId: savedFeature.organisationId,
+      projectId: savedFeature.projectId,
+      hubId:
+        adminCtx.view.queries.rows.organisation?.find(
+          item => item.id === savedFeature.organisationId,
+        )?.hubId ?? adminCtx.view.hub?.id,
+    })
+  )
+})
+
+/**
+ * Opens the saved feature in the shared, explicitly labelled map preview.
+ * @returns Nothing; navigation creates a fresh map context.
+ * @remarks Preview leaves publication state unchanged and excludes unsaved edits.
+ */
+function onPreview(): void {
+  if (!canPreview || isEditing || !feature?.data?.id) return
+  window.location.assign(
+    publicationPreviewUrl({
+      type: 'feature',
+      id: feature.data.id,
+      publishChildren: false,
+    }),
+  )
 }
 
 function onPublishToggle(): void {
