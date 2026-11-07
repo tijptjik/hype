@@ -80,6 +80,7 @@ export type TaskMapProps = {
 
 export type TaskEditorProps = {
   localeState?: ProfileLocaleState
+  onLocaleStateChange?: (state: ProfileLocaleState) => void
   task: Task
   assignableLayers?: TaskEditorLayerOption[]
   canReassignLayer?: boolean

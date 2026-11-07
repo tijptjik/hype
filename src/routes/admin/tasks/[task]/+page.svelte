@@ -725,6 +725,7 @@ const imageProviderModel = useImageProviderModel(
     {/if}
     <TaskEditor
       {localeState}
+      onLocaleStateChange={updateTaskLocales}
       {task}
       {assignableLayers}
       {canReassignLayer}

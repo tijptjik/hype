@@ -29,12 +29,16 @@ let {
   readonly = false,
   intentReadonly = readonly,
   isReviewed = false,
+  multilingualExpanded,
+  onMultilingualExpandedChange,
 }: {
   featureId?: string | null
   layout?: 'sidebar' | 'bottom' | 'top'
   readonly?: boolean
   intentReadonly?: boolean
   isReviewed?: boolean
+  multilingualExpanded?: boolean
+  onMultilingualExpandedChange?: (expanded: boolean) => void
 } = $props()
 let isMetadataOpen = $state(false)
 const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveImage)
@@ -91,6 +95,8 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
   {#snippet textControls()}
     {#if featureId}
       <FeatureGalleryRevisionEditor
+        {multilingualExpanded}
+        {onMultilingualExpandedChange}
         {featureId}
         imageId={model.state.activeImage?.image.id ?? null}
         onSaved={() => {

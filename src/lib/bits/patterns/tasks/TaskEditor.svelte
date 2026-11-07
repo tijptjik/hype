@@ -36,6 +36,7 @@ let {
   class: className = '',
   onReassignLayer,
   localeState: controlledLocaleState,
+  onLocaleStateChange,
 }: TaskEditorProps = $props()
 
 const appCtx = getSurfaceCtx()
@@ -311,6 +312,8 @@ $effect(() => {
             class="relative flex h-[var(--bits-feature-visual-expanded-height)] min-h-0 w-full flex-col overflow-hidden min-[901px]:h-full"
           >
             <TaskPrimitive.TaskImageEditor
+              multilingualExpanded={localeState.expanded}
+              onMultilingualExpandedChange={expanded => onLocaleStateChange?.({ ...localeState, expanded })}
               featureId={task.featureId ?? task.feature?.id}
               layout="top"
               readonly={isReviewed ||
@@ -438,6 +441,9 @@ $effect(() => {
             </div>
           {/if}
           <TaskPrimitive.TaskImageEditor
+              featureId={task.featureId ?? task.feature?.id}
+              multilingualExpanded={localeState.expanded}
+              onMultilingualExpandedChange={expanded => onLocaleStateChange?.({ ...localeState, expanded })}
             readonly={isReviewed ||
               task.revisionReviewRequired ||
               task.identityTransferred}

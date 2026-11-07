@@ -119,6 +119,7 @@ onDestroy(() => {
   </div>
   <TaskEditor
     {localeState}
+    onLocaleStateChange={state => { localeState = state }}
     {task}
     canReassignLayer
     assignableLayers={layers}

@@ -21,10 +21,12 @@ import type { FeatureRevisionContent } from '#lib/revisions/featureContent.js'
 import type { ProfileLocaleState } from '../forms/featureLocation/profileLocales'
 import type { ProfileValues } from '../forms/featureLocation/profileTranslation'
 
-let { featureId, imageId, isDirty = false, onSaved }: {
+let { featureId, imageId, isDirty = false, multilingualExpanded, onMultilingualExpandedChange, onSaved }: {
   featureId: string
   imageId: string | null
   isDirty?: boolean
+  multilingualExpanded?: boolean
+  onMultilingualExpandedChange?: (expanded: boolean) => void
   onSaved: () => void
 } = $props()
 type Field = 'caption' | 'alt'
@@ -34,6 +36,20 @@ let baseRevisionId = $state('')
 let editingImageId = $state('')
 let values = $state<ProfileValues<Field>>({})
 let localeState = $state<ProfileLocaleState>({ selectedLocales: [], visibleLocales: [], expanded: false })
+// Task and caption controls share expansion while retaining their own language selections.
+const effectiveLocaleState = $derived({ ...localeState, expanded: multilingualExpanded ?? localeState.expanded })
+
+/** Updates caption languages and shares multilingual expansion with the task.
+ * @param state Caption locale selection and expansion.
+ * @returns Nothing.
+ */
+function updateCaptionLocales(state: ProfileLocaleState): void {
+  const expansionChanged = state.expanded !== effectiveLocaleState.expanded
+  localeState = state
+  if (expansionChanged) onMultilingualExpandedChange?.(state.expanded)
+}
+
+
 let loading = $state(false)
 let busy = $state(false)
 let message = $state('')
@@ -151,7 +167,7 @@ $effect(() => {
       <Dialog.Title class="px-6 pt-6 pb-4 text-lg font-semibold">{m.image_text_edit()}</Dialog.Title>
       <div class="min-h-0 overflow-y-auto" aria-busy={loading || busy}>
         {#if gallery && !loading}
-          <FeatureProfileEditor {localeState} onLocaleStateChange={state => { localeState = state }}
+          <FeatureProfileEditor localeState={effectiveLocaleState} onLocaleStateChange={updateCaptionLocales}
             {values} contextKey={`${featureId}:${editingImageId}:${open}`} isEditing={!disabled}
             fieldConfigs={[{ key: 'caption', label: m.image_text_caption() }, { key: 'alt', label: m.image_text_alt() }]}
             translate={(source, target, text) => translateContentField({ source, target, text })}

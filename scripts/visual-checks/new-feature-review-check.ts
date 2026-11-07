@@ -329,6 +329,28 @@ for (const [name, engine] of [
         )
         if (clipped) throw Error('Header clips the three submitted language chips')
       }
+      await page.getByRole('button', { name: 'Edit image text', exact: true }).click()
+      const captionDialog = page.getByRole('dialog')
+      const captionLanguage = captionDialog.getByRole('button', {
+        name: 'Multilingual',
+        exact: true,
+      })
+      const taskLanguage = page
+        .locator('[data-task-header]')
+        .getByRole('button', { name: 'Multilingual', exact: true })
+      await captionLanguage.waitFor()
+      if ((await captionLanguage.getAttribute('aria-expanded')) !== 'true')
+        throw Error('Caption must inherit task multilingual state')
+      await captionLanguage.click()
+      if ((await taskLanguage.getAttribute('aria-expanded')) !== 'false')
+        throw Error('Caption collapse must update task')
+      await page.keyboard.press('Escape')
+      await taskLanguage.click()
+      await page.getByRole('button', { name: 'Edit image text', exact: true }).click()
+      await captionLanguage.waitFor()
+      if ((await captionLanguage.getAttribute('aria-expanded')) !== 'true')
+        throw Error('Reopened caption must inherit updated task state')
+      await page.keyboard.press('Escape')
       const track = await page
         .getByRole('region', { name: 'Gallery thumbnails' })
         .boundingBox()
