@@ -22,6 +22,10 @@ import {
   type MarkerRenderer,
 } from '#lib/map/markers.js'
 import {
+  createAdaptiveMarkerRenderer,
+  type AdaptiveMarkerRenderer,
+} from '#lib/map/adaptiveMarkers.js'
+import {
   type MapMarkerTheme,
   getDefaultMapStyleKey,
   getMapStyleDefinition,
@@ -92,6 +96,9 @@ type GeolocateControlProps = {
   autoTrigger: boolean
 }
 
+type CanvasMarkerRenderer = MarkerRenderer &
+  Partial<Pick<AdaptiveMarkerRenderer, 'getFeatureIdAt'>>
+
 let {
   highlightedSegment = null,
   journey = null,
@@ -125,7 +132,7 @@ let portalRecenterTimeout = 0
 let mapResizeFrame = 0
 let portalRecenterFrame = 0
 let featureCardDescriptionExpanded = $state(false)
-let markerRenderer: MarkerRenderer | null = null
+let markerRenderer: CanvasMarkerRenderer | null = null
 let markerRendererMap: MaplibreMap | undefined
 let mapStyleAbortController: AbortController | null = null
 const MAP_TRACKING_PARAM = 'mapTracking'
@@ -442,7 +449,13 @@ const setupMap = (map: MaplibreMap): void => {
   if (initialStyle) applyMapCanvasBackground(mapContainer, initialStyle, map)
   if (!markerRenderer || markerRendererMap !== map) {
     markerRenderer?.clear()
-    markerRenderer = createMarkerRenderer(map, maplibregl)
+    markerRenderer = appCtx.view.isAdmin()
+      ? createMarkerRenderer(map, maplibregl)
+      : createAdaptiveMarkerRenderer(
+          map,
+          maplibregl,
+          () => window.matchMedia('(pointer: coarse)').matches,
+        )
     markerRendererMap = map
   }
   updateMapUrlTracking()
@@ -452,14 +465,18 @@ const setupMap = (map: MaplibreMap): void => {
     event.originalEvent.preventDefault()
     event.originalEvent.stopPropagation()
     const target = event.originalEvent.target as HTMLElement
-    if (target.dataset.type === 'marker') {
-      const featureId = target.dataset.featureId
-      if (!featureId) return
+    const markerElement = target.closest<HTMLElement>(
+      '[data-type="marker"][data-feature-id]',
+    )
+    if (!markerElement && target.closest('[data-type="marker"]')) return
+    // Native detail wins hit testing; individual canvas points remain tappable underneath.
+    const featureId =
+      markerElement?.dataset.featureId ?? markerRenderer?.getFeatureIdAt?.(event.point)
+    if (featureId) {
       const isCardAlreadyOpen = omniCtx.state.isCardOpen
       if (!isCardAlreadyOpen) {
-        omniCtx.prepareCardTransitionFromMarker(
-          target.closest('[data-feature-id]') as HTMLElement | null,
-        )
+        if (markerElement) omniCtx.prepareCardTransitionFromMarker(markerElement)
+        else omniCtx.resetCardTransition()
       }
       omniCtx.handleFeatureSelection(featureId, {
         focus: false,
