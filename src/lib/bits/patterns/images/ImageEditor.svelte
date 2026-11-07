@@ -16,6 +16,7 @@ let {
   uploadSelectionMode = 'multiple',
   disableHoverPreview = false,
   isProcessingUploads = false,
+  textControls,
   leftRail,
   rightRail,
   isPublished = false,
@@ -124,6 +125,7 @@ $effect(() => {
           )}
         >
           <ImagePrimitive.ViewerControls
+            {textControls}
             {isPublished}
             {presentationMode}
             canMutate={canMutateActiveImage}

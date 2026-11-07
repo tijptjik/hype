@@ -165,7 +165,7 @@ export const initAddNewFeature = async (
       const draft = await upsertNewFeatureDraft(appCtx.draft.current ?? {})
       appCtx.draft.update({
         taskId: draft.task.id,
-        featureId: draft.featureId,
+        featureId: draft.featureId ?? undefined,
         organisationId: draft.organisationId,
         projectId: draft.projectId,
         layerId: draft.layerId,

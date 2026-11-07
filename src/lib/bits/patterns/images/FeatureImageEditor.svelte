@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import type { Snippet } from 'svelte'
 // ADAPTERS
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
@@ -15,6 +17,8 @@ import { m } from '#lib/i18n.js'
 // ICONS
 import CameraIcon from 'virtual:icons/proicons/camera'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
+
+let { textControls: imageTextControls }: { textControls?: Snippet<[string | null]> } = $props()
 
 const model = useImageEditorGalleryModel(getImageCtx())
 </script>
@@ -49,6 +53,10 @@ const model = useImageEditorGalleryModel(getImageCtx())
   onIntentChange={model.actions.setIntent}
   onRetryUpload={model.actions.retryUpload}
 >
+  {#snippet textControls()}
+    {@render imageTextControls?.(model.state.activeId)}
+  {/snippet}
+
   {#snippet leftRail(_item)}
     {#if model.state.activeImage}
       <UserAttributionCard

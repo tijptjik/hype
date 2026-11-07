@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import type { Snippet } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
@@ -50,6 +52,7 @@ let {
   showReplaceButton = true,
   showDeleteButton = false,
   showDownloadButton = true,
+  textControls,
   onRotateLeft,
   onRotateRight,
   onTogglePublished,
@@ -58,6 +61,7 @@ let {
   onDelete,
   onDownload,
 }: {
+  textControls?: Snippet
   isPublished?: boolean
   presentationMode?: ImagePresentation
   canMutate?: boolean
@@ -221,6 +225,8 @@ async function handlePresentationModeChange(
       iconClasses="h-[22px] w-[22px]"
     />
   {/if}
+
+  {@render textControls?.()}
 
   {#if shouldShowEditButton}
     <div class={VIEWER_CONTROLS_EDIT_GROUP_CLASSES}>

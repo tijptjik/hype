@@ -188,6 +188,7 @@ export type ThumbnailWrapperProps = {
 }
 
 export type ImageEditorProps = {
+  textControls?: Snippet
   items: ViewerRenderable[]
   class?: string
   activeId?: string | null

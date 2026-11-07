@@ -1,4 +1,9 @@
 <script lang="ts">
+// FEATURE LIFECYCLE
+import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIdentityDialog.svelte'
+import FeatureGalleryRevisionEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryRevisionEditor.svelte'
+import FeatureRevisionWorkspace from '#lib/bits/patterns/revisionHistory/FeatureRevisionWorkspace.svelte'
+
 // PROFILE POLICY
 import FeatureProfileEditor from '#lib/bits/patterns/forms/featureLocation/FeatureProfileEditor.svelte'
 import { resolveFeaturePresentationPolicy } from '#lib/features/presentationPolicy.js'
@@ -447,7 +452,7 @@ const activeFacet = $derived(
 // Resolve the canonical facet order once so hash sync and step navigation use the same source.
 const featureFacetOrder = $derived.by(() =>
   getAdminFacetOrderForResource(FirstClassResource.feature).filter(
-    facet => featureRef !== NEW_REF || facet !== 'images',
+    facet => featureRef !== NEW_REF || (facet !== 'images' && facet !== 'updates'),
   ),
 )
 
@@ -458,6 +463,7 @@ const isCoreFacet = $derived(activeFacet === 'core')
 
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isLocationFacet = $derived(activeFacet === 'location')
+const isUpdatesFacet = $derived(activeFacet === 'updates')
 const isImagesFacet = $derived(activeFacet === 'images')
 
 /********************
@@ -465,7 +471,7 @@ const isImagesFacet = $derived(activeFacet === 'images')
  ************/
 
 function goToFacet(facet: FacetType): void {
-  if (facet === 'images' && isNewFeatureRef) return
+  if ((facet === 'images' || facet === 'updates') && isNewFeatureRef) return
   if (facet === 'fields' && !hasSelectedLayer) return
   if (facet === activeFacet) return
   // The current route ref also covers unsaved Features, which have no cache record.
@@ -528,7 +534,7 @@ $effect(() => {
         const currentFacet = adminCtx.activeFacet
         const nextFacet =
           currentFacet &&
-          !(nextRef === NEW_REF && currentFacet === 'images') &&
+          !(nextRef === NEW_REF && (currentFacet === 'images' || currentFacet === 'updates')) &&
           resolvedFacetTabsSnapshot.has(currentFacet)
             ? currentFacet
             : 'core'
@@ -570,7 +576,7 @@ $effect(() => {
               },
         )
   )
-    .filter(facet => !isNewFeatureRef || facet.ref !== 'images')
+    .filter(facet => !isNewFeatureRef || (facet.ref !== 'images' && facet.ref !== 'updates'))
     .map(facet => ({
       ...facet,
       disabled: facet.ref === 'fields' ? !hasSelectedLayer : Boolean(facet.disabled),
@@ -626,9 +632,11 @@ let editorViewportHeight = $state(1040)
 let draftFindMode = $state<'search' | 'pin'>('search')
 let pinHighlightRequest = $state(0)
 // Inactive facets mount on first visit, then retain drafts across tab switches.
+let visitedUpdatesRef = $state<string | null>(null)
 let visitedLocationRef = $state<string | null>(null)
 let visitedImagesRef = $state<string | null>(null)
 $effect(() => {
+  if (isUpdatesFacet) visitedUpdatesRef = featureRef
   if (isLocationFacet) visitedLocationRef = featureRef
   if (isImagesFacet) visitedImagesRef = featureRef
 })
@@ -954,6 +962,19 @@ function ensureDraftPin(): boolean {
 // § Header
 let lastHeaderKey = ''
 
+let identityOpen = $state(false)
+let identityKind = $state<'split' | 'merge'>('split')
+$effect(() => {
+  const available = Boolean(currentFeatureId && isCurrentRefLoaded && !feature?.data?.isArchived)
+  headerCtrl.setTitleMenuItems(available ? [
+    { label: 'Split', disabled: isDirty, onSelect: () => { identityKind = 'split'; identityOpen = true } },
+    { label: 'Merge', disabled: isDirty, onSelect: () => { identityKind = 'merge'; identityOpen = true } },
+  ] : [])
+  return () => headerCtrl.setTitleMenuItems([])
+})
+
+
+let revisionWorkspaceVersion = $state(0)
 let lastFormActionsSignature = ''
 
 // Preserve the last known header affordances while the next ref is still loading.
@@ -1204,6 +1225,20 @@ const configuredFeatureForm = configureForm(() => ({
     resourceType: FirstClassResource.feature,
     getEntity: () => feature,
     refreshResource: async ({ success, result }) => {
+      if (success && result && typeof result === 'object' && 'revisionApplied' in result) {
+        await refreshFeature()
+        hasProgrammaticDirtyChanges = false
+        revisionWorkspaceVersion++
+        return
+      }
+      if (success && result && typeof result === 'object' && 'revisionDraft' in result) {
+        await refreshFeature()
+        hasProgrammaticDirtyChanges = false
+        revisionWorkspaceVersion++
+        toast.success('Proposed changes saved for review.')
+        return
+      }
+
       if (
         success &&
         draftPlaceSource &&
@@ -2951,6 +2986,12 @@ async function getCreatableProjectRecords(
 $effect(() => () => clearVisualSectionReopenState())
 </script>
 
+{#if currentFeatureId && feature?.data?.layerId}
+  <FeatureIdentityDialog bind:open={identityOpen} kind={identityKind} featureId={currentFeatureId} layerId={feature.data.layerId}
+    onApplied={async ids => { await refreshFeature(); await goto(`/admin/features/${encodeURIComponent(ids[0])}`) }} />
+{/if}
+
+
 <svelte:window
   bind:innerHeight={editorViewportHeight}
   onpopstate={recoverDraftSearchHistory}
@@ -3276,7 +3317,7 @@ $effect(() => () => clearVisualSectionReopenState())
       isVisible={isLocationFacet}
       transition="fade"
       fillHeight={true}
-      contentClass="h-full overflow-hidden"
+      contentClass="h-full overflow-y-auto"
       class={getFeatureEditorFacetClass({
         isVisible: isLocationFacet,
         showsVisualSection,
@@ -3498,17 +3539,41 @@ $effect(() => () => clearVisualSectionReopenState())
     </Main.Facet>
 
     <Main.Facet
+      isVisible={isUpdatesFacet}
+      transition="fade"
+      attrs={{ 'data-facet-id': 'updates' }}
+    >
+      {#if currentFeatureId &&
+        !isNewFeatureRef &&
+        (isUpdatesFacet || visitedUpdatesRef === featureRef)}
+        {#key currentFeatureId}
+          <FeatureRevisionWorkspace featureId={currentFeatureId} {isDirty} refreshVersion={revisionWorkspaceVersion} onPublished={async () => { await refreshFeature(); revisionWorkspaceVersion++ }} />
+
+        {/key}
+      {/if}
+    </Main.Facet>
+
+    <Main.Facet
       isVisible={isImagesFacet}
       transition="fade"
       fillHeight={true}
       edgeToEdge={true}
-      contentClass="h-full overflow-hidden"
+      contentClass="h-full overflow-y-auto"
       attrs={{ 'data-facet-id': 'images' }}
     >
       {#if featureImageProviderProps.isValid &&
         (isImagesFacet || visitedImagesRef === featureRef)}
         <ImageProvider model={featureImageProviderModel}>
-          <FeatureImageEditor />
+          <FeatureImageEditor>
+            {#snippet textControls(imageId)}
+              {#if currentFeatureId}
+                {#key currentFeatureId}
+                  <FeatureGalleryRevisionEditor featureId={currentFeatureId} {imageId} {isDirty}
+                    onSaved={() => { revisionWorkspaceVersion++; toast.success('Image text saved.') }} />
+                {/key}
+              {/if}
+            {/snippet}
+          </FeatureImageEditor>
         </ImageProvider>
       {/if}
     </Main.Facet>

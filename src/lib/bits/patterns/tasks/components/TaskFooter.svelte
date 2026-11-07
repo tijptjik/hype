@@ -33,9 +33,9 @@ const model = useImageEditorGalleryModel(getImageCtx())
     getIsLoading={model.status.isLoading}
     getIsUploading={model.status.isUploading}
     isIntentDisabled={readonly}
-    onIntentChange={model.actions.setIntent}
+    onIntentChange={readonly ? undefined : model.actions.setIntent}
     onDelete={readonly ? undefined : model.actions.deleteItem}
-    onRetryUpload={model.actions.retryUpload}
+    onRetryUpload={readonly ? undefined : model.actions.retryUpload}
     onLoad={model.actions.markThumbnailLoaded}
     onError={model.actions.markThumbnailErrored}
     onSelect={item => {

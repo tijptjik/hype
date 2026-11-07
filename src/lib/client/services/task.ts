@@ -38,7 +38,7 @@ import {
   uploadPreparedImageObject,
 } from '#lib/client/services/image.js'
 // ENUMS
-import { ImageContextResource } from '#lib/enums.js'
+import { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -257,7 +257,7 @@ const mapWithConcurrency = async <T>(
  */
 const uploadTaskDraftImages = async (params: {
   taskId: Id
-  featureId: Id
+  featureId: Id | null
   organisationId: Id
   projectId: Id
   photos: ImageUpload[]
@@ -267,8 +267,8 @@ const uploadTaskDraftImages = async (params: {
   onStatusChange?: (label: string) => void
 }): Promise<void> => {
   const uploadCtx = {
-    ctxType: ImageContextResource.feature,
-    ctxId: params.featureId,
+    ctxType: params.featureId ? ImageContextResource.feature : ImageContextResourceExtended.task,
+    ctxId: params.featureId ?? params.taskId,
     organisation: { id: params.organisationId } as OrganisationDB,
     project: { id: params.projectId } as ProjectDB,
     links: [{ type: 'taskImage' as const, taskId: params.taskId }],
@@ -371,6 +371,8 @@ export const getTaskReviewActionLabel = (reviewAction?: string | null): string =
       return m.task__review_action_added_photos()
     case 'added-all-photos-with-intent':
       return m.task__review_action_added_selected_photos()
+    case 'merged-feature':
+      return 'Merged with existing Feature'
     case 'added-feature':
       return m.task__review_action_added_feature()
     default:
@@ -415,9 +417,9 @@ export const mergeResolvedTaskFeature = (
  * @returns Effective layer ID backing the task editor state
  */
 export const getEffectiveTaskLayerId = (
-  task: Pick<Task, 'feature'>,
+  task: Pick<Task, 'feature' | 'creationProposal'>,
   resolvedFeature?: Pick<Feature, 'layerId'> | null,
-): Id | null => (resolvedFeature?.layerId ?? task.feature?.layerId ?? null) as Id | null
+): Id | null => (resolvedFeature?.layerId ?? task.creationProposal?.scope.layerId ?? task.feature?.layerId ?? null) as Id | null
 
 /**
  * Resolves the currently selected layer from assignable options first, then cache fallback.
@@ -592,7 +594,7 @@ export const syncAssignedTaskLayerCache = (params: {
 // +++ Task Creation Client Services
 
 /**
- * Creates or updates the provisional new-feature task and backing feature draft.
+ * Creates or updates a new-feature contribution task and its proposal.
  * @param newFeature Current client-side draft state.
  * @returns Server-minted draft identifiers and resolved hierarchy ids.
  */
@@ -600,7 +602,7 @@ export const upsertNewFeatureDraft = async (
   newFeature: DeepPartial<NewFeatureTask>,
 ): Promise<{
   task: { id: Id }
-  featureId: Id
+  featureId: Id | null
   layerId: Id
   projectId: Id
   organisationId: Id
@@ -611,7 +613,7 @@ export const upsertNewFeatureDraft = async (
 
   return draftResult.data as {
     task: { id: Id }
-    featureId: Id
+    featureId: Id | null
     layerId: Id
     projectId: Id
     organisationId: Id

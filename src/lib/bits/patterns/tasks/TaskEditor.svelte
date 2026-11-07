@@ -12,6 +12,8 @@ import { getMetadata } from '#lib/api/image.remote.js'
 // THEME
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
 import { THEME_MAP_STYLES } from '#lib/themes/themes.js'
+// DOMAIN
+import { featureCreationPreview } from '#lib/revisions/featureCreationPreview.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // TYPES
@@ -50,29 +52,44 @@ let imageMetadata = $state<{
   capturedAt?: string | null
 } | null>(null)
 
+const preview = $derived(task.creationProposal ? featureCreationPreview(task.creationProposal.content) : task.feature)
 const isNewFeature = $derived(task.type === 'newFeature')
 const isNewPhoto = $derived(task.type === 'newPhoto')
 const isReportedMissing = $derived(task.type === 'reportedMissing')
 const isReviewed = $derived(Boolean(task.isReviewed))
+// Review must expose submitted text even when the viewer hides generated translations.
 const featureTitle = $derived(
-  getI18n(task.feature, 'title', appCtx.getUserPreferences()) || '-',
+  getI18n(preview ?? undefined, 'title', appCtx.getUserPreferences(), '-', true),
 )
 const featureDescription = $derived(
-  getI18n(task.feature, 'description', appCtx.getUserPreferences()) || '-',
+  getI18n(preview ?? undefined, 'description', appCtx.getUserPreferences(), '-', true),
 )
 const featureAddress = $derived(
-  getI18n(task.feature, 'displayAddress', appCtx.getUserPreferences()) || '-',
+  getI18n(preview ?? undefined, 'displayAddress', appCtx.getUserPreferences(), '-', true),
 )
-const effectiveLayerId = $derived(task.feature?.layerId ?? null)
+const effectiveLayerId = $derived(task.creationProposal?.scope.layerId ?? task.feature?.layerId ?? null)
 // Review maps follow the user's UI palette rather than the submitted project's basemap.
 const mapStyleCode = $derived(THEME_MAP_STYLES[theme.selected])
 const featureCoordinates = $derived(
-  ((task.feature?.geometry as Point | undefined)?.coordinates as
+  (((task.creationProposal?.content.placement.geometry ?? task.feature?.geometry) as Point | undefined)?.coordinates as
     | [number, number]
     | undefined) ?? null,
 )
-const featureFields = $derived.by<TaskFieldItem[]>(() =>
-  (task.feature?.properties ?? [])
+const featureFields = $derived.by<TaskFieldItem[]>(() => {
+  if (task.creationProposal) return Object.entries(task.creationProposal.content.properties).map(([id, property]) => {
+    const selection = property.selection
+    const definition = selection.definition
+    const labels = { i18n: Object.fromEntries(Object.entries(definition.labels).map(([locale, text]) => [locale, { label: text.value }])) }
+    const translations = { i18n: Object.fromEntries(Object.entries(property.translations).map(([locale, text]) => [locale, { value: text.value }])) }
+    const options = { i18n: Object.fromEntries(Object.entries(definition.selectedOption?.translations ?? {}).map(([locale, text]) => [locale, { value: text.value }])) }
+    return {
+      label: getI18n(labels, 'label', appCtx.getUserPreferences(), id, true),
+      value: getI18n(translations, 'value', appCtx.getUserPreferences(), '', true)
+        || getI18n(options, 'value', appCtx.getUserPreferences(), '', true)
+        || definition.selectedOption?.value || selection.value || selection.valueJson || '',
+    }
+  }).filter(item => item.value.trim().length > 0)
+  return (task.feature?.properties ?? [])
     .filter(property => Boolean(property.property))
     .map(property => {
       const value = getFPI18n(property, appCtx.getUserPreferences()) ?? ''
@@ -88,8 +105,8 @@ const featureFields = $derived.by<TaskFieldItem[]>(() =>
         item.value.trim().length > 0 &&
         item.value !== '-' &&
         item.value !== m.great_crazy_squid_promise(),
-    ),
-)
+    )
+})
 const reportDate = $derived(formatRelativeDate(task.createdAt))
 const captureDate = $derived(formatRelativeDate(imageMetadata?.capturedAt))
 const reportDistance = $derived.by(() => {
@@ -184,6 +201,8 @@ $effect(() => {
     publicId: image.publicId,
     env: image.env ?? undefined,
     profile: 'basic',
+    imageRevisionId: image.imageRevisionId ?? undefined,
+    featureId: task.featureId ?? undefined,
     meta: {
       isAdminRequest: true,
     },
@@ -200,22 +219,38 @@ $effect(() => {
 <TaskPrimitive.TaskRoot class={className} hasAside={!isNewPhoto}>
   <TaskPrimitive.TaskMain>
     <div class="min-h-0 flex-1">
+      {#if task.identityTransferred && !isReviewed}
+        <div class="grid gap-2 border-b border-border p-4 text-sm">
+          <p>This task was reassigned in a reviewed merge or split. Its original evidence and contributor are retained.</p>
+          {#if isNewFeature}<p>Review any photo proposals first. Completing or rejecting this contribution does not publish or archive the destination Feature.</p>{/if}
+          {#if task.revisionReviewRequired && !isNewPhoto}<a class="underline" href="#task-proposal-review">Review photo proposals</a>{/if}
+        </div>
+      {/if}
       {#if isNewPhoto}
-        <TaskPrimitive.TaskImageEditor readonly={isReviewed} {isReviewed} />
+        {#if task.revisionReviewRequired}
+          <div class="grid gap-2 border-b border-border p-4 text-sm">
+            <p>Review each photo proposal in this task. Accepting a proposal publishes that photo; rejecting it leaves the gallery unchanged. The task completes when every photo has been reviewed.</p>
+            <a class="font-medium underline" href="#task-proposal-review">Review photo proposals</a>
+          </div>
+        {/if}
+        <TaskPrimitive.TaskImageEditor readonly={isReviewed || task.revisionReviewRequired || task.identityTransferred} {isReviewed} />
       {:else}
+        {#if isNewFeature && task.revisionReviewRequired && !isReviewed && !task.identityTransferred}
+          <p class="border-b border-border p-4 text-sm">{task.lifecycleReview ? 'Accepting keeps this Feature unpublished with its submitted photos. Publish it from the regular editor when ready.' : 'Accepting publishes this new Feature and its submitted photos together.'} Rejection retains the submitted evidence.</p>
+        {/if}
         <ResourceViewer
           flush
-          canEditPresentationMode={true}
-          canEditDropzone={isNewFeature && !isReviewed}
+          canEditPresentationMode={!task.revisionReviewRequired && !task.identityTransferred}
+          canEditDropzone={isNewFeature && !isReviewed && !task.revisionReviewRequired && !task.identityTransferred}
           hasBottomPadding={isReportedMissing}
-          isReadonly={isReviewed}
+          isReadonly={isReviewed || task.revisionReviewRequired || task.identityTransferred}
           prefetchMetadata={isReportedMissing}
         />
       {/if}
     </div>
 
     {#if isNewFeature}
-      <TaskPrimitive.TaskFooter readonly={isReviewed} />
+      <TaskPrimitive.TaskFooter readonly={isReviewed || task.revisionReviewRequired || task.identityTransferred} />
     {/if}
   </TaskPrimitive.TaskMain>
 
