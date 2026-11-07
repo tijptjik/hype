@@ -210,7 +210,7 @@ const fallbackFeatureCredit = $derived(
             >
               <Popover.Close
                 aria-label={m.guest__close()}
-                class="border-foreground/15 bg-foreground/5 text-foreground hover:bg-foreground/15 focus-visible:outline-primary absolute top-2 right-2 z-10 flex size-12 items-center justify-center rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="text-foreground hover:text-primary focus-visible:outline-primary absolute top-2 right-2 z-10 flex size-12 items-center justify-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
               >
                 <CloseIcon class="size-6" aria-hidden="true" />
               </Popover.Close>

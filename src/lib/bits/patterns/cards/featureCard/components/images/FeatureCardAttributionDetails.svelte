@@ -1,7 +1,4 @@
 <script lang="ts">
-// SVELTE
-import { slide } from 'svelte/transition'
-import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import CameraIcon from 'virtual:icons/proicons/camera'
 // COMPONENTS
@@ -177,19 +174,26 @@ const sharedLicense = $derived(
     <div class="space-y-4 motion-safe:animate-pulse" aria-hidden="true">
       {#each [0, 1] as index}
         <div class={index ? 'border-border space-y-3 border-t pt-4' : 'space-y-3'}>
-          <div class="bg-foreground/10 h-5 w-24 rounded"></div>
-          <div class="flex items-center gap-3">
-            <div class="bg-foreground/10 size-10 shrink-0 rounded-full"></div>
-            <div class="space-y-2">
-              <div class="bg-foreground/10 h-4 w-32 rounded"></div>
-              <div class="bg-foreground/10 h-3 w-20 rounded"></div>
+          <div class={index ? 'flex h-6 items-center' : 'flex h-8 items-center'}>
+            <div class="bg-foreground/10 h-5 w-24 rounded"></div>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3">
+              <div class="bg-foreground/10 size-10 shrink-0 rounded-full"></div>
+              <div class="space-y-2">
+                <div class="bg-foreground/10 h-4 w-32 rounded"></div>
+                <div class="bg-foreground/10 h-3 w-20 rounded"></div>
+              </div>
+            </div>
+            <div class="space-y-1 pl-13">
+              {#if index}
+                <div class="bg-foreground/10 h-4 w-24 rounded"></div>
+              {/if}
+              <div class="bg-foreground/10 h-6 w-28 rounded"></div>
             </div>
           </div>
-          <div class="bg-foreground/10 h-3 w-24 rounded"></div>
-          <div class="bg-foreground/10 h-5 w-28 rounded"></div>
         </div>
       {/each}
-      <div class="bg-foreground/10 h-4 w-44 rounded"></div>
     </div>
   {:else}
     <div class="space-y-3">
@@ -247,10 +251,7 @@ const sharedLicense = $derived(
         {/if}
       </div>
       {#if cameraOpen && cameraRows.length}
-        <div
-          id={cameraId}
-          transition:slide={{ duration: prefersReducedMotion.current ? 0 : 180 }}
-        >
+        <div id={cameraId}>
           <dl
             class="border-border grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-3 text-sm"
           >
