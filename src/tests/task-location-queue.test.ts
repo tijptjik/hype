@@ -7,6 +7,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { eq, sql } from 'drizzle-orm'
 // DB
 import * as schema from '#lib/db/schema/index.js'
+import { taskEntityWithRelations } from '#lib/api/services/task.js'
 import {
   listTaskQueue,
   probeLocationTask,
@@ -43,6 +44,13 @@ function setup() {
   sqlite.exec(
     `ALTER TABLE locationRevision ADD COLUMN rawSource TEXT; ALTER TABLE feature ADD COLUMN addressMeta TEXT; ALTER TABLE feature ADD COLUMN isArchived INTEGER DEFAULT 0; ALTER TABLE featureLocation ADD COLUMN version TEXT;`,
   )
+  sqlite.exec(`CREATE TABLE user(id TEXT,name TEXT);
+    ALTER TABLE featureI18n ADD COLUMN description TEXT;
+    ALTER TABLE featureI18n ADD COLUMN displayAddress TEXT;
+    ALTER TABLE project ADD COLUMN code TEXT;
+    ALTER TABLE organisation ADD COLUMN code TEXT;
+    CREATE TABLE projectI18n(projectId TEXT,name TEXT,nameShort TEXT,description TEXT);
+    CREATE TABLE organisationI18n(organisationId TEXT,name TEXT,nameShort TEXT,description TEXT);`)
   sqlite.exec(readFileSync('migrations/0157_location_rematching.sql', 'utf8'))
   const prepare = (text: string) => ({
     bind: (...args: unknown[]) => ({
@@ -77,6 +85,23 @@ function setup() {
   }
   return { db, opts }
 }
+it('budgets relational hydration bindings for large native task queues', async () => {
+  const { db, opts } = setup()
+  for (let index = 0; index < 150; index++) sqlite.prepare(`INSERT INTO task
+    SELECT ?,organisationId,projectId,featureId,contributorId,reviewerId,isDraft,type,message,isReviewed,reviewOutcome,reviewAction,reviewReason,createdAt,modifiedAt FROM task WHERE id='native'`).run(`native-${index}`)
+  const compiler = drizzle({} as never, { schema })
+  const counts: number[] = []
+  vi.mocked(db.query.task.findMany).mockImplementation(config => {
+    const query = compiler.query.task.findMany(config)
+    counts.push(query.toSQL().params.length)
+    vi.spyOn(query, 'execute').mockResolvedValue([])
+    return query
+  })
+  await listTaskQueue(db, taskEntityWithRelations, [], opts)
+  expect(counts).toHaveLength(2)
+  expect(counts.every(count => count <= 100)).toBe(true)
+})
+
 function proposal(id = 'proposal') {
   sqlite
     .prepare(
