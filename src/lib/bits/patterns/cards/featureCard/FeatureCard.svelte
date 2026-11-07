@@ -84,6 +84,7 @@ let validationElement = $state<HTMLDivElement | null>(null)
 let actionsElement = $state<HTMLDivElement | null>(null)
 let bottomSpacerElement = $state<HTMLDivElement | null>(null)
 let viewerTargetHeightPx = $state<number | null>(null)
+let overlayContentHeight = $state(0)
 let containerScrollable = $state(false)
 let latchedViewerTargetHeightPx = $state<number | null>(null)
 let viewerBudgetFrame = 0
@@ -180,7 +181,7 @@ function updateViewerBudget(): void {
     chromeBorderHeight +
     contributionHeightCompensationPx
   const viewerBlockMinHeightPx =
-    layout.viewerMinHeightPx + layout.viewerTopPaddingPx + layout.viewerPaddingPx
+    Math.max(layout.viewerMinHeightPx, overlayContentHeight) + layout.viewerTopPaddingPx + layout.viewerPaddingPx
   // Compact cards may already overflow before expansion and never latch a height.
   // Use the viewer's minimum in that case so the expanded text still enables scrolling.
   const resolvedViewerTargetHeightPx = isDescriptionExpanded
@@ -260,6 +261,7 @@ $effect(() => {
 
 $effect(() => {
   const currentLayout = layout
+  overlayContentHeight
   isPortalBand
   const viewportElement = viewport
   const contentShell = contentShellElement
@@ -329,6 +331,7 @@ $effect(() => {
           paddingPx={layout.viewerPaddingPx}
           topPaddingPx={layout.viewerTopPaddingPx}
           targetHeightPx={viewerTargetHeightPx}
+          onOverlayHeightChange={height => { overlayContentHeight = height }}
         />
       </div>
       <div

@@ -13,7 +13,11 @@ const surface = getSurfaceCtx()
 let {
   currentImage,
   gallery,
+  overlayTarget,
+  onHeightChange,
 }: {
+  overlayTarget?: HTMLElement | null
+  onHeightChange?: (height: number) => void
   currentImage: ImageCtxEnvelope
   gallery?: ReturnType<typeof useImageEditorGalleryModel>
 } = $props()
@@ -22,7 +26,7 @@ let {
 <div
   class="flex flex-row items-end gap-2 overflow-visible caret-transparent select-none"
 >
-  <FeatureCardViewerAttribution {currentImage} {gallery} />
+  <FeatureCardViewerAttribution {currentImage} {gallery} {overlayTarget} {onHeightChange} />
   {#if surface.isAdmin()}
     <FeatureCardViewerIntent {currentImage} />
   {/if}

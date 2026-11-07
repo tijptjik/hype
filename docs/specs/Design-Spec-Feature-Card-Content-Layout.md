@@ -149,3 +149,23 @@ text and portal.
 
 Future structured links and numbered references are proposed separately in
 [Structured property values](Design-Spec-Structured-Properties.md).
+
+## Mobile image attribution
+
+Below 640 CSS pixels, attribution replaces the full visible image area with an
+opaque panel aligned to the viewer's inner padding and rounded corners. Keep the
+close control available and suppress the info trigger's tooltip on mobile.
+At 640 pixels and above, retain the anchored compact attribution popover.
+
+Measure the attribution content, including panel padding, after loading and when
+metadata expands or text wraps. Its intrinsic height is a minimum for the viewer
+and the card's overall layout calculation: grow the viewer and move the body down
+when necessary. Long content uses the card's normal scrolling flow rather than a
+second viewport-sized dialog. Closing, changing images, or leaving mobile layout
+releases the extra height. Sharing and attribution use the same overlay-height
+budget without shrinking the normal photo minimum.
+
+Camera metadata opens and closes with one content-height animation. While mobile
+attribution is open, the viewer follows each measured height without an additional
+CSS height transition, keeping the body synchronized with the disclosure. Reduced
+motion disables the disclosure animation.

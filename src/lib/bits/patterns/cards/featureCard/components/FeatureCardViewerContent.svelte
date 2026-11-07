@@ -3,6 +3,7 @@ import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 import { getURLfromImage } from '#lib/client/services/image.js'
 import { CameraViewer } from '#lib/bits/patterns/images/index.js'
 import Viewer from '#lib/bits/patterns/images/components/Viewer.svelte'
+import { VIEWER_TRANSITION_MS, VIEWER_TRANSITION_EASING } from '#lib/bits/patterns/images/images.motion'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 import { getImageCtx } from '#lib/context/image.svelte.js'
 import * as ViewerPrimitive from './images'
@@ -13,7 +14,7 @@ const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx)
 let loadedActiveId = $state<string | null>(null)
 let lockedViewerHeight = $state<number | null>(null)
-let viewerRoot: HTMLDivElement | null = null
+let viewerRoot = $state<HTMLDivElement | null>(null)
 
 let {
   showImagePips = false,
@@ -22,6 +23,7 @@ let {
   paddingPx = 0,
   topPaddingPx = 0,
   targetHeightPx = null,
+  onOverlayHeightChange,
 }: {
   showImagePips?: boolean
   scrollable?: boolean
@@ -29,9 +31,14 @@ let {
   paddingPx?: number
   topPaddingPx?: number
   targetHeightPx?: number | null
+  onOverlayHeightChange?: (height: number) => void
 } = $props()
 
-const viewerBlockMinHeightPx = $derived(minHeightPx + topPaddingPx + paddingPx)
+let attributionContentHeight = $state(0)
+$effect(() => onOverlayHeightChange?.(attributionContentHeight))
+const viewerBlockMinHeightPx = $derived(
+  Math.max(minHeightPx, attributionContentHeight) + topPaddingPx + paddingPx,
+)
 const isContributionMode = $derived(
   cardCtx.isMissingMode || cardCtx.isAddPhotoMode || cardCtx.isNewMode,
 )
@@ -108,6 +115,7 @@ function stopViewerEvent(event: Event): void {
   event.stopPropagation()
 }
 
+// Attribution animates its measured content; follow directly without a second easing.
 const viewerStyle = $derived.by(() => {
   if (targetHeightPx) {
     const resolvedHeight = Math.max(targetHeightPx, viewerBlockMinHeightPx)
@@ -157,6 +165,8 @@ const viewerStyle = $derived.by(() => {
       <ViewerPrimitive.Metadata
         currentImage={model.state.activeImage}
         gallery={model}
+        overlayTarget={viewerRoot}
+        onHeightChange={height => { attributionContentHeight = height }}
       />
     {/key}
   {/if}
@@ -169,8 +179,8 @@ const viewerStyle = $derived.by(() => {
 <!-- biome-ignore lint/a11y/noStaticElementInteractions: The viewer shell stops bubbling pointer events from activating the enclosing card. -->
 <div
   bind:this={viewerRoot}
-  class={`relative pointer-events-auto w-full select-none bg-base-200 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] duration-[240ms] ease-out motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
-  style={`${viewerStyle ?? ''}${viewerStyle ? ' ' : ''}min-height: ${viewerBlockMinHeightPx}px;`}
+  class={`relative pointer-events-auto w-full select-none bg-base-200 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
+  style={`transition-duration: ${attributionContentHeight > 0 ? 0 : VIEWER_TRANSITION_MS}ms; transition-timing-function: ${VIEWER_TRANSITION_EASING}; ${viewerStyle ?? ''}${viewerStyle ? ' ' : ''}min-height: ${viewerBlockMinHeightPx}px;`}
   onclick={stopViewerEvent}
   onkeydown={stopViewerEvent}
   onpointerdown={stopViewerEvent}

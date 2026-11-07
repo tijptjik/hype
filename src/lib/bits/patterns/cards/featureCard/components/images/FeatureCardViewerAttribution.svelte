@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
+import { MediaQuery } from 'svelte/reactivity'
 import { fly } from 'svelte/transition'
 import { cubicOut } from 'svelte/easing'
 import { prefersReducedMotion } from 'svelte/motion'
@@ -33,8 +34,12 @@ const surface = getSurfaceCtx()
 let {
   currentImage,
   gallery: providedGallery,
+  overlayTarget,
+  onHeightChange,
 }: {
   currentImage: ImageCtxEnvelope
+  overlayTarget?: HTMLElement | null
+  onHeightChange?: (height: number) => void
   gallery?: ReturnType<typeof useImageEditorGalleryModel>
 } = $props()
 // One mounted viewer owns this adapter; fallback supports standalone consumption.
@@ -42,6 +47,19 @@ const gallery =
   untrack(() => providedGallery) ?? useImageEditorGalleryModel(getImageCtx())
 let open = $state(false)
 let detailsHeight = $state(0)
+let mobilePanel = $state<HTMLDivElement | null>(null)
+const mobile = new MediaQuery('(max-width: 639px)')
+const fillsImage = $derived(mobile.current && Boolean(overlayTarget))
+// Reserve intrinsic content plus actual padding in the card layout, including late metadata.
+$effect(() => {
+  let height = 0
+  if (open && fillsImage && mobilePanel) {
+    const style = getComputedStyle(mobilePanel)
+    height = Math.ceil(detailsHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom))
+  }
+  onHeightChange?.(height)
+})
+onDestroy(() => onHeightChange?.(0))
 $effect(() => {
   if (!open) detailsHeight = 0
 })
@@ -177,72 +195,91 @@ const fallbackFeatureCredit = $derived(
 )
 </script>
 
+{#snippet details()}
+  <Popover.Close
+    aria-label={m.guest__close()}
+    class="text-foreground hover:text-primary focus-visible:outline-primary absolute top-2 right-2 z-10 flex size-12 items-center justify-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+  >
+    <CloseIcon class="size-6" aria-hidden="true" />
+  </Popover.Close>
+  <!-- Measure intrinsic content so the popover or mobile viewer grows only when needed. -->
+  <div class="min-h-[17.5rem]" bind:offsetHeight={detailsHeight}>
+    <FeatureCardAttributionDetails
+      {metadata}
+      {projectLicense}
+      loading={photoLoading ||
+        metadataLoading ||
+        contributorsLoading ||
+        licenseLoading}
+      {imageUser}
+      {featureUser}
+      onOpenProfile={username => {
+        surface.panels.setPanelCtx(Panel.profile, 'username', username)
+        surface.panels.openPanel(Panel.profile)
+        open = false
+      }}
+      imageCredit={imageUser?.attribution ||
+        (imageUser && 'name' in imageUser ? imageUser.name : null) ||
+        currentImage.image.attribution}
+      featureCredit={featureUser?.attribution ||
+        (featureUser && 'name' in featureUser ? featureUser.name : null) ||
+        fallbackFeatureCredit}
+      featureCreatedAt={feature?.createdAt}
+    />
+  </div>
+{/snippet}
+
 <Popover.Root bind:open>
   <Popover.Trigger
     aria-label={m.image_attribution_title()}
-    data-tooltip={m.image_attribution_title()}
+    data-tooltip={mobile.current || open ? undefined : m.image_attribution_title()}
     class="{open
       ? 'pointer-events-none opacity-0'
       : ''} inline-flex size-12 items-center justify-center rounded-full border border-transparent bg-panel/95 text-primary shadow-sm backdrop-blur-sm transition hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-primary"
     ><InfoIcon class="size-6" aria-hidden="true" /></Popover.Trigger
   >
-  <Popover.Portal>
-    <Popover.Content
-      side="top"
-      align="start"
-      sideOffset={-48}
-      forceMount
-      class="bits-theme border-border bg-panel text-foreground relative z-[250] max-h-[calc(100dvh-2rem)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border p-4 shadow-xl transition-[height] duration-180 ease-out motion-reduce:transition-none"
-      style={{
-        height: detailsHeight ? `calc(${detailsHeight}px + 2rem + 2px)` : '19.625rem',
-      }}
-    >
-      {#snippet child({ props, wrapperProps, open: contentOpen })}
-        {#if contentOpen}
-          <div {...wrapperProps}>
-            <div
-              {...props}
-              transition:fly={{
-                y: prefersReducedMotion.current ? 0 : 8,
-                duration: prefersReducedMotion.current ? 0 : 180,
-                easing: cubicOut,
-              }}
-            >
-              <Popover.Close
-                aria-label={m.guest__close()}
-                class="text-foreground hover:text-primary focus-visible:outline-primary absolute top-2 right-2 z-10 flex size-12 items-center justify-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+  {#if fillsImage && overlayTarget}
+    <Popover.Portal to={overlayTarget}>
+      <Popover.ContentStatic
+        role="dialog"
+        bind:ref={mobilePanel}
+        aria-label={m.image_attribution_title()}
+        class="bits-theme absolute inset-x-(--feature-card-viewer-padding,0px) top-(--feature-card-viewer-padding-top,0px) bottom-(--feature-card-viewer-padding,0px) z-30 rounded-xl bg-panel p-4 text-foreground"
+      >
+        {@render details()}
+      </Popover.ContentStatic>
+    </Popover.Portal>
+  {:else}
+    <Popover.Portal>
+      <Popover.Content
+        role="dialog"
+        aria-label={m.image_attribution_title()}
+        side="top"
+        align="start"
+        sideOffset={-48}
+        forceMount
+        class="bits-theme border-border bg-panel text-foreground relative z-[250] max-h-[calc(100dvh-2rem)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border p-4 shadow-xl"
+        style={{
+          height: detailsHeight ? `calc(${detailsHeight}px + 2rem + 2px)` : '19.625rem',
+        }}
+      >
+        {#snippet child({ props, wrapperProps, open: contentOpen })}
+          {#if contentOpen}
+            <div {...wrapperProps}>
+              <div
+                {...props}
+                transition:fly={{
+                  y: prefersReducedMotion.current ? 0 : 8,
+                  duration: prefersReducedMotion.current ? 0 : 180,
+                  easing: cubicOut,
+                }}
               >
-                <CloseIcon class="size-6" aria-hidden="true" />
-              </Popover.Close>
-              <!-- Measure intrinsic content so the compact card grows only when needed. -->
-              <div class="min-h-[17.5rem]" bind:offsetHeight={detailsHeight}>
-                <FeatureCardAttributionDetails
-                  {metadata}
-                  {projectLicense}
-                  loading={photoLoading ||
-                    metadataLoading ||
-                    contributorsLoading ||
-                    licenseLoading}
-                  {imageUser}
-                  {featureUser}
-                  onOpenProfile={username => {
-                    surface.panels.setPanelCtx(Panel.profile, 'username', username)
-                    surface.panels.openPanel(Panel.profile)
-                    open = false
-                  }}
-                  imageCredit={imageUser?.attribution ||
-                    (imageUser && 'name' in imageUser ? imageUser.name : null) ||
-                    currentImage.image.attribution}
-                  featureCredit={featureUser?.attribution ||
-                    (featureUser && 'name' in featureUser ? featureUser.name : null) ||
-                    fallbackFeatureCredit}
-                  featureCreatedAt={feature?.createdAt}
-                />
+                {@render details()}
               </div>
             </div>
-          </div>
-        {/if}
-      {/snippet}
-    </Popover.Content>
-  </Popover.Portal>
+          {/if}
+        {/snippet}
+      </Popover.Content>
+    </Popover.Portal>
+  {/if}
 </Popover.Root>

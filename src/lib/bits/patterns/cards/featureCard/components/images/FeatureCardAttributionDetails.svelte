@@ -1,4 +1,10 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition'
+import { cubicOut } from 'svelte/easing'
+import { prefersReducedMotion } from 'svelte/motion'
+// MOTION
+import { VIEWER_TRANSITION_MS } from '#lib/bits/patterns/images/images.motion'
 // ICONS
 import CameraIcon from 'virtual:icons/proicons/camera'
 // COMPONENTS
@@ -251,7 +257,8 @@ const sharedLicense = $derived(
         {/if}
       </div>
       {#if cameraOpen && cameraRows.length}
-        <div id={cameraId}>
+        <!-- Animate the measured content; the viewer follows without a second easing. -->
+        <div id={cameraId} transition:slide={{ duration: prefersReducedMotion.current ? 0 : VIEWER_TRANSITION_MS, easing: cubicOut }}>
           <dl
             class="border-border grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-3 text-sm"
           >
@@ -312,7 +319,7 @@ const sharedLicense = $derived(
       </dl>
     </div>
     {#if projectLicense?.meta.attribution}
-      <footer class="border-border space-y-3 border-t pt-3 text-center text-sm">
+      <footer class="border-border space-y-3 border-t pt-3 text-left text-sm">
         {#if projectLicense?.meta.attribution}
           <div class="text-muted-foreground space-y-1">
             <p class="text-xs">{m.field_attribution()}</p>
