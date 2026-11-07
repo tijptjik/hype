@@ -3,7 +3,7 @@
 import { cx } from '#lib/bits/utils.js'
 // STYLES
 import { formSurfaceStyles } from './formSurface.styles'
-import { alignSectionHeaders } from './alignSectionHeaders'
+import { alignSectionHeaders } from './alignSectionHeaders.ts'
 // TYPES
 import type { Snippet } from 'svelte'
 
