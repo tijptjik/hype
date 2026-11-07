@@ -33,6 +33,16 @@ let {
   toolbar?: boolean
 } = $props()
 let open = $state(false)
+/** Update the menu without capturing its surrounding review dialog.
+ * @param next Requested menu visibility.
+ * @returns Nothing.
+ * @remarks Document view transitions also capture the named parent dialog, which
+ * can paint over this portalled menu while the snapshots animate.
+ */
+function setOpen(next: boolean): void {
+  open = next
+}
+
 const intentDisabled = $derived(
   !onIntentChange || disabled || item.meta?.intentReadonly === true,
 )
@@ -51,7 +61,8 @@ const orderedIntentOptions = $derived(intentOptions.map(intent => intent.id))
 
 async function handleSelect(nextIntent: Intent): Promise<void> {
   if (intentDisabled) return
-  open = false
+  // Close immediately while the optimistic intent update is applied.
+  setOpen(false)
   await onIntentChange?.(item, nextIntent)
 }
 </script>
@@ -65,7 +76,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
     className,
   )}
 >
-  <Popover.Root bind:open>
+  <Popover.Root {open} onOpenChange={next => void setOpen(next)}>
     <Popover.Trigger
       disabled={intentDisabled}
       class={cx(
@@ -101,7 +112,7 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
         align="center"
         sideOffset={10}
         class={cx(
-          'bits-theme z-[200] flex w-40 flex-col gap-1 overflow-hidden rounded-xl border border-border-input bg-(--theme-panel) p-1.5 text-base-content shadow-xl backdrop-blur-sm',
+          'bits-theme z-[200] flex w-40 flex-col gap-1 overflow-hidden rounded-xl border border-border-input bg-(--theme-panel) p-1.5 text-base-content shadow-xl',
           contentClass,
         )}
       >
