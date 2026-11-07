@@ -3,6 +3,7 @@ import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
 import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 import { m } from '#lib/i18n.js'
 import { TextInput } from '#lib/bits/custom/index.js'
+import Label from '#lib/bits/custom/form/src/label/Label.svelte'
 import TextIcon from 'virtual:icons/lucide/type'
 import ParagraphIcon from 'virtual:icons/lucide/align-left'
 import PhoneIcon from 'virtual:icons/lucide/phone'
@@ -103,18 +104,19 @@ const fieldClass = $derived(
 </script>
 
 <article class={fieldClass}>
-  <div class="bits-feature-field__content">
-    <div class="flex items-center justify-between gap-3 min-w-0">
-      <div class="flex min-w-0 items-center gap-3">
-        <FieldIcon class="size-5 shrink-0 text-primary" aria-hidden="true" />
-        <span class="bits-feature-field__title">{title}</span>
+  <!-- Keep label spacing local; legacy field-card sizing must not stretch this stack. -->
+  <div class="flex min-w-0 flex-col gap-2 px-6 py-4">
+    <div class="flex min-h-0 min-w-0 shrink-0 items-center justify-between gap-3">
+      <div class="flex min-w-0 items-center gap-2">
+        <FieldIcon class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+        <Label for={`feature-field-${property.id}`} text={title} {isEditing} />
         <span class="bits-feature-field__subtitle">{property.key}</span>
       </div>
       {#if isEditing && property.dataType === 'link'}
         <div class="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            class="inline-flex items-center gap-2 text-sm text-primary disabled:opacity-40"
+            class="text-primary inline-flex items-center gap-2 text-sm disabled:opacity-40"
             disabled={!linkControl?.canAdd()}
             onclick={() => {
               linksCollapsed = false
@@ -125,7 +127,7 @@ const fieldClass = $derived(
           </button>
           <button
             type="button"
-            class="flex size-9 items-center justify-center rounded text-primary hover:bg-primary/10 disabled:opacity-30"
+            class="text-primary hover:bg-primary/10 flex size-9 items-center justify-center rounded disabled:opacity-30"
             aria-label={linksCollapsed ? 'Expand links' : 'Collapse links'}
             title={linksCollapsed ? 'Expand links' : 'Collapse links'}
             disabled={!linkControl?.hasItems()}
@@ -142,7 +144,7 @@ const fieldClass = $derived(
       {:else if isEditing && property.component === 'PhoneField'}
         <button
           type="button"
-          class="inline-flex shrink-0 items-center gap-2 text-sm text-primary disabled:opacity-40"
+          class="text-primary inline-flex shrink-0 items-center gap-2 text-sm disabled:opacity-40"
           disabled={!phoneControl?.canAdd()}
           onclick={() => phoneControl?.add()}
         >
@@ -151,9 +153,10 @@ const fieldClass = $derived(
       {/if}
     </div>
 
-    <div class="min-w-0">
+    <div class={String.raw`min-w-0 [&_.bits-form\_\_label]:hidden!`}>
       {#if !isEditing && !hasValue}
         <TextInput
+          id={`feature-field-${property.id}`}
           value=""
           placeholder="—"
           isEditing={false}

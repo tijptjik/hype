@@ -120,6 +120,10 @@ const fields = $derived(
       label: string
     }>),
 )
+// Divide the full workspace into thirds; each field owns its inset padding.
+const titleDescriptionColumns = $derived(
+  fields.length === 2 && fields[0].key === 'title' && fields[1].key === 'description',
+)
 // Policy documents need roughly 720px each after editor controls and the divider.
 const policyColumns = $derived(
   fields.length === 2 &&
@@ -279,11 +283,13 @@ function autonym(locale: string): string {
     </div>
   {/if}
   <div
-    class="grid min-w-0 gap-x-6 gap-y-4 {policyColumns
+    class="grid min-w-0 gap-x-6 gap-y-4 {titleDescriptionColumns
+      ? 'md:-mx-6 md:gap-x-0 md:[&>section]:px-6'
+      : ''} {policyColumns
       ? '@min-[100rem]/profile-editor:grid-cols-2 @min-[100rem]/profile-editor:[&>section+section]:border-l @min-[100rem]/profile-editor:[&>section+section]:border-border/50 @min-[100rem]/profile-editor:[&>section+section]:pl-6'
       : stackNames
         ? 'md:grid-cols-3 md:grid-rows-[min-content_1fr]'
-        : `${fields.length > 1 ? 'md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6' : ''} ${fields.length === 3 ? 'md:grid-cols-3' : fields.length === 2 ? 'md:grid-cols-2' : ''}`}"
+        : `${fields.length > 1 ? 'md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6' : ''} ${fields.length === 3 ? 'md:grid-cols-3' : fields.length === 2 ? (titleDescriptionColumns ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]' : 'md:grid-cols-2') : ''}`}"
   >
     {#each fields as { key: field, label } (field)}
       {@const stickyHeader =

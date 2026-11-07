@@ -1,18 +1,18 @@
 // BITS
 import { cx } from '#lib/bits/utils.js'
 
-// Fields share the resource workspace: three columns with tinted label headers and themed controls.
+// Fields share the resource workspace: three columns with regular form labels and the shared resource control appearance.
 export const FORM_FEATURE_FIELDS_ROOT_CLASS = cx(
   'flex flex-col items-stretch [&>*]:w-full',
-  String.raw`[&_.bits-feature-field--readonly_.bits-form\_\_control--display]:text-base [&_.bits-feature-field--readonly_.bits-form\_\_control--display]:min-h-12`,
   String.raw`[&_.bits-feature-fields\_\_grid]:grid-cols-1 @min-[640px]:[&_.bits-feature-fields\_\_grid]:grid-cols-2 @min-[1050px]:[&_.bits-feature-fields\_\_grid]:grid-cols-3 [&_.bits-feature-fields\_\_grid]:gap-0`,
-  String.raw`[&_.bits-feature-field_.bits-form\_\_control-wrap]:border [&_.bits-feature-field_.bits-form\_\_control-wrap]:border-border/60 [&_.bits-feature-field_.bits-form\_\_select-display-wrap]:border [&_.bits-feature-field_.bits-form\_\_select-display-wrap]:border-border/60 [&_.bits-feature-field_.bits-form\_\_select-display-wrap]:bg-foreground/4`,
   '[&_.bits-feature-field]:rounded-none [&_.bits-feature-field]:border-0 [&_.bits-feature-field]:border-b [&_.bits-feature-field]:border-border/50 [&_.bits-feature-field]:bg-transparent [&_.bits-feature-field]:shadow-none [&_.bits-feature-field]:before:hidden',
-  // Carry column dividers through both the tinted header and the field body.
+  // Carry column dividers through the full field.
   '@min-[640px]:@max-[1050px]:[&_.bits-feature-field:nth-child(odd)]:border-r @min-[1050px]:[&_.bits-feature-field:not(:nth-child(3n))]:border-r',
-  String.raw`[&_.bits-feature-field\_\_content]:flex [&_.bits-feature-field\_\_content]:h-full [&_.bits-feature-field\_\_content]:flex-col [&_.bits-feature-field\_\_content]:items-stretch [&_.bits-feature-field\_\_content]:gap-0 [&_.bits-feature-field\_\_content]:p-0 [&_.bits-feature-field\_\_content>div:first-child]:max-w-none [&_.bits-feature-field\_\_content>div:first-child]:min-h-[68px] [&_.bits-feature-field\_\_content>div:first-child]:justify-between [&_.bits-feature-field\_\_content>div:first-child]:border-y [&_.bits-feature-field\_\_content>div:first-child]:border-border/60 [&_.bits-feature-field\_\_content>div:first-child]:bg-primary/10 [&_.bits-feature-field\_\_content>div:first-child]:px-6 [&_.bits-feature-field\_\_content>div:first-child]:py-3 [&_.bits-feature-field\_\_content>div:last-child]:p-6`,
-  String.raw`[&_.bits-feature-field\_\_title]:whitespace-normal [&_.bits-feature-field\_\_title]:text-lg [&_.bits-feature-field\_\_title]:leading-5 [&_.bits-feature-field\_\_subtitle]:hidden`,
-  String.raw`[&_.bits-feature-field_.bits-form\_\_control-wrap]:shadow-none [&_.bits-feature-field_.bits-form\_\_select-display-wrap]:shadow-none`,
+  String.raw`[&_.bits-feature-field\_\_subtitle]:hidden`,
+  // Match inline resource fields in both modes; the parent owns the label spacing.
+  String.raw`[&_.bits-feature-field_.bits-form\_\_control-wrap]:bg-transparent! [&_.bits-feature-field_.bits-form\_\_control-wrap]:min-h-10 [&_.bits-feature-field_.bits-form\_\_control-wrap]:rounded-md! [&_.bits-feature-field_.bits-form\_\_control-wrap]:shadow-none! [&_.bits-feature-field_.bits-form\_\_control-wrap--editing]:border-border/30 [&_.bits-feature-field_.bits-form\_\_control-wrap--editing:hover]:border-border/60 [&_.bits-feature-field_.bits-form\_\_control-wrap--editing:focus-within]:border-primary/70`,
+  String.raw`[&_.bits-feature-field_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing)]:border-transparent! [&_.bits-feature-field_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing)]:ring-0!`,
+  String.raw`[&_.bits-feature-field_.bits-form\_\_control--input]:h-10 [&_.bits-feature-field_.bits-form\_\_field]:gap-0 [&_.bits-feature-field_.bits-form\_\_select-display]:min-h-10 [&_.bits-feature-field_.bits-form\_\_select-display]:py-2`,
 )
 
 export const FORM_FEATURE_FIELDS_SECTION_CLASS = 'pb-12'

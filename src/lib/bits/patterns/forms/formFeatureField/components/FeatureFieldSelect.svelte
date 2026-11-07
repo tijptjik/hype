@@ -31,7 +31,7 @@ const resolvedPlaceholder = $derived(isEditing ? placeholder : '—')
   {isEditing}
   placeholder={resolvedPlaceholder}
   class="bits-feature-field__form-field"
-  triggerClass="bits-feature-field__select-trigger"
-  displayClass="bits-feature-field__select-display"
+  triggerClass="h-10! rounded-md! bg-transparent! border-border/30 hover:border-border/60 focus-visible:border-primary/70"
+  displayClass="bits-feature-field__select-display bg-transparent! border-transparent! shadow-none! ring-0!"
   onValueChange={nextValue => onChange(nextValue)}
 />
