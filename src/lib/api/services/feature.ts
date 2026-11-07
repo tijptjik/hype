@@ -18,7 +18,8 @@ import {
   saveUnlinkedFeatureForm,
 } from '#lib/db/services/featureFormSave.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
-import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
+import { applyPrismConstraints } from '#lib/db/index.js'
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 import { applyTriStateBooleanCondition } from '#lib/db/query.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
 import { toImageEnvelope, toNormalizedImageRecord } from '#lib/db/services/image.js'
@@ -370,18 +371,18 @@ const toPropertyShape = (properties: FeatureResponseRow['properties']) =>
     property: property.property
       ? {
           ...property.property,
-          i18n: transformI18nSafely(property.property.i18n as never),
+          i18n: propertyLocalesToForm(property.property.i18n),
           values:
             property.property.values?.map(value => ({
               ...value,
-              i18n: transformI18nSafely(value.i18n as never),
+              i18n: propertyLocalesToForm(value.i18n),
             })) ?? [],
         }
       : undefined,
     propertyValue: property.propertyValue
       ? {
           ...property.propertyValue,
-          i18n: transformI18nSafely(property.propertyValue.i18n as never),
+          i18n: propertyLocalesToForm(property.propertyValue.i18n),
         }
       : null,
   }))
