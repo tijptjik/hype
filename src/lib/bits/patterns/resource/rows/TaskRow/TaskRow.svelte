@@ -1,6 +1,8 @@
 <script lang="ts">
 // I18N
 import { getI18n, m } from '#lib/i18n.js'
+// DOMAIN
+import { taskRowImage } from './taskRowImage.js'
 // SERVICES
 import { getTaskReviewActionLabel } from '#lib/client/services/task.js'
 // BITS
@@ -44,6 +46,7 @@ const colorSuffix = $derived<'error' | 'info' | 'ok' | 'base'>(
 )
 const reviewAction = $derived(entity?.reviewAction)
 const reviewActionDisplay = $derived(getTaskReviewActionLabel(reviewAction))
+const thumbnail = $derived(taskRowImage(entity))
 
 function handleRowKeyDown(event: KeyboardEvent): void {
   if (isSelected || !entity?.id) return
@@ -81,7 +84,7 @@ function handleTitleClick(): void {
   class="grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 pr-3 @min-[48rem]:grid-cols-[minmax(0,1fr)_11rem_12rem_8rem]"
   onclick={handleTitleClick}
   onkeydown={handleRowKeyDown}
-  image={entity.feature ? entity.images?.[0] : undefined}
+  image={thumbnail}
   alt={`Task image for feature ${entity?.feature?.id || 'unknown'}`}
   onImageClick={entity.images?.[0]
     ? (handleImageClick as (image: unknown) => void)
