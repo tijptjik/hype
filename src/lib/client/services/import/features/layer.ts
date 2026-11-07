@@ -1,5 +1,7 @@
 // I18N
 import { m, toLocaleKey, translateI18nFields } from '#lib/i18n.js'
+// SCHEMA
+import { PropertyDetailProfileAPI, PropertyValueDetailProfileAPI } from '#lib/db/zod/schema/property.js'
 // API
 import { createLayer, getLayer, getLayers } from '#lib/api/layer.remote.js'
 import { getProjectProperties as getProjectPropertiesRemote } from '#lib/api/property.remote.js'
@@ -128,7 +130,7 @@ function _mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
   properties.forEach((projectProp: Property) => {
     if (!existingPropertyIds.includes(projectProp.id)) {
       if (typeof projectProp.i18n !== 'object' && projectProp.i18n) {
-        projectProp.i18n = transformI18nSafely(projectProp.i18n)
+        projectProp.i18n = PropertyDetailProfileAPI.shape.i18n.parse(transformI18nSafely(projectProp.i18n))
       }
       // Create a conformed property object
       const conformedProjectProp: Property = {
@@ -999,7 +1001,7 @@ export async function submitLayerForm(
     // Create layer properties array for the new layer
     const layerProperties = projectProperties.map((projectProp: Property) => {
       if (typeof projectProp.i18n !== 'object' && projectProp.i18n) {
-        projectProp.i18n = transformI18nSafely(projectProp.i18n)
+        projectProp.i18n = PropertyDetailProfileAPI.shape.i18n.parse(transformI18nSafely(projectProp.i18n))
       }
 
       // Transform property i18n from array to object format (keyed by locale)
@@ -1032,14 +1034,14 @@ export async function submitLayerForm(
 
         return {
           ...value,
-          i18n: transformedValueI18n,
+          i18n: PropertyValueDetailProfileAPI.shape.i18n.parse(transformedValueI18n),
         }
       })
 
       // Create a conformed property object
       const conformedProjectProp: Property = {
         ...projectProp,
-        i18n: transformedPropertyI18n,
+        i18n: PropertyDetailProfileAPI.shape.i18n.parse(transformedPropertyI18n),
         values: transformedValues,
       }
 

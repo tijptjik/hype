@@ -40,6 +40,7 @@ import { retryBusyRead } from './sqlite'
 import { prepareGuardedReplacement } from './guardedReplacement.js'
 import { autochunk, chunkedInArray } from '#lib/utils/batch-query.js'
 // I18N
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 import { normalizeI18nLocaleRecord } from '#lib/i18n.js'
 // TYPES
 import type { OrganisationRevisionActor } from './organisationRevision.js'
@@ -266,7 +267,18 @@ async function listLayerPropertyLinks(
     },
   })
 
-  return rows as LayerPropertyDBRaw[]
+  // Hydrate relational translations into the API locale maps used by editors.
+  return rows.map(row => ({
+    ...row,
+    property: {
+      ...row.property,
+      i18n: propertyLocalesToForm(row.property.i18n),
+      values: row.property.values.map(value => ({
+        ...value,
+        i18n: propertyLocalesToForm(value.i18n),
+      })),
+    },
+  }))
 }
 
 /**

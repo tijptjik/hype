@@ -22,7 +22,7 @@ export function createUserFacetNavigation(
     },
     select(facet: string): void {
       if (!getFacets().has(facet)) return
-      const url = new URL(currentUrl)
+      const url = new URL(currentUrl.href)
       url.hash = facet
       if (url.href === currentUrl.href) return
       void goto(url.toString(), { shallow: true })

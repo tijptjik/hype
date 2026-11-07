@@ -14,6 +14,7 @@ import { featureLocationBrandsSQL } from '#lib/db/services/locationBrandProjecti
 import { featureLocationLifecycleSQL } from '#lib/db/services/locationLifecycleProjection.js'
 import { ImageListFields } from '#lib/db/zod/schema/imageList.js'
 import { ImageContextResource } from '#lib/enums.js'
+import { FeatureListRow } from '#lib/db/zod/schema/feature.js'
 // TYPES
 import type { Database, SessionUser, UserRoleDisco } from '#lib/types.js'
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
@@ -123,17 +124,16 @@ export async function readUserContributedFeatures(
     limit: 20,
   })
   const results = await Promise.all(
-    rows.map(row =>
-      toEntityResponseShape(
-        {
-          ...row,
-          addressMeta: row.addressMeta ?? {},
-          imageCount: row.images.length,
-          imagePublishedCount: row.images.filter(assignment => assignment.isPublished).length,
-        },
-        'list',
-      ),
-    ),
+    rows.map(row => {
+      // Parse JSON projections while retaining the separately authorized image graph.
+      const parsed = {
+        ...FeatureListRow.parse({ ...row, addressMeta: row.addressMeta ?? {} }),
+        images: row.images,
+        imageCount: row.images.length,
+        imagePublishedCount: row.images.filter(assignment => assignment.isPublished).length,
+      }
+      return toEntityResponseShape(parsed, 'list')
+    }),
   )
   return results.flatMap(result => (result.data ? [result.data] : []))
 }

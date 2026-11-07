@@ -88,7 +88,7 @@ export function contentRowsToForm<T extends { locale?: string }>(
  */
 export function contentMapToStorage<T extends Record<string, unknown>>(
   values: Partial<Record<string, T>>,
-): Record<string, T> {
+): Record<string, T & { locale: string }> {
   const mapped = adaptContentMap(values, contentStorageTag)
   return Object.fromEntries(
     Object.entries(mapped).flatMap(([locale, row]) => {

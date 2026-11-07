@@ -203,10 +203,10 @@ export const TaskAdminProfileAPI = TaskBase.extend({
     properties: z.array(
       FeaturePropertyAPI.extend({
         property: PropertyRecord.extend({
-          i18n: getLocales(PropertyI18nRecord),
+          i18n: contentLocaleMap(PropertyI18nRecord),
         }),
         propertyValue: PropertyValueRecord.extend({
-          i18n: getLocales(PropertyValueI18nRecord),
+          i18n: contentLocaleMap(PropertyValueI18nRecord).nullish(),
         })
           .optional()
           .nullable(),
