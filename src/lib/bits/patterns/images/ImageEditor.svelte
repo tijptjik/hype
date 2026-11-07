@@ -1,4 +1,9 @@
 <script lang="ts">
+// SVELTE
+import { tick } from 'svelte'
+// ICONS
+import SortIcon from 'virtual:icons/proicons/arrow-swap'
+import UndoIcon from 'virtual:icons/proicons/arrow-counterclockwise'
 import { cx } from '#lib/bits/utils.js'
 import { m } from '#lib/i18n.js'
 import * as ImagePrimitive from './components'
@@ -9,6 +14,10 @@ import { getGalleryBackgroundSrc } from '#lib/client/services/image.js'
 import type { ImageEditorProps } from './images.types'
 
 let {
+  sortScope,
+  sortMode = 'automatic',
+  canSort = false,
+  onSortChange,
   items,
   layout = 'sidebar',
   showNavButtons = true,
@@ -60,6 +69,68 @@ let {
   onThumbnailError,
 }: ImageEditorProps = $props()
 
+let sortBusy = $state(false)
+let sortMessage = $state('')
+let previousSort = $state<{ mode: 'automatic' | 'manual'; order: string[] } | null>(
+  null,
+)
+let sortMembership = $state('')
+let undoState = $state('')
+let lastSortScope = $state<string | undefined>()
+
+/** Persists a completed gesture or mode choice, retaining the last manual arrangement while Automatic is active in this session.
+ * @param mode Desired mode. @param order Complete displayed membership. @param undo Whether to consume Undo.
+ * @returns Completion after persistence or a visible recoverable error.
+ */
+async function changeSort(
+  mode: 'automatic' | 'manual',
+  order = items.map(item => item.id),
+  undo = false,
+): Promise<void> {
+  if (!onSortChange || !canSort || sortBusy) return
+  const requestedScope = sortScope
+  const previous = { mode: sortMode, order: items.map(item => item.id) }
+  sortBusy = true
+  sortMessage = ''
+  try {
+    await onSortChange(mode, order)
+    await tick()
+    if (sortScope !== requestedScope) return
+    previousSort =
+      !undo && mode === 'automatic' && previous.mode === 'manual' ? previous : null
+    undoState = `${sortMode}:${items.map(item => item.id).join('|')}`
+    sortMembership = [...order].sort().join('|')
+    // Successful changes are reflected by the toggle; only failures need a message.
+  } catch (cause) {
+    sortMessage =
+      cause instanceof Error ? cause.message : 'Could not save gallery order.'
+  } finally {
+    sortBusy = false
+  }
+}
+
+$effect(() => {
+  if (lastSortScope !== sortScope) {
+    lastSortScope = sortScope
+    previousSort = null
+    sortMessage = ''
+  }
+  if (
+    !sortBusy &&
+    previousSort &&
+    ([...items.map(item => item.id)].sort().join('|') !== sortMembership ||
+      `${sortMode}:${items.map(item => item.id).join('|')}` !== undoState)
+  )
+    previousSort = null
+})
+
+$effect(() => {
+  if (items.length && !items.some(item => item.id === activeId)) {
+    activeId = items[0].id
+    onActiveIdChange?.(activeId)
+  }
+})
+
 let isDeleteMode = $state(false)
 let viewerFullscreenRequestKey = $state(0)
 let thumbnailFollowActiveRequestKey = $state(0)
@@ -76,7 +147,12 @@ const verticalRailWidthPx =
 const viewerFit = $derived.by<'fit' | 'cover'>(() =>
   presentationMode === 'cover' ? 'cover' : fit,
 )
-const railWidth = $derived(hasItems ? `${verticalRailWidthPx}px` : '0px')
+const hasSortControls = $derived(
+  Boolean(onSortChange && (sortMode === 'manual' || previousSort?.mode === 'manual')),
+)
+const railWidth = $derived(
+  hasItems ? `${verticalRailWidthPx + (hasSortControls ? 40 : 0)}px` : '0px',
+)
 const railVisibilityClass = $derived(
   hasItems
     ? 'translate-x-0 opacity-100'
@@ -100,15 +176,18 @@ $effect(() => {
     <ImageBackdrop src={getGalleryBackgroundSrc(activeItem)!} />
   {/if}
   <div class={cx('relative flex h-full min-h-0 w-full', isStackedLayout && 'flex-col')}>
+    {#if sortMessage}
+      <p
+        role="status"
+        class="bg-base-100 text-warning pointer-events-none absolute inset-x-0 top-0 z-50 px-3 py-2 text-sm"
+      >
+        {sortMessage}
+      </p>
+    {/if}
     {#if layout === 'top' && items.length > 1}
       {@render thumbnailTrack()}
     {/if}
-    <div
-      class={cx(
-        'relative min-h-0 min-w-0 flex-1',
-        className,
-      )}
-    >
+    <div class={cx('relative min-h-0 min-w-0 flex-1', className)}>
       <AdminViewer
         rounded="rounded-none"
         {items}
@@ -204,7 +283,13 @@ $effect(() => {
           style={`padding-bottom: ${verticalRailBottomBarHeightPx}px;`}
         >
           <ThumbnailWrapper
+            trackControls={onSortChange &&
+            (sortMode === 'manual' || previousSort?.mode === 'manual')
+              ? sortingControls
+              : undefined}
             {items}
+            onReorder={onSortChange ? ids => changeSort('manual', ids) : undefined}
+            reorderDisabled={!canSort || sortBusy || isDeleteMode}
             {activeId}
             followActiveIdRequestKey={thumbnailFollowActiveRequestKey}
             followActiveIdRequestId={thumbnailFollowActiveRequestId}
@@ -298,10 +383,16 @@ $effect(() => {
 {#snippet thumbnailTrack()}
   <div class="bg-base-100 h-32 shrink-0 px-2 py-1">
     <ThumbnailWrapper
+      trackControls={onSortChange &&
+      (sortMode === 'manual' || previousSort?.mode === 'manual')
+        ? sortingControls
+        : undefined}
       {items}
       {activeId}
       variant="admin"
       orientation="horizontal"
+      onReorder={onSortChange ? ids => changeSort('manual', ids) : undefined}
+      reorderDisabled={!canSort || sortBusy || isDeleteMode}
       size={112}
       trackClass="m-0! gap-2 p-1! bg-transparent! [&_button[aria-pressed]>div]:bg-transparent!"
       {fit}
@@ -323,4 +414,32 @@ $effect(() => {
       }}
     />
   </div>
+{/snippet}
+
+{#snippet sortingControls()}
+  <button
+    type="button"
+    aria-label="Automatic image sorting"
+    aria-pressed={sortMode === 'automatic'}
+    title={sortMode === 'manual' ? 'Restore automatic order' : 'Automatic order'}
+    class="border-border bg-base-100/95 text-base-content flex size-8 items-center justify-center rounded-full border shadow-sm disabled:opacity-50"
+    class:text-primary={sortMode === 'automatic'}
+    disabled={!canSort || sortBusy || sortMode === 'automatic'}
+    onclick={() => void changeSort('automatic')}
+  >
+    <SortIcon class="size-4" />
+  </button>
+  {#if sortMode === 'automatic' && previousSort?.mode === 'manual'}
+    <button
+      type="button"
+      aria-label="Restore manual image order"
+      title="Restore manual image order"
+      class="border-border bg-base-100/95 text-base-content flex size-8 items-center justify-center rounded-full border shadow-sm disabled:opacity-50"
+      disabled={!canSort || sortBusy}
+      onclick={() =>
+        previousSort && void changeSort(previousSort.mode, previousSort.order, true)}
+    >
+      <UndoIcon class="size-4" />
+    </button>
+  {/if}
 {/snippet}

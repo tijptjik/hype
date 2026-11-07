@@ -25,6 +25,7 @@ export type ViewerRenderable = {
   presentationMode?: ImagePresentation
   alt?: string | null
   galleryPosition?: number
+  gallerySortMode?: 'automatic' | 'manual'
   fallbackSeed?: string | null
   intent?: string | null
   isPublished?: boolean | null
@@ -155,6 +156,9 @@ export type CameraViewerProps = AdminViewerProps & {
 }
 
 export type ThumbnailWrapperProps = {
+  trackControls?: Snippet
+  onReorder?: (ids: string[]) => void | Promise<void>
+  reorderDisabled?: boolean
   /** Classes for the scrolling track, allowing its container to own gutters. */
   trackClass?: string
   items: ViewerRenderable[]
@@ -189,6 +193,10 @@ export type ThumbnailWrapperProps = {
 }
 
 export type ImageEditorProps = {
+  sortScope?: string
+  sortMode?: 'automatic' | 'manual'
+  canSort?: boolean
+  onSortChange?: (mode: 'automatic' | 'manual', ids: string[]) => Promise<void>
   layout?: 'sidebar' | 'bottom' | 'top'
   showNavButtons?: boolean
   textControls?: Snippet

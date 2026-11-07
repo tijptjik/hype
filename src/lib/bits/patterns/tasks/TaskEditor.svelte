@@ -313,7 +313,8 @@ $effect(() => {
           >
             <TaskPrimitive.TaskImageEditor
               multilingualExpanded={localeState.expanded}
-              onMultilingualExpandedChange={expanded => onLocaleStateChange?.({ ...localeState, expanded })}
+              onMultilingualExpandedChange={expanded =>
+                onLocaleStateChange?.({ ...localeState, expanded })}
               featureId={task.featureId ?? task.feature?.id}
               layout="top"
               readonly={isReviewed ||
@@ -441,9 +442,10 @@ $effect(() => {
             </div>
           {/if}
           <TaskPrimitive.TaskImageEditor
-              featureId={task.featureId ?? task.feature?.id}
-              multilingualExpanded={localeState.expanded}
-              onMultilingualExpandedChange={expanded => onLocaleStateChange?.({ ...localeState, expanded })}
+            featureId={task.featureId ?? task.feature?.id}
+            multilingualExpanded={localeState.expanded}
+            onMultilingualExpandedChange={expanded =>
+              onLocaleStateChange?.({ ...localeState, expanded })}
             readonly={isReviewed ||
               task.revisionReviewRequired ||
               task.identityTransferred}

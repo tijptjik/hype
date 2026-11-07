@@ -2,6 +2,8 @@
 // SVELTE
 import { flip } from 'svelte/animate'
 import { onDestroy } from 'svelte'
+// THIRD-PARTY
+import { dndzone, TRIGGERS, SOURCES, type DndEvent } from 'svelte-dnd-action'
 // LIB
 import { cx } from '#lib/bits/utils.js'
 import { buildGallerySceneAssetUrls } from '#lib/client/services/image.js'
@@ -12,6 +14,9 @@ import AdminThumbnail from './AdminThumbnail.svelte'
 import type { ThumbnailWrapperProps, ViewerRenderable } from './images.types'
 
 let {
+  onReorder,
+  trackControls,
+  reorderDisabled = false,
   items,
   activeId = $bindable<string | null>(null),
   followActiveIdRequestKey = 0,
@@ -44,6 +49,60 @@ let {
   trackClass = '',
 }: ThumbnailWrapperProps = $props()
 
+const dragZoneId = $props.id()
+let dragItems = $state<ViewerRenderable[] | null>(null)
+let reorderPending = $state(false)
+const displayedItems = $derived(dragItems ?? items)
+
+/** Commits only a completed in-zone gesture, leaving selection unchanged.
+ * @param next Completed thumbnail sequence. @returns Completion after save or rollback.
+ */
+async function finishReorder(next: ViewerRenderable[]): Promise<void> {
+  const ids = next.map(item => item.id)
+  if (
+    !onReorder ||
+    reorderDisabled ||
+    ids.length !== items.length ||
+    new Set(ids).size !== ids.length ||
+    ids.some(id => !items.some(item => item.id === id)) ||
+    ids.every((id, index) => id === items[index].id)
+  ) {
+    dragItems = null
+    return
+  }
+  reorderPending = true
+  clearHoverDebounce()
+  pendingHoverItem = null
+  try {
+    await onReorder(ids)
+  } finally {
+    dragItems = null
+    reorderPending = false
+  }
+}
+
+/** Tracks DND previews; keyboard sorting commits once when the user drops the item.
+ * @param event Svelte DND consideration event. @returns Nothing.
+ */
+function considerReorder(event: CustomEvent<DndEvent<ViewerRenderable>>): void {
+  dragItems = event.detail.items
+  clearHoverDebounce()
+  pendingHoverItem = null
+  if (event.detail.info.trigger === TRIGGERS.DRAG_STOPPED)
+    void finishReorder(event.detail.items)
+}
+
+/** Completes pointer drops; keyboard movement remains a preview until drop.
+ * @param event Svelte DND finalization event. @returns Nothing.
+ */
+function finalizeReorder(event: CustomEvent<DndEvent<ViewerRenderable>>): void {
+  dragItems = event.detail.items
+  if (event.detail.info.source === SOURCES.KEYBOARD) return
+  if (event.detail.info.trigger === TRIGGERS.DROPPED_INTO_ZONE)
+    void finishReorder(event.detail.items)
+  else dragItems = null
+}
+
 let trackEl = $state<HTMLElement>()
 let previousItemsLength = $state(0)
 let lastHandledFollowActiveIdRequestKey = $state(0)
@@ -62,7 +121,7 @@ const HOVER_TARGET_DEBOUNCE_MS = 80
 const UPLOAD_BATCH_SCROLL_SETTLE_MS = 160
 
 function handleSelect(item: ViewerRenderable): void {
-  onSelect?.(item)
+  if (!dragItems && !reorderPending) onSelect?.(item)
 }
 
 function clearHoverDebounce(): void {
@@ -165,7 +224,7 @@ function handleTrackPointerLeave(): void {
 }
 
 function handleItemHover(item: ViewerRenderable): void {
-  if (!onHover) return
+  if (!onHover || dragItems || reorderPending) return
 
   if (!isPointerInsideTrack) {
     onHover(item)
@@ -432,79 +491,113 @@ onDestroy(() => {
     >
   {/each}
 
-  <section
-    bind:this={trackEl}
-    aria-label="Gallery thumbnails"
-    onmouseenter={handleTrackPointerEnter}
-    onmousemove={handleTrackPointerMove}
-    onwheel={handleTrackWheel}
-    onclickcapture={handleTrackClickCapture}
-    onmouseleave={handleTrackPointerLeave}
-    onscroll={handleTrackScroll}
-    class={cx(
-      'flex min-h-0 w-full min-w-0 flex-1 gap-2 select-none',
-      'overscroll-contain',
-      orientation === 'vertical'
-        ? variant === 'admin'
-          ? 'flex-col overflow-x-hidden overflow-y-auto px-4 pb-3 pt-3 pr-2'
-          : 'flex-col overflow-x-hidden overflow-y-auto pr-2'
-        : variant === 'admin'
-          ? 'overflow-x-auto overflow-y-hidden bg-surface p-3 mt-3 mr-3'
-          : 'overflow-x-auto overflow-y-hidden pb-4',
-      trackClass,
-    )}
-  >
-    {#each items as item, index (item.renderKey ?? item.id)}
-      <!-- biome-ignore lint/a11y/noStaticElementInteractions: Thumbnail hover updates the visual preview without adding a separate control. -->
-      <div
-        data-gallery-thumb-id={item.id}
-        data-gallery-thumb-index={index}
-        class="relative shrink-0"
-        animate:flip={flipMode ? { duration: 220 } : undefined}
-        onmouseenter={() => handleItemHover(item)}
-      >
-        {#if variant === 'admin'}
-          <AdminThumbnail
-            {item}
-            {fit}
-            {size}
-            isActive={item.id === activeId}
-            isHighlighted={getIsHighlighted?.(item) ?? false}
-            {highlightClass}
-            badgeLabel={getBadgeLabel?.(item) ?? null}
-            badgeClass={getBadgeClass?.(item) ?? ''}
-            isLoading={getIsLoading?.(item) ?? false}
-            isBlurred={resolveIsBlurred(item)}
-            isGreyscale={resolveIsGreyscale(item)}
-            isUploading={getIsUploading?.(item) ?? false}
-            {isDeleteMode}
-            {isIntentDisabled}
-            intentPopoverSide={orientation === 'horizontal' ? 'top' : 'left'}
-            {onIntentChange}
-            onSelect={handleSelect}
-            onHover={handleItemHover}
-            onLoad={() => onLoad?.(item)}
-            onError={() => onError?.(item)}
-            {onDelete}
-            {onRetryUpload}
-          />
-        {:else}
-          <Thumbnail
-            {item}
-            {fit}
-            {size}
-            isActive={item.id === activeId}
-            isHighlighted={getIsHighlighted?.(item) ?? false}
-            {highlightClass}
-            isLoading={getIsLoading?.(item) ?? false}
-            onSelect={handleSelect}
-            onLoad={() => onLoad?.(item)}
-            onError={() => onError?.(item)}
-          />
-        {/if}
-      </div>
-    {/each}
-  </section>
+  <div class="flex min-h-0 min-w-0 flex-1">
+    <!-- One fixed control rail precedes the scrolling thumbnails and never follows selection. -->
+    <div
+      class="shrink-0 overflow-hidden transition-[width] duration-200 motion-reduce:transition-none"
+      class:w-10={Boolean(trackControls)}
+      class:w-0={!trackControls}
+    >
+      {#if trackControls}
+        <!-- biome-ignore lint/a11y/useSemanticElements: This labels a toolbar group, not form fields. -->
+        <div
+          class="flex w-10 flex-col items-center gap-1 pt-1"
+          role="group"
+          aria-label="Gallery order controls"
+        >
+          {@render trackControls()}
+        </div>
+      {/if}
+    </div>
+    <section
+      bind:this={trackEl}
+      use:dndzone={{
+        items: displayedItems,
+        type: dragZoneId,
+        flipDurationMs: 220,
+        dragDisabled: !onReorder || reorderDisabled || reorderPending,
+        zoneTabIndex: -1,
+        zoneItemTabIndex: onReorder && !reorderDisabled ? 0 : -1,
+        dropFromOthersDisabled: true,
+        dropTargetStyle: {},
+        delayTouchStart: 200,
+      }}
+      onconsider={considerReorder}
+      onfinalize={finalizeReorder}
+      aria-label="Gallery thumbnails"
+      onmouseenter={handleTrackPointerEnter}
+      onmousemove={handleTrackPointerMove}
+      onwheel={handleTrackWheel}
+      onclickcapture={handleTrackClickCapture}
+      onmouseleave={handleTrackPointerLeave}
+      onscroll={handleTrackScroll}
+      class={cx(
+        'flex min-h-0 w-full min-w-0 flex-1 gap-2 select-none',
+        'overscroll-contain',
+        orientation === 'vertical'
+          ? variant === 'admin'
+            ? 'flex-col overflow-x-hidden overflow-y-auto px-4 pb-3 pt-3 pr-2'
+            : 'flex-col overflow-x-hidden overflow-y-auto pr-2'
+          : variant === 'admin'
+            ? 'overflow-x-auto overflow-y-hidden bg-surface p-3 mt-3 mr-3'
+            : 'overflow-x-auto overflow-y-hidden pb-4',
+        trackClass,
+      )}
+    >
+      {#each displayedItems as item, index (item.id)}
+        <!-- biome-ignore lint/a11y/noStaticElementInteractions: Thumbnail hover updates the visual preview without adding a separate control. -->
+        <!-- biome-ignore lint/a11y/useAriaPropsSupportedByRole: svelte-dnd-action assigns each child its listitem role at runtime. -->
+        <div
+          aria-label={`Photo ${index + 1}${item.alt ? `: ${item.alt}` : ''}`}
+          data-gallery-thumb-id={item.id}
+          data-gallery-thumb-index={index}
+          class="relative shrink-0"
+          animate:flip={flipMode ? { duration: 220 } : undefined}
+          onmouseenter={() => handleItemHover(item)}
+        >
+          {#if variant === 'admin'}
+            <AdminThumbnail
+              {item}
+              {fit}
+              {size}
+              isActive={item.id === activeId}
+              isHighlighted={getIsHighlighted?.(item) ?? false}
+              {highlightClass}
+              badgeLabel={getBadgeLabel?.(item) ?? null}
+              badgeClass={getBadgeClass?.(item) ?? ''}
+              isLoading={getIsLoading?.(item) ?? false}
+              isBlurred={resolveIsBlurred(item)}
+              isGreyscale={resolveIsGreyscale(item)}
+              isUploading={getIsUploading?.(item) ?? false}
+              {isDeleteMode}
+              {isIntentDisabled}
+              intentPopoverSide={orientation === 'horizontal' ? 'top' : 'left'}
+              {onIntentChange}
+              onSelect={handleSelect}
+              onHover={handleItemHover}
+              onLoad={() => onLoad?.(item)}
+              onError={() => onError?.(item)}
+              {onDelete}
+              {onRetryUpload}
+            />
+          {:else}
+            <Thumbnail
+              {item}
+              {fit}
+              {size}
+              isActive={item.id === activeId}
+              isHighlighted={getIsHighlighted?.(item) ?? false}
+              {highlightClass}
+              isLoading={getIsLoading?.(item) ?? false}
+              onSelect={handleSelect}
+              onLoad={() => onLoad?.(item)}
+              onError={() => onError?.(item)}
+            />
+          {/if}
+        </div>
+      {/each}
+    </section>
+  </div>
 
   {#if footer}
     <div
