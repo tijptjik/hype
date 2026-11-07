@@ -1,0 +1,104 @@
+# Managed revision deployment
+
+The normal `bun run deploy:prod` and `bun run deploy:preview` commands now run
+`scripts/revisions/rollout.ts`. This is an independent revision cutover: it never opens
+a Breadline source, imports users or features, or reconciles a crosswalk. Existing
+production data is preserved and enrolled, including existing Breadline records.
+Development database rebuilds are a separate operation.
+
+## Prerequisites
+
+Use Bun, Node, Python 3, tar, GnuPG and the locked dependencies. Deployment requires
+`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_S3_ACCESS_KEY_ID`,
+`R2_S3_SECRET_ACCESS_KEY`, and `REVISION_RECOVERY_PUBLIC_KEY`. The latter contains one
+ASCII-armored GPG public encryption key. Retain its private key outside CI; verify
+recovery with that key before approving the first live rollout. R2 credentials need read
+access to original media and conditional write access for encrypted recovery objects in
+the environment's raw bucket. CI receives these values through environment secrets.
+Missing recovery configuration stops before queues or D1 are paused.
+
+Exact image originals and metadata must exist. Missing media blocks preparation; this
+workflow does not synthesize metadata or silently exclude resources.
+
+## Sequence
+
+1. Export the target D1 database, restore it privately and rehearse pending SQL
+   migrations and domain baseline enrollment. Build and retain the application.
+2. Save original queue states, source files, plans, exports and bundle in an encrypted,
+   hash-verified R2 recovery checkpoint. Plaintext artifacts remain private under
+   `.local/revision-deployments/`; never upload them to CI artifacts.
+3. Pause configured queue delivery and atomically fence normal D1 writes. Fence
+   installation is staged while inert, then coverage is checked at the switch. Reads
+   from the old app may continue; its writes are rejected by the database.
+4. Check that source rows and schema still match. If they changed during preparation,
+   export and rehearse again under the write fence.
+5. Apply each schema migration with its journal cursor in a single D1 batch. Reinstall
+   fences lost through table rebuilds in that same batch.
+6. Export the actual migrated database under the fence and prepare enrollment again.
+   This is necessary because migrations can generate random identities; offline
+   rehearsal identities must never replace actual production identities.
+7. Apply domain enrollment batches, verify projection fingerprints, schema, foreign
+   keys, all resource heads, logo pins and catalogue coverage.
+8. Deploy asset and database consumer Workers and the retained app. The app reports its
+   exact release hash at `/api/health/revisions`, but serves maintenance responses until
+   activation. Save another encrypted recovery checkpoint.
+9. Activate recording, verify active health and restore each queue's original delivery
+   state. A previously paused queue stays paused.
+
+Pending repository migrations still apply normally. No Breadline importer is called by
+this sequence. It does not replace the live database with a locally rebuilt or
+demo-seeded database.
+
+## Preparation, resume and recovery
+
+Read-only remote preparation (local artifacts are written):
+
+```sh
+bun run revisions:prepare:prod
+```
+
+Apply an approved prepared run, or resume it after interruption:
+
+```sh
+bun --env-file=.dev.vars scripts/revisions/rollout.ts production --apply --run-dir .local/revision-deployments/RUN
+```
+
+Use `preview` for the other environment. Resume with the same source and retained
+artifacts. D1 owns the cursor: a lost response cannot cause a committed batch to be
+reapplied. Different release plans cannot take over an unfinished rollout.
+
+Cancellation is available only before the first migration or enrollment mutation:
+
+```sh
+bun --env-file=.dev.vars scripts/revisions/rollout.ts production --abort-before-migration --run-dir .local/revision-deployments/RUN
+```
+
+After any mutation, repair the problem and resume forward. Schema-only replanning
+retains this irreversible boundary. Never redeploy an older app or restore a stale
+snapshot automatically over new revisions. A failure after activation can leave queues
+paused even though the app is active; resume verifies health and restores queue
+delivery.
+
+If the runner is lost, retrieve the latest `deployment-recovery/revisions/RUN/`
+checkpoint from the same-environment raw bucket. Verify its ciphertext SHA-256 against
+the object name/receipt, decrypt with the privately retained key, and extract into a
+private directory. Restore the retained source tree in an isolated checkout of the
+original commit, install locked dependencies and use the retained run directory. The
+archive contains private production data after decryption. Original media remains in R2
+and is excluded from recovery archives. Partial preparation before a plan exists can
+safely start in a new run directory because no database mutation has happened.
+
+## Verification boundary
+
+The local test suite covers journal retry/rollback, schema rebuild fencing, enrollment,
+activation, maintenance responses and queue restoration. The encrypted archive test uses
+real GPG encryption/decryption with simulated object storage. These checks do not
+constitute a live Cloudflare cutover. The first deployment still needs its
+target-specific media preflight, configured recovery key and remote rehearsal/health
+evidence.
+
+Offline production-schema rehearsal passed all 84 pending migrations from the retained
+November 6 production export through migration 0197, including schema parity and
+foreign-key checks. Its largest captured migration batch used 927 statements before the
+final coverage assertion. This is schema replay evidence, not full production-media
+enrollment or remote D1 execution evidence.

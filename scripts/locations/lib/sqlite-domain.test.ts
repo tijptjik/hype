@@ -51,3 +51,23 @@ test('preserves bound text literally through write and read projections', async 
     close()
   }
 })
+
+test('nested domain batches preserve the outer transaction and roll back with it', async () => {
+  const { db, sqlite, close } = fixture()
+  try {
+    sqlite.exec('BEGIN IMMEDIATE')
+    await db.batch([db.run(sql`INSERT INTO item VALUES(1,'outer-owned')`)])
+    await expect(
+      db.batch([
+        db.run(sql`INSERT INTO item VALUES(2,'rolled-back')`),
+        db.run(sql`INSERT INTO item VALUES(3,NULL)`),
+      ]),
+    ).rejects.toThrow()
+    expect(sqlite.inTransaction).toBe(true)
+    expect(sqlite.query('SELECT id FROM item').all()).toEqual([{ id: 1 }])
+    sqlite.exec('ROLLBACK')
+    expect(sqlite.query('SELECT * FROM item').all()).toEqual([])
+  } finally {
+    close()
+  }
+})

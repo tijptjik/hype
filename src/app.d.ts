@@ -45,6 +45,8 @@ declare global {
     }
     interface Platform {
       env: {
+        /** Immutable managed deployment identity; activation is recorded in D1. */
+        REVISION_RELEASE?: string
         ENVIRONMENT: string
         NODE_ENV: string
         // CLOUDFLARE BINDINGS
@@ -52,9 +54,9 @@ declare global {
         PRODUCT_USAGE_DATASET?: string
         PRODUCT_USAGE_READ_TOKEN?: string
         DB: D1Database
+        ASSETS: Fetcher
         /** Private entrypoint on our asset Worker; transformations use its WASM codecs. */
         ASSET_TRANSFORMER: Fetcher
-        ASSETS: Fetcher
         ROUTING_SERVICE?: Fetcher
       MESSAGING_NOTIFICATIONS?: {
         publicKey():Promise<string>

@@ -195,3 +195,10 @@ fixture coverage, since this database has no `featureLocation` rows.
 This completes the editorial backend slice, not the full forward projection or live
 cutover. Media baseline/delivery, Location and cascade writers, staff/contributor remote
 and UI flows, review/history UI, and identity-operation integration remain required.
+
+### Deployment boundary
+
+[Managed revision deployment](../operations/Revision-Deployment.md) fences database
+writers while migrations and Feature/image baselines are enrolled. Activation requires
+complete resource coverage and exact release health. This workflow is independent of
+Breadline imports and does not substitute a local rebuilt database for production.

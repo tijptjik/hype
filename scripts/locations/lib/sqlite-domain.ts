@@ -18,11 +18,11 @@ type Statement = {
 }
 
 /**
- * Open an explicit local SQLite rehearsal with D1-compatible atomic batch semantics.
- * @param path Existing isolated SQLite database; never a remote binding.
+ * Open an explicit local SQLite build with D1-compatible atomic batch semantics.
+ * @param path Existing offline SQLite database; never a remote binding or a live server file.
  * @returns Domain database, raw inspection connection and required close operation.
  * @remarks Each statement is prepared/executed separately; failures roll back the batch.
- * This adapter is for offline migration rehearsal, not a replacement for deployed D1.
+ * This adapter supports offline rebuilds and migration checks, not deployed D1.
  */
 export function openSqliteDomain(path: string): {
   db: Database
@@ -58,17 +58,24 @@ export function openSqliteDomain(path: string): {
   })
   /** Execute all statements or roll them all back. @param statements Deferred writes. @returns D1-shaped results. */
   const batch = async (statements: Statement[]) => {
-    sqlite.exec('BEGIN IMMEDIATE')
+    // Savepoints compose domain batches with an offline import's outer transaction.
+    const nested = sqlite.inTransaction
+    const savepoint = `domain_${crypto.randomUUID().replaceAll('-', '')}`
+    sqlite.exec(nested ? `SAVEPOINT ${savepoint}` : 'BEGIN IMMEDIATE')
     try {
       const results = []
       for (const statement of statements) results.push(await statement.all())
-      sqlite.exec('COMMIT')
+      sqlite.exec(nested ? `RELEASE ${savepoint}` : 'COMMIT')
       return results
     } catch (error) {
-      sqlite.exec('ROLLBACK')
+      sqlite.exec(nested ? `ROLLBACK TO ${savepoint}` : 'ROLLBACK')
+      if (nested) sqlite.exec(`RELEASE ${savepoint}`)
       throw error
     }
   }
   const binding = { prepare, batch } as unknown as D1Database
-  return { db: drizzle(binding) as Database, binding, sqlite, close: () => sqlite.close() }
+  // Drizzle may resolve its global D1 type to Miniflare in Bun tooling; this adapter
+  // deliberately supplies the tested statement/batch subset of either runtime.
+  const db = drizzle(binding as unknown as Parameters<typeof drizzle>[0]) as Database
+  return { db, binding, sqlite, close: () => sqlite.close() }
 }

@@ -7,6 +7,7 @@ import { sequence, type Handle } from '@sveltejs/kit/hooks'
 // I18N
 import { paraglideMiddleware } from '#lib/paraglide/server.js'
 // SECURITY
+import { handleRevisionDeployment } from '#lib/server/revisionDeployment.js'
 import { isScannerProbePath } from '#lib/utils/scannerProbe.js'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
@@ -538,6 +539,7 @@ const handle_dev_persona: Handle = async ({ event, resolve }) => {
  */
 const handle = sequence(
   handle_worker_bindings,
+  handleRevisionDeployment,
   handle_scanner_probe,
   handle_cors,
   handle_dev_persona,

@@ -14,13 +14,13 @@ const DEPLOY_TARGETS: Record<
   preview: {
     name: 'hype-preview',
     env: 'preview',
-    toleratedHostnames: []
+    toleratedHostnames: [],
   },
   production: {
     name: 'hype-prod',
     env: 'production',
-    toleratedHostnames: []
-  }
+    toleratedHostnames: [],
+  },
 }
 
 /**
@@ -33,7 +33,7 @@ const DEPLOY_TARGETS: Record<
  */
 export const shouldTreatDeployErrorAsSuccess = (
   output: string,
-  target: DeployTarget
+  target: DeployTarget,
 ): boolean => {
   const { name, toleratedHostnames } = DEPLOY_TARGETS[target]
 
@@ -49,9 +49,7 @@ export const shouldTreatDeployErrorAsSuccess = (
     return false
   }
 
-  return toleratedHostnames.some(hostname =>
-    output.includes(`Hostname '${hostname}'`)
-  )
+  return toleratedHostnames.some(hostname => output.includes(`Hostname '${hostname}'`))
 }
 
 /** Deploy both database consumers before the application can enqueue new work.
@@ -70,8 +68,13 @@ export async function deployDatabaseConsumers(
 ): Promise<number> {
   for (const consumer of ['division-refresh', 'location-refresh']) {
     const status = await run([
-      'bun', 'wrangler', 'deploy', '--config',
-      `workers/${consumer}/wrangler.jsonc`, '--env', target,
+      'bun',
+      'wrangler',
+      'deploy',
+      '--config',
+      `workers/${consumer}/wrangler.jsonc`,
+      '--env',
+      target,
     ])
     if (status !== 0) return status
   }
@@ -82,19 +85,46 @@ export async function deployDatabaseConsumers(
  * Runs a Wrangler worker deployment for the requested environment.
  *
  * @param target Deployment target being executed.
+ * @param revisionRelease Optional managed rollout identity injected into the deployed worker.
+ * @param artifact Isolated verified application bundle for a managed deployment.
  * @returns Process exit code.
  */
-export const deployWorker = async (target: DeployTarget): Promise<number> => {
+export const deployWorker = async (
+  target: DeployTarget,
+  revisionRelease?: string,
+  artifact?: { main: string; assets: string },
+): Promise<number> => {
   const { name, env } = DEPLOY_TARGETS[target]
 
   // Wrangler replaces domain registrations: preserve live assignments before any deployment.
   const config = Bun.TOML.parse(await Bun.file('wrangler.toml').text()) as {
-    env: Record<string, { routes?: Array<string | { pattern: string; custom_domain?: boolean }> }>
+    env: Record<
+      string,
+      { routes?: Array<string | { pattern: string; custom_domain?: boolean }> }
+    >
   }
-  config.env[env].routes = await preserveHubDomainRoutes({
-    CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-    HUB_DOMAINS_API_TOKEN: process.env.HUB_DOMAINS_API_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN,
-  }, name, config.env[env].routes ?? [])
+  config.env[env].routes = await preserveHubDomainRoutes(
+    {
+      CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+      HUB_DOMAINS_API_TOKEN:
+        process.env.HUB_DOMAINS_API_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN,
+    },
+    name,
+    config.env[env].routes ?? [],
+  )
+  if (revisionRelease) {
+    if (!/^[a-f0-9]{64}$/.test(revisionRelease))
+      throw new Error('Invalid revision release identity')
+    const environment = config.env[env] as (typeof config.env)[string] & {
+      vars?: Record<string, string>
+    }
+    environment.vars = { ...environment.vars, REVISION_RELEASE: revisionRelease }
+  }
+  if (artifact) {
+    Object.assign(config, { main: artifact.main })
+    const assets = config as typeof config & { assets: Record<string, unknown> }
+    assets.assets = { ...assets.assets, directory: artifact.assets }
+  }
   // Keep the temporary config beside wrangler.toml so relative asset paths remain valid.
   const configPath = `.hub-deploy-${randomUUID()}.json`
   await writeFile(configPath, JSON.stringify(config), { mode: 0o600 })
@@ -103,17 +133,27 @@ export const deployWorker = async (target: DeployTarget): Promise<number> => {
     const refreshExitCode = await deployDatabaseConsumers(target)
     if (refreshExitCode !== 0) return refreshExitCode
 
-    const command = ['bun', 'wrangler', 'deploy', '--config', configPath, '--name', name, '--env', env]
+    const command = [
+      'bun',
+      'wrangler',
+      'deploy',
+      '--config',
+      configPath,
+      '--name',
+      name,
+      '--env',
+      env,
+    ]
 
     const process = Bun.spawn(command, {
       stdout: 'pipe',
-      stderr: 'pipe'
+      stderr: 'pipe',
     })
 
     const [stdoutText, stderrText, exitCode] = await Promise.all([
       new Response(process.stdout).text(),
       new Response(process.stderr).text(),
-      process.exited
+      process.exited,
     ])
 
     stdout.write(stdoutText)
@@ -129,7 +169,7 @@ export const deployWorker = async (target: DeployTarget): Promise<number> => {
     // future domain that still has external DNS in place.
     if (shouldTreatDeployErrorAsSuccess(output, target)) {
       console.warn(
-        `Wrangler deployed ${name} but could not attach a tolerated custom domain. Continuing with success.`
+        `Wrangler deployed ${name} but could not attach a tolerated custom domain. Continuing with success.`,
       )
       return 0
     }
@@ -144,11 +184,12 @@ if (typeof Bun !== 'undefined' && import.meta.main) {
   const targetArg = Bun.argv[2]
 
   if (targetArg !== 'preview' && targetArg !== 'production') {
-    console.error(
-      'Usage: bun run scripts/cloud/deploy-worker.ts <preview|production>'
-    )
+    console.error('Usage: bun run scripts/cloud/deploy-worker.ts <preview|production>')
     exit(1)
   }
 
-  exit(await deployWorker(targetArg))
+  stderr.write(
+    'Use bun run deploy:prod or deploy:preview; direct deployment bypasses the revision rollout gate.\n',
+  )
+  exit(1)
 }

@@ -1,5 +1,6 @@
 """Refs #194. Local rebuild must roll back failed imports and reject other destinations."""
 from pathlib import Path
+import importlib.util
 import sqlite3
 import subprocess
 import tempfile
@@ -9,6 +10,24 @@ SCRIPT = Path(__file__).with_name('rebuild-database.py')
 
 
 class RebuildDatabaseTest(unittest.TestCase):
+    def test_known_production_default_is_preserved_without_loosening_the_guard(self):
+        spec = importlib.util.spec_from_file_location('rebuild_database', SCRIPT)
+        rebuild = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(rebuild)
+        canonical = '{"fallbackLocales":["en","zh-hant"], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'
+        legacy = canonical.replace('["en","zh-hant"]', '[]')
+        sql = (SCRIPT.parents[2] / 'migrations/0169_audit_column_order.sql').read_text()
+        for default in [canonical, legacy, '{}']:
+            with self.subTest(default=default), sqlite3.connect(':memory:') as db:
+                db.execute("CREATE TABLE user(preferences TEXT DEFAULT '" + default + "')")
+                adapted = rebuild.local_migration_sql(db, '0169_audit_column_order.sql', sql)
+                self.assertEqual(adapted, sql.replace(canonical, legacy) if default == legacy else sql)
+                self.assertIn('audit_user_preferences_default_matches_baseline CHECK(valid=1)', adapted)
+        with sqlite3.connect(':memory:') as db:
+            db.execute("CREATE TABLE user(preferences TEXT DEFAULT '" + legacy + "')")
+            with self.assertRaisesRegex(RuntimeError, 'Re-review'):
+                rebuild.local_migration_sql(db, '0169_audit_column_order.sql', sql.replace(canonical, legacy, 1))
+
     def test_failed_import_rolls_back_all_rows(self):
         with tempfile.TemporaryDirectory() as directory:
             database = Path(directory)/'input.sqlite'

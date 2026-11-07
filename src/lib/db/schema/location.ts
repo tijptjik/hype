@@ -24,14 +24,14 @@ import { organisation } from './organisation'
 // TYPES
 import type { LocationIdentityBaseline } from '#lib/locations/identity.js'
 import type { SaanSeoiPlaceProjection } from '#lib/locations/saanseoi.js'
-import type { LocationAdoptionPlan } from '#lib/locations/adoption.js'
+import type { StoredLocationAdoptionPlan } from '#lib/locations/adoption.js'
 import type {
   FeatureLocationOverrides,
   LocationFacts,
   ProjectLocationPolicy,
 } from '#lib/locations/model.js'
 
-/** Shared Location identity with typed establishment, building and natural-feature kinds. */
+/** Shared Location identity with authored entity types independent of matching state. */
 export const location = sqliteTable(
   'location',
   {
@@ -59,7 +59,7 @@ export const location = sqliteTable(
   table => [
     check(
       'location_kind_check',
-      sql`${table.kind} IN ('unknown','establishment','building','natural')`,
+      sql`${table.kind} IN ('unknown','premises','establishment','building','address','natural')`,
     ),
     check(
       'location_state_check',
@@ -76,7 +76,7 @@ export const location = sqliteTable(
   ],
 )
 
-/** Persist a versioned envelope while exposing the existing normalized projection. */
+/** Persist a versioned envelope while exposing the existing normalized application projection. */
 const locationFacts = customType<{ data: LocationFacts; driverData: string }>({
   dataType: () => 'text',
   fromDriver: readLocationFacts,
@@ -91,15 +91,15 @@ export const locationRevision = sqliteTable(
     locationId: text('locationId')
       .notNull()
       .references(() => location.id, { onDelete: 'restrict' }),
-    sequence: integer('sequence').notNull(),
+    version: integer('version').notNull(),
     origin: text('origin', { enum: ['saanseoi', 'local'] }).notNull(),
     ssId: text('ssId'),
     apiVersion: text('apiVersion'),
     releaseId: text('releaseId'),
     snapshotId: text('snapshotId'),
     contentHash: text('contentHash').notNull(),
-    // Raw payload includes source attribution; projection never replaces this evidence.
-    payload: text('payload', { mode: 'json' })
+    // Raw rawSource includes source attribution; projection never replaces this evidence.
+    rawSource: text('rawSource', { mode: 'json' })
       .$type<Record<string, unknown>>()
       .notNull(),
     facts: locationFacts('facts').notNull(),
@@ -108,11 +108,11 @@ export const locationRevision = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   table => [
-    check('location_revision_payload_json', sql`json_valid(${table.payload})`),
+    check('location_revision_payload_json', sql`json_valid(${table.rawSource})`),
     check('location_revision_facts_json', sql`json_valid(${table.facts})`),
     unique('location_revision_identity').on(table.locationId, table.id),
-    unique('location_revision_sequence').on(table.locationId, table.sequence),
-    check('location_revision_sequence_check', sql`${table.sequence} > 0`),
+    unique('location_revision_sequence').on(table.locationId, table.version),
+    check('location_revision_sequence_check', sql`${table.version} > 0`),
     check(
       'location_revision_origin_check',
       sql`${table.origin} IN ('saanseoi', 'local')`,
@@ -134,7 +134,7 @@ export const featureLocation = sqliteTable(
     locationId: text('locationId')
       .notNull()
       .references(() => location.id, { onDelete: 'restrict' }),
-    revision: text('revision').notNull().default('initial'),
+    version: text('version').notNull().default('initial'),
     actorId: text('actorId'),
     factsRevisionId: text('factsRevisionId').notNull(),
     locationRevisionId: text('locationRevisionId').notNull(),
@@ -145,6 +145,23 @@ export const featureLocation = sqliteTable(
       .default({}),
     factsOrganisationRevision: text('factsOrganisationRevision'),
     locationOrganisationRevision: text('locationOrganisationRevision'),
+    occupancyRevisionId: text('occupancyRevisionId'),
+    addressRevisionId: text('addressRevisionId'),
+    membershipRevisionIds: text('membershipRevisionIds', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    placementOverrides: text('placementOverrides', { mode: 'json' })
+      .$type<{ accessHints?: Record<string, string | null> }>()
+      .notNull()
+      .default({}),
+    acceptedGeometry: text('acceptedGeometry', { mode: 'json' }).$type<
+      import('geojson').Point
+    >(),
+    acceptancePolicy: text('acceptancePolicy', { mode: 'json' }).$type<
+      Record<string, unknown>
+    >(),
+    acceptanceProposalId: text('acceptanceProposalId'),
   },
   table => [
     check('feature_location_overrides_json', sql`json_valid(${table.overrides})`),
@@ -167,7 +184,7 @@ export const featureLocationHistory = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     featureId: text('featureId').notNull(),
-    revision: text('revision').notNull(),
+    version: text('version').notNull(),
     previousRevision: text('previousRevision'),
     action: text('action', {
       enum: ['baseline', 'link', 'update', 'unlink'],
@@ -182,6 +199,21 @@ export const featureLocationHistory = sqliteTable(
     actorId: text('actorId'),
     factsOrganisationRevision: text('factsOrganisationRevision'),
     locationOrganisationRevision: text('locationOrganisationRevision'),
+    occupancyRevisionId: text('occupancyRevisionId'),
+    addressRevisionId: text('addressRevisionId'),
+    membershipRevisionIds: text('membershipRevisionIds', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    placementOverrides: text('placementOverrides', { mode: 'json' })
+      .$type<{ accessHints?: Record<string, string | null> }>()
+      .notNull()
+      .default({}),
+    geometry: text('geometry', { mode: 'json' }).$type<import('geojson').Point>(),
+    policySnapshot: text('policySnapshot', { mode: 'json' }).$type<
+      Record<string, unknown>
+    >(),
+    adoptionProposalId: text('adoptionProposalId'),
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
@@ -189,7 +221,7 @@ export const featureLocationHistory = sqliteTable(
   table => [
     index('feature_location_history_feature').on(table.featureId, table.id),
     uniqueIndex('feature_location_history_revision')
-      .on(table.featureId, table.revision)
+      .on(table.featureId, table.version)
       .where(sql`${table.action} != 'unlink'`),
     check(
       'feature_location_history_action_check',
@@ -217,8 +249,9 @@ export const locationAdoptionProposal = sqliteTable(
     evidence: text('evidence', { mode: 'json' })
       .$type<{
         policy: ProjectLocationPolicy
-        plan: LocationAdoptionPlan
+        plan: StoredLocationAdoptionPlan
         candidateOverrides?: FeatureLocationOverrides
+        placement?: import('#lib/locations/placement.js').PlacementEvidence
       }>()
       .notNull(),
     organisationRevision: text('organisationRevision').notNull().default(''),
@@ -228,12 +261,16 @@ export const locationAdoptionProposal = sqliteTable(
     locationDecision: text('locationDecision', {
       mode: 'json',
     }).$type<LocationAdoptionDecisionRecord>(),
+    occupancyRevisionId: text('occupancyRevisionId'),
+    addressRevisionId: text('addressRevisionId'),
+    layerId: text('layerId'),
+    layerPolicyRevision: integer('layerPolicyRevision'),
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
   },
   table => [
-    unique('location_adoption_candidate').on(
+    uniqueIndex('location_adoption_candidate').on(
       table.featureId,
       table.projectId,
       table.locationId,
@@ -242,6 +279,10 @@ export const locationAdoptionProposal = sqliteTable(
       table.featureModifiedAt,
       table.policyRevision,
       table.organisationRevision,
+      sql`COALESCE(${table.occupancyRevisionId},'')`,
+      sql`COALESCE(${table.addressRevisionId},'')`,
+      sql`COALESCE(${table.layerId},'')`,
+      sql`COALESCE(${table.layerPolicyRevision},-1)`,
     ),
     index('location_adoption_project').on(table.projectId, table.featureId),
     check('location_adoption_policy_revision', sql`${table.policyRevision} >= 0`),
@@ -359,6 +400,7 @@ export const locationIdentityReview = sqliteTable(
 
 /** Immutable merge impact versions retained within their identity comparison. */
 export type LocationMergeReviewRecord = {
+  dependencies?: import('#lib/locations/merge.types.js').LocationMergeImpact
   id: string
   identityReviewId: string
   targetLocationId: string
@@ -394,37 +436,38 @@ export type LocationIdentityRejectionRecord = {
   createdAt: string
 }
 
-/** Versioned, Organisation-wide corrections; history retains every accepted snapshot. */
+/** Immutable Organisation corrections; heads are rows without a successor. */
 export const organisationLocation = sqliteTable(
   'organisationLocation',
   {
+    revision: text('id').primaryKey(),
     organisationId: text('organisationId')
       .notNull()
       .references(() => organisation.id, { onDelete: 'restrict' }),
     locationId: text('locationId')
       .notNull()
       .references(() => location.id, { onDelete: 'restrict' }),
-    revision: text('revision').notNull().unique(),
+    previousRevisionId: text('previousRevisionId'),
     overrides: text('overrides', { mode: 'json' })
       .$type<FeatureLocationOverrides>()
       .notNull(),
-    history: text('history', { mode: 'json' })
-      .$type<OrganisationLocationRevision[]>()
-      .notNull(),
+    provenance: text('provenance', { mode: 'json' }).$type<Record<string, unknown>>(),
     actorId: text('actorId').notNull(),
-    createdAt: text('createdAt')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
-    updatedAt: text('updatedAt')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+    createdAt: text('createdAt').notNull(),
   },
-  table => [primaryKey({ columns: [table.organisationId, table.locationId] })],
+  table => [
+    uniqueIndex('organisation_location_root')
+      .on(table.organisationId, table.locationId)
+      .where(sql`${table.previousRevisionId} IS NULL`),
+    uniqueIndex('organisation_location_successor')
+      .on(table.previousRevisionId)
+      .where(sql`${table.previousRevisionId} IS NOT NULL`),
+  ],
 )
 
 /** Immutable correction version retained in its Organisation–Location association. */
 export type OrganisationLocationRevision = {
-  revision: string
+  version: string
   provenance?: Record<string, unknown>
   overrides: FeatureLocationOverrides
   actorId: string

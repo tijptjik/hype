@@ -55,6 +55,18 @@ function insert(table: string, row: Record<string, unknown>): string {
  * @remarks Source changes to accepted mappings fail closed. No remote writes.
  */
 export function planBreadlineFeatures(args: string[]): void {
+  buildBreadlineFeaturePlan(args)
+}
+
+/** Builds a legacy plan or an in-transaction attributed import.
+ * @param args Explicit source, target and output paths.
+ * @param revision Existing locked connection and creation token, only supplied by the attributed writer.
+ * @returns Individually executable statements and newly created identities.
+ */
+function buildBreadlineFeaturePlan(
+  args: string[],
+  revision?: { target: Database; token: string },
+): { statements: string[]; createdIds: string[] } {
   process.umask(0o077)
   const option = (name: string): string => {
     const value = args[args.indexOf(name) + 1]
@@ -74,14 +86,46 @@ export function planBreadlineFeatures(args: string[]): void {
   rmSync(output, { force: true })
   rmSync(output + '.receipt.json', { force: true })
   const source = new Database(sourcePath, { readonly: true })
-  const target = new Database(targetPath, { readonly: true })
+  const target = revision?.target ?? new Database(targetPath, { readonly: true })
   try {
+    // Keep run eligibility and source hashes on one consistent read snapshot.
+    source.exec('BEGIN')
     const scope = target
       .query(
         "SELECT p.id projectId,p.organisationId FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.code='breadline' AND o.code='hkfoodworks'",
       )
       .get() as { projectId: string; organisationId: string } | null
     if (!scope) throw new Error('Breadline scope missing')
+    // This legacy SQL planner must not bypass attributed Feature creation or revise enrolled identities.
+    if (
+      !revision &&
+      target
+        .query("SELECT 1 FROM sqlite_master WHERE name='featureRevisionCreationPolicy'")
+        .get() &&
+      (
+        target
+          .query('SELECT enabled FROM featureRevisionCreationPolicy WHERE singleton=1')
+          .get() as { enabled: number } | null
+      )?.enabled
+    )
+      throw new Error(
+        'Feature revision creation is enabled; use an attributed import writer',
+      )
+    if (
+      !revision &&
+      target
+        .query("SELECT 1 FROM sqlite_master WHERE name='featureRevisionHead'")
+        .get() &&
+      target
+        .query(
+          'SELECT 1 FROM featureRevisionHead h JOIN feature f ON f.id=h.featureId WHERE f.projectId=? LIMIT 1',
+        )
+        .get(scope.projectId)
+    )
+      throw new Error(
+        'Breadline contains revision-backed Features; use an attributed import writer',
+      )
+
     if (
       !target
         .query(`SELECT p.id FROM property p JOIN hub h ON h.id=p.hubId
@@ -105,8 +149,9 @@ export function planBreadlineFeatures(args: string[]): void {
       string,
       { original: [number, number]; corrected: [number, number]; evidence: string }
     >
+    const createdIds: string[] = []
     const statements = [
-      '-- Breadline Locations + Features migration. Requires schema migrations through 0142.',
+      '-- Breadline Locations + Features migration. Requires schema migrations through 0154.',
       '-- Generated from a fresh source snapshot; source hashes preserve accepted identity.',
       '-- Apply in an error-propagating transaction; do not use Bun multi-statement exec.',
     ]
@@ -244,6 +289,18 @@ export function planBreadlineFeatures(args: string[]): void {
         if (existing) {
           if (existing.featureId !== id || existing.sourceHash !== hash)
             throw new Error(`Source changed for ${table}:${sourceId}; review required`)
+          // Retired identities keep their original crosswalk; replay never follows a successor.
+          const retired =
+            revision &&
+            target
+              .query(
+                "SELECT 1 FROM featureRevisionHead WHERE featureId=? AND state<>'active'",
+              )
+              .get(id)
+          if (retired) {
+            matched++
+            continue
+          }
           const association = target
             .query('SELECT locationId FROM featureLocation WHERE featureId=?')
             .get(id)
@@ -388,6 +445,7 @@ export function planBreadlineFeatures(args: string[]): void {
         statements.push(
           insert('feature', {
             id,
+            ...(revision ? { formWriteToken: revision.token } : {}),
             ...scope,
             layerId,
             contributorId: authors[0].id,
@@ -468,12 +526,12 @@ export function planBreadlineFeatures(args: string[]): void {
           insert('locationRevision', {
             id: revisionId,
             locationId,
-            sequence: 1,
+            version: 1,
             origin: 'local',
             contentHash: createHash('sha256')
               .update(JSON.stringify({ payload, facts: local.facts }))
               .digest('hex'),
-            payload,
+            rawSource: payload,
             facts: createLocationFactsSnapshot(
               local.facts,
               table === 'donors' ? 'establishment' : 'unknown',
@@ -487,7 +545,7 @@ export function planBreadlineFeatures(args: string[]): void {
             factsRevisionId: revisionId,
             locationRevisionId: revisionId,
             acceptedOverrides: {},
-            revision: `breadline-import:${table}:${sourceId}:${hash}`,
+            version: `breadline-import:${table}:${sourceId}:${hash}`,
             actorId: authors[0].id,
           }),
         )
@@ -501,10 +559,16 @@ export function planBreadlineFeatures(args: string[]): void {
         )
         if (table === 'donors')
           applyReview(sourceId, id, hash, coordinates, JSON.stringify(geometry))
+        createdIds.push(id)
         created++
       }
     }
     mkdirSync(dirname(output), { recursive: true })
+    if (revision)
+      return {
+        statements: statements.filter(statement => !statement.startsWith('--')),
+        createdIds,
+      }
     writeFileSync(output, statements.join('\n') + '\n', { mode: 0o600 })
     writeFileSync(
       output + '.receipt.json',
@@ -548,9 +612,89 @@ export function planBreadlineFeatures(args: string[]): void {
         output,
       }),
     )
+    return { statements, createdIds }
   } finally {
     source.close()
-    target.close()
+    if (!revision) target.close()
   }
 }
-if (import.meta.main) planBreadlineFeatures(process.argv.slice(2))
+/**
+ * Applies unchanged-source replays and new imports atomically with attributed Feature baselines.
+ * @param args Explicit source, offline target and private receipt path (--output).
+ * @returns Created identities and applied statement count.
+ * @remarks Existing reviewed content and import crosswalks are never rewritten. The caller must
+ * stop local writers before applying; this command accepts filesystem databases, never remote D1.
+ */
+export async function importBreadlineFeatureRevisions(
+  args: string[],
+): Promise<{ created: number; statements: number }> {
+  const { openSqliteDomain } = await import('../locations/lib/sqlite-domain')
+  const { readFeatureRevisionSource } = await import(
+    '../../src/lib/db/services/featureRevisionSource'
+  )
+  const { buildFeatureRevisionBaselineContent } = await import(
+    '../../src/lib/db/services/featureRevisionContent'
+  )
+  const { prepareFeatureRevisionInitialization } = await import(
+    '../../src/lib/db/services/featureRevision'
+  )
+  const { executeRevisionBatch } = await import(
+    '../../src/lib/db/services/revisionBatch'
+  )
+  const { sql: expression } = await import('drizzle-orm')
+  const path = args[args.indexOf('--target') + 1]
+  if (!args.includes('--target') || !path) throw new Error('Missing --target')
+  const domain = openSqliteDomain(path)
+  try {
+    domain.sqlite.exec('BEGIN IMMEDIATE')
+    const plan = buildBreadlineFeaturePlan(args, {
+      target: domain.sqlite,
+      token: crypto.randomUUID(),
+    })
+    for (const statement of plan.statements) domain.sqlite.query(statement).run()
+    for (const id of plan.createdIds) {
+      const source = await readFeatureRevisionSource(domain.db, id, expression`1`)
+      if (!source) throw new Error('Imported Feature source unavailable')
+      const content = buildFeatureRevisionBaselineContent(source.snapshot, {
+        revisions: {},
+        order: [],
+      })
+      const row = domain.sqlite
+        .query('SELECT isPublished FROM feature WHERE id=?')
+        .get(id) as { isPublished: number }
+      const prepared = prepareFeatureRevisionInitialization(domain.db, {
+        featureId: id,
+        content,
+        published: Boolean(row.isPublished),
+        guard: source.unchanged,
+        actorId: 'system:breadline-import',
+        origin: 'import',
+        reason: 'Imported accepted Breadline source identity',
+      })
+      if (!(await executeRevisionBatch(domain.db, prepared.guard, prepared.statements)))
+        throw new Error('Imported source changed')
+    }
+    domain.sqlite.exec('COMMIT')
+    const receipt = {
+      created: plan.createdIds.length,
+      statements: plan.statements.length,
+    }
+    writeFileSync(
+      args[args.indexOf('--output') + 1] + '.receipt.json',
+      JSON.stringify({ status: 'applied-revision-import', ...receipt }) + '\n',
+      { mode: 0o600 },
+    )
+    return receipt
+  } catch (error) {
+    if (domain.sqlite.inTransaction) domain.sqlite.exec('ROLLBACK')
+    throw error
+  } finally {
+    domain.close()
+  }
+}
+if (import.meta.main) {
+  const args = process.argv.slice(2)
+  if (args.includes('--revisions'))
+    console.log(JSON.stringify(await importBreadlineFeatureRevisions(args)))
+  else planBreadlineFeatures(args)
+}

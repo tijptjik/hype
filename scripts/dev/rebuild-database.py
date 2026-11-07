@@ -27,6 +27,21 @@ def module(name, path):
     return value
 
 
+def local_migration_sql(db, name, sql):
+    """Retain a known production preference default during local column reordering."""
+    if name != '0169_audit_column_order.sql':
+        return sql
+    canonical = '{"fallbackLocales":["en","zh-hant"], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'
+    legacy = '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'
+    default = db.execute("SELECT dflt_value FROM pragma_table_info('user') WHERE name='preferences'").fetchone()
+    if not default or default[0] != "'" + legacy + "'":
+        return sql
+    if sql.count(canonical) != 2:
+        raise RuntimeError('Re-review changed audit migration before preserving its source default')
+    # Adapt both the guard and recreated column; unknown defaults retain the original rejection.
+    return sql.replace(canonical, legacy)
+
+
 def main():
     """Apply local-only build steps, or install with a consistent rollback backup."""
     os.umask(0o077)

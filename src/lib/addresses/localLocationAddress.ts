@@ -1,6 +1,8 @@
 // Shared, versioned SaanSeoi content contract. Publication identity remains outside authored content.
 export {
-  ADDRESS_GRANULARITIES,
+  ADDRESS_SCOPES,
+  // Preserve existing form consumers while rollout tooling uses the current shared contract.
+  ADDRESS_SCOPES as ADDRESS_GRANULARITIES,
   ADDRESS_BLOCK_TYPES,
   ADDRESS_UNIT_TYPES,
   ADDRESS_FLOOR_TYPES,

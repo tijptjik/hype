@@ -738,3 +738,13 @@ translation-shape diagnostic. Feature enrollment remains disabled; no live Featu
 heads, image baselines, new migration, remote/UI cutover or browser proof is claimed for
 this increment. Immutable media delivery, dedicated Location/gallery/brand writers,
 cascades/imports, application workflows and merge/split integration remain required.
+
+### Managed deployment workflow
+
+The deployment entry points now own schema migration, fenced baseline enrollment,
+verification and activation. See
+[Revision deployment](../operations/Revision-Deployment.md) for encrypted recovery,
+resume boundaries and first-deployment prerequisites. Breadline integration remains
+separate; existing production records are preserved, and no Breadline source import or
+reconciliation is part of this rollout. Implementation and offline verification do not
+imply production activation.
