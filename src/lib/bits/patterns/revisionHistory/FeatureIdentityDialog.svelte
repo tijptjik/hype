@@ -52,6 +52,12 @@ let {
   onApplied: (ids: string[]) => Promise<void>
 } = $props()
 const view = getSurfaceCtx()
+// Pending contributions cannot be the existing Feature kept by a merge.
+const mergeCandidateConditions = {
+  isArchived: false,
+  isPublished: null,
+  isPendingReview: false,
+}
 let sources = $state<IdentitySource[]>([])
 let names = $state(['', ''])
 let redirect = $state('none')
@@ -224,7 +230,7 @@ $effect(() => {
         getFeatureIndexPage({
           q: text,
           prisms: { layer: [layer] },
-          conditions: { isArchived: false },
+          conditions: mergeCandidateConditions,
           pagination: { limit: 12, offset: 0 },
           includeCount: false,
           meta: { ...view.resources.queryMeta, isAdminRequest: true, profile: 'admin' },
