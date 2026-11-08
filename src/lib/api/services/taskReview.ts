@@ -11,6 +11,7 @@ export const reviewActions = [
   'added-all-photos',
   'added-classified-photos',
   'added-feature',
+  'merged-feature',
 ] as const
 
 export type ReviewAction = (typeof reviewActions)[number]

@@ -9,8 +9,10 @@ import { getFeatureWithRelations, toEntityResponseShape } from './feature'
 import { toUserContributionFeatureScope, toAdminContributionFeatureScope } from './user'
 // DB
 import { feature, featureImage, image, user } from '#lib/db/schema/index.js'
+import { historicalFeatureVisibility } from '#lib/db/services/historicalLayers.js'
 import { featureAuthoringSQL } from '#lib/db/services/featureAuthoringProjection.js'
 import { featureLocationBrandsSQL } from '#lib/db/services/locationBrandProjection.js'
+import { featureLocationNamesSQL } from '#lib/db/services/locationNameProjection.js'
 import { featureLocationLifecycleSQL } from '#lib/db/services/locationLifecycleProjection.js'
 import { ImageListFields } from '#lib/db/zod/schema/imageList.js'
 import { ImageContextResource } from '#lib/enums.js'
@@ -67,8 +69,15 @@ function contributionScope(
     isAdminRequest: params.isAdminRequest,
     includeAdminUnpublished: params.isAdminRequest,
   })
+  // Preserve the public app's historical-layer policy as well as profile publication scope.
+  const scope = params.isAdminRequest
+    ? publicScope
+    : db
+        .select({ id: feature.id })
+        .from(feature)
+        .where(and(inArray(feature.id, publicScope), historicalFeatureVisibility()))
   return {
-    scope: publicScope,
+    scope,
     contributor: db
       .select({ id: user.id })
       .from(user)
@@ -118,6 +127,7 @@ export async function readUserContributedFeatures(
     },
     extras: {
       locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+      locationNames: featureLocationNamesSQL().as('locationNames'),
       authoring: featureAuthoringSQL().as('authoring'),
       locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
     },
@@ -154,7 +164,8 @@ export async function readUserContributedFeatures(
         }),
         images: row.images,
         imageCount: row.images.length,
-        imagePublishedCount: row.images.filter(assignment => assignment.isPublished).length,
+        imagePublishedCount: row.images.filter(assignment => assignment.isPublished)
+          .length,
       }
       return toEntityResponseShape(parsed, 'list')
     }),

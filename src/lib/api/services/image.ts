@@ -1,9 +1,16 @@
 // CREATION CONTRIBUTIONS
 import { hasFeatureLifecycleStorage } from '#lib/db/services/featureLifecycle.js'
-import { readFeatureCreationTask, creationContributionScopeGuard } from '#lib/db/services/featureLifecycleCreationTask.js'
+import {
+  readFeatureCreationTask,
+  creationContributionScopeGuard,
+} from '#lib/db/services/featureLifecycleCreationTask.js'
 // LOGO REVISIONS
-import { readResourceLogoHead, prepareResourceLogoRevision } from '#lib/db/services/resourceLogoRevision.js'
+import {
+  readResourceLogoHead,
+  prepareResourceLogoRevision,
+} from '#lib/db/services/resourceLogoRevision.js'
 // AUTHORIZATION
+import { canEditAdminUser } from './authz/adminUser'
 // TYPES
 import type { LogoRevisionEvidence } from '#lib/db/services/resourceLogoRevision.js'
 import type { ImageMutationSnapshot } from '#lib/images/uploadContext.js'
@@ -197,8 +204,11 @@ export const getImageQueryContext = (
   if (!isSuperAdmin(user)) {
     conditions.push(
       isAdmin && ctxType === ImageContextResourceExtended.task
-        ? or(eq(image.isArchived, false), sql`EXISTS (SELECT 1 FROM task reviewed_task
-            WHERE reviewed_task.id=${ctxId} AND reviewed_task.isReviewed=1)`)!
+        ? (or(
+            eq(image.isArchived, false),
+            sql`EXISTS (SELECT 1 FROM task reviewed_task
+            WHERE reviewed_task.id=${ctxId} AND reviewed_task.isReviewed=1)`,
+          ) ?? sql`0`)
         : eq(image.isArchived, false),
     )
   }
@@ -356,12 +366,26 @@ export const assertPermissionsToCreateImage = async (
   )
 
   if (ctxType === ImageContextResourceExtended.task) {
-    if (!await hasFeatureLifecycleStorage(db) || taskLinks.length !== 1 || taskLinks[0].taskId !== ctxId)
+    if (
+      !(await hasFeatureLifecycleStorage(db)) ||
+      taskLinks.length !== 1 ||
+      taskLinks[0].taskId !== ctxId
+    )
       throw error(403, 'IMAGE_TASK_CONTEXT_MISMATCH')
     const draft = await readFeatureCreationTask(db, { taskId: ctxId, guard: sql`1` })
-    if (!draft || draft.contributorId !== user.id || !draft.isDraft || draft.isReviewed || draft.status !== 'draft')
+    if (
+      !draft ||
+      draft.contributorId !== user.id ||
+      !draft.isDraft ||
+      draft.isReviewed ||
+      draft.status !== 'draft'
+    )
       throw error(403, 'TASK_DRAFT_FORBIDDEN')
-    if (!await db.get(sql`SELECT 1 WHERE ${creationContributionScopeGuard(draft.scope)}`))
+    if (
+      !(await db.get(
+        sql`SELECT 1 WHERE ${creationContributionScopeGuard(draft.scope)}`,
+      ))
+    )
       throw error(403, 'FEATURE_NOT_AVAILABLE')
     return 'creation-contribution' as const
   }
@@ -399,6 +423,11 @@ export const assertPermissionsToCreateImage = async (
         assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId ?? '')
       break
     }
+    case ImageContextResource.user:
+      if (!(await canEditAdminUser(db, user, ctxId)))
+        throw error(403, 'INSUFFICIENT_ROLE')
+      contextAssertion = () => {}
+      break
     case ImageContextResource.project:
       contextAssertion = () =>
         assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId)
@@ -709,9 +738,18 @@ export const updateImageForContext = async (args: {
     : undefined
   let logoCapture: Awaited<ReturnType<typeof prepareResourceLogoRevision>> | undefined
   try {
-    logoCapture = args.logoRevision ? await prepareResourceLogoRevision(db, { ...args.logoRevision, imageId:id, actorId:userId, replaySameAsset: Boolean(args.replacement), reason: args.replacement ? 'Logo file replaced' : 'Logo metadata updated' }) : undefined
+    logoCapture = args.logoRevision
+      ? await prepareResourceLogoRevision(db, {
+          ...args.logoRevision,
+          imageId: id,
+          actorId: userId,
+          replaySameAsset: Boolean(args.replacement),
+          reason: args.replacement ? 'Logo file replaced' : 'Logo metadata updated',
+        })
+      : undefined
   } catch (cause) {
-    if (cause instanceof Error && cause.message === 'STALE_LOGO_REVISION') throw error(409, 'STALE_IMAGE_UPDATE')
+    if (cause instanceof Error && cause.message === 'STALE_LOGO_REVISION')
+      throw error(409, 'STALE_IMAGE_UPDATE')
     throw cause
   }
   // Persist metadata and assignment together so relation failure cannot leave a partial edit.
@@ -724,7 +762,8 @@ export const updateImageForContext = async (args: {
     imageToUpdate,
     assignment,
     id,
-    replacementGuards ?? createImageMutationGuards(db, ctxType, ctxId, args.expectedSnapshot ?? snapshot),
+    replacementGuards ??
+      createImageMutationGuards(db, ctxType, ctxId, args.expectedSnapshot ?? snapshot),
     replacementGuards?.replay,
     userId,
     logoCapture,
