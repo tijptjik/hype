@@ -19,6 +19,7 @@ import {
 import { getStorageApiCredentials } from '#lib/images/storageCredentials.js'
 import { readResourceLogoPreview } from './services/resourceLogoPreview'
 // LOGO REVISIONS
+import { equalRevisionValue } from '#lib/revisions/merge.js'
 import { readResourceLogoHead } from '#lib/db/services/resourceLogoRevision.js'
 import type {
   LogoRevisionEvidence,
@@ -2555,6 +2556,18 @@ export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx)
       .extend({ presentationMode: z.enum(IMAGE_PRESENTATION_MODES).optional() })
       .strict()
       .parse(params.data)
+    // Reject stale intent even when the submitted values happen to match the current head.
+    if (params.imageRevisionId && params.imageRevisionId !== head.imageRevisionId)
+      throw error(409, 'STALE_IMAGE_UPDATE')
+    const guard = await authorizeLogoOwners(ctx, params.id)
+    // Compare authored values before adding bookkeeping that would manufacture a revision.
+    if (
+      equalRevisionValue(head.metadata, {
+        ...previous,
+        ...patch,
+      } as LogoRevisionEvidence['metadata'])
+    )
+      return { data: null, unchanged: true }
     const version = Math.max(Date.now(), Number(previous.version ?? 0) + 1)
     const metadata = {
       ...previous,
@@ -2562,7 +2575,6 @@ export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx)
       version,
       modifiedAt: new Date(version).toISOString(),
     }
-    const guard = await authorizeLogoOwners(ctx, params.id)
     const updated = await updateImageForContext({
       db,
       user,
@@ -2792,6 +2804,16 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
   // Rotation changes delivery metadata only; the stored source and public identity are immutable.
   const publicId = logoHead?.asset.storageKey ?? existing.publicId
   const targetRotation = normalizeRotation(params.rotation)
+  // A debounced full turn or undo must not create sidecars or advance the logo journal.
+  if (
+    logoHead &&
+    params.imageRevisionId &&
+    params.imageRevisionId !== logoHead.imageRevisionId
+  )
+    throw error(409, 'STALE_IMAGE_UPDATE')
+  if (targetRotation === normalizeRotation(document.rotation))
+    return { data: null, unchanged: true }
+
   const version = Math.max(Date.now(), Number(existing.version ?? 0) + 1)
   const timestamp = new Date(version).toISOString()
   const metadataDocument = toRotatedMetadataDocument({

@@ -78,7 +78,7 @@ type ImageEditorGalleryModel = {
   }
 }
 
-const ROTATION_STEP_MS = 700
+const ROTATION_STEP_MS = 750
 const PROMOTION_MAX_ATTEMPTS = 8
 const PROMOTION_RETRY_DELAY_MS = 350
 
