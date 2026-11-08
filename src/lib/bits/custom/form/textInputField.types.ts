@@ -15,6 +15,9 @@ export interface TextInputProps {
   /** Resource editors use borderless display and a subtle outline while editing. */
   variant?: 'default' | 'resource'
   placeholder?: string
+  prefix?: string
+  fitValue?: boolean
+  fitMinWidth?: string
   required?: boolean
   disabled?: boolean
   readonly?: boolean

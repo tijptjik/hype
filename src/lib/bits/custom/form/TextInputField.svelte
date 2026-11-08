@@ -15,6 +15,9 @@ let {
   isEditing = true,
   variant = 'default',
   placeholder,
+  prefix,
+  fitValue = false,
+  fitMinWidth = '4rem',
   required = false,
   disabled = false,
   readonly = false,
@@ -61,7 +64,7 @@ const controlWrapClass = $derived(
   [
     'bits-form__control-wrap',
     isEditing ? 'bits-form__control-wrap--editing' : '',
-    trailing ? 'flex! flex-row! items-center! gap-2' : '',
+    prefix || fitValue || trailing ? 'flex! flex-row! items-center! gap-2' : '',
     resourceAppearance,
     controlClass,
   ]
@@ -69,9 +72,11 @@ const controlWrapClass = $derived(
     .join(' '),
 )
 
-const resolvedInputAttrs = $derived(
-  isEditing ? inputAttrs : { ...inputAttrs, tabindex: -1 },
-)
+const resolvedInputAttrs = $derived({
+  ...(fitValue ? { size: 1 } : {}),
+  ...inputAttrs,
+  ...(!isEditing ? { tabindex: -1 } : {}),
+})
 const resolvedPlaceholder = $derived(disabled ? '-' : placeholder)
 const resolvedDisabled = $derived(disabled)
 const resolvedReadonly = $derived(disabled ? false : isEditing ? readonly : true)
@@ -92,7 +97,7 @@ function handleValueChange(nextValue: string): void {
     attrs={resolvedInputAttrs}
     {id}
     {name}
-    class={`${inputClass} ${trailing ? 'min-w-0 flex-1' : ''}`}
+    class={`${inputClass} ${trailing ? 'min-w-0 flex-1' : ''} ${fitValue ? 'col-start-1 row-start-1 w-full! min-w-0!' : ''}`}
     type={inputType}
     bind:value
     placeholder={resolvedPlaceholder}
@@ -120,7 +125,28 @@ function handleValueChange(nextValue: string): void {
   {/if}
 
   <div class={controlWrapClass}>
-    {@render inputControl()}
+    {#if prefix}
+      <span
+        aria-hidden="true"
+        class="text-muted-foreground w-[3em] shrink-0 font-mono text-xs select-none"
+        >{prefix}</span
+      >
+    {/if}
+    {#if fitValue}
+      <div
+        class="grid max-w-full grid-cols-[minmax(0,1fr)]"
+        style:min-width={fitMinWidth}
+      >
+        <span
+          aria-hidden="true"
+          class="col-start-1 row-start-1 whitespace-pre px-3 text-sm {inputClass} invisible"
+          >{value || resolvedPlaceholder?.split(/,|、|，/)[0] || '88'} </span
+        >
+        {@render inputControl()}
+      </div>
+    {:else}
+      {@render inputControl()}
+    {/if}
 
     {#if trailing}
       <div class="flex shrink-0 items-center">{@render trailing()}</div>
