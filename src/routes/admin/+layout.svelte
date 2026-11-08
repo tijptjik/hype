@@ -360,13 +360,35 @@ afterNavigate(({ shallow }) => {
   description={m.admin__desktop_only_window_too_small_explainer()}
   widthLabel={m.admin__desktop_only_current_width()}
   icon={MonitorIcon}
-  isReady={adminCtx.isInitialised && view.isInitialised}
+  isReady={root.ready && hasAdminAccess && view.isInitialised}
+  isContentReady={adminCtx.isInitialised}
   {isPrimaryPanelAutoHide}
   isAdminPanelOpen={view.panels.isPanelOpen(Panel.admin)}
   onOpenVisual={() => view.panels.openPanelVisually(Panel.admin)}
   onCloseVisual={() => view.panels.closePanelVisually(Panel.admin)}
   {headerProps}
 >
+  {#snippet pending()}
+    <div class="flex h-full items-center justify-center" role="status">
+      {#if failedAdminScope === view.resources.scopeKey}
+        <div class="p-6 text-center">
+          <p>{m.bootstrap__error()}</p>
+          <button
+            type="button"
+            class="border-border mt-4 rounded border px-4 py-2"
+            onclick={() => {
+              failedAdminScope = null
+            }}
+          >
+            {m.bootstrap__retry()}
+          </button>
+        </div>
+      {:else}
+        <span class="loading loading-ring loading-lg" aria-hidden="true"></span>
+        <span class="sr-only">{m.resource_loading()}</span>
+      {/if}
+    </div>
+  {/snippet}
   {#snippet sidebar()}
     <ResourcePanel model={sidebarModel}
       >{#snippet footer()}
