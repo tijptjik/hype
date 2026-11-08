@@ -1,5 +1,6 @@
 // CONTENT LOCALES
 import { propertyLocalesToForm } from '#lib/properties/locales.js'
+// CONTENT LOCALES
 import { toContentLocaleSettingsForm } from '#lib/content-locales/settings.js'
 // PRESENTATION
 import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
@@ -357,8 +358,6 @@ export function toProjectFormInput(
     },
   }
 }
-
-
 
 export function toProjectIdentityPatch(
   formData: ProjectFormInput,

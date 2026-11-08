@@ -1194,7 +1194,6 @@ export function setHubImagePresentationMode(
   return setEntityImagePresentationMode(state, mode)
 }
 
-
 export const intentDisplay: Record<Intent, string> = {
   canonical: m.intent__canonical(),
   closeUp: m.intent__closeUp(),

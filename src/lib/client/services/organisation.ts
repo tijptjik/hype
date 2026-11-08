@@ -1,12 +1,11 @@
 // CONTENT LOCALES
 import { propertyLocalesToForm } from '#lib/properties/locales.js'
-// USER POLICY
-import { DEFAULT_ORGANISATION_USER_POLICY } from '#lib/organisation-users/policy.js'
 // ROLE POLICY
+import { DEFAULT_ORGANISATION_USER_POLICY } from '#lib/organisation-users/policy.js'
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // ORGANISATION SETTINGS
 import { toOrganisationSettingsForm } from '#lib/organisations/settings.js'
-// CAPABILITIES
+// ENUMS
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '#lib/capabilities.js'
 // I18N
 import { toLocaleKebab } from '#lib/i18n.js'
@@ -180,9 +179,6 @@ export function toOrganisationFormInput(
   }
 }
 
-
-
-
 type OrganisationFormI18nValue = OrganisationFormInput['data']['i18n']['en']
 
 function toOrganisationEntityI18nPatchFromFormInput(
@@ -275,9 +271,6 @@ export function overrideOrganisationEntityFromFormInput(
       : current.data,
   })
 }
-
-
-
 
 export function getOrganisationSubmitUpdates<
   TEntityCurrent,
