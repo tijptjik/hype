@@ -5,6 +5,18 @@
 Roles are used to define the permissions that a user has to a specific resource. A role
 can be assigned to a user, and a user can have multiple roles.
 
+## Staff save semantics
+
+An authorised staff edit takes effect on Save and records its history in the same
+transaction. This includes translation-only edits within the Translator's allowed
+fields, image metadata/rotation and shared Location corrections by Organisation
+managers. Saving content preserves publication visibility; publish/unpublish remain
+separate permissions and actions. Staff edits do not create review proposals.
+
+Authority remains resource-specific: Feature editing does not grant Organisation
+correction rights. Contributor task submissions and proposed shared corrections from
+actors without shared-resource edit authority retain their review workflows.
+
 ## Hub
 
 - Admin
