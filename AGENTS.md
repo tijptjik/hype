@@ -132,6 +132,18 @@ direct Vitest, Svelte checks and Cargo builds. It shares one user lock across ag
 repositories. Do not set DOTJIK_DEV_CHECK manually or bypass a failed resource scope.
 Watch commands retain the slot until stopped; avoid them for one-shot checks.
 
+## Lint workflow
+
+- `bun run lint` is read-only. Use `bun run lint:fix` only for an intentional, reviewed
+  formatting pass; do not make routine lint checks rewrite the repository.
+- Biome owns supported source/configuration formats. Prettier owns Markdown; keep
+  Biome's Markdown formatter disabled so the tools cannot undo each other.
+- Pre-commit validates a temporary snapshot of the Git index, including partially staged
+  files. It never formats, stages, or changes working-tree files.
+- Biome policy/version, package manifest, lockfile, and ignore changes trigger a full
+  staged-tree check. Include the required baseline migration in the same reviewed
+  change; keep mechanical formatting separate from behavioral changes.
+
 ## Test window placement
 
 - Launch all visible testing, browser automation, preview, and demo windows on Hyprland

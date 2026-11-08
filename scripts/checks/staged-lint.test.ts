@@ -107,6 +107,23 @@ describe('staged lint snapshot', () => {
     expect(() => checkStaged(root)).toThrow('existing.json')
   })
 
+  test('rejects deleting the lint policy instead of silently using defaults', () => {
+    const root = fixture()
+    git(root, ['rm', 'biome.json'])
+    expect(() => checkStaged(root)).toThrow('retain its Biome configuration')
+  })
+
+  test('rejects checking a new staged formatter version with the old installation', () => {
+    const root = fixture()
+    write(
+      root,
+      'package.json',
+      '{ "devDependencies": { "@biomejs/biome": "0.0.0" } }\n',
+    )
+    git(root, ['add', 'package.json'])
+    expect(() => checkStaged(root)).toThrow('differs from installed')
+  })
+
   test('checks Markdown without rewriting it', () => {
     const root = fixture()
     write(root, 'notes.md', '# Title\n\n-   item\n')

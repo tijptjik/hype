@@ -7,7 +7,16 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/.turbo", "!**/*.d.ts"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.turbo",
+      "!**/*.d.ts",
+      "!**/*.svg",
+      "!snippets",
+      "!project.inlang/.meta.json"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -91,17 +100,31 @@
   },
   "overrides": [
     {
+      "includes": ["static/mocks/saanseoi/streets/names/data.json"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": ["static/mapStyles/*.json"],
-      "formatter": { "enabled": false }
+      "formatter": {
+        "enabled": false
+      }
     },
     {
       "includes": [
         "workers/telegram/worker-configuration.d.ts",
         "workers/telegram-calls/worker-configuration.d.ts"
       ],
-      "formatter": { "enabled": false },
-      "linter": { "enabled": false },
-      "assist": { "enabled": false }
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
+      }
     },
     {
       "includes": ["**/tsconfig*.json"],
@@ -126,5 +149,10 @@
         }
       }
     }
-  ]
+  ],
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  }
 }

@@ -1,4 +1,4 @@
-name: 'TEST :: Run Tests'
+name: "TEST :: Run Tests"
 
 on:
   workflow_call:
@@ -8,39 +8,43 @@ on:
         type: string
     outputs:
       test-status:
-        description: 'Status of the test run'
+        description: "Status of the test run"
         value: ${{ jobs.test.outputs.status }}
 
 jobs:
   test:
-    name: 'TEST :: Run'
+    name: "TEST :: Run"
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.test.outputs.status }}
     steps:
-      - name: 'GIT :: Checkout'
+      - name: "GIT :: Checkout"
         uses: actions/checkout@v4
 
-      - name: 'INSTALL :: Bun'
+      - name: "INSTALL :: Bun"
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.0'
+          bun-version: "1.4.0"
 
-      - name: 'CACHE :: Restore Dependencies'
+      - name: "CACHE :: Restore Dependencies"
         uses: actions/cache@v3
         id: cache-deps
         with:
           path: node_modules
           key: ${{ runner.os }}-deps-${{ hashFiles('package.json', 'bun.lock', 'patches/**') }}
 
-      - name: 'INSTALL :: Dependencies'
+      - name: "INSTALL :: Dependencies"
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
 
-      - name: 'VERIFY :: SvelteKit Patch'
+      - name: "VERIFY :: SvelteKit Patch"
         run: bun run verify:sveltekit-patch
 
-      - name: 'CACHE :: Restore Build'
+      # Run before CI rewrites tsconfig so this checks the committed tree.
+      - name: "LINT :: Check repository"
+        run: bun run lint
+
+      - name: "CACHE :: Restore Build"
         uses: actions/cache@v3
         with:
           path: |
@@ -48,7 +52,7 @@ jobs:
             node_modules/.vite
           key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}
 
-      - name: 'FIX :: Create temporary tsconfig for CI'
+      - name: "FIX :: Create temporary tsconfig for CI"
         run: |
           # Create minimal tsconfig for CI
           cat > tsconfig.json << 'EOF'
@@ -85,13 +89,13 @@ jobs:
           }
           EOF
 
-      - name: 'TEST :: Run tests'
+      - name: "TEST :: Run tests"
         id: test
         run: |
           mkdir -p test-results
           bun run test:run
 
-      - name: 'CACHE :: Test results'
+      - name: "CACHE :: Test results"
         uses: actions/cache@v3
         with:
           path: test-results

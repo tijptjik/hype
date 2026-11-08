@@ -67,7 +67,14 @@ export function checkStaged(cwd = process.cwd()): void {
     )
       .split('\0')
       .filter(Boolean)
-    if (files.length === 0) return
+    const changed = run(
+      ['git', 'diff', '--cached', '--name-only', '-z'],
+      repository,
+      gitEnv,
+    )
+      .split('\0')
+      .filter(Boolean)
+    if (changed.length === 0) return
 
     // Materialize only staged contents; working-tree edits are deliberately invisible.
     const snapshot = join(temporary, 'tree')
@@ -96,9 +103,15 @@ export function checkStaged(cwd = process.cwd()): void {
     }
 
     // A changed lint policy must be valid for existing files, not just this commit.
-    const fullTree = files.some(file =>
+    const fullTree = changed.some(file =>
       /(^|\/)(biome\.jsonc?|package\.json|bun\.lockb?|\.gitignore)$/.test(file),
     )
+    if (
+      !existsSync(join(snapshot, 'biome.json')) &&
+      !existsSync(join(snapshot, 'biome.jsonc'))
+    ) {
+      throw new Error('The staged tree must retain its Biome configuration.')
+    }
     const biome = join(toolsRoot, 'node_modules/.bin/biome')
     const batches = fullTree
       ? [['.']]
