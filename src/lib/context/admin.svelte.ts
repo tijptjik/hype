@@ -694,8 +694,7 @@ export class AdminCtx {
   /**
    * Initializes the active admin resource for the current account scope.
    * @returns Completion of this initialization attempt.
-   * @remarks A superseded attempt leaves initialization pending so the layout retries
-   * after the active request settles; it must not mark another account scope ready.
+   * @remarks Route owners load data after mounting; bootstrap only wires queries for this scope.
    */
   init = async (): Promise<void> => {
     if (this.isInitialised || this.isInitializing) return
@@ -709,22 +708,7 @@ export class AdminCtx {
     const scope = this.view.resources.scopeKey
 
     try {
-      // Initialise only the selected admin resource; panels load their own independent pages.
-      const resource = this.navigation.getActiveResourceType()
-      if (resource === FirstClassResource.organisation)
-        await this.view.queries.refreshOrganisations(false)
-      else if (resource === FirstClassResource.project)
-        await this.view.queries.refreshProjects(false)
-      else if (resource === FirstClassResource.layer)
-        await this.view.queries.refreshLayers(false, false)
-      // Feature routes own their collection/detail reads; a known ref must mount first.
-      else if (resource === FirstClassResource.feature) {
-        this.isInitialised = scope === this.view.resources.scopeKey
-        return
-      } else if (resource === FirstClassResource.hub) await this.refreshHubs(false)
-      else if (resource === FirstClassResource.task)
-        await this.invalidateAndRefresh(resource)
-
+      // Index and detail routes own their reads; mounting must not await a duplicate list.
       this.isInitialised = scope === this.view.resources.scopeKey
     } finally {
       this.isInitializing = false

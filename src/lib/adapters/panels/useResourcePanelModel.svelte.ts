@@ -75,9 +75,11 @@ export function useResourcePanelModel(
       () => search[type],
       'panel',
       () =>
-        mode === 'admin' ||
-        app.panels.isPanelOpen(panelType) ||
-        app.panels.isPanelOpenVisually(panelType),
+        // Admin scope is synchronized before initialization permits sidebar reads.
+        mode === 'admin'
+          ? Boolean(app.isInitialised && admin?.isInitialised)
+          : app.panels.isPanelOpen(panelType) ||
+            app.panels.isPanelOpenVisually(panelType),
     ),
   )
 

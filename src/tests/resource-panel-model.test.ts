@@ -51,6 +51,8 @@ function setup(
   active = 'b',
   options: {
     mode?: 'admin' | 'prisms'
+    viewReady?: boolean
+    adminReady?: boolean
     open?: boolean
     layers?: string[]
     organisationMember?: string
@@ -79,6 +81,7 @@ function setup(
     revalidate: vi.fn().mockResolvedValue(undefined),
   }
   const app = {
+    isInitialised: options.viewReady ?? true,
     panels: {
       isPanelOpen: () => options.open ?? true,
       isPanelOpenVisually: () => false,
@@ -142,7 +145,7 @@ function setup(
   render(Fixture, {
     app,
     mode: options.mode,
-    admin: { navigation: routeNavigation } as AdminCtx,
+    admin: { navigation: routeNavigation, isInitialised: options.adminReady ?? true } as AdminCtx,
     onModel: value => {
       model = value
     },
@@ -411,4 +414,26 @@ it('does not load or refresh a closed public resource panel on window focus', as
   await vi.advanceTimersByTimeAsync(250)
   expect(list.load).not.toHaveBeenCalled()
   expect(list.revalidate).not.toHaveBeenCalled()
+})
+
+
+it.each([[false, false], [true, false], [false, true]])(
+  'does not start admin sidebar requests before view=%s and admin=%s are both ready',
+  async (viewReady, adminReady) => {
+    const { list, app, refreshPin, sections } = setup([], 'outside', { viewReady, adminReady })
+    sections[0].onRetry()
+    window.dispatchEvent(new Event('focus'))
+    await vi.advanceTimersByTimeAsync(250)
+    expect(list.load).not.toHaveBeenCalled()
+    expect(list.revalidate).not.toHaveBeenCalled()
+    expect(app.cacheCtx.retainPin).not.toHaveBeenCalled()
+    expect(refreshPin).not.toHaveBeenCalled()
+  },
+)
+
+it('loads the authenticated admin sidebar after initialization', async () => {
+  const { list, app } = setup([], 'outside', { viewReady: true, adminReady: true })
+  await vi.advanceTimersByTimeAsync(250)
+  expect(list.load).toHaveBeenCalled()
+  expect(app.cacheCtx.retainPin).toHaveBeenCalled()
 })

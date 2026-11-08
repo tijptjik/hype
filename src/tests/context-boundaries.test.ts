@@ -194,7 +194,7 @@ describe('surface context boundaries', () => {
     view.dispose()
   })
 
-  it('retries admin initialization when the account changes during its first request', async () => {
+  it('mounts each admin index without a bootstrap list request', async () => {
     const root = new RootCTX(new ResponsiveCtx())
     const view = new ResourceViewCtx(
       new DivisionCtx(),
@@ -204,31 +204,11 @@ describe('surface context boundaries', () => {
       'admin',
     )
     const admin = new AdminCtx(view)
-    // Organisation initialization awaits a request; Feature routes own their reads.
+    const refresh = vi.spyOn(view.queries, 'refreshOrganisations')
     admin.setResourceType(FirstClassResource.organisation)
-    let finish!: () => void
-    const firstRequest = new Promise<void>(resolve => {
-      finish = resolve
-    })
-    const refresh = vi
-      .spyOn(view.queries, 'refreshOrganisations')
-      .mockImplementationOnce(() => firstRequest)
-      .mockResolvedValue(undefined)
-    const initializing = admin.init()
-    expect(admin.isInitializing).toBe(true)
-    root.sync(
-      { id: 'admin', roles: [], superAdmin: true } as unknown as SessionUser,
-      null,
-    )
-    view.syncAccount()
-    admin.isInitialised = false
-    finish()
-    await initializing
-    expect(admin.isInitialised).toBe(false)
-    expect(admin.isInitializing).toBe(false)
     await admin.init()
-    expect(refresh).toHaveBeenCalledTimes(2)
     expect(admin.isInitialised).toBe(true)
+    expect(refresh).not.toHaveBeenCalled()
     view.dispose()
   })
 
