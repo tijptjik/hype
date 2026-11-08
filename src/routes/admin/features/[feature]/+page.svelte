@@ -33,7 +33,14 @@ import { show3dAddressOptions } from '#lib/projects/flags.js'
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 
 // SVELTE
-import { goto, pushState } from '$app/navigation'
+import { goto, pushState, snapshot } from '$app/navigation'
+// FORM HISTORY
+import {
+  captureFormNavigationSnapshot,
+  isCurrentFormNavigationSnapshot,
+  invalidateFormNavigationSnapshots,
+  type FormNavigationSnapshot,
+} from '#lib/client/formNavigationSnapshot.js'
 
 import { page } from '$app/state'
 import { onMount, untrack, tick, type Snippet } from 'svelte'
@@ -1258,6 +1265,11 @@ const configuredFeatureForm = configureForm(() => ({
     resourceType: FirstClassResource.feature,
     getEntity: () => feature,
     refreshResource: async ({ success, result }) => {
+      // Every successful save invalidates older history drafts before refreshing can fail.
+      if (success) {
+        invalidateFormNavigationSnapshots(navigationDraftScope)
+        pendingNavigationRestore = null
+      }
       if (
         success &&
         result &&
@@ -1314,6 +1326,83 @@ const showNameFields = $derived(
     namingChosen ||
     Object.values(currentFeatureData.i18n ?? {}).some(value => Boolean(value?.title)),
 )
+
+// History for existing features is independent of new-location discovery state.
+type FeatureFormCheckpoint = {
+  data: FeatureFormInput['data']
+  profileLocales: ProfileLocaleState
+  facet: typeof activeFacet
+  editing: boolean
+  dirty: boolean
+}
+const navigationDraftScope = $derived(
+  JSON.stringify([adminCtx.view.user?.id ?? '', featureRef]),
+)
+let pendingNavigationRestore =
+  $state.raw<FormNavigationSnapshot<FeatureFormCheckpoint> | null>(null)
+
+/** Capture independent form values for a browser history entry.
+ * @returns Serializable fields and presentation state for an existing feature.
+ */
+function captureFeatureFormCheckpoint(): FeatureFormCheckpoint {
+  return JSON.parse(
+    JSON.stringify({
+      data: currentFeatureData,
+      profileLocales: profileLocaleState,
+      facet: activeFacet,
+      editing: isEditing,
+      dirty: isDirty,
+    }),
+  )
+}
+
+/** Restore a captured editor after the current resource has finished loading.
+ * @param saved Captured form and presentation state.
+ * @returns Nothing; restoration never creates another history entry.
+ */
+function restoreFeatureFormCheckpoint(saved: FeatureFormCheckpoint): void {
+  formCtx.form.fields.set({ ...currentFormValue, data: saved.data })
+  setProfileLocaleState(
+    restoreProfileLocales(profileDefaults, saved.data.i18n, saved.profileLocales),
+  )
+  headerCtrl.setEditing(saved.editing)
+  hasProgrammaticDirtyChanges = saved.dirty
+  const facet = (page.shallow?.url ?? page.url).hash.slice(1) || saved.facet
+  if (featureFacetOrder.includes(facet as FacetType)) {
+    adminCtx.setFacet(facet as FacetType, featureRef, FirstClassResource.feature)
+  }
+}
+
+snapshot<FormNavigationSnapshot<FeatureFormCheckpoint> | null>({
+  id: 'admin-feature-form-v1',
+  capture: () =>
+    currentUser?.id && !isNewFeatureRef && isCurrentRefSettled
+      ? captureFormNavigationSnapshot(navigationDraftScope, captureFeatureFormCheckpoint())
+      : null,
+  restore: saved => {
+    pendingNavigationRestore =
+      saved && isCurrentFormNavigationSnapshot(navigationDraftScope, saved) ? saved : null
+  },
+  reset: () => {
+    pendingNavigationRestore = null
+  },
+})
+
+// Wait for form hydration and reject obsolete restore requests after navigation or saving.
+$effect(() => {
+  const saved = pendingNavigationRestore
+  const scope = navigationDraftScope
+  if (!saved || !isCurrentRefSettled) return
+  let cancelled = false
+  void tick().then(() => {
+    if (cancelled || !isCurrentFormNavigationSnapshot(scope, saved)) return
+    restoreFeatureFormCheckpoint(saved.value)
+    pendingNavigationRestore = null
+  })
+  return () => {
+    cancelled = true
+  }
+})
 
 // Hide form-level issues during programmatic resets so transient invalid states do not flash.
 const visibleAllIssues = $derived.by((): unknown[] =>
@@ -2573,6 +2662,8 @@ const isCurrentRefSettled = $derived(
  ************/
 
 function onReset(): void {
+  invalidateFormNavigationSnapshots(navigationDraftScope)
+  pendingNavigationRestore = null
   addressLookupRevision += 1
   isAddressLookupLoading = false
   addressLookupMessage = ''

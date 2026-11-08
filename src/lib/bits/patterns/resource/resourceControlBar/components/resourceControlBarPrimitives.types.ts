@@ -52,7 +52,6 @@ export type ResourceBulkEditControlProps = {
 export type ResourceControlBarFilterCtrlProps = {
   label: string
   icon?: Component
-  onHover?: () => void
   onClick?: (event: MouseEvent) => void
   showMenu?: boolean
   isCollapsed?: boolean

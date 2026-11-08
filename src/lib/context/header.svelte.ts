@@ -321,7 +321,8 @@ export class HeaderCtrl {
     this.applyEntityMeta(title, icon, facets)
     this.showControls('form')
     this.setVisibility(getEntityVisibility(visibilityOverrides))
-    this.clearControlBar()
+    // Late profile metadata must not clear controls owned by an embedded index.
+    if (!untrack(() => this.state.search?.indexView)) this.clearControlBar()
     this.clearFooter()
   }
 

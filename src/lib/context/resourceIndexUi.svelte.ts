@@ -18,7 +18,7 @@ export class ResourceIndexUi {
       feature: true,
       task: true,
       hub: false,
-      user: false,
+      user: true,
     },
     layoutMode: {
       location: 'table',
@@ -28,7 +28,7 @@ export class ResourceIndexUi {
       feature: 'table',
       task: 'table',
       hub: 'card',
-      user: 'table',
+      user: 'list',
     },
   })
 }

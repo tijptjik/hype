@@ -42,34 +42,35 @@ function resolveIconClasses(icon?: unknown): string {
 }
 </script>
 
+<!-- Outgoing controls can outlive their action while navigation clears the header. -->
 <div class={cx(HEADER_FORM_ACTIONS_CLASSES, 'relative')}>
   {#if featuresAction}
     <Button
       size="sm"
-      text={featuresAction.text}
-      color={featuresAction.color ?? 'neutral'}
-      style={featuresAction.style ?? 'outline'}
-      iconComponent={featuresAction.icon}
-      class={resolveActionClass(featuresAction.class)}
+      text={featuresAction?.text ?? ''}
+      color={featuresAction?.color ?? 'neutral'}
+      style={featuresAction?.style ?? 'outline'}
+      iconComponent={featuresAction?.icon}
+      class={resolveActionClass(featuresAction?.class)}
       hideLabel
       hideLabelInstantly
-      disabled={featuresAction.disabled}
-      onClick={() => featuresAction.onClick?.()}
+      disabled={featuresAction?.disabled ?? !featuresAction}
+      onClick={() => featuresAction?.onClick?.()}
     />
   {/if}
 
   {#if usersAction}
     <Button
       size="sm"
-      text={usersAction.text}
-      color={usersAction.color ?? 'neutral'}
-      style={usersAction.style ?? 'outline'}
-      iconComponent={usersAction.icon}
-      class={resolveActionClass(usersAction.class)}
+      text={usersAction?.text ?? ''}
+      color={usersAction?.color ?? 'neutral'}
+      style={usersAction?.style ?? 'outline'}
+      iconComponent={usersAction?.icon}
+      class={resolveActionClass(usersAction?.class)}
       hideLabel
       hideLabelInstantly
-      disabled={usersAction.disabled}
-      onClick={() => usersAction.onClick?.()}
+      disabled={usersAction?.disabled ?? !usersAction}
+      onClick={() => usersAction?.onClick?.()}
     />
   {/if}
 
@@ -92,95 +93,95 @@ function resolveIconClasses(icon?: unknown): string {
   {#if deleteAction}
     <Button
       size="sm"
-      text={deleteAction.text}
-      color={deleteAction.color ?? 'warning'}
-      style={deleteAction.style ?? 'ghost'}
-      iconComponent={deleteAction.icon}
-      iconClasses={resolveIconClasses(deleteAction.icon)}
+      text={deleteAction?.text ?? ''}
+      color={deleteAction?.color ?? 'warning'}
+      style={deleteAction?.style ?? 'ghost'}
+      iconComponent={deleteAction?.icon}
+      iconClasses={resolveIconClasses(deleteAction?.icon)}
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
-      class={resolveActionClass(deleteAction.class)}
+      class={resolveActionClass(deleteAction?.class)}
       {hideLabel}
       hideLabelInstantly
-      disabled={deleteAction.disabled}
-      onClick={() => deleteAction.onClick?.()}
+      disabled={deleteAction?.disabled ?? !deleteAction}
+      onClick={() => deleteAction?.onClick?.()}
     />
   {:else if primaryAction}
     <Button
       size="sm"
-      text={primaryAction.text}
-      color={primaryAction.color ?? 'neutral'}
-      style={primaryAction.style ?? 'ghost'}
-      iconComponent={primaryAction.icon}
-      iconClasses={resolveIconClasses(primaryAction.icon)}
+      text={primaryAction?.text ?? ''}
+      color={primaryAction?.color ?? 'neutral'}
+      style={primaryAction?.style ?? 'ghost'}
+      iconComponent={primaryAction?.icon}
+      iconClasses={resolveIconClasses(primaryAction?.icon)}
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       class={cx(
-        resolveActionClass(primaryAction.class),
-        primaryAction.style === 'soft' && HEADER_EDIT_ACTION_CLASSES,
+        resolveActionClass(primaryAction?.class),
+        primaryAction?.style === 'soft' && HEADER_EDIT_ACTION_CLASSES,
       )}
       {hideLabel}
       hideLabelInstantly
-      disabled={primaryAction.disabled}
-      onClick={() => primaryAction.onClick?.()}
+      disabled={primaryAction?.disabled ?? !primaryAction}
+      onClick={() => primaryAction?.onClick?.()}
     />
   {/if}
 
   {#if saveAction}
     <Button
       size="sm"
-      text={saveAction.text}
-      color={saveAction.color ?? 'success'}
-      style={saveAction.style ?? 'ghost'}
-      iconComponent={saveAction.icon}
-      iconClasses={resolveIconClasses(saveAction.icon)}
+      text={saveAction?.text ?? ''}
+      color={saveAction?.color ?? 'success'}
+      style={saveAction?.style ?? 'ghost'}
+      iconComponent={saveAction?.icon}
+      iconClasses={resolveIconClasses(saveAction?.icon)}
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       class={cx(
-        resolveActionClass(saveAction.class),
-        saveAction.color === 'primary' && HEADER_PRIMARY_ACTION_CLASSES,
+        resolveActionClass(saveAction?.class),
+        saveAction?.color === 'primary' && HEADER_PRIMARY_ACTION_CLASSES,
       )}
       {hideLabel}
       hideLabelInstantly
-      disabled={saveAction.disabled}
-      onClick={() => saveAction.onClick?.()}
+      disabled={saveAction?.disabled ?? !saveAction}
+      onClick={() => saveAction?.onClick?.()}
     />
   {/if}
   {#if publishAction}
-    {#if publishAction.kind === 'button'}
+    {#if publishAction?.kind === 'button'}
       <Button
         size="sm"
-        text={publishAction.text}
-        color={publishAction.color ?? 'success'}
-        style={publishAction.style ?? 'ghost'}
-        iconComponent={publishAction.icon}
-        iconClasses={resolveIconClasses(publishAction.icon)}
+        text={publishAction?.text ?? ''}
+        color={publishAction?.color ?? 'success'}
+        style={publishAction?.style ?? 'ghost'}
+        iconComponent={publishAction?.icon}
+        iconClasses={resolveIconClasses(publishAction?.icon)}
         labelClasses={HEADER_BUTTON_LABEL_CLASSES}
         class={cx(
-          resolveActionClass(publishAction.class),
-          publishAction.color === 'primary' && HEADER_PRIMARY_ACTION_CLASSES,
+          resolveActionClass(publishAction?.class),
+          publishAction?.color === 'primary' && HEADER_PRIMARY_ACTION_CLASSES,
         )}
         {hideLabel}
         hideLabelInstantly
-        disabled={publishAction.disabled}
-        onClick={() => publishAction.onClick?.()}
+        disabled={publishAction?.disabled ?? !publishAction}
+        onClick={() => publishAction?.onClick?.()}
       />
     {:else}
       <div
         class={cx(
           HEADER_PUBLISH_STATUS_CLASSES,
-          resolveActionClass(publishAction.class),
+          resolveActionClass(publishAction?.class),
         )}
-        aria-live={publishAction.ariaLive ?? 'polite'}
+        aria-live={publishAction?.ariaLive ?? 'polite'}
       >
-        {#if publishAction.icon}
-          {@const PublishStatusIcon = publishAction.icon}
+        {#if publishAction?.icon}
+          {@const PublishStatusIcon = publishAction?.icon}
           <span
-            class={cx('shrink-0', resolveIconClasses(publishAction.icon))}
+            class={cx('shrink-0', resolveIconClasses(publishAction?.icon))}
             aria-hidden="true"
           >
             <PublishStatusIcon />
           </span>
         {/if}
         {#if !hideLabel}
-          <span class={HEADER_PUBLISH_STATUS_LABEL_CLASSES}>{publishAction.text}</span>
+          <span class={HEADER_PUBLISH_STATUS_LABEL_CLASSES}>{publishAction?.text}</span>
         {/if}
       </div>
     {/if}
@@ -188,16 +189,16 @@ function resolveIconClasses(icon?: unknown): string {
   {#if previewAction}
     <Button
       size="sm"
-      text={previewAction.text}
-      color={previewAction.color ?? 'neutral'}
-      style={previewAction.style ?? 'outline'}
-      iconComponent={previewAction.icon}
+      text={previewAction?.text ?? ''}
+      color={previewAction?.color ?? 'neutral'}
+      style={previewAction?.style ?? 'outline'}
+      iconComponent={previewAction?.icon}
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
-      class={resolveActionClass(previewAction.class)}
+      class={resolveActionClass(previewAction?.class)}
       {hideLabel}
       hideLabelInstantly
-      disabled={previewAction.disabled}
-      onClick={() => previewAction.onClick?.()}
+      disabled={previewAction?.disabled ?? !previewAction}
+      onClick={() => previewAction?.onClick?.()}
     />
   {/if}
 
@@ -209,14 +210,14 @@ function resolveIconClasses(icon?: unknown): string {
       role="status"
     >
       <span class="text-foreground min-w-0 text-sm font-medium"
-        >{publishPrompt.text}</span
+        >{publishPrompt?.text}</span
       >
       <Button
-        text={publishPrompt.actionText}
+        text={publishPrompt?.actionText ?? ''}
         color="primary"
         size="sm"
         class="h-9 shrink-0 rounded-md px-4 text-sm font-medium shadow-none"
-        onClick={publishPrompt.onClick}
+        onClick={publishPrompt?.onClick}
       />
     </div>
   {/if}

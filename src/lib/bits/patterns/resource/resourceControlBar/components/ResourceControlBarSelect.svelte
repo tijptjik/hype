@@ -1,6 +1,7 @@
 <script lang="ts">
 // BITS
-import { Select, SimpleTooltip } from '#lib/bits/index.js'
+import Select from '#lib/bits/core/select/Select.svelte'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { ResourceControlBarSelectProps } from './resourceControlBarPrimitives.types'

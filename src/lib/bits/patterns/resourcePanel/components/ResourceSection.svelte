@@ -169,7 +169,7 @@ const reorder = $derived(
       aria-hidden={narrow}
       onclick={() => {
         if (section.onNavigate) {
-          section.onNavigate()
+          if (!section.isIndexActive) section.onNavigate()
         } else {
           toggleOpen()
         }

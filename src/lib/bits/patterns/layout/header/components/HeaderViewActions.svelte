@@ -43,43 +43,44 @@ let {
     />
   {/each}
 
+  <!-- Action props can clear while the parent header finishes its cross-fade. -->
   {#if controlsAction}
     <Button
-      text={controlsAction.text}
-      attrs={controlsAction.attrs}
+      text={controlsAction?.text}
+      attrs={controlsAction?.attrs}
       class={getHeaderActionClasses(
-        controlsAction.class,
-        hideLabel || controlsAction.alwaysHideLabel,
+        controlsAction?.class,
+        hideLabel || controlsAction?.alwaysHideLabel,
       )}
-      color={controlsAction.color ?? 'neutral'}
-      style={controlsAction.style ?? 'ghost'}
+      color={controlsAction?.color ?? 'neutral'}
+      style={controlsAction?.style ?? 'ghost'}
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
-      iconComponent={controlsAction.icon}
-      hideLabel={hideLabel || controlsAction.alwaysHideLabel}
-      hideLabelInstantly={controlsAction.hideLabelInstantly ??
-        controlsAction.alwaysHideLabel}
-      disabled={controlsAction.disabled}
-      onClick={() => controlsAction.onClick?.()}
+      iconComponent={controlsAction?.icon}
+      hideLabel={hideLabel || controlsAction?.alwaysHideLabel}
+      hideLabelInstantly={controlsAction?.hideLabelInstantly ??
+        controlsAction?.alwaysHideLabel}
+      disabled={controlsAction?.disabled}
+      onClick={() => controlsAction?.onClick?.()}
     />
   {/if}
 
   {#if layoutAction}
     <Button
-      text={layoutAction.text}
-      attrs={layoutAction.attrs}
+      text={layoutAction?.text}
+      attrs={layoutAction?.attrs}
       class={getHeaderActionClasses(
-        layoutAction.class,
-        hideLabel || layoutAction.alwaysHideLabel,
+        layoutAction?.class,
+        hideLabel || layoutAction?.alwaysHideLabel,
       )}
-      color={layoutAction.color ?? 'neutral'}
-      style={layoutAction.style ?? 'ghost'}
+      color={layoutAction?.color ?? 'neutral'}
+      style={layoutAction?.style ?? 'ghost'}
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
-      iconComponent={layoutAction.icon}
-      hideLabel={hideLabel || layoutAction.alwaysHideLabel}
-      hideLabelInstantly={layoutAction.hideLabelInstantly ??
-        layoutAction.alwaysHideLabel}
-      disabled={layoutAction.disabled}
-      onClick={() => layoutAction.onClick?.()}
+      iconComponent={layoutAction?.icon}
+      hideLabel={hideLabel || layoutAction?.alwaysHideLabel}
+      hideLabelInstantly={layoutAction?.hideLabelInstantly ??
+        layoutAction?.alwaysHideLabel}
+      disabled={layoutAction?.disabled}
+      onClick={() => layoutAction?.onClick?.()}
     />
   {/if}
 </div>

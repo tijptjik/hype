@@ -167,32 +167,6 @@ async function resolveFilterCollisionAgainstRightControls(
   }, COLLISION_SETTLE_DURATION_MS)
 }
 
-async function handleFilterAnchorHover(): Promise<void> {
-  if (disableMenuToggle) return
-
-  if (isFilterSuppressedByCollision) {
-    mostRecentOpenedControl = 'filter'
-    isFilterSuppressedByCollision = false
-    void resolveFilterCollisionAgainstRightControls('filter')
-    return
-  }
-
-  if (!hasActiveSection) {
-    if (showMenu) return
-    mostRecentOpenedControl = 'filter'
-    showMenu = true
-    void resolveFilterCollisionAgainstRightControls('filter')
-    return
-  }
-
-  const nextShowMenu = !showMenu
-  if (nextShowMenu) {
-    mostRecentOpenedControl = 'filter'
-  }
-  showMenu = !showMenu
-  void resolveFilterCollisionAgainstRightControls(nextShowMenu ? 'filter' : null)
-}
-
 async function handleFilterAnchorClick(_event: MouseEvent): Promise<void> {
   if (disableMenuToggle) return
 
@@ -338,7 +312,6 @@ $effect(() => {
     <FilterCtrl
       label={filterLabel}
       icon={filterIcon}
-      onHover={handleFilterAnchorHover}
       onClick={handleFilterAnchorClick}
       {showMenu}
       isCollapsed={isFilterSuppressedByCollision}

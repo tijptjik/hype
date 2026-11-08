@@ -7,7 +7,6 @@ import type { ResourceControlBarFilterCtrlProps } from './resourceControlBarPrim
 let {
   label,
   icon,
-  onHover,
   onClick,
   showMenu = true,
   isCollapsed = false,
@@ -24,14 +23,13 @@ let {
   class={`bits-resource-filter-bar__filter ${className}`.trim()}
   bind:this={rootElement}
 >
-  <!-- biome-ignore lint/a11y/noStaticElementInteractions: The filter anchor observes hover to coordinate its menu. -->
+  <!-- The filter menu changes only on explicit activation, including keyboard clicks. -->
   <div
     class="flex items-center justify-center opacity-70 transition-opacity duration-300 hover:opacity-100"
-    role="presentation"
-    onmouseenter={onHover}
   >
     <Button
       text={label}
+      attrs={{ 'aria-expanded': showMenu && !isCollapsed }}
       style="outline"
       color="light"
       size="sm"
@@ -50,7 +48,7 @@ let {
   <div class="relative flex flex-row items-center">
     {#if showMenu && !isCollapsed}
       <div
-        class="absolute z-30 flex h-16 items-center gap-2 bg-base-200 whitespace-nowrap"
+        class="bg-base-200 absolute z-30 flex h-16 items-center gap-2 whitespace-nowrap"
         bind:this={menuElement}
       >
         {#if menuContent}

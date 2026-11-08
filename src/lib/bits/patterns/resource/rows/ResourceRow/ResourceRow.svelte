@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { SimpleTooltip } from '#lib/bits/core/index.js'
-import { Row } from '#lib/bits/custom/index.js'
-import { ResourceStatusBadge } from '#lib/bits/index.js'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
+import Row from '#lib/bits/custom/rows/Row.svelte'
+import ResourceStatusBadge from '#lib/bits/patterns/resource/components/ResourceStatusBadge.svelte'
 import {
   getResourceRowMetaGridClass,
   getResourceRowClass,
