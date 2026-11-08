@@ -7,7 +7,7 @@ import { goto } from '$app/navigation'
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
 import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIdentityDialog.svelte'
-import { TaskEditor } from '#lib/bits/index.js'
+import TaskEditor from '#lib/bits/patterns/tasks/TaskEditor.svelte'
 import { locationTaskLabel } from '#lib/locations/tasks.js'
 import type {
   HeaderButtonActionConfig,
@@ -609,18 +609,6 @@ $effect(() => {
  ************/
 // +++ Task Mutations
 
-let imageReview = $state<{
-  taskId: string
-  reviewId: string | null
-  proposalVersion: string
-}>()
-let imageReviewBusy = $state(false)
-let imageAcceptAction = $state<{
-  taskId: string
-  disabled: boolean
-  accept: (mode?: 'acceptAll' | 'acceptClassified') => Promise<void>
-}>()
-
 /**
  * Reviews the current task and handles the resulting navigation flow.
  * @param action - Review action to submit
@@ -772,15 +760,17 @@ const imageProviderProps = $derived.by(() => {
     ...(hierarchySource
       ? adminCtx.view.getHierarchySync(hierarchySource as Feature | Task)
       : {}),
+    // Completed creation tasks display their own evidence even when the source Feature was merged.
     context:
-      isValid && task?.featureId
+      isValid && task?.featureId && !(task.type === 'newFeature' && task.isReviewed)
         ? {
             ctxType: ImageContextResource.feature,
             ctxId: task.featureId as Id,
             ctxTypeSecondary: ImageContextResourceExtended.task,
             ctxIdSecondary: task.id,
           }
-        : isValid && task?.creationProposal
+        : isValid &&
+            (task?.creationProposal || (task?.type === 'newFeature' && task.isReviewed))
           ? {
               ctxTypeSecondary: ImageContextResourceExtended.task,
               ctxIdSecondary: task.id,
@@ -816,7 +806,11 @@ const imageProviderModel = useImageProviderModel(
 {/if}
 
 {#if task && !task.locationTask}
-  <TaskInfoDialog bind:open={isInfoOpen} type={task.type as TaskType} revisionReviewRequired={task.revisionReviewRequired} />
+  <TaskInfoDialog
+    bind:open={isInfoOpen}
+    type={task.type as TaskType}
+    revisionReviewRequired={task.revisionReviewRequired}
+  />
 {/if}
 <TaskRejectDialog
   bind:open={isRejectDialogOpen}
