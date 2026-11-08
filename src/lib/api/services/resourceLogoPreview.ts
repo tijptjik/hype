@@ -1,5 +1,5 @@
 // DRIZZLE
-import { sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 // AUTHORIZATION
 import {
   authorizeOrganisationUpdateForSubmission,
@@ -43,7 +43,7 @@ export async function readResourceLogoPreview(
     submittedData: { i18n: true },
   }
   for (const owner of owners) {
-    let guard
+    let guard: SQL
     if (owner.resource === 'organisation') {
       const probe = await probeOrganisationQuery(db, { ref: owner.id, refKey: 'id' })
       if (

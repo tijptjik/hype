@@ -15,9 +15,9 @@ const items = $derived(
 <div data-review-header data-expected={JSON.stringify(items.map(item => item.label))}>
   <HeaderFacets {items} />
 </div>
-<button onclick={() => (resource = FirstClassResource.project)}>
+<button type="button" onclick={() => (resource = FirstClassResource.project)}>
   Switch to project
 </button>
-<button onclick={() => (resource = FirstClassResource.organisation)}>
+<button type="button" onclick={() => (resource = FirstClassResource.organisation)}>
   Switch to organisation
 </button>
