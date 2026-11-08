@@ -5,7 +5,7 @@ import type { Snippet } from 'svelte'
 import { m } from '#lib/i18n.js'
 // BITS
 import { cx } from '#lib/bits/utils.js'
-import { Button, Swap } from '#lib/bits/index.js'
+import { Button } from '#lib/bits/core/button/index.js'
 import ImagePresentationPicker from './ImagePresentationPicker.svelte'
 // LIB
 import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
@@ -16,8 +16,8 @@ import {
   VIEWER_CONTROLS_ROTATE_BUTTON_CLASSES,
   VIEWER_CONTROLS_TOGGLE_DISABLED_CLASSES,
   VIEWER_CONTROLS_TOGGLE_ENABLED_CLASSES,
-  viewerControlsEditActionsClass,
   viewerControlsEditButtonClass,
+  viewerControlsEditActionsClass,
 } from './ViewerControls.styles'
 // ICONS
 import LoaderCircleIcon from 'virtual:icons/proicons/spinner'
@@ -26,7 +26,7 @@ import RotateCwIcon from 'virtual:icons/proicons/arrow-clockwise'
 import SquarePenIcon from 'virtual:icons/proicons/compose'
 import EyeIcon from 'virtual:icons/proicons/eye'
 import EyeOffIcon from 'virtual:icons/proicons/eye-off'
-import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
+import ReplaceIcon from 'virtual:icons/lucide/replace'
 import DownloadIcon from 'virtual:icons/proicons/cloud-arrow-down'
 import Trash2Icon from 'virtual:icons/proicons/delete'
 // TYPES
@@ -52,6 +52,7 @@ let {
   showReplaceButton = true,
   showDeleteButton = false,
   showDownloadButton = true,
+  intentControls,
   textControls,
   onRotateLeft,
   onRotateRight,
@@ -61,6 +62,7 @@ let {
   onDelete,
   onDownload,
 }: {
+  intentControls?: Snippet
   textControls?: Snippet
   isPublished?: boolean
   presentationMode?: ImagePresentation
@@ -94,11 +96,11 @@ let inputEl = $state<HTMLInputElement>()
 let isEditExpanded = $state(false)
 let isPresentationModePending = $state(false)
 const shouldShowEditButton = $derived(
-  showEditButton || Boolean(onRotateLeft && onRotateRight),
+  showEditButton || Boolean(onRotateLeft && onRotateRight) || canDownload || canReplace,
 )
 
 $effect(() => {
-  if (!shouldShowEditButton || !canEdit || !canRotate) {
+  if (!shouldShowEditButton) {
     isEditExpanded = false
   }
 })
@@ -153,6 +155,7 @@ async function handlePresentationModeChange(
   )}
   aria-busy={freezeInteractions}
 >
+  {@render intentControls?.()}
 
   {#if showPresentationModeToggle}
     <ImagePresentationPicker
@@ -160,50 +163,6 @@ async function handlePresentationModeChange(
       disabled={disabled || !canMutate}
       busy={isPresentationModePending}
       onValueChange={handlePresentationModeChange}
-    />
-  {/if}
-
-  {#if showReplaceButton}
-    <Button
-      text={m.gallery__replace_image()}
-      style="transparent"
-      modifier="circle"
-      hideLabel={true}
-      class={VIEWER_CONTROLS_BUTTON_CLASSES}
-      disabled={disabled || !canReplace}
-      onClick={() => inputEl?.click()}
-      iconComponent={ReplaceIcon}
-      iconClasses="h-[22px] w-[22px]"
-    />
-  {/if}
-
-  {#if showDeleteButton}
-    <Button
-      text={deleteLabel}
-      style="transparent"
-      modifier="circle"
-      hideLabel={true}
-      class={VIEWER_CONTROLS_BUTTON_CLASSES}
-      disabled={disabled || !canDelete}
-      onClick={() => {
-        void onDelete?.()
-      }}
-      iconComponent={Trash2Icon}
-      iconClasses="h-[22px] w-[22px]"
-    />
-  {/if}
-
-  {#if showDownloadButton}
-    <Button
-      text={m.gallery__download_raw_image()}
-      style="transparent"
-      modifier="circle"
-      hideLabel={true}
-      class={VIEWER_CONTROLS_BUTTON_CLASSES}
-      disabled={disabled || !canDownload}
-      onClick={() => onDownload?.()}
-      iconComponent={DownloadIcon}
-      iconClasses="h-[22px] w-[22px]"
     />
   {/if}
 
@@ -219,9 +178,9 @@ async function handlePresentationModeChange(
         modifier="circle"
         hideLabel={true}
         class={editButtonClass}
-        disabled={disabled || isEditBusy || !canEdit || !canRotate}
+        disabled={disabled || isEditBusy}
         onClick={() => {
-          if (disabled || isEditBusy || !canEdit || !canRotate) return
+          if (disabled || isEditBusy) return
           isEditExpanded = !isEditExpanded
         }}
         attrs={{ 'aria-expanded': isEditExpanded }}
@@ -230,11 +189,9 @@ async function handlePresentationModeChange(
       />
 
       <div
-        class={viewerControlsEditActionsClass({
-          isEditExpanded,
-          canRotate,
-        })}
-        aria-hidden={!isEditExpanded || !canRotate}
+        class={viewerControlsEditActionsClass({ isEditExpanded })}
+        inert={!isEditExpanded}
+        aria-hidden={!isEditExpanded}
       >
         <Button
           text={m.gallery__rotate_image_left()}
@@ -259,6 +216,50 @@ async function handlePresentationModeChange(
           iconClasses="h-[22px] w-[22px]"
           class={VIEWER_CONTROLS_ROTATE_BUTTON_CLASSES}
         />
+        {#if showReplaceButton}
+          <Button
+            text={m.gallery__replace_image()}
+            style="transparent"
+            modifier="circle"
+            hideLabel={true}
+            class={VIEWER_CONTROLS_BUTTON_CLASSES}
+            disabled={disabled || !canReplace}
+            onClick={() => inputEl?.click()}
+            iconComponent={ReplaceIcon}
+            iconClasses="h-[22px] w-[22px]"
+          />
+        {/if}
+
+        {#if showDeleteButton}
+          <Button
+            text={deleteLabel}
+            style="transparent"
+            modifier="circle"
+            hideLabel={true}
+            class={VIEWER_CONTROLS_BUTTON_CLASSES}
+            disabled={disabled || !canDelete}
+            onClick={() => {
+              void onDelete?.()
+            }}
+            iconComponent={Trash2Icon}
+            iconClasses="h-[22px] w-[22px]"
+          />
+        {/if}
+
+        {#if showDownloadButton}
+          <Button
+            text={m.gallery__download_raw_image()}
+            style="transparent"
+            modifier="circle"
+            hideLabel={true}
+            class={VIEWER_CONTROLS_BUTTON_CLASSES}
+            disabled={disabled || !canDownload}
+            onClick={() => onDownload?.()}
+            iconComponent={DownloadIcon}
+            iconClasses="h-[22px] w-[22px]"
+          />
+        {/if}
+
       </div>
     </div>
   {/if}

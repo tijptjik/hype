@@ -289,52 +289,7 @@ for (const [name, engine] of [
           if (native)
             document.startViewTransition = ((update: any) => {
               ;(globalThis as any).menuTransitions++
-              const transition = native(update)
-              void transition.ready
-                .then(() => {
-                  if (!(globalThis as any).inspectMenuTransition) return
-                  const named =
-                    document.querySelector<HTMLElement>(
-                      '[data-popover-content][style*="view-transition-name"]',
-                    ) ??
-                    document.querySelector<HTMLElement>(
-                      '[style*="view-transition-name: image-menu"], [style*="view-transition-name:image-menu"]',
-                    )
-                  const name = named?.style.viewTransitionName
-                  const triggers = Array.from(
-                    document.querySelectorAll<HTMLElement>(
-                      'button[aria-label="Change image intent"]',
-                    ),
-                  )
-                  ;(globalThis as any).liveIntentTrigger =
-                    triggers.every(
-                      trigger =>
-                        getComputedStyle(trigger).viewTransitionName === 'none',
-                    ) &&
-                    getComputedStyle(document.documentElement).viewTransitionName ===
-                      'none'
-                  ;(globalThis as any).menuSnapshot = name
-                    ? Object.fromEntries(
-                        ['group', 'image-pair', 'old', 'new'].map(part => {
-                          const style = getComputedStyle(
-                            document.documentElement,
-                            `::view-transition-${part}(${name})`,
-                          )
-                          return [
-                            part,
-                            {
-                              width: style.width,
-                              height: style.height,
-                              overflow: style.overflow,
-                              objectFit: style.objectFit,
-                            },
-                          ]
-                        }),
-                      )
-                    : null
-                })
-                .catch(() => {})
-              return transition
+              return native(update)
             }) as typeof document.startViewTransition
         })
         const presentation = page.getByRole('button', { name: /^Image presentation:/ })
@@ -345,21 +300,17 @@ for (const [name, engine] of [
         )
         await page.getByRole('menuitemradio').first().press('Escape')
         await page.getByRole('menuitemradio').first().waitFor({ state: 'hidden' })
-        await page.evaluate(() => {
-          ;(globalThis as any).inspectMenuTransition = true
-        })
-        await intent.click()
-        await page.waitForFunction(() => (globalThis as any).menuSnapshot)
-        const snapshot = await page.evaluate(() => (globalThis as any).menuSnapshot)
-        if (!(await page.evaluate(() => (globalThis as any).liveIntentTrigger)))
-          throw Error('Intent selector was captured instead of remaining live')
-        if (
-          Math.abs(
-            parseFloat(snapshot.new.height) - parseFloat(snapshot.group.height),
-          ) > 1 ||
-          snapshot['image-pair'].overflow !== 'clip'
+        // Intent popovers stay live: document snapshots can obscure them beneath the parent dialog.
+        const intentTransitionCount = await page.evaluate(
+          () => (globalThis as any).menuTransitions,
         )
-          throw Error('Menu snapshot spills outside its own bounds')
+        await intent.click()
+        await page.getByRole('button', { name: 'General', exact: true }).waitFor()
+        if (
+          (await page.evaluate(() => (globalThis as any).menuTransitions)) !==
+          intentTransitionCount
+        )
+          throw Error('Opening intent captured the surrounding dialog')
         await page.evaluate(() => {
           ;(globalThis as any).holdReview = true
         })
@@ -393,8 +344,8 @@ for (const [name, engine] of [
           supported: Boolean(document.startViewTransition),
           count: (globalThis as any).menuTransitions,
         }))
-        if (transitions.supported && transitions.count < 4)
-          throw Error('Menus did not transition both opening and closing')
+        if (transitions.supported && transitions.count !== intentTransitionCount)
+          throw Error('Intent menu changes captured the surrounding dialog')
         await page.getByRole('button', { name: 'Edit image text', exact: true }).click()
         await page.getByRole('textbox', { name: /^Caption ·/ }).fill('Reviewed caption')
         await page.waitForFunction(
@@ -590,10 +541,15 @@ for (const [name, engine] of [
         throw Error('Existing image has a new-photo dot')
       if (await page.getByText(/^(Submitted|Existing)$/).count())
         throw Error('Text badges remain on thumbnails')
-      const dotBounds = await submittedDot.boundingBox()
-      const thumbBounds = await submittedThumb
-        .locator('button[aria-pressed]')
-        .boundingBox()
+      // Measure related elements in one frame while the responsive rail is resizing.
+      const { dotBounds, thumbBounds } = await submittedDot.evaluate(dot => ({
+        dotBounds: dot.getBoundingClientRect().toJSON(),
+        thumbBounds: dot
+          .closest('[data-gallery-thumb-id]')
+          ?.querySelector('button[aria-pressed]')
+          ?.getBoundingClientRect()
+          .toJSON(),
+      }))
       if (
         !dotBounds ||
         !thumbBounds ||
@@ -634,6 +590,10 @@ for (const [name, engine] of [
         .click()
       await page.getByRole('button', { name: 'General', exact: true }).click()
       await page.locator('[data-review-busy="false"]').waitFor()
+      // Wait for the previous popover to finish closing before opening the toolbar menu.
+      await page
+        .getByRole('button', { name: 'General', exact: true })
+        .waitFor({ state: 'hidden' })
       const existingPatch = await page.evaluate(
         () => (globalThis as any).reviewCalls.at(-1)?.patch,
       )

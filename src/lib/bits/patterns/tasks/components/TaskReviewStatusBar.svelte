@@ -1,6 +1,6 @@
 <script lang="ts">
 import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
-import { UserAttributionCard } from '#lib/bits/index.js'
+import UserAttributionCard from '#lib/bits/patterns/cards/userAttributionCard/UserAttributionCard.svelte'
 import { cx } from '#lib/bits/utils.js'
 import { getTaskReviewActionLabel } from '#lib/client/services/task.js'
 import { m } from '#lib/i18n.js'
@@ -25,6 +25,14 @@ let {
   isCompact?: boolean
   class?: string
 } = $props()
+
+// Present the precise acceptance reason for older automatic completion receipts too.
+const visibleReviewReason = $derived(
+  reviewAction === 'added-classified-photos' &&
+        reviewReason === 'All photo proposals reviewed'
+      ? 'All Classified Photos'
+      : reviewReason,
+)
 
 const outcomeLabel = $derived(
   reviewAction
@@ -67,8 +75,8 @@ const connectorClass =
       hideDetails={isCompact}
       class={cx(
         '[--bits-feature-attribution-avatar-size:36px]',
-        (reviewOutcome || reviewReason) && connectorClass,
-        (reviewOutcome || reviewReason) && connectorToneClass,
+        (reviewOutcome || visibleReviewReason) && connectorClass,
+        (reviewOutcome || visibleReviewReason) && connectorToneClass,
       )}
     />
   {/if}
@@ -77,24 +85,24 @@ const connectorClass =
     class={cx(
       'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em]',
       outcomeToneClass,
-      reviewReason && connectorClass,
-      reviewReason && connectorToneClass,
+      visibleReviewReason && connectorClass,
+      visibleReviewReason && connectorToneClass,
     )}
   >
     <OutcomeIcon class="h-4 w-4" />
     <span>{outcomeLabel}</span>
   </div>
 
-  {#if reviewReason}
+  {#if visibleReviewReason}
     {#if isCompact}
-      <TaskReason reason={reviewReason} />
+      <TaskReason reason={visibleReviewReason} />
     {:else}
       <div
-        class="max-w-[20rem] rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-xs uppercase tracking-[0.18em] text-foreground/60"
-        data-tooltip={reviewReason}
+        class="border-foreground/10 bg-foreground/[0.04] text-foreground/60 max-w-[20rem] rounded-full border px-3 py-2 text-xs tracking-[0.18em] uppercase"
+        data-tooltip={visibleReviewReason}
       >
         <ScrollableText
-          text={reviewReason}
+          text={visibleReviewReason}
           padding={16}
           separator="•"
           class="block max-w-[20rem]"

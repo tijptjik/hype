@@ -97,7 +97,7 @@ describe('atomic task image review', () => {
           "SELECT intent, isPublished FROM featureImage WHERE imageId = 'selected'",
         )
         .get(),
-    ).toEqual({ intent: 'undefined', isPublished: 1 })
+    ).toEqual({ intent: 'general', isPublished: 1 })
   })
 
   it('completes a missing-report rejection even when no images remain', async () => {

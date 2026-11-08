@@ -157,6 +157,7 @@ const canSave = $derived(canReview && isSubmittedImage)
 // Keep selection and acceptance stable while the modal owns an isolated text draft.
 const textDirty = $derived(textOpen)
 const canEdit = $derived(canSave && !textDirty && !pendingRotation)
+const canEditIntent = $derived(canReview && !textDirty && !pendingRotation)
 const canAccept = $derived(
   !readonly &&
     (!busy || pendingSort !== null) &&
@@ -209,7 +210,10 @@ const items = $derived.by<ViewerRenderable[]>(() => {
         )?.presentationMode ?? 'contain') as ImagePresentation,
         meta: {
           intentOptions,
-          intentReadonly: Boolean(review.imageIds && !review.imageIds.includes(id)),
+          intentReadonly: !pendingReviews.some(
+            candidate =>
+              Boolean(candidate.content.gallery.entries[id]) && !candidate.stale,
+          ),
         },
         intent,
         alt: item.alt[locale] ?? '',
@@ -326,15 +330,30 @@ function tokens(target = review) {
   }
 }
 
+/** Save a patch against the exact proposal that owns the review draft.
+ * @param patch Reviewed image changes.
+ * @param file Optional replacement bytes.
+ * @param refresh Whether to rebase a stale review.
+ * @param throwOnError Whether callers must handle failure.
+ * @param target Proposal receiving the patch.
+ * @returns Completion after the saved snapshot is reconciled.
+ */
 async function save(
   patch: z.infer<typeof ImageReviewPatchSchema>,
   file?: File,
   refresh = false,
   throwOnError = false,
+  target = review,
 ): Promise<void> {
+  // Existing gallery images allow intent changes without enabling other editing tools.
+  const intentOnly =
+    !file &&
+    patch.intent !== undefined &&
+    Object.keys(patch).every(key => key === 'imageId' || key === 'intent')
   if (
-    (review?.imageIds && !review.imageIds.includes(patch.imageId)) ||
-    (!canSave && !(refresh && !readonly && !busy && review?.status === 'submitted'))
+    (target?.imageIds && !target.imageIds.includes(patch.imageId) && !intentOnly) ||
+    (!(intentOnly ? canEditIntent : canSave) &&
+      !(refresh && !readonly && !busy && review?.status === 'submitted'))
   ) {
     if (throwOnError) throw new Error('This review is no longer editable.')
     return
@@ -343,7 +362,7 @@ async function save(
   message = ''
   notify()
   try {
-    const input = { ...tokens(), patch, refresh }
+    const input = { ...tokens(target), patch, refresh }
     let updated: FeatureImageReview | null
     if (file) {
       if (file.size > 20 * 1024 * 1024)
@@ -390,7 +409,13 @@ async function save(
  * @returns Completion after server reconciliation; failures restore the saved value.
  */
 async function setIntent(imageId: string, intent: Intent): Promise<void> {
-  const target = galleryOwners.get(imageId)
+  const owner = galleryOwners.get(imageId)
+  const target =
+    owner?.status === 'submitted'
+      ? owner
+      : pendingReviews.find(candidate =>
+          Boolean(candidate.content.gallery.entries[imageId]),
+        )
   if (
     readonly ||
     busy ||
@@ -398,8 +423,7 @@ async function setIntent(imageId: string, intent: Intent): Promise<void> {
     pendingRotation ||
     !target ||
     target.stale ||
-    target.status !== 'submitted' ||
-    (target.imageIds && !target.imageIds.includes(imageId))
+    target.status !== 'submitted'
   )
     return
   // A thumbnail selector edits its own submission, including touch without hover.
@@ -407,7 +431,7 @@ async function setIntent(imageId: string, intent: Intent): Promise<void> {
   const pending = { proposalId: target.proposalId, imageId, intent }
   pendingIntent = pending
   try {
-    await save({ imageId, intent })
+    await save({ imageId, intent }, undefined, false, false, target)
   } finally {
     // The saved snapshot remains authoritative; removing the overlay also rolls back failures.
     pendingIntent = null
@@ -581,7 +605,7 @@ onMount(() => {
       isEditBusy={busy}
       isPublished={entry?.isPublished ?? false}
       presentationMode={(metadata?.presentationMode ?? 'contain') as ImagePresentation}
-      isIntentDisabled={!canEdit}
+      isIntentDisabled={!canEditIntent}
       disableHoverPreview={busy || textDirty || Boolean(pendingRotation)}
       onActiveIdChange={id => {
         if (!busy && !textDirty && !pendingRotation) activeId = id

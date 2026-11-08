@@ -7,7 +7,9 @@ import { m } from '#lib/i18n.js'
 import { useGalleryOrdering } from '#lib/adapters/image/useGalleryOrdering.svelte.js'
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS
-import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import ImageEditor from '#lib/bits/patterns/images/ImageEditor.svelte'
+import UserAttributionCard from '#lib/bits/patterns/cards/userAttributionCard/UserAttributionCard.svelte'
 import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadataCard.svelte'
 import { IMAGE_METADATA_BUTTON_CLASSES } from '#lib/bits/patterns/images/components/imageChrome.styles.js'
 // IMAGE
@@ -27,40 +29,36 @@ const model = useImageEditorGalleryModel(imageCtx, { publishFromIntent: false })
 let {
   featureId,
   pendingItemCount = 0,
-  researchOutcome,
   layout = 'sidebar',
   readonly = false,
   intentReadonly = readonly,
   isReviewed = false,
+  researchOutcome,
   multilingualExpanded,
   onMultilingualExpandedChange,
 }: {
   featureId?: string | null
   pendingItemCount?: number
-  researchOutcome?: 'accepted' | 'rejected' | null
   layout?: 'sidebar' | 'bottom' | 'top'
   readonly?: boolean
   intentReadonly?: boolean
   isReviewed?: boolean
+  researchOutcome?: 'accepted' | 'rejected' | null
   multilingualExpanded?: boolean
   onMultilingualExpandedChange?: (expanded: boolean) => void
 } = $props()
-const ordering = useGalleryOrdering(
-  () => featureId,
-  () => model.state.items,
-  () => imageCtx.refreshImages(),
-)
+const ordering = useGalleryOrdering(() => featureId, () => model.state.items, () => imageCtx.refreshImages())
 let isMetadataOpen = $state(false)
 const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveImage)
 </script>
 
 <ImageEditor
   {pendingItemCount}
+  isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   sortScope={featureId ?? undefined}
   sortMode={ordering.mode}
   canSort={!readonly && ordering.enabled}
   onSortChange={ordering.save}
-  isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   {layout}
   showNavButtons={false}
   items={model.state.items}
@@ -71,7 +69,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
   presentationMode={model.state.presentationMode}
   canMutateActiveImage={!readonly && model.state.canMutateActiveImage}
   canRotateActiveImage={!readonly && model.state.canRotateActiveImage}
-  canEditActiveImage={Boolean(model.state.activeImage?.image.id)}
+  canEditActiveImage={!readonly && Boolean(model.state.activeImage?.image.id)}
   canReplaceActiveImage={!readonly && model.state.canReplaceActiveImage}
   canDeleteActiveImage={canDeleteTaskImages}
   canDownloadActiveImage={model.state.canDownloadActiveImage}
@@ -84,14 +82,14 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
     isTaskImage(item, model.state.items, imageId =>
       imageCtx.isImageHighlighted(imageId),
     )}
-  highlightClass="ring-2 ring-accent shadow-[0_0_0_2px_rgba(20,184,166,0.75)]"
+  highlightClass=""
   getBadgeLabel={item =>
     getTaskImageBadgeLabel(item, model.state.items, isReviewed, imageId =>
-      imageCtx.isImageHighlighted(imageId),
+      imageCtx.isImageHighlighted(imageId), researchOutcome,
     )}
   getBadgeClass={item =>
     getTaskImageBadgeClass(item, model.state.items, isReviewed, imageId =>
-      imageCtx.isImageHighlighted(imageId),
+      imageCtx.isImageHighlighted(imageId), researchOutcome,
     )}
   onThumbnailLoad={model.actions.markThumbnailLoaded}
   onThumbnailError={model.actions.markThumbnailErrored}
@@ -111,6 +109,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
   {#snippet textControls()}
     {#if featureId}
       <FeatureGalleryRevisionEditor
+        isDirty={readonly}
         {multilingualExpanded}
         {onMultilingualExpandedChange}
         {featureId}

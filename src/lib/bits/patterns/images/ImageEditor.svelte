@@ -223,10 +223,10 @@ const hasItems = $derived(displayedItemCount > 0)
 const adminThumbnailSize = 192
 const verticalRailPaddingLeftPx = 16
 const verticalRailPaddingRightPx = 16
+// Keep the rail stable while saves temporarily disable sorting; buttons enforce capability.
 const hasSortControls = $derived(
   Boolean(
     showSortControls &&
-      (canSort || sortBusy) &&
       onSortChange &&
       (sortMode === 'manual' || sortBusy || previousSort?.mode === 'manual'),
   ),
@@ -273,7 +273,10 @@ $effect(() => {
     {#if layout === 'top'}
       {@render expandingThumbnailTrack()}
     {/if}
-    <div class={cx('relative min-h-0 min-w-0 flex-1', className)}>
+    <div
+      data-image-editor-viewport
+      class={cx('relative min-h-0 min-w-0 flex-1', className)}
+    >
       {#if isLoading && !items.length}
         <div class="relative h-full w-full" aria-busy="true" data-image-editor-loading>
           <ImageSkeleton />
@@ -344,16 +347,6 @@ $effect(() => {
           </div>
         </div>
       {/if}
-      {#if isStackedLayout && items.length === 1 && activeItem && onIntentChange}
-        <div class="absolute top-2 right-2 z-40 h-10 w-32">
-          <ImagePrimitive.ThumbnailIntent
-            item={activeItem}
-            disabled={isIntentDisabled}
-            {onIntentChange}
-            contentSide="bottom"
-          />
-        </div>
-      {/if}
     </div>
 
     {#if isStackedLayout}
@@ -421,31 +414,33 @@ $effect(() => {
           {/if}
         </div>
 
-        <div
-          class="border-border bg-base-100 pointer-events-none absolute inset-x-0 bottom-0 z-20 border-t"
-          style={`height: ${verticalRailBottomBarHeightPx}px;`}
-        >
-          <ImagePrimitive.ThumbnailControls
-            class={cx(
-              'transition-opacity duration-200 ease-out',
-              hasItems
-                ? 'pointer-events-auto opacity-100'
-                : 'pointer-events-none opacity-0',
-            )}
-            {uploadSelectionMode}
-            variant="footer"
-            leadingControls={hasSortControls ? sortingControls : undefined}
-            disabled={isReadonly && !canDeleteActiveImage}
-            disableUpload={isReadonly}
-            disableDeleteMode={!canDeleteActiveImage}
-            {isProcessingUploads}
-            {isDeleteMode}
-            onToggleDeleteMode={() => {
-              isDeleteMode = !isDeleteMode
-            }}
-            {onAddFiles}
-          />
-        </div>
+        {#if hasGalleryActions}
+          <div
+            class="border-border bg-base-100 pointer-events-none absolute inset-x-0 bottom-0 z-20 border-t"
+            style={`height: ${verticalRailBottomBarHeightPx}px;`}
+          >
+            <ImagePrimitive.ThumbnailControls
+              class={cx(
+                'transition-opacity duration-200 ease-out',
+                hasItems
+                  ? 'pointer-events-auto opacity-100'
+                  : 'pointer-events-none opacity-0',
+              )}
+              {uploadSelectionMode}
+              variant="footer"
+              leadingControls={hasSortControls ? sortingControls : undefined}
+              disabled={isReadonly && !canDeleteActiveImage}
+              disableUpload={isReadonly || !onAddFiles}
+              disableDeleteMode={!canDeleteActiveImage}
+              {isProcessingUploads}
+              {isDeleteMode}
+              onToggleDeleteMode={() => {
+                isDeleteMode = !isDeleteMode
+              }}
+              {onAddFiles}
+            />
+          </div>
+        {/if}
       </div>
     {/if}
   </div>
@@ -474,7 +469,19 @@ $effect(() => {
     {onPresentationModeChange}
     {onReplaceFiles}
     {onDownload}
-  />
+  >
+    {#snippet intentControls()}
+      {#if activeItem && onIntentChange}
+        <ImagePrimitive.ThumbnailIntent
+          item={activeItem}
+          disabled={isIntentDisabled}
+          {onIntentChange}
+          contentSide="top"
+          toolbar
+        />
+      {/if}
+    {/snippet}
+  </ImagePrimitive.ViewerControls>
 {/snippet}
 
 {#snippet expandingThumbnailTrack()}

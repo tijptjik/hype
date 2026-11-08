@@ -56,18 +56,17 @@ export function viewerControlsEditButtonClass(args: {
 }
 
 /**
- * Reveal rotation actions when editing is expanded and rotation is available.
- * @param args - Expansion and rotation availability.
- * @returns Rotation action container classes.
+ * Slide editing actions out inline while keeping them open during saves.
+ * @param args - Edit toolbar expansion state.
+ * @returns Inline edit action container classes.
  */
 export function viewerControlsEditActionsClass(args: {
   isEditExpanded: boolean
-  canRotate: boolean
 }): string {
   return cx(
     'flex items-center gap-2 overflow-hidden transition-[max-width,opacity,transform] duration-200 ease-out motion-reduce:transition-none',
-    args.isEditExpanded && args.canRotate
-      ? 'max-w-28 translate-x-0 opacity-100'
+    args.isEditExpanded
+      ? 'max-w-64 translate-x-0 opacity-100'
       : 'max-w-0 translate-x-2 opacity-0',
   )
 }

@@ -15,6 +15,8 @@ function setup() {
   const deleteWhere = vi.fn().mockResolvedValue(undefined)
   const archiveWhere = vi.fn().mockResolvedValue(undefined)
   const db = {
+    // This legacy fixture has no persisted intent policy and uses the default catalogue.
+    get: vi.fn().mockResolvedValue({ n: 0 }),
     batch: async (queries: Promise<unknown>[]) => Promise.all(queries),
     select: () => ({
       from: vi.fn().mockReturnThis(),

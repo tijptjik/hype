@@ -494,6 +494,7 @@ export const isTaskImage = (
  * @param items - Current gallery item collection used to resolve persisted image IDs
  * @param isReviewed - Whether the parent task has already been reviewed
  * @param isImageHighlighted - Predicate backed by the image context highlight state
+ * @param researchOutcome Explicit research evidence decision; publication is independent.
  * @returns Badge label when the item should show task review state, otherwise null
  */
 export const getTaskImageBadgeLabel = (
@@ -501,6 +502,7 @@ export const getTaskImageBadgeLabel = (
   items: ViewerRenderable[],
   isReviewed: boolean,
   isImageHighlighted: (imageId: string) => boolean,
+  researchOutcome?: 'accepted' | 'rejected' | null,
 ): string | null => {
   const isLinkedToTask = isTaskImage(item, items, isImageHighlighted)
 
@@ -512,6 +514,8 @@ export const getTaskImageBadgeLabel = (
     return null
   }
 
+  // Research visibility is private by design and does not express a review decision.
+  if (item.intent === 'research') return researchOutcome?.toUpperCase() ?? null
   return item.isPublished === true ? 'ACCEPTED' : 'REJECTED'
 }
 
@@ -521,6 +525,7 @@ export const getTaskImageBadgeLabel = (
  * @param items - Current gallery item collection used to resolve persisted image IDs
  * @param isReviewed - Whether the parent task has already been reviewed
  * @param isImageHighlighted - Predicate backed by the image context highlight state
+ * @param researchOutcome Explicit research evidence decision; publication is independent.
  * @returns Badge class name when the item should show task review state
  */
 export const getTaskImageBadgeClass = (
@@ -528,6 +533,7 @@ export const getTaskImageBadgeClass = (
   items: ViewerRenderable[],
   isReviewed: boolean,
   isImageHighlighted: (imageId: string) => boolean,
+  researchOutcome?: 'accepted' | 'rejected' | null,
 ): string | undefined => {
   const isLinkedToTask = isTaskImage(item, items, isImageHighlighted)
 
@@ -539,6 +545,12 @@ export const getTaskImageBadgeClass = (
     return undefined
   }
 
+  if (item.intent === 'research')
+    return researchOutcome
+      ? researchOutcome === 'accepted'
+        ? 'bg-emerald-600'
+        : 'bg-rose-600'
+      : undefined
   return item.isPublished === true ? 'bg-emerald-600' : 'bg-rose-600'
 }
 
