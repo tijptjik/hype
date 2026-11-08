@@ -35,6 +35,7 @@ export type ParentProjectRecord = {
 }
 
 export type ParentLayerRecord = {
+  metadata?: ParentSectionLayerItem['metadata'] | null
   id?: string | null
   organisationId?: string | null
   projectId?: string | null
@@ -207,6 +208,7 @@ export function toParentLayerItem(
   if (!layer?.id) return null
   return {
     id: layer.id,
+    metadata: layer.metadata ?? undefined,
     organisationId: layer.organisationId ?? '',
     projectId: layer.projectId ?? '',
     code: layer.code ?? '',

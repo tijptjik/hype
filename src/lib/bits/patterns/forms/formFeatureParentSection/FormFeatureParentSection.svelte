@@ -21,6 +21,20 @@ let {
 }: FormFeatureParentSectionProps = $props()
 </script>
 
+{#snippet clearAllAction()}
+  {#if isEditing && onClearAll}
+    <Button
+      text={m.filters__all()}
+      color="light"
+      style="ghost"
+      size="sm"
+      iconComponent={EraserIcon}
+      onClick={onClearAll}
+      disabled={sharedSectionProps.isSubmitting}
+    />
+  {/if}
+{/snippet}
+
 <section
   class={['bits-form__section', 'bits-feature-parent-section', className]
     .filter(Boolean)
@@ -33,6 +47,7 @@ let {
       {subHeader}
       {...sharedSectionProps}
       {...organisationSection}
+      headerActions={clearAllAction}
     />
     <FormParentSection
       title={m.resource__project_singular()}
@@ -40,6 +55,8 @@ let {
       {subHeader}
       {...sharedSectionProps}
       {...projectSection}
+      getSearchFallbackImage={projectSection.getSearchFallbackImage ??
+        (item => `/api/mapRenders/projects/${item.id}/asset`)}
       fallbackImage={projectSection.fallbackImage ??
         (projectSection.parent?.id
           ? `/api/mapRenders/projects/${projectSection.parent.id}/asset`
@@ -51,22 +68,12 @@ let {
       {subHeader}
       {...sharedSectionProps}
       {...layerSection}
+      getSearchFallbackImage={layerSection.getSearchFallbackImage ??
+        (item => `/api/mapRenders/layers/${item.id}/asset`)}
       fallbackImage={layerSection.fallbackImage ??
         (layerSection.parent?.id
           ? `/api/mapRenders/layers/${layerSection.parent.id}/asset`
           : null)}
     />
   </div>
-  {#if isEditing && onClearAll}
-    <div class="flex justify-start px-6 pt-4">
-      <Button
-        text={m.admin__forms_common_clear_all()}
-        color="light"
-        style="ghost"
-        size="sm"
-        iconComponent={EraserIcon}
-        onClick={onClearAll}
-      />
-    </div>
-  {/if}
 </section>
