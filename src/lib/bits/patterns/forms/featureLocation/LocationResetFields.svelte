@@ -39,9 +39,9 @@ function toggle(key: (typeof choices)[number]['key']): void {
 }
 </script>
 
-<div class="space-y-3 rounded-xl border border-border p-4">
+<div class="border-border space-y-3 rounded-xl border p-4">
   <p class="font-medium">{m.location_reset_title()}</p>
-  <p class="text-sm text-muted-foreground">{m.location_reset_description()}</p>
+  <p class="text-muted-foreground text-sm">{m.location_reset_description()}</p>
   <div class="flex flex-wrap gap-2">
     {#each choices as choice}
       {@const selected =

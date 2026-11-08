@@ -138,7 +138,9 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
       )
       assert.equal(result.locationId, locationId)
       revisionId = result.revisionId
-      const count = target.sqlite.query('SELECT count(*) AS n FROM locationRevision').get()
+      const count = target.sqlite
+        .query('SELECT count(*) AS n FROM locationRevision')
+        .get()
       assert.deepEqual(await persistSaanSeoiPlace(target.db, hydrated), result)
       assert.deepEqual(
         target.sqlite.query('SELECT count(*) AS n FROM locationRevision').get(),

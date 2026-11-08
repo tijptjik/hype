@@ -105,7 +105,12 @@ describe('resource index SQL membership and totals', () => {
         includeCount = true,
         countOnly = false,
       ) => {
-        const query = { q: 'matching', indexFilters: { hasName: true }, includeCount, countOnly }
+        const query = {
+          q: 'matching',
+          indexFilters: { hasName: true },
+          includeCount,
+          countOnly,
+        }
         const sorting = { sortBy: 'id', sortOrder: 'asc' as const }
         const auth = [sql`${sql.identifier(type)}.id != '30'`]
         if (type === 'organisation')

@@ -118,7 +118,7 @@ async function handleFiles(event: CustomEvent): Promise<void> {
         <div class="flex max-w-80 flex-col items-center gap-8">
           <div class="space-y-3">
             <p
-              class="text-xl font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+              class="text-muted-foreground text-xl font-semibold tracking-[0.18em] uppercase"
             >
               {emptyTitle}
             </p>
@@ -159,17 +159,17 @@ async function handleFiles(event: CustomEvent): Promise<void> {
         >
           <div class="flex items-center gap-3 text-left">
             <div
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-surface text-base-content"
+              class="border-border bg-surface text-base-content flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border"
             >
               <Icon src={isDragActive ? UploadIcon : PhotoIcon} class="h-5.5 w-5.5" />
             </div>
             <div class="space-y-1 leading-none">
               <p
-                class="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground"
+                class="text-muted-foreground font-mono text-[11px] tracking-[0.22em] uppercase"
               >
                 {isDragActive ? m.dropzone__drop_images() : promptTitle}
               </p>
-              <p class="text-sm leading-6 text-base-content">
+              <p class="text-base-content text-sm leading-6">
                 {promptDescription}
               </p>
             </div>

@@ -44,26 +44,43 @@ describe('route loads', () => {
 
   it('does not query subscription state when loading the shared admin foundations', async () => {
     const lookup = vi.fn()
-    vi.doMock('#lib/db/services/hub.js', () => ({ getHubUserSubscriptionState: lookup }))
+    vi.doMock('#lib/db/services/hub.js', () => ({
+      getHubUserSubscriptionState: lookup,
+    }))
     const route = await import('../routes/+layout.server')
-    const result = await route.load({ locals: {
-      user: { id: 'user-1' }, hub: { id: 'hub-1' },
-      platform: { env: { DB: {}, ENVIRONMENT: 'preview' } },
-    } } as never)
+    const result = await route.load({
+      locals: {
+        user: { id: 'user-1' },
+        hub: { id: 'hub-1' },
+        platform: { env: { DB: {}, ENVIRONMENT: 'preview' } },
+      },
+    } as never)
     expect(result).not.toHaveProperty('hubUserState')
     expect(lookup).not.toHaveBeenCalled()
   })
 
   it('returns subscription state only for an identified public-app user', async () => {
-    const flags = { subscriptionMember: true, subscriptionPromptDismissed: false, hasAgreedToTerms: true }
+    const flags = {
+      subscriptionMember: true,
+      subscriptionPromptDismissed: false,
+      hasAgreedToTerms: true,
+    }
     const lookup = vi.fn(async () => flags)
     vi.doMock('drizzle-orm/d1', () => ({ drizzle: vi.fn(() => ({})) }))
-    vi.doMock('#lib/db/services/hub.js', () => ({ getHubUserSubscriptionState: lookup }))
+    vi.doMock('#lib/db/services/hub.js', () => ({
+      getHubUserSubscriptionState: lookup,
+    }))
     const route = await import('../routes/(public)/(app)/+layout.server')
-    const locals = { platform: { env: { DB: {} } }, hub: { id: 'hub-1' }, user: { id: 'user-1' } }
+    const locals = {
+      platform: { env: { DB: {} } },
+      hub: { id: 'hub-1' },
+      user: { id: 'user-1' },
+    }
     expect(await route.load({ locals } as never)).toEqual({ hubUserState: flags })
     expect(lookup).toHaveBeenCalledTimes(1)
-    expect(await route.load({ locals: { ...locals, user: null } } as never)).toEqual({ hubUserState: null })
+    expect(await route.load({ locals: { ...locals, user: null } } as never)).toEqual({
+      hubUserState: null,
+    })
     expect(lookup).toHaveBeenCalledTimes(1)
   })
 

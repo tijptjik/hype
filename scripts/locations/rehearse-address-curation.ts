@@ -590,8 +590,11 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
       const second = await persistSaanSeoiPlace(hypeDb as never, hydrated)
       assert.deepEqual(first, second)
       assert.equal(
-        (hype.query('SELECT count(*) AS n FROM locationRevision').get() as { n: number })
-          .n,
+        (
+          hype.query('SELECT count(*) AS n FROM locationRevision').get() as {
+            n: number
+          }
+        ).n,
         2,
       )
       assert.equal(
@@ -607,9 +610,13 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         readLocationFacts(stored.facts).location.address,
         hydrated.facts.location.address,
       )
-      const overridden = resolveFeatureLocation(hydrated.facts, hydrated.facts.location, {
-        names: { en: { mode: 'override', value: 'Breadline collection label' } },
-      })
+      const overridden = resolveFeatureLocation(
+        hydrated.facts,
+        hydrated.facts.location,
+        {
+          names: { en: { mode: 'override', value: 'Breadline collection label' } },
+        },
+      )
       assert.equal(overridden.names.en, 'Breadline collection label')
       assert.deepEqual(overridden.location?.address, hydrated.facts.location.address)
       assert.deepEqual(hype.query('PRAGMA foreign_key_check').all(), [])

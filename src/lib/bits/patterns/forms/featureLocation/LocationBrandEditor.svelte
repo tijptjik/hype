@@ -59,7 +59,7 @@ function rename(index: number, locale: string, value: string): void {
 }
 </script>
 
-<div class="space-y-3 rounded-xl border border-border p-4">
+<div class="border-border space-y-3 rounded-xl border p-4">
   <SelectField
     id="location-brand-mode"
     label={m.location_brand_title()}
@@ -76,7 +76,7 @@ function rename(index: number, locale: string, value: string): void {
   />
   {#if mode === 'override'}
     {#each brands as brand, index}
-      <div class="space-y-2 rounded-lg border border-border p-3">
+      <div class="border-border space-y-2 rounded-lg border p-3">
         {#each ['en', 'zh-hant', 'zh-hans'] as locale}
           <TextInput
             id={`location-brand-${index}-${locale}`}
@@ -113,7 +113,7 @@ function rename(index: number, locale: string, value: string): void {
       />
     {/if}
   {:else if mode === 'inherit'}
-    <p class="text-sm text-muted-foreground">
+    <p class="text-muted-foreground text-sm">
       {pending
         ? m.location_brand_reset_pending()
         : brands

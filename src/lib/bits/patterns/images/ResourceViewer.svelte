@@ -116,7 +116,9 @@ const model = useEntityImageViewerModel(imageCtx, {
 const adminCtx = getAdminCtx()
 const hasActiveImage = $derived(Boolean(model.state.activeImage))
 const hasItems = $derived(model.state.items.length > 0)
-const canUseEditFacility = $derived(!isReadonly && (canEditPresentationMode || canEditDropzone))
+const canUseEditFacility = $derived(
+  !isReadonly && (canEditPresentationMode || canEditDropzone),
+)
 const canDeleteImage = $derived(
   !isReadonly && adminCtx.view.isSuperAdmin() && model.state.canDeleteActiveImage,
 )
@@ -190,9 +192,10 @@ const displayedCanReplaceImage = $derived(
   !isReadonly && canEditDropzone && displayedCanReplaceActiveImage,
 )
 const displayedCanDeleteImage = $derived(
-  !isReadonly && (shouldShowRetainedSnapshot
-    ? (retainedSnapshot?.canDeleteImage ?? false)
-    : adminCtx.view.isSuperAdmin() && displayedCanDeleteActiveImage),
+  !isReadonly &&
+    (shouldShowRetainedSnapshot
+      ? (retainedSnapshot?.canDeleteImage ?? false)
+      : adminCtx.view.isSuperAdmin() && displayedCanDeleteActiveImage),
 )
 const displayedIsEditBusy = $derived(
   shouldShowRetainedSnapshot
@@ -383,7 +386,9 @@ onDestroy(() => {
           canRotate={canUseEditFacility && displayedCanRotateActiveImage}
           canReplace={displayedCanReplaceImage}
           canDelete={displayedCanDeleteImage}
-          deleteLabel={['organisation', 'project', 'hub'].includes(imageCtx.state.context?.ctxType ?? '')
+          deleteLabel={['organisation', 'project', 'hub'].includes(
+            imageCtx.state.context?.ctxType ?? '',
+          )
             ? m.admin__forms_common_remove()
             : m.forms__delete()}
           canDownload={displayedCanDownloadActiveImage}
@@ -404,7 +409,8 @@ onDestroy(() => {
           showPublishedToggle={false}
           showPresentationModeToggle={!isReadonly}
           showDeleteButton={displayedCanDeleteImage}
-          showReplaceButton={!isReadonly && (displayedCanReplaceImage || shouldShowRetainedSnapshot)}
+          showReplaceButton={!isReadonly &&
+            (displayedCanReplaceImage || shouldShowRetainedSnapshot)}
         />
       {/snippet}
 

@@ -327,7 +327,8 @@ onDestroy(() => {
           height="256"
           class="absolute inset-0 h-full w-full object-cover"
           onerror={event => {
-            if (event.currentTarget instanceof HTMLElement) event.currentTarget.hidden = true
+            if (event.currentTarget instanceof HTMLElement)
+              event.currentTarget.hidden = true
           }}
         >
       </span>

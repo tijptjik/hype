@@ -834,7 +834,8 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (data.locationUpdatePolicy) {
     submittedDataBeforeHydration.locationUpdatePolicy = data.locationUpdatePolicy
   }
-  if (data.imageIntentSettings) submittedDataBeforeHydration.imageIntentSettings = data.imageIntentSettings
+  if (data.imageIntentSettings)
+    submittedDataBeforeHydration.imageIntentSettings = data.imageIntentSettings
   const preliminaryUpdateDecision = authorizeProjectUpdateForSubmission({
     user,
     userRoles,
@@ -985,7 +986,8 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     submittedDataForUpdate.locationUpdatePolicy = data.locationUpdatePolicy
   }
   // Apply role-based authorization for core update fields.
-  if (data.imageIntentSettings) submittedDataForUpdate.imageIntentSettings = data.imageIntentSettings
+  if (data.imageIntentSettings)
+    submittedDataForUpdate.imageIntentSettings = data.imageIntentSettings
   const updateDecision = authorizeProjectUpdateForSubmission({
     user,
     userRoles,

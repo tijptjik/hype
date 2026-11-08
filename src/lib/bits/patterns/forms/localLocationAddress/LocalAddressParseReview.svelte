@@ -45,27 +45,27 @@ function display(content: AddressContent, tag: string): string {
   <Button text={m.location_address_parse()} {disabled} onClick={propose} />
   {#if proposal}
     <section
-      class="space-y-3 rounded-xl border border-border p-4"
+      class="border-border space-y-3 rounded-xl border p-4"
       aria-label={m.location_address_parse()}
     >
-      <p class="text-sm text-muted-foreground">{m.location_address_parse_help()}</p>
+      <p class="text-muted-foreground text-sm">{m.location_address_parse_help()}</p>
       {#each Object.keys(proposal.source) as tag}
         <div class="grid gap-2 sm:grid-cols-2">
           <p>
-            <span class="text-xs text-muted-foreground"
+            <span class="text-muted-foreground text-xs"
               >{tag}
               · {m.location_review_before()}</span
             ><br>{display(value, tag)}
           </p>
           <p>
-            <span class="text-xs text-muted-foreground"
+            <span class="text-muted-foreground text-xs"
               >{tag}
               · {m.location_review_candidate()}</span
             ><br>{display(proposal.content, tag)}
           </p>
         </div>
         {#if proposal.unresolved[tag]}
-          <p class="text-sm text-muted-foreground">
+          <p class="text-muted-foreground text-sm">
             {m.location_address_unparsed()}: {proposal.unresolved[tag]}
           </p>
         {/if}

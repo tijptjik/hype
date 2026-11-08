@@ -1,5 +1,10 @@
 // CONTENT LOCALES
-import { adaptContentMap, ContentTagInput, contentFormKey, contentStorageTag } from '#lib/i18n/contentRecords.js'
+import {
+  adaptContentMap,
+  ContentTagInput,
+  contentFormKey,
+  contentStorageTag,
+} from '#lib/i18n/contentRecords.js'
 // VALIDATION
 import { z } from 'zod'
 import { LocationFactsSchema } from './validation'
@@ -20,10 +25,7 @@ import type {
 export const LocationResetSchema = z
   .strictObject({
     expectedRevision: z.string().min(1),
-    names: z
-      .array(ContentTagInput)
-      .max(100)
-      .default([]),
+    names: z.array(ContentTagInput).max(100).default([]),
     phoneNumber: z.boolean().default(false),
     location: z.boolean().default(false),
   })
@@ -56,7 +58,8 @@ export function materializeLocationReset(input: {
   const facts = LocationFactsSchema.parse(input.facts)
   const location = LocationFactsSchema.parse(input.locationFacts).location
   const overrides = structuredClone(input.overrides)
-  if (overrides.names) overrides.names = adaptContentMap(overrides.names, contentStorageTag)
+  if (overrides.names)
+    overrides.names = adaptContentMap(overrides.names, contentStorageTag)
   const data = structuredClone(input.data)
   const i18n = adaptContentMap(structuredClone(input.i18n))
   const names = adaptContentMap(facts.names)

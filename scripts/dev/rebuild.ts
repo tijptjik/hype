@@ -77,10 +77,19 @@ async function main(): Promise<void> {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--apply') apply = true
     else if (args[i] === '--no-mocks') mocks = false
-    else if (args[i] === '--messaging-organisation' && args[i + 1] && !args[i + 1].startsWith('--')) messagingOrganisation = args[++i]
+    else if (
+      args[i] === '--messaging-organisation' &&
+      args[i + 1] &&
+      !args[i + 1].startsWith('--')
+    )
+      messagingOrganisation = args[++i]
     else if (args[i] === '--inputs' && args[i + 1] && !args[i + 1].startsWith('--'))
       inputs = resolve(args[++i])
-    else if (args[i] === '--identity-review' && args[i + 1] && !args[i + 1].startsWith('--'))
+    else if (
+      args[i] === '--identity-review' &&
+      args[i + 1] &&
+      !args[i + 1].startsWith('--')
+    )
       identityReview = resolve(args[++i])
     else
       throw new Error(
@@ -277,7 +286,11 @@ async function main(): Promise<void> {
     // Explicit reviewed target adoption runs only on the newly prepared offline database.
     if (identityReview) {
       receipt.identityAdoption = applyRebuildAdoptions(
-        dbPath, rows, identityReview, state.seed, decisions,
+        dbPath,
+        rows,
+        identityReview,
+        state.seed,
+        decisions,
         resolve(directory, 'identity-adoption'),
       )
     }
@@ -364,10 +377,17 @@ async function main(): Promise<void> {
       ]
       await run(command, 'lifecycle-mocks')
       await run(command, 'lifecycle-replay')
-      await run(['bun', 'run', 'scripts/dev/seed-tasks.ts', dbPath, '--apply'], 'task-mocks')
-      await run(['bun', 'run', 'scripts/dev/seed-tasks.ts', dbPath, '--apply'], 'task-replay')
+      await run(
+        ['bun', 'run', 'scripts/dev/seed-tasks.ts', dbPath, '--apply'],
+        'task-mocks',
+      )
+      await run(
+        ['bun', 'run', 'scripts/dev/seed-tasks.ts', dbPath, '--apply'],
+        'task-replay',
+      )
       receipt.mockSpatial = prepareMockSpatial(dbPath)
-      if (prepareMockSpatial(dbPath) !== 0) throw new Error('Mock spatial replay differs')
+      if (prepareMockSpatial(dbPath) !== 0)
+        throw new Error('Mock spatial replay differs')
       const audit = await run(
         [
           'python3',
@@ -389,7 +409,11 @@ async function main(): Promise<void> {
     }
     if (messagingOrganisation) {
       step = 'messaging-availability'
-      receipt.messagingAvailability = await backfillPreparedMessaging(dbPath, messagingOrganisation, run)
+      receipt.messagingAvailability = await backfillPreparedMessaging(
+        dbPath,
+        messagingOrganisation,
+        run,
+      )
     }
     receipt.counts = JSON.parse(await operation('check'))
     if (apply) {

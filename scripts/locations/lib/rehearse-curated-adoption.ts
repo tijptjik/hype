@@ -90,7 +90,9 @@ export async function rehearseCuratedAdoption(
   }
   for (const projectId of ['automatic', 'review']) {
     sqlite.query('INSERT INTO organisation(id) VALUES (?)').run(projectId)
-    sqlite.query('INSERT INTO project(id,organisationId) VALUES (?,?)').run(projectId, projectId)
+    sqlite
+      .query('INSERT INTO project(id,organisationId) VALUES (?,?)')
+      .run(projectId, projectId)
     sqlite
       .query(
         'INSERT INTO feature(id,projectId,isDraft,isIntangible,modifiedAt,geometry,addressMeta) VALUES (?,?,0,0,?,?,?)',
@@ -112,8 +114,14 @@ export async function rehearseCuratedAdoption(
         'Keep pickup instructions',
         'Unresolved address',
       )
-    const correction=await prepareOrganisationLocationWrite(db,{organisationId:projectId,locationId:baseline.locationId,actorId:'synthetic-rehearsal',overrides,guard:sql`1`})
-    for(const query of correction.queries)await query
+    const correction = await prepareOrganisationLocationWrite(db, {
+      organisationId: projectId,
+      locationId: baseline.locationId,
+      actorId: 'synthetic-rehearsal',
+      overrides,
+      guard: sql`1`,
+    })
+    for (const query of correction.queries) await query
     await prepareFeatureLocationAssociationWrite(db, {
       featureId: projectId,
       projectId,
@@ -124,8 +132,8 @@ export async function rehearseCuratedAdoption(
       expectedRevision: null,
       actorId: 'synthetic-rehearsal',
       overrides,
-      factsOrganisationRevision:correction.revision,
-      locationOrganisationRevision:correction.revision,
+      factsOrganisationRevision: correction.revision,
+      locationOrganisationRevision: correction.revision,
     }).query
   }
   assert.ok(
