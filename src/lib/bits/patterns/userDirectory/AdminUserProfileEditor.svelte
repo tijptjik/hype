@@ -46,7 +46,7 @@ import {
 } from '#lib/users/adminMessagingDraft.js'
 // APPEARANCE
 import { THEMES } from '#lib/themes/themes.js'
-import { MAP_STYLE_KEYS } from '#lib/map/styles/registry.js'
+import { MAP_STYLE_KEYS } from '#lib/map/styles/metadata.js'
 import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
 import { getMapStyleCatalogCopy } from '#lib/map/styles/i18n.js'
 // TYPES
