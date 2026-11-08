@@ -203,6 +203,10 @@ export enum TaskType {
   reportedMissing = 'reportedMissing',
   newPhoto = 'newPhoto',
   newFeature = 'newFeature',
+  locationFacts = 'locationFacts',
+  locationPosition = 'locationPosition',
+  locationIdentity = 'locationIdentity',
+  locationMerge = 'locationMerge',
 }
 
 export enum TaskReviewOutcome {

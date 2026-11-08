@@ -27,6 +27,8 @@ import { update } from '../crud'
 import { getProjectForFeatureId } from './project'
 import { getOrganisationForProjectId } from './organisation'
 import { getTaskHubFilter } from './hub'
+import { listTaskQueue, probeLocationTask, type TaskQueueOptions } from './taskQueue'
+import { isLocationTaskId } from '#lib/locations/tasks.js'
 import {
   taskSubmissionScopeCondition,
   taskFeatureScopeCondition,
@@ -166,7 +168,7 @@ export const listTasks = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended,
+  opts: TaskQueueOptions,
   pagination?: { limit?: number; offset?: number },
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
@@ -175,6 +177,16 @@ export const listTasks = async (
     locale?: Locale
   },
 ): Promise<ListResponse<TaskDBRaw>> => {
+  if (opts.includeLocationReviews)
+    return listTaskQueue(
+      db,
+      withRelations,
+      conditions,
+      opts,
+      pagination,
+      sorting,
+      query,
+    )
   const startedAt = Date.now()
 
   // Stored task scopes must agree with the feature before related data is hydrated.
@@ -265,8 +277,11 @@ export const loadTask = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended,
+  opts: TaskQueueOptions,
 ): Promise<TaskDBRaw | undefined> => {
+  if (opts.includeLocationReviews)
+    return (await listTaskQueue(db, withRelations, conditions, opts, { limit: 1 }))
+      .data[0]
   // Apply hub filtering - always needed as some resources are hub-exclusive
   const hubFilter = getTaskHubFilter(db, opts)
   if (hubFilter) {
@@ -297,6 +312,7 @@ export const probeTaskQuery = async (
   isReviewed: boolean
   resourceHubId: string | null
 } | null> => {
+  if (isLocationTaskId(params.ref)) return probeLocationTask(db, params.ref)
   return firstOrNull(
     await db
       .select({
@@ -346,7 +362,6 @@ export const updateTask = async (
   data: TaskDBPartial,
   ref: Id,
 ): Promise<TaskDB> => await update(db, task, data, task.id, ref)
-
 
 // ═══════════════════════
 // 2. CRUD :: IMAGE HANDLING

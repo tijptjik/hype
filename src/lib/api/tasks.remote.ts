@@ -14,6 +14,10 @@ import { saveUserContributedCreationTask } from '#lib/api/services/feature.js'
 import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
+import { isLocationTaskId } from '#lib/locations/tasks.js'
+import { canManageSharedLocationIdentity } from '#lib/api/services/authz/location.js'
+import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // ANALYTICS
 import { recordTaskContribution } from '#lib/analytics/productUsage.server.js'
 // API
@@ -85,6 +89,7 @@ import {
 // TYPES
 import type { EntityResponse, Id, ListResponse } from '#lib/types.js'
 import type {
+  GuardedBaseContext,
   GuardedCommandContext,
   GuardedFormContext,
 } from '#lib/api/guarded.types.js'
@@ -268,6 +273,32 @@ const assertPublicContributionTarget = async (
   }
 }
 
+/** Keep identity and merge tasks within the same ownership authority as their source review APIs.
+ * @param ctx Authenticated request context. @returns A narrowing condition for the combined queue.
+ * @remarks Project maintenance alone cannot administer shared Location identities.
+ */
+function locationIdentityTaskCondition(ctx: GuardedBaseContext) {
+  if (
+    canManageSharedLocationIdentity({
+      isAnonymous: ctx.user.isAnonymous,
+      userRoles: ctx.userRoles,
+    })
+  )
+    return sql`1`
+  const owners = ctx.userRoles.flatMap(role =>
+    role.type === 'organisation' && role.role === 'owner' && role.organisationId
+      ? [role.organisationId]
+      : [],
+  )
+  const ownsScope =
+    ctx.user.superAdmin ||
+    isRelevantHubAdmin(ctx.userRoles, ctx.event.locals.hub.id ?? null)
+      ? sql`1`
+      : chunkedInArray(taskTable.organisationId, owners)
+  return sql`(task.type NOT IN ('locationIdentity','locationMerge') OR (${ownsScope} AND EXISTS (
+    SELECT 1 FROM location owned WHERE owned.id=json_extract(task.locationTask,'$.locationId') AND owned.ownerOrganisationId=task.organisationId)))`
+}
+
 /**
  * Returns a role-scoped task list for admin callers.
  *
@@ -318,6 +349,11 @@ const getTasksQuery = guardedQuery(GetTasksSchema, async (params, ctx) => {
     event.locals.hub.id ?? null,
   )
 
+  conditions.push(locationIdentityTaskCondition(ctx))
+  if (params.locationOnly)
+    conditions.push(
+      sql`task.type IN ('locationFacts','locationPosition','locationIdentity','locationMerge')`,
+    )
   const result = await listTasks(
     db,
     getTaskWithRelations(profile),
@@ -325,6 +361,10 @@ const getTasksQuery = guardedQuery(GetTasksSchema, async (params, ctx) => {
     {
       ...event.locals.hub,
       isSuperAdmin: Boolean(user.superAdmin),
+      includeLocationReviews: true,
+      mockLocationFeatureId: import.meta.env.DEV
+        ? params.mockLocationFeatureId
+        : undefined,
     },
     params.pagination,
     params.sorting,
@@ -388,9 +428,15 @@ const getTaskQuery = guardedQuery(GetTaskEditorDataSchema, async (params, ctx) =
     event.locals.hub.id ?? null,
   )
 
+  if (isLocationTaskId(taskId)) conditions.push(locationIdentityTaskCondition(ctx))
   const rawTask = await loadTask(db, getTaskWithRelations(profile), conditions, {
     ...event.locals.hub,
     isSuperAdmin: Boolean(user.superAdmin),
+    includeLocationReviews: isLocationTaskId(taskId),
+    mockLocationFeatureId:
+      import.meta.env.DEV && taskId.startsWith('mock:')
+        ? taskId.split(':').slice(2).join(':')
+        : undefined,
   })
   if (!rawTask) {
     return toEntityResponseShape(null, profile)
@@ -851,6 +897,7 @@ export const reviewTask = guardedCommand(
   ReviewTaskSchema,
   async (params, ctx): Promise<EntityResponse<TaskAdminProfile>> => {
     const taskId = params.id as Id
+    if (isLocationTaskId(params.id)) error(400, 'LOCATION_TASK_USE_SOURCE_REVIEW')
     const probe = await probeTaskQuery(ctx.db, {
       ref: taskId,
     })

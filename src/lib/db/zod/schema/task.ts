@@ -29,6 +29,7 @@ import {
 // ENUMS
 import { TaskType, TaskReviewOutcome, TaskReviewAction } from '#lib/enums.js'
 import { getLocales } from '..'
+import { LocationTaskSchema } from '#lib/locations/tasks.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -86,6 +87,7 @@ export const TaskBase = createSelectSchema(task).extend({
       }),
     })
     .optional(),
+  locationTask: LocationTaskSchema.optional(),
   type: z.enum(Object.values(TaskType) as [string, ...string[]]),
 })
 export const TaskInsert = createInsertSchema(task).extend({
@@ -296,6 +298,8 @@ export const GetTaskEditorDataSchema = z.object({
 })
 
 export const GetTasksSchema = ListQueryParamsSchema.extend({
+  locationOnly: z.boolean().optional(),
+  mockLocationFeatureId: z.string().min(1).optional(),
   conditions: z
     .object({
       isDraft: z.boolean().nullable().optional(),

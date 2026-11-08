@@ -5,7 +5,9 @@ import { getI18n, m } from '#lib/i18n.js'
 import { taskRowImage } from './taskRowImage.js'
 // SERVICES
 import { getTaskReviewActionLabel } from '#lib/client/services/task.js'
+import { locationTaskLabel } from '#lib/locations/tasks.js'
 // BITS
+import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 import { Row } from '#lib/bits/custom/index.js'
 import * as TaskRowPrimitive from './components'
 // NAVIGATION
@@ -29,6 +31,10 @@ const taskTypeColors = {
   reportedMissing: 'error',
   newPhoto: 'info',
   newFeature: 'ok',
+  locationFacts: 'warning',
+  locationPosition: 'warning',
+  locationIdentity: 'warning',
+  locationMerge: 'warning',
 } as const
 type TaskTypeColorKey = keyof typeof taskTypeColors
 const type = $derived(entity?.type as TaskTypeColorKey | undefined)
@@ -38,11 +44,44 @@ const typeDisplay = $derived(
         reportedMissing: m.filters__missing(),
         newPhoto: m.aware_sea_goose_nail(),
         newFeature: m.smart_crazy_cuckoo_play(),
+        locationFacts: locationTaskLabel('locationFacts'),
+        locationPosition: locationTaskLabel('locationPosition'),
+        locationIdentity: locationTaskLabel('locationIdentity'),
+        locationMerge: locationTaskLabel('locationMerge'),
       }[type]
     : 'Undefined',
 )
-const colorSuffix = $derived<'error' | 'info' | 'ok' | 'base'>(
+const colorSuffix = $derived<'error' | 'info' | 'ok' | 'base' | 'warning'>(
   type ? (taskTypeColors[type] ?? 'base') : 'base',
+)
+// Keep source identity visible when the linked Feature has no authored title.
+const locationTitle = $derived(
+  getI18n(
+    Object.fromEntries(
+      Object.entries(entity.locationTask?.names ?? {}).map(([locale, title]) => [
+        locale,
+        { title },
+      ]),
+    ),
+    'title',
+    appCtx.getUserPreferences(),
+    '',
+  ),
+)
+const title = $derived(
+  getI18n(entity.feature ?? undefined, 'title', appCtx.getUserPreferences(), '') ||
+    locationTitle ||
+    `${m.feature_location_title()} · ${entity.featureId}`,
+)
+const description = $derived(
+  entity.locationTask
+    ? locationTaskLabel(entity.type)
+    : getI18n(
+        entity.feature ?? undefined,
+        'displayAddress',
+        appCtx.getUserPreferences(),
+        '',
+      ),
 )
 const reviewAction = $derived(entity?.reviewAction)
 const reviewActionDisplay = $derived(getTaskReviewActionLabel(reviewAction))
@@ -77,6 +116,13 @@ function handleTitleClick(): void {
 }
 </script>
 
+{#snippet imageFallback()}
+  <LocationIcon
+    kind={entity.locationTask?.locationKind}
+    class="text-muted-foreground size-8"
+  />
+{/snippet}
+
 <Row
   {index}
   entityId={entity.id}
@@ -89,16 +135,14 @@ function handleTitleClick(): void {
   onImageClick={entity.images?.[0]
     ? (handleImageClick as (image: unknown) => void)
     : undefined}
-  title={entity.feature
-    ? (getI18n(entity.feature, 'title', appCtx.getUserPreferences()) as string)
-    : ''}
-  onTitleClick={entity.feature ? handleTitleClick : undefined}
-  description={entity.feature
-    ? (getI18n(entity.feature, 'displayAddress', appCtx.getUserPreferences()) as string)
-    : ''}
+  {title}
+  {imageFallback}
+  onTitleClick={handleTitleClick}
+  {description}
 >
   <TaskRowPrimitive.Watermark
     typeDisplay={String(typeDisplay)}
+    isMock={Boolean(entity.locationTask?.mock)}
     {colorSuffix}
     message={entity?.message || ''}
     {reviewActionDisplay}
@@ -106,7 +150,9 @@ function handleTitleClick(): void {
 
   <TaskRowPrimitive.MetaSection
     createdAt={entity?.createdAt}
-    contributorName={entity.contributor?.name || '-'}
+    contributorName={entity.locationTask
+      ? m.feature_location_title()
+      : entity.contributor?.name || '-'}
     contributorAttribution={entity.contributor?.attribution || ''}
     reviewerName={entity.reviewer?.name || '-'}
     reviewerAttribution={entity.reviewer?.attribution || ''}

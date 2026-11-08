@@ -4,8 +4,8 @@ Feature transfers (Refs #194, parent #180) preserve accepted Location customisat
 Cross-organisation moves copy accepted organisation corrections and scoped placement
 evidence with provenance; source-owned local Locations receive independent destination
 copies. Destination organisation management is required for these definitions. Conflicts
-reject without overwrite; the copies, Feature move and revision commit atomically.
-See [authorization roles](../../../docs/auth/Roles.md) and
+reject without overwrite; the copies, Feature move and revision commit atomically. See
+[authorization roles](../../../docs/auth/Roles.md) and
 [transfer authorization](../../../docs/specs/Design-Spec-Authorization.md#feature-transfers-and-organisation-location-definitions).
 
 Visibility selector presentation (Refs #194, parent #180): use the shared Bits Select
@@ -385,6 +385,38 @@ now presents pending adoption reviews as **Tasks**, with a count and an action t
 prepare the latest locally authored address for review. The dedicated tab, unified
 identity tasks and richer component comparisons remain UI follow-up work; they do not
 require another persistence model.
+
+### Location tasks in the shared Review Queue (22 October 2026, Refs #194)
+
+The Feature facet is labelled **Location**; existing `address` navigation keys and deep
+links remain stable. The Tasks disclosure (moved to Updates on 29 October) and the
+existing Review Queue now consume the same `getTasks` API and `TaskRow` component. An
+empty Location task list produces no disclosure. Identity search and explicit
+preparation of a latest-local review now live in Updates, as described below.
+
+The shared queue includes `locationFacts`, `locationPosition`, `locationIdentity` and
+`locationMerge` alongside contribution tasks. A read-only SQL projection derives pending
+rows from retained adoption/identity evidence and current associations. Group decisions,
+accepted snapshots, rejection, current identity baselines and source occupancy determine
+relevance; there is no second persisted task lifecycle. Adoption task IDs survive
+reassessment. Repeated identity captures with identical baseline and source evidence
+expose only the latest retained review, including its rejection; different candidates
+and new evidence remain separate. Existing permission/prism filters, counts, sorting and
+pagination apply to the combined set before bounded relation hydration. Identity and
+merge rows additionally require Location ownership/core authority.
+
+Location rows use ordinary `/admin/tasks/[task]` detail routes. Facts and position
+reviews open their exact proposal and field group; identity and merge tasks open the
+retained identity comparison/merge impact. Existing source review APIs enforce notes,
+authority and concurrency. Contribution review commands reject Location task IDs. Source
+decisions invalidate the queue and remove resolved pending entries.
+
+Development-only `locationTaskPreview=all&previewFeatureId=<featureId>` adds four
+clearly marked mock rows through this same API, row, filter and detail machinery. The
+Feature Location editor can request the same fixtures with `locationTaskPreview`. Mock
+decisions require a note but remain browser-only; no task/proposal/source record is
+inserted. The production source-review projection does not depend on this fixture flag.
+Structured-address completion remains a separate future task design.
 
 ## Feature Address presentation
 
