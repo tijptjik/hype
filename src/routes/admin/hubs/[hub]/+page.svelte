@@ -1,8 +1,10 @@
 <script lang="ts">
+// DEFERRED FACETS
+import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE INTENTS
 import ImageIntentSettings from '#lib/bits/patterns/images/ImageIntentSettings.svelte'
 // COMPONENTS
-import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
+
 // ROLE HIERARCHY
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // SVELTE
@@ -103,17 +105,15 @@ import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeCont
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 import { translateContentField } from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
-import {
-  FormFieldsSection,
-  FormHubLayersSection,
-  FormHubSpecifiersFields,
-  FormHubSubscriptionSection,
-  FormOrganisationsSection,
-  FormUserRolesSection,
-  Main,
-  ResourceViewer,
-  SectionHeader,
-} from '#lib/bits/index.js'
+import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
+import FormHubLayersSection from '#lib/bits/patterns/forms/formHubLayersSection/FormHubLayersSection.svelte'
+import FormHubSpecifiersFields from '#lib/bits/patterns/forms/formI18nSection/components/FormHubSpecifiersFields.svelte'
+import FormHubSubscriptionSection from '#lib/bits/patterns/forms/formI18nSection/components/FormHubSubscriptionSection.svelte'
+import FormOrganisationsSection from '#lib/bits/patterns/forms/formOrganisationsSection/FormOrganisationsSection.svelte'
+import FormUserRolesSection from '#lib/bits/patterns/forms/formUserRolesSection/FormUserRolesSection.svelte'
+import * as Main from '#lib/bits/custom/main/index.js'
+import ResourceViewer from '#lib/bits/patterns/images/ResourceViewer.svelte'
+import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
 import HubPolicyDocumentBody from '#lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import {
@@ -401,16 +401,20 @@ const isDirty = $derived(Boolean(formCtx.dirty))
 function onImageIntentSettingsChange(value: string | undefined): void {
   const current = formCtx.form.fields.value()
   if (current.data?.imageIntentSettings === value) return
-  formCtx.form.fields.set({ ...current, data: { ...current.data, imageIntentSettings: value } })
+  formCtx.form.fields.set({
+    ...current,
+    data: { ...current.data, imageIntentSettings: value },
+  })
 }
 
 /** Returns native JSON transport attributes for the staged image policy. */
 function imageIntentInputAttrs(): Record<string, unknown> {
-  return (formCtx.form.fields.data.imageIntentSettings as unknown as {
-    as(type: 'hidden', value: string): Record<string, unknown>
-  }).as('hidden', String(formCtx.form.fields.value().data?.imageIntentSettings))
+  return (
+    formCtx.form.fields.data.imageIntentSettings as unknown as {
+      as(type: 'hidden', value: string): Record<string, unknown>
+    }
+  ).as('hidden', String(formCtx.form.fields.value().data?.imageIntentSettings))
 }
-
 
 const visibleAllIssues = $derived.by((): unknown[] =>
   suppressFormLevelIssues ? [] : (formCtx.allIssues ?? []),
@@ -1479,7 +1483,6 @@ $effect(() => {
 })
 
 $effect(() => {
-  const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
   const ref = hubRef
   adminCtx.view.resources.scopeKey
   return untrack(() =>
@@ -1494,10 +1497,8 @@ $effect(() => {
       setFacetForRef: nextRef => {
         untrack(() => {
           const currentFacet = adminCtx.activeFacet
-          const nextFacet =
-            currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
-              ? currentFacet
-              : 'core'
+          // Keep bookmarks while destination data and permission-derived tabs load.
+          const nextFacet = currentFacet || 'core'
           adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.hub)
         })
       },
@@ -1505,6 +1506,13 @@ $effect(() => {
       commit: commitSettledHubState,
     }),
   )
+})
+
+// Validate the requested tab only after the destination's authorization has settled.
+$effect(() => {
+  if (!isCurrentRefSettled) return
+  if (resolvedFacetTabs.has(activeFacet)) return
+  adminCtx.setFacet('core', hubRef, FirstClassResource.hub)
 })
 
 $effect(() => {
@@ -1643,7 +1651,7 @@ $effect(() => {
     isReady={Boolean(formCtx.form?.fields && (hub?.data || isNewHubRef))}
   >
     {#if formCtx.form.fields.value().data?.imageIntentSettings !== undefined}
-      <input {...imageIntentInputAttrs()} />
+      <input {...imageIntentInputAttrs()}>
     {/if}
     <Main.Facet
       isVisible={isCoreFacet}
@@ -1946,11 +1954,24 @@ $effect(() => {
         </FormI18nDescriptorProfile>
       </FormSurface>
     </Main.Facet>
-    <Main.Facet isVisible={activeFacet === 'advanced'} class="right-0! left-0!" transition="fade" previousAction={buildFacetNavAction('advanced', 'previous')} nextAction={buildFacetNavAction('advanced', 'next')} attrs={{ 'data-facet-id': 'advanced' }}>
+    <Main.Facet
+      isVisible={activeFacet === 'advanced'}
+      class="right-0! left-0!"
+      transition="fade"
+      previousAction={buildFacetNavAction('advanced', 'previous')}
+      nextAction={buildFacetNavAction('advanced', 'next')}
+      attrs={{ 'data-facet-id': 'advanced' }}
+    >
       <FormSurface>
         {#if hub?.data?.id}
           <div class="flex min-w-0 flex-col pb-6">
-            <ImageIntentSettings scopeType="hub" scopeId={hub.data.id} disabled={!isEditing || formCtx.submitting} resetVersion={profileResetVersion} onChange={onImageIntentSettingsChange} />
+            <ImageIntentSettings
+              scopeType="hub"
+              scopeId={hub.data.id}
+              disabled={!isEditing || formCtx.submitting}
+              resetVersion={profileResetVersion}
+              onChange={onImageIntentSettingsChange}
+            />
           </div>
         {/if}
       </FormSurface>
@@ -2002,7 +2023,14 @@ $effect(() => {
       isCurrentRefLoaded &&
       optimisticHubData?.id}
       {#key `${optimisticHubData.id}:${optimisticHubData.modifiedAt}:${adminCtx.view.account.user?.id}`}
-        <AdminResourceHistory resource="hub" resourceId={optimisticHubData.id} />
+        <Deferred
+          load={() =>
+            import('#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte')}
+        >
+          {#snippet children(module)}
+            <module.default resource="hub" resourceId={optimisticHubData.id} />
+          {/snippet}
+        </Deferred>
       {/key}
     {/if}
   </Main.Facet>
