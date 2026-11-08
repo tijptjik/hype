@@ -14,6 +14,7 @@ scripts/.venv
 /build-static
 /package
 /dist
+__pycache__
 # Output:migrations
 /migrations/*.js
 
