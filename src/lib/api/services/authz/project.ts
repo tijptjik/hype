@@ -1,6 +1,10 @@
 import { error } from '@sveltejs/kit'
-import { shouldLogAuthzDeny, toAccountRequirementCode, toActorPolicyBase } from '.'
-import { getScopedHubAdminIds, isCoreHubAdmin, isRelevantHubAdmin } from './hub'
+import {
+  shouldLogAuthzDeny,
+  toAccountRequirementCode,
+  toActorPolicyBase,
+} from './shared'
+import { getScopedHubAdminIds, isCoreHubAdmin, isRelevantHubAdmin } from './hubPolicy'
 import { hasAnyOrganisationStaffRole, isOrganisationOwner } from './organisation'
 import { hasAuthenticatedSession } from './user'
 // TYPES

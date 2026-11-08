@@ -6,8 +6,8 @@ import {
   toAccountRequirementCode,
   toActorPolicyBase,
   toAuthMessage,
-} from '.'
-import { getScopedHubAdminIds, isCoreHubAdmin, isRelevantHubAdmin } from './hub'
+} from './shared'
+import { getScopedHubAdminIds, isCoreHubAdmin, isRelevantHubAdmin } from './hubPolicy'
 import { hasAuthenticatedSession } from './user'
 // TYPES
 import type {

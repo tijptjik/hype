@@ -2,7 +2,7 @@ import { organisation, project } from '#lib/db/schema/index.js'
 import type { AssetAnalyticsScope } from '#lib/api/services/assetAnalytics.types.js'
 import type { Database, UserRoleDisco } from '#lib/types.js'
 import { autochunk, chunkedInArray } from '#lib/utils/batch-query.js'
-import { getScopedHubAdminIds, isCoreHubAdmin } from './hub'
+import { getScopedHubAdminIds, isCoreHubAdmin } from './hubPolicy'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

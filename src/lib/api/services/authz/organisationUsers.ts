@@ -1,5 +1,5 @@
 // AUTHORIZATION
-import { isRelevantHubAdmin } from './hub'
+import { isRelevantHubAdmin } from './hubPolicy'
 // TYPES
 import type { UserRoleDisco } from '#lib/types.js'
 

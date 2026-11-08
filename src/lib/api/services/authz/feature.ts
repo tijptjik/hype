@@ -1,6 +1,10 @@
 import { error } from '@sveltejs/kit'
-import { shouldLogAuthzDeny, toAccountRequirementCode, toActorPolicyBase } from '.'
-import { isCoreHubAdmin, isRelevantHubAdmin } from './hub'
+import {
+  shouldLogAuthzDeny,
+  toAccountRequirementCode,
+  toActorPolicyBase,
+} from './shared'
+import { isCoreHubAdmin, isRelevantHubAdmin } from './hubPolicy'
 import type { AuthorizationDecision } from '#lib/api/services/authz/authorization.types.js'
 import type { UserRoleDisco } from '#lib/types.js'
 

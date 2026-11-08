@@ -1,5 +1,5 @@
 // AUTHORIZATION
-import { isCoreHubAdmin } from './hub'
+import { isCoreHubAdmin } from './hubPolicy'
 // TYPES
 import type { UserRoleDisco } from '#lib/types.js'
 
