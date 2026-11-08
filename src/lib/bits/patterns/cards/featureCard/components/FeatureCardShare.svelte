@@ -4,7 +4,7 @@ import { onDestroy, tick } from 'svelte'
 import { prefersReducedMotion } from 'svelte/motion'
 import { fly } from 'svelte/transition'
 // MOTION
-import { VIEWER_TRANSITION_MS } from '#lib/bits/patterns/images/images.motion'
+import { VIEWER_TRANSITION_MS } from '#lib/bits/patterns/images/images.motion.js'
 // BITS
 import { cx } from '#lib/bits/utils.js'
 // SHARING
@@ -250,7 +250,7 @@ async function download(): Promise<void> {
     exiting = true
   }}
   inert={exiting}
-  class="absolute inset-0 z-30 flex h-full min-h-0 w-full flex-col overflow-y-auto bg-base-200 p-3 text-base-content"
+  class="bg-base-200 text-base-content absolute inset-0 z-30 flex h-full min-h-0 w-full flex-col overflow-y-auto p-3"
   aria-labelledby="feature-share-heading"
   onkeydown={event => {
     if (event.key === 'Escape') {
@@ -281,11 +281,11 @@ async function download(): Promise<void> {
         <span class="mr-3 text-lg font-semibold">{text.share}</span>
         <ResourceIcon class="text-muted-foreground size-4" aria-hidden="true" />
         <span class="flex min-w-0 flex-col justify-center gap-0.5">
-          <span class="text-[10px] font-medium leading-3 text-muted-foreground"
+          <span class="text-muted-foreground text-[10px] leading-3 font-medium"
             >{text[target.kind]}</span
           >
           <span
-            class="min-w-0 whitespace-normal break-words text-sm font-medium leading-4"
+            class="min-w-0 text-sm leading-4 font-medium break-words whitespace-normal"
             >{target.title || resource?.title}</span
           >
         </span>
@@ -295,12 +295,7 @@ async function download(): Promise<void> {
       {#if loading}
         <p role="status">{text.loading}</p>
       {:else if resource}
-        <!-- biome-ignore lint/a11y/useSemanticElements: Sharing groups combine navigation links and actions rather than form fields. -->
-        <div
-          class="flex flex-col gap-2"
-          role="group"
-          aria-labelledby="share-socials-heading"
-        >
+        <fieldset class="flex flex-col gap-2" aria-labelledby="share-socials-heading">
           <h3
             id="share-socials-heading"
             class="text-muted-foreground text-[11px] font-medium tracking-wider uppercase"
@@ -350,13 +345,11 @@ async function download(): Promise<void> {
               <span>Instagram</span>
             </button>
           </div>
-        </div>
+        </fieldset>
 
         <!-- Keep the two primary local actions together beneath the platform grid. -->
-        <!-- biome-ignore lint/a11y/useSemanticElements: Sharing groups combine navigation links and actions rather than form fields. -->
-        <div
+        <fieldset
           class="border-base-content/10 flex flex-col gap-2 border-t pt-3"
-          role="group"
           aria-labelledby="share-direct-heading"
         >
           <h3
@@ -435,7 +428,7 @@ async function download(): Promise<void> {
             </button>
             <span class="sr-only" role="status">{linkCopied ? text.copied : ''}</span>
           </div>
-        </div>
+        </fieldset>
 
         {#if instagram}
           <div

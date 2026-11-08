@@ -12,6 +12,7 @@ import { setDivisionCtx } from '#lib/context/division.svelte.js'
 import { parsePublicationPreview } from '#lib/publication/preview.js'
 import { getPublicationPreview } from '#lib/api/publicationPreview.remote.js'
 // SERVICES
+import { parseSharePath } from '#lib/sharing/resource.js'
 import { getMapPrisms, MAP_PRISM_PARAMS } from '#lib/navigation/adminMapLink.js'
 import { getMapResourceDeepLinkLayerIds } from '#lib/client/services/mapResourceDeepLink.js'
 import { isAuthEntryPath } from '#lib/auth/bootstrap.js'
@@ -63,7 +64,7 @@ async function initializeMap(userId: string | null): Promise<void> {
  * @returns Whether the route renders the public map shell.
  */
 function canApplyMapResourceDeepLink(): boolean {
-  return page.url.pathname === '/' || page.url.pathname.startsWith('/features/')
+  return page.url.pathname === '/' || Boolean(parseSharePath(page.url.pathname))
 }
 
 /**
@@ -76,6 +77,9 @@ function canApplyMapResourceDeepLink(): boolean {
  */
 async function applyInitialMapResourceDeepLink(): Promise<void> {
   if (!canApplyMapResourceDeepLink() || appCtx.view.publicationPreview) return
+  // Canonical map paths own their scope; legacy query targets cannot override them.
+  const addressedResource = parseSharePath(page.url.pathname)
+  if (addressedResource && addressedResource.kind !== 'feature') return
 
   const transferredPrisms = getMapPrisms(page.url.searchParams)
   if (transferredPrisms) {
@@ -137,6 +141,53 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
 }
 
 // The root owns identity; this layout owns map loading and keyboard listeners.
+/** Applies a persistent public address after bootstrap and on client navigation.
+ * @param target Server-validated resource.
+ * @param isCurrent Whether this route still owns the map scope.
+ * @returns Completion of scoped map refresh, stopping when navigation supersedes it.
+ */
+async function applyPublicResourceRoute(
+  target: NonNullable<typeof page.data.shareResource>,
+  isCurrent: () => boolean,
+): Promise<void> {
+  if (!isCurrent()) return
+  // Resolve the hierarchy inside this public hub before selecting its visible layers.
+  appCtx.view.scope.prisms = {
+    organisation: target.kind === 'organisation' ? [target.id] : [],
+    project: target.kind === 'project' ? [target.id] : [],
+    layer: target.kind === 'layer' ? [target.id] : [],
+  }
+  await appCtx.view.queries.refreshProjects(false)
+  if (!isCurrent()) return
+  await appCtx.view.queries.refreshLayers(false, false)
+  if (!isCurrent()) return
+  const projects = appCtx.view.queries.rows.project
+  const layers = appCtx.view.queries.rows.layer
+  const selected = layers.filter(layer => target.kind === 'layer'
+    ? layer.id === target.id
+    : target.kind === 'project'
+      ? layer.projectId === target.id
+      : projects.some(project => project.id === layer.projectId && project.organisationId === target.id))
+  appCtx.view.scope.prisms.layer = selected.map(layer => layer.id)
+  await appCtx.view.postLayerMutation(false, false)
+  if (!isCurrent()) return
+  await appCtx.view.queries.refreshFeatures(false)
+}
+
+$effect(() => {
+  const target = page.data.shareResource
+  const ready = appCtx.view.isInitialised
+  if (!ready || !target || target.kind === 'feature' || preview) return
+  // Cleanup also cancels a pending scope when leaving sharing routes or entering preview.
+  let current = true
+  untrack(() => {
+    void applyPublicResourceRoute(target, () => current).catch(reason => {
+      if (current) error = String(reason)
+    })
+  })
+  return () => { current = false }
+})
+
 // Shallow facet navigation changes the visible URL without replacing page.url.
 appCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'app')
 $effect(() => appCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'app'))
@@ -202,7 +253,7 @@ onDestroy(() => {
     {/if}
     <button
       type="button"
-      class="mt-4 rounded bg-base-content px-4 py-2 text-base-100"
+      class="bg-base-content text-base-100 mt-4 rounded px-4 py-2"
       onclick={() => retry++}
     >
       {m.bootstrap__retry()}
