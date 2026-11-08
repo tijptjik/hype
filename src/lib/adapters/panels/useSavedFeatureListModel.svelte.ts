@@ -204,15 +204,14 @@ export function useSavedFeatureListModel(
       return guidanceError
     },
     get hasMoreGuidance() {
-      return guidanceOffset !== null
+      // Offset zero is the initial request, not evidence of another results page.
+      return guidanceOffset !== null && guidanceOffset > 0
     },
     loadMoreGuidance: () => loadGuidance(),
     retryGuidance: () => loadGuidance(true),
     get title() {
       const name =
         kind === 'visited' ? m.stars__have_visited() : m.stars__want_to_visit()
-      if (kind === 'wishlist' && (guidance.length || guidanceLoading || guidanceError))
-        return name
       return query.totalCount === null ? name : `${name} (${query.totalCount})`
     },
     get rows() {

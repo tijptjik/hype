@@ -31,19 +31,18 @@ let {
   />
   <div class="px-6 pb-4">
     {#if kind === 'wishlist' &&
-      (model.splitGuidance.length ||
-        model.guidanceError ||
-        model.guidanceLoading ||
-        model.hasMoreGuidance)}
+      (model.splitGuidance.length || model.guidanceError || model.hasMoreGuidance)}
       <section
         class="border-border mb-4 grid gap-2 rounded-md border p-3"
         aria-label="Updates to saved places"
       >
         <p class="text-sm font-medium">Updates to saved places</p>
-        <p class="text-muted-foreground text-xs">
-          These places were split. Your original saved links are kept; choose which
-          resulting places you want to visit.
-        </p>
+        {#if model.splitGuidance.length}
+          <p class="text-muted-foreground text-xs">
+            These places were split. Your original saved links are kept; choose which
+            resulting places you want to visit.
+          </p>
+        {/if}
         {#each model.splitGuidance as saved (saved.id)}
           <div class="grid gap-1 text-sm">
             <a
