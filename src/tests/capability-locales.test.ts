@@ -27,9 +27,7 @@ describe('capability content languages', () => {
     })
     const reloadedCapabilities = CapabilityRoot.parse(reloaded.data.capabilities)
     expect(reloadedCapabilities.manageBakeries?.i18n?.ja).toBe('寄付者')
-    expect(reloadedCapabilities.manageBakeries?.i18n?.$locale_pt_BR).toBe(
-      'Doadores',
-    )
+    expect(reloadedCapabilities.manageBakeries?.i18n?.$locale_pt_BR).toBe('Doadores')
   })
 
   it('keeps empty added languages and rejects conflicting normalized language identities', () => {
@@ -45,4 +43,35 @@ describe('capability content languages', () => {
       }).success,
     ).toBe(false)
   })
+})
+
+it('round-trips explicit organisation analytics delegation through form validation', async () => {
+  const { OrganisationRoleFormData } = await import(
+    '#lib/db/zod/schema/organisation.js'
+  )
+  const { toUserRoles } = await import('#lib/db/services/organisation.js')
+  const form = toOrganisationFormInput({
+    userRoles: [{ userId: 'member', role: 'member', viewAnalytics: true }],
+  })
+  const role = OrganisationRoleFormData.parse(form.data.userRoles?.[0])
+  expect(role.viewAnalytics).toBe(true)
+  expect(toUserRoles([role], 'org')).toEqual([
+    { organisationId: 'org', userId: 'member', role: 'member', viewAnalytics: true },
+  ])
+  expect(
+    OrganisationRoleFormData.parse({ ...role, viewAnalytics: 'false' }).viewAnalytics,
+  ).toBe(false)
+})
+
+it('detects analytics-only changes for organisation role management', async () => {
+  const { toOrganisationUserRoleSignature } = await import(
+    '#lib/api/services/authz/shared.js'
+  )
+  const row = { userId: 'member', role: 'member' }
+  expect(toOrganisationUserRoleSignature([row])).toBe(
+    toOrganisationUserRoleSignature([{ ...row, viewAnalytics: false }]),
+  )
+  expect(toOrganisationUserRoleSignature([row])).not.toBe(
+    toOrganisationUserRoleSignature([{ ...row, viewAnalytics: true }]),
+  )
 })

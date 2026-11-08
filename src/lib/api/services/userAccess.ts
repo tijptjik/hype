@@ -207,6 +207,7 @@ export async function readUserAccessOverview(
       'manageBakeries',
       'manageVolunteers',
       'manageDropOffs',
+      'viewAnalytics',
     ] satisfies CapabilityKey[]) {
       if (assigned?.[key] === true)
         capabilities.push({ key, available: available?.[key] === true })

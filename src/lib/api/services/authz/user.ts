@@ -52,8 +52,9 @@ export const canAccessAdminPanel = (actor: UserSearchActor): boolean => {
  * - hub admins
  * - organisation owners
  * - project owners
+ * @param actor Current session roles. @returns Whether an owner/admin role is present.
  */
-export const canAccessAnalytics = (actor: UserSearchActor): boolean => {
+const hasElevatedAccess = (actor: UserSearchActor): boolean => {
   if (actor.superAdmin) return true
 
   return actor.userRoles.some(role => {
@@ -63,6 +64,20 @@ export const canAccessAnalytics = (actor: UserSearchActor): boolean => {
     return false
   })
 }
+
+/** Allows owners and explicitly delegated staff to enter analytics.
+ * @param actor Fresh session roles. @returns Whether scoped analytics is available.
+ * @remarks This does not grant user search or infrastructure access.
+ */
+export const canAccessAnalytics = (actor: UserSearchActor): boolean =>
+  hasElevatedAccess(actor) ||
+  actor.userRoles.some(role =>
+    role.type === 'organisation'
+      ? role.role === 'member' && role.viewAnalytics === true
+      : role.type === 'project' &&
+        ['member', 'maintainer', 'translator'].includes(role.role) &&
+        role.capabilities?.viewAnalytics === true,
+  )
 
 /**
  * Search-users endpoint access policy.
@@ -77,7 +92,7 @@ export const canAccessAnalytics = (actor: UserSearchActor): boolean => {
  * @returns Whether user lookup is permitted.
  */
 export const canSearchUsers = (actor: UserSearchActor): boolean =>
-  canAccessAnalytics(actor) ||
+  hasElevatedAccess(actor) ||
   actor.userRoles.some(
     role =>
       role.type === 'project' &&

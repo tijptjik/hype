@@ -9,15 +9,15 @@ import { formatAnalyticsError } from '#lib/bits/patterns/analytics/analyticsErro
 import { runRemoteQuery } from '#lib/remote/index.js'
 // API
 import {
+  getAnalyticsScopes,
   getAssetAnalyticsSummary,
   getProductAnalyticsSummary,
   getPlatformAnalyticsSummary,
 } from '#lib/api/analytics.remote.js'
 // I18N
 import { getLocale } from '#lib/i18n.js'
-// ENUMS
-import { FirstClassResource } from '#lib/enums.js'
 // BITS
+import AnalyticsScopePicker from '#lib/bits/patterns/analytics/AnalyticsScopePicker.svelte'
 import ProductUsageDashboard from '#lib/bits/patterns/analytics/ProductUsageDashboard.svelte'
 import PlatformAnalyticsDashboardSkeleton from '#lib/bits/patterns/analytics/platformAnalyticsDashboard/PlatformAnalyticsDashboardSkeleton.svelte'
 import PlatformAnalyticsDashboard from '#lib/bits/patterns/analytics/platformAnalyticsDashboard/PlatformAnalyticsDashboard.svelte'
@@ -34,6 +34,10 @@ import LoaderCircle from 'virtual:icons/proicons/spinner'
 import RefreshCw from 'virtual:icons/proicons/arrow-sync'
 import Users from 'virtual:icons/proicons/person-multiple'
 // TYPES
+import type {
+  AnalyticsSelection,
+  AnalyticsScopeOption,
+} from '#lib/api/services/analyticsScope.js'
 import type { PlatformAnalyticsResult } from '#lib/api/services/platformAnalytics.types.js'
 import type { ProductAnalyticsResult } from '#lib/api/services/productAnalytics.js'
 import type { AssetAnalyticsSummaryResult } from '#lib/api/services/assetAnalytics.types.js'
@@ -62,20 +66,57 @@ let activeFacet = $state<AnalyticsFacet>(DEFAULT_ANALYTICS_FACET)
 const analyticsScope = $derived(
   JSON.stringify([adminCtx.view.account.revision, adminCtx.view.resources.scopeKey]),
 )
-const prismOrganisationIds = $derived([
-  ...adminCtx.view.scope.getPrism(FirstClassResource.organisation),
-])
-const prismProjectIds = $derived([
-  ...adminCtx.view.scope.getPrism(FirstClassResource.project),
-])
-const prismSignature = $derived(
-  `${prismOrganisationIds.join('|')}::${prismProjectIds.join('|')}`,
+let scopeOptions = $state<AnalyticsScopeOption[]>([])
+let selectionKey = $state('')
+let allowAssets = $state(false)
+let allowData = $state(false)
+const selection = $derived(
+  scopeOptions.find(option => `${option.type}:${option.id ?? ''}` === selectionKey),
 )
+const availableFacets = $derived(
+  ANALYTICS_FACETS.filter(facet =>
+    facet.ref === 'assets' ? allowAssets : facet.ref === 'data' ? allowData : true,
+  ),
+)
+const prismOrganisationIds = $derived(
+  selection?.type === 'organisation' ? [selection.id!] : [],
+)
+const prismProjectIds = $derived(selection?.type === 'project' ? [selection.id!] : [])
+const prismSignature = $derived(selectionKey)
 let analyticsState = $state<AssetAnalyticsSummaryResult | null>(null)
 let analyticsPreviewState = $state<AssetAnalyticsSummaryResult | null>(null)
 let platformState = $state<PlatformAnalyticsResult | null>(null)
 let usageState = $state<ProductAnalyticsResult | null>(null)
 let hostname = $state('')
+const trafficData = $derived(
+  (activeFacet === 'views' || activeFacet === 'audience') &&
+    platformState?.status === 'success'
+    ? platformState.data
+    : null,
+)
+const scopeDetails = $derived.by(() => {
+  if (activeFacet === 'data')
+    return 'Database and queue activity is shared across the platform and cannot be broken down by project.'
+  if (activeFacet === 'usage')
+    return 'Sampled interaction and contribution counts, not unique people. Historical results follow current resource ownership.'
+  if (activeFacet === 'assets')
+    return 'Asset delivery metrics include request volume, cache performance, and missing assets.'
+  if (selection?.type === 'project' || selection?.type === 'organisation')
+    return 'Counts visits to resource pages. Activity within shared maps cannot be attributed. Historical results follow current resource ownership.'
+  return 'Page views and visits are sampled estimates, not unique people.'
+})
+const snapshotTime = $derived(
+  activeFacet === 'assets' &&
+    analyticsState &&
+    (analyticsState.status === 'success' || analyticsState.status === 'empty')
+    ? analyticsState.data?.generatedAt
+    : platformState?.status === 'success' && activeFacet !== 'usage'
+      ? platformState.data.generatedAt
+      : undefined,
+)
+const toolbarDetails = $derived(
+  `${scopeDetails}${snapshotTime ? `\nUpdated ${formatGeneratedAt(snapshotTime)}` : ''}`,
+)
 let isRefreshing = $state(false)
 let analyticsRequestVersion = 0
 
@@ -119,6 +160,7 @@ async function resolvePrismScopePrefixes(): Promise<string[]> {
  * @returns Remote query parameters including explicit admin intent metadata.
  */
 async function buildAnalyticsQueryParams(scope: string): Promise<{
+  selection?: AnalyticsSelection
   scopePrefixes: string[]
   organisationIds: string[]
   projectIds: string[]
@@ -135,6 +177,7 @@ async function buildAnalyticsQueryParams(scope: string): Promise<{
   })
 
   return {
+    selection,
     scopePrefixes,
     organisationIds: prismOrganisationIds,
     projectIds: prismProjectIds,
@@ -244,8 +287,32 @@ async function runAnalyticsLoad(options?: {
   }
 
   try {
+    const accessQuery = getAnalyticsScopes({
+      meta: { isAdminRequest: true, scope: requestScope },
+    })
+    if (preservePreview) await accessQuery.refresh()
+    const access = await runRemoteQuery(accessQuery)
+    if (requestVersion !== analyticsRequestVersion || requestScope !== analyticsScope)
+      return
+    scopeOptions = access.options
+    allowAssets = access.assets
+    allowData = access.data
+    if (!selection) {
+      const first = scopeOptions[0]
+      if (!first) throw new Error('No authorized analytics scope is available.')
+      selectionKey = `${first.type}:${first.id ?? ''}`
+      return
+    }
+    if (
+      (activeFacet === 'assets' && !allowAssets) ||
+      (activeFacet === 'data' && !allowData)
+    ) {
+      activeFacet = 'usage'
+      return
+    }
     if (activeFacet === 'usage') {
       const query = getProductAnalyticsSummary({
+        selection,
         meta: { isAdminRequest: true, scope: requestScope },
       })
       if (preservePreview) await query.refresh()
@@ -259,6 +326,7 @@ async function runAnalyticsLoad(options?: {
     if (activeFacet !== 'assets') {
       const query = getPlatformAnalyticsSummary({
         facet: activeFacet,
+        selection,
         hostname: hostname || undefined,
         meta: { isAdminRequest: true, scope: requestScope },
       })
@@ -325,7 +393,7 @@ function formatGeneratedAt(value: string | null | undefined): string {
  * @returns Nothing; ignores unknown facets.
  */
 function handleFacetChange(nextFacet: string): void {
-  if (!ANALYTICS_FACETS.some(facet => facet.ref === nextFacet)) return
+  if (!availableFacets.some(facet => facet.ref === nextFacet)) return
   activeFacet = nextFacet as AnalyticsFacet
 }
 
@@ -344,9 +412,33 @@ $effect(() => {
   })
 
   headerCtrl.setFacets(
-    ANALYTICS_FACETS.map(facet => ({ ...facet })),
+    availableFacets.map(facet => ({ ...facet })),
     { active: activeFacet, onFacetChange: handleFacetChange },
   )
+
+  headerCtrl.setViewActionContent(AnalyticsScopePicker, {
+    options: scopeOptions,
+    value: selectionKey,
+    hosts: trafficData?.hosts ?? [],
+    hostname: trafficData?.hostname ?? hostname,
+    hostLabel:
+      activeFacet === 'data'
+        ? 'Shared infrastructure'
+        : activeFacet === 'views' || activeFacet === 'audience'
+          ? hostname === '*'
+            ? 'All production hosts'
+            : hostname || 'Production hosts'
+          : 'All hosts',
+    details: toolbarDetails,
+    onHostChange: (value: string) => {
+      hostname = value
+    },
+    onChange: (value: string) => {
+      selectionKey = value
+      hostname = ''
+      analyticsPreviewState = null
+    },
+  })
 
   headerCtrl.setViewActions([
     {
@@ -382,9 +474,13 @@ $effect(() => {
     platformState = null
     usageState = null
     hostname = ''
+    selectionKey = ''
+    scopeOptions = []
+    allowAssets = false
+    allowData = false
     isRefreshing = false
   }
-  const signature = `${analyticsScope}:${activeFacet}:${activeFacet === 'assets' ? prismSignature : hostname}`
+  const signature = `${analyticsScope}:${activeFacet}:${prismSignature}:${hostname}`
   if (signature === lastPrismSignature) return
   lastPrismSignature = signature
   if (!lastPrismSignature) return
@@ -412,11 +508,7 @@ $effect(() => {
       </div>
     {:else if platformState && activeFacet !== 'assets'}
       {#key activeFacet}
-        <PlatformAnalyticsDashboard
-          state={platformState}
-          facet={activeFacet}
-          onHostChange={value => (hostname = value)}
-        />
+        <PlatformAnalyticsDashboard state={platformState} facet={activeFacet} />
       {/key}
     {/if}
 

@@ -19,11 +19,9 @@ import type {
 let {
   state: analyticsState,
   facet,
-  onHostChange,
 }: {
   state: PlatformAnalyticsResult
   facet: PlatformAnalyticsFacet
-  onHostChange: (hostname: string) => void
 } = $props()
 const presentation = $derived(PLATFORM_ANALYTICS_PRESENTATION[facet])
 let selected = $state<AssetAnalyticsWindowKey[]>([...DEFAULT_VISIBLE_WINDOWS])
@@ -88,28 +86,6 @@ const sectionTitles = $derived(
       description={analyticsState.message}
     />
   {:else}
-    <Card.Root>
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="space-y-1 text-sm text-foreground-alt">
-          <p>{analyticsState.data.scope}</p>
-          <p>Updated {new Date(analyticsState.data.generatedAt).toLocaleString()}</p>
-        </div>
-        {#if facet !== 'data'}
-          <label class="flex items-center gap-3 text-sm text-foreground"
-            >Hostname
-            <select
-              class="max-w-full rounded-lg border border-border bg-surface px-3 py-2"
-              value={analyticsState.data.hostname}
-              onchange={event => onHostChange(event.currentTarget.value)}
-            >
-              {#each analyticsState.data.hosts as host}
-                <option value={host}>{host}</option>
-              {/each}
-            </select>
-          </label>
-        {/if}
-      </div>
-    </Card.Root>
     {#if Object.values(analyticsState.data.windows).some(window => window.error)}
       <Card.EmptyState
         tone="warning"
@@ -138,10 +114,10 @@ const sectionTitles = $derived(
         />
       {:else}
         <div
-          class="mt-5 overflow-x-auto rounded-[1.4rem] border border-foreground/10 bg-surface p-4 pt-8"
+          class="border-foreground/10 bg-surface mt-5 overflow-x-auto rounded-[1.4rem] border p-4 pt-8"
         >
           <svg
-            class="h-64 min-w-[720px] w-full"
+            class="h-64 w-full min-w-[720px]"
             viewBox="0 0 840 244"
             role="img"
             aria-label={`Daily ${facet === 'data' ? 'database queries' : 'page views'} over the last 30 days`}
@@ -180,7 +156,7 @@ const sectionTitles = $derived(
               {/if}
             {/each}
           </svg>
-          <details class="mt-2 text-xs text-foreground-alt">
+          <details class="text-foreground-alt mt-2 text-xs">
             <summary>Daily values</summary>
             <table class="mt-2 w-full">
               <tbody>
@@ -224,14 +200,14 @@ const sectionTitles = $derived(
               <div class="grid grid-cols-2 gap-3">
                 {#each data.metrics as metric}
                   <article
-                    class="rounded-[1.2rem] border border-border bg-surface px-3 py-3"
+                    class="border-border bg-surface rounded-[1.2rem] border px-3 py-3"
                   >
                     <p
-                      class="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-alt"
+                      class="text-foreground-alt text-[11px] font-semibold tracking-[0.18em] uppercase"
                     >
                       {metric.label}
                     </p>
-                    <p class="mt-2 break-words text-2xl font-semibold text-foreground">
+                    <p class="text-foreground mt-2 text-2xl font-semibold break-words">
                       {metric.value === null
                         ? '—'
                         : metric.unit === 'ms'
@@ -247,7 +223,7 @@ const sectionTitles = $derived(
           {/each}
         </div>
       {/if}
-      <p class="mt-5 text-xs leading-5 text-foreground-alt">
+      <p class="text-foreground-alt mt-5 text-xs leading-5">
         {facet === 'data'
           ? 'Latency measures query batches. Queue writes, reads and deletions are operations, not backlog or completed jobs. Storage growth and pipeline failures are not available from these datasets.'
           : 'Cloudflare Web Analytics counts recorded page loads and visits, not unique people. Audience distributions are weighted by page views. Core Web Vitals are not included in this dataset.'}
@@ -282,7 +258,7 @@ const sectionTitles = $derived(
                 {@const total =
                   section?.rows.reduce((sum, row) => sum + row.value, 0) ?? 0}
                 <section
-                  class="min-w-0 space-y-4 rounded-[1.25rem] border border-border bg-surface p-4"
+                  class="border-border bg-surface min-w-0 space-y-4 rounded-[1.25rem] border p-4"
                 >
                   <Card.SectionHeader
                     {title}
@@ -296,7 +272,7 @@ const sectionTitles = $derived(
                         'No section available.'}
                     />
                   {:else if section.rows.length === 0}
-                    <p class="text-sm text-foreground-alt">No activity recorded.</p>
+                    <p class="text-foreground-alt text-sm">No activity recorded.</p>
                   {:else}
                     <table class="w-full table-fixed text-xs">
                       <thead>
@@ -308,8 +284,8 @@ const sectionTitles = $derived(
                       </thead>
                       <tbody>
                         {#each section.rows as row}
-                          <tr class="border-t border-border">
-                            <td class="break-all py-3 pr-2" data-tooltip={row.label}>
+                          <tr class="border-border border-t">
+                            <td class="py-3 pr-2 break-all" data-tooltip={row.label}>
                               {row.label}
                             </td>
                             <td class="text-right font-mono">

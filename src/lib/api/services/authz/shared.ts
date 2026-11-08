@@ -70,7 +70,16 @@ export const shouldLogAuthzDeny = (): boolean => {
   return value === '1' || value === 'true'
 }
 
-export const toOrganisationUserRoleSignature = toUserRoleSignature
+/** Includes analytics delegation in organisation role-management change detection.
+ * @param roles Submitted or persisted staff assignments. @returns Stable permission signature.
+ */
+export const toOrganisationUserRoleSignature = (
+  roles: Array<{ userId: string; role: string; viewAnalytics?: boolean }>,
+): string =>
+  roles
+    .map(role => `${role.userId}:${role.role}:${role.viewAnalytics === true}`)
+    .sort()
+    .join('|')
 export const toProjectUserRoleSignature = toUserRoleSignature
 
 const RESOURCE_CODE_SEGMENTS = [

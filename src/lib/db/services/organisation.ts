@@ -299,10 +299,19 @@ export const createUserRoles = async (
       throw new Error('Invalid organisation staff assignment')
     return db
       .insert(organisationRole)
-      .values({ organisationId, userId: row.userId, role, grant: { manual: role } })
+      .values({
+        organisationId,
+        userId: row.userId,
+        role,
+        viewAnalytics: row.viewAnalytics === true,
+        grant: { manual: role },
+      })
       .onConflictDoUpdate({
         target: [organisationRole.organisationId, organisationRole.userId],
-        set: { grant: sql`json_patch(${organisationRole.grant},excluded.grant)` },
+        set: {
+          grant: sql`json_patch(${organisationRole.grant},excluded.grant)`,
+          viewAnalytics: sql`excluded.viewAnalytics`,
+        },
       })
   })
   if (writes.length)
@@ -318,13 +327,19 @@ export const createUserRoles = async (
  * Maps organisation form role rows into persisted role rows bound to organisationId.
  */
 export const toUserRoles = (
-  userRoles: Array<{ userId: string; role: string }>,
+  userRoles: Array<{ userId: string; role: string; viewAnalytics?: boolean }>,
   organisationId: string,
-): Array<{ organisationId: string; userId: string; role: string }> =>
+): Array<{
+  organisationId: string
+  userId: string
+  role: string
+  viewAnalytics: boolean
+}> =>
   userRoles.map(userRole => ({
     organisationId,
     userId: userRole.userId,
     role: userRole.role,
+    viewAnalytics: userRole.viewAnalytics === true,
   }))
 
 // ═══════════════════════
@@ -695,11 +710,12 @@ export const listUserRoles = async (
 export const listUserRoleAssignments = async (
   db: Database,
   organisationId: string,
-): Promise<Array<{ userId: string; role: string }>> => {
+): Promise<Array<{ userId: string; role: string; viewAnalytics?: boolean }>> => {
   return await db
     .select({
       userId: organisationRole.userId,
       role: organisationRole.role,
+      viewAnalytics: organisationRole.viewAnalytics,
     })
     .from(organisationRole)
     .where(
@@ -970,11 +986,11 @@ export const updateOrganisationPublishedStateById = async (
       parentUpdate,
       // A skipped parent write must not commit descendant publication changes.
       prepareRevisionCheck(db, sql`changes() = 1`),
-      ...await buildDescendantPublication(
+      ...(await buildDescendantPublication(
         db,
         { kind: 'organisation', id: params.id },
         params,
-      ),
+      )),
       ...capture.after,
     ],
   )

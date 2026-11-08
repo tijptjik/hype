@@ -20,7 +20,7 @@ import type { BatchItem } from 'drizzle-orm/batch'
 export function prepareOrganisationStaffRoles(
   db: Database,
   organisationId: string,
-  submitted: Array<{ userId: string; role?: string }>,
+  submitted: Array<{ userId: string; role?: string; viewAnalytics?: boolean }>,
   guard: SQL = sql`1`,
 ): [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]] {
   const roles = submitted.map(row => ({ ...row, role: row.role ?? 'member' }))
@@ -29,11 +29,20 @@ export function prepareOrganisationStaffRoles(
     new Set(roles.map(role => role.userId)).size !== roles.length
   )
     throw new Error('Invalid organisation staff assignments')
-  const payload = JSON.stringify(roles.map(({ userId, role }) => ({ userId, role })))
+  const payload = JSON.stringify(
+    roles.map(({ userId, role, viewAnalytics }) => ({
+      userId,
+      role,
+      viewAnalytics: viewAnalytics === true,
+    })),
+  )
   // Remove omitted manual grants only; imported/onboarded users are not staff-form rows.
   const remove = db
     .update(organisationRole)
-    .set({ grant: sql`json_remove(${organisationRole.grant},'$.manual')` })
+    .set({
+      grant: sql`json_remove(${organisationRole.grant},'$.manual')`,
+      viewAnalytics: false,
+    })
     .where(
       and(
         eq(organisationRole.organisationId, organisationId),
@@ -46,11 +55,14 @@ export function prepareOrganisationStaffRoles(
   const add = db
     .insert(organisationRole)
     .select(
-      sql`SELECT ${organisationId},json_extract(value,'$.userId'),json_extract(value,'$.role'),json_object('manual',json_extract(value,'$.role')) FROM json_each(${payload}) WHERE ${guard}`,
+      sql`SELECT ${organisationId},json_extract(value,'$.userId'),json_extract(value,'$.role'),json_extract(value,'$.viewAnalytics'),json_object('manual',json_extract(value,'$.role')) FROM json_each(${payload}) WHERE ${guard}`,
     )
     .onConflictDoUpdate({
       target: [organisationRole.organisationId, organisationRole.userId],
-      set: { grant: sql`json_patch(${organisationRole.grant},excluded.grant)` },
+      set: {
+        grant: sql`json_patch(${organisationRole.grant},excluded.grant)`,
+        viewAnalytics: sql`excluded.viewAnalytics`,
+      },
     })
   return [remove, add]
 }

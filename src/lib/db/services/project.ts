@@ -196,7 +196,7 @@ function prepareProjectRelations(
         db
           .insert(organisationRole)
           .select(
-            sql`select ${organisationId}, json_extract(value,'$.userId'), case when json_extract(value,'$.role')='user' then 'user' else 'member' end, json_object(${'project:' + id},case when json_extract(value,'$.role')='user' then 'user' else 'member' end) from json_each(${JSON.stringify(relations.userRoles)}) where ${guard}`,
+            sql`select ${organisationId}, json_extract(value,'$.userId'), case when json_extract(value,'$.role')='user' then 'user' else 'member' end, 0, json_object(${'project:' + id},case when json_extract(value,'$.role')='user' then 'user' else 'member' end) from json_each(${JSON.stringify(relations.userRoles)}) where ${guard}`,
           )
           .onConflictDoUpdate({
             target: [organisationRole.organisationId, organisationRole.userId],
@@ -1032,10 +1032,16 @@ export const updateProjectByIdWithConcurrency = async (
   const moveGuard = exists(
     db.select({ id: project.id }).from(project).where(guardedProject),
   )
-  if (params.imageIntentSettings && !params.actorId) throw new Error('Image settings require an attributed actor')
+  if (params.imageIntentSettings && !params.actorId)
+    throw new Error('Image settings require an attributed actor')
   // Include policy and gallery changes in the parent form's guarded transaction.
   const imageSettings = params.imageIntentSettings
-    ? await prepareImageIntentPolicySave(db, { ...params.imageIntentSettings, scope: { type: 'project', id: params.id }, actorId: params.actorId!, guard: moveGuard })
+    ? await prepareImageIntentPolicySave(db, {
+        ...params.imageIntentSettings,
+        scope: { type: 'project', id: params.id },
+        actorId: params.actorId!,
+        guard: moveGuard,
+      })
     : []
   if (imageSettings === null) return null
   const writes = prepareProjectRelations(
@@ -1144,7 +1150,12 @@ export const updateProjectByIdWithConcurrency = async (
     const rows = results[beforeCore.length] as { id: string; modifiedAt: string }[]
     return rows[0] ?? null
   }
-  const before = [...imageSettings, ...capture.before, ...layerCapture.before, ...writes]
+  const before = [
+    ...imageSettings,
+    ...capture.before,
+    ...layerCapture.before,
+    ...writes,
+  ]
   const results = await executeRevisionBatch(db, moveGuard, [
     ...before,
     updateCore,
@@ -1244,7 +1255,11 @@ export const updateProjectPublishedStateById = async (
       parentUpdate,
       // A skipped parent write must not commit descendant publication changes.
       prepareRevisionCheck(db, sql`changes() = 1`),
-      ...await buildDescendantPublication(db, { kind: 'project', id: params.id }, params),
+      ...(await buildDescendantPublication(
+        db,
+        { kind: 'project', id: params.id },
+        params,
+      )),
       ...capture.after,
     ],
   )
@@ -1273,7 +1288,11 @@ export const cascadeProjectPublishedStateToDescendants = async (
   },
 ): Promise<void> => {
   await db.batch(
-    await buildDescendantPublication(db, { kind: 'project', id: params.projectId }, params),
+    await buildDescendantPublication(
+      db,
+      { kind: 'project', id: params.projectId },
+      params,
+    ),
   )
 }
 

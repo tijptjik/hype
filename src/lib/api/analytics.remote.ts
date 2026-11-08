@@ -3,12 +3,19 @@ import { error } from '@sveltejs/kit'
 // THIRD PARTY
 import { z } from 'zod'
 // DB
-import { hub } from '#lib/db/schema/index.js'
+import { hub, organisation } from '#lib/db/schema/index.js'
 import { FormBoolean } from '#lib/db/zod/form.js'
 // REMOTE
 import { guardedQuery } from '#lib/api/server/guarded.js'
+// SCOPING
+import {
+  analyticsHostsForScope,
+  listAnalyticsScopes,
+  resolveAnalyticsResources,
+} from '#lib/api/services/analyticsScope.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // AUTHORIZATION
-import { getScopedHubAdminIds, isCoreHubAdmin } from '#lib/api/services/authz/hub.js'
+import { isCoreHubAdmin } from '#lib/api/services/authz/hub.js'
 import { resolveAnalyticsScope, toAuthMessage } from '#lib/api/services/authz/index.js'
 import { canAccessAnalytics } from '#lib/api/services/authz/user.js'
 // SERVER
@@ -28,7 +35,45 @@ import {
 // - getPlatformAnalyticsSummary
 // - getProductAnalyticsSummary
 
+const analyticsSelectionSchema = z.object({
+  type: z.enum(['global', 'hub', 'organisation', 'project']),
+  id: z.string().min(1).max(64).optional(),
+})
+
+/** Lists authorized analytics perspectives and infrastructure tabs.
+ * @param params Admin intent and cache identity. @param ctx Fresh guarded session.
+ * @returns Authorized scope options and available infrastructure facets.
+ */
+export const getAnalyticsScopes = guardedQuery(
+  z.object({
+    meta: z
+      .object({ isAdminRequest: FormBoolean.optional(), scope: z.string().optional() })
+      .optional(),
+  }),
+  async (_params, ctx) => {
+    if (
+      ctx.user.isAnonymous ||
+      !ctx.isAdminRequest ||
+      !canAccessAnalytics({ superAdmin: ctx.user.superAdmin, userRoles: ctx.userRoles })
+    )
+      throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    return {
+      options: await listAnalyticsScopes({
+        db: ctx.db,
+        user: ctx.user,
+        userRoles: ctx.userRoles,
+      }),
+      assets: Boolean(
+        ctx.user.superAdmin ||
+          ctx.userRoles.some(role => role.type === 'hub' && role.role === 'admin'),
+      ),
+      data: Boolean(ctx.user.superAdmin || isCoreHubAdmin(ctx.userRoles)),
+    }
+  },
+)
+
 const assetAnalyticsSummaryParamsSchema = z.object({
+  selection: analyticsSelectionSchema.optional(),
   scopePrefixes: z.array(z.string()).optional(),
   organisationIds: z.array(z.string()).optional(),
   projectIds: z.array(z.string()).optional(),
@@ -62,14 +107,54 @@ export const getAssetAnalyticsSummary = guardedQuery(
       throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
     }
 
+    if (
+      !(
+        ctx.user.superAdmin ||
+        ctx.userRoles.some(role => role.type === 'hub' && role.role === 'admin')
+      )
+    )
+      throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    let organisationIds = params.organisationIds ?? []
+    let projectIds = params.projectIds ?? []
+    if (params.selection) {
+      const options = await listAnalyticsScopes({
+        db: ctx.db,
+        user: ctx.user,
+        userRoles: ctx.userRoles,
+      })
+      if (
+        !options.some(
+          option =>
+            option.type === params.selection?.type &&
+            option.id === params.selection?.id,
+        )
+      )
+        throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+      organisationIds =
+        params.selection.type === 'organisation' ? [params.selection.id!] : []
+      projectIds = params.selection.type === 'project' ? [params.selection.id!] : []
+      if (params.selection.type === 'hub') {
+        const rows = await ctx.db
+          .select({ id: organisation.id })
+          .from(organisation)
+          .where(chunkedInArray(organisation.hubId, [params.selection.id!]))
+        organisationIds = rows.map(row => row.id)
+        if (!organisationIds.length)
+          return {
+            status: 'error' as const,
+            message: 'This hub has no organisation assets.',
+          }
+      }
+    }
+
     const scope = await resolveAnalyticsScope({
       db: ctx.db,
       user: ctx.user,
       userRoles: ctx.userRoles,
       requestedScope: {
         scopePrefixes: params.scopePrefixes ?? [],
-        organisationIds: params.organisationIds ?? [],
-        projectIds: params.projectIds ?? [],
+        organisationIds,
+        projectIds,
       },
     })
     if (!scope.allowed || !scope.scope) {
@@ -98,11 +183,12 @@ export const getAssetAnalyticsSummary = guardedQuery(
  * @param ctx - Guarded identity, database, and server credentials.
  * @returns A normalized snapshot for the selected dashboard.
  * @remarks Shared infrastructure is restricted to global administrators. Hub admins
- * can read only their own persisted custom domains; prisms do not attribute traffic.
+ * read their own persisted domains; delegated readers receive exact resource-path filters.
  */
 export const getPlatformAnalyticsSummary = guardedQuery(
   z.object({
     facet: z.enum(['views', 'audience', 'data']),
+    selection: analyticsSelectionSchema.optional(),
     hostname: z.string().max(253).optional(),
     meta: z
       .object({ isAdminRequest: FormBoolean.optional(), scope: z.string().optional() })
@@ -123,42 +209,40 @@ export const getPlatformAnalyticsSummary = guardedQuery(
         message: 'Shared infrastructure analytics requires a global administrator.',
       }
     }
+    const resources = await resolveAnalyticsResources(
+      { db: ctx.db, user: ctx.user, userRoles: ctx.userRoles },
+      params.selection,
+    )
+    if (!resources) throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
     let hosts: string[] = []
     let hostname = ''
     if (params.facet !== 'data') {
-      const allowedHubIds = getScopedHubAdminIds(ctx.userRoles)
-      // Resolve host ownership from persisted hubs, never from client-supplied prisms.
-      const hubs = await ctx.db.select({ id: hub.id, domain: hub.domain }).from(hub)
-      hosts = [
-        ...new Set(
-          hubs
-            .filter(row => globalAdmin || allowedHubIds.has(row.id))
-            .map(row => row.domain?.trim().toLowerCase())
-            .filter(
-              (domain): domain is string =>
-                Boolean(domain) &&
-                !/localhost|\.localhost$|^preview\./.test(domain ?? ''),
-            ),
-        ),
-      ].sort()
-      // Prefer the active hub's production domain while retaining authorized scope.
+      // Resolve host membership server-side and retain exact resource-path filters.
+      const hubs = await ctx.db
+        .select({ id: hub.id, code: hub.code, domain: hub.domain })
+        .from(hub)
+      hosts = analyticsHostsForScope(hubs, resources)
       const hubDomain = hubs
         .find(row => row.id === ctx.event.locals.hub?.id)
         ?.domain?.trim()
         .toLowerCase()
-      const defaultHostname =
-        hubDomain && hosts.includes(hubDomain)
+      if (hosts.length > 1) hosts.unshift('*')
+      hostname =
+        params.hostname ||
+        (hosts.includes('*') ? '*' : '') ||
+        (hubDomain && hosts.includes(hubDomain)
           ? hubDomain
           : hosts.includes('hype.hk')
             ? 'hype.hk'
-            : hosts[0] || ''
-      hostname = params.hostname || defaultHostname
+            : hosts[0] || '')
       if (params.hostname && !hosts.includes(hostname))
         throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
     }
     const env = ctx.event.locals.platform?.env
     return fetchPlatformAnalytics({
       facet: params.facet,
+      paths: resources.paths,
+      scopeLabel: resources.label,
       hostname,
       hosts,
       accountId: env?.CLOUDFLARE_ACCOUNT_ID,
@@ -172,25 +256,31 @@ export const getPlatformAnalyticsSummary = guardedQuery(
 )
 
 /**
- * Reads global product interactions and contribution totals from production in every deployment.
+ * Reads authorized product interactions and contribution totals from production in every deployment.
  * @param params Explicit admin intent and cache identity.
  * @param ctx Verified identity and request-local bindings.
  * @returns A sampling-weighted 30-day snapshot.
- * @remarks Global product rankings require a super admin or core-hub admin.
+ * @remarks Filtering precedes aggregation; resource selection never grants authority.
  */
 export const getProductAnalyticsSummary = guardedQuery(
   z.object({
+    selection: analyticsSelectionSchema.optional(),
     meta: z
       .object({ isAdminRequest: FormBoolean.optional(), scope: z.string().optional() })
       .optional(),
   }),
-  async (_params, ctx) => {
+  async (params, ctx) => {
     if (
       ctx.user.isAnonymous ||
       !ctx.isAdminRequest ||
-      !(ctx.user.superAdmin || isCoreHubAdmin(ctx.userRoles))
+      !canAccessAnalytics({ superAdmin: ctx.user.superAdmin, userRoles: ctx.userRoles })
     )
       throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
-    return fetchProductAnalytics(ctx.event.locals.platform.env)
+    const resources = await resolveAnalyticsResources(
+      { db: ctx.db, user: ctx.user, userRoles: ctx.userRoles },
+      params.selection,
+    )
+    if (!resources) throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    return fetchProductAnalytics(ctx.event.locals.platform.env, fetch, resources)
   },
 )

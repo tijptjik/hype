@@ -156,6 +156,10 @@ export const organisationRole = sqliteTable(
     })
       .notNull()
       .default(OrganisationRoleType.member),
+    // Explicit organisation analytics access for staff; owners inherit access.
+    viewAnalytics: integer('viewAnalytics', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     // Independent source keys preserve membership when one source is withdrawn.
     grant: text('grant', { mode: 'json' })
       .$type<import('#lib/roles/organisation.js').OrganisationRoleGrants>()

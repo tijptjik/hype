@@ -205,7 +205,7 @@ export type PersistedProjectLocalPropertyCandidate = {
 export type ProjectCapabilities = Record<
   'manageBakeries' | 'manageVolunteers' | 'manageDropOffs',
   boolean
->
+> & { viewAnalytics?: boolean }
 
 export type ProjectRoleCapabilities = Partial<ProjectCapabilities>
 

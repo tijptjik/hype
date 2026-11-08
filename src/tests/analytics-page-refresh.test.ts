@@ -6,11 +6,14 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   assets: vi.fn(),
+  scopes: vi.fn(),
   scope: vi.fn(() => 'account-a'),
   revision: vi.fn(() => 0),
   platform: vi.fn(),
+  usage: vi.fn(),
   facets: vi.fn(),
   actions: vi.fn(),
+  content: vi.fn(),
 }))
 vi.mock('$app/env', () => ({ browser: true }))
 vi.mock('#lib/context/admin.svelte.js', () => ({
@@ -36,12 +39,15 @@ vi.mock('#lib/context/header.svelte.js', () => ({
     setHeaderForStandAlone: vi.fn(),
     setFacets: mocks.facets,
     setViewActions: mocks.actions,
+    setViewActionContent: mocks.content,
     clearFooter: vi.fn(),
   }),
 }))
 vi.mock('#lib/api/analytics.remote.js', () => ({
+  getAnalyticsScopes: mocks.scopes,
   getAssetAnalyticsSummary: mocks.assets,
   getPlatformAnalyticsSummary: mocks.platform,
+  getProductAnalyticsSummary: mocks.usage,
 }))
 vi.mock('#lib/bits/index.js', async () => {
   const component = (await import('./fixtures/components/AnalyticsStateFixture.svelte'))
@@ -56,6 +62,16 @@ import Page from '../routes/admin/analytics/+page.svelte'
 const originalAnimate = Element.prototype.animate
 beforeEach(() => {
   vi.useRealTimers()
+  mocks.scopes.mockReturnValue(
+    Object.assign(
+      Promise.resolve({
+        options: [{ type: 'global', label: 'Global' }],
+        assets: true,
+        data: true,
+      }),
+      { refresh: vi.fn(async () => {}) },
+    ),
+  )
   mocks.scope.mockReturnValue('account-a')
   mocks.revision.mockReturnValue(0)
   Element.prototype.animate = () => ({ cancel() {} }) as Animation
@@ -148,7 +164,13 @@ it.each(['views', 'audience', 'data'] as const)(
         ),
       )
     const view = render(Page)
-    await vi.waitFor(() => expect(mocks.facets).toHaveBeenCalled())
+    await vi.waitFor(() =>
+      expect(
+        mocks.facets.mock.calls
+          .at(-1)?.[0]
+          .some((row: { ref: string }) => row.ref === 'assets'),
+      ).toBe(true),
+    )
     mocks.facets.mock.calls.at(-1)![1].onFacetChange(facet)
     await vi.waitFor(() => expect(mocks.platform).toHaveBeenCalledOnce())
     const firstScope = mocks.platform.mock.calls[0][0].meta.scope
@@ -164,3 +186,64 @@ it.each(['views', 'audience', 'data'] as const)(
     expect(view.queryByText('Old platform result')).toBeNull()
   },
 )
+
+it('loads product usage and refreshes its native query handle', async () => {
+  mocks.assets.mockReturnValue(
+    Object.assign(Promise.resolve({ status: 'error', message: 'Assets' }), {
+      refresh: vi.fn(),
+    }),
+  )
+  const refresh = vi.fn(async () => {})
+  mocks.usage.mockReturnValue(
+    Object.assign(
+      Promise.resolve({
+        status: 'success',
+        environment: 'preview',
+        totals: [{ event: 'feature.view', count: 23 }],
+        rankings: [],
+      }),
+      { refresh },
+    ),
+  )
+  const view = render(Page)
+  await vi.waitFor(() =>
+    expect(
+      mocks.facets.mock.calls
+        .at(-1)?.[0]
+        .some((row: { ref: string }) => row.ref === 'assets'),
+    ).toBe(true),
+  )
+  mocks.facets.mock.calls.at(-1)![1].onFacetChange('usage')
+  await vi.waitFor(() => expect(view.getByText('23')).toBeTruthy())
+  expect(mocks.platform).not.toHaveBeenCalled()
+  mocks.actions.mock.calls.at(-1)![0][0].onClick()
+  await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+})
+
+it('shows only scoped facets for delegated members and sends the selected project', async () => {
+  mocks.scopes.mockReturnValue(
+    Object.assign(
+      Promise.resolve({
+        options: [{ type: 'project', id: 'p', label: 'Project · p' }],
+        assets: false,
+        data: false,
+      }),
+      { refresh: vi.fn(async () => {}) },
+    ),
+  )
+  mocks.usage.mockReturnValue(
+    Object.assign(Promise.resolve({ status: 'error', message: 'Scoped usage' }), {
+      refresh: vi.fn(),
+    }),
+  )
+  const view = render(Page)
+  await vi.waitFor(() => expect(view.getByText('Scoped usage')).toBeTruthy())
+  expect(
+    mocks.facets.mock.calls.at(-1)?.[0].map((row: { ref: string }) => row.ref),
+  ).toEqual(['usage', 'views', 'audience'])
+  expect(mocks.usage.mock.calls.at(-1)?.[0].selection).toMatchObject({
+    type: 'project',
+    id: 'p',
+  })
+  expect(mocks.assets).not.toHaveBeenCalled()
+})

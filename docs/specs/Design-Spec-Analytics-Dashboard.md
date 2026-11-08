@@ -1,5 +1,44 @@
 # Analytics Dashboard Design Spec
 
+## Scoped analytics (November 2026)
+
+The live page has Usage, Views, Audience, Assets and Data facets. The older rollout
+notes below describe the original implementation plan; this section defines the current
+scope contract.
+
+- A server-authorized perspective picker offers global, hub, organisation and project
+  choices from fresh roles and persisted ancestry. Owners inherit analytics; delegated
+  staff use `viewAnalytics`. Project assignments cannot widen to their organisation.
+- Usage filters Analytics Engine events by resource type and ID before computing totals
+  and rankings. Hub scope uses the recorded hub ID. Organisation and project scope
+  resolves projects, layers, features and contribution tasks on demand.
+- Views and Audience apply exact public resource-path filters to **every** aggregate,
+  ranking and timeline query. Organisation/project perspectives offer only their assigned hub domain and the core
+  domain when core inclusion is enabled and the organisation is not hub-exclusive.
+  Global perspective offers all production hub domains. All hosts aggregates only the
+  offered domains and is omitted when only one domain is available. Hub perspective
+  restricts traffic to that hub's persisted production domain.
+- Shared map URLs, query-only navigation and paths that no longer resolve to current
+  resources cannot be reliably attributed to an organisation/project. Usage events
+  cover recorded map interactions. Current ownership defines historical attribution;
+  this is not an ownership-at-event-time ledger. Shared resources may contribute to
+  multiple perspectives; these scopes are not additive partitions.
+- Assets is a Hub Admin surface with authorized descendant filters. Data is shared
+  global infrastructure and remains SuperAdmin/core Hub Admin only; its scope is
+  explicitly displayed even when a narrower perspective is selected.
+- No materialized views or new analytics event stores are created. Existing production
+  telemetry is read server-side. An empty or excessive filter never falls back to an
+  unfiltered dataset. Queries exceeding the bounded filter size report unavailable
+  rather than returning truncated totals.
+- `0205_organisation_analytics_capability.sql` adds the organisation staff permission,
+  defaulting to off. It must be applied before the new schema is used. Project
+  permissions reuse existing JSON capability storage and revocation cascades.
+
+Validation includes scoped-owner/delegation/foreign-scope tests, exact query predicates,
+role persistence and revocation, and account-switch race tests. Cloudflare's live schema
+was checked for `requestPath_in` support. Production rollout and real authenticated
+browser verification are separate from local synthetic evidence.
+
 ## Summary
 
 This spec defines the remaining implementation work for the admin analytics surface at
@@ -210,23 +249,23 @@ This means host selection is the primary filter contract for `views` and, by ext
 
 ```ts
 type ViewsAnalyticsSummary = {
-  generatedAt: string
+  generatedAt: string;
   scope: {
-    hostname: string
-  }
+    hostname: string;
+  };
   windows: Record<
-    '1h' | '24h' | '7d' | '30d',
+    "1h" | "24h" | "7d" | "30d",
     null | {
-      totalPageViews: number
-      totalVisits?: number
-      topHosts: Array<{ host: string; views: number }>
-      topPaths: Array<{ path: string; views: number }>
-      topReferrers: Array<{ referrer: string; views: number }>
-      timeseries: Array<{ date: string; views: number }>
+      totalPageViews: number;
+      totalVisits?: number;
+      topHosts: Array<{ host: string; views: number }>;
+      topPaths: Array<{ path: string; views: number }>;
+      topReferrers: Array<{ referrer: string; views: number }>;
+      timeseries: Array<{ date: string; views: number }>;
     }
-  >
-  windowErrors: Partial<Record<'1h' | '24h' | '7d' | '30d', string>>
-}
+  >;
+  windowErrors: Partial<Record<"1h" | "24h" | "7d" | "30d", string>>;
+};
 ```
 
 ### Backend Work

@@ -93,6 +93,7 @@ export class HeaderCtrl {
       onFacetChange: null,
       titleMenuItems: [],
       viewActions: [],
+      viewActionContent: null,
       taskActions: [],
       taskActionContent: null,
     },
@@ -185,6 +186,25 @@ export class HeaderCtrl {
   setViewActions(actions: HeaderButtonActionConfig[]): void {
     if (untrack(() => isSameViewActions(this.state.meta.viewActions, actions))) return
     this.state.meta.viewActions = [...actions]
+  }
+
+  /** Set route-owned controls immediately before the header view-action buttons.
+   * @param component Inline control component, or null to clear it.
+   * @param props Reactive values and callbacks supplied by the route.
+   * @returns Nothing; route metadata resets also clear this content.
+   */
+  setViewActionContent<Props extends Record<string, unknown>>(
+    component: Component<Props> | null,
+    props: Props,
+  ): void {
+    const next = component
+      ? { component: component as unknown as Component<Record<string, unknown>>, props }
+      : null
+    if (
+      untrack(() => isSameLayoutRegionConfig(this.state.meta.viewActionContent, next))
+    )
+      return
+    this.state.meta.viewActionContent = next
   }
 
   /**
@@ -318,6 +338,7 @@ export class HeaderCtrl {
     this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
     this.state.meta.viewActions = []
+    this.state.meta.viewActionContent = null
     this.state.meta.taskActions = []
     this.state.meta.taskActionContent = null
   }
@@ -480,6 +501,7 @@ export class HeaderCtrl {
           this.state.meta.onFacetChange == null &&
           this.state.meta.titleMenuItems.length === 0 &&
           this.state.meta.viewActions.length === 0 &&
+          this.state.meta.viewActionContent == null &&
           this.state.meta.taskActions.length === 0 &&
           this.state.meta.taskActionContent == null,
       )
@@ -493,6 +515,7 @@ export class HeaderCtrl {
     this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
     this.state.meta.viewActions = []
+    this.state.meta.viewActionContent = null
     this.state.meta.taskActions = []
     this.state.meta.taskActionContent = null
   }
@@ -530,6 +553,7 @@ export class HeaderCtrl {
           this.state.meta.onFacetChange == null &&
           this.state.meta.titleMenuItems.length === 0 &&
           this.state.meta.viewActions.length === 0 &&
+          this.state.meta.viewActionContent == null &&
           this.state.meta.taskActions.length === 0 &&
           this.state.meta.taskActionContent == null,
       )
@@ -544,6 +568,7 @@ export class HeaderCtrl {
     this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
     this.state.meta.viewActions = []
+    this.state.meta.viewActionContent = null
     this.state.meta.taskActions = []
     this.state.meta.taskActionContent = null
   }

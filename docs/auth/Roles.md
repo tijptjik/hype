@@ -230,3 +230,17 @@ authoritative checks are in [`project.ts`](../../src/lib/api/services/authz/proj
   have ‘responsibilities’ assigned to them (e.g. ‘Support Manager’, ‘Whip’,’)
 - `Users` don’t have any admin rights, but they show up as valid values for events -
   only project users can attend project “events".
+
+## Analytics capability
+
+`viewAnalytics` grants Usage, Views and Audience for an assigned scope. Organisation
+Owners and Project Owners inherit access. Organisation Members may receive the explicit
+staff analytics flag; project staff may receive the project `viewAnalytics` capability
+through the existing organisation-definition, project-availability and member-assignment
+controls. User-level membership never grants analytics. Organisation delegation includes
+its projects; project delegation never grants its parent or sibling scopes.
+
+Hub Admins can inspect their hub and owned descendants. SuperAdmins and core Hub Admins
+can select global scopes. Assets is restricted to Hub Admins and SuperAdmins; shared
+Data remains restricted to SuperAdmins and core Hub Admins. Analytics delegation does
+not grant contact-directory/user-search access.

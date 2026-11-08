@@ -22,10 +22,6 @@ let { state }: { state: ProductAnalyticsResult | null } = $props()
   {:else if state.status !== 'success'}
     <p role="status" class="text-foreground-alt text-sm">{state.message}</p>
   {:else}
-    <p class="text-foreground-alt text-xs">
-      Environment: {state.environment}. Global scope; organisation and project filters
-      do not apply.
-    </p>
     <dl class="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {#each Object.entries(USAGE_LABELS) as [event, label]}
         <div class="border-foreground/10 rounded-lg border p-4">

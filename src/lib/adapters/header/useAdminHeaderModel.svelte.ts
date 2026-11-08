@@ -936,7 +936,7 @@ export function useAdminHeaderModel(
     menuAction: titleMenuAction,
   }))
 
-  const inlineViewActionContent = $derived.by(() => null)
+  const inlineViewActionContent = $derived(headerCtrl.state.meta.viewActionContent)
   const renderedControlBar = $derived.by(() => headerCtrl.state.layout.controlBar)
 
   // ---

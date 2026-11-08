@@ -27,7 +27,7 @@ export function buildOrganisationCapabilityCascade(
   guard?: SQL,
 ): [BatchItem<'sqlite'>, BatchItem<'sqlite'>] {
   const allowed = new Set(getCapabilityKeysFromDefinitions(definitions))
-  // Normalize the three supported keys while clamping each live value to the new definitions.
+  // Normalize supported keys while clamping each live value to the new definitions.
   const projectCapabilities = sql`json_object(${sql.join(
     CAPABILITY_KEYS.map(key => {
       const enabled = allowed.has(key)

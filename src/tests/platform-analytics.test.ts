@@ -100,3 +100,24 @@ describe('platform analytics', () => {
     expect(result.data.windows['24h'].error).toBeUndefined()
   })
 })
+
+it('does not query an empty resource scope or broaden it to the hostname', async () => {
+  const fetcher = vi.fn()
+  const result = await fetchPlatformAnalytics({ ...config, paths: [], fetcher })
+  expect(result.status).toBe('error')
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+it('aggregates authorized production hosts while retaining exact resource paths', () => {
+  const query = buildPlatformAnalyticsQuery(
+    {
+      ...config,
+      hostname: '*',
+      hosts: ['*', 'hype.hk', 'breadline.hk'],
+      paths: ['/project/p'],
+    },
+    '24h',
+  )
+  expect(query).toContain('requestHost_in:["hype.hk","breadline.hk"]')
+  expect(query).toContain('requestPath_in:["/project/p"]')
+})

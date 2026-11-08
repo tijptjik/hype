@@ -180,6 +180,7 @@ export function toOrganisationFormInput(
         .map(userRole => ({
           userId: userRole.userId ?? '',
           role: userRole.role as 'member' | 'owner',
+          viewAnalytics: userRole.viewAnalytics === true,
         })),
       properties: cloneOrganisationProperties(data.properties),
     },

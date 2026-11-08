@@ -54,13 +54,18 @@ export const resolveAnalyticsScope = async (params: {
   const ownedOrganisationIds = params.userRoles
     .filter(
       (role): role is Extract<UserRoleDisco, { type: 'organisation' }> =>
-        role.type === 'organisation' && role.role === 'owner',
+        role.type === 'organisation' &&
+        (role.role === 'owner' ||
+          (role.role === 'member' && role.viewAnalytics === true)),
     )
     .map(role => role.organisationId)
   const ownedProjectIds = params.userRoles
     .filter(
       (role): role is Extract<UserRoleDisco, { type: 'project' }> =>
-        role.type === 'project' && role.role === 'owner',
+        role.type === 'project' &&
+        (role.role === 'owner' ||
+          (['member', 'maintainer', 'translator'].includes(role.role) &&
+            role.capabilities?.viewAnalytics === true)),
     )
     .map(role => role.projectId)
   const scopedHubIds = Array.from(getScopedHubAdminIds(params.userRoles))

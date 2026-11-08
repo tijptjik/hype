@@ -17,9 +17,11 @@ export const CAPABILITY_KEYS = [
   'manageBakeries',
   'manageVolunteers',
   'manageDropOffs',
+  'viewAnalytics',
 ] as const satisfies readonly CapabilityKey[]
 
 export const CAPABILITY_I18N_BY_KEY: Record<CapabilityKey, CapabilityI18nRoot> = {
+  viewAnalytics: { en: 'View analytics', zhHans: '查看分析', zhHant: '查看分析' },
   manageBakeries: {
     en: m.admin__capability_manage_bakeries({}, { locale: 'en' }),
     zhHans: m.admin__capability_manage_bakeries({}, { locale: 'zh-hans' }),
@@ -83,6 +85,7 @@ export function normalizeProjectCapabilities(value: unknown): ProjectCapabilitie
       ? (value as Record<string, unknown>)
       : {}
   return {
+    viewAnalytics: source.viewAnalytics === true,
     manageBakeries: source.manageBakeries === true,
     manageVolunteers: source.manageVolunteers === true,
     manageDropOffs: source.manageDropOffs === true,

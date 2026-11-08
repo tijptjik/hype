@@ -120,7 +120,7 @@ export type OrganisationFormSource = {
   i18n?: Partial<
     Record<'en' | 'zhHans' | 'zhHant', OrganisationFormLocaleSource>
   > | null
-  userRoles?: Array<{ userId?: string; role?: string }>
+  userRoles?: Array<{ userId?: string; role?: string; viewAnalytics?: boolean }>
   properties?: OrganisationPropertySource[] | null
 }
 export type OrganisationBooleanField = 'isPublished' | 'isArchived'

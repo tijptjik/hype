@@ -102,6 +102,7 @@ export const OrganisationRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabiliti
     manageBakeries: z.boolean().optional(),
     manageVolunteers: z.boolean().optional(),
     manageDropOffs: z.boolean().optional(),
+    viewAnalytics: z.boolean().optional(),
   })
 
 const toCapabilityValue = (value: unknown): unknown => {
@@ -160,7 +161,9 @@ export const OrganisationI18nUpdate = createUpdateSchema(organisationI18n).omit(
   locale: true,
 })
 
-export const OrganisationRoleBase = createSelectSchema(organisationRole).omit({
+export const OrganisationRoleBase = createSelectSchema(organisationRole, {
+  viewAnalytics: z.boolean().optional(),
+}).omit({
   grant: true,
 })
 
@@ -168,12 +171,16 @@ export const OrganisationRoleWithUser = OrganisationRoleBase.extend({
   user: UserBasic.nullish(),
 })
 
-export const OrganisationRoleInsert = createInsertSchema(organisationRole).omit({
+export const OrganisationRoleInsert = createInsertSchema(organisationRole, {
+  viewAnalytics: FormBoolean.optional(),
+}).omit({
   grant: true,
   organisationId: true,
 })
 
-export const OrganisationRoleUpdate = createUpdateSchema(organisationRole).omit({
+export const OrganisationRoleUpdate = createUpdateSchema(organisationRole, {
+  viewAnalytics: FormBoolean.optional(),
+}).omit({
   grant: true,
 })
 
@@ -227,6 +234,7 @@ export const OrganisationRoleFormData = z.object({
     .string()
     .min(1, { message: m.field_is_required({ field: m.field_user() }) }),
   role: z.enum(['member', 'owner']),
+  viewAnalytics: FormBoolean.optional(),
 })
 
 export const OrganisationI18nByLocaleFormData = z.object({

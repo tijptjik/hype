@@ -59,6 +59,8 @@ type Config = {
   queueIds?: string[]
   facet: PlatformAnalyticsFacet
   hostname: string
+  paths?: string[]
+  scopeLabel?: string
   hosts: string[]
   now?: Date
   fetcher?: (input: string, init?: RequestInit) => Promise<Response>
@@ -108,7 +110,15 @@ export function buildPlatformAnalyticsQuery(
         `queues:queueMessageOperationsAdaptiveGroups(limit:100,filter:{${period},queueId_in:${JSON.stringify(config.queueIds)}}){count dimensions{queueId actionType outcome} avg{lagTime retryCount}}`,
       )
   } else {
-    const filter = `${period},requestHost:${JSON.stringify(config.hostname)}`
+    const pathFilter =
+      config.paths === undefined
+        ? ''
+        : `,requestPath_in:${JSON.stringify(config.paths)}`
+    const hostFilter =
+      config.hostname === '*'
+        ? `requestHost_in:${JSON.stringify(config.hosts.filter(host => host !== '*'))}`
+        : `requestHost:${JSON.stringify(config.hostname)}`
+    const filter = `${period},${hostFilter}${pathFilter}`
     fields = [
       `totals:rumPageloadEventsAdaptiveGroups(limit:1,filter:{${filter}}){count sum{visits}}`,
     ]
@@ -152,6 +162,16 @@ export async function fetchPlatformAnalytics(
       status: 'error',
       message: 'No authorized production hostname is available.',
     }
+  if (config.paths?.length === 0)
+    return {
+      status: 'error',
+      message: 'No attributable resource URLs exist in this scope.',
+    }
+  if (config.paths && JSON.stringify(config.paths).length > 80000)
+    return {
+      status: 'error',
+      message: 'This scope is too large for a traffic query. Select a smaller project.',
+    }
   const now = config.now ?? new Date()
   const windows = {} as Record<AssetAnalyticsWindowKey, PlatformAnalyticsWindow>
   // Bound concurrency to four fixed windows and preserve a common snapshot cutoff.
@@ -169,7 +189,7 @@ export async function fetchPlatformAnalytics(
       scope:
         config.facet === 'data'
           ? 'Hype production database and render queues · shared infrastructure'
-          : `${config.hostname} · production host · independent of organisation/project prisms`,
+          : `${config.hostname === '*' ? 'All production hosts' : config.hostname} · ${config.scopeLabel ?? 'production host'}${config.paths ? ' · resource URL visits only; shared map visits cannot be attributed' : ''}`,
       windows,
     },
   }

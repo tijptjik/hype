@@ -96,6 +96,7 @@ export const ProjectCapabilitiesSchema: z.ZodType<ProjectCapabilities> = z.objec
   manageBakeries: FormBoolean.default(false),
   manageVolunteers: FormBoolean.default(false),
   manageDropOffs: FormBoolean.default(false),
+  viewAnalytics: FormBoolean.default(false),
 })
 
 export const ProjectRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
@@ -103,6 +104,7 @@ export const ProjectRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
     manageBakeries: FormBoolean.optional(),
     manageVolunteers: FormBoolean.optional(),
     manageDropOffs: FormBoolean.optional(),
+    viewAnalytics: FormBoolean.optional(),
   })
 
 const toProjectJsonValue = (value: unknown): unknown => {
@@ -134,6 +136,7 @@ const ProjectCapabilitiesBase = z.preprocess(
     manageBakeries: false,
     manageVolunteers: false,
     manageDropOffs: false,
+    viewAnalytics: false,
   }),
 )
 

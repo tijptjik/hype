@@ -69,6 +69,8 @@ const wrapperClass = $derived(
 const rootClass = $derived(
   [
     DEFAULT_CLASS,
+    // Keep route-owned selectors reachable within the top bar on narrow screens.
+    viewActions.content?.component ? 'max-w-full overflow-x-auto' : '',
     brand ? 'pl-3' : 'pl-6',
     showAvatar ? 'pr-6' : 'pr-0',
     showFacets && contentStart !== undefined ? HEADER_ALIGNED_NAVIGATION_CLASSES : '',

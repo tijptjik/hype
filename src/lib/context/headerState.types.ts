@@ -45,6 +45,7 @@ type HeaderMetaState = {
   onFacetChange: ((ref: string) => void) | null
   titleMenuItems: HeaderTitleMenuItemConfig[]
   viewActions: HeaderButtonActionConfig[]
+  viewActionContent: HeaderLayoutRegionConfig | null
   taskActions: HeaderButtonActionConfig[]
   taskActionContent: HeaderLayoutRegionConfig | null
 }

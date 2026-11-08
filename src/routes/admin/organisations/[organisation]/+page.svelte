@@ -24,6 +24,7 @@ import {
   translateText as translateCapabilityTexts,
 } from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
+import AnalyticsMemberAccess from '#lib/bits/patterns/analytics/AnalyticsMemberAccess.svelte'
 import OrganisationImageEditor from '#lib/bits/patterns/organisationEditor/OrganisationImageEditor.svelte'
 import OrganisationAdvancedSettings from '#lib/bits/patterns/organisationEditor/OrganisationAdvancedSettings.svelte'
 
@@ -662,6 +663,7 @@ const formUserRoleValues = $derived(
   (formCtx.form.fields.value().data?.userRoles ?? []) as Array<{
     userId: string
     role: string
+    viewAnalytics?: boolean
   }>,
 )
 
@@ -670,7 +672,7 @@ const userRoleResolverForm = $derived(
 )
 const userRoleUpdaterForm = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{
-    userRoles?: Array<{ userId: string; role: string }>
+    userRoles?: Array<{ userId: string; role: string; viewAnalytics?: boolean }>
   }>,
 )
 const hiddenUserIdInputAttrs = $derived(
@@ -1048,6 +1050,19 @@ function onRoleChange(userId: string, role: OrganisationRoleType): void {
   revalidateAfterProgrammaticChange()
 }
 
+/** Updates only the explicit analytics delegation; ownership remains implicit.
+ * @param params Member and desired capability value. @returns Nothing.
+ */
+function onAnalyticsCapabilityChange(params: { userId: string; value: boolean }): void {
+  updateFormData(userRoleUpdaterForm, data => ({
+    ...data,
+    userRoles: data.userRoles?.map(row =>
+      row.userId === params.userId ? { ...row, viewAnalytics: params.value } : row,
+    ),
+  }))
+  revalidateAfterProgrammaticChange()
+}
+
 // RESOURCE STATE
 
 async function refreshOrganisation(
@@ -1141,7 +1156,8 @@ async function handleOrganisationStateToggle({
     committed = true
     mutation.settle(true)
     if (!isCurrentMutation()) return
-    if (field === 'isPublished') pendingImagePublicationId = nextState ? organisationData.id : null
+    if (field === 'isPublished')
+      pendingImagePublicationId = nextState ? organisationData.id : null
     // Settle from the acknowledgement; an empty filtered read must not erase the editor.
     if (
       organisationRef === mutationRef &&
@@ -1679,6 +1695,27 @@ $effect(() => {
             {onRemoveUser}
             {onRoleChange}
           />
+          <AnalyticsMemberAccess
+            rows={userRoles
+              .filter(row => row.role === 'member')
+              .map(row => ({
+                userId: row.userId,
+                name: row.user?.name ?? row.userId,
+                enabled:
+                  formUserRoleValues.find(value => value.userId === row.userId)
+                    ?.viewAnalytics === true,
+              }))}
+            isEditing={isEditing && !formCtx.submitting}
+            onChange={onAnalyticsCapabilityChange}
+          />
+          {#each formUserRoleValues as row, index (row.userId)}
+            <input
+              {...formCtx.form.fields.data.userRoles[index].viewAnalytics.as(
+                'hidden',
+                String(row.viewAnalytics === true),
+              )}
+            >
+          {/each}
         </div>
         <div class={formSectionDividerStyles}>
           <FormSpecifiersFields
@@ -1942,5 +1979,9 @@ $effect(() => {
 {/if}
 
 {#if pendingImagePublicationId && pendingImagePublicationId === organisation?.data?.id}
-  <PublishUnclassifiedImagesDialog scopeType="organisation" scopeId={pendingImagePublicationId} onDone={() => pendingImagePublicationId = null} />
+  <PublishUnclassifiedImagesDialog
+    scopeType="organisation"
+    scopeId={pendingImagePublicationId}
+    onDone={() => (pendingImagePublicationId = null)}
+  />
 {/if}

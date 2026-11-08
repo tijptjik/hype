@@ -82,9 +82,13 @@ describe('organisation role hierarchy and provenance', () => {
       sqlite.exec(`INSERT INTO organisationRole VALUES('org','audience','user','{"breadline:1":"user"}');
         INSERT INTO organisationRole VALUES('org','former-staff','owner','{"manual":"owner","onboarding":"user"}');
         INSERT INTO organisationRole VALUES('org','owner','owner','{"manual":"owner","breadline:2":"user"}');`)
+      sqlite.exec(
+        readFileSync('migrations/0205_organisation_analytics_capability.sql', 'utf8'),
+      )
       const roles = Array.from({ length: 250 }, (_, i) => ({
         userId: i ? 'staff-' + i : 'owner',
         role: i ? 'member' : 'owner',
+        viewAnalytics: i === 1,
       }))
       const statements = prepareOrganisationStaffRoles(
         db as unknown as Database,
@@ -97,6 +101,21 @@ describe('organisation role hierarchy and provenance', () => {
             .length,
         ).toBeLessThanOrEqual(100)
       await db.batch(statements)
+      expect(
+        sqlite
+          .prepare("SELECT viewAnalytics FROM organisationRole WHERE userId='staff-1'")
+          .get(),
+      ).toEqual({ viewAnalytics: 1 })
+      await db.batch(
+        prepareOrganisationStaffRoles(
+          db as unknown as Database,
+          'org',
+          roles.map(row => ({ ...row, viewAnalytics: false })),
+        ),
+      )
+      expect(
+        sqlite.prepare('SELECT sum(viewAnalytics) AS n FROM organisationRole').get(),
+      ).toEqual({ n: 0 })
       expect(
         sqlite
           .prepare(

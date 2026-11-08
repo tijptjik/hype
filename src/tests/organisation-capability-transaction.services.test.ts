@@ -10,6 +10,7 @@ import type { Database } from '#lib/types.js'
 
 const full = { manageBakeries: true, manageVolunteers: true, manageDropOffs: true }
 const none = {
+  viewAnalytics: false,
   manageBakeries: false,
   manageVolunteers: false,
   manageDropOffs: false,
