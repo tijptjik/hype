@@ -16,6 +16,8 @@ const resolvedAction = $derived(action ?? null)
 const buttonClass = $derived(
   cx(
     'h-9 flex-none min-w-max whitespace-nowrap rounded-md px-3 text-sm font-medium shadow-none transition-colors hover:bg-primary! hover:text-white!',
+    // Keep scrolling results from showing through the floating navigation buttons.
+    'bg-[color-mix(in_oklab,var(--color-primary)_16%,var(--color-panel))]!',
     isNext && 'ml-auto flex-row-reverse',
   ),
 )
