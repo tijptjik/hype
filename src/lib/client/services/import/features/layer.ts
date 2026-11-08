@@ -4,7 +4,7 @@ import { toLocaleKey, translateI18nFields } from '#lib/i18n.js'
 import {
   PropertyDetailProfileAPI,
   PropertyValueDetailProfileAPI,
-} from '#lib/db/zod/schema/property.js'
+} from '#lib/db/zod/schema/property.profile.js'
 // API
 import { createLayer, getLayer, getLayers } from '#lib/api/layer.remote.js'
 import { getProjectProperties as getProjectPropertiesRemote } from '#lib/api/property.remote.js'
