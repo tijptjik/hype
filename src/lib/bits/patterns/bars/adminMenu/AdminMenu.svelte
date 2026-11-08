@@ -1,8 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
-// FEEDBACK
-import { toast } from 'svelte-sonner'
+import { untrack } from 'svelte'
+// API
+import { getTasks } from '#lib/api/tasks.remote.js'
 // I18N
 import * as m from '#lib/paraglide/messages.js'
 // BITS COMPONENTS
@@ -38,35 +39,56 @@ const PAGE_SIZE = 5
 const WHEEL_INTENT_THRESHOLD = 12
 const PAGE_SCROLL_SETTLE_MS = 220
 
-let { isNarrow, firstLayerId }: AdminMenuProps = $props()
+let { isNarrow }: AdminMenuProps = $props()
 let viewportElement = $state<HTMLDivElement | null>(null)
 let pageScrollLock = $state(false)
 let pageScrollLockTimeout: ReturnType<typeof setTimeout> | null = null
 let isScrollDetectionEnabled = $state(false)
 let initialScrollTimeout: ReturnType<typeof setTimeout> | null = null
 
-const notificationCount = $derived(adminCtx.filteredTasks.length)
+const canListTasks = $derived(
+  Boolean(
+    adminCtx.view.user &&
+      authorizeTaskListForContext({
+        user: adminCtx.view.user as SessionUser,
+        userRoles: adminCtx.view.user.roles ?? [],
+        isAdminRequest: true,
+        resourceHubId: adminCtx.view.hub?.id,
+      }).allowed,
+  ),
+)
+// Navigation needs the server total even when the Tasks index has never been opened.
+const taskCountQuery = $derived(
+  canListTasks
+    ? getTasks({
+        conditions: {
+          isReviewed: adminCtx.view.filters.viewFilters.task.isReviewed,
+          type: adminCtx.view.filters.viewFilters.task.type,
+        },
+        prisms: adminCtx.view.scope.prisms,
+        pagination: { limit: 1, offset: 0 },
+        meta: { ...adminCtx.view.resources.queryMeta },
+      })
+    : null,
+)
+const notificationCount = $derived(
+  canListTasks ? (taskCountQuery?.current?.totalCount ?? 0) : 0,
+)
+let previousTaskRows: unknown
+// Task reviews refresh the queue rows; refresh the small badge query alongside that update.
+$effect(() => {
+  const rows = adminCtx.view.queries.rows.task
+  const query = taskCountQuery
+  const changed = previousTaskRows !== undefined && previousTaskRows !== rows
+  previousTaskRows = rows
+  if (changed && query)
+    untrack(() => {
+      void query.refresh().catch(() => {})
+    })
+})
 const featureCount = $derived(adminCtx.filteredFeatures.length)
 
-/**
- * Opens Features with the first displayed layer when no hierarchy prism is selected.
- * @returns Completion after layer dependents refresh and navigation is requested.
- * @remarks Existing organisation, project, or layer selections and an empty layer list are preserved.
- */
-async function openFeatures(): Promise<void> {
-  try {
-    const { organisation, project, layer } = adminCtx.view.scope.prisms
-    if (!organisation.length && !project.length && !layer.length && firstLayerId) {
-      await adminCtx.view.scope.togglePrism(FirstClassResource.layer, firstLayerId)
-    }
-    navigateOnAdmin(adminCtx, FirstClassResource.feature)
-  } catch (error) {
-    console.error('[Admin menu] Opening Features failed:', error)
-    toast.error(m.resource_action_failed())
-  }
-}
-
-// Features seeds a layer only without hierarchy prisms; other indexes preserve explicit prisms.
+// Index navigation preserves prisms; empty selections show all server-permitted resources.
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   const actor = adminCtx.view.user as SessionUser | null
   const directoryAllowed =
@@ -100,14 +122,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   }
 
   // Review queue visibility follows the same scoped policy as its server query.
-  if (
-    authorizeTaskListForContext({
-      user: actor,
-      userRoles: actor.roles ?? [],
-      isAdminRequest: true,
-      resourceHubId: adminCtx.view.hub?.id,
-    }).allowed
-  ) {
+  if (canListTasks) {
     items.push({
       href: `${ADMIN_PATH}/tasks`,
       label: 'Tasks',
@@ -121,7 +136,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     href: `${ADMIN_PATH}/features`,
     label: 'Features',
     icon: MapPin,
-    onClick: () => void openFeatures(),
+    onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.feature),
     notificationCount: featureCount,
   })
 
@@ -150,7 +165,6 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       label: 'Bulk Upload',
       icon: CloudArrowUp,
     })
-
   }
 
   items.push({ href: `${ADMIN_PATH}/messaging`, label: 'Messaging', icon: ChatIcon })

@@ -11,6 +11,4 @@ export interface AdminMenuItem {
   tone?: 'primary' | 'secondary' | 'accent'
 }
 
-export interface AdminMenuProps extends Pick<PanelProps, 'isNarrow'> {
-  firstLayerId?: string
-}
+export type AdminMenuProps = Pick<PanelProps, 'isNarrow'>
