@@ -222,6 +222,7 @@ export enum TaskReviewAction {
   addedAllPhotos = 'added-all-photos',
   addedClassifiedPhotos = 'added-classified-photos',
   addedFeature = 'added-feature',
+  mergedFeature = 'merged-feature',
 }
 
 export enum TaskTypeColor {
