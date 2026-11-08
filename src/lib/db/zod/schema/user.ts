@@ -4,7 +4,7 @@ import { PrivateContributionDetailsSchema } from '#lib/contributions/profile.js'
 import { ListQueryParamsSchema } from './api'
 import { FormBoolean } from '../form'
 // THEME
-import { ThemePreferencesSchema } from '#lib/themes/preferences.js'
+import { UserSettingsSchema } from './userSettings'
 // DRIZZLE
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
@@ -59,56 +59,6 @@ import {
 // ═══════════════════════
 // 1. SUPPORTING SCHEMAS
 // ═══════════════════════
-
-const UserPreferencesSchema = z
-  .object({
-    fallbackLocales: z.array(z.string()).nullish(),
-    allowMachineTranslation: z.boolean().nullish(),
-    preferFallbackInCurrentLocale: z.boolean().nullish(),
-    isTranslateButtonVisible: z.boolean().nullish(),
-    theme: ThemePreferencesSchema.nullish().catch(undefined),
-    profileContributions: z
-      .object({
-        observePrisms: z.boolean().optional(),
-        showAll: z.boolean().optional(),
-      })
-      .nullish(),
-    admin: z
-      .object({
-        isAdminMapCollapsed: z.boolean().optional(),
-        isPrimaryPanelCollapsed: z.boolean().optional(),
-        isPrimaryPanelAutoHide: z.boolean().optional(),
-      })
-      .nullish(),
-  })
-  .prefault({
-    fallbackLocales: ['en', 'zh-hant'],
-    allowMachineTranslation: false,
-    preferFallbackInCurrentLocale: false,
-    isTranslateButtonVisible: true,
-    admin: {},
-  })
-
-const UserExperimentalSchema = z
-  .object({
-    contributorMode: z.boolean().nullish(),
-    noLabelsMode: z.boolean().nullish(),
-  })
-  .prefault({
-    contributorMode: false,
-    noLabelsMode: false,
-  })
-  .nullish()
-
-const JsonStringWithFallback = <T extends z.ZodTypeAny>(schema: T) =>
-  z.preprocess(value => {
-    if (typeof value !== 'string') return value
-    try {
-      return JSON.parse(value)
-    } catch {
-      return {}
-    }
-  }, schema)
 
 export const UsernameSchema = z
   .string()
@@ -231,10 +181,7 @@ export const UserSelfProfileAPI = UserBase.pick({
   experimental: true,
   isAnonymous: true,
 } as const)
-  .extend({
-    preferences: JsonStringWithFallback(UserPreferencesSchema),
-    experimental: JsonStringWithFallback(UserExperimentalSchema),
-  })
+  .extend(UserSettingsSchema.shape)
   .extend(UserContributionSummaryFields.shape)
 
 export const UserAdminProfileAPI = UserAdminListProfileAPI.extend({
