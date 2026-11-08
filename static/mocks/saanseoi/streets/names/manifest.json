@@ -16,10 +16,7 @@
     "variant": "saanseoi",
     "class": "district"
   },
-  "locales": [
-    "en",
-    "zh-Hant"
-  ],
+  "locales": ["en", "zh-Hant"],
   "recordCount": 4053,
   "representations": [
     {

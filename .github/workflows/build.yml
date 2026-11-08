@@ -1,4 +1,4 @@
-name: 'BUILD :: Build Application'
+name: "BUILD :: Build Application"
 
 on:
   workflow_call:
@@ -8,39 +8,39 @@ on:
         type: string
     outputs:
       build-cache-hit:
-        description: 'Was the build cache hit?'
+        description: "Was the build cache hit?"
         value: ${{ jobs.build.outputs.cache-hit }}
 
 jobs:
   build:
-    name: 'BUILD :: App'
+    name: "BUILD :: App"
     runs-on: ubuntu-latest
     outputs:
       cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
     steps:
-      - name: 'GIT :: Checkout'
+      - name: "GIT :: Checkout"
         uses: actions/checkout@v4
 
-      - name: 'INSTALL :: Bun'
+      - name: "INSTALL :: Bun"
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.0'
+          bun-version: "1.4.0"
 
-      - name: 'CACHE :: Restore Dependencies'
+      - name: "CACHE :: Restore Dependencies"
         uses: actions/cache@v3
         id: cache-deps
         with:
           path: node_modules
           key: ${{ runner.os }}-deps-${{ hashFiles('package.json', 'bun.lock', 'patches/**') }}
 
-      - name: 'INSTALL :: Dependencies'
+      - name: "INSTALL :: Dependencies"
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
 
-      - name: 'VERIFY :: SvelteKit Patch'
+      - name: "VERIFY :: SvelteKit Patch"
         run: bun run verify:sveltekit-patch
 
-      - name: 'CACHE :: Restore Build'
+      - name: "CACHE :: Restore Build"
         uses: actions/cache@v3
         id: cache-build
         with:
@@ -51,7 +51,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}
 
-      - name: 'BUILD :: Application'
+      - name: "BUILD :: Application"
         if: steps.cache-build.outputs.cache-hit != 'true'
         run: bun run build:cf:${{ inputs.environment }}
         env:

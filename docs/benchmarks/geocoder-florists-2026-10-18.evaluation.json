@@ -14,11 +14,7 @@
       "id": "florist-01",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.15559359999999&lat=22.282631499999997&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2419,
       "httpStatus": 503,
       "candidates": [],
@@ -44,11 +40,7 @@
       "id": "florist-01",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Room+1104%2C+11%2FF%2C+70+Queen%27s+Road+Central%2C+Central%2C+Hong+Kong+Island%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2361,
       "httpStatus": 503,
       "candidates": [],
@@ -74,11 +66,7 @@
       "id": "florist-01",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=70+Queen%27s+Road+Central&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2347,
       "httpStatus": 503,
       "candidates": [],
@@ -104,11 +92,7 @@
       "id": "florist-02",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.153786&lat=22.282127&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2438,
       "httpStatus": 503,
       "candidates": [],
@@ -134,11 +118,7 @@
       "id": "florist-02",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=2F%2C+Hollywood+House%2C+29+Hollywood+Rd%2C+Central%2C+Hong+Kong+Island%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2323,
       "httpStatus": 503,
       "candidates": [],
@@ -164,11 +144,7 @@
       "id": "florist-02",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=29+Hollywood+Road&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2297,
       "httpStatus": 503,
       "candidates": [],
@@ -194,11 +170,7 @@
       "id": "florist-03",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.156846&lat=22.284913&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2312,
       "httpStatus": 503,
       "candidates": [],
@@ -224,11 +196,7 @@
       "id": "florist-03",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Level+20%2C+One+ifc%2C+Central%2C+1+Harbour+View+St%2C+Sheung+Wan%2C+Hong+Kong+Island%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2297,
       "httpStatus": 503,
       "candidates": [],
@@ -254,11 +222,7 @@
       "id": "florist-03",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=1+Harbour+View+Street&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2304,
       "httpStatus": 503,
       "candidates": [],
@@ -284,11 +248,7 @@
       "id": "florist-04",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.1723102&lat=22.275408199999998&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2494,
       "httpStatus": 503,
       "candidates": [],
@@ -314,11 +274,7 @@
       "id": "florist-04",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=G18+-+G20%2C+Lee+Tung+Avenue%2C+200+Queen%27s+Rd+E%2C+Wan+Chai%2C+Hong+Kong+Island%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2283,
       "httpStatus": 503,
       "candidates": [],
@@ -344,11 +300,7 @@
       "id": "florist-04",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=200+Queen%27s+Road+East&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2294,
       "httpStatus": 503,
       "candidates": [],
@@ -374,11 +326,7 @@
       "id": "florist-05",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.1783018&lat=22.279933&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2297,
       "httpStatus": 503,
       "candidates": [],
@@ -404,11 +352,7 @@
       "id": "florist-05",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=G%2FF%2C+Tien+Chu+Commercial+Building%2C+173-174+Gloucester+Rd%2C+Wan+Chai%2C+Hong+Kong+Island%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2285,
       "httpStatus": 503,
       "candidates": [],
@@ -434,11 +378,7 @@
       "id": "florist-05",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=173-174+Gloucester+Road&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2304,
       "httpStatus": 503,
       "candidates": [],
@@ -464,11 +404,7 @@
       "id": "florist-06",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.1716917&lat=22.275661799999998&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2292,
       "httpStatus": 503,
       "candidates": [],
@@ -494,11 +430,7 @@
       "id": "florist-06",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=13+Swatow+St%2C+Wan+Chai%2C+Hong+Kong+Island%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2291,
       "httpStatus": 503,
       "candidates": [],
@@ -524,11 +456,7 @@
       "id": "florist-06",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=13+Swatow+Street&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2290,
       "httpStatus": 503,
       "candidates": [],
@@ -554,11 +482,7 @@
       "id": "florist-07",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.17109909999999&lat=22.321585799999998&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2273,
       "httpStatus": 503,
       "candidates": [],
@@ -584,11 +508,7 @@
       "id": "florist-07",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+Kowloon%2C+Mong+Kok%2C+Sai+Yee+St%2C+139A%E5%9C%B0%E4%B8%8B&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2283,
       "httpStatus": 503,
       "candidates": [],
@@ -614,11 +534,7 @@
       "id": "florist-07",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=139A+Sai+Yee+Street&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2292,
       "httpStatus": 503,
       "candidates": [],
@@ -644,11 +560,7 @@
       "id": "florist-08",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.1709071&lat=22.324731&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2342,
       "httpStatus": 503,
       "candidates": [],
@@ -674,11 +586,7 @@
       "id": "florist-08",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hentiff+Building%2C+Shop+C%2C+G%2FF%2C+160+Prince+Edward+Rd+W%2C+Mong+Kok%2C+Kowloon%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2349,
       "httpStatus": 503,
       "candidates": [],
@@ -704,11 +612,7 @@
       "id": "florist-08",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=160+Prince+Edward+Road+West&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2282,
       "httpStatus": 503,
       "candidates": [],
@@ -734,11 +638,7 @@
       "id": "florist-09",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.1713288&lat=22.3246924&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2328,
       "httpStatus": 503,
       "candidates": [],
@@ -764,11 +664,7 @@
       "id": "florist-09",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=164+Prince+Edward+Rd+W%2C+Mong+Kok%2C+Kowloon%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2317,
       "httpStatus": 503,
       "candidates": [],
@@ -794,11 +690,7 @@
       "id": "florist-09",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=164+Prince+Edward+Road+West&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2397,
       "httpStatus": 503,
       "candidates": [],
@@ -824,11 +716,7 @@
       "id": "florist-10",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.2241782&lat=22.3125625&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2477,
       "httpStatus": 503,
       "candidates": [],
@@ -854,11 +742,7 @@
       "id": "florist-10",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=203%2C+2%2FF%2C+World+Interests+Building%2C+8+Tsun+Yip+Ln%2C+Kwun+Tong%2C+Kowloon%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2376,
       "httpStatus": 503,
       "candidates": [],
@@ -884,11 +768,7 @@
       "id": "florist-10",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=8+Tsun+Yip+Lane&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2476,
       "httpStatus": 503,
       "candidates": [],
@@ -914,11 +794,7 @@
       "id": "florist-11",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.2236787&lat=22.309299199999998&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2578,
       "httpStatus": 503,
       "candidates": [],
@@ -944,11 +820,7 @@
       "id": "florist-11",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+Kowloon%2C+Kwun+Tong%2C+Hoi+Yuen+Rd%2C+50%E8%99%9F%2C+Lemmi+Centre%2C+21%E6%A8%9303%E5%AE%A4&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2332,
       "httpStatus": 503,
       "candidates": [],
@@ -974,11 +846,7 @@
       "id": "florist-11",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=50+Hoi+Yuen+Road&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2521,
       "httpStatus": 503,
       "candidates": [],
@@ -1004,11 +872,7 @@
       "id": "florist-12",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.2213103&lat=22.311199&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2453,
       "httpStatus": 503,
       "candidates": [],
@@ -1034,11 +898,7 @@
       "id": "florist-12",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Unit+312%2C+3%2FF%2C+44-46+Hung+To+Rd%2C+Kwun+Tong%2C+Kowloon%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2691,
       "httpStatus": 503,
       "candidates": [],
@@ -1064,11 +924,7 @@
       "id": "florist-12",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=44-46+Hung+To+Road&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2477,
       "httpStatus": 503,
       "candidates": [],
@@ -1094,11 +950,7 @@
       "id": "florist-13",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.1157873&lat=22.3649925&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2306,
       "httpStatus": 503,
       "candidates": [],
@@ -1124,11 +976,7 @@
       "id": "florist-13",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Unit+2403%2C+24%2FF%2C+Tsuen+Wan+Industrial+Center%2C+220-248+Texaco+Rd%2C+Tsuen+Wan%2C+New+Territories%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2450,
       "httpStatus": 503,
       "candidates": [],
@@ -1154,11 +1002,7 @@
       "id": "florist-13",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=220-248+Texaco+Road&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2549,
       "httpStatus": 503,
       "candidates": [],
@@ -1184,11 +1028,7 @@
       "id": "florist-14",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.11561479999999&lat=22.3712823&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2736,
       "httpStatus": 503,
       "candidates": [],
@@ -1214,11 +1054,7 @@
       "id": "florist-14",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=%E5%9C%B0%E4%B8%8BA%E8%99%9F%E8%88%96%2C+Foo+Wah+House%2C+32-36%E8%99%9F+Hau+Tei+Square%2C+Tsuen+Wan%2C+New+Territories%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        503,
-        503
-      ],
+      "attempts": [503, 503, 503],
       "durationMs": 2407,
       "httpStatus": 503,
       "candidates": [],
@@ -1244,10 +1080,7 @@
       "id": "florist-14",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=32-36+Hau+Tei+Square&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        503,
-        200
-      ],
+      "attempts": [503, 200],
       "durationMs": 1390,
       "httpStatus": 200,
       "candidates": [],
@@ -1278,9 +1111,7 @@
       "id": "florist-15",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.1153569&lat=22.368333399999997&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 3038,
       "httpStatus": 200,
       "candidates": [
@@ -1345,10 +1176,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                114.1153569,
-                22.368333399999997
-              ],
+              "coordinates": [114.1153569, 22.368333399999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 1.9775064417201664
@@ -1371,10 +1199,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                114.1153569,
-                22.368333399999997
-              ],
+              "coordinates": [114.1153569, 22.368333399999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 3.424551881651686
@@ -1397,10 +1222,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                114.1153569,
-                22.368333399999997
-              ],
+              "coordinates": [114.1153569, 22.368333399999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 6.310367429247629
@@ -1423,10 +1245,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                114.1153569,
-                22.368333399999997
-              ],
+              "coordinates": [114.1153569, 22.368333399999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 7.954358757854836
@@ -1449,10 +1268,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                114.1153569,
-                22.368333399999997
-              ],
+              "coordinates": [114.1153569, 22.368333399999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 12.414726327389289
@@ -1477,10 +1293,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.11535,
-                  22.36835
-                ]
+                "coordinates": [114.11535, 22.36835]
               },
               "granularity": "unknown",
               "i18n": {
@@ -1505,10 +1318,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.11539,
-                  22.36833
-                ]
+                "coordinates": [114.11539, 22.36833]
               },
               "granularity": "unknown",
               "i18n": {
@@ -1533,10 +1343,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.11531,
-                  22.36837
-                ]
+                "coordinates": [114.11531, 22.36837]
               },
               "granularity": "unknown",
               "i18n": {
@@ -1561,10 +1368,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.11543,
-                  22.36831
-                ]
+                "coordinates": [114.11543, 22.36831]
               },
               "granularity": "unknown",
               "i18n": {
@@ -1589,10 +1393,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.11526,
-                  22.3684
-                ]
+                "coordinates": [114.11526, 22.3684]
               },
               "granularity": "unknown",
               "i18n": {
@@ -1630,9 +1431,7 @@
       "id": "florist-15",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+New+Territories%2C+Tsuen+Wan%2C+Yeung+Uk+Rd%2C+75%E8%99%9F%E5%9C%B0%E8%88%96&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 29219,
       "httpStatus": 200,
       "candidates": [],
@@ -1663,9 +1462,7 @@
       "id": "florist-15",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=75+Yeung+Uk+Road&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 744,
       "httpStatus": 200,
       "candidates": [
@@ -1718,10 +1515,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.11543,
-                  22.36831
-                ]
+                "coordinates": [114.11543, 22.36831]
               },
               "granularity": "unknown",
               "i18n": {
@@ -1758,9 +1552,7 @@
       "id": "florist-16",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.20801739999999&lat=22.3884749&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 3464,
       "httpStatus": 200,
       "candidates": [
@@ -1825,10 +1617,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                114.20801739999999,
-                22.3884749
-              ],
+              "coordinates": [114.20801739999999, 22.3884749],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 55.32846348861902
@@ -1851,10 +1640,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                114.20801739999999,
-                22.3884749
-              ],
+              "coordinates": [114.20801739999999, 22.3884749],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 77.85838469139071
@@ -1877,10 +1663,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                114.20801739999999,
-                22.3884749
-              ],
+              "coordinates": [114.20801739999999, 22.3884749],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 86.17480540809096
@@ -1903,10 +1686,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                114.20801739999999,
-                22.3884749
-              ],
+              "coordinates": [114.20801739999999, 22.3884749],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 94.95419835260861
@@ -1929,10 +1709,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                114.20801739999999,
-                22.3884749
-              ],
+              "coordinates": [114.20801739999999, 22.3884749],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 97.86403189786819
@@ -1957,10 +1734,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.20761,
-                  22.3888
-                ]
+                "coordinates": [114.20761, 22.3888]
               },
               "granularity": "building",
               "i18n": {
@@ -1987,10 +1761,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.20778,
-                  22.38781
-                ]
+                "coordinates": [114.20778, 22.38781]
               },
               "granularity": "building",
               "i18n": {
@@ -2017,10 +1788,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.20803,
-                  22.3877
-                ]
+                "coordinates": [114.20803, 22.3877]
               },
               "granularity": "unknown",
               "i18n": {
@@ -2045,10 +1813,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.20888,
-                  22.38878
-                ]
+                "coordinates": [114.20888, 22.38878]
               },
               "granularity": "unknown",
               "i18n": {
@@ -2073,10 +1838,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.20707,
-                  22.38856
-                ]
+                "coordinates": [114.20707, 22.38856]
               },
               "granularity": "building",
               "i18n": {
@@ -2116,9 +1878,7 @@
       "id": "florist-16",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+New+Territories%2C+Sha+Tin%2C+%E7%9F%B3%E9%96%80%E5%AE%89%E7%BE%A4%E8%A1%973%E8%99%9F%E4%BA%AC%E7%91%9E%E5%BB%A3%E5%A0%B4%E4%B8%80%E6%9C%9F2%E6%A8%93219%E8%99%9F&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 22773,
       "httpStatus": 200,
       "candidates": [],
@@ -2149,9 +1909,7 @@
       "id": "florist-16",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=3+On+Kwan+Street&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 370,
       "httpStatus": 200,
       "candidates": [
@@ -2235,10 +1993,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.20803,
-                  22.3877
-                ]
+                "coordinates": [114.20803, 22.3877]
               },
               "granularity": "unknown",
               "i18n": {
@@ -2263,10 +2018,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.20778,
-                  22.38781
-                ]
+                "coordinates": [114.20778, 22.38781]
               },
               "granularity": "building",
               "i18n": {
@@ -2305,9 +2057,7 @@
       "id": "florist-17",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.195675&lat=22.396851599999998&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 1462,
       "httpStatus": 200,
       "candidates": [
@@ -2372,10 +2122,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                114.195675,
-                22.396851599999998
-              ],
+              "coordinates": [114.195675, 22.396851599999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 18.672384782656003
@@ -2398,10 +2145,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                114.195675,
-                22.396851599999998
-              ],
+              "coordinates": [114.195675, 22.396851599999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 54.90746194258742
@@ -2424,10 +2168,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                114.195675,
-                22.396851599999998
-              ],
+              "coordinates": [114.195675, 22.396851599999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 68.34851879425398
@@ -2450,10 +2191,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                114.195675,
-                22.396851599999998
-              ],
+              "coordinates": [114.195675, 22.396851599999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 69.88186509217311
@@ -2476,10 +2214,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                114.195675,
-                22.396851599999998
-              ],
+              "coordinates": [114.195675, 22.396851599999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 102.75172814643764
@@ -2504,10 +2239,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.19576,
-                  22.397
-                ]
+                "coordinates": [114.19576, 22.397]
               },
               "granularity": "building",
               "i18n": {
@@ -2534,10 +2266,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.19605,
-                  22.3965
-                ]
+                "coordinates": [114.19605, 22.3965]
               },
               "granularity": "building",
               "i18n": {
@@ -2558,10 +2287,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.1959,
-                  22.39743
-                ]
+                "coordinates": [114.1959, 22.39743]
               },
               "granularity": "building",
               "i18n": {
@@ -2588,10 +2314,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.19521,
-                  22.39731
-                ]
+                "coordinates": [114.19521, 22.39731]
               },
               "granularity": "building",
               "i18n": {
@@ -2618,10 +2341,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.1954,
-                  22.39774
-                ]
+                "coordinates": [114.1954, 22.39774]
               },
               "granularity": "building",
               "i18n": {
@@ -2669,9 +2389,7 @@
       "id": "florist-17",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+New+Territories%2C+Fo+Tan%2C+Au+Pui+Wan+St%2C+27-31%E8%99%9F%2C+Unison+Industrial+Centre%2C+810%E5%96%AE%E4%BD%8D8%E6%A8%93C%E5%AE%A4&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 22115,
       "httpStatus": 200,
       "candidates": [],
@@ -2702,9 +2420,7 @@
       "id": "florist-17",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=27-31+Au+Pui+Wan+Street&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 710,
       "httpStatus": 200,
       "candidates": [
@@ -2757,10 +2473,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.19576,
-                  22.397
-                ]
+                "coordinates": [114.19576, 22.397]
               },
               "granularity": "building",
               "i18n": {
@@ -2799,9 +2512,7 @@
       "id": "florist-18",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.1771667&lat=22.3739565&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 4405,
       "httpStatus": 200,
       "candidates": [
@@ -2866,10 +2577,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                114.1771667,
-                22.3739565
-              ],
+              "coordinates": [114.1771667, 22.3739565],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 12.942166917395745
@@ -2892,10 +2600,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                114.1771667,
-                22.3739565
-              ],
+              "coordinates": [114.1771667, 22.3739565],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 23.166907050340928
@@ -2918,10 +2623,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                114.1771667,
-                22.3739565
-              ],
+              "coordinates": [114.1771667, 22.3739565],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 45.27917172360059
@@ -2944,10 +2646,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                114.1771667,
-                22.3739565
-              ],
+              "coordinates": [114.1771667, 22.3739565],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 49.94092527203357
@@ -2970,10 +2669,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                114.1771667,
-                22.3739565
-              ],
+              "coordinates": [114.1771667, 22.3739565],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 53.71044445694843
@@ -2998,10 +2694,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.17727,
-                  22.37389
-                ]
+                "coordinates": [114.17727, 22.37389]
               },
               "granularity": "building",
               "i18n": {
@@ -3036,10 +2729,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.17706,
-                  22.37414
-                ]
+                "coordinates": [114.17706, 22.37414]
               },
               "granularity": "building",
               "i18n": {
@@ -3074,10 +2764,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.17757,
-                  22.37412
-                ]
+                "coordinates": [114.17757, 22.37412]
               },
               "granularity": "building",
               "i18n": {
@@ -3112,10 +2799,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.17738,
-                  22.37436
-                ]
+                "coordinates": [114.17738, 22.37436]
               },
               "granularity": "building",
               "i18n": {
@@ -3150,10 +2834,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.17748,
-                  22.37357
-                ]
+                "coordinates": [114.17748, 22.37357]
               },
               "granularity": "building",
               "i18n": {
@@ -3201,9 +2882,7 @@
       "id": "florist-18",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+New+Territories%2C+Tai+Wai%2C+%E8%A1%97%E5%B8%82W63&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 26538,
       "httpStatus": 200,
       "candidates": [],
@@ -3234,9 +2913,7 @@
       "id": "florist-18",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Tai+Wai+Market&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 380,
       "httpStatus": 200,
       "candidates": [],
@@ -3267,9 +2944,7 @@
       "id": "florist-19",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.16648699999999&lat=22.446356299999998&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 5602,
       "httpStatus": 200,
       "candidates": [
@@ -3334,10 +3009,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                114.16648699999999,
-                22.446356299999998
-              ],
+              "coordinates": [114.16648699999999, 22.446356299999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 13.090358598215174
@@ -3360,10 +3032,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                114.16648699999999,
-                22.446356299999998
-              ],
+              "coordinates": [114.16648699999999, 22.446356299999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 26.917434277065375
@@ -3386,10 +3055,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                114.16648699999999,
-                22.446356299999998
-              ],
+              "coordinates": [114.16648699999999, 22.446356299999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 26.917434277065375
@@ -3412,10 +3078,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                114.16648699999999,
-                22.446356299999998
-              ],
+              "coordinates": [114.16648699999999, 22.446356299999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 51.195626276191085
@@ -3438,10 +3101,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                114.16648699999999,
-                22.446356299999998
-              ],
+              "coordinates": [114.16648699999999, 22.446356299999998],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 51.56617703267057
@@ -3466,10 +3126,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16639,
-                  22.44628
-                ]
+                "coordinates": [114.16639, 22.44628]
               },
               "granularity": "complex",
               "i18n": {
@@ -3496,10 +3153,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16658,
-                  22.44613
-                ]
+                "coordinates": [114.16658, 22.44613]
               },
               "granularity": "building",
               "i18n": {
@@ -3526,10 +3180,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16658,
-                  22.44613
-                ]
+                "coordinates": [114.16658, 22.44613]
               },
               "granularity": "building",
               "i18n": {
@@ -3556,10 +3207,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16662,
-                  22.4468
-                ]
+                "coordinates": [114.16662, 22.4468]
               },
               "granularity": "building",
               "i18n": {
@@ -3586,10 +3234,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16648,
-                  22.44682
-                ]
+                "coordinates": [114.16648, 22.44682]
               },
               "granularity": "building",
               "i18n": {
@@ -3629,9 +3274,7 @@
       "id": "florist-19",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+New+Territories%2C+Heung+Sze+Wui+St%2C+8%E8%99%9F1%E6%A8%93W9+W10+Tai+Po+Complex&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 20888,
       "httpStatus": 200,
       "candidates": [],
@@ -3662,9 +3305,7 @@
       "id": "florist-19",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=8+Heung+Sze+Wui+Street&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 324,
       "httpStatus": 200,
       "candidates": [
@@ -3779,10 +3420,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16658,
-                  22.44613
-                ]
+                "coordinates": [114.16658, 22.44613]
               },
               "granularity": "building",
               "i18n": {
@@ -3809,10 +3447,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16639,
-                  22.44628
-                ]
+                "coordinates": [114.16639, 22.44628]
               },
               "granularity": "complex",
               "i18n": {
@@ -3839,10 +3474,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16658,
-                  22.44613
-                ]
+                "coordinates": [114.16658, 22.44613]
               },
               "granularity": "building",
               "i18n": {
@@ -3881,9 +3513,7 @@
       "id": "florist-20",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.16523149999999&lat=22.4490272&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 4647,
       "httpStatus": 200,
       "candidates": [
@@ -3948,10 +3578,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                114.16523149999999,
-                22.4490272
-              ],
+              "coordinates": [114.16523149999999, 22.4490272],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 4.3019788438439095
@@ -3974,10 +3601,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                114.16523149999999,
-                22.4490272
-              ],
+              "coordinates": [114.16523149999999, 22.4490272],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 6.704428657332372
@@ -4000,10 +3624,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                114.16523149999999,
-                22.4490272
-              ],
+              "coordinates": [114.16523149999999, 22.4490272],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 6.704428657332372
@@ -4026,10 +3647,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                114.16523149999999,
-                22.4490272
-              ],
+              "coordinates": [114.16523149999999, 22.4490272],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 6.704428657332372
@@ -4052,10 +3670,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                114.16523149999999,
-                22.4490272
-              ],
+              "coordinates": [114.16523149999999, 22.4490272],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 19.423164466056427
@@ -4080,10 +3695,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.16522,
-                  22.44899
-                ]
+                "coordinates": [114.16522, 22.44899]
               },
               "granularity": "unknown",
               "i18n": {
@@ -4108,10 +3720,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.1652,
-                  22.44908
-                ]
+                "coordinates": [114.1652, 22.44908]
               },
               "granularity": "building",
               "i18n": {
@@ -4138,10 +3747,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.1652,
-                  22.44908
-                ]
+                "coordinates": [114.1652, 22.44908]
               },
               "granularity": "building",
               "i18n": {
@@ -4168,10 +3774,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.1652,
-                  22.44908
-                ]
+                "coordinates": [114.1652, 22.44908]
               },
               "granularity": "building",
               "i18n": {
@@ -4198,10 +3801,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.1653,
-                  22.44919
-                ]
+                "coordinates": [114.1653, 22.44919]
               },
               "granularity": "building",
               "i18n": {
@@ -4241,9 +3841,7 @@
       "id": "florist-20",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=4%E8%99%9F+Tsing+Yuen+St%2C+Tai+Po%2C+New+Territories%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 24246,
       "httpStatus": 200,
       "candidates": [],
@@ -4274,9 +3872,7 @@
       "id": "florist-20",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=4+Tsing+Yuen+Street&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 350,
       "httpStatus": 200,
       "candidates": [
@@ -4329,10 +3925,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.1652,
-                  22.44908
-                ]
+                "coordinates": [114.1652, 22.44908]
               },
               "granularity": "building",
               "i18n": {
@@ -4371,9 +3964,7 @@
       "id": "florist-21",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.0264775&lat=22.4459458&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 6042,
       "httpStatus": 200,
       "candidates": [
@@ -4438,10 +4029,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                114.0264775,
-                22.4459458
-              ],
+              "coordinates": [114.0264775, 22.4459458],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 4.013991187314843
@@ -4464,10 +4052,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                114.0264775,
-                22.4459458
-              ],
+              "coordinates": [114.0264775, 22.4459458],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 18.31005253205562
@@ -4490,10 +4075,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                114.0264775,
-                22.4459458
-              ],
+              "coordinates": [114.0264775, 22.4459458],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 19.481940566022633
@@ -4516,10 +4098,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                114.0264775,
-                22.4459458
-              ],
+              "coordinates": [114.0264775, 22.4459458],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 19.481940566022633
@@ -4542,10 +4121,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                114.0264775,
-                22.4459458
-              ],
+              "coordinates": [114.0264775, 22.4459458],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 19.481940566022633
@@ -4570,10 +4146,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.02649,
-                  22.44598
-                ]
+                "coordinates": [114.02649, 22.44598]
               },
               "granularity": "building",
               "i18n": {
@@ -4600,10 +4173,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.0263,
-                  22.44596
-                ]
+                "coordinates": [114.0263, 22.44596]
               },
               "granularity": "building",
               "i18n": {
@@ -4630,10 +4200,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.02629,
-                  22.44592
-                ]
+                "coordinates": [114.02629, 22.44592]
               },
               "granularity": "building",
               "i18n": {
@@ -4660,10 +4227,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.02629,
-                  22.44592
-                ]
+                "coordinates": [114.02629, 22.44592]
               },
               "granularity": "building",
               "i18n": {
@@ -4690,10 +4254,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.02629,
-                  22.44592
-                ]
+                "coordinates": [114.02629, 22.44592]
               },
               "granularity": "building",
               "i18n": {
@@ -4733,9 +4294,7 @@
       "id": "florist-21",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+New+Territories%2C+Yuen+Long%2C+%E5%AE%89%E5%AF%A7%E8%B7%AF+63%E8%99%9F+D+G%2FF+TAI+LEE+BUILDING+63+ON+NING+ROAD+YUEN+LONG%2C+NT+Tai+Lee+Building%2C+%E5%9C%B0%E4%B8%8BD%E9%8B%AA+FLAT&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 21894,
       "httpStatus": 200,
       "candidates": [],
@@ -4766,9 +4325,7 @@
       "id": "florist-21",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=63+On+Ning+Road&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 309,
       "httpStatus": 200,
       "candidates": [],
@@ -4799,9 +4356,7 @@
       "id": "florist-22",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.0302523&lat=22.4415712&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 5067,
       "httpStatus": 200,
       "candidates": [
@@ -4866,10 +4421,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 1,
-              "coordinates": [
-                114.0302523,
-                22.4415712
-              ],
+              "coordinates": [114.0302523, 22.4415712],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 3.442889597930512
@@ -4892,10 +4444,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 2,
-              "coordinates": [
-                114.0302523,
-                22.4415712
-              ],
+              "coordinates": [114.0302523, 22.4415712],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 3.442889597930512
@@ -4918,10 +4467,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 3,
-              "coordinates": [
-                114.0302523,
-                22.4415712
-              ],
+              "coordinates": [114.0302523, 22.4415712],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 3.442889597930512
@@ -4944,10 +4490,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 4,
-              "coordinates": [
-                114.0302523,
-                22.4415712
-              ],
+              "coordinates": [114.0302523, 22.4415712],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 3.442889597930512
@@ -4970,10 +4513,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 5,
-              "coordinates": [
-                114.0302523,
-                22.4415712
-              ],
+              "coordinates": [114.0302523, 22.4415712],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 3.442889597930512
@@ -4998,10 +4538,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.03024,
-                  22.4416
-                ]
+                "coordinates": [114.03024, 22.4416]
               },
               "granularity": "building",
               "i18n": {
@@ -5028,10 +4565,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.03024,
-                  22.4416
-                ]
+                "coordinates": [114.03024, 22.4416]
               },
               "granularity": "building",
               "i18n": {
@@ -5058,10 +4592,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.03024,
-                  22.4416
-                ]
+                "coordinates": [114.03024, 22.4416]
               },
               "granularity": "building",
               "i18n": {
@@ -5088,10 +4619,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.03024,
-                  22.4416
-                ]
+                "coordinates": [114.03024, 22.4416]
               },
               "granularity": "building",
               "i18n": {
@@ -5118,10 +4646,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.03024,
-                  22.4416
-                ]
+                "coordinates": [114.03024, 22.4416]
               },
               "granularity": "building",
               "i18n": {
@@ -5161,9 +4686,7 @@
       "id": "florist-22",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Hong+Kong%2C+New+Territories%2C+Yuen+Long%2C+Kin+Tak+St%2C+10-16%E8%99%9F%E5%9C%B0%E4%B8%8BA1%E8%88%96&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 20574,
       "httpStatus": 200,
       "candidates": [],
@@ -5194,9 +4717,7 @@
       "id": "florist-22",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=10-16+Kin+Tak+Street&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 370,
       "httpStatus": 200,
       "candidates": [
@@ -5249,10 +4770,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  114.03027,
-                  22.44151
-                ]
+                "coordinates": [114.03027, 22.44151]
               },
               "granularity": "building",
               "i18n": {
@@ -5291,9 +4809,7 @@
       "id": "florist-23",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=113.96851679999999&lat=22.4109513&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 1437,
       "httpStatus": 200,
       "candidates": [
@@ -5358,10 +4874,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                113.96851679999999,
-                22.4109513
-              ],
+              "coordinates": [113.96851679999999, 22.4109513],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 13.530462279545137
@@ -5384,10 +4897,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                113.96851679999999,
-                22.4109513
-              ],
+              "coordinates": [113.96851679999999, 22.4109513],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 14.352826868435947
@@ -5410,10 +4920,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                113.96851679999999,
-                22.4109513
-              ],
+              "coordinates": [113.96851679999999, 22.4109513],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 33.102789713970374
@@ -5436,10 +4943,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                113.96851679999999,
-                22.4109513
-              ],
+              "coordinates": [113.96851679999999, 22.4109513],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 33.102789713970374
@@ -5462,10 +4966,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                113.96851679999999,
-                22.4109513
-              ],
+              "coordinates": [113.96851679999999, 22.4109513],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 44.113549843155226
@@ -5490,10 +4991,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.96857,
-                  22.41084
-                ]
+                "coordinates": [113.96857, 22.41084]
               },
               "granularity": "building",
               "i18n": {
@@ -5530,10 +5028,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.96865,
-                  22.41099
-                ]
+                "coordinates": [113.96865, 22.41099]
               },
               "granularity": "building",
               "i18n": {
@@ -5560,10 +5055,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.96863,
-                  22.41123
-                ]
+                "coordinates": [113.96863, 22.41123]
               },
               "granularity": "building",
               "i18n": {
@@ -5600,10 +5092,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.96863,
-                  22.41123
-                ]
+                "coordinates": [113.96863, 22.41123]
               },
               "granularity": "building",
               "i18n": {
@@ -5640,10 +5129,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.96888,
-                  22.41074
-                ]
+                "coordinates": [113.96888, 22.41074]
               },
               "granularity": "building",
               "i18n": {
@@ -5693,9 +5179,7 @@
       "id": "florist-23",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=8%E8%99%9F+Yan+Po+Rd%2C+Tuen+Mun%2C+New+Territories%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 20515,
       "httpStatus": 200,
       "candidates": [],
@@ -5726,9 +5210,7 @@
       "id": "florist-23",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=8+Yan+Po+Road&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 292,
       "httpStatus": 200,
       "candidates": [
@@ -5905,10 +5387,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.96972,
-                  22.4109
-                ]
+                "coordinates": [113.96972, 22.4109]
               },
               "granularity": "unknown",
               "i18n": {
@@ -5933,10 +5412,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.97089,
-                  22.41123
-                ]
+                "coordinates": [113.97089, 22.41123]
               },
               "granularity": "building",
               "i18n": {
@@ -5964,10 +5440,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.96918,
-                  22.41075
-                ]
+                "coordinates": [113.96918, 22.41075]
               },
               "granularity": "building",
               "i18n": {
@@ -6004,10 +5477,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.96888,
-                  22.41074
-                ]
+                "coordinates": [113.96888, 22.41074]
               },
               "granularity": "building",
               "i18n": {
@@ -6044,10 +5514,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.97106,
-                  22.41035
-                ]
+                "coordinates": [113.97106, 22.41035]
               },
               "granularity": "building",
               "i18n": {
@@ -6087,9 +5554,7 @@
       "id": "florist-24",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=113.99234899999999&lat=22.372362&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 2983,
       "httpStatus": 200,
       "candidates": [
@@ -6154,10 +5619,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                113.99234899999999,
-                22.372362
-              ],
+              "coordinates": [113.99234899999999, 22.372362],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 19.757063106309253
@@ -6180,10 +5642,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                113.99234899999999,
-                22.372362
-              ],
+              "coordinates": [113.99234899999999, 22.372362],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 57.47037426978196
@@ -6206,10 +5665,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                113.99234899999999,
-                22.372362
-              ],
+              "coordinates": [113.99234899999999, 22.372362],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 106.38199953925925
@@ -6232,10 +5688,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                113.99234899999999,
-                22.372362
-              ],
+              "coordinates": [113.99234899999999, 22.372362],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 121.41363329751988
@@ -6258,10 +5711,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                113.99234899999999,
-                22.372362
-              ],
+              "coordinates": [113.99234899999999, 22.372362],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 121.41363329751988
@@ -6286,10 +5736,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.99216,
-                  22.37233
-                ]
+                "coordinates": [113.99216, 22.37233]
               },
               "granularity": "unknown",
               "i18n": {
@@ -6318,10 +5765,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.99209,
-                  22.37282
-                ]
+                "coordinates": [113.99209, 22.37282]
               },
               "granularity": "building",
               "i18n": {
@@ -6356,10 +5800,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.99187,
-                  22.37321
-                ]
+                "coordinates": [113.99187, 22.37321]
               },
               "granularity": "building",
               "i18n": {
@@ -6394,10 +5835,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.99303,
-                  22.37147
-                ]
+                "coordinates": [113.99303, 22.37147]
               },
               "granularity": "building",
               "i18n": {
@@ -6426,10 +5864,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.99303,
-                  22.37147
-                ]
+                "coordinates": [113.99303, 22.37147]
               },
               "granularity": "unknown",
               "i18n": {
@@ -6461,9 +5896,7 @@
       "id": "florist-24",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=S27%2C+G%2FF%2C+Gold+Coast+Piazza%2C+1+Castle+Peak+Road-Castle+Peak+Bay%2C+So+Kwun+Wat%2C+New+Territories%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 220,
       "httpStatus": 200,
       "candidates": [],
@@ -6494,9 +5927,7 @@
       "id": "florist-24",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=1+Castle+Peak+Road+Castle+Peak+Bay&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 211,
       "httpStatus": 200,
       "candidates": [],
@@ -6527,9 +5958,7 @@
       "id": "florist-25",
       "mode": "reverse",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=113.94240149999999&lat=22.2888351&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 2864,
       "httpStatus": 200,
       "candidates": [
@@ -6594,10 +6023,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                113.94240149999999,
-                22.2888351
-              ],
+              "coordinates": [113.94240149999999, 22.2888351],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 5.70668931290456
@@ -6620,10 +6046,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                113.94240149999999,
-                22.2888351
-              ],
+              "coordinates": [113.94240149999999, 22.2888351],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 84.33836217582694
@@ -6646,10 +6069,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                113.94240149999999,
-                22.2888351
-              ],
+              "coordinates": [113.94240149999999, 22.2888351],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 84.33836217582694
@@ -6672,10 +6092,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                113.94240149999999,
-                22.2888351
-              ],
+              "coordinates": [113.94240149999999, 22.2888351],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 89.54394792663099
@@ -6698,10 +6115,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                113.94240149999999,
-                22.2888351
-              ],
+              "coordinates": [113.94240149999999, 22.2888351],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 107.25706221346967
@@ -6726,10 +6140,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.94245,
-                  22.28886
-                ]
+                "coordinates": [113.94245, 22.28886]
               },
               "granularity": "building",
               "i18n": {
@@ -6758,10 +6169,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.94312,
-                  22.28847
-                ]
+                "coordinates": [113.94312, 22.28847]
               },
               "granularity": "unknown",
               "i18n": {
@@ -6786,10 +6194,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.94312,
-                  22.28847
-                ]
+                "coordinates": [113.94312, 22.28847]
               },
               "granularity": "building",
               "i18n": {
@@ -6816,10 +6221,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.94213,
-                  22.28807
-                ]
+                "coordinates": [113.94213, 22.28807]
               },
               "granularity": "building",
               "i18n": {
@@ -6848,10 +6250,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.94284,
-                  22.28796
-                ]
+                "coordinates": [113.94284, 22.28796]
               },
               "granularity": "building",
               "i18n": {
@@ -6901,9 +6300,7 @@
       "id": "florist-25",
       "mode": "forward_raw",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=M20%2C+Lantau+Island%2C+FU+TUNG+MARKET%2C+Fu+Tung+St%2C+Tung+Chung%2C+New+Territories%2C+Hong+Kong&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 209,
       "httpStatus": 200,
       "candidates": [],
@@ -6934,9 +6331,7 @@
       "id": "florist-25",
       "mode": "forward_core",
       "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Fu+Tung+Market&profile=map&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
-      "attempts": [
-        200
-      ],
+      "attempts": [200],
       "durationMs": 252,
       "httpStatus": 200,
       "candidates": [
@@ -6989,10 +6384,7 @@
             "attributes": {
               "geometry": {
                 "type": "Point",
-                "coordinates": [
-                  113.94213,
-                  22.28807
-                ]
+                "coordinates": [113.94213, 22.28807]
               },
               "granularity": "building",
               "i18n": {

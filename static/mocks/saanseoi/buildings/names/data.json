@@ -5,9 +5,7 @@
       "en": "Central Plaza",
       "zh-Hant": "中環廣場"
     },
-    "divisionCodes": [
-      "WC"
-    ]
+    "divisionCodes": ["WC"]
   },
   {
     "id": "2d933aee-3d03-5493-b4cf-b017f2d76ee2",
@@ -15,9 +13,7 @@
       "en": "International Finance Centre",
       "zh-Hant": "國際金融中心"
     },
-    "divisionCodes": [
-      "CW"
-    ]
+    "divisionCodes": ["CW"]
   },
   {
     "id": "93273fe6-9213-54a8-934e-4371dc027868",
@@ -25,8 +21,6 @@
       "en": "International Commerce Centre",
       "zh-Hant": "環球貿易廣場"
     },
-    "divisionCodes": [
-      "YTM"
-    ]
+    "divisionCodes": ["YTM"]
   }
 ]

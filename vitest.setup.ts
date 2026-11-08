@@ -1,9 +1,16 @@
 import { afterEach, beforeEach, vi } from 'vitest'
 
 // jsdom has no canvas renderer. TGS playback is verified by the Chromium/Firefox media check.
-vi.mock('lottie-web/build/player/lottie_light', () => ({ default: {
-  loadAnimation: vi.fn(() => ({ play() {}, pause() {}, destroy() {}, addEventListener() {} })),
-} }))
+vi.mock('lottie-web/build/player/lottie_light', () => ({
+  default: {
+    loadAnimation: vi.fn(() => ({
+      play() {},
+      pause() {},
+      destroy() {},
+      addEventListener() {},
+    })),
+  },
+}))
 
 // Only DOM suites need the testing-library matcher dependency graph.
 if (typeof document !== 'undefined') {

@@ -76,10 +76,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 1,
-              "coordinates": [
-                114.15559359999999,
-                22.282631499999997
-              ],
+              "coordinates": [114.15559359999999, 22.282631499999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 7.531211314776638
@@ -102,10 +99,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 2,
-              "coordinates": [
-                114.15559359999999,
-                22.282631499999997
-              ],
+              "coordinates": [114.15559359999999, 22.282631499999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 23.021851598342142
@@ -128,10 +122,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 3,
-              "coordinates": [
-                114.15559359999999,
-                22.282631499999997
-              ],
+              "coordinates": [114.15559359999999, 22.282631499999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 26.927003744998657
@@ -154,10 +145,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 4,
-              "coordinates": [
-                114.15559359999999,
-                22.282631499999997
-              ],
+              "coordinates": [114.15559359999999, 22.282631499999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 30.385138151832457
@@ -180,10 +168,7 @@
             "attributes": {
               "status": "resolved",
               "rank": 5,
-              "coordinates": [
-                114.15559359999999,
-                22.282631499999997
-              ],
+              "coordinates": [114.15559359999999, 22.282631499999997],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 30.907922922838907
@@ -632,10 +617,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 1,
-              "coordinates": [
-                114.153786,
-                22.282127
-              ],
+              "coordinates": [114.153786, 22.282127],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 2.695908173242253
@@ -658,10 +640,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 2,
-              "coordinates": [
-                114.153786,
-                22.282127
-              ],
+              "coordinates": [114.153786, 22.282127],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 2.695908173242253
@@ -684,10 +663,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 3,
-              "coordinates": [
-                114.153786,
-                22.282127
-              ],
+              "coordinates": [114.153786, 22.282127],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 12.857562687661595
@@ -710,10 +686,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 4,
-              "coordinates": [
-                114.153786,
-                22.282127
-              ],
+              "coordinates": [114.153786, 22.282127],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 16.127274472328136
@@ -736,10 +709,7 @@
             "attributes": {
               "status": "ambiguous",
               "rank": 5,
-              "coordinates": [
-                114.153786,
-                22.282127
-              ],
+              "coordinates": [114.153786, 22.282127],
               "match": {
                 "type": "nearest",
                 "distanceMetres": 16.76011903943976
