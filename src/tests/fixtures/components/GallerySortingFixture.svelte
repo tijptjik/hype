@@ -13,24 +13,55 @@ import { useGalleryOrdering } from '#lib/adapters/image/useGalleryOrdering.svelt
 import { orderGallery, type GallerySortMode } from '#lib/images/galleryOrder.js'
 setRootCTX(setResponsiveCtx())
 setThemeModel()
-let gallery = $state<{ order: string[]; sortMode?: GallerySortMode; entries: Record<string, { intent: string }> }>({ order: [], entries: {} })
+let gallery = $state<{
+  order: string[]
+  sortMode?: GallerySortMode
+  entries: Record<string, { intent: string }>
+}>({ order: [], entries: {} })
 let activeId = $state<string | null>('a')
-const items = $derived(orderGallery(gallery.order.map((id, position) => ({ id,
-  src: '/__sorting-image.svg', thumbnailSrc: '/__sorting-image.svg', intent: gallery.entries[id].intent,
-  galleryPosition: position, gallerySortMode: gallery.sortMode ?? 'automatic', createdAt: '2026-01-01',
-  alt: id, status: { kind: 'persisted' as const },
-})), gallery.sortMode))
+const items = $derived(
+  orderGallery(
+    gallery.order.map((id, position) => ({
+      id,
+      src: '/__sorting-image.svg',
+      thumbnailSrc: '/__sorting-image.svg',
+      intent: gallery.entries[id].intent,
+      galleryPosition: position,
+      gallerySortMode: gallery.sortMode ?? 'automatic',
+      createdAt: '2026-01-01',
+      alt: id,
+      status: { kind: 'persisted' as const },
+    })),
+    gallery.sortMode,
+  ),
+)
 /** Refreshes the accepted fixture projection after the real ordering adapter saves.
  * @returns Completion after the current gallery has loaded.
  */
 async function refresh(): Promise<void> {
-  const result = await getFeatureGalleryRevisionEditor({ featureId: 'feature', meta: { isAdminRequest: true } })
+  const result = await getFeatureGalleryRevisionEditor({
+    featureId: 'feature',
+    meta: { isAdminRequest: true },
+  })
   if (result.enabled) gallery = result.gallery
 }
-const ordering = useGalleryOrdering(() => 'feature', () => items, refresh)
-onMount(() => { void refresh() })
+const ordering = useGalleryOrdering(
+  () => 'feature',
+  () => items,
+  refresh,
+)
+onMount(() => {
+  void refresh()
+})
 </script>
 <div class="h-dvh" data-active-image={activeId}>
-  <ImageEditor {items} {activeId} onActiveIdChange={id => activeId = id} disableHoverPreview
-    sortMode={ordering.mode} canSort={ordering.enabled} onSortChange={ordering.save} />
+  <ImageEditor
+    {items}
+    {activeId}
+    onActiveIdChange={id => (activeId = id)}
+    disableHoverPreview
+    sortMode={ordering.mode}
+    canSort={ordering.enabled}
+    onSortChange={ordering.save}
+  />
 </div>
