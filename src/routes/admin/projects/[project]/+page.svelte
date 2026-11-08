@@ -143,7 +143,7 @@ import { getLayers } from '#lib/api/layer.remote.js'
 import { getFeatures } from '#lib/api/feature.remote.js'
 import { getOrganisation, getOrganisations } from '#lib/api/organisation.remote.js'
 // SCHEMA
-import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.js'
+import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.form.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
@@ -199,7 +199,7 @@ import {
   canSetProjectParentOrganisation,
   resolveProjectParentOrganisationScope,
   toProjectAuthActor,
-} from '#lib/api/services/authz/index.js'
+} from '#lib/api/services/authz/project.js'
 // UTILS
 import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
