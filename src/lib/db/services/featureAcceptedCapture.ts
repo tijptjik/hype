@@ -104,11 +104,12 @@ export async function prepareFeatureAcceptedCapture(
     const initialStorage = await db.get<{ n: number }>(
       sql`SELECT count(*) n FROM sqlite_master WHERE name='featureInitialRevision' AND type='table'`,
     )
+    // The initial marker is retained as provenance after acceptance; only unresolved contributions stay frozen.
     if (
       initialStorage?.n &&
-      (await db.get(
-        sql`SELECT 1 FROM featureInitialRevision WHERE featureId=${input.featureId} AND mode='contribution'`,
-      ))
+      (await db.get(sql`SELECT 1 FROM featureInitialRevision i
+      WHERE i.featureId=${input.featureId} AND i.mode='contribution'
+        AND NOT EXISTS (SELECT 1 FROM featureRevisionProposal p WHERE p.id=i.proposalId AND p.status='accepted')`))
     )
       throw new Error('Submitted initial contributions are frozen for task review')
     const reservedStorage = await db.get<{ n: number }>(

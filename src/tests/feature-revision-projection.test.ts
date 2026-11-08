@@ -4209,6 +4209,70 @@ describe('approved private Feature maintenance', () => {
     ).toBe(capture.revisionId)
   })
 
+  it.each(['accepted', 'submitted', 'rejected', 'withdrawn'] as const)(
+    'allows private gallery edits only after initial contribution acceptance (%s)',
+    async status => {
+      const f = fixture()
+      f.sqlite.exec("UPDATE feature SET isPublished=0,localIsPublished=0 WHERE id='f'")
+      const baseline = await f.initialize(false)
+      const proposal = await f.proposal(baseline.revisionId, baseline.content)
+      // Retained initial-contribution provenance must not freeze an accepted Feature.
+      f.sqlite.exec(readFileSync('migrations/0189_feature_private_capture.sql', 'utf8'))
+      f.sqlite.exec(
+        `CREATE TABLE featureInitialRevision(featureId TEXT,proposalId TEXT,mode TEXT)`,
+      )
+      f.sqlite
+        .prepare("INSERT INTO featureInitialRevision VALUES('f',?,'contribution')")
+        .run(proposal.proposalId)
+      if (status !== 'submitted')
+        f.sqlite
+          .prepare('UPDATE featureRevisionProposal SET status=? WHERE id=?')
+          .run(status, proposal.proposalId)
+      f.sqlite.exec(
+        readFileSync('migrations/0186_feature_revision_projection_guards.sql', 'utf8'),
+      )
+      const edit = updateImageWithFeatureImage(
+        f.db,
+        {},
+        { featureId: 'f', intent: 'general' },
+        'photo',
+        undefined,
+        undefined,
+        'reviewer',
+      )
+      if (status !== 'accepted') {
+        await expect(edit).rejects.toThrow(
+          'Submitted initial contributions are frozen for task review',
+        )
+        expect(
+          f.sqlite.prepare('SELECT count(*) n FROM featurePrivateCapture').get(),
+        ).toEqual({ n: 0 })
+        return
+      }
+      await edit
+      expect(
+        f.sqlite
+          .prepare(
+            "SELECT intent,localIsPublished FROM featureImage WHERE featureId='f' AND imageId='photo'",
+          )
+          .get(),
+      ).toEqual({ intent: 'general', localIsPublished: 1 })
+      expect(
+        f.sqlite.prepare("SELECT isPublished FROM feature WHERE id='f'").get(),
+      ).toEqual({ isPublished: 0 })
+      expect(
+        f.sqlite
+          .prepare(`SELECT json_extract(r.content,'$.gallery.entries.photo.intent') intent,c.actorId
+        FROM featurePrivateCapture p JOIN featureRevision r ON r.id=p.revisionId
+        JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE p.featureId='f'`)
+          .get(),
+      ).toEqual({ intent: 'general', actorId: 'reviewer' })
+      expect(
+        f.sqlite.prepare('SELECT count(*) n FROM featureRevisionWriteScope').get(),
+      ).toEqual({ n: 0 })
+    },
+  )
+
   it.each([false, true])(
     'records automation without publication, then merges explicit staff Publish (previously published=%s)',
     async previouslyPublished => {
