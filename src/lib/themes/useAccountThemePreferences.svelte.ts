@@ -25,34 +25,42 @@ export function useAccountThemePreferences(
 ): void {
   $effect(() => {
     const userId = account.session?.id
+    const isGuest = account.session?.isAnonymous === true
     const revision = account.revision
     if (!userId) return
     const sync = untrack(
       () =>
-        new ThemePreferenceSync(model, {
-          read: async () => {
-            // Refresh the query on each account lifetime; cached queries can outlive login.
-            const query = getThemePreferences({ accountId: userId })
-            await query.refresh()
-            return await query
+        new ThemePreferenceSync(
+          model,
+          {
+            read: async () => {
+              // Refresh the query on each account lifetime; cached queries can outlive login.
+              const query = getThemePreferences({ accountId: userId })
+              await query.refresh()
+              return await query
+            },
+            write: async preferences => {
+              if (account.revision !== revision) return
+              return saveThemePreferences({ accountId: userId, preferences })
+            },
+            publish: theme => {
+              if (account.revision !== revision) return
+              const preferences = account.user?.preferences
+              if (preferences)
+                account.applyProfile(
+                  { preferences: { ...preferences, theme } },
+                  revision,
+                )
+            },
+            onError: error => {
+              console.error('Could not synchronize appearance preferences:', error)
+              toast.error(
+                'Could not sync appearance settings. Your choice is saved in this browser.',
+              )
+            },
           },
-          write: async preferences => {
-            if (account.revision !== revision) return
-            return saveThemePreferences({ accountId: userId, preferences })
-          },
-          publish: theme => {
-            if (account.revision !== revision) return
-            const preferences = account.user?.preferences
-            if (preferences)
-              account.applyProfile({ preferences: { ...preferences, theme } }, revision)
-          },
-          onError: error => {
-            console.error('Could not synchronize appearance preferences:', error)
-            toast.error(
-              'Could not sync appearance settings. Your choice is saved in this browser.',
-            )
-          },
-        }),
+          { isGuest },
+        ),
     )
     void sync.restore()
     return () => sync.dispose()

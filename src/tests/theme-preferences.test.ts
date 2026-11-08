@@ -85,6 +85,49 @@ describe('account appearance synchronization', () => {
     sync.dispose()
   })
 
+  it('starts a new guest on the active hub map despite a cached browser opt-out', async () => {
+    storage.set('hype-use-active-map-style', 'false')
+    storage.set('hype-sync-ui-map-styles', 'false')
+    storage.set('hype-map-style', 'hype-dark')
+    const model = new ThemeModel()
+    model.restoreMapPreferences()
+    model.updateActiveMapContext('ghostsigns-layer', 'ghostery')
+    expect(model.resolvedMapStyle).toBe('hype-dark')
+    const api = transport(async () => null)
+    const sync = new ThemePreferenceSync(model, api, { isGuest: true })
+    await sync.restore()
+    await settle()
+    expect(model.useActiveMapStyle).toBe(true)
+    expect(model.resolvedMapStyle).toBe('ghostery')
+    expect(api.write).toHaveBeenCalledExactlyOnceWith(model.preferences)
+    sync.dispose()
+  })
+
+  it('retains an existing guest account map preference', async () => {
+    const model = new ThemeModel()
+    const api = transport()
+    const sync = new ThemePreferenceSync(model, api, { isGuest: true })
+    await sync.restore()
+    expect(model.preferences).toEqual(saved)
+    expect(api.write).not.toHaveBeenCalled()
+    sync.dispose()
+  })
+
+  it('retains a new guest map choice made before preference loading finishes', async () => {
+    const read = Promise.withResolvers<ThemePreferences | null>()
+    const model = new ThemeModel()
+    const api = transport(() => read.promise)
+    const sync = new ThemePreferenceSync(model, api, { isGuest: true })
+    const loading = sync.restore()
+    model.selectMap('midnight')
+    await settle()
+    read.resolve(null)
+    await loading
+    expect(model.useActiveMapStyle).toBe(false)
+    expect(model.resolvedMapStyle).toBe('midnight')
+    sync.dispose()
+  })
+
   it('coalesces manual map changes and serializes rapid writes', async () => {
     const model = new ThemeModel()
     const api = transport()

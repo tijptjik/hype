@@ -21,10 +21,12 @@ export class ThemePreferenceSync {
    * Connects explicit appearance changes for one account lifetime.
    * @param model - Root-owned appearance state.
    * @param transport - Account-scoped persistence and profile callbacks.
+   * @param options - Whether this lifetime belongs to a guest account.
    */
   constructor(
     private readonly model: ThemeModel,
     private readonly transport: ThemePreferenceTransport,
+    private readonly options: { isGuest?: boolean } = {},
   ) {
     model.onPreferencesChange = this.changed
   }
@@ -36,6 +38,13 @@ export class ThemePreferenceSync {
       if (this.disposed) return
       // A deliberate choice made while loading wins over the older server snapshot.
       if (saved && !this.edited) this.model.applyPreferences(saved)
+      // A new guest follows the current hub instead of inheriting another account's map opt-out.
+      if (!saved && !this.edited && this.options.isGuest) {
+        this.model.applyPreferences({
+          ...this.model.preferences,
+          useActiveMapStyle: true,
+        })
+      }
       this.transport.publish(this.model.preferences)
       if (!saved || this.edited) this.pending = this.model.preferences
     } catch (error) {
