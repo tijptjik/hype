@@ -3132,7 +3132,6 @@ $effect(() => {
                 subtitle="This project belongs to"
                 issues={parentOrganisationIssues}
                 parent={selectedParentOrganisation}
-                hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
                 {isEditing}
                 isSubmitting={formCtx.submitting}
                 isSubmitRequested={formCtx.isSubmitRequested}
@@ -3489,6 +3488,10 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
     <div class="hidden" aria-hidden="true">
+      <!-- Parent identity is required even when this actor cannot move the project. -->
+      {#if hiddenParentOrganisationInputAttrs}
+        <input {...hiddenParentOrganisationInputAttrs}>
+      {/if}
       {#if stagedLocationPolicy}
         <input {...getHiddenLocationPolicyAttrs()}>
       {/if}
