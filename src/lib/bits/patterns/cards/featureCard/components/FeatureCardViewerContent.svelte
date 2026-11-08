@@ -7,7 +7,7 @@ import Viewer from '#lib/bits/patterns/images/components/Viewer.svelte'
 import {
   VIEWER_TRANSITION_MS,
   VIEWER_TRANSITION_EASING,
-} from '#lib/bits/patterns/images/images.motion'
+} from '#lib/bits/patterns/images/images.motion.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 import { getImageCtx } from '#lib/context/image.svelte.js'
 import * as ViewerPrimitive from './images'

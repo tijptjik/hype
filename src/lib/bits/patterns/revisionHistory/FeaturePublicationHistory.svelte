@@ -5,7 +5,10 @@ import { onMount } from 'svelte'
 import { formatDistanceStrict } from 'date-fns'
 // COMPONENTS
 import HistoryLocaleValues from './components/HistoryLocaleValues.svelte'
-import { groupHistoryLocales, localeGroupAction } from '#lib/revisions/historyLocaleGroups.js'
+import {
+  groupHistoryLocales,
+  localeGroupAction,
+} from '#lib/revisions/historyLocaleGroups.js'
 import ChangelogActor from './components/ChangelogActor.svelte'
 import HistoryTimestamp from './components/HistoryTimestamp.svelte'
 import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
@@ -154,9 +157,7 @@ function relative(value: string): string {
           class:cursor-pointer={canReview}
           onclick={event => toggleSurface(event, entry)}
         >
-          <header
-            class={styles.featureSummary}
-          >
+          <header class={styles.featureSummary}>
             <div class="col-span-full min-w-0 @[56rem]:col-span-1">
               <div class="mb-1 flex flex-wrap items-center gap-2 text-xs">
                 <span class="text-muted-foreground"
@@ -175,14 +176,19 @@ function relative(value: string): string {
               >
                 {#if entry.transfer}
                   <span>Moved </span>
-                  <span class="font-mono text-xs leading-relaxed">{entry.transfer.from.join(' › ')} <span class="text-muted-foreground" aria-label="to">→</span> {entry.transfer.to.join(' › ')}</span>
+                  <span class="font-mono text-xs leading-relaxed"
+                    >{entry.transfer.from.join(' › ')}
+                    <span class="text-muted-foreground" aria-hidden="true">→</span
+                    ><span class="sr-only">to</span>
+                    {entry.transfer.to.join(' › ')}</span
+                  >
                 {:else}
-                {entry.reason ??
-                  (privateHistory
-                    ? 'Approved maintenance'
-                    : entry.revisionId
-                      ? 'Feature published'
-                      : 'Feature unpublished')}
+                  {entry.reason ??
+                    (privateHistory
+                      ? 'Approved maintenance'
+                      : entry.revisionId
+                        ? 'Feature published'
+                        : 'Feature unpublished')}
                 {/if}
               </h4>
             </div>
@@ -295,7 +301,9 @@ function relative(value: string): string {
                     </dl>
                     {#if group.rows[0].locale !== null}
                       <HistoryLocaleValues rows={group.rows}>
-                        {#snippet value(row, side)}{featureReviewValue(row, side)}{/snippet}
+                        {#snippet value(row, side)}
+                          {featureReviewValue(row, side)}
+                        {/snippet}
                       </HistoryLocaleValues>
                     {:else}
                       <dl class={styles.values}>

@@ -501,14 +501,12 @@ onDestroy(() => {
       class:w-0={!trackControls}
     >
       {#if trackControls}
-        <!-- biome-ignore lint/a11y/useSemanticElements: This labels a toolbar group, not form fields. -->
-        <div
-          class="flex w-10 flex-col items-center gap-1 pt-1"
-          role="group"
+        <fieldset
+          class="flex w-10 min-w-0 flex-col items-center gap-1 pt-1"
           aria-label="Gallery order controls"
         >
           {@render trackControls()}
-        </div>
+        </fieldset>
       {/if}
     </div>
     <section
@@ -523,7 +521,7 @@ onDestroy(() => {
         dropFromOthersDisabled: true,
         dropTargetStyle: {},
         transformDraggedElement: element => {
-          element.style.outline = 'none'
+          if (element) element.style.outline = 'none'
         },
         delayTouchStart: 200,
       }}
@@ -550,9 +548,8 @@ onDestroy(() => {
       )}
     >
       {#each displayedItems as item, index (item.id)}
-        <!-- biome-ignore lint/a11y/noStaticElementInteractions: Thumbnail hover updates the visual preview without adding a separate control. -->
-        <!-- biome-ignore lint/a11y/useAriaPropsSupportedByRole: svelte-dnd-action assigns each child its listitem role at runtime. -->
-        <div
+        <!-- Thumbnail hover updates the visual preview without adding a separate control. -->
+        <figure
           aria-label={`Photo ${index + 1}${item.alt ? `: ${item.alt}` : ''}`}
           data-gallery-thumb-id={item.id}
           data-gallery-thumb-index={index}
@@ -599,7 +596,7 @@ onDestroy(() => {
               onError={() => onError?.(item)}
             />
           {/if}
-        </div>
+        </figure>
       {/each}
     </section>
   </div>

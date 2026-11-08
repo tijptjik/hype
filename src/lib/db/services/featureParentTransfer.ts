@@ -36,7 +36,10 @@ export function featureDestinationGuard(destination: FeatureDestinationScope): S
  * @returns Predicate that prevents private project/organisation/hub fields crossing scope.
  * @remarks Reconciliation drops unsupported fields first; this final guard prevents stale definitions crossing namespaces.
  */
-export function featureDestinationPropertiesGuard(featureId: string, destination: FeatureDestinationScope): SQL {
+export function featureDestinationPropertiesGuard(
+  featureId: string,
+  destination: FeatureDestinationScope,
+): SQL {
   return sql`NOT EXISTS (SELECT 1 FROM featureProperty fp LEFT JOIN property p ON p.id=fp.propertyId
     WHERE fp.featureId=${featureId} AND (p.id IS NULL
       OR (p.projectId IS NOT NULL AND p.projectId IS NOT ${destination.projectId})
@@ -74,13 +77,22 @@ export async function reconcileFeatureTransferProperties(
       AND (p.hubId IS NULL OR p.hubId=${destination.resourceHubId}
         OR EXISTS(SELECT 1 FROM hub h WHERE h.id=p.hubId AND h.code='core')) ORDER BY p.id`
   const fields = await db.all<{ id: string; audience: string }>(supported)
-  const existing = await db.all<{ propertyId: string; value: string | null; propertyValueId: string | null; valueJson: string | null }>(sql`SELECT propertyId,value,propertyValueId,valueJson FROM featureProperty WHERE featureId=${featureId}`)
+  const existing = await db.all<{
+    propertyId: string
+    value: string | null
+    propertyValueId: string | null
+    valueJson: string | null
+  }>(
+    sql`SELECT propertyId,value,propertyValueId,valueJson FROM featureProperty WHERE featureId=${featureId}`,
+  )
   // Retained translations stay in storage; only explicit submitted locale edits replace them.
   const current = new Map(existing.map(row => [row.propertyId, row]))
   const supplied = new Map(submitted.map(row => [row.propertyId, row]))
   const properties = fields.map(field => {
-    const row = (field.audience !== 'internal' || allowedInternalIds.has(field.id) ? supplied.get(field.id) : undefined)
-      ?? current.get(field.id)
+    const row =
+      (field.audience !== 'internal' || allowedInternalIds.has(field.id)
+        ? supplied.get(field.id)
+        : undefined) ?? current.get(field.id)
     return {
       propertyId: field.id,
       value: !current.has(field.id) && row?.value === '' ? null : (row?.value ?? null),

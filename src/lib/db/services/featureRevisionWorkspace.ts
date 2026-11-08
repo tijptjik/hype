@@ -1,7 +1,10 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // SERVICES
-import { describeFeatureTransfers, type FeatureTransferPath } from './featureTransferDescription'
+import {
+  describeFeatureTransfers,
+  type FeatureTransferPath,
+} from './featureTransferDescription'
 import {
   hasFeatureLifecycleStorage,
   readCurrentFeatureRevision,
@@ -198,10 +201,11 @@ export async function readFeatureRevisionWorkspace(
       entry.baselineActor = await readFeatureBaselineActor(db, entry.publicationId)
   }
   const initialStorage =
-    head.generation === 0 &&
-    (await db.get<{ n: number }>(
-      sql`SELECT count(*) n FROM sqlite_master WHERE name='featureInitialRevision' AND type='table'`,
-    ))
+    head.generation === 0
+      ? await db.get<{ n: number }>(
+          sql`SELECT count(*) n FROM sqlite_master WHERE name='featureInitialRevision' AND type='table'`,
+        )
+      : null
   const privateStorage = await db.get<{ n: number }>(
     sql`SELECT count(*) n FROM sqlite_master WHERE name='featurePrivateCapture' AND type='table'`,
   )
@@ -213,12 +217,11 @@ export async function readFeatureRevisionWorkspace(
     WHERE capture.featureId=${input.featureId} AND (${input.guard}) ORDER BY capture.sequence DESC LIMIT 50`)
       : []
   await describeFeatureTransfers(db, [...history, ...privateHistory])
-  const initial =
-    initialStorage && initialStorage.n
-      ? await db.get<{ taskId: string | null }>(sql`
+  const initial = initialStorage?.n
+    ? await db.get<{ taskId: string | null }>(sql`
     SELECT (SELECT id FROM task WHERE featureId=i.featureId AND type='newFeature' AND isReviewed=0 ORDER BY id LIMIT 1) taskId
     FROM featureInitialRevision i WHERE i.featureId=${input.featureId} AND i.mode='contribution' AND (${input.guard})`)
-      : null
+    : null
   return {
     ...head,
     enabled: true,

@@ -1377,11 +1377,16 @@ snapshot<FormNavigationSnapshot<FeatureFormCheckpoint> | null>({
   id: 'admin-feature-form-v1',
   capture: () =>
     currentUser?.id && !isNewFeatureRef && isCurrentRefSettled
-      ? captureFormNavigationSnapshot(navigationDraftScope, captureFeatureFormCheckpoint())
+      ? captureFormNavigationSnapshot(
+          navigationDraftScope,
+          captureFeatureFormCheckpoint(),
+        )
       : null,
   restore: saved => {
     pendingNavigationRestore =
-      saved && isCurrentFormNavigationSnapshot(navigationDraftScope, saved) ? saved : null
+      saved && isCurrentFormNavigationSnapshot(navigationDraftScope, saved)
+        ? saved
+        : null
   },
   reset: () => {
     pendingNavigationRestore = null
@@ -3001,7 +3006,8 @@ async function getCreatableProjectRecords(
       superAdmin: currentAuthorizationUser?.superAdmin,
     },
     userRoles: currentAuthorizationUser?.roles ?? [],
-    getOrganisationHubId: async id => (await adminCtx.view.getOrganisationById(id))?.hubId ?? null,
+    getOrganisationHubId: async id =>
+      (await adminCtx.view.getOrganisationById(id))?.hubId ?? null,
   })
 }
 
@@ -3216,23 +3222,25 @@ $effect(() => () => clearVisualSectionReopenState())
                 {@const language = getContentLocaleRecord(locale, getLocaleKey())}
                 {@const config = featureDescriptorFieldConfigs.find(
                   config => config.key === field,
-                )!}
-                <FormI18nDescriptorFields
-                  form={formCtx.form}
-                  fields={formCtx.form.fields.data.i18n[key]}
-                  locale={key}
-                  {isEditing}
-                  inline
-                  {onEditStart}
-                  fieldConfigs={[
-                    {
-                      ...config,
-                      label: prefix,
-                      ariaLabel: `${config.label} · ${language.name}`,
-                    },
-                  ] as never}
-                  {isRequiredInPreflight}
-                />
+                )}
+                {#if config}
+                  <FormI18nDescriptorFields
+                    form={formCtx.form}
+                    fields={formCtx.form.fields.data.i18n[key]}
+                    locale={key}
+                    {isEditing}
+                    inline
+                    {onEditStart}
+                    fieldConfigs={[
+                      {
+                        ...config,
+                        label: prefix,
+                        ariaLabel: `${config.label} · ${language.name}`,
+                      },
+                    ] as never}
+                    {isRequiredInPreflight}
+                  />
+                {/if}
               {/snippet}
             </FeatureProfileEditor>
           </div>

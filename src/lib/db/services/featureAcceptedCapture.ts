@@ -149,7 +149,10 @@ export async function prepareFeatureAcceptedCapture(
   )
   const record = parseFeatureRevisionSource(source.snapshot).record
   const resultingLayer = input.resultingScope
-    ? featureLayerAfterStatus(input.resultingScope.layerId, content.profile.isIntangible)
+    ? featureLayerAfterStatus(
+        input.resultingScope.layerId,
+        content.profile.isIntangible,
+      )
     : previous.profile.isIntangible === content.profile.isIntangible
       ? sql`${record.layerId}`
       : featureLayerAfterStatus(String(record.layerId), content.profile.isIntangible)
@@ -175,6 +178,13 @@ export async function prepareFeatureAcceptedCapture(
     ),
   ]
   // The domain projection and its revision must either both commit or both roll back.
+  /** Require attribution only for branches that append a publication receipt.
+   * @returns The prepared change-set identity.
+   */
+  function changeSetId(): string {
+    if (!idle.changeSetId) throw new Error('Feature revision change set is unavailable')
+    return idle.changeSetId
+  }
   const after: BatchItem<'sqlite'>[] = [
     prepareRevisionCheck(
       db,
@@ -223,7 +233,7 @@ export async function prepareFeatureAcceptedCapture(
                     previousRevisionId: head.publishedRevisionId,
                     revisionId: id,
                     generation: head.generation + 1,
-                    changeSetId: idle.changeSetId!,
+                    changeSetId: changeSetId(),
                   }),
                 ]),
           ]),
@@ -245,7 +255,7 @@ export async function prepareFeatureAcceptedCapture(
         previousRevisionId: id,
         revisionId: null,
         generation: head.generation + 2,
-        changeSetId: idle.changeSetId!,
+        changeSetId: changeSetId(),
       }),
     )
   after.push(...idle.finish, ...writeScope.after)

@@ -23,7 +23,7 @@ describe('layer style at the remote privacy boundary', () => {
       }
       const response = await toEntityResponseShape(row as never, 'default')
       const projected = projectPropertyAudience(response, new Set<string>())
-      expect(projected.data.mapStyleCode).toBe(mapStyleCode)
+      expect(projected.data?.mapStyleCode).toBe(mapStyleCode)
     },
   )
 

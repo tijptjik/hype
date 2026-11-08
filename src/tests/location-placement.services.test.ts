@@ -1,3 +1,5 @@
+// FIXTURE ASSERTIONS
+import { required } from './fixtures/required'
 import { getAcceptedFeatureLocation } from '#lib/db/services/location.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/locationEdit.js'
 // @vitest-environment node
@@ -20,7 +22,6 @@ import {
   decideLocationPlacement,
   reconcileLocationPlacements,
 } from '#lib/db/services/locationPlacement.js'
-import { taskQueueProjection } from '#lib/db/services/taskQueue.js'
 
 const stores: ReturnType<typeof setupLifecycleDatabase>[] = []
 afterEach(() => {
@@ -180,11 +181,13 @@ describe('occupancy and canonical address acceptance', () => {
       actorId: 'worker',
     })
     expect(result.applied).toBe(1)
-    const b = s.sqlite.prepare('SELECT * FROM featureLocation').get()!
+    const b = required(s.sqlite.prepare('SELECT * FROM featureLocation').get())
     expect(b.occupancyRevisionId).toBe('move')
-    const history = s.sqlite
-      .prepare("SELECT * FROM featureLocationHistory WHERE action='update'")
-      .get()!
+    const history = required(
+      s.sqlite
+        .prepare("SELECT * FROM featureLocationHistory WHERE action='update'")
+        .get(),
+    )
     expect(JSON.parse(String(history.geometry)).coordinates).toEqual([114.1, 22.1])
     expect(history.adoptionProposalId).toBeTruthy()
     expect(
@@ -203,11 +206,13 @@ describe('occupancy and canonical address acceptance', () => {
   })
   it('review later retains pending state; keep is durable across policy changes', async () => {
     const s = await setup()
-    const p = (await proposeLocationPlacement(s.db, {
-      featureId: 'f',
-      projectId: 'p',
-      occupancyRevisionId: 'move',
-    }))!
+    const p = required(
+      await proposeLocationPlacement(s.db, {
+        featureId: 'f',
+        projectId: 'p',
+        occupancyRevisionId: 'move',
+      }),
+    )
     expect(await decideLocationPlacement(s.db, decision(p, 'later'))).toEqual({
       status: 'deferred',
     })
@@ -232,11 +237,13 @@ describe('occupancy and canonical address acceptance', () => {
   })
   it('requires explicit directions decisions and preserves the old locale text in immutable evidence', async () => {
     const s = await setup('follow', true)
-    const p = (await proposeLocationPlacement(s.db, {
-      featureId: 'f',
-      projectId: 'p',
-      occupancyRevisionId: 'move',
-    }))!
+    const p = required(
+      await proposeLocationPlacement(s.db, {
+        featureId: 'f',
+        projectId: 'p',
+        occupancyRevisionId: 'move',
+      }),
+    )
     expect(p.evidence.plan.decision.location).toBe('review')
     expect((await decideLocationPlacement(s.db, decision(p))).status).toBe('review')
     expect(
@@ -251,7 +258,9 @@ describe('occupancy and canonical address acceptance', () => {
         })
       ).status,
     ).toBe('applied')
-    const b = s.sqlite.prepare('SELECT placementOverrides FROM featureLocation').get()!
+    const b = required(
+      s.sqlite.prepare('SELECT placementOverrides FROM featureLocation').get(),
+    )
     expect(JSON.parse(String(b.placementOverrides)).accessHints['zh-hant']).toBe(
       '新入口',
     )
@@ -259,11 +268,13 @@ describe('occupancy and canonical address acceptance', () => {
   })
   it('rejects stale policy and head changes without moving the Feature', async () => {
     const s = await setup()
-    const p = (await proposeLocationPlacement(s.db, {
-      featureId: 'f',
-      projectId: 'p',
-      occupancyRevisionId: 'move',
-    }))!
+    const p = required(
+      await proposeLocationPlacement(s.db, {
+        featureId: 'f',
+        projectId: 'p',
+        occupancyRevisionId: 'move',
+      }),
+    )
     s.sqlite.exec('UPDATE layer SET relocationPolicyRevision=1')
     expect((await decideLocationPlacement(s.db, decision(p))).status).toBe('conflict')
     expect(
@@ -294,11 +305,13 @@ describe('occupancy and canonical address acceptance', () => {
       sourceReferences: s.canonical.sourceReferences,
       rawSource: { source: 'new' },
     })
-    const p = (await proposeLocationPlacement(s.db, {
-      featureId: 'f',
-      projectId: 'p',
-      addressRevisionId: target.id,
-    }))!
+    const p = required(
+      await proposeLocationPlacement(s.db, {
+        featureId: 'f',
+        projectId: 'p',
+        addressRevisionId: target.id,
+      }),
+    )
     expect(
       (
         await decideLocationPlacement(s.db, {
@@ -316,11 +329,13 @@ describe('occupancy and canonical address acceptance', () => {
 
 it('rolls every projection and history write back if final receipt fails', async () => {
   const s = await setup()
-  const p = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const p = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   s.sqlite.exec(
     "CREATE TRIGGER reject_receipt BEFORE UPDATE ON locationAdoptionProposal BEGIN SELECT RAISE(ABORT,'receipt failure'); END",
   )
@@ -339,11 +354,13 @@ it('rolls every projection and history write back if final receipt fails', async
 })
 it('does not expose or adopt a destination made private after assessment', async () => {
   const s = await setup()
-  const p = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const p = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   s.sqlite.exec(
     "UPDATE location SET state='manual',ownerOrganisationId='other' WHERE id='new'",
   )
@@ -361,11 +378,13 @@ it('planned or competing occupancies never follow automatically', async () => {
     },
     'editor',
   )
-  const p = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'planned',
-  }))!
+  const p = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'planned',
+    }),
+  )
   expect(p.evidence.placement?.blockers).toContain('planned-or-ended-occupancy')
   expect(
     (await decideLocationPlacement(s.db, { ...decision(p), automatic: true })).status,
@@ -374,7 +393,7 @@ it('planned or competing occupancies never follow automatically', async () => {
 it('reasserts only differing local address fields on the new base; equal fields retire', async () => {
   const s = await setup('follow')
   await reconcileLocationPlacements(s.db, { locationId: 'shop', actorId: 'worker' })
-  const parent = s.sqlite.prepare('SELECT addressMeta FROM feature').get()!
+  const parent = required(s.sqlite.prepare('SELECT addressMeta FROM feature').get())
   const meta = JSON.parse(String(parent.addressMeta))
   meta.address.overrides = {
     en: { buildingName: 'Local name', streetName: 'New Street' },
@@ -394,11 +413,13 @@ it('reasserts only differing local address fields on the new base; equal fields 
     sourceReferences: s.canonical.sourceReferences,
     rawSource: {},
   })
-  const p = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    addressRevisionId: target.id,
-  }))!
+  const p = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      addressRevisionId: target.id,
+    }),
+  )
   expect(
     (
       await decideLocationPlacement(s.db, {
@@ -407,9 +428,9 @@ it('reasserts only differing local address fields on the new base; equal fields 
       })
     ).status,
   ).toBe('applied')
-  const correction = s.sqlite
-    .prepare('SELECT overrides FROM organisationLocationHead')
-    .get()!
+  const correction = required(
+    s.sqlite.prepare('SELECT overrides FROM organisationLocationHead').get(),
+  )
   expect(JSON.parse(String(correction.overrides)).address).toEqual({
     baseAddressRevisionId: target.id,
     fields: { en: { buildingName: 'Local name' } },
@@ -441,7 +462,9 @@ it('retains the accepted placement and directions through an unrelated facts sav
   expect(accepted?.effective.location?.address.canonical?.revisionId).toBe(
     s.canonical.id,
   )
-  const current = s.sqlite.prepare('SELECT modifiedAt,addressMeta FROM feature').get()!
+  const current = required(
+    s.sqlite.prepare('SELECT modifiedAt,addressMeta FROM feature').get(),
+  )
   const result = await saveLinkedFeatureForm(s.db, {
     featureId: 'f',
     projectId: 'p',
@@ -451,9 +474,11 @@ it('retains the accepted placement and directions through an unrelated facts sav
     i18n: {},
   })
   expect(result.status).toBe('saved')
-  const binding = s.sqlite
-    .prepare('SELECT acceptedGeometry,addressRevisionId FROM featureLocation')
-    .get()!
+  const binding = required(
+    s.sqlite
+      .prepare('SELECT acceptedGeometry,addressRevisionId FROM featureLocation')
+      .get(),
+  )
   expect(JSON.parse(String(binding.acceptedGeometry)).coordinates).toEqual([
     114.1, 22.1,
   ])
@@ -470,11 +495,13 @@ it('requires a deliberate unit decision and retains the old detail as proposal e
     address: { ...emptyFeatureAddress(), unitDetails: { unitRef: '8', unitType: 'R' } },
   }
   s.sqlite.prepare('UPDATE feature SET addressMeta=?').run(JSON.stringify(meta))
-  const p = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const p = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   expect(
     (
       await decideLocationPlacement(s.db, {
@@ -511,11 +538,13 @@ it('does not create or apply proposals after a source lease is lost', async () =
       additionalGuard: sql`0`,
     }),
   ).toBeNull()
-  const p = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const p = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   expect(
     (await decideLocationPlacement(s.db, { ...decision(p), additionalGuard: sql`0` }))
       .status,
@@ -536,11 +565,13 @@ it('retains an actionable review when the destination has no canonical address',
     },
     'editor',
   )
-  const p = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'no-address',
-  }))!
+  const p = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'no-address',
+    }),
+  )
   expect(p.evidence.placement?.blockers).toContain('missing-destination-address')
   expect(p.addressRevisionId).toBeNull()
   expect((await decideLocationPlacement(s.db, decision(p))).status).toBe('review')
@@ -571,11 +602,13 @@ it('fences curated address imports to the exact preceding canonical version', as
 it('reviews evidenced occupancy even when the publisher has omitted the historical entity', async () => {
   const s = await setup()
   s.sqlite.exec("UPDATE location SET sourceAvailability='missing' WHERE id='shop'")
-  const p = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const p = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   expect(p.evidence.placement?.occupancyRevisionId).toBe('move')
   expect((await decideLocationPlacement(s.db, decision(p, 'keep'))).status).toBe(
     'rejected',
@@ -588,11 +621,13 @@ it('reviews evidenced occupancy even when the publisher has omitted the historic
 })
 it('retains a fresh assessment after container dependencies change without a Feature edit', async () => {
   const s = await setup()
-  const first = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const first = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   s.sqlite.exec(
     "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('premises','premises','unresolved','p')",
   )
@@ -616,11 +651,13 @@ it('retains a fresh assessment after container dependencies change without a Fea
     },
     'editor',
   )
-  const second = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const second = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   expect(second.id).not.toBe(first.id)
   expect((await decideLocationPlacement(s.db, decision(first))).status).toBe('conflict')
   expect((await decideLocationPlacement(s.db, decision(second))).status).toBe('applied')
@@ -638,11 +675,13 @@ it('retains a review for two simultaneous evidenced destinations without an auto
     },
     'editor',
   )
-  const proposal = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const proposal = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   expect(proposal.evidence.placement?.blockers).toContain('ambiguous-occupancy')
   expect(
     (await reconcileLocationPlacements(s.db, { locationId: 'shop', actorId: 'worker' }))
@@ -660,11 +699,13 @@ it('retains a review for two simultaneous evidenced destinations without an auto
 
 it('rejects a relocation after its Feature is reparented without rewriting accepted history', async () => {
   const s = await setup()
-  const proposal = (await proposeLocationPlacement(s.db, {
-    featureId: 'f',
-    projectId: 'p',
-    occupancyRevisionId: 'move',
-  }))!
+  const proposal = required(
+    await proposeLocationPlacement(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      occupancyRevisionId: 'move',
+    }),
+  )
   s.sqlite.exec(
     "INSERT INTO layer(id,projectId,organisationId,relocationPolicy) VALUES('other-layer','p','p','review'); UPDATE feature SET layerId='other-layer' WHERE id='f'",
   )
@@ -691,17 +732,36 @@ it('transfers a legacy Feature with accepted occupancy and addressing into desti
     CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
     INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'new-baseline','new',1,'local','container-hash','{}',json_remove(json_set(facts,'$.kind','building'),'$.details.brands') FROM locationRevision WHERE id='r';
     INSERT INTO layer(id,projectId,organisationId) VALUES('destination','other','other');`)
-  const current = s.sqlite.prepare("SELECT modifiedAt,addressMeta FROM feature WHERE id='f'").get()!
+  const current = required(
+    s.sqlite.prepare("SELECT modifiedAt,addressMeta FROM feature WHERE id='f'").get(),
+  )
   const result = await saveLinkedFeatureForm(s.db, {
-    featureId: 'f', projectId: 'p', actorId: 'manager', updatedAt: String(current.modifiedAt),
-    destinationScope: { organisationId: 'other', projectId: 'other', layerId: 'destination', resourceHubId: null },
+    featureId: 'f',
+    projectId: 'p',
+    actorId: 'manager',
+    updatedAt: String(current.modifiedAt),
+    destinationScope: {
+      organisationId: 'other',
+      projectId: 'other',
+      layerId: 'destination',
+      resourceHubId: null,
+    },
     authorizeDestinationLocation: async () => {},
-    data: { organisationId: 'other', projectId: 'other', layerId: 'destination' }, i18n: {},
+    data: { organisationId: 'other', projectId: 'other', layerId: 'destination' },
+    i18n: {},
   })
   expect(result.status).toBe('saved')
-  const accepted = s.sqlite.prepare("SELECT * FROM featureLocation WHERE featureId='f'").get()!
+  const accepted = required(
+    s.sqlite.prepare("SELECT * FROM featureLocation WHERE featureId='f'").get(),
+  )
   expect(accepted.locationId).not.toBe('shop')
   expect(accepted.addressRevisionId).toBe(s.canonical.id)
-  expect(s.sqlite.prepare('SELECT scopeOrganisationId FROM locationOccupancy WHERE id=?').get(accepted.occupancyRevisionId)?.scopeOrganisationId).toBe('other')
-  expect(s.sqlite.prepare("SELECT projectId,addressMeta FROM feature WHERE id='f'").get()).toMatchObject({projectId: 'other', addressMeta: current.addressMeta})
+  expect(
+    s.sqlite
+      .prepare('SELECT scopeOrganisationId FROM locationOccupancy WHERE id=?')
+      .get(accepted.occupancyRevisionId)?.scopeOrganisationId,
+  ).toBe('other')
+  expect(
+    s.sqlite.prepare("SELECT projectId,addressMeta FROM feature WHERE id='f'").get(),
+  ).toMatchObject({ projectId: 'other', addressMeta: current.addressMeta })
 })

@@ -1,7 +1,10 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // SERVICES
-import { describeFeatureTransfers, type FeatureTransferPath } from './featureTransferDescription'
+import {
+  describeFeatureTransfers,
+  type FeatureTransferPath,
+} from './featureTransferDescription'
 import { hasRevisionEditWindows, revisionActivityTime } from './revisionEditWindow'
 import { historicalFeatureVisibility } from './historicalLayers'
 // TYPES

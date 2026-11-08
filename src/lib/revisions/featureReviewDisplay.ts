@@ -45,7 +45,10 @@ const labels: Record<string, string> = {
  * @param change Optional complete change, retaining labels for removed properties.
  * @returns Human-readable group/field label.
  */
-export function featureReviewLabel(path: readonly string[], change?: RevisionDifference): string {
+export function featureReviewLabel(
+  path: readonly string[],
+  change?: RevisionDifference,
+): string {
   if (path[0] === 'properties' && path.length === 2 && change) {
     for (const slot of [change.after, change.before]) {
       const entry = slot.present ? object(slot.value) : null
@@ -92,18 +95,34 @@ export function featureReviewValue(
       : 'No photos'
   }
   if (change.path[0] === 'properties' && change.path.length === 2) {
-    const entry = object(slot.value), selection = object(entry?.selection)
+    const entry = object(slot.value),
+      selection = object(entry?.selection)
     if (selection) {
-      const definition = object(selection.definition), option = object(definition?.selectedOption)
-      const selected = translated(option?.translations) || (typeof option?.value === 'string' ? option.value : '')
+      const definition = object(selection.definition),
+        option = object(definition?.selectedOption)
+      const selected =
+        translated(option?.translations) ||
+        (typeof option?.value === 'string' ? option.value : '')
       const lines: string[] = []
       if (selected) lines.push(selected)
-      else if (selection.propertyValueId) lines.push('Selected option (label unavailable)')
-      if (selection.value !== null && selection.value !== undefined && selection.value !== '') lines.push(display(selection.value))
-      if (selection.valueJson !== null && selection.valueJson !== undefined && selection.valueJson !== '') lines.push(`Details: ${display(selection.valueJson)}`)
+      else if (selection.propertyValueId)
+        lines.push('Selected option (label unavailable)')
+      if (
+        selection.value !== null &&
+        selection.value !== undefined &&
+        selection.value !== ''
+      )
+        lines.push(display(selection.value))
+      if (
+        selection.valueJson !== null &&
+        selection.valueJson !== undefined &&
+        selection.valueJson !== ''
+      )
+        lines.push(`Details: ${display(selection.valueJson)}`)
       for (const [locale, value] of Object.entries(object(entry?.translations) ?? {})) {
         const text = object(value)?.value
-        if (text !== null && text !== undefined && text !== '') lines.push(`${locale}: ${display(text)}`)
+        if (text !== null && text !== undefined && text !== '')
+          lines.push(`${locale}: ${display(text)}`)
       }
       return lines.join('\n') || 'Not set'
     }
@@ -132,7 +151,9 @@ function display(value: RevisionValue): string {
 }
 
 /** Narrow a retained JSON object. @param value Candidate value. @returns Object or null. */
-function object(value: RevisionValue | undefined): Record<string, RevisionValue> | null {
+function object(
+  value: RevisionValue | undefined,
+): Record<string, RevisionValue> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : null
 }
 
@@ -143,7 +164,12 @@ function object(value: RevisionValue | undefined): Record<string, RevisionValue>
 function translated(value: RevisionValue | undefined): string {
   const rows = object(value)
   if (!rows) return ''
-  for (const locale of ['en', ...Object.keys(rows).filter(key => key !== 'en').sort()]) {
+  for (const locale of [
+    'en',
+    ...Object.keys(rows)
+      .filter(key => key !== 'en')
+      .sort(),
+  ]) {
     const label = object(rows[locale])?.value
     if (typeof label === 'string' && label.trim()) return label
   }

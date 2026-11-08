@@ -1,3 +1,5 @@
+// FIXTURE ASSERTIONS
+import { required } from './fixtures/required'
 // @vitest-environment node
 // NODE
 import { readFileSync } from 'node:fs'
@@ -246,6 +248,7 @@ function fixture(linked = false, catalogueCascades = false) {
   seed(featureLocationMembership, source.locationMemberships)
   sqlite.exec(readFileSync('migrations/0171_feature_revisions.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0172_image_revisions.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0201_task_image_review_context.sql', 'utf8'))
   sqlite.exec(`CREATE TABLE task(id TEXT PRIMARY KEY, featureId TEXT,projectId TEXT,organisationId TEXT,
     contributorId TEXT,isDraft INTEGER,isReviewed INTEGER,modifiedAt TEXT,type TEXT,
     reviewerId TEXT,reviewReason TEXT,reviewOutcome TEXT,reviewAction TEXT,message TEXT,createdAt TEXT);
@@ -894,13 +897,15 @@ describe('atomic complete Feature editorial projection', () => {
       before = await f.capture()
     const content = structuredClone(baseline.content)
     content.translations.en.title.value = 'Staff draft'
-    const draft = (await saveFeatureStaffDraft(f.db, {
-      ...common,
-      expectedScope,
-      baseRevisionId: baseline.revisionId,
-      content,
-      validateResult: () => [],
-    }))!
+    const draft = required(
+      await saveFeatureStaffDraft(f.db, {
+        ...common,
+        expectedScope,
+        baseRevisionId: baseline.revisionId,
+        content,
+        validateResult: () => [],
+      }),
+    )
     expect(draft).not.toBeNull()
     expect(await executeRevisionBatch(f.db, before.unchanged, [])).toEqual([])
     const input = {
@@ -940,13 +945,15 @@ describe('atomic complete Feature editorial projection', () => {
     ).toBe(true)
     const content = structuredClone(baseline.content)
     content.translations.en.title.value = 'Republished staff draft'
-    const draft = (await saveFeatureStaffDraft(f.db, {
-      ...common,
-      expectedScope,
-      baseRevisionId: baseline.revisionId,
-      content,
-      validateResult: () => [],
-    }))!
+    const draft = required(
+      await saveFeatureStaffDraft(f.db, {
+        ...common,
+        expectedScope,
+        baseRevisionId: baseline.revisionId,
+        content,
+        validateResult: () => [],
+      }),
+    )
     const input = {
       ...common,
       expectedScope,
@@ -978,13 +985,15 @@ describe('atomic complete Feature editorial projection', () => {
     const f = fixture(),
       baseline = await f.initialize(),
       before = await f.capture()
-    const draft = (await saveFeatureStaffDraft(f.db, {
-      ...common,
-      expectedScope,
-      baseRevisionId: baseline.revisionId,
-      content: baseline.content,
-      validateResult: () => [],
-    }))!
+    const draft = required(
+      await saveFeatureStaffDraft(f.db, {
+        ...common,
+        expectedScope,
+        baseRevisionId: baseline.revisionId,
+        content: baseline.content,
+        validateResult: () => [],
+      }),
+    )
     f.sqlite.exec(
       "CREATE TRIGGER fail_staff_publish BEFORE INSERT ON featureRevisionPublication BEGIN SELECT RAISE(ABORT,'staff publication failure'); END",
     )
@@ -1108,29 +1117,49 @@ describe('existing form revision routing', () => {
     } as unknown as Parameters<typeof buildFeatureFormCandidate>[2]
   }
   it('rolls back the form when the destination layer has left the authorized project', async () => {
-    const f = fixture(), initial = await f.initialize()
-    f.sqlite.exec("INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES ('destination','org','other-project',1,0)")
-    await expect(saveFeatureFormRevision(f.db, {
-      ...common,
-      guard: buildFeatureCommandScopeGuard(f.db, common.featureId, expectedScope),
-      expectedScope, updatedAt: 'token',
-      data: { ...form(initial.content), layerId: 'destination' },
-      canPublish: true, allowDescriptions: true, allowedInternalIds: new Set(),
-    })).rejects.toThrow('changed')
-    expect(f.sqlite.prepare('SELECT layerId, modifiedAt FROM feature WHERE id=?').get(common.featureId)).toMatchObject({ layerId: 'layer', modifiedAt: 'token' })
+    const f = fixture(),
+      initial = await f.initialize()
+    f.sqlite.exec(
+      "INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES ('destination','org','other-project',1,0)",
+    )
+    await expect(
+      saveFeatureFormRevision(f.db, {
+        ...common,
+        guard: buildFeatureCommandScopeGuard(f.db, common.featureId, expectedScope),
+        expectedScope,
+        updatedAt: 'token',
+        data: { ...form(initial.content), layerId: 'destination' },
+        canPublish: true,
+        allowDescriptions: true,
+        allowedInternalIds: new Set(),
+      }),
+    ).rejects.toThrow('changed')
+    expect(
+      f.sqlite
+        .prepare('SELECT layerId, modifiedAt FROM feature WHERE id=?')
+        .get(common.featureId),
+    ).toMatchObject({ layerId: 'layer', modifiedAt: 'token' })
   })
   it('saves same-project layer reassignment with the staff revision', async () => {
-    const f = fixture(), initial = await f.initialize()
-    f.sqlite.exec("INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES ('destination','org','project',1,0)")
+    const f = fixture(),
+      initial = await f.initialize()
+    f.sqlite.exec(
+      "INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES ('destination','org','project',1,0)",
+    )
     const saved = await saveFeatureFormRevision(f.db, {
       ...common,
       guard: buildFeatureCommandScopeGuard(f.db, common.featureId, expectedScope),
-      expectedScope, updatedAt: 'token',
+      expectedScope,
+      updatedAt: 'token',
       data: { ...form(initial.content), layerId: 'destination' },
-      canPublish: true, allowDescriptions: true, allowedInternalIds: new Set(),
+      canPublish: true,
+      allowDescriptions: true,
+      allowedInternalIds: new Set(),
     })
     expect(saved.status).toBe('applied')
-    expect(f.sqlite.prepare('SELECT layerId FROM feature WHERE id=?').get(common.featureId)).toMatchObject({ layerId: 'destination' })
+    expect(
+      f.sqlite.prepare('SELECT layerId FROM feature WHERE id=?').get(common.featureId),
+    ).toMatchObject({ layerId: 'destination' })
   })
   it('applies staff form changes directly while preserving hidden content and visibility', async () => {
     const f = fixture(),
@@ -1303,11 +1332,13 @@ describe('accepted gallery read projection', () => {
       undefined,
       'gallery-editor',
     )
-    const row = f.sqlite
-      .prepare(
-        'SELECT r.content,r.previousRevisionId,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
-      )
-      .get()!
+    const row = required(
+      f.sqlite
+        .prepare(
+          'SELECT r.content,r.previousRevisionId,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
+        )
+        .get(),
+    )
     const content = JSON.parse(String(row.content))
     expect(row.previousRevisionId).toBe(initial.revisionId)
     expect(row.actorId).toBe('gallery-editor')
@@ -1526,9 +1557,11 @@ describe('revision publication controls and workspace privacy', () => {
     if (saved.status !== 'saved') throw new Error('Expected research draft')
     const content = JSON.parse(
       String(
-        f.sqlite
-          .prepare('SELECT content FROM featureRevision WHERE id=?')
-          .get(saved.candidateRevisionId)!.content,
+        required(
+          f.sqlite
+            .prepare('SELECT content FROM featureRevision WHERE id=?')
+            .get(saved.candidateRevisionId),
+        ).content,
       ),
     )
     expect(content.gallery.entries[saved.imageId]).toMatchObject({
@@ -1727,8 +1760,8 @@ describe('revision publication controls and workspace privacy', () => {
   it.each(['contain', 'cast-edges'] as const)(
     'accepts %s image metadata immediately without creating a review proposal',
     async presentationMode => {
-      const f = fixture(),
-        initial = await f.initialize()
+      const f = fixture()
+      await f.initialize()
       const before = (await f.capture()).snapshot
       const saved = await saveFeatureImageMetadata(f.db, {
         ...common,
@@ -1750,19 +1783,23 @@ describe('revision publication controls and workspace privacy', () => {
         f.sqlite.prepare('SELECT publishedRevisionId FROM featureRevisionHead').get()
           ?.publishedRevisionId,
       ).toBe(saved.revisionId)
-      const revision = f.sqlite
-        .prepare('SELECT * FROM imageRevision WHERE id=?')
-        .get(saved.imageRevisionId)!
+      const revision = required(
+        f.sqlite
+          .prepare('SELECT * FROM imageRevision WHERE id=?')
+          .get(saved.imageRevisionId),
+      )
       expect(revision.previousRevisionId).toBe('image-r1')
       expect(revision.assetVersionId).toBe('asset-photo')
       expect(JSON.parse(String(revision.metadata)).renderRotation).toBe(90)
       const content = JSON.parse(
         String(
-          f.sqlite
-            .prepare(
-              'SELECT r.content FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId',
-            )
-            .get()!.content,
+          required(
+            f.sqlite
+              .prepare(
+                'SELECT r.content FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId',
+              )
+              .get(),
+          ).content,
         ),
       )
       expect(content.gallery.entries.photo.imageRevisionId).toBe(saved.imageRevisionId)
@@ -1879,11 +1916,13 @@ describe('revision publication controls and workspace privacy', () => {
   it('keeps another author draft private even from a publisher and reveals submitted text only', async () => {
     const f = fixture(),
       initial = await f.initialize()
-    const draft = (await createFeatureRevisionProposal(f.db, {
-      ...common,
-      baseRevisionId: initial.revisionId,
-      content: initial.content,
-    }))!
+    const draft = required(
+      await createFeatureRevisionProposal(f.db, {
+        ...common,
+        baseRevisionId: initial.revisionId,
+        content: initial.content,
+      }),
+    )
     const request = { ...common, actorId: 'other', canPublish: true }
     expect((await readFeatureRevisionWorkspace(f.db, request)).proposals).toEqual([])
     await submitFeatureRevisionProposal(f.db, {
@@ -1997,11 +2036,13 @@ describe('Feature history around shared catalogue cascades', () => {
           ...capture.after,
         ]),
       ).not.toBeNull()
-      const row = f.sqlite
-        .prepare(
-          'SELECT r.content,r.previousRevisionId,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
-        )
-        .get()!
+      const row = required(
+        f.sqlite
+          .prepare(
+            'SELECT r.content,r.previousRevisionId,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
+          )
+          .get(),
+      )
       const content = JSON.parse(String(row.content))
       expect(row.previousRevisionId).toBe(initial.revisionId)
       expect(row.actorId).toBe('catalogue-editor')
@@ -2011,9 +2052,11 @@ describe('Feature history around shared catalogue cascades', () => {
           propertyValueId: null,
           definition: { selectedOption: null },
         })
-      const old = f.sqlite
-        .prepare('SELECT content FROM featureRevision WHERE id=?')
-        .get(initial.revisionId)!
+      const old = required(
+        f.sqlite
+          .prepare('SELECT content FROM featureRevision WHERE id=?')
+          .get(initial.revisionId),
+      )
       expect(
         JSON.parse(String(old.content)).properties.choice.selection.propertyValueId,
       ).toBe('option')
@@ -2137,11 +2180,13 @@ describe('enrolled Feature task and hierarchy decisions', () => {
         canPublish: true,
       })
       expect(workspace.publishedRevisionId === null).toBe(action !== 'setIntangible')
-      const row = f.sqlite
-        .prepare(
-          'SELECT r.content,c.actorId FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.id=?',
-        )
-        .get(workspace.comparisonRevisionId!)!
+      const row = required(
+        f.sqlite
+          .prepare(
+            'SELECT r.content,c.actorId FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.id=?',
+          )
+          .get(required(workspace.comparisonRevisionId)),
+      )
       expect(row.actorId).toBe('reviewer')
       const content = JSON.parse(String(row.content))
       if (action === 'setIntangible') expect(content.profile.isIntangible).toBe(true)
@@ -2220,8 +2265,9 @@ describe('enrolled Feature projection guards', () => {
       })
       if (uploaded.status !== 'saved') throw new Error('Missing initial upload')
       const taskToken = String(
-        f.sqlite.prepare("SELECT modifiedAt FROM task WHERE id='initial-task'").get()!
-          .modifiedAt,
+        required(
+          f.sqlite.prepare("SELECT modifiedAt FROM task WHERE id='initial-task'").get(),
+        ).modifiedAt,
       )
       expect(
         await commitTaskFeatureDraftFinalization(f.db, {
@@ -2234,12 +2280,18 @@ describe('enrolled Feature projection guards', () => {
           feature: created,
         }),
       ).toBe(true)
-      const initial = f.sqlite
-        .prepare("SELECT * FROM featureInitialRevision WHERE featureId='contribution'")
-        .get()!
-      const initialHead = f.sqlite
-        .prepare("SELECT * FROM featureRevisionHead WHERE featureId='contribution'")
-        .get()!
+      const initial = required(
+        f.sqlite
+          .prepare(
+            "SELECT * FROM featureInitialRevision WHERE featureId='contribution'",
+          )
+          .get(),
+      )
+      const initialHead = required(
+        f.sqlite
+          .prepare("SELECT * FROM featureRevisionHead WHERE featureId='contribution'")
+          .get(),
+      )
       expect(
         await publishFeatureStaffDraft(f.db, {
           featureId: 'contribution',
@@ -2261,13 +2313,16 @@ describe('enrolled Feature projection guards', () => {
         errors: ['Review this initial contribution through its task'],
       })
       const featureToken = String(
-        f.sqlite
-          .prepare("SELECT modifiedAt FROM feature WHERE id='contribution'")
-          .get()!.modifiedAt,
+        required(
+          f.sqlite
+            .prepare("SELECT modifiedAt FROM feature WHERE id='contribution'")
+            .get(),
+        ).modifiedAt,
       )
       const reviewToken = String(
-        f.sqlite.prepare("SELECT modifiedAt FROM task WHERE id='initial-task'").get()!
-          .modifiedAt,
+        required(
+          f.sqlite.prepare("SELECT modifiedAt FROM task WHERE id='initial-task'").get(),
+        ).modifiedAt,
       )
       const command = {
         task: {
@@ -2423,7 +2478,7 @@ describe('enrolled Feature projection guards', () => {
         .prepare(
           'SELECT c.actorId FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.id=?',
         )
-        .get(domain.revisionId!)?.actorId,
+        .get(required(domain.revisionId))?.actorId,
     ).toBe('approved-system')
     const submission = await prepareInitialFeatureSubmission(f.db, {
       featureId: created.id,
@@ -2442,7 +2497,10 @@ describe('enrolled Feature projection guards', () => {
       }),
     ).rejects.toThrow('Submitted initial contributions are frozen for task review')
     expect(
-      await saveUnlinkedFeatureForm(f.db, { ...command, updatedAt: saved!.modifiedAt }),
+      await saveUnlinkedFeatureForm(f.db, {
+        ...command,
+        updatedAt: required(saved).modifiedAt,
+      }),
     ).toBeUndefined()
     expect(
       f.sqlite.prepare('SELECT count(*) n FROM featureRevisionWriteScope').get()?.n,
@@ -2506,7 +2564,7 @@ describe('enrolled Feature projection guards', () => {
         .prepare(
           'SELECT actorId,origin FROM revisionChangeSet WHERE id=(SELECT changeSetId FROM featureRevision WHERE id=?)',
         )
-        .get(workspace.comparisonRevisionId!),
+        .get(required(workspace.comparisonRevisionId)),
     ).toEqual({ actorId: 'creator', origin: 'user' })
     expect(
       await routeFeatureRevisionPublication(f.db, {
@@ -2556,11 +2614,13 @@ describe('enrolled Feature projection guards', () => {
       ).toBe(0)
       f.sqlite.exec('DROP TRIGGER fail_photo_completion')
       expect(await commitTaskImageReview(f.db, command)).toBe(true)
-      const row = f.sqlite
-        .prepare(
-          'SELECT r.content,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
-        )
-        .get()!
+      const row = required(
+        f.sqlite
+          .prepare(
+            'SELECT r.content,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
+          )
+          .get(),
+      )
       expect(row.actorId).toBe('reviewer')
       const gallery = JSON.parse(String(row.content)).gallery
       if (action === 'reject') expect(gallery.order).toEqual([])
@@ -2597,7 +2657,8 @@ describe('enrolled Feature projection guards', () => {
     expect(
       await updateFeatureRevisionState(f.db, {
         ...command,
-        updatedAt: result.status === 'updated' ? result.feature!.modifiedAt : '',
+        updatedAt:
+          result.status === 'updated' ? required(result.feature).modifiedAt : '',
         data: { isPublished: true },
       }),
     ).toMatchObject({ status: 'updated' })
@@ -2903,11 +2964,15 @@ describe('reviewed Feature merge and split integration', () => {
         },
       }),
     ).rejects.toThrow('Cover photo must be selected')
-    const id = (await createFeatureIdentityProposal(f.db, { ...f.command, selection }))!
-    const proposal = (await readFeatureIdentityProposal(f.db, id))!
-    const candidate = f.sqlite
-      .prepare('SELECT content FROM featureRevision WHERE id=?')
-      .get(proposal.plan.outputs[0].revisionId)!
+    const id = required(
+      await createFeatureIdentityProposal(f.db, { ...f.command, selection }),
+    )
+    const proposal = required(await readFeatureIdentityProposal(f.db, id))
+    const candidate = required(
+      f.sqlite
+        .prepare('SELECT content FROM featureRevision WHERE id=?')
+        .get(proposal.plan.outputs[0].revisionId),
+    )
     const content = JSON.parse(String(candidate.content)) as FeatureRevisionContent
     expect(content.gallery.entries[coverImageId].intent).toBe('canonical')
     expect(
@@ -2941,19 +3006,21 @@ describe('reviewed Feature merge and split integration', () => {
     f.sqlite.exec(
       "INSERT INTO task(id,featureId,projectId,organisationId,contributorId,isDraft,isReviewed,modifiedAt,type) VALUES ('open','f','project','org','author',0,0,'2026-01-01','reportedMissing'),('done','f','project','org','author',0,1,'2026-01-01','reportedMissing')",
     )
-    const id = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'split',
-        inputs: [f.input],
-        reason: 'Two sites',
-        outputs: [
-          { featureId: 'f', sourceFeatureId: 'f' },
-          { featureId: null, sourceFeatureId: 'f' },
-        ],
-      },
-    }))!
-    const child = (await readFeatureIdentityProposal(f.db, id))!.plan.outputs[1]
+    const id = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'split',
+          inputs: [f.input],
+          reason: 'Two sites',
+          outputs: [
+            { featureId: 'f', sourceFeatureId: 'f' },
+            { featureId: null, sourceFeatureId: 'f' },
+          ],
+        },
+      }),
+    )
+    const child = required(await readFeatureIdentityProposal(f.db, id)).plan.outputs[1]
       .featureId
     const decide = {
       ...f.command,
@@ -3025,19 +3092,26 @@ describe('reviewed Feature merge and split integration', () => {
       })),
       f.db.update(task).set({ isDraft: false }).where(sql`id='photo-task'`),
     ])
-    const split = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'split',
-        inputs: [f.input],
-        reason: 'Two sites',
-        outputs: [
-          { featureId: 'f', sourceFeatureId: 'f' },
-          { featureId: null, sourceFeatureId: 'f', titles: { en: 'Destination name' } },
-        ],
-      },
-    }))!
-    const outputs = (await readFeatureIdentityProposal(f.db, split))!.plan.outputs
+    const split = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'split',
+          inputs: [f.input],
+          reason: 'Two sites',
+          outputs: [
+            { featureId: 'f', sourceFeatureId: 'f' },
+            {
+              featureId: null,
+              sourceFeatureId: 'f',
+              titles: { en: 'Destination name' },
+            },
+          ],
+        },
+      }),
+    )
+    const outputs = required(await readFeatureIdentityProposal(f.db, split)).plan
+      .outputs
     const child = outputs[1].featureId
     expect(
       await decideFeatureIdentityProposal(f.db, {
@@ -3050,11 +3124,13 @@ describe('reviewed Feature merge and split integration', () => {
         taskAssignments: [{ taskId: 'photo-task', featureId: child }],
       }),
     ).toBeTruthy()
-    const forwarded = f.sqlite
-      .prepare(
-        'SELECT p.*,r.content,c.actorId FROM featureTaskUploadEvidence u JOIN featureRevisionProposal p ON p.id=u.proposalId JOIN featureRevision r ON r.id=p.candidateRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
-      )
-      .get()!
+    const forwarded = required(
+      f.sqlite
+        .prepare(
+          'SELECT p.*,r.content,c.actorId FROM featureTaskUploadEvidence u JOIN featureRevisionProposal p ON p.id=u.proposalId JOIN featureRevision r ON r.id=p.candidateRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
+        )
+        .get(),
+    )
     expect(forwarded.contributorId).toBe('author')
     expect(forwarded.actorId).toBe('reviewer')
     expect(forwarded.status).toBe('submitted')
@@ -3077,15 +3153,17 @@ describe('reviewed Feature merge and split integration', () => {
       imageRevisionId: upload.imageRevisionId,
       publicId: 'task-upload',
     })
-    const merge = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'merge',
-        inputs: outputs.map(ref => ({ ...ref, generation: 1 })),
-        reason: 'Combine sites',
-        outputs: [{ featureId: 'f', sourceFeatureId: 'f' }],
-      },
-    }))!
+    const merge = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'merge',
+          inputs: outputs.map(ref => ({ ...ref, generation: 1 })),
+          reason: 'Combine sites',
+          outputs: [{ featureId: 'f', sourceFeatureId: 'f' }],
+        },
+      }),
+    )
     expect(
       await decideFeatureIdentityProposal(f.db, {
         ...f.command,
@@ -3103,16 +3181,18 @@ describe('reviewed Feature merge and split integration', () => {
     expect(
       f.sqlite.prepare('SELECT count(*) n FROM featureImageUploadRevision').get()?.n,
     ).toBe(1)
-    const pin = f.sqlite.prepare('SELECT * FROM featureTaskUploadEvidence').get()!
+    const pin = required(
+      f.sqlite.prepare('SELECT * FROM featureTaskUploadEvidence').get(),
+    )
     const grant = await readFeatureUploadAttachmentGrant(f.db, {
       ...common,
       proposalId: String(pin.proposalId),
     })
     expect(grant.pins.get(upload.imageId)).toBe(upload.imageRevisionId)
     expect(await f.db.get(sql`SELECT ${grant.guard} allowed`)).toEqual({ allowed: 1 })
-    const head = f.sqlite
-      .prepare("SELECT * FROM featureRevisionHead WHERE featureId='f'")
-      .get()!
+    const head = required(
+      f.sqlite.prepare("SELECT * FROM featureRevisionHead WHERE featureId='f'").get(),
+    )
     const accepted = await acceptFeatureEditorialRevision(f.db, {
       ...common,
       actorId: 'reviewer',
@@ -3135,19 +3215,22 @@ describe('reviewed Feature merge and split integration', () => {
   })
   it('moves and deduplicates wishlists without copying or replacing visit history', async () => {
     const f = await identityFixture()
-    const split = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'split',
-        inputs: [f.input],
-        reason: 'Two sites',
-        outputs: [
-          { featureId: 'f', sourceFeatureId: 'f' },
-          { featureId: null, sourceFeatureId: 'f' },
-        ],
-      },
-    }))!
-    const outputs = (await readFeatureIdentityProposal(f.db, split))!.plan.outputs,
+    const split = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'split',
+          inputs: [f.input],
+          reason: 'Two sites',
+          outputs: [
+            { featureId: 'f', sourceFeatureId: 'f' },
+            { featureId: null, sourceFeatureId: 'f' },
+          ],
+        },
+      }),
+    )
+    const outputs = required(await readFeatureIdentityProposal(f.db, split)).plan
+        .outputs,
       child = outputs[1].featureId
     await decideFeatureIdentityProposal(f.db, {
       ...f.command,
@@ -3167,15 +3250,17 @@ describe('reviewed Feature merge and split integration', () => {
         "INSERT INTO userFeature VALUES('only-child',?,1,1,'original child visit','initial','initial')",
       )
       .run(child)
-    const merge = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'merge',
-        inputs: outputs.map(ref => ({ ...ref, generation: 1 })),
-        reason: 'Duplicate',
-        outputs: [{ featureId: 'f', sourceFeatureId: 'f' }],
-      },
-    }))!
+    const merge = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'merge',
+          inputs: outputs.map(ref => ({ ...ref, generation: 1 })),
+          reason: 'Duplicate',
+          outputs: [{ featureId: 'f', sourceFeatureId: 'f' }],
+        },
+      }),
+    )
     await decideFeatureIdentityProposal(f.db, {
       ...f.command,
       proposalId: merge,
@@ -3217,20 +3302,22 @@ describe('reviewed Feature merge and split integration', () => {
       f.sqlite.exec(
         "INSERT INTO task(id,featureId,projectId,organisationId,contributorId,isDraft,isReviewed,modifiedAt,type) VALUES ('open','f','project','org','author',0,0,'2026-01-01','reportedMissing')",
       )
-      const id = (await createFeatureIdentityProposal(f.db, {
-        ...f.command,
-        selection: {
-          kind: 'split',
-          inputs: [f.input],
-          reason: 'Two',
-          outputs: [
-            { featureId: null, sourceFeatureId: 'f' },
-            { featureId: null, sourceFeatureId: 'f' },
-          ],
-        },
-      }))!
-      const child = (await readFeatureIdentityProposal(f.db, id))!.plan.outputs[0]
-        .featureId
+      const id = required(
+        await createFeatureIdentityProposal(f.db, {
+          ...f.command,
+          selection: {
+            kind: 'split',
+            inputs: [f.input],
+            reason: 'Two',
+            outputs: [
+              { featureId: null, sourceFeatureId: 'f' },
+              { featureId: null, sourceFeatureId: 'f' },
+            ],
+          },
+        }),
+      )
+      const child = required(await readFeatureIdentityProposal(f.db, id)).plan
+        .outputs[0].featureId
       if (changed === 'task')
         f.sqlite.exec("UPDATE task SET isReviewed=1 WHERE id='open'")
       if (changed === 'wishlist') f.sqlite.exec('UPDATE userFeature SET isWishlisted=0')
@@ -3250,7 +3337,7 @@ describe('reviewed Feature merge and split integration', () => {
       expect(
         f.sqlite.prepare('SELECT count(*) n FROM featureTaskTransfer').get()?.n,
       ).toBe(0)
-      expect((await readFeatureIdentityProposal(f.db, id))!.outcome).toBeNull()
+      expect(required(await readFeatureIdentityProposal(f.db, id)).outcome).toBeNull()
       expect(
         f.sqlite.prepare("SELECT featureId FROM task WHERE id='open'").get()?.featureId,
       ).toBe('f')
@@ -3261,19 +3348,21 @@ describe('reviewed Feature merge and split integration', () => {
     f.sqlite.exec(
       "INSERT INTO task(id,featureId,projectId,organisationId,contributorId,isDraft,isReviewed,modifiedAt,type) VALUES ('open','f','project','org','author',0,0,'2026-01-01','reportedMissing')",
     )
-    const id = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'split',
-        inputs: [f.input],
-        reason: 'Two',
-        outputs: [
-          { featureId: null, sourceFeatureId: 'f' },
-          { featureId: null, sourceFeatureId: 'f' },
-        ],
-      },
-    }))!
-    const child = (await readFeatureIdentityProposal(f.db, id))!.plan.outputs[0]
+    const id = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'split',
+          inputs: [f.input],
+          reason: 'Two',
+          outputs: [
+            { featureId: null, sourceFeatureId: 'f' },
+            { featureId: null, sourceFeatureId: 'f' },
+          ],
+        },
+      }),
+    )
+    const child = required(await readFeatureIdentityProposal(f.db, id)).plan.outputs[0]
       .featureId
     f.sqlite.exec(
       "CREATE TRIGGER fail_task_move BEFORE UPDATE OF featureId ON task BEGIN SELECT RAISE(ABORT,'late task failure'); END",
@@ -3310,19 +3399,21 @@ describe('reviewed Feature merge and split integration', () => {
     f.sqlite.exec(
       "INSERT INTO task(id,featureId,projectId,organisationId,contributorId,isDraft,isReviewed,modifiedAt,type) VALUES ('open','f','project','org','author',0,0,'2026-01-01','newFeature')",
     )
-    const id = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'split',
-        inputs: [f.input],
-        reason: 'Two',
-        outputs: [
-          { featureId: null, sourceFeatureId: 'f' },
-          { featureId: null, sourceFeatureId: 'f' },
-        ],
-      },
-    }))!
-    const child = (await readFeatureIdentityProposal(f.db, id))!.plan.outputs[0]
+    const id = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'split',
+          inputs: [f.input],
+          reason: 'Two',
+          outputs: [
+            { featureId: null, sourceFeatureId: 'f' },
+            { featureId: null, sourceFeatureId: 'f' },
+          ],
+        },
+      }),
+    )
+    const child = required(await readFeatureIdentityProposal(f.db, id)).plan.outputs[0]
       .featureId
     await decideFeatureIdentityProposal(f.db, {
       ...f.command,
@@ -3332,8 +3423,10 @@ describe('reviewed Feature merge and split integration', () => {
       relationshipsReviewed: true,
       taskAssignments: [{ taskId: 'open', featureId: child }],
     })
-    const current = f.sqlite.prepare("SELECT * FROM task WHERE id='open'").get()!,
-      output = f.sqlite.prepare('SELECT * FROM feature WHERE id=?').get(child)!
+    const current = required(
+        f.sqlite.prepare("SELECT * FROM task WHERE id='open'").get(),
+      ),
+      output = required(f.sqlite.prepare('SELECT * FROM feature WHERE id=?').get(child))
     expect(
       await commitTaskFeatureReview(f.db, {
         task: current,
@@ -3360,18 +3453,20 @@ describe('reviewed Feature merge and split integration', () => {
   })
   it('keeps saved split guidance visible for retained and retired originals within the user and hub scope', async () => {
     const f = await identityFixture()
-    const id = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'split',
-        inputs: [f.input],
-        reason: 'Two',
-        outputs: [
-          { featureId: 'f', sourceFeatureId: 'f' },
-          { featureId: null, sourceFeatureId: 'f' },
-        ],
-      },
-    }))!
+    const id = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'split',
+          inputs: [f.input],
+          reason: 'Two',
+          outputs: [
+            { featureId: 'f', sourceFeatureId: 'f' },
+            { featureId: null, sourceFeatureId: 'f' },
+          ],
+        },
+      }),
+    )
     await decideFeatureIdentityProposal(f.db, {
       ...f.command,
       proposalId: id,
@@ -3424,20 +3519,22 @@ describe('reviewed Feature merge and split integration', () => {
         deriveMetadata: () => ({ version: 1, presentationMode: 'contain' }),
       })
       if (uploaded.status !== 'saved') throw new Error('Expected upload')
-      const id = (await createFeatureIdentityProposal(f.db, {
-        ...f.command,
-        selection: {
-          kind: 'split',
-          inputs: [f.input],
-          reason: 'Two',
-          outputs: [
-            { featureId: null, sourceFeatureId: 'f' },
-            { featureId: null, sourceFeatureId: 'f' },
-          ],
-        },
-      }))!
-      const child = (await readFeatureIdentityProposal(f.db, id))!.plan.outputs[0]
-        .featureId
+      const id = required(
+        await createFeatureIdentityProposal(f.db, {
+          ...f.command,
+          selection: {
+            kind: 'split',
+            inputs: [f.input],
+            reason: 'Two',
+            outputs: [
+              { featureId: null, sourceFeatureId: 'f' },
+              { featureId: null, sourceFeatureId: 'f' },
+            ],
+          },
+        }),
+      )
+      const child = required(await readFeatureIdentityProposal(f.db, id)).plan
+        .outputs[0].featureId
       await decideFeatureIdentityProposal(f.db, {
         ...f.command,
         proposalId: id,
@@ -3446,9 +3543,9 @@ describe('reviewed Feature merge and split integration', () => {
         relationshipsReviewed: true,
         taskAssignments: [{ taskId: 'draft', featureId: child }],
       })
-      const evidence = f.sqlite
-        .prepare('SELECT * FROM featureTaskUploadEvidence')
-        .get()!
+      const evidence = required(
+        f.sqlite.prepare('SELECT * FROM featureTaskUploadEvidence').get(),
+      )
       expect(
         f.sqlite
           .prepare(
@@ -3462,8 +3559,12 @@ describe('reviewed Feature merge and split integration', () => {
         proposalId: String(evidence.proposalId),
       })
       expect(await f.db.get(sql`SELECT ${grant.guard} allowed`)).toEqual({ allowed: 0 })
-      const current = f.sqlite.prepare("SELECT * FROM task WHERE id='draft'").get()!
-      const output = f.sqlite.prepare('SELECT * FROM feature WHERE id=?').get(child)!
+      const current = required(
+        f.sqlite.prepare("SELECT * FROM task WHERE id='draft'").get(),
+      )
+      const output = required(
+        f.sqlite.prepare('SELECT * FROM feature WHERE id=?').get(child),
+      )
       if (type === 'newFeature')
         expect(
           await commitTaskFeatureDraftFinalization(f.db, {
@@ -3479,7 +3580,9 @@ describe('reviewed Feature merge and split integration', () => {
           .get(evidence.proposalId)?.status,
       ).toBe('submitted')
       expect(await f.db.get(sql`SELECT ${grant.guard} allowed`)).toEqual({ allowed: 1 })
-      const snapshot = f.sqlite.prepare("SELECT * FROM task WHERE id='draft'").get()!
+      const snapshot = required(
+        f.sqlite.prepare("SELECT * FROM task WHERE id='draft'").get(),
+      )
       if (type === 'newFeature')
         expect(
           await commitTaskFeatureReview(f.db, {
@@ -3537,19 +3640,21 @@ describe('reviewed Feature merge and split integration', () => {
       ...(await prepareFeatureUploadSubmission(f.db, { ...common, taskId: 'one' })),
       f.db.update(task).set({ isDraft: false }).where(sql`1`),
     ])
-    const id = (await createFeatureIdentityProposal(f.db, {
-      ...f.command,
-      selection: {
-        kind: 'split',
-        inputs: [f.input],
-        reason: 'Two',
-        outputs: [
-          { featureId: 'f', sourceFeatureId: 'f' },
-          { featureId: null, sourceFeatureId: 'f' },
-        ],
-      },
-    }))!
-    const child = (await readFeatureIdentityProposal(f.db, id))!.plan.outputs[1]
+    const id = required(
+      await createFeatureIdentityProposal(f.db, {
+        ...f.command,
+        selection: {
+          kind: 'split',
+          inputs: [f.input],
+          reason: 'Two',
+          outputs: [
+            { featureId: 'f', sourceFeatureId: 'f' },
+            { featureId: null, sourceFeatureId: 'f' },
+          ],
+        },
+      }),
+    )
+    const child = required(await readFeatureIdentityProposal(f.db, id)).plan.outputs[1]
       .featureId
     await decideFeatureIdentityProposal(f.db, {
       ...f.command,
@@ -3575,9 +3680,11 @@ describe('reviewed Feature merge and split integration', () => {
       proposalId: uploaded.proposalId,
     })
     expect(await f.db.get(sql`SELECT ${grant.guard} allowed`)).toEqual({ allowed: 1 })
-    const other = f.sqlite
-      .prepare('SELECT proposalId FROM featureTaskUploadEvidence WHERE featureId=?')
-      .get(child)!
+    const other = required(
+      f.sqlite
+        .prepare('SELECT proposalId FROM featureTaskUploadEvidence WHERE featureId=?')
+        .get(child),
+    )
     expect(other.proposalId).not.toBe(uploaded.proposalId)
     const terminal = {
       ...common,
@@ -3617,7 +3724,9 @@ describe('reviewed Feature merge and split integration', () => {
         },
       })
       expect(proposalId).toBeTruthy()
-      const proposal = (await readFeatureIdentityProposal(f.db, proposalId!))!
+      const proposal = required(
+        await readFeatureIdentityProposal(f.db, required(proposalId)),
+      )
       expect(
         f.sqlite.prepare('SELECT count(*) n FROM feature WHERE isPublished=1').get(),
       ).toEqual({ n: 1 })
@@ -3631,7 +3740,7 @@ describe('reviewed Feature merge and split integration', () => {
       ).toThrow(/reserved/)
       const result = await decideFeatureIdentityProposal(f.db, {
         ...f.command,
-        proposalId: proposalId!,
+        proposalId: required(proposalId),
         accept: true,
         reason: 'Reviewed outputs',
         relationshipsReviewed: true,
@@ -3703,7 +3812,7 @@ describe('reviewed Feature merge and split integration', () => {
       expect(
         await decideFeatureIdentityProposal(f.db, {
           ...f.command,
-          proposalId: mergeId!,
+          proposalId: required(mergeId),
           accept: true,
           reason: 'Reviewed merge',
           relationshipsReviewed: true,
@@ -3763,8 +3872,9 @@ describe('reviewed Feature merge and split integration', () => {
     })
     if (uploaded.status !== 'saved') throw new Error('Missing upload')
     const token = String(
-      f.sqlite.prepare("SELECT modifiedAt FROM task WHERE id='initial-task'").get()!
-        .modifiedAt,
+      required(
+        f.sqlite.prepare("SELECT modifiedAt FROM task WHERE id='initial-task'").get(),
+      ).modifiedAt,
     )
     expect(
       await commitTaskFeatureDraftFinalization(f.db, {
@@ -3810,7 +3920,7 @@ describe('reviewed Feature merge and split integration', () => {
     })
     const decision = {
       ...command,
-      proposalId: proposalId!,
+      proposalId: required(proposalId),
       accept: true,
       reason: 'Duplicate',
       relationshipsReviewed: true as const,
@@ -3881,14 +3991,15 @@ describe('reviewed Feature merge and split integration', () => {
     })
     await decideFeatureIdentityProposal(f.db, {
       ...f.command,
-      proposalId: split!,
+      proposalId: required(split),
       accept: true,
       reason: 'Split',
       relationshipsReviewed: true,
       taskAssignments: [],
       preserveVisibility: true,
     })
-    const children = (await readFeatureIdentityProposal(f.db, split!))!.plan.outputs
+    const children = required(await readFeatureIdentityProposal(f.db, required(split)))
+      .plan.outputs
     const merge = await createFeatureIdentityProposal(f.db, {
       ...f.command,
       selection: {
@@ -3903,7 +4014,7 @@ describe('reviewed Feature merge and split integration', () => {
     expect(
       await decideFeatureIdentityProposal(f.db, {
         ...f.command,
-        proposalId: merge!,
+        proposalId: required(merge),
         accept: true,
         reason: 'Merge',
         relationshipsReviewed: true,
@@ -3962,11 +4073,13 @@ describe('reviewed Feature merge and split integration', () => {
         ],
       },
     })
-    const proposal = (await readFeatureIdentityProposal(f.db, proposalId!))!
+    const proposal = required(
+      await readFeatureIdentityProposal(f.db, required(proposalId)),
+    )
     expect(
       await decideFeatureIdentityProposal(f.db, {
         ...f.command,
-        proposalId: proposalId!,
+        proposalId: required(proposalId),
         accept: true,
         reason: 'Split',
         relationshipsReviewed: true,
@@ -4038,10 +4151,12 @@ describe('reviewed Feature merge and split integration', () => {
         ],
       },
     })
-    const proposal = (await readFeatureIdentityProposal(f.db, proposalId!))!
+    const proposal = required(
+      await readFeatureIdentityProposal(f.db, required(proposalId)),
+    )
     await decideFeatureIdentityProposal(f.db, {
       ...f.command,
-      proposalId: proposalId!,
+      proposalId: required(proposalId),
       accept: true,
       reason: 'Split',
       relationshipsReviewed: true,
@@ -4095,7 +4210,7 @@ describe('reviewed Feature merge and split integration', () => {
     expect(
       await decideFeatureIdentityProposal(f.db, {
         ...f.command,
-        proposalId: first!,
+        proposalId: required(first),
         accept: true,
         reason: 'Reviewed',
         relationshipsReviewed: true,
@@ -4105,14 +4220,16 @@ describe('reviewed Feature merge and split integration', () => {
     expect(
       await decideFeatureIdentityProposal(f.db, {
         ...f.command,
-        proposalId: second!,
+        proposalId: required(second),
         accept: true,
         reason: 'Stale',
         relationshipsReviewed: true,
         taskAssignments: [],
       }),
     ).toBeNull()
-    expect((await readFeatureIdentityProposal(f.db, second!))?.outcome).toBeNull()
+    expect(
+      (await readFeatureIdentityProposal(f.db, required(second)))?.outcome,
+    ).toBeNull()
   })
   it('rolls back decisions, projections, retirement and scopes after a late output failure', async () => {
     const f = await identityFixture()
@@ -4134,14 +4251,14 @@ describe('reviewed Feature merge and split integration', () => {
     await expect(
       decideFeatureIdentityProposal(f.db, {
         ...f.command,
-        proposalId: id!,
+        proposalId: required(id),
         accept: true,
         reason: 'Reviewed',
         relationshipsReviewed: true,
         taskAssignments: [],
       }),
     ).rejects.toThrow()
-    expect((await readFeatureIdentityProposal(f.db, id!))?.outcome).toBeNull()
+    expect((await readFeatureIdentityProposal(f.db, required(id)))?.outcome).toBeNull()
     expect(
       f.sqlite.prepare('SELECT count(*) n FROM featureIdentityOperation').get(),
     ).toEqual({ n: 0 })
@@ -4185,7 +4302,7 @@ describe('reviewed Feature merge and split integration', () => {
     expect(
       await decideFeatureIdentityProposal(f.db, {
         ...f.command,
-        proposalId: id!,
+        proposalId: required(id),
         accept: true,
         reason: 'Reviewed',
         relationshipsReviewed: true,
@@ -4195,14 +4312,16 @@ describe('reviewed Feature merge and split integration', () => {
     expect(
       await decideFeatureIdentityProposal(f.db, {
         ...f.command,
-        proposalId: id!,
+        proposalId: required(id),
         accept: false,
         reason: 'Inputs changed',
         relationshipsReviewed: true,
         taskAssignments: [],
       }),
     ).toBe(id)
-    expect((await readFeatureIdentityProposal(f.db, id!))?.outcome).toBe('rejected')
+    expect((await readFeatureIdentityProposal(f.db, required(id)))?.outcome).toBe(
+      'rejected',
+    )
   })
 })
 
@@ -4383,10 +4502,10 @@ describe('approved private Feature maintenance', () => {
       const result = await publishFeatureStaffDraft(f.db, {
         ...common,
         expectedScope,
-        proposalId: draft!.proposalId,
-        expectedCandidateRevisionId: draft!.candidateRevisionId,
+        proposalId: required(draft).proposalId,
+        expectedCandidateRevisionId: required(draft).candidateRevisionId,
         expectedPublishedRevisionId: null,
-        expectedComparisonRevisionId: capture.revisionId!,
+        expectedComparisonRevisionId: required(capture.revisionId),
         expectedGeneration: previouslyPublished ? 1 : 0,
         validateResult: () => [],
         canReviewPath: () => true,
@@ -4438,26 +4557,57 @@ it('records authored status changes while real historical routing moves only the
     canPublish: true,
   })
   expect(workspace.publishedRevisionId).not.toBe(initial.revisionId)
-  const revision = f.sqlite
-    .prepare('SELECT content FROM featureRevision WHERE id=?')
-    .get(workspace.publishedRevisionId!)!
+  const revision = required(
+    f.sqlite
+      .prepare('SELECT content FROM featureRevision WHERE id=?')
+      .get(required(workspace.publishedRevisionId)),
+  )
   expect(JSON.parse(String(revision.content)).profile.isIntangible).toBe(true)
 })
 
 it('keeps the legacy unlinked transfer and destination guard in one transaction', async () => {
   const f = fixture()
-  f.sqlite.exec("CREATE TABLE IF NOT EXISTS layerProperty(layerId TEXT,propertyId TEXT,isVisible INTEGER); INSERT INTO layerProperty SELECT 'destination-layer',id,1 FROM property WHERE id <> 'private'")
-  const destinationScope = { organisationId: 'org', projectId: 'destination-project', layerId: 'destination-layer', resourceHubId: null }
-  f.sqlite.exec("INSERT INTO project(id,organisationId,isPublished,isArchived) VALUES('destination-project','org',1,0); INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES('destination-layer','org','destination-project',1,0)")
+  f.sqlite.exec(
+    "CREATE TABLE IF NOT EXISTS layerProperty(layerId TEXT,propertyId TEXT,isVisible INTEGER); INSERT INTO layerProperty SELECT 'destination-layer',id,1 FROM property WHERE id <> 'private'",
+  )
+  const destinationScope = {
+    organisationId: 'org',
+    projectId: 'destination-project',
+    layerId: 'destination-layer',
+    resourceHubId: null,
+  }
+  f.sqlite.exec(
+    "INSERT INTO project(id,organisationId,isPublished,isArchived) VALUES('destination-project','org',1,0); INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES('destination-layer','org','destination-project',1,0)",
+  )
   const guard = sql`(${buildFeatureCommandScopeGuard(f.db, 'f', expectedScope)}) AND (${featureDestinationGuard(destinationScope)})`
   const saved = await saveUnlinkedFeatureForm(f.db, {
-    featureId: 'f', projectId: 'project', actorId: 'owner', updatedAt: 'token',
-    scopeGuard: guard, destinationScope,
-    data: { projectId: 'destination-project', layerId: 'destination-layer', organisationId: 'org' },
+    featureId: 'f',
+    projectId: 'project',
+    actorId: 'owner',
+    updatedAt: 'token',
+    scopeGuard: guard,
+    destinationScope,
+    data: {
+      projectId: 'destination-project',
+      layerId: 'destination-layer',
+      organisationId: 'org',
+    },
     i18n: {},
   })
   expect(saved?.projectId).toBe('destination-project')
   expect(saved?.id).toBe('f')
-  expect(f.sqlite.prepare("SELECT propertyId FROM featureProperty WHERE featureId='f' AND propertyId='private'").get()).toBeUndefined()
-  expect(f.sqlite.prepare("SELECT propertyId FROM featurePropertyI18n WHERE featureId='f' AND propertyId='private'").get()).toBeUndefined()
+  expect(
+    f.sqlite
+      .prepare(
+        "SELECT propertyId FROM featureProperty WHERE featureId='f' AND propertyId='private'",
+      )
+      .get(),
+  ).toBeUndefined()
+  expect(
+    f.sqlite
+      .prepare(
+        "SELECT propertyId FROM featurePropertyI18n WHERE featureId='f' AND propertyId='private'",
+      )
+      .get(),
+  ).toBeUndefined()
 })

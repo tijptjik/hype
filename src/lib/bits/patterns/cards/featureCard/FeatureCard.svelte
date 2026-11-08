@@ -12,7 +12,7 @@ import FeatureCardContainer from './components/FeatureCardContainer.svelte'
 import {
   VIEWER_TRANSITION_MS,
   VIEWER_TRANSITION_EASING,
-} from '#lib/bits/patterns/images/images.motion'
+} from '#lib/bits/patterns/images/images.motion.js'
 import FeatureCardContent from './components/FeatureCardContent.svelte'
 import FeatureCardPortalBand from './components/FeatureCardPortalBand.svelte'
 import FeatureCardMissingReportBody from './components/FeatureCardMissingReportBody.svelte'

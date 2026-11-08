@@ -33,7 +33,7 @@ import type { PropertyLayoutResult } from '../featureCard.types'
 import {
   VIEWER_TRANSITION_MS,
   VIEWER_TRANSITION_EASING,
-} from '#lib/bits/patterns/images/images.motion'
+} from '#lib/bits/patterns/images/images.motion.js'
 import {
   fitFeaturePropertyLayoutInRegion,
   getFeatureCardCollapsedDescriptionLineCount,

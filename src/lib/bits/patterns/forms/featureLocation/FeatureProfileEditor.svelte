@@ -269,7 +269,10 @@ function autonym(locale: string): string {
   inert={loading}
 >
   {#if showToolbar}
-    <div class="border-border/50 mb-6 flex flex-wrap items-center gap-2 border-b pb-3" inert={loading}>
+    <div
+      class="border-border/50 mb-6 flex flex-wrap items-center gap-2 border-b pb-3"
+      inert={loading}
+    >
       {#if toolbarMessage}
         <div class="min-w-0 flex-1">{@render toolbarMessage()}</div>
       {/if}
@@ -278,7 +281,8 @@ function autonym(locale: string): string {
           {...localeState}
           {options}
           allowAdd={isEditing}
-          onExpandedChange={expanded => onLocaleStateChange({ ...localeState, expanded })}
+          onExpandedChange={expanded =>
+            onLocaleStateChange({ ...localeState, expanded })}
           onChange={change =>
             onLocaleStateChange({
               ...localeState,
@@ -374,16 +378,16 @@ function autonym(locale: string): string {
                 message={results[field]?.length
                   ? [
                       m.profile_translation_complete({
-                        count: results[field]!.filter(
+                        count: (results[field] ?? []).filter(
                           result => result.status === 'translated',
                         ).length,
                       }),
-                      ...results[field]!.filter(
-                        result => result.status !== 'translated',
-                      ).map(
-                        result =>
-                          `${name(result.locale)}: ${result.status === 'unsupported' ? m.profile_translation_unsupported() : result.status === 'stale' ? m.profile_translation_skipped() : m.address_translate_error()}`,
-                      ),
+                      ...(results[field] ?? [])
+                        .filter(result => result.status !== 'translated')
+                        .map(
+                          result =>
+                            `${name(result.locale)}: ${result.status === 'unsupported' ? m.profile_translation_unsupported() : result.status === 'stale' ? m.profile_translation_skipped() : m.address_translate_error()}`,
+                        ),
                     ].join(' ')
                   : ''}
               />

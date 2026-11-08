@@ -13,10 +13,17 @@ import { equalLocationValue } from '#lib/locations/baseline.js'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // SERVICES
 import { featureLegacyPublicationGuard } from './featureRevisionPublication'
-import { featureRevisionCreationEnabled, prepareFeatureCreationRevision } from './featureCreationRevision'
+import {
+  featureRevisionCreationEnabled,
+  prepareFeatureCreationRevision,
+} from './featureCreationRevision'
 import { prepareInitialFeatureDraftSave } from './featureInitialDraft'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
-import { featureDestinationPropertiesGuard, reconcileFeatureTransferProperties, type FeatureDestinationScope } from './featureParentTransfer'
+import {
+  featureDestinationPropertiesGuard,
+  reconcileFeatureTransferProperties,
+  type FeatureDestinationScope,
+} from './featureParentTransfer'
 import { getDetachedFeatureBrands } from './locationDetached'
 import { prepareFeatureFormRelations } from './locationRelations'
 // TYPES
@@ -71,14 +78,27 @@ export async function prepareFeatureFormCreation(
     properties: NewFeatureProperty[]
     revisionActor?: { actorId: string; mode: 'staff' | 'contribution' }
   },
-): Promise<{ id: string; statements: [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]] }> {
+): Promise<{
+  id: string
+  statements: [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]
+}> {
   const id = input.data.id || nanoid(12)
   const enabled = await featureRevisionCreationEnabled(db)
-  if (enabled && !input.revisionActor) throw new Error('Feature creation requires session attribution')
-  if (enabled && input.data.isPublished) throw new Error('New Features must be saved before publication')
+  if (enabled && !input.revisionActor)
+    throw new Error('Feature creation requires session attribution')
+  if (enabled && input.data.isPublished)
+    throw new Error('New Features must be saved before publication')
   // Persist exactly the authored defaults used by the first immutable snapshot.
-  const data = enabled ? { ...input.data, ...(input.revisionActor?.mode === 'staff' ? { isDraft: false } : {}), visitableAsOf: input.data.visitableAsOf ?? new Date().toISOString().slice(0, 10),
-    isIntangible: input.data.isIntangible ?? false, isVisitable: input.data.isVisitable ?? true } : input.data
+  const data = enabled
+    ? {
+        ...input.data,
+        ...(input.revisionActor?.mode === 'staff' ? { isDraft: false } : {}),
+        visitableAsOf:
+          input.data.visitableAsOf ?? new Date().toISOString().slice(0, 10),
+        isIntangible: input.data.isIntangible ?? false,
+        isVisitable: input.data.isVisitable ?? true,
+      }
+    : input.data
   const formWriteToken = crypto.randomUUID()
   const parent = db
     .insert(feature)
@@ -92,16 +112,26 @@ export async function prepareFeatureFormCreation(
     })
     .returning()
   const guard = sql`EXISTS (SELECT 1 FROM feature WHERE id = ${id} AND formWriteToken = ${formWriteToken})`
-  const revisions = enabled ? await prepareFeatureCreationRevision(db, {
-    ...input, ...input.revisionActor!, id, data, guard,
-  }) : []
+  const revisions =
+    enabled && input.revisionActor
+      ? await prepareFeatureCreationRevision(db, {
+          ...input,
+          ...input.revisionActor,
+          id,
+          data,
+          guard,
+        })
+      : []
   return {
     id,
     statements: [
       parent,
       ...prepareFeatureFormRelations(db, id, guard, input.i18n, input.properties),
       ...revisions,
-      db.select().from(feature).where(and(eq(feature.id, id), guard)),
+      db
+        .select()
+        .from(feature)
+        .where(and(eq(feature.id, id), guard)),
     ],
   }
 }
@@ -123,7 +153,9 @@ export async function saveUnlinkedFeatureForm(
   if (!plan) return undefined
   // One atomic batch prevents a linker from observing new parent data with old children.
   const result = await executeRevisionBatch(db, plan.precondition, plan.statements)
-  return result && (result[plan.writeIndex] as FeatureDB[])[0] ? (result[result.length - 1] as FeatureDB[])[0] : undefined
+  return result && (result[plan.writeIndex] as FeatureDB[])[0]
+    ? (result[result.length - 1] as FeatureDB[])[0]
+    : undefined
 }
 
 /**
@@ -149,10 +181,24 @@ export async function prepareUnlinkedFeatureFormSave(
     locationBrandEdit?: LocationBrandEdit
     actorId?: string
   },
-): Promise<{ guard: SQL; precondition: SQL; writeIndex: number; statements: BatchItem<'sqlite'>[] } | undefined> {
-  const transfer = input.destinationScope ? await reconcileFeatureTransferProperties(
-    db, input.featureId, input.destinationScope, input.properties, input.allowedInternalIds,
-  ) : undefined
+): Promise<
+  | {
+      guard: SQL
+      precondition: SQL
+      writeIndex: number
+      statements: BatchItem<'sqlite'>[]
+    }
+  | undefined
+> {
+  const transfer = input.destinationScope
+    ? await reconcileFeatureTransferProperties(
+        db,
+        input.featureId,
+        input.destinationScope,
+        input.properties,
+        input.allowedInternalIds,
+      )
+    : undefined
   if (transfer) input = { ...input, properties: transfer.properties }
   const brandEdit = input.locationBrandEdit
     ? LocationBrandEditSchema.parse(input.locationBrandEdit)
@@ -192,13 +238,13 @@ export async function prepareUnlinkedFeatureFormSave(
       ...data,
       modifiedAt,
       formWriteToken,
-      ...(brandEdit
+      ...(brandEdit && input.actorId
         ? {
             localLocationBrands: {
               brands:
                 brandEdit.choice.mode === 'override' ? brandEdit.choice.value : [],
               revision: crypto.randomUUID(),
-              actorId: input.actorId!,
+              actorId: input.actorId,
             },
           }
         : {}),
@@ -212,7 +258,7 @@ export async function prepareUnlinkedFeatureFormSave(
         eq(feature.projectId, input.projectId),
         eq(feature.modifiedAt, input.updatedAt),
         initial?.guard ?? legacy,
-        ...(brandEdit
+        ...(brandEdit && input.actorId
           ? [
               sql`json_extract(${feature.localLocationBrands},'$.revision')=${brandEdit.expectedRevision}`,
             ]
@@ -243,8 +289,21 @@ export async function prepareUnlinkedFeatureFormSave(
         Boolean(transfer),
       ),
       ...(initial?.after ?? []),
-      ...(input.destinationScope ? [prepareRevisionCheck(db, featureDestinationPropertiesGuard(input.featureId, input.destinationScope))] : []),
-      db.select().from(feature).where(and(eq(feature.id, input.featureId), guard)),
+      ...(input.destinationScope
+        ? [
+            prepareRevisionCheck(
+              db,
+              featureDestinationPropertiesGuard(
+                input.featureId,
+                input.destinationScope,
+              ),
+            ),
+          ]
+        : []),
+      db
+        .select()
+        .from(feature)
+        .where(and(eq(feature.id, input.featureId), guard)),
     ],
   }
 }

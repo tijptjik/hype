@@ -66,7 +66,11 @@ import {
 } from '#lib/db/services/featureFormSave.js'
 import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/locationEdit.js'
-import { featureDestinationGuard, reconcileFeatureTransferProperties, type FeatureDestinationScope } from '#lib/db/services/featureParentTransfer.js'
+import {
+  featureDestinationGuard,
+  reconcileFeatureTransferProperties,
+  type FeatureDestinationScope,
+} from '#lib/db/services/featureParentTransfer.js'
 import { saveFeatureFormRevision } from '#lib/db/services/featureFormRevision.js'
 import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
 import { getInternalPropertyAccess } from '#lib/properties/audience.server.js'
@@ -239,7 +243,9 @@ async function readFeatureList(
   params: z.infer<typeof ListQueryParamsSchema>,
   ctx: GuardedQueryContext,
   idsOnly = false,
-): Promise<ListResponse<FeatureListByProfile<FeatureProfile>> | ListResponse<{ id: string }>> {
+): Promise<
+  ListResponse<FeatureListByProfile<FeatureProfile>> | ListResponse<{ id: string }>
+> {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'list')
 
@@ -281,9 +287,12 @@ async function readFeatureList(
       )
   const result = await listFeatures(
     db,
-    idsOnly ? {} : getFeatureWithRelations(profile) as never,
+    idsOnly ? {} : (getFeatureWithRelations(profile) as never),
     conditions,
-    { ...event.locals.hub, isAdminRequest: isAdminRequest && !params.meta?.publicationPreview },
+    {
+      ...event.locals.hub,
+      isAdminRequest: isAdminRequest && !params.meta?.publicationPreview,
+    },
     params.pagination,
     params.sorting,
     { q: params.q, filtersToApply, locale: getLocale(), idsOnly },
@@ -312,11 +321,20 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, (params, ctx) =>
  * @remarks Every page uses the ordinary list authorization and hub predicates.
  */
 export const getFeatureIds = guardedQuery(ListQueryParamsSchema, async (params, ctx) =>
-  readFeatureList({
-    ...params,
-    pagination: { ...params.pagination, limit: Math.min(params.pagination?.limit ?? 250, 250) },
-  }, ctx, true),
-) as unknown as (params: FeatureListParamsByProfile<'card'>) => RemoteQuery<ListResponse<{ id: string }>>
+  readFeatureList(
+    {
+      ...params,
+      pagination: {
+        ...params.pagination,
+        limit: Math.min(params.pagination?.limit ?? 250, 250),
+      },
+    },
+    ctx,
+    true,
+  ),
+) as unknown as (
+  params: FeatureListParamsByProfile<'card'>,
+) => RemoteQuery<ListResponse<{ id: string }>>
 
 export const getFeatures = getFeaturesQuery as unknown as <
   P extends FeatureProfile = 'list',
@@ -390,7 +408,10 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     db,
     getFeatureWithRelations(profile) as never,
     conditions,
-    { ...event.locals.hub, isAdminRequest: isAdminRequest && !params.meta?.publicationPreview },
+    {
+      ...event.locals.hub,
+      isAdminRequest: isAdminRequest && !params.meta?.publicationPreview,
+    },
   )
 
   return toEntityResponseShape(result as never, profile)
@@ -515,7 +536,6 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     geometry: normalizeFeatureFormGeometry(params.data.geometry),
   })
 
-
   const featureId = meta?.id?.trim()
   const mode = meta?.mode
   const isSupportedMode = mode === 'create' || mode === 'update'
@@ -618,8 +638,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
   let destinationScope: FeatureDestinationScope | undefined
-  const parentsChanged = data.layerId !== current.layerId ||
-    data.projectId !== current.projectId || data.organisationId !== current.organisationId
+  const parentsChanged =
+    data.layerId !== current.layerId ||
+    data.projectId !== current.projectId ||
+    data.organisationId !== current.organisationId
 
   // Authorize scalar changes before loading the relation-heavy admin shape.
   const submittedDataBeforeHydration: Record<string, unknown> = {
@@ -685,7 +707,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       await probeLayerForUpdate(db, data.layerId as Id),
       () => invalid(issue('LAYER_NOT_FOUND')),
     )
-    if (destination.organisationId !== data.organisationId || destination.projectId !== data.projectId)
+    if (
+      destination.organisationId !== data.organisationId ||
+      destination.projectId !== data.projectId
+    )
       invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
     destinationScope = {
       organisationId: destination.organisationId,
@@ -694,12 +719,18 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       resourceHubId: destination.hubId,
     }
     const destinationDecision = authorizeFeatureCreateForSubmission({
-      user, userRoles, resource: destinationScope, submittedData: { layerId: data.layerId },
+      user,
+      userRoles,
+      resource: destinationScope,
+      submittedData: { layerId: data.layerId },
     })
     if (!destinationDecision.allowed)
-      invalid(issue(toIssueDetailMessage(destinationDecision.code ?? 'INSUFFICIENT_ROLE')))
+      invalid(
+        issue(toIssueDetailMessage(destinationDecision.code ?? 'INSUFFICIENT_ROLE')),
+      )
   }
-  const resolvedOrganisationId = destinationScope?.organisationId ?? current.organisationId
+  const resolvedOrganisationId =
+    destinationScope?.organisationId ?? current.organisationId
   const resolvedProjectId = destinationScope?.projectId ?? current.projectId
 
   const currentWithRelations = requireValue(
@@ -789,10 +820,17 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   if (destinationScope) {
-    submittedProperties = (await reconcileFeatureTransferProperties(
-      db, current.id, destinationScope, submittedProperties,
-      (await getInternalPropertyAccess(ctx)).allowed,
-    )).properties
+    submittedProperties = (
+      await reconcileFeatureTransferProperties(
+        db,
+        current.id,
+        destinationScope,
+        submittedProperties,
+        (
+          await getInternalPropertyAccess(ctx)
+        ).allowed,
+      )
+    ).properties
   }
 
   if (propertiesChanged || data.layerId !== current.layerId) {
@@ -812,7 +850,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     }
   }
 
-  if (data.layerId !== current.layerId && await historicalSourceLayerId(db, data.layerId))
+  if (
+    data.layerId !== current.layerId &&
+    (await historicalSourceLayerId(db, data.layerId))
+  )
     invalid(issue('HISTORICAL_LAYER_MEMBERSHIP_AUTOMATIC'))
 
   const saveInput = {
@@ -857,22 +898,37 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       guard: buildFeatureCommandScopeGuard(db, current.id, current),
       destinationScope,
       revisionBoundary: Boolean(destinationScope),
-      reason: destinationScope ? `Feature transferred from ${current.organisationId}/${current.projectId}/${current.layerId} to ${resolvedOrganisationId}/${resolvedProjectId}/${data.layerId}` : undefined,
-      canPublish: authorizeFeaturePublishForSubmission({ user, userRoles, resource: current }).allowed,
+      reason: destinationScope
+        ? `Feature transferred from ${current.organisationId}/${current.projectId}/${current.layerId} to ${resolvedOrganisationId}/${resolvedProjectId}/${data.layerId}`
+        : undefined,
+      canPublish: authorizeFeaturePublishForSubmission({
+        user,
+        userRoles,
+        resource: current,
+      }).allowed,
       allowDescriptions: presentationPolicy.allowDescriptions,
       allowedInternalIds: (await getInternalPropertyAccess(ctx)).allowed,
     })
     if (revision.status === 'applied') {
-      if (!currentWithRelations.isDraft) recordContribution(ctx.event.locals, 'contribution.edit', current.id)
+      if (!currentWithRelations.isDraft)
+        recordContribution(ctx.event.locals, 'contribution.edit', current.id)
       if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, current.id)
       return { data: { id: current.id }, revisionApplied: revision.revisionId }
     }
-    if (revision.status === 'saved') return {
-      data: { id: current.id, modifiedAt: current.modifiedAt },
-      revisionDraft: { proposalId: revision.proposalId, candidateRevisionId: revision.candidateRevisionId },
-    }
+    if (revision.status === 'saved')
+      return {
+        data: { id: current.id, modifiedAt: current.modifiedAt },
+        revisionDraft: {
+          proposalId: revision.proposalId,
+          candidateRevisionId: revision.candidateRevisionId,
+        },
+      }
   } catch (cause) {
-    invalid(issue(cause instanceof Error ? cause.message : 'Feature changes could not be saved'))
+    invalid(
+      issue(
+        cause instanceof Error ? cause.message : 'Feature changes could not be saved',
+      ),
+    )
   }
   const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')
@@ -981,7 +1037,12 @@ export const publishFeatureImages = guardedCommand(
       toIssueDetailMessage,
     )
 
-    const published = await publishAllFeatureImagesExceptResearch(db, featureId, user.id as Id, probed)
+    const published = await publishAllFeatureImagesExceptResearch(
+      db,
+      featureId,
+      user.id as Id,
+      probed,
+    )
     if (!published) throw error(409, 'STALE_FEATURE_PUBLICATION_SCOPE')
     return { data: { id: featureId } }
   },
@@ -1077,12 +1138,16 @@ async function applyFeatureStatePatch(
   }
 
   const revisionState = await updateFeatureRevisionState(db, {
-    featureId: params.id, updatedAt: current.modifiedAt, data: params.data, actorId: user.id,
+    featureId: params.id,
+    updatedAt: current.modifiedAt,
+    data: params.data,
+    actorId: user.id,
     guard: buildFeatureCommandScopeGuard(db, params.id, current),
   })
-  if (revisionState.status === 'updated') return requireValue(revisionState.feature, () => {
-    throw error(409, 'STALE_WRITE')
-  })
+  if (revisionState.status === 'updated')
+    return requireValue(revisionState.feature, () => {
+      throw error(409, 'STALE_WRITE')
+    })
   const persisted = requireValue(
     await updateFeatureByIdWithConcurrency(db, {
       id: params.id as Id,
@@ -1261,21 +1326,22 @@ export const updateFeatureState = guardedCommand(
  */
 export const updateFeatureBulkState = guardedCommand(
   z.array(BulkFeatureStateSchema).min(1).max(100),
-  async (updates, ctx): Promise<FeatureBulkStateResult[]> => Promise.all(
-    updates.map(async params => {
-      try {
-        const data = await applyFeatureBulkStateField(params, {
-          ...ctx,
-          isAdminRequest: params.meta?.isAdminRequest === true,
-        })
-        return { id: params.id as Id, ok: true, data }
-      } catch (err) {
-        return {
-          id: params.id as Id,
-          ok: false,
-          error: toFeatureBulkStateErrorMessage(err),
+  async (updates, ctx): Promise<FeatureBulkStateResult[]> =>
+    Promise.all(
+      updates.map(async params => {
+        try {
+          const data = await applyFeatureBulkStateField(params, {
+            ...ctx,
+            isAdminRequest: params.meta?.isAdminRequest === true,
+          })
+          return { id: params.id as Id, ok: true, data }
+        } catch (err) {
+          return {
+            id: params.id as Id,
+            ok: false,
+            error: toFeatureBulkStateErrorMessage(err),
+          }
         }
-      }
-    }),
-  ),
+      }),
+    ),
 )

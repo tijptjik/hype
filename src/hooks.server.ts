@@ -216,14 +216,15 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       }),
     )
     if (hubDb) {
+      const { layerDefaults, ...profileData } = hubDb
       const hub = (await hubServices.toEntityResponseShape(
-        hubDb,
+        profileData,
         'card',
       )) as HubShapeResult
 
       event.locals.hub = toHubLocalsShape({
         ...(hub.data as Partial<HubOptsExtended>),
-        layerDefaults: hubDb.layerDefaults,
+        layerDefaults,
       })
     }
   } else if (db && event.locals && hubOpts.domain) {
@@ -272,14 +273,15 @@ const handle_hub: Handle = async ({ event, resolve }) => {
         (hubDb?.isPublished && !hubDb?.isArchived))
 
     if (hubDb && canUseDomainHub) {
+      const { layerDefaults, ...profileData } = hubDb
       const hub = (await hubServices.toEntityResponseShape(
-        hubDb,
+        profileData,
         'card',
       )) as HubShapeResult
 
       event.locals.hub = toHubLocalsShape({
         ...(hub.data as Partial<HubOptsExtended>),
-        layerDefaults: hubDb.layerDefaults,
+        layerDefaults,
       })
     }
   } else {

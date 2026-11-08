@@ -29,7 +29,11 @@ import {
 import { prepareFeatureLocationTransfer } from './featureLocationTransfer'
 import { featureLegacyPublicationGuard } from './featureRevisionPublication'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
-import { featureDestinationPropertiesGuard, reconcileFeatureTransferProperties, type FeatureDestinationScope } from './featureParentTransfer'
+import {
+  featureDestinationPropertiesGuard,
+  reconcileFeatureTransferProperties,
+  type FeatureDestinationScope,
+} from './featureParentTransfer'
 import { readLocationResetSources, prepareLocationPhoneReset } from './locationReset'
 import { getDetachedFeatureBrands } from './locationDetached'
 import { readFeatureLocationBaseline } from './locationBaseline'
@@ -101,9 +105,15 @@ export async function saveLinkedFeatureForm(
     }
     return { status: 'unlinked' }
   }
-  const transfer = input.destinationScope ? await reconcileFeatureTransferProperties(
-    db, input.featureId, input.destinationScope, input.properties, input.allowedInternalIds,
-  ) : undefined
+  const transfer = input.destinationScope
+    ? await reconcileFeatureTransferProperties(
+        db,
+        input.featureId,
+        input.destinationScope,
+        input.properties,
+        input.allowedInternalIds,
+      )
+    : undefined
   if (transfer) input = { ...input, properties: transfer.properties }
   const brandEdit = input.locationBrandEdit
     ? LocationBrandEditSchema.parse(input.locationBrandEdit)
@@ -116,7 +126,11 @@ export async function saveLinkedFeatureForm(
     (reset && reset.expectedRevision !== association.version)
   )
     return { status: 'conflict' }
-  if (input.data.projectId && input.data.projectId !== input.projectId && !input.destinationScope)
+  if (
+    input.data.projectId &&
+    input.data.projectId !== input.projectId &&
+    !input.destinationScope
+  )
     return {
       status: 'review',
       reason: 'Location association must be reviewed before moving projects',
@@ -129,6 +143,9 @@ export async function saveLinkedFeatureForm(
     'linked',
   )
   if (before.status !== 'ready') return { status: 'review', reason: before.reason }
+  const acceptedLocation = before.baseline.effective.location
+  if (!acceptedLocation)
+    return { status: 'review', reason: 'Accepted Location baseline is unavailable' }
   if (before.baseline.modifiedAt !== input.updatedAt) return { status: 'conflict' }
   const after = await readFeatureLocationBaseline(
     db,
@@ -136,7 +153,7 @@ export async function saveLinkedFeatureForm(
     input.projectId,
     {
       data: {
-        geometry: input.data.geometry ?? before.baseline.effective.location!.geometry,
+        geometry: input.data.geometry ?? acceptedLocation.geometry,
         addressMeta: input.data.addressMeta ?? { address: before.baseline.address },
         ...(input.data.isIntangible === undefined
           ? {}
@@ -261,7 +278,7 @@ export async function saveLinkedFeatureForm(
   if (association.addressRevisionId || independentPlacement) {
     materializedData = {
       ...materializedData,
-      geometry: input.data.geometry ?? before.baseline.effective.location!.geometry,
+      geometry: input.data.geometry ?? acceptedLocation.geometry,
       addressMeta: input.data.addressMeta ?? { address: before.baseline.address },
     }
     const address = FeatureAddressSchema.parse(materializedData.addressMeta?.address)
@@ -326,32 +343,55 @@ export async function saveLinkedFeatureForm(
       ? { placementOverrides: { accessHints: savedAddress.data.accessHints } }
       : {}),
   })
-  const sourceOrganisation = input.destinationScope ? await db.get<{ organisationId: string }>(
-    sql`SELECT organisationId FROM project WHERE id=${input.projectId}`,
-  ) : undefined
-  const crossOrganisation = sourceOrganisation && input.destinationScope &&
-    sourceOrganisation.organisationId !== input.destinationScope.organisationId
+  const sourceOrganisation = input.destinationScope
+    ? await db.get<{ organisationId: string }>(
+        sql`SELECT organisationId FROM project WHERE id=${input.projectId}`,
+      )
+    : undefined
+  const destinationScope = input.destinationScope
+  const crossOrganisation =
+    sourceOrganisation &&
+    destinationScope &&
+    sourceOrganisation.organisationId !== destinationScope.organisationId
   if (crossOrganisation && correction)
-    throw new Error('Save Location edits before transferring the Feature to another organisation')
-  const locationTransfer = crossOrganisation ? await prepareFeatureLocationTransfer(db, {
-    featureId: input.featureId, actorId: input.actorId,
-    sourceOrganisationId: sourceOrganisation.organisationId,
-    destinationOrganisationId: input.destinationScope!.organisationId,
-    authorizeDestination: input.authorizeDestinationLocation,
-    accepted: FeatureRevisionContentSchema.shape.placement.shape.location.unwrap().parse({
-      locationId: association.locationId, associationVersion: association.version,
-      factsRevisionId: association.factsRevisionId, locationRevisionId: association.locationRevisionId,
-      acceptedOverrides: association.overrides, factsOrganisationRevision: association.factsOrganisationRevision,
-      locationOrganisationRevision: association.locationOrganisationRevision,
-      occupancyRevisionId: association.occupancyRevisionId, addressRevisionId: association.addressRevisionId,
-      membershipRevisionIds: association.membershipRevisionIds, placementOverrides: association.placementOverrides,
-      acceptedGeometry: association.acceptedGeometry, acceptancePolicy: association.acceptancePolicy,
-      acceptanceProposalId: association.acceptanceProposalId,
-      memberships: (await db.select().from(featureLocationMembership).where(eq(featureLocationMembership.featureId, input.featureId)))
-        .map(({ featureId: _featureId, ...row }) => row),
-    }),
-  }) : undefined
-  const savedAssociationVersion = locationTransfer?.accepted.associationVersion ?? associationWrite.version
+    throw new Error(
+      'Save Location edits before transferring the Feature to another organisation',
+    )
+  const locationTransfer = crossOrganisation
+    ? await prepareFeatureLocationTransfer(db, {
+        featureId: input.featureId,
+        actorId: input.actorId,
+        sourceOrganisationId: sourceOrganisation.organisationId,
+        destinationOrganisationId: destinationScope.organisationId,
+        authorizeDestination: input.authorizeDestinationLocation,
+        accepted: FeatureRevisionContentSchema.shape.placement.shape.location
+          .unwrap()
+          .parse({
+            locationId: association.locationId,
+            associationVersion: association.version,
+            factsRevisionId: association.factsRevisionId,
+            locationRevisionId: association.locationRevisionId,
+            acceptedOverrides: association.overrides,
+            factsOrganisationRevision: association.factsOrganisationRevision,
+            locationOrganisationRevision: association.locationOrganisationRevision,
+            occupancyRevisionId: association.occupancyRevisionId,
+            addressRevisionId: association.addressRevisionId,
+            membershipRevisionIds: association.membershipRevisionIds,
+            placementOverrides: association.placementOverrides,
+            acceptedGeometry: association.acceptedGeometry,
+            acceptancePolicy: association.acceptancePolicy,
+            acceptanceProposalId: association.acceptanceProposalId,
+            memberships: (
+              await db
+                .select()
+                .from(featureLocationMembership)
+                .where(eq(featureLocationMembership.featureId, input.featureId))
+            ).map(({ featureId: _featureId, ...row }) => row),
+          }),
+      })
+    : undefined
+  const savedAssociationVersion =
+    locationTransfer?.accepted.associationVersion ?? associationWrite.version
   // Do not enqueue spatial/MTR work when the user changed only non-location values.
   const { id: _id, geometry, modifiedAt: _modifiedAt, ...data } = materializedData
   const geometryChanged =
@@ -372,7 +412,9 @@ export async function saveLinkedFeatureForm(
     .where(
       and(
         eq(feature.id, input.featureId),
-        locationTransfer ? sql`projectId=${input.projectId} AND modifiedAt=${input.updatedAt}` : sql`EXISTS (SELECT 1 FROM featureLocation
+        locationTransfer
+          ? sql`projectId=${input.projectId} AND modifiedAt=${input.updatedAt}`
+          : sql`EXISTS (SELECT 1 FROM featureLocation
     WHERE featureId = ${input.featureId} AND version = ${associationWrite.version})`,
       ),
     )
@@ -415,7 +457,17 @@ export async function saveLinkedFeatureForm(
         Boolean(transfer),
       ),
       ...phoneWrites,
-      ...(input.destinationScope ? [prepareRevisionCheck(db, featureDestinationPropertiesGuard(input.featureId, input.destinationScope))] : []),
+      ...(input.destinationScope
+        ? [
+            prepareRevisionCheck(
+              db,
+              featureDestinationPropertiesGuard(
+                input.featureId,
+                input.destinationScope,
+              ),
+            ),
+          ]
+        : []),
       db.select().from(feature).where(eq(feature.id, input.featureId)),
     ] as unknown as [
       import('drizzle-orm/batch').BatchItem<'sqlite'>,

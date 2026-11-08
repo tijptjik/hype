@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { and } from 'drizzle-orm'
 import { feature } from '#lib/db/schema/index.js'
+import * as schema from '#lib/db/schema/index.js'
 import { toQueryConditions } from '#lib/api/services/feature.js'
 import { publicationSqlite } from './fixtures/publicationSqlite'
 import type { SessionUser, UserRoleDisco } from '#lib/types.js'
@@ -10,7 +11,7 @@ const actor = { id: 'member', isAnonymous: false, superAdmin: false } as Session
 
 describe('public features in admin lists', () => {
   it('includes public rows without granting private, archived or draft access', async () => {
-    const { sqlite, db } = publicationSqlite({})
+    const { sqlite, db } = publicationSqlite(schema)
     sqlite.exec(`
       CREATE TABLE feature (id TEXT, organisationId TEXT, projectId TEXT,
         isPublished INTEGER, isArchived INTEGER, isDraft INTEGER);

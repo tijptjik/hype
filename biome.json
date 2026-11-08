@@ -21,7 +21,13 @@
     "rules": {
       "preset": "recommended",
       "suspicious": {
-        "noConfusingVoidType": "off"
+        "noConfusingVoidType": "off",
+        "noUndeclaredEnvVars": {
+          "level": "warn",
+          "options": {
+            "allowedEnvVars": ["DEV", "HYPE_DEV_PERSONA", "HYPE_STATIC_BUILD"]
+          }
+        }
       },
       "correctness": {
         "noUnknownPseudoElement": "off"

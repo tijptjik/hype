@@ -9,12 +9,22 @@ import {
 } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import Fixture from './fixtures/components/FeatureProfileFixture.svelte'
+import { required } from './fixtures/required'
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
 })
 beforeEach(() => {
   vi.useRealTimers()
+  // JSDOM does not measure layout; real-browser checks cover observer-driven sizing.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
   if (!Element.prototype.getAnimations) Element.prototype.getAnimations = () => []
   // JSDOM has no Web Animations API; exercise motion in the real-browser checks.
   vi.stubGlobal('matchMedia', () => ({
@@ -25,20 +35,22 @@ beforeEach(() => {
 })
 const state = (container: HTMLElement) =>
   JSON.parse(
-    container
-      .querySelector('[data-profile-state]')!
-      .getAttribute('data-profile-state')!,
+    required(
+      required(container.querySelector('[data-profile-state]')).getAttribute(
+        'data-profile-state',
+      ),
+    ),
   )
 
 it('offers language additions only while the profile is being edited', async () => {
   render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
-  expect(screen.getByRole('button', { name: '+ Add' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Add' })).toBeTruthy()
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
-  expect(screen.queryByRole('button', { name: '+ Add' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Add' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Traditional Chinese' })).toBeTruthy()
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
-  expect(screen.getByRole('button', { name: '+ Add' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Add' })).toBeTruthy()
 })
 
 it('opens inline fields, cancels with Escape, commits on blur, and retains rich description markup', async () => {
@@ -148,7 +160,7 @@ it('preserves verification, dynamic field registration, reorder and draft recove
   expect(state(view.container).localeState.selectedLocales[0]).toBe('ja')
   expect(state(view.container).localeState.visibleLocales).not.toContain('ja')
   expect(state(view.container).values.ja.description).toBe('日本語の内容')
-  const data = new FormData(view.container.querySelector('form')!)
+  const data = new FormData(required(view.container.querySelector('form')))
   expect(data.get('data.i18n.ja.description')).toBe('日本語の内容')
   expect(data.get('data.i18n.ja.descriptionGen')).toBe('false')
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
@@ -178,7 +190,7 @@ it('protects a user starting an empty target edit during translation', async () 
 it('registers an added locale in both fields, keeps its empty inherited title locked and permits verification', async () => {
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
-  await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Add' }))
   const search = await screen.findByRole('combobox', { hidden: true })
   await fireEvent.input(search, { target: { value: '한국어' } })
   await fireEvent.keyDown(search, { key: 'Enter' })
@@ -192,7 +204,7 @@ it('registers an added locale in both fields, keeps its empty inherited title lo
   expect(state(view.container).values.ko.descriptionGen).toBe(true)
   await fireEvent.click(screen.getByRole('button', { name: 'Use name' }))
   expect(screen.queryByRole('button', { name: 'title ko' })).toBeNull()
-  const data = new FormData(view.container.querySelector('form')!)
+  const data = new FormData(required(view.container.querySelector('form')))
   expect(data.get('data.i18n.ko.title')).toBe('')
   expect(data.get('data.i18n.ko.descriptionGen')).toBe('true')
 })
@@ -200,10 +212,15 @@ it('registers an added locale in both fields, keeps its empty inherited title lo
 it('omits only the first displayed locale prefix and relabels rows after reordering', async () => {
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  const prefixElement = (locale: string) =>
+    required(
+      view.container.querySelector<HTMLElement>(
+        `[data-profile-field="title"] [data-profile-locale="${locale}"] [data-inline-locale-row] > span`,
+      ),
+    )
+  // Prefix text stays mounted during the fade; visibility follows the reordered column.
   const prefix = (locale: string) =>
-    view.container.querySelector(
-      `[data-profile-field="title"] [data-profile-locale="${locale}"] [data-inline-locale-row] > span`,
-    )?.textContent ?? ''
+    prefixElement(locale).style.opacity === '0' ? '' : prefixElement(locale).textContent
   expect(prefix('en')).toBe('')
   expect(prefix('zh-Hant')).toBe('繁中')
   expect(prefix('zh-Hans')).toBe('简中')
@@ -219,7 +236,16 @@ it('omits only the first displayed locale prefix and relabels rows after reorder
     key: 'ArrowLeft',
     altKey: true,
   })
+  expect(state(view.container).localeState.selectedLocales).toEqual([
+    'ja',
+    'en',
+    'zh-Hant',
+    'zh-Hans',
+  ])
   expect(prefix('ja')).toBe('')
+  expect(prefixElement('ja').parentElement).toHaveStyle({
+    gridTemplateColumns: '0rem minmax(0,1fr) 2.5rem',
+  })
   expect(prefix('en')).toBe('En')
 })
 
@@ -238,7 +264,7 @@ it('animates only the chosen source and fades completion in the field header aft
   const requests: Array<(value: { status: 'translated'; text: string }) => void> = []
   render(Fixture, { provider: () => new Promise(resolve => requests.push(resolve)) })
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
-  const section = document.querySelector('[data-profile-field="description"]')!
+  const section = required(document.querySelector('[data-profile-field="description"]'))
   const source = within(section as HTMLElement).getByRole('button', {
     name: 'Translate empty values from English',
   })
@@ -275,7 +301,7 @@ it('offers translation controls only while multilingual mode is enabled', async 
 
 it('sizes navigation skeletons to the visible languages and preserves form registrations', async () => {
   const view = render(Fixture)
-  const before = new FormData(view.container.querySelector('form')!)
+  const before = new FormData(required(view.container.querySelector('form')))
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle loading' }))
   expect(
     view.container
@@ -284,9 +310,9 @@ it('sizes navigation skeletons to the visible languages and preserves form regis
   ).toBe('true')
   expect(view.container.querySelectorAll('[data-profile-skeleton-row]')).toHaveLength(2)
   expect(screen.queryByRole('button', { name: 'description en' })).toBeNull()
-  expect([...new FormData(view.container.querySelector('form')!).entries()]).toEqual([
-    ...before.entries(),
-  ])
+  expect([
+    ...new FormData(required(view.container.querySelector('form'))).entries(),
+  ]).toEqual([...before.entries()])
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle loading' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Japanese' }))
@@ -300,13 +326,14 @@ it('sizes navigation skeletons to the visible languages and preserves form regis
 it('retains the current profile instead of skeletons while navigating to another record', async () => {
   const view = render(Fixture, { retainContent: true })
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
-  const before = view.container.querySelector(
-    '[data-profile-field="description"]',
-  )!.textContent
+  const before = required(
+    view.container.querySelector('[data-profile-field="description"]'),
+  ).textContent
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle loading' }))
   expect(view.container.querySelectorAll('[data-profile-skeleton-row]')).toHaveLength(0)
   expect(
-    view.container.querySelector('[data-profile-field="description"]')!.textContent,
+    required(view.container.querySelector('[data-profile-field="description"]'))
+      .textContent,
   ).toBe(before)
   expect(
     (view.container.querySelector('[data-feature-profile-editor]') as HTMLElement)

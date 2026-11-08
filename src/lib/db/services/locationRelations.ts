@@ -114,7 +114,9 @@ export function prepareFeatureFormRelations(
   }
   if (properties === undefined) return queries
   // Preserve omitted internal fields for ordinary edits; transfers replace the complete reconciled snapshot.
-  const replaceable = replaceAllProperties ? sql`1` : sql`(propertyId NOT IN (SELECT id FROM property WHERE audience = 'internal') OR propertyId IN (SELECT value FROM json_each(${JSON.stringify(properties.map(row => row.propertyId))})))`
+  const replaceable = replaceAllProperties
+    ? sql`1`
+    : sql`(propertyId NOT IN (SELECT id FROM property WHERE audience = 'internal') OR propertyId IN (SELECT value FROM json_each(${JSON.stringify(properties.map(row => row.propertyId))})))`
   // Remove only omitted properties; retained property translations may contain hidden locales.
   const removed = sql`propertyId NOT IN (SELECT value FROM json_each(${JSON.stringify(properties.map(row => row.propertyId))}))`
   // Remove children before parents, keeping unrelated Features outside the guard.
