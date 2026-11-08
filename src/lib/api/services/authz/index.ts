@@ -9,73 +9,11 @@ import type {
   ProjectAuthorizationAction,
   ProjectAuthorizeParams,
 } from '#lib/api/services/authz/authorization.types.js'
-import type { UserRoleDisco } from '#lib/types.js'
-// I18N
-import { m } from '#lib/i18n.js'
-// ENUMS
-import { FirstClassResource, RESERVED_PARAMETERS, ResourcePath } from '#lib/enums.js'
 // POLICIES
 import { organisationPolicyMap } from './organisation'
 import { projectPolicyMap } from './project'
 import { hubPolicyMap } from './hub'
-export type AuthzActorBase = {
-  userId?: string | null
-  userRoles: UserRoleDisco[]
-  isAuthenticated?: boolean
-  isAnonymous?: boolean
-  isSuperAdmin?: boolean
-}
-
-/**
- * Projects an actor into the shared authorization policy shape.
- * Used to keep policy handlers decoupled from caller-specific user objects.
- */
-export const toActorPolicyBase = (actor: AuthzActorBase): AuthzActorBase => ({
-  userId: actor.userId,
-  userRoles: actor.userRoles,
-  isAuthenticated: actor.isAuthenticated,
-  isAnonymous: actor.isAnonymous,
-  isSuperAdmin: actor.isSuperAdmin,
-})
-
-/**
- * Distinguishes a guest session from a missing session for account-only actions.
- *
- * @param actor - Actor rejected by an account-only operation.
- * @returns Stable machine-readable denial code.
- */
-export const toAccountRequirementCode = (
-  actor: Pick<AuthzActorBase, 'isAnonymous'>,
-): 'ACCOUNT_REQUIRED' | 'UNAUTHENTICATED' =>
-  actor.isAnonymous === true ? 'ACCOUNT_REQUIRED' : 'UNAUTHENTICATED'
-
-/**
- * Builds a stable signature for role membership comparisons.
- * Used to cheaply detect role-set changes across submissions.
- */
-export const toUserRoleSignature = (
-  userRoles: Array<{ userId: string; role: string }>,
-): string =>
-  userRoles
-    .map(role => `${role.userId}:${role.role}`)
-    .sort((a, b) => a.localeCompare(b))
-    .join('|')
-
-/**
- * Resolves whether deny-path authorization logs should be emitted.
- * Used to toggle noisy diagnostics via env flags in runtime and build contexts.
- */
-export const shouldLogAuthzDeny = (): boolean => {
-  const fromProcess =
-    typeof process !== 'undefined' ? process.env?.AUTHZ_LOG_DENY : undefined
-  const fromImportMeta = (import.meta as { env?: Record<string, string | undefined> })
-    .env?.AUTHZ_LOG_DENY
-  const value = (fromProcess ?? fromImportMeta)?.toLowerCase()
-  return value === '1' || value === 'true'
-}
-
-export const toOrganisationUserRoleSignature = toUserRoleSignature
-export const toProjectUserRoleSignature = toUserRoleSignature
+export * from './shared'
 
 export {
   toOrganisationSubmittedFields,
@@ -194,107 +132,6 @@ export {
   canUpdateUserProfile,
 } from './user'
 export { resolveAnalyticsScope } from './analytics'
-
-const RESOURCE_CODE_SEGMENTS = [
-  ...Object.values(FirstClassResource),
-  ...Object.values(ResourcePath),
-].map(value => value.toLowerCase())
-
-const PLATFORM_RESERVED_CODES = [
-  'api',
-  'app',
-  'admin',
-  'core',
-  'root',
-  'system',
-  'www',
-  'assets',
-  'static',
-  'docs',
-  'help',
-  'support',
-  'login',
-  'logout',
-  'signin',
-  'signup',
-  'settings',
-  'profile',
-]
-
-const IDENTITY_RESERVED_CODES = [
-  'hype',
-  'hypehk',
-  'hkhype',
-  'tijptjik',
-  'mart',
-  'hongkong',
-  'hk',
-  'hkgov',
-  'govhk',
-]
-
-export const RESERVED_CODES = new Set(
-  [
-    ...RESERVED_PARAMETERS,
-    ...RESOURCE_CODE_SEGMENTS,
-    ...PLATFORM_RESERVED_CODES,
-    ...IDENTITY_RESERVED_CODES,
-  ].map(value => value.toLowerCase()),
-)
-
-/**
- * Checks if a candidate code is blocked by platform/system reserved words.
- * Used to enforce namespace constraints before persistence.
- */
-export const isReservedCode = (value: string): boolean =>
-  RESERVED_CODES.has(value.trim().toLowerCase())
-
-/**
- * Maps issue codes to localized, user-facing detail messages.
- * Used to keep API authorization/validation responses consistent.
- */
-export const toIssueDetailMessage = (code: string): string => {
-  if (code === 'UNAUTHENTICATED') return m.admin__authz_unauthenticated()
-  if (code === 'ACCOUNT_REQUIRED') return m.guest__reason_sync()
-  if (code === 'HUB_SCOPE_FORBIDDEN') return m.admin__authz_hub_scope_forbidden()
-  if (code === 'REQUEST_STATE_REQUIRED') return m.admin__authz_request_state_required()
-  if (code === 'INSUFFICIENT_ROLE') return m.admin__authz_insufficient_role()
-  if (code === 'FIELD_FORBIDDEN') return m.admin__authz_field_forbidden()
-  if (code === 'STALE_WRITE') return m.admin__authz_stale_write()
-  if (code === 'CODE_RESERVED') return m.admin__validation_code_is_reserved()
-  if (code === 'CODE_ALREADY_EXISTS') return m.admin__validation_code_already_exists()
-  if (code === 'USER_ROLES_REQUIRED') return m.admin__validation_user_roles_add_user()
-  if (code === 'OWNER_REQUIRED')
-    return m.admin__validation_user_roles_at_least_one_owner()
-  return m.forms__invalid()
-}
-
-/**
- * Formats a structured form issue string from an issue code.
- * Used for superform error payloads that expect `"CODE: message"` format.
- */
-export const toFormIssueMessage = (code: string): string => {
-  return `${code}: ${toIssueDetailMessage(code)}`
-}
-
-/**
- * Resolves user-facing authorization messages by issue code.
- * Used by remote commands to emit consistent 403 error text.
- */
-export const toAuthMessage = (code: string): string => {
-  if (
-    code === 'UNAUTHENTICATED' ||
-    code === 'ACCOUNT_REQUIRED' ||
-    code === 'HUB_SCOPE_FORBIDDEN' ||
-    code === 'REQUEST_STATE_REQUIRED' ||
-    code === 'INSUFFICIENT_ROLE' ||
-    code === 'FIELD_FORBIDDEN' ||
-    code === 'STALE_WRITE'
-  ) {
-    return toFormIssueMessage(code)
-  }
-  return `${code}: ${m.missing_permissions()}`
-}
 
 /**
  * Central authorization entry point.
