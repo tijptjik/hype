@@ -223,7 +223,10 @@ it('edits policy markdown inline, cancels safely and translates only the chosen 
   await fireEvent.click(
     screen.getByRole('button', { name: 'Privacy Policy · English' }),
   )
-  const input = screen.getByRole('textbox', { name: 'Privacy Policy · English' })
+  await fireEvent.click(screen.getByRole('button', { name: 'Markdown' }))
+  const input = screen.getByRole('textbox', {
+    name: 'Privacy Policy · English Markdown',
+  })
   expect((input as HTMLTextAreaElement).value).toBe(original)
   await fireEvent.input(input, { target: { value: '# Changed policy' } })
   expect(snapshot(view.container).data.i18n.en.privacyPolicyGen).toBe(false)

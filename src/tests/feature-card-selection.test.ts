@@ -12,6 +12,9 @@ const mocks = vi.hoisted(() => ({
   app: null as any,
   imageOptions: null as any,
 }))
+vi.mock('#lib/api/featureIdentity.remote.js', () => ({
+  getFeatureSuccessors: vi.fn().mockResolvedValue(null),
+}))
 vi.mock('$app/state', () => ({
   page: { params: { id: 'a' }, url: new URL('http://localhost/features/a') },
 }))

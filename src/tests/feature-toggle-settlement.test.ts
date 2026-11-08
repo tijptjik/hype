@@ -19,12 +19,21 @@ afterEach(() => {
 function setup() {
   const route = readFileSync('src/routes/admin/features/[feature]/+page.svelte', 'utf8')
   const start = route.indexOf('let featureActionRevision = 0')
-  const source =
-    route.slice(start, route.indexOf('const shouldOfferImagePublication', start)) +
-    route.slice(
-      route.indexOf('function withPublishedFeatureImages('),
-      route.indexOf('// Anchor the follow-up action'),
-    )
+  if (start < 0) throw new Error('Feature action lifecycle was not found')
+  // Extract through the handler itself instead of depending on the following comment.
+  const parsed = ts.createSourceFile(
+    'feature-actions.ts',
+    route.slice(start),
+    ts.ScriptTarget.Latest,
+    true,
+  )
+  const toggle = parsed.statements.find(
+    statement =>
+      ts.isFunctionDeclaration(statement) &&
+      statement.name?.text === 'handleFeatureStateToggle',
+  )
+  if (!toggle) throw new Error('Feature toggle handler was not found')
+  const source = route.slice(start, start + toggle.end)
   const reactiveSource = source
     .replace('$effect(() => {', 'const stop = $effect.root(() => { $effect(() => {')
     .replace('})\n\n/**', '}) });\n\n/**')
@@ -53,7 +62,7 @@ function setup() {
     const commitFeatureState = commitSettledFeatureState;
     ${reactiveSource}
     return {
-      run: () => handleFeatureStateToggle('isPublished'), runImages: publishRemainingFeatureImages, current: () => feature,
+      run: () => handleFeatureStateToggle('isPublished'), current: () => feature,
       prompt: () => imagePublicationPrompt,
       dispose: stop, scope: () => { scope = 'b'; flushSync() },
       navigate: () => { featureRef = 'two'; feature = { data: { id: 'two', isPublished: false } }; flushSync() },
@@ -78,7 +87,6 @@ function setup() {
   )(client, untrack, flushSync)
   const handler = create(env) as {
     run: () => Promise<void>
-    runImages: () => Promise<void>
     current: () => { data: Record<string, unknown> } | null
     prompt: () => unknown
     dispose: () => void
@@ -150,99 +158,21 @@ describe('Feature toggle settlement', () => {
   }
 })
 
-describe('Feature bulk image settlement', () => {
-  it('rolls back its own optimistic snapshot after a rejected write', async () => {
+describe('Feature publication prompt ownership', () => {
+  it('offers the image decision after publication and clears it on unpublish', async () => {
+    const { env, handler } = setup()
+    await handler.run()
+    expect(handler.prompt()).toEqual({ featureId: 'one', routeRef: 'one' })
+    env.write = Promise.resolve({ data: { id: 'one', isPublished: false } })
+    await handler.run()
+    expect(handler.prompt()).toBeNull()
+  })
+  it('does not offer an image decision after a failed Feature write', async () => {
     const { env, handler } = setup()
     env.write = Promise.reject(new Error('failed'))
-    await handler.runImages()
-    expect(handler.current()?.data.images).toEqual([
-      { id: 'image', isPublished: false },
-    ])
+    await handler.run()
+    expect(handler.prompt()).toBeNull()
     expect(env.settle.mock.calls).toEqual([[false]])
     expect(env.error).toHaveBeenCalledOnce()
   })
-
-  it('does not roll a newer editor snapshot back after a rejected write', async () => {
-    const { env, handler } = setup()
-    env.write = Promise.reject(new Error('failed'))
-    const pending = handler.runImages()
-    handler.receive()
-    await pending
-    expect(handler.current()?.data.relations).toEqual(['fresh'])
-    expect(handler.current()?.data.images).toEqual([
-      { id: 'image', isPublished: false },
-    ])
-  })
-
-  it('uses the native gallery update without an additional read', async () => {
-    const { env, handler } = setup()
-    env.detail.current = {
-      data: { id: 'one', images: [{ id: 'image', isPublished: true }] },
-    }
-    await handler.runImages()
-    expect(handler.current()?.data.images).toEqual([{ id: 'image', isPublished: true }])
-    expect(env.refresh).not.toHaveBeenCalled()
-    expect(env.settle.mock.calls).toEqual([[true]])
-  })
-
-  it('preserves a replacement gallery after a rejected write', async () => {
-    const { env, handler } = setup()
-    env.write = Promise.reject(new Error('failed'))
-    const pending = handler.runImages()
-    handler.receiveGallery()
-    await pending
-    expect(handler.current()?.data.images).toEqual([{ id: 'new', isPublished: true }])
-  })
-
-  it('restores its gallery without erasing in-place relation edits', async () => {
-    const { env, handler } = setup()
-    env.write = Promise.reject(new Error('failed'))
-    const pending = handler.runImages()
-    handler.editInPlace()
-    await pending
-    expect(handler.current()?.data.relations).toEqual(['edited'])
-    expect(handler.current()?.data.images).toEqual([
-      { id: 'image', isPublished: false },
-    ])
-  })
-
-  it('restores publication only while preserving gallery additions and image metadata edits', async () => {
-    const { env, handler } = setup()
-    env.write = Promise.reject(new Error('failed'))
-    const pending = handler.runImages()
-    handler.editGallery()
-    await pending
-    expect(handler.current()?.data.images).toEqual([
-      { id: 'image', isPublished: false, caption: 'edited' },
-      { id: 'added', isPublished: true },
-    ])
-  })
-
-  for (const transition of ['navigate', 'dispose', 'scope'] as const) {
-    it.each([true, false])(
-      `suppresses obsolete bulk-image completion after ${transition} (success=%s)`,
-      async success => {
-        const { env, handler } = setup()
-        let resolve!: (value: { data: { id: string; isPublished: boolean } }) => void
-        let reject!: (reason: unknown) => void
-        env.write = new Promise((done, fail) => {
-          resolve = done
-          reject = fail
-        })
-        const pending = handler.runImages()
-        handler[transition]()
-        if (success) resolve({ data: { id: 'one', isPublished: true } })
-        else reject(new Error('failed'))
-        await pending
-        expect(env.settle.mock.calls).toEqual([[success]])
-        expect(env.busy.mock.calls).toEqual([[true]])
-        expect(env.success).not.toHaveBeenCalled()
-        expect(env.error).not.toHaveBeenCalled()
-        expect(env.refresh).not.toHaveBeenCalled()
-        expect(handler.current()?.data.id).toBe(
-          transition === 'navigate' ? 'two' : 'one',
-        )
-      },
-    )
-  }
 })

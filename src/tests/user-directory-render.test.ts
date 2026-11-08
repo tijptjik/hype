@@ -69,11 +69,20 @@ it('loads at the scroll sentinel and pauses observation while loading or failed'
   vi.stubGlobal(
     'IntersectionObserver',
     class {
-      constructor(callback: IntersectionObserverCallback) {
-        intersect = callback
+      private pagination: boolean
+      constructor(
+        callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit,
+      ) {
+        this.pagination = options?.rootMargin === '240px'
+        if (this.pagination) intersect = callback
       }
-      observe = observe
-      disconnect = disconnect
+      observe(target: Element) {
+        if (this.pagination) observe(target)
+      }
+      disconnect() {
+        if (this.pagination) disconnect()
+      }
     },
   )
   const load = vi.fn()

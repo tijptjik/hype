@@ -9,6 +9,7 @@ import * as kitForms from '../../node_modules/@sveltejs/kit/src/runtime/form-uti
 import FormFieldCard from '#lib/bits/patterns/forms/formFieldsSection/components/FormFieldCard.svelte'
 import FormFieldCardBody from '#lib/bits/patterns/forms/formFieldsSection/components/FormFieldCardBody.svelte'
 // CONTENT LOCALES
+import { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
 // TYPES
 import type { Property } from '#lib/db/zod/schema/property.types.js'
@@ -95,8 +96,18 @@ describe('SvelteKit 3 custom property controls', () => {
       }
       const { container } =
         presentation === 'body'
-          ? render(FormFieldCardBody, props)
-          : render(FormFieldCard, props)
+          ? render(FormFieldCardBody, {
+              props,
+              context: new Map([
+                [Symbol.for('hype.context.responsive'), new ResponsiveCtx()],
+              ]),
+            })
+          : render(FormFieldCard, {
+              props,
+              context: new Map([
+                [Symbol.for('hype.context.responsive'), new ResponsiveCtx()],
+              ]),
+            })
       const formData = new FormData()
       for (const control of container.querySelectorAll<HTMLInputElement>(
         'input[type="hidden"]',

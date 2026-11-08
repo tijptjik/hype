@@ -15,6 +15,23 @@ vi.mock('lottie-web/build/player/lottie_light', () => ({
 // Only DOM suites need the testing-library matcher dependency graph.
 if (typeof document !== 'undefined') {
   await import('@testing-library/jest-dom/vitest')
+  // jsdom has no layout engine. Geometry-sensitive suites supply their own callbacks.
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.IntersectionObserver ??= class {
+    readonly root = null
+    readonly rootMargin = '0px'
+    readonly thresholds = [0]
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return []
+    }
+  }
 }
 
 vi.mock('unique-names-generator', () => ({

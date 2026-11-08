@@ -17,6 +17,10 @@ import type {
   MediaCatalogPage,
 } from '#lib/messaging/media-catalog.js'
 
+vi.mock('#lib/messaging/integrations.js', () => ({
+  messagingIntegrations: { telegram: true, whatsapp: true },
+}))
+
 // Picker interaction tests do not exercise the canvas-dependent animation renderer.
 vi.mock('#lib/messaging/sticker-player.js', () => ({ stickerPlayer: undefined }))
 
@@ -51,6 +55,8 @@ const emptyContent = {
 
 beforeEach(() => {
   vi.useRealTimers()
+  // Exercise the tile's eager fallback because jsdom cannot report visibility.
+  vi.stubGlobal('IntersectionObserver', undefined)
   // Browser checks cover actual textarea and menu geometry; jsdom needs the observer lifecycle.
   vi.stubGlobal(
     'ResizeObserver',

@@ -127,16 +127,28 @@ it('submits hyphenated locales and verification flags after editing and hiding t
 it('only offers adding field languages in edit mode and closes an open picker when editing ends', async () => {
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
-  await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))
+  await fireEvent.click(
+    within(
+      screen.getByRole('button', { name: 'Multilingual' }).closest('header')!,
+    ).getByRole('button', { name: 'Add' }),
+  )
   const search = await screen.findByPlaceholderText('Search languages')
   await fireEvent.input(search, { target: { value: 'Japanese' } })
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
-  expect(screen.queryByRole('button', { name: '+ Add' })).toBeNull()
+  expect(
+    within(
+      screen.getByRole('button', { name: 'Multilingual' }).closest('header')!,
+    ).queryByRole('button', { name: 'Add' }),
+  ).toBeNull()
   expect(screen.queryByPlaceholderText('Search languages')).toBeNull()
   expect(screen.getByRole('button', { name: 'Traditional Chinese' })).toBeTruthy()
   expect(submitted(view.container).i18n.ja).toBeUndefined()
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
-  expect(screen.getByRole('button', { name: '+ Add' })).toBeTruthy()
+  expect(
+    within(
+      screen.getByRole('button', { name: 'Multilingual' }).closest('header')!,
+    ).getByRole('button', { name: 'Add' }),
+  ).toBeTruthy()
   expect(screen.queryByPlaceholderText('Search languages')).toBeNull()
 })
 
@@ -179,7 +191,11 @@ it('shares locale order across text fields and option columns, retaining hidden 
 it('adds Japanese, edits and cancels individual fields, and preserves option identities during column reordering', async () => {
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
-  await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))
+  await fireEvent.click(
+    within(
+      screen.getByRole('button', { name: 'Multilingual' }).closest('header')!,
+    ).getByRole('button', { name: 'Add' }),
+  )
   const search = await screen.findByPlaceholderText('Search languages')
   await fireEvent.input(search, { target: { value: 'Japanese' } })
   await fireEvent.keyDown(search, { key: 'Enter' })
@@ -241,7 +257,11 @@ it('uses one header language strip to add, hide and reorder languages across eve
       'true',
     )
   }
-  await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))
+  await fireEvent.click(
+    within(
+      screen.getByRole('button', { name: 'Multilingual' }).closest('header')!,
+    ).getByRole('button', { name: 'Add' }),
+  )
   const search = await screen.findByPlaceholderText('Search languages')
   await fireEvent.input(search, { target: { value: 'Japanese' } })
   await fireEvent.keyDown(search, { key: 'Enter' })
@@ -273,14 +293,14 @@ it('places translation controls in the option header and scopes requests to that
   const option = view.container.querySelector('[data-dnd-item]') as HTMLElement
   const header = option.querySelector('[data-option-header]') as HTMLElement
   await fireEvent.click(
-    within(header).getByRole('button', { name: 'Translate empty values from en' }),
+    within(header).getByRole('button', { name: 'Translate empty values from English' }),
   )
   await waitFor(() => expect(translate).toHaveBeenCalledTimes(2))
   expect(translate.mock.calls).toEqual([
     ['religion', 'en', 'zh-Hant', { type: 'value', valueId: 'option-0' }],
     ['religion', 'en', 'zh-Hans', { type: 'value', valueId: 'option-0' }],
   ])
-  expect(screen.queryByRole('heading', { name: 'Options' })).toBeNull()
+  expect(screen.getAllByRole('heading', { name: 'Options' })).toHaveLength(1)
   expect(submitted(view.container).values[1].i18n.zhHans.value).toBe('')
 })
 

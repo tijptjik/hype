@@ -78,6 +78,7 @@ function setup(kind: 'layer' | 'organisation' | 'project') {
     let ${kind} = env.original;
     let committed${title} = env.original;
     let ${kind}Ref = 'one';
+    let pendingImagePublicationId = null;
     let scope = 'scope-a';
     let cacheGeneration = 0;
     const adminCtx = { view: {

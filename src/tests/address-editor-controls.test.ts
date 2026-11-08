@@ -605,7 +605,7 @@ it('keeps the lookup label stable and swaps the search icon for a spinner while 
   const button = view.getByRole('button', { name: 'Lookup Address' })
   expect(button.getAttribute('aria-busy')).toBe('false')
   await view.rerender({ isLoading: true })
-  expect(button.textContent).toBe('Lookup Address')
+  expect(button.textContent?.trim()).toBe('Lookup Address')
   expect(button.getAttribute('aria-busy')).toBe('true')
   expect(button).toBeDisabled()
 })
