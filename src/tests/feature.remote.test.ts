@@ -543,7 +543,7 @@ describe('feature.remote authz matrix', () => {
 
   it('forwards authorized preview intent to list galleries and rejects denied previews before reading', async () => {
     const publicationPreview = {
-      type: 'feature',
+      type: 'feature' as const,
       id: 'feature-1',
       publishChildren: false,
     }

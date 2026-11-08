@@ -54,10 +54,22 @@ function setup() {
       },
     }),
   })
+  const batch = async (statements: ReturnType<typeof prepare>[]) => {
+    sqlite.exec('BEGIN')
+    try {
+      const results = []
+      for (const statement of statements) results.push(await statement.all())
+      sqlite.exec('COMMIT')
+      return results
+    } catch (error) {
+      sqlite.exec('ROLLBACK')
+      throw error
+    }
+  }
   return {
     sqlite,
     retained,
-    db: drizzle({ prepare } as unknown as D1Database) as unknown as Database,
+    db: drizzle({ prepare, batch } as unknown as D1Database) as unknown as Database,
   }
 }
 

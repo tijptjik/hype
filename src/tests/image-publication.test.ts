@@ -21,6 +21,8 @@ function fixture() {
     CREATE TABLE project (id TEXT, code TEXT, flags TEXT, organisationId TEXT);
     CREATE TABLE feature (id TEXT, projectId TEXT, layerId TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER);
     CREATE TABLE image (id TEXT, createdAt TEXT, isArchived INTEGER);
+    CREATE TABLE task(id TEXT PRIMARY KEY, featureId TEXT, isReviewed INTEGER);
+    CREATE TABLE taskImage(taskId TEXT, imageId TEXT);
     CREATE TABLE featureImage (featureId TEXT, imageId TEXT, intent TEXT, isPublished INTEGER, localIsPublished INTEGER, publishedAt TEXT, publisherId TEXT);
     CREATE UNIQUE INDEX canonical_intent ON featureImage(featureId) WHERE intent='canonical';
     INSERT INTO organisation VALUES ('o','h'),('other','h');
@@ -42,7 +44,7 @@ describe('project image publication cascade', () => {
     ['project', 'p'],
     ['organisation', 'o'],
   ] as const) {
-    it(`classifies and publishes only eligible images through ${kind}`, async () => {
+    it(`publishes classified eligible images without classifying others through ${kind}`, async () => {
       const { sqlite, db } = fixture()
       try {
         await publishScopedFeatureImages(db, { kind, id }, 'actor')
@@ -52,7 +54,7 @@ describe('project image publication cascade', () => {
           )
           .all()
         expect(rows).toEqual([
-          { imageId: 'a', intent: 'canonical', isPublished: 1 },
+          { imageId: 'a', intent: 'undefined', isPublished: 0 },
           { imageId: 'archived', intent: 'general', isPublished: 0 },
           { imageId: 'b', intent: 'context', isPublished: 1 },
           { imageId: 'r', intent: 'research', isPublished: 0 },
@@ -77,41 +79,35 @@ describe('project image publication cascade', () => {
       }
     })
   }
-  it('honours independent settings and preserves existing Featured choices', async () => {
+  it('uses intent policy instead of legacy flags and leaves pending review images private', async () => {
     const { sqlite, db } = fixture()
     try {
-      sqlite.exec(
-        `UPDATE project SET flags='{"autoFeatureFirstImage":false,"autoPublishClassifiedImages":false}'`,
-      )
-      await publishScopedFeatureImages(db, { kind: 'project', id: 'p' })
+      sqlite.exec(`UPDATE project SET flags='{"autoFeatureFirstImage":true,"autoPublishClassifiedImages":false}';
+        UPDATE featureImage SET intent='canonical' WHERE featureId='f' AND imageId='a';
+        INSERT INTO task VALUES ('pending','f',0);
+        INSERT INTO taskImage VALUES ('pending','b');`)
+      await publishScopedFeatureImages(db, { kind: 'project', id: 'p' }, 'actor')
       expect(
         sqlite
           .prepare(
-            "SELECT count(*) AS n FROM featureImage WHERE intent='canonical' OR isPublished=1",
+            "SELECT imageId,intent,isPublished FROM featureImage WHERE featureId='f' ORDER BY imageId",
           )
-          .get(),
-      ).toEqual({ n: 0 })
-      sqlite.exec(`UPDATE project SET flags='{"autoPublishClassifiedImages":false}'`)
-      await publishScopedFeatureImages(db, { kind: 'project', id: 'p' })
-      expect(
-        sqlite
-          .prepare(
-            "SELECT intent,isPublished FROM featureImage WHERE featureId='f' AND imageId='a'",
-          )
-          .get(),
-      ).toEqual({ intent: 'canonical', isPublished: 0 })
-      sqlite.exec(`UPDATE project SET flags='{"autoFeatureFirstImage":false}'`)
-      await publishScopedFeatureImages(db, { kind: 'project', id: 'p' })
-      expect(
-        sqlite
-          .prepare("SELECT imageId FROM featureImage WHERE intent='canonical'")
           .all(),
-      ).toEqual([{ imageId: 'a' }])
+      ).toEqual([
+        { imageId: 'a', intent: 'canonical', isPublished: 1 },
+        { imageId: 'archived', intent: 'general', isPublished: 0 },
+        { imageId: 'b', intent: 'context', isPublished: 0 },
+        { imageId: 'r', intent: 'research', isPublished: 0 },
+      ])
+      sqlite.exec("UPDATE task SET isReviewed=1 WHERE id='pending'")
+      await publishScopedFeatureImages(db, { kind: 'project', id: 'p' }, 'actor')
       expect(
         sqlite
-          .prepare('SELECT count(*) AS n FROM featureImage WHERE isPublished=1')
+          .prepare(
+            "SELECT isPublished FROM featureImage WHERE featureId='f' AND imageId='b'",
+          )
           .get(),
-      ).toEqual({ n: 2 })
+      ).toEqual({ isPublished: 1 })
     } finally {
       sqlite.close()
     }
@@ -149,7 +145,7 @@ describe('project image publication cascade', () => {
     }
   })
 
-  it('explicitly publishes all active non-research images even when project automation is disabled', async () => {
+  it('classifies unclassified images without republishing independently private classified images', async () => {
     const { sqlite, db } = fixture()
     try {
       sqlite.exec(
@@ -167,7 +163,7 @@ describe('project image publication cascade', () => {
       ).toEqual([
         { imageId: 'a', isPublished: 1, publisherId: 'actor' },
         { imageId: 'archived', isPublished: 0, publisherId: null },
-        { imageId: 'b', isPublished: 1, publisherId: 'actor' },
+        { imageId: 'b', isPublished: 0, publisherId: null },
         { imageId: 'r', isPublished: 0, publisherId: null },
       ])
       const beforeRetry = sqlite.prepare('SELECT * FROM featureImage').all()

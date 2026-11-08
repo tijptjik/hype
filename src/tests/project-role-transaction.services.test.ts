@@ -26,6 +26,9 @@ beforeEach(() => {
     INSERT INTO organisationRole VALUES ('org', 'old-user', 'owner');
     INSERT INTO projectRole VALUES ('project', 'old-user', 'admin', null)`)
   sqlite.exec(
+    'ALTER TABLE organisationRole ADD COLUMN viewAnalytics INTEGER NOT NULL DEFAULT 0',
+  )
+  sqlite.exec(
     'CREATE TABLE organisation(id TEXT PRIMARY KEY); CREATE TABLE user(id TEXT PRIMARY KEY); CREATE TABLE breadlineImportIdentity(sourceUserId INTEGER PRIMARY KEY)',
   )
   sqlite.exec(readFileSync('migrations/0168_organisation_users.sql', 'utf8'))
@@ -98,12 +101,14 @@ describe('atomic project roles and organisation membership', () => {
         organisationId: 'org',
         userId: 'new-user',
         role: 'user',
+        viewAnalytics: 0,
         grant: '{"project:project":"user"}',
       },
       {
         organisationId: 'org',
         userId: 'old-user',
         role: 'owner',
+        viewAnalytics: 0,
         grant: '{"manual":"owner","project:project":"user"}',
       },
     ])

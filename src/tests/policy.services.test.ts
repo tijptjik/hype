@@ -16,18 +16,26 @@ describe('policy defaults', () => {
       new Date('2026-04-10T00:00:00.000Z'),
     )
 
-    expect(policy).toContain('# **Central Archive Privacy Policy**')
-    expect(policy).toContain('**Last Updated:** April 10, 2026')
-    expect(policy).toContain(
+    expect(policy.replace(/\s+/g, ' ')).toContain(
+      '# **Central Archive Privacy Policy**',
+    )
+    expect(policy.replace(/\s+/g, ' ')).toContain('**Last Updated:** April 10, 2026')
+    expect(policy.replace(/\s+/g, ' ')).toContain(
       'This Privacy Policy explains how **Central Archive** ("**we**", "**us**", "**our**")',
     )
-    expect(policy).toContain('[legal@archive.hk]')
-    expect(policy).toContain('### 5.3 Requests From Public Authorities')
-    expect(policy).toContain(
+    expect(policy.replace(/\s+/g, ' ')).toContain('[legal@archive.hk]')
+    expect(policy.replace(/\s+/g, ' ')).toContain(
+      '### 5.3 Requests From Public Authorities',
+    )
+    expect(policy.replace(/\s+/g, ' ')).toContain(
       'Review the request for legal validity, scope, and authority.',
     )
-    expect(policy).toContain('Disclose only the minimum personal data necessary')
-    expect(policy).toContain('Document the request, our response, the legal basis')
+    expect(policy.replace(/\s+/g, ' ')).toContain(
+      'Disclose only the minimum personal data necessary',
+    )
+    expect(policy.replace(/\s+/g, ' ')).toContain(
+      'Document the request, our response, the legal basis',
+    )
   })
 
   it('falls back to HYPE when no localized hub name is available', () => {
@@ -39,9 +47,11 @@ describe('policy defaults', () => {
       new Date('2026-04-10T00:00:00.000Z'),
     )
 
-    expect(policy).toContain('# **HYPE Terms of Service**')
-    expect(policy).toContain('By using HYPE ("we", "our", "us"), you agree')
-    expect(policy).toContain('legal@hype.hk')
+    expect(policy.replace(/\s+/g, ' ')).toContain('# **HYPE Terms of Service**')
+    expect(policy.replace(/\s+/g, ' ')).toContain(
+      'By using HYPE ("we", "our", "us"), you agree',
+    )
+    expect(policy.replace(/\s+/g, ' ')).toContain('legal@hype.hk')
   })
 })
 

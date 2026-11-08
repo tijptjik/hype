@@ -24,13 +24,15 @@ function fixture(published: boolean) {
     CREATE TABLE layer (id TEXT PRIMARY KEY, organisationId TEXT, projectId TEXT, ${columns});
     CREATE TABLE feature (id TEXT PRIMARY KEY, organisationId TEXT, projectId TEXT, layerId TEXT, isArchived INTEGER DEFAULT 0, ${columns});
     CREATE TABLE image (id TEXT PRIMARY KEY, createdAt TEXT, isArchived INTEGER);
+    CREATE TABLE task(id TEXT PRIMARY KEY, featureId TEXT, isReviewed INTEGER);
+    CREATE TABLE taskImage(taskId TEXT, imageId TEXT);
     CREATE TABLE featureImage (featureId TEXT, imageId TEXT, intent TEXT, isPublished INTEGER, localIsPublished INTEGER, publishedAt TEXT, publisherId TEXT);
     INSERT INTO organisation(id,hubId) VALUES ('o','h'), ('other','h');
     INSERT INTO project(id,organisationId,flags) VALUES ('p','o','{}'), ('other-p','o','{}');
     INSERT INTO layer(id,organisationId,projectId) VALUES ('l','o','p');
     INSERT INTO feature(id,organisationId,projectId,layerId) VALUES ('f','o','p','l'), ('draft','o','p','l'), ('outside','other','other','other');
     INSERT INTO image VALUES ('i','2020',0);
-    INSERT INTO featureImage VALUES ('f','i','undefined',0,NULL,NULL,NULL), ('draft','i','undefined',0,NULL,NULL,NULL);
+    INSERT INTO featureImage VALUES ('f','i','general',0,NULL,NULL,NULL), ('draft','i','general',0,NULL,NULL,NULL);
   `)
   for (const table of ['organisation', 'project', 'layer', 'feature']) {
     sqlite.exec(
@@ -123,7 +125,7 @@ for (const [kind, id, apply] of commands) {
               )
               .get(),
           ).toEqual({
-            intent: 'canonical',
+            intent: 'general',
             isPublished: 1,
             publisherId: 'actor',
           })

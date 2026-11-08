@@ -165,7 +165,7 @@ function media(f: ReturnType<typeof fixture>): void {
   )
 }
 
-test('enrollment preserves projections and pending photo authors, replays, and permits initial review', async () => {
+test('enrollment preserves projections and pending photo authors, replays, and accepts initial review without publication', async () => {
   const f = fixture()
   try {
     f.target.exec(`INSERT INTO feature(id,projectId,organisationId,layerId,contributorId,geometry,isPublished,isDraft,isPendingReview) VALUES
@@ -256,11 +256,16 @@ test('enrollment preserves projections and pending photo authors, replays, and p
         }),
       ).toBe(true)
       expect(f.target.query('SELECT isPublished FROM feature').get()).toEqual({
-        isPublished: 1,
+        isPublished: 0,
       })
       expect(f.target.query('SELECT isPublished FROM featureImage').get()).toEqual({
-        isPublished: 1,
+        isPublished: 0,
       })
+      expect(
+        f.target
+          .query('SELECT publishedRevisionId,generation FROM featureRevisionHead')
+          .get(),
+      ).toEqual({ publishedRevisionId: null, generation: 1 })
     } finally {
       domain.close()
     }

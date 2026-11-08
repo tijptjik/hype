@@ -40,7 +40,7 @@ beforeEach(() => {
   sqlite.exec(`CREATE UNIQUE INDEX layer_property_unique ON layerProperty(layerId, propertyId);
     INSERT INTO layer (id, projectId) VALUES ('layer', 'project'), ('second', 'project'), ('other-layer', 'other-project');
     INSERT INTO layerProperty VALUES ('layer', 'old', 1, 1), ('other-layer', 'other', 1, 0);
-    INSERT INTO property (id, key) VALUES ('new', 'new-key');
+    INSERT INTO property (id, key) VALUES ('new', 'new-key'), ('old', 'old-key'), ('other', 'other-key');
     INSERT INTO propertyI18n (propertyId, locale, label) VALUES ('new', 'en', 'New property');
     INSERT INTO propertyValue (id, propertyId, rank, value) VALUES ('value', 'new', 0, 'canonical');
     INSERT INTO propertyValueI18n (propertyValueId, locale, value) VALUES ('value', 'en', 'Translated')`)
@@ -228,13 +228,15 @@ describe('layer-property replacement integrity', () => {
             isUserContributable: true,
             property: expect.objectContaining({
               id: 'new',
-              i18n: [expect.objectContaining({ locale: 'en', label: 'New property' })],
+              i18n: {
+                en: expect.objectContaining({ locale: 'en', label: 'New property' }),
+              },
               values: [
                 expect.objectContaining({
                   id: 'value',
-                  i18n: [
-                    expect.objectContaining({ locale: 'en', value: 'Translated' }),
-                  ],
+                  i18n: {
+                    en: expect.objectContaining({ locale: 'en', value: 'Translated' }),
+                  },
                 }),
               ],
             }),

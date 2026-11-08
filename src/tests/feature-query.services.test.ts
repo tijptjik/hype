@@ -1276,7 +1276,7 @@ it.each([false, true])(
         db,
         {},
         base,
-        { ...hub, isAdminRequest: false },
+        { isSuperAdmin: true, isAdminRequest: false } as never,
         { limit: 1 },
         undefined,
         { publicationPreview },

@@ -59,7 +59,13 @@ describe('feature contribution submission stage', () => {
     async isDraft => {
       const result = await createUserContributedFeature(
         {} as never,
-        { layerId: 'layer', i18n: {}, properties: [], isDraft } as never,
+        {
+          contributorId: 'author',
+          layerId: 'layer',
+          i18n: {},
+          properties: [],
+          isDraft,
+        } as never,
         '',
         '',
       )
@@ -103,6 +109,7 @@ it('retains selected building identity and address components through contributi
   const result = await createUserContributedFeature(
     {} as never,
     {
+      contributorId: 'author',
       layerId: 'layer',
       addressMeta: identity,
       i18n: {
@@ -143,7 +150,13 @@ it('requires the exact persisted draft state for atomic contribution updates', a
     organisationId: 'organisation',
   })
   mocks.saveUnlinkedFeatureForm.mockResolvedValue({ id: 'feature', isDraft: true })
-  const input = { layerId: 'layer', i18n: {}, properties: [], isDraft: true } as never
+  const input = {
+    contributorId: 'author',
+    layerId: 'layer',
+    i18n: {},
+    properties: [],
+    isDraft: true,
+  } as never
   await updateUserContributedFeatureDraft({} as never, 'feature', input, '', '')
   expect(mocks.saveUnlinkedFeatureForm).toHaveBeenCalledWith(
     expect.anything(),
@@ -179,6 +192,7 @@ it('preserves fourth-language content and verification without copying failed tr
   await createUserContributedFeature(
     { query: { property: { findMany: async () => [] } } } as never,
     {
+      contributorId: 'author',
       layerId: 'layer',
       isDraft: false,
       i18n: {
@@ -220,7 +234,13 @@ it.each([false, true])(
     await expect(
       createUserContributedFeatureTask(
         {} as never,
-        { layerId: 'layer', i18n: {}, properties: [], isDraft } as never,
+        {
+          contributorId: 'author',
+          layerId: 'layer',
+          i18n: {},
+          properties: [],
+          isDraft,
+        } as never,
         '',
         '',
         { contributorId: 'account' },
@@ -269,7 +289,12 @@ it('maps a superseded combined draft save to a conflict without a separate Featu
     updateUserContributedFeatureTaskDraft(
       {} as never,
       expected,
-      { layerId: 'layer', i18n: {}, properties: [], contributorId: 'spoofed' } as never,
+      {
+        layerId: 'layer',
+        i18n: {},
+        properties: [],
+        contributorId: 'spoofed',
+      } as never,
       '',
       '',
     ),

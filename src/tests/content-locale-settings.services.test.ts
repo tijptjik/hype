@@ -42,8 +42,23 @@ beforeEach(() => {
   sqlite.exec(readFileSync('migrations/0158_content_locale_settings.sql', 'utf8'))
   db = drizzle(
     {
+      batch: async (statements: { sql: string; params: never[] }[]) => {
+        sqlite.exec('BEGIN')
+        try {
+          const results = statements.map(({ sql, params }) => ({
+            results: sqlite.prepare(sql).all(...params),
+          }))
+          sqlite.exec('COMMIT')
+          return results
+        } catch (error) {
+          sqlite.exec('ROLLBACK')
+          throw error
+        }
+      },
       prepare: (sql: string) => ({
         bind: (...params: never[]) => ({
+          sql,
+          params,
           raw: async () => {
             const statement = sqlite.prepare(sql)
             statement.setReturnArrays(true)

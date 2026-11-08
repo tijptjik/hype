@@ -29,13 +29,15 @@ function fixture() {
       CREATE TABLE project(id TEXT PRIMARY KEY, organisationId TEXT, flags TEXT);
       CREATE TABLE layer(id TEXT PRIMARY KEY, projectId TEXT, organisationId TEXT);
       CREATE TABLE image(id TEXT PRIMARY KEY, createdAt TEXT,isArchived INTEGER);
-      CREATE TABLE featureImage(featureId TEXT,imageId TEXT,intent TEXT,isPublished INTEGER,localIsPublished INTEGER,publishedAt TEXT,publisherId TEXT);
+      CREATE TABLE task(id TEXT PRIMARY KEY, featureId TEXT, isReviewed INTEGER);
+    CREATE TABLE taskImage(taskId TEXT, imageId TEXT);
+    CREATE TABLE featureImage(featureId TEXT,imageId TEXT,intent TEXT,isPublished INTEGER,localIsPublished INTEGER,publishedAt TEXT,publisherId TEXT);
       INSERT INTO organisation VALUES('o','h'),('other','h');
       INSERT INTO project VALUES('p','o','{}'),('other-p','o','{}');
       INSERT INTO layer VALUES('l','p','o'),('other-l','p','o');
       INSERT INTO feature(id,organisationId,projectId,layerId,isPublished,isArchived,modifiedAt) VALUES('f','o','p','l',0,0,'before');
       INSERT INTO image VALUES('i','2020',0);
-      INSERT INTO featureImage VALUES('f','i','undefined',0,NULL,NULL,NULL);`)
+      INSERT INTO featureImage VALUES('f','i','general',0,NULL,NULL,NULL);`)
   return { sqlite, db: db as unknown as Database }
 }
 
@@ -80,7 +82,7 @@ it.each([
       expect(sqlite.prepare('SELECT * FROM feature').all()).toEqual(before)
       expect(
         sqlite.prepare('SELECT intent,isPublished FROM featureImage').get(),
-      ).toEqual({ intent: 'undefined', isPublished: 0 })
+      ).toEqual({ intent: 'general', isPublished: 0 })
     } else if (scenario === 'missing' || scenario === 'feature skipped') {
       expect(await pending).toBeUndefined()
       expect(sqlite.prepare('SELECT * FROM feature').all()).toEqual(before)
@@ -101,7 +103,7 @@ it.each([
       })
       expect(
         sqlite.prepare('SELECT intent,isPublished,publisherId FROM featureImage').get(),
-      ).toEqual({ intent: 'canonical', isPublished: 1, publisherId: 'actor' })
+      ).toEqual({ intent: 'general', isPublished: 1, publisherId: 'actor' })
     }
   } finally {
     sqlite.close()
