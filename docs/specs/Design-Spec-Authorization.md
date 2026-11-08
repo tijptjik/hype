@@ -713,5 +713,5 @@ retains shared identities and address revisions, and clones source-owned local L
 with provenance. Existing conflicting destination definitions reject the transfer.
 Evidence copies, association replacement, parent changes and the accepted Feature
 revision commit in one guarded batch. Source definitions and historical pins remain
-unchanged. Destination ancestry and definition heads are checked inside that batch;
-role authorization follows the request-time checks used by other commands.
+unchanged. Destination ancestry and definition heads are checked inside that batch; role
+authorization follows the request-time checks used by other commands.
