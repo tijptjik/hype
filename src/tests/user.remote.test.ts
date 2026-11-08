@@ -82,7 +82,8 @@ vi.mock('#lib/api/services/adminUser.js', () => ({
 
 vi.mock('#lib/types.js', () => ({}))
 
-vi.mock('#lib/enums.js', () => ({
+vi.mock('#lib/enums.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/enums.js')>()),
   HierarchicalResource: {
     feature: 'feature',
   },
