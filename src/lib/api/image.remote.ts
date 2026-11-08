@@ -27,7 +27,7 @@ import type {
 import { hasResourceLogoStorage } from '#lib/db/services/resourceLogoSnapshot.js'
 // DB
 import { removeAcceptedFeatureImage } from '#lib/db/services/featureGalleryCommands.js'
-import { saveFeatureImageMetadataDraft } from '#lib/db/services/featureImageMetadataRevision.js'
+import { saveFeatureImageMetadata } from '#lib/db/services/featureImageMetadataRevision.js'
 import {
   hasFeatureRevisionHead,
   saveFeatureImageUploadDraft,
@@ -2468,6 +2468,10 @@ export const createImage = guardedCommand(async (input, ctx) => {
 
 /**
  * Updates an existing image in context.
+ * @param params Authorised context, displayed image revision and metadata fields.
+ * @param ctx Authenticated request and resource permissions.
+ * @returns Accepted metadata revision or the saved legacy image.
+ * @remarks Staff metadata edits apply immediately while preserving publication visibility.
  */
 export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx) => {
   const { db, user, userId, userRoles, event } = ctx
@@ -2490,12 +2494,12 @@ export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx)
       params.ctxType,
     )
     if (!snapshot) throw error(409, 'STALE_IMAGE_UPDATE')
-    const draft = await saveFeatureImageMetadataDraft(db, {
+    const saved = await saveFeatureImageMetadata(db, {
       featureId: params.ctxId,
       imageId: params.id,
       expectedImageRevisionId: params.imageRevisionId,
       actorId: userId,
-      reason: 'Image metadata saved for review',
+      reason: 'Image metadata edited',
       guard: createImageMutationGuards(db, params.ctxType, params.ctxId, snapshot)
         .before,
       derive: previous => {
@@ -2517,8 +2521,7 @@ export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx)
         }
       },
     })
-    if (draft.status === 'accepted') return { data: null, revisionAccepted: draft }
-    if (draft.status === 'saved') return { data: null, revisionDraft: draft }
+    if (saved.status === 'accepted') return { data: null, revisionAccepted: saved }
   }
   if (isLogoContext(params.ctxType) && (await hasResourceLogoStorage(db))) {
     await assertPermissionsToUpdateImage(
@@ -2715,12 +2718,12 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
 
   // Enrolled Feature edits branch from their displayed image pin, leaving shared bytes and sidecars intact.
   if (params.ctxType === ImageContextResource.feature) {
-    const draft = await saveFeatureImageMetadataDraft(db, {
+    const saved = await saveFeatureImageMetadata(db, {
       featureId: params.ctxId,
       imageId: params.id,
       expectedImageRevisionId: params.imageRevisionId,
       actorId: userId,
-      reason: 'Image rotation saved for review',
+      reason: 'Image rotated',
       guard: createImageMutationGuards(db, params.ctxType, params.ctxId, snapshot)
         .before,
       derive: previous => {
@@ -2737,8 +2740,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
         }
       },
     })
-    if (draft.status === 'accepted') return { data: null, revisionAccepted: draft }
-    if (draft.status === 'saved') return { data: null, revisionDraft: draft }
+    if (saved.status === 'accepted') return { data: null, revisionAccepted: saved }
   }
 
   const logoHead =

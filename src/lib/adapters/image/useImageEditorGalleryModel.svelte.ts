@@ -833,14 +833,8 @@ export function useImageEditorGalleryModel(
     isRotatePending = true
 
     try {
-      const outcome = await imageCtx.handleRotate(rotation, imageId)
-      if (outcome === 'draft') {
-        // The persisted gallery still shows its accepted orientation until explicit publication.
-        optimisticRotationByImageId = Object.fromEntries(
-          Object.entries(optimisticRotationByImageId).filter(([id]) => id !== imageId),
-        ) as typeof optimisticRotationByImageId
-        return
-      }
+      // Staff saves refresh the accepted orientation immediately; reconcile its new version below.
+      await imageCtx.handleRotate(rotation, imageId)
       const optimisticRotation = optimisticRotationByImageId[imageId]
       const nextVersion = imageCtx.getImage(imageId)?.image.version ?? null
 

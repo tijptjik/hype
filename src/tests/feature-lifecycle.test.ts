@@ -1154,10 +1154,10 @@ it('routes existing contribution save and submit APIs to partial proposals witho
   ).toBe('withdrawn')
 })
 
-import { saveFeatureImageMetadataDraft } from '#lib/db/services/featureImageMetadataRevision.js'
+import { saveFeatureImageMetadata } from '#lib/db/services/featureImageMetadataRevision.js'
 it('saves staff metadata through the existing image editor without making a proposal', async () => {
   const f = await fixture(false)
-  const result = await saveFeatureImageMetadataDraft(f.db, {
+  const result = await saveFeatureImageMetadata(f.db, {
     ...command,
     imageId: 'photo',
     expectedImageRevisionId: 'image-r1',
@@ -1271,7 +1271,7 @@ it('serves only current published image pins while retaining authorized historic
   expect(await readImageRevisionDelivery(f.db, 'image-r1')).toMatchObject({
     storageKey: 'immutable-photo',
   })
-  const changed = await saveFeatureImageMetadataDraft(f.db, {
+  const changed = await saveFeatureImageMetadata(f.db, {
     ...command,
     imageId: 'photo',
     expectedImageRevisionId: 'image-r1',

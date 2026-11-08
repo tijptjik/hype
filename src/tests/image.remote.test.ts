@@ -49,9 +49,9 @@ const {
   mockHasImageStorageReference,
   mockRemoveOrganisationImage,
   mockReadImageRevisionDelivery,
-  mockSaveFeatureImageMetadataDraft,
+  mockSaveFeatureImageMetadata,
 } = vi.hoisted(() => ({
-  mockSaveFeatureImageMetadataDraft: vi.fn(async (): Promise<unknown> => ({ status: 'legacy' })),
+  mockSaveFeatureImageMetadata: vi.fn(async (): Promise<unknown> => ({ status: 'legacy' })),
   mockReadImageRevisionDelivery: vi.fn(async (): Promise<unknown> => null),
   mockRemoveOrganisationImage: vi.fn(async () => true),
   mockHasImageStorageReference: vi.fn(async () => false),
@@ -135,7 +135,7 @@ vi.mock('#lib/db/services/featureGalleryCommands.js', () => ({
   prepareFeatureGalleryAssignmentCapture: vi.fn(async () => ({ before: [], after: [], revisionId: null })),
 }))
 vi.mock('#lib/db/services/featureImageMetadataRevision.js', () => ({
-  saveFeatureImageMetadataDraft: mockSaveFeatureImageMetadataDraft,
+  saveFeatureImageMetadata: mockSaveFeatureImageMetadata,
 }))
 vi.mock('#lib/db/services/featureImageUploadRevision.js', () => ({
   hasFeatureRevisionHead: vi.fn(async () => false),
@@ -346,7 +346,7 @@ describe('image.remote', () => {
   })
 
   beforeEach(() => {
-    mockSaveFeatureImageMetadataDraft.mockReset().mockResolvedValue({ status: 'legacy' })
+    mockSaveFeatureImageMetadata.mockReset().mockResolvedValue({ status: 'legacy' })
     mockReadImageRevisionDelivery.mockReset().mockResolvedValue(null)
     mockHasImageStorageReference.mockResolvedValue(false)
     mockCreateUploadedResourceImage
@@ -1390,14 +1390,14 @@ describe('image.remote', () => {
 
   it.each(['rotation', 'presentation'] as const)('saves enrolled %s edits without mutable image writes or sidecars', async kind => {
     mockLoadImageById.mockResolvedValue({ id: 'img-1', env: 'local', publicId: 'old-key', version: 1 })
-    const draft = { status: 'saved', proposalId: 'p', candidateRevisionId: 'r', imageRevisionId: 'ir' }
-    mockSaveFeatureImageMetadataDraft.mockResolvedValueOnce(draft)
+    const draft = { status: 'accepted', revisionId: 'r', imageRevisionId: 'ir', assetVersionId: 'asset' }
+    mockSaveFeatureImageMetadata.mockResolvedValueOnce(draft)
     const result = kind === 'rotation'
       ? await remote.rotateImage({ id: 'img-1', ctxType: ImageContextResource.feature, ctxId: 'feature-1', imageRevisionId: 'ir-base', rotation: 90 })
       : await remote.updateImage({ id: 'img-1', ctxType: ImageContextResource.feature, ctxId: 'feature-1', imageRevisionId: 'ir-base', data: { presentationMode: 'cover' } })
-    expect(result).toEqual({ data: null, revisionDraft: draft })
+    expect(result).toEqual({ data: null, revisionAccepted: draft })
     expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
-    expect(mockSaveFeatureImageMetadataDraft).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(mockSaveFeatureImageMetadata).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       featureId: 'feature-1', expectedImageRevisionId: 'ir-base', actorId: 'u-1',
     }))
     expect(mockUpdateImageForContext).not.toHaveBeenCalled()

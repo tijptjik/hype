@@ -1272,11 +1272,11 @@ export class ImageCtx {
   async updateMetadata(
     imageId: Id,
     data: Parameters<typeof updateImageRemote>[0]['data'],
-  ): Promise<'draft' | 'saved'> {
+  ): Promise<'saved'> {
     const ctx = this.getCtx()
     const contextAtStart = this.state.context
     const displayedRevisionId = this.getImage(imageId)?.image.imageRevisionId
-    // An enrolled gallery keeps showing its accepted pin until the metadata draft is published.
+    // An enrolled gallery adopts the accepted metadata pin after the save completes.
     if (displayedRevisionId) {
       const response = await updateImageRemote({
         id: imageId,
@@ -1286,10 +1286,6 @@ export class ImageCtx {
         data,
         meta: { isAdminRequest: true },
       })
-      if ('revisionDraft' in response) {
-        toast.success('Image changes saved for review.')
-        return 'draft'
-      }
       // Immediate logo saves advance the displayed pin; the next replacement must use that revision.
       if (this.state.context === contextAtStart && response.data) {
         const saved = response.data as ImageCtxEnvelope
@@ -2783,14 +2779,14 @@ export class ImageCtx {
   async handleRotate(
     rotation: 0 | 90 | 180 | 270,
     imageId: Id | null = this.state.activeImage?.image.id ?? null,
-  ): Promise<'draft' | 'saved' | undefined> {
+  ): Promise<'saved' | undefined> {
     if (!imageId) return
 
     const ctx = this.getCtx()
     const contextAtStart = this.state.context
 
     try {
-      const result = await rotateImageRemote({
+      await rotateImageRemote({
         id: imageId,
         imageRevisionId: this.getImage(imageId)?.image.imageRevisionId,
         ctxType: ctx.ctxType,
@@ -2798,12 +2794,6 @@ export class ImageCtx {
         rotation,
         meta: { isAdminRequest: true },
       })
-
-      if (result && 'revisionDraft' in result) {
-        if (this.state.context === contextAtStart)
-          toast.success('Rotation saved as a draft. Review and publish it in Updates.')
-        return 'draft'
-      }
 
       // Refresh fresh metadata only in the viewer that initiated the rotation.
       await this.reconcileImageMutation(contextAtStart)

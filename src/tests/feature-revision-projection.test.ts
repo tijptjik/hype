@@ -80,7 +80,7 @@ import {
 } from '#lib/db/services/image.js'
 import { applyFeatureGalleryPins } from '#lib/db/services/featureGalleryRead.js'
 import { readFeatureRevisionWorkspace } from '#lib/db/services/featureRevisionWorkspace.js'
-import { saveFeatureImageMetadataDraft } from '#lib/db/services/featureImageMetadataRevision.js'
+import { saveFeatureImageMetadata } from '#lib/db/services/featureImageMetadataRevision.js'
 import {
   saveFeatureImageUploadDraft,
   readFeatureUploadAttachmentGrant,
@@ -1698,12 +1698,12 @@ describe('revision publication controls and workspace privacy', () => {
     )
   })
   it.each(['contain', 'cast-edges'] as const)(
-    'saves %s image metadata atomically as a Feature draft and adopts it only on explicit publication',
+    'accepts %s image metadata immediately without creating a review proposal',
     async presentationMode => {
       const f = fixture(),
         initial = await f.initialize()
       const before = (await f.capture()).snapshot
-      const saved = await saveFeatureImageMetadataDraft(f.db, {
+      const saved = await saveFeatureImageMetadata(f.db, {
         ...common,
         imageId: 'photo',
         expectedImageRevisionId: 'image-r1',
@@ -1715,33 +1715,20 @@ describe('revision publication controls and workspace privacy', () => {
           presentationMode,
         }),
       })
-      if (saved.status !== 'saved') throw new Error('Expected draft')
-      expect((await f.capture()).snapshot).toEqual(before)
+      if (saved.status !== 'accepted') throw new Error('Expected accepted metadata')
+      expect(
+        f.sqlite.prepare('SELECT count(*) n FROM featureRevisionProposal').get()?.n,
+      ).toBe(0)
       expect(
         f.sqlite.prepare('SELECT publishedRevisionId FROM featureRevisionHead').get()
           ?.publishedRevisionId,
-      ).toBe(initial.revisionId)
+      ).toBe(saved.revisionId)
       const revision = f.sqlite
         .prepare('SELECT * FROM imageRevision WHERE id=?')
         .get(saved.imageRevisionId)!
       expect(revision.previousRevisionId).toBe('image-r1')
       expect(revision.assetVersionId).toBe('asset-photo')
       expect(JSON.parse(String(revision.metadata)).renderRotation).toBe(90)
-      expect(
-        (
-          await publishFeatureStaffDraft(f.db, {
-            ...common,
-            expectedScope,
-            proposalId: saved.proposalId,
-            expectedCandidateRevisionId: saved.candidateRevisionId,
-            expectedPublishedRevisionId: initial.revisionId,
-            expectedComparisonRevisionId: initial.revisionId,
-            expectedGeneration: 0,
-            validateResult: () => [],
-            canReviewPath: () => true,
-          })
-        ).status,
-      ).toBe('accepted')
       const content = JSON.parse(
         String(
           f.sqlite
@@ -1768,14 +1755,45 @@ describe('revision publication controls and workspace privacy', () => {
       )
     },
   )
-  it('rolls back metadata registration when a late proposal receipt fails', async () => {
+  it('saves private image metadata immediately, preserves visibility and rejects stale pins', async () => {
+    const f = fixture()
+    f.sqlite.exec(readFileSync('migrations/0189_feature_private_capture.sql', 'utf8'))
+    f.sqlite.exec("UPDATE feature SET isPublished=0,localIsPublished=0 WHERE id='f'")
+    await f.initialize(false)
+    const input = {
+      ...common,
+      imageId: 'photo',
+      expectedImageRevisionId: 'image-r1',
+      derive: (
+        metadata: Parameters<
+          Parameters<typeof saveFeatureImageMetadata>[1]['derive']
+        >[0],
+      ) => ({ ...metadata, version: 2, credit: 'Staff credit' }),
+    }
+    const saved = await saveFeatureImageMetadata(f.db, input)
+    if (saved.status !== 'accepted') throw new Error('Expected accepted metadata')
+    const workspace = await readFeatureRevisionWorkspace(f.db, {
+      ...common,
+      canPublish: true,
+    })
+    expect(workspace.comparisonRevisionId).toBe(saved.revisionId)
+    expect(workspace.publishedRevisionId).toBeNull()
+    expect(workspace.proposals).toHaveLength(0)
+    expect(
+      f.sqlite.prepare("SELECT isPublished FROM feature WHERE id='f'").get()
+        ?.isPublished,
+    ).toBe(0)
+    await expect(saveFeatureImageMetadata(f.db, input)).rejects.toThrow('changed')
+    expect(f.sqlite.prepare('SELECT count(*) n FROM imageRevision').get()?.n).toBe(3)
+  })
+  it('rolls back metadata registration when a late accepted history receipt fails', async () => {
     const f = fixture()
     await f.initialize()
     f.sqlite.exec(
-      "CREATE TRIGGER fail_proposal BEFORE INSERT ON featureRevisionReview BEGIN SELECT RAISE(ABORT,'review failed'); END",
+      "CREATE TRIGGER fail_metadata BEFORE INSERT ON featureRevisionPublication BEGIN SELECT RAISE(ABORT,'history failed'); END",
     )
     await expect(
-      saveFeatureImageMetadataDraft(f.db, {
+      saveFeatureImageMetadata(f.db, {
         ...common,
         imageId: 'photo',
         expectedImageRevisionId: 'image-r1',

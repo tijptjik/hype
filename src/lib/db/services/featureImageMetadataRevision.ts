@@ -7,11 +7,13 @@ import { ImageMetadataFullSchema } from '#lib/db/zod/schema/image.js'
 import { imageRevision } from '../schema/imageRevision'
 // DOMAIN
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
+import { equalRevisionValue } from '#lib/revisions/merge.js'
 // SERVICES
 import { hasFeatureLifecycleStorage, readCurrentFeatureRevision } from './featureLifecycle'
 import { saveLifecycleImageChange } from './featureLifecycleImage'
 import { readFeatureRevisionWorkspace } from './featureRevisionWorkspace'
-import { prepareFeatureRevisionProposal, prepareRevisionChangeSet } from './featureRevision'
+import { prepareRevisionChangeSet } from './featureRevision'
+import { prepareFeatureAcceptedCapture } from './featureAcceptedCapture'
 import { executeRevisionBatch } from './revisionBatch'
 // IMAGE PRESENTATION
 import { IMAGE_PRESENTATION_MODES } from '#lib/images/presentation.js'
@@ -25,15 +27,15 @@ const metadataSchema = ImageMetadataFullSchema.extend({
 })
 
 /**
- * Saves an immutable metadata edit and a Feature gallery proposal in one transaction.
+ * Applies an immutable metadata edit and its accepted Feature pin in one transaction.
  * @param db Request database.
  * @param input Authorized Feature/image, exact displayed pin and a trusted metadata transformation.
- * @returns Legacy routing or saved draft identifiers; never mutates image identity or public pins.
- * @remarks Editing an image used by several Features changes only this Feature's proposal.
+ * @returns Legacy routing or accepted revision identifiers; preserves identity and visibility.
+ * @remarks Editing an image used by several Features changes only this Feature's accepted pin.
  * The caller must authorize image editing first. Other Features adopt the revision explicitly.
  * No mutable sidecar or newest-image lookup supplies metadata for an enrolled Feature.
  */
-export async function saveFeatureImageMetadataDraft(
+export async function saveFeatureImageMetadata(
   db: Database,
   input: RevisionCommand & {
     featureId: string
@@ -41,7 +43,7 @@ export async function saveFeatureImageMetadataDraft(
     expectedImageRevisionId?: string
     derive: (metadata: z.infer<typeof metadataSchema>) => z.infer<typeof metadataSchema>
   },
-): Promise<{ status: 'legacy' } | {status:'accepted';revisionId:string;imageRevisionId:string;assetVersionId:string} | { status: 'saved'; proposalId: string; candidateRevisionId: string; imageRevisionId: string }> {
+): Promise<{ status: 'legacy' } | {status:'accepted';revisionId:string;imageRevisionId:string;assetVersionId:string}> {
   if(await hasFeatureLifecycleStorage(db)) {
     const current=await readCurrentFeatureRevision(db,input)
     if(!current||!input.expectedImageRevisionId)throw new Error('Refresh the Feature image before editing')
@@ -70,23 +72,31 @@ export async function saveFeatureImageMetadataDraft(
   const metadata = metadataSchema.parse(input.derive(metadataSchema.parse(JSON.parse(row.metadata))))
   const content = FeatureRevisionContentSchema.parse(JSON.parse(row.content))
   const id = crypto.randomUUID(), change = prepareRevisionChangeSet(db, input)
+  const previous = structuredClone(content)
   content.gallery.entries[input.imageId].imageRevisionId = id
   const guard = sql`(${input.guard}) AND EXISTS (SELECT 1 FROM featureRevisionHead
     WHERE featureId=${input.featureId} AND state='active' AND generation=${workspace.generation}
       AND publishedRevisionId IS ${workspace.publishedRevisionId})
     AND EXISTS (SELECT 1 FROM image WHERE id=${input.imageId} AND isArchived=0)`
-  const proposal = await prepareFeatureRevisionProposal(db, {
-    ...input, guard, content, baseRevisionId: workspace.comparisonRevisionId,
+  const capture = await prepareFeatureAcceptedCapture(db, {
+    ...input, guard,
+    derive: current => {
+      if (!equalRevisionValue(current, previous))
+        throw new Error('Feature image changed; refresh before editing')
+      return content
+    },
   })
-  // The gallery snapshot trigger needs the exact metadata revision in this same transaction.
-  const result = await executeRevisionBatch(db, proposal.guard, [
+  if (!capture.revisionId) throw new Error('Feature image revision is unavailable')
+  // Register metadata before the accepted snapshot pin, with both rolled back on failure.
+  const result = await executeRevisionBatch(db, guard, [
+    ...capture.before,
     change.statement,
     db.insert(imageRevision).values({ id, imageId: input.imageId,
       previousRevisionId: input.expectedImageRevisionId, assetVersionId: row.assetVersionId,
       changeSetId: change.id, metadata }),
-    ...proposal.statements,
+    ...capture.after,
   ])
   if (!result) throw new Error('Feature image changed; refresh before editing')
-  return { status: 'saved', proposalId: proposal.proposalId,
-    candidateRevisionId: proposal.candidateRevisionId, imageRevisionId: id }
+  return { status: 'accepted', revisionId: capture.revisionId,
+    imageRevisionId: id, assetVersionId: row.assetVersionId }
 }

@@ -1170,13 +1170,12 @@ export async function updateImagePresentationMode(options: {
 
   try {
     if (options.imageCtx) {
-      const outcome = await options.imageCtx.updateMetadata(currentImage.id, {
+      await options.imageCtx.updateMetadata(currentImage.id, {
         presentationMode: nextMode,
       })
-      if (outcome === 'draft') return true
     } else {
       const { updateImage: updateImageRemote } = await loadImageRemotes()
-      const response = await updateImageRemote({
+      await updateImageRemote({
         id: currentImage.id,
         imageRevisionId: 'imageRevisionId' in currentImage && typeof currentImage.imageRevisionId === 'string' ? currentImage.imageRevisionId : undefined,
         ctxType: ctx.ctxType,
@@ -1184,7 +1183,6 @@ export async function updateImagePresentationMode(options: {
         data: { presentationMode: nextMode },
         meta: { isAdminRequest: true },
       })
-      if ('revisionDraft' in response) return true
     }
     options.onSuccess?.(nextMode)
     return true
