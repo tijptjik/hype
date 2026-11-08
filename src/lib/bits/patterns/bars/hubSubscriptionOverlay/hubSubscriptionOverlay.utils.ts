@@ -66,26 +66,30 @@ export function getDecorativeFeatureImages(
   const uniqueImages = [
     ...new Map(featureImages.map(image => [image.image.id, image])).values(),
   ]
-  return uniqueImages
-    .map(image => ({
-      image,
-      sortValue: getDecorativeImageSortValue(image.image.id, seed),
-    }))
-    .sort((left, right) => left.sortValue - right.sortValue)
-    .slice(0, limit)
-    .map(({ image }, index) => {
-      try {
-        return {
-          id: image.image.id,
-          src: getURLfromImage({
-            image,
-            transformation: 'c_fill,h_256,w_256',
-          }),
-          index,
+  return (
+    uniqueImages
+      .map(image => ({
+        image,
+        sortValue: getDecorativeImageSortValue(image.image.id, seed),
+      }))
+      .sort((left, right) => left.sortValue - right.sortValue)
+      .slice(0, limit)
+      .map(({ image }, index) => {
+        try {
+          return {
+            id: image.image.id,
+            src: getURLfromImage({
+              image,
+              transformation: 'c_fill,h_256,w_256',
+            }),
+            index,
+          }
+        } catch {
+          return null
         }
-      } catch {
-        return null
-      }
-    })
-    .filter((image): image is DecorativeFeatureImage => image !== null)
+      })
+      .filter((image): image is DecorativeFeatureImage => image !== null)
+      // Keep angular positions contiguous when an unsupported image was omitted.
+      .map((image, index) => ({ ...image, index }))
+  )
 }

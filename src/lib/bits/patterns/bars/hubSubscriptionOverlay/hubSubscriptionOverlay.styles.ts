@@ -1,4 +1,4 @@
-import { getDecorativeImageDelay } from './hubSubscriptionOverlay.utils'
+// TYPES
 
 type MobileCardMarginParams = {
   isMobile: boolean
@@ -126,7 +126,8 @@ export function getCardScaleStyle(
 export function getCardSurfaceStyle(isExpanded: boolean): string {
   return [
     'clip-path:circle(50%)',
-    `transform:scale(${isExpanded ? 1 : 0})`,
+    `transform:scale(${isExpanded ? 1 : 0.96})`,
+    `opacity:${isExpanded ? 1 : 0}`,
     'transform-origin:center',
   ].join(';')
 }
@@ -149,7 +150,7 @@ export function getDismissButtonStyle(params: DismissButtonStyleParams): string 
     'top:50%',
     `transform:translate(-50%, -50%) translate(${x}px, ${y}px) scale(${scale})`,
     `opacity:${opacity}`,
-    `transition-delay:${params.isExpanded ? 500 : 0}ms`,
+    'transition-delay:0ms',
   ].join(';')
 }
 
@@ -165,15 +166,14 @@ export function getDecorativeImageStyle(params: DecorativeImageStyleParams): str
   const x = Math.cos(radians) * params.orbitRadius
   const y = Math.sin(radians) * params.orbitRadius
   const imageRotation = angle + 90
-  const delay = getDecorativeImageDelay(params.index, params.count)
   const hoverOffset =
     params.activeIndex === params.index
       ? params.orbitRadius * params.hoverOffsetRatio
       : 0
   const hoverX = Math.cos(radians) * hoverOffset
   const hoverY = Math.sin(radians) * hoverOffset
-  const finalX = params.isExpanded ? x + hoverX : 0
-  const finalY = params.isExpanded ? y + hoverY : 0
+  const finalX = params.isExpanded ? x + hoverX : x * 0.92
+  const finalY = params.isExpanded ? y + hoverY : y * 0.92
   const scale = params.isExpanded ? 1 : 0.82
 
   return [
@@ -181,6 +181,6 @@ export function getDecorativeImageStyle(params: DecorativeImageStyleParams): str
     'top:50%',
     `--decorative-image-rotation:${imageRotation}deg`,
     `transform:translate(-50%, -50%) translate(${finalX}px, ${finalY}px) scale(${scale})`,
-    `transition-delay:${params.activeIndex === null ? delay : 0}ms`,
+    'transition-delay:0ms',
   ].join(';')
 }

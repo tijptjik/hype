@@ -53,7 +53,7 @@ const subscriptionLabel = $derived(
 </script>
 
 <div
-  class="relative aspect-square overflow-hidden rounded-full border border-[color-mix(in_oklab,var(--color-map-base)_72%,white_8%)] bg-sky-950 transition-transform duration-[500ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+  class="relative aspect-square overflow-hidden rounded-full border border-[color-mix(in_oklab,var(--color-map-base)_72%,white_8%)] bg-sky-950 transition-[transform,opacity] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
   style={getCardSurfaceStyle(isExpanded)}
 >
   <div
@@ -63,7 +63,7 @@ const subscriptionLabel = $derived(
       <div class="min-w-0 px-4">
         {#if subscriptionLabel}
           <p
-            class="mb-3 text-center font-mono text-[14px] uppercase tracking-[0.3em] text-white/62"
+            class="mb-3 text-center font-mono text-[14px] tracking-[0.3em] text-white/62 uppercase"
           >
             {subscriptionLabel}
           </p>
@@ -86,7 +86,7 @@ const subscriptionLabel = $derived(
       <div
         class="max-w-sm rounded-[1.8rem] border bg-[color-mix(in_oklab,var(--color-map-base)_34%,white_10%)] px-4 py-3"
       >
-        <p class="text-[11px] uppercase tracking-[0.32em] text-white/72">
+        <p class="text-[11px] tracking-[0.32em] text-white/72 uppercase">
           {m.hub__subscription_cta()}
         </p>
         <p class="mt-0.5 px-3 text-sm leading-6 text-white/92">

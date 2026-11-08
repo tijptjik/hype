@@ -17,7 +17,6 @@ type Props = {
   isLoading?: boolean
   isDisabled?: boolean
   onDismiss?: () => void | Promise<void>
-  onReady?: () => void
   children?: import('svelte').Snippet
 }
 
@@ -29,7 +28,6 @@ let {
   isLoading = false,
   isDisabled = false,
   onDismiss,
-  onReady,
   children,
 }: Props = $props()
 
@@ -42,33 +40,12 @@ const DECORATIVE_IMAGE_HOVER_OFFSET_RATIO = 0.18
 const DECORATIVE_IMAGE_ORBIT_RADIUS_PX = 254
 const DISMISS_BUTTON_ANGLE_DEGREES = -45
 const DISMISS_BUTTON_ORBIT_RADIUS_PX = 242
-const decorativeImageSettleCount = $derived(
-  Object.keys(loadedFeatureImageIds).length + Object.keys(failedFeatureImageIds).length,
-)
-
-$effect(() => {
-  if (
-    decorativeFeatureImages.length === 0 ||
-    decorativeImageSettleCount < decorativeFeatureImages.length
-  ) {
-    return
-  }
-
-  onReady?.()
-})
-
 function handleDecorativeImageLoad(imageId: string): void {
-  loadedFeatureImageIds = {
-    ...loadedFeatureImageIds,
-    [imageId]: true,
-  }
+  loadedFeatureImageIds[imageId] = true
 }
 
 function handleDecorativeImageError(imageId: string): void {
-  failedFeatureImageIds = {
-    ...failedFeatureImageIds,
-    [imageId]: true,
-  }
+  failedFeatureImageIds[imageId] = true
 }
 
 // Determine which orbit image should react to the current pointer direction.
@@ -90,27 +67,10 @@ function handleCardCirclePointerMove(event: PointerEvent): void {
     return
   }
 
-  const pointerAngle = Math.atan2(pointerY, pointerX)
-  let closestIndex = 0
-  let closestDelta = Number.POSITIVE_INFINITY
-
-  for (const image of decorativeFeatureImages) {
-    const imageAngle =
-      ((-90 + (360 / decorativeFeatureImages.length) * image.index) * Math.PI) / 180
-    const wrappedDelta = Math.abs(
-      Math.atan2(
-        Math.sin(pointerAngle - imageAngle),
-        Math.cos(pointerAngle - imageAngle),
-      ),
-    )
-
-    if (wrappedDelta < closestDelta) {
-      closestDelta = wrappedDelta
-      closestIndex = image.index
-    }
-  }
-
-  activeDecorativeImageIndex = closestIndex
+  // Uniform angular spacing lets us select a neighbour without scanning every photo.
+  const turns = (Math.atan2(pointerY, pointerX) + Math.PI / 2) / (2 * Math.PI)
+  const count = decorativeFeatureImages.length
+  activeDecorativeImageIndex = ((Math.round(turns * count) % count) + count) % count
 }
 
 function handleCardCirclePointerLeave(): void {
@@ -126,13 +86,14 @@ function handleCardCirclePointerLeave(): void {
 >
   {#each decorativeFeatureImages as featureImage (featureImage.id)}
     <div
-      class={`absolute z-0 size-32 overflow-hidden rounded-full border border-[color-mix(in_oklab,var(--color-map-base)_48%,white_10%)] transition-[transform,opacity] duration-[500ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${loadedFeatureImageIds[featureImage.id] && !failedFeatureImageIds[featureImage.id] ? 'opacity-100' : 'opacity-0'}`}
+      class={`absolute z-0 size-32 overflow-hidden rounded-full border border-[color-mix(in_oklab,var(--color-map-base)_48%,white_10%)] transition-[transform,opacity] duration-[500ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${loadedFeatureImageIds[featureImage.id] && !failedFeatureImageIds[featureImage.id] ? 'opacity-100' : 'opacity-0'}`}
       style={getDecorativeImageStyle({
         index: featureImage.index,
         count: decorativeFeatureImages.length,
         orbitRadius: DECORATIVE_IMAGE_ORBIT_RADIUS_PX,
         hoverOffsetRatio: DECORATIVE_IMAGE_HOVER_OFFSET_RATIO,
-        isExpanded: areDecorativeImagesExpanded,
+        isExpanded:
+          areDecorativeImagesExpanded && !!loadedFeatureImageIds[featureImage.id],
         activeIndex: activeDecorativeImageIndex,
       })}
       aria-hidden="true"
@@ -141,7 +102,10 @@ function handleCardCirclePointerLeave(): void {
         src={featureImage.src}
         alt=""
         class="h-full w-full rotate-[var(--decorative-image-rotation)] object-cover contrast-[1.02] saturate-[0.9]"
-        loading="lazy"
+        loading="eager"
+        fetchpriority="low"
+        width="256"
+        height="256"
         decoding="async"
         onload={() => handleDecorativeImageLoad(featureImage.id)}
         onerror={() => handleDecorativeImageError(featureImage.id)}
@@ -154,7 +118,7 @@ function handleCardCirclePointerLeave(): void {
 
   <button
     type="button"
-    class="absolute z-20 flex size-11 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--color-map-base)_34%,white_10%)] bg-sky-950 text-white/84 transition-[transform,opacity,border-color,background-color,color] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[color-mix(in_oklab,var(--color-map-primary)_34%,white_8%)] hover:bg-sky-900 hover:text-white disabled:pointer-events-none disabled:opacity-48"
+    class="absolute z-20 flex size-11 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--color-map-base)_34%,white_10%)] bg-sky-950 text-white/84 transition-[transform,opacity,border-color,background-color,color] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[color-mix(in_oklab,var(--color-map-primary)_34%,white_8%)] hover:bg-sky-900 hover:text-white disabled:pointer-events-none disabled:opacity-48 motion-reduce:transition-none"
     style={getDismissButtonStyle({
       angleDegrees: DISMISS_BUTTON_ANGLE_DEGREES,
       orbitRadius: DISMISS_BUTTON_ORBIT_RADIUS_PX,

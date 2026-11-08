@@ -101,29 +101,21 @@ const cardScaleStyle = $derived.by(() => {
   )
 })
 
+// Reveal the prompt independently of decorative network requests, after its first paint.
 $effect(() => {
-  if (areDecorativeImagesExpanded || decorativeFeatureImages.length > 0) {
-    return
-  }
-
-  const animationFrame = requestAnimationFrame(() => {
-    isCardSurfaceExpanded = true
-    areDecorativeImagesExpanded = true
+  let revealFrame = 0
+  const paintFrame = requestAnimationFrame(() => {
+    revealFrame = requestAnimationFrame(() => {
+      isCardSurfaceExpanded = true
+      areDecorativeImagesExpanded = true
+    })
   })
 
-  return () => cancelAnimationFrame(animationFrame)
+  return () => {
+    cancelAnimationFrame(paintFrame)
+    cancelAnimationFrame(revealFrame)
+  }
 })
-
-function handleDecorativeOrbitReady(): void {
-  if (areDecorativeImagesExpanded) {
-    return
-  }
-
-  requestAnimationFrame(() => {
-    isCardSurfaceExpanded = true
-    areDecorativeImagesExpanded = true
-  })
-}
 </script>
 
 <section
@@ -144,7 +136,6 @@ function handleDecorativeOrbitReady(): void {
           {isLoading}
           {isDisabled}
           {onDismiss}
-          onReady={handleDecorativeOrbitReady}
         >
           <HubSubscriptionOverlayPrimitive.HubSubscriptionOverlayCard
             {title}
