@@ -15,15 +15,18 @@ import {
   getConfiguredBasemapAccessToken,
   listMapStyleCatalog,
 } from '#lib/map/styles/index.js'
+import { resolveMapStyleSpriteUrls } from '#lib/map/styles/runtime.js'
 import { freezeMapForResize, holdMapSizeDuringFlight } from '#lib/map/resizeSnapshot.js'
 import { createMapController, type MapController } from '#lib/map/controller.js'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import MapLoading from './MapLoading.svelte'
 import { VISUAL_TRANSITION_MS } from '#lib/bits/custom/main/visualTransition.js'
+// REVIEW
+import { locationMoveDistance } from '#lib/locations/reviewPresentation.js'
 // ICONS
 import ArrowsPointingIn from 'virtual:icons/proicons/full-screen-minimize'
 import ArrowsPointingOut from 'virtual:icons/proicons/full-screen-maximize'
-import { Icon } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 // TYPES
 import * as maplibregl from 'maplibre-gl'
 import type {
@@ -36,6 +39,8 @@ import type { Id } from '#lib/types.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 import type { MapStyleCatalogKey } from '#lib/map/styles/catalog.js'
 type MapProps = {
+  comparison?: { before: [number, number]; after: [number, number] } | null
+  pinControls?: import('svelte').Snippet
   pinHighlightRequest?: number
   showMarker?: boolean
   locationCandidates?: import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
@@ -49,6 +54,8 @@ type MapProps = {
   addressMeta: AddressMeta | null
   mapStyleCode?: string | null
   draggable?: boolean
+  /** Prevents camera panning and marker dragging while pin notices need attention. */
+  draggingLocked?: boolean
   toggleFullscreen?: (isFullscreen: boolean) => void
   toggleCollapsed?: (isCollapsed: boolean) => void
   dragEndCallback?: (lngLat: number[]) => void
@@ -59,6 +66,28 @@ type MapProps = {
 
 // STATE : PROPS
 let mapProps: MapProps = $props()
+let pinIsDragging = $state(false)
+let pinControlPosition = $state<{ x: number; y: number } | null>(null)
+// Keep the suggestion anchored below the geographic pin during camera moves and resizing.
+$effect(() => {
+  const map = activeMapInstance
+  const coordinates = getCoordinateTuple(mapProps.coordinates)
+  if (!map || !coordinates || !mapProps.pinControls) {
+    pinControlPosition = null
+    return
+  }
+  const position = (): void => {
+    const point = map.project(coordinates)
+    pinControlPosition = { x: point.x, y: point.y + 34 }
+  }
+  position()
+  map.on('move', position)
+  map.on('resize', position)
+  return () => {
+    map.off('move', position)
+    map.off('resize', position)
+  }
+})
 
 /**
  * Narrows editor coordinates to the tuple accepted by MapLibre camera APIs.
@@ -140,6 +169,61 @@ const shouldFreeze = $derived(
   Boolean(mapProps.freezeForResize || (containerResizing && !pendingViewport)),
 )
 
+let movementLine = $state<{ x1: number; y1: number; x2: number; y2: number } | null>(
+  null,
+)
+let comparisonMapUnavailable = $state(false)
+// Review overlays follow this map camera and stay visible even when basemap tiles are unavailable.
+$effect(() => {
+  const target = activeMapInstance
+  const comparison = mapProps.comparison
+  if (!target || !comparison) return
+  const markers: maplibregl.Marker[] = []
+  const projectLine = (): void => {
+    const before = target.project(comparison.before),
+      after = target.project(comparison.after)
+    movementLine = { x1: before.x, y1: before.y, x2: after.x, y2: after.y }
+  }
+  const unavailable = (): void => {
+    comparisonMapUnavailable = true
+  }
+  for (const [point, label, tone] of [
+    [comparison.before, m.location_map_old(), 'bg-panel text-foreground'],
+    [comparison.after, m.location_map_new(), 'bg-warning text-black'],
+  ] as const) {
+    const element = document.createElement('div')
+    element.className = `rounded-full border-2 border-white px-3 py-1 text-xs font-bold shadow-lg ${tone}`
+    element.textContent = label
+    element.dataset.reviewMarker = label
+    markers.push(
+      new maplibregl.Marker({
+        element,
+        anchor: label === m.location_map_old() ? 'bottom-right' : 'top-left',
+      })
+        .setLngLat(point)
+        .addTo(target),
+    )
+  }
+  target.on('move', projectLine)
+  target.on('resize', projectLine)
+  target.on('error', unavailable)
+  target.fitBounds(
+    new maplibregl.LngLatBounds(comparison.before, comparison.before).extend(
+      comparison.after,
+    ),
+    { padding: 90, maxZoom: 18, duration: 0 },
+  )
+  projectLine()
+  return () => {
+    target.off('move', projectLine)
+    target.off('resize', projectLine)
+    target.off('error', unavailable)
+    markers.forEach(marker => {
+      marker.remove()
+    })
+  }
+})
+
 // Numbered discovery markers are transient UI; removing results removes their map objects.
 // Keep marker elements stable while rows are hovered or focused; hover never selects.
 const candidateMarkers = new Map<string, maplibregl.Marker>()
@@ -176,7 +260,11 @@ $effect(() => {
       marker = new maplibregl.Marker({ element: shell })
         .setLngLat(candidate.coordinates)
         .addTo(target)
+      marker.on('dragstart', () => {
+        pinIsDragging = true
+      })
       marker.on('dragend', () => {
+        pinIsDragging = false
         const position = marker?.getLngLat()
         if (position) mapProps.dragEndCallback?.(position.toArray())
       })
@@ -191,7 +279,12 @@ $effect(() => {
       }
     }
     marker.setDraggable(
-      Boolean(candidate.selected && !candidate.previewOnly && mapProps.draggable),
+      Boolean(
+        candidate.selected &&
+          !candidate.previewOnly &&
+          mapProps.draggable &&
+          !mapProps.draggingLocked,
+      ),
     )
     marker.setLngLat(
       candidate.selected && !candidate.previewOnly
@@ -201,8 +294,12 @@ $effect(() => {
     const shell = marker.getElement()
     const button = shell.firstElementChild
     if (!(button instanceof HTMLButtonElement)) continue
-    button.style.setProperty('--search-color', locationSearchColor(candidate.kind))
-    button.style.backgroundColor = locationSearchColor(candidate.kind)
+    button.style.setProperty(
+      '--search-color',
+      candidate.color ?? locationSearchColor(candidate.kind),
+    )
+    button.style.backgroundColor =
+      candidate.color ?? locationSearchColor(candidate.kind)
     // Keep every preview mounted while a selection fades the other choices away.
     button.style.transition = prefersReducedMotion.current
       ? 'none'
@@ -213,11 +310,38 @@ $effect(() => {
     button.style.pointerEvents = candidate.hidden ? 'none' : ''
     button.tabIndex = -1
     button.setAttribute('aria-hidden', String(Boolean(candidate.hidden)))
-    button.textContent = String(candidate.number)
-    button.setAttribute('aria-label', `${candidate.number}. ${candidate.label}`)
+    button.replaceChildren()
+    if (candidate.number) button.textContent = String(candidate.number)
+    else {
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      icon.setAttribute('viewBox', '0 0 24 24')
+      icon.setAttribute('width', '20')
+      icon.setAttribute('height', '20')
+      icon.setAttribute('fill', 'none')
+      icon.setAttribute('stroke', 'currentColor')
+      icon.setAttribute('stroke-width', '2')
+      icon.setAttribute('aria-hidden', 'true')
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      path.setAttribute(
+        'd',
+        'M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+      )
+      icon.append(path)
+      button.append(icon)
+    }
+    button.setAttribute(
+      'aria-label',
+      candidate.number ? `${candidate.number}. ${candidate.label}` : candidate.label,
+    )
     button.setAttribute('aria-pressed', String(Boolean(candidate.selected)))
+    button.style.width = candidate.compact ? '28px' : ''
+    button.style.height = candidate.compact ? '28px' : ''
+    button.style.fontSize = candidate.compact ? '12px' : ''
     button.dataset.highlighted = String(Boolean(candidate.highlighted))
-    const emphasized = Boolean(candidate.selected || candidate.highlighted)
+    const emphasized = Boolean(
+      candidate.highlighted ||
+        (candidate.selected && !candidate.fitGroup?.startsWith('association:')),
+    )
     button.classList.toggle('ring-4', emphasized)
     button.classList.toggle('ring-[var(--search-color)]/40', emphasized)
     shell.style.zIndex = candidate.highlighted ? '2' : candidate.selected ? '1' : '0'
@@ -247,32 +371,64 @@ onDestroy(() => {
   for (const marker of candidateMarkers.values()) marker.remove()
   candidateMarkers.clear()
 })
-let lastCandidatesKey = ''
-$effect(() => {
-  const target = activeMapInstance
-  const candidates = mapProps.locationCandidates ?? []
-  const key = candidates
+// Camera fitting depends on membership and coordinates, never hover or focus highlights.
+const candidateFitKey = $derived(
+  (mapProps.locationCandidates ?? [])
+    .filter(candidate => !candidate.hidden)
     .map(
       candidate =>
-        `${candidate.id}:${candidate.coordinates.join(',')}:${Boolean(candidate.selected)}`,
+        `${candidate.fitGroup ?? ''}:${candidate.id}:${candidate.coordinates.join(',')}`,
     )
-    .join('|')
-  if (!target || !candidates.length) {
-    lastCandidatesKey = ''
+    .join('|'),
+)
+$effect(() => {
+  const target = activeMapInstance
+  const key = candidateFitKey
+  if (!target || !key) return
+  const candidates = untrack(() =>
+    (mapProps.locationCandidates ?? []).filter(candidate => !candidate.hidden),
+  )
+  const review = candidates.some(candidate =>
+    candidate.fitGroup?.startsWith('association:'),
+  )
+  if (!review && candidates.some(candidate => candidate.selected)) return
+  if (
+    review &&
+    new Set(candidates.map(candidate => candidate.coordinates.join(','))).size < 2
+  )
     return
-  }
-  if (key === lastCandidatesKey) return
-  lastCandidatesKey = key
-  if (candidates.some(candidate => candidate.selected)) return
   const bounds = new maplibregl.LngLatBounds()
-  const pin = getCoordinateTuple(mapProps.coordinates)
-  if (pin && mapProps.showMarker !== false) bounds.extend(pin)
+  const pin = untrack(() => getCoordinateTuple(mapProps.coordinates))
+  const isSubset = candidates.some(candidate => candidate.fitGroup)
+  if (!isSubset && pin && untrack(() => mapProps.showMarker !== false))
+    bounds.extend(pin)
   for (const candidate of candidates) bounds.extend(candidate.coordinates)
-  target.fitBounds(bounds, {
-    padding: 60,
-    maxZoom: 17,
-    duration: prefersReducedMotion.current ? 0 : 350,
-  })
+  /** Keep the complete marker circles inside the requested margin after a map resize.
+   * @param animate Whether this is the initial comparison transition. @returns Nothing.
+   */
+  const fitComparisonBounds = (animate = false): void => {
+    const { clientWidth: width, clientHeight: height } = target.getContainer()
+    if (!width || !height) return
+    const radius = review ? 20 : 0
+    target.fitBounds(bounds, {
+      padding: isSubset
+        ? {
+            top: height * 0.2 + radius,
+            bottom: height * 0.2 + radius,
+            left: width * 0.2 + radius,
+            right: width * 0.2 + radius,
+          }
+        : 60,
+      maxZoom: review ? 20 : 17,
+      duration: animate && !prefersReducedMotion.current ? 350 : 0,
+    })
+  }
+  fitComparisonBounds(true)
+  const resized = (): void => fitComparisonBounds()
+  if (isSubset) target.on('resize', resized)
+  return () => {
+    target.off('resize', resized)
+  }
 })
 
 // STATE : DERIVED
@@ -301,7 +457,9 @@ const resolvedMapStyleKey = $derived.by(() => {
 })
 const resolvedMapStyle = $derived(
   applyRuntimeBasemapSource(
-    buildCatalogMapStyle(resolvedMapStyleKey, { locale: activeLocale }),
+    resolveMapStyleSpriteUrls(
+      buildCatalogMapStyle(resolvedMapStyleKey, { locale: activeLocale }),
+    ),
     getConfiguredBasemapAccessToken(),
   ),
 )
@@ -353,11 +511,14 @@ $effect(() => {
   feature = new maplibregl.Marker({
     color: '#F04D7F',
     clickTolerance: 24,
-    draggable: mapProps.draggable ?? true,
+    draggable: (mapProps.draggable ?? true) && !mapProps.draggingLocked,
   })
     .setLngLat(coordinateTuple)
     .addTo(map)
   featureMap = map
+  feature.on('dragstart', () => {
+    pinIsDragging = true
+  })
   feature.on('dragend', handleDragEnd)
 })
 
@@ -381,7 +542,7 @@ onDestroy(() => {
 $effect(() => {
   if (!coordinateTuple) pendingViewport = null
   if (map && coordinateTuple && feature) {
-    feature.setDraggable(mapProps.draggable ?? true)
+    feature.setDraggable((mapProps.draggable ?? true) && !mapProps.draggingLocked)
     const coordinateKey = coordinateTuple.join(',')
     if (!hasSyncedViewport) {
       hasSyncedViewport = true
@@ -439,6 +600,7 @@ $effect(() => {
 
 // EVENTS
 const handleDragEnd = (e: MarkerDragEvent): void => {
+  pinIsDragging = false
   mapProps.dragEndCallback?.(e.target?.getLngLat().toArray())
 }
 
@@ -492,6 +654,19 @@ $effect(() => {
 <!-- ENHANCEMENT - show the canonical image on top of the marker, so that we
  can remove the canonical image box and leave more space for the properties -->
 <div bind:this={resizeContainer} class="relative h-full w-full overflow-hidden">
+  {#if mapProps.pinControls &&
+    pinControlPosition &&
+    !pinIsDragging &&
+    mapProps.showMarker !== false}
+    <div
+      class="absolute z-30 -translate-x-1/2"
+      style:left={`${pinControlPosition.x}px`}
+      style:top={`${pinControlPosition.y}px`}
+      data-map-pin-controls
+    >
+      {@render mapProps.pinControls()}
+    </div>
+  {/if}
   <div
     class="{isCollapsed
       ? 'absolute w-full justify-center'
@@ -557,15 +732,15 @@ $effect(() => {
     {/if}
   </div>
   <!-- Loading stays inside the final map pane until the map is ready. -->
-  {#if !isMapLoaded}
+  {#if !isMapLoaded && !mapProps.comparison}
     <MapLoading />
   {/if}
 
   <!-- Map Container -->
   <div
     class="map bg-base-300 h-full w-full grow"
-    class:opacity-0={!isMapLoaded}
-    class:opacity-100={isMapLoaded}
+    class:opacity-0={!isMapLoaded && !mapProps.comparison}
+    class:opacity-100={isMapLoaded || Boolean(mapProps.comparison)}
     data-testid="map"
   >
     <MapSurface
@@ -576,10 +751,46 @@ $effect(() => {
       zoom={initialCamera.zoom}
       attributionControl={false}
       hash={false}
+      dragPan={!mapProps.draggingLocked}
       canvasContextAttributes={{ antialias: true }}
       onload={handleMapLoad}
     />
   </div>
+  {#if mapProps.comparison}
+    {#if movementLine}
+      <svg
+        class="pointer-events-none absolute inset-0 h-full w-full"
+        aria-hidden="true"
+      >
+        <line
+          {...movementLine}
+          stroke="#facc15"
+          stroke-width="3"
+          stroke-dasharray="6 6"
+        />
+      </svg>
+    {/if}
+    {#if comparisonMapUnavailable}
+      <p
+        class="bg-panel/95 text-muted-foreground absolute top-4 left-4 rounded p-2 text-xs"
+        role="status"
+      >
+        {m.location_map_unavailable()}
+      </p>
+    {/if}
+    <div
+      class="bg-panel/95 text-warning absolute bottom-4 left-4 z-10 rounded-lg px-3 py-2 text-sm"
+      data-review-distance
+    >
+      {m.location_map_distance({
+        distance: String(
+          Math.round(
+            locationMoveDistance(mapProps.comparison.before, mapProps.comparison.after),
+          ),
+        ),
+      })}
+    </div>
+  {/if}
 </div>
 
 <style>

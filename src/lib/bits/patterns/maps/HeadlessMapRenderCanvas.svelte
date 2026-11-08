@@ -11,13 +11,9 @@ import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 // MAP
 import { createMarkerRenderer, type MarkerRenderer } from '#lib/map/markers.js'
 import { loadMapLibre } from '#lib/map/maplibreAssets.js'
-import { getDefaultMapStyleKey, isMapStyleKey } from '#lib/map/styles/index.js'
+import { getDefaultMapStyleKey, isMapStyleKey } from '#lib/map/styles/metadata.js'
 import { resolveRuntimeMapStyle } from '#lib/map/styles/runtime.js'
-import {
-  MAP_RENDER_READY_TIMEOUT_MS,
-  waitForMapEvent,
-  waitForMarkerImages,
-} from '#lib/map/render-readiness.js'
+import { waitForMapEvent, waitForMarkerImages } from '#lib/map/render-readiness.js'
 // TYPES
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type {
@@ -39,6 +35,8 @@ type RenderPayload = {
   selectedLayerIds: string[]
 }
 
+// Headless batches must allow cold tile/style requests to settle before capture.
+const HEADLESS_RENDER_READY_TIMEOUT_MS = 30_000
 const PREVIEW_PADDING_RATIO = 0.05
 const HK_BOUNDS = [
   [114.0028131, 22.1193278],
@@ -68,6 +66,8 @@ const previewWindow = (): Window & {
   }
 
 const markReady = (): void => {
+  // Failed tile or style requests must never become a successful blank capture.
+  if (previewError) return
   previewError = null
   previewWindow().__HYPE_MAP_STYLE_PREVIEW_ERROR__ = undefined
   previewWindow().__HYPE_MAP_STYLE_PREVIEW_READY__ = true
@@ -77,6 +77,7 @@ const markReady = (): void => {
 const markError = (error: unknown): void => {
   const message = error instanceof Error ? error.message : String(error)
   previewError = message
+  previewReady = false
   previewWindow().__HYPE_MAP_STYLE_PREVIEW_READY__ = false
   previewWindow().__HYPE_MAP_STYLE_PREVIEW_ERROR__ = message
   console.error('Failed to render headless map preview', error)
@@ -221,17 +222,22 @@ $effect(() => {
   })
   resetReadySignal()
   void (async () => {
-    if (!map.loaded()) await waitForMapEvent(map, 'load', MAP_RENDER_READY_TIMEOUT_MS)
+    // Marker sources can become pending after the map's one-shot load event has fired.
+    // Idle repeats after source settlement, so it also covers an already loaded map.
+    if (!map.loaded())
+      await waitForMapEvent(map, 'idle', HEADLESS_RENDER_READY_TIMEOUT_MS)
     if (serial !== renderRequestSerial) return
     await tick()
     fitRenderViewport(map, payload.features)
-    await waitForMapEvent(map, 'idle', MAP_RENDER_READY_TIMEOUT_MS)
+    await waitForMapEvent(map, 'idle', HEADLESS_RENDER_READY_TIMEOUT_MS)
     if (serial !== renderRequestSerial) return
-    await waitForMarkerImages(document, MAP_RENDER_READY_TIMEOUT_MS)
+    await waitForMarkerImages(document, HEADLESS_RENDER_READY_TIMEOUT_MS)
     if (serial !== renderRequestSerial) return
     markReady()
   })().catch(error => {
-    if (serial === renderRequestSerial) markError(error)
+    if (serial === renderRequestSerial) {
+      markError(error)
+    }
   })
 })
 </script>

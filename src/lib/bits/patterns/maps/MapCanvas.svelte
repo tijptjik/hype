@@ -13,7 +13,8 @@ import { getLocale, m } from '#lib/i18n.js'
 import { fade } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
 // BITS COMPONENTS
-import { Button } from '#lib/bits/index.js'
+import { bridgeNativeTooltips } from '#lib/bits/core/tooltip/bridgeNativeTooltips.js'
+import Button from '#lib/bits/core/button/Button.svelte'
 // LIB
 import {
   createMarkerRenderer,
@@ -437,7 +438,10 @@ const projectMarkerStyles = $derived(
 const layerMarkerStyles = $derived(
   new Map(
     [...appCtx.view.cache.layer.values()].map(layer => {
-      const code = layer.metadata?.markerStyleCode
+      const code =
+        layer.markerStyleCode !== undefined
+          ? layer.markerStyleCode
+          : layer.metadata?.markerStyleCode
       return [layer.id, isMarkerStyleCode(code) ? code : null] as const
     }),
   ),
@@ -946,6 +950,7 @@ $effect(() => {
   data-location-marker-tone={locationMarkerTone}
   data-navigation-active={journey ? 'true' : undefined}
   bind:this={mapContainer}
+  use:bridgeNativeTooltips
 >
   {#if activeMapInstance}
     {#if journey}
