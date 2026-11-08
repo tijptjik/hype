@@ -93,12 +93,10 @@ import {
 import {
   toOrganisationAuthActor,
   resolveOrganisationActionPermissions,
-} from '#lib/api/services/authz/index.js'
+} from '#lib/api/services/authz/organisation.js'
 // SCHEMA
-import {
-  OrganisationPreflightFormData,
-  OrganisationAdminProfileAPI,
-} from '#lib/db/zod/schema/organisation.js'
+import { OrganisationPreflightFormData } from '#lib/db/zod/schema/organisation.form.js'
+import { OrganisationAdminProfileAPI } from '#lib/db/zod/schema/organisation.profile.js'
 import {
   CAPABILITY_I18N_BY_KEY,
   CAPABILITY_KEYS,

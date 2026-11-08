@@ -19,14 +19,19 @@ describe('organisation staff boundary', () => {
     expect(getOrganisationIdforRoles(roles)).toEqual(['staff'])
   })
 
-  it('keeps audience membership out of submitted staff assignments', () => {
-    const form = toOrganisationFormInput({
-      id: 'organisation',
-      userRoles: [
-        { userId: 'audience', role: 'user' },
-        { userId: 'staff', role: 'owner' },
-      ],
-    } as never)
-    expect(form.data.userRoles).toEqual([{ userId: 'staff', role: 'owner' }])
-  })
+  it.each([undefined, false, true])(
+    'keeps audience membership out of staff assignments with analytics %s',
+    viewAnalytics => {
+      const form = toOrganisationFormInput({
+        id: 'organisation',
+        userRoles: [
+          { userId: 'audience', role: 'user' },
+          { userId: 'staff', role: 'owner', viewAnalytics },
+        ],
+      } as never)
+      expect(form.data.userRoles).toEqual([
+        { userId: 'staff', role: 'owner', viewAnalytics: viewAnalytics === true },
+      ])
+    },
+  )
 })

@@ -1,19 +1,5 @@
 // CONTENT LOCALES
-import {
-  OrganisationUserPolicySchema,
-  OrganisationUserPolicyFormSchema,
-} from '#lib/organisation-users/policy.js'
 import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
-import { OrganisationSettingsFormSchema } from '#lib/organisations/settings.js'
-// I18N
-import { m } from '#lib/i18n.js'
-import { contentLocaleMap } from '#lib/i18n/contentRecords.js'
-import type {
-  CapabilityDefinition,
-  CapabilityDefinitions,
-  CapabilityKey,
-} from '#lib/capabilities.types.js'
-import type { ProjectRoleCapabilities } from './project.types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -24,16 +10,12 @@ import {
   organisationI18n,
   organisationRole,
 } from '#lib/db/schema/index.js'
+import { CapabilityBase } from './organisation.form'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
 import { getLocales } from '../constraints'
-import { ImageContextEnvelopeAPI } from './image'
 import { ImageBase } from './image'
-import {
-  ProjectPropertyFormData,
-  PropertyAdminProfileAPI,
-  PropertyRecordRaw,
-} from './property'
+import { PropertyRecordRaw } from './property'
 import { UserBasic } from './user'
 
 // ═══════════════════════
@@ -88,47 +70,11 @@ import { UserBasic } from './user'
 // 1. CAPABILITY SCHEMAS
 // ═══════════════════════
 
-export const CabilityDefinitionSchema: z.ZodType<CapabilityDefinition> = z.object({
-  i18n: contentLocaleMap(z.string()).optional(),
-})
-
-export const CapabilityRoot: z.ZodType<CapabilityDefinitions> = z.record(
-  z.custom<CapabilityKey>(),
+export {
   CabilityDefinitionSchema,
-)
-
-export const OrganisationRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
-  z.object({
-    manageBakeries: z.boolean().optional(),
-    manageVolunteers: z.boolean().optional(),
-    manageDropOffs: z.boolean().optional(),
-    viewAnalytics: z.boolean().optional(),
-  })
-
-const toCapabilityValue = (value: unknown): unknown => {
-  if (typeof value !== 'string') return value
-  const trimmed = value.trim()
-  if (!trimmed) return undefined
-  try {
-    return JSON.parse(trimmed)
-  } catch {
-    return value
-  }
-}
-
-const CapabilityBase = z.preprocess(value => {
-  if (!Array.isArray(value)) return toCapabilityValue(value)
-
-  const normalized = value
-    .map(toCapabilityValue)
-    .filter(item => item !== undefined && item !== null)
-  if (normalized.length === 0) return undefined
-
-  const objectCandidate = [...normalized]
-    .reverse()
-    .find(item => typeof item === 'object' && !Array.isArray(item))
-  return objectCandidate ?? normalized[normalized.length - 1]
-}, CapabilityRoot.optional())
+  CapabilityRoot,
+  OrganisationRoleCapabilitiesSchema,
+} from './organisation.form'
 
 // ═══════════════════════
 // 2. DB / RELATIONAL PRIMITIVES
@@ -211,105 +157,19 @@ export const OrganisationRaw = OrganisationBase.extend({
 // 3. REMOTE FORM SCHEMAS
 // ═══════════════════════
 
-export const OrganisationI18nFormData = z.object({
-  name: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_name() }) })
-    .max(128, { message: m.admin__validation_lte_128_chars() }),
-  nameShort: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_short_name() }) })
-    .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
-  description: z
-    .string()
-    .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
-    .optional(),
-  nameGen: FormBoolean.default(false),
-  nameShortGen: FormBoolean.default(false),
-  descriptionGen: FormBoolean.optional(),
-})
-
-export const OrganisationRoleFormData = z.object({
-  userId: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_user() }) }),
-  role: z.enum(['member', 'owner']),
-  viewAnalytics: FormBoolean.optional(),
-})
-
-export const OrganisationI18nByLocaleFormData = z.object({
-  en: OrganisationI18nFormData,
-  zhHans: OrganisationI18nFormData,
-  zhHant: OrganisationI18nFormData,
-})
-
-export const OrganisationUserRolesFormData = z.preprocess(
-  (value: z.input<typeof OrganisationRoleFormData>[] | undefined) =>
-    value === undefined || value === null ? [] : value,
-  z
-    .array(OrganisationRoleFormData)
-    .refine(schema => schema.length > 0, m.admin__validation_user_roles_add_user())
-    .refine(
-      schema => schema.map(user => user.role).some(role => role === 'owner'),
-      m.admin__validation_user_roles_at_least_one_owner(),
-    ),
-)
-
-export const OrganisationEntityFormData = z.object({
-  userPolicy: OrganisationUserPolicyFormSchema,
-  settings: OrganisationSettingsFormSchema,
-  code: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_code() }) })
-    .min(2, { message: m.admin__validation_code_is_required() })
-    .max(24, { message: m.admin__validation_code_lte_24_chars() })
-    .regex(/^[a-zA-Z0-9_$]*$/, {
-      message: m.admin__validation_key_valid_characters(),
-    }),
-  url: z.union([z.literal(''), z.url({ message: m.admin__validation_url_invalid() })]),
-  capabilities: CapabilityBase,
-  defaultLocationVisibility: z.enum(['shared', 'exclusive']).default('shared'),
-  permitUserDetailsEdit: FormBoolean.optional(),
-  i18n: OrganisationI18nByLocaleFormData,
-  userRoles: OrganisationUserRolesFormData,
-  properties: z.array(ProjectPropertyFormData).default([]),
-})
-
-export const OrganisationFormMeta = z.object({
-  id: z.string().optional(),
-  updatedAt: z.string().min(1).optional(),
-  mode: z.enum(['create', 'replace', 'update']).optional(),
-  isAdminRequest: FormBoolean.optional(),
-})
-
-export const OrganisationFormData = z.object({
-  meta: OrganisationFormMeta.optional(),
-  data: OrganisationEntityFormData,
-})
-
-export const OrganisationPreflightFormData = OrganisationFormData
-
-export const OrganisationCreateFormData = OrganisationFormData.refine(
-  value => !value.meta?.id,
-  'Create forms cannot include an id',
-)
-
-export const OrganisationReplaceFormData = OrganisationFormData.refine(
-  value => Boolean(value.meta?.id),
-  'Replace forms require an id',
-)
-
-export const OrganisationUpdateFormData = z.object({
-  meta: OrganisationFormMeta.extend({
-    id: z.string().min(1),
-    updatedAt: z.string().min(1),
-    mode: z.literal('update').optional(),
-  }),
-  data: OrganisationEntityFormData.partial().refine(
-    value => Object.keys(value).length > 0,
-    'Update forms require at least one field',
-  ),
-})
+export {
+  OrganisationI18nFormData,
+  OrganisationRoleFormData,
+  OrganisationI18nByLocaleFormData,
+  OrganisationUserRolesFormData,
+  OrganisationEntityFormData,
+  OrganisationFormMeta,
+  OrganisationFormData,
+  OrganisationPreflightFormData,
+  OrganisationCreateFormData,
+  OrganisationReplaceFormData,
+  OrganisationUpdateFormData,
+} from './organisation.form'
 
 // ═══════════════════════
 // 4. REMOTE COMMAND SCHEMAS
@@ -340,65 +200,13 @@ export const RemoveOrganisationSchema = z.object({
 // 5. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-// Legacy selectors remain compatible while callers migrate to resource payload profiles.
-export const OrganisationProfile = z.enum([
-  'compact',
-  'default',
-  'map',
-  'full',
-  'admin',
-  'list',
-  'card',
-  'detail',
-])
-
-const OrganisationListFields = OrganisationBase.pick({
-  settings: true,
-  id: true,
-  code: true,
-  createdAt: true,
-  modifiedAt: true,
-})
-
-const OrganisationCardFields = OrganisationBase.pick({
-  url: true,
-  isPublished: true,
-  isArchived: true,
-  hubId: true,
-})
-
-const OrganisationDetailFields = OrganisationBase.pick({
-  defaultLocationVisibility: true,
-  publishedAt: true,
-  publisherId: true,
-})
-
-export const OrganisationListProfileAPI = OrganisationListFields.extend({
-  i18n: getLocales(OrganisationI18nBase),
-})
-
-export const OrganisationCardProfileAPI = OrganisationListProfileAPI.extend({
-  ...OrganisationCardFields.shape,
-  image: ImageContextEnvelopeAPI.nullish(),
-})
-
-export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({
-  ...OrganisationDetailFields.shape,
-})
-
-export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI.extend({
-  permitUserDetailsEdit: OrganisationBase.shape.permitUserDetailsEdit,
-  hub: z
-    .object({ id: z.string(), code: z.string(), domain: z.string().nullish() })
-    .nullish(),
-  userPolicy: OrganisationUserPolicySchema.nullish(),
-  userRoles: z
-    .array(OrganisationRoleBase.extend({ user: UserBasic.nullish() }))
-    .default([]),
-  capabilities: CapabilityBase,
-  properties: z.array(PropertyAdminProfileAPI).default([]),
-  publisher: UserBasic.nullish(),
-})
+export {
+  OrganisationProfile,
+  OrganisationListProfileAPI,
+  OrganisationCardProfileAPI,
+  OrganisationDetailProfileAPI,
+  OrganisationAdminProfileAPI,
+} from './organisation.profile'
 
 /** Minimal identity and action state for paged resource lists. */
 export const OrganisationCompactProfileAPI = OrganisationBase.pick({

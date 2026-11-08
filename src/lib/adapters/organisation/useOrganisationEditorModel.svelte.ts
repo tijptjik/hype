@@ -17,7 +17,7 @@ import {
 } from '#lib/api/organisation.remote.js'
 // FORM
 import { configureForm } from '#lib/factories.svelte.js'
-import { OrganisationPreflightFormData } from '#lib/db/zod/schema/organisation.js'
+import { OrganisationPreflightFormData } from '#lib/db/zod/schema/organisation.form.js'
 // SETTINGS
 import { readOrganisationSettingsForm } from '#lib/organisations/settings.js'
 import { readChatAppearance } from '#lib/messaging/appearance.js'
