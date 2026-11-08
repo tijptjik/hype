@@ -8,6 +8,8 @@ import { navigateOnAdmin } from '#lib/navigation/admin.js'
 import type { HeaderButtonActionConfig } from '#lib/bits/patterns/layout/header/header.types.js'
 import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 import { getEmbedResources } from '#lib/api/embed.remote.js'
+import { resolveEmbedTargetId } from '#lib/embed/target.js'
+import type { EmbedLayer } from '#lib/embed/embed.types.js'
 import { page } from '$app/state'
 // AUTH
 import { canAccessAdminPanel } from '#lib/api/services/authz/user.js'
@@ -186,14 +188,64 @@ const shareTarget = $derived(
     : null,
 )
 const shareKey = $derived(`${shareType}:${shareTarget}`)
-const isShareFacet = $derived(Boolean(shareTarget && adminCtx.activeFacet === 'share'))
+const shareAccessKey = $derived(
+  JSON.stringify([
+    shareKey,
+    root.user?.id,
+    root.user?.superAdmin,
+    root.user?.roles,
+    root.hub,
+  ]),
+)
+let shareAccess = $state<{ key: string; rows: EmbedLayer[] } | null>(null)
+const shareAccessReady = $derived(shareAccess?.key === shareAccessKey)
+const canShare = $derived(
+  Boolean(
+    hasAdminAccess &&
+      shareAccessReady &&
+      shareType &&
+      shareTarget &&
+      resolveEmbedTargetId(shareAccess!.rows, shareType, shareTarget),
+  ),
+)
+const isShareFacet = $derived(adminCtx.activeFacet === 'share')
+
+// Resolve access from the server-filtered catalogue and discard stale navigation results.
+$effect(() => {
+  const key = shareAccessKey
+  if (!root.ready || !hasAdminAccess || !shareTarget) return
+  let cancelled = false
+  void getEmbedResources({ meta: { isAdminRequest: true } }).then(
+    rows => {
+      if (!cancelled) shareAccess = { key, rows }
+    },
+    () => {
+      if (!cancelled) shareAccess = { key, rows: [] }
+    },
+  )
+  return () => {
+    cancelled = true
+  }
+})
+
+// Hash navigation is client-owned: deny direct bookmarks as well as shallow navigation.
+$effect(() => {
+  if (
+    root.ready &&
+    hasAdminAccess &&
+    isShareFacet &&
+    (!shareTarget || (shareAccessReady && !canShare))
+  ) {
+    void goto('/admin', { replaceState: true })
+  }
+})
 // Keep the builder mounted across tab changes, but never carry choices to another resource.
 $effect(() => {
-  if (isShareFacet) visitedShareTarget = shareKey
+  if (isShareFacet && canShare) visitedShareTarget = shareKey
 })
 const baseHeaderProps = $derived(headerModel.getHeaderProps())
 const shareAction = $derived<HeaderButtonActionConfig | null>(
-  shareTarget
+  canShare
     ? {
         text: 'Share map',
         icon: ShareIcon,
@@ -201,7 +253,7 @@ const shareAction = $derived<HeaderButtonActionConfig | null>(
         color: isShareFacet ? 'primary' : 'neutral',
         attrs: { 'aria-pressed': isShareFacet },
         onClick: () => {
-          if (shareType && shareTarget)
+          if (canShare && shareType && shareTarget)
             void navigateOnAdmin(adminCtx, shareType, shareTarget, 'share')
         },
       }
@@ -210,6 +262,10 @@ const shareAction = $derived<HeaderButtonActionConfig | null>(
 const headerProps = $derived({
   ...baseHeaderProps,
   shareAction,
+  facets: {
+    ...baseHeaderProps.facets,
+    items: baseHeaderProps.facets?.items?.filter(item => item.ref !== 'share'),
+  },
   // Sharing has its own controls; keep resource form actions on their editing tabs.
   ...(isShareFacet
     ? {
@@ -351,7 +407,7 @@ afterNavigate(({ shallow }) => {
     {@render children()}
   </div>
   {#key shareKey}
-    {#if shareTarget && shareType && visitedShareTarget === shareKey}
+    {#if canShare && shareTarget && shareType && visitedShareTarget === shareKey}
       <div class={isShareFacet ? 'h-full min-h-0 w-full' : 'hidden'}>
         <Deferred
           load={() => import('#lib/bits/patterns/embed/ShareEmbedPanel.svelte')}

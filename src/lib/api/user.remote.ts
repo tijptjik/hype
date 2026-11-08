@@ -292,7 +292,7 @@ export const getUserForAttribution = guardedBatchByIdQuery<
 
 /**
  * Loads a read-only admin profile with server-enforced field visibility.
- * @param params Username to look up, matched case-insensitively.
+ * @param params Username to look up case-insensitively, or @me for the session account.
  * @returns Public contributions and authorized profile details, or null.
  */
 export const getAdminUserProfile = guardedQuery(

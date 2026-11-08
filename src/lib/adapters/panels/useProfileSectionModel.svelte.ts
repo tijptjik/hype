@@ -215,10 +215,21 @@ export function useProfileSectionModel(
     editedUsername = ''
   }
 
+  /**
+   * Opens the current user's profile in the owning surface.
+   * @returns Nothing; navigation or panel state is updated.
+   */
   function handleOpenProfile(): void {
     const user = appCtx.account.user
     if (isGuestUserSession(user)) {
       requestProfileUpgrade(window.location.href)
+      return
+    }
+    // Admin owns a profile route; the public profile panel is not mounted there.
+    if (appCtx.isAdmin()) {
+      // Let the destination navigation own the URL; panel sync would start a competing goto.
+      appCtx.panels.closePanel(Panel.settings, false)
+      void goto('/admin/users/@me')
       return
     }
     appCtx.panels.setPanelCtx(Panel.profile, 'username', user?.username)

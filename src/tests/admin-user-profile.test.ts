@@ -90,6 +90,53 @@ beforeEach(() => {
 })
 
 describe('admin user profile permissions', () => {
+  it('resolves @me by session ID when the account has no username', async () => {
+    loadUser.mockResolvedValueOnce({ ...row, username: null, displayUsername: null })
+    const result = await readAdminUserProfile(db, {
+      username: '@me',
+      actor: { ...actor, id: row.id, username: null },
+      userRoles: [
+        {
+          type: 'organisation',
+          role: 'member',
+          organisationId: 'org',
+        } as UserRoleDisco,
+      ],
+      hub,
+    })
+    expect(result?.profile.id).toBe(row.id)
+    const condition = new SQLiteSyncDialect().sqlToQuery(loadUser.mock.calls[0][2][0])
+    expect(condition.sql).toBe('"user"."id" = ?')
+    expect(condition.params).toEqual([row.id])
+  })
+
+  it('allows an organisation member to read their own admin profile', async () => {
+    const result = await readAdminUserProfile(db, {
+      username: row.username,
+      actor: { ...actor, id: row.id },
+      userRoles: [
+        {
+          type: 'organisation',
+          role: 'member',
+          organisationId: 'org',
+        } as UserRoleDisco,
+      ],
+      hub,
+    })
+    expect(result?.profile.id).toBe(row.id)
+    expect(result?.canEdit).toBe(false)
+  })
+
+  it('does not grant members private fields or editing on other profiles', async () => {
+    const result = await read([
+      { type: 'organisation', role: 'member', organisationId: 'org' } as UserRoleDisco,
+    ])
+    expect(result?.canEdit).toBe(false)
+    expect(result?.details).toBeNull()
+    expect(result?.settings).toBeNull()
+    expect(result?.linkedAccounts).toEqual([])
+  })
+
   it('rejects ordinary users and anonymous actors before reading records', async () => {
     await expect(read([])).rejects.toMatchObject({ status: 403 })
     expect(

@@ -40,7 +40,7 @@ export function canReadAdminUserProfile(actor: {
 /**
  * Loads a profile with readable contributions and permission-filtered personal fields.
  * @param db Request-scoped database.
- * @param params Username, session actor, roles and server-resolved active hub.
+ * @param params Username (or @me for the session account), actor, roles and active hub.
  * @returns Profile and scoped contributions, with nullable privileged details.
  * @remarks Clients cannot select a broader response profile or supply a hub scope.
  * Only linked provider labels and recorded emails are returned; tokens are never returned. Settings require target-specific edit authority.
@@ -56,7 +56,12 @@ export async function readAdminUserProfile(
 ): Promise<AdminUserProfile | null> {
   const actor = { ...params.actor, userRoles: params.userRoles }
   if (!canReadAdminUserProfile(actor)) error(403, 'INSUFFICIENT_ROLE')
-  const conditions = [sql`lower(${user.username}) = ${params.username.toLowerCase()}`]
+  // The self route uses durable session identity, including accounts without usernames.
+  const conditions = [
+    params.username === '@me'
+      ? eq(user.id, params.actor.id)
+      : sql`lower(${user.username}) = ${params.username.toLowerCase()}`,
+  ]
 
   // Include accepted unpublished contributions only within live management scope; drafts stay private.
   const relations = toUserRelationsWithContributionConstraints(db, {

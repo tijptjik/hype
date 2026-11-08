@@ -753,9 +753,14 @@ export const toQueryConditions = (
   const requestedIsDraft = toBooleanOrUndefined(isDraft)
 
   if (!isSuperAdmin && !isHubAdmin && isAdminRequest) {
-    // Owners can view every archive state; maintainers/translators only non-archived rows.
+    // Public rows remain readable; owners can view every archive state, while maintainers/translators only see non-archived rows.
     conditions.push(
       or(
+        and(
+          eq(feature.isPublished, true),
+          eq(feature.isArchived, false),
+          eq(feature.isDraft, false),
+        ),
         chunkedInArray(feature.organisationId, ownerOrganisationIds),
         chunkedInArray(feature.projectId, ownerProjectIds),
         and(
