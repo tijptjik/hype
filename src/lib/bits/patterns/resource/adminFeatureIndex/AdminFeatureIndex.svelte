@@ -15,7 +15,7 @@ import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 import { updateFeatureBulkState } from '#lib/api/feature.remote.js'
 import { getFeatureIndexPage } from '#lib/api/featureIndex.remote.js'
 import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
-import { refreshRemoteQuery } from '#lib/remote/index.js'
+import { refreshRemoteQuery, readFreshRemoteQuery } from '#lib/remote/index.js'
 // SERVICES
 import { collectBulkSelection } from '#lib/client/services/bulkSelection.js'
 import { runBulkCommands } from '#lib/client/services/bulkCommands.js'
@@ -29,13 +29,11 @@ import {
   createTranslationFilter,
 } from '#lib/client/services/filters.js'
 // BITS PATTERNS
-import {
-  CompletionFooter,
-  FeatureRow,
-  IndexCard,
-  ResourceControlBar,
-  ResourceIndex,
-} from '#lib/bits/index.js'
+import CompletionFooter from '#lib/bits/patterns/resource/completionFooter/CompletionFooter.svelte'
+import FeatureRow from '#lib/bits/patterns/resource/rows/FeatureRow/FeatureRow.svelte'
+import IndexCard from '#lib/bits/patterns/cards/indexCard/IndexCard.svelte'
+import ResourceControlBar from '#lib/bits/patterns/resource/resourceControlBar/ResourceControlBar.svelte'
+import ResourceIndex from '#lib/bits/patterns/resource/resourceIndex/ResourceIndex.svelte'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // I18N
@@ -532,6 +530,7 @@ async function loadMoreFeatureResults(): Promise<void> {
         q: query,
         pagination: { limit: 50, offset: remoteNextOffset },
         includeCount: false,
+        summaryOnly: true,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }),
     )
@@ -701,6 +700,7 @@ async function selectAllFeatureMatches(): Promise<void> {
             filters: adminCtx.view.filters.viewFilters.feature,
             idsOnly: true,
             includeCount: false,
+        summaryOnly: true,
             q: query,
             pagination: { limit: 100, offset },
             meta,
@@ -1006,20 +1006,40 @@ $effect(() => {
     remotePageError = null
     matchingCount = null
     matchingCountLoading = true
+    const input: FeatureIndexQuery = {
+      conditions: adminCtx.view.isSuperAdmin()
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
+      prisms: adminCtx.view.scope.prisms,
+      sorting: adminCtx.view.filters.sorting.feature as FeatureIndexQuery['sorting'],
+      filters: adminCtx.view.filters.viewFilters.feature,
+      q: nextQuery,
+      pagination: { limit: 50, offset: 0 },
+      includeCount: false,
+      summaryOnly: true,
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+    }
+    // Counts settle independently; a slow count must not hold the visible page.
+    void readFreshRemoteQuery(
+      getFeatureIndexPage({ ...input, includeCount: true, countOnly: true }),
+      searchRetry > 0 || matchingCountRevision > 0,
+    )
+      .then(result => {
+        if (
+          latestRemoteRequestId === nextRequestId &&
+          signature === searchSignature &&
+          nextQuery === normalizedTextQuery
+        )
+          matchingCount = result.totalCount
+      })
+      .catch(() => { /* Rows remain usable when an optional total fails. */ })
+      .finally(() => {
+        if (latestRemoteRequestId === nextRequestId) matchingCountLoading = false
+      })
     // Retained rows remain an immediate local preview until this exact query settles.
-    void refreshRemoteQuery(
-      getFeatureIndexPage({
-        conditions: adminCtx.view.isSuperAdmin()
-          ? { isArchived: null, isPublished: null }
-          : { isArchived: false, isPublished: null },
-        prisms: adminCtx.view.scope.prisms,
-        sorting: adminCtx.view.filters.sorting.feature as FeatureIndexQuery['sorting'],
-        filters: adminCtx.view.filters.viewFilters.feature,
-        q: nextQuery,
-        pagination: { limit: 50, offset: 0 },
-        includeCount: true,
-        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-      }),
+    void readFreshRemoteQuery(
+      getFeatureIndexPage(input),
+      searchRetry > 0 || matchingCountRevision > 0,
     )
       .then(result => {
         if (
@@ -1034,7 +1054,6 @@ $effect(() => {
         remoteMatchedEntities = toUniqueFeatures(result.data as Feature[])
         remoteHasMore = result.hasMore
         remoteNextOffset = result.nextOffset ?? result.data.length
-        matchingCount = result.totalCount
       })
       .catch(error => {
         if (latestRemoteRequestId !== nextRequestId || signature !== searchSignature)
@@ -1045,7 +1064,6 @@ $effect(() => {
       .finally(() => {
         if (latestRemoteRequestId === nextRequestId) {
           remotePending = false
-          matchingCountLoading = false
           indexInitialised = true
         }
       })

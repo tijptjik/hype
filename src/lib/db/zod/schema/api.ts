@@ -24,6 +24,7 @@ export const RequestMetaSchema = z
 export const ListQueryParamsSchema = z.object({
   indexFilters: ResourceIndexFiltersSchema.optional(),
   includeCount: z.boolean().optional(),
+  countOnly: z.boolean().optional(),
   conditions: z.record(z.string(), z.unknown()).optional(),
   prisms: z
     .object({

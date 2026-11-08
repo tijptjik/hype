@@ -36,6 +36,9 @@ export class ResourceCollection {
   get hasMore(): boolean {
     return this.list.scope === this.meta().scope && this.list.hasMore
   }
+  get countLoading(): boolean {
+    return this.list.scope === this.meta().scope && this.list.countLoading
+  }
   get totalCount(): number | null {
     return this.list.scope === this.meta().scope ? this.list.totalCount : null
   }

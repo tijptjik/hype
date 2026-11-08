@@ -55,6 +55,7 @@ export const FeatureIndexQuerySchema = ListQueryParamsSchema.extend({
   q: z.string().trim().max(200).optional(),
   includeCount: z.boolean().default(true),
   idsOnly: z.boolean().default(false),
+  summaryOnly: z.boolean().optional(),
   pagination: z
     .object({
       limit: z.number().int().min(1).max(100).default(50),

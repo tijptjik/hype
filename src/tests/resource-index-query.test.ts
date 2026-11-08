@@ -103,8 +103,9 @@ describe('resource index SQL membership and totals', () => {
           afterValue?: string
         },
         includeCount = true,
+        countOnly = false,
       ) => {
-        const query = { q: 'matching', indexFilters: { hasName: true }, includeCount }
+        const query = { q: 'matching', indexFilters: { hasName: true }, includeCount, countOnly }
         const sorting = { sortBy: 'id', sortOrder: 'asc' as const }
         const auth = [sql`${sql.identifier(type)}.id != '30'`]
         if (type === 'organisation')
@@ -115,6 +116,11 @@ describe('resource index SQL membership and totals', () => {
           return listLayers(db, {}, auth, opts, pagination, sorting, query)
         return listHubs(db, {}, auth, pagination, sorting, query)
       }
+      const count = await read({ limit: 25 }, true, true)
+      expect(count).toMatchObject({ data: [], totalCount: 27, hasMore: false })
+      expect(statements).toHaveLength(1)
+      expect(statements[0]).toMatch(/count\(\*\)/i)
+      statements.length = 0
       const first = await read({ limit: 25 })
       expect(first.totalCount).toBe(27)
       expect(first.data).toHaveLength(25)

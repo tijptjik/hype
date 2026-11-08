@@ -9,6 +9,7 @@ import { getTasks } from '#lib/api/tasks.remote.js'
 import {
   refreshRemoteQuery as runRemoteQuery,
   toSafeListResponse,
+  readFreshRemoteQuery,
 } from '#lib/remote/index.js'
 import { debouncedUpdateUserPreferences } from '#lib/client/services/user.js'
 // I18N
@@ -648,6 +649,8 @@ export class AdminCtx {
     return result.data
   }
 
+  hubCountLoading = $state(false)
+
   /**
    * Fetches hubs for the admin view and stores list metadata for later UI decisions.
    *
@@ -656,23 +659,28 @@ export class AdminCtx {
   hubsQueryFn = async (): Promise<Hub[]> => {
     const isCurrent = this.beginMetadataRead('hub', () => this.hubsQueryKey)
     if (!this.view.isAdmin()) return []
+    const input = {
+      q: this.view.filters.values.hub.text,
+      indexFilters: this.view.filters.viewFilters.hub,
+      conditions: this.view.isSuperAdmin()
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
+      sorting: this.view.filters.sorting.hub,
+      meta: { ...this.view.resources.queryMeta, profile: 'card' as const },
+    }
+    this.hubCountLoading = true
+    // Metadata has its own completion path so counting cannot delay hub cards.
+    void readFreshRemoteQuery(getHubs({ ...input, includeCount: true, countOnly: true }))
+      .then(result => {
+        if (isCurrent()) this.view.setListQueryMeta(this.hubsQueryKey, result)
+      })
+      .catch(() => {
+        if (isCurrent()) this.view.setListQueryMeta(this.hubsQueryKey, { data: [], totalCount: null })
+      })
+      .finally(() => { if (isCurrent()) this.hubCountLoading = false })
     try {
-      const result = toSafeListResponse<Hub>(
-        (await runRemoteQuery(
-          getHubs({
-            q: this.view.filters.values.hub.text,
-            indexFilters: this.view.filters.viewFilters.hub,
-            conditions: this.view.isSuperAdmin()
-              ? { isArchived: null, isPublished: null }
-              : { isArchived: false, isPublished: null },
-            sorting: this.view.filters.sorting.hub,
-            meta: { ...this.view.resources.queryMeta, profile: 'card' },
-          }),
-        )) as ListResponse<Hub> | undefined,
-      )
-      // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
-      if (isCurrent()) this.view.setListQueryMeta(this.hubsQueryKey, result)
-      return result.data
+      const result = await readFreshRemoteQuery(getHubs({ ...input, includeCount: false }))
+      return result.data as Hub[]
     } catch (err) {
       const status =
         typeof err === 'object' && err && 'status' in err

@@ -1,5 +1,6 @@
 // SVELTE
 import { untrack } from 'svelte'
+import { invalidateRemoteFreshness } from '#lib/remote/index.js'
 // DOMAIN
 import { FirstClassResource } from '#lib/enums.js'
 import { matchesResourceIndexSearch } from '#lib/resources/indexQuery.js'
@@ -66,7 +67,8 @@ export function useAdminIndexQuery(
       pending = true
       failed = false
     })
-    const timer = setTimeout(() => void load(), 200)
+    const search = admin.view.filters.values[resource].text
+    const timer = setTimeout(() => void load(), search?.trim() ? 200 : 0)
     return () => {
       clearTimeout(timer)
       generation++
@@ -86,12 +88,12 @@ export function useAdminIndexQuery(
       return admin.view.filters.getViewFilteredResource(FirstClassResource.task)
     },
     get totalCount(): number | null {
-      return settledKey === key && !pending && !failed
+      return settledKey === key && !pending && !failed && !(resource === 'hub' && admin.hubCountLoading)
         ? (admin.view.getListQueryMeta(queryKey)?.totalCount ?? null)
         : null
     },
     get countLoading(): boolean {
-      return !failed && (pending || settledKey !== key)
+      return !failed && (pending || settledKey !== key || (resource === 'hub' && admin.hubCountLoading))
     },
     get isInitialised(): boolean {
       return settledKey === key || failed
@@ -99,6 +101,9 @@ export function useAdminIndexQuery(
     get failed(): boolean {
       return failed
     },
-    retry: load,
+    retry: async () => {
+      invalidateRemoteFreshness()
+      await load()
+    },
   }
 }

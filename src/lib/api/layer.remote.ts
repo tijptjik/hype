@@ -160,6 +160,7 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
       q: params.q,
       indexFilters: params.indexFilters,
       includeCount: params.includeCount,
+      countOnly: params.countOnly,
       filtersToApply,
       locale: getLocale(),
     },

@@ -36,6 +36,7 @@ export type ResourcePage = {
 export type ResourcePageInput = {
   indexFilters?: import('#lib/resources/indexQuery.js').ResourceIndexFilters
   includeCount?: boolean
+  countOnly?: boolean
   type: PanelResourceType
   profile?: 'compact' | 'default'
   sorting?: { sortBy: string; sortOrder: 'asc' | 'desc' }

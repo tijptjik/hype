@@ -52,6 +52,8 @@ import { SvelteMap } from 'svelte/reactivity'
 // MARKERS
 // ENUMS
 import { FirstClassResource, Panel } from '#lib/enums.js'
+// REMOTE
+import { invalidateRemoteFreshness } from '#lib/remote/index.js'
 // TYPES
 import type { PublicationPreview } from '#lib/publication/preview.js'
 import type { Cache, CachedEntity } from '#lib/context/cache.types.js'
@@ -992,6 +994,7 @@ export class ResourceViewCtx {
   invalidate = async (
     resource: FirstClassResource | 'userFeatures' | 'user',
   ): Promise<void> => {
+    invalidateRemoteFreshness()
     const resourcesToInvalidate = [resource]
     // Clear relevant caches when invalidating (forces fresh data)
     if (resource === FirstClassResource.organisation) {

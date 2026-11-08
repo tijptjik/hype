@@ -1,5 +1,7 @@
 import type { RemoteQuery } from '$app/server'
 
+// REMOTE
+import { readFreshRemoteQuery, invalidateRemoteFreshness } from '#lib/remote/index.js'
 // TYPES
 import type {
   PanelResource,
@@ -37,6 +39,7 @@ function isAccessDenied(error: unknown): boolean {
 /** Native query handles own page data; this controller owns traversal and retained handles. */
 export class ResourceList {
   pages: RemoteQuery<ResourcePage>[] = $state.raw([])
+  private countPage: RemoteQuery<ResourcePage> | undefined = $state.raw()
   loading = $state(false)
   error: unknown = $state(null)
   private countInvalidated = $state(false)
@@ -86,7 +89,11 @@ export class ResourceList {
   private input: ResourcePageInput | undefined = $state.raw()
   private history = new Map<
     string,
-    { pages: RemoteQuery<ResourcePage>[]; fetchedAt: number }
+    {
+      pages: RemoteQuery<ResourcePage>[]
+      fetchedAt: number
+      countPage?: RemoteQuery<ResourcePage>
+    }
   >()
 
   constructor(
@@ -132,6 +139,7 @@ export class ResourceList {
   get denied(): boolean {
     return (
       isAccessDenied(this.error) ||
+      isAccessDenied(this.countPage?.error) ||
       this.pages.some(page => isAccessDenied(page.error)) ||
       // A pending replacement can still be displaying a previously authorized page.
       (this.showingFallback &&
@@ -188,12 +196,26 @@ export class ResourceList {
     if (
       this.denied ||
       this.error ||
+      this.countPage?.error ||
+      this.countPage?.loading ||
       this.countInvalidated ||
       this.showingFallback ||
       this.pages[0]?.loading
     )
       return null
-    return this.pages[0]?.current?.totalCount ?? null
+    return (this.countPage ?? this.pages[0])?.current?.totalCount ?? null
+  }
+
+  /** Whether the independent exact count is still pending. */
+  get countLoading(): boolean {
+    return (
+      !this.denied &&
+      !this.error &&
+      !this.countPage?.error &&
+      Boolean(
+        this.input?.includeCount && (this.countPage?.loading || !this.countPage?.ready),
+      )
+    )
   }
 
   /**
@@ -256,10 +278,12 @@ export class ResourceList {
     if (
       !force &&
       retained &&
+      !retained.countPage?.error &&
       !retained.pages.some(page => isAccessDenied(page.error)) &&
       Date.now() - retained.fetchedAt < 60_000
     ) {
       this.pages = retained.pages
+      this.countPage = retained.countPage
       this.validatedAt = retained.fetchedAt
       // The retained view is authoritative; earlier preview owners no longer apply.
       this.fallback = []
@@ -276,11 +300,18 @@ export class ResourceList {
     this.validatedAt = 0
     this.loading = true
     try {
-      const page = this.query(input)
-      this.pageIdentities.set(page, key)
+      this.countPage = undefined
+      if (input.includeCount) {
+        const countPage = this.query({ ...input, cursor: undefined, countOnly: true })
+        this.countPage = countPage
+        // Observe failures without coupling the first row to count completion.
+        void readFreshRemoteQuery(countPage, force).catch(() => {})
+      }
+      const pageInput = input.includeCount ? { ...input, includeCount: false } : input
+      const page = this.query(pageInput)
+      this.pageIdentities.set(page, resourceQueryIdentity(pageInput))
       this.pages = [page]
-      if (page.ready) await page.refresh()
-      else await page
+      await readFreshRemoteQuery(page, force)
       if (generation !== this.generation) return
       this.fallback = []
       this.fallbackPages = []
@@ -289,7 +320,11 @@ export class ResourceList {
       if (invalidationRevision !== this.invalidationRevision) return
       this.validatedAt = Date.now()
       this.countInvalidated = false
-      this.history.set(key, { pages: this.pages, fetchedAt: this.validatedAt })
+      this.history.set(key, {
+        pages: this.pages,
+        fetchedAt: this.validatedAt,
+        countPage: this.countPage,
+      })
       // Keep back-navigation retention bounded independently of the active traversal.
       while (this.history.size > 12) {
         const oldest = this.history.keys().next()
@@ -337,6 +372,7 @@ export class ResourceList {
       if (invalidationRevision !== this.invalidationRevision) return
       this.history.set(resourceQueryIdentity(input), {
         pages: this.pages,
+        countPage: this.countPage,
         // Appending a page does not revalidate the earlier pages in this traversal.
         fetchedAt: this.validatedAt,
       })
@@ -408,12 +444,15 @@ export class ResourceList {
 
   /** Rebuilds cursor boundaries after a committed membership or ordering change. */
   async reconcile(): Promise<void> {
+    invalidateRemoteFreshness()
     this.history.clear()
     if (this.input) await this.load(this.input, true)
   }
 
   /** Invalidates retained membership after mutations, preserving visible native handles. */
   invalidate(): void {
+    invalidateRemoteFreshness()
+    this.countPage = undefined
     this.countInvalidated = true
     this.invalidationRevision++
     this.history.clear()
@@ -422,6 +461,7 @@ export class ResourceList {
 
   /** Clears scope-sensitive handles and supersedes pending page requests. */
   clear(): void {
+    this.countPage = undefined
     this.countInvalidated = false
     this.generation++
     this.activeLoad = undefined

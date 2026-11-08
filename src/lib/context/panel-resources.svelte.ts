@@ -3,10 +3,7 @@ import { getSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 // SVELTE
 import { untrack, onMount, onDestroy } from 'svelte'
 // INDEX SEARCH
-import {
-  matchesResourceIndexSearch,
-  type ResourceIndexFilters,
-} from '#lib/resources/indexQuery.js'
+import { matchesResourceIndexSearch, type ResourceIndexFilters } from '#lib/resources/indexQuery.js'
 import type { Resource } from '#lib/types.js'
 // REMOTE
 // TYPES
@@ -44,9 +41,7 @@ export function usePanelResources(
           profile: 'default' as const,
           includeCount: true,
           // Retained query identities must not mutate when a nested toggle changes.
-          indexFilters: JSON.parse(
-            JSON.stringify(app.filters.viewFilters[type]),
-          ) as ResourceIndexFilters,
+          indexFilters: JSON.parse(JSON.stringify(app.filters.viewFilters[type])) as ResourceIndexFilters,
           sorting: app.filters.sorting[type],
           conditions: {
             isPublished: app.filters.viewFilters[type].isPublished,
@@ -71,18 +66,13 @@ export function usePanelResources(
         ],
   )
   // Reading a native pin creates its query, so hidden panels must defer reads too.
-  const pins = $derived(
-    active() ? selected.map(id => app.cacheCtx.pin(type, id, input.meta)) : [],
-  )
+  const pins = $derived(active() ? selected.map(id => app.cacheCtx.pin(type, id, input.meta)) : [])
   $effect(() => {
     if (!active()) return
     const ids = selected
     const meta = input.meta
     const release = untrack(() => ids.map(id => app.cacheCtx.retainPin(type, id, meta)))
-    return () =>
-      release.forEach(detach => {
-        detach()
-      })
+    return () => release.forEach(detach => { detach() })
   })
   $effect(() => {
     if (!active()) return
@@ -106,7 +96,7 @@ export function usePanelResources(
     const next = input
     // Refresh only this panel's current pins; Kit coalesces shared native query requests.
     void Promise.allSettled([
-      Promise.resolve().then(() => (force ? list.load(next, true) : list.revalidate())),
+      Promise.resolve().then(() => force ? list.load(next, true) : list.revalidate()),
       ...pins.map(async pin => pin.refresh()),
     ])
   }
@@ -128,17 +118,13 @@ export function usePanelResources(
     // Native queries retain their last payload on failure; denied pins must not revive it.
     const denied = new Set(
       pins.flatMap((pin, index) =>
-        [401, 403, 404].includes(
-          (pin.error as { status?: number } | undefined)?.status ?? 0,
-        )
+        [401, 403, 404].includes((pin.error as { status?: number } | undefined)?.status ?? 0)
           ? [selected[index]]
           : [],
       ),
     )
     const visiblePins = pins.filter((_, index) => !denied.has(selected[index]))
-    const pageRows = new Map(
-      list.rows.filter(row => !denied.has(row.id)).map(row => [row.id, row]),
-    )
+    const pageRows = new Map(list.rows.filter(row => !denied.has(row.id)).map(row => [row.id, row]))
     // Only prism selections lead the list; navigation keeps paged rows in their existing order.
     for (const pin of visiblePins)
       if (pin.current && app.scope.prisms[type].includes(pin.current.id))
@@ -153,7 +139,7 @@ export function usePanelResources(
   const previewRows = $derived.by(() => {
     if (slot !== 'index') return rows
     // Settled server membership is authoritative, even if related preview metadata is absent.
-    if (submittedKey === viewKey && list.totalCount !== null) return rows
+    if (submittedKey === viewKey && !list.loading && !list.error) return rows
     const searched = rows.filter(row => matchesResourceIndexSearch(row, search()))
     const apply = {
       organisation: app.filters.applyOrganisationViewFilters,
@@ -182,7 +168,7 @@ export function usePanelResources(
       return submittedKey === viewKey ? list.totalCount : null
     },
     get countLoading(): boolean {
-      return submittedKey !== viewKey || (list.loading && list.totalCount === null)
+      return submittedKey !== viewKey || list.countLoading
     },
     get viewKey() {
       return viewKey

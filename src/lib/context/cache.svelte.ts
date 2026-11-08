@@ -12,6 +12,8 @@ import {
   OptimisticRecords,
   projectResourcePatch,
 } from '#lib/client/services/optimisticRecords.js'
+// REMOTE
+import { invalidateRemoteFreshness } from '#lib/remote/index.js'
 // TYPES
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 import type { Cache } from '#lib/context/cache.types.js'
@@ -607,6 +609,7 @@ export class CacheCtx {
    * @returns Completion of current-view refreshes; inactive views remain invalidated.
    */
   async reconcile(type: string): Promise<void> {
+    invalidateRemoteFreshness()
     // Project overrides and Hub inheritance change only when their owners are saved.
     if (['project', 'hub', 'organisation'].includes(type))
       this.imageIntentOptions.clear()
@@ -647,11 +650,13 @@ export class CacheCtx {
    * @returns Nothing.
    */
   invalidate(type: PanelResourceType): void {
+    invalidateRemoteFreshness()
     for (const list of this.listsFor([type])) list.invalidate()
   }
 
   /** Clears every retained scope-sensitive record and page before an identity transition. */
   clear(): void {
+    invalidateRemoteFreshness()
     this.imageIntentOptions.clear()
     this.epoch++
     this.optimisticRecords.clear()

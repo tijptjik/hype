@@ -712,42 +712,43 @@ it.each(['clear', 'release', 'new view'] as const)(
   },
 )
 
-it('keeps exact totals separate from previews and skips continuation counts', async () => {
-  const first = controlledQuery(),
-    second = controlledQuery(),
-    replacement = controlledQuery()
-  const fetcher = vi
-    .fn()
-    .mockReturnValueOnce(first.query)
-    .mockReturnValueOnce(second.query)
-    .mockReturnValueOnce(replacement.query)
+it('renders rows before the independent count and skips continuation counts', async () => {
+  const count = controlledQuery(), first = controlledQuery(), second = controlledQuery()
+  const fetcher = vi.fn().mockReturnValueOnce(count.query).mockReturnValueOnce(first.query).mockReturnValueOnce(second.query)
   const list = new ResourceList(fetcher)
   const initial = list.load({ ...input, includeCount: true })
-  expect(list.totalCount).toBeNull()
-  first.resolve({
-    data: [row('a')],
-    totalCount: 42,
-    nextCursor: { id: 'a', signature: 'scope' },
-  })
+  first.resolve({ data: [row('a')], totalCount: null, nextCursor: { id: 'a', signature: 'scope' } })
   await initial
+  expect(list.rows).toHaveLength(1)
+  expect(list.loading).toBe(false)
+  expect(list.countLoading).toBe(true)
+  expect(list.totalCount).toBeNull()
+  count.resolve({ data: [], totalCount: 42, nextCursor: null })
+  await count.query
   expect(list.totalCount).toBe(42)
   const more = list.next()
-  expect(fetcher).toHaveBeenLastCalledWith(
-    expect.objectContaining({ includeCount: false }),
-  )
+  expect(fetcher).toHaveBeenLastCalledWith(expect.objectContaining({ includeCount: false }))
   second.resolve({ data: [row('b')], totalCount: null, nextCursor: null })
   await more
   expect(list.totalCount).toBe(42)
-  const changed = list.load({
-    ...input,
-    includeCount: true,
-    indexFilters: { hasName: false },
-  })
-  expect(list.rows).toHaveLength(2)
+  list.invalidate()
   expect(list.totalCount).toBeNull()
-  replacement.resolve({ data: [], totalCount: 0, nextCursor: null })
-  await changed
-  expect(list.totalCount).toBe(0)
   list.clear()
-  expect(list.totalCount).toBeNull()
+})
+
+it('does not publish an obsolete count after switching filters', async () => {
+  const oldCount = controlledQuery(), oldRows = controlledQuery()
+  const newCount = controlledQuery(), newRows = controlledQuery()
+  const list = new ResourceList(vi.fn().mockReturnValueOnce(oldCount.query).mockReturnValueOnce(oldRows.query).mockReturnValueOnce(newCount.query).mockReturnValueOnce(newRows.query))
+  const first = list.load({ ...input, includeCount: true })
+  oldRows.resolve({ data: [row('old')], nextCursor: null })
+  await first
+  const next = list.load({ ...input, q: 'new', includeCount: true })
+  newRows.resolve({ data: [row('new')], nextCursor: null })
+  newCount.resolve({ data: [], totalCount: 1, nextCursor: null })
+  await next
+  oldCount.resolve({ data: [], totalCount: 99, nextCursor: null })
+  await oldCount.query
+  expect(list.totalCount).toBe(1)
+  expect(list.rows.map(value => value.id)).toEqual(['new'])
 })

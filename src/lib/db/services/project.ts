@@ -495,6 +495,7 @@ export async function listProjects<
     q?: string
     indexFilters?: ResourceIndexFilters
     includeCount?: boolean
+    countOnly?: boolean
     searchColumns?: string[]
     ignoreHubFilter?: boolean
     filtersToApply?: QueryParams
@@ -574,6 +575,21 @@ export async function listProjects<
   }
 
   const countWhere = and(...conditions)
+  // Exact totals share authorization predicates but never hydrate list relations.
+  if (query?.countOnly) {
+    const totals = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(project)
+      .where(countWhere)
+    return {
+      data: [],
+      totalCount: Number(totals[0]?.count ?? 0),
+      hasMore: false,
+      nextOffset: null,
+      offset: 0,
+      durationMs: Date.now() - startedAt,
+    }
+  }
   // Keyset pages advance using a unique immutable ID, independently of row offsets.
   if (pagination?.afterId && pagination.afterValue === undefined)
     conditions.push(gt(project.id, pagination.afterId))

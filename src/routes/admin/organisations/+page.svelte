@@ -13,12 +13,10 @@ import {
   createTranslationFilter,
 } from '#lib/client/services/filters.js'
 // BITS PATTERNS
-import {
-  IndexCard,
-  ResourceControlBar,
-  ResourceIndex,
-  ResourceRow,
-} from '#lib/bits/index.js'
+import IndexCard from '#lib/bits/patterns/cards/indexCard/IndexCard.svelte'
+import ResourceControlBar from '#lib/bits/patterns/resource/resourceControlBar/ResourceControlBar.svelte'
+import ResourceIndex from '#lib/bits/patterns/resource/resourceIndex/ResourceIndex.svelte'
+import ResourceRow from '#lib/bits/patterns/resource/rows/ResourceRow/ResourceRow.svelte'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // I18N
@@ -27,7 +25,7 @@ import { m } from '#lib/i18n.js'
 import {
   authorizeOrganisationCreate,
   toOrganisationAuthActor,
-} from '#lib/api/services/authz/index.js'
+} from '#lib/api/services/authz/organisation.js'
 // ICONS
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
 import StatusIcon from 'virtual:icons/proicons/target'

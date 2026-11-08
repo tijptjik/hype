@@ -53,3 +53,60 @@ export async function refreshRemoteQuery<T>(query: Promise<T>): Promise<T> {
   }
   return await query
 }
+
+// Native handles retain payloads; this weak registry only records verified freshness.
+let freshnessEpoch = 0
+const freshResults = new WeakMap<object, { at: number; epoch: number }>()
+// Keep a bounded set of browser-native handles alive across route unmounts.
+const retainedQueries = new Map<object, { query: Promise<unknown>; at: number }>()
+
+/** Invalidates quick-return freshness after mutations or identity changes.
+ * @returns Nothing.
+ */
+export function invalidateRemoteFreshness(): void {
+  freshnessEpoch++
+  retainedQueries.clear()
+}
+
+/** Reuses a recently verified native payload, without keeping a second data cache.
+ * @param query Native remote handle, or a promise supplied by tests.
+ * @param force Whether a retry or explicit refresh must bypass the freshness window.
+ * @returns Current response after any required read completes.
+ * @remarks Errors, changed payload objects and mutations always require revalidation.
+ */
+export async function readFreshRemoteQuery<T>(
+  query: Promise<T>,
+  force = false,
+): Promise<T> {
+  for (const [payload, retained] of retainedQueries)
+    if (Date.now() - retained.at >= 60_000) retainedQueries.delete(payload)
+  const handle = query as Promise<T> & { current?: T; ready?: boolean; error?: unknown }
+  const current = handle.current
+  const ready = handle.ready ?? current !== undefined
+  const stamp =
+    current && typeof current === 'object' ? freshResults.get(current) : undefined
+  if (
+    !force &&
+    ready &&
+    !handle.error &&
+    stamp?.epoch === freshnessEpoch &&
+    Date.now() - stamp.at < 60_000
+  )
+    return current as T
+  if (current && typeof current === 'object') freshResults.delete(current)
+  const epoch = freshnessEpoch
+  const result = ready ? await refreshRemoteQuery(query) : await query
+  if (result && typeof result === 'object' && epoch === freshnessEpoch) {
+    const at = Date.now()
+    freshResults.set(result, { at, epoch })
+    if (typeof window !== 'undefined') {
+      retainedQueries.set(result, { query, at })
+      while (retainedQueries.size > 32) {
+        const oldest = retainedQueries.keys().next()
+        if (oldest.done) break
+        retainedQueries.delete(oldest.value)
+      }
+    }
+  }
+  return result
+}

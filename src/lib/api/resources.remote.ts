@@ -34,6 +34,7 @@ const meta = z.object({
 const pageInput = z.object({
   indexFilters: ResourceIndexFiltersSchema.optional(),
   includeCount: z.boolean().optional(),
+  countOnly: z.boolean().optional(),
   type: resourceType,
   profile: z.enum(['compact', 'default']).optional(),
   sorting: z
@@ -90,6 +91,7 @@ export const getResourcePage = guardedQuery(
     const params = {
       indexFilters: input.indexFilters,
       includeCount: input.includeCount ?? false,
+      countOnly: input.countOnly,
       conditions: {
         isArchived: input.meta.isAdminRequest
           ? (input.conditions?.isArchived ?? null)

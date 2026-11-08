@@ -384,6 +384,7 @@ export const listHubs = async (
     q?: string
     indexFilters?: ResourceIndexFilters
     includeCount?: boolean
+    countOnly?: boolean
     searchColumns?: string[]
     filtersToApply?: Record<string, unknown>
     locale?: Locale
@@ -457,6 +458,21 @@ export const listHubs = async (
   }
 
   const countWhere = and(...conditions)
+  // Exact totals share authorization predicates but never hydrate list relations.
+  if (query?.countOnly) {
+    const totals = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(hub)
+      .where(countWhere)
+    return {
+      data: [],
+      totalCount: Number(totals[0]?.count ?? 0),
+      hasMore: false,
+      nextOffset: null,
+      offset: 0,
+      durationMs: Date.now() - startedAt,
+    }
+  }
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
