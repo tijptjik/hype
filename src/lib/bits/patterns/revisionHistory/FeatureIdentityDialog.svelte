@@ -5,6 +5,7 @@ import { untrack } from 'svelte'
 import MorphDialog from '#lib/bits/core/dialog/MorphDialog.svelte'
 import { transitionReviewDialog } from '#lib/bits/core/dialog/dialogTransition.js'
 import Row from '#lib/bits/custom/rows/Row.svelte'
+import RowThumbnail from '#lib/bits/custom/rows/src/RowThumbnail.svelte'
 import { getFeatureIdenticonUrl } from '#lib/client/services/image.js'
 import { getI18n } from '#lib/i18n.js'
 // API
@@ -360,8 +361,12 @@ async function apply(): Promise<void> {
       : candidate
         ? 'Move useful details and photos from Discard to Keep. Check the result on the right before merging.'
         : origin
-          ? 'Select a nearby Feature to keep, or search by name.'
-          : 'Find the Feature you want to keep.'}
+          ? duplicateTaskId
+            ? 'Select a nearby Feature to keep, or search by name.'
+            : 'Select a nearby Feature to merge into this one, or search by name.'
+          : duplicateTaskId
+            ? 'Find the Feature you want to keep.'
+            : 'Find the Feature to merge into this one.'}
 >
   <div class="grid min-w-0 gap-6">
     {#if choosing}
@@ -384,7 +389,7 @@ async function apply(): Promise<void> {
         </button>
         <button
           type="button"
-          class="bg-primary text-primary-content hover:bg-primary/90 inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-3 text-sm font-medium disabled:opacity-45"
+          class="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-content hover:bg-primary/90 disabled:opacity-45"
           disabled={busy}
           onclick={() =>
             transitionReviewDialog(() => {
@@ -414,7 +419,7 @@ async function apply(): Promise<void> {
               <option value={String(index)}>{name || `Feature ${index + 1}`}</option>
             {/each}
           </select>
-          <span class="text-muted-foreground font-normal"
+          <span class="font-normal text-muted-foreground"
             >The redirect becomes active when the chosen Feature is published. The
             original is unpublished and archived.</span
           >
@@ -431,7 +436,7 @@ async function apply(): Promise<void> {
             >
           </label>
           {#if !search.trim() && origin}
-            <p class="text-muted-foreground text-sm">
+            <p class="text-sm text-muted-foreground">
               {nearbyLoading
                 ? 'Loading nearby features…'
                 : nearby.length
@@ -440,7 +445,7 @@ async function apply(): Promise<void> {
             </p>
           {/if}
           {#if search.trim() || nearby.length}
-            <section
+            <div
               class="grid min-w-0 gap-2"
               aria-label={search.trim() ? 'Matching Features' : 'Nearby features'}
             >
@@ -448,37 +453,7 @@ async function apply(): Promise<void> {
                 <Row
                   {index}
                   entityId={match.id}
-                  variant="feature"
-                  image={match.image}
-                  imageSrc={match.image ? undefined : getFeatureIdenticonUrl(match.id)}
-                  alt={getI18n(
-                    match,
-                    'title',
-                    view.getUserPreferences(),
-                    match.id,
-                    true,
-                  )}
-                  title={getI18n(
-                    match,
-                    'title',
-                    view.getUserPreferences(),
-                    match.id,
-                    true,
-                  )}
-                  description={[
-                    getI18n(
-                      match,
-                      'displayAddress',
-                      view.getUserPreferences(),
-                      '',
-                      true,
-                    ),
-                    !search.trim() && origin && featurePoint(match.geometry)
-                      ? `${Math.round(featureDistance(origin, featurePoint(match.geometry)!))} m away`
-                      : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
+                  class="grid-cols-[auto_minmax(0,1fr)] gap-4 pr-3"
                   onclick={() => {
                     if (!busy)
                       void load(
@@ -496,9 +471,50 @@ async function apply(): Promise<void> {
                         )
                     }
                   }}
-                />
+                >
+                  <RowThumbnail
+                    image={match.image}
+                    imageSrc={match.image
+                      ? undefined
+                      : getFeatureIdenticonUrl(match.id)}
+                  />
+                  <!-- Picker options use the full row width and wrap instead of scrolling table labels. -->
+                  <div class="grid min-w-0 gap-1 py-1 text-left">
+                    <div
+                      class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3"
+                    >
+                      <span class="min-w-0 whitespace-normal break-words font-semibold"
+                        >{getI18n(
+                          match,
+                          'title',
+                          view.getUserPreferences(),
+                          match.id,
+                          true,
+                        )}</span
+                      >
+                      {#if origin && featurePoint(match.geometry)}
+                        <span class="whitespace-nowrap text-sm font-medium text-red-500"
+                          >{Math.round(
+                            featureDistance(origin, featurePoint(match.geometry)!),
+                          )}
+                          m</span
+                        >
+                      {/if}
+                    </div>
+                    <span
+                      class="min-w-0 whitespace-normal break-words text-sm text-muted-foreground"
+                      >{getI18n(
+                        match,
+                        'displayAddress',
+                        view.getUserPreferences(),
+                        '',
+                        true,
+                      )}</span
+                    >
+                  </div>
+                </Row>
               {/each}
-            </section>
+            </div>
           {/if}
         {/if}
         {#if primary && output && candidate}
@@ -523,7 +539,7 @@ async function apply(): Promise<void> {
   {#snippet footer()}
     <button
       type="button"
-      class="bg-primary text-primary-content hover:bg-primary/90 inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-2 text-sm font-medium disabled:opacity-45"
+      class="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-content hover:bg-primary/90 disabled:opacity-45"
       disabled={busy ||
         !primary ||
         (kind === 'split' ? names.some(name => !name.trim()) : !candidate)}
