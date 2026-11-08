@@ -1,12 +1,14 @@
 <script lang="ts">
+// DEFERRED FACETS
+import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
 import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // IMAGE INTENTS
 import ImageIntentSettings from '#lib/bits/patterns/images/ImageIntentSettings.svelte'
 // COMPONENTS
-import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
+
 // BITS COMPONENTS
-import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
+
 import { ProjectFlagsSchema, show3dAddressOptions } from '#lib/projects/flags.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
 import { SimpleTooltip } from '#lib/bits/core/index.js'
@@ -155,18 +157,16 @@ import {
   formSelectionSectionStyles,
 } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
-import {
-  FormFieldsSection,
-  FormMapStyleSection,
-  FormParentSection,
-  FormProjectLayersSection,
-  FormProjectLicenseSection,
-  FormSpecifiersFields,
-  FormUserRolesSection,
-  Main,
-  ProjectCapabilities,
-  ResourceViewer,
-} from '#lib/bits/index.js'
+import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
+import FormMapStyleSection from '#lib/bits/patterns/forms/formMapStyleSection/FormMapStyleSection.svelte'
+import FormParentSection from '#lib/bits/patterns/forms/formParentSection/FormParentSection.svelte'
+import FormProjectLayersSection from '#lib/bits/patterns/forms/formProjectLayersSection/FormProjectLayersSection.svelte'
+import FormProjectLicenseSection from '#lib/bits/patterns/forms/formProjectLicenseSection/FormProjectLicenseSection.svelte'
+import FormSpecifiersFields from '#lib/bits/patterns/forms/formI18nSection/components/FormSpecifiersFields.svelte'
+import FormUserRolesSection from '#lib/bits/patterns/forms/formUserRolesSection/FormUserRolesSection.svelte'
+import * as Main from '#lib/bits/custom/main/index.js'
+import ProjectCapabilities from '#lib/bits/patterns/capabilities/projectCapabilities/ProjectCapabilities.svelte'
+import ResourceViewer from '#lib/bits/patterns/images/ResourceViewer.svelte'
 
 import type { ParentSectionOrganisationItem } from '#lib/bits/patterns/forms/formParentSection/index.js'
 import type { MapStyleSelectionItem } from '#lib/bits/patterns/forms/formMapStyleSection/index.js'
@@ -769,16 +769,20 @@ const isDirty = $derived(Boolean(formCtx.dirty))
 function onImageIntentSettingsChange(value: string | undefined): void {
   const current = formCtx.form.fields.value()
   if (current.data?.imageIntentSettings === value) return
-  formCtx.form.fields.set({ ...current, data: { ...current.data, imageIntentSettings: value } })
+  formCtx.form.fields.set({
+    ...current,
+    data: { ...current.data, imageIntentSettings: value },
+  })
 }
 
 /** Returns native JSON transport attributes for the staged image policy. */
 function imageIntentInputAttrs(): Record<string, unknown> {
-  return (formCtx.form.fields.data.imageIntentSettings as unknown as {
-    as(type: 'hidden', value: string): Record<string, unknown>
-  }).as('hidden', String(formCtx.form.fields.value().data?.imageIntentSettings))
+  return (
+    formCtx.form.fields.data.imageIntentSettings as unknown as {
+      as(type: 'hidden', value: string): Record<string, unknown>
+    }
+  ).as('hidden', String(formCtx.form.fields.value().data?.imageIntentSettings))
 }
-
 
 // Narrowed form adapter for property-only mutators.
 const projectPropertyFormAdapter = $derived(
@@ -1459,7 +1463,6 @@ const hasLicenseChanges = $derived.by(
     toStableSignature(formProjectLicense) !== toStableSignature(baselineProjectLicense),
 )
 
-
 const licenseWizardChoiceCards = [
   {
     key: 'publicDomain' as const,
@@ -1529,7 +1532,6 @@ function syncLicenseEditorStateFromForm(): void {
     data: formProjectLicense.media.data.license,
   }
 }
-
 
 // Select field names keyed by userId for role dropdown binding.
 const roleFieldNameByUserId = $derived.by(() => {
@@ -2363,7 +2365,8 @@ async function handleProjectStateToggle({
     mutation.settle(true)
     if (!isCurrentMutation()) return
 
-    if (field === 'isPublished') pendingImagePublicationId = nextState ? projectData.id : null
+    if (field === 'isPublished')
+      pendingImagePublicationId = nextState ? projectData.id : null
     // Settle from the write acknowledgement, never from a possibly empty filtered read.
     if (
       projectRef === mutationRef &&
@@ -2643,7 +2646,6 @@ $effect(() => {
   const ref = projectRef
   // Reload on navigation or authorization scope changes, not reactive query settlement.
   adminCtx.view.resources.scopeKey
-  const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
   return untrack(() =>
     editorCtrl.syncRouteAndLoad({
       ref,
@@ -2667,10 +2669,8 @@ $effect(() => {
       setFacetForRef: nextRef => {
         untrack(() => {
           const currentFacet = adminCtx.activeFacet
-          const nextFacet =
-            currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
-              ? currentFacet
-              : 'core'
+          // Keep bookmarks while destination data and permission-derived tabs load.
+          const nextFacet = currentFacet || 'core'
           adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.project)
         })
       },
@@ -2678,6 +2678,13 @@ $effect(() => {
       commit: commitSettledProjectState,
     }),
   )
+})
+
+// Validate the requested tab only after the destination's authorization has settled.
+$effect(() => {
+  if (!isCurrentRefSettled) return
+  if (resolvedFacetTabs.has(activeFacet)) return
+  adminCtx.setFacet('core', projectRef, FirstClassResource.project)
 })
 
 $effect(() => {
@@ -2942,7 +2949,7 @@ $effect(() => {
     isReady={Boolean(formCtx.form?.fields)}
   >
     {#if formCtx.form.fields.value().data?.imageIntentSettings !== undefined}
-      <input {...imageIntentInputAttrs()} />
+      <input {...imageIntentInputAttrs()}>
     {/if}
     <Main.Facet
       isVisible={isCoreFacet}
@@ -3427,7 +3434,13 @@ $effect(() => {
           </div>
         </section>
         {#if project?.data?.id}
-          <ImageIntentSettings scopeType="project" scopeId={project.data.id} disabled={!isEditing || formCtx.submitting} resetVersion={profileResetVersion} onChange={onImageIntentSettingsChange} />
+          <ImageIntentSettings
+            scopeType="project"
+            scopeId={project.data.id}
+            disabled={!isEditing || formCtx.submitting}
+            resetVersion={profileResetVersion}
+            onChange={onImageIntentSettingsChange}
+          />
         {/if}
         {#if activeCommittedProjectData?.id}
           {#key activeCommittedProjectData.id}
@@ -3518,11 +3531,21 @@ $effect(() => {
   >
     {#if activeFacet === 'features' && project?.data?.id}
       {#key project.data.id}
-        <ScopedFeatureIndex
-          embedded
-          resourceType="project"
-          resourceId={project.data.id}
-        />
+        {@const deferredResourceId = project.data!.id}
+        <Deferred
+          load={() =>
+            import(
+              '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
+            )}
+        >
+          {#snippet children(module)}
+            <module.default
+              embedded
+              resourceType="project"
+              resourceId={deferredResourceId}
+            />
+          {/snippet}
+        </Deferred>
       {/key}
     {/if}
   </Main.Facet>
@@ -3536,10 +3559,14 @@ $effect(() => {
       isCurrentRefLoaded &&
       optimisticProjectData?.id}
       {#key `${optimisticProjectData.id}:${optimisticProjectData.modifiedAt}:${adminCtx.view.account.user?.id}`}
-        <AdminResourceHistory
-          resource="project"
-          resourceId={optimisticProjectData.id}
-        />
+        <Deferred
+          load={() =>
+            import('#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte')}
+        >
+          {#snippet children(module)}
+            <module.default resource="project" resourceId={optimisticProjectData.id} />
+          {/snippet}
+        </Deferred>
       {/key}
     {/if}
   </Main.Facet>
@@ -3567,5 +3594,9 @@ $effect(() => {
 {/if}
 
 {#if pendingImagePublicationId && pendingImagePublicationId === project?.data?.id}
-  <PublishUnclassifiedImagesDialog scopeType="project" scopeId={pendingImagePublicationId} onDone={() => pendingImagePublicationId = null} />
+  <PublishUnclassifiedImagesDialog
+    scopeType="project"
+    scopeId={pendingImagePublicationId}
+    onDone={() => (pendingImagePublicationId = null)}
+  />
 {/if}

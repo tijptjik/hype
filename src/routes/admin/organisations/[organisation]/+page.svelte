@@ -1,4 +1,6 @@
 <script lang="ts">
+// DEFERRED FACETS
+import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
 import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // SVELTE
@@ -7,14 +9,14 @@ import { untrack } from 'svelte'
 // THIRD-PARTY
 import { toast } from 'svelte-sonner'
 // HISTORY
-import OrganisationHistory from '#lib/bits/patterns/revisionHistory/OrganisationHistory.svelte'
+
 // ORGANISATION USERS
 import OrganisationUserSettings from '#lib/bits/patterns/organisationUsers/OrganisationUserSettings.svelte'
 import OrganisationUsers from '#lib/bits/patterns/organisationUsers/OrganisationUsers.svelte'
-import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
+
 import ResourceIndex from '#lib/bits/patterns/resource/resourceIndex/ResourceIndex.svelte'
 // MESSAGING
-import OrganisationMessaging from '#lib/bits/patterns/messaging/OrganisationMessaging.svelte'
+
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
 // PROFILE
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
@@ -23,8 +25,7 @@ import {
   translateText as translateCapabilityTexts,
 } from '#lib/api/translation.remote.js'
 // BITS COMPONENTS
-import AnalyticsMemberAccess from '#lib/bits/patterns/analytics/AnalyticsMemberAccess.svelte'
-import OrganisationImageEditor from '#lib/bits/patterns/organisationEditor/OrganisationImageEditor.svelte'
+
 import OrganisationAdvancedSettings from '#lib/bits/patterns/organisationEditor/OrganisationAdvancedSettings.svelte'
 
 // I18N
@@ -119,18 +120,15 @@ import {
   FormSectionSkeleton,
   FormProfileSkeleton,
 } from '#lib/bits/patterns/forms/formSkeleton/index.js'
-import {
-  FormFieldsSection,
-  OrganisationCapabilities,
-  FormSpecifiersFields,
-  FormUserRolesSection,
-  Main,
-} from '#lib/bits/index.js'
+import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
+import AnalyticsMemberAccess from '#lib/bits/patterns/analytics/AnalyticsMemberAccess.svelte'
+import OrganisationCapabilities from '#lib/bits/patterns/capabilities/organisationCapabilities/OrganisationCapabilities.svelte'
+import FormSpecifiersFields from '#lib/bits/patterns/forms/formI18nSection/components/FormSpecifiersFields.svelte'
+import FormUserRolesSection from '#lib/bits/patterns/forms/formUserRolesSection/FormUserRolesSection.svelte'
+import * as Main from '#lib/bits/custom/main/index.js'
 import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ADAPTERS
-import {
-  useOrganisationEditorModel,
-} from '#lib/adapters/organisation/useOrganisationEditorModel.svelte.js'
+import { useOrganisationEditorModel } from '#lib/adapters/organisation/useOrganisationEditorModel.svelte.js'
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // CLIENT SERVICES
 import { setOrganisationImagePresentationMode } from '#lib/client/services/image.js'
@@ -282,6 +280,11 @@ const isCoreFacet = $derived(activeFacet === 'core')
 const isCapabilitiesFacet = $derived(activeFacet === 'capabilities')
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
+let visitedImagesRef = $state<string | null>(null)
+// Keep gallery edits alive after first opening, but do not load hidden galleries on entry.
+$effect(() => {
+  if (isImagesFacet) visitedImagesRef = organisationRef
+})
 const isMessagingFacet = $derived(activeFacet === 'messaging')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewOrganisationRef = $derived(organisationRef === NEW_REF)
@@ -1808,7 +1811,14 @@ $effect(() => {
         canEditOrganisation &&
         optimisticOrganisationData?.id}
         {#key `${optimisticOrganisationData.id}:${optimisticOrganisationData.modifiedAt}:${currentUser?.id}`}
-          <OrganisationHistory organisationId={optimisticOrganisationData.id} />
+          <Deferred
+            load={() =>
+              import('#lib/bits/patterns/revisionHistory/OrganisationHistory.svelte')}
+          >
+            {#snippet children(module)}
+              <module.default organisationId={optimisticOrganisationData.id} />
+            {/snippet}
+          </Deferred>
         {/key}
       {/if}
     </Main.Facet>
@@ -1887,11 +1897,20 @@ $effect(() => {
   >
     {#if activeFacet === 'features' && featureOrganisationId}
       {#key featureOrganisationId}
-        <ScopedFeatureIndex
-          embedded
-          resourceType="organisation"
-          resourceId={featureOrganisationId}
-        />
+        <Deferred
+          load={() =>
+            import(
+              '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
+            )}
+        >
+          {#snippet children(module)}
+            <module.default
+              embedded
+              resourceType="organisation"
+              resourceId={featureOrganisationId}
+            />
+          {/snippet}
+        </Deferred>
       {/key}
     {:else if activeFacet === 'features'}
       {#if hasProfileLoadFailed}
@@ -1922,15 +1941,22 @@ $effect(() => {
   >
     {#if isMessagingFacet && canManageMessaging && optimisticOrganisationData}
       {#key optimisticOrganisationData.id}
-        <OrganisationMessaging
-          organisationId={optimisticOrganisationData.id}
-          appearance={messagingAppearance}
-          appearanceDisabled={!isEditing ||
-            formCtx.submitting ||
-            !canSubmitOrganisation}
-          appearanceIssues={contentLocaleFormIssues(visibleAllIssues)}
-          onAppearanceChange={setMessagingAppearance}
-        />
+        <Deferred
+          load={() =>
+            import('#lib/bits/patterns/messaging/OrganisationMessaging.svelte')}
+        >
+          {#snippet children(module)}
+            <module.default
+              organisationId={optimisticOrganisationData.id}
+              appearance={messagingAppearance}
+              appearanceDisabled={!isEditing ||
+                formCtx.submitting ||
+                !canSubmitOrganisation}
+              appearanceIssues={contentLocaleFormIssues(visibleAllIssues)}
+              onAppearanceChange={setMessagingAppearance}
+            />
+          {/snippet}
+        </Deferred>
       {/key}
     {/if}
   </Main.Facet>
@@ -1942,16 +1968,27 @@ $effect(() => {
     contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    <OrganisationImageEditor
-      {isFormReady}
-      {hasProfileLoadFailed}
-      isValid={imageProviderProps.isValid}
-      model={imageProviderModel}
-      {canEditImagePresentationMode}
-      {canEditImageDropzone}
-      {retryOrganisationLoad}
-      {onPresentationModeCommitted}
-    />
+    {#if isImagesFacet || visitedImagesRef === organisationRef}
+      <Deferred
+        load={() =>
+          import(
+            '#lib/bits/patterns/organisationEditor/OrganisationImageEditor.svelte'
+          )}
+      >
+        {#snippet children(gallery)}
+          <gallery.default
+            {isFormReady}
+            {hasProfileLoadFailed}
+            isValid={imageProviderProps.isValid}
+            model={imageProviderModel}
+            {canEditImagePresentationMode}
+            {canEditImageDropzone}
+            {retryOrganisationLoad}
+            {onPresentationModeCommitted}
+          />
+        {/snippet}
+      </Deferred>
+    {/if}
   </Main.Facet>
 </Main.Root>
 

@@ -1,12 +1,14 @@
 <script lang="ts">
+// DEFERRED FACETS
+import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
 import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // COMPONENTS
-import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
+
 // BITS COMPONENTS
 import { Select } from '#lib/bits/core/index.js'
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
-import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
+
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
 import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 import type { RemoteForm, RemoteFormFields } from '$app/server'
@@ -92,12 +94,10 @@ import {
 import FormCardStyleSection from '#lib/bits/patterns/forms/formCardStyleSection/FormCardStyleSection.svelte'
 import { isCardStyleCode, DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import type { CardStyleCode } from '#lib/features/cardStyle.js'
-import {
-  FormParentSection,
-  FormMapStyleSection,
-  LayerPropertyCard,
-  Main,
-} from '#lib/bits/index.js'
+import FormParentSection from '#lib/bits/patterns/forms/formParentSection/FormParentSection.svelte'
+import FormMapStyleSection from '#lib/bits/patterns/forms/formMapStyleSection/FormMapStyleSection.svelte'
+import * as LayerPropertyCard from '#lib/bits/patterns/cards/layerPropertyCard/components/index.js'
+import * as Main from '#lib/bits/custom/main/index.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
 import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // MAP STYLES
@@ -107,7 +107,7 @@ import {
 } from '#lib/map/styles/catalog.js'
 import { getMapStyleCatalogI18n } from '#lib/map/styles/i18n.js'
 import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
-import { isMapStyleKey } from '#lib/map/styles/registry.js'
+import { isMapStyleKey } from '#lib/map/styles/metadata.js'
 // FACTORIES
 import { configureForm } from '#lib/factories.svelte.js'
 // NAVIGATION
@@ -1109,7 +1109,8 @@ async function handleLayerStateToggle({
     committed = true
     mutation.settle(true)
     if (!isCurrentMutation()) return
-    if (field === 'isPublished') pendingImagePublicationId = nextState ? current.id : null
+    if (field === 'isPublished')
+      pendingImagePublicationId = nextState ? current.id : null
     // The write acknowledgement settles this field without depending on another detail read.
     if (
       layerRef === mutationRef &&
@@ -1282,7 +1283,6 @@ $effect(() => {
 })
 
 $effect(() => {
-  const resolvedFacetTabsSnapshot = untrack(() => headerFacetTabsWithIssues)
   adminCtx.view.resources.scopeKey
   const ref = layerRef
   return untrack(() =>
@@ -1300,10 +1300,8 @@ $effect(() => {
       setFacetForRef: nextRef => {
         untrack(() => {
           const currentFacet = adminCtx.activeFacet
-          const nextFacet =
-            currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
-              ? currentFacet
-              : 'core'
+          // Keep bookmarks while destination data and permission-derived tabs load.
+          const nextFacet = currentFacet || 'core'
           adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.layer)
         })
       },
@@ -1311,6 +1309,13 @@ $effect(() => {
       commit: commitSettledLayerState,
     }),
   )
+})
+
+// Validate the requested tab only after the destination's authorization has settled.
+$effect(() => {
+  if (!isCurrentRefSettled) return
+  if (headerFacetTabsWithIssues.has(activeFacet)) return
+  adminCtx.setFacet('core', layerRef, FirstClassResource.layer)
 })
 
 $effect(() => {
@@ -1321,6 +1326,7 @@ $effect(() => {
 
 // Facet guards
 $effect(() => {
+  if (!isCurrentRefSettled) return
   if (activeFacet !== 'fields') return
   if (hasSelectedParentProject) return
 
@@ -1756,7 +1762,21 @@ $effect(() => {
   >
     {#if activeFacet === 'features' && layer?.data?.id}
       {#key layer.data.id}
-        <ScopedFeatureIndex embedded resourceType="layer" resourceId={layer.data.id} />
+        {@const deferredResourceId = layer.data!.id}
+        <Deferred
+          load={() =>
+            import(
+              '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
+            )}
+        >
+          {#snippet children(module)}
+            <module.default
+              embedded
+              resourceType="layer"
+              resourceId={deferredResourceId}
+            />
+          {/snippet}
+        </Deferred>
       {/key}
     {/if}
   </Main.Facet>
@@ -1770,7 +1790,15 @@ $effect(() => {
       isCurrentRefLoaded &&
       layer?.data?.id}
       {#key `${layer.data.id}:${layer.data.modifiedAt}:${adminCtx.view.account.user?.id}`}
-        <AdminResourceHistory resource="layer" resourceId={layer.data.id} />
+        {@const deferredResourceId = layer.data!.id}
+        <Deferred
+          load={() =>
+            import('#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte')}
+        >
+          {#snippet children(module)}
+            <module.default resource="layer" resourceId={deferredResourceId} />
+          {/snippet}
+        </Deferred>
       {/key}
     {/if}
   </Main.Facet>
@@ -1798,5 +1826,9 @@ $effect(() => {
 {/if}
 
 {#if pendingImagePublicationId && pendingImagePublicationId === layer?.data?.id}
-  <PublishUnclassifiedImagesDialog scopeType="layer" scopeId={pendingImagePublicationId} onDone={() => pendingImagePublicationId = null} />
+  <PublishUnclassifiedImagesDialog
+    scopeType="layer"
+    scopeId={pendingImagePublicationId}
+    onDone={() => (pendingImagePublicationId = null)}
+  />
 {/if}
