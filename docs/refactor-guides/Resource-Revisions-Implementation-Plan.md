@@ -256,8 +256,8 @@ canonical-image rules after any merge. Identity merges deduplicate selected gall
 entries by identity and require explicit metadata/order decisions; split outputs
 explicitly select/share references.
 
-Reviewer amendments to task images live on the review, not on the frozen proposal.
-The [review-owned task image contract](Feature-Revisions-Write-Boundaries.md#review-owned-task-image-changes)
+Reviewer amendments to task images live on the review, not on the frozen proposal. The
+[review-owned task image contract](Feature-Revisions-Write-Boundaries.md#review-owned-task-image-changes)
 defines immutable review versions, original/edited previews, exact acceptance tokens,
 creation baselines and retention after rejection. It follows the current lifecycle
 visibility rules described in that integration contract.

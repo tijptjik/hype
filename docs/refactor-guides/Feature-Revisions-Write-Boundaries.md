@@ -17,25 +17,52 @@ earlier checkpoints:
    publication.
 2. Staff Save applies accepted content immediately while preserving visibility. There
    are no staff draft proposals. Publish/unpublish only exposes or hides accepted
-   content. Staff gallery uploads and replacements also apply immediately on both the
-   compatibility revision-head schema and the lifecycle schema, with immutable
-   asset/history pins and replay receipts; task contribution evidence stays in review.
-   External proposed changes are reviewed in their task flow. The Feature Updates tab is
-   now read-only History. Split creates two unpublished successors; Merge preserves the
-   existing primary's identity and visibility. Duplicate task review merges selected
-   evidence and completes the task atomically, or discards it. Redirect choices persist
-   independently of current destination visibility.
-3. Review shared Organisation/Location corrections separately from a contributor's
-   Feature proposal. A linked-feature form currently can create such corrections via
+   content. Staff gallery uploads, replacements, metadata and rotation also apply
+   immediately on both the compatibility revision-head schema and the lifecycle schema,
+   with immutable asset/history pins and replay receipts; task contribution evidence
+   stays in review. Translation-only staff save their permitted text immediately without
+   gaining publish authority. External proposed changes are reviewed in their task flow.
+   The Feature Updates tab is now read-only History. Split creates two unpublished
+   successors; Merge preserves the existing primary's identity and visibility. Duplicate
+   task review merges selected evidence and completes the task atomically, or discards
+   it. Redirect choices persist independently of current destination visibility.
+3. Save shared Organisation/Location corrections immediately when the actor has
+   Organisation edit authority. Feature-only editors propose shared corrections to an
+   Organisation manager; staff membership alone never grants rights to another resource.
+   Keep this shared-resource operation separate from a contributor's Feature proposal. A
+   linked-feature form currently can create such corrections via
    `saveLinkedFeatureForm`; this side effect must never occur while saving a proposal. A
    Feature proposal cannot implicitly approve or write a shared correction, even when
    the reviewer holds both permissions. Shared corrections retain their own explicit
-   review and accepted evidence.
+   authority and accepted evidence.
 
 Existing agreements stand: independent proposals, whole-proposal acceptance or
 rejection, accepted changes immediately published, same-feature merge parents, and
 explicit multi-feature merge/split receipts. A merge retains a survivor and redirects
 absorbed identities. A split may retain one identity or retire it and create new ones.
+
+## Staff edit-path audit (7 November 2026)
+
+| Resource / entry path                                                        | Save behaviour                                                                                                     |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Feature form and translation endpoint                                        | Accepted content immediately, including authorised translation-only staff; visibility unchanged.                   |
+| Feature gallery metadata, presentation and rotation                          | Immutable image revision and accepted Feature pin in one batch on both schemas; stale pins rejected.               |
+| Gallery uploads, replacements, order, captions, alt text, intent and removal | Accepted gallery changes immediately; contributor/task uploads remain isolated evidence.                           |
+| Hub, Organisation, Project and Layer forms                                   | Direct concurrency-checked writes with attributed revision capture; publication is a separate action.              |
+| Hub, Organisation and Project logos                                          | Immediate immutable logo revision and resource pointer update.                                                     |
+| Properties, user/account edits and operational settings                      | Existing direct authorised mutation paths; no Feature proposal routing.                                            |
+| Local Location edits, accessibility and associations                         | Existing direct scoped writes; source adoption/identity operations remain distinct explicit decisions.             |
+| Shared Organisation/Location corrections                                     | Direct accepted correction for Organisation managers; Feature-only editors cannot approve shared-resource changes. |
+
+Regression coverage: `feature-revision-projection.test.ts`,
+`staff-translation.remote.test.ts`, `feature-lifecycle.test.ts`, `image.remote.test.ts`,
+`feature.remote.test.ts`, `admin-resource-revision-persistence.test.ts`,
+`organisation-revision-persistence.test.ts`, `resource-logo-revisions.test.ts`,
+`location-services.test.ts` and `location-corrections.remote.test.ts`.
+`scripts/visual-checks/staff-save-check.ts` checks the actual shared-correction
+component in headless Chromium and Firefox with isolated remote fixtures. Existing
+proposals are retained; this change does not bulk-accept old drafts or contributor
+submissions.
 
 ## Ownership and restoration boundary
 
@@ -522,24 +549,24 @@ proposal version and the accepted Feature revision used for comparison. This use
 existing review table rather than a provisional Feature or a second proposal. The
 compatibility revision-head schema adds the context column with
 `0201_task_image_review_context.sql`; the lifecycle schema already has it. New-Feature
-reports review the complete initial proposal, including all of its submitted photos,
-as one unit. The additive migration leaves those proposals and upload receipts unchanged.
+reports review the complete initial proposal, including all of its submitted photos, as
+one unit. The additive migration leaves those proposals and upload receipts unchanged.
 
 `featureImageReview.ts` saves the reviewed gallery, excluded-image decisions and new
-immutable image revisions. Rotation and presentation reuse the pinned asset;
-replacement verifies decodable bytes before storing a fresh immutable asset key.
-Caption/alt translations, intent, local visibility and order remain gallery choices.
-Excluding an image does not delete its submitted evidence. Original bytes and metadata
-remain available for comparison. Review responses expose only gallery data, not the
-proposal's unrelated internal fields.
+immutable image revisions. Rotation and presentation reuse the pinned asset; replacement
+verifies decodable bytes before storing a fresh immutable asset key. Caption/alt
+translations, intent, local visibility and order remain gallery choices. Excluding an
+image does not delete its submitted evidence. Original bytes and metadata remain
+available for comparison. Review responses expose only gallery data, not the proposal's
+unrelated internal fields.
 
 `TaskImageReview` previews saved reviewer versions in one gallery, with existing images
-as read-only context.
-Review saves never write accepted Feature projections. Pending saves and unsaved text
-block task acceptance in the editor. Server guards independently check the exact
-proposal, review and target revision, current task ancestry and unfinished task state.
-A changed accepted target requires an explicit comparison refresh; overlapping changes
-remain blocked for resolution rather than being silently overwritten.
+as read-only context. Review saves never write accepted Feature projections. Pending
+saves and unsaved text block task acceptance in the editor. Server guards independently
+check the exact proposal, review and target revision, current task ancestry and
+unfinished task state. A changed accepted target requires an explicit comparison
+refresh; overlapping changes remain blocked for resolution rather than being silently
+overwritten.
 
 Creation acceptance adopts the reviewed gallery as the new Feature's baseline.
 Existing-Feature photo acceptance applies the reviewed changes through the normal
@@ -552,8 +579,8 @@ still apply: lifecycle creation proposals create unpublished Features, while the
 compatibility initial-review path retains its existing publication semantics.
 
 Photo-task headers provide Reject, Accept All and Accept Classified. Both acceptance
-actions fence the complete pending proposal set and publish one combined gallery in
-the same transaction as all proposal receipts and task completion. Accept All classifies
+actions fence the complete pending proposal set and publish one combined gallery in the
+same transaction as all proposal receipts and task completion. Accept All classifies
 unclassified additions as general; Accept Classified declines them. Intent policy still
 controls visibility, including private research images. If none qualify, the task is
 reviewed without changing the accepted gallery. Orphan tasks with no submitted photos
@@ -566,5 +593,5 @@ normal accepted-image delivery rules apply.
 
 Regression coverage is in `feature-image-review.test.ts` and
 `task-image-review.remote.test.ts`; the headless editor check is
-`scripts/visual-checks/task-image-review-check.ts`. These are implementation checks,
-not evidence of a production rollout.
+`scripts/visual-checks/task-image-review-check.ts`. These are implementation checks, not
+evidence of a production rollout.
