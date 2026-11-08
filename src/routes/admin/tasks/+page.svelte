@@ -1,7 +1,10 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { page } from '$app/state'
+import { onMount, untrack } from 'svelte'
 import { preloadCode } from '$app/navigation'
+// LOCATION TASKS
+import { LOCATION_TASK_TYPES, locationTaskLabel } from '#lib/locations/tasks.js'
 // CONTEXT
 import { useAdminIndexQuery } from '#lib/adapters/useAdminIndexQuery.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -50,6 +53,10 @@ const filters = {
             { value: 'newFeature', label: m.smart_crazy_cuckoo_play() },
             { value: 'newPhoto', label: m.aware_sea_goose_nail() },
             { value: 'reportedMissing', label: m.noble_zany_crow_dance() },
+            ...LOCATION_TASK_TYPES.map(type => ({
+              value: type,
+              label: locationTaskLabel(type),
+            })),
           ],
         }),
         createSelectFilter('reviewAction', {
@@ -93,6 +100,22 @@ const headerCtrl = getHeaderCtrl()
 // Warm the editor modules while the queue is visible, before a task is selected.
 onMount(() => {
   void preloadCode('/admin/tasks/[task]').catch(() => {})
+})
+// The route owns this explicit development input; the shared context never reads request-bound page state.
+let appliedPreviewFeatureId: string | undefined
+$effect(() => {
+  const requested =
+    import.meta.env.DEV && page.url.searchParams.has('locationTaskPreview')
+      ? (page.url.searchParams.get('previewFeatureId') ?? undefined)
+      : undefined
+  const ready = adminCtx.isInitialised
+  untrack(() => {
+    adminCtx.taskPreviewFeatureId = requested
+    if (ready && appliedPreviewFeatureId !== requested) {
+      appliedPreviewFeatureId = requested
+      void adminCtx.invalidateAndRefresh(FirstClassResource.task)
+    }
+  })
 })
 adminCtx.setFacet(false, false, FirstClassResource.task)
 
@@ -155,12 +178,6 @@ $effect(() => {
   headerCtrl.clearFooter()
 })
 
-
-
-// Derived states for navigation capability
-
-
-
 /**
  * Opens the review workspace from a queue thumbnail.
  * @param _image - Clicked task image
@@ -170,7 +187,6 @@ $effect(() => {
 function openModal(_image: ImageCtxEnvelope, task: Task): void {
   navigateOnAdmin(adminCtx, FirstClassResource.task, task.id)
 }
-
 </script>
 
 <div class="text-foreground flex min-h-0 flex-1 flex-col overflow-hidden">
