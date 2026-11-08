@@ -16,7 +16,7 @@ import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 import { m } from '#lib/i18n.js'
 
 // TYPES
-import type { FormProjectLayersSectionProps } from './formProjectLayersSection.types'
+import type { FormProjectLayersSectionProps } from './formProjectLayersSection.types.js'
 
 let {
   title,

@@ -1,4 +1,5 @@
 export type FormMapSectionProps = {
+  pinControls?: import('svelte').Snippet
   pinHighlightRequest?: number
   showMarker?: boolean
   onMapReady?: (
@@ -13,6 +14,7 @@ export type FormMapSectionProps = {
   initialCenter?: [number, number] | null
   addressMeta: import('#lib/utils/address.types.js').AddressMeta | null
   draggable?: boolean
+  draggingLocked?: boolean
   onCoordinateChange?: (coordinates: number[]) => void
   onToggleFullscreen?: (isFullscreen: boolean) => void
   onToggleCollapsed?: (isCollapsed: boolean) => void
