@@ -444,3 +444,42 @@ it.each([false, true])(
     )
   },
 )
+
+it('invalidates merge evidence when an intermediate membership closes a transitive cycle', async () => {
+  const s = setup()
+  const { assessMergeDependencies } = await import(
+    '#lib/db/services/locationMergeImpact.js'
+  )
+  s.sqlite.exec(
+    "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('a','premises','unresolved','p'),('b','premises','unresolved','p'),('c','premises','unresolved','p'),('d','premises','unresolved','p')",
+  )
+  const edge = async (child: string, parent: string) =>
+    appendLocationRelationship(
+      s.db,
+      {
+        table: 'locationMembership',
+        id: child + parent,
+        relationshipId: child + parent,
+        previousRevisionId: null,
+        scopeOrganisationId: 'p',
+        assertionState: 'asserted',
+        childLocationId: child,
+        parentLocationId: parent,
+        membershipState: 'current',
+        evidence: [],
+        observedAt: null,
+        verifiedAt: null,
+        effectiveFrom: null,
+        effectiveTo: null,
+      },
+      'editor',
+    )
+  await edge('a', 'b')
+  await edge('c', 'd')
+  const before = await assessMergeDependencies(s.db, 'a', 'd')
+  expect(before.blockers).toEqual([])
+  await edge('b', 'c')
+  const after = await assessMergeDependencies(s.db, 'a', 'd')
+  expect(after.blockers).toContain('membership-cycle-after-merge')
+  expect(after.token).not.toBe(before.token)
+})

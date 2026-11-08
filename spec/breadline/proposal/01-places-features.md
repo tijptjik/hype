@@ -1370,3 +1370,16 @@ compact search into a Discard / Keep comparison. Categories load their allowed c
 options, while translated field edits and per-photo intents are validated server-side
 before the existing atomic merge. The kept identity remains explicit on the right; photo
 movement retains immutable revision pins and attribution.
+
+## Merge review consistency (9 November 2026, Refs #194)
+
+Feature merge placement selection carries localized addresses with the chosen geometry
+and association. Shared inherited names and phone fields follow that same inspected
+Location; names and descriptions unrelated to the placement retain their selected
+values. Missing address languages are cleared instead of retaining another location's
+address.
+
+Location merge dependency evidence includes intermediate membership revisions and their
+canonical endpoint mappings. A graph change invalidates the prior review before a merge
+can introduce a transitive membership cycle. Feature split execution retains its
+existing atomic retirement, unpublished successors, and explicit redirect choice.
