@@ -865,16 +865,30 @@ export const syncPropertyValues = async (
       })
   })
 
-  const removed = existingValues.filter(value => !incomingIds.includes(value.id)).map(value => value.id)
-  const capture = await prepareFeaturePropertyCascadeCapture(db, { propertyIds: [], optionIds: removed, actor })
+  const removed = existingValues
+    .filter(value => !incomingIds.includes(value.id))
+    .map(value => value.id)
+  const capture = await prepareFeaturePropertyCascadeCapture(db, {
+    propertyIds: [],
+    optionIds: removed,
+    actor,
+  })
   // Fence the complete option set: a concurrent insertion must not become an unrecorded cascade.
-  const snapshot = JSON.stringify(existingValues.map(({ id, propertyId, rank, value }) => ({ id, propertyId, rank, value })).sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  const snapshot = JSON.stringify(
+    existingValues
+      .map(({ id, propertyId, rank, value }) => ({ id, propertyId, rank, value }))
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+  )
   const unchanged = sql`(SELECT json_group_array(json_object('id',id,'propertyId',propertyId,'rank',rank,'value',value))
     FROM (SELECT id,propertyId,rank,value FROM propertyValue WHERE propertyId=${propertyId} ORDER BY id))=${snapshot}`
   try {
     // Keep deletion, creates, guarded updates, Feature history, and readback in one transaction.
     const results = await executeRevisionBatch(db, unchanged, [
-      ...capture.before, deletion, ...creates, ...updates, ...capture.after,
+      ...capture.before,
+      deletion,
+      ...creates,
+      ...updates,
+      ...capture.after,
       db.select().from(propertyValue).where(eq(propertyValue.propertyId, propertyId)),
     ])
     if (!results) throw error(409, 'PROPERTY_VALUES_CHANGED')
@@ -1281,12 +1295,20 @@ export const preparePropertyCatalog = async (
       ),
     )
   }
-  const removedPropertyIds = existingProperties.filter(row => row.audience === 'public' && !ids.includes(row.id)).map(row => row.id)
-  const removedOptionIds = prepared.flatMap(row => row.values
-    ? (row.existing?.values ?? []).filter(value => !row.values!.some(next => next.id === value.id)).map(value => value.id)
-    : [])
+  const removedPropertyIds = existingProperties
+    .filter(row => row.audience === 'public' && !ids.includes(row.id))
+    .map(row => row.id)
+  const removedOptionIds = prepared.flatMap(row =>
+    row.values
+      ? (row.existing?.values ?? [])
+          .filter(value => !row.values!.some(next => next.id === value.id))
+          .map(value => value.id)
+      : [],
+  )
   const affectedFeatures = await prepareFeaturePropertyCascadeCapture(db, {
-    propertyIds: removedPropertyIds, optionIds: removedOptionIds, actor,
+    propertyIds: removedPropertyIds,
+    optionIds: removedOptionIds,
+    actor,
   })
   // Enclosing forms own overlapping captures; nested capture scopes retain their original preimage.
   return {

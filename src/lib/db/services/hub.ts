@@ -912,10 +912,16 @@ export const updateHubByIdWithConcurrency = async (
   const guard = exists(db.select({ id: hub.id }).from(hub).where(revisionGuard))
   const writes = prepareHubRelations(db, params.id, params, guard)
 
-  if (params.imageIntentSettings && !params.actorId) throw new Error('Image settings require an attributed actor')
+  if (params.imageIntentSettings && !params.actorId)
+    throw new Error('Image settings require an attributed actor')
   // Include policy and gallery changes in the parent form's guarded transaction.
   const imageSettings = params.imageIntentSettings
-    ? await prepareImageIntentPolicySave(db, { ...params.imageIntentSettings, scope: { type: 'hub', id: params.id }, actorId: params.actorId!, guard: guard })
+    ? await prepareImageIntentPolicySave(db, {
+        ...params.imageIntentSettings,
+        scope: { type: 'hub', id: params.id },
+        actorId: params.actorId!,
+        guard: guard,
+      })
     : []
   if (imageSettings === null) return null
   const actor = params.actorId ? { actorId: params.actorId } : undefined

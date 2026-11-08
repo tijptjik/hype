@@ -9,7 +9,7 @@ let sorting = $state<{ sortBy: string; sortOrder: 'asc' | 'desc' }>({
   sortOrder: 'asc',
 })
 </script>
-<main class="bits-theme min-h-screen bg-base-100 text-base-content">
+<main class="bits-theme bg-base-100 text-base-content min-h-screen">
   <UserDirectoryControls
     count={1689}
     archived={false}

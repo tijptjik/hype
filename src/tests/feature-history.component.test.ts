@@ -86,11 +86,17 @@ it('toggles the card surface while preserving controls and selected text', async
   expect(loadReview).toHaveBeenCalledTimes(1)
 })
 
-
 it('resolves user actors to profile links without toggling the comparison', async () => {
   const loadReview = vi.fn()
   render(FeaturePublicationHistory, {
-    entries: [{ ...entry, actorName: 'History Editor', actorUsername: 'history.editor', actorDisplayUsername: 'History.Editor' }],
+    entries: [
+      {
+        ...entry,
+        actorName: 'History Editor',
+        actorUsername: 'history.editor',
+        actorDisplayUsername: 'History.Editor',
+      },
+    ],
     canReview: true,
     loadReview,
   })
@@ -101,18 +107,28 @@ it('resolves user actors to profile links without toggling the comparison', asyn
 })
 
 it('falls back to the recorded ID when the user no longer exists', () => {
-  render(FeaturePublicationHistory, { entries: [entry], canReview: false, loadReview: vi.fn() })
+  render(FeaturePublicationHistory, {
+    entries: [entry],
+    canReview: false,
+    loadReview: vi.fn(),
+  })
   expect(screen.getByText('editor')).toBeTruthy()
   expect(screen.queryByRole('link')).toBeNull()
 })
 
 it('renders multilingual photo metadata as two fields with locale comparison rows', async () => {
-  const changes = ['alt', 'caption'].flatMap(field => ['en', 'zh-Hans', 'zh-Hant'].map(locale => ({
-    path: ['gallery', 'entries', 'photo', field, locale],
-    before: { present: false as const },
-    after: { present: true as const, value: `${field} ${locale}` },
-  })))
-  render(FeaturePublicationHistory, { entries: [entry], canReview: true, loadReview: vi.fn().mockResolvedValue({ changes, redacted: false }) })
+  const changes = ['alt', 'caption'].flatMap(field =>
+    ['en', 'zh-Hans', 'zh-Hant'].map(locale => ({
+      path: ['gallery', 'entries', 'photo', field, locale],
+      before: { present: false as const },
+      after: { present: true as const, value: `${field} ${locale}` },
+    })),
+  )
+  render(FeaturePublicationHistory, {
+    entries: [entry],
+    canReview: true,
+    loadReview: vi.fn().mockResolvedValue({ changes, redacted: false }),
+  })
   await fireEvent.click(screen.getByRole('button', { name: 'View changes' }))
   expect(await screen.findByRole('button', { name: '2 changed fields' })).toBeTruthy()
   expect(screen.getAllByRole('table')).toHaveLength(2)

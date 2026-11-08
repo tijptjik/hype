@@ -713,11 +713,21 @@ it.each(['clear', 'release', 'new view'] as const)(
 )
 
 it('renders rows before the independent count and skips continuation counts', async () => {
-  const count = controlledQuery(), first = controlledQuery(), second = controlledQuery()
-  const fetcher = vi.fn().mockReturnValueOnce(count.query).mockReturnValueOnce(first.query).mockReturnValueOnce(second.query)
+  const count = controlledQuery(),
+    first = controlledQuery(),
+    second = controlledQuery()
+  const fetcher = vi
+    .fn()
+    .mockReturnValueOnce(count.query)
+    .mockReturnValueOnce(first.query)
+    .mockReturnValueOnce(second.query)
   const list = new ResourceList(fetcher)
   const initial = list.load({ ...input, includeCount: true })
-  first.resolve({ data: [row('a')], totalCount: null, nextCursor: { id: 'a', signature: 'scope' } })
+  first.resolve({
+    data: [row('a')],
+    totalCount: null,
+    nextCursor: { id: 'a', signature: 'scope' },
+  })
   await initial
   expect(list.rows).toHaveLength(1)
   expect(list.loading).toBe(false)
@@ -727,7 +737,9 @@ it('renders rows before the independent count and skips continuation counts', as
   await count.query
   expect(list.totalCount).toBe(42)
   const more = list.next()
-  expect(fetcher).toHaveBeenLastCalledWith(expect.objectContaining({ includeCount: false }))
+  expect(fetcher).toHaveBeenLastCalledWith(
+    expect.objectContaining({ includeCount: false }),
+  )
   second.resolve({ data: [row('b')], totalCount: null, nextCursor: null })
   await more
   expect(list.totalCount).toBe(42)
@@ -737,9 +749,18 @@ it('renders rows before the independent count and skips continuation counts', as
 })
 
 it('does not publish an obsolete count after switching filters', async () => {
-  const oldCount = controlledQuery(), oldRows = controlledQuery()
-  const newCount = controlledQuery(), newRows = controlledQuery()
-  const list = new ResourceList(vi.fn().mockReturnValueOnce(oldCount.query).mockReturnValueOnce(oldRows.query).mockReturnValueOnce(newCount.query).mockReturnValueOnce(newRows.query))
+  const oldCount = controlledQuery(),
+    oldRows = controlledQuery()
+  const newCount = controlledQuery(),
+    newRows = controlledQuery()
+  const list = new ResourceList(
+    vi
+      .fn()
+      .mockReturnValueOnce(oldCount.query)
+      .mockReturnValueOnce(oldRows.query)
+      .mockReturnValueOnce(newCount.query)
+      .mockReturnValueOnce(newRows.query),
+  )
   const first = list.load({ ...input, includeCount: true })
   oldRows.resolve({ data: [row('old')], nextCursor: null })
   await first

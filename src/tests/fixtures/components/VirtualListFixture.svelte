@@ -3,9 +3,7 @@ import VirtualResourceList from '#lib/bits/custom/resources/VirtualResourceList.
 let { items }: { items: { id: string; name: string }[] } = $props()
 </script>
 <VirtualResourceList {items}>
-  {#snippet item(
-    row,
-  )}
+  {#snippet item(row)}
     <span>{row.name}</span>
   {/snippet}
 </VirtualResourceList>

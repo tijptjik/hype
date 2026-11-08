@@ -273,9 +273,11 @@ const ReadLocationLifecycle = z.preprocess(
 )
 const ReadFeatureAuthoring = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
-  z.object({
-    nameMode: z.enum(['inherit', 'independent']),
-  }).optional(),
+  z
+    .object({
+      nameMode: z.enum(['inherit', 'independent']),
+    })
+    .optional(),
 )
 const ReadLocationNames = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
@@ -405,13 +407,17 @@ export const FeatureProfile = z.enum([
 ])
 
 export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
-  i18n: contentLocaleMap(FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true })).nullish(),
+  i18n: contentLocaleMap(
+    FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true }),
+  ).nullish(),
   property: PropertyDetailProfileAPI.optional(),
   propertyValue: PropertyValueDetailProfileAPI.nullish(),
 })
 
 export const FeaturePropertyAPI = FeaturePropertyBase.extend({
-  i18n: contentLocaleMap(FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true })).nullish(),
+  i18n: contentLocaleMap(
+    FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true }),
+  ).nullish(),
   property: PropertyAdminProfileAPI.optional(),
   propertyValue: PropertyValueAdminProfileAPI.nullish(),
 })

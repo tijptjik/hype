@@ -84,8 +84,14 @@ describe('user contribution profiles', () => {
   })
 
   it('retains authorized unpublished contributions only for the explicit admin projection', () => {
-    const result = toUserProfileResponseShape(contributedUser as unknown as UserRaw, 'detail', true)
-    expect(result?.contributedFeatures).toEqual({ 'project-1': ['feature-1', 'feature-2'] })
+    const result = toUserProfileResponseShape(
+      contributedUser as unknown as UserRaw,
+      'detail',
+      true,
+    )
+    expect(result?.contributedFeatures).toEqual({
+      'project-1': ['feature-1', 'feature-2'],
+    })
     expect(result?.contributedImages).toEqual({ 'project-1': ['image-1', 'image-2'] })
   })
 

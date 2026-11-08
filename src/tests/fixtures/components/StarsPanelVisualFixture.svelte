@@ -84,5 +84,5 @@ const shell = {
   },
 } as ReturnType<typeof usePanelShellModel>
 </script>
-<div class="relative h-screen bg-surface"><StarsPanel {model} {shell} /></div>
+<div class="bg-surface relative h-screen"><StarsPanel {model} {shell} /></div>
 <output class="sr-only" data-opened>{opened}</output>

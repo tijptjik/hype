@@ -18,7 +18,7 @@ const items = [
   { ref: 'image', label: 'Image', icon: Photo },
 ]
 </script>
-<div class="bits-theme flex h-[72px] items-center justify-center bg-surface">
+<div class="bits-theme bg-surface flex h-[72px] items-center justify-center">
   <HeaderFacets
     {items}
     {active}

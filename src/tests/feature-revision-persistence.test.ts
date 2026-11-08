@@ -79,36 +79,70 @@ describe('persisted feature revision workflow', () => {
     const f = fixture()
     const location = { locationId: 'place', factsRevisionId: 'facts' }
     const baseline = (await initializeFeatureRevision(f.db, {
-      ...f.common, content: { location }, published: true,
+      ...f.common,
+      content: { location },
+      published: true,
     }))!
     const moved = { locationId: 'other-place', factsRevisionId: 'facts' }
     const a = await f.proposal(baseline, { location: moved })
-    const b = await f.proposal(baseline, { location: { ...location, factsRevisionId: 'new-facts' } })
-    const mergePolicy = { isAtomic: (path: readonly string[]) => path.length === 1 && path[0] === 'location' }
+    const b = await f.proposal(baseline, {
+      location: { ...location, factsRevisionId: 'new-facts' },
+    })
+    const mergePolicy = {
+      isAtomic: (path: readonly string[]) =>
+        path.length === 1 && path[0] === 'location',
+    }
     const common = { ...f.common, validate: () => [], project: f.project, mergePolicy }
-    expect((await acceptFeatureRevisionProposal(f.db, {
-      ...common, proposalId: a.proposalId, expectedCandidateRevisionId: a.candidateRevisionId,
-      expectedPublishedRevisionId: baseline, expectedGeneration: 0,
-    })).status).toBe('accepted')
+    expect(
+      (
+        await acceptFeatureRevisionProposal(f.db, {
+          ...common,
+          proposalId: a.proposalId,
+          expectedCandidateRevisionId: a.candidateRevisionId,
+          expectedPublishedRevisionId: baseline,
+          expectedGeneration: 0,
+        })
+      ).status,
+    ).toBe('accepted')
     const comparison = {
-      ...common, proposalId: b.proposalId, expectedCandidateRevisionId: b.candidateRevisionId,
-      expectedPublishedRevisionId: a.candidateRevisionId, expectedGeneration: 1,
+      ...common,
+      proposalId: b.proposalId,
+      expectedCandidateRevisionId: b.candidateRevisionId,
+      expectedPublishedRevisionId: a.candidateRevisionId,
+      expectedGeneration: 1,
     }
     expect(await acceptFeatureRevisionProposal(f.db, comparison)).toMatchObject({
-      status: 'conflict', conflicts: [{ path: ['location'] }],
+      status: 'conflict',
+      conflicts: [{ path: ['location'] }],
     })
-    expect(f.sqlite.prepare('SELECT status FROM featureRevisionProposal WHERE id=?').get(b.proposalId))
-      .toEqual({ status: 'submitted' })
-    expect(f.sqlite.prepare("SELECT content FROM publicProjection WHERE featureId='f'").get())
-      .toEqual({ content: JSON.stringify({ location: moved }) })
+    expect(
+      f.sqlite
+        .prepare('SELECT status FROM featureRevisionProposal WHERE id=?')
+        .get(b.proposalId),
+    ).toEqual({ status: 'submitted' })
+    expect(
+      f.sqlite
+        .prepare("SELECT content FROM publicProjection WHERE featureId='f'")
+        .get(),
+    ).toEqual({ content: JSON.stringify({ location: moved }) })
     const reviewed = { locationId: 'other-place', factsRevisionId: 'reviewed-facts' }
     const result = await acceptFeatureRevisionProposal(f.db, {
-      ...comparison, resolutions: [{ path: ['location'], result: { present: true, value: reviewed } }],
+      ...comparison,
+      resolutions: [{ path: ['location'], result: { present: true, value: reviewed } }],
     })
     expect(result.status).toBe('accepted')
     if (result.status === 'accepted') {
-      expect(f.sqlite.prepare('SELECT previousRevisionId,mergedFromRevisionId,content FROM featureRevision WHERE id=?').get(result.revisionId))
-        .toEqual({ previousRevisionId: a.candidateRevisionId, mergedFromRevisionId: b.candidateRevisionId, content: JSON.stringify({ location: reviewed }) })
+      expect(
+        f.sqlite
+          .prepare(
+            'SELECT previousRevisionId,mergedFromRevisionId,content FROM featureRevision WHERE id=?',
+          )
+          .get(result.revisionId),
+      ).toEqual({
+        previousRevisionId: a.candidateRevisionId,
+        mergedFromRevisionId: b.candidateRevisionId,
+        content: JSON.stringify({ location: reviewed }),
+      })
     }
   })
 
@@ -405,13 +439,20 @@ it('requires explicit first-publication intent before publishing a never-publish
     published: false,
   }))!
   const candidate = await f.proposal(baseline, { en: 'First publication', zh: '舊' })
-  expect(await acceptFeatureRevisionProposal(f.db, {
-    ...f.common, ...candidate, expectedCandidateRevisionId: candidate.candidateRevisionId,
-    expectedPublishedRevisionId: null, expectedGeneration: 0,
-    validate: () => [], project: f.project,
-  })).toEqual({ status: 'stale' })
-  expect(f.sqlite.prepare("SELECT isPublished,isDraft FROM feature WHERE id='f'").get())
-    .toEqual({ isPublished: 0, isDraft: 1 })
+  expect(
+    await acceptFeatureRevisionProposal(f.db, {
+      ...f.common,
+      ...candidate,
+      expectedCandidateRevisionId: candidate.candidateRevisionId,
+      expectedPublishedRevisionId: null,
+      expectedGeneration: 0,
+      validate: () => [],
+      project: f.project,
+    }),
+  ).toEqual({ status: 'stale' })
+  expect(
+    f.sqlite.prepare("SELECT isPublished,isDraft FROM feature WHERE id='f'").get(),
+  ).toEqual({ isPublished: 0, isDraft: 1 })
   expect(
     (
       await acceptFeatureRevisionProposal(f.db, {
@@ -432,19 +473,43 @@ it('requires explicit first-publication intent before publishing a never-publish
 })
 
 it('retains system attribution for policy-authorized acceptance without changing the author', async () => {
-  const f = fixture(), baseline = (await f.baseline())!
+  const f = fixture(),
+    baseline = (await f.baseline())!
   const candidate = await f.proposal(baseline, { en: 'Policy accepted', zh: '舊' })
-  expect((await acceptFeatureRevisionProposal(f.db, {
-    ...f.common, ...candidate, actorId: 'system:location-adoption', origin: 'system',
+  expect(
+    (
+      await acceptFeatureRevisionProposal(f.db, {
+        ...f.common,
+        ...candidate,
+        actorId: 'system:location-adoption',
+        origin: 'system',
+        reason: 'Accepted under the captured Location policy',
+        expectedCandidateRevisionId: candidate.candidateRevisionId,
+        expectedPublishedRevisionId: baseline,
+        expectedGeneration: 0,
+        validate: () => [],
+        project: f.project,
+      })
+    ).status,
+  ).toBe('accepted')
+  expect(
+    f.sqlite
+      .prepare(
+        "SELECT c.actorId,c.origin,c.reason FROM featureRevisionReview r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.action='accepted'",
+      )
+      .get(),
+  ).toEqual({
+    actorId: 'system:location-adoption',
+    origin: 'system',
     reason: 'Accepted under the captured Location policy',
-    expectedCandidateRevisionId: candidate.candidateRevisionId,
-    expectedPublishedRevisionId: baseline, expectedGeneration: 0,
-    validate: () => [], project: f.project,
-  })).status).toBe('accepted')
-  expect(f.sqlite.prepare("SELECT c.actorId,c.origin,c.reason FROM featureRevisionReview r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.action='accepted'").get())
-    .toEqual({ actorId: 'system:location-adoption', origin: 'system', reason: 'Accepted under the captured Location policy' })
-  expect(f.sqlite.prepare('SELECT c.actorId,c.origin FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.id=?').get(candidate.candidateRevisionId))
-    .toEqual({ actorId: 'editor', origin: 'user' })
+  })
+  expect(
+    f.sqlite
+      .prepare(
+        'SELECT c.actorId,c.origin FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.id=?',
+      )
+      .get(candidate.candidateRevisionId),
+  ).toEqual({ actorId: 'editor', origin: 'user' })
 })
 
 it('does not append history for an unchanged draft save', async () => {

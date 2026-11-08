@@ -16,7 +16,13 @@ type AcceptedLocation = NonNullable<FeatureRevisionContent['placement']['locatio
  */
 export async function readFeatureLocationRevisionMemberships(
   db: Database,
-  input: Pick<AcceptedLocation, 'locationId' | 'associationVersion' | 'occupancyRevisionId' | 'membershipRevisionIds'>,
+  input: Pick<
+    AcceptedLocation,
+    | 'locationId'
+    | 'associationVersion'
+    | 'occupancyRevisionId'
+    | 'membershipRevisionIds'
+  >,
 ): Promise<AcceptedLocation['memberships']> {
   const direct = await db.all<AcceptedLocation['memberships'][number]>(sql`
     SELECT l.id AS containerLocationId,l.kind AS role,${input.associationVersion} AS bindingVersion,
@@ -29,12 +35,22 @@ export async function readFeatureLocationRevisionMemberships(
       'premises' AS role,${input.associationVersion} AS bindingVersion,NULL AS occupancyRevisionId,min(m.id) AS membershipRevisionId
     FROM locationMembership m JOIN json_each(${JSON.stringify(input.membershipRevisionIds)}) j ON j.value=m.id
     GROUP BY (SELECT locationId FROM locationCanonical WHERE aliasId=m.parentLocationId)`)
-  const selected = new Map(direct.map(row => [JSON.stringify([row.containerLocationId, row.role]), row]))
+  const selected = new Map(
+    direct.map(row => [JSON.stringify([row.containerLocationId, row.role]), row]),
+  )
   for (const row of inherited) {
     const key = JSON.stringify([row.containerLocationId, row.role])
     if (!selected.has(key)) selected.set(key, row)
   }
   return [...selected.values()].sort((a, b) =>
-    a.containerLocationId < b.containerLocationId ? -1 : a.containerLocationId > b.containerLocationId ? 1 :
-      a.role < b.role ? -1 : a.role > b.role ? 1 : 0)
+    a.containerLocationId < b.containerLocationId
+      ? -1
+      : a.containerLocationId > b.containerLocationId
+        ? 1
+        : a.role < b.role
+          ? -1
+          : a.role > b.role
+            ? 1
+            : 0,
+  )
 }

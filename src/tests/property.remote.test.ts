@@ -124,7 +124,9 @@ vi.mock('#lib/db/services/property.js', () => ({
 }))
 
 vi.mock('#lib/db/services/hub.js', () => ({ probeHubQuery: mockProbeHubQuery }))
-vi.mock('#lib/db/services/organisation.js', () => ({ probeOrganisationQuery: mockProbeOrganisationQuery }))
+vi.mock('#lib/db/services/organisation.js', () => ({
+  probeOrganisationQuery: mockProbeOrganisationQuery,
+}))
 
 vi.mock('#lib/db/services/project.js', () => ({
   probeProjectQuery: mockProbeProjectQuery,
@@ -338,14 +340,25 @@ describe('property.remote', () => {
 
   describe.each(['hub', 'organisation'] as const)('%s-owned category reads', owner => {
     const setup = () => {
-      mockPropertyScopeRows.mockResolvedValue([{
-        id: 'shared-category', scope: owner, projectId: null,
-        hubId: owner === 'hub' ? 'hub-1' : null,
-        organisationId: owner === 'organisation' ? 'org-1' : null,
-      }])
+      mockPropertyScopeRows.mockResolvedValue([
+        {
+          id: 'shared-category',
+          scope: owner,
+          projectId: null,
+          hubId: owner === 'hub' ? 'hub-1' : null,
+          organisationId: owner === 'organisation' ? 'org-1' : null,
+        },
+      ])
       const probe = owner === 'hub' ? mockProbeHubQuery : mockProbeOrganisationQuery
-      const authorize = owner === 'hub' ? mockAuthorizeHubReadForProbe : mockAuthorizeOrganisationReadForProbe
-      probe.mockResolvedValue({ id: owner === 'hub' ? 'hub-1' : 'org-1', isPublished: true, isArchived: false })
+      const authorize =
+        owner === 'hub'
+          ? mockAuthorizeHubReadForProbe
+          : mockAuthorizeOrganisationReadForProbe
+      probe.mockResolvedValue({
+        id: owner === 'hub' ? 'hub-1' : 'org-1',
+        isPublished: true,
+        isArchived: false,
+      })
       authorize.mockReturnValue({ allowed: true })
       return { probe, authorize }
     }
@@ -354,7 +367,9 @@ describe('property.remote', () => {
       const { authorize } = setup()
       const row = { id: 'shared-category', values: [{ id: 'choice-1' }] }
       mockLoadProperty.mockResolvedValue(row)
-      await expect(remote.getProperty({ id: 'shared-category' })).resolves.toEqual({ data: { row } })
+      await expect(remote.getProperty({ id: 'shared-category' })).resolves.toEqual({
+        data: { row },
+      })
       expect(authorize).toHaveBeenCalled()
       expect(mockProbeProjectQuery).not.toHaveBeenCalled()
       expect(mockLoadProperty).toHaveBeenCalledOnce()
@@ -363,14 +378,18 @@ describe('property.remote', () => {
     it('does not hydrate choices when owner read permission is denied', async () => {
       const { authorize } = setup()
       authorize.mockReturnValue({ allowed: false, code: 'INSUFFICIENT_ROLE' })
-      await expect(remote.getProperty({ id: 'shared-category' })).rejects.toMatchObject({ status: 403 })
+      await expect(remote.getProperty({ id: 'shared-category' })).rejects.toMatchObject(
+        { status: 403 },
+      )
       expect(mockLoadProperty).not.toHaveBeenCalled()
     })
 
     it('returns null without hydrating choices when the owner is missing', async () => {
       const { probe } = setup()
       probe.mockResolvedValue(null)
-      await expect(remote.getProperty({ id: 'shared-category' })).resolves.toEqual({ data: null })
+      await expect(remote.getProperty({ id: 'shared-category' })).resolves.toEqual({
+        data: null,
+      })
       expect(mockLoadProperty).not.toHaveBeenCalled()
     })
   })

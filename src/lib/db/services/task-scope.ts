@@ -34,7 +34,7 @@ export const taskFeatureScopeCondition = (): SQL<unknown> => sql`exists (
  */
 export async function taskLifecycleScopeCondition(db: Database): Promise<SQL> {
   const existing = taskFeatureScopeCondition()
-  if (!await hasFeatureLifecycleStorage(db)) return existing
+  if (!(await hasFeatureLifecycleStorage(db))) return existing
   // Keep both ancestry branches inside the caller's identity and authorization filters.
   return sql`((${existing}) OR EXISTS (
     SELECT 1 FROM main.task creation_task

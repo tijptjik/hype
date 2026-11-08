@@ -1502,47 +1502,62 @@ describe('accepted gallery read projection', () => {
       (await applyFeatureGalleryPins(f.db, rows, { publishedOnly: false }))[0].images,
     ).toHaveLength(1)
   })
-  it.each([true, null])('previews parent-suppressed photos with local intent %s without publishing the head', async localIsPublished => {
-    const f = fixture()
-    await f.initialize(false)
-    f.sqlite.exec("UPDATE feature SET isPublished=0 WHERE id='f'")
-    const rows = [
-      {
-        id: 'f',
-        images: [
-          { imageId: 'photo', isPublished: false, localIsPublished, image: { publicId: 'mutable' } },
-          { imageId: 'research', isPublished: false, image: { publicId: 'private' } },
-        ],
-      },
-    ]
-    const result = await applyFeatureGalleryPins(f.db, rows, {
-      publishedOnly: true,
-      publicationPreview: true,
-    })
-    expect(result[0].images.map(link => link.imageId)).toEqual(['photo'])
-    expect(result[0].images[0].isPublished).toBe(true)
-    expect(result[0].images[0].image).toMatchObject({
-      publicId: 'immutable-photo',
-      imageRevisionId: 'image-r1',
-    })
-    expect(
-      (await applyFeatureGalleryPins(f.db, rows, { publishedOnly: true }))[0].images,
-    ).toEqual([])
-    expect(
-      f.sqlite
-        .prepare(
-          "SELECT publishedRevisionId FROM featureRevisionHead WHERE featureId='f'",
-        )
-        .get()?.publishedRevisionId,
-    ).toBeNull()
-    // An explicit photo-level suppression must not be restored by preview.
-    rows[0].images[0].localIsPublished = false
-    expect((await applyFeatureGalleryPins(f.db, rows, {
-      publishedOnly: true, publicationPreview: true,
-    }))[0].images).toEqual([])
-    expect(f.sqlite.prepare("SELECT isPublished FROM feature WHERE id='f'").get()?.isPublished).toBe(0)
-
-  })
+  it.each([true, null])(
+    'previews parent-suppressed photos with local intent %s without publishing the head',
+    async localIsPublished => {
+      const f = fixture()
+      await f.initialize(false)
+      f.sqlite.exec("UPDATE feature SET isPublished=0 WHERE id='f'")
+      const rows = [
+        {
+          id: 'f',
+          images: [
+            {
+              imageId: 'photo',
+              isPublished: false,
+              localIsPublished,
+              image: { publicId: 'mutable' },
+            },
+            { imageId: 'research', isPublished: false, image: { publicId: 'private' } },
+          ],
+        },
+      ]
+      const result = await applyFeatureGalleryPins(f.db, rows, {
+        publishedOnly: true,
+        publicationPreview: true,
+      })
+      expect(result[0].images.map(link => link.imageId)).toEqual(['photo'])
+      expect(result[0].images[0].isPublished).toBe(true)
+      expect(result[0].images[0].image).toMatchObject({
+        publicId: 'immutable-photo',
+        imageRevisionId: 'image-r1',
+      })
+      expect(
+        (await applyFeatureGalleryPins(f.db, rows, { publishedOnly: true }))[0].images,
+      ).toEqual([])
+      expect(
+        f.sqlite
+          .prepare(
+            "SELECT publishedRevisionId FROM featureRevisionHead WHERE featureId='f'",
+          )
+          .get()?.publishedRevisionId,
+      ).toBeNull()
+      // An explicit photo-level suppression must not be restored by preview.
+      rows[0].images[0].localIsPublished = false
+      expect(
+        (
+          await applyFeatureGalleryPins(f.db, rows, {
+            publishedOnly: true,
+            publicationPreview: true,
+          })
+        )[0].images,
+      ).toEqual([])
+      expect(
+        f.sqlite.prepare("SELECT isPublished FROM feature WHERE id='f'").get()
+          ?.isPublished,
+      ).toBe(0)
+    },
+  )
 })
 
 describe('revision publication controls and workspace privacy', () => {

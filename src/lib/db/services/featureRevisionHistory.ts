@@ -34,18 +34,21 @@ export async function readFeaturePublicationChanges(
   baseline: boolean
   unpublished: boolean
 } | null> {
-  const lifecycle=await hasFeatureLifecycleStorage(db)
+  const lifecycle = await hasFeatureLifecycleStorage(db)
   const row = await db.get<{
     before: string | null
     after: string | null
     current: string | null
-    stateBefore?:string|null
-    stateAfter?:string|null
-  }>(lifecycle?sql`
+    stateBefore?: string | null
+    stateAfter?: string | null
+  }>(
+    lifecycle
+      ? sql`
     SELECT b.content AS before,a.content AS after,c.content AS current,b.recordState stateBefore,a.recordState stateAfter
     FROM featureRevision a LEFT JOIN featureRevision b ON b.id=a.previousRevisionId AND b.featureId=a.featureId
     JOIN feature f ON f.id=a.featureId LEFT JOIN featureRevision c ON c.id=f.currentRevisionId AND c.featureId=f.id
-    WHERE a.featureId=${input.featureId} AND a.sequence=${input.generation} AND (${input.guard})`:sql`
+    WHERE a.featureId=${input.featureId} AND a.sequence=${input.generation} AND (${input.guard})`
+      : sql`
     SELECT b.content AS before,a.content AS after,c.content AS current
     FROM featureRevisionPublication p
     LEFT JOIN featureRevision b ON b.id=p.previousRevisionId AND b.featureId=p.featureId
@@ -53,7 +56,8 @@ export async function readFeaturePublicationChanges(
     LEFT JOIN featureRevisionHead h ON h.featureId=p.featureId
     LEFT JOIN featureRevisionPublication latest ON latest.featureId=h.featureId AND latest.generation=h.generation
     LEFT JOIN featureRevision c ON c.id=COALESCE(h.publishedRevisionId,latest.previousRevisionId) AND c.featureId=h.featureId
-    WHERE p.featureId=${input.featureId} AND p.generation=${input.generation} AND (${input.guard})`)
+    WHERE p.featureId=${input.featureId} AND p.generation=${input.generation} AND (${input.guard})`,
+  )
   if (!row) return null
   if (input.generation === 0 || !row.after)
     return {
@@ -85,19 +89,40 @@ export async function readFeaturePublicationChanges(
           input.allowedInternalIds.has(change.path[1])
         : [...privateIds].every(id => input.allowedInternalIds.has(id))),
   )
-  const beforeState=row.stateBefore?JSON.parse(row.stateBefore):null,afterState=row.stateAfter?JSON.parse(row.stateAfter):null
-  const stateChanges=lifecycle&&beforeState&&afterState?diffRevisionValues(
-    {present:true,value:{isPublished:beforeState.isPublished??null,isArchived:beforeState.isArchived??null}},
-    {present:true,value:{isPublished:afterState.isPublished??null,isArchived:afterState.isArchived??null}},
-  ).map(change=>({...change,path:['recordState',...change.path]})):[]
+  const beforeState = row.stateBefore ? JSON.parse(row.stateBefore) : null,
+    afterState = row.stateAfter ? JSON.parse(row.stateAfter) : null
+  const stateChanges =
+    lifecycle && beforeState && afterState
+      ? diffRevisionValues(
+          {
+            present: true,
+            value: {
+              isPublished: beforeState.isPublished ?? null,
+              isArchived: beforeState.isArchived ?? null,
+            },
+          },
+          {
+            present: true,
+            value: {
+              isPublished: afterState.isPublished ?? null,
+              isArchived: afterState.isArchived ?? null,
+            },
+          },
+        ).map(change => ({ ...change, path: ['recordState', ...change.path] }))
+      : []
   return {
     changes: [
-      ...changes,...stateChanges,
+      ...changes,
+      ...stateChanges,
       ...(await readFeatureImageMetadataChanges(db, before, after)),
     ],
     redacted: changes.length !== all.length,
     baseline: false,
-    unpublished: Boolean(lifecycle&&beforeState?.isPublished===true&&afterState?.isPublished===false),
+    unpublished: Boolean(
+      lifecycle &&
+        beforeState?.isPublished === true &&
+        afterState?.isPublished === false,
+    ),
   }
 }
 
@@ -115,11 +140,16 @@ export async function readFeaturePrivateChanges(
     allowedInternalIds: ReadonlySet<string>
   },
 ): Promise<{ changes: RevisionDifference[]; redacted: boolean } | null> {
-  if(await hasFeatureLifecycleStorage(db)) {
-    const revision=await db.get<{sequence:number|null}>(sql`SELECT sequence FROM featureRevision WHERE id=${input.revisionId} AND featureId=${input.featureId} AND (${input.guard})`)
-    if(revision?.sequence==null)return null
-    const result=await readFeaturePublicationChanges(db,{...input,generation:revision.sequence})
-    return result?{changes:result.changes,redacted:result.redacted}:null
+  if (await hasFeatureLifecycleStorage(db)) {
+    const revision = await db.get<{ sequence: number | null }>(
+      sql`SELECT sequence FROM featureRevision WHERE id=${input.revisionId} AND featureId=${input.featureId} AND (${input.guard})`,
+    )
+    if (revision?.sequence == null) return null
+    const result = await readFeaturePublicationChanges(db, {
+      ...input,
+      generation: revision.sequence,
+    })
+    return result ? { changes: result.changes, redacted: result.redacted } : null
   }
   const row = await db.get<{
     before: string

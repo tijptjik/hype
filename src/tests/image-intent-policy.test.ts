@@ -36,9 +36,7 @@ const projectScope = { type: 'project' as const, id: 'project' }
 async function fixture(published = true) {
   const f = lifecycleFixture()
   connections.push(f)
-  f.sqlite.exec(
-    "INSERT INTO hub VALUES('core','core');",
-  )
+  f.sqlite.exec("INSERT INTO hub VALUES('core','core');")
   f.sqlite.exec(readFileSync('migrations/0200_image_intent_policies.sql', 'utf8'))
   await f.initialize(published)
   return f

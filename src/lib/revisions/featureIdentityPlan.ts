@@ -48,8 +48,7 @@ export const FeatureIdentitySelectionSchema = z.object({
             z.object({
               sourceFeatureId: z.string().min(1),
               imageId: z.string().min(1),
-              intent: ImageIntentIdSchema
-                .optional(),
+              intent: ImageIntentIdSchema.optional(),
             }),
           )
           .optional(),

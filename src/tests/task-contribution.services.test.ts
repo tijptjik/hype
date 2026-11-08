@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ create: vi.fn() }))
-vi.mock('#lib/db/services/featureCreationRevision.js', () => ({ featureRevisionCreationEnabled: vi.fn(async () => false) }))
+vi.mock('#lib/db/services/featureCreationRevision.js', () => ({
+  featureRevisionCreationEnabled: vi.fn(async () => false),
+}))
 vi.mock('#lib/api/services/feature.js', () => ({
   createUserContributedFeatureTask: mocks.create,
 }))

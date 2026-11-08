@@ -655,7 +655,6 @@ const normalizeEditorTool = (value: string | null | undefined): string | null =>
   return normalized.length > 1 ? normalized : null
 }
 
-
 /**
  * Reads originals-bucket object metadata while tolerating provider-level head errors.
  *

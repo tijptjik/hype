@@ -1264,17 +1264,29 @@ it('projects accepted gallery pins before returning collection previews', async 
   }
 })
 
-
-it.each([false, true])('forwards saved preview intent %s through legacy list galleries', async publicationPreview => {
-  const { db } = setup()
-  const pin = vi.spyOn(galleryPins, 'applyFeatureGalleryPins')
-    .mockImplementation(async (_db, rows) => rows)
-  try {
-    await listFeatures(db, {}, base, { ...hub, isAdminRequest: false }, { limit: 1 }, undefined, { publicationPreview })
-    expect(pin).toHaveBeenCalledWith(db, expect.any(Array), {
-      publishedOnly: true, publicationPreview,
-    })
-  } finally {
-    pin.mockRestore()
-  }
-})
+it.each([false, true])(
+  'forwards saved preview intent %s through legacy list galleries',
+  async publicationPreview => {
+    const { db } = setup()
+    const pin = vi
+      .spyOn(galleryPins, 'applyFeatureGalleryPins')
+      .mockImplementation(async (_db, rows) => rows)
+    try {
+      await listFeatures(
+        db,
+        {},
+        base,
+        { ...hub, isAdminRequest: false },
+        { limit: 1 },
+        undefined,
+        { publicationPreview },
+      )
+      expect(pin).toHaveBeenCalledWith(db, expect.any(Array), {
+        publishedOnly: true,
+        publicationPreview,
+      })
+    } finally {
+      pin.mockRestore()
+    }
+  },
+)

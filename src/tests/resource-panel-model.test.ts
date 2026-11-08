@@ -145,7 +145,10 @@ function setup(
   render(Fixture, {
     app,
     mode: options.mode,
-    admin: { navigation: routeNavigation, isInitialised: options.adminReady ?? true } as AdminCtx,
+    admin: {
+      navigation: routeNavigation,
+      isInitialised: options.adminReady ?? true,
+    } as AdminCtx,
     onModel: value => {
       model = value
     },
@@ -416,11 +419,17 @@ it('does not load or refresh a closed public resource panel on window focus', as
   expect(list.revalidate).not.toHaveBeenCalled()
 })
 
-
-it.each([[false, false], [true, false], [false, true]])(
+it.each([
+  [false, false],
+  [true, false],
+  [false, true],
+])(
   'does not start admin sidebar requests before view=%s and admin=%s are both ready',
   async (viewReady, adminReady) => {
-    const { list, app, refreshPin, sections } = setup([], 'outside', { viewReady, adminReady })
+    const { list, app, refreshPin, sections } = setup([], 'outside', {
+      viewReady,
+      adminReady,
+    })
     sections[0].onRetry()
     window.dispatchEvent(new Event('focus'))
     await vi.advanceTimersByTimeAsync(250)

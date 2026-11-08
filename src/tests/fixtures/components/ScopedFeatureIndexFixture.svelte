@@ -42,7 +42,7 @@ onDestroy(() => view.dispose())
 
 <svelte:window bind:innerWidth={width} bind:innerHeight={height} />
 
-<main class="bits-theme flex h-screen min-h-0 flex-col bg-panel">
+<main class="bits-theme bg-panel flex h-screen min-h-0 flex-col">
   <Header
     title={{ text: 'Independent Bookstores' }}
     avatar={{ isVisible: false }}

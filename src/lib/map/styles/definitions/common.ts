@@ -1,4 +1,4 @@
-import { type NamedProtomapsFlavor } from '../flavors'
+import type { NamedProtomapsFlavor } from '../flavors'
 import { layers, namedFlavor, type Flavor } from '@protomaps/basemaps'
 import type { StyleSpecification, ExpressionSpecification } from 'maplibre-gl'
 

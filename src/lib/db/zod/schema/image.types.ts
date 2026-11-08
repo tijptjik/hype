@@ -112,7 +112,6 @@ export type EXIF = {
   [key: string]: string
 }
 
-
 export type Metadata = Record<string, string>
 export type FinalizeImageUploadLink = z.infer<typeof FinalizeImageUploadLinkSchema>
 export type FinalizeImageUploadParams = z.infer<typeof FinalizeImageUploadSchema>
@@ -229,12 +228,6 @@ export type CreateImageParams = {
   data: ImageNew
   meta?: ImageRemoteMeta
 }
-
-
-
-
-
-
 
 export type ImageMetadataResponse = EntityResponse<
   ImageMetadataBasic | ImageMetadataFull | null

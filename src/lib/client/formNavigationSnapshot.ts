@@ -12,7 +12,10 @@ const revisions = new Map<string, string>()
  * @param scope Account and resource identity. @param value Serializable draft state.
  * @returns A checkpoint that cannot be mutated by subsequent form edits.
  */
-export function captureFormNavigationSnapshot<T>(scope: string, value: T): FormNavigationSnapshot<T> {
+export function captureFormNavigationSnapshot<T>(
+  scope: string,
+  value: T,
+): FormNavigationSnapshot<T> {
   const revision = revisions.get(scope) ?? crypto.randomUUID()
   revisions.set(scope, revision)
   return { scope, revision, value: structuredClone(value) }
@@ -22,7 +25,10 @@ export function captureFormNavigationSnapshot<T>(scope: string, value: T): FormN
  * @param scope Current account and resource identity. @param saved History checkpoint.
  * @returns Whether restoration is allowed in this runtime.
  */
-export function isCurrentFormNavigationSnapshot<T>(scope: string, saved: FormNavigationSnapshot<T>): boolean {
+export function isCurrentFormNavigationSnapshot<T>(
+  scope: string,
+  saved: FormNavigationSnapshot<T>,
+): boolean {
   return saved.scope === scope && revisions.get(scope) === saved.revision
 }
 

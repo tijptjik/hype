@@ -53,16 +53,12 @@ function next(): void {
     isLoadingMore={loading}
     onNearEnd={next}
   >
-    {#snippet row(
-      entity,
-    )}
+    {#snippet row(entity)}
       <div data-row={entity.id} style="height:72px;background:#ddd">
         Location {entity.id}
       </div>
     {/snippet}
-    {#snippet card(
-      entity,
-    )}
+    {#snippet card(entity)}
       <div data-row={entity.id} style="height:396px;background:#ddd">
         Location {entity.id}
       </div>

@@ -1,6 +1,10 @@
 import { orderGallery } from '#lib/images/galleryOrder.js'
 // IMAGE INTENT POLICY
-import { readFeatureImageIntentPolicy, resolvePolicyImageIntent, prepareImageIntentGalleryChange } from './imageIntentPolicy'
+import {
+  readFeatureImageIntentPolicy,
+  resolvePolicyImageIntent,
+  prepareImageIntentGalleryChange,
+} from './imageIntentPolicy'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 // DRIZZLE
@@ -179,7 +183,8 @@ export const updateImage = async (
   db: Database,
   data: ImageDBPartial,
   ref: Id,
-): Promise<ImageDB> => (await updateImageWithFeatureImage(db, data, undefined, ref)).image
+): Promise<ImageDB> =>
+  (await updateImageWithFeatureImage(db, data, undefined, ref)).image
 
 // ═══════════════════════
 // 2. CRUD :: RELATIONAL OPERATIONS
@@ -238,21 +243,34 @@ export const updateFeatureImage = async (
   actorId = 'system:image-assignment',
 ): Promise<FeatureImageDB> => {
   const policy = await readFeatureImageIntentPolicy(db, modifiedFeatureImage.featureId)
-  if (modifiedFeatureImage.intent != null) Object.assign(modifiedFeatureImage, resolvePolicyImageIntent(policy, modifiedFeatureImage.intent))
-  else if (modifiedFeatureImage.isPublished != null) throw error(400, 'Choose an image intent to control publication')
+  if (modifiedFeatureImage.intent != null)
+    Object.assign(
+      modifiedFeatureImage,
+      resolvePolicyImageIntent(policy, modifiedFeatureImage.intent),
+    )
+  else if (modifiedFeatureImage.isPublished != null)
+    throw error(400, 'Choose an image intent to control publication')
   const mutation = prepareFeatureImageMutation(db, modifiedFeatureImage, imageId)
   const capture = await prepareFeatureGalleryAssignmentCapture(db, {
-    featureId: modifiedFeatureImage.featureId, imageId, actorId, guard: mutation.guard,
-    intent: modifiedFeatureImage.intent ?? undefined, isPublished: modifiedFeatureImage.isPublished ?? undefined,
+    featureId: modifiedFeatureImage.featureId,
+    imageId,
+    actorId,
+    guard: mutation.guard,
+    intent: modifiedFeatureImage.intent ?? undefined,
+    isPublished: modifiedFeatureImage.isPublished ?? undefined,
   })
-  const result = await executeRevisionBatch(db, sql`(${mutation.guard}) AND (${policy.guard})`, [
-    ...capture.before,
-    ...prepareTaskEvidenceRevision(db, mutation.affectedTasks),
-    ...mutation.statements,
-    prepareRevisionCheck(db, mutation.complete),
-    ...capture.after,
-    mutation.current,
-  ])
+  const result = await executeRevisionBatch(
+    db,
+    sql`(${mutation.guard}) AND (${policy.guard})`,
+    [
+      ...capture.before,
+      ...prepareTaskEvidenceRevision(db, mutation.affectedTasks),
+      ...mutation.statements,
+      prepareRevisionCheck(db, mutation.complete),
+      ...capture.after,
+      mutation.current,
+    ],
+  )
   if (!result) throw error(404, 'Feature image assignment not found')
   return (result.at(-1) as FeatureImageDB[])[0]
 }
@@ -383,10 +401,15 @@ export async function updateImageWithFeatureImage(
 ): Promise<{ image: ImageDB; featureImage?: FeatureImageDB; replayed?: boolean }> {
   if (data.id !== undefined && data.id !== imageId)
     throw error(400, 'IMAGE_ID_MISMATCH')
-  if (replay && (!data.publicId || !data.env)) throw error(400, 'INVALID_IMAGE_REPLACEMENT')
-  const policy = assignment ? await readFeatureImageIntentPolicy(db, assignment.featureId) : null
-  if (assignment?.intent != null && policy) Object.assign(assignment, resolvePolicyImageIntent(policy, assignment.intent))
-  else if (assignment?.isPublished != null) throw error(400, 'Choose an image intent to control publication')
+  if (replay && (!data.publicId || !data.env))
+    throw error(400, 'INVALID_IMAGE_REPLACEMENT')
+  const policy = assignment
+    ? await readFeatureImageIntentPolicy(db, assignment.featureId)
+    : null
+  if (assignment?.intent != null && policy)
+    Object.assign(assignment, resolvePolicyImageIntent(policy, assignment.intent))
+  else if (assignment?.isPublished != null)
+    throw error(400, 'Choose an image intent to control publication')
   const { id: _id, ...fields } = data
   const current = db.select().from(image).where(eq(image.id, imageId))
   const mutation = assignment
@@ -426,12 +449,21 @@ export async function updateImageWithFeatureImage(
     ),
     mutation?.affectedTasks,
   )!
-  const featureCapture = assignment && (assignment.intent != null || assignment.isPublished != null)
-    ? await prepareFeatureGalleryAssignmentCapture(db, {
-        featureId: assignment.featureId, imageId, actorId, guard: and(exists(current), mutation?.guard, guards?.before, policy?.guard)!,
-        intent: assignment.intent ?? undefined, isPublished: assignment.isPublished ?? undefined,
-      }) : { before: [], after: [] }
-  const capture = { before: [...logoCapture.before,...featureCapture.before], after: [...logoCapture.after,...featureCapture.after] }
+  const featureCapture =
+    assignment && (assignment.intent != null || assignment.isPublished != null)
+      ? await prepareFeatureGalleryAssignmentCapture(db, {
+          featureId: assignment.featureId,
+          imageId,
+          actorId,
+          guard: and(exists(current), mutation?.guard, guards?.before, policy?.guard)!,
+          intent: assignment.intent ?? undefined,
+          isPublished: assignment.isPublished ?? undefined,
+        })
+      : { before: [], after: [] }
+  const capture = {
+    before: [...logoCapture.before, ...featureCapture.before],
+    after: [...logoCapture.after, ...featureCapture.after],
+  }
   // Validate both targets before writes and both resulting records before committing.
   const result = await executeRevisionBatch(
     db,
@@ -483,7 +515,10 @@ export async function updateImageWithFeatureImage(
           replayed:
             (
               result[
-                capture.before.length + 2 + (mutation?.statements.length ?? 0) + (mutation ? 1 : 0)
+                capture.before.length +
+                  2 +
+                  (mutation?.statements.length ?? 0) +
+                  (mutation ? 1 : 0)
               ] as unknown[]
             ).length === 0,
         }
@@ -555,7 +590,13 @@ export const publishAllFeatureImagesExceptResearch = async (
 ): Promise<boolean> => {
   const policy = await readFeatureImageIntentPolicy(db, featureId)
   const guard = sql`(${buildFeatureCommandScopeGuard(db, featureId, expectedScope)}) AND (${policy.guard})`
-  const statements = await prepareImageIntentGalleryChange(db, { featureId, actorId: publisherId, guard, policy, classify: true })
+  const statements = await prepareImageIntentGalleryChange(db, {
+    featureId,
+    actorId: publisherId,
+    guard,
+    policy,
+    classify: true,
+  })
   return (await executeRevisionBatch(db, guard, statements)) !== null
 }
 
@@ -683,7 +724,13 @@ export const getImageForContextType = async (
 ): Promise<ImageDBFlat[] | ImageDB[]> => {
   let images: ImageDBFlat[] | ImageDB[] = []
   if (ctxType === ImageContextResource.feature) {
-    images = await getImagesForFeature(db, conditions, pagination, sorting, !isAdminMode)
+    images = await getImagesForFeature(
+      db,
+      conditions,
+      pagination,
+      sorting,
+      !isAdminMode,
+    )
   } else if (ctxType === ImageContextResource.hub) {
     images = await getImageForHub(db, conditions, pagination, sorting)
   } else if (ctxType === ImageContextResource.project) {
@@ -725,9 +772,13 @@ export const getImagesForFeature = async (
   publishedOnly = false,
 ): Promise<ImageDBFlat[]> => {
   const orderBy = toOrderBy(sorting)
-  const storage = await db.get<{ n: number }>(sql`SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name='featureRevisionHead'`)
+  const storage = await db.get<{ n: number }>(
+    sql`SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name='featureRevisionHead'`,
+  )
   // Admin galleries retain the last accepted content while publication is explicitly off.
-  const revisionSelection = publishedOnly ? sql`h.publishedRevisionId` : sql`COALESCE(h.publishedRevisionId,
+  const revisionSelection = publishedOnly
+    ? sql`h.publishedRevisionId`
+    : sql`COALESCE(h.publishedRevisionId,
     (SELECT p.previousRevisionId FROM featureRevisionPublication p WHERE p.featureId=h.featureId AND p.generation=h.generation),
     (SELECT initial.id FROM featureRevision initial JOIN featureRevisionPublication receipt
       ON receipt.featureId=initial.featureId AND receipt.changeSetId=initial.changeSetId AND receipt.generation=0
@@ -737,10 +788,14 @@ export const getImagesForFeature = async (
     JOIN featureRevisionImage pin ON pin.featureRevisionId=r.id WHERE f.id=${featureImage.featureId} AND pin.imageId=${image.id}
       AND (${Number(!publishedOnly)} OR (f.isPublished=1 AND f.isArchived=0 AND EXISTS(
         SELECT 1 FROM json_each(r.content,'$.gallery.entries') entry WHERE entry.key=${image.id} AND json_extract(entry.value,'$.isPublished')=1))))`
-  const pinnedOrder = lifecycle ? sql`COALESCE((SELECT pin.position FROM feature f JOIN featureRevisionImage pin ON pin.featureRevisionId=f.currentRevisionId
-    WHERE f.id=${featureImage.featureId} AND pin.imageId=${image.id}),2147483647)` : storage?.n ? sql`COALESCE((SELECT pin.position FROM featureRevisionHead h
+  const pinnedOrder = lifecycle
+    ? sql`COALESCE((SELECT pin.position FROM feature f JOIN featureRevisionImage pin ON pin.featureRevisionId=f.currentRevisionId
+    WHERE f.id=${featureImage.featureId} AND pin.imageId=${image.id}),2147483647)`
+    : storage?.n
+      ? sql`COALESCE((SELECT pin.position FROM featureRevisionHead h
     JOIN featureRevisionImage pin ON pin.featureRevisionId=${revisionSelection}
-    WHERE h.featureId=${featureImage.featureId} AND h.state='active' AND pin.imageId=${image.id}),2147483647)` : sql`0`
+    WHERE h.featureId=${featureImage.featureId} AND h.state='active' AND pin.imageId=${image.id}),2147483647)`
+      : sql`0`
   const query = db
     .select({
       ...getTableColumns(image),
@@ -753,28 +808,62 @@ export const getImagesForFeature = async (
     .from(image)
     .innerJoin(featureImage, eq(image.id, featureImage.imageId))
     .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...conditions, lifecycle ? currentMembership : storage?.n ? sql`(NOT EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=${featureImage.featureId})
+    .where(
+      and(
+        ...conditions,
+        lifecycle
+          ? currentMembership
+          : storage?.n
+            ? sql`(NOT EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=${featureImage.featureId})
       OR EXISTS (SELECT 1 FROM featureRevisionHead h JOIN featureRevisionImage pin ON pin.featureRevisionId=${revisionSelection}
         WHERE h.featureId=${featureImage.featureId} AND h.state='active' AND pin.imageId=${image.id}
         AND (${Number(!publishedOnly)} OR (EXISTS (
           SELECT 1 FROM featureRevision r,json_each(r.content,'$.gallery.entries') entry
-          WHERE r.id=h.publishedRevisionId AND entry.key=${image.id} AND json_extract(entry.value,'$.isPublished')=1)))))` : undefined))
+          WHERE r.id=h.publishedRevisionId AND entry.key=${image.id} AND json_extract(entry.value,'$.isPublished')=1)))))`
+            : undefined,
+      ),
+    )
     .orderBy(pinnedOrder, orderBy)
   /** Resolve accepted pins after the existing live image access conditions have filtered rows. */
   const pinned = async (rows: ImageDBFlat[]): Promise<ImageDBFlat[]> => {
-    const features = new Map<string, { id: string; images: { imageId: string; image: ImageDBFlat; intent: unknown; isPublished: unknown }[] }>()
+    const features = new Map<
+      string,
+      {
+        id: string
+        images: {
+          imageId: string
+          image: ImageDBFlat
+          intent: unknown
+          isPublished: unknown
+        }[]
+      }
+    >()
     for (const row of rows) {
       if (!row.featureId) continue
-      if (!features.has(row.featureId)) features.set(row.featureId, { id: row.featureId, images: [] })
-      features.get(row.featureId)!.images.push({ imageId: row.id, image: row, intent: row.intent, isPublished: row.isPublished })
+      if (!features.has(row.featureId))
+        features.set(row.featureId, { id: row.featureId, images: [] })
+      features.get(row.featureId)!.images.push({
+        imageId: row.id,
+        image: row,
+        intent: row.intent,
+        isPublished: row.isPublished,
+      })
     }
-    const resolved = await applyFeatureGalleryPins(db, [...features.values()], { publishedOnly })
-    return resolved.flatMap(row => row.images.map(link => ({ ...link.image, intent: link.intent, isPublished: link.isPublished }))) as ImageDBFlat[]
+    const resolved = await applyFeatureGalleryPins(db, [...features.values()], {
+      publishedOnly,
+    })
+    return resolved.flatMap(row =>
+      row.images.map(link => ({
+        ...link.image,
+        intent: link.intent,
+        isPublished: link.isPublished,
+      })),
+    ) as ImageDBFlat[]
   }
   if (typeof pagination?.limit === 'number' && typeof pagination?.offset === 'number') {
-    return pinned((await query
-      .limit(pagination.limit)
-      .offset(pagination.offset)) as ImageDBFlat[])
+    return pinned(
+      (await query.limit(pagination.limit).offset(pagination.offset)) as ImageDBFlat[],
+    )
   }
   if (typeof pagination?.limit === 'number') {
     return pinned((await query.limit(pagination.limit)) as ImageDBFlat[])
@@ -823,9 +912,10 @@ export const getImagesForTask = async (
     .where(and(...conditions))
     .orderBy(orderBy)
   if (typeof pagination?.limit === 'number' && typeof pagination?.offset === 'number') {
-    return await applyFeatureUploadTaskPins(db, await query
-      .limit(pagination.limit)
-      .offset(pagination.offset))
+    return await applyFeatureUploadTaskPins(
+      db,
+      await query.limit(pagination.limit).offset(pagination.offset),
+    )
   }
   if (typeof pagination?.limit === 'number') {
     return await applyFeatureUploadTaskPins(db, await query.limit(pagination.limit))

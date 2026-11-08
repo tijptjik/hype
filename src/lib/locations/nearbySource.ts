@@ -1,7 +1,10 @@
 // THIRD PARTY
 import { polygonToCellsExperimental, POLYGON_TO_CELLS_FLAGS } from 'h3-js'
 import { z } from 'zod'
-import { matchesPlaceSearchFilters, placeSearchFilterParams } from './placeSearchFilters'
+import {
+  matchesPlaceSearchFilters,
+  placeSearchFilterParams,
+} from './placeSearchFilters'
 // DOMAIN
 import { NearbyPlacesInputSchema } from './discovery'
 import { locationDistance } from './searchPresentation'
@@ -108,7 +111,7 @@ export async function searchNearbySaanSeoiPlaces(
           for (const row of data.places)
             if (
               locationDistance(query.coordinates, row.geometry.coordinates) <=
-              query.radius &&
+                query.radius &&
               matchesPlaceSearchFilters(query.filters, {
                 basicCategory: row.basicCategory,
                 taxonomyPrimary: row.taxonomy?.primary,

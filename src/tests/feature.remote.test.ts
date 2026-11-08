@@ -542,14 +542,26 @@ describe('feature.remote authz matrix', () => {
   })
 
   it('forwards authorized preview intent to list galleries and rejects denied previews before reading', async () => {
-    const publicationPreview = { type: 'feature', id: 'feature-1', publishChildren: false }
+    const publicationPreview = {
+      type: 'feature',
+      id: 'feature-1',
+      publishChildren: false,
+    }
     await remote.getFeatures({ meta: { publicationPreview } })
     expect(previewConditions).toHaveBeenCalled()
-    expect(mockListFeatures.mock.calls.at(-1)?.[3]).toMatchObject({ isAdminRequest: false })
-    expect(mockListFeatures.mock.calls.at(-1)?.[6]).toMatchObject({ publicationPreview: true })
+    expect(mockListFeatures.mock.calls.at(-1)?.[3]).toMatchObject({
+      isAdminRequest: false,
+    })
+    expect(mockListFeatures.mock.calls.at(-1)?.[6]).toMatchObject({
+      publicationPreview: true,
+    })
     mockListFeatures.mockClear()
-    previewConditions.mockRejectedValueOnce(Object.assign(new Error('INSUFFICIENT_ROLE'), { status: 403 }))
-    await expect(remote.getFeatures({ meta: { publicationPreview } })).rejects.toMatchObject({ status: 403 })
+    previewConditions.mockRejectedValueOnce(
+      Object.assign(new Error('INSUFFICIENT_ROLE'), { status: 403 }),
+    )
+    await expect(
+      remote.getFeatures({ meta: { publicationPreview } }),
+    ).rejects.toMatchObject({ status: 403 })
     expect(mockListFeatures).not.toHaveBeenCalled()
   })
 

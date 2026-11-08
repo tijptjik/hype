@@ -566,15 +566,17 @@ export const readMetadataDocument = async ({
     const resolvedVersion =
       typeof version === 'number'
         ? version
-        : exact ? null : ((
-            await readJsonViaBindingsOrApi<{ version?: number }>({
-              platform,
-              stage: readableStage,
-              bucket,
-              key: toManifestObjectKey(normalizedPublicId),
-              fetchFn,
-            })
-          )?.version ?? null)
+        : exact
+          ? null
+          : ((
+              await readJsonViaBindingsOrApi<{ version?: number }>({
+                platform,
+                stage: readableStage,
+                bucket,
+                key: toManifestObjectKey(normalizedPublicId),
+                fetchFn,
+              })
+            )?.version ?? null)
     const versionedKey = toMetadataObjectKey(
       normalizedPublicId,
       resolvedVersion ?? undefined,

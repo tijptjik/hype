@@ -7,4 +7,15 @@ import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIde
 const target = document.getElementById('app')
 if (!target) throw new Error('Missing fixture target')
 const query = new URLSearchParams(location.search)
-mount(FeatureIdentityDialog, {target,props:{open:true,kind:query.has('merge')?'merge':'split',creationProposal:query.has('creation'),duplicateTaskId:query.has('creation')?'creation-task':undefined,featureId:'-CPB8EQMld2x',layerId:'layer',onApplied:async()=>{}}})
+mount(FeatureIdentityDialog, {
+  target,
+  props: {
+    open: true,
+    kind: query.has('merge') ? 'merge' : 'split',
+    creationProposal: query.has('creation'),
+    duplicateTaskId: query.has('creation') ? 'creation-task' : undefined,
+    featureId: '-CPB8EQMld2x',
+    layerId: 'layer',
+    onApplied: async () => {},
+  },
+})

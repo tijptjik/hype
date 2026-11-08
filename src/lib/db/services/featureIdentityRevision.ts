@@ -72,8 +72,13 @@ export async function publishFeatureIdentityOperation(
   )
     throw new Error('Every input and output requires exactly one inspected head')
   for (const source of input.inputs) {
-    if (expected.get(source.featureId)?.publishedRevisionId !== source.revisionId &&
-      !(input.preserveVisibility && expected.get(source.featureId)?.publishedRevisionId === null))
+    if (
+      expected.get(source.featureId)?.publishedRevisionId !== source.revisionId &&
+      !(
+        input.preserveVisibility &&
+        expected.get(source.featureId)?.publishedRevisionId === null
+      )
+    )
       throw new Error('Identity inputs must match their inspected published revisions')
   }
   const inputIds = new Set(input.inputs.map(ref => ref.featureId))
@@ -92,7 +97,8 @@ export async function publishFeatureIdentityOperation(
   const closing: BatchItem<'sqlite'>[] = []
   for (const featureId of ids) {
     const scope = await prepareFeatureRevisionWriteScope(db, featureId)
-    statements.push(...scope.before); closing.push(...scope.after)
+    statements.push(...scope.before)
+    closing.push(...scope.after)
   }
   // Keep each head/reference check in its own statement to avoid unbounded SQL bindings.
   for (const head of input.expectedHeads) {
@@ -141,13 +147,19 @@ export async function publishFeatureIdentityOperation(
         }),
       )
   }
-  statements.push(...(input.decisionStatements?.(id) ?? []), ...input.projection.statements)
+  statements.push(
+    ...(input.decisionStatements?.(id) ?? []),
+    ...input.projection.statements,
+  )
   const retired = new Set(retiredFeatureIds(input))
   const outputs = new Map(input.outputs.map(ref => [ref.featureId, ref.revisionId]))
   for (const head of input.expectedHeads) {
     const isRetired = retired.has(head.featureId)
     const outputRevisionId = outputs.get(head.featureId)
-    const privateOutput = !isRetired && input.preserveVisibility && (input.kind === 'split' || !head.publishedRevisionId)
+    const privateOutput =
+      !isRetired &&
+      input.preserveVisibility &&
+      (input.kind === 'split' || !head.publishedRevisionId)
     const revisionId = isRetired || privateOutput ? null : outputRevisionId
     if (revisionId === undefined) throw new Error('Missing output revision')
     const generation = head.generation + 1
@@ -200,11 +212,20 @@ export async function publishFeatureIdentityOperation(
           .where(eq(feature.id, head.featureId)),
       )
     }
-    if (privateOutput && outputRevisionId) statements.push(db.insert(featurePrivateCapture).values({
-      featureId: head.featureId, revisionId: outputRevisionId, generation,
-    }))
+    if (privateOutput && outputRevisionId)
+      statements.push(
+        db.insert(featurePrivateCapture).values({
+          featureId: head.featureId,
+          revisionId: outputRevisionId,
+          generation,
+        }),
+      )
   }
-  statements.push(...(input.projection.afterPublication ?? []), prepareRevisionCheck(db, input.projection.verify), ...closing)
+  statements.push(
+    ...(input.projection.afterPublication ?? []),
+    prepareRevisionCheck(db, input.projection.verify),
+    ...closing,
+  )
   return (await executeRevisionBatch(db, input.guard, statements)) ? id : null
 }
 

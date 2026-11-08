@@ -56,7 +56,13 @@ const images = imageIds.map(id => ({
     presentationMode: 'contain',
   },
 })) as unknown as ImageCtxEnvelope[]
-const imageCtx = setImageCtx({ isAdminMode: true, images, highlightedIds: new URLSearchParams(window.location.search).has('missing') ? ['first'] : [] })
+const imageCtx = setImageCtx({
+  isAdminMode: true,
+  images,
+  highlightedIds: new URLSearchParams(window.location.search).has('missing')
+    ? ['first']
+    : [],
+})
 const layers = ['Current', 'Other'].map(name => ({
   id: name.toLowerCase(),
   code: name,
@@ -85,7 +91,9 @@ const task = $derived({
   feature: {
     id: 'review-fixture',
     layerId,
-    contributorId: new URLSearchParams(window.location.search).has('missing') ? 'feature-contributor' : null,
+    contributorId: new URLSearchParams(window.location.search).has('missing')
+      ? 'feature-contributor'
+      : null,
     geometry: { type: 'Point', coordinates: [114.124, 22.266] },
     i18n: {
       zhHant: { title: '兒童復康中心', description: '支援兒童及家庭。' },
@@ -153,7 +161,11 @@ onDestroy(() => {
 {#if new URLSearchParams(window.location.search).has('missing-info')}
   <TaskInfoDialog
     open={true}
-    type={new URLSearchParams(window.location.search).get('help-type') === 'newFeature' ? 'newFeature' : new URLSearchParams(window.location.search).get('help-type') === 'newPhoto' ? 'newPhoto' : 'reportedMissing'}
+    type={new URLSearchParams(window.location.search).get('help-type') === 'newFeature'
+      ? 'newFeature'
+      : new URLSearchParams(window.location.search).get('help-type') === 'newPhoto'
+        ? 'newPhoto'
+        : 'reportedMissing'}
     revisionReviewRequired={!new URLSearchParams(window.location.search).has('legacy')}
   />
 {/if}

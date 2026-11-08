@@ -7,4 +7,7 @@ import FeatureIdentityWorkspace from '#lib/bits/patterns/revisionHistory/Feature
 
 const target = document.getElementById('app')
 if (!target) throw new Error('Missing identity editor fixture target')
-mount(FeatureIdentityWorkspace, { target, props: { featureId: '-CPB8EQMld2x', onPublished: async () => {} } })
+mount(FeatureIdentityWorkspace, {
+  target,
+  props: { featureId: '-CPB8EQMld2x', onPublished: async () => {} },
+})

@@ -22,7 +22,11 @@ export interface MediaCatalogItem {
 }
 
 /** Public pack names are safe to cache; access hashes remain in the bridge. */
-export interface StickerPack { id: string; title: string; count: number }
+export interface StickerPack {
+  id: string
+  title: string
+  count: number
+}
 
 /** A catalogue selection is visible before its immutable send receives an acknowledgement. */
 export interface CatalogSend {

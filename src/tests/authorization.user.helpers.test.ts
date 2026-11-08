@@ -100,7 +100,10 @@ describe('canAccessAdminPanel', () => {
       ...organisationMemberRole(),
       role: 'user',
     } as UserRoleDisco
-    for (const userRoles of [[organisationUser], [organisationUser, projectUserRole()]]) {
+    for (const userRoles of [
+      [organisationUser],
+      [organisationUser, projectUserRole()],
+    ]) {
       expect(canAccessAdminPanel({ superAdmin: false, userRoles })).toBe(false)
     }
   })
@@ -112,10 +115,12 @@ describe('canAccessAdminPanel', () => {
       { type: 'hub', role: 'owner' },
       { type: 'unknown', role: 'admin' },
     ]) {
-      expect(canAccessAdminPanel({
-        superAdmin: false,
-        userRoles: [role as unknown as UserRoleDisco],
-      })).toBe(false)
+      expect(
+        canAccessAdminPanel({
+          superAdmin: false,
+          userRoles: [role as unknown as UserRoleDisco],
+        }),
+      ).toBe(false)
     }
   })
 })

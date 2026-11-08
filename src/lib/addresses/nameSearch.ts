@@ -8,7 +8,12 @@ import type { LocaleKey } from '#lib/types.js'
  * @remarks Only for name matching; address numbers and unit expressions retain punctuation.
  */
 export function normalizeNameSearch(value: string): string {
-  return value.normalize('NFKC').toLocaleLowerCase().replace(/\p{P}/gu, '').replace(/\s+/gu, ' ').trim()
+  return value
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replace(/\p{P}/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim()
 }
 
 /** Read the selected language only; never disguise a fallback as a translation.
@@ -36,10 +41,7 @@ export function searchAddressNames(
   const results: AddressName[] = []
   for (const row of rows) {
     const name = addressNameLabel(row, locale)
-    if (
-      name.length > 0 &&
-      normalizeNameSearch(name).includes(needle)
-    ) {
+    if (name.length > 0 && normalizeNameSearch(name).includes(needle)) {
       results.push(row)
       if (results.length >= limit) break
     }

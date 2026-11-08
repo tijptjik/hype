@@ -9,7 +9,11 @@ import {
   applyFeatureTranslationPatch,
 } from '#lib/revisions/featureContent.js'
 // SERVICES
-import { hasFeatureLifecycleStorage, readCurrentFeatureRevision, acceptPartialFeatureProposal } from './featureLifecycle'
+import {
+  hasFeatureLifecycleStorage,
+  readCurrentFeatureRevision,
+  acceptPartialFeatureProposal,
+} from './featureLifecycle'
 import { readPartialFeatureProposal } from './featureLifecycleProposal'
 import { prepareFeatureUploadTaskCompletion } from './featureUploadTasks'
 import { buildFeatureCommandScopeGuard } from './featureCommandScope'
@@ -61,8 +65,9 @@ type TranslationPermission = Parameters<typeof applyFeatureTranslationPatch>[2]
  * @param input Server-authorized identity and captured parent scope.
  * @returns In-transaction predicate; hidden/retired/unpublished Features require another workflow.
  */
-function publishedScope(db: Database, input: EditorialCommand, lifecycle=false): SQL {
-  if(lifecycle)return sql`(${input.guard}) AND (${buildFeatureCommandScopeGuard(db,input.featureId,input.expectedScope)})
+function publishedScope(db: Database, input: EditorialCommand, lifecycle = false): SQL {
+  if (lifecycle)
+    return sql`(${input.guard}) AND (${buildFeatureCommandScopeGuard(db, input.featureId, input.expectedScope)})
     AND EXISTS(SELECT 1 FROM feature f JOIN layer l ON l.id=f.layerId JOIN project p ON p.id=f.projectId JOIN organisation o ON o.id=f.organisationId
       WHERE f.id=${input.featureId} AND f.currentRevisionId IS NOT NULL AND f.isPublished=1 AND f.isArchived=0
       AND l.isPublished=1 AND l.isArchived=0 AND p.isPublished=1 AND p.isArchived=0 AND o.isPublished=1 AND o.isArchived=0)
@@ -101,10 +106,11 @@ export async function createFeatureTranslationProposal(
     permission: TranslationPermission
   },
 ): Promise<{ proposalId: string; candidateRevisionId: string } | null> {
-  const lifecycle=await hasFeatureLifecycleStorage(db)
-  const accepted=lifecycle?sql`EXISTS(SELECT 1 FROM featureRevision WHERE featureId=${input.featureId} AND id=${input.baseRevisionId} AND sequence IS NOT NULL)`:
-    sql`EXISTS(SELECT 1 FROM featureRevisionPublication WHERE featureId=${input.featureId} AND revisionId=${input.baseRevisionId})`
-  const guard=sql`(${publishedScope(db,input,lifecycle)}) AND (${accepted})`
+  const lifecycle = await hasFeatureLifecycleStorage(db)
+  const accepted = lifecycle
+    ? sql`EXISTS(SELECT 1 FROM featureRevision WHERE featureId=${input.featureId} AND id=${input.baseRevisionId} AND sequence IS NOT NULL)`
+    : sql`EXISTS(SELECT 1 FROM featureRevisionPublication WHERE featureId=${input.featureId} AND revisionId=${input.baseRevisionId})`
+  const guard = sql`(${publishedScope(db, input, lifecycle)}) AND (${accepted})`
   const base = await db
     .select({ content: featureRevision.content })
     .from(featureRevision)
@@ -143,12 +149,25 @@ export async function saveFeatureTranslationProposal(
     permission: TranslationPermission
   },
 ): Promise<string | null> {
-  const lifecycle=await hasFeatureLifecycleStorage(db)
-  const guard = publishedScope(db, input,lifecycle)
-  if(lifecycle){
-    const proposal=await readPartialFeatureProposal(db,{...input,guard,version:input.expectedCandidateRevisionId,status:'draft'})
-    if(!proposal||proposal.contributorId!==input.actorId)return null
-    return saveFeatureRevisionProposal(db,{...input,guard,content:applyFeatureTranslationPatch(proposal.content,input.patch,input.permission)})
+  const lifecycle = await hasFeatureLifecycleStorage(db)
+  const guard = publishedScope(db, input, lifecycle)
+  if (lifecycle) {
+    const proposal = await readPartialFeatureProposal(db, {
+      ...input,
+      guard,
+      version: input.expectedCandidateRevisionId,
+      status: 'draft',
+    })
+    if (!proposal || proposal.contributorId !== input.actorId) return null
+    return saveFeatureRevisionProposal(db, {
+      ...input,
+      guard,
+      content: applyFeatureTranslationPatch(
+        proposal.content,
+        input.patch,
+        input.permission,
+      ),
+    })
   }
   const current = await db
     .select({ content: featureRevision.content })
@@ -215,7 +234,10 @@ export async function acceptFeatureEditorialRevision(
     ) => readonly string[]
     canReviewPath: (path: readonly string[]) => boolean
     galleryAttachmentGuard?: SQL
-    validateBeforeProjection?: (previous: FeatureRevisionContent, result: FeatureRevisionContent) => Promise<void>
+    validateBeforeProjection?: (
+      previous: FeatureRevisionContent,
+      result: FeatureRevisionContent,
+    ) => Promise<void>
   },
 ): Promise<PersistedFeatureAcceptance> {
   if (input.resolutions?.some(resolution => !input.canReviewPath(resolution.path)))
@@ -225,20 +247,48 @@ export async function acceptFeatureEditorialRevision(
         'Conflict resolution includes fields outside current review permissions',
       ],
     }
-  if(await hasFeatureLifecycleStorage(db)) {
-    const guard=sql`(${input.guard}) AND (${buildFeatureCommandScopeGuard(db,input.featureId,input.expectedScope)})`
-    const current=await readCurrentFeatureRevision(db,{...input,guard})
-    if(!current||current.revisionId!==input.expectedPublishedRevisionId||current.version!==input.expectedGeneration)return {status:'stale'}
-    const result=await acceptPartialFeatureProposal(db,{...input,guard,expectedRevisionId:current.revisionId,expectedVersion:current.version,
-      expectedProposalVersion:input.expectedCandidateRevisionId,attachmentGuard:input.galleryAttachmentGuard,
-      completion:await prepareFeatureUploadTaskCompletion(db,input),validate:input.validateResult,
-      prepareProjection:async ({previous,content,source})=>{
-        await input.validateBeforeProjection?.(previous,content)
-        return prepareFeatureEditorialProjection(db,{featureId:input.featureId,source,previous,content,
-          gallery:{actorId:input.actorId,attachmentGuard:input.galleryAttachmentGuard}})
-      }})
-    if(result.status==='conflict'&&result.conflicts.some(conflict=>!input.canReviewPath(conflict.path)))
-      return {status:'invalid',errors:['Proposal conflicts include fields outside current review permissions']}
+  if (await hasFeatureLifecycleStorage(db)) {
+    const guard = sql`(${input.guard}) AND (${buildFeatureCommandScopeGuard(db, input.featureId, input.expectedScope)})`
+    const current = await readCurrentFeatureRevision(db, { ...input, guard })
+    if (
+      !current ||
+      current.revisionId !== input.expectedPublishedRevisionId ||
+      current.version !== input.expectedGeneration
+    )
+      return { status: 'stale' }
+    const result = await acceptPartialFeatureProposal(db, {
+      ...input,
+      guard,
+      expectedRevisionId: current.revisionId,
+      expectedVersion: current.version,
+      expectedProposalVersion: input.expectedCandidateRevisionId,
+      attachmentGuard: input.galleryAttachmentGuard,
+      completion: await prepareFeatureUploadTaskCompletion(db, input),
+      validate: input.validateResult,
+      prepareProjection: async ({ previous, content, source }) => {
+        await input.validateBeforeProjection?.(previous, content)
+        return prepareFeatureEditorialProjection(db, {
+          featureId: input.featureId,
+          source,
+          previous,
+          content,
+          gallery: {
+            actorId: input.actorId,
+            attachmentGuard: input.galleryAttachmentGuard,
+          },
+        })
+      },
+    })
+    if (
+      result.status === 'conflict' &&
+      result.conflicts.some(conflict => !input.canReviewPath(conflict.path))
+    )
+      return {
+        status: 'invalid',
+        errors: [
+          'Proposal conflicts include fields outside current review permissions',
+        ],
+      }
     return result
   }
   const guard = sql`(${publishedScope(db, input)}) AND EXISTS (SELECT 1 FROM featureRevisionHead

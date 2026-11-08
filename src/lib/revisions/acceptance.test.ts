@@ -15,16 +15,34 @@ it('uses the same dependent-value policy for comparison and reviewed resolution'
   const location = { locationId: 'place', factsRevisionId: 'facts' }
   const comparison = {
     base: { ...base, content: { location } },
-    published: { ...base, revisionId: 'new-head', content: { location: { ...location, locationId: 'other' } } },
-    submitted: { ...submitted, content: { location: { ...location, factsRevisionId: 'new-facts' } } },
-    mergePolicy: { isAtomic: (path: readonly string[]) => path.length === 1 && path[0] === 'location' },
+    published: {
+      ...base,
+      revisionId: 'new-head',
+      content: { location: { ...location, locationId: 'other' } },
+    },
+    submitted: {
+      ...submitted,
+      content: { location: { ...location, factsRevisionId: 'new-facts' } },
+    },
+    mergePolicy: {
+      isAtomic: (path: readonly string[]) =>
+        path.length === 1 && path[0] === 'location',
+    },
     validate,
   }
   expect(prepareFeatureAcceptance(comparison).status).toBe('conflict')
-  expect(prepareFeatureAcceptance({ ...comparison, resolutions: [
-    { path: ['location'], result: { present: true, value: location } },
-  ] })).toMatchObject({ status: 'ready', plan: { result: { kind: 'merge', content: { location } } } })
-  expect(prepareFeatureAcceptance({ ...comparison, resolutions: [] }).status).toBe('invalid')
+  expect(
+    prepareFeatureAcceptance({
+      ...comparison,
+      resolutions: [{ path: ['location'], result: { present: true, value: location } }],
+    }),
+  ).toMatchObject({
+    status: 'ready',
+    plan: { result: { kind: 'merge', content: { location } } },
+  })
+  expect(prepareFeatureAcceptance({ ...comparison, resolutions: [] }).status).toBe(
+    'invalid',
+  )
 })
 
 describe('acceptance publishes a reviewed proposal', () => {

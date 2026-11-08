@@ -5,7 +5,12 @@ import {
   resolveRevisionContent,
 } from './merge'
 // TYPES
-import type { RevisionConflict, RevisionValue, RevisionResolution, RevisionMergePolicy } from './merge'
+import type {
+  RevisionConflict,
+  RevisionValue,
+  RevisionResolution,
+  RevisionMergePolicy,
+} from './merge'
 import type { FeatureRevisionRef } from './lineage'
 
 export type SubmittedFeatureRevision = FeatureRevisionRef &

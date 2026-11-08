@@ -96,4 +96,4 @@ const shell = {
   },
 } as unknown as ReturnType<typeof usePanelShellModel>
 </script>
-<div class="relative h-screen bg-surface"><FiltersPanel {model} {shell} /></div>
+<div class="bg-surface relative h-screen"><FiltersPanel {model} {shell} /></div>

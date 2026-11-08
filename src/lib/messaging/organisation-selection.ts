@@ -31,7 +31,9 @@ export function chooseMessagingOrganisation(
   const memberships = organisations.filter(organisation => organisation.isMember)
   if (memberships.length === 1) return memberships[0].id
   if (organisations.length === 1) return organisations[0].id
-  return memberships.find(organisation => organisation.hasMessaging)?.id
-    ?? organisations.find(organisation => organisation.hasMessaging)?.id
-    ?? null
+  return (
+    memberships.find(organisation => organisation.hasMessaging)?.id ??
+    organisations.find(organisation => organisation.hasMessaging)?.id ??
+    null
+  )
 }

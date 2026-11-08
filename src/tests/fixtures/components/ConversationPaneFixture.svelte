@@ -10,12 +10,28 @@ import ConversationPane from '#lib/bits/patterns/whatsapp/components/Conversatio
 // TYPES
 import type { WhatsAppConsoleModel } from '#lib/bits/patterns/whatsapp/whatsapp.types.js'
 
-let { options, selectedChat, onReady }: { options: Parameters<typeof createWhatsAppModel>[0]; selectedChat: string; onReady?: (model: WhatsAppConsoleModel) => void } = $props()
+let {
+  options,
+  selectedChat,
+  onReady,
+}: {
+  options: Parameters<typeof createWhatsAppModel>[0]
+  selectedChat: string
+  onReady?: (model: WhatsAppConsoleModel) => void
+} = $props()
 setResponsiveCtx()
 const model = untrack(() => createWhatsAppModel(options))
-onMount(() => { model.selectChat(selectedChat); onReady?.(model) })
+onMount(() => {
+  model.selectChat(selectedChat)
+  onReady?.(model)
+})
 </script>
 
 <div class="flex h-[600px] min-h-0 min-w-0">
-  <ConversationPane {model} recipientLocked displayName="HYPE Test User" username="hype-test-user" />
+  <ConversationPane
+    {model}
+    recipientLocked
+    displayName="HYPE Test User"
+    username="hype-test-user"
+  />
 </div>

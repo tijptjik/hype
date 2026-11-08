@@ -613,7 +613,10 @@ export function useImageEditorGalleryModel(
         } satisfies ViewerRenderable
       })
 
-    return sortGalleryItems([...queueItems, ...imageItems], imageCtx.intentOptions.map(intent => intent.id))
+    return sortGalleryItems(
+      [...queueItems, ...imageItems],
+      imageCtx.intentOptions.map(intent => intent.id),
+    )
   })
 
   const isProcessingUploads = $derived.by(() =>

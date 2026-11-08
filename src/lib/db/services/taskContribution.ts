@@ -36,8 +36,10 @@ export async function createFeatureTask(
   input: Parameters<typeof prepareFeatureFormCreation>[1],
   author: Pick<TaskNew, 'contributorId' | 'message'>,
 ): Promise<{ feature: FeatureDB; task: TaskDB }> {
-  const plan = await prepareFeatureFormCreation(db, { ...input,
-    revisionActor: { actorId: author.contributorId!, mode: 'contribution' } })
+  const plan = await prepareFeatureFormCreation(db, {
+    ...input,
+    revisionActor: { actorId: author.contributorId!, mode: 'contribution' },
+  })
   const taskData: TaskNew = {
     ...author,
     type: 'newFeature',

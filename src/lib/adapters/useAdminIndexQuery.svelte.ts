@@ -88,12 +88,18 @@ export function useAdminIndexQuery(
       return admin.view.filters.getViewFilteredResource(FirstClassResource.task)
     },
     get totalCount(): number | null {
-      return settledKey === key && !pending && !failed && !(resource === 'hub' && admin.hubCountLoading)
+      return settledKey === key &&
+        !pending &&
+        !failed &&
+        !(resource === 'hub' && admin.hubCountLoading)
         ? (admin.view.getListQueryMeta(queryKey)?.totalCount ?? null)
         : null
     },
     get countLoading(): boolean {
-      return !failed && (pending || settledKey !== key || (resource === 'hub' && admin.hubCountLoading))
+      return (
+        !failed &&
+        (pending || settledKey !== key || (resource === 'hub' && admin.hubCountLoading))
+      )
     },
     get isInitialised(): boolean {
       return settledKey === key || failed

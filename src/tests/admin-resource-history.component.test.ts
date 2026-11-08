@@ -11,11 +11,14 @@ vi.mock('#lib/remote/index.js', () => ({
 import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 beforeEach(() => {
   // jsdom has no layout observer; browser checks cover section-header sizing.
-  vi.stubGlobal('ResizeObserver', class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  })
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
   vi.useRealTimers()
   vi.clearAllMocks()
 })
@@ -133,7 +136,9 @@ it('toggles the history surface without intercepting tree controls, profile link
   const disclosure = screen.getByRole('button', { name: '1 changed field' })
   await fireEvent.click(screen.getByText('Options updated'))
   expect(disclosure.getAttribute('aria-expanded')).toBe('false')
-  await fireEvent.click(screen.getByText('Preferred contact method', { selector: 'h4' }))
+  await fireEvent.click(
+    screen.getByText('Preferred contact method', { selector: 'h4' }),
+  )
   expect(disclosure.getAttribute('aria-expanded')).toBe('true')
   await fireEvent.click(screen.getByRole('button', { name: 'Expand en' }))
   expect(screen.getByText('Telegram')).toBeTruthy()

@@ -436,11 +436,12 @@
 
 /* The same outline tokens apply at rest and throughout camera gestures. */
 .marker-container:is(
-  .marker-theme--dark,
-  .marker-theme--light,
-  .marker-theme--etch-dark,
-  .marker-theme--etch-light
-) .marker-image-frame {
+    .marker-theme--dark,
+    .marker-theme--light,
+    .marker-theme--etch-dark,
+    .marker-theme--etch-light
+  )
+  .marker-image-frame {
   border-color: var(--marker-outline);
   border-width: var(--marker-ring-width);
   box-shadow: none;
@@ -448,21 +449,23 @@
 
 /* biome-ignore lint/style/noDescendingSpecificity: Map palette rings intentionally override generic marker states, not address markers. */
 .marker-container:is(
-  .marker-theme--dark,
-  .marker-theme--light,
-  .marker-theme--etch-dark,
-  .marker-theme--etch-light
-) .marker-circle {
+    .marker-theme--dark,
+    .marker-theme--light,
+    .marker-theme--etch-dark,
+    .marker-theme--etch-light
+  )
+  .marker-circle {
   fill: var(--marker-outline);
   stroke: var(--marker-outline);
 }
 
 /* biome-ignore lint/style/noDescendingSpecificity: Map palette rings intentionally override generic marker states, not address markers. */
 .marker-container:is(
-  .marker-theme--dark,
-  .marker-theme--light,
-  .marker-theme--etch-dark,
-  .marker-theme--etch-light
-) .marker-dot {
+    .marker-theme--dark,
+    .marker-theme--light,
+    .marker-theme--etch-dark,
+    .marker-theme--etch-light
+  )
+  .marker-dot {
   fill: var(--marker-separator);
 }

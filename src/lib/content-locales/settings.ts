@@ -4,8 +4,11 @@ import { z } from 'zod'
 import { SupportedContentLocaleSchema } from './catalogue'
 import { ContentLocaleSchema } from './model'
 
-export const MULTILINGUAL_SETTING_KEYS = ['multilingualContent', 'multilingualAddresses'] as const
-export type MultilingualSettingKey = typeof MULTILINGUAL_SETTING_KEYS[number]
+export const MULTILINGUAL_SETTING_KEYS = [
+  'multilingualContent',
+  'multilingualAddresses',
+] as const
+export type MultilingualSettingKey = (typeof MULTILINGUAL_SETTING_KEYS)[number]
 
 export const MAX_CONTENT_LOCALES = 32
 const orderedLocales = z
@@ -88,7 +91,9 @@ export function applyContentLocaleSettingsPatch(
 export function toContentLocaleSettingsForm(
   settings?: ContentLocaleSettings,
 ): ContentLocaleSettingsPatch {
-  const patch: ContentLocaleSettingsPatch = settings?.contentLocales ? { contentLocales: [...settings.contentLocales] } : {}
+  const patch: ContentLocaleSettingsPatch = settings?.contentLocales
+    ? { contentLocales: [...settings.contentLocales] }
+    : {}
   for (const key of MULTILINGUAL_SETTING_KEYS) {
     if (settings?.[key] !== undefined) patch[key] = settings[key]
   }

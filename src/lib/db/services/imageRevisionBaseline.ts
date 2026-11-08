@@ -65,10 +65,20 @@ export async function registerImageRevisionBaseline(
   if (!Number.isSafeInteger(input.expectedVersion) || (input.expectedVersion ?? 0) < 1)
     throw new Error('An exact positive metadata version is required')
   const recovery = input.metadataRecovery
-  if (recovery && (recovery.kind !== 'empty-missing-sidecar' || recovery.missingVersion !== input.expectedVersion ||
-      typeof recovery.reason !== 'string' || !recovery.reason.trim() || !input.metadata ||
-      typeof input.metadata !== 'object' || Array.isArray(input.metadata) || Object.keys(input.metadata).length))
-    throw new Error('Empty metadata recovery requires an empty object, matching version and explicit reason')
+  if (
+    recovery &&
+    (recovery.kind !== 'empty-missing-sidecar' ||
+      recovery.missingVersion !== input.expectedVersion ||
+      typeof recovery.reason !== 'string' ||
+      !recovery.reason.trim() ||
+      !input.metadata ||
+      typeof input.metadata !== 'object' ||
+      Array.isArray(input.metadata) ||
+      Object.keys(input.metadata).length)
+  )
+    throw new Error(
+      'Empty metadata recovery requires an empty object, matching version and explicit reason',
+    )
   const metadata = ImageMetadataFullSchema.parse(input.metadata)
   const digest = await crypto.subtle.digest('SHA-256', input.bytes)
   const contentHash = Array.from(new Uint8Array(digest), byte =>
@@ -82,33 +92,70 @@ export async function registerImageRevisionBaseline(
     AND publicId=${input.storageKey} AND env=${input.storageNamespace} AND version IS ${input.expectedVersion}
     AND modifiedAt=${input.expectedModifiedAt} AND contentHash IS ${existing.contentHash} AND presentationMode IS ${existing.presentationMode})`
   const storedMetadata = {
-    ...metadata, presentationMode: existing.presentationMode, version: existing.version,
+    ...metadata,
+    presentationMode: existing.presentationMode,
+    version: existing.version,
     ...(recovery ? { baselineRecovery: recovery } : {}),
   } as RevisionValue
   // Rehearsal and upload retries may reuse identical evidence, never an object locator with different bytes.
-  const registered = await db.all<{ assetVersionId: string; imageRevisionId: string; contentHash: string; byteSize: number; mediaType: string; metadata: string }>(sql`
+  const registered = await db.all<{
+    assetVersionId: string
+    imageRevisionId: string
+    contentHash: string
+    byteSize: number
+    mediaType: string
+    metadata: string
+  }>(sql`
     SELECT av.id AS assetVersionId,ir.id AS imageRevisionId,av.contentHash,av.byteSize,av.mediaType,ir.metadata
     FROM imageAssetVersion av JOIN imageRevision ir ON ir.assetVersionId=av.id AND ir.imageId=av.imageId
     WHERE av.imageId=${input.imageId} AND av.storageNamespace=${input.storageNamespace} AND av.storageKey=${input.storageKey}
       AND (${guard})`)
   if (registered.length) {
-    const match = registered.find(row => row.contentHash === contentHash && row.byteSize === input.bytes.byteLength &&
-      row.mediaType === input.mediaType && equalRevisionValue(JSON.parse(row.metadata), storedMetadata))
+    const match = registered.find(
+      row =>
+        row.contentHash === contentHash &&
+        row.byteSize === input.bytes.byteLength &&
+        row.mediaType === input.mediaType &&
+        equalRevisionValue(JSON.parse(row.metadata), storedMetadata),
+    )
     if (!match && input.captureCurrentPresentation) {
       // Legacy presentation edits may predate logo recording; retain the old pin and append the current verified setting.
-      const previous = registered.find(row => row.contentHash === contentHash && row.byteSize === input.bytes.byteLength &&
-        row.mediaType === input.mediaType && equalRevisionValue(
-          { ...JSON.parse(row.metadata), presentationMode: existing.presentationMode }, storedMetadata))
+      const previous = registered.find(
+        row =>
+          row.contentHash === contentHash &&
+          row.byteSize === input.bytes.byteLength &&
+          row.mediaType === input.mediaType &&
+          equalRevisionValue(
+            {
+              ...JSON.parse(row.metadata),
+              presentationMode: existing.presentationMode,
+            },
+            storedMetadata,
+          ),
+      )
       if (previous) {
         const imageRevisionId = await createImageMetadataRevision(db, {
-          ...input, guard, origin: 'migration', reason: 'Verified current logo presentation baseline',
-          previousRevisionId: previous.imageRevisionId, assetVersionId: previous.assetVersionId, metadata: storedMetadata,
+          ...input,
+          guard,
+          origin: 'migration',
+          reason: 'Verified current logo presentation baseline',
+          previousRevisionId: previous.imageRevisionId,
+          assetVersionId: previous.assetVersionId,
+          metadata: storedMetadata,
         })
-        return imageRevisionId ? { assetVersionId: previous.assetVersionId, imageRevisionId } : null
+        return imageRevisionId
+          ? { assetVersionId: previous.assetVersionId, imageRevisionId }
+          : null
       }
     }
-    if (!match) throw new Error('Image locator is already registered with different evidence; use an explicit image revision')
-    return { assetVersionId: match.assetVersionId, imageRevisionId: match.imageRevisionId }
+    if (!match)
+      throw new Error(
+        'Image locator is already registered with different evidence; use an explicit image revision',
+      )
+    return {
+      assetVersionId: match.assetVersionId,
+      imageRevisionId: match.imageRevisionId,
+    }
   }
   return createImageAssetRevision(db, {
     ...input,

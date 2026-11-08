@@ -23,7 +23,9 @@ let index = $state(false)
         featuresAction: index ? null : { text: 'Features', icon: Icon },
         usersAction: index ? null : { text: 'Users', icon: Icon },
         primaryAction: index ? null : { text: 'Edit', icon: Icon, disabled: true },
-        publishAction: index ? null : { kind: 'button', text: 'Publish', disabled: true },
+        publishAction: index
+          ? null
+          : { kind: 'button', text: 'Publish', disabled: true },
         previewAction: index ? null : { text: 'Preview', icon: Icon },
       }}
     />

@@ -13,14 +13,10 @@ const items = Array.from({ length: 10000 }, (_, id) => ({ id }))
     bufferAfter={10}
     getKey={row => row.id}
   >
-    {#snippet children(
-      row,
-    )}
+    {#snippet children(row)}
       <div data-row={row.id} style="height: 72px; background: #ddd;">Row {row.id}</div>
     {/snippet}
-    {#snippet placeholder(
-      height,
-    )}
+    {#snippet placeholder(height)}
       <div data-skeleton style:height={`${height}px`} style:background="#aaa"></div>
     {/snippet}
   </VirtualList>

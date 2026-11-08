@@ -23,20 +23,35 @@ import type { Database } from '#lib/types.js'
  */
 export async function prepareFeatureGalleryAssignmentCapture(
   db: Database,
-  input: { featureId: string; imageId: string; actorId: string; guard: SQL;
-    intent?: string; isPublished?: boolean },
+  input: {
+    featureId: string
+    imageId: string
+    actorId: string
+    guard: SQL
+    intent?: string
+    isPublished?: boolean
+  },
 ): Promise<Awaited<ReturnType<typeof prepareFeatureAcceptedCapture>>> {
   const capture = await prepareFeatureAcceptedCapture(db, {
-    ...input, reason: 'Feature gallery image intent or visibility changed',
+    ...input,
+    reason: 'Feature gallery image intent or visibility changed',
     origin: input.actorId === 'system:image-assignment' ? 'system' : 'user',
     derive: previous => {
       const content = structuredClone(previous)
       const entry = content.gallery.entries[input.imageId]
       if (!entry) throw new Error('Image is not in the accepted Feature gallery')
-      if (input.intent === 'canonical') for (const [id, other] of Object.entries(content.gallery.entries)) {
-        if (id !== input.imageId && other.intent === 'canonical') { other.intent = 'general'; other.isPublished = true }
-      }
-      if (input.intent !== undefined) entry.intent = FeatureRevisionContentSchema.shape.gallery.shape.entries.valueType.shape.intent.parse(input.intent)
+      if (input.intent === 'canonical')
+        for (const [id, other] of Object.entries(content.gallery.entries)) {
+          if (id !== input.imageId && other.intent === 'canonical') {
+            other.intent = 'general'
+            other.isPublished = true
+          }
+        }
+      if (input.intent !== undefined)
+        entry.intent =
+          FeatureRevisionContentSchema.shape.gallery.shape.entries.valueType.shape.intent.parse(
+            input.intent,
+          )
       if (input.isPublished !== undefined) entry.isPublished = input.isPublished
       return content
     },
@@ -45,10 +60,25 @@ export async function prepareFeatureGalleryAssignmentCapture(
     // Explicit local intent is retained even while parent visibility hides the Feature.
     const now = new Date().toISOString()
     capture.after.unshift(
-      ...(input.isPublished === undefined ? [] : [db.update(featureImage).set({ localIsPublished: input.isPublished })
-        .where(and(eq(featureImage.featureId, input.featureId), eq(featureImage.imageId, input.imageId)))]),
-      db.update(feature).set({ modifiedAt: sql`CASE WHEN modifiedAt>=${now}
-        THEN strftime('%Y-%m-%dT%H:%M:%fZ',modifiedAt,'+0.001 seconds') ELSE ${now} END` })
+      ...(input.isPublished === undefined
+        ? []
+        : [
+            db
+              .update(featureImage)
+              .set({ localIsPublished: input.isPublished })
+              .where(
+                and(
+                  eq(featureImage.featureId, input.featureId),
+                  eq(featureImage.imageId, input.imageId),
+                ),
+              ),
+          ]),
+      db
+        .update(feature)
+        .set({
+          modifiedAt: sql`CASE WHEN modifiedAt>=${now}
+        THEN strftime('%Y-%m-%dT%H:%M:%fZ',modifiedAt,'+0.001 seconds') ELSE ${now} END`,
+        })
         .where(eq(feature.id, input.featureId)),
     )
   }
@@ -73,7 +103,9 @@ export async function removeAcceptedFeatureImage(
   const lifecycle = await hasFeatureLifecycleStorage(db)
   if (!storage?.n && !lifecycle) return 'legacy'
   const head = await db.get(
-    lifecycle ? sql`SELECT id FROM feature WHERE id=${input.featureId} AND currentRevisionId IS NOT NULL` : sql`SELECT featureId FROM featureRevisionHead WHERE featureId=${input.featureId}`,
+    lifecycle
+      ? sql`SELECT id FROM feature WHERE id=${input.featureId} AND currentRevisionId IS NOT NULL`
+      : sql`SELECT featureId FROM featureRevisionHead WHERE featureId=${input.featureId}`,
   )
   if (!head) return 'legacy'
   const capture = await prepareFeatureAcceptedCapture(db, {

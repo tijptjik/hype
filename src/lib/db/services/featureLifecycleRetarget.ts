@@ -96,27 +96,23 @@ export async function retargetFeatureContribution(
   }
   return (await executeRevisionBatch(db, guard, [
     change.statement,
-    db
-      .insert(partialFeatureProposal)
-      .values({
-        id: proposalId,
-        featureId: input.featureId,
-        baseRevisionId: current.revisionId,
-        kind: 'update',
-        version,
-        changes,
-        contributorId: original.contributorId,
-        status: 'submitted',
-        createdChangeSetId: change.id,
-      }),
-    db
-      .insert(partialFeatureReview)
-      .values({
-        ...evidence,
-        id: crypto.randomUUID(),
-        action: 'retargeted',
-        comparedRevisionId: current.revisionId,
-      }),
+    db.insert(partialFeatureProposal).values({
+      id: proposalId,
+      featureId: input.featureId,
+      baseRevisionId: current.revisionId,
+      kind: 'update',
+      version,
+      changes,
+      contributorId: original.contributorId,
+      status: 'submitted',
+      createdChangeSetId: change.id,
+    }),
+    db.insert(partialFeatureReview).values({
+      ...evidence,
+      id: crypto.randomUUID(),
+      action: 'retargeted',
+      comparedRevisionId: current.revisionId,
+    }),
     db
       .insert(partialFeatureReview)
       .values({ ...evidence, id: crypto.randomUUID(), action: 'withdrawn' }),
@@ -124,30 +120,26 @@ export async function retargetFeatureContribution(
       .update(partialFeatureProposal)
       .set({ status: 'withdrawn' })
       .where(eq(partialFeatureProposal.id, input.proposalId)),
-    db
-      .insert(partialFeatureReview)
-      .values({
-        id: crypto.randomUUID(),
-        featureId: input.featureId,
-        proposalId,
-        proposalVersion: version,
-        changes,
-        context,
-        action: 'created',
-        changeSetId: change.id,
-      }),
-    db
-      .insert(partialFeatureReview)
-      .values({
-        id: crypto.randomUUID(),
-        featureId: input.featureId,
-        proposalId,
-        proposalVersion: version,
-        changes,
-        context,
-        action: 'submitted',
-        changeSetId: change.id,
-      }),
+    db.insert(partialFeatureReview).values({
+      id: crypto.randomUUID(),
+      featureId: input.featureId,
+      proposalId,
+      proposalVersion: version,
+      changes,
+      context,
+      action: 'created',
+      changeSetId: change.id,
+    }),
+    db.insert(partialFeatureReview).values({
+      id: crypto.randomUUID(),
+      featureId: input.featureId,
+      proposalId,
+      proposalVersion: version,
+      changes,
+      context,
+      action: 'submitted',
+      changeSetId: change.id,
+    }),
     ...(input.retargetTasks?.(proposalId) ?? []),
   ]))
     ? { status: 'retargeted', proposalId, version }

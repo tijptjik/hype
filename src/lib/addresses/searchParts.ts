@@ -108,7 +108,11 @@ export function addressSearchParts(
     return true
   })
   // A resolved floor or unit must not hide the unresolved two-dimensional address text.
-  if (distinct.length && distinct.every(part => part.kind === 'unit' || part.kind === 'floor') && text('formattedAddress'))
+  if (
+    distinct.length &&
+    distinct.every(part => part.kind === 'unit' || part.kind === 'floor') &&
+    text('formattedAddress')
+  )
     distinct.push({ kind: 'address', text: text('formattedAddress') })
   // Free-form establishment addresses remain intact; never manufacture structured parts.
   return distinct.length

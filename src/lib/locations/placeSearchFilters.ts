@@ -3,7 +3,11 @@ import { z } from 'zod'
 import { matchesPlaceTaxonomy } from './placeTaxonomy'
 
 export const PlaceSearchFiltersSchema = z.strictObject({
-  taxonomyCategory: z.string().regex(/^[a-z0-9_]+$/).max(200).optional(),
+  taxonomyCategory: z
+    .string()
+    .regex(/^[a-z0-9_]+$/)
+    .max(200)
+    .optional(),
   basicCategory: z
     .string()
     .regex(/^[a-z0-9_]+$/)
@@ -29,7 +33,12 @@ export function placeSearchFilterParams(
 ): Record<string, string> {
   return Object.fromEntries(
     Object.entries(PlaceSearchFiltersSchema.parse(filters ?? {}))
-      .filter((entry): entry is [string, string] => Boolean(entry[1]) && entry[0] !== 'taxonomyCategory' && !(entry[0] === 'operatingStatus' && ['open', 'any'].includes(entry[1]!)))
+      .filter(
+        (entry): entry is [string, string] =>
+          Boolean(entry[1]) &&
+          entry[0] !== 'taxonomyCategory' &&
+          !(entry[0] === 'operatingStatus' && ['open', 'any'].includes(entry[1]!)),
+      )
       .map(([key, value]) => [`filter[${key}]`, value]),
   )
 }
@@ -46,13 +55,27 @@ export function placeCategoryLabel(value: string): string {
  * @param filters Accepted filter selection. @param place Verified preview classification.
  * @returns Whether the place matches every selected condition.
  */
-export function matchesPlaceSearchFilters(filters: PlaceSearchFilters | undefined, place: {
-  basicCategory?: string | null; taxonomyPrimary?: string | null; operatingStatus?: string | null
-}): boolean {
+export function matchesPlaceSearchFilters(
+  filters: PlaceSearchFilters | undefined,
+  place: {
+    basicCategory?: string | null
+    taxonomyPrimary?: string | null
+    operatingStatus?: string | null
+  },
+): boolean {
   const status = filters?.operatingStatus ?? 'open'
-  const knownStatus = place.operatingStatus && place.operatingStatus !== 'unknown' ? place.operatingStatus : null
-  return (!filters?.basicCategory || place.basicCategory === filters.basicCategory)
-    && (!filters?.taxonomyPrimary || place.taxonomyPrimary === filters.taxonomyPrimary)
-    && (!filters?.taxonomyCategory || matchesPlaceTaxonomy(filters.taxonomyCategory, place.taxonomyPrimary))
-    && (status === 'any' || (status === 'open' ? !knownStatus || knownStatus === 'open' : knownStatus === status))
+  const knownStatus =
+    place.operatingStatus && place.operatingStatus !== 'unknown'
+      ? place.operatingStatus
+      : null
+  return (
+    (!filters?.basicCategory || place.basicCategory === filters.basicCategory) &&
+    (!filters?.taxonomyPrimary || place.taxonomyPrimary === filters.taxonomyPrimary) &&
+    (!filters?.taxonomyCategory ||
+      matchesPlaceTaxonomy(filters.taxonomyCategory, place.taxonomyPrimary)) &&
+    (status === 'any' ||
+      (status === 'open'
+        ? !knownStatus || knownStatus === 'open'
+        : knownStatus === status))
+  )
 }

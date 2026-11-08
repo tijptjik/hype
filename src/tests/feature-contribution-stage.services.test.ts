@@ -14,11 +14,15 @@ const mocks = vi.hoisted(() => ({
   finalParse: vi.fn(value => value),
 }))
 
-vi.mock('#lib/db/services/featureLifecycle.js', () => ({ hasFeatureLifecycleStorage: vi.fn(async () => false) }))
+vi.mock('#lib/db/services/featureLifecycle.js', () => ({
+  hasFeatureLifecycleStorage: vi.fn(async () => false),
+}))
 vi.mock('#lib/db/services/feature.js', () => mocks)
 vi.mock('#lib/db/services/featureFormSave.js', () => mocks)
 vi.mock('#lib/db/services/taskContribution.js', () => mocks)
-vi.mock('#lib/db/services/featureCreationRevision.js', () => ({ featureRevisionCreationEnabled: async () => false }))
+vi.mock('#lib/db/services/featureCreationRevision.js', () => ({
+  featureRevisionCreationEnabled: async () => false,
+}))
 vi.mock('#lib/db/services/layer.js', () => mocks)
 vi.mock('#lib/db/services/historicalLayers.js', () => ({
   historicalSourceLayerId: vi.fn(async () => null),

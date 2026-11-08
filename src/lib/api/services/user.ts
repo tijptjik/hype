@@ -1093,7 +1093,13 @@ export const toUserReadQueryPlan = (
 ): {
   conditions: SQL<unknown>[]
   profile:
-    'attribution' | 'adminList' | 'card' | 'leaderboard' | 'detail' | 'self' | 'admin'
+    | 'attribution'
+    | 'adminList'
+    | 'card'
+    | 'leaderboard'
+    | 'detail'
+    | 'self'
+    | 'admin'
   withRelations: Record<string, boolean | object>
 } => {
   const { conditions } = getUserQueryContext(

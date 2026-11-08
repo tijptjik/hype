@@ -68,7 +68,11 @@ export async function saveFeatureStaffDraft(
   },
 ): Promise<{ proposalId: string; candidateRevisionId: string } | null> {
   const reference = input.draft?.candidateRevisionId ?? input.baseRevisionId
-  const privateComparison = await privateFeatureComparison(db, sql`${input.featureId}`, sql`(SELECT generation FROM featureRevisionHead WHERE featureId=${input.featureId})`)
+  const privateComparison = await privateFeatureComparison(
+    db,
+    sql`${input.featureId}`,
+    sql`(SELECT generation FROM featureRevisionHead WHERE featureId=${input.featureId})`,
+  )
   const evidence = input.draft
     ? sql`EXISTS (SELECT 1 FROM featureRevisionProposal WHERE id=${input.draft.proposalId}
         AND featureId=${input.featureId} AND contributorId=${input.actorId} AND status='draft'
@@ -123,12 +127,28 @@ export async function publishFeatureStaffDraft(
     ) => readonly string[]
     canReviewPath: (path: readonly string[]) => boolean
     galleryAttachmentGuard?: SQL
-    validateBeforeProjection?: (previous: FeatureRevisionContent, result: FeatureRevisionContent) => Promise<void>
+    validateBeforeProjection?: (
+      previous: FeatureRevisionContent,
+      result: FeatureRevisionContent,
+    ) => Promise<void>
   },
 ): Promise<PersistedFeatureAcceptance> {
-  const initialStorage = input.expectedGeneration === 0 && await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featureInitialRevision' AND type='table'`)
-  if (initialStorage && initialStorage.n && await db.get(sql`SELECT 1 FROM featureInitialRevision WHERE featureId=${input.featureId} AND mode='contribution'`))
-    return { status: 'invalid', errors: ['Review this initial contribution through its task'] }
+  const initialStorage =
+    input.expectedGeneration === 0 &&
+    (await db.get<{ n: number }>(
+      sql`SELECT count(*) n FROM sqlite_master WHERE name='featureInitialRevision' AND type='table'`,
+    ))
+  if (
+    initialStorage &&
+    initialStorage.n &&
+    (await db.get(
+      sql`SELECT 1 FROM featureInitialRevision WHERE featureId=${input.featureId} AND mode='contribution'`,
+    ))
+  )
+    return {
+      status: 'invalid',
+      errors: ['Review this initial contribution through its task'],
+    }
   if (input.resolutions?.some(resolution => !input.canReviewPath(resolution.path)))
     return {
       status: 'invalid',

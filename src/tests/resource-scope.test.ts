@@ -51,7 +51,11 @@ describe('resource scope', () => {
     const { scope, calls } = setup()
     scope.prisms = { organisation: ['o', 'other'], project: ['p'], layer: ['a'] }
     await scope.selectOrganisation('other')
-    expect(scope.prisms).toEqual({ organisation: ['other'], project: ['p'], layer: ['a'] })
+    expect(scope.prisms).toEqual({
+      organisation: ['other'],
+      project: ['p'],
+      layer: ['a'],
+    })
     expect(calls).toEqual(['projects'])
     await scope.selectOrganisation('other')
     expect(calls).toEqual(['projects'])

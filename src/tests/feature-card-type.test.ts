@@ -75,9 +75,9 @@ describe('saved feature card presentation', () => {
     expect(projectChoice.parse({ cardStyleCode: 'flexible' }).cardStyleCode).toBe(
       'flexible',
     )
-    expect(
-      LayerMetadataSchema.parse({ cardStyleCode: 'flexible' }).cardStyleCode,
-    ).toBe('flexible')
+    expect(LayerMetadataSchema.parse({ cardStyleCode: 'flexible' }).cardStyleCode).toBe(
+      'flexible',
+    )
   })
 
   it('validates saved choices and resets inheritance without discarding other metadata', () => {

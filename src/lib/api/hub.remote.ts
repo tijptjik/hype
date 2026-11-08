@@ -506,7 +506,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Persist main record atomically with optimistic concurrency.
   const result = await updateHubByIdWithConcurrency(db, {
-      imageIntentSettings: data.imageIntentSettings,
+    imageIntentSettings: data.imageIntentSettings,
     actorId: user.id,
     id: current.id,
     updatedAt: updatedAt as string,

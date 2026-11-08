@@ -278,12 +278,25 @@ export function toFeatureFormInput(
       isIntangible: value.isIntangible,
       isVisitable: value.isVisitable,
       isPendingReview: value.isPendingReview,
-      i18n: Object.fromEntries(Object.entries<Partial<NonNullable<Feature['i18n']>[string]>>({ en: {}, zhHans: {}, zhHant: {}, ...adaptContentMap(value.i18n ?? {}) }).map(([locale, row]) => [locale, {
-        title: row.title ?? '', titleGen: row.titleGen ?? false,
-        description: row.description ?? '', descriptionGen: row.descriptionGen ?? false,
-        displayAddress: row.displayAddress ?? '', displayAddressGen: row.displayAddressGen ?? false,
-        addressProperties: row.addressProperties ?? {},
-      }])),
+      i18n: Object.fromEntries(
+        Object.entries<Partial<NonNullable<Feature['i18n']>[string]>>({
+          en: {},
+          zhHans: {},
+          zhHant: {},
+          ...adaptContentMap(value.i18n ?? {}),
+        }).map(([locale, row]) => [
+          locale,
+          {
+            title: row.title ?? '',
+            titleGen: row.titleGen ?? false,
+            description: row.description ?? '',
+            descriptionGen: row.descriptionGen ?? false,
+            displayAddress: row.displayAddress ?? '',
+            displayAddressGen: row.displayAddressGen ?? false,
+            addressProperties: row.addressProperties ?? {},
+          },
+        ]),
+      ),
 
       properties:
         value.properties?.map(property => ({
@@ -291,9 +304,20 @@ export function toFeatureFormInput(
           value: property.value ?? '',
           valueJson: property.valueJson ?? '',
           propertyValueId: sanitizeFeaturePropertyValueId(property.propertyValueId),
-          i18n: Object.fromEntries(Object.entries<{ value?: string | null; valueGen?: boolean }>({ en: {}, zhHans: {}, zhHant: {}, ...adaptContentMap(property.i18n ?? {}) }).map(([locale, row]) => [locale, {
-            value: row.value ?? '', valueGen: row.valueGen ?? false,
-          }])),
+          i18n: Object.fromEntries(
+            Object.entries<{ value?: string | null; valueGen?: boolean }>({
+              en: {},
+              zhHans: {},
+              zhHant: {},
+              ...adaptContentMap(property.i18n ?? {}),
+            }).map(([locale, row]) => [
+              locale,
+              {
+                value: row.value ?? '',
+                valueGen: row.valueGen ?? false,
+              },
+            ]),
+          ),
           property: property.property,
           propertyValue: property.propertyValue,
         })) ?? [],
@@ -369,7 +393,7 @@ export function getProgrammaticFeatureInputEntries(
   appendNestedEntries('data.addressMeta', addressMetadata)
   if (address) appendEntry('data.addressMeta.address', JSON.stringify(address))
 
-  ;Object.keys(featureData?.i18n ?? {}).forEach(locale => {
+  Object.keys(featureData?.i18n ?? {}).forEach(locale => {
     const localeI18n = featureData?.i18n?.[locale]
 
     appendEntry(`data.i18n.${locale}.displayAddress`, localeI18n?.displayAddress ?? '')
@@ -395,7 +419,7 @@ export function getProgrammaticFeatureInputEntries(
     if (property.property?.isTranslatable) {
       const propertyI18n = property.i18n ?? {}
 
-      ;Object.keys(propertyI18n).forEach(locale => {
+      Object.keys(propertyI18n).forEach(locale => {
         appendEntry(
           `data.properties[${index}].i18n.${locale}.value`,
           propertyI18n[locale]?.value ?? '',

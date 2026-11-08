@@ -87,8 +87,11 @@ function setup() {
 }
 it('budgets relational hydration bindings for large native task queues', async () => {
   const { db, opts } = setup()
-  for (let index = 0; index < 150; index++) sqlite.prepare(`INSERT INTO task
-    SELECT ?,organisationId,projectId,featureId,contributorId,reviewerId,isDraft,type,message,isReviewed,reviewOutcome,reviewAction,reviewReason,createdAt,modifiedAt FROM task WHERE id='native'`).run(`native-${index}`)
+  for (let index = 0; index < 150; index++)
+    sqlite
+      .prepare(`INSERT INTO task
+    SELECT ?,organisationId,projectId,featureId,contributorId,reviewerId,isDraft,type,message,isReviewed,reviewOutcome,reviewAction,reviewReason,createdAt,modifiedAt FROM task WHERE id='native'`)
+      .run(`native-${index}`)
   const compiler = drizzle({} as never, { schema })
   const counts: number[] = []
   vi.mocked(db.query.task.findMany).mockImplementation(config => {

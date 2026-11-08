@@ -26,7 +26,7 @@ import {
   readMetadataDocument,
 } from '#lib/images/storage.js'
 // ENUMS
-import { ImageContextResource } from '#lib/enums.js'
+import type { ImageContextResource } from '#lib/enums.js'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { GuardedQueryContext } from '#lib/api/guarded.types.js'

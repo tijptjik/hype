@@ -2,15 +2,25 @@
 // COMPONENTS
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 
-let { disabled = false, repeatedText = false }: { disabled?: boolean; repeatedText?: boolean } = $props()
+let {
+  disabled = false,
+  repeatedText = false,
+}: { disabled?: boolean; repeatedText?: boolean } = $props()
 let activations = $state(0)
 let submissions = $state(0)
 let notice = $state(false)
 </script>
 
-<form onsubmit={event => { event.preventDefault(); submissions++ }}>
+<form
+  onsubmit={event => {
+    event.preventDefault()
+    submissions++
+  }}
+>
   <SimpleTooltip {disabled} triggerProps={{ 'aria-label': 'Help', role: 'button' }}>
-    {#snippet trigger()}<span>Help</span>{/snippet}
+    {#snippet trigger()}
+      <span>Help</span>
+    {/snippet}
     {repeatedText ? 'Help' : 'Useful help'}
   </SimpleTooltip>
   <SimpleTooltip>
@@ -19,11 +29,17 @@ let notice = $state(false)
     {/snippet}
     Action help
   </SimpleTooltip>
-  <SimpleTooltip bind:open={notice} triggerProps={{ 'aria-label': 'Notice', role: 'button' }} contentProps={{ role: 'status' }}>
-    {#snippet trigger()}<span>Notice</span>{/snippet}
+  <SimpleTooltip
+    bind:open={notice}
+    triggerProps={{ 'aria-label': 'Notice', role: 'button' }}
+    contentProps={{ role: 'status' }}
+  >
+    {#snippet trigger()}
+      <span>Notice</span>
+    {/snippet}
     Automatic notice
   </SimpleTooltip>
-  <button type="button" onclick={() => notice = true}>Show notice</button>
+  <button type="button" onclick={() => (notice = true)}>Show notice</button>
   <button type="button">Outside</button>
 </form>
 <output data-testid="activations">{activations}</output>

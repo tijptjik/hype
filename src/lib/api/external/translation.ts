@@ -132,23 +132,30 @@ export async function translateContentField(
   const source = canonicalContentTag(input.source)
   const target = canonicalContentTag(input.target)
   try {
-    if (!input.text.trim()) throw new TranslationProviderError('Empty translation input')
+    if (!input.text.trim())
+      throw new TranslationProviderError('Empty translation input')
     // Keep chunk-boundary whitespace outside the provider so paragraphs survive reassembly.
     const chunks = splitTranslationText(input.text).map(chunk => ({
       prefix: chunk.match(/^\s*/u)?.[0] ?? '',
       text: chunk.trim(),
-      suffix: chunk.trim() ? chunk.match(/\s*$/u)?.[0] ?? '' : '',
+      suffix: chunk.trim() ? (chunk.match(/\s*$/u)?.[0] ?? '') : '',
     }))
     const translated = await translateText(
       chunks.filter(chunk => chunk.text).map(chunk => chunk.text),
-      source, target, region, apiKey,
+      source,
+      target,
+      region,
+      apiKey,
     )
     if (translated.some(text => !text.trim()))
       throw new TranslationProviderError('Empty translation response')
     let index = 0
-    const text = chunks.map(chunk =>
-      chunk.prefix + (chunk.text ? translated[index++].trim() : '') + chunk.suffix,
-    ).join('')
+    const text = chunks
+      .map(
+        chunk =>
+          chunk.prefix + (chunk.text ? translated[index++].trim() : '') + chunk.suffix,
+      )
+      .join('')
     if (!text.trim()) throw new TranslationProviderError('Empty translation response')
     return { status: 'translated', text, source, target }
   } catch (error) {

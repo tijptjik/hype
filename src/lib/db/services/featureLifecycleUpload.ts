@@ -1,5 +1,8 @@
 // IMAGE INTENT POLICY
-import { readFeatureImageIntentPolicy, resolvePolicyImageIntent } from './imageIntentPolicy'
+import {
+  readFeatureImageIntentPolicy,
+  resolvePolicyImageIntent,
+} from './imageIntentPolicy'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // VALIDATION
@@ -130,7 +133,11 @@ export async function saveDirectFeatureUpload(
     imageRevisionId = crypto.randomUUID(),
     change = prepareRevisionChangeSet(db, input)
   const imagePolicy = await readFeatureImageIntentPolicy(db, input.featureId)
-  const assignment = resolvePolicyImageIntent(imagePolicy, input.intent, imagePolicy.autoPublishUnclassified)
+  const assignment = resolvePolicyImageIntent(
+    imagePolicy,
+    input.intent,
+    imagePolicy.autoPublishUnclassified,
+  )
   const prepared = await prepareFeatureEdit(db, {
     ...input,
     guard: sql`(${input.guard}) AND (${imagePolicy.guard})`,
@@ -142,7 +149,10 @@ export async function saveDirectFeatureUpload(
       else {
         if (input.intent === 'canonical')
           for (const entry of Object.values(content.gallery.entries))
-            if (entry.intent === 'canonical') { entry.intent = 'general'; entry.isPublished = true }
+            if (entry.intent === 'canonical') {
+              entry.intent = 'general'
+              entry.isPublished = true
+            }
         content.gallery.order.push(imageId)
         content.gallery.entries[imageId] = {
           imageRevisionId,
@@ -161,41 +171,35 @@ export async function saveDirectFeatureUpload(
       ...(input.replacement
         ? []
         : [
-            db
-              .insert(image)
-              .values({
-                id: imageId,
-                contributorId: input.actorId,
-                cdn: 'cloudflareR2',
-                env: input.storageNamespace,
-                publicId: input.storageKey,
-                contentHash: input.hash,
-                version: metadata.version,
-                presentationMode: metadata.presentationMode,
-              }),
+            db.insert(image).values({
+              id: imageId,
+              contributorId: input.actorId,
+              cdn: 'cloudflareR2',
+              env: input.storageNamespace,
+              publicId: input.storageKey,
+              contentHash: input.hash,
+              version: metadata.version,
+              presentationMode: metadata.presentationMode,
+            }),
           ]),
-      db
-        .insert(imageAssetVersion)
-        .values({
-          id: assetVersionId,
-          imageId,
-          storageNamespace: input.storageNamespace,
-          storageKey: input.storageKey,
-          contentHash: input.hash,
-          mediaType: input.mediaType,
-          byteSize: input.bytes.byteLength,
-          changeSetId: change.id,
-        }),
-      db
-        .insert(imageRevision)
-        .values({
-          id: imageRevisionId,
-          imageId,
-          assetVersionId,
-          previousRevisionId: input.replacement?.imageRevisionId,
-          metadata,
-          changeSetId: change.id,
-        }),
+      db.insert(imageAssetVersion).values({
+        id: assetVersionId,
+        imageId,
+        storageNamespace: input.storageNamespace,
+        storageKey: input.storageKey,
+        contentHash: input.hash,
+        mediaType: input.mediaType,
+        byteSize: input.bytes.byteLength,
+        changeSetId: change.id,
+      }),
+      db.insert(imageRevision).values({
+        id: imageRevisionId,
+        imageId,
+        assetVersionId,
+        previousRevisionId: input.replacement?.imageRevisionId,
+        metadata,
+        changeSetId: change.id,
+      }),
       ...prepared.statements,
     ])
     if (accepted)

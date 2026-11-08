@@ -47,7 +47,9 @@ async function fixture(assignment = { intent: 'general', isPublished: true }) {
     INSERT INTO organisation VALUES ('o',1,0); INSERT INTO project VALUES ('p','o',1,0);
     INSERT INTO layer VALUES ('l','p',1,0); INSERT INTO feature VALUES ('f','l','p','o',1,0,0);
     INSERT INTO image VALUES ('photo',0); INSERT INTO featureImage VALUES ('f','photo',1,'general');`)
-  sqlite.prepare('UPDATE featureImage SET intent=?,isPublished=?').run(assignment.intent, Number(assignment.isPublished))
+  sqlite
+    .prepare('UPDATE featureImage SET intent=?,isPublished=?')
+    .run(assignment.intent, Number(assignment.isPublished))
   sqlite.exec(readFileSync('migrations/0171_feature_revisions.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0172_image_revisions.sql', 'utf8'))
   const common = { actorId: 'editor', guard: sql`1` }
@@ -146,7 +148,9 @@ describe('exact image revision delivery', () => {
     const assignment = resolveImageIntent(intents, 'research')
     expect(assignment).toEqual({ intent: 'research', isPublished: true })
     const f = await fixture(assignment)
-    expect(await readImageRevisionDelivery(f.db, f.asset.imageRevisionId)).toMatchObject({
+    expect(
+      await readImageRevisionDelivery(f.db, f.asset.imageRevisionId),
+    ).toMatchObject({
       revisionId: f.asset.imageRevisionId,
       storageKey: 'immutable/photo',
     })

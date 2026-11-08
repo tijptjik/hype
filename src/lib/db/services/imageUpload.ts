@@ -1,5 +1,8 @@
 // IMAGE INTENT POLICY
-import { readFeatureImageIntentPolicy, resolvePolicyImageIntent } from './imageIntentPolicy'
+import {
+  readFeatureImageIntentPolicy,
+  resolvePolicyImageIntent,
+} from './imageIntentPolicy'
 // DRIZZLE
 import { and, eq, exists, sql } from 'drizzle-orm'
 // DB
@@ -81,7 +84,11 @@ export async function createUploadedFeatureImage(
   if (draftContributorId && !taskIds.length) return null
   const featureId = data.ctxId
   const policy = await readFeatureImageIntentPolicy(db, featureId)
-  const assignment = resolvePolicyImageIntent(policy, data.featureImage?.intent ?? 'undefined', !taskIds.length && !draftContributorId && policy.autoPublishUnclassified)
+  const assignment = resolvePolicyImageIntent(
+    policy,
+    data.featureImage?.intent ?? 'undefined',
+    !taskIds.length && !draftContributorId && policy.autoPublishUnclassified,
+  )
   const id = newImageId ?? (await getUploadedImageId(data))
   const requested = JSON.stringify([...new Set(taskIds)])
   const target = db
@@ -145,7 +152,13 @@ export async function createUploadedFeatureImage(
     prepareRevisionCheck(db, exists(storedImage)),
     db
       .insert(featureImage)
-      .values({ ...data.featureImage, ...assignment, isPublished: !taskIds.length && !draftContributorId && assignment.isPublished, imageId: id, featureId })
+      .values({
+        ...data.featureImage,
+        ...assignment,
+        isPublished: !taskIds.length && !draftContributorId && assignment.isPublished,
+        imageId: id,
+        featureId,
+      })
       .onConflictDoNothing({ target: [featureImage.featureId, featureImage.imageId] }),
     // A new evidence link invalidates review snapshots; a replay must not change the revision.
     ...prepareTaskEvidenceRevision(

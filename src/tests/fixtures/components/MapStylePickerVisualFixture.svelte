@@ -40,4 +40,4 @@ const model = {
 } as unknown as ReturnType<typeof useSettingsPanelModel>
 const panel = { panelType: 'settings', position: 'right' } as PanelProps
 </script>
-<div class="min-h-screen bg-panel max-w-96"><ThemeSection {model} {...panel} /></div>
+<div class="bg-panel min-h-screen max-w-96"><ThemeSection {model} {...panel} /></div>

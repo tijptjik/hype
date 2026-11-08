@@ -61,9 +61,7 @@ it('shows comparisons, loads older entries and clears evidence after access fail
   await fireEvent.click(screen.getByText('Older changes'))
   await screen.findByText('Initial capture')
   expect(query).toHaveBeenLastCalledWith({ organisationId: 'o', before: 5 })
-  await fireEvent.click(
-    screen.getByRole('button', { name: 'Field definitions' }),
-  )
+  await fireEvent.click(screen.getByRole('button', { name: 'Field definitions' }))
   await screen.findByRole('alert')
   expect(screen.queryByText('Translation corrected')).toBeNull()
   expect(screen.queryByText('Old name')).toBeNull()
@@ -75,9 +73,7 @@ it('distinguishes unavailable tracking from empty recorded history', async () =>
     .mockResolvedValueOnce({ available: true, entries: [], nextCursor: null })
   render(OrganisationHistory, { organisationId: 'o' })
   await screen.findByText('History tracking is not yet enabled.')
-  await fireEvent.click(
-    screen.getByRole('button', { name: 'Field definitions' }),
-  )
+  await fireEvent.click(screen.getByRole('button', { name: 'Field definitions' }))
   await screen.findByText('No recorded changes yet. Earlier edits are not available.')
 })
 
@@ -126,9 +122,7 @@ it('switches to field definitions without retaining profile entries', async () =
     })
   render(OrganisationHistory, { organisationId: 'o' })
   await screen.findByText('Translation corrected')
-  await fireEvent.click(
-    screen.getByRole('button', { name: 'Field definitions' }),
-  )
+  await fireEvent.click(screen.getByRole('button', { name: 'Field definitions' }))
   await screen.findByText('Field definitions updated')
   expect(screen.queryByText('Translation corrected')).toBeNull()
   expect(query).toHaveBeenLastCalledWith({
@@ -144,9 +138,23 @@ it('switches to field definitions without retaining profile entries', async () =
 })
 
 it('shows translated resource names together in a locale table', async () => {
-  query.mockResolvedValue({ available: true, nextCursor: null, entries: [{ ...entry, changes: [
-    entry.changes[0], { ...entry.changes[0], path: ['i18n', 'zh-Hant', 'name'], after: { present: true, value: '新名稱' } },
-  ] }] })
+  query.mockResolvedValue({
+    available: true,
+    nextCursor: null,
+    entries: [
+      {
+        ...entry,
+        changes: [
+          entry.changes[0],
+          {
+            ...entry.changes[0],
+            path: ['i18n', 'zh-Hant', 'name'],
+            after: { present: true, value: '新名稱' },
+          },
+        ],
+      },
+    ],
+  })
   render(OrganisationHistory, { organisationId: 'org' })
   expect(await screen.findByRole('button', { name: '1 changed field' })).toBeTruthy()
   expect(screen.getAllByRole('table')).toHaveLength(1)

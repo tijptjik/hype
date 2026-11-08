@@ -2,33 +2,71 @@ import { describe, expect, it } from 'vitest'
 import { mergeRevisionContent, resolveRevisionContent } from './merge'
 
 describe('dependent Feature values', () => {
-  const policy = { isAtomic: (path: readonly string[]) => path.length === 1 && path[0] === 'location' }
-  const base = { location: { locationId: 'old-place', factsRevisionId: 'old-facts' }, title: 'Old' }
-  const current = { ...base, location: { ...base.location, locationId: 'new-place' }, title: 'Accepted' }
-  const proposed = { ...base, location: { ...base.location, factsRevisionId: 'new-facts' } }
+  const policy = {
+    isAtomic: (path: readonly string[]) => path.length === 1 && path[0] === 'location',
+  }
+  const base = {
+    location: { locationId: 'old-place', factsRevisionId: 'old-facts' },
+    title: 'Old',
+  }
+  const current = {
+    ...base,
+    location: { ...base.location, locationId: 'new-place' },
+    title: 'Accepted',
+  }
+  const proposed = {
+    ...base,
+    location: { ...base.location, factsRevisionId: 'new-facts' },
+  }
 
   it('does not construct an unreviewed combination of accepted Location references', () => {
     expect(mergeRevisionContent(base, current, proposed, policy)).toMatchObject({
-      status: 'conflict', conflicts: [{ path: ['location'],
-        current: { value: current.location }, proposed: { value: proposed.location } }],
+      status: 'conflict',
+      conflicts: [
+        {
+          path: ['location'],
+          current: { value: current.location },
+          proposed: { value: proposed.location },
+        },
+      ],
     })
   })
 
   it('requires a decision for the whole dependent value and retains independent changes', () => {
     const location = { locationId: 'reviewed-place', factsRevisionId: 'reviewed-facts' }
-    expect(resolveRevisionContent(base, current, proposed, [
-      { path: ['location'], result: { present: true, value: location } },
-    ], policy)).toEqual({ location, title: 'Accepted' })
-    expect(() => resolveRevisionContent(base, current, proposed, [
-      { path: ['location', 'factsRevisionId'], result: { present: true, value: 'new-facts' } },
-    ], policy)).toThrow('Resolve every displayed conflict')
+    expect(
+      resolveRevisionContent(
+        base,
+        current,
+        proposed,
+        [{ path: ['location'], result: { present: true, value: location } }],
+        policy,
+      ),
+    ).toEqual({ location, title: 'Accepted' })
+    expect(() =>
+      resolveRevisionContent(
+        base,
+        current,
+        proposed,
+        [
+          {
+            path: ['location', 'factsRevisionId'],
+            result: { present: true, value: 'new-facts' },
+          },
+        ],
+        policy,
+      ),
+    ).toThrow('Resolve every displayed conflict')
   })
 
   it('allows a whole-value change when the other branch leaves it alone or agrees', () => {
-    expect(mergeRevisionContent(base, { ...base, title: 'Accepted' }, proposed, policy))
-      .toEqual({ status: 'merged', value: { ...proposed, title: 'Accepted' } })
-    expect(mergeRevisionContent(base, proposed, proposed, policy))
-      .toEqual({ status: 'merged', value: proposed })
+    expect(
+      mergeRevisionContent(base, { ...base, title: 'Accepted' }, proposed, policy),
+    ).toEqual({ status: 'merged', value: { ...proposed, title: 'Accepted' } })
+    expect(mergeRevisionContent(base, proposed, proposed, policy)).toEqual({
+      status: 'merged',
+      value: proposed,
+    })
   })
 
   it('supports keyed property boundaries without treating all properties as one conflict', () => {
@@ -36,10 +74,19 @@ describe('dependent Feature values', () => {
     const result = mergeRevisionContent(
       { properties },
       { properties: { ...properties, a: { selection: 'v2', value: null } } },
-      { properties: { ...properties, a: { selection: 'v1', value: 'Scalar' }, b: { value: 'New' } } },
+      {
+        properties: {
+          ...properties,
+          a: { selection: 'v1', value: 'Scalar' },
+          b: { value: 'New' },
+        },
+      },
       { isAtomic: path => path.length === 2 && path[0] === 'properties' },
     )
-    expect(result).toMatchObject({ status: 'conflict', conflicts: [{ path: ['properties', 'a'] }] })
+    expect(result).toMatchObject({
+      status: 'conflict',
+      conflicts: [{ path: ['properties', 'a'] }],
+    })
   })
 })
 

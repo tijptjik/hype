@@ -128,7 +128,11 @@ export class ResourceScope {
   selectOrganisation = async (id: Id | null): Promise<void> => {
     const next = id ? [id] : []
     const previous = this.prisms.organisation
-    if (previous.length === next.length && previous.every((value, index) => value === next[index])) return
+    if (
+      previous.length === next.length &&
+      previous.every((value, index) => value === next[index])
+    )
+      return
     this.prisms.organisation = next
     await this.dependencies.refreshProjects()
   }

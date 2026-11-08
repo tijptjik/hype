@@ -34,7 +34,10 @@ export function materializeEffectiveLocation(input: {
   const effective = resolveFeatureLocation(
     { ...input.facts, names: adaptContentMap(input.facts.names, contentStorageTag) },
     input.locationFacts.location,
-    { ...input.overrides, names: adaptContentMap(input.overrides.names ?? {}, contentStorageTag) },
+    {
+      ...input.overrides,
+      names: adaptContentMap(input.overrides.names ?? {}, contentStorageTag),
+    },
   )
   if (!effective.location) throw new Error('A Feature requires Location coordinates')
   const address = FeatureAddressSchema.parse({

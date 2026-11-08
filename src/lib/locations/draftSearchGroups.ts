@@ -65,7 +65,13 @@ export function groupDraftSearchResults<T extends DraftSearchResult>(
           ) <= 100,
       )
     if (group) group.members.push(row)
-    else groups.push({ key, representative: row, members: [row], expandable: Boolean(key) })
+    else
+      groups.push({
+        key,
+        representative: row,
+        members: [row],
+        expandable: Boolean(key),
+      })
   }
   for (const group of groups) {
     group.members.sort(

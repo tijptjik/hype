@@ -46,8 +46,7 @@ beforeEach(() => {
     CREATE TABLE revisionChangeSet(id TEXT PRIMARY KEY,createdAt TEXT,actorId TEXT,origin TEXT,reason TEXT);
   `)
   for (const resource of ['hub', 'organisation', 'project', 'layer']) {
-    fixture.sqlite
-      .exec(`CREATE TABLE ${resource}I18n(${resource}Id TEXT,locale TEXT,name TEXT);
+    fixture.sqlite.exec(`CREATE TABLE ${resource}I18n(${resource}Id TEXT,locale TEXT,name TEXT);
       CREATE TABLE ${resource}Revision(id TEXT PRIMARY KEY,${resource}Id TEXT,previousRevisionId TEXT,content TEXT,changeSetId TEXT);`)
   }
   for (const [resource, id] of [

@@ -6,14 +6,16 @@ const { eligible, history, access } = vi.hoisted(() => ({
   access: vi.fn(),
 }))
 vi.mock('#lib/api/server/guarded.js', () => ({
-  guardedQuery:
-    (
-      schema: { parse(value: unknown): unknown },
-      handler: (input: unknown, ctx: unknown) => unknown,
-    ) =>
-    Object.assign(async (input: unknown, ctx: unknown) => handler(schema.parse(input), ctx), {
-      __: { type: 'query' },
-    }),
+  guardedQuery: (
+    schema: { parse(value: unknown): unknown },
+    handler: (input: unknown, ctx: unknown) => unknown,
+  ) =>
+    Object.assign(
+      async (input: unknown, ctx: unknown) => handler(schema.parse(input), ctx),
+      {
+        __: { type: 'query' },
+      },
+    ),
 }))
 vi.mock('#lib/db/services/userChangelogScope.js', () => ({
   canReadUserChangelog: eligible,

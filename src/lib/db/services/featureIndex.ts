@@ -126,8 +126,21 @@ export async function queryFeatureIndex(
   const source = sql`${feature}`
   // Count requests use the identical authorized predicate without reading any row relations.
   if (input.countOnly) {
-    const counts = await getFeatureQueryCounts(db, queryInput, conditions, source,
-      input.q ? null : buildFeatureRollupConditions(db, queryInput, [...authorizedConditions, ...filters], hub), false)
+    const counts = await getFeatureQueryCounts(
+      db,
+      queryInput,
+      conditions,
+      source,
+      input.q
+        ? null
+        : buildFeatureRollupConditions(
+            db,
+            queryInput,
+            [...authorizedConditions, ...filters],
+            hub,
+          ),
+      false,
+    )
     return { data: [], totalCount: counts.totalCount, hasMore: false, nextOffset: null }
   }
   const limit = input.pagination?.limit ?? 50
@@ -210,11 +223,21 @@ export async function queryFeatureIndex(
     'admin',
   )
   // Index thumbnails need one image; full galleries remain owned by the detail endpoint.
-  const data = input.summaryOnly ? shaped.data.map(item => {
-    const { images, ...summary } = item
-    const relations = (rows.find(row => row.id === item.id) as unknown as { images?: Array<{ isPublished?: boolean }> })?.images ?? []
-    return { ...summary, imageCount: relations.length,
-      imagePublishedCount: relations.filter(image => image.isPublished).length }
-  }) : shaped.data
+  const data = input.summaryOnly
+    ? shaped.data.map(item => {
+        const { images, ...summary } = item
+        const relations =
+          (
+            rows.find(row => row.id === item.id) as unknown as {
+              images?: Array<{ isPublished?: boolean }>
+            }
+          )?.images ?? []
+        return {
+          ...summary,
+          imageCount: relations.length,
+          imagePublishedCount: relations.filter(image => image.isPublished).length,
+        }
+      })
+    : shaped.data
   return { data, ...metadata }
 }

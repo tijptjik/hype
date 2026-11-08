@@ -26,7 +26,7 @@ export async function loadAddressNames(
   family: 'streets' | 'buildings',
 ): Promise<AddressName[]> {
   const bundle = family === 'buildings' ? await loadBuildingNames() : null
-  const rows = bundle?.records ?? await loadSaanseoiNames(family)
+  const rows = bundle?.records ?? (await loadSaanseoiNames(family))
   return rows.flatMap(row => {
     const names = Object.fromEntries(
       Object.entries(row.names).filter(
@@ -35,7 +35,15 @@ export async function loadAddressNames(
       ),
     )
     return Object.keys(names).length || row.name
-      ? [{ id: row.id, name: row.name, release: bundle?.release, names, divisionCodes: row.divisionCodes }]
+      ? [
+          {
+            id: row.id,
+            name: row.name,
+            release: bundle?.release,
+            names,
+            divisionCodes: row.divisionCodes,
+          },
+        ]
       : []
   })
 }
@@ -82,17 +90,35 @@ export function structurePlaceAddress(
     return address
   const content = prepareLocalLocationAddress(address)
   // Match compound source addresses against the same street vocabulary used by the pickers.
-  const matcher = createPlaceAddressMatcher([], streets.flatMap(street =>
-    Object.entries(street.names).map(([locale, name]) => ({ locale: locale.toLowerCase(), name, streetId: street.id })),
-  ))
+  const matcher = createPlaceAddressMatcher(
+    [],
+    streets.flatMap(street =>
+      Object.entries(street.names).map(([locale, name]) => ({
+        locale: locale.toLowerCase(),
+        name,
+        streetId: street.id,
+      })),
+    ),
+  )
   // A bare unit reference is usable only alongside an explicit floor and named mall.
   // This source-text pattern proposes editable components, never a canonical identity.
-  const mallUnit = /^([A-Z]\d+[A-Z]?),\s*((?:\d+|G|UG|LG|B\d*)\/F),\s*(.+\bMall(?:\s+[IVX]+|\s+\d+)?)$/i.exec(address.source.fallbackDisplay.en?.trim() ?? '')
+  const mallUnit =
+    /^([A-Z]\d+[A-Z]?),\s*((?:\d+|G|UG|LG|B\d*)\/F),\s*(.+\bMall(?:\s+[IVX]+|\s+\d+)?)$/i.exec(
+      address.source.fallbackDisplay.en?.trim() ?? '',
+    )
   const labels = mallUnit
-    ? { ...address.source.fallbackDisplay, en: `Unit ${mallUnit[1]}, ${mallUnit[2]}, ${mallUnit[3]}` }
+    ? {
+        ...address.source.fallbackDisplay,
+        en: `Unit ${mallUnit[1]}, ${mallUnit[2]}, ${mallUnit[3]}`,
+      }
     : address.source.fallbackDisplay
   const parsed = parseAddressContent(labels, matcher).content
-  if (mallUnit) parsed.i18n.en = { ...parsed.i18n.en, premisesName: mallUnit[3], formattedAddress: '' }
+  if (mallUnit)
+    parsed.i18n.en = {
+      ...parsed.i18n.en,
+      premisesName: mallUnit[3],
+      formattedAddress: '',
+    }
   if (parsed.unit) {
     content.unit = parsed.unit
     content.unitI18n = parsed.unitI18n
@@ -120,7 +146,8 @@ export function structurePlaceAddress(
   }
   // Do not install an unstructured parser result merely to replace identical source text.
   if (
-    !content.unit && !Object.values(content.i18n).some(
+    !content.unit &&
+    !Object.values(content.i18n).some(
       row => row.streetName || row.buildingName || row.premisesName,
     )
   )

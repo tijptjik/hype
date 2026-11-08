@@ -1,5 +1,8 @@
 // IMAGE INTENT POLICY
-import { readFeatureImageIntentPolicy, resolvePolicyImageIntent } from './imageIntentPolicy'
+import {
+  readFeatureImageIntentPolicy,
+  resolvePolicyImageIntent,
+} from './imageIntentPolicy'
 // DRIZZLE
 import { and, sql } from 'drizzle-orm'
 // VALIDATION
@@ -276,14 +279,21 @@ export async function saveFeatureImageUploadDraft(
   const evidenceGuard = sql`NOT EXISTS (SELECT id,type FROM task WHERE id IN (SELECT value FROM json_each(${requested}))
     EXCEPT SELECT json_extract(value,'$.id'),json_extract(value,'$.type') FROM json_each(${JSON.stringify(evidenceTasks)}))`
   const imagePolicy = await readFeatureImageIntentPolicy(db, input.featureId)
-  const assignment = resolvePolicyImageIntent(imagePolicy, research ? 'research' : input.intent, !taskIds.length && imagePolicy.autoPublishUnclassified)
+  const assignment = resolvePolicyImageIntent(
+    imagePolicy,
+    research ? 'research' : input.intent,
+    !taskIds.length && imagePolicy.autoPublishUnclassified,
+  )
   // A replacement preserves this Feature's captions, ordering and visibility intent.
   if (input.replacement)
     content.gallery.entries[imageId].imageRevisionId = imageRevisionId
   else {
     if (!research && input.intent === 'canonical')
       for (const entry of Object.values(content.gallery.entries))
-        if (entry.intent === 'canonical') { entry.intent = 'general'; entry.isPublished = true }
+        if (entry.intent === 'canonical') {
+          entry.intent = 'general'
+          entry.isPublished = true
+        }
     content.gallery.order.push(imageId)
     content.gallery.entries[imageId] = {
       imageRevisionId,
@@ -312,44 +322,48 @@ export async function saveFeatureImageUploadDraft(
         },
       })
       if (!capture.revisionId) throw new Error('Feature enrollment changed')
-      const result = await executeRevisionBatch(db, sql`(${guard}) AND (${imagePolicy.guard})`, [
-        ...capture.before,
-        change.statement,
-        ...(input.replacement
-          ? []
-          : [
-              db.insert(image).values({
-                id: imageId,
-                contributorId: input.actorId,
-                cdn: 'cloudflareR2',
-                env: input.storageNamespace,
-                publicId: input.storageKey,
-                contentHash: hash,
-                version: metadata.version,
-                presentationMode: metadata.presentationMode,
-              }),
-            ]),
-        db.insert(imageAssetVersion).values({
-          id: assetVersionId,
-          imageId,
-          storageNamespace: input.storageNamespace,
-          storageKey: input.storageKey,
-          contentHash: hash,
-          mediaType: input.mediaType,
-          byteSize: input.bytes.byteLength,
-          changeSetId: change.id,
-        }),
-        db.insert(imageRevision).values({
-          id: imageRevisionId,
-          imageId,
-          assetVersionId,
-          previousRevisionId: input.replacement?.imageRevisionId,
-          metadata,
-          changeSetId: change.id,
-        }),
-        ...projection,
-        ...capture.after,
-      ])
+      const result = await executeRevisionBatch(
+        db,
+        sql`(${guard}) AND (${imagePolicy.guard})`,
+        [
+          ...capture.before,
+          change.statement,
+          ...(input.replacement
+            ? []
+            : [
+                db.insert(image).values({
+                  id: imageId,
+                  contributorId: input.actorId,
+                  cdn: 'cloudflareR2',
+                  env: input.storageNamespace,
+                  publicId: input.storageKey,
+                  contentHash: hash,
+                  version: metadata.version,
+                  presentationMode: metadata.presentationMode,
+                }),
+              ]),
+          db.insert(imageAssetVersion).values({
+            id: assetVersionId,
+            imageId,
+            storageNamespace: input.storageNamespace,
+            storageKey: input.storageKey,
+            contentHash: hash,
+            mediaType: input.mediaType,
+            byteSize: input.bytes.byteLength,
+            changeSetId: change.id,
+          }),
+          db.insert(imageRevision).values({
+            id: imageRevisionId,
+            imageId,
+            assetVersionId,
+            previousRevisionId: input.replacement?.imageRevisionId,
+            metadata,
+            changeSetId: change.id,
+          }),
+          ...projection,
+          ...capture.after,
+        ],
+      )
       if (result)
         return {
           status: 'accepted',

@@ -10,7 +10,16 @@ import type { ContentLocale } from './model'
  */
 const entries = [
   ['en', 'English', 'English'],
-  ['zh-Hant', '繁體中文', 'Traditional Chinese', 'zhHant', 'Cantonese', 'yue', '粵語', '粤语'],
+  [
+    'zh-Hant',
+    '繁體中文',
+    'Traditional Chinese',
+    'zhHant',
+    'Cantonese',
+    'yue',
+    '粵語',
+    '粤语',
+  ],
   ['zh-Hans', '简体中文', 'Simplified Chinese', 'zhHans'],
   ['ja', '日本語', 'Japanese'],
   ['ko', '한국어', 'Korean'],
@@ -83,13 +92,15 @@ export const CONTENT_LOCALE_CATALOGUE = Object.freeze(
     }),
   ),
 )
-const eligibleTags = new Set<string>(
-  [
-    ...CONTENT_LOCALE_CATALOGUE.map(entry => entry.locale),
-    // Retired search choices remain writable so existing settings can be saved unchanged.
-    'zh-Hant-HK', 'zh-Hant-TW', 'zh-Hans-CN', 'zh-Hans-SG', 'yue',
-  ],
-)
+const eligibleTags = new Set<string>([
+  ...CONTENT_LOCALE_CATALOGUE.map(entry => entry.locale),
+  // Retired search choices remain writable so existing settings can be saved unchanged.
+  'zh-Hant-HK',
+  'zh-Hant-TW',
+  'zh-Hans-CN',
+  'zh-Hans-SG',
+  'yue',
+])
 export const SupportedContentLocaleSchema = ContentLocaleSchema.refine(
   locale => eligibleTags.has(locale),
   'Choose a language from the content locale catalogue.',

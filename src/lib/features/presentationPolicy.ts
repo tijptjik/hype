@@ -7,9 +7,14 @@ import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
  * @param metadata Layer preferences; null and absent values inherit the Project.
  * @returns Effective description availability and Location naming policy.
  */
-export function resolveFeaturePresentationPolicy(flags?: ProjectFlags | null, metadata?: LayerMetadata | null): { allowDescriptions: boolean; locationBasedNames: boolean } {
+export function resolveFeaturePresentationPolicy(
+  flags?: ProjectFlags | null,
+  metadata?: LayerMetadata | null,
+): { allowDescriptions: boolean; locationBasedNames: boolean } {
   return {
-    allowDescriptions: metadata?.allowFeatureDescriptions ?? flags?.allowFeatureDescriptions ?? true,
-    locationBasedNames: metadata?.locationBasedFeatureNames ?? flags?.locationBasedFeatureNames ?? false,
+    allowDescriptions:
+      metadata?.allowFeatureDescriptions ?? flags?.allowFeatureDescriptions ?? true,
+    locationBasedNames:
+      metadata?.locationBasedFeatureNames ?? flags?.locationBasedFeatureNames ?? false,
   }
 }

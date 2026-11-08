@@ -16,8 +16,16 @@ import type { Database } from '#lib/types.js'
  * @param db Request database. @param layerId Authorized Feature parent.
  * @returns Effective policy; missing parents retain legacy defaults.
  */
-export async function readFeaturePresentationPolicy(db: Database, layerId: string): Promise<ReturnType<typeof resolveFeaturePresentationPolicy>> {
-  const row = await db.select({ flags: project.flags, metadata: layer.metadata }).from(layer).innerJoin(project, eq(project.id, layer.projectId)).where(eq(layer.id, layerId)).get()
+export async function readFeaturePresentationPolicy(
+  db: Database,
+  layerId: string,
+): Promise<ReturnType<typeof resolveFeaturePresentationPolicy>> {
+  const row = await db
+    .select({ flags: project.flags, metadata: layer.metadata })
+    .from(layer)
+    .innerJoin(project, eq(project.id, layer.projectId))
+    .where(eq(layer.id, layerId))
+    .get()
   return resolveFeaturePresentationPolicy(row?.flags, row?.metadata)
 }
 

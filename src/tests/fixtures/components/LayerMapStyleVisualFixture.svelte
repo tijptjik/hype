@@ -58,7 +58,7 @@ function inspect(event: SubmitEvent): void {
   )
 }
 </script>
-<form class="max-w-3xl bg-panel p-6 text-foreground" onsubmit={inspect}>
+<form class="bg-panel text-foreground max-w-3xl p-6" onsubmit={inspect}>
   <FormMapStyleSection
     title="Map style"
     availableMapStyles={options}
@@ -67,7 +67,7 @@ function inspect(event: SubmitEvent): void {
     hiddenMapStyleInputAttrs={inputs}
     onSelectMapStyle={select}
   />
-  <button type="submit" class="mt-4 rounded border border-border px-4 py-2">
+  <button type="submit" class="border-border mt-4 rounded border px-4 py-2">
     Inspect submission
   </button>
   <output class="block p-3">{submitted}</output>

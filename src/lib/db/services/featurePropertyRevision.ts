@@ -22,32 +22,55 @@ import type { OrganisationRevisionActor } from './organisationRevision'
  */
 export async function prepareFeaturePropertyCascadeCapture(
   db: Database,
-  input: { propertyIds: readonly string[]; optionIds: readonly string[]; actor?: OrganisationRevisionActor },
+  input: {
+    propertyIds: readonly string[]
+    optionIds: readonly string[]
+    actor?: OrganisationRevisionActor
+  },
 ): Promise<{ before: BatchItem<'sqlite'>[]; after: BatchItem<'sqlite'>[] }> {
-  const empty = { before: [] as BatchItem<'sqlite'>[], after: [] as BatchItem<'sqlite'>[] }
+  const empty = {
+    before: [] as BatchItem<'sqlite'>[],
+    after: [] as BatchItem<'sqlite'>[],
+  }
   if (!input.propertyIds.length && !input.optionIds.length) return empty
-  const storage = await db.get<{ n: number }>(sql`SELECT count(*) AS n FROM sqlite_master WHERE name='featureRevisionHead' AND type='table'`)
-  if (!storage?.n && !await hasFeatureLifecycleStorage(db)) return empty
+  const storage = await db.get<{ n: number }>(
+    sql`SELECT count(*) AS n FROM sqlite_master WHERE name='featureRevisionHead' AND type='table'`,
+  )
+  if (!storage?.n && !(await hasFeatureLifecycleStorage(db))) return empty
   const selected = sql`SELECT DISTINCT featureId FROM featureProperty WHERE
     propertyId IN (SELECT value FROM json_each(${JSON.stringify(input.propertyIds)})) OR
     propertyValueId IN (SELECT value FROM json_each(${JSON.stringify(input.optionIds)}))`
-  const affected = await db.all<{ featureId: string }>(sql`${selected} ORDER BY featureId`)
+  const affected = await db.all<{ featureId: string }>(
+    sql`${selected} ORDER BY featureId`,
+  )
   const ids = affected.map(row => row.featureId)
-  const removed = new Set(input.propertyIds), options = new Set(input.optionIds)
+  const removed = new Set(input.propertyIds),
+    options = new Set(input.optionIds)
   // An additional child assignment after preparation must not escape the deletion's audit capture.
-  empty.before.push(prepareRevisionCheck(db, sql`NOT EXISTS (
-    SELECT featureId FROM (${selected}) EXCEPT SELECT value FROM json_each(${JSON.stringify(ids)}))`))
+  empty.before.push(
+    prepareRevisionCheck(
+      db,
+      sql`NOT EXISTS (
+    SELECT featureId FROM (${selected}) EXCEPT SELECT value FROM json_each(${JSON.stringify(ids)}))`,
+    ),
+  )
   for (const featureId of ids) {
     const capture = await prepareFeatureAcceptedCapture(db, {
-      featureId, actorId: input.actor?.actorId ?? 'unattributed', guard: sql`1`,
+      featureId,
+      actorId: input.actor?.actorId ?? 'unattributed',
+      guard: sql`1`,
       origin: input.actor?.origin,
       reason: input.actor?.reason ?? 'Shared catalogue removed Feature values',
       derive: previous => {
-        if (!input.actor?.actorId) throw new Error('Feature catalogue cascades require an attributed editor')
+        if (!input.actor?.actorId)
+          throw new Error('Feature catalogue cascades require an attributed editor')
         const content = structuredClone(previous)
         for (const [id, row] of Object.entries(content.properties)) {
           if (removed.has(id)) delete content.properties[id]
-          else if (row.selection.propertyValueId && options.has(row.selection.propertyValueId)) {
+          else if (
+            row.selection.propertyValueId &&
+            options.has(row.selection.propertyValueId)
+          ) {
             row.selection.propertyValueId = null
             row.selection.definition.selectedOption = null
           }
@@ -58,8 +81,15 @@ export async function prepareFeaturePropertyCascadeCapture(
     empty.before.push(...capture.before)
     if (capture.revisionId) {
       const now = new Date().toISOString()
-      empty.after.push(db.update(feature).set({ modifiedAt: sql`CASE WHEN modifiedAt>=${now}
-        THEN strftime('%Y-%m-%dT%H:%M:%fZ',modifiedAt,'+0.001 seconds') ELSE ${now} END` }).where(eq(feature.id, featureId)))
+      empty.after.push(
+        db
+          .update(feature)
+          .set({
+            modifiedAt: sql`CASE WHEN modifiedAt>=${now}
+        THEN strftime('%Y-%m-%dT%H:%M:%fZ',modifiedAt,'+0.001 seconds') ELSE ${now} END`,
+          })
+          .where(eq(feature.id, featureId)),
+      )
     }
     empty.after.push(...capture.after)
   }

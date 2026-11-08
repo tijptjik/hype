@@ -62,24 +62,50 @@ onDestroy(() => view.dispose())
     controlBar={header.state.layout.controlBar}
   />
   <nav class="flex gap-4 p-2">
-    <button type="button"
+    <button
+      type="button"
       onclick={() => {
         scopes = [...scopes, 'second']
         profileReady = false
       }}
-    >Mount next organisation</button>
-    <button type="button" onclick={() => { scopes = ['second'] }}>
+    >
+      Mount next organisation
+    </button>
+    <button
+      type="button"
+      onclick={() => {
+        scopes = ['second']
+      }}
+    >
       Dispose previous organisation
     </button>
-    <button type="button" onclick={() => { profileReady = true }}>Resolve profile</button>
-    <button type="button" onclick={() => { showFeatures = !showFeatures }}>Toggle Features</button>
+    <button
+      type="button"
+      onclick={() => {
+        profileReady = true
+      }}
+    >
+      Resolve profile
+    </button>
+    <button
+      type="button"
+      onclick={() => {
+        showFeatures = !showFeatures
+      }}
+    >
+      Toggle Features
+    </button>
   </nav>
   <Main.Root class="min-h-0 flex-1">
     <Main.Form isReady={profileReady}>
       {#snippet fallback()}
-        {#if !showFeatures}<p>Profile loading</p>{/if}
+        {#if !showFeatures}
+          <p>Profile loading</p>
+        {/if}
       {/snippet}
-      {#if !showFeatures}<p>Profile ready</p>{/if}
+      {#if !showFeatures}
+        <p>Profile ready</p>
+      {/if}
     </Main.Form>
     <Main.Facet
       isVisible={showFeatures}

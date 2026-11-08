@@ -289,7 +289,7 @@
 
   /* Background tracking uses a hollow target; waiting retains MapLibre's icon animation. */
   .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background
-  .maplibregl-ctrl-icon::after,
+    .maplibregl-ctrl-icon::after,
   .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background-error
     .maplibregl-ctrl-icon::after {
     content: none;

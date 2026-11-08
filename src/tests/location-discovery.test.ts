@@ -157,19 +157,23 @@ describe('discovery ranking and independent preferences', () => {
   })
 })
 
-
 it('filters nearby types and status before the nearest-fifty candidate cap', async () => {
   const unrelated = Array.from({ length: 60 }, (_, index) => ({
-    ...row(`unrelated-${index}`), taxonomy: { primary: 'clothing_store' },
+    ...row(`unrelated-${index}`),
+    taxonomy: { primary: 'clothing_store' },
   }))
   const closed = { ...row('closed'), operatingStatus: 'permanently_closed' }
   const matching = row('matching', [114.171, 22.3])
   const client = {
-    baseUrl: 'https://example.test', apiKey: 'test',
-    fetch: vi.fn(async () => page([...unrelated, closed, matching])) as unknown as typeof fetch,
+    baseUrl: 'https://example.test',
+    apiKey: 'test',
+    fetch: vi.fn(async () =>
+      page([...unrelated, closed, matching]),
+    ) as unknown as typeof fetch,
   }
   const found = await searchNearbySaanSeoiPlaces(client, {
-    ...input, filters: { taxonomyCategory: 'food_and_drink' },
+    ...input,
+    filters: { taxonomyCategory: 'food_and_drink' },
   })
   expect(found.candidates.map(candidate => candidate.placeId)).toEqual(['matching'])
   expect(found.limited).toBe(false)

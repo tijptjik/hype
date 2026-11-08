@@ -36,8 +36,8 @@ export async function searchBuildingNames(
   if (!needle) return []
   const matches = bundle.records
     .filter(row =>
-      [row.name, ...Object.values(row.names)].some(name =>
-        name && normalizeNameSearch(name).includes(needle),
+      [row.name, ...Object.values(row.names)].some(
+        name => name && normalizeNameSearch(name).includes(needle),
       ),
     )
     .slice(0, 10)

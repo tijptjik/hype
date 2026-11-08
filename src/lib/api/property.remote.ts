@@ -491,17 +491,17 @@ const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) =
       user,
       userRoles,
     })
-  } else if (
-    propertyScope.scope === 'organisation' && propertyScope.organisationId
-  ) {
+  } else if (propertyScope.scope === 'organisation' && propertyScope.organisationId) {
     const probe = await probeOrganisationQuery(db, {
-      ref: propertyScope.organisationId, refKey: 'id',
+      ref: propertyScope.organisationId,
+      refKey: 'id',
     })
     if (probe)
       readDecision = authorizeOrganisationReadForProbe({ user, userRoles, probe })
   } else if (propertyScope.scope === 'hub' && propertyScope.hubId) {
     const probe = await probeHubQuery(db, {
-      ref: propertyScope.hubId, refKey: 'id',
+      ref: propertyScope.hubId,
+      refKey: 'id',
     })
     if (probe) readDecision = authorizeHubReadForProbe({ user, userRoles, probe })
   }

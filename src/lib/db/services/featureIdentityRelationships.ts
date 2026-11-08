@@ -78,10 +78,12 @@ export async function prepareFeatureIdentityRelationships(
     throw new Error(
       'Install the identity relationship migration before accepting this operation',
     )
-  const invalidScope = await db.get(sql`SELECT 1 FROM task t JOIN feature f ON f.id=t.featureId
-    WHERE t.featureId IN(SELECT value FROM json_each(${JSON.stringify(input.inputs.map(ref=>ref.featureId))}))
+  const invalidScope =
+    await db.get(sql`SELECT 1 FROM task t JOIN feature f ON f.id=t.featureId
+    WHERE t.featureId IN(SELECT value FROM json_each(${JSON.stringify(input.inputs.map(ref => ref.featureId))}))
       AND t.isReviewed=0 AND (t.organisationId IS NOT f.organisationId OR t.projectId IS NOT f.projectId) LIMIT 1`)
-  if (invalidScope) throw new Error('Repair task ancestry before reviewing identity assignments')
+  if (invalidScope)
+    throw new Error('Repair task ancestry before reviewing identity assignments')
   const evidence = await featureUploadEvidenceSource(db)
   const statements: BatchItem<'sqlite'>[] = []
   const change = prepareRevisionChangeSet(db, {
@@ -102,18 +104,16 @@ export async function prepareFeatureIdentityRelationships(
       sql`SELECT COALESCE(max(sequence),0)+1 n FROM featureTaskTransfer WHERE taskId=${original.id}`,
     ))!.n
     statements.push(
-      db
-        .insert(featureTaskTransfer)
-        .values({
-          id: transferId,
-          identityProposalId: input.proposalId,
-          taskId: original.id,
-          sequence,
-          sourceFeatureId: original.featureId,
-          targetFeatureId: targetId,
-          sourceModifiedAt: original.modifiedAt,
-          changeSetId: change.id,
-        }),
+      db.insert(featureTaskTransfer).values({
+        id: transferId,
+        identityProposalId: input.proposalId,
+        taskId: original.id,
+        sequence,
+        sourceFeatureId: original.featureId,
+        targetFeatureId: targetId,
+        sourceModifiedAt: original.modifiedAt,
+        changeSetId: change.id,
+      }),
     )
     const uploads =
       await db.all<UploadEvidence>(sql`SELECT u.id,u.proposalId,p.candidateRevisionId,u.imageId,u.imageRevisionId,
@@ -179,16 +179,14 @@ export async function prepareFeatureIdentityRelationships(
               .update(featureRevisionProposal)
               .set({ status: 'submitted' })
               .where(eq(featureRevisionProposal.id, proposalId)),
-            db
-              .insert(featureRevisionReview)
-              .values({
-                id: crypto.randomUUID(),
-                featureId: targetId,
-                proposalId,
-                candidateRevisionId: prepared.candidateRevisionId,
-                action: 'submitted',
-                changeSetId: change.id,
-              }),
+            db.insert(featureRevisionReview).values({
+              id: crypto.randomUUID(),
+              featureId: targetId,
+              proposalId,
+              candidateRevisionId: prepared.candidateRevisionId,
+              action: 'submitted',
+              changeSetId: change.id,
+            }),
           )
         superseded.set(upload.proposalId, {
           featureId: upload.proposalFeatureId,
@@ -196,15 +194,13 @@ export async function prepareFeatureIdentityRelationships(
         })
       }
       statements.push(
-        db
-          .insert(featureTaskUploadTransfer)
-          .values({
-            transferId,
-            uploadId: upload.id,
-            sourceProposalId: upload.proposalId,
-            sourceCandidateRevisionId: upload.candidateRevisionId,
-            proposalId,
-          }),
+        db.insert(featureTaskUploadTransfer).values({
+          transferId,
+          uploadId: upload.id,
+          sourceProposalId: upload.proposalId,
+          sourceCandidateRevisionId: upload.candidateRevisionId,
+          proposalId,
+        }),
       )
     }
     // Advance the task token even if two assignments happen within the same millisecond.

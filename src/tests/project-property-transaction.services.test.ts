@@ -526,7 +526,11 @@ describe('local project property value translations', () => {
             component: 'SelectField',
             i18n: { en: { label: 'Changed', labelGen: false, placeholderGen: false } },
             values: [
-              { id: 'existing', value: 'changed', i18n: { en: { value: 'Rejected', valueGen: false } } },
+              {
+                id: 'existing',
+                value: 'changed',
+                i18n: { en: { value: 'Rejected', valueGen: false } },
+              },
             ],
           } as ProjectPropertyForm,
         ],

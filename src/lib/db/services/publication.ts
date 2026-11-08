@@ -69,26 +69,39 @@ export async function buildScopedFeatureImagePublication(
     project: 'projectId',
     organisation: 'organisationId',
   }[scope.kind]
-  const storage = await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featureRevisionHead' AND type='table'`)
-  const legacy = await hasFeatureLifecycleStorage(db) ? sql`0` : storage?.n ? sql`NOT EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=f.id)` : sql`1`
+  const storage = await db.get<{ n: number }>(
+    sql`SELECT count(*) n FROM sqlite_master WHERE name='featureRevisionHead' AND type='table'`,
+  )
+  const legacy = (await hasFeatureLifecycleStorage(db))
+    ? sql`0`
+    : storage?.n
+      ? sql`NOT EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=f.id)`
+      : sql`1`
   const eligible = sql`SELECT f.id FROM feature f
     JOIN project p ON p.id = f.projectId
     WHERE f.${sql.raw(column)} = ${scope.id}
       AND f.isPublished = 1 AND f.isArchived = 0 AND (${legacy})`
 
-  const policyStorage = await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='hubImageIntentPolicy' AND type='table'`)
-  const definitions = policyStorage?.n ? sql`COALESCE(
+  const policyStorage = await db.get<{ n: number }>(
+    sql`SELECT count(*) n FROM sqlite_master WHERE name='hubImageIntentPolicy' AND type='table'`,
+  )
+  const definitions = policyStorage?.n
+    ? sql`COALESCE(
     (SELECT ip.intents FROM projectImageIntentPolicy ip WHERE ip.projectId=p.id),
     (SELECT hp.intents FROM hubImageIntentPolicy hp JOIN hub h ON h.id=hp.hubId
       WHERE h.id=COALESCE((SELECT o.hubId FROM organisation o WHERE o.id=p.organisationId),(SELECT id FROM hub WHERE code='core'))),
-    ${JSON.stringify(DEFAULT_IMAGE_INTENTS)})` : sql`${JSON.stringify(DEFAULT_IMAGE_INTENTS)}`
+    ${JSON.stringify(DEFAULT_IMAGE_INTENTS)})`
+    : sql`${JSON.stringify(DEFAULT_IMAGE_INTENTS)}`
   // Intent is authoritative; unclassified images require the explicit follow-up choice.
-  const publish = db.update(featureImage).set({
-    isPublished: true,
-    localIsPublished: true,
-    publishedAt: sql`COALESCE(publishedAt,${new Date().toISOString()})`,
-    publisherId: sql`COALESCE(publisherId,${publisherId})`,
-  }).where(sql`featureId IN (${eligible}
+  const publish = db
+    .update(featureImage)
+    .set({
+      isPublished: true,
+      localIsPublished: true,
+      publishedAt: sql`COALESCE(publishedAt,${new Date().toISOString()})`,
+      publisherId: sql`COALESCE(publisherId,${publisherId})`,
+    })
+    .where(sql`featureId IN (${eligible}
       AND EXISTS(SELECT 1 FROM json_each(${definitions}) definition
         WHERE json_extract(definition.value,'$.id')=featureImage.intent AND json_extract(definition.value,'$.isPublished')=1))
       AND intent<>'undefined' AND isPublished=0
@@ -168,11 +181,16 @@ export async function buildDescendantPublication(
  * Unpublished or retired enrolled identities require their own explicit revision publication.
  */
 export async function featurePublicationEligibility(db: Database): Promise<SQL> {
-  if (await hasFeatureLifecycleStorage(db)) return sql`EXISTS(SELECT 1 FROM feature f JOIN featureRevision r ON r.id=f.currentRevisionId AND r.featureId=f.id
+  if (await hasFeatureLifecycleStorage(db))
+    return sql`EXISTS(SELECT 1 FROM feature f JOIN featureRevision r ON r.id=f.currentRevisionId AND r.featureId=f.id
     WHERE f.id=${feature.id} AND f.isArchived=0 AND COALESCE(json_extract(r.recordState,'$.localIsPublished'),json_extract(r.recordState,'$.isPublished'))=1
       AND NOT EXISTS(SELECT 1 FROM featureIdentityOperationMember i WHERE i.featureId=f.id AND i.role='input'
         AND NOT EXISTS(SELECT 1 FROM featureIdentityOperationMember o WHERE o.operationId=i.operationId AND o.role='output' AND o.featureId=f.id)))`
-  const storage = await db.get<{ n: number }>(sql`SELECT count(*) n FROM sqlite_master WHERE name='featureRevisionHead' AND type='table'`)
-  return storage?.n ? sql`(NOT EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=${feature.id})
-    OR EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=${feature.id} AND h.state='active' AND h.publishedRevisionId IS NOT NULL))` : sql`1`
+  const storage = await db.get<{ n: number }>(
+    sql`SELECT count(*) n FROM sqlite_master WHERE name='featureRevisionHead' AND type='table'`,
+  )
+  return storage?.n
+    ? sql`(NOT EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=${feature.id})
+    OR EXISTS (SELECT 1 FROM featureRevisionHead h WHERE h.featureId=${feature.id} AND h.state='active' AND h.publishedRevisionId IS NOT NULL))`
+    : sql`1`
 }

@@ -140,15 +140,13 @@ it.each(['organisation', 'hub', 'project'] as const)(
       ['before', 'old'],
       ['after', 'new'],
     ]) {
-      fixture.sqlite
-        .prepare(`UPDATE ${resource}Revision SET content=? WHERE id=?`)
-        .run(
-          JSON.stringify({
-            record: { imageId: 'logo' },
-            logo: { imageId: 'logo', imageRevisionId: revision },
-          }),
-          id,
-        )
+      fixture.sqlite.prepare(`UPDATE ${resource}Revision SET content=? WHERE id=?`).run(
+        JSON.stringify({
+          record: { imageId: 'logo' },
+          logo: { imageId: 'logo', imageRevisionId: revision },
+        }),
+        id,
+      )
     }
     const result =
       resource === 'organisation'

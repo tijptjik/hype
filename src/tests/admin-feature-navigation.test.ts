@@ -196,10 +196,12 @@ describe('feature detail loading priority', () => {
   it('uses server search matches when continuing a partial search index', async () => {
     const { admin } = setup()
     admin.rememberFeatureIndex([{ id: 'remote-match' }], false)
-    const query = vi.spyOn(featureIndexRemote, 'getFeatureIndexPage').mockResolvedValueOnce({
-      data: [{ id: 'remote-match' }, { id: 'remote-next' }],
-      hasMore: false,
-    } as never)
+    const query = vi
+      .spyOn(featureIndexRemote, 'getFeatureIndexPage')
+      .mockResolvedValueOnce({
+        data: [{ id: 'remote-match' }, { id: 'remote-next' }],
+        hasMore: false,
+      } as never)
     const cards = vi.spyOn(featureRemote, 'getFeatures')
     await admin.ensureFeatureNavigation('remote-match')
     expect(query.mock.calls[0][0].q).toBe('Tea')
@@ -213,12 +215,19 @@ describe('feature detail loading priority', () => {
     const { admin, view } = setup()
     view.filters.values.feature.text = ''
     view.filters.viewFilters.feature.hasTitle = true
-    const query = vi.spyOn(featureIndexRemote, 'getFeatureIndexPage').mockResolvedValueOnce({
-      data: [{ id: 'a' }, { id: 'next' }], hasMore: false, totalCount: null, nextOffset: null,
-    } as never)
+    const query = vi
+      .spyOn(featureIndexRemote, 'getFeatureIndexPage')
+      .mockResolvedValueOnce({
+        data: [{ id: 'a' }, { id: 'next' }],
+        hasMore: false,
+        totalCount: null,
+        nextOffset: null,
+      } as never)
     await admin.ensureFeatureNavigation('a')
     expect(query.mock.calls[0][0]).toMatchObject({
-      filters: { hasTitle: true }, idsOnly: true, includeCount: false,
+      filters: { hasTitle: true },
+      idsOnly: true,
+      includeCount: false,
     })
     expect(admin.featureNavigationRows.map(row => row.id)).toEqual(['a', 'next'])
   })
@@ -284,7 +293,9 @@ it.each(['ids', 'cards'])(
         query.current = current
       }),
     })
-    vi.spyOn(featureIndexRemote, 'getFeatureIndexPage').mockReturnValueOnce(query as never)
+    vi.spyOn(featureIndexRemote, 'getFeatureIndexPage').mockReturnValueOnce(
+      query as never,
+    )
     await admin.ensureFeatureNavigation('a')
     expect(query.refresh).toHaveBeenCalledOnce()
     expect(getAdjacentResourceRefs(admin.featureNavigationRows, 'a').nextRef).toBe(

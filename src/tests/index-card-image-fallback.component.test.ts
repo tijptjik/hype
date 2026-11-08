@@ -33,12 +33,21 @@ describe('index card image recovery', () => {
     })
     const foreground = () => view.getByAltText('Project preview') as HTMLImageElement
     // Browsers expose currentSrc as an absolute URL even for a relative src attribute.
-    Object.defineProperty(foreground(), 'currentSrc', { configurable: true, get() { return this.src } })
+    Object.defineProperty(foreground(), 'currentSrc', {
+      configurable: true,
+      get() {
+        return this.src
+      },
+    })
     await fireEvent.error(foreground())
     await waitFor(() => expect(foreground().getAttribute('src')).toBe('/cover.png'))
     await fireEvent.error(foreground())
     await waitFor(() => expect(foreground().getAttribute('src')).toBe('/identicon.svg'))
     await view.rerender({ imageSrc: '/api/mapRenders/projects/changed/asset' })
-    await waitFor(() => expect(foreground().getAttribute('src')).toBe('/api/mapRenders/projects/changed/asset'))
+    await waitFor(() =>
+      expect(foreground().getAttribute('src')).toBe(
+        '/api/mapRenders/projects/changed/asset',
+      ),
+    )
   })
 })

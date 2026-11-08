@@ -262,7 +262,7 @@ describe('shared defaults follow resource update permissions', () => {
   })
 })
 
- it('offers script-level Chinese and Cantonese aliases while preserving retired settings', () => {
+it('offers script-level Chinese and Cantonese aliases while preserving retired settings', () => {
   for (const query of ['Cantonese', 'yue', '粵語']) {
     expect(queryContentLocales({ query }).map(row => row.locale)).toEqual(['zh-Hant'])
   }

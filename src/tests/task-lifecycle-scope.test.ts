@@ -32,23 +32,34 @@ it('keeps creation ancestry inside task identity and authorization filters', asy
         ('creation',NULL,'p','allowed','author','newFeature','a'),
         ('foreign',NULL,'q','other','author','newFeature','b');
     `)
-    const db = drizzle({
-      prepare: (text: string) => ({ bind: (...params: unknown[]) => ({
-        all: async () => ({ results: sqlite.prepare(text).all(...params as never[]) }),
-        raw: async () => {
-          const statement = sqlite.prepare(text)
-          statement.setReturnArrays(true)
-          return statement.all(...params as never[])
-        },
-      }) }),
-    } as never, { schema }) as Database
+    const db = drizzle(
+      {
+        prepare: (text: string) => ({
+          bind: (...params: unknown[]) => ({
+            all: async () => ({
+              results: sqlite.prepare(text).all(...(params as never[])),
+            }),
+            raw: async () => {
+              const statement = sqlite.prepare(text)
+              statement.setReturnArrays(true)
+              return statement.all(...(params as never[]))
+            },
+          }),
+        }),
+      } as never,
+      { schema },
+    ) as Database
     const scope = await taskLifecycleScopeCondition(db)
     for (const id of ['existing', 'creation', 'missing']) {
-      const rows = await db.select({ id: schema.task.id }).from(schema.task)
+      const rows = await db
+        .select({ id: schema.task.id })
+        .from(schema.task)
         .where(and(eq(schema.task.id, id), scope))
       expect(rows).toEqual(id === 'missing' ? [] : [{ id }])
     }
-    const allowed = await db.select({ id: schema.task.id }).from(schema.task)
+    const allowed = await db
+      .select({ id: schema.task.id })
+      .from(schema.task)
       .where(and(eq(schema.task.organisationId, 'allowed'), scope))
     expect(allowed.map(row => row.id).sort()).toEqual(['creation', 'existing'])
   } finally {

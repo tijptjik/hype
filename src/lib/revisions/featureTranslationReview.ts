@@ -31,8 +31,11 @@ export function validateFeatureTranslationResult(
         )
       )
         return ['Inherited names require separate Location correction review']
-      if (field === 'title') retained.translations[locale].title = previous.translations[locale].title
-      else retained.translations[locale].description = previous.translations[locale].description
+      if (field === 'title')
+        retained.translations[locale].title = previous.translations[locale].title
+      else
+        retained.translations[locale].description =
+          previous.translations[locale].description
     }
   }
   return equalRevisionValue(previous, retained)

@@ -21,7 +21,7 @@ export function toggleSettings() {
     headerProps={{ title: { text: 'Organisation' }, avatar: { isVisible: false } }}
   >
     {#snippet sidebar()}
-      <aside class="h-full w-64 shrink-0 bg-panel" data-test-sidebar>Resources</aside>
+      <aside class="bg-panel h-full w-64 shrink-0" data-test-sidebar>Resources</aside>
     {/snippet}
     {#snippet settings()}
       <PanelRoot

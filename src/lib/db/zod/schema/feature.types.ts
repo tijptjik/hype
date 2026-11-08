@@ -202,10 +202,7 @@ export type UserContributedFeatureProperty = {
   propertyValueId?: Id | null
   value?: string | null
   i18n?: Partial<
-    Record<
-      string,
-      { locale: string; value: string | null; valueGen?: boolean }
-    >
+    Record<string, { locale: string; value: string | null; valueGen?: boolean }>
   > | null
 }
 

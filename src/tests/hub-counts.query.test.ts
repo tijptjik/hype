@@ -108,7 +108,13 @@ it('loads stored totals through the hub relation and renders them without child 
         ['h', 'test'],
         ['core-h', 'core'],
       ]) {
-        const opts = { code, isCore: code === 'core', i18n: {}, isSuperAdmin: false, isAdminRequest: false }
+        const opts = {
+          code,
+          isCore: code === 'core',
+          i18n: {},
+          isSuperAdmin: false,
+          isAdminRequest: false,
+        }
         const serviceDb = db as unknown as Database
         const organisations = await db
           .select({ id: schema.organisation.id })
