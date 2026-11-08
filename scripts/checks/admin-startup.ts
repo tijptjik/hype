@@ -60,6 +60,13 @@ for (const resource of resources) {
     ...new Set(entries.map(entry => entry.file).filter(file => file.endsWith('.js'))),
   ]
   const bytes = files.map(file => readFileSync(resolve(output, file)))
+  // Drizzle's runtime symbol tags identify SQL code even when chunk names change.
+  const eagerSql = files.filter((_, index) => bytes[index].includes('drizzle:'))
+  if (eagerSql.length)
+    throw new Error(
+      `Admin ${resource} eagerly imports SQL runtime: ${eagerSql.join(', ')}`,
+    )
+
   console.log(
     JSON.stringify(
       {
