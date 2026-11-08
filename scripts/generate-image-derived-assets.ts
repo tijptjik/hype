@@ -3,7 +3,10 @@ import { readFile } from 'node:fs/promises'
 import { Database as SQLiteDatabase } from 'bun:sqlite'
 
 import { and, asc, eq, gt, inArray, isNotNull } from 'drizzle-orm'
-import { drizzle as drizzleBunSqlite, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
+import {
+  drizzle as drizzleBunSqlite,
+  type BunSQLiteDatabase,
+} from 'drizzle-orm/bun-sqlite'
 import {
   D1Helper,
   type BoundD1,
@@ -62,8 +65,7 @@ type WarmupCounters = {
   variantsFailed: number
 }
 
-const DEFAULT_PRERENDER_ACCEPT =
-  'image/webp,image/jpeg,image/*;q=0.9,*/*;q=0.8'
+const DEFAULT_PRERENDER_ACCEPT = 'image/webp,image/jpeg,image/*;q=0.9,*/*;q=0.8'
 const DEFAULT_BASE_URLS: Record<ImageStage, string> = {
   local: 'http://localhost:8788',
   preview: 'https://assets.preview.hype.hk',
@@ -121,7 +123,9 @@ const loadEnvFile = async (filePath: string): Promise<void> => {
   }
 }
 
-const loadRemoteCredentials = async (stage: Exclude<ImageStage, 'local'>): Promise<void> => {
+const loadRemoteCredentials = async (
+  stage: Exclude<ImageStage, 'local'>,
+): Promise<void> => {
   if (stage === 'preview') {
     await loadEnvFile('.env.drizzle.preview.local')
     return
@@ -170,7 +174,11 @@ const parseImageStage = (value: string | undefined, flagName: string): ImageStag
     throw new Error(`Missing ${flagName} value`)
   }
 
-  if (value === ImageEnv.local || value === ImageEnv.preview || value === ImageEnv.production) {
+  if (
+    value === ImageEnv.local ||
+    value === ImageEnv.preview ||
+    value === ImageEnv.production
+  ) {
     return value
   }
 
@@ -189,7 +197,9 @@ const parseDerivativeKeys = (): DerivativeKey[] | undefined => {
 
   const invalidValues = values.filter(
     value =>
-      !SUPPORTED_DERIVATIVE_KEYS.includes(value as (typeof SUPPORTED_DERIVATIVE_KEYS)[number]),
+      !SUPPORTED_DERIVATIVE_KEYS.includes(
+        value as (typeof SUPPORTED_DERIVATIVE_KEYS)[number],
+      ),
   )
   if (invalidValues.length > 0) {
     throw new Error(
@@ -229,13 +239,11 @@ const parseLegacyStage = (): ImageStage | undefined => {
   return parseImageStage(value, '--stage')
 }
 
-const parseStorageMode = (
-  params: {
-    localFlag: string
-    remoteFlag: string
-    fallback: StorageMode
-  },
-): StorageMode => {
+const parseStorageMode = (params: {
+  localFlag: string
+  remoteFlag: string
+  fallback: StorageMode
+}): StorageMode => {
   const useLocal = process.argv.includes(params.localFlag)
   const useRemote = process.argv.includes(params.remoteFlag)
 
@@ -259,12 +267,20 @@ const parseOptions = (): ScriptOptions => {
   const dbStorage = parseStorageMode({
     localFlag: '--db-local',
     remoteFlag: '--db-remote',
-    fallback: legacyStage ? (legacyStage === ImageEnv.local ? 'local' : 'remote') : 'local',
+    fallback: legacyStage
+      ? legacyStage === ImageEnv.local
+        ? 'local'
+        : 'remote'
+      : 'local',
   })
   const r2Storage = parseStorageMode({
     localFlag: '--r2-local',
     remoteFlag: '--r2-remote',
-    fallback: legacyStage ? (legacyStage === ImageEnv.local ? 'local' : 'remote') : 'local',
+    fallback: legacyStage
+      ? legacyStage === ImageEnv.local
+        ? 'local'
+        : 'remote'
+      : 'local',
   })
   const defaultBaseUrl =
     r2Storage === 'local' ? DEFAULT_BASE_URLS.local : DEFAULT_BASE_URLS[r2Stage]
@@ -381,6 +397,7 @@ const toDerivativePaths = (params: {
           format: 'jpeg',
         })
     }
+    throw new Error(`Unsupported derivative key: ${key satisfies never}`)
   })
 }
 
@@ -572,7 +589,10 @@ const runWithConcurrency = async (
   )
 }
 
-const runBackfill = async (db: DrizzleDatabase, options: ScriptOptions): Promise<void> => {
+const runBackfill = async (
+  db: DrizzleDatabase,
+  options: ScriptOptions,
+): Promise<void> => {
   const counters: WarmupCounters = {
     imagesSeen: 0,
     imagesWarmed: 0,
@@ -654,7 +674,9 @@ const main = async (): Promise<void> => {
   }
 
   if (options.dbStage === ImageEnv.local) {
-    throw new Error('Remote DB access requires --db-stage preview or --db-stage production')
+    throw new Error(
+      'Remote DB access requires --db-stage preview or --db-stage production',
+    )
   }
 
   await loadRemoteCredentials(options.dbStage)

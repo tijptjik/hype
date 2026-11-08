@@ -94,7 +94,7 @@ function main(): void {
       candidateMatching: evidence.summary,
     }
     writeFileSync(`${output}.json`, JSON.stringify({ summary, rows }, null, 2))
-    const escape = (v: unknown): string =>
+    const escapeTableCell = (v: unknown): string =>
       String(v ?? '—')
         .replaceAll('|', '\\|')
         .replaceAll('\n', ' ')
@@ -116,7 +116,7 @@ function main(): void {
             r.candidateAddress2d,
             r.candidateDistanceMetres,
           ]
-            .map(escape)
+            .map(escapeTableCell)
             .join(' | '),
         )
         .map((line: string) => `| ${line} |`)
