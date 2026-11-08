@@ -9,7 +9,9 @@ import { Database } from 'bun:sqlite'
  */
 function benchmark(path: string): void {
   const db = new Database(path, { readonly: true })
-  const page = db.query(`SELECT id, organisationId, projectId FROM layer ORDER BY id LIMIT 25`)
+  const page = db.query(
+    `SELECT id, organisationId, projectId FROM layer ORDER BY id LIMIT 25`,
+  )
   const joined = db.query(`SELECT l.id, l.organisationId, l.projectId,
     o.code AS organisationCode, oi.name AS organisationName,
     p.code AS projectCode, pi.name AS projectName
@@ -18,7 +20,11 @@ function benchmark(path: string): void {
     LEFT JOIN organisationI18n oi ON oi.organisationId = l.organisationId AND oi.locale = 'en'
     LEFT JOIN project p ON p.id = l.projectId
     LEFT JOIN projectI18n pi ON pi.projectId = l.projectId AND pi.locale = 'en'`)
-  const rows = page.all() as Array<{ id: string; organisationId: string; projectId: string }>
+  const rows = page.all() as Array<{
+    id: string
+    organisationId: string
+    projectId: string
+  }>
   const organisationIds = [...new Set(rows.map(row => row.organisationId))]
   const projectIds = [...new Set(rows.map(row => row.projectId))]
   const organisations = db.query(`SELECT o.id, o.code, i.name FROM organisation o
@@ -29,7 +35,11 @@ function benchmark(path: string): void {
     WHERE p.id IN (${projectIds.map(() => '?').join(',')})`)
   const strategies = {
     joined: () => joined.all(),
-    batched: () => ({ rows: page.all(), organisations: organisations.all(...organisationIds), projects: projects.all(...projectIds) }),
+    batched: () => ({
+      rows: page.all(),
+      organisations: organisations.all(...organisationIds),
+      projects: projects.all(...projectIds),
+    }),
   }
   const results: Record<string, unknown> = {}
   for (const [name, run] of Object.entries(strategies)) {
@@ -41,12 +51,24 @@ function benchmark(path: string): void {
       times.push(performance.now() - start)
     }
     times.sort((a, b) => a - b)
-    results[name] = { queries: name === 'joined' ? 1 : 3, medianMs: times[500], p95Ms: times[950], bytes: new TextEncoder().encode(JSON.stringify(run())).length }
+    results[name] = {
+      queries: name === 'joined' ? 1 : 3,
+      medianMs: times[500],
+      p95Ms: times[950],
+      bytes: new TextEncoder().encode(JSON.stringify(run())).length,
+    }
   }
-  console.log(JSON.stringify({ rows: rows.length, repetitions: 1000, warmups: 100, results }, null, 2))
+  console.log(
+    JSON.stringify(
+      { rows: rows.length, repetitions: 1000, warmups: 100, results },
+      null,
+      2,
+    ),
+  )
   db.close()
 }
 
 const path = Bun.argv[2]
-if (!path) throw new Error('Usage: bun scripts/benchmark-resource-breadcrumbs.ts <sqlite-path>')
+if (!path)
+  throw new Error('Usage: bun scripts/benchmark-resource-breadcrumbs.ts <sqlite-path>')
 benchmark(path)

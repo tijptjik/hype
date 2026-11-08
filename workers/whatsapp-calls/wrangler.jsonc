@@ -3,9 +3,7 @@
   "name": "hype-whatsover-voice-prod",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-02",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
   "upload_source_maps": true,

@@ -275,9 +275,7 @@ const warmTarget = async (target: SurvivorTarget): Promise<void> => {
       },
     })
 
-    console.log(
-      `[warm] id=${target.id} status=${response.status} url=${url}`,
-    )
+    console.log(`[warm] id=${target.id} status=${response.status} url=${url}`)
   }
 }
 

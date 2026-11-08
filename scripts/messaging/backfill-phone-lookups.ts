@@ -14,40 +14,123 @@ import {
 } from './phone-lookup-queries'
 
 const args = process.argv.slice(2)
-const option = (name: string): string | undefined => { const index = args.indexOf(name); return index < 0 ? undefined : args[index + 1] }
-const database = option('--database'), organisation = option('--organisation')
-const apply = args.includes('--apply'), limit = Number(option('--limit') ?? 50)
-if (!database?.startsWith('/') || !organisation || !Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error('Provide --database /absolute/local.sqlite --organisation CODE and --limit 1..500; --apply performs checks')
+const option = (name: string): string | undefined => {
+  const index = args.indexOf(name)
+  return index < 0 ? undefined : args[index + 1]
+}
+const database = option('--database'),
+  organisation = option('--organisation')
+const apply = args.includes('--apply'),
+  limit = Number(option('--limit') ?? 50)
+if (
+  !database?.startsWith('/') ||
+  !organisation ||
+  !Number.isSafeInteger(limit) ||
+  limit < 1 ||
+  limit > 500
+)
+  throw new Error(
+    'Provide --database /absolute/local.sqlite --organisation CODE and --limit 1..500; --apply performs checks',
+  )
 const db = new Database(database, { readonly: !apply, strict: true, create: false })
 const rows = findPhoneLookupCandidates(db, organisation, limit, Date.now())
 // Output only aggregate counts; profile phones and bridge credentials stay private.
-console.log(JSON.stringify({ organisation, candidates: rows.length, mode: apply ? 'apply' : 'dry-run', limit }))
-if (!apply) { db.close(); process.exit(0) }
-const proxy = await getPlatformProxy({ configPath: new URL('./backfill.wrangler.jsonc', import.meta.url).pathname, persist: false, remoteBindings: false, envFiles: [] })
-let checked = 0, registered = 0, unavailable = 0
+console.log(
+  JSON.stringify({
+    organisation,
+    candidates: rows.length,
+    mode: apply ? 'apply' : 'dry-run',
+    limit,
+  }),
+)
+if (!apply) {
+  db.close()
+  process.exit(0)
+}
+const proxy = await getPlatformProxy({
+  configPath: new URL('./backfill.wrangler.jsonc', import.meta.url).pathname,
+  persist: false,
+  remoteBindings: false,
+  envFiles: [],
+})
+let checked = 0,
+  registered = 0,
+  unavailable = 0
 try {
- for (const row of rows) {
-  const phone = normalizeTelephone(row.telephone)
-  let address: string | null = null, reason: string | null = null
-  const label = row.platform === 'whatsapp' ? 'WhatsApp' : 'Telegram'
-  if (!phone) reason = 'No valid phone number on this HYPE profile'
-  else try {
-   const bridge = proxy.env[row.platform === 'whatsapp' ? 'WA' : 'TG'] as { lookupPhone(account: string, phone: string): Promise<{ status: string; address?: string }> }
-   const result = await bridge.lookupPhone(row.bridgeAccountId, phone)
-   if (result.status === 'registered' && result.address && (row.platform === 'whatsapp' ? /^[1-9]\d{6,14}@s\.whatsapp\.net$/ : /^[1-9]\d*$/).test(result.address)) address = result.address
-   else reason = result.status === 'not_found' ? `No ${label} account found for the saved phone number` : result.status === 'unresolved' ? 'Telegram could not resolve this number; it may be hidden by privacy settings or not registered' : `${label} lookup is temporarily unavailable; try again`
-  } catch { reason = `${label} lookup is temporarily unavailable; try again` }
-  if (address && hasConflictingMessagingOwner(db, row, address)) {
-   address = null; reason = 'This account belongs to a different HYPE user; review the phone number'
-  }
-  const now = Date.now(), temporary = reason?.includes('temporarily unavailable')
-  // Persist only while both the profile and organisation account still match the checked inputs.
-  db.query(`INSERT INTO messagingPhoneLookup(accountId,userId,externalAccountId,telephone,address,reason,checkedAt,expiresAt)
+  for (const row of rows) {
+    const phone = normalizeTelephone(row.telephone)
+    let address: string | null = null,
+      reason: string | null = null
+    const label = row.platform === 'whatsapp' ? 'WhatsApp' : 'Telegram'
+    if (!phone) reason = 'No valid phone number on this HYPE profile'
+    else
+      try {
+        const bridge = proxy.env[row.platform === 'whatsapp' ? 'WA' : 'TG'] as {
+          lookupPhone(
+            account: string,
+            phone: string,
+          ): Promise<{ status: string; address?: string }>
+        }
+        const result = await bridge.lookupPhone(row.bridgeAccountId, phone)
+        if (
+          result.status === 'registered' &&
+          result.address &&
+          (row.platform === 'whatsapp'
+            ? /^[1-9]\d{6,14}@s\.whatsapp\.net$/
+            : /^[1-9]\d*$/
+          ).test(result.address)
+        )
+          address = result.address
+        else
+          reason =
+            result.status === 'not_found'
+              ? `No ${label} account found for the saved phone number`
+              : result.status === 'unresolved'
+                ? 'Telegram could not resolve this number; it may be hidden by privacy settings or not registered'
+                : `${label} lookup is temporarily unavailable; try again`
+      } catch {
+        reason = `${label} lookup is temporarily unavailable; try again`
+      }
+    if (address && hasConflictingMessagingOwner(db, row, address)) {
+      address = null
+      reason = 'This account belongs to a different HYPE user; review the phone number'
+    }
+    const now = Date.now(),
+      temporary = reason?.includes('temporarily unavailable')
+    // Persist only while both the profile and organisation account still match the checked inputs.
+    db.query(`INSERT INTO messagingPhoneLookup(accountId,userId,externalAccountId,telephone,address,reason,checkedAt,expiresAt)
    SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM user WHERE id=? AND telephone=?) AND EXISTS(SELECT 1 FROM messagingAccount WHERE id=? AND externalAccountId=?)
-   ON CONFLICT(accountId,userId) DO UPDATE SET externalAccountId=excluded.externalAccountId,telephone=excluded.telephone,address=excluded.address,reason=excluded.reason,checkedAt=excluded.checkedAt,expiresAt=excluded.expiresAt`)
-   .run(row.accountId,row.userId,row.externalAccountId,row.telephone,address,reason,now,now+(address?7*86400000:temporary?60000:86400000),row.userId,row.telephone,row.accountId,row.externalAccountId)
-  checked++; if (address) registered++; if (temporary) { unavailable++; break }
-  await Bun.sleep(500)
- }
- console.log(JSON.stringify({ checked, registered, unavailable, remaining: rows.length - checked }))
-} finally { await proxy.dispose(); db.close() }
+   ON CONFLICT(accountId,userId) DO UPDATE SET externalAccountId=excluded.externalAccountId,telephone=excluded.telephone,address=excluded.address,reason=excluded.reason,checkedAt=excluded.checkedAt,expiresAt=excluded.expiresAt`).run(
+      row.accountId,
+      row.userId,
+      row.externalAccountId,
+      row.telephone,
+      address,
+      reason,
+      now,
+      now + (address ? 7 * 86400000 : temporary ? 60000 : 86400000),
+      row.userId,
+      row.telephone,
+      row.accountId,
+      row.externalAccountId,
+    )
+    checked++
+    if (address) registered++
+    if (temporary) {
+      unavailable++
+      break
+    }
+    await Bun.sleep(500)
+  }
+  console.log(
+    JSON.stringify({
+      checked,
+      registered,
+      unavailable,
+      remaining: rows.length - checked,
+    }),
+  )
+} finally {
+  await proxy.dispose()
+  db.close()
+}

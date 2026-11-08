@@ -85,22 +85,36 @@ for (const [name, engine] of [
       'image/jpeg',
     )
     const back = page.getByRole('button', { name: 'Back to photos', exact: true })
-    assert(await back.evaluate(element => {
-      const bounds = element.getBoundingClientRect()
-      return element.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
-    }), 'Back to photos must remain visible while Instagram options scroll')
+    assert(
+      await back.evaluate(element => {
+        const bounds = element.getBoundingClientRect()
+        return element.contains(
+          document.elementFromPoint(
+            bounds.x + bounds.width / 2,
+            bounds.y + bounds.height / 2,
+          ),
+        )
+      }),
+      'Back to photos must remain visible while Instagram options scroll',
+    )
     await page.screenshot({ path: `output/playwright/sharing-${name}-mobile.png` })
     await page.getByRole('button', { name: 'Back to photos', exact: true }).click()
     await share.waitFor()
     await share.focus()
     await page.keyboard.press('Enter')
     await page.getByRole('menuitem').first().waitFor()
-    await page.waitForFunction(() => ['menu', 'menuitem'].includes(document.activeElement?.getAttribute('role') ?? ''))
+    await page.waitForFunction(() =>
+      ['menu', 'menuitem'].includes(document.activeElement?.getAttribute('role') ?? ''),
+    )
     await page.keyboard.press('ArrowDown')
-    await page.waitForFunction(() => document.activeElement?.getAttribute('role') === 'menuitem')
+    await page.waitForFunction(
+      () => document.activeElement?.getAttribute('role') === 'menuitem',
+    )
     await page.keyboard.press('Enter')
     await page.getByRole('heading', { name: /Share/ }).waitFor()
-    await page.waitForFunction(() => document.activeElement?.id === 'feature-share-heading')
+    await page.waitForFunction(
+      () => document.activeElement?.id === 'feature-share-heading',
+    )
     assert.equal(
       await page.evaluate(() => document.activeElement?.id),
       'feature-share-heading',

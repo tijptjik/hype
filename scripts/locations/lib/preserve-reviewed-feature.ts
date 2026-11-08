@@ -147,7 +147,9 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     const overrides = JSON.parse(
       (
         target.sqlite
-          .query('SELECT acceptedOverrides AS overrides FROM featureLocation WHERE featureId=?')
+          .query(
+            'SELECT acceptedOverrides AS overrides FROM featureLocation WHERE featureId=?',
+          )
           .get(application.featureId) as { overrides: string }
       ).overrides,
     )

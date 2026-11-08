@@ -158,8 +158,9 @@ test('reinstalls fences on a table rebuilt by a migration in the same atomic bat
 test.each([false, true])(
   'full-schema rehearsal enrolls, verifies and activates without imports (lifecycle=%s)',
   async lifecycle => {
-    const { bootstrapLocalDatabase, seedLocalApplication } =
-      await import('../../breadline/lib/local-bootstrap')
+    const { bootstrapLocalDatabase, seedLocalApplication } = await import(
+      '../../breadline/lib/local-bootstrap'
+    )
     const { prepareRelease } = await import('./prepare')
     const root = mkdtempSync(join(tmpdir(), 'revision-complete-'))
     directories.push(root)

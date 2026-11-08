@@ -5,15 +5,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import sharp from 'sharp'
 
-type RasterFormat =
-  | 'avif'
-  | 'gif'
-  | 'heic'
-  | 'jpeg'
-  | 'jxl'
-  | 'png'
-  | 'tiff'
-  | 'webp'
+type RasterFormat = 'avif' | 'gif' | 'heic' | 'jpeg' | 'jxl' | 'png' | 'tiff' | 'webp'
 type OutputFormat = RasterFormat | 'svg'
 type DimensionSpec =
   | {
@@ -161,9 +153,7 @@ const parseArgs = (argv: string[]): CliOptions => {
 
   return {
     inputPath: parsedInputPath,
-    outputDir: outputDir
-      ? path.resolve(outputDir)
-      : path.resolve('tmp', baseName),
+    outputDir: outputDir ? path.resolve(outputDir) : path.resolve('tmp', baseName),
   }
 }
 
@@ -380,7 +370,10 @@ const createAnnotatedRasterBuffer = async (params: {
   width: number
   height: number
 }> => {
-  const { pipeline, width, height } = await createBasePipeline(params.source, params.spec)
+  const { pipeline, width, height } = await createBasePipeline(
+    params.source,
+    params.spec,
+  )
   const sizeLabel =
     params.spec.kind === 'original' ? `${width}x${height}` : params.spec.label
   const overlay = createTextOverlaySvg({
@@ -435,14 +428,18 @@ const createSvgOutput = async (params: {
   width: number
   height: number
 }> => {
-  const { pipeline, width, height } = await createBasePipeline(params.source, params.spec)
+  const { pipeline, width, height } = await createBasePipeline(
+    params.source,
+    params.spec,
+  )
   const rasterBase = await pipeline.png().toBuffer()
   const rasterDataUri = `data:image/png;base64,${rasterBase.toString('base64')}`
   const overlay = createTextOverlaySvg({
     formatLabel: SVG_FORMAT_LABEL,
     width,
     height,
-    sizeLabel: params.spec.kind === 'original' ? `${width}x${height}` : params.spec.label,
+    sizeLabel:
+      params.spec.kind === 'original' ? `${width}x${height}` : params.spec.label,
   }).toString('utf8')
 
   const svg = `
@@ -466,7 +463,10 @@ const createSvgOutput = async (params: {
  * @param format Target output format.
  * @returns Encoded image bytes.
  */
-const encodeRaster = async (pipeline: sharp.Sharp, format: RasterFormat): Promise<Buffer> => {
+const encodeRaster = async (
+  pipeline: sharp.Sharp,
+  format: RasterFormat,
+): Promise<Buffer> => {
   switch (format) {
     case 'avif':
       return await pipeline.avif({ effort: 1, quality: 50 }).toBuffer()
@@ -630,8 +630,7 @@ const main = async (): Promise<void> => {
 
   for (const spec of DIMENSION_SPECS) {
     for (const format of outputPlan.formats) {
-      const label =
-        spec.kind === 'original' ? 'original' : `${spec.size}x${spec.size}`
+      const label = spec.kind === 'original' ? 'original' : `${spec.size}x${spec.size}`
       const filename = `${baseName}--${label}--${format}.${toExtension(format)}`
       const outputPath = path.join(options.outputDir, filename)
       console.log(`Generating ${filename}`)

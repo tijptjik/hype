@@ -12,7 +12,7 @@ type PromptedSecretName = Exclude<AppSecretName, 'ANONYMOUS_CLEANUP_TOKEN'>
 const APP_SECRET_NAMES = [
   'AUTH_SECRET',
   'AUTH_GOOGLE_ID',
-  'AUTH_GOOGLE_SECRET'
+  'AUTH_GOOGLE_SECRET',
 ] as const
 const SCHEDULER_WRANGLER_CONFIG = 'workers/maintenance-scheduler/wrangler.toml'
 
@@ -44,7 +44,7 @@ export const parseDeploymentTargets = (args: string[]): DeploymentTarget[] => {
 export const buildSecretPutCommand = (
   secretName: AppSecretName,
   target: DeploymentTarget,
-  configPath?: string
+  configPath?: string,
 ): string[] => [
   'bun',
   'wrangler',
@@ -53,7 +53,7 @@ export const buildSecretPutCommand = (
   secretName,
   ...(configPath ? ['--config', configPath] : []),
   '--env',
-  target
+  target,
 ]
 
 /**
@@ -65,7 +65,7 @@ export const buildSecretPutCommand = (
  */
 const promptForSecret = async (
   secretName: PromptedSecretName,
-  target: DeploymentTarget
+  target: DeploymentTarget,
 ): Promise<string> => {
   if (!stdin.isTTY || !stdin.setRawMode) {
     throw new Error('Secret configuration requires an interactive terminal.')
@@ -136,15 +136,15 @@ const uploadSecret = async (
   secretName: AppSecretName,
   value: string,
   target: DeploymentTarget,
-  configPath?: string
+  configPath?: string,
 ): Promise<void> => {
   const processHandle = Bun.spawn(
     buildSecretPutCommand(secretName, target, configPath),
     {
       stdin: new Blob([`${value}\n`]),
       stdout: 'inherit',
-      stderr: 'inherit'
-    }
+      stderr: 'inherit',
+    },
   )
   const exitCode = await processHandle.exited
 
@@ -179,7 +179,7 @@ const configureTarget = async (target: DeploymentTarget): Promise<void> => {
     'ANONYMOUS_CLEANUP_TOKEN',
     cleanupToken,
     target,
-    SCHEDULER_WRANGLER_CONFIG
+    SCHEDULER_WRANGLER_CONFIG,
   )
   await uploadSecret('ANONYMOUS_CLEANUP_TOKEN', cleanupToken, target)
 }
@@ -191,7 +191,7 @@ const configureTarget = async (target: DeploymentTarget): Promise<void> => {
  * @returns Resolves when all selected environments are complete.
  */
 export const configureAuthSecrets = async (
-  targets: DeploymentTarget[]
+  targets: DeploymentTarget[],
 ): Promise<void> => {
   for (const target of targets) {
     stdout.write(`Configuring authentication secrets for ${target}.\n`)

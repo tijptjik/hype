@@ -69,55 +69,122 @@ for (const [name, engine] of [
       await page.route('https://review-map.invalid/**', route =>
         route.fulfill({ status: 204, body: '' }),
       )
-      await page.route('**/src/lib/api/user.remote.*', route => route.fulfill({
-        contentType: 'application/javascript',
-        body: `
+      await page.route('**/src/lib/api/user.remote.*', route =>
+        route.fulfill({
+          contentType: 'application/javascript',
+          body: `
           ${['searchUsers', 'getAdminUserProfile', 'getUserContributionPreviews', 'getUserContributedFeatures', 'getUserContributedImages', 'getUserDirectoryMetrics', 'getUser', 'updateUserProfile', 'getUserLayers', 'setUserLayerDefaults', 'getUserFeatures', 'addUserFeatureToList', 'removeUserFeatureFromList'].map(name => `export async function ${name}(){ return null }`).join('\n')}
           export async function getUserForAttribution({ id }) {
             return { id, name: id === 'report-submitter' ? 'Report Submitter' : 'Original Contributor', attribution: id, username: id, image: '/review-fixture/first' }
           }
         `,
-      }))
+        }),
+      )
       await page.goto(`${base}/__new-feature-review.html?missing`)
-      await page.getByText('Building got cleaned up and sign removed', { exact: true }).waitFor({ timeout: 45000 })
-      await page.getByRole('heading', { name: 'Distance from Feature', exact: true }).waitFor()
-      const attribution = page.locator('.bits-feature-attribution-shell[data-open="true"]')
+      await page
+        .getByText('Building got cleaned up and sign removed', { exact: true })
+        .waitFor({ timeout: 45000 })
+      await page
+        .getByRole('heading', { name: 'Distance from Feature', exact: true })
+        .waitFor()
+      const attribution = page.locator(
+        '.bits-feature-attribution-shell[data-open="true"]',
+      )
       await attribution.getByText('Report Submitter', { exact: true }).waitFor()
-      if (await attribution.locator('img').getAttribute('alt') !== 'Report Submitter') throw Error('Wrong report avatar')
-      if (await attribution.getByRole('link').getAttribute('href') !== '/admin/users/report-submitter') throw Error('Wrong report profile link')
-      if (await page.getByText('Original Contributor', { exact: true }).count()) throw Error('Feature contributor shown for report')
-      if (await page.getByRole('heading', { name: 'Address', exact: true }).count()) throw Error('Missing reports must not show the feature address')
-      const metadata = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Distance from Feature', exact: true }) }).last()
-      if ((await metadata.locator('dt').allTextContents()).join(',') !== 'Reported,Captured') throw Error('Report timestamps must share the distance metadata card')
-      if (await page.getByRole('heading', { name: 'Title', exact: true }).count()) throw Error('Title should be replaced')
-      if (await page.getByRole('heading', { name: 'Description', exact: true }).count()) throw Error('Description should be replaced')
-      await page.getByRole('region', { name: 'Location context map', exact: true }).waitFor()
-      const reportDot = page.getByRole('img', { name: 'Photo submitted with this report' })
+      if ((await attribution.locator('img').getAttribute('alt')) !== 'Report Submitter')
+        throw Error('Wrong report avatar')
+      if (
+        (await attribution.getByRole('link').getAttribute('href')) !==
+        '/admin/users/report-submitter'
+      )
+        throw Error('Wrong report profile link')
+      if (await page.getByText('Original Contributor', { exact: true }).count())
+        throw Error('Feature contributor shown for report')
+      if (await page.getByRole('heading', { name: 'Address', exact: true }).count())
+        throw Error('Missing reports must not show the feature address')
+      const metadata = page
+        .locator('section')
+        .filter({
+          has: page.getByRole('heading', {
+            name: 'Distance from Feature',
+            exact: true,
+          }),
+        })
+        .last()
+      if (
+        (await metadata.locator('dt').allTextContents()).join(',') !==
+        'Reported,Captured'
+      )
+        throw Error('Report timestamps must share the distance metadata card')
+      if (await page.getByRole('heading', { name: 'Title', exact: true }).count())
+        throw Error('Title should be replaced')
+      if (await page.getByRole('heading', { name: 'Description', exact: true }).count())
+        throw Error('Description should be replaced')
+      await page
+        .getByRole('region', { name: 'Location context map', exact: true })
+        .waitFor()
+      const reportDot = page.getByRole('img', {
+        name: 'Photo submitted with this report',
+      })
       await reportDot.waitFor()
-      if (await reportDot.count() !== 1) throw Error('Only the report photo should have a dot')
+      if ((await reportDot.count()) !== 1)
+        throw Error('Only the report photo should have a dot')
       const dotBounds = await reportDot.boundingBox()
-      if (!dotBounds || dotBounds.width > 12 || dotBounds.height > 12) throw Error('Report marker is not a compact dot')
-      if (await page.locator('[data-gallery-thumb-id]').getByText('NEW', { exact: true }).count()) throw Error('Large NEW badge remains')
-      const thumbnails = page.locator('[data-gallery-thumb-id] button[aria-pressed]:not([title])')
+      if (!dotBounds || dotBounds.width > 12 || dotBounds.height > 12)
+        throw Error('Report marker is not a compact dot')
+      if (
+        await page
+          .locator('[data-gallery-thumb-id]')
+          .getByText('NEW', { exact: true })
+          .count()
+      )
+        throw Error('Large NEW badge remains')
+      const thumbnails = page.locator(
+        '[data-gallery-thumb-id] button[aria-pressed]:not([title])',
+      )
       await thumbnails.nth(1).click()
-      await page.waitForFunction(() => document.querySelectorAll('[data-gallery-thumb-id] button[aria-pressed]:not([title])')[1]?.getAttribute('aria-pressed') === 'true')
-      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('Horizontal overflow')
+      await page.waitForFunction(
+        () =>
+          document
+            .querySelectorAll(
+              '[data-gallery-thumb-id] button[aria-pressed]:not([title])',
+            )[1]
+            ?.getAttribute('aria-pressed') === 'true',
+      )
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+        throw Error('Horizontal overflow')
       await metadata.locator('dd').last().scrollIntoViewIfNeeded()
-      await page.screenshot({ path: `${directory}/${name}-${width}.png`, fullPage: true })
+      await page.screenshot({
+        path: `${directory}/${name}-${width}.png`,
+        fullPage: true,
+      })
       await page.goto(`${base}/__new-feature-review.html`)
       const address = page.getByText('5–7 Sha Wan Drive, Sandy Bay', { exact: true })
       await address.waitFor()
       const layerSection = page.locator('section').filter({ has: address }).last()
-      await layerSection.getByText('5–7 Sha Wan Drive, Sandy Bay', { exact: true }).waitFor()
+      await layerSection
+        .getByText('5–7 Sha Wan Drive, Sandy Bay', { exact: true })
+        .waitFor()
       const selectorBounds = await layerSection.getByRole('combobox').boundingBox()
       const addressBounds = await address.boundingBox()
-      if (!selectorBounds || !addressBounds || addressBounds.y <= selectorBounds.y + selectorBounds.height) throw Error('Address must sit beneath the layer selector')
+      if (
+        !selectorBounds ||
+        !addressBounds ||
+        addressBounds.y <= selectorBounds.y + selectorBounds.height
+      )
+        throw Error('Address must sit beneath the layer selector')
       await address.scrollIntoViewIfNeeded()
-      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('New feature address overflows')
-      await page.screenshot({ path: `${directory}/new-feature-address-${name}-${width}.png`, fullPage: true })
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+        throw Error('New feature address overflows')
+      await page.screenshot({
+        path: `${directory}/new-feature-address-${name}-${width}.png`,
+        fullPage: true,
+      })
       if (errors.length) throw Error(errors.join('\n'))
       console.log(`${name} ${width}: missing report layout and photo selection passed`)
       await page.close()
     }
-  } finally { await browser.close() }
+  } finally {
+    await browser.close()
+  }
 }

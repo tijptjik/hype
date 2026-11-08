@@ -67,10 +67,33 @@ for (const [name, engine] of [
           const section = element.closest('section')!
           const area = section.getBoundingClientRect()
           const content = section.firstElementChild!.getBoundingClientRect()
-          return { area: { x: area.x, y: area.y, width: area.width, height: area.height }, content: { x: content.x, y: content.y, width: content.width, height: content.height } }
+          return {
+            area: { x: area.x, y: area.y, width: area.width, height: area.height },
+            content: {
+              x: content.x,
+              y: content.y,
+              width: content.width,
+              height: content.height,
+            },
+          }
         })
-        assert(Math.abs(placement.area.x + placement.area.width / 2 - placement.content.x - placement.content.width / 2) < 2)
-        if (width > 390) assert(Math.abs(placement.area.y + placement.area.height / 2 - placement.content.y - placement.content.height / 2) < 2)
+        assert(
+          Math.abs(
+            placement.area.x +
+              placement.area.width / 2 -
+              placement.content.x -
+              placement.content.width / 2,
+          ) < 2,
+        )
+        if (width > 390)
+          assert(
+            Math.abs(
+              placement.area.y +
+                placement.area.height / 2 -
+                placement.content.y -
+                placement.content.height / 2,
+            ) < 2,
+          )
         assert(
           await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         )

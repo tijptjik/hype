@@ -46,7 +46,9 @@ const listKeys = async (bucket: string): Promise<string[]> => {
       throw new Error(`${bucket}: list failed ${response.status} ${body}`)
     }
 
-    keys.push(...[...body.matchAll(/<Key>([^<]+)<\/Key>/g)].map(match => match[1] ?? ''))
+    keys.push(
+      ...[...body.matchAll(/<Key>([^<]+)<\/Key>/g)].map(match => match[1] ?? ''),
+    )
     continuationToken =
       body.match(/<NextContinuationToken>([^<]+)<\/NextContinuationToken>/)?.[1] ?? ''
 

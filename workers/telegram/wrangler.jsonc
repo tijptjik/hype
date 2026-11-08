@@ -3,9 +3,7 @@
   "name": "hype-telegram-local",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-03",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
   "observability": {
@@ -22,9 +20,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": [
-        "TelegramAccount"
-      ]
+      "new_sqlite_classes": ["TelegramAccount"]
     }
   ],
   "env": {
@@ -39,10 +35,7 @@
         ]
       },
       "secrets": {
-        "required": [
-          "TELEGRAM_API_ID",
-          "TELEGRAM_API_HASH"
-        ]
+        "required": ["TELEGRAM_API_ID", "TELEGRAM_API_HASH"]
       }
     },
     "preview": {
@@ -56,17 +49,11 @@
         ]
       },
       "secrets": {
-        "required": [
-          "TELEGRAM_API_ID",
-          "TELEGRAM_API_HASH"
-        ]
+        "required": ["TELEGRAM_API_ID", "TELEGRAM_API_HASH"]
       }
     }
   },
   "secrets": {
-    "required": [
-      "TELEGRAM_API_ID",
-      "TELEGRAM_API_HASH"
-    ]
+    "required": ["TELEGRAM_API_ID", "TELEGRAM_API_HASH"]
   }
 }

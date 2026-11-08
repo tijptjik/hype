@@ -46,7 +46,11 @@ export async function backfillFeatureMtr(args: string[]): Promise<void> {
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname))
     throw new Error('Backfill requires a local routing engine')
   const db = new Database(option('--database'), { readonly: true })
-  const rows = db.query("SELECT id,geometry FROM feature WHERE json_extract(COALESCE(mtrResolution,'{}'),'$.review') IS NULL ORDER BY id").all() as {
+  const rows = db
+    .query(
+      "SELECT id,geometry FROM feature WHERE json_extract(COALESCE(mtrResolution,'{}'),'$.review') IS NULL ORDER BY id",
+    )
+    .all() as {
     id: string
     geometry: string
   }[]
@@ -73,7 +77,12 @@ export async function backfillFeatureMtr(args: string[]): Promise<void> {
       const row = rows[index++]
       const key = createHash('sha256')
         .update(
-          JSON.stringify([MTR_POLICY_VERSION, graph, mtrCatalog.sourceSha256, row.geometry]),
+          JSON.stringify([
+            MTR_POLICY_VERSION,
+            graph,
+            mtrCatalog.sourceSha256,
+            row.geometry,
+          ]),
         )
         .digest('hex')
       let result = cache.get(key)

@@ -34,12 +34,10 @@ try {
     throw Error('Map was unmounted on Location')
   if ((await page.locator('[data-testid="map"]').count()) !== 1)
     throw Error('Duplicate map containers')
-  const transition = await page
-    .locator('[data-facet-id="address"]')
-    .evaluate(e => ({
-      properties: getComputedStyle(e).transitionProperty,
-      duration: getComputedStyle(e).transitionDuration,
-    }))
+  const transition = await page.locator('[data-facet-id="address"]').evaluate(e => ({
+    properties: getComputedStyle(e).transitionProperty,
+    duration: getComputedStyle(e).transitionDuration,
+  }))
   if (!transition.properties.includes('transform') || transition.duration !== '0.3s')
     throw Error(JSON.stringify(transition))
   await page.getByRole('button', { name: 'Profile', exact: true }).click()

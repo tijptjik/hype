@@ -16,20 +16,10 @@
           "https://preview.breadline.hk",
           "https://breadline.preview.hype.hk"
         ],
-        "methods": [
-          "PUT",
-          "GET",
-          "HEAD"
-        ],
-        "headers": [
-          "content-type",
-          "x-amz-content-sha256",
-          "if-none-match"
-        ]
+        "methods": ["PUT", "GET", "HEAD"],
+        "headers": ["content-type", "x-amz-content-sha256", "if-none-match"]
       },
-      "expose_headers": [
-        "etag"
-      ],
+      "expose_headers": ["etag"],
       "max_age_seconds": 3600
     }
   ]

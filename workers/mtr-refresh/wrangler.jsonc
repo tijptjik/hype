@@ -3,18 +3,14 @@
   "name": "hype-mtr-refresh",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-19",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
   "observability": {
     "enabled": true
   },
   "secrets": {
-    "required": [
-      "ROUTING_TOKEN"
-    ]
+    "required": ["ROUTING_TOKEN"]
   },
   "vars": {},
   "d1_databases": [
@@ -29,15 +25,11 @@
     "preview": {
       "name": "hype-mtr-refresh-preview",
       "secrets": {
-        "required": [
-          "ROUTING_TOKEN"
-        ]
+        "required": ["ROUTING_TOKEN"]
       },
       "vars": {},
       "triggers": {
-        "crons": [
-          "*/5 * * * *"
-        ]
+        "crons": ["*/5 * * * *"]
       },
       "d1_databases": [
         {
@@ -57,15 +49,11 @@
     "production": {
       "name": "hype-mtr-refresh-production",
       "secrets": {
-        "required": [
-          "ROUTING_TOKEN"
-        ]
+        "required": ["ROUTING_TOKEN"]
       },
       "vars": {},
       "triggers": {
-        "crons": [
-          "*/5 * * * *"
-        ]
+        "crons": ["*/5 * * * *"]
       },
       "d1_databases": [
         {

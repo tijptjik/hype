@@ -106,7 +106,12 @@ function main(): void {
         row.locationId !== plan.locationId ||
         row.factsRevisionId !== plan.revisionId ||
         row.locationRevisionId !== plan.revisionId ||
-        row.ownerOrganisationId !== (db.query('SELECT organisationId FROM project WHERE id=?').get(plan.projectId) as { organisationId: string } | null)?.organisationId ||
+        row.ownerOrganisationId !==
+          (
+            db
+              .query('SELECT organisationId FROM project WHERE id=?')
+              .get(plan.projectId) as { organisationId: string } | null
+          )?.organisationId ||
         row.state !== 'unresolved' ||
         row.ssId !== null ||
         row.origin !== 'local' ||

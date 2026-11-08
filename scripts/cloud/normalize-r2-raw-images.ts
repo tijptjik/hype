@@ -280,9 +280,7 @@ const parseArgs = (argv: string[]): CliOptions => {
 
   const maxDimension = options.maxDimension ?? 2048
   if (!Number.isInteger(maxDimension) || maxDimension <= 0) {
-    throw new Error(
-      `Invalid --max-dimension value: ${String(options.maxDimension)}`,
-    )
+    throw new Error(`Invalid --max-dimension value: ${String(options.maxDimension)}`)
   }
 
   if (options.onlyFormat && options.onlyFormat !== 'tiff') {
@@ -311,9 +309,7 @@ const encodeObjectKeyPath = (objectKey: string): string =>
 
 const buildBucketUrl = (bucket: string, objectKey?: string): URL => {
   const accountId = getAccountId()
-  const basePath = objectKey
-    ? `${bucket}/${encodeObjectKeyPath(objectKey)}`
-    : bucket
+  const basePath = objectKey ? `${bucket}/${encodeObjectKeyPath(objectKey)}` : bucket
   return new URL(`https://${accountId}.r2.cloudflarestorage.com/${basePath}`)
 }
 
@@ -365,7 +361,9 @@ const listObjects = async (
       }
     }
 
-    const tokenMatch = xml.match(/<NextContinuationToken>(.*?)<\/NextContinuationToken>/u)
+    const tokenMatch = xml.match(
+      /<NextContinuationToken>(.*?)<\/NextContinuationToken>/u,
+    )
     continuationToken = tokenMatch?.[1] ?? null
   } while (continuationToken)
 
@@ -448,8 +446,8 @@ const inferContentTypeFromKey = (objectKey: string): string => {
 const isOriginalImageKey = (objectKey: string): boolean =>
   objectKey.startsWith('h/') &&
   !objectKey.endsWith('.raw') &&
-    !objectKey.endsWith(MANIFEST_SUFFIX) &&
-    !objectKey.endsWith(METADATA_SUFFIX)
+  !objectKey.endsWith(MANIFEST_SUFFIX) &&
+  !objectKey.endsWith(METADATA_SUFFIX)
 
 /**
  * Checks whether an object key belongs to an operator-selected image.
@@ -623,12 +621,7 @@ const normalizeImageBuffer = async (
     }
   }
 
-  if (
-    !originalWidth ||
-    !originalHeight ||
-    !format ||
-    metadata.pages !== undefined
-  ) {
+  if (!originalWidth || !originalHeight || !format || metadata.pages !== undefined) {
     return {
       body: sourceBuffer,
       info: {
@@ -763,10 +756,9 @@ const updateMetadataDocument = (
     ...(prepared.originalObjectKey
       ? {
           originalObjectKey: prepared.originalObjectKey,
-          workingObjectKey:
-            prepared.originalObjectKey.endsWith('.raw')
-              ? prepared.originalObjectKey.slice(0, -'.raw'.length)
-              : prepared.originalObjectKey,
+          workingObjectKey: prepared.originalObjectKey.endsWith('.raw')
+            ? prepared.originalObjectKey.slice(0, -'.raw'.length)
+            : prepared.originalObjectKey,
         }
       : {}),
   }
@@ -797,10 +789,7 @@ const mapWithConcurrency = async <T>(
   )
 }
 
-const runPrepare = async (
-  client: AwsClient,
-  options: CliOptions,
-): Promise<void> => {
+const runPrepare = async (client: AwsClient, options: CliOptions): Promise<void> => {
   const objects = options.keys
     ? Array.from(
         new Map(
@@ -816,7 +805,9 @@ const runPrepare = async (
     : await listObjects(client, options.bucket, options.prefix, options.limit)
   const selectedObjects = filterObjectsForKeys(objects, options.keys)
   const sourceObjects = resolveSourceObjects(selectedObjects, options.keys)
-  const sidecarObjects = selectedObjects.filter(object => !isOriginalImageKey(object.key))
+  const sidecarObjects = selectedObjects.filter(
+    object => !isOriginalImageKey(object.key),
+  )
   const preparedInfo = new Map<string, PreparedImageInfo>()
 
   console.log(
@@ -865,7 +856,10 @@ const runPrepare = async (
 
   await mapWithConcurrency(sidecarObjects, options.concurrency, async object => {
     const publicId = toMetadataPublicId(object.key)
-    if (options.onlyFormat === 'tiff' && (!publicId || !preparedPublicIds.has(publicId))) {
+    if (
+      options.onlyFormat === 'tiff' &&
+      (!publicId || !preparedPublicIds.has(publicId))
+    ) {
       return
     }
 
@@ -877,7 +871,9 @@ const runPrepare = async (
       const prepared = publicId ? preparedInfo.get(publicId) : undefined
 
       if (prepared) {
-        const document = JSON.parse(Buffer.from(body).toString('utf8')) as ImageMetadataDocument
+        const document = JSON.parse(
+          Buffer.from(body).toString('utf8'),
+        ) as ImageMetadataDocument
         output = new TextEncoder().encode(
           `${JSON.stringify(
             updateMetadataDocument(document, prepared, options.maxDimension),
@@ -928,16 +924,13 @@ const runSync = async (client: AwsClient, options: CliOptions): Promise<void> =>
   )
 
   await mapWithConcurrency(files, options.concurrency, async filePath => {
-    const relativePath = path.relative(options.outDir, filePath).split(path.sep).join('/')
+    const relativePath = path
+      .relative(options.outDir, filePath)
+      .split(path.sep)
+      .join('/')
     const body = new Uint8Array(await readFile(filePath))
     const contentType = await detectContentTypeFromBody(body, relativePath)
-    await putObject(
-      client,
-      options.bucket,
-      relativePath,
-      body,
-      contentType,
-    )
+    await putObject(client, options.bucket, relativePath, body, contentType)
     console.log(`[r2:normalize] uploaded ${relativePath}`)
   })
 

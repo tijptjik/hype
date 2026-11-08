@@ -1,9 +1,9 @@
 {
- "name": "hype-messaging-backfill",
- "compatibility_date": "2026-11-03",
- "compatibility_flags": ["nodejs_compat"],
- "services": [
-  {"binding": "WA", "service": "hype-whatsover-local"},
-  {"binding": "TG", "service": "hype-telegram-local"}
- ]
+  "name": "hype-messaging-backfill",
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [
+    { "binding": "WA", "service": "hype-whatsover-local" },
+    { "binding": "TG", "service": "hype-telegram-local" }
+  ]
 }

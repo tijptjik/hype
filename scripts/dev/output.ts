@@ -5,14 +5,24 @@
  * @returns SvelteKit output directory and an optional watcher exclusion.
  * @remarks Both generated manifests and optimized dependencies are process-owned.
  */
-export function getDevOutput(argv: string[], command: string): {
+export function getDevOutput(
+  argv: string[],
+  command: string,
+): {
   outDir: string
   ignored: RegExp[]
 } {
   const index = argv.indexOf('--port')
-  const value = index >= 0 ? argv[index + 1] : argv.find(arg => arg.startsWith('--port='))?.slice(7)
+  const value =
+    index >= 0 ? argv[index + 1] : argv.find(arg => arg.startsWith('--port='))?.slice(7)
   const port = Number(value)
-  if (command !== 'serve' || !Number.isInteger(port) || port < 1 || port > 65535 || port === 5175) {
+  if (
+    command !== 'serve' ||
+    !Number.isInteger(port) ||
+    port < 1 ||
+    port > 65535 ||
+    port === 5175
+  ) {
     return { outDir: '.svelte-kit', ignored: [] }
   }
   const directory = `dev-${port}`

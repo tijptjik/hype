@@ -53,8 +53,11 @@ async function main(): Promise<void> {
     mkdirSync(dirname(output), { recursive: true })
     writeFileSync(
       output,
-      JSON.stringify({ version: 1, total: rows.length, counts, localeCounts, results }, null, 2) +
-        '\n',
+      JSON.stringify(
+        { version: 1, total: rows.length, counts, localeCounts, results },
+        null,
+        2,
+      ) + '\n',
       { mode: 0o600 },
     )
     console.log(JSON.stringify({ total: rows.length, counts, localeCounts }))

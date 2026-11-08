@@ -1,19 +1,19 @@
 // DRIZZLE
-import { sqliteGenerate } from 'drizzle-dbml-generator';
+import { sqliteGenerate } from 'drizzle-dbml-generator'
 // DB
-import * as schema from '../src/lib/db/schema';
+import * as schema from '../src/lib/db/schema'
 
-const out = './schema.dbml';
-const relational = true;
+const out = './schema.dbml'
+const relational = true
 
-console.log('🚀 Generating DBML from Drizzle schema...');
+console.log('🚀 Generating DBML from Drizzle schema...')
 
 try {
-  const dbml = sqliteGenerate({ schema, out, relational });
-  console.log('✅ DBML generated successfully!');
-  console.log(`📄 Output: ${out}`);
-  console.log(`🔗 Relational mode: ${relational ? 'enabled' : 'disabled'}`);
+  const dbml = sqliteGenerate({ schema, out, relational })
+  console.log('✅ DBML generated successfully!')
+  console.log(`📄 Output: ${out}`)
+  console.log(`🔗 Relational mode: ${relational ? 'enabled' : 'disabled'}`)
 } catch (error) {
-  console.error('❌ Error generating DBML:', error);
-  process.exit(1);
+  console.error('❌ Error generating DBML:', error)
+  process.exit(1)
 }

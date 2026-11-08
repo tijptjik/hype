@@ -3,9 +3,7 @@
   "name": "hype-whatsover-relay-prod",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-02",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
   "upload_source_maps": true,
@@ -35,9 +33,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": [
-        "WhatsoverRelay"
-      ]
+      "new_sqlite_classes": ["WhatsoverRelay"]
     }
   ],
   "env": {

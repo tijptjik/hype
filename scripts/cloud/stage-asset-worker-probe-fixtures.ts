@@ -158,9 +158,7 @@ const parseArgs = (argv: string[]): CliOptions => {
 
   const maxDimension = options.maxDimension ?? 2048
   if (!Number.isInteger(maxDimension) || maxDimension <= 0) {
-    throw new Error(
-      `Invalid --max-dimension value: ${String(options.maxDimension)}`,
-    )
+    throw new Error(`Invalid --max-dimension value: ${String(options.maxDimension)}`)
   }
 
   const fitMode = options.fitMode ?? 'cover'
@@ -326,7 +324,10 @@ const main = async (): Promise<void> => {
   await loadLocalEnvForStage(options.stage)
   const client = createR2Client()
   const bucket = DEFAULT_BUCKET_BY_STAGE[options.stage]
-  const sourceBaseName = path.basename(options.sourceFile, path.extname(options.sourceFile))
+  const sourceBaseName = path.basename(
+    options.sourceFile,
+    path.extname(options.sourceFile),
+  )
 
   console.log(
     JSON.stringify(

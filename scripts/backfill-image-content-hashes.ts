@@ -3,7 +3,10 @@ import { readFile } from 'node:fs/promises'
 import { Database as SQLiteDatabase } from 'bun:sqlite'
 import { AwsClient } from 'aws4fetch'
 import { and, eq, isNull, or } from 'drizzle-orm'
-import { drizzle as drizzleBunSqlite, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
+import {
+  drizzle as drizzleBunSqlite,
+  type BunSQLiteDatabase,
+} from 'drizzle-orm/bun-sqlite'
 import {
   D1Helper,
   type BoundD1,
@@ -325,10 +328,7 @@ const runBackfill = async (
       })
       const contentHash = await hashBytes(bytes)
 
-      await db
-        .update(image)
-        .set({ contentHash })
-        .where(eq(image.id, row.id))
+      await db.update(image).set({ contentHash }).where(eq(image.id, row.id))
 
       console.log(
         `[image:hash:backfill] Updated ${row.id} ${row.publicId} ${contentHash}`,

@@ -79,7 +79,9 @@ async function main(): Promise<void> {
       .query('SELECT baseline FROM locationIdentityReview WHERE id=?')
       .get(receipt.identityReviewId) as { baseline: string }
     const merge = evidence.sqlite
-      .query(`SELECT json_extract(m.value,'$.sourceBaseline') AS sourceBaseline,json_extract(m.value,'$.sourceRevisionId') AS sourceRevisionId FROM locationIdentityReview r,json_each(r.mergeReviews) m WHERE json_extract(m.value,'$.id')=?`)
+      .query(
+        `SELECT json_extract(m.value,'$.sourceBaseline') AS sourceBaseline,json_extract(m.value,'$.sourceRevisionId') AS sourceRevisionId FROM locationIdentityReview r,json_each(r.mergeReviews) m WHERE json_extract(m.value,'$.id')=?`,
+      )
       .get(receipt.mergeReviewId) as {
       sourceBaseline: string
       sourceRevisionId: string

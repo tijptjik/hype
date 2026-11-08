@@ -87,7 +87,7 @@ export async function prepareDivisions(
       )
       .all<FailedJob>()
     const attemptsBefore = new Map(
-      previousFailures.results.map((job) => [
+      previousFailures.results.map(job => [
         `${job.featureId}:${job.generation}`,
         job.attempts,
       ]),
@@ -104,7 +104,7 @@ export async function prepareDivisions(
       .all<FailedJob>()
     if (
       failed.results.some(
-        (job) =>
+        job =>
           job.attempts >
           (attemptsBefore.get(`${job.featureId}:${job.generation}`) ?? 0),
       )

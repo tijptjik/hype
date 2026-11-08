@@ -29,11 +29,9 @@ export async function prepareLocalMirror(): Promise<void> {
     remoteBindings: false,
   })
   try {
-    const pending = await proxy.env.DB
-      .prepare(
-        "SELECT count(*) AS count FROM feature WHERE spatialIndex IS NULL AND json_extract(geometry, '$.type') = 'Point'",
-      )
-      .first<{ count: number }>()
+    const pending = await proxy.env.DB.prepare(
+      "SELECT count(*) AS count FROM feature WHERE spatialIndex IS NULL AND json_extract(geometry, '$.type') = 'Point'",
+    ).first<{ count: number }>()
     if (!pending || pending.count > 0)
       throw new Error(
         `Spatial backfill incomplete: ${pending?.count ?? 'unknown'} point features remain; inspect invalid geometry and run feature:spatial:backfill --require-complete explicitly`,

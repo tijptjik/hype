@@ -3,9 +3,7 @@
   "name": "hype-whatsover-prod",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-02",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
   "upload_source_maps": true,
@@ -30,9 +28,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": [
-        "WhatsoverAccount"
-      ]
+      "new_sqlite_classes": ["WhatsoverAccount"]
     }
   ],
   "env": {

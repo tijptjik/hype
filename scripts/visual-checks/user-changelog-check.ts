@@ -55,7 +55,9 @@ for (const [name, engine] of [
       const page = await browser.newPage({ viewport: { width, height: 900 } })
       const errors: string[] = []
       page.on('pageerror', error => errors.push(error.message))
-      page.on('requestfailed', request => errors.push(request.url() + ': ' + request.failure()?.errorText))
+      page.on('requestfailed', request =>
+        errors.push(request.url() + ': ' + request.failure()?.errorText),
+      )
       await page.route('**/src/lib/api/userChangelog.remote.ts*', route =>
         route.fulfill({
           contentType: 'application/javascript',
@@ -71,7 +73,12 @@ for (const [name, engine] of [
       await page.goto(`${origin}/__user-changelog.html`)
       const first = page.locator('details[data-change-key="entry-0"]')
       await first.waitFor().catch(async error => {
-        console.log(JSON.stringify({ errors, body: (await page.locator('body').innerText()).slice(0, 1500) }))
+        console.log(
+          JSON.stringify({
+            errors,
+            body: (await page.locator('body').innerText()).slice(0, 1500),
+          }),
+        )
         throw error
       })
       await first.locator('summary').click()

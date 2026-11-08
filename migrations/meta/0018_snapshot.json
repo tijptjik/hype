@@ -155,65 +155,45 @@
         "feature_organisationId_organisation_id_fk": {
           "name": "feature_organisationId_organisation_id_fk",
           "tableFrom": "feature",
-          "columnsFrom": [
-            "organisationId"
-          ],
+          "columnsFrom": ["organisationId"],
           "tableTo": "organisation",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "feature_projectId_project_id_fk": {
           "name": "feature_projectId_project_id_fk",
           "tableFrom": "feature",
-          "columnsFrom": [
-            "projectId"
-          ],
+          "columnsFrom": ["projectId"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "feature_layerId_layer_id_fk": {
           "name": "feature_layerId_layer_id_fk",
           "tableFrom": "feature",
-          "columnsFrom": [
-            "layerId"
-          ],
+          "columnsFrom": ["layerId"],
           "tableTo": "layer",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "feature_contributorId_user_id_fk": {
           "name": "feature_contributorId_user_id_fk",
           "tableFrom": "feature",
-          "columnsFrom": [
-            "contributorId"
-          ],
+          "columnsFrom": ["contributorId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         },
         "feature_publisherId_user_id_fk": {
           "name": "feature_publisherId_user_id_fk",
           "tableFrom": "feature",
-          "columnsFrom": [
-            "publisherId"
-          ],
+          "columnsFrom": ["publisherId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         }
@@ -297,23 +277,16 @@
         "featureI18n_featureId_feature_id_fk": {
           "name": "featureI18n_featureId_feature_id_fk",
           "tableFrom": "featureI18n",
-          "columnsFrom": [
-            "featureId"
-          ],
+          "columnsFrom": ["featureId"],
           "tableTo": "feature",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "featureI18n_featureId_locale_pk": {
-          "columns": [
-            "featureId",
-            "locale"
-          ],
+          "columns": ["featureId", "locale"],
           "name": "featureI18n_featureId_locale_pk"
         }
       },
@@ -357,49 +330,34 @@
         "featureProperty_featureId_feature_id_fk": {
           "name": "featureProperty_featureId_feature_id_fk",
           "tableFrom": "featureProperty",
-          "columnsFrom": [
-            "featureId"
-          ],
+          "columnsFrom": ["featureId"],
           "tableTo": "feature",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "featureProperty_propertyId_property_id_fk": {
           "name": "featureProperty_propertyId_property_id_fk",
           "tableFrom": "featureProperty",
-          "columnsFrom": [
-            "propertyId"
-          ],
+          "columnsFrom": ["propertyId"],
           "tableTo": "property",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "featureProperty_propertyValueId_propertyValue_id_fk": {
           "name": "featureProperty_propertyValueId_propertyValue_id_fk",
           "tableFrom": "featureProperty",
-          "columnsFrom": [
-            "propertyValueId"
-          ],
+          "columnsFrom": ["propertyValueId"],
           "tableTo": "propertyValue",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {
         "featureProperty_featureId_propertyId_pk": {
-          "columns": [
-            "featureId",
-            "propertyId"
-          ],
+          "columns": ["featureId", "propertyId"],
           "name": "featureProperty_featureId_propertyId_pk"
         }
       },
@@ -450,52 +408,34 @@
         "featurePropertyI18n_featureId_feature_id_fk": {
           "name": "featurePropertyI18n_featureId_feature_id_fk",
           "tableFrom": "featurePropertyI18n",
-          "columnsFrom": [
-            "featureId"
-          ],
+          "columnsFrom": ["featureId"],
           "tableTo": "feature",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "featurePropertyI18n_propertyId_property_id_fk": {
           "name": "featurePropertyI18n_propertyId_property_id_fk",
           "tableFrom": "featurePropertyI18n",
-          "columnsFrom": [
-            "propertyId"
-          ],
+          "columnsFrom": ["propertyId"],
           "tableTo": "property",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "featurePropertyI18n_featureProperty_fk": {
           "name": "featurePropertyI18n_featureProperty_fk",
           "tableFrom": "featurePropertyI18n",
-          "columnsFrom": [
-            "featureId",
-            "propertyId"
-          ],
+          "columnsFrom": ["featureId", "propertyId"],
           "tableTo": "featureProperty",
-          "columnsTo": [
-            "featureId",
-            "propertyId"
-          ],
+          "columnsTo": ["featureId", "propertyId"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {
         "featurePropertyI18n_featureId_propertyId_locale_pk": {
-          "columns": [
-            "featureId",
-            "propertyId",
-            "locale"
-          ],
+          "columns": ["featureId", "propertyId", "locale"],
           "name": "featurePropertyI18n_featureId_propertyId_locale_pk"
         }
       },
@@ -569,16 +509,12 @@
       "indexes": {
         "hub_code_unique": {
           "name": "hub_code_unique",
-          "columns": [
-            "code"
-          ],
+          "columns": ["code"],
           "isUnique": true
         },
         "hub_domain_unique": {
           "name": "hub_domain_unique",
-          "columns": [
-            "domain"
-          ],
+          "columns": ["domain"],
           "isUnique": true
         }
       },
@@ -586,13 +522,9 @@
         "hub_imageId_image_id_fk": {
           "name": "hub_imageId_image_id_fk",
           "tableFrom": "hub",
-          "columnsFrom": [
-            "imageId"
-          ],
+          "columnsFrom": ["imageId"],
           "tableTo": "image",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         }
@@ -669,23 +601,16 @@
         "hubI18n_hubId_hub_id_fk": {
           "name": "hubI18n_hubId_hub_id_fk",
           "tableFrom": "hubI18n",
-          "columnsFrom": [
-            "hubId"
-          ],
+          "columnsFrom": ["hubId"],
           "tableTo": "hub",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "hubI18n_hubId_locale_pk": {
-          "columns": [
-            "hubId",
-            "locale"
-          ],
+          "columns": ["hubId", "locale"],
           "name": "hubI18n_hubId_locale_pk"
         }
       },
@@ -723,36 +648,25 @@
         "hubRole_hubId_hub_id_fk": {
           "name": "hubRole_hubId_hub_id_fk",
           "tableFrom": "hubRole",
-          "columnsFrom": [
-            "hubId"
-          ],
+          "columnsFrom": ["hubId"],
           "tableTo": "hub",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "hubRole_userId_user_id_fk": {
           "name": "hubRole_userId_user_id_fk",
           "tableFrom": "hubRole",
-          "columnsFrom": [
-            "userId"
-          ],
+          "columnsFrom": ["userId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "hubRole_hubId_userId_pk": {
-          "columns": [
-            "hubId",
-            "userId"
-          ],
+          "columns": ["hubId", "userId"],
           "name": "hubRole_hubId_userId_pk"
         }
       },
@@ -817,9 +731,7 @@
       "indexes": {
         "canonical_intent": {
           "name": "canonical_intent",
-          "columns": [
-            "featureId"
-          ],
+          "columns": ["featureId"],
           "where": "intent = 'canonical'",
           "isUnique": true
         }
@@ -828,36 +740,25 @@
         "featureImage_featureId_feature_id_fk": {
           "name": "featureImage_featureId_feature_id_fk",
           "tableFrom": "featureImage",
-          "columnsFrom": [
-            "featureId"
-          ],
+          "columnsFrom": ["featureId"],
           "tableTo": "feature",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "featureImage_imageId_image_id_fk": {
           "name": "featureImage_imageId_image_id_fk",
           "tableFrom": "featureImage",
-          "columnsFrom": [
-            "imageId"
-          ],
+          "columnsFrom": ["imageId"],
           "tableTo": "image",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "featureImage_featureId_imageId_pk": {
-          "columns": [
-            "featureId",
-            "imageId"
-          ],
+          "columns": ["featureId", "imageId"],
           "name": "featureImage_featureId_imageId_pk"
         }
       },
@@ -1134,13 +1035,9 @@
         "account_userId_user_id_fk": {
           "name": "account_userId_user_id_fk",
           "tableFrom": "account",
-          "columnsFrom": [
-            "userId"
-          ],
+          "columnsFrom": ["userId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1214,13 +1111,9 @@
         "session_userId_user_id_fk": {
           "name": "session_userId_user_id_fk",
           "tableFrom": "session",
-          "columnsFrom": [
-            "userId"
-          ],
+          "columnsFrom": ["userId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1347,23 +1240,17 @@
       "indexes": {
         "user_username_unique": {
           "name": "user_username_unique",
-          "columns": [
-            "username"
-          ],
+          "columns": ["username"],
           "isUnique": true
         },
         "user_displayUsername_unique": {
           "name": "user_displayUsername_unique",
-          "columns": [
-            "displayUsername"
-          ],
+          "columns": ["displayUsername"],
           "isUnique": true
         },
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
@@ -1404,13 +1291,9 @@
         "userActivity_userId_user_id_fk": {
           "name": "userActivity_userId_user_id_fk",
           "tableFrom": "userActivity",
-          "columnsFrom": [
-            "userId"
-          ],
+          "columnsFrom": ["userId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
@@ -1481,36 +1364,25 @@
         "userFeature_userId_user_id_fk": {
           "name": "userFeature_userId_user_id_fk",
           "tableFrom": "userFeature",
-          "columnsFrom": [
-            "userId"
-          ],
+          "columnsFrom": ["userId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "userFeature_featureId_feature_id_fk": {
           "name": "userFeature_featureId_feature_id_fk",
           "tableFrom": "userFeature",
-          "columnsFrom": [
-            "featureId"
-          ],
+          "columnsFrom": ["featureId"],
           "tableTo": "feature",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "userFeature_userId_featureId_pk": {
-          "columns": [
-            "userId",
-            "featureId"
-          ],
+          "columns": ["userId", "featureId"],
           "name": "userFeature_userId_featureId_pk"
         }
       },
@@ -1548,36 +1420,25 @@
         "userLayer_layerId_layer_id_fk": {
           "name": "userLayer_layerId_layer_id_fk",
           "tableFrom": "userLayer",
-          "columnsFrom": [
-            "layerId"
-          ],
+          "columnsFrom": ["layerId"],
           "tableTo": "layer",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "userLayer_userId_user_id_fk": {
           "name": "userLayer_userId_user_id_fk",
           "tableFrom": "userLayer",
-          "columnsFrom": [
-            "userId"
-          ],
+          "columnsFrom": ["userId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "userLayer_layerId_userId_pk": {
-          "columns": [
-            "layerId",
-            "userId"
-          ],
+          "columns": ["layerId", "userId"],
           "name": "userLayer_layerId_userId_pk"
         }
       },
@@ -1748,9 +1609,7 @@
       "indexes": {
         "organisation_code_unique": {
           "name": "organisation_code_unique",
-          "columns": [
-            "code"
-          ],
+          "columns": ["code"],
           "isUnique": true
         }
       },
@@ -1758,39 +1617,27 @@
         "organisation_imageId_image_id_fk": {
           "name": "organisation_imageId_image_id_fk",
           "tableFrom": "organisation",
-          "columnsFrom": [
-            "imageId"
-          ],
+          "columnsFrom": ["imageId"],
           "tableTo": "image",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         },
         "organisation_hubId_hub_id_fk": {
           "name": "organisation_hubId_hub_id_fk",
           "tableFrom": "organisation",
-          "columnsFrom": [
-            "hubId"
-          ],
+          "columnsFrom": ["hubId"],
           "tableTo": "hub",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         },
         "organisation_publisherId_user_id_fk": {
           "name": "organisation_publisherId_user_id_fk",
           "tableFrom": "organisation",
-          "columnsFrom": [
-            "publisherId"
-          ],
+          "columnsFrom": ["publisherId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         }
@@ -1867,23 +1714,16 @@
         "organisationI18n_organisationId_organisation_id_fk": {
           "name": "organisationI18n_organisationId_organisation_id_fk",
           "tableFrom": "organisationI18n",
-          "columnsFrom": [
-            "organisationId"
-          ],
+          "columnsFrom": ["organisationId"],
           "tableTo": "organisation",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "organisationI18n_organisationId_locale_pk": {
-          "columns": [
-            "organisationId",
-            "locale"
-          ],
+          "columns": ["organisationId", "locale"],
           "name": "organisationI18n_organisationId_locale_pk"
         }
       },
@@ -1921,36 +1761,25 @@
         "organisationRole_organisationId_organisation_id_fk": {
           "name": "organisationRole_organisationId_organisation_id_fk",
           "tableFrom": "organisationRole",
-          "columnsFrom": [
-            "organisationId"
-          ],
+          "columnsFrom": ["organisationId"],
           "tableTo": "organisation",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "organisationRole_userId_user_id_fk": {
           "name": "organisationRole_userId_user_id_fk",
           "tableFrom": "organisationRole",
-          "columnsFrom": [
-            "userId"
-          ],
+          "columnsFrom": ["userId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "organisationRole_organisationId_userId_pk": {
-          "columns": [
-            "organisationId",
-            "userId"
-          ],
+          "columns": ["organisationId", "userId"],
           "name": "organisationRole_organisationId_userId_pk"
         }
       },
@@ -2060,9 +1889,7 @@
       "indexes": {
         "project_code_unique": {
           "name": "project_code_unique",
-          "columns": [
-            "code"
-          ],
+          "columns": ["code"],
           "isUnique": true
         }
       },
@@ -2070,39 +1897,27 @@
         "project_organisationId_organisation_id_fk": {
           "name": "project_organisationId_organisation_id_fk",
           "tableFrom": "project",
-          "columnsFrom": [
-            "organisationId"
-          ],
+          "columnsFrom": ["organisationId"],
           "tableTo": "organisation",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "project_imageId_image_id_fk": {
           "name": "project_imageId_image_id_fk",
           "tableFrom": "project",
-          "columnsFrom": [
-            "imageId"
-          ],
+          "columnsFrom": ["imageId"],
           "tableTo": "image",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         },
         "project_publisherId_user_id_fk": {
           "name": "project_publisherId_user_id_fk",
           "tableFrom": "project",
-          "columnsFrom": [
-            "publisherId"
-          ],
+          "columnsFrom": ["publisherId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         }
@@ -2210,23 +2025,16 @@
         "projectI18n_projectId_project_id_fk": {
           "name": "projectI18n_projectId_project_id_fk",
           "tableFrom": "projectI18n",
-          "columnsFrom": [
-            "projectId"
-          ],
+          "columnsFrom": ["projectId"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "projectI18n_projectId_locale_pk": {
-          "columns": [
-            "projectId",
-            "locale"
-          ],
+          "columns": ["projectId", "locale"],
           "name": "projectI18n_projectId_locale_pk"
         }
       },
@@ -2271,36 +2079,25 @@
         "projectRole_projectId_project_id_fk": {
           "name": "projectRole_projectId_project_id_fk",
           "tableFrom": "projectRole",
-          "columnsFrom": [
-            "projectId"
-          ],
+          "columnsFrom": ["projectId"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "projectRole_userId_user_id_fk": {
           "name": "projectRole_userId_user_id_fk",
           "tableFrom": "projectRole",
-          "columnsFrom": [
-            "userId"
-          ],
+          "columnsFrom": ["userId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "projectRole_projectId_userId_pk": {
-          "columns": [
-            "projectId",
-            "userId"
-          ],
+          "columns": ["projectId", "userId"],
           "name": "projectRole_projectId_userId_pk"
         }
       },
@@ -2412,39 +2209,27 @@
         "layer_organisationId_organisation_id_fk": {
           "name": "layer_organisationId_organisation_id_fk",
           "tableFrom": "layer",
-          "columnsFrom": [
-            "organisationId"
-          ],
+          "columnsFrom": ["organisationId"],
           "tableTo": "organisation",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "layer_projectId_project_id_fk": {
           "name": "layer_projectId_project_id_fk",
           "tableFrom": "layer",
-          "columnsFrom": [
-            "projectId"
-          ],
+          "columnsFrom": ["projectId"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "layer_publisherId_user_id_fk": {
           "name": "layer_publisherId_user_id_fk",
           "tableFrom": "layer",
-          "columnsFrom": [
-            "publisherId"
-          ],
+          "columnsFrom": ["publisherId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         }
@@ -2521,23 +2306,16 @@
         "layerI18n_layerId_layer_id_fk": {
           "name": "layerI18n_layerId_layer_id_fk",
           "tableFrom": "layerI18n",
-          "columnsFrom": [
-            "layerId"
-          ],
+          "columnsFrom": ["layerId"],
           "tableTo": "layer",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "layerI18n_layerId_locale_pk": {
-          "columns": [
-            "layerId",
-            "locale"
-          ],
+          "columns": ["layerId", "locale"],
           "name": "layerI18n_layerId_locale_pk"
         }
       },
@@ -2583,26 +2361,18 @@
         "layerProperty_layerId_layer_id_fk": {
           "name": "layerProperty_layerId_layer_id_fk",
           "tableFrom": "layerProperty",
-          "columnsFrom": [
-            "layerId"
-          ],
+          "columnsFrom": ["layerId"],
           "tableTo": "layer",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "layerProperty_propertyId_property_id_fk": {
           "name": "layerProperty_propertyId_property_id_fk",
           "tableFrom": "layerProperty",
-          "columnsFrom": [
-            "propertyId"
-          ],
+          "columnsFrom": ["propertyId"],
           "tableTo": "property",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
@@ -2711,13 +2481,9 @@
         "property_projectId_project_id_fk": {
           "name": "property_projectId_project_id_fk",
           "tableFrom": "property",
-          "columnsFrom": [
-            "projectId"
-          ],
+          "columnsFrom": ["projectId"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
@@ -2780,13 +2546,9 @@
         "propertyI18n_propertyId_property_id_fk": {
           "name": "propertyI18n_propertyId_property_id_fk",
           "tableFrom": "propertyI18n",
-          "columnsFrom": [
-            "propertyId"
-          ],
+          "columnsFrom": ["propertyId"],
           "tableTo": "property",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
@@ -2826,13 +2588,9 @@
         "propertyValue_propertyId_property_id_fk": {
           "name": "propertyValue_propertyId_property_id_fk",
           "tableFrom": "propertyValue",
-          "columnsFrom": [
-            "propertyId"
-          ],
+          "columnsFrom": ["propertyId"],
           "tableTo": "property",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
@@ -2879,23 +2637,16 @@
         "propertyValueI18n_propertyValueId_propertyValue_id_fk": {
           "name": "propertyValueI18n_propertyValueId_propertyValue_id_fk",
           "tableFrom": "propertyValueI18n",
-          "columnsFrom": [
-            "propertyValueId"
-          ],
+          "columnsFrom": ["propertyValueId"],
           "tableTo": "propertyValue",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "propertyValueI18n_propertyValueId_locale_pk": {
-          "columns": [
-            "propertyValueId",
-            "locale"
-          ],
+          "columns": ["propertyValueId", "locale"],
           "name": "propertyValueI18n_propertyValueId_locale_pk"
         }
       },
@@ -3012,65 +2763,45 @@
         "task_organisationId_organisation_id_fk": {
           "name": "task_organisationId_organisation_id_fk",
           "tableFrom": "task",
-          "columnsFrom": [
-            "organisationId"
-          ],
+          "columnsFrom": ["organisationId"],
           "tableTo": "organisation",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "task_projectId_project_id_fk": {
           "name": "task_projectId_project_id_fk",
           "tableFrom": "task",
-          "columnsFrom": [
-            "projectId"
-          ],
+          "columnsFrom": ["projectId"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "task_featureId_feature_id_fk": {
           "name": "task_featureId_feature_id_fk",
           "tableFrom": "task",
-          "columnsFrom": [
-            "featureId"
-          ],
+          "columnsFrom": ["featureId"],
           "tableTo": "feature",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "task_contributorId_user_id_fk": {
           "name": "task_contributorId_user_id_fk",
           "tableFrom": "task",
-          "columnsFrom": [
-            "contributorId"
-          ],
+          "columnsFrom": ["contributorId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         },
         "task_reviewerId_user_id_fk": {
           "name": "task_reviewerId_user_id_fk",
           "tableFrom": "task",
-          "columnsFrom": [
-            "reviewerId"
-          ],
+          "columnsFrom": ["reviewerId"],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         }
@@ -3102,36 +2833,25 @@
         "taskImage_taskId_task_id_fk": {
           "name": "taskImage_taskId_task_id_fk",
           "tableFrom": "taskImage",
-          "columnsFrom": [
-            "taskId"
-          ],
+          "columnsFrom": ["taskId"],
           "tableTo": "task",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "taskImage_imageId_image_id_fk": {
           "name": "taskImage_imageId_image_id_fk",
           "tableFrom": "taskImage",
-          "columnsFrom": [
-            "imageId"
-          ],
+          "columnsFrom": ["imageId"],
           "tableTo": "image",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "cascade",
           "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {
         "taskImage_taskId_imageId_pk": {
-          "columns": [
-            "taskId",
-            "imageId"
-          ],
+          "columns": ["taskId", "imageId"],
           "name": "taskImage_taskId_imageId_pk"
         }
       },

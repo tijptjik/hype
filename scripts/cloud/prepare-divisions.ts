@@ -39,8 +39,7 @@ export async function prepareRemoteDivisions(args: string[]): Promise<void> {
     token: process.env.SAANSEOI_API_KEY,
   }
   if (mode === '--apply') {
-    if (!api.token)
-      throw new Error('Set server-side SAANSEOI_API_KEY before applying.')
+    if (!api.token) throw new Error('Set server-side SAANSEOI_API_KEY before applying.')
     // Reject invalid credentials or an unpublished API before any production mutation.
     const probe = await apiRead(
       api,
@@ -54,9 +53,7 @@ export async function prepareRemoteDivisions(args: string[]): Promise<void> {
       },
       geocodeSchema,
     )
-    console.info(
-      JSON.stringify({ target, release: probe.meta.release.apiReleaseSet }),
-    )
+    console.info(JSON.stringify({ target, release: probe.meta.release.apiReleaseSet }))
   }
 
   // Isolate the explicit remote binding from local mirrors and app service bindings.
@@ -98,10 +95,10 @@ export async function prepareRemoteDivisions(args: string[]): Promise<void> {
       const columns = await db
         .prepare('PRAGMA table_info(feature)')
         .all<{ name: string }>()
-      const names = new Set(columns.results.map((column) => column.name))
+      const names = new Set(columns.results.map(column => column.name))
       if (
         [...Object.keys(divisionRoles), 'divisionResolution'].some(
-          (name) => !names.has(name),
+          name => !names.has(name),
         )
       )
         throw new Error('Apply migration 0088 before running this writer.')
@@ -129,8 +126,5 @@ export async function prepareRemoteDivisions(args: string[]): Promise<void> {
   }
 }
 
-if (
-  process.argv[1] &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
   await prepareRemoteDivisions(process.argv.slice(2))

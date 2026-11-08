@@ -127,7 +127,9 @@ async function main(): Promise<void> {
       .orderBy(feature.id)
     const linked = new Set(
       (
-        await connection.db.select({ id: featureLocation.featureId }).from(featureLocation)
+        await connection.db
+          .select({ id: featureLocation.featureId })
+          .from(featureLocation)
       ).map(row => row.id),
     )
     const plans = []

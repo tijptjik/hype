@@ -150,11 +150,9 @@ const parseArgs = (argv: string[]): CliOptions => {
 
   return {
     outPath: options.outPath ?? DEFAULT_OUT_PATH,
-    sourceBucket:
-      options.sourceBucket ?? DEFAULT_SOURCE_BUCKET_BY_STAGE[stage],
+    sourceBucket: options.sourceBucket ?? DEFAULT_SOURCE_BUCKET_BY_STAGE[stage],
     stage,
-    targetBucket:
-      options.targetBucket ?? DEFAULT_TARGET_BUCKET_BY_STAGE[stage],
+    targetBucket: options.targetBucket ?? DEFAULT_TARGET_BUCKET_BY_STAGE[stage],
     write: options.write ?? false,
     ...(options.prefix ? { prefix: options.prefix } : {}),
     ...(options.limit !== undefined ? { limit: options.limit } : {}),
@@ -195,9 +193,7 @@ const encodeObjectKeyPath = (objectKey: string): string =>
 
 const buildBucketUrl = (bucket: string, objectKey?: string): URL => {
   const accountId = getAccountId()
-  const basePath = objectKey
-    ? `${bucket}/${encodeObjectKeyPath(objectKey)}`
-    : bucket
+  const basePath = objectKey ? `${bucket}/${encodeObjectKeyPath(objectKey)}` : bucket
   return new URL(`https://${accountId}.r2.cloudflarestorage.com/${basePath}`)
 }
 
@@ -228,13 +224,18 @@ const listObjects = async (
     }
 
     const xml = await response.text()
-    const keyMatches = [...xml.matchAll(/<Contents>[\s\S]*?<Key>(.*?)<\/Key>[\s\S]*?<Size>(\d+)<\/Size>[\s\S]*?<\/Contents>/gu)]
+    const keyMatches = [
+      ...xml.matchAll(
+        /<Contents>[\s\S]*?<Key>(.*?)<\/Key>[\s\S]*?<Size>(\d+)<\/Size>[\s\S]*?<\/Contents>/gu,
+      ),
+    ]
     for (const match of keyMatches) {
       objects.push({
-        key: match[1]
-          ?.replaceAll('&amp;', '&')
-          .replaceAll('&lt;', '<')
-          .replaceAll('&gt;', '>') ?? '',
+        key:
+          match[1]
+            ?.replaceAll('&amp;', '&')
+            .replaceAll('&lt;', '<')
+            .replaceAll('&gt;', '>') ?? '',
         size: Number.parseInt(match[2] ?? '0', 10),
       })
       if (limit !== undefined && objects.length >= limit) {
@@ -242,7 +243,9 @@ const listObjects = async (
       }
     }
 
-    const tokenMatch = xml.match(/<NextContinuationToken>(.*?)<\/NextContinuationToken>/u)
+    const tokenMatch = xml.match(
+      /<NextContinuationToken>(.*?)<\/NextContinuationToken>/u,
+    )
     continuationToken = tokenMatch?.[1] ?? null
   } while (continuationToken)
 

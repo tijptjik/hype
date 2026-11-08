@@ -321,7 +321,10 @@ for (const [name, engine] of [
           }
         }
         await dialog.getByLabel('Nearby features', { exact: true }).waitFor()
-        await dialog.getByText(/0\s+m(?: away)?/).first().waitFor()
+        await dialog
+          .getByText(/0\s+m(?: away)?/)
+          .first()
+          .waitFor()
         await dialog.getByLabel('Find the existing Feature').fill('community')
         const result = page.locator('[data-entity-id="primary"]')
         await result.waitFor()
@@ -361,7 +364,10 @@ for (const [name, engine] of [
           .getByRole('button', { name: 'Replace kept Feature', exact: true })
           .click()
         await dialog.getByLabel('Nearby features', { exact: true }).waitFor()
-        await dialog.getByText(/0\s+m(?: away)?/).first().waitFor()
+        await dialog
+          .getByText(/0\s+m(?: away)?/)
+          .first()
+          .waitFor()
         await dialog.getByLabel('Find the existing Feature').fill('community')
         await result.click()
         await dialog

@@ -1,12 +1,23 @@
 {
- "$schema":"../../node_modules/wrangler/config-schema.json",
- "name":"hype-messaging-notifications-local",
- "main":"index.ts",
- "compatibility_date":"2026-11-03",
- "compatibility_flags":["nodejs_compat"],
- "workers_dev":false,
- "d1_databases":[{"binding":"DB","database_name":"hype-db-local","database_id":"6757bbf2-ac2c-4323-b73a-0a48f0c41d62"}],
- "durable_objects":{"bindings":[{"name":"DELIVERY","class_name":"NotificationDelivery"}]},
- "migrations":[{"tag":"v1","new_sqlite_classes":["NotificationDelivery"]}],
- "services":[{"binding":"WHATSOVER","service":"hype-whatsover-local"},{"binding":"TELEGRAM","service":"hype-telegram-local"}]
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "hype-messaging-notifications-local",
+  "main": "index.ts",
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hype-db-local",
+      "database_id": "6757bbf2-ac2c-4323-b73a-0a48f0c41d62"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "DELIVERY", "class_name": "NotificationDelivery" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NotificationDelivery"] }],
+  "services": [
+    { "binding": "WHATSOVER", "service": "hype-whatsover-local" },
+    { "binding": "TELEGRAM", "service": "hype-telegram-local" }
+  ]
 }

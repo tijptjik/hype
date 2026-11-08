@@ -90,7 +90,11 @@ const main = async (): Promise<void> => {
     secretAccessKey: process.env.R2_S3_SECRET_ACCESS_KEY ?? '',
   }
 
-  if (!remoteConfig.accountId || !remoteConfig.accessKeyId || !remoteConfig.secretAccessKey) {
+  if (
+    !remoteConfig.accountId ||
+    !remoteConfig.accessKeyId ||
+    !remoteConfig.secretAccessKey
+  ) {
     throw new Error(
       'Map render persistence requires CLOUDFLARE_ACCOUNT_ID, R2_S3_ACCESS_KEY_ID, and R2_S3_SECRET_ACCESS_KEY',
     )

@@ -25,15 +25,23 @@ for (const [name, engine] of [
     for (let iteration = 0; iteration < 3; iteration++) {
       // Optional disabled flags must still leave valid navigation actions enabled.
       await header.getByRole('button', { name: 'Features', exact: true }).waitFor()
-      assert.equal(await header.getByRole('button', { name: 'Features', exact: true }).isEnabled(), true)
-      assert.equal(await header.getByRole('button', { name: 'Edit', exact: true }).isDisabled(), true)
+      assert.equal(
+        await header.getByRole('button', { name: 'Features', exact: true }).isEnabled(),
+        true,
+      )
+      assert.equal(
+        await header.getByRole('button', { name: 'Edit', exact: true }).isDisabled(),
+        true,
+      )
       await page.getByRole('button', { name: 'Open index', exact: true }).click()
       await page.locator('header').waitFor({ state: 'detached' })
       await page.getByRole('heading', { name: 'Organizations', exact: true }).waitFor()
       await page.getByRole('button', { name: 'Open images', exact: true }).click()
     }
     assert.deepEqual(errors, [])
-    console.log(`${name}: repeated header teardown, return and action availability passed`)
+    console.log(
+      `${name}: repeated header teardown, return and action availability passed`,
+    )
   } finally {
     await browser.close()
   }

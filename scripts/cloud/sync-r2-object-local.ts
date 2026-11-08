@@ -188,10 +188,7 @@ const main = async (): Promise<void> => {
   const sourceBucket = getBucketName(options.bucketKind, options.sourceStage)
   const targetBucket = getBucketName(options.bucketKind, options.targetStage)
   const tempDir = await mkdtemp(path.join(tmpdir(), 'hype-r2-sync-'))
-  const tempFile = path.join(
-    tempDir,
-    path.basename(options.key) || 'object.bin',
-  )
+  const tempFile = path.join(tempDir, path.basename(options.key) || 'object.bin')
 
   try {
     console.log(

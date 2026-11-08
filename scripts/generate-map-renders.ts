@@ -102,7 +102,11 @@ const main = async (): Promise<void> => {
     secretAccessKey: process.env.R2_S3_SECRET_ACCESS_KEY ?? '',
   }
 
-  if (!remoteConfig.accountId || !remoteConfig.accessKeyId || !remoteConfig.secretAccessKey) {
+  if (
+    !remoteConfig.accountId ||
+    !remoteConfig.accessKeyId ||
+    !remoteConfig.secretAccessKey
+  ) {
     throw new Error(
       'Map render persistence requires CLOUDFLARE_ACCOUNT_ID, R2_S3_ACCESS_KEY_ID, and R2_S3_SECRET_ACCESS_KEY',
     )
@@ -121,14 +125,10 @@ const main = async (): Promise<void> => {
       styleArgs.push('--force')
     }
 
-    const stylesProcess = spawn(
-      'bun',
-      styleArgs,
-      {
-        cwd: process.cwd(),
-        stdio: 'inherit',
-      },
-    )
+    const stylesProcess = spawn('bun', styleArgs, {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+    })
 
     const exitCode = await new Promise<number>((resolve, reject) => {
       stylesProcess.on('error', reject)
@@ -144,9 +144,7 @@ const main = async (): Promise<void> => {
   )
 
   if (entityKinds.length === 0) {
-    console.log(
-      `[map:render] Done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`,
-    )
+    console.log(`[map:render] Done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`)
     return
   }
 

@@ -1,19 +1,9 @@
 [
   {
-    "AllowedOrigins": [
-      "https://tiles.hype.hk"
-    ],
-    "AllowedMethods": [
-      "GET",
-      "HEAD"
-    ],
-    "AllowedHeaders": [
-      "range",
-      "if-match"
-    ],
-    "ExposeHeaders": [
-      "etag"
-    ],
+    "AllowedOrigins": ["https://tiles.hype.hk"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["range", "if-match"],
+    "ExposeHeaders": ["etag"],
     "MaxAgeSeconds": 3000
   }
 ]

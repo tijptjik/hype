@@ -10,9 +10,7 @@
       "names": {
         "en": "Project House"
       },
-      "featureIds": [
-        "eln2025Book001"
-      ],
+      "featureIds": ["eln2025Book001"],
       "evidence": [
         {
           "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
@@ -33,9 +31,7 @@
       "names": {
         "en": "COMMAA"
       },
-      "featureIds": [
-        "eln2025Book002"
-      ],
+      "featureIds": ["eln2025Book002"],
       "evidence": [
         {
           "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
@@ -60,10 +56,7 @@
       "names": {
         "en": "La Galerie Paris 1839"
       },
-      "featureIds": [
-        "eln2025Book003",
-        "eln2024Spot004"
-      ],
+      "featureIds": ["eln2025Book003", "eln2024Spot004"],
       "evidence": [
         {
           "url": "https://iichongkong.esteri.it/en/gli_eventi/calendario/literature-night-hong-kong-2024-free-event/",
@@ -97,11 +90,7 @@
         "en": "La Biblioteca Italian Library",
         "zh-hant": "意大利圖書館"
       },
-      "featureIds": [
-        "eln2025Book004",
-        "eln2024Spot003",
-        "elnBook00008"
-      ],
+      "featureIds": ["eln2025Book004", "eln2024Spot003", "elnBook00008"],
       "evidence": [
         {
           "url": "https://iichongkong.esteri.it/en/gli_eventi/calendario/literature-night-hong-kong-2024-free-event/",
@@ -139,10 +128,7 @@
         "en": "PMQ Taste Library",
         "zh-hant": "PMQ 味道圖書館"
       },
-      "featureIds": [
-        "eln2025Book005",
-        "eln2025Book008"
-      ],
+      "featureIds": ["eln2025Book005", "eln2025Book008"],
       "evidence": [
         {
           "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
@@ -171,10 +157,7 @@
       "names": {
         "en": "Habyt"
       },
-      "featureIds": [
-        "eln2025Book006",
-        "elnBook00010"
-      ],
+      "featureIds": ["eln2025Book006", "elnBook00010"],
       "evidence": [
         {
           "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
@@ -199,10 +182,7 @@
       "names": {
         "en": "Bookazine Social"
       },
-      "featureIds": [
-        "eln2025Book007",
-        "elnBook00009"
-      ],
+      "featureIds": ["eln2025Book007", "elnBook00009"],
       "evidence": [
         {
           "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
@@ -231,10 +211,7 @@
       "names": {
         "en": "Parenthèses"
       },
-      "featureIds": [
-        "eln2025Book009",
-        "elnBook00006"
-      ],
+      "featureIds": ["eln2025Book009", "elnBook00006"],
       "evidence": [
         {
           "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
@@ -263,9 +240,7 @@
       "names": {
         "en": "The Flying Club"
       },
-      "featureIds": [
-        "eln2025Book010"
-      ],
+      "featureIds": ["eln2025Book010"],
       "evidence": [
         {
           "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
@@ -383,9 +358,7 @@
       "names": {
         "en": "Ztoryhome"
       },
-      "featureIds": [
-        "eln2025Book013"
-      ],
+      "featureIds": ["eln2025Book013"],
       "evidence": [
         {
           "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
@@ -410,9 +383,7 @@
       "names": {
         "en": "TASCHEN"
       },
-      "featureIds": [
-        "eln2024Spot001"
-      ],
+      "featureIds": ["eln2024Spot001"],
       "evidence": [
         {
           "url": "https://iichongkong.esteri.it/en/gli_eventi/calendario/literature-night-hong-kong-2024-free-event/",
@@ -437,9 +408,7 @@
       "names": {
         "en": "Novalis Art Design"
       },
-      "featureIds": [
-        "eln2024Spot002"
-      ],
+      "featureIds": ["eln2024Spot002"],
       "evidence": [
         {
           "url": "https://iichongkong.esteri.it/en/gli_eventi/calendario/literature-night-hong-kong-2024-free-event/",
@@ -464,9 +433,7 @@
       "names": {
         "en": "The Siberian"
       },
-      "featureIds": [
-        "elnBook00001"
-      ],
+      "featureIds": ["elnBook00001"],
       "evidence": [],
       "notes": "Imported venue address is the available English evidence. First-party social profile and domain were unavailable; Chinese name remains unresolved.",
       "traditionalChineseDecision": "unresolved",
@@ -482,9 +449,7 @@
       "names": {
         "en": "Mount Zero Books"
       },
-      "featureIds": [
-        "elnBook00002"
-      ],
+      "featureIds": ["elnBook00002"],
       "evidence": [],
       "notes": "Imported venue address is English evidence. Candidate Chinese name 見山書店 was not retrievable from a first-party source in this research, so it is deliberately NOT proposed.",
       "traditionalChineseDecision": "unresolved",
@@ -501,9 +466,7 @@
         "en": "Print Art Contemporary",
         "zh-hant": "當代印藝"
       },
-      "featureIds": [
-        "elnBook00003"
-      ],
+      "featureIds": ["elnBook00003"],
       "evidence": [
         {
           "url": "https://www.pmq.org.hk/shop/print-art-contemporary/?lang=ch",
@@ -524,9 +487,7 @@
       "names": {
         "en": "One Bite Design Studio"
       },
-      "featureIds": [
-        "elnBook00005"
-      ],
+      "featureIds": ["elnBook00005"],
       "evidence": [
         {
           "url": "https://onebitedesign.com/",
@@ -548,9 +509,7 @@
         "en": "10 Chancery Lane Gallery",
         "zh-hant": "10 號贊善里畫廊"
       },
-      "featureIds": [
-        "elnBook00011"
-      ],
+      "featureIds": ["elnBook00011"],
       "evidence": [
         {
           "url": "https://www.10chancerylanegallery.com/zh/contact/",

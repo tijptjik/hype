@@ -279,9 +279,7 @@ const encodeObjectKeyPath = (objectKey: string): string =>
  */
 const buildBucketUrl = (bucket: string, objectKey?: string): URL => {
   const accountId = getAccountId()
-  const basePath = objectKey
-    ? `${bucket}/${encodeObjectKeyPath(objectKey)}`
-    : bucket
+  const basePath = objectKey ? `${bucket}/${encodeObjectKeyPath(objectKey)}` : bucket
   return new URL(`https://${accountId}.r2.cloudflarestorage.com/${basePath}`)
 }
 
@@ -336,7 +334,9 @@ const listObjects = async (
       })
     }
 
-    const tokenMatch = xml.match(/<NextContinuationToken>(.*?)<\/NextContinuationToken>/u)
+    const tokenMatch = xml.match(
+      /<NextContinuationToken>(.*?)<\/NextContinuationToken>/u,
+    )
     continuationToken = tokenMatch?.[1] ?? null
   } while (continuationToken)
 
@@ -389,7 +389,11 @@ const isImageObjectKey = (key: string): boolean =>
  * @returns Metadata candidate or null when the key is not a metadata sidecar.
  */
 const toMetadataCandidate = (key: string): MetadataSidecarCandidate | null => {
-  if (!key.startsWith('h/') || key.endsWith('.manifest.json') || !key.endsWith('.json')) {
+  if (
+    !key.startsWith('h/') ||
+    key.endsWith('.manifest.json') ||
+    !key.endsWith('.json')
+  ) {
     return null
   }
 
@@ -428,7 +432,11 @@ const preferMetadataCandidate = (
     return next
   }
 
-  if (current.version !== null && next.version !== null && next.version > current.version) {
+  if (
+    current.version !== null &&
+    next.version !== null &&
+    next.version > current.version
+  ) {
     return next
   }
 
@@ -550,10 +558,7 @@ const formatBytes = (bytes: number): string => {
  * @param largestCount Number of rows to print.
  * @returns Nothing.
  */
-const printLargestObjects = (
-  objects: ObjectSummary[],
-  largestCount: number,
-): void => {
+const printLargestObjects = (objects: ObjectSummary[], largestCount: number): void => {
   const largest = objects
     .filter(object => isImageObjectKey(object.key))
     .sort((left, right) => right.size - left.size)

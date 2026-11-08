@@ -176,7 +176,9 @@ const TARGETS: ProbeTarget[] = [
  * @param argv Raw CLI args after the script path.
  * @returns Normalized probe options.
  */
-const parseArgs = (argv: string[]): {
+const parseArgs = (
+  argv: string[],
+): {
   outDir: string
   reportPath: string
   retries: number

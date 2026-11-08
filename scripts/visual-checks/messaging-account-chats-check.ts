@@ -143,17 +143,36 @@ for (const [browserName, engine] of [
         throw new Error('Loading more chats discarded draft')
       await group.click({ button: 'right' })
       await page.getByRole('menuitem', { name: 'Pin chat', exact: true }).click()
-      await page.waitForFunction(() => document.querySelector('nav[aria-label="Conversations"] button')?.textContent?.includes('Delivery Team'))
-      if ((await page.getByRole('textbox', { name: 'Message', exact: true }).inputValue()) !== 'Keep this native chat draft')
+      await page.waitForFunction(() =>
+        document
+          .querySelector('nav[aria-label="Conversations"] button')
+          ?.textContent?.includes('Delivery Team'),
+      )
+      if (
+        (await page
+          .getByRole('textbox', { name: 'Message', exact: true })
+          .inputValue()) !== 'Keep this native chat draft'
+      )
         throw new Error('Pinning changed selection or discarded draft')
-      if (!(await mina.innerText()).includes('Preview for external-tg') || !(await linked.innerText()).includes('Preview for linked-tg'))
+      if (
+        !(await mina.innerText()).includes('Preview for external-tg') ||
+        !(await linked.innerText()).includes('Preview for linked-tg')
+      )
         throw new Error('Chat previews crossed identities')
       await page.reload()
       await group.waitFor()
-      await page.waitForFunction(() => document.querySelector('nav[aria-label="Conversations"] button')?.textContent?.includes('Delivery Team'))
+      await page.waitForFunction(() =>
+        document
+          .querySelector('nav[aria-label="Conversations"] button')
+          ?.textContent?.includes('Delivery Team'),
+      )
       await group.click({ button: 'right' })
       await page.getByRole('menuitem', { name: 'Unpin chat', exact: true }).click()
-      await page.waitForFunction(() => document.querySelector('nav[aria-label="Conversations"] button')?.textContent?.includes('HYPE Member'))
+      await page.waitForFunction(() =>
+        document
+          .querySelector('nav[aria-label="Conversations"] button')
+          ?.textContent?.includes('HYPE Member'),
+      )
       await mina.click()
       await nav.evaluate(element => {
         element.scrollTop = 0
@@ -167,13 +186,11 @@ for (const [browserName, engine] of [
         fullPage: true,
         animations: 'disabled',
       })
-      const externalWa = nav
-        .getByRole('button')
-        .filter({
-          has: page.getByText('Long Native Contact Name That Must Remain Readable', {
-            exact: true,
-          }),
-        })
+      const externalWa = nav.getByRole('button').filter({
+        has: page.getByText('Long Native Contact Name That Must Remain Readable', {
+          exact: true,
+        }),
+      })
       await externalWa.click()
       await page
         .getByRole('heading', {
@@ -183,8 +200,13 @@ for (const [browserName, engine] of [
         .waitFor()
       const senderHeader = chat.locator('header[title="Synthetic Operator"]')
       await senderHeader.getByText('Synthetic Organisation', { exact: true }).waitFor()
-      if ((await senderHeader.innerText()).includes('WhatsApp') || (await senderHeader.innerText()).includes('Synthetic Operator'))
-        throw new Error('Outgoing header exposes account or operator instead of organisation')
+      if (
+        (await senderHeader.innerText()).includes('WhatsApp') ||
+        (await senderHeader.innerText()).includes('Synthetic Operator')
+      )
+        throw new Error(
+          'Outgoing header exposes account or operator instead of organisation',
+        )
       await senderHeader.hover()
       await page
         .getByRole('textbox', { name: 'Message', exact: true })

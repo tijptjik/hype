@@ -27,18 +27,26 @@ const verifySvelteKitPatch = (): number => {
 
     if (
       EXPECTED_SNIPPETS.every(snippet => source.includes(snippet)) &&
-      !guard.includes('if (kit.experimental.remoteFunctions && is_remote_module(id)) return;')
+      !guard.includes(
+        'if (kit.experimental.remoteFunctions && is_remote_module(id)) return;',
+      )
     ) {
       return 0
     }
   } catch (error) {
-    console.error('Unable to read the installed SvelteKit query runtime and import guard.')
+    console.error(
+      'Unable to read the installed SvelteKit query runtime and import guard.',
+    )
     console.error(error)
     return 1
   }
 
-  console.error('SvelteKit query patch is missing or the obsolete import-guard bypass is still installed.')
-  console.error(`Expected query return flow in ${PATCHED_QUERY_PATH} and no remote-module bypass in ${FRAMEWORK_GUARD_PATH}.`)
+  console.error(
+    'SvelteKit query patch is missing or the obsolete import-guard bypass is still installed.',
+  )
+  console.error(
+    `Expected query return flow in ${PATCHED_QUERY_PATH} and no remote-module bypass in ${FRAMEWORK_GUARD_PATH}.`,
+  )
 
   return 1
 }

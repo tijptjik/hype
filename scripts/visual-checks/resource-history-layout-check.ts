@@ -142,8 +142,13 @@ for (const [name, engine] of [
       }))
       assert.equal(scroll.overflow, 'auto')
       if (width < 448) {
-        assert.ok(scroll.content > scroll.width, 'Narrow comparisons must scroll locally')
-        await scrollRegion.evaluate(element => { element.scrollLeft = element.scrollWidth })
+        assert.ok(
+          scroll.content > scroll.width,
+          'Narrow comparisons must scroll locally',
+        )
+        await scrollRegion.evaluate(element => {
+          element.scrollLeft = element.scrollWidth
+        })
         assert.ok(await scrollRegion.evaluate(element => element.scrollLeft > 0))
       }
       const headerIcon = page.locator('.bits-header__icon-wrap').first()

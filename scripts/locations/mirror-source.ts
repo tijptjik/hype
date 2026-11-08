@@ -54,7 +54,9 @@ async function main(): Promise<void> {
   let source:
     | ReturnType<typeof import('./lib/local-source-api').openLocalSourceApi>
     | undefined
-  let proxy: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>> | undefined
+  let proxy:
+    | Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>>
+    | undefined
   try {
     // Load the sibling API only when explicit sealed local source exports are supplied.
     if (values['source-export'] && values['current-export']) {
@@ -68,7 +70,11 @@ async function main(): Promise<void> {
     const db = drizzle(proxy.env.DB) as Database
     await mirrorSourceSubset({
       db,
-      client: source?.client ?? { baseUrl: 'https://api.saanseoi.hk', apiKey: apiKey!, fetch },
+      client: source?.client ?? {
+        baseUrl: 'https://api.saanseoi.hk',
+        apiKey: apiKey!,
+        fetch,
+      },
       checkpoint,
       saveCheckpoint: next => {
         mkdirSync(dirname(checkpointPath), { recursive: true })

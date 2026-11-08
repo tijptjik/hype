@@ -4,7 +4,10 @@ import { dirname } from 'node:path'
 // DATABASE
 import { getPlatformProxy } from 'wrangler'
 import { drizzle } from 'drizzle-orm/d1'
-import { featureLocation, location as locationTable } from '../../src/lib/db/schema/location'
+import {
+  featureLocation,
+  location as locationTable,
+} from '../../src/lib/db/schema/location'
 import { planUnresolvedFeatureSplit } from '../../src/lib/locations/migrationPlan'
 import { feature } from '../../src/lib/db/schema/feature'
 import { readFeatureLocationBaseline } from '../../src/lib/db/services/locationBaseline'
@@ -42,7 +45,9 @@ async function main(): Promise<void> {
       ),
     )
     const locationIds = new Set(
-      (await db.select({ id: locationTable.id }).from(locationTable)).map(row => row.id),
+      (await db.select({ id: locationTable.id }).from(locationTable)).map(
+        row => row.id,
+      ),
     )
     // Every Feature receives a proposal or explicit exclusion; no identity is guessed.
     for (const row of rows) {

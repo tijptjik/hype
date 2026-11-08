@@ -82,35 +82,81 @@ for (const [name, engine] of [
 
       await page.goto(base + '/__task-image-review.html?photo')
       await page.locator('[data-review-busy="false"]').waitFor()
-      const openText=page.getByRole('button',{name:'Edit image text',exact:true})
+      const openText = page.getByRole('button', {
+        name: 'Edit image text',
+        exact: true,
+      })
       await openText.click()
-      { const multilingual=page.getByRole('dialog').getByRole('button',{name:'Multilingual',exact:true}); if(await multilingual.getAttribute('aria-expanded')==='false')await multilingual.click() }
-      const dialog=page.getByRole('dialog')
-      const toggle=dialog.getByRole('button',{name:'Multilingual',exact:true})
-      if(await toggle.getAttribute('aria-expanded')==='false') await toggle.click()
-      const enCaption=dialog.getByRole('textbox',{name:'Caption · en',exact:true})
-      const zhCaption=dialog.getByRole('textbox',{name:'Caption · zh-Hant',exact:true})
+      {
+        const multilingual = page
+          .getByRole('dialog')
+          .getByRole('button', { name: 'Multilingual', exact: true })
+        if ((await multilingual.getAttribute('aria-expanded')) === 'false')
+          await multilingual.click()
+      }
+      const dialog = page.getByRole('dialog')
+      const toggle = dialog.getByRole('button', { name: 'Multilingual', exact: true })
+      if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
+      const enCaption = dialog.getByRole('textbox', {
+        name: 'Caption · en',
+        exact: true,
+      })
+      const zhCaption = dialog.getByRole('textbox', {
+        name: 'Caption · zh-Hant',
+        exact: true,
+      })
       await enCaption.fill('Saved English caption')
       await zhCaption.fill('已儲存說明')
-      await dialog.getByRole('textbox',{name:'Alt text · en',exact:true}).fill('Saved English alternative')
-      await dialog.getByRole('button',{name:'Save',exact:true}).click()
-      await dialog.waitFor({state:'hidden'})
+      await dialog
+        .getByRole('textbox', { name: 'Alt text · en', exact: true })
+        .fill('Saved English alternative')
+      await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+      await dialog.waitFor({ state: 'hidden' })
       await page.locator('[data-review-busy="false"]').waitFor()
       await openText.click()
-      { const multilingual=page.getByRole('dialog').getByRole('button',{name:'Multilingual',exact:true}); if(await multilingual.getAttribute('aria-expanded')==='false')await multilingual.click() }
-      if(await enCaption.inputValue()!=='Saved English caption')throw Error('Caption did not reload')
-      if(await zhCaption.inputValue()!=='已儲存說明')throw Error('Chinese caption did not reload')
-      if(await dialog.getByRole('textbox',{name:'Alt text · en',exact:true}).inputValue()!=='Saved English alternative')throw Error('Alt text did not reload')
+      {
+        const multilingual = page
+          .getByRole('dialog')
+          .getByRole('button', { name: 'Multilingual', exact: true })
+        if ((await multilingual.getAttribute('aria-expanded')) === 'false')
+          await multilingual.click()
+      }
+      if ((await enCaption.inputValue()) !== 'Saved English caption')
+        throw Error('Caption did not reload')
+      if ((await zhCaption.inputValue()) !== '已儲存說明')
+        throw Error('Chinese caption did not reload')
+      if (
+        (await dialog
+          .getByRole('textbox', { name: 'Alt text · en', exact: true })
+          .inputValue()) !== 'Saved English alternative'
+      )
+        throw Error('Alt text did not reload')
       await enCaption.fill('Discard this draft')
-      await dialog.getByRole('button',{name:'Cancel',exact:true}).click()
-      await dialog.waitFor({state:'hidden'})
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+      await dialog.waitFor({ state: 'hidden' })
       await openText.click()
-      { const multilingual=page.getByRole('dialog').getByRole('button',{name:'Multilingual',exact:true}); if(await multilingual.getAttribute('aria-expanded')==='false')await multilingual.click() }
-      if(await enCaption.inputValue()!=='Saved English caption')throw Error('Cancel retained unsaved draft')
-      if(await page.evaluate(() => globalThis.reviewCalls.length)!==1)throw Error('Cancel wrote a review')
-      await page.screenshot({path:output+'/'+name+'-'+width+'-multilingual-readback.png'})
-      console.log(name,width,'multilingual caption and alt save/reopen, cancel passed')
+      {
+        const multilingual = page
+          .getByRole('dialog')
+          .getByRole('button', { name: 'Multilingual', exact: true })
+        if ((await multilingual.getAttribute('aria-expanded')) === 'false')
+          await multilingual.click()
+      }
+      if ((await enCaption.inputValue()) !== 'Saved English caption')
+        throw Error('Cancel retained unsaved draft')
+      if ((await page.evaluate(() => globalThis.reviewCalls.length)) !== 1)
+        throw Error('Cancel wrote a review')
+      await page.screenshot({
+        path: output + '/' + name + '-' + width + '-multilingual-readback.png',
+      })
+      console.log(
+        name,
+        width,
+        'multilingual caption and alt save/reopen, cancel passed',
+      )
       await page.close()
     }
-  } finally { await browser.close() }
+  } finally {
+    await browser.close()
+  }
 }

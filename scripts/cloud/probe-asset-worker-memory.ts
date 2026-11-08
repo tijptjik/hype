@@ -159,8 +159,7 @@ const parseArgs = (argv: string[]): CliOptions => {
 
   return {
     accept: options.accept ?? DEFAULT_ACCEPT,
-    baseUrl:
-      (options.baseUrl ?? DEFAULT_BASE_URL_BY_STAGE[stage]).replace(/\/+$/, ''),
+    baseUrl: (options.baseUrl ?? DEFAULT_BASE_URL_BY_STAGE[stage]).replace(/\/+$/, ''),
     cases,
     format: options.format ?? 'auto',
     gravity: options.gravity ?? 'auto',
@@ -196,10 +195,7 @@ const toTransformPath = (options: CliOptions, probeCase: ProbeCase): string => {
  * @param probeCase Probe case.
  * @returns Nothing.
  */
-const probeCase = async (
-  options: CliOptions,
-  probeCase: ProbeCase,
-): Promise<void> => {
+const probeCase = async (options: CliOptions, probeCase: ProbeCase): Promise<void> => {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), options.requestTimeoutMs)
   const path = toTransformPath(options, probeCase)
