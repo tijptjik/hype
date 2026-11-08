@@ -86,7 +86,14 @@ async function handleFiles(event: CustomEvent): Promise<void> {
     </DropzonePrimitive>
   {/if}
 
-  {#if !disabled || showEmptyState}
+  {#if disabled && showEmptyState}
+    <div
+      class="text-muted-foreground absolute inset-4 flex flex-col items-center justify-center gap-4 px-6 text-center"
+    >
+      <p class="text-sm font-medium">{m.gallery__no_image_available()}</p>
+      <Icon src={PhotoIcon} size="3xl" aria-hidden="true" />
+    </div>
+  {:else if !disabled}
     <div
       class={cx(
         'pointer-events-none absolute inset-4 z-70 border-2 border-dashed transition-[background-color,border-color] duration-200',

@@ -779,6 +779,7 @@
   "gallery__previous_image": "上一張圖片",
   "gallery__next_image": "下一張圖片",
   "gallery__empty_state_title": "沒有圖片",
+  "gallery__no_image_available": "暫無圖片",
   "gallery__empty_state_description": "按一下以選擇圖片或拖放到這裡。",
   "gallery__replace_image": "取代圖片",
   "gallery__upload_image": "上傳圖片",

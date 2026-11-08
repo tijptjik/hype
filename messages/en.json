@@ -779,6 +779,7 @@
   "gallery__previous_image": "Previous image",
   "gallery__next_image": "Next image",
   "gallery__empty_state_title": "No image",
+  "gallery__no_image_available": "No image available",
   "gallery__empty_state_description": "Click to select or drop images here.",
   "gallery__replace_image": "Replace image",
   "gallery__upload_image": "Upload image",
