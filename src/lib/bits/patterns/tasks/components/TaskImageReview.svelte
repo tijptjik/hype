@@ -22,7 +22,7 @@ import { IMAGE_METADATA_BUTTON_CLASSES } from '#lib/bits/patterns/images/compone
 import CameraIcon from 'virtual:icons/proicons/camera'
 import { ImageMetadataFullSchema } from '#lib/db/zod/schema/image.js'
 import ImageEditor from '#lib/bits/patterns/images/ImageEditor.svelte'
-import FeatureGalleryRevisionEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryRevisionEditor.svelte'
+import FeatureGalleryImageTextEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryImageTextEditor.svelte'
 // IMAGE ORDER
 import {
   orderGalleryForReview,
@@ -691,7 +691,7 @@ onMount(() => {
         {/if}
       {/snippet}
       {#snippet textControls()}
-        <FeatureGalleryRevisionEditor
+        <FeatureGalleryImageTextEditor
           imageId={activeId}
           isDirty={!canSave || Boolean(pendingRotation)}
           hasText={Boolean(

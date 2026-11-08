@@ -1,6 +1,6 @@
 <script lang="ts">
 // COMPONENTS
-import FeatureGalleryRevisionEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryRevisionEditor.svelte'
+import FeatureGalleryImageTextEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryImageTextEditor.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // ADAPTERS
@@ -108,7 +108,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
 >
   {#snippet textControls()}
     {#if featureId}
-      <FeatureGalleryRevisionEditor
+      <FeatureGalleryImageTextEditor
         isDirty={readonly}
         {multilingualExpanded}
         {onMultilingualExpandedChange}

@@ -4,8 +4,8 @@ import { refreshRemoteQuery } from '#lib/remote/index.js'
 import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // FEATURE LIFECYCLE
 import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIdentityDialog.svelte'
-import FeatureGalleryRevisionEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryRevisionEditor.svelte'
-import FeatureRevisionWorkspace from '#lib/bits/patterns/revisionHistory/FeatureRevisionWorkspace.svelte'
+import FeatureGalleryImageTextEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryImageTextEditor.svelte'
+import FeatureHistory from '#lib/bits/patterns/revisionHistory/FeatureHistory.svelte'
 
 // PROFILE POLICY
 import FeatureProfileEditor from '#lib/bits/patterns/forms/featureLocation/FeatureProfileEditor.svelte'
@@ -3590,14 +3590,10 @@ $effect(() => () => clearVisualSectionReopenState())
         !isNewFeatureRef &&
         (isUpdatesFacet || visitedUpdatesRef === featureRef)}
         {#key currentFeatureId}
-          <FeatureRevisionWorkspace
+          <FeatureHistory
             featureId={currentFeatureId}
             {isDirty}
             refreshVersion={revisionWorkspaceVersion}
-            onPublished={async () => {
-              await refreshFeature()
-              revisionWorkspaceVersion++
-            }}
           />
         {/key}
       {/if}
@@ -3618,7 +3614,7 @@ $effect(() => () => clearVisualSectionReopenState())
             {#snippet textControls(imageId, hasText)}
               {#if currentFeatureId}
                 {#key currentFeatureId}
-                  <FeatureGalleryRevisionEditor
+                  <FeatureGalleryImageTextEditor
                     {hasText}
                     featureId={currentFeatureId}
                     {imageId}
