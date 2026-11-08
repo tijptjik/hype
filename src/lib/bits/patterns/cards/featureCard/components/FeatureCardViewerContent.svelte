@@ -1,5 +1,7 @@
 <script lang="ts">
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
+import { getLocaleKey } from '#lib/i18n.js'
+import { galleryText } from '#lib/images/galleryText.js'
 import { getURLfromImage } from '#lib/client/services/image.js'
 import { CameraViewer } from '#lib/bits/patterns/images/index.js'
 import FeatureCardShare from './FeatureCardShare.svelte'
@@ -125,7 +127,8 @@ function stopViewerEvent(event: Event): void {
 
 // Once the body is measured, move it with the gallery using the feature crossfade
 // timing. The container fills spare space while the retained geometry transitions.
-// Attribution animates its measured content; follow directly without a second easing.
+// Attribution already animates its measured content: follow each frame directly
+// instead of repeatedly easing toward a moving height and lagging behind it.
 const viewerStyle = $derived.by(() => {
   if (targetHeightPx) {
     const resolvedHeight = Math.max(targetHeightPx, viewerBlockMinHeightPx)
@@ -169,6 +172,17 @@ const viewerStyle = $derived.by(() => {
 
 {#snippet leftRail()}
   {#if model.state.activeImage}
+    {@const caption = galleryText(
+      model.state.activeImage.image.galleryCaption,
+      getLocaleKey(),
+    )}
+    {#if caption}
+      <p
+        class="max-w-96 rounded-md bg-black/60 px-3 py-2 text-sm break-words whitespace-pre-wrap text-white"
+      >
+        {caption}
+      </p>
+    {/if}
     {#key `${model.state.activeImage.ctxId}:${model.state.activeImage.image.id}`}
       <ViewerPrimitive.Metadata
         currentImage={model.state.activeImage}

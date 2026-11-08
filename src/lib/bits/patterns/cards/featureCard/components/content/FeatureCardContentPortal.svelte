@@ -31,6 +31,21 @@ const userPreferences = $derived({
 const displayAddress = $derived(
   getI18n(feature as Feature, 'displayAddress', userPreferences, '', true).trim(),
 )
+// Venue identity stays separate from the Feature title and the postal address.
+const venueName = $derived(
+  getI18n(
+    {
+      i18n: Object.fromEntries(
+        Object.entries(
+          'locationNames' in feature ? (feature.locationNames ?? {}) : {},
+        ).map(([locale, name]) => [locale, { name }]),
+      ),
+    },
+    'name',
+    userPreferences,
+    '',
+  ).trim(),
+)
 const featureKey = $derived('id' in feature ? feature.id : NEW_REF)
 const portalMaskId = $derived(`feature-card-portal-mask-${featureKey}`)
 </script>
@@ -73,7 +88,16 @@ const portalMaskId = $derived(`feature-card-portal-mask-${featureKey}`)
     <FeatureCardContentAddress addressText={displayAddress} {featureKey} />
   {/if}
 
+  {#if venueName}
+    <div
+      class="text-foreground pointer-events-none absolute bottom-3 left-1/2 w-max max-w-[calc(100%-24px)] -translate-x-1/2 rounded-md bg-(--theme-panel) px-2 py-1 text-center text-xs leading-4 font-medium shadow-sm"
+      data-feature-venue
+    >
+      <span class="line-clamp-2 [overflow-wrap:anywhere]">{venueName}</span>
+    </div>
+  {/if}
+
   <div
-    class="pointer-events-none absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
+    class="pointer-events-none absolute top-1/2 left-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
   ></div>
 </div>
