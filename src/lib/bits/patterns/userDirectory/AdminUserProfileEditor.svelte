@@ -10,6 +10,7 @@ import {
   adminProfileErrorMessage,
   adminProfileErrorField,
 } from '#lib/users/adminProfileError.js'
+import { discardImageUpload, cleanupImageUploads } from '#lib/api/image.remote.js'
 import { saveAdminUserProfile } from '#lib/api/adminUser.remote.js'
 // BITS COMPONENTS
 import * as Main from '#lib/bits/custom/main/index.js'
@@ -79,6 +80,8 @@ const disabled = $derived(!editing || saving)
 let messagingDraft = $state(createAdminMessagingDraft())
 let message = $state('')
 let fieldErrors = $state<Record<string, string>>({})
+let selectionEpoch = $state(0)
+let avatarSelection = $state<{ imageId: string; url: string } | null>(null)
 let draft = $state<NonNullable<AdminUserProfile['settings']> | null>(null)
 const validationErrors = $derived(
   validateAdminPhoneFields(
@@ -110,8 +113,22 @@ const languageOptions = [
   ['isTranslateButtonVisible', 'Show translate button'],
 ] as const
 
+/** Discard the pending selection on replacement, reset or departure.
+ * @returns Nothing; cleanup failures remain retryable through receipt expiry.
+ */
+function discardAvatar(): void {
+  const previous = avatarSelection
+  avatarSelection = null
+  if (previous)
+    void discardImageUpload({ imageId: previous.imageId }).catch(cause => {
+      console.error('Pending image cleanup will be retried:', cause)
+    })
+}
+
 function begin(): void {
   if (!data.settings) return
+  selectionEpoch += 1
+  discardAvatar()
   draft = { ...data.settings }
   messagingDraft = createAdminMessagingDraft(data.messagingSettings)
   preferences = JSON.parse(draft.preferences)
@@ -162,6 +179,7 @@ async function save(): Promise<void> {
     const result = await saveAdminUserProfile({
       id: data.profile.id,
       updatedAt: data.updatedAt,
+      imageId: avatarSelection?.imageId,
       messaging: messagingDraft,
       settings: {
         ...draft,
@@ -175,6 +193,10 @@ async function save(): Promise<void> {
       },
     })
     if (disposed || data.profile.id !== targetId) return
+    avatarSelection = null
+    void cleanupImageUploads({}).catch(cause =>
+      console.error('Image cleanup will be retried:', cause),
+    )
     onsaved(result)
     headerCtrl.setEditing(false)
     if (result.username !== previousUsername)
@@ -195,6 +217,7 @@ async function save(): Promise<void> {
 function serializeDraft(): string {
   return JSON.stringify({
     draft,
+    avatarSelection,
     messagingDraft,
     preferences,
     experimental,
@@ -259,6 +282,7 @@ $effect(() => {
   })
 })
 onDestroy(() => {
+  discardAvatar()
   disposed = true
   headerCtrl.setEditing(false)
   headerCtrl.clearFormActions()
@@ -383,11 +407,13 @@ onDestroy(() => {
     <FormSurface>
       <UserProfileVisual
         profile={data.profile}
+        {selectionEpoch}
         initialPreviews={data.contributionPreviews}
-        avatar={draft?.image ?? data.profile.image}
+        avatar={avatarSelection?.url ?? draft?.image ?? data.profile.image}
         editing={editing && data.canEdit && !saving}
-        onImageChange={url => {
-          if (draft) draft.image = url
+        onImageChange={selection => {
+          discardAvatar()
+          avatarSelection = selection
         }}
         onBusyChange={busy => (uploadingAvatar = busy)}
         onMore={() => selectFacet('contributions')}

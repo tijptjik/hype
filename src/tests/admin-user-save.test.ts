@@ -127,3 +127,111 @@ it('returns committed canonical phone values and the new revision for the editor
     settings: { telephone: '+85291234567', emailVerified: false },
   })
 })
+
+it('rejects arbitrary avatar URLs without a verified image ID', async () => {
+  await expect(
+    save(
+      {
+        ...params,
+        settings: { ...settings, image: 'https://arbitrary.invalid/avatar' },
+      },
+      ctx,
+    ),
+  ).rejects.toMatchObject({ status: 400 })
+  expect(mocks.set).not.toHaveBeenCalled()
+})
+
+// Real D1-adapter checks complement the request mocks above: avatar and profile writes must share a transaction.
+import { getTableColumns } from 'drizzle-orm'
+import { readFileSync } from 'node:fs'
+import { user as userTable } from '#lib/db/schema/user.js'
+import { image as imageTable } from '#lib/db/schema/image.js'
+import { publicationSqlite } from './fixtures/publicationSqlite.js'
+import {
+  getUserImageUploadSnapshot,
+  stageImageUpload,
+} from '#lib/db/services/singleImageUpload.js'
+import type { Database } from '#lib/types.js'
+
+it.each(['save', 'stale', 'revoked', 'wrong-target', 'skip'] as const)(
+  'commits avatar identity and profile fields together: %s',
+  async scenario => {
+    const { db, sqlite } = publicationSqlite({ user: userTable })
+    try {
+      for (const [name, table] of [
+        ['user', userTable],
+        ['image', imageTable],
+      ] as const) {
+        const columns = Object.values(getTableColumns(table))
+          .map(c => `"${c.name}" ${c.getSQLType()}`)
+          .join(',')
+        sqlite.exec(`CREATE TABLE "${name}" (${columns}, PRIMARY KEY(id))`)
+      }
+      sqlite.exec(readFileSync('migrations/0206_image_upload_attachment.sql', 'utf8'))
+      sqlite.exec(`CREATE TABLE organisationRole(userId TEXT,organisationId TEXT,role TEXT);
+      CREATE TABLE organisation(id TEXT,hubId TEXT,isArchived INTEGER,permitUserDetailsEdit INTEGER);
+      CREATE TABLE hubRole(userId TEXT,hubId TEXT,role TEXT);`)
+      await db.insert(userTable).values({
+        ...settings,
+        locale: 'en',
+        id: 'target',
+        name: 'Before',
+        image: 'https://external.invalid/previous',
+        updatedAt: new Date(params.updatedAt),
+      })
+      const database = db as unknown as Database
+      const receipt = await stageImageUpload(database, {
+        data: {
+          publicId: 'h/user/new',
+          env: 'local',
+          cdn: 'cloudflareR2',
+          contributorId: 'actor',
+          presentationMode: 'contain',
+          version: 1000,
+        },
+        actorId: 'actor',
+        ctxType: 'user',
+        ctxId: scenario === 'wrong-target' ? 'someone-else' : 'target',
+        snapshot: (await getUserImageUploadSnapshot(database, 'target'))!,
+        expiresAt: Date.now() + 60000,
+      })
+      if (scenario === 'stale') sqlite.exec('UPDATE user SET updatedAt=1')
+      if (scenario === 'skip')
+        sqlite.exec(
+          'CREATE TRIGGER skip_avatar BEFORE UPDATE ON user BEGIN SELECT RAISE(IGNORE); END',
+        )
+      const result = save(
+        { ...params, imageId: receipt.imageId },
+        {
+          db,
+          user: { id: 'actor', isAnonymous: false, superAdmin: scenario !== 'revoked' },
+          event: { url: new URL('http://localhost:4173') },
+        },
+      )
+      if (scenario === 'save') {
+        await expect(result).resolves.toMatchObject({
+          settings: {
+            name: settings.name,
+            image: expect.stringContaining('h/user/new'),
+          },
+        })
+        expect(sqlite.prepare('SELECT state FROM imageUpload').get()?.state).toBe(
+          'attached',
+        )
+        expect(sqlite.prepare('SELECT count(*) AS n FROM image').get()?.n).toBe(1)
+      } else {
+        await expect(result).rejects.toMatchObject({ status: 409 })
+        expect(sqlite.prepare('SELECT name,image FROM user').get()).toEqual({
+          name: 'Before',
+          image: 'https://external.invalid/previous',
+        })
+        expect(sqlite.prepare('SELECT count(*) AS n FROM image').get()?.n).toBe(0)
+        expect(sqlite.prepare('SELECT state FROM imageUpload').get()?.state).toBe(
+          'pending',
+        )
+      }
+    } finally {
+      sqlite.close()
+    }
+  },
+)

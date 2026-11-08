@@ -103,3 +103,79 @@ it('finishes loading with a recoverable error when the preview request fails', a
   await fireEvent.click(screen.getByRole('button', { name: 'More' }))
   expect(props.onMore).toHaveBeenCalledOnce()
 })
+
+vi.mock('#lib/api/image.remote.js', () => ({
+  discardImageUpload: vi.fn(async () => ({ discarded: true })),
+}))
+vi.mock('#lib/context/responsive.svelte.js', () => ({
+  getResponsiveCtx: () => ({ isMobile: false }),
+}))
+import UserProfileVisual from '#lib/bits/patterns/userDirectory/UserProfileVisual.svelte'
+import { uploadAndProcessImage } from '#lib/client/services/image.js'
+import { discardImageUpload } from '#lib/api/image.remote.js'
+
+it('previews a deferred avatar by image identity without saving the profile', async () => {
+  const onImageChange = vi.fn()
+  vi.mocked(uploadAndProcessImage).mockResolvedValue({
+    publicId: '/new-avatar.jpg',
+    image: { id: 'verified-image' },
+  } as never)
+  render(UserProfileVisual, {
+    profile,
+    initialPreviews: [],
+    avatar: null,
+    editing: true,
+    onImageChange,
+    onBusyChange: vi.fn(),
+    onMore: vi.fn(),
+  })
+  await fireEvent.change(screen.getByLabelText('Upload user avatar'), {
+    target: { files: [new File(['test'], 'avatar.png', { type: 'image/png' })] },
+  })
+  await waitFor(() =>
+    expect(onImageChange).toHaveBeenCalledWith({
+      imageId: 'verified-image',
+      url: '/new-avatar.jpg',
+    }),
+  )
+  expect(uploadAndProcessImage).toHaveBeenCalledWith(
+    expect.any(File),
+    expect.objectContaining({
+      attachment: 'deferred',
+      ctxType: 'user',
+      ctxId: profile.id,
+    }),
+  )
+  expect(discardImageUpload).not.toHaveBeenCalled()
+})
+
+it('discards a completed upload when Reset invalidates its edit session', async () => {
+  let finish!: (value: never) => void
+  vi.mocked(uploadAndProcessImage).mockImplementation(
+    () =>
+      new Promise(resolve => {
+        finish = resolve
+      }),
+  )
+  const onImageChange = vi.fn()
+  const props = {
+    profile,
+    initialPreviews: [],
+    avatar: null,
+    editing: true,
+    selectionEpoch: 0,
+    onImageChange,
+    onBusyChange: vi.fn(),
+    onMore: vi.fn(),
+  }
+  const view = render(UserProfileVisual, props)
+  await fireEvent.change(screen.getByLabelText('Upload user avatar'), {
+    target: { files: [new File(['test'], 'avatar.png', { type: 'image/png' })] },
+  })
+  await view.rerender({ ...props, selectionEpoch: 1 })
+  finish({ publicId: '/new-avatar.jpg', image: { id: 'abandoned' } } as never)
+  await waitFor(() =>
+    expect(discardImageUpload).toHaveBeenCalledWith({ imageId: 'abandoned' }),
+  )
+  expect(onImageChange).not.toHaveBeenCalled()
+})

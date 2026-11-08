@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // DRIZZLE
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, exists, sql } from 'drizzle-orm'
 // API
 import { getAdminUserProfile } from '#lib/api/user.remote.js'
 import { guardedCommand } from '#lib/api/server/guarded.js'
@@ -14,6 +14,11 @@ import {
 } from '#lib/api/services/authz/adminUser.js'
 // DB
 import { user } from '#lib/db/schema/user.js'
+import {
+  loadStagedImageUpload,
+  prepareUserImageAttachment,
+} from '#lib/db/services/singleImageUpload.js'
+import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
 // SETTINGS
 import { prepareAdminMessagingWrites } from '#lib/api/services/adminUserMessaging.js'
 import { AdminMessagingDraftSchema } from '#lib/users/adminMessagingDraft.js'
@@ -46,6 +51,7 @@ export const saveAdminUserProfile = guardedCommand(
     id: z.string().min(1),
     updatedAt: z.iso.datetime(),
     settings: AdminUserSettingsSchema,
+    imageId: z.string().min(1).optional(),
     messaging: AdminMessagingDraftSchema.optional(),
   }),
   async (params, ctx) => {
@@ -55,6 +61,22 @@ export const saveAdminUserProfile = guardedCommand(
       where: eq(user.id, params.id),
     })
     if (!existing) error(404, 'USER_NOT_FOUND')
+    // Existing external avatars may be preserved; new uploads attach by verified image identity.
+    if (!params.imageId && (params.settings.image || null) !== (existing.image || null))
+      error(400, 'Upload an image before changing the profile avatar.')
+    const avatar = params.imageId
+      ? prepareUserImageAttachment(
+          ctx.db,
+          await loadStagedImageUpload(
+            ctx.db,
+            params.imageId,
+            ctx.user.id,
+            'user',
+            params.id,
+          ),
+          ctx.event.url.origin,
+        )
+      : null
     const settings = params.settings
     const username = normalizeUsername(settings.username ?? '')
     if (!validateUsername(username) || username === 'admin')
@@ -93,6 +115,7 @@ export const saveAdminUserProfile = guardedCommand(
       eq(user.id, params.id),
       eq(user.updatedAt, new Date(params.updatedAt)),
       adminUserEditCondition(ctx.user),
+      avatar?.guard,
     )!
     const messagingPlan = params.messaging
       ? await prepareAdminMessagingWrites(
@@ -117,7 +140,7 @@ export const saveAdminUserProfile = guardedCommand(
             : settings.username?.trim(),
         name: settings.name || null,
         attribution: settings.attribution || null,
-        image: settings.image || null,
+        image: avatar?.url ?? existing.image ?? null,
         email,
         telephone,
         emailVerified: !email
@@ -132,15 +155,29 @@ export const saveAdminUserProfile = guardedCommand(
       .where(profileGuard)
       .returning()
     // D1 batches commit all fields together or roll back all of them on failure.
-    const saved = messagingWrites.length
-      ? ((
-          await ctx.db.batch([
-            messagingWrites[0]!,
-            ...messagingWrites.slice(1),
-            profileWrite,
-          ])
-        ).at(-1) as (typeof user.$inferSelect)[])
-      : await profileWrite
+    const saved = avatar
+      ? (((
+          await executeRevisionBatch(
+            ctx.db,
+            exists(ctx.db.select({ id: user.id }).from(user).where(profileGuard)),
+            [
+              ...avatar.before,
+              ...messagingWrites,
+              profileWrite,
+              ...avatar.after,
+              ctx.db.select().from(user).where(eq(user.id, params.id)),
+            ],
+          )
+        )?.at(-1) as (typeof user.$inferSelect)[] | undefined) ?? [])
+      : messagingWrites.length
+        ? ((
+            await ctx.db.batch([
+              messagingWrites[0]!,
+              ...messagingWrites.slice(1),
+              profileWrite,
+            ])
+          ).at(-1) as (typeof user.$inferSelect)[])
+        : await profileWrite
     if (!saved.length)
       error(409, 'Profile changed or access was revoked. Reload before saving.')
     // Refresh the active profile handle before the page exits edit mode.

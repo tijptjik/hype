@@ -43,6 +43,25 @@ The editor covers identity/contact details, account status, language, appearance
 contribution/admin display preferences, experimental flags, and separate messaging
 settings. Saves use revision conflict checks and database identity uniqueness.
 
+Avatar uploads share the single-image lifecycle with organisation, project and hub logos
+(Refs #189). Migration `0206_image_upload_attachment.sql` records verified assets
+independently of attachment. Upload callers choose `immediate` or `deferred`; the
+profile editor uses deferred attachment and submits an image ID on Save. The server
+binds that ID to the uploader and destination, resolves the delivery URL, and commits
+attachment with the profile's revision and live audience guards.
+Reset/replacement/departure cancel pending receipts; attached receipts cannot be
+canceled or replayed over a newer selection. Pending receipts expire after the signed
+upload window plus 24 hours. Subsequent single-image upload requests reclaim up to ten
+expired own uploads or terminal cleanup receipts; successful profile Save also requests
+cleanup of replaced avatars. Currently selected avatars and historical logos remain
+protected. This is opportunistic cleanup, not a background schedule. Tombstones remain
+to prevent resurrection. Existing external avatar URLs are preserved when unchanged.
+Logo attachment retains its existing resource and immutable image history. Feature
+galleries retain their revision workflow. Transaction evidence is in
+`src/tests/single-image-upload.services.test.ts`; profile control and API checks are in
+`src/tests/user-profile-visual.component.test.ts` and
+`src/tests/admin-user-save.test.ts`.
+
 An organisation Maintainer entitlement remains pending a role-model decision: the
 current organisation roles are User, Member, and Owner. No Member-to-Maintainer
 promotion is inferred. See
