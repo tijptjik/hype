@@ -8,6 +8,7 @@ import { sequence, type Handle } from '@sveltejs/kit/hooks'
 import { paraglideMiddleware } from '#lib/paraglide/server.js'
 // SECURITY
 import { handleRevisionDeployment } from '#lib/server/revisionDeployment.js'
+import { getDevelopmentHubOverride } from '#lib/server/developmentHub.js'
 import { isScannerProbePath } from '#lib/utils/scannerProbe.js'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
@@ -55,6 +56,7 @@ const toHubLocalsShape = (hub?: Partial<HubOptsExtended> | null): HubOptsExtende
   subscriptionPlacement: hub?.subscriptionPlacement ?? undefined,
   i18n: hub?.i18n ?? EMPTY_HUB_I18N,
   image: hub?.image,
+  layerDefaults: hub?.layerDefaults ?? [],
   isSuperAdmin: hub?.isSuperAdmin ?? false,
   isAdminRequest: hub?.isAdminRequest ?? false,
   isCore: hub?.isCore ?? hub?.code === 'core',
@@ -138,9 +140,11 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   const host = event.request.headers.get('host')
 
   // Allow a dev-only URL override so local hub switching does not depend on host setup.
-  const devHubCodeOverride = import.meta.env.DEV
-    ? (event.url.searchParams.get('hub') ?? undefined)
-    : undefined
+  const devHubCodeOverride = getDevelopmentHubOverride(
+    event.url,
+    event.request.headers.get('referer'),
+    import.meta.env.DEV,
+  )
 
   // Get hub code from platform env for development override
   const hubCode = devHubCodeOverride || event.locals.platform?.env?.PUBLIC_HUB_CODE
@@ -200,6 +204,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
         with: {
           i18n: true,
           image: true,
+          layerDefaults: true,
         },
         where: canResolveUnpublishedHub
           ? eq(schema.hub.code, hubCode)
@@ -216,7 +221,10 @@ const handle_hub: Handle = async ({ event, resolve }) => {
         'card',
       )) as HubShapeResult
 
-      event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
+      event.locals.hub = toHubLocalsShape({
+        ...(hub.data as Partial<HubOptsExtended>),
+        layerDefaults: hubDb.layerDefaults,
+      })
     }
   } else if (db && event.locals && hubOpts.domain) {
     const hubDomain = hubOpts.domain
@@ -226,6 +234,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
         with: {
           i18n: true,
           image: true,
+          layerDefaults: true,
         },
         where: isCoreAdmin
           ? eq(schema.hub.domain, hubDomain)
@@ -244,7 +253,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
         hubCodeBatch =>
           retryBusyRead(() =>
             db.query.hub.findMany({
-              with: { i18n: true, image: true },
+              with: { i18n: true, image: true, layerDefaults: true },
               where: and(
                 eq(schema.hub.domain, hubDomain),
                 inArray(schema.hub.code, hubCodeBatch),
@@ -268,7 +277,10 @@ const handle_hub: Handle = async ({ event, resolve }) => {
         'card',
       )) as HubShapeResult
 
-      event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
+      event.locals.hub = toHubLocalsShape({
+        ...(hub.data as Partial<HubOptsExtended>),
+        layerDefaults: hubDb.layerDefaults,
+      })
     }
   } else {
     // Default to Core

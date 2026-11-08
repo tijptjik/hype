@@ -126,11 +126,12 @@ export interface HubOpts {
   id?: string
 }
 
-export interface HubOptsExtended extends Partial<Omit<Hub, 'i18n'>> {
+export interface HubOptsExtended extends Partial<Omit<Hub, 'i18n' | 'layerDefaults'>> {
   id?: string
   code?: string
   domain?: string | null
   legalContactAddress?: string | null
+  layerDefaults?: HubLayer[]
   i18n: Record<string, Partial<HubI18nDB>>
   isSuperAdmin: boolean
   isAdminRequest: boolean

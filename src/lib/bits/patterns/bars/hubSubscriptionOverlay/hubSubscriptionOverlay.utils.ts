@@ -62,7 +62,11 @@ export function getDecorativeFeatureImages(
   seed: number,
   limit: number,
 ): DecorativeFeatureImage[] {
-  return featureImages
+  // Multiple features may share a photo; the orbit and its load tracking use image IDs.
+  const uniqueImages = [
+    ...new Map(featureImages.map(image => [image.image.id, image])).values(),
+  ]
+  return uniqueImages
     .map(image => ({
       image,
       sortValue: getDecorativeImageSortValue(image.image.id, seed),

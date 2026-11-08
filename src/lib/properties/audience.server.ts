@@ -127,7 +127,11 @@ export function projectPropertyAudience<T>(value: T, denied: ReadonlySet<string>
     return Object.fromEntries(
       Object.entries(row)
         .filter(([key]) => !denied.has(key))
-        .map(([key, item]) => [key, visit(item) ?? null]),
+        // Missing optional fields must retain inheritance semantics; denied rows become null.
+        .map(([key, item]) => [
+          key,
+          item === undefined ? undefined : (visit(item) ?? null),
+        ]),
     )
   }
   return (visit(value) ?? null) as T
