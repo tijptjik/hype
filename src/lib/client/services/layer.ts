@@ -6,7 +6,7 @@ import {
   resolveLayerActionPermissions,
   resolveLayerProjectSelectionScope,
   toLayerAuthActor,
-} from '#lib/api/services/authz/index.js'
+} from '#lib/api/services/authz/layerPolicy.js'
 import type { LayerProjectSelectionScope } from '#lib/api/services/authz/layer.js'
 import { updateFormData } from '#lib/client/services/form.js'
 import {
