@@ -1274,6 +1274,12 @@ export class ResourceViewCtx {
       refKey: 'id' as const,
       meta: { isAdminRequest: this.isAdmin(), profile: 'default' as const },
     }
+    // Preview galleries must arrive with the authorized Feature read: the separate
+    // public image endpoint only reads published revisions, which a preview may lack.
+    const detailInput =
+      resource === FirstClassResource.feature && this.publicationPreview
+        ? { ...input, meta: { ...input.meta, profile: 'detail' as const } }
+        : input
     // Typed hierarchy providers retain profile inference at the standard client boundary.
     const detail =
       resource === FirstClassResource.organisation
@@ -1284,11 +1290,11 @@ export class ResourceViewCtx {
             ? this.hierarchy.layers.detail(input)
             : this.resources.detail(
                 resource,
-                input,
+                detailInput,
                 () =>
                   remoteGet({
-                    ...input,
-                    meta: { ...input.meta, ...this.resources.queryMeta },
+                    ...detailInput,
+                    meta: { ...detailInput.meta, ...this.resources.queryMeta },
                   }) as import('$app/server').RemoteQuery<
                     import('#lib/types.js').EntityResponse<unknown>
                   >,
