@@ -4,7 +4,7 @@ import { onDestroy } from 'svelte'
 import type { ErrorEvent, Map as MaplibreMap, StyleSpecification } from 'maplibre-gl'
 
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
-import { getDefaultMapStyleKey, isMapStyleKey } from '#lib/map/styles/index.js'
+import { getDefaultMapStyleKey, isMapStyleKey } from '#lib/map/styles/metadata.js'
 import { MAP_STYLE_RENDER_VIEW } from '#lib/map/styles/render.shared.js'
 import { resolveRuntimeMapStyle } from '#lib/map/styles/runtime.js'
 import { MAP_RENDER_READY_TIMEOUT_MS } from '#lib/map/render-readiness.js'

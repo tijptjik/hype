@@ -6,7 +6,7 @@ import { getProperty } from '#lib/api/property.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // MAP
 import TaskMap from '#lib/bits/patterns/tasks/components/TaskMap.svelte'
-import { LngLat } from 'maplibre-gl'
+import { locationMoveDistance } from '#lib/locations/reviewPresentation.js'
 // I18N
 import { getLocaleKey } from '#lib/i18n.js'
 // COMPONENTS
@@ -143,10 +143,8 @@ const separation = $derived.by(() => {
   const a = coordinates(keep),
     b = coordinates(discard)
   if (!a || !b) return ''
-  const metres = new LngLat(a[0], a[1]).distanceTo(new LngLat(b[0], b[1]))
-  return metres >= 1000
-    ? `${(metres / 1000).toFixed(1)} km`
-    : `${Math.round(metres)} m`
+  const metres = locationMoveDistance(a, b)
+  return metres >= 1000 ? `${(metres / 1000).toFixed(1)} km` : `${Math.round(metres)} m`
 })
 
 /** Choose an allowed catalogue option while retaining the inspected field's identity.
@@ -284,7 +282,9 @@ function editProperty(
   <div
     class="bg-panel sticky top-0 z-10 col-span-3 grid grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] gap-x-2 pb-3 sm:gap-x-4"
   >
-    <header class="border-border/50 bg-surface/40 min-w-0 space-y-2 rounded-lg border px-3 py-4 text-right sm:px-5">
+    <header
+      class="border-border/50 bg-surface/40 min-w-0 space-y-2 rounded-lg border px-3 py-4 text-right sm:px-5"
+    >
       <span
         class="text-foreground/70 block text-2xl leading-none font-normal tracking-[-0.035em] sm:text-3xl"
         >Discard</span
@@ -295,7 +295,7 @@ function editProperty(
     </header>
     <span></span>
     <header
-      class="group/keep border-primary/35 bg-[color-mix(in_oklab,var(--color-primary)_18%,#171923)] text-white relative min-w-0 space-y-2 rounded-lg border border-l-2 border-l-primary px-3 py-4 sm:px-5"
+      class="group/keep border-primary/35 border-l-primary relative min-w-0 space-y-2 rounded-lg border border-l-2 bg-[color-mix(in_oklab,var(--color-primary)_18%,#171923)] px-3 py-4 text-white sm:px-5"
     >
       <span
         class="block pr-7 text-2xl leading-none font-normal tracking-[-0.035em] sm:text-3xl"
@@ -303,24 +303,28 @@ function editProperty(
       >
       <button
         type="button"
-        class="border-white/30 bg-transparent text-white absolute top-2 right-2 flex size-7 items-center justify-center rounded-md border opacity-0 transition-opacity group-hover/keep:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-current [@media(hover:none)]:opacity-100"
+        class="absolute top-2 right-2 flex size-7 items-center justify-center rounded-md border border-white/30 bg-transparent text-white opacity-0 transition-opacity group-hover/keep:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-current [@media(hover:none)]:opacity-100"
         aria-label="Replace kept Feature"
         disabled={busy}
         onclick={onReplace}
       >
         <ReplaceIcon class="size-4" />
       </button>
-      <h3 class="text-[13px] leading-snug font-medium break-words whitespace-normal">{identityTitle(keep)}</h3>
+      <h3 class="text-[13px] leading-snug font-medium break-words whitespace-normal">
+        {identityTitle(keep)}
+      </h3>
     </header>
   </div>
   {#each [discard, keep] as record, index}
     {#if index === 1}
       {#if separation}
-        <div role="group" aria-label="Distance between locations"
-          class="text-muted-foreground flex min-w-0 flex-col items-center justify-center gap-1.5 self-stretch text-center text-[10px] font-medium sm:text-xs">
+        <fieldset
+          aria-label="Distance between locations"
+          class="text-muted-foreground flex min-w-0 flex-col items-center justify-center gap-1.5 self-stretch text-center text-[10px] font-medium sm:text-xs"
+        >
           <span class="whitespace-nowrap tabular-nums">{separation}</span>
           <DistanceIcon class="h-4 w-6 opacity-60" aria-hidden="true" />
-        </div>
+        </fieldset>
       {:else}
         <span></span>
       {/if}
@@ -383,7 +387,9 @@ function editProperty(
         key === 'title'
           ? (output.titles?.[language] ?? '')
           : (output.descriptions?.[language] ?? '')}
-      <div class="flex min-w-0 flex-row-reverse items-start gap-2 py-2 text-right text-sm">
+      <div
+        class="flex min-w-0 flex-row-reverse items-start gap-2 py-2 text-right text-sm"
+      >
         {#if multilingual}
           <span
             class="text-muted-foreground shrink-0 font-mono text-xs whitespace-nowrap"
@@ -402,8 +408,7 @@ function editProperty(
           (key === 'title' &&
             Boolean(
               inheritedLocation &&
-                inheritedLocation.acceptancePolicy?.nameMode !==
-                  'independent',
+                inheritedLocation.acceptancePolicy?.nameMode !== 'independent',
             ))}
         onToggle={importing => {
           if (key === 'title')
@@ -429,8 +434,7 @@ function editProperty(
             disabled={busy ||
               Boolean(
                 inheritedLocation &&
-                  inheritedLocation.acceptancePolicy?.nameMode !==
-                    'independent',
+                  inheritedLocation.acceptancePolicy?.nameMode !== 'independent',
               )}
             oninput={event => (output.titles![language] = event.currentTarget.value)}
           >
@@ -449,7 +453,9 @@ function editProperty(
       </div>
     {/each}
   {/each}
-  <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">Status</h4>
+  <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
+    Status
+  </h4>
   {#each [
     {
       key: 'isIntangible',
@@ -504,7 +510,9 @@ function editProperty(
     </select>
   {/each}
   <h5 class="text-muted-foreground col-span-3 text-center text-xs">Last seen</h5>
-  <p class="self-center text-right text-sm">{discard.content.profile.visitability.asOf ?? '—'}</p>
+  <p class="self-center text-right text-sm">
+    {discard.content.profile.visitability.asOf ?? '—'}
+  </p>
   <MergeImportControl
     incoming={discard.content.profile.visitability.asOf}
     existing={keep.content.profile.visitability.asOf}
@@ -529,7 +537,9 @@ function editProperty(
   <p class="text-muted-foreground col-span-3 text-center text-xs">
     Choose whether to bring over the last seen date.
   </p>
-  <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">Location</h4>
+  <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
+    Location
+  </h4>
   <p class="min-w-0 self-center text-right text-sm break-words whitespace-normal">
     {discard.content.translations[locale]?.address.value || '—'}
   </p>
@@ -605,9 +615,7 @@ function editProperty(
           label={`${propertyLabel(id)} ${language}`}
           disabled={busy ||
             !discard.content.properties[id] ||
-            Boolean(
-              inheritedLocation && definition.component === 'PhoneField',
-            )}
+            Boolean(inheritedLocation && definition.component === 'PhoneField')}
           onToggle={importing => {
             const sourceId = importing ? discard.featureId : keep.featureId
             if (
@@ -639,10 +647,7 @@ function editProperty(
               class={field}
               aria-label={`Keep ${propertyLabel(id)} source ${language}`}
               disabled={busy ||
-                Boolean(
-                  inheritedLocation &&
-                    definition.component === 'PhoneField',
-                )}
+                Boolean(inheritedLocation && definition.component === 'PhoneField')}
               value={chosen?.sourceFeatureId ?? ''}
               onchange={event => chooseProperty(id, event.currentTarget.value)}
             >

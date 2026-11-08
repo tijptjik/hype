@@ -163,11 +163,16 @@ async function applyPublicResourceRoute(
   if (!isCurrent()) return
   const projects = appCtx.view.queries.rows.project
   const layers = appCtx.view.queries.rows.layer
-  const selected = layers.filter(layer => target.kind === 'layer'
-    ? layer.id === target.id
-    : target.kind === 'project'
-      ? layer.projectId === target.id
-      : projects.some(project => project.id === layer.projectId && project.organisationId === target.id))
+  const selected = layers.filter(layer =>
+    target.kind === 'layer'
+      ? layer.id === target.id
+      : target.kind === 'project'
+        ? layer.projectId === target.id
+        : projects.some(
+            project =>
+              project.id === layer.projectId && project.organisationId === target.id,
+          ),
+  )
   appCtx.view.scope.prisms.layer = selected.map(layer => layer.id)
   await appCtx.view.postLayerMutation(false, false)
   if (!isCurrent()) return
@@ -185,7 +190,9 @@ $effect(() => {
       if (current) error = String(reason)
     })
   })
-  return () => { current = false }
+  return () => {
+    current = false
+  }
 })
 
 // Shallow facet navigation changes the visible URL without replacing page.url.
