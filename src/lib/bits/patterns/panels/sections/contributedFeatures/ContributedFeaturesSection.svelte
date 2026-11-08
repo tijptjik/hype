@@ -36,15 +36,9 @@ let contents: HTMLDivElement | undefined = $state(undefined)
 let continuation: HTMLDivElement | null = $state(null)
 
 // HEIGHT MANAGEMENT
-let contentHeight = $state(0)
-let availableHeight = $state(0)
-let predictedHeight = $state(0) // For smooth transitions
+// For smooth transitions
 
 // Calculate dynamic heights - use predicted height when available
-let effectiveHeight = $derived(predictedHeight > 0 ? predictedHeight : contentHeight)
-let minHeight = $derived(Math.min(effectiveHeight, 420))
-let maxHeight = $derived(Math.max(420, (availableHeight - 64) / 2))
-let finalHeight = $derived(Math.min(minHeight, maxHeight))
 
 // COLLAPSIBLE STATE
 let collapsedGroups = $state<Set<string>>(new Set())
@@ -117,15 +111,19 @@ const contributions = useContributedFeatures(
 // Reobserve after each page so short or empty pages keep filling the viewport.
 $effect(() => {
   if (
-    !viewport || !continuation || contributions.loading ||
-    contributions.failed || !contributions.hasMore
+    !viewport ||
+    !continuation ||
+    contributions.loading ||
+    contributions.failed ||
+    !contributions.hasMore
   )
     return
   const observer = new IntersectionObserver(
     entries => {
       if (
         entries.some(entry => entry.isIntersecting) &&
-        !contributions.loading && !contributions.failed
+        !contributions.loading &&
+        !contributions.failed
       )
         void contributions.loadMore()
     },
@@ -302,7 +300,9 @@ $effect(() => {
                           {/if}
                         </div>
                         {#if layout === 'dashboard' && !feature.isPublished}
-                          <span class="text-muted-foreground col-start-2 text-xs">Unpublished</span>
+                          <span class="text-muted-foreground col-start-2 text-xs"
+                            >Unpublished</span
+                          >
                         {/if}
                         {#if shouldShowDate(groupData.entries, index) &&
                           feature.createdAt}
