@@ -57,6 +57,8 @@ beforeEach(() => {
     schema.feature,
     schema.image,
     schema.featureImage,
+    schema.task,
+    schema.taskImage,
     schema.hub,
     schema.project,
     schema.layer,

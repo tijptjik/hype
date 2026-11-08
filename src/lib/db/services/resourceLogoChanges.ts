@@ -27,11 +27,11 @@ function logoPin(
   return { imageId: logo.imageId, imageRevisionId: logo.imageRevisionId }
 }
 
-/** Compare display modes retained by the exact before/after logo revisions.
+/** Compare display modes and rotations retained by the exact before/after logo revisions.
  * @param db Request database with image revision storage installed.
  * @param before Authorized previous resource snapshot.
  * @param after Authorized current resource snapshot.
- * @returns A display-mode difference only when both revisions retain known evidence.
+ * @returns Display differences only when both revisions retain known evidence.
  * @remarks Never reads the mutable image head, invents legacy defaults, or exposes other metadata.
  */
 export async function readResourceLogoChanges(
@@ -47,9 +47,13 @@ export async function readResourceLogoChanges(
   const modes = await db.get<{
     beforeMode: string | null
     afterMode: string | null
+    beforeRotation: number | null
+    afterRotation: number | null
   }>(sql`
     SELECT json_extract(b.metadata,'$.presentationMode') AS beforeMode,
-      json_extract(a.metadata,'$.presentationMode') AS afterMode
+      json_extract(a.metadata,'$.presentationMode') AS afterMode,
+      json_extract(b.metadata,'$.rotation') AS beforeRotation,
+      json_extract(a.metadata,'$.rotation') AS afterRotation
     FROM imageRevision b JOIN imageRevision a
     WHERE b.id=${previous.imageRevisionId} AND b.imageId=${previous.imageId}
       AND a.id=${current.imageRevisionId} AND a.imageId=${current.imageId}`)
@@ -64,6 +68,17 @@ export async function readResourceLogoChanges(
       path: ['logo', 'presentationMode'],
       before: { present: true, value: modes.beforeMode },
       after: { present: true, value: modes.afterMode },
+    })
+  // Missing legacy rotation evidence stays unknown rather than being invented as zero.
+  if (
+    modes.beforeRotation !== modes.afterRotation &&
+    [0, 90, 180, 270].some(value => value === modes.beforeRotation) &&
+    [0, 90, 180, 270].some(value => value === modes.afterRotation)
+  )
+    changes.push({
+      path: ['logo', 'rotation'],
+      before: { present: true, value: modes.beforeRotation },
+      after: { present: true, value: modes.afterRotation },
     })
   return changes
 }

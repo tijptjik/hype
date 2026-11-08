@@ -1165,15 +1165,20 @@ export async function handleResourceFormSubmissionResult({
     error,
     onSuccess: async () => {
       const name = getSubmittedName(nameKey)
-      // Show the local confirmation time once the save has succeeded.
-      toast.success(`${successPrefix}${name ? ` “${name}”` : ''}`, {
-        description: new Intl.DateTimeFormat(getLocale(), {
-          dateStyle: 'medium',
-          timeStyle: 'medium',
-        }).format(new Date()),
-      })
-      await refreshResource()
-      await onSuccess?.()
+      // Preserve the local save confirmation time while post-save work settles.
+      const confirmedAt = new Date()
+      try {
+        await refreshResource()
+        await onSuccess?.()
+      } finally {
+        // Start the toast's display time after navigation, even if a refresh fails.
+        toast.success(`${successPrefix}${name ? ` “${name}”` : ''}`, {
+          description: new Intl.DateTimeFormat(getLocale(), {
+            dateStyle: 'medium',
+            timeStyle: 'medium',
+          }).format(confirmedAt),
+        })
+      }
     },
     onError: async issueError => {
       toast.error(issueError)

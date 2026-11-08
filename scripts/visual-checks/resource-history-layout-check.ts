@@ -81,7 +81,7 @@ for (const [name, engine] of [
           .first()
           .boundingBox())!
         assert.ok(
-          Math.abs(changedBounds.x - titleBounds.x - titleBounds.width - 32) < 2,
+          Math.abs(changedBounds.x - titleBounds.x - titleBounds.width - 24) < 2,
           'Revision metadata must follow the title with a fixed gap',
         )
         const primaryLabel = (await latest
@@ -122,17 +122,30 @@ for (const [name, engine] of [
         0,
         'Unchanged logos must not repeat on every save',
       )
-      const comparison = page
-        .getByRole('region', { name: 'English', exact: true })
-        .locator('section')
+      const comparison = profile
+        .getByRole('region', { name: 'Locale comparisons', exact: true })
         .first()
-      const before = comparison.locator('dt').filter({ hasText: /^Before$/ })
-      const after = comparison.locator('dt').filter({ hasText: /^After$/ })
+      const table = comparison.getByRole('table')
+      const before = table.getByRole('columnheader', { name: 'Before', exact: true })
+      const after = table.getByRole('columnheader', { name: 'After', exact: true })
       const a = (await before.boundingBox())!,
         b = (await after.boundingBox())!
-      if (width >= 576 && !narrow)
-        assert.ok(Math.abs(a.y - b.y) < 1, 'Wide comparisons must align')
-      else assert.ok(b.y > a.y, 'Narrow panels must stack comparisons')
+      assert.ok(Math.abs(a.y - b.y) < 1, 'Comparison columns must align')
+      assert.ok(b.x > a.x, 'After must follow Before')
+      // Narrow locale tables scroll within their own keyboard-accessible region.
+      const scrollRegion = comparison
+      assert.equal(await scrollRegion.getAttribute('tabindex'), '0')
+      const scroll = await scrollRegion.evaluate(element => ({
+        width: element.clientWidth,
+        content: element.scrollWidth,
+        overflow: getComputedStyle(element).overflowX,
+      }))
+      assert.equal(scroll.overflow, 'auto')
+      if (width < 448) {
+        assert.ok(scroll.content > scroll.width, 'Narrow comparisons must scroll locally')
+        await scrollRegion.evaluate(element => { element.scrollLeft = element.scrollWidth })
+        assert.ok(await scrollRegion.evaluate(element => element.scrollLeft > 0))
+      }
       const headerIcon = page.locator('.bits-header__icon-wrap').first()
       assert.ok(
         (await headerIcon.boundingBox())!.height < 40,

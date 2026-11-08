@@ -135,18 +135,20 @@ it.each(['organisation', 'hub', 'project'] as const)(
   'includes pinned logo display-mode changes in %s History',
   async resource => {
     fixture.sqlite.exec(`CREATE TABLE imageRevision(id TEXT PRIMARY KEY,imageId TEXT,metadata TEXT);
-      INSERT INTO imageRevision VALUES('old','logo','{"presentationMode":"cover"}'),('new','logo','{"presentationMode":"cast-edges"}');`)
+      INSERT INTO imageRevision VALUES('old','logo','{"presentationMode":"cover","rotation":0}'),('new','logo','{"presentationMode":"cast-edges","rotation":90}');`)
     for (const [id, revision] of [
       ['before', 'old'],
       ['after', 'new'],
     ]) {
-      fixture.sqlite.prepare(`UPDATE ${resource}Revision SET content=? WHERE id=?`).run(
-        JSON.stringify({
-          record: { imageId: 'logo' },
-          logo: { imageId: 'logo', imageRevisionId: revision },
-        }),
-        id,
-      )
+      fixture.sqlite
+        .prepare(`UPDATE ${resource}Revision SET content=? WHERE id=?`)
+        .run(
+          JSON.stringify({
+            record: { imageId: 'logo' },
+            logo: { imageId: 'logo', imageRevisionId: revision },
+          }),
+          id,
+        )
     }
     const result =
       resource === 'organisation'
@@ -157,6 +159,11 @@ it.each(['organisation', 'hub', 'project'] as const)(
             organisationId: 'org',
             hubId: 'hub',
           })
+    expect(result.entries[0].changes).toContainEqual({
+      path: ['logo', 'rotation'],
+      before: { present: true, value: 0 },
+      after: { present: true, value: 90 },
+    })
     expect(result.entries[0].changes).toContainEqual({
       path: ['logo', 'presentationMode'],
       before: { present: true, value: 'cover' },

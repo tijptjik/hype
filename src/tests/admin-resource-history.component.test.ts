@@ -10,10 +10,19 @@ vi.mock('#lib/remote/index.js', () => ({
 }))
 import AdminResourceHistory from '#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte'
 beforeEach(() => {
+  // jsdom has no layout observer; browser checks cover section-header sizing.
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  })
   vi.useRealTimers()
   vi.clearAllMocks()
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 it.each(['project', 'layer', 'hub'] as const)(
   'renders the %s profile viewer without unsupported field history',
   async resource => {

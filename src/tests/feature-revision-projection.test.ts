@@ -1254,6 +1254,42 @@ describe('existing form revision routing', () => {
         .get(),
     ).toEqual({ publishedRevisionId: workspace.comparisonRevisionId })
   })
+  it.each([true, false])(
+    'saves translation-only staff edits immediately (published=%s)',
+    async published => {
+      const f = fixture()
+      f.sqlite.exec(readFileSync('migrations/0189_feature_private_capture.sql', 'utf8'))
+      if (!published)
+        f.sqlite.exec(
+          "UPDATE feature SET isPublished=0,localIsPublished=0 WHERE id='f'",
+        )
+      const initial = await f.initialize(published)
+      const data = form(initial.content)
+      data.i18n.en.title = 'Staff translation'
+      const saved = await saveFeatureFormRevision(f.db, {
+        ...common,
+        expectedScope,
+        updatedAt: 'token',
+        data,
+        canPublish: false,
+        allowDescriptions: true,
+        allowedInternalIds: new Set(),
+      })
+      expect(saved.status).toBe('applied')
+      expect(
+        f.sqlite
+          .prepare("SELECT title FROM featureI18n WHERE featureId='f' AND locale='en'")
+          .get()?.title,
+      ).toBe('Staff translation')
+      expect(
+        f.sqlite.prepare("SELECT isPublished FROM feature WHERE id='f'").get()
+          ?.isPublished,
+      ).toBe(Number(published))
+      expect(
+        f.sqlite.prepare('SELECT count(*) n FROM featureRevisionProposal').get()?.n,
+      ).toBe(0)
+    },
+  )
   it('rolls direct staff changes back if the history receipt fails', async () => {
     const f = fixture(),
       initial = await f.initialize()

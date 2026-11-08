@@ -30,7 +30,6 @@ import { readFeatureRevisionWorkspace } from './featureRevisionWorkspace'
 import { prepareFeatureAcceptedCapture } from './featureAcceptedCapture'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
 import { validateFeatureFormResult } from './featureFormReview'
-import { createFeatureRevisionProposal } from './featureRevision'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { RevisionCommand } from './featureRevision'
@@ -238,11 +237,11 @@ function preserveTransferredLocationText(
 }
 
 /**
- * Saves staff edits directly and isolates contributor proposals for enrolled identities.
+ * Saves authorized staff edits directly for enrolled identities.
  * @param db Request database.
  * @param input Authorized form and exact loaded parent timestamp, never a client snapshot.
- * @returns Legacy routing, an accepted revision, or a contributor proposal token. Stale input fails before any mutation.
- * @remarks Staff saves preserve publication state; contributor proposals never change accepted content.
+ * @returns Legacy routing or an accepted revision. Stale input fails before any mutation.
+ * @remarks Staff saves preserve publication state. Translation-only staff retain their field restrictions.
  */
 export async function saveFeatureFormRevision(
   db: Database,
@@ -257,11 +256,7 @@ export async function saveFeatureFormRevision(
     allowDescriptions: boolean
     allowedInternalIds: ReadonlySet<string>
   },
-): Promise<
-  | { status: 'legacy' }
-  | { status: 'applied'; revisionId: string }
-  | { status: 'saved'; proposalId: string; candidateRevisionId: string }
-> {
+): Promise<{ status: 'legacy' } | { status: 'applied'; revisionId: string }> {
   const workspace = await readFeatureRevisionWorkspace(db, input)
   if (workspace.enabled && workspace.state !== 'active')
     throw new Error('Retired Feature history is read-only')
@@ -355,7 +350,7 @@ export async function saveFeatureFormRevision(
   const fields: ('title' | 'description')[] = input.allowDescriptions
     ? ['title', 'description']
     : ['title']
-  // Keep contributor proposals isolated from accepted content.
+  // Translation authority permits immediate text saves, never broader fields or visibility.
   if (!input.canPublish) {
     const translationErrors = validateFeatureTranslationResult(
       previous,
@@ -363,16 +358,6 @@ export async function saveFeatureFormRevision(
       fields,
     )
     if (translationErrors.length) throw new Error(translationErrors.join('; '))
-    if (!workspace.publishedRevisionId)
-      throw new Error('Contributor proposals require a published Feature')
-    const result = await createFeatureRevisionProposal(db, {
-      ...input,
-      guard,
-      content,
-      baseRevisionId: workspace.publishedRevisionId,
-    })
-    if (!result) throw new Error('Feature changed; refresh the editor')
-    return { status: 'saved', ...result }
   }
   const projection = prepareFeatureEditorialProjection(db, {
     featureId: input.featureId,
