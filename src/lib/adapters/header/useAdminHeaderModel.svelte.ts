@@ -7,7 +7,7 @@ import { NEW_REF } from '#lib/constants.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // LIB
 import { navigateOnAdmin } from '#lib/navigation/index.js'
-import { authorizeHubList, toHubAuthActor } from '#lib/api/services/authz/hub.js'
+import { authorizeHubList, toHubAuthActor } from '#lib/api/services/authz/hubPolicy.js'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS

@@ -1,7 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit'
 import { error } from '@sveltejs/kit'
 
-import { isMapStyleKey } from '#lib/map/styles/index.js'
+import { isMapStyleKey } from '#lib/map/styles/metadata.js'
 import { serveMapStyleByKey } from '#lib/map/styles/serve.js'
 
 // +++ Table Of Contents

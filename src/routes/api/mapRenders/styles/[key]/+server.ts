@@ -1,7 +1,7 @@
 import { dev } from '$app/env'
 import { error, type RequestHandler } from '@sveltejs/kit'
 
-import { isMapStyleKey } from '#lib/map/styles/index.js'
+import { isMapStyleKey } from '#lib/map/styles/metadata.js'
 import { getMapRenderRemoteConfig } from '#lib/api/services/render.js'
 
 // +++ Table Of Contents
