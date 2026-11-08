@@ -654,6 +654,34 @@ export async function buildSelectedFeatureIdentityContent(
       content.detachedBrands = structuredClone(value.content.detachedBrands)
     }
   }
+  // Localized addresses belong to the chosen placement, including languages missing there.
+  const placementSourceId = output.placementSourceFeatureId ?? output.sourceFeatureId
+  const placementSource = sources.get(placementSourceId)!
+  for (const [locale, translation] of Object.entries(content.translations))
+    translation.address = structuredClone(
+      placementSource.content.translations[locale]?.address ?? {
+        value: null,
+        generated: false,
+        properties: null,
+      },
+    )
+  // A transferred shared Location owns its inherited names and phone values as well.
+  if (content.placement.location && placementSourceId !== output.sourceFeatureId) {
+    if (content.placement.location.acceptancePolicy?.nameMode !== 'independent')
+      for (const [locale, translation] of Object.entries(content.translations))
+        translation.title = structuredClone(
+          placementSource.content.translations[locale]?.title ?? {
+            value: '',
+            generated: false,
+          },
+        )
+    for (const [id, property] of Object.entries(content.properties))
+      if (property.selection.definition.component === 'PhoneField')
+        delete content.properties[id]
+    for (const [id, property] of Object.entries(placementSource.content.properties))
+      if (property.selection.definition.component === 'PhoneField')
+        content.properties[id] = structuredClone(property)
+  }
   for (const [locale, description] of Object.entries(output.descriptions ?? {})) {
     if (!content.translations[locale]) throw new Error('Unknown output language')
     content.translations[locale].description = { value: description, generated: false }
@@ -710,13 +738,13 @@ export async function buildSelectedFeatureIdentityContent(
       if (
         content.placement.location &&
         value.selection.definition.component === 'PhoneField' &&
-        field.sourceFeatureId !== output.sourceFeatureId
+        field.sourceFeatureId !== placementSourceId
       )
         throw new Error('Shared phone values must follow their accepted Location')
       content.properties[field.propertyId] = structuredClone(value)
     }
     if (content.placement.location)
-      for (const [id, value] of Object.entries(selected.content.properties))
+      for (const [id, value] of Object.entries(placementSource.content.properties))
         if (
           value.selection.definition.component === 'PhoneField' &&
           !content.properties[id]

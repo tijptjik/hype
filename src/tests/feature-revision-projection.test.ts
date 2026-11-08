@@ -1608,8 +1608,15 @@ describe('revision publication controls and workspace privacy', () => {
       saveFeatureImageUploadDraft(f.db, upload),
       saveFeatureImageUploadDraft(f.db, upload),
     ])
-    expect(results[0]).toMatchObject({ status: 'accepted' })
-    expect(results[1]).toMatchObject({ ...results[0], replayed: true })
+    // Either concurrent caller can win; both must receive the same immutable receipt.
+    expect(results.map(result => result.status)).toEqual(['accepted', 'accepted'])
+    const receipts = results.map(result => {
+      if (result.status !== 'accepted') throw new Error('Expected accepted upload')
+      const { replayed, ...receipt } = result
+      return { replayed, receipt }
+    })
+    expect(receipts.map(result => result.replayed).sort()).toEqual([false, true])
+    expect(receipts[0].receipt).toEqual(receipts[1].receipt)
     expect(
       f.sqlite.prepare('SELECT count(*) n FROM featureImageUploadRevision').get()?.n,
     ).toBe(0)
@@ -2813,6 +2820,109 @@ describe('reviewed Feature merge and split integration', () => {
     const input = { featureId: 'f', revisionId: baseline.revisionId, generation: 0 }
     return { ...f, baseline, command, input }
   }
+  it('takes every localized address from the selected placement without importing unrelated text', async () => {
+    const f = await identityFixture()
+    const primary = structuredClone(f.baseline.content)
+    const incoming = structuredClone(primary)
+    primary.translations.en.address = {
+      value: 'Old address',
+      generated: false,
+      properties: { old: true },
+    }
+    incoming.translations.en.address = {
+      value: 'New address',
+      generated: true,
+      properties: { new: true },
+    }
+    primary.translations.fr = structuredClone(primary.translations.en)
+    incoming.translations.zh = structuredClone(incoming.translations.en)
+    incoming.placement.geometry = { type: 'Point', coordinates: [115, 23] }
+    const sources = new Map([
+      ['f', { content: primary }],
+      ['other', { content: incoming }],
+    ])
+    const input = {
+      kind: 'merge' as const,
+      featureId: 'f',
+      layerId: 'layer',
+      allowedInternalIds: new Set(['private']),
+      sources,
+    }
+    const content = await buildSelectedFeatureIdentityContent(f.db, {
+      ...input,
+      output: {
+        featureId: 'f',
+        sourceFeatureId: 'f',
+        placementSourceFeatureId: 'other',
+      },
+    })
+    expect(content.placement.geometry).toEqual(incoming.placement.geometry)
+    expect(content.translations.en.address).toEqual(incoming.translations.en.address)
+    expect(content.translations.zh.address).toEqual(incoming.translations.zh.address)
+    expect(content.translations.fr.address).toEqual({
+      value: null,
+      generated: false,
+      properties: null,
+    })
+    expect(content.translations.en.title).toEqual(primary.translations.en.title)
+    const kept = await buildSelectedFeatureIdentityContent(f.db, {
+      ...input,
+      output: { featureId: 'f', sourceFeatureId: 'f' },
+    })
+    expect(kept.translations.zh.address.value).toBeNull()
+    expect(primary.translations.en.address.value).toBe('Old address')
+  })
+  it('keeps inherited names and phone fields with an imported shared Location', async () => {
+    const f = await identityFixture(true)
+    const primary = structuredClone(f.baseline.content)
+    const incoming = structuredClone(primary)
+    incoming.translations.en.title.value = 'Incoming shared name'
+    primary.properties.private.selection.definition.component = 'PhoneField'
+    incoming.properties.private.selection.definition.component = 'PhoneField'
+    incoming.properties.private.selection.value = 'Incoming phone'
+    const input = {
+      kind: 'merge' as const,
+      featureId: 'f',
+      layerId: 'layer',
+      allowedInternalIds: new Set(['private']),
+      sources: new Map([
+        ['f', { content: primary }],
+        ['other', { content: incoming }],
+      ]),
+    }
+    const output = {
+      featureId: 'f',
+      sourceFeatureId: 'f',
+      placementSourceFeatureId: 'other',
+      titles: { en: 'Incoming shared name' },
+    }
+    const content = await buildSelectedFeatureIdentityContent(f.db, {
+      ...input,
+      output,
+    })
+    expect(content.translations.en.title.value).toBe('Incoming shared name')
+    expect(content.properties.private.selection.value).toBe('Incoming phone')
+    await expect(
+      buildSelectedFeatureIdentityContent(f.db, {
+        ...input,
+        output: {
+          ...output,
+          properties: [{ propertyId: 'private', sourceFeatureId: 'f' }],
+        },
+      }),
+    ).rejects.toThrow('Shared phone values')
+    await expect(
+      buildSelectedFeatureIdentityContent(f.db, {
+        ...input,
+        output: {
+          ...output,
+          properties: [{ propertyId: 'private', sourceFeatureId: 'other' }],
+        },
+      }),
+    ).resolves.toMatchObject({
+      properties: { private: { selection: { value: 'Incoming phone' } } },
+    })
+  })
   it('retains inspected image pins while applying selected photo intents', async () => {
     const f = await identityFixture()
     const original = structuredClone(f.baseline.content)

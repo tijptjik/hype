@@ -38,6 +38,10 @@ let {
 } = $props()
 const keep = $derived(sources[0])
 const discard = $derived(sources[1])
+const placementSource = $derived(
+  sources.find(source => source.featureId === output.placementSourceFeatureId) ?? keep,
+)
+const inheritedLocation = $derived(placementSource.content.placement.location)
 const languages = $derived(Object.keys(output.titles ?? {}))
 const locale = $derived(languages.includes('en') ? 'en' : (languages[0] ?? 'en'))
 let multilingual = $state(false)
@@ -157,6 +161,39 @@ function chooseOption(id: string, optionId: string): void {
   output.propertyOptionEdits[id] = optionId || null
   delete output.propertyEdits?.[id]
   delete output.propertyTranslationEdits?.[id]
+}
+
+/** Select a complete location and its inherited fields together.
+ * @param source Inspected placement owner. @returns Nothing.
+ */
+function choosePlacement(source: IdentitySource): void {
+  output.placementSourceFeatureId = source.featureId
+  const location = source.content.placement.location
+  if (!location) return
+  // Shared names and phone fields cannot remain attached to the previous Location.
+  if (location.acceptancePolicy?.nameMode !== 'independent')
+    for (const language of languages)
+      output.titles![language] =
+        source.content.translations[language]?.title.value ?? ''
+  for (const id of new Set(
+    sources.flatMap(record => Object.keys(record.content.properties)),
+  )) {
+    if (
+      !sources.some(
+        record =>
+          record.content.properties[id]?.selection.definition.component ===
+          'PhoneField',
+      )
+    )
+      continue
+    output.properties = (output.properties ?? []).filter(
+      field => field.propertyId !== id,
+    )
+    if (source.content.properties[id]) chooseProperty(id, source.featureId)
+    delete output.propertyOptionEdits?.[id]
+    delete output.propertyEdits?.[id]
+    delete output.propertyTranslationEdits?.[id]
+  }
 }
 
 /** Resolve field text from its inspected option label rather than exposing an opaque ID.
@@ -364,8 +401,8 @@ function editProperty(
         disabled={busy ||
           (key === 'title' &&
             Boolean(
-              keep.content.placement.location &&
-                keep.content.placement.location.acceptancePolicy?.nameMode !==
+              inheritedLocation &&
+                inheritedLocation.acceptancePolicy?.nameMode !==
                   'independent',
             ))}
         onToggle={importing => {
@@ -391,8 +428,8 @@ function editProperty(
             aria-label={`Keep name ${language}`}
             disabled={busy ||
               Boolean(
-                keep.content.placement.location &&
-                  keep.content.placement.location.acceptancePolicy?.nameMode !==
+                inheritedLocation &&
+                  inheritedLocation.acceptancePolicy?.nameMode !==
                     'independent',
               )}
             oninput={event => (output.titles![language] = event.currentTarget.value)}
@@ -505,7 +542,7 @@ function editProperty(
     label="location"
     disabled={busy}
     onToggle={importing => {
-      output.placementSourceFeatureId = importing ? discard.featureId : keep.featureId
+      choosePlacement(importing ? discard : keep)
     }}
   />
   <p class="min-w-0 rounded-md px-2 py-2 text-sm break-words whitespace-normal">
@@ -533,7 +570,7 @@ function editProperty(
         !selected.propertyValueId &&
         !selected.valueJson &&
         ['text', 'number', 'date'].includes(definition.dataType) &&
-        !(keep.content.placement.location && definition.component === 'PhoneField')}
+        !(inheritedLocation && definition.component === 'PhoneField')}
       <h5 class="text-muted-foreground col-span-3 text-center text-xs font-medium">
         {propertyLabel(id)}
       </h5>
@@ -569,7 +606,7 @@ function editProperty(
           disabled={busy ||
             !discard.content.properties[id] ||
             Boolean(
-              keep.content.placement.location && definition.component === 'PhoneField',
+              inheritedLocation && definition.component === 'PhoneField',
             )}
           onToggle={importing => {
             const sourceId = importing ? discard.featureId : keep.featureId
@@ -603,7 +640,7 @@ function editProperty(
               aria-label={`Keep ${propertyLabel(id)} source ${language}`}
               disabled={busy ||
                 Boolean(
-                  keep.content.placement.location &&
+                  inheritedLocation &&
                     definition.component === 'PhoneField',
                 )}
               value={chosen?.sourceFeatureId ?? ''}
