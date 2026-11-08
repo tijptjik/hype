@@ -82,7 +82,6 @@ type FeatureParentSectionControllerDeps = {
   getLayerIdValue: () => string
   getIsReplacingParentProject: () => boolean
   getIsReplacingParentLayer: () => boolean
-  setIsReplacingParentOrganisation: (value: boolean) => void
   setIsReplacingParentProject: (value: boolean) => void
   setIsReplacingParentLayer: (value: boolean) => void
   applyFeatureParentSelection: (params: ParentSelectionParams) => void
@@ -325,7 +324,6 @@ export function createFeatureParentSectionController(
   }
 
   function resetFeatureParents(): void {
-    deps.setIsReplacingParentOrganisation(false)
     deps.setIsReplacingParentProject(false)
     deps.setIsReplacingParentLayer(false)
     deps.applyFeatureParentSelection({
@@ -339,7 +337,6 @@ export function createFeatureParentSectionController(
     async onReplaceParentOrganisation(
       organisation: ParentSectionOrganisationItem,
     ): Promise<void> {
-      deps.setIsReplacingParentOrganisation(false)
       deps.syncSelectedOrganisation(organisation)
       const selectedProject = deps.getSelectedProject()
       const selectedLayer = deps.getSelectedLayer()
@@ -394,11 +391,8 @@ export function createFeatureParentSectionController(
     resetFeatureParents,
     beginReplaceParentOrganisation(): void {
       if (!deps.getOrganisationIdValue()) return
-      deps.setIsReplacingParentOrganisation(true)
     },
-    cancelReplaceParentOrganisation(): void {
-      deps.setIsReplacingParentOrganisation(false)
-    },
+    cancelReplaceParentOrganisation(): void {},
     beginReplaceParentProject(): void {
       if (!deps.getProjectIdValue()) return
       deps.setIsReplacingParentProject(true)

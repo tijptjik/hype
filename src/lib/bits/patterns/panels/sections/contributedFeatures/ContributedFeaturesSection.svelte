@@ -35,11 +35,6 @@ let viewport: HTMLDivElement | null = $state(null)
 let contents: HTMLDivElement | undefined = $state(undefined)
 let continuation: HTMLDivElement | null = $state(null)
 
-// HEIGHT MANAGEMENT
-// For smooth transitions
-
-// Calculate dynamic heights - use predicted height when available
-
 // COLLAPSIBLE STATE
 let collapsedGroups = $state<Set<string>>(new Set())
 
