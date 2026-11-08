@@ -6,7 +6,10 @@ import { z } from 'zod'
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 // SERVICES
 import { orderGallery } from '#lib/images/galleryOrder.js'
-import { readImageIntentPolicy, readFeatureImageIntentPolicy } from './imageIntentPolicy'
+import {
+  readImageIntentPolicy,
+  readFeatureImageIntentPolicy,
+} from './imageIntentPolicy'
 import { hasFeatureLifecycleStorage } from './featureLifecycle'
 import { privateFeatureComparison } from './featurePrivateCapture'
 // IMAGE PRESENTATION
@@ -30,7 +33,7 @@ const pinSchema = z.object({
  * Replaces mutable image locators/order with exact accepted gallery pins for hydrated Features.
  * @param db Request database.
  * @param rows Already-authorized Feature rows with their currently visible image relations.
- * @param options Whether this is public delivery, which requires the accepted publication intent too.
+ * @param options Public image filtering and an already-authorized saved publication preview.
  * @returns The same shape with pinned image metadata and explicit gallery ordering.
  * @remarks Live visibility/moderation filters remain in force. Missing or unsupported
  * pins fail closed instead of showing another version. No proposal content is read.
@@ -38,7 +41,7 @@ const pinSchema = z.object({
 export async function applyFeatureGalleryPins<T extends Record<string, unknown>>(
   db: Database,
   rows: T[],
-  options: { publishedOnly?: boolean } = {},
+  options: { publishedOnly?: boolean; publicationPreview?: boolean } = {},
 ): Promise<T[]> {
   const ids = rows
     .filter(row => typeof row.id === 'string' && Array.isArray(row.images))
@@ -49,11 +52,21 @@ export async function applyFeatureGalleryPins<T extends Record<string, unknown>>
   )
   const lifecycle = await hasFeatureLifecycleStorage(db)
   if (!storage?.n && !lifecycle) return rows
-  const privateComparison = await privateFeatureComparison(db, sql`h.featureId`, sql`h.generation`)
-  const source = lifecycle ? sql`feature h LEFT JOIN featureRevision r ON r.id=h.currentRevisionId AND r.featureId=h.id
-    AND (${Number(!options.publishedOnly)} OR (h.isPublished=1 AND h.isArchived=0))` : sql`featureRevisionHead h
+  const privateComparison = await privateFeatureComparison(
+    db,
+    sql`h.featureId`,
+    sql`h.generation`,
+  )
+  // Authorized previews read retained accepted pins while keeping public image filters below.
+  const requirePublishedRevision = Boolean(
+    options.publishedOnly && !options.publicationPreview,
+  )
+  const source = lifecycle
+    ? sql`feature h LEFT JOIN featureRevision r ON r.id=h.currentRevisionId AND r.featureId=h.id
+    AND (${Number(!requirePublishedRevision)} OR (h.isPublished=1 AND h.isArchived=0))`
+    : sql`featureRevisionHead h
     LEFT JOIN featureRevisionPublication p ON p.featureId=h.featureId AND p.generation=h.generation
-    LEFT JOIN featureRevision r ON r.id=CASE WHEN ${Number(Boolean(options.publishedOnly))}=1 THEN h.publishedRevisionId
+    LEFT JOIN featureRevision r ON r.id=CASE WHEN ${Number(requirePublishedRevision)}=1 THEN h.publishedRevisionId
       ELSE COALESCE(h.publishedRevisionId,${privateComparison},p.previousRevisionId,
         (SELECT initial.id FROM featureRevision initial JOIN featureRevisionPublication receipt
           ON receipt.featureId=initial.featureId AND receipt.changeSetId=initial.changeSetId AND receipt.generation=0
@@ -76,65 +89,93 @@ export async function applyFeatureGalleryPins<T extends Record<string, unknown>>
   const byFeature = new Map(accepted.map(row => [row.featureId, row]))
   // Share policy reads across Features belonging to the same Project.
   const policies = new Map<string, ReturnType<typeof readImageIntentPolicy>>()
-  return Promise.all(rows.map(async row => {
-    const accepted = byFeature.get(String(row.id))
-    if (!accepted) return row
-    const content = FeatureRevisionContentSchema.safeParse(
-      accepted.content && JSON.parse(accepted.content),
-    )
-    if (!content.success) return { ...row, images: [] }
-    const pins = new Map<string, z.infer<typeof pinSchema>>()
-    for (const value of JSON.parse(accepted.pins)) {
-      const pin = pinSchema.safeParse(value)
-      if (pin.success) pins.set(pin.data.imageId, pin.data)
-    }
-    const images = new Map(
-      (row.images as Record<string, unknown>[]).map(link => [
-        String(link.imageId),
-        link,
-      ]),
-    )
-    const key = typeof row.projectId === 'string' ? `project:${row.projectId}` : `feature:${row.id}`
-    if (!policies.has(key)) policies.set(key, typeof row.projectId === 'string'
-      ? readImageIntentPolicy(db, { type: 'project', id: row.projectId })
-      : readFeatureImageIntentPolicy(db, String(row.id)))
-    const intentOrder = (await policies.get(key)!).intents.map(intent => intent.id)
-    const ordered: Record<string, unknown>[] = []
-    // Preserve caller filtering: a historical pin cannot restore a removed live assignment.
-    for (const [position, imageId] of content.data.gallery.order.entries()) {
-      const link = images.get(imageId),
-        pin = pins.get(imageId)
-      const image = link?.image
-      if (!link || !pin || !image || typeof image !== 'object' || Array.isArray(image))
-        continue
-      const entry = content.data.gallery.entries[imageId]
-      if (options.publishedOnly && (!entry.isPublished || !link.isPublished)) continue
-      ordered.push({
-        ...link,
-        intent: entry.intent,
-        // Admins edit the photo's saved setting independently of parent visibility.
-        isPublished: options.publishedOnly
-          ? Boolean(link.isPublished && entry.isPublished)
-          : entry.isPublished,
-        image: {
-          ...image,
-          publicId: pin.storageKey,
-          env: pin.storageNamespace,
-          version: pin.metadata.version,
-          contentHash: pin.contentHash,
-          presentationMode: pin.metadata.presentationMode ?? 'contain',
-          imageRevisionId: pin.imageRevisionId,
-          galleryPosition: position,
-          gallerySortMode: content.data.gallery.sortMode ?? 'automatic',
-          galleryIntentOrder: intentOrder,
-          galleryCaption: entry.caption,
-          galleryAlt: entry.alt,
-        },
-      })
-    }
-    const positions = orderGallery(ordered.map(link => ({ id: String(link.imageId), intent: String(link.intent),
-      createdAt: (link.image as { createdAt?: string }).createdAt,
-      galleryPosition: (link.image as { galleryPosition: number }).galleryPosition, link })), content.data.gallery.sortMode, intentOrder)
-    return { ...row, images: positions.map(item => item.link) }
-  }))
+  return Promise.all(
+    rows.map(async row => {
+      const accepted = byFeature.get(String(row.id))
+      if (!accepted) return row
+      const content = FeatureRevisionContentSchema.safeParse(
+        accepted.content && JSON.parse(accepted.content),
+      )
+      if (!content.success) return { ...row, images: [] }
+      const pins = new Map<string, z.infer<typeof pinSchema>>()
+      for (const value of JSON.parse(accepted.pins)) {
+        const pin = pinSchema.safeParse(value)
+        if (pin.success) pins.set(pin.data.imageId, pin.data)
+      }
+      const images = new Map(
+        (row.images as Record<string, unknown>[]).map(link => [
+          String(link.imageId),
+          link,
+        ]),
+      )
+      const key =
+        typeof row.projectId === 'string'
+          ? `project:${row.projectId}`
+          : `feature:${row.id}`
+      if (!policies.has(key))
+        policies.set(
+          key,
+          typeof row.projectId === 'string'
+            ? readImageIntentPolicy(db, { type: 'project', id: row.projectId })
+            : readFeatureImageIntentPolicy(db, String(row.id)),
+        )
+      const intentOrder = (await policies.get(key)!).intents.map(intent => intent.id)
+      const ordered: Record<string, unknown>[] = []
+      // Preserve caller filtering: a historical pin cannot restore a removed live assignment.
+      for (const [position, imageId] of content.data.gallery.order.entries()) {
+        const link = images.get(imageId),
+          pin = pins.get(imageId)
+        const image = link?.image
+        if (
+          !link ||
+          !pin ||
+          !image ||
+          typeof image !== 'object' ||
+          Array.isArray(image)
+        )
+          continue
+        const entry = content.data.gallery.entries[imageId]
+        // Preview restores saved photo intent when parent visibility suppresses the live flag.
+        // Explicit local suppression and accepted private intent still fail closed.
+        const published = options.publicationPreview
+          ? (link.localIsPublished ?? entry.isPublished)
+          : link.isPublished
+        if (options.publishedOnly && (!entry.isPublished || !published)) continue
+        ordered.push({
+          ...link,
+          intent: entry.intent,
+          // Admins edit the photo's saved setting independently of parent visibility.
+          isPublished: options.publishedOnly
+            ? Boolean(published && entry.isPublished)
+            : entry.isPublished,
+          image: {
+            ...image,
+            publicId: pin.storageKey,
+            env: pin.storageNamespace,
+            version: pin.metadata.version,
+            contentHash: pin.contentHash,
+            presentationMode: pin.metadata.presentationMode ?? 'contain',
+            imageRevisionId: pin.imageRevisionId,
+            galleryPosition: position,
+            gallerySortMode: content.data.gallery.sortMode ?? 'automatic',
+            galleryIntentOrder: intentOrder,
+            galleryCaption: entry.caption,
+            galleryAlt: entry.alt,
+          },
+        })
+      }
+      const positions = orderGallery(
+        ordered.map(link => ({
+          id: String(link.imageId),
+          intent: String(link.intent),
+          createdAt: (link.image as { createdAt?: string }).createdAt,
+          galleryPosition: (link.image as { galleryPosition: number }).galleryPosition,
+          link,
+        })),
+        content.data.gallery.sortMode,
+        intentOrder,
+      )
+      return { ...row, images: positions.map(item => item.link) }
+    }),
+  )
 }
