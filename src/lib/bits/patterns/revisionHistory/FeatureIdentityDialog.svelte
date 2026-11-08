@@ -389,7 +389,7 @@ async function apply(): Promise<void> {
         </button>
         <button
           type="button"
-          class="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-content hover:bg-primary/90 disabled:opacity-45"
+          class="bg-primary text-primary-content hover:bg-primary/90 inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-3 text-sm font-medium disabled:opacity-45"
           disabled={busy}
           onclick={() =>
             transitionReviewDialog(() => {
@@ -419,7 +419,7 @@ async function apply(): Promise<void> {
               <option value={String(index)}>{name || `Feature ${index + 1}`}</option>
             {/each}
           </select>
-          <span class="font-normal text-muted-foreground"
+          <span class="text-muted-foreground font-normal"
             >The redirect becomes active when the chosen Feature is published. The
             original is unpublished and archived.</span
           >
@@ -436,7 +436,7 @@ async function apply(): Promise<void> {
             >
           </label>
           {#if !search.trim() && origin}
-            <p class="text-sm text-muted-foreground">
+            <p class="text-muted-foreground text-sm">
               {nearbyLoading
                 ? 'Loading nearby features…'
                 : nearby.length
@@ -445,7 +445,7 @@ async function apply(): Promise<void> {
             </p>
           {/if}
           {#if search.trim() || nearby.length}
-            <div
+            <section
               class="grid min-w-0 gap-2"
               aria-label={search.trim() ? 'Matching Features' : 'Nearby features'}
             >
@@ -483,7 +483,7 @@ async function apply(): Promise<void> {
                     <div
                       class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3"
                     >
-                      <span class="min-w-0 whitespace-normal break-words font-semibold"
+                      <span class="min-w-0 font-semibold break-words whitespace-normal"
                         >{getI18n(
                           match,
                           'title',
@@ -493,7 +493,7 @@ async function apply(): Promise<void> {
                         )}</span
                       >
                       {#if origin && featurePoint(match.geometry)}
-                        <span class="whitespace-nowrap text-sm font-medium text-red-500"
+                        <span class="text-sm font-medium whitespace-nowrap text-red-500"
                           >{Math.round(
                             featureDistance(origin, featurePoint(match.geometry)!),
                           )}
@@ -502,7 +502,7 @@ async function apply(): Promise<void> {
                       {/if}
                     </div>
                     <span
-                      class="min-w-0 whitespace-normal break-words text-sm text-muted-foreground"
+                      class="text-muted-foreground min-w-0 text-sm break-words whitespace-normal"
                       >{getI18n(
                         match,
                         'displayAddress',
@@ -514,7 +514,7 @@ async function apply(): Promise<void> {
                   </div>
                 </Row>
               {/each}
-            </div>
+            </section>
           {/if}
         {/if}
         {#if primary && output && candidate}
@@ -539,7 +539,7 @@ async function apply(): Promise<void> {
   {#snippet footer()}
     <button
       type="button"
-      class="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-content hover:bg-primary/90 disabled:opacity-45"
+      class="bg-primary text-primary-content hover:bg-primary/90 inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-2 text-sm font-medium disabled:opacity-45"
       disabled={busy ||
         !primary ||
         (kind === 'split' ? names.some(name => !name.trim()) : !candidate)}
