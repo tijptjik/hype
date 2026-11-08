@@ -1,7 +1,7 @@
 import type { MarkerStyleCode } from '#lib/features/markerStyle.js'
 import type { CardStyleCode } from '#lib/features/cardStyle.js'
 // TYPES
-import type { MapStyleKey } from '#lib/map/styles/registry.js'
+import type { MapStyleKey } from '#lib/map/styles/metadata.js'
 
 /** Absent style inherits the project; null explicitly follows the user's map preference. */
 export type LayerMetadata = {

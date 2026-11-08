@@ -1,3 +1,4 @@
+import { type NamedProtomapsFlavor } from '../flavors'
 import { layers, namedFlavor, type Flavor } from '@protomaps/basemaps'
 import type { StyleSpecification, ExpressionSpecification } from 'maplibre-gl'
 
@@ -42,15 +43,7 @@ export const BASE_VECTOR_STYLE: StyleSpecification = {
   layers: [],
 }
 
-export const NAMED_PROTOMAPS_FLAVORS = [
-  'light',
-  'dark',
-  'white',
-  'grayscale',
-  'black',
-] as const
-
-export type NamedProtomapsFlavor = (typeof NAMED_PROTOMAPS_FLAVORS)[number]
+export { NAMED_PROTOMAPS_FLAVORS, type NamedProtomapsFlavor } from '../flavors'
 
 // Keep road names legible without repeating the same label across a short stretch.
 const ROAD_LABEL_SYMBOL_SPACING = 750

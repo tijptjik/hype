@@ -101,7 +101,7 @@ import {
   appendProjectLicenseHistory,
   normalizeProjectLicense,
 } from '#lib/db/services/licence.js'
-import { isMapStyleKey } from '#lib/map/styles/index.js'
+import { isMapStyleKey } from '#lib/map/styles/metadata.js'
 import { resolveMapStyleRenderPathForKey } from '#lib/map/styles/render.shared.js'
 // SCHEMA
 import {

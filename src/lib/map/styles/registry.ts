@@ -1,8 +1,15 @@
-import {
-  getDefaultMapStyleCatalogEntry,
-  MAP_STYLE_CATALOG,
-  REGISTERED_MAP_STYLE_CATALOG,
-} from './catalog'
+// METADATA
+import { MAP_STYLE_KEYS, type MapStyleKey } from './metadata'
+export {
+  MAP_STYLE_KEYS,
+  isMapStyleKey,
+  getDefaultMapStyleKey,
+  listMapStyleCatalog,
+  type MapStyleKey,
+} from './metadata'
+// BUILDERS
+import { MAP_STYLE_BUILDERS } from './builders'
+import { MAP_STYLE_CATALOG, REGISTERED_MAP_STYLE_CATALOG } from './catalog'
 import {
   applySpriteVariant,
   applyWaterColorToBackground,
@@ -11,7 +18,7 @@ import {
 // TYPES
 import type { StyleSpecification } from 'maplibre-gl'
 import type { LocaleKey } from '#lib/types.js'
-import type { MapStyleCatalogEntry, MapStyleCatalogKey } from './catalog'
+import type { MapStyleCatalogKey } from './catalog'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -38,14 +45,8 @@ const REGISTERED_MAP_STYLE_DEFINITIONS = REGISTERED_MAP_STYLE_CATALOG.map(entry 
   basemapVariant: entry.basemapVariant,
   markerTheme: entry.markerTheme,
   showSymbols: entry.showSymbols,
-  buildStyle: entry.buildStyle,
+  buildStyle: MAP_STYLE_BUILDERS[entry.key],
 })) as Array<MapStyleDefinition<(typeof REGISTERED_MAP_STYLE_CATALOG)[number]['key']>>
-
-export const MAP_STYLE_KEYS = REGISTERED_MAP_STYLE_DEFINITIONS.map(
-  definition => definition.key,
-) as Array<(typeof REGISTERED_MAP_STYLE_DEFINITIONS)[number]['key']>
-
-export type MapStyleKey = (typeof REGISTERED_MAP_STYLE_DEFINITIONS)[number]['key']
 
 const MAP_STYLE_DEFINITIONS = Object.fromEntries(
   REGISTERED_MAP_STYLE_DEFINITIONS.map(definition => [definition.key, definition]),
@@ -58,9 +59,6 @@ const toHash = async (value: string): Promise<string> => {
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('')
 }
-
-export const isMapStyleKey = (value: string): value is MapStyleKey =>
-  MAP_STYLE_KEYS.includes(value as MapStyleKey)
 
 /**
  * Lists registered built-in map-style definitions.
@@ -80,23 +78,6 @@ export const listMapStyleDefinitions = (): MapStyleDefinition<MapStyleKey>[] => 
 export const getMapStyleDefinition = (
   key: MapStyleKey,
 ): MapStyleDefinition<MapStyleKey> => MAP_STYLE_DEFINITIONS[key]
-
-/**
- * Resolves the default registered map-style key.
- *
- * @returns Default map-style key.
- */
-export const getDefaultMapStyleKey = (): MapStyleKey =>
-  getDefaultMapStyleCatalogEntry().key as MapStyleKey
-
-/**
- * Lists the full map-style catalog, including non-registered entries.
- *
- * @returns Immutable map-style catalog.
- */
-export const listMapStyleCatalog = (): ReadonlyArray<
-  MapStyleCatalogEntry<MapStyleCatalogKey>
-> => MAP_STYLE_CATALOG
 
 /**
  * Builds one runtime style specification for the requested key.
@@ -135,7 +116,7 @@ export const buildCatalogMapStyle = (
   }
 
   return applyWaterColorToBackground(
-    applySpriteVariant(definition.buildStyle(options), {
+    applySpriteVariant(MAP_STYLE_BUILDERS[definition.key](options), {
       basemapVariant: definition.basemapVariant,
       showSymbols: definition.showSymbols,
     }),

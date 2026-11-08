@@ -2,7 +2,7 @@
 import { z } from 'zod'
 // THEME
 import { THEMES } from './themes'
-import { MAP_STYLE_KEYS } from '#lib/map/styles/registry.js'
+import { MAP_STYLE_KEYS } from '#lib/map/styles/metadata.js'
 // TYPES
 import type { ThemeId } from './themes.types'
 

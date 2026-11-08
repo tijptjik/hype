@@ -1,8 +1,8 @@
 // CATALOGUES
-import { isMapStyleKey } from '#lib/map/styles/registry.js'
+import { isMapStyleKey } from '#lib/map/styles/metadata.js'
 import { isThemeId } from '#lib/themes/themes.js'
 // TYPES
-import type { MapStyleKey } from '#lib/map/styles/registry.js'
+import type { MapStyleKey } from '#lib/map/styles/metadata.js'
 import type { ThemeId } from '#lib/themes/themes.types.js'
 
 export type EmbedCamera = [

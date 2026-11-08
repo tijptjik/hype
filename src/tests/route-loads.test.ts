@@ -12,6 +12,7 @@ describe('route loads', () => {
     vi.doUnmock('#lib/navigation/title.js')
     vi.doUnmock('#lib/images/storage.js')
     vi.doUnmock('#lib/map/styles/index.js')
+    vi.doUnmock('#lib/map/styles/metadata.js')
     vi.doUnmock('#lib/map/styles/serve.js')
   })
 
@@ -141,7 +142,7 @@ describe('route loads', () => {
         throw thrown
       },
     }))
-    vi.doMock('#lib/map/styles/index.js', () => ({
+    vi.doMock('#lib/map/styles/metadata.js', () => ({
       isMapStyleKey: vi.fn(() => false),
     }))
     const serveMapStyleByKey = vi.fn()

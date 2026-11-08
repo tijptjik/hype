@@ -11,7 +11,7 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import { layer, layerI18n, layerProperty, userLayer } from '#lib/db/schema/index.js'
 // MAP
-import { MAP_STYLE_KEYS } from '#lib/map/styles/registry.js'
+import { MAP_STYLE_KEYS } from '#lib/map/styles/metadata.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'

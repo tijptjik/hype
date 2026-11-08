@@ -10,7 +10,7 @@ import {
 } from './themes'
 import { isProjectOnlyMapStyle } from '#lib/map/styles/catalog.js'
 import type { ThemePreferences } from './preferences'
-import { isMapStyleKey, type MapStyleKey } from '#lib/map/styles/registry.js'
+import { isMapStyleKey, type MapStyleKey } from '#lib/map/styles/metadata.js'
 // TYPES
 import type { ThemeId } from './themes.types'
 

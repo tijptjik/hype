@@ -1,26 +1,7 @@
-// MAP
-import { buildQuercusStyle } from './definitions/quercus'
-import { buildNoclit25Style } from './definitions/noclit25'
-import { buildNoclit26Style } from './definitions/noclit26'
-import { buildMidnightStyle } from './definitions/midnight'
-import { buildBreadlineDarkStyle } from './definitions/breadlineDark'
-import { buildBreadlineLightStyle } from './definitions/breadlineLight'
-import { buildGhosteryStyle } from './definitions/ghostery'
-import { buildHyperStyle } from './definitions/hyper'
-import { buildHyperLightStyle } from './definitions/hyperLight'
-import { buildHyperAdminStyle } from './definitions/hyperAdmin'
-import { buildHyperpopStyle } from './definitions/hyperpop'
-import { buildneorangeStyle } from './definitions/neorange'
-import { buildGenesisStyle } from './definitions/genesis'
-import { buildRosepunkStyle } from './definitions/rosepunk'
-import { buildSinStyle } from './definitions/sin'
-import {
-  NAMED_PROTOMAPS_FLAVORS,
-  type MapStyleDefinition,
-  type NamedProtomapsFlavor,
-  type MapStyleVariant,
-} from './definitions/common'
-import { buildProtomapsFlavorStyle } from './definitions/protomaps'
+// METADATA
+import { NAMED_PROTOMAPS_FLAVORS } from './flavors'
+// TYPES
+import type { MapStyleDefinition, MapStyleVariant } from './definitions/common'
 import { getMapStyleCatalogCopy } from './i18n'
 
 /** Keys available in the map-style catalog, including the internal admin style. */
@@ -71,7 +52,7 @@ export type MapMarkerTheme =
 
 export type MapStyleCatalogEntry<TCode extends string = string> = Omit<
   MapStyleDefinition<TCode>,
-  'label' | 'description'
+  'label' | 'description' | 'buildStyle'
 > & {
   name: string
   description: string
@@ -98,8 +79,6 @@ const PROTOMAPS_FLAVOR_ENTRIES: ReadonlyArray<
     `protomaps-${flavorName}` as MapStyleCatalogKey,
     'en',
   ).description,
-  buildStyle: options =>
-    buildProtomapsFlavorStyle(flavorName as NamedProtomapsFlavor, options),
   basemapVariant: flavorName as MapStyleVariant,
   markerTheme:
     flavorName === 'light' || flavorName === 'white'
@@ -114,7 +93,6 @@ export const MAP_STYLE_CATALOG = [
   {
     key: 'noclit25',
     ...getMapStyleCatalogCopy('noclit25', 'en'),
-    buildStyle: buildNoclit25Style,
     projectCode: 'eln',
     bundledPreviewPath: '/mapStylePreviews/noclit25.png',
     basemapVariant: 'dark',
@@ -124,7 +102,6 @@ export const MAP_STYLE_CATALOG = [
   {
     key: 'noclit26',
     ...getMapStyleCatalogCopy('noclit26', 'en'),
-    buildStyle: buildNoclit26Style,
     projectCode: 'eln',
     bundledPreviewPath: '/mapStylePreviews/noclit26.png',
     basemapVariant: 'dark',
@@ -135,7 +112,6 @@ export const MAP_STYLE_CATALOG = [
     key: 'hype-dark',
     name: getMapStyleCatalogCopy('hype-dark', 'en').name,
     description: getMapStyleCatalogCopy('hype-dark', 'en').description,
-    buildStyle: buildHyperStyle,
     bundledPreviewPath: '/mapStylePreviews/hype-dark.png',
     basemapVariant: 'dark',
     markerTheme: 'etch-dark',
@@ -145,7 +121,6 @@ export const MAP_STYLE_CATALOG = [
     key: 'hype-light',
     name: getMapStyleCatalogCopy('hype-light', 'en').name,
     description: getMapStyleCatalogCopy('hype-light', 'en').description,
-    buildStyle: buildHyperLightStyle,
     bundledPreviewPath: '/mapStylePreviews/hype-light.png',
     basemapVariant: 'light',
     markerTheme: 'etch-light',
@@ -155,7 +130,6 @@ export const MAP_STYLE_CATALOG = [
     key: 'hyperpop',
     name: getMapStyleCatalogCopy('hyperpop', 'en').name,
     description: getMapStyleCatalogCopy('hyperpop', 'en').description,
-    buildStyle: buildHyperpopStyle,
     basemapVariant: 'dark',
     markerTheme: 'hyperpop',
     showSymbols: true,
@@ -164,7 +138,6 @@ export const MAP_STYLE_CATALOG = [
     key: 'ghostery',
     name: getMapStyleCatalogCopy('ghostery', 'en').name,
     description: getMapStyleCatalogCopy('ghostery', 'en').description,
-    buildStyle: buildGhosteryStyle,
     default: true,
     hubCode: 'hkghostsigns',
     basemapVariant: 'dark',
@@ -175,7 +148,6 @@ export const MAP_STYLE_CATALOG = [
     key: 'neorange',
     name: getMapStyleCatalogCopy('neorange', 'en').name,
     description: getMapStyleCatalogCopy('neorange', 'en').description,
-    buildStyle: buildneorangeStyle,
     basemapVariant: 'dark',
     markerTheme: 'neon',
     showSymbols: true,
@@ -185,7 +157,6 @@ export const MAP_STYLE_CATALOG = [
     selectable: false,
     name: getMapStyleCatalogCopy('genesis', 'en').name,
     description: getMapStyleCatalogCopy('genesis', 'en').description,
-    buildStyle: buildGenesisStyle,
     basemapVariant: 'dark',
     markerTheme: 'dark',
     showSymbols: true,
@@ -195,7 +166,6 @@ export const MAP_STYLE_CATALOG = [
     selectable: false,
     name: getMapStyleCatalogCopy('sin', 'en').name,
     description: getMapStyleCatalogCopy('sin', 'en').description,
-    buildStyle: buildSinStyle,
     basemapVariant: 'dark',
     markerTheme: 'dark',
     showSymbols: true,
@@ -205,7 +175,6 @@ export const MAP_STYLE_CATALOG = [
     selectable: false,
     name: getMapStyleCatalogCopy('rosepunk', 'en').name,
     description: getMapStyleCatalogCopy('rosepunk', 'en').description,
-    buildStyle: buildRosepunkStyle,
     basemapVariant: 'dark',
     markerTheme: 'rosepunk',
     showSymbols: true,
@@ -214,7 +183,6 @@ export const MAP_STYLE_CATALOG = [
     key: 'breadline-light',
     name: getMapStyleCatalogCopy('breadline-light', 'en').name,
     description: getMapStyleCatalogCopy('breadline-light', 'en').description,
-    buildStyle: buildBreadlineLightStyle,
     hubCode: 'breadline',
     basemapVariant: 'light',
     markerTheme: 'light',
@@ -223,7 +191,6 @@ export const MAP_STYLE_CATALOG = [
   {
     key: 'breadline-dark',
     ...getMapStyleCatalogCopy('breadline-dark', 'en'),
-    buildStyle: buildBreadlineDarkStyle,
     hubCode: 'breadline',
     basemapVariant: 'dark',
     markerTheme: 'dark',
@@ -232,7 +199,6 @@ export const MAP_STYLE_CATALOG = [
   {
     key: 'quercus',
     ...getMapStyleCatalogCopy('quercus', 'en'),
-    buildStyle: buildQuercusStyle,
     bundledPreviewPath: '/mapStylePreviews/quercus.png',
     basemapVariant: 'light',
     markerTheme: 'light',
@@ -241,7 +207,6 @@ export const MAP_STYLE_CATALOG = [
   {
     key: 'midnight',
     ...getMapStyleCatalogCopy('midnight', 'en'),
-    buildStyle: buildMidnightStyle,
     basemapVariant: 'dark',
     markerTheme: 'dark',
     showSymbols: true,
@@ -251,7 +216,6 @@ export const MAP_STYLE_CATALOG = [
     key: 'hyperAdmin',
     name: getMapStyleCatalogCopy('hyperAdmin', 'en').name,
     description: getMapStyleCatalogCopy('hyperAdmin', 'en').description,
-    buildStyle: buildHyperAdminStyle,
     register: false,
     basemapVariant: 'dark',
     markerTheme: 'dark',

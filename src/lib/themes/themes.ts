@@ -1,5 +1,5 @@
 // TYPES
-import type { MapStyleKey } from '#lib/map/styles/registry.js'
+import type { MapStyleKey } from '#lib/map/styles/metadata.js'
 import type { ThemeId, ThemeDefinition } from './themes.types'
 
 export const THEMES: readonly ThemeDefinition[] = [
