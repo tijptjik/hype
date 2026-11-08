@@ -12,6 +12,7 @@ let {
   image = null,
   imageSrc,
   imageFallbackSrcs = [],
+  imageFallback,
   alt = 'Resource image',
   onClick,
 }: RowThumbnailProps = $props()
@@ -91,7 +92,11 @@ function handleClick(event: Event): void {
     >
   {:else}
     <div class={rowThumbnailFallbackClass}>
-      <span class={rowThumbnailFallbackTextClass}></span>
+      {#if imageFallback}
+        {@render imageFallback()}
+      {:else}
+        <span class={rowThumbnailFallbackTextClass}></span>
+      {/if}
     </div>
   {/if}
 </button>

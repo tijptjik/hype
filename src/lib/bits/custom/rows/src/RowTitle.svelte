@@ -8,6 +8,7 @@ let {
   image,
   imageSrc,
   imageFallbackSrcs,
+  imageFallback,
   alt = 'Resource image',
   onImageClick,
   title = '',
@@ -18,7 +19,14 @@ let {
 </script>
 
 <div class={rowTitleClass}>
-  <RowThumbnail {image} {imageSrc} {imageFallbackSrcs} {alt} onClick={onImageClick} />
+  <RowThumbnail
+    {image}
+    {imageSrc}
+    {imageFallbackSrcs}
+    {imageFallback}
+    {alt}
+    onClick={onImageClick}
+  />
   <div class={rowTitleContentClass}>
     <TextTitle text={title} onClick={onTitleClick} tabIndex={-1} />
     <TextDescription text={description} onClick={onDescriptionClick} tabIndex={-1} />

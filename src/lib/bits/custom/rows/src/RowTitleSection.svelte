@@ -7,6 +7,7 @@ let {
   image,
   imageSrc,
   imageFallbackSrcs,
+  imageFallback,
   alt = 'Resource image',
   onImageClick,
   title = '',
@@ -21,6 +22,7 @@ let {
     {image}
     {imageSrc}
     {imageFallbackSrcs}
+    {imageFallback}
     {alt}
     {onImageClick}
     {title}

@@ -22,6 +22,7 @@ export type RowThumbnailProps = {
   image?: unknown
   imageSrc?: string
   imageFallbackSrcs?: string[]
+  imageFallback?: Snippet
   alt?: string
   onClick?: RowImageClickHandler
 }
@@ -30,6 +31,7 @@ export type RowTitleProps = {
   image?: unknown
   imageSrc?: string
   imageFallbackSrcs?: string[]
+  imageFallback?: Snippet
   alt?: string
   onImageClick?: RowImageClickHandler
   title?: string
