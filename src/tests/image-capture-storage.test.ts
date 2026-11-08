@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 // IMAGES
 import {
   stageImageMetadataRevision,
+  readMetadataDocument,
   toMetadataProfilePayload,
 } from '#lib/images/storage.js'
 import type { ImageMetadataDocument } from '#lib/images/storage.js'
@@ -119,5 +120,28 @@ describe('capture metadata storage', () => {
         document,
       }),
     ).rejects.toThrow('readback failed')
+  })
+})
+
+
+describe('exact metadata reads', () => {
+  it('never substitutes a latest alias, manifest or another environment for a missing pin', async () => {
+    const reads: string[] = []
+    const binding = (stage: string) => ({ get: async (key: string) => {
+      reads.push(stage + ':' + key)
+      return key.endsWith('.v1.json') && stage === 'local' ? null : { json: async () => ({ credit: 'Wrong fallback' }) }
+    } })
+    const platform = { env: { ASSET_RAW_DEV: binding('local'), ASSET_RAW_PREVIEW: binding('preview'), ASSET_RAW_PRODUCTION: binding('production') } } as unknown as App.Platform
+    expect(await readMetadataDocument({ platform, env: 'local', publicId: 'images/pin', version: 1, exact: true })).toEqual({ document: null, resolvedEnv: 'local', resolvedVersion: 1 })
+    expect(reads).toEqual(['local:images/pin.v1.json'])
+  })
+  it('returns the exact requested sidecar without consulting its manifest', async () => {
+    const reads: string[] = []
+    const platform = { env: { ASSET_RAW_DEV: { get: async (key: string) => {
+      reads.push(key)
+      return { json: async () => ({ credit: 'Pinned' }) }
+    } } } } as unknown as App.Platform
+    expect((await readMetadataDocument({ platform, env: 'local', publicId: 'images/pin', version: 12, exact: true })).document).toEqual({ credit: 'Pinned' })
+    expect(reads).toEqual(['images/pin.v12.json'])
   })
 })

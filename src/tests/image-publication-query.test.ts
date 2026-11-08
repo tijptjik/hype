@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { and, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { image, featureImage, taskImage } from '#lib/db/schema/index.js'
+import { image, featureImage, taskImage, task as taskTable } from '#lib/db/schema/index.js'
 import {
   getImageEntityQueryContext,
   getImageQueryContext,
@@ -19,6 +19,8 @@ describe('public image query filtering', () => {
         sqlite.exec(`CREATE TABLE image (id TEXT, isArchived INTEGER);
         CREATE TABLE featureImage (featureId TEXT, imageId TEXT, isPublished INTEGER);
         CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
+        CREATE TABLE task (id TEXT, isReviewed INTEGER);
+        INSERT INTO task VALUES ('task',0);
         INSERT INTO image VALUES ('published', 0), ('pending', 0), ('unlinked', 0);
         INSERT INTO featureImage VALUES ('feature', 'published', 1), ('feature', 'pending', 0);
         INSERT INTO taskImage VALUES ('task', 'published'), ('task', 'pending'), ('task', 'unlinked');`)
@@ -59,4 +61,31 @@ describe('public image query filtering', () => {
       }
     },
   )
+})
+
+
+it.each([false, true])('retains archived rejected evidence only in completed admin tasks (%s)', isAdmin => {
+  const sqlite = new DatabaseSync(':memory:')
+  try {
+    sqlite.exec(`CREATE TABLE image (id TEXT, isArchived INTEGER);
+      CREATE TABLE featureImage (featureId TEXT, imageId TEXT, isPublished INTEGER);
+      CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
+      CREATE TABLE task (id TEXT, isReviewed INTEGER);
+      INSERT INTO task VALUES ('reviewed',1),('pending',0),('other',1);
+      INSERT INTO image VALUES ('rejected',1),('accepted',0),('other-photo',1);
+      INSERT INTO taskImage VALUES ('reviewed','rejected'),('reviewed','accepted'),('pending','rejected'),('other','other-photo');
+      INSERT INTO featureImage VALUES ('feature','accepted',1);`)
+    const db = drizzle({} as never)
+    for (const taskId of ['reviewed','pending']) {
+      const { conditions } = getImageQueryContext({id:'reviewer',superAdmin:false} as never, isAdmin, {}, taskId, ImageContextResourceExtended.task)
+      const query = db.select({id:image.id}).from(image)
+        .innerJoin(taskImage,eq(taskImage.imageId,image.id))
+        .innerJoin(taskTable,eq(taskTable.id,taskImage.taskId))
+        .leftJoin(featureImage,eq(featureImage.imageId,image.id))
+        .where(and(...conditions)).orderBy(image.id).toSQL()
+      expect(sqlite.prepare(query.sql).all(...query.params as never[])).toEqual(
+        (taskId === 'pending' ? [] : isAdmin ? ['accepted','rejected'] : ['accepted']).map(id=>({id})),
+      )
+    }
+  } finally { sqlite.close() }
 })

@@ -60,11 +60,11 @@ export async function readImageRevisionDelivery(
       JOIN project p ON p.id=f.projectId AND p.organisationId=f.organisationId
       JOIN organisation o ON o.id=f.organisationId
       JOIN featureImage fi ON fi.featureId=f.id AND fi.imageId=i.id
-      WHERE pin.imageId=i.id AND pin.imageRevisionId=ir.id AND pin.intent!='research'
+      WHERE pin.imageId=i.id AND pin.imageRevisionId=ir.id
         AND EXISTS (SELECT 1 FROM json_each(r.content,'$.gallery.entries') entry
           WHERE entry.key=i.id AND json_extract(entry.value,'$.imageRevisionId')=ir.id
             AND json_extract(entry.value,'$.isPublished')=1)
-        AND fi.isPublished=1 AND fi.intent!='research'
+        AND fi.isPublished=1
         AND f.isPublished=1 AND f.isArchived=0 AND f.isDraft=0
         AND l.isPublished=1 AND l.isArchived=0 AND p.isPublished=1 AND p.isArchived=0
         AND o.isPublished=1 AND o.isArchived=0

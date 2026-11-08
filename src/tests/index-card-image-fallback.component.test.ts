@@ -6,6 +6,23 @@ import IndexCardHeader from '#lib/bits/patterns/cards/indexCard/components/Index
 afterEach(cleanup)
 
 describe('index card image recovery', () => {
+  it('keeps the loaded fallback and its element when identical card URLs are rebuilt', async () => {
+    vi.useRealTimers()
+    const view = render(IndexCardHeader, {
+      imageSrc: '/missing-logo.png',
+      imageFallbackSrcs: ['/identicon.svg'],
+      imageAlt: 'Organisation',
+      imageLayout: 'cover',
+    })
+    const foreground = view.getByAltText('Organisation') as HTMLImageElement
+    await fireEvent.error(foreground)
+    await waitFor(() => expect(foreground.getAttribute('src')).toBe('/identicon.svg'))
+    await fireEvent.load(foreground)
+    await view.rerender({ imageFallbackSrcs: ['/identicon.svg'] })
+    expect(view.getByAltText('Organisation')).toBe(foreground)
+    expect(foreground.getAttribute('src')).toBe('/identicon.svg')
+  })
+
   it('advances from a failed relative preview to its cover and identicon, and retries a changed preview', async () => {
     vi.useRealTimers()
     const view = render(IndexCardHeader, {

@@ -189,14 +189,21 @@ export const getImageQueryContext = (
   let conditions: SQL<unknown>[] = []
   const excludeColumns = ['isArchived', 'isPublished']
 
-  // NON-SUPERADMIN : Hide images which are archived
+  const isAdmin =
+    typeof adminContext === 'boolean' ? adminContext : isAdminRequest(adminContext)
+
+  // NON-SUPERADMIN : Hide archived images except retained evidence in an authorized completed task.
+  // Legacy rejection archives the photo, but its task association still records the review outcome.
   if (!isSuperAdmin(user)) {
-    conditions.push(eq(image.isArchived, false))
+    conditions.push(
+      isAdmin && ctxType === ImageContextResourceExtended.task
+        ? or(eq(image.isArchived, false), sql`EXISTS (SELECT 1 FROM task reviewed_task
+            WHERE reviewed_task.id=${ctxId} AND reviewed_task.isReviewed=1)`)!
+        : eq(image.isArchived, false),
+    )
   }
 
   // PUBLIC : List all images which are isPublished, and not isArchived,
-  const isAdmin =
-    typeof adminContext === 'boolean' ? adminContext : isAdminRequest(adminContext)
 
   if (!isAdmin) {
     params = removeExcludedColumns(params, excludeColumns)
@@ -700,7 +707,7 @@ export const updateImageForContext = async (args: {
         args.replacement.env,
       )
     : undefined
-  let logoCapture
+  let logoCapture: Awaited<ReturnType<typeof prepareResourceLogoRevision>> | undefined
   try {
     logoCapture = args.logoRevision ? await prepareResourceLogoRevision(db, { ...args.logoRevision, imageId:id, actorId:userId, replaySameAsset: Boolean(args.replacement), reason: args.replacement ? 'Logo file replaced' : 'Logo metadata updated' }) : undefined
   } catch (cause) {

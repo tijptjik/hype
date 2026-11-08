@@ -166,7 +166,7 @@ describe('atomic image and assignment edits', () => {
             "SELECT intent FROM featureImage WHERE featureId='feature' AND imageId='old'",
           )
           .get(),
-      ).toEqual({ intent: 'undefined' })
+      ).toEqual({ intent: 'general' })
       expect(
         sqlite
           .prepare(
@@ -231,7 +231,7 @@ describe('atomic image and assignment edits', () => {
       const result = await updateImageWithFeatureImage(
         db,
         { id: 'new' },
-        { featureId: 'feature', isPublished: true },
+        { featureId: 'feature', intent: 'general' },
         'new',
       )
       expect(result.image.modifiedAt).toBe('2000-01-01T00:00:00.000Z')
@@ -934,7 +934,7 @@ describe('signed upload replacements', () => {
             env: 'local',
             version: 1000,
             featureId: 'feature',
-            isPublished: false,
+            intent: 'undefined',
           },
           replacement: { snapshot, publicId: 'new-upload', env: 'local' },
         }),

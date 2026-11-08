@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
 import { ImageCtx } from '#lib/context/image.svelte.js'
+import { getTaskImageBadgeLabel } from '#lib/client/services/task.js'
 import {
   deleteImage,
   setImagePublished,
@@ -294,6 +295,30 @@ describe('image refresh ownership', () => {
       vi.mocked(getImagesForContext).mockReturnValue({
         withOverride: vi.fn(() => () => {}),
       } as never)
+      ctx.dispose()
+    }
+  })
+
+  it('classifies task evidence without changing its publication state', async () => {
+    const ctx = new ImageCtx({}, createImageResources())
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'feature' },
+    })
+    vi.spyOn(ctx, 'refreshImages').mockResolvedValue(undefined)
+    vi.mocked(setImageIntent)
+      .mockClear()
+      .mockResolvedValue({} as never)
+    try {
+      await ctx.handleSetIntent('submitted', 'context', false)
+      expect(setImageIntent).toHaveBeenCalledOnce()
+      const request = vi.mocked(setImageIntent).mock.calls[0][0]
+      expect(request).toMatchObject({
+        id: 'submitted',
+        intent: 'context',
+        featureId: 'feature',
+      })
+      expect(request).not.toHaveProperty('isPublished')
+    } finally {
       ctx.dispose()
     }
   })
@@ -1208,6 +1233,65 @@ describe('image refresh ownership', () => {
     resolve()
     await older
     expect(reset).not.toHaveBeenCalled()
+  })
+
+  it('retains a rejected task image and its badge when the feature gallery refreshes', async () => {
+    const ctx = new ImageCtx({}, createImageResources())
+    vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)
+    const rejected = {
+      image: { id: 'rejected', isArchived: true },
+      intent: null,
+      isPublished: null,
+    } as ImageCtxEnvelope
+    const accepted = {
+      image: { id: 'accepted' },
+      intent: 'general',
+      isPublished: true,
+    } as ImageCtxEnvelope
+    await ctx.setContext({
+      context: {
+        ctxType: ImageContextResource.feature,
+        ctxId: 'feature',
+        ctxTypeSecondary: ImageContextResourceExtended.task,
+        ctxIdSecondary: 'reviewed-task',
+      },
+      images: [rejected, accepted],
+      highlightedIds: ['rejected', 'accepted'],
+    })
+    vi.spyOn(ctx, 'imagesQueryFn').mockResolvedValue([accepted])
+    vi.spyOn(ctx, 'extendedImagesQueryFn').mockResolvedValue([rejected, accepted])
+    await ctx.refreshImages()
+    expect(ctx.getImages().map(row => row.image.id)).toContain('rejected')
+    const item = {
+      id: 'rejected',
+      intent: 'undefined',
+      isPublished: ctx.getImage('rejected')!.isPublished,
+    }
+    expect(
+      getTaskImageBadgeLabel(item, [item], true, id => ctx.isImageHighlighted(id)),
+    ).toBe('REJECTED')
+  })
+
+  it('loads completed task evidence without reading a retired feature gallery', async () => {
+    const ctx = new ImageCtx({}, createImageResources())
+    vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)
+    await ctx.setContext({
+      context: {
+        ctxTypeSecondary: ImageContextResourceExtended.task,
+        ctxIdSecondary: 'merged-task',
+      },
+    })
+    const photo = {
+      image: { id: 'submitted-photo', imageRevisionId: 'original' },
+    } as ImageCtxEnvelope
+    const primary = vi
+      .spyOn(ctx, 'imagesQueryFn')
+      .mockRejectedValue(new Error('Feature retired'))
+    vi.spyOn(ctx, 'extendedImagesQueryFn').mockResolvedValue([photo])
+    const setImages = vi.spyOn(ctx, 'setImages')
+    await ctx.refreshImages()
+    expect(primary).not.toHaveBeenCalled()
+    expect(setImages).toHaveBeenCalledWith([photo])
   })
 
   it('clears fetching state when the current request fails', async () => {

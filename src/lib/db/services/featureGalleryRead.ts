@@ -108,11 +108,14 @@ export async function applyFeatureGalleryPins<T extends Record<string, unknown>>
       if (!link || !pin || !image || typeof image !== 'object' || Array.isArray(image))
         continue
       const entry = content.data.gallery.entries[imageId]
-      if (options.publishedOnly && (!entry.isPublished || entry.intent === 'research' || !link.isPublished)) continue
+      if (options.publishedOnly && (!entry.isPublished || !link.isPublished)) continue
       ordered.push({
         ...link,
         intent: entry.intent,
-        isPublished: Boolean(link.isPublished && entry.isPublished),
+        // Admins edit the photo's saved setting independently of parent visibility.
+        isPublished: options.publishedOnly
+          ? Boolean(link.isPublished && entry.isPublished)
+          : entry.isPublished,
         image: {
           ...image,
           publicId: pin.storageKey,

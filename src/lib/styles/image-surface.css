@@ -75,3 +75,27 @@
     opacity: 0.42;
   }
 }
+
+/* Animate menu snapshots independently; their selectors remain live and immediately
+   reflect optimistic selection changes beneath the transition layer. */
+@layer components {
+  :root[data-review-transition] {
+    view-transition-name: none;
+  }
+
+  ::view-transition-group(.image-menu) {
+    animation-duration: 160ms;
+  }
+
+  ::view-transition-image-pair(.image-menu) {
+    overflow: clip;
+    border-radius: 0.75rem;
+  }
+
+  ::view-transition-old(.image-menu),
+  ::view-transition-new(.image-menu) {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+  }
+}

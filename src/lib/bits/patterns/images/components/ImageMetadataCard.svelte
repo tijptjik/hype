@@ -2,7 +2,7 @@
 // SVELTE
 import type { Component } from 'svelte'
 // LIB
-import { Icon } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import { getMetadata } from '#lib/api/image.remote.js'
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { m } from '#lib/i18n.js'
@@ -33,7 +33,7 @@ let {
   loading: loadingProp = undefined,
   enabled = metadataProp !== undefined || loadingProp !== undefined,
 }: {
-  image: Image
+  image?: Image
   metadata?: ImageMetadataBasic | ImageMetadataFull | null
   loading?: boolean
   enabled?: boolean
@@ -262,7 +262,7 @@ $effect(() => {
     meta: appCtx.isAdmin() ? { isAdminRequest: true } : undefined,
   })
     .then(response => {
-      if (image.id !== currentImageId) {
+      if (image?.id !== currentImageId) {
         return
       }
 
@@ -270,7 +270,7 @@ $effect(() => {
       isLoading = false
     })
     .catch(() => {
-      if (image.id !== currentImageId) {
+      if (image?.id !== currentImageId) {
         return
       }
 

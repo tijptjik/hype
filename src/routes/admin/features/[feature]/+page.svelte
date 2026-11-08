@@ -3616,10 +3616,11 @@ $effect(() => () => clearVisualSectionReopenState())
         (isImagesFacet || visitedImagesRef === featureRef)}
         <ImageProvider model={featureImageProviderModel}>
           <FeatureImageEditor featureId={currentFeatureId ?? undefined}>
-            {#snippet textControls(imageId)}
+            {#snippet textControls(imageId, hasText)}
               {#if currentFeatureId}
                 {#key currentFeatureId}
                   <FeatureGalleryRevisionEditor
+                    {hasText}
                     featureId={currentFeatureId}
                     {imageId}
                     {isDirty}

@@ -5,7 +5,9 @@ import type { Snippet } from 'svelte'
 import { useGalleryOrdering } from '#lib/adapters/image/useGalleryOrdering.svelte.js'
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
-import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import ImageEditor from '#lib/bits/patterns/images/ImageEditor.svelte'
+import UserAttributionCard from '#lib/bits/patterns/cards/userAttributionCard/UserAttributionCard.svelte'
 import ImageMetadataCard from './components/ImageMetadataCard.svelte'
 import {
   IMAGE_ATTRIBUTION_CLASSES,
@@ -19,26 +21,25 @@ import { m } from '#lib/i18n.js'
 import CameraIcon from 'virtual:icons/proicons/camera'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
 
-let {
-  featureId,
-  textControls: imageTextControls,
-}: { featureId?: string; textControls?: Snippet<[string | null]> } = $props()
+let { featureId, textControls: imageTextControls }: { featureId?: string; textControls?: Snippet<[string | null, boolean]> } = $props()
 
 const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx)
-const ordering = useGalleryOrdering(
-  () => featureId,
-  () => model.state.items,
-  () => imageCtx.refreshImages(),
+const ordering = useGalleryOrdering(() => featureId, () => model.state.items, () => imageCtx.refreshImages())
+const hasActiveText = $derived(
+  [
+    ...Object.values(model.state.activeImage?.image.galleryCaption ?? {}),
+    ...Object.values(model.state.activeImage?.image.galleryAlt ?? {}),
+  ].some(text => text.trim().length > 0),
 )
 </script>
 
 <ImageEditor
+  isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   sortScope={featureId ?? undefined}
   sortMode={ordering.mode}
   canSort={ordering.enabled}
   onSortChange={ordering.save}
-  isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   items={model.state.items}
   activeId={model.state.activeId}
   fit="fit"
@@ -70,7 +71,7 @@ const ordering = useGalleryOrdering(
   onRetryUpload={model.actions.retryUpload}
 >
   {#snippet textControls()}
-    {@render imageTextControls?.(model.state.activeId)}
+    {@render imageTextControls?.(model.state.activeId, hasActiveText)}
   {/snippet}
 
   {#snippet leftRail(_item)}

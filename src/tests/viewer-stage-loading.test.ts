@@ -52,6 +52,100 @@ it('hides the first image until decode and retains it while the next image loads
   )
 })
 
+it('retains the same-id image and backdrop until replacement bytes decode', async () => {
+  const view = render(ViewerStage, {
+    currentItem: { id: 'image', src: '/old.jpg', blurSrc: '/old.jpg' },
+    activeId: 'image',
+    fit: 'fit',
+  })
+  flushSync()
+  view.container.querySelector('img')!.dispatchEvent(new Event('load'))
+  await vi.advanceTimersByTimeAsync(300)
+  flushSync()
+
+  const rerender = view.rerender({
+    currentItem: { id: 'image', src: '/replacement.jpg', blurSrc: '/replacement.jpg' },
+    activeId: 'image',
+    fit: 'fit',
+  })
+  await vi.advanceTimersByTimeAsync(0)
+  await rerender
+  flushSync()
+  expect(view.container.querySelector('.viewer-scene img')?.getAttribute('src')).toBe(
+    '/old.jpg',
+  )
+  expect(
+    view.container.querySelector('.viewer-backdrop img')?.getAttribute('src'),
+  ).toBe('/old.jpg')
+  const preload = view.container.querySelector('img[src="/replacement.jpg"]')!
+  const decoded = Promise.withResolvers<void>()
+  Object.defineProperty(preload, 'decode', { value: () => decoded.promise })
+  preload.dispatchEvent(new Event('load'))
+  await vi.advanceTimersByTimeAsync(500)
+  flushSync()
+  expect(view.container.querySelector('.viewer-scene img')?.getAttribute('src')).toBe(
+    '/old.jpg',
+  )
+  decoded.resolve()
+  await vi.advanceTimersByTimeAsync(300)
+  flushSync()
+  expect(view.container.querySelector('.viewer-scene img')?.getAttribute('src')).toBe(
+    '/replacement.jpg',
+  )
+  expect(
+    view.container.querySelector('.viewer-backdrop img')?.getAttribute('src'),
+  ).toBe('/replacement.jpg')
+  expect(view.container.querySelector('[data-image-skeleton]')).toBeNull()
+})
+
+it('promotes a settled upload silently without a second fade or loading pulse', async () => {
+  const view = render(ViewerStage, {
+    currentItem: {
+      id: 'image',
+      src: 'blob:preview',
+      blurSrc: 'blob:preview',
+      status: { kind: 'replacement-upload', uploadStatus: 'uploading' },
+    },
+    activeId: 'image',
+    fit: 'fit',
+  })
+  flushSync()
+  view.container.querySelector('img')!.dispatchEvent(new Event('load'))
+  await vi.advanceTimersByTimeAsync(300)
+  flushSync()
+  view.container.querySelector('.viewer-scene img')!.dispatchEvent(new Event('load'))
+  flushSync()
+  expect(view.container.querySelector('.gallery-image-breathe')).toBeNull()
+
+  const rerender = view.rerender({
+    currentItem: { id: 'image', src: '/final.jpg', blurSrc: '/final.jpg' },
+    activeId: 'image',
+    fit: 'fit',
+  })
+  await vi.advanceTimersByTimeAsync(0)
+  await rerender
+  flushSync()
+  expect(view.container.querySelector('.viewer-scene img')?.getAttribute('src')).toBe(
+    'blob:preview',
+  )
+  view.container
+    .querySelector('img[src="/final.jpg"]')!
+    .dispatchEvent(new Event('load'))
+  await vi.advanceTimersByTimeAsync(0)
+  flushSync()
+  expect(view.container.querySelectorAll('.viewer-scene')).toHaveLength(1)
+  expect(
+    view.container.querySelector('.viewer-scene')?.getAttribute('style'),
+  ).not.toContain('transition:')
+  expect(view.container.querySelector('.viewer-scene img')?.getAttribute('src')).toBe(
+    '/final.jpg',
+  )
+  await vi.advanceTimersByTimeAsync(1000)
+  flushSync()
+  expect(view.container.querySelectorAll('.viewer-scene')).toHaveLength(1)
+  expect(view.container.querySelector('.gallery-image-breathe')).toBeNull()
+})
+
 it('keeps decoded foreground and backdrop nodes through crossfade settlement and metadata hydration', async () => {
   const view = render(ViewerStage, {
     currentItem: { id: 'first', src: '/first.jpg', blurSrc: '/first.jpg' },

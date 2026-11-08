@@ -1,4 +1,8 @@
 <script lang="ts">
+// SVELTE
+import { tick } from 'svelte'
+// TRANSITIONS
+import { transitionReviewDialog } from '#lib/bits/core/dialog/dialogTransition.js'
 // BITS-UI
 import { DropdownMenu } from 'bits-ui'
 // I18N
@@ -25,6 +29,26 @@ let {
   busy?: boolean
   onValueChange?: (mode: ImagePresentation) => void | Promise<void>
 } = $props()
+
+let open = $state(false)
+const menuId = $props.id()
+const transitionName = `image-menu-${menuId.replace(/[^a-zA-Z0-9-]/g, '')}`
+let transitioning = $state(false)
+
+/** Animate only the options menu, leaving its trigger live during selection.
+ * @param next Requested menu visibility.
+ * @returns Completion after the native transition or reduced-motion update.
+ */
+async function setOpen(next: boolean): Promise<void> {
+  if (next === open) return
+  transitioning = true
+  await tick()
+  try {
+    await transitionReviewDialog(() => { open = next })
+  } finally {
+    transitioning = false
+  }
+}
 
 const options = $derived([
   {
@@ -61,7 +85,7 @@ function select(next: string): void {
 }
 </script>
 
-<DropdownMenu.Root>
+<DropdownMenu.Root {open} onOpenChange={next => void setOpen(next)}>
   <DropdownMenu.Trigger
     {disabled}
     aria-busy={busy}
@@ -76,6 +100,7 @@ function select(next: string): void {
   </DropdownMenu.Trigger>
   <DropdownMenu.Portal>
     <DropdownMenu.Content
+        style={transitioning && open ? `view-transition-name:${transitionName};view-transition-class:image-menu` : undefined}
       side="top"
       align="center"
       sideOffset={12}

@@ -1,3 +1,5 @@
+// SVELTE
+import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // DOMAIN
@@ -162,6 +164,7 @@ export async function readFeatureImageIntentPolicy(
  * @param id Requested or historical identity.
  * @param classify Whether to assign Unclassified to Catch-All.
  * @returns Current assignment with policy-derived visibility.
+ * @remarks Unavailable client identities fail with HTTP 400 before any writes.
  */
 export function resolvePolicyImageIntent(
   policy: ImageIntentPolicy,
@@ -174,6 +177,11 @@ export function resolvePolicyImageIntent(
     seen.add(id)
     id = policy.redirects[id]
   }
+  if (!policy.intents.some(item => item.id === id))
+    throw error(
+      400,
+      'This image intent is no longer available; refresh and choose another intent',
+    )
   return resolveImageIntent(policy.intents, id, classify)
 }
 

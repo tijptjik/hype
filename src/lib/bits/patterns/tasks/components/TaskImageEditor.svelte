@@ -114,6 +114,10 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
         {onMultilingualExpandedChange}
         {featureId}
         imageId={model.state.activeImage?.image.id ?? null}
+        hasText={Object.values(
+          model.state.activeImage?.image.galleryCaption ?? {},
+        ).some(Boolean) ||
+          Object.values(model.state.activeImage?.image.galleryAlt ?? {}).some(Boolean)}
         onSaved={() => {
           void imageCtx.refreshImages()
         }}
