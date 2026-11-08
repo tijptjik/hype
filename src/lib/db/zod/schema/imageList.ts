@@ -1,21 +1,27 @@
-// DRIZZLE
-import { createSelectSchema } from 'drizzle-zod'
+// ZOD
 import { z } from 'zod'
-import { image } from '#lib/db/schema/image.js'
+// ENUMS
+import { ImageCDN, ImageEnv, ImagePresentationMode } from '#lib/enums.js'
 
-export const ImageListFields = createSelectSchema(image)
-  .pick({
-    id: true,
-    cdn: true,
-    env: true,
-    cdnId: true,
-    publicId: true,
-    contentHash: true,
-    version: true,
-    presentationMode: true,
-    contributorId: true,
-    createdAt: true,
-    modifiedAt: true,
+export const ImageListFields = z
+  .object({
+    id: z.string(),
+    cdn: z.enum(Object.values(ImageCDN) as [string, ...string[]]),
+    env: z.enum(Object.values(ImageEnv) as [string, ...string[]]),
+    cdnId: z.string().nullable(),
+    publicId: z.string(),
+    contentHash: z.string().nullable(),
+    version: z
+      .int()
+      .gte(Number.MIN_SAFE_INTEGER)
+      .lte(Number.MAX_SAFE_INTEGER)
+      .nullable(),
+    presentationMode: z.enum(
+      Object.values(ImagePresentationMode) as [string, ...string[]],
+    ),
+    contributorId: z.string().nullable(),
+    createdAt: z.string(),
+    modifiedAt: z.string(),
   })
   .extend({
     imageRevisionId: z.string().optional(),

@@ -1,5 +1,5 @@
 // SCHEMAS
-import { UserSelfProfileAPI } from '#lib/db/zod/schema/user.js'
+import { UserSettingsSchema } from '#lib/db/zod/schema/userSettings.js'
 // TYPES
 import type { CurrentUser } from '#lib/db/zod/schema/user.types.js'
 
@@ -15,9 +15,9 @@ export function parseSessionSettings(
   preferences: unknown,
   experimental: unknown,
 ): Pick<CurrentUser, 'preferences' | 'experimental'> {
-  const parsedPreferences = UserSelfProfileAPI.shape.preferences.safeParse(preferences)
+  const parsedPreferences = UserSettingsSchema.shape.preferences.safeParse(preferences)
   const parsedExperimental =
-    UserSelfProfileAPI.shape.experimental.safeParse(experimental)
+    UserSettingsSchema.shape.experimental.safeParse(experimental)
 
   return {
     preferences: parsedPreferences.success

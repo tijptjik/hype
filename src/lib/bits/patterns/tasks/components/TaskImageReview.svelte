@@ -20,7 +20,7 @@ import UserAttributionCard from '#lib/bits/patterns/cards/userAttributionCard/Us
 import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadataCard.svelte'
 import { IMAGE_METADATA_BUTTON_CLASSES } from '#lib/bits/patterns/images/components/imageChrome.styles.js'
 import CameraIcon from 'virtual:icons/proicons/camera'
-import { ImageMetadataFullSchema } from '#lib/db/zod/schema/image.js'
+import { ImageMetadataFullSchema } from '#lib/db/zod/schema/imageMetadata.js'
 import ImageEditor from '#lib/bits/patterns/images/ImageEditor.svelte'
 import FeatureGalleryImageTextEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryImageTextEditor.svelte'
 // IMAGE ORDER

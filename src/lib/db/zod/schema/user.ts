@@ -90,14 +90,7 @@ export const UserRoleDiscoSchema = z.union([
 
 export const UserBase = createSelectSchema(user)
 
-export const UserBasic = UserBase.pick({
-  id: true,
-  username: true,
-  displayUsername: true,
-  name: true,
-  image: true,
-  attribution: true,
-} as const)
+export { UserBasic } from './userBasic'
 
 // ═══════════════════════
 // 3. REMOTE PROFILE SCHEMAS

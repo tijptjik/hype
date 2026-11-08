@@ -7,8 +7,7 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import { feature, featureImage, image } from '#lib/db/schema/index.js'
 // IMAGE
-import { ImageCaptureSchema, ImageCaptureSourceSchema } from '#lib/images/capture.js'
-import { ImageListFields } from './imageList.js'
+import { ImageMetadataFullSchema, ImageMetadataProfileSchema } from './imageMetadata'
 import { isSupportedUploadImageContentType } from '#lib/images/accept.js'
 import {
   DEFAULT_UPLOAD_IMAGE_PRESENTATION,
@@ -127,24 +126,14 @@ export const FeatureImageUpdate = createUpdateSchema(featureImage)
 // 2. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const ImageProfile = z.enum(['list', 'card', 'detail', 'admin'])
-
-export const ImageListProfileAPI = ImageListFields
-export const ImageCardProfileAPI = ImageListProfileAPI
-export const ImageDetailProfileAPI = ImageCardProfileAPI
-export const ImageAdminProfileAPI = ImageDetailProfileAPI
-
-export const ImageContextEnvelopeAPI = z.object({
-  ctxType: z.union([
-    z.enum(ImageContextResource),
-    z.enum(ImageContextResourceExtended),
-  ]),
-  ctxId: z.string(),
-  image: z.lazy(() => z.union([ImageListProfileAPI, ImageAdminProfileAPI])),
-  intent: ImageIntentIdSchema.nullish(),
-  isPublished: z.boolean().nullish(),
-  publishedAt: z.string().nullish(),
-})
+export {
+  ImageProfile,
+  ImageListProfileAPI,
+  ImageCardProfileAPI,
+  ImageDetailProfileAPI,
+  ImageAdminProfileAPI,
+  ImageContextEnvelopeAPI,
+} from './image.profile'
 
 // ═══════════════════════
 // 3. REMOTE MUTATION SCHEMAS
@@ -205,33 +194,11 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
 // 4. METADATA SCHEMAS
 // ═══════════════════════
 
-export const ImageMetadataBasicSchema = z.object({
-  originalFilename: z.string().nullish(),
-  originalExtension: z.string().nullish(),
-  contentHash: z.string().nullish(),
-  originalWidth: z.number().int().nullish(),
-  originalHeight: z.number().int().nullish(),
-  rotation: z.number().int().min(0).max(270).nullish(),
-  sourceRotation: z.number().int().min(0).max(270).nullish(),
-  renderRotation: z.number().int().min(0).max(270).nullish(),
-  cameraModel: z.string().nullish(),
-  capturedAt: z.string().nullish(),
-  // Authored capture assertions remain separate from extracted EXIF instants.
-  capture: ImageCaptureSchema.nullish(),
-  credit: z.string().nullish(),
-  latitude: z.string().nullish(),
-  longitude: z.string().nullish(),
-})
-
-export const ImageMetadataFullSchema = ImageMetadataBasicSchema.extend({
-  captureSources: z.array(ImageCaptureSourceSchema).nullish(),
-  metadata: z.record(z.string(), z.string()).nullish(),
-  sourceVersion: z.number().int().nullish(),
-  uploadedAt: z.string().nullish(),
-  modifiedAt: z.string().nullish(),
-})
-
-export const ImageMetadataProfileSchema = z.enum(['basic', 'full', 'auto', 'admin'])
+export {
+  ImageMetadataBasicSchema,
+  ImageMetadataFullSchema,
+  ImageMetadataProfileSchema,
+} from './imageMetadata'
 
 // ═══════════════════════
 // 5. INTERMEDIATE SCHEMAS
