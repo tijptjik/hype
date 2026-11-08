@@ -83,3 +83,18 @@ it('retains a detached logo referenced only by immutable organisation history', 
     sqlite.close()
   }
 })
+
+it('preserves an attached avatar until its profile selects another image', async () => {
+  const { db, sqlite } = setup()
+  try {
+    sqlite.exec(`CREATE TABLE user(id TEXT,image TEXT);
+      CREATE TABLE imageUpload(imageId TEXT,ctxType TEXT,state TEXT,selectedUrl TEXT);
+      INSERT INTO imageUpload VALUES('old','user','attached','https://assets.invalid/avatar');
+      INSERT INTO user VALUES('profile','https://assets.invalid/avatar');`)
+    expect(await deleteDetachedImage(db, 'old')).toBe(false)
+    sqlite.exec("UPDATE user SET image='https://assets.invalid/replacement'")
+    expect(await deleteDetachedImage(db, 'old')).toBe(true)
+  } finally {
+    sqlite.close()
+  }
+})

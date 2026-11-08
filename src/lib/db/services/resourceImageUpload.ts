@@ -5,6 +5,11 @@
 // 2. UPLOAD CONFIRMATION — guarded atomic persistence and replay
 
 // DRIZZLE
+import {
+  imageUploadGuard,
+  markImageUploadAttached,
+  type StagedImageUpload,
+} from './singleImageUpload.js'
 import { and, eq, exists, notExists, or, sql } from 'drizzle-orm'
 // DB
 import { hasResourceLogoStorage } from './resourceLogoSnapshot'
@@ -12,7 +17,10 @@ import { prepareResourceLogoRevision } from './resourceLogoRevision'
 import { hub, image, organisation, project } from '#lib/db/schema/index.js'
 import { getUploadedImageId } from './image.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
-import { prepareAdminResourceRevisionCapture, isAdminResourceRevisionRecordingEnabled } from './adminResourceRevision.js'
+import {
+  prepareAdminResourceRevisionCapture,
+  isAdminResourceRevisionRecordingEnabled,
+} from './adminResourceRevision.js'
 import {
   prepareOrganisationRevisionCapture,
   organisationRevisionTarget,
@@ -85,6 +93,7 @@ export async function getResourceUploadSnapshot(
  * @param newImageId Fresh server-generated identity for non-upload creation; omit for upload replay.
  * @param actor Authenticated actor for resource image history.
  * @param logoEvidence Verified original bytes descriptor and exact metadata for the logo journal.
+ * @param staged Optional verified receipt consumed atomically with selection.
  * @returns Persisted image, or null for a stale resource or upload.
  * @remarks The original revision prevents resurrection after detached image cleanup.
  * Retries preserve metadata and never reselect an image displaced by a newer upload.
@@ -98,11 +107,16 @@ export async function createUploadedResourceImage(
   newImageId?: string,
   actor?: OrganisationRevisionActor,
   logoEvidence?: LogoRevisionEvidence,
+  staged?: StagedImageUpload,
 ): Promise<ImageDB | null> {
-  if (await hasResourceLogoStorage(db) && (!logoEvidence || !actor)) {
+  if ((await hasResourceLogoStorage(db)) && (!logoEvidence || !actor)) {
     throw new Error('Logo uploads require verified image evidence and attribution')
   }
-  if (logoEvidence && type !== 'organisation' && !await isAdminResourceRevisionRecordingEnabled(db, type)) {
+  if (
+    logoEvidence &&
+    type !== 'organisation' &&
+    !(await isAdminResourceRevisionRecordingEnabled(db, type))
+  ) {
     throw new Error(`Logo history requires ${type} revision recording to be enabled`)
   }
   const id = newImageId ?? (await getUploadedImageId(data))
@@ -156,29 +170,43 @@ export async function createUploadedResourceImage(
           sql`SELECT ${resourceId} AS id`,
           actor,
         )
-  const logoCapture = logoEvidence && actor ? await prepareResourceLogoRevision(db, { ...logoEvidence, imageId:id, actorId:actor.actorId, reason:actor.reason??'Logo uploaded', initialUpload:true }) : {before:[],after:[]}
+  const logoCapture =
+    logoEvidence && actor
+      ? await prepareResourceLogoRevision(db, {
+          ...logoEvidence,
+          imageId: id,
+          actorId: actor.actorId,
+          reason: actor.reason ?? 'Logo uploaded',
+          initialUpload: true,
+        })
+      : { before: [], after: [] }
   // The batch guards, inserts and selects together; failed/skipped pointer writes roll back.
-  const result = await executeRevisionBatch(db, exists(allowed), [
-    ...capture.before,
-    ...logoCapture.before,
-    db
-      .insert(image)
-      .values({ ...data, id })
-      .onConflictDoNothing({ target: image.id }),
-    db
-      .update(table)
-      .set({
-        imageId: id,
-        modifiedAt: sql`CASE
+  const result = await executeRevisionBatch(
+    db,
+    and(exists(allowed), staged ? imageUploadGuard(db, staged) : undefined)!,
+    [
+      ...capture.before,
+      ...logoCapture.before,
+      db
+        .insert(image)
+        .values({ ...data, id })
+        .onConflictDoNothing({ target: image.id }),
+      db
+        .update(table)
+        .set({
+          imageId: id,
+          modifiedAt: sql`CASE
       WHEN ${table.modifiedAt} >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
       THEN strftime('%Y-%m-%dT%H:%M:%fZ', ${table.modifiedAt}, '+0.001 seconds')
       ELSE strftime('%Y-%m-%dT%H:%M:%fZ', 'now') END`,
-      })
-      .where(and(eq(table.id, resourceId), sql`${table.imageId} IS NOT ${id}`)),
-    prepareRevisionCheck(db, and(exists(allowed), exists(selected), exists(stored))!),
-    ...logoCapture.after,
-    ...capture.after,
-    stored,
-  ])
+        })
+        .where(and(eq(table.id, resourceId), sql`${table.imageId} IS NOT ${id}`)),
+      prepareRevisionCheck(db, and(exists(allowed), exists(selected), exists(stored))!),
+      ...logoCapture.after,
+      ...capture.after,
+      ...(staged ? [markImageUploadAttached(db, staged)] : []),
+      stored,
+    ],
+  )
   return result ? (result.at(-1) as ImageDB[])[0] : null
 }

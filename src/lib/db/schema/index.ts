@@ -46,3 +46,5 @@ export * from './resourceLogoRevision'
 
 export * from './imageIntentPolicy'
 export * from './revisionEditWindow'
+
+export * from './imageUpload'

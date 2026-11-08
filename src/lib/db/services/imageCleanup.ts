@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, notExists } from 'drizzle-orm'
+import { and, eq, notExists, sql } from 'drizzle-orm'
 // DB
 import {
   featureImage,
@@ -45,6 +45,16 @@ export async function deleteDetachedImage(
   imageId: string,
 ): Promise<boolean> {
   const historyGuard = await organisationImageDeletionGuard(db, imageId)
+  // Avatar compatibility URLs are recorded on receipts; preserve any currently selected one.
+  const hasUploads = await db.get<{ n: number }>(
+    sql`SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name='imageUpload'`,
+  )
+  const avatarGuard = hasUploads?.n
+    ? sql`NOT EXISTS (
+    SELECT 1 FROM imageUpload receipt JOIN user owner ON owner.image = receipt.selectedUrl
+    WHERE receipt.imageId = ${imageId} AND receipt.ctxType = 'user' AND receipt.state = 'attached'
+  )`
+    : undefined
   // Preserve historical logos and images reattached since upload preflight, including shared task evidence.
   const deleted = await db
     .delete(image)
@@ -52,6 +62,7 @@ export async function deleteDetachedImage(
       and(
         eq(image.id, imageId),
         historyGuard,
+        avatarGuard,
         notExists(
           db
             .select({ id: project.id })

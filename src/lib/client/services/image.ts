@@ -1,18 +1,26 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
-import { PUBLIC_ASSET_BASE_URL, PUBLIC_PREVIEW_ASSET_BASE_URL } from '$app/env/public'
+import {
+  resolveImageUploadEnv,
+  resolveImageAssetBaseUrl,
+} from '#lib/images/assetUrl.js'
+export {
+  resolveImageUploadEnv,
+  resolveImageAssetBaseUrl,
+} from '#lib/images/assetUrl.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // IMAGE
 import { orderGallery, orderGalleryForReview } from '#lib/images/galleryOrder.js'
-import { toCloudflareImageWorkerPath, IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '#lib/images/delivery.js'
+import {
+  toCloudflareImageWorkerPath,
+  IMAGE_RAW_INTERMEDIATE_TRANSFORMATION,
+} from '#lib/images/delivery.js'
 import {
   extractImageUploadMetadata,
   type ExtractedImageUploadMetadata,
 } from '#lib/images/metadata.js'
 import { normalizeUploadFileForAssetPipeline } from '#lib/images/upload.js'
-// UTILS
-import { resolveAppStage } from '#lib'
 // SERVICES
 import { adminIntentOrder, intentOrder } from '#lib/images/intentOrder.js'
 // NAVIGATION
@@ -192,7 +200,8 @@ export async function prepareImageUpload(
     contentType: normalizedUpload.file.type || 'application/octet-stream',
     size: normalizedUpload.file.size,
     replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
-    replaceImageRevisionId: uploadCtx.imageToReplace?.image.imageRevisionId ?? undefined,
+    replaceImageRevisionId:
+      uploadCtx.imageToReplace?.image.imageRevisionId ?? undefined,
     links: uploadCtx.links,
     meta: { isAdminRequest },
   })
@@ -276,13 +285,19 @@ export async function finalizePreparedImageUpload(
         message.includes('database is locked') ||
         message.includes('internal error; reference =')
       // A lost response may follow a committed write; replay its idempotent token.
-      const isRetryableNetworkError = error instanceof TypeError &&
-        /^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?|fetch failed)$/i.test(message)
+      const isRetryableNetworkError =
+        error instanceof TypeError &&
+        /^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?|fetch failed)$/i.test(
+          message,
+        )
       // Kit parses the response body before returning; truncation can obscure a committed result.
-      const isTruncatedResponse = error instanceof SyntaxError &&
-        /unexpected end of json input/i.test(message)
+      const isTruncatedResponse =
+        error instanceof SyntaxError && /unexpected end of json input/i.test(message)
 
-      if ((!isRetryableLockError && !isRetryableNetworkError && !isTruncatedResponse) || attempt === retryAttempts - 1) {
+      if (
+        (!isRetryableLockError && !isRetryableNetworkError && !isTruncatedResponse) ||
+        attempt === retryAttempts - 1
+      ) {
         throw error
       }
 
@@ -314,7 +329,9 @@ export async function uploadAndProcessImage(
   },
   fetchFn: typeof fetch = fetch,
   options: {
-    onObjectUploaded?: (prepared: Awaited<ReturnType<typeof prepareImageUpload>>) => void
+    onObjectUploaded?: (
+      prepared: Awaited<ReturnType<typeof prepareImageUpload>>,
+    ) => void
   } = {},
 ): Promise<ImageCtxEnvelope> {
   const preparedUpload = await prepareImageUpload(file, uploadCtx, extendedFeatureInfo)
@@ -326,108 +343,7 @@ export async function uploadAndProcessImage(
 // ═══════════════════════
 // 3. UPLOAD / URL UTILS
 // ═══════════════════════
-const DEFAULT_PUBLIC_ASSET_BASE_URL = 'https://assets.hype.hk'
-
-const DEFAULT_PUBLIC_PREVIEW_ASSET_BASE_URL = 'https://assets.preview.hype.hk'
-const DEFAULT_LOCAL_ASSET_BASE_URL = 'http://assets.hype.localhost'
-
-const resolvePublicAssetBaseUrl = (): string => {
-  const configuredBaseUrl =
-    PUBLIC_ASSET_BASE_URL || import.meta.env.PUBLIC_ASSET_BASE_URL || ''
-
-  if (configuredBaseUrl) {
-    return configuredBaseUrl
-  }
-
-  return DEFAULT_PUBLIC_ASSET_BASE_URL
-}
-
-const resolvePreviewAssetBaseUrl = (): string => {
-  const configuredBaseUrl =
-    PUBLIC_PREVIEW_ASSET_BASE_URL || import.meta.env.PUBLIC_PREVIEW_ASSET_BASE_URL || ''
-
-  if (configuredBaseUrl) {
-    return configuredBaseUrl
-  }
-
-  return DEFAULT_PUBLIC_PREVIEW_ASSET_BASE_URL
-}
-
-/**
- * Resolves the upload stage for the current client session.
- *
- * @param params Optional overrides for tests and non-browser contexts.
- * @returns Stage whose raw bucket should receive the new upload.
- * @remarks Runtime public env is preferred over build-time env because local
- * dev sessions can inject different public asset hosts via Wrangler `.dev.vars`.
- */
-export const resolveImageUploadEnv = (params?: {
-  appOrigin?: string
-  assetBaseUrl?: string
-}): PreviewStage => {
-  const appOrigin =
-    params?.appOrigin ?? (typeof window !== 'undefined' ? window.location.origin : '')
-  const appStage = resolveAppStage(appOrigin)
-
-  if (appStage !== 'local') {
-    return appStage
-  }
-
-  return resolveAppStage(params?.assetBaseUrl ?? resolvePublicAssetBaseUrl())
-}
-
 const toImageEnv = (): PreviewStage => resolveImageUploadEnv()
-
-/**
- * Resolves the correct asset host for an image based on its persisted stage.
- *
- * @param stage Image environment stored on the image record.
- * @param appOrigin Optional application origin for non-browser callers and tests.
- * @returns Public asset base URL that can serve that image stage.
- * @remarks A configured local worker handles every storage stage during local development.
- */
-export const resolveImageAssetBaseUrl = (
-  stage?: PreviewStage,
-  appOrigin?: string,
-): string => {
-  const hasConfiguredAssetBaseUrl = Boolean(
-    PUBLIC_ASSET_BASE_URL || import.meta.env.PUBLIC_ASSET_BASE_URL,
-  )
-  const assetBaseUrl = resolvePublicAssetBaseUrl()
-  const configuredStage = resolveAppStage(assetBaseUrl)
-  const runtimeAppOrigin =
-    appOrigin ?? (typeof window !== 'undefined' ? window.location.origin : '')
-  const runtimeAppStage = resolveAppStage(runtimeAppOrigin)
-
-  // Exercise the local delivery code while retaining the image's persisted bucket stage.
-  if (
-    runtimeAppStage === 'local' &&
-    (configuredStage === 'local' || !hasConfiguredAssetBaseUrl)
-  ) {
-    const localBaseUrl = hasConfiguredAssetBaseUrl
-      ? assetBaseUrl
-      : DEFAULT_LOCAL_ASSET_BASE_URL
-    return stage === 'preview' || stage === 'production'
-      ? `${localBaseUrl.replace(/\/+$/, '')}/${stage}`
-      : localBaseUrl
-  }
-
-  if (stage === 'preview') {
-    return configuredStage === 'preview' ? assetBaseUrl : resolvePreviewAssetBaseUrl()
-  }
-
-  if (stage === 'production') {
-    return configuredStage === 'production'
-      ? assetBaseUrl
-      : DEFAULT_PUBLIC_ASSET_BASE_URL
-  }
-
-  if (runtimeAppStage === 'local' && configuredStage === 'production') {
-    return DEFAULT_LOCAL_ASSET_BASE_URL
-  }
-
-  return assetBaseUrl
-}
 
 /**
  * Lazily loads image remotes so utility-only imports of this module do not
@@ -559,9 +475,17 @@ export async function waitForThumbnailReadyEvent(params: {
  * @param configuredOrder Effective intent catalogue order.
  * @returns A sorted copy, with unpositioned uploads appended in manual mode.
  */
-export function sortGalleryItems(itemsToSort: ViewerRenderable[], configuredOrder?: readonly string[]): ViewerRenderable[] {
-  const mode = itemsToSort.find(item => item.gallerySortMode)?.gallerySortMode ?? 'automatic'
-  return orderGalleryForReview(itemsToSort.map(item => ({ ...item, createdAt: item.status?.sortCreatedAt })), mode, configuredOrder)
+export function sortGalleryItems(
+  itemsToSort: ViewerRenderable[],
+  configuredOrder?: readonly string[],
+): ViewerRenderable[] {
+  const mode =
+    itemsToSort.find(item => item.gallerySortMode)?.gallerySortMode ?? 'automatic'
+  return orderGalleryForReview(
+    itemsToSort.map(item => ({ ...item, createdAt: item.status?.sortCreatedAt })),
+    mode,
+    configuredOrder,
+  )
 }
 
 function getViewerRenderableStatus(
@@ -773,9 +697,15 @@ export function getURLfromImage(opts: {
   // Revision-backed galleries never fall through to mutable worker manifests or sidecars.
   if (image.imageRevisionId) {
     const params = new URLSearchParams()
-    if (image.version !== null && image.version !== undefined) params.set('v', String(image.version))
-    if (inputImage.ctxType === ImageContextResource.feature) params.set('feature', inputImage.ctxId)
-    const transform = raw ? rawTransformation === undefined ? IMAGE_RAW_INTERMEDIATE_TRANSFORMATION : rawTransformation : transformation
+    if (image.version !== null && image.version !== undefined)
+      params.set('v', String(image.version))
+    if (inputImage.ctxType === ImageContextResource.feature)
+      params.set('feature', inputImage.ctxId)
+    const transform = raw
+      ? rawTransformation === undefined
+        ? IMAGE_RAW_INTERMEDIATE_TRANSFORMATION
+        : rawTransformation
+      : transformation
     if (transform) {
       params.set('t', transform)
       params.set('gravity', gravity)
@@ -1019,10 +949,19 @@ export function extendImageWithResource(image: Partial<ImageNew>, ctx: ImageUplo
  * @param configuredOrder Effective intent identities, when resolved by the owning context.
  * @returns Sorted image rows.
  */
-export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false, configuredOrder?: readonly string[]) {
-  const sortable = images as (typeof images[number] & { gallerySortMode?: 'automatic' | 'manual'; galleryIntentOrder?: string[] })[]
+export function sortImages(
+  images: Image[] | ImageDBFlat[],
+  isAdmin: boolean = false,
+  configuredOrder?: readonly string[],
+) {
+  const sortable = images as ((typeof images)[number] & {
+    gallerySortMode?: 'automatic' | 'manual'
+    galleryIntentOrder?: string[]
+  })[]
   const mode = sortable.find(item => item.gallerySortMode)?.gallerySortMode
-  const policy = configuredOrder ?? sortable.find(item => item.galleryIntentOrder)?.galleryIntentOrder
+  const policy =
+    configuredOrder ??
+    sortable.find(item => item.galleryIntentOrder)?.galleryIntentOrder
   if (mode || policy) return orderGallery(sortable, mode, policy)
   // Preserve non-Feature and legacy admin upload prioritization outside explicit gallery sorting.
   const ranks: readonly string[] = isAdmin ? adminIntentOrder : intentOrder
@@ -1033,8 +972,13 @@ export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = f
       if (pendingA !== pendingB) return pendingA ? -1 : 1
       if (a.isPublished !== b.isPublished) return a.isPublished ? -1 : 1
     }
-    const rank = a.intent && b.intent ? ranks.indexOf(a.intent) - ranks.indexOf(b.intent) : 0
-    return rank || new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
+    const rank =
+      a.intent && b.intent ? ranks.indexOf(a.intent) - ranks.indexOf(b.intent) : 0
+    return (
+      rank ||
+      new Date(b.createdAt as string).getTime() -
+        new Date(a.createdAt as string).getTime()
+    )
   })
 }
 
@@ -1049,7 +993,8 @@ export function extractVersionFromImageUrl(
 ): number | null {
   if (!url) return null
 
-  const match = url.match(/\/v(\d+)\//) ??
+  const match =
+    url.match(/\/v(\d+)\//) ??
     (url.includes('/api/images/revisions/') ? url.match(/[?&]v=(\d+)(?:&|$)/) : null)
 
   if (!match) return null
@@ -1132,7 +1077,10 @@ export function getFeatureIdenticonUrl(seed: string): string {
  * @remarks If required inputs are missing, or the target mode matches current mode, the function no-ops and returns `false`.
  */
 export async function updateImagePresentationMode(options: {
-  currentImage?: (Pick<Image, 'id' | 'presentationMode'> & { imageRevisionId?: string }) | ImageDBBasic | null
+  currentImage?:
+    | (Pick<Image, 'id' | 'presentationMode'> & { imageRevisionId?: string })
+    | ImageDBBasic
+    | null
   nextChecked?: boolean | null
   nextMode?: ImagePresentation
   ctx?: ImageEditCtx
@@ -1177,7 +1125,11 @@ export async function updateImagePresentationMode(options: {
       const { updateImage: updateImageRemote } = await loadImageRemotes()
       await updateImageRemote({
         id: currentImage.id,
-        imageRevisionId: 'imageRevisionId' in currentImage && typeof currentImage.imageRevisionId === 'string' ? currentImage.imageRevisionId : undefined,
+        imageRevisionId:
+          'imageRevisionId' in currentImage &&
+          typeof currentImage.imageRevisionId === 'string'
+            ? currentImage.imageRevisionId
+            : undefined,
         ctxType: ctx.ctxType,
         ctxId: ctx.ctxId,
         data: { presentationMode: nextMode },
