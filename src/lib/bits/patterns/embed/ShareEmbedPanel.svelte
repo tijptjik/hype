@@ -9,7 +9,7 @@ import {
   embedLanguages,
 } from '#lib/embed/config.js'
 import { resolveEmbedTargetId } from '#lib/embed/target.js'
-import { isMapStyleKey } from '#lib/map/styles/registry.js'
+import { isMapStyleKey } from '#lib/map/styles/metadata.js'
 import {
   SELECTABLE_MAP_STYLE_CATALOG,
   isProjectOnlyMapStyle,

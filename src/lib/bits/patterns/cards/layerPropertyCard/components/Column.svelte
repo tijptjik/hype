@@ -14,9 +14,9 @@ import Body from './Body.svelte'
 import Root from './Root.svelte'
 import Wrapper from './Wrapper.svelte'
 // TRANSITIONS
-import { createLayerPropertyTransfer } from '../layerPropertyCard.transitions'
+import { createLayerPropertyTransfer } from '../layerPropertyCard.transitions.js'
 // TYPES
-import type { LayerPropertyTransfer } from '../layerPropertyCard.transitions'
+import type { LayerPropertyTransfer } from '../layerPropertyCard.transitions.js'
 
 type LayerPropertyRow = {
   index: number
