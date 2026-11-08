@@ -6,7 +6,6 @@ import { getUser, updateUserProfile } from '#lib/api/user.remote.js'
 import { toast } from 'svelte-sonner'
 // TYPES
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
-import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 
 /**
@@ -18,8 +17,7 @@ export function useProfileContributionPreferences(app: ResourceViewCtx) {
   let isSaving = $state(false)
   const preferences = $derived(app.account.user?.preferences?.profileContributions)
   const observePrisms = $derived(
-    preferences?.observePrisms ??
-      (app.hub as Hub | undefined)?.organisations?.length !== 1,
+    preferences?.observePrisms ?? app.hub?.organisations?.length !== 1,
   )
 
   // Synchronize restored preferences with the profile request's map scope.

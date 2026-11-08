@@ -1,5 +1,8 @@
 // SVELTE
 import { untrack } from 'svelte'
+// API
+import { getSavedFeatureSuccessors } from '#lib/api/featureIdentity.remote.js'
+import { refreshRemoteQuery } from '#lib/remote/index.js'
 // DATE
 import { formatDistanceToNow } from 'date-fns'
 // I18N
@@ -36,6 +39,69 @@ export function useSavedFeatureListModel(
 ) {
   const query = app.resources.featureQueries[kind]
   let searchTerm = $state('')
+  let guidance = $state<Awaited<ReturnType<typeof getSavedFeatureSuccessors>>['rows']>(
+    [],
+  )
+  let guidanceOffset = $state<number | null>(0),
+    guidanceLoading = $state(false),
+    guidanceError = $state('')
+  let guidanceGeneration = 0,
+    guidanceKey = ''
+
+  /** Loads session-owned successor guidance without importing retired Feature content.
+   * @param reset Whether to replace the first page.
+   * @returns Completion of this account's bounded guidance request.
+   */
+  async function loadGuidance(reset = false): Promise<void> {
+    if (
+      kind !== 'wishlist' ||
+      !app.user ||
+      (!reset && (guidanceLoading || guidanceOffset === null))
+    )
+      return
+    const generation = guidanceGeneration,
+      accountRevision = app.account.revision
+    guidanceLoading = true
+    guidanceError = ''
+    try {
+      const result = await refreshRemoteQuery(
+        getSavedFeatureSuccessors({ offset: reset ? 0 : guidanceOffset! }),
+      )
+      if (generation !== guidanceGeneration || accountRevision !== app.account.revision)
+        return
+      guidance = reset ? result.rows : [...guidance, ...result.rows]
+      guidanceOffset = result.nextOffset
+    } catch {
+      if (generation === guidanceGeneration && accountRevision === app.account.revision)
+        guidanceError = 'Unable to load updates to saved places.'
+    } finally {
+      if (generation === guidanceGeneration && accountRevision === app.account.revision)
+        guidanceLoading = false
+    }
+  }
+  $effect(() => {
+    const enabled = active()
+    const user = app.user?.id,
+      revision = app.account.revision
+    // Membership changes refresh guidance; responses cannot cross an account switch.
+    const membership = app.account.collections.state.wishlisted
+    const key = JSON.stringify([
+      user,
+      revision,
+      membership.map(row => [row.featureId, row.modifiedAt, row.isWishlisted]),
+    ])
+    untrack(() => {
+      if (!enabled && user) return
+      if (key === guidanceKey) return
+      guidanceKey = key
+      guidanceGeneration++
+      guidance = []
+      guidanceOffset = 0
+      guidanceLoading = false
+      guidanceError = ''
+      if (user && kind === 'wishlist') void loadGuidance(true)
+    })
+  })
 
   /** Builds deterministic query input from the current search and saved list. */
   function queryInput() {
@@ -122,9 +188,31 @@ export function useSavedFeatureListModel(
   })
 
   return {
+    get splitGuidance() {
+      return guidance.filter(
+        row =>
+          !searchTerm ||
+          Object.values(row.titles).some(title =>
+            title.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase()),
+          ),
+      )
+    },
+    get guidanceLoading() {
+      return guidanceLoading
+    },
+    get guidanceError() {
+      return guidanceError
+    },
+    get hasMoreGuidance() {
+      return guidanceOffset !== null
+    },
+    loadMoreGuidance: () => loadGuidance(),
+    retryGuidance: () => loadGuidance(true),
     get title() {
       const name =
         kind === 'visited' ? m.stars__have_visited() : m.stars__want_to_visit()
+      if (kind === 'wishlist' && (guidance.length || guidanceLoading || guidanceError))
+        return name
       return query.totalCount === null ? name : `${name} (${query.totalCount})`
     },
     get rows() {

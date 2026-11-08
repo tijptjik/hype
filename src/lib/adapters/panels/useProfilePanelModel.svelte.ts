@@ -25,7 +25,6 @@ import type {
   FeatureFromCollection,
 } from '#lib/db/zod/schema/feature.types.js'
 import type { Image } from '#lib/db/zod/schema/image.types.js'
-import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 
 /**
  * Resolves the displayed profile and guest-upgrade state at the route boundary.
@@ -88,7 +87,7 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
       }
     },
     get isSingleOrganisation() {
-      return (app.hub as Hub | undefined)?.organisations?.length === 1
+      return app.hub?.organisations?.length === 1
     },
     get observePrisms() {
       return contributionPreferences.observePrisms
