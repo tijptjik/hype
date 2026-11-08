@@ -63,6 +63,37 @@ to the root account's `collections`, shared across surfaces. Use these owners di
 rather than adding forwarding APIs. Public map visibility, selection and camera
 orchestration remain on `AppCtx`.
 
+## Startup dependency boundaries
+
+Admin navigation renders after authenticated surface setup. Bootstrap wires query owners
+without fetching duplicate lists; each index owns its initial rows and retries. Exact
+index totals use separate count-only requests with the same authorization and filter
+predicates, so counting never gates the first visible page. Feature index summaries
+retain properties, one thumbnail and image completion counts, while detail requests own
+full image galleries.
+
+Quick return visits can reuse verified native results for one minute. Retention is
+limited to 32 browser query handles; mutations, identity changes, errors and explicit
+retries invalidate freshness. Do not introduce a second copied entity cache. The public
+`(app)` server layout owns hub subscription state; shared root metadata must not query
+subscription state on admin requests.
+
+Browser authorization consumers use `authz/hubPolicy.ts`, `authz/layerPolicy.ts` and
+`authz/shared.ts`. The `hub.ts` and `layer.ts` facades retain database query adapters
+for server callers. Keep shared presentation constants out of database service modules.
+Policy refactors must retain the existing server authorization decisions.
+
+Map pickers and theme preferences use `map/styles/metadata.ts` and `catalog.ts`. Only
+renderers and asset generation import `registry.ts` and `builders.ts`. Catalogue entries
+contain presentation metadata, not executable style builders. Run
+`bun scripts/checks/admin-startup.ts` after a production build to inspect the actual
+production route dependency closure; development route node numbers differ. Use
+`--details` to check the six resource detail routes as well. Detail pages import
+components directly. Optional history, messaging, embedded indexes and galleries use
+`custom/deferred/Deferred.svelte` inside their existing active/visited facet boundaries.
+Keep visited editors mounted to preserve unsaved work; a failed chunk must offer retry
+without hiding navigation. Required form data stays complete before editing begins.
+
 ## Account and Map Ownership
 
 `RootCTX.account` owns `AccountState`. Its authoritative session identity and roles are
@@ -663,3 +694,40 @@ Do not add native HTML `title` tooltips. Component properties named `title` that
 headings, document titles, and accessible SVG names retain their normal meaning.
 Third-party map controls use `bridgeNativeTooltips` at the map boundary to translate
 library-generated titles into the same tooltip labels.
+
+## Gallery sorting
+
+A fresh **Automatic** gallery has no sorting tools. After a manual drag, or when loading
+a **Manual** gallery, one control rail slides out at the fixed left edge of the track,
+outside the scrolling thumbnails. It never follows selection or covers an image. Restore
+Automatic keeps the last manual arrangement for this session and reveals an undo button
+underneath. Undo restores that exact arrangement. Reloading a saved automatic gallery
+hides the rail and clears the session-only undo. Automatic uses the effective
+image-intent catalogue order, then newest image creation within each intent. Editing and
+photo-review rails put Unclassified first to prompt classification; public gallery
+priority and deliberate manual positions are unchanged. Removed intent identities sort
+after configured intents. Historical revision snapshots without `gallery.sortMode` are
+interpreted as automatic without rewriting their JSON or content hashes.
+
+Manual uses the revision's complete `gallery.order` array. Dropping a thumbnail with
+Svelte DND switches to manual using the current displayed sequence; pointer, touch and
+keyboard interactions share the same guarded save. Selection is independent of dragging.
+Restoring Automatic provides a session-only manual-order Undo. Failed saves preserve
+accepted ordering; concurrent changes require a fresh comparison token. Membership
+changes invalidate Undo.
+
+New images join automatic galleries at their intent/date position. They append to manual
+galleries. Intent changes, captions, alternative text, rotation and replacement preserve
+manual positions. The mode and order travel together through accepted Feature revisions,
+image projections and client rendering; an array position alone never implies manual
+mode.
+
+Photo tasks show all submissions and existing-image context in the same right-side
+gallery as the Feature editor, falling below the image on narrow screens. New
+submissions have a small blue dot at the top right. Internal proposal boundaries do not
+create separate gallery selectors. Ordering is editable only when one submission owns
+the whole displayed gallery; acceptance preserves an existing Feature's mode and
+existing positions, appending reviewed additions in their relative submission order.
+Automatic Feature galleries then display those additions by intent/date. Initial Feature
+creation can adopt its reviewed gallery mode because it has no accepted gallery to
+preserve.
