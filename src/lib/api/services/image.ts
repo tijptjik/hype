@@ -109,23 +109,7 @@ import { getUserById } from '#lib/db/services/user.js'
 /**
  * The order of intents for feature images.
  */
-export const intentOrder = [
-  'canonical',
-  'closeUp',
-  'context',
-  'general',
-  'undefined',
-  'research',
-] as const
-
-export const adminIntentOrder = [
-  'undefined',
-  'canonical',
-  'closeUp',
-  'context',
-  'general',
-  'research',
-] as const
+export { intentOrder, adminIntentOrder } from '#lib/images/intentOrder.js'
 
 const imageProfiles = ['list', 'card', 'detail', 'admin'] as const
 

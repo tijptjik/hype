@@ -13,7 +13,7 @@ import { normalizeUploadFileForAssetPipeline } from '#lib/images/upload.js'
 // UTILS
 import { resolveAppStage } from '#lib'
 // SERVICES
-import { adminIntentOrder, intentOrder } from '#lib/api/services/image.js'
+import { adminIntentOrder, intentOrder } from '#lib/images/intentOrder.js'
 // NAVIGATION
 import { getUrlForResource } from '#lib/navigation/index.js'
 import type { OrganisationGetState } from '#lib/db/zod/schema/organisation.types.js'
