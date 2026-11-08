@@ -1,3 +1,4 @@
+import { orderGallery } from '#lib/images/galleryOrder.js'
 // IMAGE INTENT POLICY
 import { readFeatureImageIntentPolicy, resolvePolicyImageIntent, prepareImageIntentGalleryChange } from './imageIntentPolicy'
 // SVELTEKIT
@@ -1130,38 +1131,28 @@ const adminIntentOrder = [
  * @returns The sorted input array.
  */
 export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false) {
-  const intentOrderToUse: readonly string[] = isAdmin ? adminIntentOrder : intentOrder
-
+  const sortable = images as ((typeof images)[number] & {
+    gallerySortMode?: 'automatic' | 'manual'
+    galleryIntentOrder?: string[]
+  })[]
+  const mode = sortable.find(item => item.gallerySortMode)?.gallerySortMode
+  const policy = sortable.find(item => item.galleryIntentOrder)?.galleryIntentOrder
+  if (mode || policy) return orderGallery(sortable, mode, policy)
+  // Preserve non-Feature and legacy admin upload prioritization outside explicit gallery sorting.
+  const ranks: readonly string[] = isAdmin ? adminIntentOrder : intentOrder
   return images.sort((a, b) => {
-    if ('galleryPosition' in a && typeof a.galleryPosition === 'number' &&
-        'galleryPosition' in b && typeof b.galleryPosition === 'number')
-      return a.galleryPosition - b.galleryPosition
     if (isAdmin) {
-      const aIsUnpublishedNoIntent =
-        !a.isPublished && (!a.intent || a.intent === 'undefined')
-      const bIsUnpublishedNoIntent =
-        !b.isPublished && (!b.intent || b.intent === 'undefined')
-
-      if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
-      if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
-
-      if (a.isPublished !== b.isPublished) {
-        return a.isPublished ? -1 : 1
-      }
+      const pendingA = !a.isPublished && (!a.intent || a.intent === 'undefined')
+      const pendingB = !b.isPublished && (!b.intent || b.intent === 'undefined')
+      if (pendingA !== pendingB) return pendingA ? -1 : 1
+      if (a.isPublished !== b.isPublished) return a.isPublished ? -1 : 1
     }
-
-    if (a.intent && b.intent) {
-      const intentCompare =
-        intentOrderToUse.indexOf(a.intent as Intent) -
-        intentOrderToUse.indexOf(b.intent as Intent)
-      if (intentCompare !== 0) {
-        return intentCompare
-      }
-    }
-
+    const rank =
+      a.intent && b.intent ? ranks.indexOf(a.intent) - ranks.indexOf(b.intent) : 0
     return (
+      rank ||
       new Date(b.createdAt as string).getTime() -
-      new Date(a.createdAt as string).getTime()
+        new Date(a.createdAt as string).getTime()
     )
   })
 }

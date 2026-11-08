@@ -578,6 +578,7 @@ export function useImageEditorGalleryModel(
             resolvedImage.intent ||
             m.admin__project_license_media_image(),
           galleryPosition: resolvedImage.image.galleryPosition,
+          gallerySortMode: resolvedImage.image.gallerySortMode,
           fallbackSeed: resolvedImage.image.publicId ?? resolvedImage.image.id,
           intent: resolvedImage.intent ?? 'undefined',
           isPublished: resolvedImage.isPublished ?? false,

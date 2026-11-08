@@ -93,10 +93,19 @@ export type ImageContextEnvelope<P extends ImageProfile = 'list'> = {
 export type ImageCtxEnvelope = Omit<ImageContextEnvelope<'detail'>, 'image'> & {
   intentLabel?: string
   revisionDraft?: { proposalId: string; candidateRevisionId: string }
-  image: Image & Pick<z.infer<typeof ImageListProfileAPI>, 'imageRevisionId' | 'galleryPosition' | 'galleryCaption' | 'galleryAlt'> & {
-    preview?: string
-    file?: File
-  }
+  image: Image &
+    Pick<
+      z.infer<typeof ImageListProfileAPI>,
+      | 'imageRevisionId'
+      | 'galleryPosition'
+      | 'gallerySortMode'
+      | 'galleryIntentOrder'
+      | 'galleryCaption'
+      | 'galleryAlt'
+    > & {
+      preview?: string
+      file?: File
+    }
 }
 
 export type FeatureImageDB = z.infer<typeof FeatureImageBase>

@@ -20,6 +20,8 @@ export const ImageListFields = createSelectSchema(image)
   .extend({
     imageRevisionId: z.string().optional(),
     galleryPosition: z.number().int().nonnegative().optional(),
+    gallerySortMode: z.enum(['automatic', 'manual']).optional(),
+    galleryIntentOrder: z.array(z.string()).optional(),
     galleryCaption: z.record(z.string(), z.string()).optional(),
     galleryAlt: z.record(z.string(), z.string()).optional(),
   })

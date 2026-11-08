@@ -4,6 +4,7 @@ import { PUBLIC_ASSET_BASE_URL, PUBLIC_PREVIEW_ASSET_BASE_URL } from '$app/env/p
 // I18N
 import { m } from '#lib/i18n.js'
 // IMAGE
+import { orderGallery, orderGalleryForReview } from '#lib/images/galleryOrder.js'
 import { toCloudflareImageWorkerPath, IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '#lib/images/delivery.js'
 import {
   extractImageUploadMetadata,
@@ -552,57 +553,15 @@ export async function waitForThumbnailReadyEvent(params: {
 }
 
 /**
- * Sorts gallery items so unpublished/no-intent uploads stay prominent while preserving
- * the existing editorial intent ordering for persisted images.
+ * Applies explicit manual positions or automatic intent/date ordering to the editor rail.
  *
  * @param itemsToSort Gallery items to sort for the editor rail.
  * @param configuredOrder Effective intent catalogue order.
- * @returns Sorted gallery items.
+ * @returns A sorted copy, with unpositioned uploads appended in manual mode.
  */
 export function sortGalleryItems(itemsToSort: ViewerRenderable[], configuredOrder?: readonly string[]): ViewerRenderable[] {
-  return [...itemsToSort].sort((a, b) => {
-    // Accepted gallery order is editorial content; intent sorting belongs only to legacy rows.
-    if (typeof a.galleryPosition === 'number' && typeof b.galleryPosition === 'number')
-      return a.galleryPosition - b.galleryPosition
-    if (typeof a.galleryPosition === 'number' !== (typeof b.galleryPosition === 'number'))
-      return typeof a.galleryPosition === 'number' ? 1 : -1
-    const aIsUnpublishedNoIntent =
-      !a.isPublished && (!a.intent || a.intent === 'undefined')
-    const bIsUnpublishedNoIntent =
-      !b.isPublished && (!b.intent || b.intent === 'undefined')
-
-    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
-    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
-
-    if (a.isPublished !== b.isPublished) {
-      return a.isPublished ? -1 : 1
-    }
-
-    const intentOrder: readonly string[] = configuredOrder ?? [
-      'undefined',
-      'canonical',
-      'general',
-      'context',
-      'research',
-      'closeUp',
-    ] as const
-
-    const aIntent = intentOrder.indexOf(
-      (a.intent ?? 'undefined') as (typeof intentOrder)[number],
-    )
-    const bIntent = intentOrder.indexOf(
-      (b.intent ?? 'undefined') as (typeof intentOrder)[number],
-    )
-
-    if (aIntent !== bIntent) {
-      return aIntent - bIntent
-    }
-
-    return (
-      new Date(String(b.status?.sortCreatedAt ?? '')).getTime() -
-      new Date(String(a.status?.sortCreatedAt ?? '')).getTime()
-    )
-  })
+  const mode = itemsToSort.find(item => item.gallerySortMode)?.gallerySortMode ?? 'automatic'
+  return orderGalleryForReview(itemsToSort.map(item => ({ ...item, createdAt: item.status?.sortCreatedAt })), mode, configuredOrder)
 }
 
 function getViewerRenderableStatus(
@@ -1055,43 +1014,28 @@ export function extendImageWithResource(image: Partial<ImageNew>, ctx: ImageUplo
 // 7. UTILS
 // ═══════════════════════
 
+/** Orders image responses while retaining legacy admin prioritization outside explicit galleries.
+ * @param images Visible image response rows. @param isAdmin Whether legacy upload priority applies.
+ * @param configuredOrder Effective intent identities, when resolved by the owning context.
+ * @returns Sorted image rows.
+ */
 export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false, configuredOrder?: readonly string[]) {
-  const intentOrderToUse: readonly string[] = configuredOrder ?? (isAdmin ? adminIntentOrder : intentOrder)
-  const sortedImages = images.sort((a, b) => {
+  const sortable = images as (typeof images[number] & { gallerySortMode?: 'automatic' | 'manual'; galleryIntentOrder?: string[] })[]
+  const mode = sortable.find(item => item.gallerySortMode)?.gallerySortMode
+  const policy = configuredOrder ?? sortable.find(item => item.galleryIntentOrder)?.galleryIntentOrder
+  if (mode || policy) return orderGallery(sortable, mode, policy)
+  // Preserve non-Feature and legacy admin upload prioritization outside explicit gallery sorting.
+  const ranks: readonly string[] = isAdmin ? adminIntentOrder : intentOrder
+  return images.sort((a, b) => {
     if (isAdmin) {
-      // Priority 1: Unpublished with no intent (undefined) come first
-      const aIsUnpublishedNoIntent =
-        !a.isPublished && (!a.intent || a.intent === 'undefined')
-
-      const bIsUnpublishedNoIntent =
-        !b.isPublished && (!b.intent || b.intent === 'undefined')
-
-      if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
-      if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
-
-      // Priority 2: Published vs unpublished (published first among remaining)
-      if (a.isPublished !== b.isPublished) {
-        return a.isPublished ? -1 : 1
-      }
+      const pendingA = !a.isPublished && (!a.intent || a.intent === 'undefined')
+      const pendingB = !b.isPublished && (!b.intent || b.intent === 'undefined')
+      if (pendingA !== pendingB) return pendingA ? -1 : 1
+      if (a.isPublished !== b.isPublished) return a.isPublished ? -1 : 1
     }
-    // Priority 3: Intent order within same publish status
-    if (a.intent && b.intent) {
-      const intentCompare =
-        intentOrderToUse.indexOf(a.intent as Intent) -
-        intentOrderToUse.indexOf(b.intent as Intent)
-      if (intentCompare !== 0) {
-        return intentCompare
-      }
-    }
-
-    // Priority 4: Creation date (newest first)
-    return (
-      new Date(b.createdAt as string).getTime() -
-      new Date(a.createdAt as string).getTime()
-    )
+    const rank = a.intent && b.intent ? ranks.indexOf(a.intent) - ranks.indexOf(b.intent) : 0
+    return rank || new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
   })
-
-  return sortedImages
 }
 
 /**

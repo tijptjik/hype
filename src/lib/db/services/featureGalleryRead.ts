@@ -5,6 +5,8 @@ import { z } from 'zod'
 // DOMAIN
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 // SERVICES
+import { orderGallery } from '#lib/images/galleryOrder.js'
+import { readImageIntentPolicy, readFeatureImageIntentPolicy } from './imageIntentPolicy'
 import { hasFeatureLifecycleStorage } from './featureLifecycle'
 import { privateFeatureComparison } from './featurePrivateCapture'
 // IMAGE PRESENTATION
@@ -72,7 +74,9 @@ export async function applyFeatureGalleryPins<T extends Record<string, unknown>>
     FROM ${source}
     WHERE ${identity} IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`)
   const byFeature = new Map(accepted.map(row => [row.featureId, row]))
-  return rows.map(row => {
+  // Share policy reads across Features belonging to the same Project.
+  const policies = new Map<string, ReturnType<typeof readImageIntentPolicy>>()
+  return Promise.all(rows.map(async row => {
     const accepted = byFeature.get(String(row.id))
     if (!accepted) return row
     const content = FeatureRevisionContentSchema.safeParse(
@@ -90,6 +94,11 @@ export async function applyFeatureGalleryPins<T extends Record<string, unknown>>
         link,
       ]),
     )
+    const key = typeof row.projectId === 'string' ? `project:${row.projectId}` : `feature:${row.id}`
+    if (!policies.has(key)) policies.set(key, typeof row.projectId === 'string'
+      ? readImageIntentPolicy(db, { type: 'project', id: row.projectId })
+      : readFeatureImageIntentPolicy(db, String(row.id)))
+    const intentOrder = (await policies.get(key)!).intents.map(intent => intent.id)
     const ordered: Record<string, unknown>[] = []
     // Preserve caller filtering: a historical pin cannot restore a removed live assignment.
     for (const [position, imageId] of content.data.gallery.order.entries()) {
@@ -113,11 +122,16 @@ export async function applyFeatureGalleryPins<T extends Record<string, unknown>>
           presentationMode: pin.metadata.presentationMode ?? 'contain',
           imageRevisionId: pin.imageRevisionId,
           galleryPosition: position,
+          gallerySortMode: content.data.gallery.sortMode ?? 'automatic',
+          galleryIntentOrder: intentOrder,
           galleryCaption: entry.caption,
           galleryAlt: entry.alt,
         },
       })
     }
-    return { ...row, images: ordered }
-  })
+    const positions = orderGallery(ordered.map(link => ({ id: String(link.imageId), intent: String(link.intent),
+      createdAt: (link.image as { createdAt?: string }).createdAt,
+      galleryPosition: (link.image as { galleryPosition: number }).galleryPosition, link })), content.data.gallery.sortMode, intentOrder)
+    return { ...row, images: positions.map(item => item.link) }
+  }))
 }
