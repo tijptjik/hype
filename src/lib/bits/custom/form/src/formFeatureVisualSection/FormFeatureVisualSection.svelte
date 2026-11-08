@@ -54,6 +54,8 @@ let {
 const rootClass = $derived(
   cx(
     'bits-feature-editor__visual',
+    // Map-only sections keep the full requested map height without horizontal border insets.
+    !showImage && 'border-y-0!',
     hasPresentedCanonicalImageSizing && 'bits-feature-editor__visual--image-loaded',
     isCanonicalImagePending && 'bits-feature-editor__visual--image-pending',
     className,
@@ -231,36 +233,38 @@ export function rememberHeight(): void {
 
   {#snippet rightControls()}
     {#if showNavigationControls}
-      <div
-        class="bg-panel text-foreground inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] px-2.5 py-1 backdrop-blur-[14px]"
-      >
-        <Button
-          text={m.slimy_helpful_shad_vent()}
-          iconComponent={ChevronLeftIcon}
-          color="dark"
-          style="transparent"
-          size="sm"
-          hideLabel={true}
-          hideLabelInstantly={true}
-          disabled={!hasPrevious}
-          iconClasses="h-5.5 w-5.5"
-          class="h-10 w-6 !border-0 !bg-transparent p-0 text-[var(--color-foreground)] shadow-none transition-[background-color,opacity] duration-180 ease-out disabled:opacity-35"
-          onClick={() => onNavigatePrevious?.()}
-        />
-        <Button
-          text={m.curly_flaky_panther_mop()}
-          iconComponent={ChevronRightIcon}
-          color="dark"
-          style="transparent"
-          size="sm"
-          hideLabel={true}
-          hideLabelInstantly={true}
-          disabled={!hasNext}
-          iconClasses="h-5.5 w-5.5"
-          class="h-10 w-6 hover:text-white disabled:opacity-35"
-          onClick={() => onNavigateNext?.()}
-        />
-      </div>
+      {#if !isNewFeature}
+        <div
+          class="bg-panel text-foreground inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] px-2.5 py-1 backdrop-blur-[14px]"
+        >
+          <Button
+            text={m.slimy_helpful_shad_vent()}
+            iconComponent={ChevronLeftIcon}
+            color="dark"
+            style="transparent"
+            size="sm"
+            hideLabel={true}
+            hideLabelInstantly={true}
+            disabled={!hasPrevious}
+            iconClasses="h-5.5 w-5.5"
+            class="h-10 w-6 !border-0 !bg-transparent p-0 text-[var(--color-foreground)] shadow-none transition-[background-color,opacity] duration-180 ease-out disabled:opacity-35"
+            onClick={() => onNavigatePrevious?.()}
+          />
+          <Button
+            text={m.curly_flaky_panther_mop()}
+            iconComponent={ChevronRightIcon}
+            color="dark"
+            style="transparent"
+            size="sm"
+            hideLabel={true}
+            hideLabelInstantly={true}
+            disabled={!hasNext}
+            iconClasses="h-5.5 w-5.5"
+            class="h-10 w-6 hover:text-white disabled:opacity-35"
+            onClick={() => onNavigateNext?.()}
+          />
+        </div>
+      {/if}
     {/if}
   {/snippet}
 
