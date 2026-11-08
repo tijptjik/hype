@@ -295,7 +295,13 @@ async function readFeatureList(
     },
     params.pagination,
     params.sorting,
-    { q: params.q, filtersToApply, locale: getLocale(), idsOnly },
+    {
+      q: params.q,
+      filtersToApply,
+      locale: getLocale(),
+      idsOnly,
+      publicationPreview: Boolean(params.meta?.publicationPreview),
+    },
   )
 
   if (idsOnly) return result as ListResponse<{ id: string }>
@@ -412,6 +418,7 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
       ...event.locals.hub,
       isAdminRequest: isAdminRequest && !params.meta?.publicationPreview,
     },
+    { publicationPreview: Boolean(params.meta?.publicationPreview) },
   )
 
   return toEntityResponseShape(result as never, profile)

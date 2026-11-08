@@ -24,6 +24,13 @@ vi.mock('#lib/db/services/featurePresentationPolicy.js', () => ({
   })),
 }))
 
+const { previewConditions } = vi.hoisted(() => ({
+  previewConditions: vi.fn(async () => ({ conditions: [], filtersToApply: {} })),
+}))
+vi.mock('#lib/api/services/publicationPreview.js', () => ({
+  publicationPreviewConditions: previewConditions,
+}))
+
 // Panel query registration is isolated from this resource's authorization fixtures.
 vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { z } from 'zod'
@@ -532,6 +539,18 @@ describe('feature.remote authz matrix', () => {
     )
     expect(mockGetFeatureWithRelations).not.toHaveBeenCalled()
     expect(mockToListResponseShape).not.toHaveBeenCalled()
+  })
+
+  it('forwards authorized preview intent to list galleries and rejects denied previews before reading', async () => {
+    const publicationPreview = { type: 'feature', id: 'feature-1', publishChildren: false }
+    await remote.getFeatures({ meta: { publicationPreview } })
+    expect(previewConditions).toHaveBeenCalled()
+    expect(mockListFeatures.mock.calls.at(-1)?.[3]).toMatchObject({ isAdminRequest: false })
+    expect(mockListFeatures.mock.calls.at(-1)?.[6]).toMatchObject({ publicationPreview: true })
+    mockListFeatures.mockClear()
+    previewConditions.mockRejectedValueOnce(Object.assign(new Error('INSUFFICIENT_ROLE'), { status: 403 }))
+    await expect(remote.getFeatures({ meta: { publicationPreview } })).rejects.toMatchObject({ status: 403 })
+    expect(mockListFeatures).not.toHaveBeenCalled()
   })
 
   it('getFeatures allows admin-scoped unpublished list requests', async () => {

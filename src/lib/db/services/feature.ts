@@ -365,7 +365,7 @@ export const createProperties = async (
  * @param opts - Hub request scope used to apply hub-level filtering.
  * @param pagination - Optional bounded page or cursor.
  * @param sorting - Stable field and direction for ordering.
- * @param query - Text filters, locale and optional ID-only projection.
+ * @param query - Text filters, locale, ID-only projection and already-authorized saved preview intent.
  * @returns A paginated feature row result.
  */
 export const listFeatures = async <TRow extends Record<string, unknown> = FeatureDB>(
@@ -386,6 +386,8 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
     locale?: Locale
     /** Return only traversal identities; never hydrate relation graphs or projections. */
     idsOnly?: boolean
+    /** Saved preview intent authorized by the API before this read. */
+    publicationPreview?: boolean
   },
 ): Promise<ListResponse<TRow>> => {
   const startedAt = Date.now()
@@ -469,7 +471,10 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   const data = await applyFeatureGalleryPins(
     db,
     pageLimit === undefined ? pageRows : pageRows.slice(0, pageLimit),
-    { publishedOnly: !opts.isAdminRequest },
+    {
+      publishedOnly: !opts.isAdminRequest,
+      publicationPreview: query?.publicationPreview,
+    },
   )
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(feature)
   const totalRows = await retryBusyRead(() =>
@@ -500,6 +505,7 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
  * @param withRelations - Optional Drizzle relation graph to hydrate.
  * @param conditions - SQL conditions already normalized by API services.
  * @param opts - Hub request scope used to apply hub-level filtering.
+ * @param galleryOptions - Saved preview intent, authorized by the API before this read.
  * @returns The matching feature row or `undefined`.
  * @remarks
  * The loaded row intentionally keeps raw relation arrays. Response/profile shaping
@@ -510,6 +516,7 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
+  galleryOptions: { publicationPreview?: boolean } = {},
 ): Promise<TRow | undefined> => {
   const allConditions = [...conditions]
   const hubFilter = getFeatureHubFilter(db, opts)
@@ -535,6 +542,7 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
     ? (
         await applyFeatureGalleryPins(db, [row], {
           publishedOnly: !opts.isAdminRequest,
+          publicationPreview: galleryOptions.publicationPreview,
         })
       )[0]
     : undefined
