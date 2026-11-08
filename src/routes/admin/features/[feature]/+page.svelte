@@ -137,6 +137,7 @@ import {
 import {
   createFeatureParentSearchPrisms,
   createFeatureParentSectionController,
+  filterCreatableParentProjects,
   toParentLayerItem,
   toParentOrganisationItem,
   toParentProjectItem,
@@ -180,7 +181,6 @@ import {
 } from '#lib/addresses/featureAddress.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ImageProvider from '#lib/providers/ImageProvider.svelte'
-import { canCreateFeatureForProject } from '#lib/api/services/authz/feature.js'
 // NAVIGATION
 import {
   getAdjacentResourceRefs,
@@ -2992,30 +2992,17 @@ async function getCreatableProjectRecords(
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
   })
 
-  // Projects carry their organisation ID; resolve the owning hub from that resource.
-  const ancestors = await Promise.all(
-    [...new Set(result.data.map(project => project.organisationId))].map(
-      async id => [id, await adminCtx.view.getOrganisationById(id)] as const,
-    ),
-  )
-
-  const organisations = new Map(ancestors)
-  return (result.data ?? []).filter(project =>
-    canCreateFeatureForProject({
-      user: {
-        id: currentAuthorizationUser?.id,
-        isAnonymous: currentAuthorizationUser?.isAnonymous,
-        superAdmin: currentAuthorizationUser?.superAdmin,
-      },
-      userRoles: currentAuthorizationUser?.roles ?? [],
-      resource: {
-        organisationId: project.organisationId,
-        projectId: project.id,
-        layerId: '',
-        resourceHubId: organisations.get(project.organisationId)?.hubId ?? null,
-      },
-    }),
-  ) as ParentProjectRecord[]
+  // Project staff need no organisation read grant to choose layers in their project.
+  return filterCreatableParentProjects({
+    projects: result.data ?? [],
+    user: {
+      id: currentAuthorizationUser?.id,
+      isAnonymous: currentAuthorizationUser?.isAnonymous,
+      superAdmin: currentAuthorizationUser?.superAdmin,
+    },
+    userRoles: currentAuthorizationUser?.roles ?? [],
+    getOrganisationHubId: async id => (await adminCtx.view.getOrganisationById(id))?.hubId ?? null,
+  })
 }
 
 /********************
@@ -3168,8 +3155,8 @@ $effect(() => () => clearVisualSectionReopenState())
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-7! pb-12`}>
-        <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {#if !showNameFields}
+          <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           <div
             class="flex min-h-44 flex-col items-center justify-center gap-4 py-8"
             out:slide={{ duration: prefersReducedMotion.current ? 0 : 180 }}
@@ -3221,6 +3208,9 @@ $effect(() => () => clearVisualSectionReopenState())
                 translateContentField({ source, target, text })}
               onTranslated={applyProfileTranslation}
             >
+              {#snippet toolbarMessage()}
+                <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+              {/snippet}
               {#snippet children(field, locale, onEditStart, prefix)}
                 {@const key = contentFormKey(locale)}
                 {@const language = getContentLocaleRecord(locale, getLocaleKey())}

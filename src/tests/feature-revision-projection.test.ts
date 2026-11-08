@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs'
 // TESTS
 import { afterEach, describe, expect, it } from 'vitest'
+import { featureDestinationGuard } from '#lib/db/services/featureParentTransfer.js'
 // DRIZZLE
 import { getTableColumns, getTableName, sql } from 'drizzle-orm'
 // SCHEMA
@@ -150,7 +151,8 @@ function fixture(linked = false, catalogueCascades = false) {
     'CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,username TEXT,displayUsername TEXT,attribution TEXT)',
   )
   sqlite.exec('PRAGMA foreign_keys=ON')
-  sqlite.exec(`CREATE TABLE organisation(id TEXT PRIMARY KEY,hubId TEXT,isPublished INTEGER,isArchived INTEGER);
+  sqlite.exec(`CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
+    CREATE TABLE organisation(id TEXT PRIMARY KEY,hubId TEXT,isPublished INTEGER,isArchived INTEGER);
     CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT,isPublished INTEGER,isArchived INTEGER);
     CREATE TABLE layer(id TEXT PRIMARY KEY,organisationId TEXT,projectId TEXT,isPublished INTEGER,isArchived INTEGER);
     INSERT INTO organisation VALUES ('org',NULL,1,0);
@@ -1105,6 +1107,31 @@ describe('existing form revision routing', () => {
         })),
     } as unknown as Parameters<typeof buildFeatureFormCandidate>[2]
   }
+  it('rolls back the form when the destination layer has left the authorized project', async () => {
+    const f = fixture(), initial = await f.initialize()
+    f.sqlite.exec("INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES ('destination','org','other-project',1,0)")
+    await expect(saveFeatureFormRevision(f.db, {
+      ...common,
+      guard: buildFeatureCommandScopeGuard(f.db, common.featureId, expectedScope),
+      expectedScope, updatedAt: 'token',
+      data: { ...form(initial.content), layerId: 'destination' },
+      canPublish: true, allowDescriptions: true, allowedInternalIds: new Set(),
+    })).rejects.toThrow('changed')
+    expect(f.sqlite.prepare('SELECT layerId, modifiedAt FROM feature WHERE id=?').get(common.featureId)).toMatchObject({ layerId: 'layer', modifiedAt: 'token' })
+  })
+  it('saves same-project layer reassignment with the staff revision', async () => {
+    const f = fixture(), initial = await f.initialize()
+    f.sqlite.exec("INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES ('destination','org','project',1,0)")
+    const saved = await saveFeatureFormRevision(f.db, {
+      ...common,
+      guard: buildFeatureCommandScopeGuard(f.db, common.featureId, expectedScope),
+      expectedScope, updatedAt: 'token',
+      data: { ...form(initial.content), layerId: 'destination' },
+      canPublish: true, allowDescriptions: true, allowedInternalIds: new Set(),
+    })
+    expect(saved.status).toBe('applied')
+    expect(f.sqlite.prepare('SELECT layerId FROM feature WHERE id=?').get(common.featureId)).toMatchObject({ layerId: 'destination' })
+  })
   it('applies staff form changes directly while preserving hidden content and visibility', async () => {
     const f = fixture(),
       initial = await f.initialize()
@@ -2495,7 +2522,7 @@ describe('enrolled Feature projection guards', () => {
     async action => {
       const f = fixture()
       f.sqlite.exec(
-        "ALTER TABLE project ADD COLUMN imageId TEXT; ALTER TABLE organisation ADD COLUMN imageId TEXT; CREATE TABLE hub(id TEXT,imageId TEXT); UPDATE featureImage SET isPublished=0,localIsPublished=0 WHERE imageId='photo'; INSERT INTO task(id,featureId,projectId,organisationId,contributorId,isDraft,isReviewed,modifiedAt,type) VALUES ('photos','f','project','org','author',0,0,'task-token','newPhoto'); INSERT INTO taskImage VALUES ('photos','photo'),('photos','research')",
+        "ALTER TABLE project ADD COLUMN imageId TEXT; ALTER TABLE organisation ADD COLUMN imageId TEXT; ALTER TABLE hub ADD COLUMN imageId TEXT; UPDATE featureImage SET isPublished=0,localIsPublished=0 WHERE imageId='photo'; INSERT INTO task(id,featureId,projectId,organisationId,contributorId,isDraft,isReviewed,modifiedAt,type) VALUES ('photos','f','project','org','author',0,0,'task-token','newPhoto'); INSERT INTO taskImage VALUES ('photos','photo'),('photos','research')",
       )
       const baseline = await f.initialize()
       f.sqlite.exec(
@@ -4415,4 +4442,22 @@ it('records authored status changes while real historical routing moves only the
     .prepare('SELECT content FROM featureRevision WHERE id=?')
     .get(workspace.publishedRevisionId!)!
   expect(JSON.parse(String(revision.content)).profile.isIntangible).toBe(true)
+})
+
+it('keeps the legacy unlinked transfer and destination guard in one transaction', async () => {
+  const f = fixture()
+  f.sqlite.exec("CREATE TABLE IF NOT EXISTS layerProperty(layerId TEXT,propertyId TEXT,isVisible INTEGER); INSERT INTO layerProperty SELECT 'destination-layer',id,1 FROM property WHERE id <> 'private'")
+  const destinationScope = { organisationId: 'org', projectId: 'destination-project', layerId: 'destination-layer', resourceHubId: null }
+  f.sqlite.exec("INSERT INTO project(id,organisationId,isPublished,isArchived) VALUES('destination-project','org',1,0); INSERT INTO layer(id,organisationId,projectId,isPublished,isArchived) VALUES('destination-layer','org','destination-project',1,0)")
+  const guard = sql`(${buildFeatureCommandScopeGuard(f.db, 'f', expectedScope)}) AND (${featureDestinationGuard(destinationScope)})`
+  const saved = await saveUnlinkedFeatureForm(f.db, {
+    featureId: 'f', projectId: 'project', actorId: 'owner', updatedAt: 'token',
+    scopeGuard: guard, destinationScope,
+    data: { projectId: 'destination-project', layerId: 'destination-layer', organisationId: 'org' },
+    i18n: {},
+  })
+  expect(saved?.projectId).toBe('destination-project')
+  expect(saved?.id).toBe('f')
+  expect(f.sqlite.prepare("SELECT propertyId FROM featureProperty WHERE featureId='f' AND propertyId='private'").get()).toBeUndefined()
+  expect(f.sqlite.prepare("SELECT propertyId FROM featurePropertyI18n WHERE featureId='f' AND propertyId='private'").get()).toBeUndefined()
 })

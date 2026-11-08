@@ -58,6 +58,7 @@ let {
   onTranslated,
   children,
   afterField,
+  toolbarMessage,
 }: {
   localeState: ProfileLocaleState
   onLocaleStateChange: (state: ProfileLocaleState) => void
@@ -68,6 +69,7 @@ let {
   recordKey?: string
   fieldConfigs?: ReadonlyArray<{ key: Field; label: string }>
   stackNames?: boolean
+  toolbarMessage?: Snippet
   showToolbar?: boolean
   stickyFieldHeaders?: boolean | ReadonlyArray<Field>
   showPrimaryLocaleHeader?: boolean
@@ -267,19 +269,24 @@ function autonym(locale: string): string {
   inert={loading}
 >
   {#if showToolbar}
-    <div class="border-border/50 mb-6 border-b pb-3" inert={loading}>
-      <LocaleToolbar
-        {...localeState}
-        {options}
-        allowAdd={isEditing}
-        onExpandedChange={expanded => onLocaleStateChange({ ...localeState, expanded })}
-        onChange={change =>
-          onLocaleStateChange({
-            ...localeState,
-            selectedLocales: change.selectedLocales,
-            visibleLocales: change.visibleLocales,
-          })}
-      />
+    <div class="border-border/50 mb-6 flex flex-wrap items-center gap-2 border-b pb-3" inert={loading}>
+      {#if toolbarMessage}
+        <div class="min-w-0 flex-1">{@render toolbarMessage()}</div>
+      {/if}
+      <div class="ml-auto min-w-0">
+        <LocaleToolbar
+          {...localeState}
+          {options}
+          allowAdd={isEditing}
+          onExpandedChange={expanded => onLocaleStateChange({ ...localeState, expanded })}
+          onChange={change =>
+            onLocaleStateChange({
+              ...localeState,
+              selectedLocales: change.selectedLocales,
+              visibleLocales: change.visibleLocales,
+            })}
+        />
+      </div>
     </div>
   {/if}
   <div

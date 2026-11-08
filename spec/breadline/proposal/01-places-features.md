@@ -1,5 +1,13 @@
 # Locations, Feature inheritance and SaanSeoi Addresses
 
+Feature transfers (Refs #194, parent #180) preserve accepted Location customisations.
+Cross-organisation moves copy accepted organisation corrections and scoped placement
+evidence with provenance; source-owned local Locations receive independent destination
+copies. Destination organisation management is required for these definitions. Conflicts
+reject without overwrite; the copies, Feature move and revision commit atomically.
+See [authorization roles](../../../docs/auth/Roles.md) and
+[transfer authorization](../../../docs/specs/Design-Spec-Authorization.md#feature-transfers-and-organisation-location-definitions).
+
 Visibility selector presentation (Refs #194, parent #180): use the shared Bits Select
 menu with **Shared** / **Organisation-only** labels and bold labels in its help tooltip.
 The stored values remain `shared` / `exclusive`; this presentation change does not

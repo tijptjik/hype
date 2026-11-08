@@ -42,6 +42,8 @@ export async function prepareFeatureAcceptedCapture(
   db: Database,
   input: RevisionCommand & {
     featureId: string
+    /** Server-authorized destination for an atomic parent transfer. */
+    resultingScope?: { organisationId: string; projectId: string; layerId: string }
     unpublish?: boolean
     derive: (
       previous: FeatureRevisionContent,
@@ -146,12 +148,13 @@ export async function prepareFeatureAcceptedCapture(
     await input.derive(structuredClone(previous), source),
   )
   const record = parseFeatureRevisionSource(source.snapshot).record
-  const resultingLayer =
-    previous.profile.isIntangible === content.profile.isIntangible
+  const resultingLayer = input.resultingScope
+    ? featureLayerAfterStatus(input.resultingScope.layerId, content.profile.isIntangible)
+    : previous.profile.isIntangible === content.profile.isIntangible
       ? sql`${record.layerId}`
       : featureLayerAfterStatus(String(record.layerId), content.profile.isIntangible)
   const retainedScope = sql`EXISTS (SELECT 1 FROM feature WHERE id=${input.featureId}
-    AND organisationId IS ${record.organisationId} AND projectId IS ${record.projectId} AND layerId IS ${resultingLayer})`
+    AND organisationId IS ${input.resultingScope?.organisationId ?? record.organisationId} AND projectId IS ${input.resultingScope?.projectId ?? record.projectId} AND layerId IS ${resultingLayer})`
   const idle = await prepareFeatureIdleRevision(db, {
     ...input,
     previousRevisionId: comparisonId,

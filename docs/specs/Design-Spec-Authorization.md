@@ -702,3 +702,16 @@ proposal, historical and archived image addresses. Successful delivery is public
 cacheable; hiding or archiving a record removes discovery, not access to an
 already-known image URL. Image edits, review decisions and full metadata APIs retain
 their authorization.
+
+## Feature transfers and organisation Location definitions
+
+A Feature transfer requires source Feature-update and destination Feature-create
+permission. Copying or reusing organisation-specific Location definitions additionally
+requires destination organisation management permission; project grants do not confer
+that authority. The server copies only accepted correction pins and placement evidence,
+retains shared identities and address revisions, and clones source-owned local Locations
+with provenance. Existing conflicting destination definitions reject the transfer.
+Evidence copies, association replacement, parent changes and the accepted Feature
+revision commit in one guarded batch. Source definitions and historical pins remain
+unchanged. Destination ancestry and definition heads are checked inside that batch;
+role authorization follows the request-time checks used by other commands.

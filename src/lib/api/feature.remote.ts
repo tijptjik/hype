@@ -1,3 +1,4 @@
+import { historicalSourceLayerId } from '#lib/db/services/historicalLayers.js'
 import type { RemoteQuery } from '$app/server'
 import { error } from '@sveltejs/kit'
 
@@ -11,7 +12,7 @@ import {
   guardedQuery,
 } from '#lib/api/server/guarded.js'
 
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 // ANALYTICS
@@ -65,6 +66,7 @@ import {
 } from '#lib/db/services/featureFormSave.js'
 import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/locationEdit.js'
+import { featureDestinationGuard, reconcileFeatureTransferProperties, type FeatureDestinationScope } from '#lib/db/services/featureParentTransfer.js'
 import { saveFeatureFormRevision } from '#lib/db/services/featureFormRevision.js'
 import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
 import { getInternalPropertyAccess } from '#lib/properties/audience.server.js'
@@ -615,21 +617,16 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     await probeFeatureForUpdate(db, targetFeatureId as Id),
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
-  // Feature updates do not support reparenting; reject caller-controlled scope changes.
-  if (
-    data.layerId !== current.layerId ||
-    data.projectId !== current.projectId ||
-    data.organisationId !== current.organisationId
-  ) {
-    invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
-  }
-
-  const resolvedOrganisationId = current.organisationId
-  const resolvedProjectId = current.projectId
+  let destinationScope: FeatureDestinationScope | undefined
+  const parentsChanged = data.layerId !== current.layerId ||
+    data.projectId !== current.projectId || data.organisationId !== current.organisationId
 
   // Authorize scalar changes before loading the relation-heavy admin shape.
   const submittedDataBeforeHydration: Record<string, unknown> = {
     i18n: data.i18n,
+  }
+  if (parentsChanged) {
+    submittedDataBeforeHydration.layerId = data.layerId
   }
   // Property snapshots need persisted relations for comparison; the final gate below
   // checks their actual changes so unchanged values do not block translators.
@@ -682,6 +679,29 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     )
   }
 
+  // Authorize the source first, then resolve and independently authorize the destination.
+  if (parentsChanged) {
+    const destination = requireValue(
+      await probeLayerForUpdate(db, data.layerId as Id),
+      () => invalid(issue('LAYER_NOT_FOUND')),
+    )
+    if (destination.organisationId !== data.organisationId || destination.projectId !== data.projectId)
+      invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
+    destinationScope = {
+      organisationId: destination.organisationId,
+      projectId: destination.projectId,
+      layerId: data.layerId,
+      resourceHubId: destination.hubId,
+    }
+    const destinationDecision = authorizeFeatureCreateForSubmission({
+      user, userRoles, resource: destinationScope, submittedData: { layerId: data.layerId },
+    })
+    if (!destinationDecision.allowed)
+      invalid(issue(toIssueDetailMessage(destinationDecision.code ?? 'INSUFFICIENT_ROLE')))
+  }
+  const resolvedOrganisationId = destinationScope?.organisationId ?? current.organisationId
+  const resolvedProjectId = destinationScope?.projectId ?? current.projectId
+
   const currentWithRelations = requireValue(
     await loadFeature<FeatureQueryRowByProfile<'admin'>>(
       db,
@@ -701,7 +721,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
   // Disabled description authoring retains existing content instead of erasing it.
-  const presentationPolicy = await readFeaturePresentationPolicy(db, current.layerId)
+  const presentationPolicy = await readFeaturePresentationPolicy(db, data.layerId)
   if (!presentationPolicy.allowDescriptions) {
     for (const [locale, row] of Object.entries(data.i18n)) {
       const previous = currentEntity.i18n?.[locale as keyof typeof currentEntity.i18n]
@@ -726,6 +746,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const pendingReviewChanged =
     Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)
   const submittedDataForUpdate: Record<string, unknown> = {}
+
+  if (parentsChanged) submittedDataForUpdate.layerId = data.layerId
 
   if (i18nChanged || data.locationReset?.names.length || data.locationNameMode)
     submittedDataForUpdate.i18n = data.i18n
@@ -766,13 +788,22 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('STALE_WRITE')))
   }
 
-  if (propertiesChanged) {
+  if (destinationScope) {
+    submittedProperties = (await reconcileFeatureTransferProperties(
+      db, current.id, destinationScope, submittedProperties,
+      (await getInternalPropertyAccess(ctx)).allowed,
+    )).properties
+  }
+
+  if (propertiesChanged || data.layerId !== current.layerId) {
     try {
       submittedProperties = await validateFeaturePhoneProperties(
         db,
         submittedProperties,
-        (await getInternalPropertyAccess(ctx)).allowed,
-        current.layerId,
+        destinationScope
+          ? new Set(submittedProperties.map(row => row.propertyId))
+          : (await getInternalPropertyAccess(ctx)).allowed,
+        data.layerId,
       )
     } catch (error) {
       invalid(
@@ -781,12 +812,19 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     }
   }
 
+  if (data.layerId !== current.layerId && await historicalSourceLayerId(db, data.layerId))
+    invalid(issue('HISTORICAL_LAYER_MEMBERSHIP_AUTOMATIC'))
 
   const saveInput = {
     featureId: current.id,
     projectId: current.projectId,
     actorId: user.id,
     updatedAt,
+    destinationScope,
+    allowedInternalIds: (await getInternalPropertyAccess(ctx)).allowed,
+    scopeGuard: destinationScope
+      ? sql`(${buildFeatureCommandScopeGuard(db, current.id, current)}) AND (${featureDestinationGuard(destinationScope)})`
+      : undefined,
     data: {
       organisationId: resolvedOrganisationId,
       projectId: resolvedProjectId,
@@ -799,12 +837,14 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       isPendingReview: data.isPendingReview,
     },
     i18n: data.i18n,
-    properties: propertiesChanged ? submittedProperties : undefined,
+    properties: propertiesChanged || destinationScope ? submittedProperties : undefined,
     locationBrandEdit: data.locationBrandEdit,
     locationReset: data.locationReset,
     locationNameMode: presentationPolicy.locationBasedNames
       ? ('inherit' as const)
       : data.locationNameMode,
+    authorizeDestinationLocation: () =>
+      requireLocationOrganisationManager(ctx, resolvedOrganisationId),
     authorizeLocationCorrection: () =>
       requireLocationOrganisationManager(ctx, current.organisationId),
   }
@@ -815,6 +855,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       data: { ...data, properties: submittedProperties },
       expectedScope: current,
       guard: buildFeatureCommandScopeGuard(db, current.id, current),
+      destinationScope,
+      revisionBoundary: Boolean(destinationScope),
+      reason: destinationScope ? `Feature transferred from ${current.organisationId}/${current.projectId}/${current.layerId} to ${resolvedOrganisationId}/${resolvedProjectId}/${data.layerId}` : undefined,
       canPublish: authorizeFeaturePublishForSubmission({ user, userRoles, resource: current }).allowed,
       allowDescriptions: presentationPolicy.allowDescriptions,
       allowedInternalIds: (await getInternalPropertyAccess(ctx)).allowed,

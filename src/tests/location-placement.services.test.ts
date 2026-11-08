@@ -680,3 +680,28 @@ it('rejects a relocation after its Feature is reparented without rewriting accep
       .get()?.n,
   ).toBe(0)
 })
+
+it('transfers a legacy Feature with accepted occupancy and addressing into destination-owned copies', async () => {
+  const s = await setup('follow')
+  await reconcileLocationPlacements(s.db, { locationId: 'shop', actorId: 'worker' })
+  s.sqlite.exec(`ALTER TABLE property ADD COLUMN projectId TEXT;
+    ALTER TABLE property ADD COLUMN organisationId TEXT;
+    ALTER TABLE property ADD COLUMN type TEXT;
+    CREATE TABLE layerProperty(layerId TEXT,propertyId TEXT);
+    CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
+    INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'new-baseline','new',1,'local','container-hash','{}',json_remove(json_set(facts,'$.kind','building'),'$.details.brands') FROM locationRevision WHERE id='r';
+    INSERT INTO layer(id,projectId,organisationId) VALUES('destination','other','other');`)
+  const current = s.sqlite.prepare("SELECT modifiedAt,addressMeta FROM feature WHERE id='f'").get()!
+  const result = await saveLinkedFeatureForm(s.db, {
+    featureId: 'f', projectId: 'p', actorId: 'manager', updatedAt: String(current.modifiedAt),
+    destinationScope: { organisationId: 'other', projectId: 'other', layerId: 'destination', resourceHubId: null },
+    authorizeDestinationLocation: async () => {},
+    data: { organisationId: 'other', projectId: 'other', layerId: 'destination' }, i18n: {},
+  })
+  expect(result.status).toBe('saved')
+  const accepted = s.sqlite.prepare("SELECT * FROM featureLocation WHERE featureId='f'").get()!
+  expect(accepted.locationId).not.toBe('shop')
+  expect(accepted.addressRevisionId).toBe(s.canonical.id)
+  expect(s.sqlite.prepare('SELECT scopeOrganisationId FROM locationOccupancy WHERE id=?').get(accepted.occupancyRevisionId)?.scopeOrganisationId).toBe('other')
+  expect(s.sqlite.prepare("SELECT projectId,addressMeta FROM feature WHERE id='f'").get()).toMatchObject({projectId: 'other', addressMeta: current.addressMeta})
+})

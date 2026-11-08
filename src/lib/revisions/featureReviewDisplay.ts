@@ -36,14 +36,24 @@ const labels: Record<string, string> = {
   propertyValueId: 'Option',
   detachedBrands: 'Brands',
   value: 'Text',
+  valueJson: 'Details',
 }
 
 /**
  * Labels a changed content path without presenting storage identities as field names.
  * @param path Authorized difference path.
+ * @param change Optional complete change, retaining labels for removed properties.
  * @returns Human-readable group/field label.
  */
-export function featureReviewLabel(path: readonly string[]): string {
+export function featureReviewLabel(path: readonly string[], change?: RevisionDifference): string {
+  if (path[0] === 'properties' && path.length === 2 && change) {
+    for (const slot of [change.after, change.before]) {
+      const entry = slot.present ? object(slot.value) : null
+      const definition = object(object(entry?.selection)?.definition)
+      const name = translated(definition?.labels)
+      if (name) return name
+    }
+  }
   return path
     .filter(
       (_, index) =>
@@ -81,6 +91,25 @@ export function featureReviewValue(
           'No photos'
       : 'No photos'
   }
+  if (change.path[0] === 'properties' && change.path.length === 2) {
+    const entry = object(slot.value), selection = object(entry?.selection)
+    if (selection) {
+      const definition = object(selection.definition), option = object(definition?.selectedOption)
+      const selected = translated(option?.translations) || (typeof option?.value === 'string' ? option.value : '')
+      const lines: string[] = []
+      if (selected) lines.push(selected)
+      else if (selection.propertyValueId) lines.push('Selected option (label unavailable)')
+      if (selection.value !== null && selection.value !== undefined && selection.value !== '') lines.push(display(selection.value))
+      if (selection.valueJson !== null && selection.valueJson !== undefined && selection.valueJson !== '') lines.push(`Details: ${display(selection.valueJson)}`)
+      for (const [locale, value] of Object.entries(object(entry?.translations) ?? {})) {
+        const text = object(value)?.value
+        if (text !== null && text !== undefined && text !== '') lines.push(`${locale}: ${display(text)}`)
+      }
+      return lines.join('\n') || 'Not set'
+    }
+  }
+  if (change.path[0] === 'properties' && change.path.at(-1) === 'propertyValueId')
+    return slot.value ? 'Selected option changed' : 'Not set'
   return display(slot.value)
 }
 
@@ -100,4 +129,23 @@ function display(value: RevisionValue): string {
       .map(([key, child]) => `${labels[key] ?? key}: ${display(child)}`)
       .join('\n') || 'None'
   )
+}
+
+/** Narrow a retained JSON object. @param value Candidate value. @returns Object or null. */
+function object(value: RevisionValue | undefined): Record<string, RevisionValue> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : null
+}
+
+/** Read a saved label without consulting mutable or inaccessible catalogues.
+ * @param value Retained translation map.
+ * @returns Preferred English label, then another nonempty label, or an empty string.
+ */
+function translated(value: RevisionValue | undefined): string {
+  const rows = object(value)
+  if (!rows) return ''
+  for (const locale of ['en', ...Object.keys(rows).filter(key => key !== 'en').sort()]) {
+    const label = object(rows[locale])?.value
+    if (typeof label === 'string' && label.trim()) return label
+  }
+  return ''
 }

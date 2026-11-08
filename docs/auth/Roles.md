@@ -185,6 +185,24 @@ Note `deleteEventAttendence` is not available - user no shows are marked with
 - `manageReviewQueue` - accept/reject reports
 - manageTeam - assign Whip/DPM/Caller on a day
 
+Feature transfers require general Feature-update authority in the current project and
+Feature-create authority in the destination project. This includes Owners and
+Maintainers with grants at both ends, as well as applicable Organisation owners,
+Hub admins and Superadmins. Translators cannot transfer Features. The destination
+layer determines its project and organisation; those links are rechecked atomically.
+Transfers preserve Feature identity, media and history and record the new scope in a
+revision. Transfers retain values only for fields assigned to the destination layer within its
+project/organisation/hub scope, drop all other fields (including hidden internal
+fields), and initialize newly supported fields to null. Previous values remain in
+revision history; matching uses field identity, never a similarly named field. Cross-organisation transfers copy accepted organisation Location corrections and scoped
+placement evidence into the destination. Shared Location identities remain shared;
+source-owned local Locations are cloned with their accepted baselines. Creating or
+reusing an organisation definition requires destination organisation management
+permission. Equivalent destination corrections are reused; conflicting definitions
+reject the transfer without overwriting either organisation. Copying, relinking and
+the Feature transfer commit atomically, with source revisions and copy provenance
+retained. Destination project ownership alone does not grant this organisation authority.
+
 Maintainers cannot create or delete layers, or update layer fields other than
 translations. They cannot configure project capabilities (`manageCapabilities`) or
 delete the project.

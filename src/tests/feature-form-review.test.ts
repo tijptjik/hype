@@ -35,6 +35,13 @@ describe('Feature publication field authority', () => {
     after.properties.structured.selection.valueJson = '{"items":[]}'
     expect(validateFeatureFormResult(before, after, policy)[0]).toContain('no longer available')
   })
+  it('permits shared core catalogue fields across hubs while rejecting other hub fields', () => {
+    const { before, after, policy } = setup()
+    policy.snapshot.fieldDefinitions.find(row => row.id === 'structured')!.hubId = 'core-hub'
+    after.properties.structured.selection.valueJson = '{"items":[]}'
+    expect(validateFeatureFormResult(before, after, { ...policy, coreHubId: 'core-hub' })).toEqual([])
+    expect(validateFeatureFormResult(before, after, { ...policy, coreHubId: 'another-hub' })[0]).toContain('no longer available')
+  })
   it('rejects resurrection of a removed field', () => {
     const { before, after, policy } = setup()
     policy.snapshot.fieldDefinitions = policy.snapshot.fieldDefinitions.filter(row => row.id !== 'structured')

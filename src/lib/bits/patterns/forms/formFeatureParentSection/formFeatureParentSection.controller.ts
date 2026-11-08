@@ -1,3 +1,7 @@
+// AUTHORIZATION
+import { canCreateFeatureForProject } from '#lib/api/services/authz/feature.js'
+// TYPES
+import type { UserRoleDisco } from '#lib/types.js'
 import type {
   ParentSectionLayerItem,
   ParentSectionOrganisationItem,
@@ -7,6 +11,7 @@ import type {
 /********************
  *  TABLE OF CONTENTS
  ************/
+// - filterCreatableParentProjects
 // - createFeatureParentSearchPrisms
 // - toParentOrganisationItem
 // - toParentProjectItem
@@ -85,6 +90,34 @@ type FeatureParentSectionControllerDeps = {
 type AutoSelectedProjectAndLayer = {
   projectId: string
   layerId: string
+}
+
+/**
+ * Filters project choices without requiring project staff to read their parent organisation.
+ * @param params Available projects, current actor and a hub lookup for hub-admin-only grants.
+ * @returns Projects where the actor may create or assign Features.
+ * @remarks Direct project/organisation grants are sufficient; hub ancestry is read only for hub admins.
+ */
+export async function filterCreatableParentProjects<T extends { id: string; organisationId: string }>(params: {
+  projects: T[]
+  user: { id?: string | null; isAnonymous?: boolean | null; superAdmin?: boolean | null }
+  userRoles: UserRoleDisco[]
+  getOrganisationHubId: (id: string) => Promise<string | null>
+}): Promise<T[]> {
+  const hubs = new Map<string, Promise<string | null>>()
+  const allowed = await Promise.all(params.projects.map(async project => {
+    const canCreate = (resourceHubId: string | null): boolean => canCreateFeatureForProject({
+      user: params.user,
+      userRoles: params.userRoles,
+      resource: { organisationId: project.organisationId, projectId: project.id, layerId: '', resourceHubId },
+    })
+    if (canCreate(null)) return true
+    if (!params.userRoles.some(role => role.type === 'hub' && role.role === 'admin')) return false
+    // Only hub-scoped grants need ancestor resolution, shared across sibling projects.
+    if (!hubs.has(project.organisationId)) hubs.set(project.organisationId, params.getOrganisationHubId(project.organisationId))
+    return canCreate(await hubs.get(project.organisationId)!)
+  }))
+  return params.projects.filter((_, index) => allowed[index])
 }
 
 /**

@@ -173,12 +173,17 @@ function relative(value: string): string {
               <h4
                 class="text-foreground text-sm leading-relaxed font-medium break-words"
               >
+                {#if entry.transfer}
+                  <span>Moved </span>
+                  <span class="font-mono text-xs leading-relaxed">{entry.transfer.from.join(' › ')} <span class="text-muted-foreground" aria-label="to">→</span> {entry.transfer.to.join(' › ')}</span>
+                {:else}
                 {entry.reason ??
                   (privateHistory
                     ? 'Approved maintenance'
                     : entry.revisionId
                       ? 'Feature published'
                       : 'Feature unpublished')}
+                {/if}
               </h4>
             </div>
             <dl class={styles.metadata}>
@@ -272,13 +277,13 @@ function relative(value: string): string {
                   {@const change = group.rows[0].change}
                   <section
                     class={styles.comparison}
-                    aria-label={featureReviewLabel(group.path)}
+                    aria-label={featureReviewLabel(group.path, change)}
                   >
                     <dl class={styles.fieldHeading}>
                       <div class="min-w-0 space-y-1">
                         <dt class={styles.label}>Field</dt>
                         <dd class="text-sm font-medium break-words">
-                          {featureReviewLabel(group.path)}
+                          {featureReviewLabel(group.path, change)}
                         </dd>
                       </div>
                       <div class="min-w-0 space-y-1">

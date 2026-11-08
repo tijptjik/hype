@@ -1,6 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // SERVICES
+import { describeFeatureTransfers, type FeatureTransferPath } from './featureTransferDescription'
 import {
   hasFeatureLifecycleStorage,
   readCurrentFeatureRevision,
@@ -57,6 +58,7 @@ export type FeatureRevisionWorkspace = {
     actorDisplayUsername?: string | null
     origin: string
     reason: string | null
+    transfer?: FeatureTransferPath
     createdAt: string
   }[]
   privateHistory: {
@@ -67,6 +69,7 @@ export type FeatureRevisionWorkspace = {
     actorDisplayUsername?: string | null
     origin: string
     reason: string | null
+    transfer?: FeatureTransferPath
     createdAt: string
   }[]
 }
@@ -209,6 +212,7 @@ export async function readFeatureRevisionWorkspace(
     JOIN featureRevision r ON r.id=capture.revisionId AND r.featureId=capture.featureId JOIN revisionChangeSet c ON c.id=r.changeSetId LEFT JOIN user u ON u.id=c.actorId
     WHERE capture.featureId=${input.featureId} AND (${input.guard}) ORDER BY capture.sequence DESC LIMIT 50`)
       : []
+  await describeFeatureTransfers(db, [...history, ...privateHistory])
   const initial =
     initialStorage && initialStorage.n
       ? await db.get<{ taskId: string | null }>(sql`

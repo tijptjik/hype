@@ -15,7 +15,8 @@ import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 import { featureLegacyPublicationGuard } from './featureRevisionPublication'
 import { featureRevisionCreationEnabled, prepareFeatureCreationRevision } from './featureCreationRevision'
 import { prepareInitialFeatureDraftSave } from './featureInitialDraft'
-import { executeRevisionBatch } from './revisionBatch'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
+import { featureDestinationPropertiesGuard, reconcileFeatureTransferProperties, type FeatureDestinationScope } from './featureParentTransfer'
 import { getDetachedFeatureBrands } from './locationDetached'
 import { prepareFeatureFormRelations } from './locationRelations'
 // TYPES
@@ -135,6 +136,9 @@ export async function saveUnlinkedFeatureForm(
 export async function prepareUnlinkedFeatureFormSave(
   db: Database,
   input: {
+    scopeGuard?: SQL
+    destinationScope?: FeatureDestinationScope
+    allowedInternalIds?: ReadonlySet<string>
     featureId: string
     projectId: string
     updatedAt: string
@@ -146,6 +150,10 @@ export async function prepareUnlinkedFeatureFormSave(
     actorId?: string
   },
 ): Promise<{ guard: SQL; precondition: SQL; writeIndex: number; statements: BatchItem<'sqlite'>[] } | undefined> {
+  const transfer = input.destinationScope ? await reconcileFeatureTransferProperties(
+    db, input.featureId, input.destinationScope, input.properties, input.allowedInternalIds,
+  ) : undefined
+  if (transfer) input = { ...input, properties: transfer.properties }
   const brandEdit = input.locationBrandEdit
     ? LocationBrandEditSchema.parse(input.locationBrandEdit)
     : undefined
@@ -220,7 +228,7 @@ export async function prepareUnlinkedFeatureFormSave(
   // Execute together so a linker cannot observe new parent data with old children.
   return {
     guard,
-    precondition: initial?.guard ?? sql`1`,
+    precondition: sql`(${initial?.guard ?? sql`1`}) AND (${input.scopeGuard ?? sql`1`}) AND (${transfer?.unchanged ?? sql`1`})`,
     writeIndex: initial?.before.length ?? 0,
     statements: [
       ...(initial?.before ?? []),
@@ -231,8 +239,11 @@ export async function prepareUnlinkedFeatureFormSave(
         guard,
         input.i18n,
         input.properties,
+        false,
+        Boolean(transfer),
       ),
       ...(initial?.after ?? []),
+      ...(input.destinationScope ? [prepareRevisionCheck(db, featureDestinationPropertiesGuard(input.featureId, input.destinationScope))] : []),
       db.select().from(feature).where(and(eq(feature.id, input.featureId), guard)),
     ],
   }

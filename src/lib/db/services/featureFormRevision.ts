@@ -1,11 +1,16 @@
 // DRIZZLE
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
+// SCHEMA
+import { feature } from '../schema/feature'
+import { featureLayerAfterStatus } from './historicalLayers'
+import { featureDestinationGuard, featureDestinationPropertiesGuard, reconcileFeatureTransferProperties, type FeatureDestinationScope } from './featureParentTransfer'
 // DOMAIN
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 import { equalRevisionValue } from '#lib/revisions/merge.js'
 import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
 import { validateFeatureTranslationResult } from '#lib/revisions/featureTranslationReview.js'
 // SERVICES
+import { prepareFeatureLocationTransfer } from './featureLocationTransfer'
 import { hasFeatureLifecycleStorage } from './featureLifecycle'
 import { readFeatureRevisionSource } from './featureRevisionSource'
 import { parseFeatureRevisionSource, buildFeatureRevisionBaselineContent } from './featureRevisionContent'
@@ -27,13 +32,15 @@ type FeatureFormValues = z.output<typeof FeatureEntityFormData>
 
 // TABLE OF CONTENTS
 // 1. Lossless form candidate construction
-// 2. Existing form save routing
+// 2. Transfer-owned text preservation
+// 3. Existing form save routing
 
 /**
  * Builds a candidate from authorized form values without writing compatibility tables.
  * @param previous Accepted authored content, including hidden fields and exact gallery pins.
  * @param snapshot Captured private source with proposed property definitions included.
  * @param data Validated form values; caller already authorized the changed fields.
+ * @param retainOmittedInternal Preserve hidden fields for ordinary edits; transfers provide a complete server-reconciled snapshot.
  * @returns Complete proposed content, retaining omitted locales/internal fields and media pins.
  * @remarks Shared Location corrections/reset intents cannot be submitted through a Feature draft.
  */
@@ -41,10 +48,11 @@ export function buildFeatureFormCandidate(
   previous: FeatureRevisionContent,
   snapshot: RevisionValue,
   data: FeatureFormValues,
+  retainOmittedInternal = true,
 ): FeatureRevisionContent {
   const source = parseFeatureRevisionSource(snapshot)
   if (data.locationReset || (previous.placement.location && data.locationBrandEdit))
-    throw new Error('Shared Location changes require separate Location review')
+    throw new Error('Edit shared Location changes through separate review')
   if (previous.placement.location && data.locationNameMode &&
       data.locationNameMode !== (previous.placement.location.acceptancePolicy?.nameMode ?? 'inherit'))
     throw new Error('Location name inheritance requires separate Location review')
@@ -71,7 +79,7 @@ export function buildFeatureFormCandidate(
   const submitted = new Set(properties.map(row => row.propertyId))
   if (submitted.size !== properties.length) throw new Error('Duplicate property identities')
   const internal = new Set(source.fieldDefinitions.filter(row => row.audience === 'internal').map(row => row.id))
-  source.properties = source.properties.filter(row => internal.has(row.propertyId) && !submitted.has(String(row.propertyId)))
+  source.properties = source.properties.filter(row => retainOmittedInternal && internal.has(row.propertyId) && !submitted.has(String(row.propertyId)))
   const retained = new Set([...submitted, ...source.properties.map(row => String(row.propertyId))])
   source.propertyTranslations = source.propertyTranslations.filter(row => retained.has(String(row.propertyId)))
   for (const property of properties) {
@@ -116,6 +124,30 @@ export function buildFeatureFormCandidate(
 }
 
 /**
+ * Keeps Location-owned text exact when a form transfers only Feature ownership.
+ * @param previous Accepted revision before the transfer.
+ * @param content Candidate whose editable descriptions and independent titles remain authored.
+ * @returns Nothing; protected text is restored in the candidate in place.
+ * @remarks Form transport fills nulls and empty default locales. Those defaults are not
+ * Location corrections and must not change accepted source text or verification flags.
+ */
+function preserveTransferredLocationText(previous: FeatureRevisionContent, content: FeatureRevisionContent): void {
+  if (!previous.placement.location) return
+  const inheritsNames = previous.placement.location.acceptancePolicy?.nameMode !== 'independent'
+  for (const [locale, row] of Object.entries(content.translations)) {
+    const accepted = previous.translations[locale]
+    if (accepted) {
+      row.address = structuredClone(accepted.address)
+      if (inheritsNames) row.title = structuredClone(accepted.title)
+    } else if (!row.title.value && !row.description?.value && !row.address.value &&
+      !Object.keys(row.address.properties ?? {}).length) {
+      // Empty transport-only locales do not create new inherited names or addresses.
+      delete content.translations[locale]
+    }
+  }
+}
+
+/**
  * Saves staff edits directly and isolates contributor proposals for enrolled identities.
  * @param db Request database.
  * @param input Authorized form and exact loaded parent timestamp, never a client snapshot.
@@ -129,6 +161,8 @@ export async function saveFeatureFormRevision(
     expectedScope: Omit<FeatureCommandProbe, 'id'>
     updatedAt: string
     data: FeatureFormValues
+    destinationScope?: FeatureDestinationScope
+    authorizeDestinationLocation?: () => Promise<unknown>
     canPublish: boolean
     allowDescriptions: boolean
     allowedInternalIds: ReadonlySet<string>
@@ -146,40 +180,95 @@ export async function saveFeatureFormRevision(
   const row = await db.get<{ content: string }>(sql`SELECT content FROM featureRevision WHERE id=${workspace.comparisonRevisionId} AND featureId=${input.featureId}`)
   if (!row) throw new Error('Feature revision changed; refresh the editor')
   const previous = FeatureRevisionContentSchema.parse(JSON.parse(row.content))
-  const source = await readFeatureRevisionSource(db, input.featureId, input.guard, input.data.properties?.map(row => row.propertyId))
+  const destination = input.destinationScope
+  const transfer = destination ? await reconcileFeatureTransferProperties(
+    db, input.featureId, destination, input.data.properties, input.allowedInternalIds,
+  ) : undefined
+  const data = transfer ? { ...input.data, properties: transfer.properties } : input.data
+  const source = await readFeatureRevisionSource(db, input.featureId, input.guard, data.properties?.map(row => row.propertyId))
   if (!source || parseFeatureRevisionSource(source.snapshot).record.modifiedAt !== input.updatedAt)
     throw new Error('Feature changed; refresh the editor')
-  const content = buildFeatureFormCandidate(previous, source.snapshot, input.data)
+  const content = buildFeatureFormCandidate(previous, source.snapshot, data, !transfer)
+  if (destination) preserveTransferredLocationText(previous, content)
+  // Automatic drops and null initialization are transfer operations, not edits to protected fields.
+  const validationPrevious = transfer ? { ...previous, properties: Object.fromEntries(
+    Object.keys(content.properties).map(id => [id, previous.properties[id] ?? content.properties[id]]),
+  ) } : previous
+  const validationSource = parseFeatureRevisionSource(source.snapshot)
+  if (destination) {
+    validationSource.record.projectId = destination.projectId
+    validationSource.record.organisationId = destination.organisationId
+  }
+  const coreHub = await db.get<{ id: string }>(sql`SELECT id FROM hub WHERE code='core'`)
   const validateResult = (before: FeatureRevisionContent, after: FeatureRevisionContent): string[] => validateFeatureFormResult(before, after, {
-    snapshot: source.snapshot, allowedInternalIds: input.allowedInternalIds, allowDescriptions: input.allowDescriptions, resourceHubId: input.expectedScope.resourceHubId,
+    snapshot: validationSource as unknown as RevisionValue, coreHubId: coreHub?.id, allowedInternalIds: input.allowedInternalIds, allowDescriptions: input.allowDescriptions, resourceHubId: destination ? destination.resourceHubId : input.expectedScope.resourceHubId,
   })
-  const errors = validateResult(previous, content)
+  const errors = validateResult(validationPrevious, content)
   if (errors.length) throw new Error(errors.join('; '))
   const currentGuard = await hasFeatureLifecycleStorage(db)
     ? sql`EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND currentRevisionId=${workspace.comparisonRevisionId} AND revisionVersion=${workspace.generation})`
     : sql`EXISTS (SELECT 1 FROM featureRevisionHead WHERE featureId=${input.featureId}
       AND state='active' AND generation=${workspace.generation} AND publishedRevisionId IS ${workspace.publishedRevisionId})`
-  const guard = sql`(${input.guard}) AND (${source.unchanged})
+  const guard = sql`(${input.guard}) AND (${source.unchanged}) AND (${transfer?.unchanged ?? sql`1`})
     AND (${featureContentProjectionMatches(input.featureId, previous)})
-    AND (${currentGuard})`
+    AND (${currentGuard})
+    AND ((SELECT id FROM hub WHERE code='core') IS ${coreHub?.id ?? null})`
   const fields: ('title' | 'description')[] = input.allowDescriptions ? ['title', 'description'] : ['title']
-  if (input.canPublish) {
-    const projection = prepareFeatureEditorialProjection(db, { featureId: input.featureId, source, previous, content })
-    // Capture rechecks its own source; the complete form guard runs first in the atomic batch.
-    const capture = await prepareFeatureAcceptedCapture(db, { ...input, derive: () => content })
-    if (!capture.revisionId) throw new Error('Feature revision changed; refresh the editor')
-    // Apply the form and its attributed history together without changing visibility.
-    const applied = await executeRevisionBatch(db, guard, [
-      ...capture.before, ...projection.statements, ...capture.after,
-      ...(projection.afterPublication ?? []), prepareRevisionCheck(db, projection.verify),
-    ])
-    if (!applied) throw new Error('Feature changed; refresh the editor')
-    return { status: 'applied', revisionId: capture.revisionId }
+  // Keep contributor proposals isolated from accepted content.
+  if (!input.canPublish) {
+    const translationErrors = validateFeatureTranslationResult(previous, content, fields)
+    if (translationErrors.length) throw new Error(translationErrors.join('; '))
+    if (!workspace.publishedRevisionId) throw new Error('Contributor proposals require a published Feature')
+    const result = await createFeatureRevisionProposal(db, { ...input, guard, content, baseRevisionId: workspace.publishedRevisionId })
+    if (!result) throw new Error('Feature changed; refresh the editor')
+    return { status: 'saved', ...result }
   }
-  const translationErrors = validateFeatureTranslationResult(previous, content, fields)
-  if (translationErrors.length) throw new Error(translationErrors.join('; '))
-  if (!workspace.publishedRevisionId) throw new Error('Contributor proposals require a published Feature')
-  const result = await createFeatureRevisionProposal(db, { ...input, guard, content, baseRevisionId: workspace.publishedRevisionId })
-  if (!result) throw new Error('Feature changed; refresh the editor')
-  return { status: 'saved', ...result }
+  const projection = prepareFeatureEditorialProjection(db, { featureId: input.featureId, source, previous, content })
+  const locationTransfer = destination && destination.organisationId !== input.expectedScope.organisationId && content.placement.location
+    ? await prepareFeatureLocationTransfer(db, {
+      featureId: input.featureId, actorId: input.actorId,
+      sourceOrganisationId: input.expectedScope.organisationId,
+      destinationOrganisationId: destination.organisationId,
+      accepted: content.placement.location, authorizeDestination: input.authorizeDestinationLocation,
+    }) : undefined
+  const transferredContent = locationTransfer ? structuredClone(content) : content
+  if (locationTransfer) transferredContent.placement.location = locationTransfer.accepted
+  const layerChanged = input.data.layerId !== input.expectedScope.layerId
+  const resultingScope = destination ?? (layerChanged ? {
+    organisationId: input.expectedScope.organisationId,
+    projectId: input.expectedScope.projectId,
+    layerId: input.data.layerId,
+  } : undefined)
+  // Capture rechecks its own source; the complete form guard runs first in the atomic batch.
+  const capture = await prepareFeatureAcceptedCapture(db, {
+    ...input,
+    resultingScope,
+    revisionBoundary: Boolean(resultingScope) || input.revisionBoundary,
+    derive: current => {
+      if (!equalRevisionValue(current, previous)) throw new Error('Feature changed; refresh the editor')
+      return transferredContent
+    },
+  })
+  if (!capture.revisionId) throw new Error('Feature revision changed; refresh the editor')
+  // Parent membership is outside authored content; verify the old projection before moving and capturing the new scope.
+  const layerWrites = layerChanged || destination ? [
+    ...(destination ? [prepareRevisionCheck(db, featureDestinationGuard(destination)),
+      prepareRevisionCheck(db, featureDestinationPropertiesGuard(input.featureId, destination))] : []),
+    prepareRevisionCheck(db, sql`EXISTS (SELECT 1 FROM layer WHERE id=${input.data.layerId}
+      AND projectId=${destination?.projectId ?? input.expectedScope.projectId} AND organisationId=${destination?.organisationId ?? input.expectedScope.organisationId}
+      AND historicalSourceLayerId IS NULL)`),
+    db.update(feature).set({
+      ...(destination ? { projectId: destination.projectId, organisationId: destination.organisationId } : {}),
+      layerId: featureLayerAfterStatus(input.data.layerId, input.data.isIntangible),
+    }).where(eq(feature.id, input.featureId)),
+    prepareRevisionCheck(db, sql`changes()=1`),
+  ] : []
+  // Apply the form and its attributed history together without changing visibility.
+  const applied = await executeRevisionBatch(db, guard, [
+    ...capture.before, ...projection.statements, ...(projection.afterPublication ?? []),
+    prepareRevisionCheck(db, projection.verify), ...(locationTransfer?.beforeMove ?? []),
+    ...layerWrites, ...(locationTransfer?.afterMove ?? []), ...capture.after,
+  ])
+  if (!applied) throw new Error('Feature changed; refresh the editor')
+  return { status: 'applied', revisionId: capture.revisionId }
 }

@@ -2,6 +2,10 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { readFeaturePresentationPolicy } from '#lib/db/services/featurePresentationPolicy.js'
+vi.mock('#lib/db/services/featureParentTransfer.js', async importOriginal => ({
+  ...await importOriginal<typeof import('#lib/db/services/featureParentTransfer.js')>(),
+  reconcileFeatureTransferProperties: vi.fn(async (_db, _id, _destination, properties) => ({ properties, ids: [], unchanged: {} })),
+}))
 vi.mock('#lib/db/services/historicalLayers.js', () => ({
   historicalSourceLayerId: vi.fn(async () => null),
 }))
@@ -1061,7 +1065,10 @@ describe('feature.remote authz matrix', () => {
     expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
   })
 
-  it('featureForm update rejects reparenting before probing the target layer', async () => {
+  it('featureForm update rejects forged destination parent IDs', async () => {
+    mockProbeLayerForUpdate.mockResolvedValue({
+      id: 'foreign-layer', organisationId: 'org-1', projectId: 'other-project', hubId: 'hub-a',
+    })
     await expect(
       remote.featureForm(
         {
@@ -1088,9 +1095,133 @@ describe('feature.remote authz matrix', () => {
       ),
     ).rejects.toThrow('FIELD_FORBIDDEN')
 
-    expect(mockProbeLayerForUpdate).not.toHaveBeenCalled()
+    expect(mockProbeLayerForUpdate).toHaveBeenCalled()
     expect(mockLoadFeature).not.toHaveBeenCalled()
     expect(mockSaveLinkedFeatureForm).not.toHaveBeenCalled()
+  })
+
+  it('featureForm update allows a destination layer in the same project', async () => {
+    mockProbeLayerForUpdate.mockResolvedValue({
+      id: 'foreign-layer', organisationId: 'org-1', projectId: 'project-1', hubId: 'hub-a',
+    })
+    await expect(
+      remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'foreign-layer',
+            contributorId: null,
+            i18n: { en: { name: 'Feature' } },
+            properties: [],
+            geometry: { type: 'Point', coordinates: [114.2, 22.4] },
+            addressMeta: {},
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: false,
+          },
+        },
+        throwingInvalid,
+      ),
+    ).resolves.toBeDefined()
+
+    expect(mockProbeLayerForUpdate).toHaveBeenCalled()
+    expect(mockLoadFeature).toHaveBeenCalled()
+    expect(mockAuthorizeFeatureUpdateForSubmission).toHaveBeenLastCalledWith(
+      expect.objectContaining({ submittedData: expect.objectContaining({ layerId: 'foreign-layer' }) }),
+    )
+    expect(mockSaveUnlinkedFeatureForm).toHaveBeenCalledWith(
+      expect.anything(), expect.objectContaining({ data: expect.objectContaining({ layerId: 'foreign-layer' }) }),
+    )
+  })
+
+  it('featureForm update allows a destination layer in another authorized project', async () => {
+    mockProbeLayerForUpdate.mockResolvedValue({
+      id: 'foreign-layer', organisationId: 'org-1', projectId: 'other-project', hubId: 'hub-a',
+    })
+    await expect(
+      remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'other-project',
+            layerId: 'foreign-layer',
+            contributorId: null,
+            i18n: { en: { name: 'Feature' } },
+            properties: [],
+            geometry: { type: 'Point', coordinates: [114.2, 22.4] },
+            addressMeta: {},
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: false,
+          },
+        },
+        throwingInvalid,
+      ),
+    ).resolves.toBeDefined()
+
+    expect(mockAuthorizeFeatureCreateForSubmission).toHaveBeenCalledWith(expect.objectContaining({
+      resource: expect.objectContaining({ projectId: 'other-project', layerId: 'foreign-layer' }),
+    }))
+    expect(mockSaveFeatureFormRevision).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      expectedScope: expect.objectContaining({ projectId: 'project-1' }),
+      destinationScope: expect.objectContaining({ projectId: 'other-project' }),
+      data: expect.objectContaining({ projectId: 'other-project' }),
+    }))
+    expect(mockProbeLayerForUpdate).toHaveBeenCalled()
+    expect(mockLoadFeature).toHaveBeenCalled()
+    expect(mockAuthorizeFeatureUpdateForSubmission).toHaveBeenLastCalledWith(
+      expect.objectContaining({ submittedData: expect.objectContaining({ layerId: 'foreign-layer' }) }),
+    )
+    expect(mockSaveUnlinkedFeatureForm).toHaveBeenCalledWith(
+      expect.anything(), expect.objectContaining({ data: expect.objectContaining({ layerId: 'foreign-layer' }) }),
+    )
+  })
+
+  it.each(['source', 'destination'])('featureForm transfer requires %s authority', async deniedScope => {
+    mockProbeLayerForUpdate.mockResolvedValue({ id: 'foreign-layer', organisationId: 'org-1', projectId: 'other-project', hubId: 'hub-a' })
+    const denied = { allowed: false, code: 'INSUFFICIENT_ROLE' } as const
+    if (deniedScope === 'source') mockAuthorizeFeatureUpdateForSubmission.mockReturnValue(denied)
+    else mockAuthorizeFeatureCreateForSubmission.mockReturnValue(denied)
+    await expect(
+      remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'other-project',
+            layerId: 'foreign-layer',
+            contributorId: null,
+            i18n: { en: { name: 'Feature' } },
+            properties: [],
+            geometry: { type: 'Point', coordinates: [114.2, 22.4] },
+            addressMeta: {},
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: false,
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+
+    expect(mockSaveFeatureFormRevision).not.toHaveBeenCalled()
+    expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
+    if (deniedScope === 'source') expect(mockProbeLayerForUpdate).not.toHaveBeenCalled()
   })
 
   it('featureForm create allows a caller-supplied id', async () => {

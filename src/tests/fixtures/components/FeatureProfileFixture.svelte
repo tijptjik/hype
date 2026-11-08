@@ -1,6 +1,7 @@
 <script lang="ts">
 import { untrack } from 'svelte'
 // COMPONENTS
+import SectionHeaderIssues from '#lib/bits/custom/form/src/sectionHeader/components/SectionHeaderIssues.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import FeatureProfileEditor from '#lib/bits/patterns/forms/featureLocation/FeatureProfileEditor.svelte'
 import FormI18nDescriptorFields from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nDescriptorFields.svelte'
@@ -12,6 +13,7 @@ import type { ProfileProviderResult } from '#lib/bits/patterns/forms/featureLoca
 
 let {
   retainContent = false,
+  toolbarIssue = '',
   provider = async (
     _source: string,
     target: string,
@@ -21,6 +23,7 @@ let {
     text: `${target}: ${text}`,
   }),
 }: {
+  toolbarIssue?: string
   retainContent?: boolean
   provider?: (
     source: string,
@@ -126,6 +129,9 @@ function fields(locale: string) {
           values[key] = { ...values[key], [field]: text, [`${field}Gen`]: true }
         }}
       >
+        {#snippet toolbarMessage()}
+          <SectionHeaderIssues issues={toolbarIssue ? [toolbarIssue] : []} />
+        {/snippet}
         {#snippet children(field, locale, onEditStart, prefix)}
           {@const key = contentFormKey(locale)}
           {@const language = getContentLocaleRecord(locale, 'en')}

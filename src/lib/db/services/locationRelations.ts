@@ -20,6 +20,7 @@ import type {
  * @param translations Validated full locale map from the Feature form.
  * @param properties Validated, phone-normalized property snapshot, or undefined to retain it.
  * @param editIndependentNames Explicit Feature-form name edits, never source projection.
+ * @param replaceAllProperties Replace the complete server-reconciled transfer field set.
  * @returns Batch statements; execute in the same atomic batch as the association and Feature writes.
  * @remarks Every statement checks the new token, including deletes. One row per insert
  * keeps each query under D1's 100-parameter limit regardless of collection size. Never
@@ -36,6 +37,7 @@ export function prepareFeatureLocationRelations(
     }
   >,
   editIndependentNames = false,
+  replaceAllProperties = false,
 ): BatchItem<'sqlite'>[] {
   if (!featureId || !revision) throw new Error('Feature association token is required')
   const guard = sql`EXISTS (SELECT 1 FROM featureLocation
@@ -47,6 +49,7 @@ export function prepareFeatureLocationRelations(
     translations,
     properties,
     !editIndependentNames,
+    replaceAllProperties,
   )
 }
 
@@ -58,6 +61,7 @@ export function prepareFeatureLocationRelations(
  * @param translations Validated complete translation snapshot.
  * @param properties Validated property snapshot, or undefined to leave properties untouched.
  * @param preserveIndependentNames Retain Feature-owned names during source projection.
+ * @param replaceAllProperties Transfers supply a complete trusted property snapshot, including protected fields.
  * @returns Statements to execute in the same atomic batch as the guarded parent write.
  * @remarks Guard every delete and insert; never execute these statements in separate batches.
  */
@@ -68,6 +72,7 @@ export function prepareFeatureFormRelations(
   translations: Record<string, FeatureI18nPartial>,
   properties?: Parameters<typeof prepareFeatureLocationRelations>[4],
   preserveIndependentNames = false,
+  replaceAllProperties = false,
 ): BatchItem<'sqlite'>[] {
   const locales = contentMapToStorage(translations)
   // Source projection must not overwrite independently authored Feature names.
@@ -108,8 +113,8 @@ export function prepareFeatureFormRelations(
     )
   }
   if (properties === undefined) return queries
-  // Preserve omitted internal fields when a public editor saves the visible snapshot.
-  const replaceable = sql`(propertyId NOT IN (SELECT id FROM property WHERE audience = 'internal') OR propertyId IN (SELECT value FROM json_each(${JSON.stringify(properties.map(row => row.propertyId))})))`
+  // Preserve omitted internal fields for ordinary edits; transfers replace the complete reconciled snapshot.
+  const replaceable = replaceAllProperties ? sql`1` : sql`(propertyId NOT IN (SELECT id FROM property WHERE audience = 'internal') OR propertyId IN (SELECT value FROM json_each(${JSON.stringify(properties.map(row => row.propertyId))})))`
   // Remove only omitted properties; retained property translations may contain hidden locales.
   const removed = sql`propertyId NOT IN (SELECT value FROM json_each(${JSON.stringify(properties.map(row => row.propertyId))}))`
   // Remove children before parents, keeping unrelated Features outside the guard.

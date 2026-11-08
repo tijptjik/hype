@@ -23,6 +23,7 @@ export function validateFeatureFormResult(
     allowedInternalIds: ReadonlySet<string>
     allowDescriptions: boolean
     resourceHubId?: string | null
+    coreHubId?: string | null
   },
 ): string[] {
   if (!equalRevisionValue(previous.gallery, result.gallery)) return ['Gallery changes require gallery review']
@@ -39,7 +40,7 @@ export function validateFeatureFormResult(
     if (after && (!definition ||
       (definition.projectId && definition.projectId !== source.record.projectId) ||
       (definition.organisationId && definition.organisationId !== source.record.organisationId) ||
-      (definition.hubId && definition.hubId !== policy.resourceHubId)))
+      (definition.hubId && definition.hubId !== policy.resourceHubId && definition.hubId !== policy.coreHubId)))
       return ['A proposed property is no longer available in this Feature scope']
     if (previous.placement.location && (definition?.component === 'PhoneField' || before?.selection.definition.component === 'PhoneField') )
       return ['Shared phone changes require separate Location review']

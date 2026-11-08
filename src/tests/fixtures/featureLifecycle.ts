@@ -45,7 +45,8 @@ export function lifecycleFixture(linked = false, catalogueCascades = false) {
     'CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,username TEXT,displayUsername TEXT,attribution TEXT)',
   )
   sqlite.exec('PRAGMA foreign_keys=ON')
-  sqlite.exec(`CREATE TABLE organisation(id TEXT PRIMARY KEY,hubId TEXT,isPublished INTEGER,isArchived INTEGER);
+  sqlite.exec(`CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
+    CREATE TABLE organisation(id TEXT PRIMARY KEY,hubId TEXT,isPublished INTEGER,isArchived INTEGER);
     CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT,isPublished INTEGER,isArchived INTEGER);
     CREATE TABLE layer(id TEXT PRIMARY KEY,organisationId TEXT,projectId TEXT,isPublished INTEGER,isArchived INTEGER);
     INSERT INTO organisation VALUES ('org',NULL,1,0);
