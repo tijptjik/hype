@@ -408,7 +408,7 @@ async function handleAccept(): Promise<void> {
     const draft = await upsertNewFeatureDraft(appCtx.draft.current ?? {})
     appCtx.draft.update({
       taskId: draft.task.id,
-      featureId: draft.featureId,
+      featureId: draft.featureId ?? undefined,
       organisationId: draft.organisationId,
       projectId: draft.projectId,
       layerId: draft.layerId,
@@ -440,7 +440,7 @@ async function handleAccept(): Promise<void> {
   <Dialog.Root open={true}>
     <Dialog.Portal>
       <Dialog.Content
-        class="bits-theme fixed left-1/2 top-1/2 z-[951] flex max-h-[min(44rem,calc(100vh-2rem))] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[2rem] border border-border bg-panel text-base-content shadow-2xl focus:outline-none"
+        class="bits-theme border-border bg-panel text-base-content fixed top-1/2 left-1/2 z-[951] flex max-h-[min(44rem,calc(100vh-2rem))] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[2rem] border shadow-2xl focus:outline-none"
         style={`margin-left: ${appMainOffsetX}px;`}
         onInteractOutside={event => {
           event.preventDefault()
@@ -450,22 +450,22 @@ async function handleAccept(): Promise<void> {
         }}
       >
         <div
-          class="flex items-start justify-between gap-4 border-b border-border px-6 pb-5 pt-6"
+          class="border-border flex items-start justify-between gap-4 border-b px-6 pt-6 pb-5"
         >
           <div class="min-w-0">
             <Dialog.Title
-              class="flex items-center gap-3 text-lg font-semibold uppercase tracking-[0.18em] text-base-content"
+              class="text-base-content flex items-center gap-3 text-lg font-semibold tracking-[0.18em] uppercase"
             >
-              <Icon src={MapPin} class="h-5 w-5 text-primary" />
+              <Icon src={MapPin} class="text-primary h-5 w-5" />
               {m.each_gray_felix_catch()}
             </Dialog.Title>
-            <Dialog.Description class="mt-3 text-sm leading-6 text-muted-foreground">
+            <Dialog.Description class="text-muted-foreground mt-3 text-sm leading-6">
               {m.new_feature__select_map_desc()}
             </Dialog.Description>
           </div>
           <button
             type="button"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground transition hover:bg-raised hover:text-base-content"
+            class="border-border bg-surface text-muted-foreground hover:bg-raised hover:text-base-content flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition"
             onclick={handleCloseModal}
           >
             <Icon src={X} class="h-5 w-5" />
@@ -478,7 +478,7 @@ async function handleAccept(): Promise<void> {
           {#if isFindOtherOpen}
             <div>
               <div
-                class="sticky top-0 z-10 -mx-4 space-y-4 border-b border-border bg-panel px-4 py-4"
+                class="border-border bg-panel sticky top-0 z-10 -mx-4 space-y-4 border-b px-4 py-4"
               >
                 {#if selectedOrganisation || selectedProject || selectedLayer}
                   <div
@@ -487,10 +487,10 @@ async function handleAccept(): Promise<void> {
                     {#if selectedOrganisation}
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-full border border-primary bg-primary px-3 py-2 text-sm text-primary-content transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        class="border-primary bg-primary text-primary-content inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
                         onclick={() => clearSelection('organisation')}
                       >
-                        <Icon src={Users} class="h-4 w-4 text-primary-content" />
+                        <Icon src={Users} class="text-primary-content h-4 w-4" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{getOrganisationLabel(selectedOrganisation)}</span
@@ -500,10 +500,10 @@ async function handleAccept(): Promise<void> {
                     {#if selectedProject}
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-full border border-accent bg-accent px-3 py-2 text-sm text-accent-content transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        class="border-accent bg-accent text-accent-content inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
                         onclick={() => clearSelection('project')}
                       >
-                        <Icon src={LayoutGrid} class="h-4 w-4 text-accent-content" />
+                        <Icon src={LayoutGrid} class="text-accent-content h-4 w-4" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{getProjectLabel(selectedProject)}</span
@@ -513,10 +513,10 @@ async function handleAccept(): Promise<void> {
                     {#if selectedLayer}
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-full border border-secondary bg-secondary px-3 py-2 text-sm text-secondary-content transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        class="border-secondary bg-secondary text-secondary-content inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
                         onclick={() => clearSelection('layer')}
                       >
-                        <Icon src={Layers3} class="h-4 w-4 text-secondary-content" />
+                        <Icon src={Layers3} class="text-secondary-content h-4 w-4" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{getLayerLabel(selectedLayer)}</span
@@ -529,12 +529,12 @@ async function handleAccept(): Promise<void> {
                   <div class="relative">
                     <Icon
                       src={Search}
-                      class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                      class="text-muted-foreground pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2"
                     />
                     <input
                       bind:value={searchQuery}
                       type="text"
-                      class="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-base-content caret-primary placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                      class="border-border bg-surface text-base-content caret-primary placeholder:text-muted-foreground focus:border-primary h-11 w-full rounded-full border pr-4 pl-11 text-sm focus:outline-none"
                       placeholder={m.new_feature__search_resources_placeholder()}
                     >
                   </div>
@@ -545,7 +545,7 @@ async function handleAccept(): Promise<void> {
                 {#each searchableResources as item (`${item.kind}:${item.resource.id}`)}
                   <button
                     type="button"
-                    class="flex w-full items-center justify-between border border-border bg-surface px-4 py-3 text-left transition hover:border-primary/40 hover:bg-raised"
+                    class="border-border bg-surface hover:border-primary/40 hover:bg-raised flex w-full items-center justify-between border px-4 py-3 text-left transition"
                     onclick={() => handleResourceSelect(item.resource)}
                   >
                     <span class="flex min-w-0 items-center gap-3">
@@ -560,20 +560,20 @@ async function handleAccept(): Promise<void> {
                       <span class="min-w-0">
                         {#if item.breadcrumb}
                           <span
-                            class="!block overflow-hidden text-ellipsis whitespace-nowrap text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
+                            class="text-muted-foreground !block overflow-hidden text-[11px] tracking-[0.18em] text-ellipsis whitespace-nowrap uppercase"
                           >
                             {item.breadcrumb}
                           </span>
                         {/if}
                         <span
-                          class="!block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium"
+                          class="!block overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap"
                           >{item.label}</span
                         >
                       </span>
                     </span>
                     <Icon
                       src={ChevronRight}
-                      class="h-4 w-4 shrink-0 text-muted-foreground"
+                      class="text-muted-foreground h-4 w-4 shrink-0"
                     />
                   </button>
                 {/each}
@@ -582,7 +582,7 @@ async function handleAccept(): Promise<void> {
           {:else}
             <div class="space-y-2">
               <h3
-                class="px-2 pb-1 text-center font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground"
+                class="text-muted-foreground px-2 pb-1 text-center font-mono text-[11px] tracking-[0.28em] uppercase"
               >
                 {m.new_feature__active_layers()}
               </h3>
@@ -594,24 +594,24 @@ async function handleAccept(): Promise<void> {
                 >
                   <span class="min-w-0 flex-1">
                     <span
-                      class="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-x-3 gap-y-1 text-xs uppercase tracking-[0.18em] text-muted-foreground"
+                      class="text-muted-foreground grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-x-3 gap-y-1 text-xs tracking-[0.18em] uppercase"
                     >
                       <span class="flex min-w-0 items-center gap-2">
-                        <Icon src={Users} class="h-4 w-4 shrink-0 text-primary" />
+                        <Icon src={Users} class="text-primary h-4 w-4 shrink-0" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{item.organisationName}</span
                         >
                       </span>
                       <span class="flex min-w-0 items-center gap-2">
-                        <Icon src={LayoutGrid} class="h-4 w-4 shrink-0 text-accent" />
+                        <Icon src={LayoutGrid} class="text-accent h-4 w-4 shrink-0" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{item.projectName}</span
                         >
                       </span>
                       <span class="flex min-w-0 items-center gap-2">
-                        <Icon src={Layers3} class="h-4 w-4 shrink-0 text-secondary" />
+                        <Icon src={Layers3} class="text-secondary h-4 w-4 shrink-0" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{item.layerName}</span
@@ -620,11 +620,11 @@ async function handleAccept(): Promise<void> {
                     </span>
                   </span>
                   {#if selectedLayer?.id === item.layer.id}
-                    <Icon src={Check} class="h-4 w-4 shrink-0 text-secondary" />
+                    <Icon src={Check} class="text-secondary h-4 w-4 shrink-0" />
                   {:else}
                     <Icon
                       src={ChevronRight}
-                      class="h-4 w-4 shrink-0 text-muted-foreground"
+                      class="text-muted-foreground h-4 w-4 shrink-0"
                     />
                   {/if}
                 </button>
@@ -634,11 +634,11 @@ async function handleAccept(): Promise<void> {
         </div>
 
         <div
-          class="flex items-center justify-between gap-3 border-t border-border px-6 py-5"
+          class="border-border flex items-center justify-between gap-3 border-t px-6 py-5"
         >
           <button
             type="button"
-            class="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-raised hover:text-base-content"
+            class="border-border text-muted-foreground hover:bg-raised hover:text-base-content rounded-full border px-4 py-2 text-sm transition"
             onclick={handleOpenFindOther}
           >
             {isFindOtherOpen
@@ -648,14 +648,14 @@ async function handleAccept(): Promise<void> {
           <div class="flex items-center gap-3">
             <button
               type="button"
-              class="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-raised hover:text-base-content"
+              class="border-border text-muted-foreground hover:bg-raised hover:text-base-content rounded-full border px-4 py-2 text-sm transition"
               onclick={handleCloseModal}
             >
               {m.cancel()}
             </button>
             <button
               type="button"
-              class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-content transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              class="bg-primary text-primary-content rounded-full px-5 py-2 text-sm font-semibold transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               onclick={handleAccept}
               disabled={!isValid || isSaving}
             >
