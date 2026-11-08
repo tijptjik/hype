@@ -164,6 +164,37 @@ the exact existing pin when byte size, media type, metadata and current presenta
 also agree, preserving prior recovery provenance. This does not authorize new empty
 metadata recovery or removal of old files.
 
+### Reassessment after lifecycle integration — November 7
+
+The managed transition remains appropriate: SQL alone cannot verify R2 originals,
+construct domain baselines, convert contribution evidence and coordinate application
+activation. Breadline import/reconciliation remains independent. However, the current
+orchestrator is not yet ready for production execution; component tests and the older
+84-migration rehearsal do not establish recovery of the latest complete lifecycle run.
+
+Resolve these implementation gaps before live cutover:
+
+- Resume must inspect the existing journal before reinstalling initial-schema fences.
+  `pause()` currently uses every table in `plan.initial`; lifecycle conversion removes
+  some of those tables, so restarting after conversion can fail before reaching the
+  durable cursor.
+- Re-export/rebase must occur only at the numbered-migration boundary. The CLI still
+  tests whether any group has `tables`, which also matches the later lifecycle group.
+  Resuming after enrollment can therefore attempt a prohibited rebase beyond the schema
+  boundary instead of continuing the retained plan.
+- Already-converted databases must still rehearse and apply pending numbered migrations.
+  Their current early return selects cleanup-only planning before the numbered migration
+  runner, leaving future migrations outside the normal deploy path.
+
+Keep a single deployment entry point, with an explicit first-transition path and a
+steady-state path that always checks pending migrations and performs only required data
+work. Add orchestrator-level interruption tests after schema migration, enrollment,
+lifecycle conversion, verification and activation, plus a subsequent release containing
+a new numbered migration. Then rehearse the complete latest plan on a fresh production
+snapshot and validate it on remote preview D1, including recovery from a lost runner and
+measurement of the write-maintenance window. Only that evidence should qualify the
+production cutover.
+
 ## Editing-window policy rollout
 
 Apply `0203_revision_edit_windows.sql` before enabling the coalescing writers. It is
