@@ -2,7 +2,7 @@
 // ADAPTERS
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS
-import { ThumbnailWrapper } from '#lib/bits/index.js'
+import ThumbnailWrapper from '#lib/bits/patterns/images/ThumbnailWrapper.svelte'
 import { getImageCtx } from '#lib/context/image.svelte.js'
 import type { Snippet } from 'svelte'
 import type { TaskFooterProps } from '../task.types'

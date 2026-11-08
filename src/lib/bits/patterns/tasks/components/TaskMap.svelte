@@ -1,7 +1,7 @@
 <script lang="ts">
 import { tick } from 'svelte'
 import { cx } from '#lib/bits/utils.js'
-import Maplet from '#lib/bits/patterns/maps/Maplet.svelte'
+import Maplet from '#lib/bits/patterns/maps/LazyMaplet.svelte'
 import MapLoading from '#lib/bits/patterns/maps/MapLoading.svelte'
 import { m } from '#lib/i18n.js'
 import type { TaskMapProps } from '../task.types'

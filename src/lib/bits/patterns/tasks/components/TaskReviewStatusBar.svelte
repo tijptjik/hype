@@ -26,9 +26,12 @@ let {
   class?: string
 } = $props()
 
+// Merge reasons repeat the action outcome, so omit the extra message and connector.
 // Present the precise acceptance reason for older automatic completion receipts too.
 const visibleReviewReason = $derived(
-  reviewAction === 'added-classified-photos' &&
+  reviewAction === 'merged-feature'
+    ? null
+    : reviewAction === 'added-classified-photos' &&
         reviewReason === 'All photo proposals reviewed'
       ? 'All Classified Photos'
       : reviewReason,

@@ -47,7 +47,11 @@ let {
   multilingualExpanded?: boolean
   onMultilingualExpandedChange?: (expanded: boolean) => void
 } = $props()
-const ordering = useGalleryOrdering(() => featureId, () => model.state.items, () => imageCtx.refreshImages())
+const ordering = useGalleryOrdering(
+  () => featureId,
+  () => model.state.items,
+  () => imageCtx.refreshImages(),
+)
 let isMetadataOpen = $state(false)
 const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveImage)
 </script>
@@ -84,12 +88,20 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
     )}
   highlightClass=""
   getBadgeLabel={item =>
-    getTaskImageBadgeLabel(item, model.state.items, isReviewed, imageId =>
-      imageCtx.isImageHighlighted(imageId), researchOutcome,
+    getTaskImageBadgeLabel(
+      item,
+      model.state.items,
+      isReviewed,
+      imageId => imageCtx.isImageHighlighted(imageId),
+      researchOutcome,
     )}
   getBadgeClass={item =>
-    getTaskImageBadgeClass(item, model.state.items, isReviewed, imageId =>
-      imageCtx.isImageHighlighted(imageId), researchOutcome,
+    getTaskImageBadgeClass(
+      item,
+      model.state.items,
+      isReviewed,
+      imageId => imageCtx.isImageHighlighted(imageId),
+      researchOutcome,
     )}
   onThumbnailLoad={model.actions.markThumbnailLoaded}
   onThumbnailError={model.actions.markThumbnailErrored}
