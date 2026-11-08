@@ -1,0 +1,117 @@
+// BUN
+import { afterEach, describe, expect, test } from 'bun:test'
+
+// NODE
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+
+// LOCAL
+import { checkStaged } from './staged-lint'
+
+const repositories: string[] = []
+
+/** Create an isolated Git fixture with a committed lint policy. */
+function fixture(): string {
+  const root = mkdtempSync(join(tmpdir(), 'hype-hook-test-'))
+  repositories.push(root)
+  git(root, ['init', '-q'])
+  write(root, 'biome.json', '{"formatter":{"indentStyle":"space"}}\n')
+  write(root, 'package.json', '{}\n')
+  write(root, 'existing.json', '{ "value": 1 }\n')
+  git(root, ['add', '.'])
+  git(root, [
+    '-c',
+    'user.name=Test',
+    '-c',
+    'user.email=test@example.test',
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-qm',
+    'fixture',
+  ])
+  return root
+}
+
+/** Execute fixture-only Git operations and fail on errors. */
+function git(root: string, args: string[]): void {
+  const env = { ...process.env }
+  for (const key of Object.keys(env)) if (key.startsWith('GIT_')) delete env[key]
+  const result = Bun.spawnSync(['git', ...args], { cwd: root, env })
+  if (result.exitCode !== 0) throw new Error(result.stderr.toString())
+}
+
+/** Write a fixture file, including paths containing spaces. */
+function write(root: string, path: string, content: string): void {
+  mkdirSync(dirname(join(root, path)), { recursive: true })
+  writeFileSync(join(root, path), content)
+}
+
+afterEach(() => {
+  for (const root of repositories.splice(0))
+    rmSync(root, { recursive: true, force: true })
+})
+
+describe('staged lint snapshot', () => {
+  test('rejects unformatted staged JSONC even when the working copy is fixed', () => {
+    const root = fixture()
+    write(root, 'a space/config.jsonc', '{"value":2}')
+    git(root, ['add', 'a space/config.jsonc'])
+    write(root, 'a space/config.jsonc', '{ "value": 2 }\n')
+    const index = readFileSync(join(root, '.git/index'))
+    expect(() => checkStaged(root)).toThrow()
+    expect(readFileSync(join(root, '.git/index'))).toEqual(index)
+    expect(readFileSync(join(root, 'a space/config.jsonc'), 'utf8')).toBe(
+      '{ "value": 2 }\n',
+    )
+  })
+
+  test('accepts clean staged content without touching dirty working content', () => {
+    const root = fixture()
+    write(root, 'a space/config.jsonc', '{ "value": 2 }\n')
+    git(root, ['add', 'a space/config.jsonc'])
+    write(root, 'a space/config.jsonc', '{"value":3}')
+    expect(() => checkStaged(root)).not.toThrow()
+    expect(readFileSync(join(root, 'a space/config.jsonc'), 'utf8')).toBe('{"value":3}')
+  })
+
+  test('checks HTML instead of silently omitting its extension', () => {
+    const root = fixture()
+    write(root, 'example.html', '<img src="example.png">')
+    git(root, ['add', 'example.html'])
+    expect(() => checkStaged(root)).toThrow()
+  })
+
+  test('checks existing files when the lint policy changes', () => {
+    const root = fixture()
+    write(root, 'existing.json', '{"value":1}')
+    git(root, ['add', 'existing.json'])
+    git(root, [
+      '-c',
+      'user.name=Test',
+      '-c',
+      'user.email=test@example.test',
+      '-c',
+      'core.hooksPath=/dev/null',
+      'commit',
+      '-qm',
+      'old backlog',
+    ])
+    write(
+      root,
+      'biome.json',
+      '{ "formatter": { "indentStyle": "space", "lineWidth": 88 } }\n',
+    )
+    git(root, ['add', 'biome.json'])
+    expect(() => checkStaged(root)).toThrow('existing.json')
+  })
+
+  test('checks Markdown without rewriting it', () => {
+    const root = fixture()
+    write(root, 'notes.md', '# Title\n\n-   item\n')
+    git(root, ['add', 'notes.md'])
+    expect(() => checkStaged(root)).toThrow()
+    expect(readFileSync(join(root, 'notes.md'), 'utf8')).toBe('# Title\n\n-   item\n')
+  })
+})
