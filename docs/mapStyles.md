@@ -15,6 +15,8 @@ rendered into preview PNGs, and then synced into D1 so projects can assign them.
   - Provides localized catalog copy used by admin UI and DB sync.
 - `src/lib/map/styles/catalog.ts`
   - `MapStyleCatalogKey` and marker theme contracts live with the map catalog.
+- `src/lib/map/styles/builders.ts`
+  - Connects catalog keys to their builders without loading them in picker controls.
 - `static/mapStyles`
   - Generated immutable JSON artifacts plus `manifest.json`.
 - `scripts/generate-map-style-renders.ts`
@@ -25,7 +27,7 @@ rendered into preview PNGs, and then synced into D1 so projects can assign them.
 ## Adding A New Built-In Style
 
 1. Add a definition file under `src/lib/map/styles/definitions`.
-2. Import that builder into `src/lib/map/styles/catalog.ts`.
+2. Register that builder in `src/lib/map/styles/builders.ts`.
 3. Add a `MAP_STYLE_CATALOG` entry.
 4. Add localized copy in `src/lib/map/styles/i18n.ts`.
 5. Add the key to `MapStyleCatalogKey` in `src/lib/map/styles/catalog.ts`.
