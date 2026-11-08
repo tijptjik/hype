@@ -110,6 +110,8 @@ export class AdminCtx {
   // Load State
   isInitialised: boolean = $state(false)
   isInitializing: boolean = $state(false)
+  /** Explicit development fixtures are selected by the owning queue route, never global page state. */
+  taskPreviewFeatureId: string | undefined = $state()
 
   // ═══════════════════════
   // CONSTRUCTOR
@@ -248,6 +250,7 @@ export class AdminCtx {
     return [
       FirstClassResource.task,
       this.view.resources.scopeKey,
+      this.taskPreviewFeatureId,
       this.view.filters.values.task.text,
       this.view.filters.viewFilters.task.reviewAction,
       this.view.filters.viewFilters.task.reviewOutcome,
@@ -590,6 +593,9 @@ export class AdminCtx {
         (await runRemoteQuery(
           getTasks({
             q: this.view.filters.values.task.text,
+            mockLocationFeatureId: import.meta.env.DEV
+              ? this.taskPreviewFeatureId
+              : undefined,
             conditions: {
               reviewAction: this.view.filters.viewFilters.task.reviewAction || null,
               reviewOutcome:
@@ -670,16 +676,23 @@ export class AdminCtx {
     }
     this.hubCountLoading = true
     // Metadata has its own completion path so counting cannot delay hub cards.
-    void readFreshRemoteQuery(getHubs({ ...input, includeCount: true, countOnly: true }))
+    void readFreshRemoteQuery(
+      getHubs({ ...input, includeCount: true, countOnly: true }),
+    )
       .then(result => {
         if (isCurrent()) this.view.setListQueryMeta(this.hubsQueryKey, result)
       })
       .catch(() => {
-        if (isCurrent()) this.view.setListQueryMeta(this.hubsQueryKey, { data: [], totalCount: null })
+        if (isCurrent())
+          this.view.setListQueryMeta(this.hubsQueryKey, { data: [], totalCount: null })
       })
-      .finally(() => { if (isCurrent()) this.hubCountLoading = false })
+      .finally(() => {
+        if (isCurrent()) this.hubCountLoading = false
+      })
     try {
-      const result = await readFreshRemoteQuery(getHubs({ ...input, includeCount: false }))
+      const result = await readFreshRemoteQuery(
+        getHubs({ ...input, includeCount: false }),
+      )
       return result.data as Hub[]
     } catch (err) {
       const status =
@@ -966,7 +979,7 @@ export class AdminCtx {
 
   isViewportContained = $derived(
     this.navigation.state.resourceRef === false ||
-      this.navigation.state.facet === 'address' ||
+      this.navigation.state.facet === 'location' ||
       this.navigation.state.facet === 'images' ||
       (this.navigation.state.resourceType === 'feature' &&
         (this.navigation.state.facet === 'core' ||
