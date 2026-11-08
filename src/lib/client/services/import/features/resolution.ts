@@ -4,7 +4,7 @@ import {
   contentFormKey,
   contentStorageTag,
 } from '#lib/i18n/contentRecords.js'
-import { FeatureI18nBase } from '#lib/db/zod/schema/feature.js'
+import { FeatureI18nBase } from '#lib/db/zod/schema/featureI18n.js'
 import type { RemoteForm, RemoteFormInput } from '$app/server'
 
 // REMOTE

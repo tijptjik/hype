@@ -118,7 +118,7 @@ import { getLayer, getLayers } from '#lib/api/layer.remote.js'
 import { getOrganisationsWhichHaveLayers } from '#lib/api/organisation.remote.js'
 import { getProjectsWhichHaveLayers } from '#lib/api/project.remote.js'
 // SCHEMA
-import { FeaturePreflightFormData } from '#lib/db/zod/index.js'
+import { FeaturePreflightFormData } from '#lib/db/zod/schema/feature.form.js'
 // FACTORIES
 import { configureForm } from '#lib/factories.svelte.js'
 // BITS
