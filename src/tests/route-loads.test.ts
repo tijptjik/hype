@@ -42,6 +42,31 @@ describe('route loads', () => {
     })
   })
 
+  it('does not query subscription state when loading the shared admin foundations', async () => {
+    const lookup = vi.fn()
+    vi.doMock('#lib/db/services/hub.js', () => ({ getHubUserSubscriptionState: lookup }))
+    const route = await import('../routes/+layout.server')
+    const result = await route.load({ locals: {
+      user: { id: 'user-1' }, hub: { id: 'hub-1' },
+      platform: { env: { DB: {}, ENVIRONMENT: 'preview' } },
+    } } as never)
+    expect(result).not.toHaveProperty('hubUserState')
+    expect(lookup).not.toHaveBeenCalled()
+  })
+
+  it('returns subscription state only for an identified public-app user', async () => {
+    const flags = { subscriptionMember: true, subscriptionPromptDismissed: false, hasAgreedToTerms: true }
+    const lookup = vi.fn(async () => flags)
+    vi.doMock('drizzle-orm/d1', () => ({ drizzle: vi.fn(() => ({})) }))
+    vi.doMock('#lib/db/services/hub.js', () => ({ getHubUserSubscriptionState: lookup }))
+    const route = await import('../routes/(public)/(app)/+layout.server')
+    const locals = { platform: { env: { DB: {} } }, hub: { id: 'hub-1' }, user: { id: 'user-1' } }
+    expect(await route.load({ locals } as never)).toEqual({ hubUserState: flags })
+    expect(lookup).toHaveBeenCalledTimes(1)
+    expect(await route.load({ locals: { ...locals, user: null } } as never)).toEqual({ hubUserState: null })
+    expect(lookup).toHaveBeenCalledTimes(1)
+  })
+
   it('returns null hub user state when the subscription lookup fails', async () => {
     const mockDb = { kind: 'db' }
     const mockGetHubUserSubscriptionState = vi.fn(async () => {
@@ -61,7 +86,7 @@ describe('route loads', () => {
       getTitleEnvironmentLabel: vi.fn(() => 'Preview'),
     }))
 
-    const route = await import('../routes/+layout.server')
+    const route = await import('../routes/(public)/(app)/+layout.server')
 
     const result = await route.load({
       locals: {
@@ -81,7 +106,6 @@ describe('route loads', () => {
       userId: 'user-1',
     })
     expect(result?.hubUserState).toBe(null)
-    expect(result?.titleEnvironmentLabel).toBe('Preview')
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Failed to fetch hub user subscription state:',
       expect.any(Error),
