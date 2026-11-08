@@ -91,14 +91,14 @@ onMount(() => {
 >
 
 <div
-  class="inline-flex items-center gap-2 rounded-full border border-border bg-base-100 px-2 py-2 text-base-content shadow-[0_12px_32px_rgba(0,0,0,0.28)]"
+  class="border-border bg-base-100 text-base-content inline-flex items-center gap-2 rounded-full border px-2 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.28)]"
 >
   <Button
     text={m.forms__delete()}
     style="transparent"
     modifier="circle"
     hideLabel={true}
-    class="h-10 w-10 rounded-full border border-border bg-base-100 text-base-content hover:bg-base-content/10"
+    class="border-border bg-base-100 text-base-content hover:bg-base-content/10 h-10 w-10 rounded-full border"
     onClick={() => {
       void onDelete?.()
     }}
@@ -106,10 +106,10 @@ onMount(() => {
     iconClasses="h-[18px] w-[18px]"
   />
 
-  <div class="h-6 w-px bg-base-content/10" aria-hidden="true"></div>
+  <div class="bg-base-content/10 h-6 w-px" aria-hidden="true"></div>
 
   <div
-    class="px-1.5 font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground"
+    class="text-muted-foreground px-1.5 font-mono text-[11px] tracking-[0.28em] uppercase"
   >
     {m.wacky_home_sawfish_accept()}
   </div>
@@ -120,7 +120,7 @@ onMount(() => {
       style="transparent"
       modifier="circle"
       hideLabel={true}
-      class="h-10 w-10 rounded-full border border-border bg-base-100 text-base-content hover:bg-base-content/10"
+      class="border-border bg-base-100 text-base-content hover:bg-base-content/10 h-10 w-10 rounded-full border"
       onClick={() => {
         void handleCameraClick()
       }}
@@ -134,7 +134,7 @@ onMount(() => {
     style="transparent"
     modifier="circle"
     hideLabel={true}
-    class="h-10 w-10 rounded-full border border-border bg-base-100 text-base-content hover:bg-base-content/10"
+    class="border-border bg-base-100 text-base-content hover:bg-base-content/10 h-10 w-10 rounded-full border"
     onClick={() => galleryInput?.click()}
     iconComponent={FolderOpenIcon}
     iconClasses="h-[18px] w-[18px]"

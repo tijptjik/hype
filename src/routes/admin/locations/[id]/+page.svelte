@@ -36,7 +36,7 @@ $effect(() => {
 })
 </script>
 
-<div class="min-h-0 flex-1 overflow-y-auto bg-panel">
+<div class="bg-panel min-h-0 flex-1 overflow-y-auto">
   <div class="mx-auto flex w-full max-w-3xl flex-col gap-5 p-6">
     <a class="text-primary underline" href="/admin/locations"
       >{m.location_policy_tab()}</a
@@ -51,7 +51,7 @@ $effect(() => {
             place.id}
         </h1>
         <dl
-          class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 rounded-xl border border-border p-5"
+          class="border-border grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 rounded-xl border p-5"
         >
           <dt>HYPE ID</dt>
           <dd class="break-all">{place.id}</dd>
@@ -97,7 +97,7 @@ $effect(() => {
             await request.refresh()
           }}
         />
-        <p class="text-sm text-muted-foreground">
+        <p class="text-muted-foreground text-sm">
           {m.location_directory_detail_help()}
         </p>
       {:else}

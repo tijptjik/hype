@@ -48,7 +48,7 @@ const fields = $derived(
 
 <div data-card-content="breadline" class="pointer-events-auto flex flex-col gap-4 pb-4">
   <div
-    class="mx-4 flex items-start gap-3 rounded-xl border-l-4 bg-base-200/60 p-3"
+    class="bg-base-200/60 mx-4 flex items-start gap-3 rounded-xl border-l-4 p-3"
     style:border-color={brand.color}
   >
     <span
@@ -58,7 +58,7 @@ const fields = $derived(
       >{brand.badge}</span
     >
     <div class="min-w-0 flex-1">
-      <p class="text-xs font-semibold uppercase tracking-wide opacity-65">
+      <p class="text-xs font-semibold tracking-wide uppercase opacity-65">
         {brand.name}
       </p>
       {#if address}
@@ -80,7 +80,7 @@ const fields = $derived(
     <p class="mx-4 text-sm leading-relaxed opacity-80">{description}</p>
   {/if}
   {#if run}
-    <div class="mx-4 rounded-xl border border-border p-3">
+    <div class="border-border mx-4 rounded-xl border p-3">
       <p class="text-xs font-medium opacity-60">{run.dateLabel}</p>
       <div class="mt-2 flex items-baseline justify-between gap-3">
         <p class="font-semibold">{run.pickupWindow}</p>
@@ -88,7 +88,7 @@ const fields = $derived(
       </div>
       <button
         type="button"
-        class="mt-3 w-full rounded-lg bg-primary px-4 py-2 font-medium text-primary-content disabled:opacity-50"
+        class="bg-primary text-primary-content mt-3 w-full rounded-lg px-4 py-2 font-medium disabled:opacity-50"
         disabled={run.pending}
         onclick={() => run?.onClaim()}
       >
@@ -97,7 +97,7 @@ const fields = $derived(
     </div>
   {:else}
     <p
-      class="mx-4 rounded-xl border border-dashed border-border px-3 py-2 text-xs leading-relaxed opacity-65"
+      class="border-border mx-4 rounded-xl border border-dashed px-3 py-2 text-xs leading-relaxed opacity-65"
     >
       {m.breadline_card__choose_date()}
     </p>

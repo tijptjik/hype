@@ -47,14 +47,14 @@ let {
       {/if}
       {#if leftMetaText}
         <div
-          class="flex items-center font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/55"
+          class="text-base-content/55 flex items-center font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {leftMetaText}
         </div>
       {/if}
     </div>
 
-    <div class="flex items-center justify-center gap-2 text-sm text-base-content/60">
+    <div class="text-base-content/60 flex items-center justify-center gap-2 text-sm">
       {#if showPips}
         <div class="flex gap-1">
           {#each Array(totalSteps) as _, i}
@@ -83,7 +83,7 @@ let {
 
       {#if rightMetaText}
         <div
-          class="flex items-center px-3 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/55"
+          class="text-base-content/55 flex items-center px-3 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {rightMetaText}
         </div>

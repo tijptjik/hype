@@ -32,18 +32,18 @@ let triHoverState = $state<boolean | null>(null)
 
 <main class="h-full overflow-y-auto p-6">
   <section
-    class="bits-theme space-y-10 rounded-xl border border-base-300 bg-base-100 p-6"
+    class="bits-theme border-base-300 bg-base-100 space-y-10 rounded-xl border p-6"
   >
-    <h1 class="text-xl font-semibold text-foreground">Switch Variations</h1>
+    <h1 class="text-foreground text-xl font-semibold">Switch Variations</h1>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Interactive
       </h2>
       <div class="flex flex-wrap items-center gap-8">
         <div class="flex items-center gap-3">
           <Switch bind:checked={biState} name="enabled-switch" id="enabled-switch" />
-          <span class="text-sm text-foreground"
+          <span class="text-foreground text-sm"
             >Bi-state ({biState ? 'on' : 'off'})</span
           >
         </div>
@@ -57,7 +57,7 @@ let triHoverState = $state<boolean | null>(null)
             rightColor="secondary"
             leftColor="primary"
           />
-          <span class="text-sm text-foreground">
+          <span class="text-foreground text-sm">
             Tri-state ({triState === null ? 'unset' : triState ? 'on' : 'off'})
           </span>
         </div>
@@ -65,7 +65,7 @@ let triHoverState = $state<boolean | null>(null)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Sizes
       </h2>
       <div class="flex flex-wrap items-center gap-6">
@@ -78,7 +78,7 @@ let triHoverState = $state<boolean | null>(null)
               id={`size-${size}`}
               name={`size-${size}`}
             />
-            <span class="text-xs uppercase tracking-wide text-foreground-alt"
+            <span class="text-foreground-alt text-xs tracking-wide uppercase"
               >{size}</span
             >
           </div>
@@ -87,7 +87,7 @@ let triHoverState = $state<boolean | null>(null)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Sizes With Labels
       </h2>
       <div class="flex flex-wrap items-center gap-6">
@@ -105,7 +105,7 @@ let triHoverState = $state<boolean | null>(null)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Colors
       </h2>
       <div class="flex flex-wrap items-center gap-5">
@@ -117,7 +117,7 @@ let triHoverState = $state<boolean | null>(null)
               id={`color-${color}`}
               name={`color-${color}`}
             />
-            <span class="text-xs uppercase tracking-wide text-foreground-alt"
+            <span class="text-foreground-alt text-xs tracking-wide uppercase"
               >{color}</span
             >
           </div>
@@ -126,18 +126,18 @@ let triHoverState = $state<boolean | null>(null)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Disabled
       </h2>
       <div class="flex flex-wrap items-center gap-8">
         <div class="flex items-center gap-3 opacity-70">
           <Switch checked={true} disabled={true} id="disabled-on-switch" />
-          <span class="text-sm text-foreground">On</span>
+          <span class="text-foreground text-sm">On</span>
         </div>
 
         <div class="flex items-center gap-3 opacity-70">
           <Switch checked={false} disabled={true} id="disabled-off-switch" />
-          <span class="text-sm text-foreground">Off</span>
+          <span class="text-foreground text-sm">Off</span>
         </div>
 
         <div class="flex items-center gap-3 opacity-70">
@@ -147,24 +147,24 @@ let triHoverState = $state<boolean | null>(null)
             disabled={true}
             id="disabled-indeterminate-switch"
           />
-          <span class="text-sm text-foreground">Indeterminate</span>
+          <span class="text-foreground text-sm">Indeterminate</span>
         </div>
       </div>
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Display Only
       </h2>
       <div class="flex flex-wrap items-center gap-8">
         <div class="flex items-center gap-3">
           <Switch checked={true} isDisplay={true} id="display-on-switch" />
-          <span class="text-sm text-foreground">On</span>
+          <span class="text-foreground text-sm">On</span>
         </div>
 
         <div class="flex items-center gap-3">
           <Switch checked={false} isDisplay={true} id="display-off-switch" />
-          <span class="text-sm text-foreground">Off</span>
+          <span class="text-foreground text-sm">Off</span>
         </div>
 
         <div class="flex items-center gap-3">
@@ -174,7 +174,7 @@ let triHoverState = $state<boolean | null>(null)
             isDisplay={true}
             id="display-indeterminate-switch"
           />
-          <span class="text-sm text-foreground">Indeterminate</span>
+          <span class="text-foreground text-sm">Indeterminate</span>
         </div>
 
         <Switch
@@ -190,7 +190,7 @@ let triHoverState = $state<boolean | null>(null)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Labels
       </h2>
       <div class="flex flex-wrap items-center gap-8">

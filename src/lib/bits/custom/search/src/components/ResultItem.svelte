@@ -74,7 +74,7 @@ $effect(() => {
       aria-hidden="true"
     >
       <span
-        class="text-[10px] font-semibold uppercase tracking-[0.16em] text-base-content/58"
+        class="text-base-content/58 text-[10px] font-semibold tracking-[0.16em] uppercase"
         >{resolvedDisabledLabel}</span
       >
       {#if resolvedDisabledValue}

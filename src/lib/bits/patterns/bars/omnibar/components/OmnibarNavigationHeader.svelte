@@ -50,7 +50,7 @@ function handleCloseClick(event: MouseEvent): void {
       {#if showCollectionSwitcher}
         <button
           type="button"
-          class="btn btn-ghost btn-sm m-0 h-auto p-0 pt-2 hover:bg-transparent hover:text-base-content/80 focus:outline-none"
+          class="btn btn-ghost btn-sm hover:text-base-content/80 m-0 h-auto p-0 pt-2 hover:bg-transparent focus:outline-none"
           onclick={handleToggleTrayClick}
         >
           <Icon src={QueueList} class="h-6 w-6 stroke-2" />
@@ -81,7 +81,7 @@ function handleCloseClick(event: MouseEvent): void {
 
   <button
     type="button"
-    class="btn btn-ghost btn-sm omnibar-close-button relative m-0 inline-flex h-10 w-10 flex-none items-center justify-center overflow-visible rounded-full p-0 text-base-content transition-[transform,filter,color] duration-300 hover:bg-transparent hover:text-base-content/80"
+    class="btn btn-ghost btn-sm omnibar-close-button text-base-content hover:text-base-content/80 relative m-0 inline-flex h-10 w-10 flex-none items-center justify-center overflow-visible rounded-full p-0 transition-[transform,filter,color] duration-300 hover:bg-transparent"
     class:omnibar-close-button--pending={isCardOpeningPending}
     onclick={handleCloseClick}
   >

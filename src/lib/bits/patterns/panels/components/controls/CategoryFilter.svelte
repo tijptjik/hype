@@ -40,17 +40,17 @@ const optionsId = $props.id()
 </script>
 
 <div
-  class="mx-6 shrink-0 border-b border-base-content/10 text-base-content last:border-b-0"
+  class="border-base-content/10 text-base-content mx-6 shrink-0 border-b last:border-b-0"
 >
   <button
     type="button"
-    class="-mx-6 flex w-[calc(100%+3rem)] cursor-pointer items-center justify-between gap-4 px-6 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+    class="focus-visible:ring-focus -mx-6 flex w-[calc(100%+3rem)] cursor-pointer items-center justify-between gap-4 px-6 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
     aria-expanded={isOpen}
     aria-controls={optionsId}
     onclick={() => (isOpen = !isOpen)}
   >
     <span class="flex min-w-0 flex-col gap-1">
-      <span class="text-xs font-medium uppercase tracking-widest text-base-content/60"
+      <span class="text-base-content/60 text-xs font-medium tracking-widest uppercase"
         >{label}</span
       >
       <span
@@ -98,7 +98,7 @@ const optionsId = $props.id()
               <Check class="size-3" />
             {/if}
           </span>
-          <span class="min-w-0 flex-1 break-words font-normal">{optionLabel}</span>
+          <span class="min-w-0 flex-1 font-normal break-words">{optionLabel}</span>
         </button>
       {/each}
     </div>

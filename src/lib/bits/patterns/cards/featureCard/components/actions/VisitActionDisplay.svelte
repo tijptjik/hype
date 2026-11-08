@@ -151,18 +151,16 @@ $effect(() => {
 })
 </script>
 
-{#snippet visitValue(
-  value: FeatureCardActionDisplay,
-)}
+{#snippet visitValue(value: FeatureCardActionDisplay)}
   <div class="flex h-10 min-w-0 flex-col justify-center text-left">
     {#if value.detail}
       <p
-        class="h-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase"
+        class="h-4 max-w-full overflow-hidden text-xs text-ellipsis whitespace-nowrap uppercase"
       >
         {value.label}
       </p>
       <p
-        class="mt-1 h-5 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm normal-case tracking-normal text-base-content"
+        class="text-base-content mt-1 h-5 max-w-full overflow-hidden font-mono text-sm tracking-normal text-ellipsis whitespace-nowrap normal-case"
       >
         {value.detail}
       </p>
@@ -174,13 +172,11 @@ $effect(() => {
   </div>
 {/snippet}
 
-{#snippet visitContent(
-  isCollapsed: boolean,
-)}
+{#snippet visitContent(isCollapsed: boolean)}
   <!-- Root: this action consumes only the flex space that remains before the directions portal. -->
   <div class="flex min-w-0 flex-1 items-center gap-2">
     <!-- Icon: stable, fixed-position, and always primary. -->
-    <Icon src={Check} class="h-6 w-6 shrink-0 text-primary" />
+    <Icon src={Check} class="text-primary h-6 w-6 shrink-0" />
     {#if !isCollapsed}
       <!-- One keyed transition fades the whole action unit, never its rows independently. -->
       <div class="relative h-10 min-w-0 flex-1">

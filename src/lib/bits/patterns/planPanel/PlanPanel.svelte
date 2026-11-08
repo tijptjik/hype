@@ -532,7 +532,7 @@ onMount(() => {
     title={headerTitle}
   />
 
-  <div class="relative flex min-h-full flex-col bg-panel">
+  <div class="bg-panel relative flex min-h-full flex-col">
     <section
       class="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(236,72,153,0.16),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.12),_transparent_32%),linear-gradient(180deg,#19161f_0%,#11141a_58%,#000000_100%)] px-4 py-4"
     >
@@ -548,7 +548,7 @@ onMount(() => {
 
         <div class="min-w-0 space-y-2">
           <p
-            class="text-[11px] font-semibold uppercase tracking-[0.35em] text-[#ff69b0]"
+            class="text-[11px] font-semibold tracking-[0.35em] text-[#ff69b0] uppercase"
           >
             This Friday
           </p>
@@ -585,13 +585,13 @@ onMount(() => {
 
     {#if isLoading}
       <div
-        class="flex flex-1 items-center justify-center px-6 py-12 text-sm text-base-content/60"
+        class="text-base-content/60 flex flex-1 items-center justify-center px-6 py-12 text-sm"
       >
         Building a Friday programme from live feature data...
       </div>
     {:else if errorMessage}
       <div
-        class="m-4 rounded-3xl border border-warning/30 bg-warning/10 px-4 py-5 text-sm leading-6 text-base-content/80"
+        class="border-warning/30 bg-warning/10 text-base-content/80 m-4 rounded-3xl border px-4 py-5 text-sm leading-6"
       >
         {errorMessage}
       </div>
@@ -601,7 +601,7 @@ onMount(() => {
       >
         {#each scheduleStops as stop, index (stop.featureId)}
           <div class="relative pl-16">
-            <div class="absolute left-0 top-0 flex w-14 flex-col items-center">
+            <div class="absolute top-0 left-0 flex w-14 flex-col items-center">
               <div
                 class="rounded-full border border-[#ff69b0]/20 bg-[#ff69b0]/12 px-2.5 py-1 text-xs font-semibold text-[#ff73b5]"
               >
@@ -610,7 +610,7 @@ onMount(() => {
               <div class="mt-2 flex min-h-24 w-full flex-1 flex-col items-center">
                 <div class="h-12 w-px bg-white/10"></div>
                 <div
-                  class="flex w-14 flex-col items-center gap-1 text-center text-[10px] font-medium leading-3 text-white/35"
+                  class="flex w-14 flex-col items-center gap-1 text-center text-[10px] leading-3 font-medium text-white/35"
                 >
                   <BookOpenIcon class="h-3.5 w-3.5 text-white/25" />
                   <span>15 min</span>
@@ -618,7 +618,7 @@ onMount(() => {
                 {#if stop.distanceLabel}
                   <div class="mt-2 h-8 w-px bg-white/10"></div>
                   <div
-                    class="mt-1 flex w-14 flex-col items-center gap-1 text-center text-[10px] font-medium leading-3 text-white/45"
+                    class="mt-1 flex w-14 flex-col items-center gap-1 text-center text-[10px] leading-3 font-medium text-white/45"
                   >
                     <FootprintsIcon class="h-3.5 w-3.5 text-white/30" />
                     <span>{stop.distanceLabel}</span>
@@ -643,7 +643,7 @@ onMount(() => {
                   >
                 {:else}
                   <div
-                    class="flex h-28 items-center justify-center bg-gradient-to-br from-primary/15 via-base-200 to-secondary/15 text-3xl"
+                    class="from-primary/15 via-base-200 to-secondary/15 flex h-28 items-center justify-center bg-gradient-to-br text-3xl"
                   >
                     {stop.flag}
                   </div>
@@ -653,7 +653,7 @@ onMount(() => {
               <div class="min-w-0 space-y-2 p-2.5">
                 <div class="flex items-start gap-2">
                   <h4
-                    class="min-w-0 flex-1 line-clamp-2 text-sm font-semibold leading-5 text-white"
+                    class="line-clamp-2 min-w-0 flex-1 text-sm leading-5 font-semibold text-white"
                   >
                     {stop.title}
                   </h4>
@@ -707,7 +707,7 @@ onMount(() => {
     {/if}
 
     <div
-      class="pointer-events-none sticky bottom-0 mt-auto flex justify-end bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.82)_38%,#000000_100%)] px-4 pb-24 pt-8"
+      class="pointer-events-none sticky bottom-0 mt-auto flex justify-end bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.82)_38%,#000000_100%)] px-4 pt-8 pb-24"
     >
       <div class="pointer-events-auto">
         <Button

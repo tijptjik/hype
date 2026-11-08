@@ -183,17 +183,17 @@ function getSelectedResourceName(
             }}
           >
             <span
-              class="min-w-0 justify-self-start whitespace-normal wrap-break-word leading-tight text-sm"
+              class="min-w-0 justify-self-start text-sm leading-tight wrap-break-word whitespace-normal"
               >{name}</span
             >
-            <Icon size="lg" src={XMark} class="h-3 w-3 shrink-0 self-center -ml-1" />
+            <Icon size="lg" src={XMark} class="-ml-1 h-3 w-3 shrink-0 self-center" />
           </button>
         {/each}
       </div>
 
       {#if shouldShowEmptyState}
         <div class="flex flex-wrap justify-start gap-2 px-[1.625rem]">
-          <p class="pb-2 text-sm text-base-content/60">
+          <p class="text-base-content/60 pb-2 text-sm">
             {@html getNoneSelectedMessage(props)}
           </p>
         </div>

@@ -37,11 +37,38 @@ function handleClick(event: MouseEvent): void {
       aria-label={tooltip}
       onclick={handleClick}
     >
-      <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
-        <rect x="4" y="4" width="16" height="16" rx={isGenAI ? 3 : 8} style:rx={isGenAI ? '3px' : '8px'} class="transition-all duration-200 motion-reduce:transition-none" />
-        <path d="M12 1v3M2 10v4M22 10v4" style:opacity={isGenAI ? 1 : 0} class="transition-opacity duration-200 motion-reduce:transition-none" />
-        <circle cx="8.5" cy="10" r=".7" fill="currentColor" /><circle cx="15.5" cy="10" r=".7" fill="currentColor" />
-        <path d={isGenAI ? "M8 15 Q12 15 16 15" : "M8 14 Q12 19 16 14"} style:d={isGenAI ? 'path("M8 15 Q12 15 16 15")' : 'path("M8 14 Q12 19 16 14")'} class="transition-all duration-200 motion-reduce:transition-none" />
+      <svg
+        viewBox="0 0 24 24"
+        class="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <rect
+          x="4"
+          y="4"
+          width="16"
+          height="16"
+          rx={isGenAI ? 3 : 8}
+          style:rx={isGenAI ? '3px' : '8px'}
+          class="transition-all duration-200 motion-reduce:transition-none"
+        />
+        <path
+          d="M12 1v3M2 10v4M22 10v4"
+          style:opacity={isGenAI ? 1 : 0}
+          class="transition-opacity duration-200 motion-reduce:transition-none"
+        />
+        <circle cx="8.5" cy="10" r=".7" fill="currentColor" />
+        <circle cx="15.5" cy="10" r=".7" fill="currentColor" />
+        <path
+          d={isGenAI ? 'M8 15 Q12 15 16 15' : 'M8 14 Q12 19 16 14'}
+          style:d={isGenAI
+            ? 'path("M8 15 Q12 15 16 15")'
+            : 'path("M8 14 Q12 19 16 14")'}
+          class="transition-all duration-200 motion-reduce:transition-none"
+        />
       </svg>
     </button>
   {/snippet}

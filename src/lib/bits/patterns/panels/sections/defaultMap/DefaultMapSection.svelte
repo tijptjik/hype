@@ -87,7 +87,7 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
   {/if}
   <div class="flex min-w-0 flex-col gap-4 px-6 pt-2 pb-6">
     {#if filteredLayers.length === 0 && searchTerm.trim()}
-      <p class="text-sm text-muted-foreground" role="status">{m.omni__no_results()}</p>
+      <p class="text-muted-foreground text-sm" role="status">{m.omni__no_results()}</p>
     {/if}
     {#each filteredLayers as layer (layer.id)}
       {@const { organisation, project } = model.getHierarchy(layer)}
@@ -107,7 +107,7 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
             <div class="flex flex-row items-center gap-3">
               <div class="flex min-w-0 flex-col items-start gap-0">
                 <p
-                  class="flex min-w-0 space-x-0.5 font-mono text-xs uppercase tracking-widest"
+                  class="flex min-w-0 space-x-0.5 font-mono text-xs tracking-widest uppercase"
                 >
                   {#if organisationName}
                     <span class="text-primary">{organisationName}</span>
@@ -131,7 +131,7 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
                     {#if hasLongDescription}
                       <button
                         type="button"
-                        class="mt-1 text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
+                        class="text-primary mt-1 text-xs tracking-[0.18em] uppercase transition-opacity hover:opacity-80"
                         onclick={() => toggleDescriptionExpanded(layer.id)}
                       >
                         {isExpanded ? m.common__read_less() : m.common__read_more()}

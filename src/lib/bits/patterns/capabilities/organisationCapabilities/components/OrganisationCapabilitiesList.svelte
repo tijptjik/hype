@@ -16,9 +16,9 @@ let {
 <div class="bits-form__parent-resource-list bits-form__capabilities-list pt-2">
   {#each selectedCapabilityKeys as capabilityKey (capabilityKey)}
     <div
-      class="flex min-h-14 items-center gap-4 border-b border-border/40 px-3 last:border-b-0"
+      class="border-border/40 flex min-h-14 items-center gap-4 border-b px-3 last:border-b-0"
     >
-      <ShieldCheckIcon class="size-5 shrink-0 text-primary" aria-hidden="true" />
+      <ShieldCheckIcon class="text-primary size-5 shrink-0" aria-hidden="true" />
       <span class="min-w-0 flex-1 text-[15px] font-medium"
         >{getCapabilityDisplayLabel(capabilityKey)}</span
       >

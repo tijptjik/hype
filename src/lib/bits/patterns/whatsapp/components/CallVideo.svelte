@@ -16,7 +16,7 @@ $effect(() => {
 </script>
 
 <section
-  class="relative aspect-video overflow-hidden rounded-xl border border-border bg-black"
+  class="border-border relative aspect-video overflow-hidden rounded-xl border bg-black"
   aria-label="Video call"
 >
   <video

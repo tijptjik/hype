@@ -44,7 +44,9 @@ async function setOpen(next: boolean): Promise<void> {
   transitioning = true
   await tick()
   try {
-    await transitionReviewDialog(() => { open = next })
+    await transitionReviewDialog(() => {
+      open = next
+    })
   } finally {
     transitioning = false
   }
@@ -100,7 +102,9 @@ function select(next: string): void {
   </DropdownMenu.Trigger>
   <DropdownMenu.Portal>
     <DropdownMenu.Content
-        style={transitioning && open ? `view-transition-name:${transitionName};view-transition-class:image-menu` : undefined}
+      style={transitioning && open
+        ? `view-transition-name:${transitionName};view-transition-class:image-menu`
+        : undefined}
       side="top"
       align="center"
       sideOffset={12}

@@ -26,7 +26,12 @@ let {
 <div
   class="flex flex-row items-end gap-2 overflow-visible caret-transparent select-none"
 >
-  <FeatureCardViewerAttribution {currentImage} {gallery} {overlayTarget} {onHeightChange} />
+  <FeatureCardViewerAttribution
+    {currentImage}
+    {gallery}
+    {overlayTarget}
+    {onHeightChange}
+  />
   {#if surface.isAdmin()}
     <FeatureCardViewerIntent {currentImage} />
   {/if}

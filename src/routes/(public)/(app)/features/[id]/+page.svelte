@@ -46,7 +46,9 @@ omniCtx.setCardCtx(cardCtx)
 // viewer's outgoing scene survive until the next selected resource can crossfade.
 let feature = $state.raw<ReturnType<typeof appCtx.getActiveFeature>>(null)
 let successors = $state<Awaited<ReturnType<typeof getFeatureSuccessors>>>(null)
-let successorPreviews = $state<{ id: string; title: string; images: ViewerRenderable[] }[]>([])
+let successorPreviews = $state<
+  { id: string; title: string; images: ViewerRenderable[] }[]
+>([])
 let successorsLoading = $state(false)
 let presentedAccountRevision = untrack(() => appCtx.view.account.revision)
 $effect(() => {
@@ -148,27 +150,45 @@ const loadFeatureAndSetContext = async (
     appCtx.resetActiveFeature()
     feature = null
     if (lineage.redirectFeatureId) {
-      await goto(`/features/${encodeURIComponent(lineage.redirectFeatureId)}${page.url.search}`, { replace: true, reset: false })
+      await goto(
+        `/features/${encodeURIComponent(lineage.redirectFeatureId)}${page.url.search}`,
+        { replace: true, reset: false },
+      )
       return
     }
     // Resolve each public successor through the ordinary authorized Feature reader.
     successorPreviews = lineage.successors.map(item => ({
-      id: item.id, title: Object.values(item.titles)[0] || item.id, images: [],
+      id: item.id,
+      title: Object.values(item.titles)[0] || item.id,
+      images: [],
     }))
     successorsLoading = true
     omniCtx.setMode(OmniMode.search, { openCard: false })
     omniCtx.openCard()
     try {
-      const previews = await Promise.all(lineage.successors.map(async item => {
-        const target = await appCtx.view.getFeatureById(item.id)
-        const title = target ? getI18n(target, 'title', appCtx.view.getUserPreferences(), item.id) : Object.values(item.titles)[0] || item.id
-        const images = target && 'images' in target && target.images?.length
-          ? target.images as ImageCtxEnvelope[]
-          : target?.image ? [target.image as ImageCtxEnvelope] : []
-        return { id: item.id, title, images: images.map(image => ({
-          id: image.image.id, src: getURLfromImage({ image }), alt: title,
-        })) }
-      }))
+      const previews = await Promise.all(
+        lineage.successors.map(async item => {
+          const target = await appCtx.view.getFeatureById(item.id)
+          const title = target
+            ? getI18n(target, 'title', appCtx.view.getUserPreferences(), item.id)
+            : Object.values(item.titles)[0] || item.id
+          const images =
+            target && 'images' in target && target.images?.length
+              ? (target.images as ImageCtxEnvelope[])
+              : target?.image
+                ? [target.image as ImageCtxEnvelope]
+                : []
+          return {
+            id: item.id,
+            title,
+            images: images.map(image => ({
+              id: image.image.id,
+              src: getURLfromImage({ image }),
+              alt: title,
+            })),
+          }
+        }),
+      )
       if (routeFeatureId === id) successorPreviews = previews
     } catch (error) {
       // Keep the destination links available if a preview cannot be loaded.
@@ -297,14 +317,33 @@ const imageProviderModel = useImageProviderModel(
 
 {#if appCtx}
   {#if successors && !successors.retainsIdentity}
-    <FeatureSuccessorCard state={successors.state} items={successorPreviews} loading={successorsLoading} />
+    <FeatureSuccessorCard
+      state={successors.state}
+      items={successorPreviews}
+      loading={successorsLoading}
+    />
   {:else if feature}
     {#if successors}
-      <section class="rounded-xl border border-border bg-background p-4" aria-label="Feature successors">
-        <p class="mb-3 text-sm">This Feature was split. It continues here and in these Features:</p>
-        <ul class="grid gap-2">{#each successors.successors.filter(item => item.id !== routeFeatureId) as successor}
-          <li><a class="text-sm underline whitespace-normal break-words" href={`/features/${encodeURIComponent(successor.id)}`}>{Object.values(successor.titles)[0] || successor.id}</a></li>
-        {/each}</ul>
+      <section
+        class="border-border bg-background rounded-xl border p-4"
+        aria-label="Feature successors"
+      >
+        <p class="mb-3 text-sm">
+          This Feature was split. It continues here and in these Features:
+        </p>
+        <ul class="grid gap-2">
+          {#each successors.successors.filter(
+            item => item.id !== routeFeatureId,
+          ) as successor}
+            <li>
+              <a
+                class="text-sm break-words whitespace-normal underline"
+                href={`/features/${encodeURIComponent(successor.id)}`}
+                >{Object.values(successor.titles)[0] || successor.id}</a
+              >
+            </li>
+          {/each}
+        </ul>
       </section>
     {/if}
     <ImageProvider model={imageProviderModel}>
@@ -324,7 +363,7 @@ const imageProviderModel = useImageProviderModel(
     </ImageProvider>
   {/if}
 {:else}
-  <div class="absolute inset-0 flex items-center justify-center rounded-lg bg-base-300">
+  <div class="bg-base-300 absolute inset-0 flex items-center justify-center rounded-lg">
     <div class="loading loading-ring loading-lg text-primary"></div>
   </div>
 {/if}

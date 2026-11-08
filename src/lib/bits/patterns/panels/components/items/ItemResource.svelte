@@ -146,7 +146,7 @@ afterNavigate(async ({ shallow }) => {
 
 <fieldset
   bind:this={buttonEl}
-  class="bits-theme group relative m-0 border-0 p-0 bits-panel-item-resource"
+  class="bits-theme group bits-panel-item-resource relative m-0 border-0 p-0"
   class:bits-panel-item-resource--narrow={panelProps.isNarrow}
   data-tone={colorTone}
   data-selected={isSelected}
@@ -189,7 +189,7 @@ afterNavigate(async ({ shallow }) => {
     onblur={hideTooltip}
   ></button>
   <div
-    class="group pointer-events-none relative z-10 bits-panel-item-resource__main"
+    class="group bits-panel-item-resource__main pointer-events-none relative z-10"
     class:bits-panel-item-resource__main--narrow={panelProps.isNarrow}
     class:bits-panel-item-resource__main--wide={!panelProps.isNarrow}
   >
@@ -229,7 +229,7 @@ afterNavigate(async ({ shallow }) => {
     {/if}
 
     {#if !panelProps.isNarrow}
-      <div class="flex min-w-0 overflow-visible flex-col items-start gap-0">
+      <div class="flex min-w-0 flex-col items-start gap-0 overflow-visible">
         <ResourceHierarchyPath {hierarchy} />
 
         <p
@@ -245,7 +245,7 @@ afterNavigate(async ({ shallow }) => {
   {#if !panelProps.isNarrow}
     <button
       type="button"
-      class="shrink-0 text-sm text-base-content/20 group-hover:text-base-content/40 group-focus-visible:text-base-content/40 relative z-10 border-0 bg-transparent p-0"
+      class="text-base-content/20 group-hover:text-base-content/40 group-focus-visible:text-base-content/40 relative z-10 shrink-0 border-0 bg-transparent p-0 text-sm"
       aria-label={name}
       onclick={event => handleControlClick(event, onToggle)}
       onkeydown={stopControlKeydown}
@@ -259,7 +259,7 @@ afterNavigate(async ({ shallow }) => {
   <Portal target="body">
     <div
       transition:tooltipShift={{ duration: 160, offsetX: 10 }}
-      class="bits-theme pointer-events-auto fixed z-50 min-h-4 min-w-10 whitespace-nowrap rounded-r-md bg-panel px-3 py-2 text-center text-sm text-base-content"
+      class="bits-theme bg-panel text-base-content pointer-events-auto fixed z-50 min-h-4 min-w-10 rounded-r-md px-3 py-2 text-center text-sm whitespace-nowrap"
       style="top: {tooltipPosition.top}px; left: {tooltipPosition.left}px;"
     >
       {name}

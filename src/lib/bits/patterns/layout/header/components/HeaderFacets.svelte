@@ -88,7 +88,7 @@ $effect(() => {
               attrs={{ 'aria-current': isActive ? 'page' : undefined }}
               {color}
               style="ghost"
-              class={`${facetButtonClass} whitespace-nowrap w-max`}
+              class={`${facetButtonClass} w-max whitespace-nowrap`}
               labelClasses={HEADER_BUTTON_LABEL_CLASSES}
               iconComponent={facet.icon}
               {hideLabel}

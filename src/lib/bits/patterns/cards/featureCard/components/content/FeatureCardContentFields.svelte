@@ -108,12 +108,12 @@ $effect(() => {
         style={`grid-column: ${(cell?.column ?? 0) + 1} / span ${cell?.colSpan ?? 1}; grid-row: ${(cell?.row ?? 0) + 1};`}
       >
         <span
-          class="font-mono text-xs font-normal uppercase leading-4 text-muted-foreground"
+          class="text-muted-foreground font-mono text-xs leading-4 font-normal uppercase"
         >
           {property.label}
         </span>
         <div
-          class={`mt-0.5 overflow-hidden break-words text-base font-medium leading-[22px] ${
+          class={`mt-0.5 overflow-hidden text-base leading-[22px] font-medium break-words ${
             property.display?.kind === 'links'
               ? 'max-h-[88px] overflow-y-auto overscroll-contain pr-1'
               : layoutResult.cellOverflowIds.has(property.id)

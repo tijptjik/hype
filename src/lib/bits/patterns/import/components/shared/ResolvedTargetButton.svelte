@@ -24,7 +24,7 @@ let { children, title, changeLabel, onReset }: Props = $props()
   <div class="flex min-w-0 items-center gap-3">
     {@render children()}
   </div>
-  <div class="flex shrink-0 items-center gap-2 text-xs text-success/70">
+  <div class="text-success/70 flex shrink-0 items-center gap-2 text-xs">
     <Icon src={CheckCircle} class="h-4 w-4" />
     <span>{changeLabel}</span>
   </div>

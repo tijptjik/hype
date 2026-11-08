@@ -458,7 +458,7 @@ function getSampleValues(limit = 10): string[] {
 
 <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+    class="border-info/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
   >
     {#if isLoading}
       <div class="flex min-h-full flex-1 items-center justify-center">
@@ -466,7 +466,7 @@ function getSampleValues(limit = 10): string[] {
         <span class="ml-3">{m.validating_range_values()}</span>
       </div>
     {:else if !existingProperty}
-      <div class="rounded-2xl border border-error/25 bg-error/10 p-4 text-error">
+      <div class="border-error/25 bg-error/10 text-error rounded-2xl border p-4">
         <h4 class="font-semibold">{m.property_not_found()}</h4>
         <p class="mt-2 text-sm">
           {m.property_not_found_description({ key: property.key })}
@@ -477,49 +477,49 @@ function getSampleValues(limit = 10): string[] {
         <div class="flex items-start justify-between gap-4">
           <div>
             <div
-              class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-success"
+              class="text-success font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
             >
               Existing range property
             </div>
             <h3 class="mt-2 text-2xl font-black tracking-tight">{property.key}</h3>
           </div>
           <div
-            class="rounded-full border border-success/25 bg-success/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-success"
+            class="border-success/25 bg-success/10 text-success rounded-full border px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.08em] uppercase"
           >
             Toggle detected
           </div>
         </div>
 
-        <div class="rounded-2xl border border-success/25 bg-success/10 p-4">
-          <h4 class="font-semibold text-success">Boolean values detected</h4>
-          <p class="mt-2 text-sm text-success/80">
+        <div class="border-success/25 bg-success/10 rounded-2xl border p-4">
+          <h4 class="text-success font-semibold">Boolean values detected</h4>
+          <p class="text-success/80 mt-2 text-sm">
             This column will be submitted as numeric range values using `true = 1` and
             `false = 0`.
           </p>
         </div>
 
         <div
-          class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-2"
+          class="border-foreground/10 bg-foreground/[0.055] grid min-h-[4.35rem] gap-3 rounded-2xl border p-4 md:grid-cols-2"
         >
           <div>
             <div
-              class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+              class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
             >
               Current property range
             </div>
-            <div class="mt-2 font-mono text-lg text-base-content/90">
+            <div class="text-base-content/90 mt-2 font-mono text-lg">
               {existingProperty.min ?? '∞'}
               - {existingProperty.max ?? '∞'}
             </div>
           </div>
           <div class="flex items-center justify-start md:justify-end">
             <span class="loading loading-spinner loading-md"></span>
-            <span class="ml-3 text-sm text-base-content/70">Auto-proceeding…</span>
+            <span class="text-base-content/70 ml-3 text-sm">Auto-proceeding…</span>
           </div>
         </div>
       </div>
     {:else if !validation}
-      <div class="rounded-2xl border border-error/25 bg-error/10 p-4 text-error">
+      <div class="border-error/25 bg-error/10 text-error rounded-2xl border p-4">
         <h4 class="font-semibold">{m.validation_error()}</h4>
         <p class="mt-2 text-sm">{m.unable_to_validate_values()}</p>
       </div>
@@ -528,14 +528,14 @@ function getSampleValues(limit = 10): string[] {
         <div class="flex items-start justify-between gap-4">
           <div>
             <div
-              class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-info"
+              class="text-info font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
             >
               Existing range property
             </div>
             <h3 class="mt-2 text-2xl font-black tracking-tight">{property.key}</h3>
           </div>
           <div
-            class={`rounded-full border px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] ${
+            class={`rounded-full border px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.08em] uppercase ${
               validation.isValid
                 ? 'border-success/25 bg-success/10 text-success'
                 : 'border-warning/25 bg-warning/10 text-warning'
@@ -547,47 +547,47 @@ function getSampleValues(limit = 10): string[] {
 
         <div class="grid gap-3 md:grid-cols-2">
           <div
-            class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+            class="border-foreground/10 bg-foreground/[0.055] rounded-2xl border p-4"
           >
             <div
-              class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+              class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
             >
               {m.current_property_range()}
             </div>
-            <div class="mt-2 font-mono text-2xl font-black text-base-content/90">
+            <div class="text-base-content/90 mt-2 font-mono text-2xl font-black">
               {validation.currentRange.min ?? '∞'}
               - {validation.currentRange.max ?? '∞'}
             </div>
-            <p class="mt-2 text-sm text-base-content/65">{m.existing_constraints()}</p>
+            <p class="text-base-content/65 mt-2 text-sm">{m.existing_constraints()}</p>
           </div>
 
           <div
-            class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+            class="border-foreground/10 bg-foreground/[0.055] rounded-2xl border p-4"
           >
             <div
-              class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+              class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
             >
               {m.csv_data_range()}
             </div>
-            <div class="mt-2 font-mono text-2xl font-black text-base-content/90">
+            <div class="text-base-content/90 mt-2 font-mono text-2xl font-black">
               {validation.csvRange.min ?? '—'}
               - {validation.csvRange.max ?? '—'}
             </div>
-            <p class="mt-2 text-sm text-base-content/65">{m.values_in_import_data()}</p>
+            <p class="text-base-content/65 mt-2 text-sm">{m.values_in_import_data()}</p>
           </div>
         </div>
 
         {#if validation.isValid}
-          <div class="rounded-2xl border border-success/25 bg-success/10 p-4">
-            <h4 class="font-semibold text-success">{m.all_values_within_range()}</h4>
-            <p class="mt-2 text-sm text-success/80">
+          <div class="border-success/25 bg-success/10 rounded-2xl border p-4">
+            <h4 class="text-success font-semibold">{m.all_values_within_range()}</h4>
+            <p class="text-success/80 mt-2 text-sm">
               These values can be imported directly without any remapping.
             </p>
           </div>
         {:else}
-          <div class="rounded-2xl border border-warning/25 bg-warning/8 p-4">
-            <h4 class="font-semibold text-warning">Resolve invalid input values</h4>
-            <p class="mt-2 text-sm text-warning/80">
+          <div class="border-warning/25 bg-warning/8 rounded-2xl border p-4">
+            <h4 class="text-warning font-semibold">Resolve invalid input values</h4>
+            <p class="text-warning/80 mt-2 text-sm">
               Map each CSV value to a stored numeric value, or drop it for this import.
             </p>
           </div>
@@ -595,32 +595,32 @@ function getSampleValues(limit = 10): string[] {
           <div class="space-y-3">
             {#each valuesNeedingResolution as issue}
               <div
-                class="grid gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[minmax(0,1fr)_10rem]"
+                class="border-foreground/10 bg-foreground/[0.055] grid gap-3 rounded-2xl border p-4 md:grid-cols-[minmax(0,1fr)_10rem]"
               >
                 <div class="min-w-0">
                   <div
-                    class="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-base-content/45"
+                    class="text-base-content/45 font-mono text-xs font-semibold tracking-[0.16em] uppercase"
                   >
                     Source value
                   </div>
-                  <div class="mt-2 font-mono text-base text-base-content/90">
+                  <div class="text-base-content/90 mt-2 font-mono text-base">
                     {issue.value}
                   </div>
-                  <div class="mt-2 text-sm text-warning/80">
+                  <div class="text-warning/80 mt-2 text-sm">
                     {getIssueText(issue)}
                   </div>
                 </div>
 
                 <div class="space-y-2">
                   <div
-                    class="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-base-content/45"
+                    class="text-base-content/45 font-mono text-xs font-semibold tracking-[0.16em] uppercase"
                   >
                     Assign to
                   </div>
                   {#if usesDiscreteAssignments}
                     <div class="p-2">
                       <select
-                        class="select select-bordered w-full bg-panel/30 px-2 text-center font-mono text-sm"
+                        class="select select-bordered bg-panel/30 w-full px-2 text-center font-mono text-sm"
                         value={assignments[issue.value] ?? ''}
                         onchange={event => {
                           assignments[issue.value] = (
@@ -638,7 +638,7 @@ function getSampleValues(limit = 10): string[] {
                   {:else}
                     <div class="flex gap-2 p-2">
                       <input
-                        class="input input-bordered w-full bg-panel/30 px-2 text-center font-mono text-sm"
+                        class="input input-bordered bg-panel/30 w-full px-2 text-center font-mono text-sm"
                         type="number"
                         step="any"
                         value={assignments[issue.value] === DROP_VALUE
@@ -677,11 +677,11 @@ function getSampleValues(limit = 10): string[] {
   </section>
 
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+    class="border-warning/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
   >
     <div class="mb-5">
       <div
-        class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-warning"
+        class="text-warning font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
       >
         {uniqueValues.length} {uniqueValues.length === 1 ? 'value' : 'values'}
       </div>
@@ -689,11 +689,11 @@ function getSampleValues(limit = 10): string[] {
     </div>
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04]"
+      class="border-foreground/10 bg-foreground/[0.04] min-h-0 flex-1 overflow-y-auto rounded-2xl border"
     >
       {#each getSampleValues() as value}
         <div
-          class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+          class="border-foreground/10 text-base-content/80 border-b px-4 py-3 font-mono text-sm last:border-b-0"
         >
           {value}
         </div>
@@ -702,14 +702,14 @@ function getSampleValues(limit = 10): string[] {
 
     {#if validation && !validation.isValid}
       <div
-        class="mt-4 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+        class="border-foreground/10 bg-foreground/[0.055] mt-4 rounded-2xl border p-4"
       >
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+          class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           Resolution mode
         </div>
-        <p class="mt-2 text-sm leading-relaxed text-base-content/70">
+        <p class="text-base-content/70 mt-2 text-sm leading-relaxed">
           {usesDiscreteAssignments
             ? 'This range is short enough to choose from fixed numeric options.'
             : 'This range is broad, so enter a numeric replacement or drop the value.'}

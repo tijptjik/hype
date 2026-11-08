@@ -203,7 +203,7 @@ $effect(() => {
 
 {#snippet coordinatesControl()}
   <div
-    class="flex min-h-11 max-w-full flex-wrap items-center gap-2 rounded-lg border border-border bg-panel px-3 py-1 text-foreground"
+    class="border-border bg-panel text-foreground flex min-h-11 max-w-full flex-wrap items-center gap-2 rounded-lg border px-3 py-1"
   >
     {#if isEditing}
       <button
@@ -212,18 +212,18 @@ $effect(() => {
         data-tooltip={m.admin__geo_lookup_address_at_location()}
         disabled={!isEditing || isLoading || Boolean(coordinateError)}
         onclick={() => onLookup()}
-        class="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:text-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-35"
+        class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-8 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-2 disabled:opacity-35"
       >
         <SearchIcon class="size-4" aria-hidden="true" />
       </button>
     {/if}
     {#each ['longitude', 'latitude'] as const as axis, index}
       {#if index}
-        <span aria-hidden="true" class="h-6 w-px bg-foreground/20"></span>
+        <span aria-hidden="true" class="bg-foreground/20 h-6 w-px"></span>
       {/if}
       <div class="flex min-w-0 items-center gap-2">
         <span
-          class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+          class="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
           >{axis === 'longitude' ? 'LNG' : 'LAT'}</span
         >
         {#if isEditing}
@@ -239,7 +239,7 @@ $effect(() => {
                 ? longitude
                 : latitude
               : compactCoordinate(axis === 'longitude' ? longitude : latitude)}
-            class="w-20 min-w-0 rounded-md bg-transparent py-2 text-sm tabular-nums outline-none transition-[width] focus:w-44 focus:ring-2 focus:ring-primary @max-[1100px]:focus:w-32"
+            class="focus:ring-primary w-20 min-w-0 rounded-md bg-transparent py-2 text-sm tabular-nums transition-[width] outline-none focus:w-44 focus:ring-2 @max-[1100px]:focus:w-32"
             onfocus={() => (focusedCoordinate = axis)}
             oninput={event => {
               if (axis === 'longitude') longitude = event.currentTarget.value
@@ -270,10 +270,10 @@ $effect(() => {
         ? m.feature_address_coordinates_copied()
         : m.feature_address_copy_coordinates()}
       data-tooltip={m.feature_address_copy_coordinates()}
-      class="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+      class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-8 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-2"
     >
       {#if copiedCoordinates}
-        <CheckIcon class="size-4 text-success" aria-hidden="true" />
+        <CheckIcon class="text-success size-4" aria-hidden="true" />
       {:else}
         <CopyIcon class="size-4" aria-hidden="true" />
       {/if}
@@ -289,7 +289,7 @@ $effect(() => {
 {/snippet}
 {#snippet lookupControl()}
   <div
-    class="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-panel py-1 pl-3 pr-1 text-foreground"
+    class="border-border bg-panel text-foreground flex min-h-11 items-center gap-2 rounded-lg border py-1 pr-1 pl-3"
   >
     <input
       type="text"
@@ -297,7 +297,7 @@ $effect(() => {
       placeholder={m.feature_address_lookup()}
       bind:value={lookupQuery}
       readonly={!isEditing}
-      class="min-w-0 flex-1 rounded-md bg-transparent py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      class="focus-visible:ring-primary min-w-0 flex-1 rounded-md bg-transparent py-2 text-sm outline-none focus-visible:ring-2"
       onkeydown={event => {
         if (event.key === 'Enter') {
           event.preventDefault()
@@ -313,7 +313,7 @@ $effect(() => {
       hideLabelInstantly={true}
       style="transparent"
       size="sm"
-      class="size-10 shrink-0 rounded-full text-primary"
+      class="text-primary size-10 shrink-0 rounded-full"
       disabled={!isEditing || isLoading || !lookupQuery.trim()}
       onClick={() => onLookup(lookupQuery.trim())}
     />
@@ -357,17 +357,17 @@ $effect(() => {
       address.matchStatus === 'ambiguous'}
       <div class="px-6 py-3">
         {#if coordinateError}
-          <p role="alert" class="text-sm text-error">{coordinateError}</p>
+          <p role="alert" class="text-error text-sm">{coordinateError}</p>
         {/if}
         {#if message ||
           address.matchStatus === 'stale' ||
           address.matchStatus === 'ambiguous'}
-          <p role="status" class="text-sm text-muted-foreground">{message || status}</p>
+          <p role="status" class="text-muted-foreground text-sm">{message || status}</p>
         {/if}
       </div>
     {/if}
     {#if candidates.length}
-      <div class="space-y-2 border-b border-border px-6 py-5">
+      <div class="border-border space-y-2 border-b px-6 py-5">
         <h3 class="text-sm font-semibold">{m.feature_address_choose_result()}</h3>
         <div class="grid gap-2">
           {#each candidates as candidate, index}
@@ -375,23 +375,23 @@ $effect(() => {
               type="button"
               disabled={isLoading}
               onclick={() => onSelectCandidate(candidate)}
-              class="flex items-center gap-3 rounded-md border border-border bg-background px-4 py-3 text-left text-foreground transition-colors hover:border-primary hover:bg-primary/10 disabled:opacity-50"
+              class="border-border bg-background text-foreground hover:border-primary hover:bg-primary/10 flex items-center gap-3 rounded-md border px-4 py-3 text-left transition-colors disabled:opacity-50"
             >
-              <span class="text-xs text-muted-foreground">{index + 1}</span>
+              <span class="text-muted-foreground text-xs">{index + 1}</span>
               <span class="flex-1 text-sm"
                 >{String(
                   getAddressLocale(candidate, getLocaleKey()).formattedAddress ||
                     getAddressDisplay(candidate, getLocaleKey()),
                 )}</span
               >
-              <span class="text-xs text-primary">{m.feature_address_select()}</span>
+              <span class="text-primary text-xs">{m.feature_address_select()}</span>
             </button>
           {/each}
         </div>
       </div>
     {/if}
     {#if showAddressDetails && show3dAddressOptions && units.length}
-      <div class="border-b border-border px-6 py-6">
+      <div class="border-border border-b px-6 py-6">
         <SelectField
           label={m.feature_address_unit()}
           items={units}
@@ -414,10 +414,19 @@ $effect(() => {
       </div>
     {/if}
     <div
-      class="grid items-start gap-8 border-t border-border/60 px-6 py-6 lg:grid-cols-2"
+      class="border-border/60 grid items-start gap-8 border-t px-6 py-6 lg:grid-cols-2"
     >
       {#if showAddressDetails}
-        <AddressDetails {address} {isEditing} {show3dAddressOptions} {hasLocation} onChange={next => { if (!hasLocation && next.coordinates) onCoordinateChange(next.coordinates); onChange(next) }} />
+        <AddressDetails
+          {address}
+          {isEditing}
+          {show3dAddressOptions}
+          {hasLocation}
+          onChange={next => {
+            if (!hasLocation && next.coordinates) onCoordinateChange(next.coordinates)
+            onChange(next)
+          }}
+        />
       {/if}
       {#if showDivisions}
         <AddressDivisions

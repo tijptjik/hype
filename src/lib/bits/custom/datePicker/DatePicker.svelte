@@ -37,7 +37,7 @@ let open = $state(false)
   >
     {#snippet trigger()}
       <span class="text-sm">{value || 'Choose date'}</span>
-      <CalendarIcon class="size-4 shrink-0 text-muted-foreground" />
+      <CalendarIcon class="text-muted-foreground size-4 shrink-0" />
     {/snippet}
     <Calendar
       {value}
@@ -48,10 +48,10 @@ let open = $state(false)
         open = false
       }}
     />
-    <div class="flex justify-end border-t border-border px-3 py-2">
+    <div class="border-border flex justify-end border-t px-3 py-2">
       <button
         type="button"
-        class="text-xs text-muted-foreground hover:text-primary"
+        class="text-muted-foreground hover:text-primary text-xs"
         onclick={() => {
           onChange('')
           open = false

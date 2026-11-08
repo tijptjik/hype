@@ -11,12 +11,12 @@ let {
 
 <div
   role="status"
-  class="mx-6 my-3 flex items-center gap-3 rounded-lg border border-l-[3px] border-error/35 bg-error/8 px-4 py-3 text-sm"
+  class="border-error/35 bg-error/8 mx-6 my-3 flex items-center gap-3 rounded-lg border border-l-[3px] px-4 py-3 text-sm"
 >
-  <AlertTriangleIcon class="size-7 shrink-0 text-error" />
+  <AlertTriangleIcon class="text-error size-7 shrink-0" />
   <div class="min-w-0">
-    <p class="font-semibold text-error">{m.funny_bright_lynx_grin()}</p>
-    <p class="mt-1 text-foreground/80">
+    <p class="text-error font-semibold">{m.funny_bright_lynx_grin()}</p>
+    <p class="text-foreground/80 mt-1">
       {m.admin__forms_remove_self_warning({ resource: resourceLabel })}
     </p>
   </div>

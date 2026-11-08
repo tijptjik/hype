@@ -135,7 +135,9 @@ const stats = $derived([
         </dl>
       </div>
       {#if showHistory}
-        <div class="grid min-w-0 flex-1 @3xl:min-h-0 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <div
+          class="grid min-w-0 flex-1 @3xl:min-h-0 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+        >
           <div class="border-border min-w-0 @3xl:min-h-0 @3xl:border-r">
             <ContributedFeatures userData={data.profile} {model} layout="dashboard" />
           </div>

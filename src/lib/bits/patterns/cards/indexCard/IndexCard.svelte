@@ -69,7 +69,7 @@ function handleHeaderImageClick(event: MouseEvent): void {
     <div class="bits-index-card__body">
       {@render content()}
       {#if actions}
-        <div class="flex items-center justify-between w-full mt-[0.35rem]">
+        <div class="mt-[0.35rem] flex w-full items-center justify-between">
           {@render actions()}
         </div>
       {/if}

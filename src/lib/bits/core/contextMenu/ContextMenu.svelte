@@ -31,7 +31,7 @@ function onKeydown(event: KeyboardEvent): void {
   >
   <ContextMenu.Portal>
     <ContextMenu.Content
-      class="z-[1200] min-w-48 rounded-xl border border-border bg-panel p-1.5 text-base-content shadow-xl"
+      class="border-border bg-panel text-base-content z-[1200] min-w-48 rounded-xl border p-1.5 shadow-xl"
     >
       {#each items as item (item.label)}
         <ContextMenu.Item
@@ -45,7 +45,7 @@ function onKeydown(event: KeyboardEvent): void {
           {#if item.icon}
             <item.icon class={cx('size-4 shrink-0', item.iconClass)} />
           {/if}
-          <span class="min-w-0 whitespace-normal break-words">{item.label}</span>
+          <span class="min-w-0 break-words whitespace-normal">{item.label}</span>
         </ContextMenu.Item>
       {/each}
     </ContextMenu.Content>

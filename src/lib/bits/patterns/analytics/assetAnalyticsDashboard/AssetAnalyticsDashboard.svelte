@@ -115,9 +115,7 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
   {/each}
 {/snippet}
 
-{#snippet analyticsWindowColumnHeaders(
-  leftLabel: string,
-)}
+{#snippet analyticsWindowColumnHeaders(leftLabel: string)}
   <div class={cx('grid min-w-[min(100%,1240px)] gap-4', visibleWindowGridClass)}>
     {#each visibleWindows as windowConfig}
       <AnalyticsCardPrimitive.WindowHeader

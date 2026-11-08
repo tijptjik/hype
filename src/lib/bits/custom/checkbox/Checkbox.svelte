@@ -93,15 +93,12 @@ function handleIndeterminateChange(nextIndeterminate: boolean) {
       onCheckedChange={handleCheckedChange}
       onIndeterminateChange={handleIndeterminateChange}
     >
-      {#snippet children({
-        checked: isChecked,
-        indeterminate: isIndeterminate,
-      })}
+      {#snippet children({ checked: isChecked, indeterminate: isIndeterminate })}
         <span class="bits-checkbox__icon" aria-hidden="true">
           {#if isIndeterminate}
             <svg
               viewBox="0 0 16 16"
-              class="w-full h-full block"
+              class="block h-full w-full"
               fill="none"
               aria-hidden="true"
               focusable="false"
@@ -116,7 +113,7 @@ function handleIndeterminateChange(nextIndeterminate: boolean) {
           {:else if isChecked}
             <svg
               viewBox="0 0 16 16"
-              class="w-full h-full block"
+              class="block h-full w-full"
               fill="none"
               aria-hidden="true"
               focusable="false"

@@ -21,11 +21,18 @@ import { m } from '#lib/i18n.js'
 import CameraIcon from 'virtual:icons/proicons/camera'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
 
-let { featureId, textControls: imageTextControls }: { featureId?: string; textControls?: Snippet<[string | null, boolean]> } = $props()
+let {
+  featureId,
+  textControls: imageTextControls,
+}: { featureId?: string; textControls?: Snippet<[string | null, boolean]> } = $props()
 
 const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx)
-const ordering = useGalleryOrdering(() => featureId, () => model.state.items, () => imageCtx.refreshImages())
+const ordering = useGalleryOrdering(
+  () => featureId,
+  () => model.state.items,
+  () => imageCtx.refreshImages(),
+)
 const hasActiveText = $derived(
   [
     ...Object.values(model.state.activeImage?.image.galleryCaption ?? {}),

@@ -61,19 +61,19 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
 </script>
 
 {#if !isLoading && (!hasPassword || wasPasswordAdded)}
-  <section class="mx-4 my-3 rounded-xl border border-base-content/15 p-4">
+  <section class="border-base-content/15 mx-4 my-3 rounded-xl border p-4">
     {#if wasPasswordAdded}
       <h2 class="font-medium">{m.account__password_added()}</h2>
     {:else}
       <h2 class="font-medium">{m.account__add_password_title()}</h2>
-      <p class="mt-1 text-sm text-base-content/70">
+      <p class="text-base-content/70 mt-1 text-sm">
         {m.account__add_password_description()}
       </p>
     {/if}
     {#if !hasPassword}
       <form class="mt-3 flex flex-col gap-2" onsubmit={handleSubmit}>
         <input
-          class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+          class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
           type="password"
           autocomplete="new-password"
           minlength="8"
@@ -83,10 +83,10 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
           required
         >
         {#if errorMessage}
-          <p class="text-sm text-error">{errorMessage}</p>
+          <p class="text-error text-sm">{errorMessage}</p>
         {/if}
         <button
-          class="rounded-lg bg-base-content px-3 py-2 text-sm font-medium text-base-100 disabled:opacity-50"
+          class="bg-base-content text-base-100 rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
           type="submit"
           disabled={isBusy}
         >
@@ -95,7 +95,7 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
       </form>
     {/if}
     {#if statusMessage}
-      <p class="mt-3 text-sm text-success">{statusMessage}</p>
+      <p class="text-success mt-3 text-sm">{statusMessage}</p>
     {/if}
   </section>
 {/if}

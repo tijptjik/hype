@@ -391,14 +391,14 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
   <WhatsApp.CallControls {model} compact>
     {#snippet header(actions)}
       <header
-        class="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-panel px-4 py-3"
+        class="border-border bg-panel flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3"
       >
         <Avatar name={chatName} src={chatPhoto} />
         <div class="min-w-0 flex-1 basis-24">
-          <h3 class="break-words font-semibold [overflow-wrap:anywhere]">{chatName}</h3>
+          <h3 class="font-semibold [overflow-wrap:anywhere] break-words">{chatName}</h3>
           <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {#if chatUsername}
-              <p class="break-words text-xs text-muted-foreground">
+              <p class="text-muted-foreground text-xs break-words">
                 @{chatUsername.replace(/^@/, '')}
               </p>
             {/if}
@@ -420,7 +420,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
           {/if}
           {#if recipientLocked}
             <span
-              class="mr-1 shrink-0 rounded-full border border-border px-2 py-1 text-xs text-muted-foreground"
+              class="border-border text-muted-foreground mr-1 shrink-0 rounded-full border px-2 py-1 text-xs"
               >{platformLabel}</span
             >
           {/if}
@@ -448,7 +448,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
         </div>
       </header>
       {#if searchOpen}
-        <div id={searchId} class="shrink-0 space-y-1 border-b border-border px-4 py-2">
+        <div id={searchId} class="border-border shrink-0 space-y-1 border-b px-4 py-2">
           <div class="flex items-center gap-2">
             <input
               bind:this={searchInput}
@@ -456,7 +456,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
               bind:value={query}
               maxlength="200"
               placeholder="Search saved messages…"
-              class="min-w-0 flex-1 rounded-lg border border-border bg-panel px-3 py-2 text-sm"
+              class="border-border bg-panel min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm"
               onkeydown={event => {
                 if (event.key === 'Escape') {
                   event.preventDefault()
@@ -476,16 +476,16 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
             />
           </div>
           {#if searching}
-            <p role="status" class="text-xs text-muted-foreground">
+            <p role="status" class="text-muted-foreground text-xs">
               Searching messages…
             </p>
           {:else if query.trim() && !searchError}
-            <p role="status" class="text-xs text-muted-foreground">
+            <p role="status" class="text-muted-foreground text-xs">
               {matches.length} {matches.length === 1 ? 'match' : 'matches'}
             </p>
           {/if}
           {#if searchError}
-            <p role="alert" class="text-sm text-muted-foreground">{searchError}</p>
+            <p role="alert" class="text-muted-foreground text-sm">{searchError}</p>
           {/if}
         </div>
       {/if}
@@ -494,13 +494,13 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
   {#if quoteLoading}
     <p
       role="status"
-      class="shrink-0 border-b border-border px-4 py-2 text-xs text-muted-foreground"
+      class="border-border text-muted-foreground shrink-0 border-b px-4 py-2 text-xs"
     >
       Finding quoted message…
     </p>
   {/if}
   {#if quoteError}
-    <p role="alert" class="shrink-0 border-b border-border px-4 py-2 text-sm">
+    <p role="alert" class="border-border shrink-0 border-b px-4 py-2 text-sm">
       {quoteError}
     </p>
   {/if}
@@ -524,7 +524,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
     {#if recipientLocked && model.error}
       <p
         role="alert"
-        class="break-words rounded-lg border border-border bg-surface p-3 text-sm"
+        class="border-border bg-surface rounded-lg border p-3 text-sm break-words"
       >
         {model.error}
       </p>
@@ -532,16 +532,16 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
     {#if model.historyAvailable && model.selectedChat && !query}
       <div class="flex flex-col items-center gap-2">
         {#if model.historyComplete}
-          <p class="text-sm text-muted-foreground">Beginning of available history</p>
+          <p class="text-muted-foreground text-sm">Beginning of available history</p>
         {:else}
-          <p role="status" class="text-xs text-muted-foreground">
+          <p role="status" class="text-muted-foreground text-xs">
             {model.historyLoading
               ? 'Loading older messages…'
               : 'Scroll up for older messages'}
           </p>
         {/if}
         {#if model.historyError}
-          <p role="alert" class="text-sm text-muted-foreground">{model.historyError}</p>
+          <p role="alert" class="text-muted-foreground text-sm">{model.historyError}</p>
         {/if}
       </div>
     {/if}
@@ -625,7 +625,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
     <!-- Reactions have no outgoing bubble; keep their recovery in history, outside the composer. -->
     {#if model.pendingRequest?.reaction !== undefined && !model.busy}
       <div
-        class="flex flex-col items-end gap-1 text-right text-xs text-muted-foreground"
+        class="text-muted-foreground flex flex-col items-end gap-1 text-right text-xs"
       >
         {#if model.attempt?.state === 'uncertain'}
           <p role="status">
@@ -652,12 +652,12 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
     {/each}
     {#if query.trim()}
       {#if !searching && !searchError && !visible.length}
-        <p class="py-10 text-center text-sm text-muted-foreground">
+        <p class="text-muted-foreground py-10 text-center text-sm">
           No saved messages match “{query.trim()}”.
         </p>
       {/if}
     {:else if !visible.length && !outgoing.length && !catalogOutgoing.length}
-      <p class="py-10 text-center text-sm text-muted-foreground">
+      <p class="text-muted-foreground py-10 text-center text-sm">
         {recipientLocked
           ? 'No messages yet. Write a message below to start this conversation.'
           : 'Select a conversation or enter a recipient below to start one.'}

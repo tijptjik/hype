@@ -12,7 +12,7 @@ let {
 </script>
 
 <main
-  class="flex min-h-screen items-center justify-center bg-background p-6 text-foreground"
+  class="bg-background text-foreground flex min-h-screen items-center justify-center p-6"
 >
   <form method="POST" class="w-full max-w-sm rounded-2xl border border-current/15 p-6">
     <h1 class="text-xl font-semibold">{m.breadline__phone_title()}</h1>
@@ -40,7 +40,7 @@ let {
       </p>
     {/if}
     <button
-      class="mt-4 w-full rounded-lg bg-primary px-4 py-2 text-primary-content"
+      class="bg-primary text-primary-content mt-4 w-full rounded-lg px-4 py-2"
       type="submit"
     >
       {m.breadline__phone_continue()}

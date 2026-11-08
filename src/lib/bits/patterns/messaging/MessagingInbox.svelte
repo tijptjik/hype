@@ -30,7 +30,7 @@ const configurationHref = $derived(
 </script>
 
 <div
-  class="@container flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-canvas"
+  class="bg-canvas @container flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
 >
   {#each model.accounts as account (account.id)}
     <MessagingAccountRuntime
@@ -39,9 +39,9 @@ const configurationHref = $derived(
     />
   {/each}
   <header
-    class="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-panel px-4 py-2"
+    class="border-border bg-panel flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2"
   >
-    <h2 class="min-w-0 break-words font-semibold">
+    <h2 class="min-w-0 font-semibold break-words">
       {model.organisation?.code ?? 'Messaging'}
     </h2>
     <div class="ml-auto flex flex-wrap items-center justify-end gap-3">
@@ -100,7 +100,7 @@ const configurationHref = $derived(
       )}
       {#if conversation}
         <div
-          class="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-panel px-4 py-2"
+          class="border-border bg-panel flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2"
         >
           <p role="status" class="text-sm">
             Incoming {account.platform === 'telegram' ? 'Telegram' : 'WhatsApp'} call
@@ -125,7 +125,7 @@ const configurationHref = $derived(
         runtime.status.qr ||
         runtime.status.lastEvent === 'PairingQrCodesExhausted')}
       <div
-        class="min-h-0 max-h-[70%] shrink-0 overflow-y-auto border-b border-border p-4"
+        class="border-border max-h-[70%] min-h-0 shrink-0 overflow-y-auto border-b p-4"
       >
         <MessagingAccountCard
           platform="whatsapp"
@@ -142,18 +142,18 @@ const configurationHref = $derived(
     {/if}
   {/each}
   {#if model.error}
-    <p role="alert" class="shrink-0 border-b border-border px-4 py-2 text-sm">
+    <p role="alert" class="border-border shrink-0 border-b px-4 py-2 text-sm">
       {model.error}
     </p>
   {/if}
   {#if model.loading}
-    <p role="status" class="p-5 text-sm text-muted-foreground">Loading messaging…</p>
+    <p role="status" class="text-muted-foreground p-5 text-sm">Loading messaging…</p>
   {:else if !model.selectedOrganisation}
-    <p class="p-5 text-sm text-muted-foreground">
+    <p class="text-muted-foreground p-5 text-sm">
       Select an organisation in the sidebar to open its inbox.
     </p>
   {:else if !model.accounts.length}
-    <p class="p-5 text-sm text-muted-foreground">
+    <p class="text-muted-foreground p-5 text-sm">
       Link an account in this organisation’s Messaging configuration to start chatting.
     </p>
   {:else}
@@ -161,7 +161,7 @@ const configurationHref = $derived(
       class="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(100px,0.7fr)_minmax(0,2fr)] overflow-hidden @min-[48rem]:grid-cols-[minmax(0,0.8fr)_minmax(0,2fr)] @min-[48rem]:grid-rows-1"
     >
       <aside
-        class="flex min-h-0 min-w-0 flex-col overflow-hidden max-h-[34dvh] border-b border-border bg-panel @min-[48rem]:max-h-none @min-[48rem]:border-r @min-[48rem]:border-b-0"
+        class="border-border bg-panel flex max-h-[34dvh] min-h-0 min-w-0 flex-col overflow-hidden border-b @min-[48rem]:max-h-none @min-[48rem]:border-r @min-[48rem]:border-b-0"
         aria-label="Linked account conversations"
       >
         <div class="shrink-0 p-3">
@@ -226,7 +226,7 @@ const configurationHref = $derived(
                   aria-current={model.selected?.key === conversation.key
                     ? 'true'
                     : undefined}
-                  class="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-xl px-3 py-3 text-left focus-visible:outline-2 focus-visible:outline-focus"
+                  class="focus-visible:outline-focus grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-xl px-3 py-3 text-left focus-visible:outline-2"
                   onclick={() => model.selectConversation(conversation.key)}
                 >
                   <span
@@ -257,12 +257,12 @@ const configurationHref = $derived(
                         <MessagingPlatformIcon platform={conversation.platform} />
                       </span>
                       <span
-                        class="min-w-0 flex-1 whitespace-normal break-words text-sm font-semibold leading-5"
+                        class="min-w-0 flex-1 text-sm leading-5 font-semibold break-words whitespace-normal"
                         >{conversation.recipient.name}</span
                       >
                       {#if conversation.pinnedAt}
                         <span
-                          class="inline-flex shrink-0 text-muted-foreground"
+                          class="text-muted-foreground inline-flex shrink-0"
                           title="Pinned chat"
                           role="img"
                           aria-label="Pinned chat"
@@ -273,15 +273,15 @@ const configurationHref = $derived(
                         <span
                           role="img"
                           aria-label={`${conversation.unreadCount} unread messages`}
-                          class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] leading-none tabular-nums text-primary-content"
+                          class="bg-primary text-primary-content inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1 text-[10px] leading-none tabular-nums"
                           >{conversation.unreadCount}</span
                         >
                       {/if}
                     </span>
                     <span
-                      class="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted-foreground"
+                      class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px] leading-4"
                     >
-                      <span class="min-w-0 whitespace-normal break-words"
+                      <span class="min-w-0 break-words whitespace-normal"
                         >{conversation.recipient.username
                           ? `@${conversation.recipient.username}`
                           : conversation.isGroup
@@ -294,7 +294,7 @@ const configurationHref = $derived(
                       >
                     </span>
                     <span
-                      class="line-clamp-1 break-words text-xs leading-4 text-muted-foreground [overflow-wrap:anywhere]"
+                      class="text-muted-foreground line-clamp-1 text-xs leading-4 [overflow-wrap:anywhere] break-words"
                       title={conversation.preview || undefined}
                       >{conversation.preview || 'No messages yet'}</span
                     >
@@ -303,7 +303,7 @@ const configurationHref = $derived(
               </div>
             </ContextMenu>
           {:else}
-            <p class="p-3 text-sm text-muted-foreground">
+            <p class="text-muted-foreground p-3 text-sm">
               {model.search.trim()
                 ? 'No matching chats.'
                 : model.archived
@@ -312,44 +312,44 @@ const configurationHref = $derived(
             </p>
           {/each}
           {#if model.search.trim()}
-            <p class="px-3 pt-3 text-xs font-semibold text-muted-foreground">
+            <p class="text-muted-foreground px-3 pt-3 text-xs font-semibold">
               HYPE users
             </p>
           {/if}
           {#if model.search.trim()}
             {#if model.searching}
-              <p role="status" class="p-3 text-sm text-muted-foreground">
+              <p role="status" class="text-muted-foreground p-3 text-sm">
                 Searching HYPE users…
               </p>
             {/if}
             {#each model.results as user (user.userId)}
               <div
-                class="flex min-w-0 items-start gap-1 rounded-xl border border-transparent p-1 hover:bg-surface"
+                class="hover:bg-surface flex min-w-0 items-start gap-1 rounded-xl border border-transparent p-1"
               >
                 <button
                   type="button"
                   disabled={model.routing || !user.available}
-                  class="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-lg p-2 text-left focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-60"
+                  class="focus-visible:outline-focus grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-lg p-2 text-left focus-visible:outline-2 disabled:opacity-60"
                   onclick={() => void model.openUser(user)}
                 >
                   <Avatar name={user.name} src={user.image} />
                   <span class="grid min-w-0 gap-1"
-                    ><span class="break-words text-sm font-semibold">{user.name}</span
-                    ><span class="break-words text-xs text-muted-foreground"
+                    ><span class="text-sm font-semibold break-words">{user.name}</span
+                    ><span class="text-muted-foreground text-xs break-words"
                       >@{user.username}</span
                     >
                     {#if !user.available}
                       {#if user.unavailableReason ===
                         'No valid phone number on this HYPE profile'}
                         <span
-                          class="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                          class="text-muted-foreground inline-flex items-center gap-1 text-xs"
                           aria-label="Missing phone number"
                           role="img"
                           title={user.unavailableReason}
                           >Missing <PhoneIcon class="size-3" aria-hidden="true" /></span
                         >
                       {:else}
-                        <span class="text-xs text-muted-foreground"
+                        <span class="text-muted-foreground text-xs"
                           >{user.unavailableReason}</span
                         >
                       {/if}
@@ -362,7 +362,7 @@ const configurationHref = $derived(
                       type="button"
                       aria-label={`Open ${channel.platform === 'telegram' ? 'Telegram' : 'WhatsApp'} chat with ${user.name}`}
                       disabled={model.routing || !channel.available}
-                      class="flex size-7 items-center justify-center rounded-full hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-30"
+                      class="hover:bg-raised focus-visible:outline-focus flex size-7 items-center justify-center rounded-full focus-visible:outline-2 disabled:opacity-30"
                       title={channel.checking
                         ? `Checking ${channel.platform}…`
                         : channel.available
@@ -377,16 +377,16 @@ const configurationHref = $derived(
               </div>
             {:else}
               {#if !model.searching}
-                <p class="p-3 text-sm text-muted-foreground">No matching HYPE users.</p>
+                <p class="text-muted-foreground p-3 text-sm">No matching HYPE users.</p>
               {/if}
             {/each}
           {/if}
         </nav>
-        <div class="shrink-0 border-t border-border px-3 py-2">
+        <div class="border-border shrink-0 border-t px-3 py-2">
           <button
             type="button"
             disabled={Boolean(model.archiving.length)}
-            class="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-50"
+            class="text-muted-foreground hover:bg-surface focus-visible:outline-focus inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm focus-visible:outline-2 disabled:opacity-50"
             onclick={() => void model.showArchived(!model.archived)}
           >
             {#if model.archived}
@@ -418,7 +418,7 @@ const configurationHref = $derived(
           {/key}
         {:else}
           <div class="flex min-h-0 flex-1 items-center justify-center p-5">
-            <p class="max-w-md text-center text-sm text-muted-foreground">
+            <p class="text-muted-foreground max-w-md text-center text-sm">
               Select a conversation or search for a HYPE user. New conversations use
               that user’s verified messaging preference.
             </p>

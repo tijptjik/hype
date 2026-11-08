@@ -89,7 +89,7 @@ const rotationDegrees = $derived(item?.rotationDegrees ?? 0)
 const animateRotation = $derived(item?.animateRotation ?? false)
 const shouldPulseImage = $derived(
   animateLoading &&
-  (isLoading || uploadStatus === 'uploading' || uploadStatus === 'finalizing') &&
+    (isLoading || uploadStatus === 'uploading' || uploadStatus === 'finalizing') &&
     hasLoaded &&
     !hasError,
 )

@@ -103,17 +103,17 @@ onMount(() => {
 >
 
 <div
-  class="flex h-full w-full flex-col items-center justify-center gap-5 rounded-[1.75rem] border border-dashed border-border bg-surface px-6 py-8 text-center text-base-content"
+  class="border-border bg-surface text-base-content flex h-full w-full flex-col items-center justify-center gap-5 rounded-[1.75rem] border border-dashed px-6 py-8 text-center"
 >
   <div class="space-y-2">
     <div class="flex justify-center">
-      <ImageIcon class="h-6 w-6 text-muted-foreground" />
+      <ImageIcon class="text-muted-foreground h-6 w-6" />
     </div>
-    <h3 class="text-2xl font-semibold tracking-[-0.03em] text-base-content pb-2">
+    <h3 class="text-base-content pb-2 text-2xl font-semibold tracking-[-0.03em]">
       {m.honest_fluffy_falcon_enjoy()}
     </h3>
     {#if cameraHelperText ?? emptyDescription}
-      <p class="max-w-[24rem] text-sm leading-6 text-muted-foreground">
+      <p class="text-muted-foreground max-w-[24rem] text-sm leading-6">
         {cameraHelperText ?? emptyDescription}
       </p>
     {/if}
@@ -127,7 +127,7 @@ onMount(() => {
       size="md"
       iconComponent={FolderOpenIcon}
       iconClasses="h-4.5 w-4.5"
-      class="rounded-full bg-base-content/10 text-base-content shadow-none hover:bg-base-content/10 hover:text-base-content"
+      class="bg-base-content/10 text-base-content hover:bg-base-content/10 hover:text-base-content rounded-full shadow-none"
       onClick={() => galleryInput?.click()}
     />
 
@@ -141,7 +141,7 @@ onMount(() => {
         size="md"
         iconComponent={CameraIcon}
         iconClasses="h-4.5 w-4.5"
-        class="rounded-full bg-base-100 text-base-content shadow-none hover:bg-surface hover:text-base-content"
+        class="bg-base-100 text-base-content hover:bg-surface hover:text-base-content rounded-full shadow-none"
         onClick={() => {
           void openCameraCapture()
         }}

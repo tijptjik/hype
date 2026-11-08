@@ -199,60 +199,60 @@ const panel: ResourcePanelModel = {
 <main
   data-theme={selected}
   style={previewStyle}
-  class="bits-theme min-h-screen bg-canvas text-base-content transition-colors duration-200"
+  class="bits-theme bg-canvas text-base-content min-h-screen transition-colors duration-200"
 >
   <div class="mx-auto max-w-[1600px] px-4 py-5 sm:px-10 sm:py-6 lg:px-14">
-    <header class="flex items-center justify-between border-b border-border pb-6">
+    <header class="border-border flex items-center justify-between border-b pb-6">
       <a
         data-sveltekit-reload
         href="/"
         class="flex items-center gap-3 text-sm font-semibold tracking-[0.16em]"
         ><span
-          class="grid size-9 place-items-center rounded-xl bg-primary text-primary-content"
+          class="bg-primary text-primary-content grid size-9 place-items-center rounded-xl"
           >H</span
         >
-        HYPE <span class="font-normal text-muted-foreground">/ THEME STUDIO</span></a
+        HYPE <span class="text-muted-foreground font-normal">/ THEME STUDIO</span></a
       >
       <a
         data-sveltekit-reload
         href="/admin/styles/button"
-        class="hidden items-center gap-2 text-xs text-muted-foreground hover:text-primary sm:flex"
+        class="text-muted-foreground hover:text-primary hidden items-center gap-2 text-xs sm:flex"
         >Button library <ArrowUpRight class="size-4" /></a
       >
       <a
         data-sveltekit-reload
         href="/themes/colours"
-        class="hidden items-center gap-2 text-xs text-muted-foreground hover:text-primary sm:flex"
+        class="text-muted-foreground hover:text-primary hidden items-center gap-2 text-xs sm:flex"
         >Colour study <ArrowUpRight class="size-4" /></a
       >
       <a
         href="/themes/icons"
-        class="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
+        class="text-muted-foreground hover:text-primary flex items-center gap-2 text-xs"
         >Icon study <ArrowUpRight class="size-4" /></a
       >
     </header>
 
     <div class="grid gap-10 py-10 lg:grid-cols-[1fr_520px] lg:items-center">
       <div>
-        <p class="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+        <p class="text-primary mb-4 text-xs font-semibold tracking-[0.22em] uppercase">
           A different kind of atmosphere
         </p>
         <h1
-          class="max-w-xl text-5xl font-medium leading-[1.08] tracking-[-0.045em] sm:text-6xl"
+          class="max-w-xl text-5xl leading-[1.08] font-medium tracking-[-0.045em] sm:text-6xl"
         >
           Good things.<br><span class="text-muted-foreground">In every light.</span>
         </h1>
-        <p class="mt-6 max-w-md text-sm leading-7 text-muted-foreground">
+        <p class="text-muted-foreground mt-6 max-w-md text-sm leading-7">
           Five palettes, one familiar place. Explore a neighbourhood, plan a collection,
           and find the atmosphere that feels like you.
         </p>
         <div class="mt-6 flex items-center gap-3 text-sm">
-          <span class="size-2 rounded-full bg-primary"></span
+          <span class="bg-primary size-2 rounded-full"></span
           ><span class="font-medium">{current.name}</span
           ><span class="text-muted-foreground">{current.family} · {current.mode}</span>
         </div>
       </div>
-      <div class="rounded-3xl border border-border bg-panel p-5 sm:p-6">
+      <div class="border-border bg-panel rounded-3xl border p-5 sm:p-6">
         <ThemePicker
           value={selected}
           onSelect={theme => {
@@ -261,21 +261,21 @@ const panel: ResourcePanelModel = {
           }}
           label="Choose your atmosphere"
         />
-        <div class="mt-5 border-t border-border pt-5" data-colour-controls>
+        <div class="border-border mt-5 border-t pt-5" data-colour-controls>
           <div class="flex items-start justify-between gap-3">
             <div>
               <p
-                class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                class="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase"
               >
                 Live colour sandbox
               </p>
-              <p class="mt-2 text-xs leading-5 text-muted-foreground">
+              <p class="text-muted-foreground mt-2 text-xs leading-5">
                 Tune {current.name} and watch the preview change immediately.
               </p>
             </div>
             <button
               type="button"
-              class="shrink-0 rounded-lg border border-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-primary"
+              class="border-border text-muted-foreground hover:border-primary hover:text-primary shrink-0 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold tracking-wider uppercase"
               onclick={resetPreviewColours}
             >
               Reset
@@ -284,7 +284,7 @@ const panel: ResourcePanelModel = {
           <div class="mt-4 grid grid-cols-3 gap-2">
             {#each colourRoles as role}
               <label
-                class="min-w-0 cursor-pointer rounded-xl border border-border bg-surface p-2 transition-colors hover:border-primary"
+                class="border-border bg-surface hover:border-primary min-w-0 cursor-pointer rounded-xl border p-2 transition-colors"
               >
                 <input
                   type="color"
@@ -295,14 +295,14 @@ const panel: ResourcePanelModel = {
                     updatePreviewColour(role.key, event.currentTarget.value)}
                 >
                 <span
-                  class="mt-2 block truncate text-[10px] font-semibold uppercase tracking-wider"
+                  class="mt-2 block truncate text-[10px] font-semibold tracking-wider uppercase"
                 >
                   {role.name}
                 </span>
-                <code class="mt-1 block truncate text-[10px] text-muted-foreground">
+                <code class="text-muted-foreground mt-1 block truncate text-[10px]">
                   {activeColours[role.key]}
                 </code>
-                <span class="mt-1 block text-[10px] text-muted-foreground"
+                <span class="text-muted-foreground mt-1 block text-[10px]"
                   >{role.description}</span
                 >
               </label>
@@ -310,41 +310,41 @@ const panel: ResourcePanelModel = {
           </div>
         </div>
         <label
-          class="mt-5 flex cursor-pointer items-center justify-between gap-4 border-t border-border pt-4 text-xs text-muted-foreground"
+          class="border-border text-muted-foreground mt-5 flex cursor-pointer items-center justify-between gap-4 border-t pt-4 text-xs"
           >Compare all five palettes<input
             type="checkbox"
             bind:checked={compare}
-            class="size-4 accent-primary"
+            class="accent-primary size-4"
           ></label
         >
       </div>
     </div>
 
     <div
-      class="mb-4 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+      class="text-muted-foreground mb-4 flex items-center justify-between text-[10px] font-semibold tracking-[0.18em] uppercase"
     >
       <span>01 / In good company</span><span>Interactive composition</span>
     </div>
     <div
-      class="overflow-hidden rounded-3xl border border-border bg-panel shadow-xl shadow-base-content/5"
+      class="border-border bg-panel shadow-base-content/5 overflow-hidden rounded-3xl border shadow-xl"
     >
-      <div class="flex items-center justify-between border-b border-border px-5 py-4">
+      <div class="border-border flex items-center justify-between border-b px-5 py-4">
         <div class="flex items-center gap-2 text-sm font-medium">
-          <span class="size-2 rounded-full bg-success"></span>
+          <span class="bg-success size-2 rounded-full"></span>
           The evening collection
         </div>
-        <span class="text-xs text-muted-foreground">Hong Kong · 18:30</span>
+        <span class="text-muted-foreground text-xs">Hong Kong · 18:30</span>
       </div>
       <div class="grid lg:grid-cols-[380px_1fr]">
         <aside
           data-demo-sidebar
-          class="h-[430px] overflow-hidden border-b border-border lg:h-[590px] lg:border-b-0 lg:border-r"
+          class="border-border h-[430px] overflow-hidden border-b lg:h-[590px] lg:border-r lg:border-b-0"
         >
           <ResourcePanel model={panel} />
         </aside>
         <div class="p-5 sm:p-7">
           <div
-            class="relative mb-6 overflow-hidden rounded-2xl border border-border bg-surface"
+            class="border-border bg-surface relative mb-6 overflow-hidden rounded-2xl border"
           >
             <svg
               viewBox="0 0 760 200"
@@ -465,50 +465,50 @@ const panel: ResourcePanelModel = {
               </g>
             </svg>
             <span
-              class="absolute right-3 top-3 rounded-full border border-border bg-panel px-3 py-1 text-[10px] uppercase tracking-wider text-muted-foreground"
+              class="border-border bg-panel text-muted-foreground absolute top-3 right-3 rounded-full border px-3 py-1 text-[10px] tracking-wider uppercase"
               >Route preview</span
             >
           </div>
           <div class="flex flex-wrap items-start justify-between gap-5">
             <div>
               <span
-                class="text-[10px] font-semibold uppercase tracking-[0.16em] text-tertiary"
+                class="text-tertiary text-[10px] font-semibold tracking-[0.16em] uppercase"
                 >A little effort. A lot of good.</span
               >
               <h2 class="mt-2 text-2xl font-medium tracking-tight">
                 Bread worth sharing.
               </h2>
-              <p class="mt-2 text-sm text-muted-foreground">
+              <p class="text-muted-foreground mt-2 text-sm">
                 Three stops. One neighbourhood. Nothing wasted.
               </p>
             </div>
             <span
-              class="rounded-full bg-success/12 px-3 py-1.5 text-xs font-medium text-success"
+              class="bg-success/12 text-success rounded-full px-3 py-1.5 text-xs font-medium"
               >Open for volunteers</span
             >
           </div>
           <div
-            class="my-6 grid grid-cols-3 divide-x divide-border rounded-2xl border border-border bg-surface py-4"
+            class="divide-border border-border bg-surface my-6 grid grid-cols-3 divide-x rounded-2xl border py-4"
           >
             <div class="px-4">
               <p class="text-2xl font-medium">
-                24<span class="ml-1 text-sm text-muted-foreground">kg</span>
+                24<span class="text-muted-foreground ml-1 text-sm">kg</span>
               </p>
-              <p class="mt-1 text-xs text-muted-foreground">Food to share</p>
+              <p class="text-muted-foreground mt-1 text-xs">Food to share</p>
             </div>
             <div class="px-4">
               <p class="text-2xl font-medium">3</p>
-              <p class="mt-1 text-xs text-muted-foreground">Bakery stops</p>
+              <p class="text-muted-foreground mt-1 text-xs">Bakery stops</p>
             </div>
             <div class="px-4">
               <p class="text-2xl font-medium">
-                45<span class="ml-1 text-sm text-muted-foreground">min</span>
+                45<span class="text-muted-foreground ml-1 text-sm">min</span>
               </p>
-              <p class="mt-1 text-xs text-muted-foreground">An evening well spent</p>
+              <p class="text-muted-foreground mt-1 text-xs">An evening well spent</p>
             </div>
           </div>
           <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-3 text-xs text-muted-foreground">
+            <div class="text-muted-foreground flex items-center gap-3 text-xs">
               <Clock class="size-4" />
               Tonight, 19:00 <span>·</span><MapPin class="size-4" />
               Central
@@ -530,22 +530,22 @@ const panel: ResourcePanelModel = {
     </div>
 
     <div class="mt-8 grid gap-4 md:grid-cols-3">
-      <section class="rounded-2xl border border-border bg-panel p-5">
-        <span class="text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
+      <section class="border-border bg-panel rounded-2xl border p-5">
+        <span class="text-muted-foreground text-[10px] tracking-[0.16em] uppercase"
           >A moment of progress</span
         >
-        <div class="mb-3 mt-4 flex justify-between text-sm">
+        <div class="mt-4 mb-3 flex justify-between text-sm">
           <span>Tonight’s team</span><span class="text-secondary">7 / 10</span>
         </div>
-        <div class="h-2 overflow-hidden rounded-full bg-raised">
-          <div class="h-full w-[70%] rounded-full bg-secondary"></div>
+        <div class="bg-raised h-2 overflow-hidden rounded-full">
+          <div class="bg-secondary h-full w-[70%] rounded-full"></div>
         </div>
-        <p class="mt-3 text-xs text-muted-foreground">
+        <p class="text-muted-foreground mt-3 text-xs">
           Three more pairs of helping hands.
         </p>
       </section>
-      <section class="rounded-2xl border border-border bg-panel p-5">
-        <span class="text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
+      <section class="border-border bg-panel rounded-2xl border p-5">
+        <span class="text-muted-foreground text-[10px] tracking-[0.16em] uppercase"
           >Made for small decisions</span
         >
         <div class="mt-4 flex flex-wrap gap-2">
@@ -562,8 +562,8 @@ const panel: ResourcePanelModel = {
           />
         </div>
       </section>
-      <section class="rounded-2xl border border-border bg-panel p-5">
-        <span class="text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
+      <section class="border-border bg-panel rounded-2xl border p-5">
+        <span class="text-muted-foreground text-[10px] tracking-[0.16em] uppercase"
           >Your preview</span
         >
         <p class="mt-4 text-sm leading-6" role="status">{notice}</p>
@@ -574,23 +574,23 @@ const panel: ResourcePanelModel = {
         {#each THEMES as theme}
           <section
             data-theme={theme.id}
-            class="bits-theme rounded-2xl border border-border bg-panel p-5 text-base-content"
+            class="bits-theme border-border bg-panel text-base-content rounded-2xl border p-5"
           >
             <div class="flex justify-between">
               <h2 class="font-semibold">{getThemeName(theme.id)}</h2>
               {#if theme.mode === 'dark'}
-                <Moon class="size-4 text-muted-foreground" />
+                <Moon class="text-muted-foreground size-4" />
               {:else}
-                <Sun class="size-4 text-muted-foreground" />
+                <Sun class="text-muted-foreground size-4" />
               {/if}
             </div>
-            <p class="my-4 text-sm text-muted-foreground">
+            <p class="text-muted-foreground my-4 text-sm">
               There’s always room at the table.
             </p>
             <div class="mb-4 flex gap-2">
-              <span class="size-7 rounded-full bg-primary"></span
-              ><span class="size-7 rounded-full bg-secondary"></span
-              ><span class="size-7 rounded-full bg-tertiary"></span>
+              <span class="bg-primary size-7 rounded-full"></span
+              ><span class="bg-secondary size-7 rounded-full"></span
+              ><span class="bg-tertiary size-7 rounded-full"></span>
             </div>
             <Button
               text="Make a little difference"
@@ -602,7 +602,7 @@ const panel: ResourcePanelModel = {
       </div>
     {/if}
     <footer
-      class="flex flex-wrap justify-between gap-3 py-8 text-[10px] uppercase tracking-widest text-muted-foreground"
+      class="text-muted-foreground flex flex-wrap justify-between gap-3 py-8 text-[10px] tracking-widest uppercase"
     >
       <span>Nullspace / Nebula / Oblivion / Milque / Rye</span
       ><span>Preview only · No account changes</span>

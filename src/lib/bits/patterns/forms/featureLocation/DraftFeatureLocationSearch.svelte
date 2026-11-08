@@ -15,7 +15,10 @@ import {
 } from '#lib/locations/searchPresentation.js'
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 // ICONS
-import { loadAddressNames, structurePlaceAddress } from '#lib/addresses/nameCatalogue.js'
+import {
+  loadAddressNames,
+  structurePlaceAddress,
+} from '#lib/addresses/nameCatalogue.js'
 import UnlinkIcon from 'virtual:icons/lucide/unlink'
 import BackIcon from 'virtual:icons/lucide/arrow-left'
 import OpenDetailsIcon from 'virtual:icons/lucide/arrow-up-right'
@@ -110,21 +113,27 @@ function setFindMode(mode: 'search' | 'pin'): void {
   void tick().then(() => {
     const target = mode === 'search' ? input : nearbyButton
     target?.focus()
-    if (!prefersReducedMotion.current) target?.animate(
-      [
-        { boxShadow: '0 0 0 0 transparent', offset: 0 },
-        { boxShadow: '0 0 0 5px var(--color-primary)', offset: 0.2 },
-        { boxShadow: '0 0 0 5px var(--color-primary)', offset: 0.5 },
-        { boxShadow: '0 0 0 0 transparent' },
-      ],
-      { duration: 380, iterations: 2 },
-    )
+    if (!prefersReducedMotion.current)
+      target?.animate(
+        [
+          { boxShadow: '0 0 0 0 transparent', offset: 0 },
+          { boxShadow: '0 0 0 5px var(--color-primary)', offset: 0.2 },
+          { boxShadow: '0 0 0 5px var(--color-primary)', offset: 0.5 },
+          { boxShadow: '0 0 0 0 transparent' },
+        ],
+        { duration: 380, iterations: 2 },
+      )
   })
 }
 let filters = $state<PlaceSearchFilters>({ operatingStatus: 'open' })
 let filtersOpen = $state(false)
 let filterButton: HTMLButtonElement | undefined = $state()
-const filterCount = $derived(Object.entries(filters).filter(([key, value]) => Boolean(value) && !(key === 'operatingStatus' && value === 'open')).length)
+const filterCount = $derived(
+  Object.entries(filters).filter(
+    ([key, value]) =>
+      Boolean(value) && !(key === 'operatingStatus' && value === 'open'),
+  ).length,
+)
 $effect(() => {
   onFilterPanelChange?.(filtersOpen ? filterPanel : undefined)
 })
@@ -143,7 +152,8 @@ function closeFilters(): void {
  */
 function applyFilters(value: PlaceSearchFilters): void {
   filters = { ...value }
-  if (value.basicCategory || value.taxonomyPrimary || value.taxonomyCategory) includeShops = true
+  if (value.basicCategory || value.taxonomyPrimary || value.taxonomyCategory)
+    includeShops = true
   expandedGroup = null
   selected = null
   accepted = false
@@ -163,7 +173,9 @@ function clearSearch(): void {
   previousQuery = ''
   hovered = null
   nearbyMode = false
-  void tick().then(() => { if (findMode === 'search') input?.focus() })
+  void tick().then(() => {
+    if (findMode === 'search') input?.focus()
+  })
 }
 let radius = $state(300)
 let nearbyMode = $state(false)
@@ -172,7 +184,9 @@ let includeShops = $state(true)
 let includeAddresses = $state(true)
 let includeBuildings = $state(true)
 const searchBuildings = $derived(includeBuildings && findMode === 'search')
-const hasPlaceCategory = $derived(Boolean(filters.basicCategory || filters.taxonomyPrimary || filters.taxonomyCategory))
+const hasPlaceCategory = $derived(
+  Boolean(filters.basicCategory || filters.taxonomyPrimary || filters.taxonomyCategory),
+)
 const searchAddresses = $derived(includeAddresses && !hasPlaceCategory)
 let subsetBackButton: HTMLButtonElement | undefined = $state()
 const hasSearchTypes = $derived(includeShops || searchAddresses || searchBuildings)
@@ -181,20 +195,29 @@ let showSearchTypePrompt = $state(false)
 $effect(() => {
   showSearchTypePrompt = false
   if (hasSearchTypes) return
-  const promptTimer = setTimeout(() => { showSearchTypePrompt = true }, 2000)
+  const promptTimer = setTimeout(() => {
+    showSearchTypePrompt = true
+  }, 2000)
   return () => clearTimeout(promptTimer)
 })
 let selected = $state<Result | null>(null)
 let accepted = $state(false)
 // Source previews need a persisted shared identity before linking to HYPE details.
-const selectedLocationLookup = $derived(accepted && selected?.source?.ssId && !selected.identity?.locationId
-  ? getSharedLocationIdBySource({ ssId: selected.source.ssId }) : null)
-const selectedLocationId = $derived(selected?.identity?.locationId ?? selectedLocationLookup?.current ?? null)
-const selectedLocationHref = $derived(selectedLocationId
-  ? `/admin/locations/${encodeURIComponent(selectedLocationId)}`
-  : selected?.buildingSource
-    ? `/admin/locations/building/${encodeURIComponent(selected.buildingSource.id)}?${new URLSearchParams({ release: selected.buildingSource.release, ...(selected.buildingSource.addressId ? { address: selected.buildingSource.addressId } : {}) })}`
-    : null)
+const selectedLocationLookup = $derived(
+  accepted && selected?.source?.ssId && !selected.identity?.locationId
+    ? getSharedLocationIdBySource({ ssId: selected.source.ssId })
+    : null,
+)
+const selectedLocationId = $derived(
+  selected?.identity?.locationId ?? selectedLocationLookup?.current ?? null,
+)
+const selectedLocationHref = $derived(
+  selectedLocationId
+    ? `/admin/locations/${encodeURIComponent(selectedLocationId)}`
+    : selected?.buildingSource
+      ? `/admin/locations/building/${encodeURIComponent(selected.buildingSource.id)}?${new URLSearchParams({ release: selected.buildingSource.release, ...(selected.buildingSource.addressId ? { address: selected.buildingSource.addressId } : {}) })}`
+      : null,
+)
 let linked = $state(false)
 let expandedGroup = $state<string | null>(null)
 $effect(() => onAcceptedChange?.(accepted))
@@ -206,9 +229,15 @@ let receivedRows = $state.raw<Result[]>([])
 let requestedKinds = new Set<Result['kind']>()
 // Keep provider ranking within each kind while late responses reorder both list and map.
 const rows = $derived(
-  receivedRows.filter(row => row.kind === 'establishment' ? includeShops : row.kind === 'building' ? searchBuildings : searchAddresses).toSorted(
-    (a, b) => searchKinds.indexOf(a.kind) - searchKinds.indexOf(b.kind),
-  ),
+  receivedRows
+    .filter(row =>
+      row.kind === 'establishment'
+        ? includeShops
+        : row.kind === 'building'
+          ? searchBuildings
+          : searchAddresses,
+    )
+    .toSorted((a, b) => searchKinds.indexOf(a.kind) - searchKinds.indexOf(b.kind)),
 )
 const groups = $derived(groupDraftSearchResults(rows))
 const currentGroup = $derived(
@@ -263,7 +292,15 @@ async function search(nearby = false): Promise<void> {
     return
   }
   loading = true
-  requestedKinds = new Set(searchKinds.filter(kind => kind === 'establishment' ? includeShops : kind === 'building' ? searchBuildings && !nearby : searchAddresses))
+  requestedKinds = new Set(
+    searchKinds.filter(kind =>
+      kind === 'establishment'
+        ? includeShops
+        : kind === 'building'
+          ? searchBuildings && !nearby
+          : searchAddresses,
+    ),
+  )
   addressController?.abort()
   addressController = new AbortController()
   receivedRows = []
@@ -273,7 +310,8 @@ async function search(nearby = false): Promise<void> {
   addressesFailed = false
   buildingsFailed = false
   searched = false
-  let pending = Number(includeShops) + Number(searchAddresses) + Number(searchBuildings && !nearby)
+  let pending =
+    Number(includeShops) + Number(searchAddresses) + Number(searchBuildings && !nearby)
   // Publish each provider immediately; a slow provider must not hide usable results.
   const finish = (): void => {
     if (request !== version) return
@@ -284,8 +322,12 @@ async function search(nearby = false): Promise<void> {
   await Promise.allSettled([
     searchBuildings && !nearby
       ? searchBuildingNames(q, getLocaleKey(), () => request === version)
-          .then(buildings => { if (request === version) receivedRows = [...receivedRows, ...buildings] })
-          .catch(() => { if (request === version) buildingsFailed = true })
+          .then(buildings => {
+            if (request === version) receivedRows = [...receivedRows, ...buildings]
+          })
+          .catch(() => {
+            if (request === version) buildingsFailed = true
+          })
           .finally(finish)
       : Promise.resolve(),
     includeShops
@@ -307,13 +349,16 @@ async function search(nearby = false): Promise<void> {
                 source: { ssId: place.id, resourceReleaseId: place.resourceReleaseId },
                 names: place.facts.names,
                 taxonomyLabel: placeTaxonomyLabel(place.facts.classification),
-                address: structurePlaceAddress({
-                  version: 1 as const,
-                  source: place.facts.location.address,
-                  coordinates: place.facts.location.geometry.coordinates,
-                  matchStatus: place.facts.location.address.status,
-                  overrides: {},
-                }, streets),
+                address: structurePlaceAddress(
+                  {
+                    version: 1 as const,
+                    source: place.facts.location.address,
+                    coordinates: place.facts.location.geometry.coordinates,
+                    matchStatus: place.facts.location.address.status,
+                    overrides: {},
+                  },
+                  streets,
+                ),
               })),
             ]
           })
@@ -411,11 +456,18 @@ function publishMarkers(): void {
       if (result) {
         choose(result)
         void tick().then(() => {
-          const row = Array.from(resultsElement?.querySelectorAll<HTMLElement>('[data-result-id]') ?? []).find(element => element.dataset.resultId === id)
-          if (row && resultsElement) resultsElement.scrollTo({
-            top: resultsElement.scrollTop + row.getBoundingClientRect().top - resultsElement.getBoundingClientRect().top - (resultsElement.clientHeight - row.clientHeight) / 2,
-            behavior: prefersReducedMotion.current ? 'instant' : 'smooth',
-          })
+          const row = Array.from(
+            resultsElement?.querySelectorAll<HTMLElement>('[data-result-id]') ?? [],
+          ).find(element => element.dataset.resultId === id)
+          if (row && resultsElement)
+            resultsElement.scrollTo({
+              top:
+                resultsElement.scrollTop +
+                row.getBoundingClientRect().top -
+                resultsElement.getBoundingClientRect().top -
+                (resultsElement.clientHeight - row.clientHeight) / 2,
+              behavior: prefersReducedMotion.current ? 'instant' : 'smooth',
+            })
         })
       }
     }),
@@ -445,11 +497,18 @@ function choose(result: Result): void {
  * @param result Source row. @param nameMode Whether names follow the linked place.
  * @returns Nothing.
  */
-async function acceptResult(result: Result, nameMode: 'independent' | 'inherit'): Promise<void> {
+async function acceptResult(
+  result: Result,
+  nameMode: 'independent' | 'inherit',
+): Promise<void> {
   if (selected?.id !== result.id) choose(result)
   if (result.kind === 'establishment') {
     let streets: Awaited<ReturnType<typeof loadAddressNames>> = []
-    try { streets = await loadAddressNames('streets') } catch { /* Preserve source text when the catalogue is unavailable. */ }
+    try {
+      streets = await loadAddressNames('streets')
+    } catch {
+      /* Preserve source text when the catalogue is unavailable. */
+    }
     if (selected?.id !== result.id || accepted) return
     result = { ...result, address: structurePlaceAddress(result.address, streets) }
     selected = result
@@ -551,8 +610,11 @@ onDestroy(() => {
 function handleResultTab(event: KeyboardEvent, index: number): void {
   if (event.key !== 'Tab' || event.shiftKey || index !== visibleRows.length - 1) return
   const target = event.currentTarget as HTMLButtonElement
-  const controls = target.closest('[data-search-result]')?.querySelectorAll<HTMLButtonElement>('button:not([disabled]):not([tabindex="-1"])')
-  if (controls?.[controls.length - 1] === target && onResultsEnd?.()) event.preventDefault()
+  const controls = target
+    .closest('[data-search-result]')
+    ?.querySelectorAll<HTMLButtonElement>('button:not([disabled]):not([tabindex="-1"])')
+  if (controls?.[controls.length - 1] === target && onResultsEnd?.())
+    event.preventDefault()
 }
 </script>
 {#snippet filterPanel()}
@@ -568,24 +630,57 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       <button
         type="button"
         onclick={backToResults}
-        class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-panel px-3 py-3 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+        class="border-border bg-panel hover:bg-muted focus-visible:outline-primary inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium focus-visible:outline-2"
       >
         <BackIcon class="size-4" aria-hidden="true" />
         {m.feature_start_back_results()}
       </button>
-        {#if selectedLocationHref}
-          <a href={selectedLocationHref} class="group/location-details grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded text-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-            <LocationIcon kind={selected.kind} class="size-6 shrink-0 text-muted-foreground" />
-            <span class="min-w-0 whitespace-normal break-words underline decoration-primary/40 underline-offset-4 group-hover/location-details:decoration-primary">{resultLabels(selected).title}</span>
-            <OpenDetailsIcon class="size-4 shrink-0" />
-          </a>
-        {:else}
-          <LocationIcon kind={selected.kind} class="size-6 shrink-0 text-muted-foreground" />
-          <span class="min-w-0 whitespace-normal break-words text-sm font-medium">{resultLabels(selected).title}</span>
-        {/if}
-        <SimpleTooltip triggerProps={{ tabindex: -1 }}>{#snippet trigger()}<button type="button" aria-label={m.association_change()} class="inline-flex size-8 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary" onclick={() => selected && openAssociation(selected)}><ReplaceIcon class="size-4" /></button>{/snippet}{m.association_change()}</SimpleTooltip>
+      {#if selectedLocationHref}
+        <a
+          href={selectedLocationHref}
+          class="group/location-details text-primary focus-visible:outline-primary grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <LocationIcon
+            kind={selected.kind}
+            class="text-muted-foreground size-6 shrink-0"
+          />
+          <span
+            class="decoration-primary/40 group-hover/location-details:decoration-primary min-w-0 break-words whitespace-normal underline underline-offset-4"
+            >{resultLabels(selected).title}</span
+          >
+          <OpenDetailsIcon class="size-4 shrink-0" />
+        </a>
+      {:else}
+        <LocationIcon
+          kind={selected.kind}
+          class="text-muted-foreground size-6 shrink-0"
+        />
+        <span class="min-w-0 text-sm font-medium break-words whitespace-normal"
+          >{resultLabels(selected).title}</span
+        >
+      {/if}
+      <SimpleTooltip triggerProps={{ tabindex: -1 }}
+        >{#snippet trigger()}
+          <button
+            type="button"
+            aria-label={m.association_change()}
+            class="text-primary hover:bg-primary/10 focus-visible:outline-primary inline-flex size-8 shrink-0 items-center justify-center rounded focus-visible:outline-2"
+            onclick={() => selected && openAssociation(selected)}
+          >
+            <ReplaceIcon class="size-4" />
+          </button>
+        {/snippet}
+        {m.association_change()}</SimpleTooltip
+      >
       {#if linked}
-        <button type="button" class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted" onclick={() => { linked = false; onUnlink?.() }}>
+        <button
+          type="button"
+          class="border-border hover:bg-muted inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+          onclick={() => {
+            linked = false
+            onUnlink?.()
+          }}
+        >
           <UnlinkIcon class="size-4" aria-hidden="true" />{m.account__unlink()}
         </button>
       {/if}
@@ -597,11 +692,11 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         aria-label={m.feature_search_include()}
       >
         <legend class="sr-only">{m.feature_search_include()}</legend>
-        <span class="text-sm text-muted-foreground" aria-hidden="true"
+        <span class="text-muted-foreground text-sm" aria-hidden="true"
           >{m.feature_search_include()}</span
         >
         <div
-          class="inline-flex items-center gap-1 rounded-lg border border-border bg-panel p-1"
+          class="border-border bg-panel inline-flex items-center gap-1 rounded-lg border p-1"
         >
           {#each searchKinds as kind}
             {@const enabled =
@@ -641,76 +736,83 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 } else if (findMode === 'pin') void search(true)
                 else schedule()
               }}
-              class="flex size-9 items-center justify-center rounded-md text-muted-foreground dark:text-white transition-colors hover:bg-muted aria-pressed:bg-[var(--search-color)] aria-pressed:text-white focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-30"
+              class="text-muted-foreground hover:bg-muted focus-visible:outline-primary flex size-9 items-center justify-center rounded-md transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-30 aria-pressed:bg-[var(--search-color)] aria-pressed:text-white dark:text-white"
             >
               <LocationIcon {kind} class="size-5" />
             </button>
           {/each}
         </div>
       </fieldset>
-      <div class="flex min-w-0 basis-64 flex-1 items-center justify-center gap-3">
+      <div class="flex min-w-0 flex-1 basis-64 items-center justify-center gap-3">
         {#if showSearchTypePrompt && !hasSearchTypes}
-          <p role="status" class="flex min-h-12 w-full items-center justify-center text-center text-sm text-muted-foreground">
+          <p
+            role="status"
+            class="text-muted-foreground flex min-h-12 w-full items-center justify-center text-center text-sm"
+          >
             {m.feature_search_select_types()}
           </p>
         {:else if findMode === 'search'}
-        <div class="flex min-w-0 flex-1 items-center rounded-lg border border-border bg-panel focus-within:ring-2 focus-within:ring-primary">
-          <input
-            bind:this={input}
-            bind:value={query}
-            oninput={schedule}
-            maxlength="200"
-            aria-label={m.feature_start_search()}
-            placeholder={m.feature_start_search()}
-            class="w-full min-w-0 flex-1 rounded-lg bg-transparent py-3 pl-4 pr-2 text-foreground outline-none"
-            onkeydown={event => {
-              if (event.key === 'Tab' && !event.shiftKey && rows.length) {
-                const first =
-                  resultsElement?.querySelector<HTMLButtonElement>('[data-result-id]')
-                if (first) {
-                  event.preventDefault()
-                  first.focus()
+          <div
+            class="border-border bg-panel focus-within:ring-primary flex min-w-0 flex-1 items-center rounded-lg border focus-within:ring-2"
+          >
+            <input
+              bind:this={input}
+              bind:value={query}
+              oninput={schedule}
+              maxlength="200"
+              aria-label={m.feature_start_search()}
+              placeholder={m.feature_start_search()}
+              class="text-foreground w-full min-w-0 flex-1 rounded-lg bg-transparent py-3 pr-2 pl-4 outline-none"
+              onkeydown={event => {
+                if (event.key === 'Tab' && !event.shiftKey && rows.length) {
+                  const first =
+                    resultsElement?.querySelector<HTMLButtonElement>('[data-result-id]')
+                  if (first) {
+                    event.preventDefault()
+                    first.focus()
+                  }
                 }
-              }
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                clearTimeout(timer)
-                void search()
-              }
-            }}
-          >
-          {#if !loading && (rows.length || searched)}
-            <span role="status" class="shrink-0 px-2 text-xs text-muted-foreground">{m.feature_search_result_count({ count: visibleRows.length })}</span>
-          {/if}
-          <button
-            type="button"
-            aria-label={searched || rows.length
-              ? m.feature_search_clear()
-              : m.feature_search_submit()}
-            data-tooltip={searched || rows.length
-              ? m.feature_search_clear()
-              : m.feature_search_submit()}
-            disabled={!searched && !rows.length && (!query.trim() || !hasSearchTypes)}
-            onclick={() => {
-              if (searched || rows.length) clearSearch()
-              else {
-                clearTimeout(timer)
-                void search()
-              }
-            }}
-            class="mr-1 flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40"
-          >
-            {#if searched || rows.length}
-              <ClearIcon class="size-5" aria-hidden="true" />
-            {:else}
-              <SearchIcon class="size-5" aria-hidden="true" />
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  clearTimeout(timer)
+                  void search()
+                }
+              }}
+            >
+            {#if !loading && (rows.length || searched)}
+              <span role="status" class="text-muted-foreground shrink-0 px-2 text-xs"
+                >{m.feature_search_result_count({ count: visibleRows.length })}</span
+              >
             {/if}
-          </button>
-        </div>
+            <button
+              type="button"
+              aria-label={searched || rows.length
+                ? m.feature_search_clear()
+                : m.feature_search_submit()}
+              data-tooltip={searched || rows.length
+                ? m.feature_search_clear()
+                : m.feature_search_submit()}
+              disabled={!searched && !rows.length && (!query.trim() || !hasSearchTypes)}
+              onclick={() => {
+                if (searched || rows.length) clearSearch()
+                else {
+                  clearTimeout(timer)
+                  void search()
+                }
+              }}
+              class="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-primary mr-1 flex size-10 shrink-0 items-center justify-center rounded-md focus-visible:outline-2 disabled:opacity-40"
+            >
+              {#if searched || rows.length}
+                <ClearIcon class="size-5" aria-hidden="true" />
+              {:else}
+                <SearchIcon class="size-5" aria-hidden="true" />
+              {/if}
+            </button>
+          </div>
         {:else if hasPin && coordinates}
           <button
             type="button"
-            class="min-h-14 shrink-0 rounded-lg bg-primary px-7 py-4 text-base font-semibold text-white disabled:opacity-40"
+            class="bg-primary min-h-14 shrink-0 rounded-lg px-7 py-4 text-base font-semibold text-white disabled:opacity-40"
             bind:this={nearbyButton}
             disabled={loading || !hasSearchTypes}
             onclick={() => void search(true)}
@@ -718,34 +820,50 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             {m.feature_search_nearby()}
           </button>
           {#if !loading && (rows.length || searched)}
-            <span role="status" class="shrink-0 text-xs text-muted-foreground">{m.feature_search_result_count({ count: visibleRows.length })}</span>
+            <span role="status" class="text-muted-foreground shrink-0 text-xs"
+              >{m.feature_search_result_count({ count: visibleRows.length })}</span
+            >
           {/if}
         {/if}
-      <button
-        bind:this={filterButton}
-        type="button"
-        aria-label={m.feature_search_filters()}
-        data-tooltip={m.feature_search_filters()}
-        aria-expanded={filtersOpen}
-        disabled={!includeShops}
-        onclick={() => (filtersOpen = !filtersOpen)}
-        class="relative flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-panel text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
-      >
-        <FilterIcon class="size-5" aria-hidden="true" />
-        {#if filterCount}
-          <span
-            class="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white"
-            >{filterCount}</span
-          >
-        {/if}
-      </button>
+        <button
+          bind:this={filterButton}
+          type="button"
+          aria-label={m.feature_search_filters()}
+          data-tooltip={m.feature_search_filters()}
+          aria-expanded={filtersOpen}
+          disabled={!includeShops}
+          onclick={() => (filtersOpen = !filtersOpen)}
+          class="border-border bg-panel text-muted-foreground hover:bg-muted focus-visible:outline-primary relative flex size-11 shrink-0 items-center justify-center rounded-lg border focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40"
+        >
+          <FilterIcon class="size-5" aria-hidden="true" />
+          {#if filterCount}
+            <span
+              class="bg-primary absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full text-xs font-semibold text-white"
+              >{filterCount}</span
+            >
+          {/if}
+        </button>
       </div>
       {#if findMode === 'pin' && coordinatesControl}
         <div class="min-w-0 shrink-0">{@render coordinatesControl()}</div>
       {/if}
-      <fieldset  aria-label={m.feature_find_by()} class="inline-flex shrink-0 rounded-lg border border-border bg-muted/40 p-1">
+      <fieldset
+        aria-label={m.feature_find_by()}
+        class="border-border bg-muted/40 inline-flex shrink-0 rounded-lg border p-1"
+      >
         {#each ['search', 'pin'] as mode}
-          <button type="button" aria-label={mode === 'search' ? `${m.feature_find_by()} ${m.feature_find_search()}` : m.feature_find_pin()} aria-pressed={findMode === mode} disabled={mode === 'pin' && !onDropPin} onclick={() => setFindMode(mode as 'search' | 'pin')} class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors aria-pressed:bg-panel aria-pressed:text-foreground aria-pressed:shadow-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40">{mode === 'search' ? m.feature_find_search() : m.feature_find_pin()}</button>
+          <button
+            type="button"
+            aria-label={mode === 'search'
+              ? `${m.feature_find_by()} ${m.feature_find_search()}`
+              : m.feature_find_pin()}
+            aria-pressed={findMode === mode}
+            disabled={mode === 'pin' && !onDropPin}
+            onclick={() => setFindMode(mode as 'search' | 'pin')}
+            class="text-muted-foreground aria-pressed:bg-panel aria-pressed:text-foreground hover:text-foreground focus-visible:outline-primary rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 disabled:opacity-40 aria-pressed:shadow-sm"
+          >
+            {mode === 'search' ? m.feature_find_search() : m.feature_find_pin()}
+          </button>
         {/each}
       </fieldset>
     </div>
@@ -756,15 +874,45 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
 {/snippet}
 {#snippet searchResults()}
   {#if !accepted && !loading && !searched && !rows.length}
-    <section aria-label={m.feature_find_by()} class="flex flex-1 items-center justify-center px-6 py-10">
-      <div class="grid w-full max-w-4xl gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/60">
+    <section
+      aria-label={m.feature_find_by()}
+      class="flex flex-1 items-center justify-center px-6 py-10"
+    >
+      <div
+        class="sm:divide-border/60 grid w-full max-w-4xl gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x"
+      >
         {#each ['search', 'pin', 'manual'] as choice}
           <div class="flex flex-col items-center gap-4 px-6 text-center">
-            <p class="max-w-64 text-sm leading-relaxed text-muted-foreground">
-              <strong class="mb-2 block text-lg font-semibold leading-snug text-foreground">{choice === 'search' ? m.feature_find_search_lead() : choice === 'pin' ? m.feature_find_pin_lead() : m.feature_find_manual_lead()}</strong>
-              {choice === 'search' ? m.feature_find_search_detail() : choice === 'pin' ? m.feature_find_pin_detail() : m.feature_find_manual_detail()}
+            <p class="text-muted-foreground max-w-64 text-sm leading-relaxed">
+              <strong
+                class="text-foreground mb-2 block text-lg leading-snug font-semibold"
+                >{choice === 'search'
+                  ? m.feature_find_search_lead()
+                  : choice === 'pin'
+                    ? m.feature_find_pin_lead()
+                    : m.feature_find_manual_lead()}</strong
+              >
+              {choice === 'search'
+                ? m.feature_find_search_detail()
+                : choice === 'pin'
+                  ? m.feature_find_pin_detail()
+                  : m.feature_find_manual_detail()}
             </p>
-            <button type="button" disabled={choice !== 'search' && !onDropPin} onclick={() => choice === 'manual' ? onManualEntry?.() : setFindMode(choice as 'search' | 'pin')} class="mt-auto rounded-lg px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40">{choice === 'search' ? m.feature_find_name() : choice === 'pin' ? m.feature_find_location() : m.feature_search_manual_location()}</button>
+            <button
+              type="button"
+              disabled={choice !== 'search' && !onDropPin}
+              onclick={() =>
+                choice === 'manual'
+                  ? onManualEntry?.()
+                  : setFindMode(choice as 'search' | 'pin')}
+              class="text-primary hover:bg-primary/10 focus-visible:outline-primary mt-auto rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 disabled:opacity-40"
+            >
+              {choice === 'search'
+                ? m.feature_find_name()
+                : choice === 'pin'
+                  ? m.feature_find_location()
+                  : m.feature_search_manual_location()}
+            </button>
           </div>
         {/each}
       </div>
@@ -780,10 +928,10 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         >
           {#each [0, 1, 2] as placeholder (placeholder)}
             <div aria-hidden="true" class="flex h-12 items-center gap-3">
-              <div class="size-6 rounded-full bg-muted"></div>
+              <div class="bg-muted size-6 rounded-full"></div>
               <div class="flex-1 space-y-2">
-                <div class="h-3 w-2/3 rounded bg-muted"></div>
-                <div class="h-3 w-1/2 rounded bg-muted"></div>
+                <div class="bg-muted h-3 w-2/3 rounded"></div>
+                <div class="bg-muted h-3 w-1/2 rounded"></div>
               </div>
             </div>
           {/each}
@@ -805,7 +953,10 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         <p role="status" class="py-2 text-sm">{m.feature_start_addresses_failed()}</p>
       {/if}
       {#if currentGroup}
-        <div class="flex items-center" transition:slide={{ duration: prefersReducedMotion.current ? 0 : 160 }}>
+        <div
+          class="flex items-center"
+          transition:slide={{ duration: prefersReducedMotion.current ? 0 : 160 }}
+        >
           <button
             bind:this={subsetBackButton}
             type="button"
@@ -823,19 +974,19 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       {/if}
       <section
         bind:this={resultsElement}
-        class="min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-py-12 pt-3 pb-16"
+        class="min-h-0 flex-1 scroll-py-12 overflow-y-auto overscroll-contain pt-3 pb-16"
         aria-label={m.feature_start_search()}
       >
         {#each visibleRows as result, index (result.id)}
           {@const labels = resultLabels(result)}
           <div
             data-search-result={result.id}
-            class="relative flex items-center gap-3 rounded-md border-b border-border/50 transition-colors hover:bg-muted focus-within:bg-primary/10 last:border-0 [&:has([data-result-actions])_[data-division-class=town]]:invisible"
+            class="border-border/50 hover:bg-muted focus-within:bg-primary/10 relative flex items-center gap-3 rounded-md border-b transition-colors last:border-0 [&:has([data-result-actions])_[data-division-class=town]]:invisible"
             animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180 }}
           >
             <button
               type="button"
-              class="group flex min-h-20 min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-6 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+              class="group focus-visible:outline-primary flex min-h-20 min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-6 text-left focus-visible:outline-2 focus-visible:-outline-offset-2"
               data-result-id={result.id}
               data-result-number={index + 1}
               data-result-kind={result.kind}
@@ -872,16 +1023,33 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               >
               <LocationIcon
                 kind={result.kind}
-                class="size-5 shrink-0 text-muted-foreground"
+                class="text-muted-foreground size-5 shrink-0"
               />
               <span class="relative min-w-0 flex-1">
-                <AddressSearchParts address={result.address} numberSummary={currentGroup ? undefined : groups.find(group => group.representative.id === result.id)?.numberRange} establishmentTitle={result.kind === 'establishment' ? labels.title : undefined} taxonomyLabel={result.taxonomyLabel} primaryName={result.kind === 'building' ? labels.title : undefined} collapsed={!currentGroup && result.kind === 'address' && Boolean(groups.find(group => group.representative.id === result.id)?.expandable)} />
+                <AddressSearchParts
+                  address={result.address}
+                  numberSummary={currentGroup
+                    ? undefined
+                    : groups.find(group => group.representative.id === result.id)
+                        ?.numberRange}
+                  establishmentTitle={result.kind === 'establishment'
+                    ? labels.title
+                    : undefined}
+                  taxonomyLabel={result.taxonomyLabel}
+                  primaryName={result.kind === 'building' ? labels.title : undefined}
+                  collapsed={!currentGroup &&
+                    result.kind === 'address' &&
+                    Boolean(
+                      groups.find(group => group.representative.id === result.id)
+                        ?.expandable,
+                    )}
+                />
                 {#if !currentGroup &&
                   groups.find(
-                    group =>
-                      group.representative.id === result.id && group.expandable,
+                    group => group.representative.id === result.id && group.expandable,
                   )}
-                  <span class="absolute left-0 top-full mt-1 text-xs text-muted-foreground"
+                  <span
+                    class="text-muted-foreground absolute top-full left-0 mt-1 text-xs"
                     >{m.feature_search_group_count({
                       count:
                         groups.find(group => group.representative.id === result.id)
@@ -891,31 +1059,71 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 {/if}
               </span>
             </button>
-            {#if selected?.id === result.id && (currentGroup || !groups.some(group => group.representative.id === result.id && group.expandable))}
-              <div class={["flex shrink-0 flex-wrap justify-end gap-2 pr-3", result.kind !== 'establishment' && 'absolute right-0 top-1/2 -translate-y-1/2']} data-result-actions={result.id}>
+            {#if selected?.id === result.id &&
+              (currentGroup ||
+                !groups.some(
+                  group => group.representative.id === result.id && group.expandable,
+                ))}
+              <div
+                class={[
+                  'flex shrink-0 flex-wrap justify-end gap-2 pr-3',
+                  result.kind !== 'establishment' &&
+                    'absolute top-1/2 right-0 -translate-y-1/2',
+                ]}
+                data-result-actions={result.id}
+              >
                 {#if result.kind === 'establishment'}
-                  <button type="button" onkeydown={event => handleResultTab(event, index)} tabindex={selected?.id === result.id ? 0 : -1} class="rounded-md border border-primary bg-white px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-white" onclick={() => acceptResult(result, 'independent')}>{m.feature_search_link_place()}</button>
-                  <button type="button" onkeydown={event => handleResultTab(event, index)} tabindex={selected?.id === result.id ? 0 : -1} class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-white" onclick={() => acceptResult(result, 'inherit')}>{m.feature_search_link_name()}</button>
+                  <button
+                    type="button"
+                    onkeydown={event => handleResultTab(event, index)}
+                    tabindex={selected?.id === result.id ? 0 : -1}
+                    class="border-primary text-primary rounded-md border bg-white px-3 py-2 text-sm font-medium transition-colors hover:bg-white"
+                    onclick={() => acceptResult(result, 'independent')}
+                  >
+                    {m.feature_search_link_place()}
+                  </button>
+                  <button
+                    type="button"
+                    onkeydown={event => handleResultTab(event, index)}
+                    tabindex={selected?.id === result.id ? 0 : -1}
+                    class="bg-primary rounded-md px-3 py-2 text-sm font-medium text-white"
+                    onclick={() => acceptResult(result, 'inherit')}
+                  >
+                    {m.feature_search_link_name()}
+                  </button>
                 {:else}
-                  <button type="button" onkeydown={event => handleResultTab(event, index)} tabindex={selected?.id === result.id ? 0 : -1} class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-white" onclick={() => acceptResult(result, 'independent')}>{m.feature_search_use_address()}</button>
+                  <button
+                    type="button"
+                    onkeydown={event => handleResultTab(event, index)}
+                    tabindex={selected?.id === result.id ? 0 : -1}
+                    class="bg-primary rounded-md px-3 py-2 text-sm font-medium text-white"
+                    onclick={() => acceptResult(result, 'independent')}
+                  >
+                    {m.feature_search_use_address()}
+                  </button>
                 {/if}
               </div>
-
             {/if}
           </div>
         {/each}
       </section>
-      {#if searched && !loading && !rows.length && !placesFailed && !placesPartial && !placesLimited && !addressesFailed && !buildingsFailed}
+      {#if searched &&
+        !loading &&
+        !rows.length &&
+        !placesFailed &&
+        !placesPartial &&
+        !placesLimited &&
+        !addressesFailed &&
+        !buildingsFailed}
         <p class="py-3 text-sm">{m.feature_start_empty()}</p>
       {/if}
-
     </div>
   {/if}
 {/snippet}
 {#snippet mapControls()}
   {#if findMode === 'pin' && hasPin && !selected}
     <label
-      class="flex w-52 flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-panel px-3 py-2 text-sm text-foreground shadow-sm"
+      class="border-border bg-panel text-foreground flex w-52 flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm"
     >
       {m.feature_location_radius()}
       <output class="tabular-nums">{radius} m</output>
@@ -927,7 +1135,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         bind:value={radius}
         disabled={loading}
         aria-label={m.feature_location_radius()}
-        class="h-4 w-full cursor-pointer accent-primary"
+        class="accent-primary h-4 w-full cursor-pointer"
       >
     </label>
   {/if}

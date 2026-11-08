@@ -31,19 +31,19 @@ let displayText = $derived(filter.displayText)
 </script>
 
 <div
-  class="mx-6 min-h-10 shrink-0 border-b border-base-content/10 text-base-content last:border-b-0"
+  class="border-base-content/10 text-base-content mx-6 min-h-10 shrink-0 border-b last:border-b-0"
 >
   <button
     type="button"
-    class="-mx-6 flex w-[calc(100%+3rem)] shrink-0 items-center justify-between gap-4 px-6 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+    class="focus-visible:ring-focus -mx-6 flex w-[calc(100%+3rem)] shrink-0 items-center justify-between gap-4 px-6 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset"
     aria-expanded={isOpen}
     onclick={() => (isOpen = !isOpen)}
   >
-    <div class="flex flex-col min-w-0 justify-start gap-1 text-left">
-      <p class="text-xs font-medium uppercase tracking-widest text-base-content/60">
+    <div class="flex min-w-0 flex-col justify-start gap-1 text-left">
+      <p class="text-base-content/60 text-xs font-medium tracking-widest uppercase">
         {label}
       </p>
-      <p class="break-words text-sm leading-5 text-base-content/60">{displayText}</p>
+      <p class="text-base-content/60 text-sm leading-5 break-words">{displayText}</p>
     </div>
     <Icon
       src={ChevronDown}
@@ -61,7 +61,7 @@ let displayText = $derived(filter.displayText)
       }}
       class="flex flex-col overflow-visible px-1"
     >
-      <div class="pb-3.5 pt-2.5">
+      <div class="pt-2.5 pb-3.5">
         <PropertyRangeControl
           compact
           definition={filter.definition}

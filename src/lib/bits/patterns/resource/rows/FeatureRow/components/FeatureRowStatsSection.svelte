@@ -14,6 +14,6 @@ let {
 } = $props()
 </script>
 
-<div class="flex items-center justify-center min-w-0">
+<div class="flex min-w-0 items-center justify-center">
   <FeatureRowStats {feature} {appCtx} {grapheme} />
 </div>

@@ -36,15 +36,15 @@ const projectName = $derived(
 </script>
 
 {#if organisationName || projectName}
-  <p class="flex items-start space-x-0.5 font-mono text-xs uppercase tracking-widest">
+  <p class="flex items-start space-x-0.5 font-mono text-xs tracking-widest uppercase">
     {#if organisationName}
-      <span class="min-w-0 text-primary">{organisationName}</span>
+      <span class="text-primary min-w-0">{organisationName}</span>
     {/if}
     {#if projectName}
       {#if organisationName}
         <span class="shrink-0 px-0">›</span>
       {/if}
-      <span class="min-w-0 text-accent">{projectName}</span>
+      <span class="text-accent min-w-0">{projectName}</span>
     {/if}
   </p>
 {/if}

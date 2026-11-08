@@ -197,7 +197,7 @@ function handleFieldChange(event: Event): void {
     <div>
       <span class="label label-text text-xs">
         {m.feature_import__column_property_type_label()}
-        <span class="text-xs text-base-content/50">
+        <span class="text-base-content/50 text-xs">
           {m.feature_import__column_property_type_auto()}
         </span>
       </span>

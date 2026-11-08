@@ -551,18 +551,18 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
 }
 </script>
 
-<section in:slide={{ duration: 220 }} class="border-b border-border px-6 py-5">
+<section in:slide={{ duration: 220 }} class="border-border border-b px-6 py-5">
   {#if isGuest}
     {#if !startGuestUpgradeOpen}
       <div class="flex flex-col items-center text-center">
         <div class="flex w-full items-center justify-between">
           <h2
-            class="text-sm font-semibold uppercase tracking-wide text-base-content/65"
+            class="text-base-content/65 text-sm font-semibold tracking-wide uppercase"
           >
             {m.guest__guest_account()}
           </h2>
           <button
-            class="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-content transition hover:bg-primary/90"
+            class="bg-primary text-primary-content hover:bg-primary/90 rounded-lg px-3 py-2 text-sm font-medium transition"
             type="button"
             aria-expanded={isEditing}
             onclick={() => {
@@ -580,11 +580,11 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
     {#if isEditing}
       <div
         class={`flex flex-col gap-4 ${
-          startGuestUpgradeOpen ? '' : 'mt-4 border-t border-base-content/10 pt-4'
+          startGuestUpgradeOpen ? '' : 'border-base-content/10 mt-4 border-t pt-4'
         }`}
       >
         <div class="flex flex-col gap-2">
-          <h3 class="text-center text-sm font-medium text-base-content/70">
+          <h3 class="text-base-content/70 text-center text-sm font-medium">
             {isGuestSignIn
               ? m.guest__sign_in_social_account()
               : m.guest__linked_account()}
@@ -593,7 +593,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             {#each socialProviders as provider (provider.id)}
               {@const ProviderIcon = provider.icon}
               <button
-                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                class="border-base-content/20 flex items-center gap-2 rounded border px-2 py-1 text-sm disabled:opacity-50"
                 type="button"
                 disabled={isBusy}
                 onclick={() => handleGuestSocial(provider.id)}
@@ -607,7 +607,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
         </div>
 
         <div class="flex flex-col gap-2">
-          <h3 class="text-center text-sm font-medium text-base-content/70">
+          <h3 class="text-base-content/70 text-center text-sm font-medium">
             {isGuestSignIn
               ? m.guest__sign_in_standard_method()
               : m.guest__login_methods()}
@@ -615,7 +615,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           <div class="flex flex-wrap justify-center gap-2">
             {#if !showEmailSetup}
               <button
-                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                class="border-base-content/20 flex items-center gap-2 rounded border px-2 py-1 text-sm disabled:opacity-50"
                 type="button"
                 disabled={isBusy}
                 onclick={() => {
@@ -628,7 +628,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             {/if}
             {#if !showPasskeySetup}
               <button
-                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                class="border-base-content/20 flex items-center gap-2 rounded border px-2 py-1 text-sm disabled:opacity-50"
                 type="button"
                 disabled={isBusy}
                 onclick={() => {
@@ -655,7 +655,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               >
               <input
                 id="guest-account-name"
-                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+                class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
                 type="text"
                 autocomplete="name"
                 bind:value={emailAccountName}
@@ -665,7 +665,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             <label class="text-sm" for="guest-account-email">{m.guest__email()}</label>
             <input
               id="guest-account-email"
-              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
               type="email"
               autocomplete="email"
               bind:value={email}
@@ -676,7 +676,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             >
             <input
               id="guest-account-password"
-              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
               type="password"
               autocomplete={isGuestSignIn ? 'current-password' : 'new-password'}
               minlength="8"
@@ -685,7 +685,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               required
             >
             <button
-              class="mt-3 self-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
+              class="bg-primary text-primary-content mt-3 self-center rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
               type="submit"
               disabled={isBusy}
             >
@@ -693,7 +693,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             </button>
             {#if isGuestSignIn}
               <button
-                class="self-center text-sm text-base-content/70 underline disabled:opacity-50"
+                class="text-base-content/70 self-center text-sm underline disabled:opacity-50"
                 type="button"
                 disabled={isBusy}
                 onclick={handlePasswordResetRequest}
@@ -705,10 +705,10 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
         {/if}
         {#if showPasskeySetup}
           <form class="flex flex-col gap-2" onsubmit={handleGuestPasskeySubmit}>
-            <h4 class="text-center text-sm font-medium text-base-content/70">
+            <h4 class="text-base-content/70 text-center text-sm font-medium">
               {m.guest__passkey_setup_title()}
             </h4>
-            <p class="text-center text-sm text-base-content/65">
+            <p class="text-base-content/65 text-center text-sm">
               {m.guest__passkey_setup_description()}
             </p>
             <label class="text-sm" for="guest-passkey-name"
@@ -716,7 +716,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             >
             <input
               id="guest-passkey-name"
-              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
               type="text"
               autocomplete="name"
               bind:value={preferredName}
@@ -726,7 +726,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             >
             <input
               id="guest-passkey-username"
-              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
               type="text"
               autocomplete="username"
               maxlength="32"
@@ -737,13 +737,13 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             >
             <input
               id="guest-passkey-email"
-              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
               type="email"
               autocomplete="email"
               bind:value={preferredEmail}
             >
             <button
-              class="mt-3 self-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
+              class="bg-primary text-primary-content mt-3 self-center rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
               type="submit"
               disabled={isBusy}
             >
@@ -755,7 +755,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           <p
             role="alert"
             transition:slide={{ duration: 220 }}
-            class="text-center text-sm text-error"
+            class="text-error text-center text-sm"
           >
             {errorMessage}
           </p>
@@ -764,7 +764,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           <p
             role="status"
             transition:slide={{ duration: 220 }}
-            class="text-center text-sm text-success"
+            class="text-success text-center text-sm"
           >
             {statusMessage}
           </p>
@@ -776,7 +776,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
       {#if isLoading}
         <div class="flex flex-col gap-2">
           <h3
-            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            class="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
           >
             {m.account__social_accounts()}
           </h3>
@@ -792,7 +792,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               >
               <span
                 aria-busy="true"
-                class="h-8 w-12 shrink-0 animate-pulse rounded border border-base-content/10 bg-base-content/10"
+                class="border-base-content/10 bg-base-content/10 h-8 w-12 shrink-0 animate-pulse rounded border"
                 ><span class="sr-only">Loading linked sign-in methods</span></span
               >
             </div>
@@ -801,7 +801,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
 
         <div class="flex flex-col gap-2">
           <h3
-            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            class="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
           >
             {m.account__standard_login_methods()}
           </h3>
@@ -817,7 +817,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               >
               <span
                 aria-busy="true"
-                class="h-8 w-12 shrink-0 animate-pulse rounded border border-base-content/10 bg-base-content/10"
+                class="border-base-content/10 bg-base-content/10 h-8 w-12 shrink-0 animate-pulse rounded border"
                 ><span class="sr-only">Loading linked sign-in methods</span></span
               >
             </div>
@@ -826,7 +826,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
       {:else}
         <div class="flex flex-col gap-2">
           <h3
-            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            class="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
           >
             {m.account__social_accounts()}
           </h3>
@@ -840,7 +840,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                   class={account.providerId === 'facebook'
                     ? 'h-5 w-5 text-[#1877F2]'
                     : 'h-5 w-5'}
-                /><span class="min-w-0 break-words text-base-content"
+                /><span class="text-base-content min-w-0 break-words"
                   >{providerLabel(account.providerId)}
                   {#if providerEmails[accountKey(account)]}
                     <span class="text-base-content/55"
@@ -850,7 +850,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 ></span
               >
               <button
-                class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
+                class="border-border text-muted-foreground hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:ring-focus shrink-0 rounded-md border px-2.5 py-1.5 text-xs transition focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                 type="button"
                 disabled={isBusy || accounts.length <= 1}
                 onclick={() => handleUnlink(account)}
@@ -871,7 +871,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                   /><span class="text-base-content">{provider.label}</span></span
                 >
                 <button
-                  class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-base-content transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
+                  class="border-border text-base-content hover:bg-surface focus-visible:ring-focus shrink-0 rounded-md border px-2.5 py-1.5 text-xs transition focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                   type="button"
                   disabled={isBusy}
                   onclick={() => handleLink(provider.id)}
@@ -885,7 +885,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
 
         <div class="flex flex-col gap-2">
           <h3
-            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            class="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
           >
             {m.account__standard_login_methods()}
           </h3>
@@ -895,7 +895,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
                 ><Mail class="h-5 w-5" />
-                <span class="min-w-0 break-words text-base-content"
+                <span class="text-base-content min-w-0 break-words"
                   >{m.account__email()}
                   {#if linkedAccountLabel}
                     <span class="text-base-content/55">({linkedAccountLabel})</span>
@@ -903,7 +903,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 ></span
               >
               <button
-                class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
+                class="border-border text-muted-foreground hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:ring-focus shrink-0 rounded-md border px-2.5 py-1.5 text-xs transition focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                 type="button"
                 disabled={isBusy || accounts.length <= 1}
                 onclick={() => handleUnlink(account)}
@@ -917,7 +917,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               <div class="flex items-center justify-between gap-3 text-sm">
                 <span class="flex min-w-0 flex-1 items-center gap-2.5"
                   ><KeyRound class="h-4 w-4" />
-                  <span class="min-w-0 break-words text-base-content"
+                  <span class="text-base-content min-w-0 break-words"
                     >{m.account__passkey()}
                     <span class="text-base-content/55"
                       >({passkeyIdentifier(passkey)})</span
@@ -925,7 +925,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                   ></span
                 >
                 <button
-                  class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
+                  class="border-border text-muted-foreground hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:ring-focus shrink-0 rounded-md border px-2.5 py-1.5 text-xs transition focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                   type="button"
                   disabled={isBusy || (accounts.length === 0 && passkeys.length <= 1)}
                   onclick={() => handleRemovePasskey(passkey)}
@@ -940,7 +940,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 ><KeyRound class="h-4 w-4" />{m.account__passkey()}</span
               >
               <button
-                class="rounded-md border border-border px-2.5 py-1.5 text-xs text-base-content transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
+                class="border-border text-base-content hover:bg-surface focus-visible:ring-focus rounded-md border px-2.5 py-1.5 text-xs transition focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                 type="button"
                 disabled={isBusy}
                 onclick={handleAddPasskey}
@@ -957,7 +957,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 <span class="text-base-content">{m.account__email()}</span></span
               >
               <button
-                class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-base-content transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
+                class="border-border text-base-content hover:bg-surface focus-visible:ring-focus shrink-0 rounded-md border px-2.5 py-1.5 text-xs transition focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
                 type="button"
                 disabled={isBusy}
                 onclick={() => (showEmailSetup = true)}
@@ -975,7 +975,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               >
               <input
                 id="profile-account-email"
-                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+                class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
                 type="email"
                 autocomplete="email"
                 bind:value={email}
@@ -986,7 +986,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               >
               <input
                 id="profile-account-password"
-                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+                class="border-base-content/20 bg-base-100 rounded-lg border px-3 py-2"
                 type="password"
                 autocomplete="new-password"
                 minlength="8"
@@ -995,7 +995,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 required
               >
               <button
-                class="mt-3 min-w-52 self-center rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
+                class="bg-primary text-primary-content mt-3 min-w-52 self-center rounded-lg px-5 py-2 text-sm font-medium disabled:opacity-50"
                 type="submit"
                 disabled={isBusy}
               >
@@ -1007,7 +1007,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             <p
               role="alert"
               transition:slide={{ duration: 220 }}
-              class="text-center text-sm text-error"
+              class="text-error text-center text-sm"
             >
               {errorMessage}
             </p>
@@ -1016,7 +1016,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             <p
               role="status"
               transition:slide={{ duration: 220 }}
-              class="text-center text-sm text-success"
+              class="text-success text-center text-sm"
             >
               {statusMessage}
             </p>

@@ -162,9 +162,9 @@ function getBreakdownItems(
   {:else}
     <div class="grid grid-cols-2 gap-3">
       {#each visibleKpiItems as item}
-        <article class="rounded-[1.2rem] border border-border bg-surface px-3 py-3">
+        <article class="border-border bg-surface rounded-[1.2rem] border px-3 py-3">
           <p
-            class="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-alt"
+            class="text-foreground-alt text-[11px] font-semibold tracking-[0.18em] uppercase"
           >
             {item.label}
           </p>
@@ -175,7 +175,7 @@ function getBreakdownItems(
       {/each}
     </div>
 
-    <section class="space-y-4 rounded-[1.25rem] border border-border bg-surface p-4">
+    <section class="border-border bg-surface space-y-4 rounded-[1.25rem] border p-4">
       <AnalyticsCardPrimitive.SectionHeader
         title="Latency"
         tooltip="Percentile response times for the active request classes in this time window."
@@ -188,20 +188,20 @@ function getBreakdownItems(
 
           <div class="space-y-2">
             <div
-              class="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-alt"
+              class="text-foreground-alt text-xs font-semibold tracking-[0.18em] uppercase"
             >
               {tier.label}
             </div>
             {#each bars as bar}
               <div class="grid grid-cols-[88px_1fr_auto] items-center gap-3">
-                <div class="text-xs text-foreground-alt">{bar.label}</div>
-                <div class="h-2.5 overflow-hidden rounded-full bg-foreground/6">
+                <div class="text-foreground-alt text-xs">{bar.label}</div>
+                <div class="bg-foreground/6 h-2.5 overflow-hidden rounded-full">
                   <div
                     class={cx('h-full rounded-full', bar.color)}
                     style={`width: ${getLatencyWidth(bar.value, maxValue)}`}
                   ></div>
                 </div>
-                <div class="text-xs font-medium text-foreground">
+                <div class="text-foreground text-xs font-medium">
                   {formatAnalyticsLatency(bar.value)}
                 </div>
               </div>
@@ -211,7 +211,7 @@ function getBreakdownItems(
       </div>
     </section>
 
-    <section class="space-y-5 rounded-[1.25rem] border border-border bg-surface p-4">
+    <section class="border-border bg-surface space-y-5 rounded-[1.25rem] border p-4">
       <AnalyticsCardPrimitive.SectionHeader
         title="Transformations"
         tooltip="Request-weighted shares for crop mode, format, dimensions, quality, and gravity in this time window."
@@ -223,46 +223,46 @@ function getBreakdownItems(
           <article class="min-w-0">
             <div class="mb-4 flex items-center justify-between gap-3">
               <h3
-                class="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm font-semibold text-foreground"
+                class="text-foreground overflow-hidden font-mono text-sm font-semibold text-ellipsis whitespace-nowrap"
               >
                 {breakdownSection.title()}
               </h3>
               <span
-                class="shrink-0 whitespace-nowrap font-mono text-xs text-foreground-alt"
+                class="text-foreground-alt shrink-0 font-mono text-xs whitespace-nowrap"
               >
                 {formatAnalyticsCount(items.length)}
               </span>
             </div>
 
             {#if items.length === 0}
-              <p class="text-sm text-foreground-alt">No requests recorded.</p>
+              <p class="text-foreground-alt text-sm">No requests recorded.</p>
             {:else}
               <div class="space-y-3">
                 {#each items.slice(0, 6) as item}
                   <div class="space-y-1.5">
                     <div class="flex items-center justify-between gap-3">
                       <div
-                        class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm text-foreground"
+                        class="text-foreground min-w-0 flex-1 overflow-hidden font-mono text-sm text-ellipsis whitespace-nowrap"
                         data-tooltip={`${item.label} • ${formatAnalyticsCount(item.requests)} requests`}
                       >
                         {item.label}
                       </div>
                       <div
-                        class="shrink-0 whitespace-nowrap text-right font-mono text-xs font-medium tabular-nums text-foreground"
+                        class="text-foreground shrink-0 text-right font-mono text-xs font-medium whitespace-nowrap tabular-nums"
                       >
                         {formatAnalyticsPercent(item.percent)}
                       </div>
                     </div>
 
                     <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                      <div class="h-2 overflow-hidden rounded-full bg-foreground/6">
+                      <div class="bg-foreground/6 h-2 overflow-hidden rounded-full">
                         <div
-                          class="h-full rounded-full bg-primary"
+                          class="bg-primary h-full rounded-full"
                           style={`width: ${Math.max(item.percent, item.percent > 0 ? 4 : 0)}%`}
                         ></div>
                       </div>
                       <div
-                        class="shrink-0 whitespace-nowrap font-mono text-xs tabular-nums text-foreground-alt"
+                        class="text-foreground-alt shrink-0 font-mono text-xs whitespace-nowrap tabular-nums"
                       >
                         {formatAnalyticsCount(item.requests)}
                       </div>

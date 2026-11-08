@@ -11,8 +11,12 @@ const header = getHeaderCtrl()
 admin.setResourceType(false)
 $effect(() => {
   header.setHeaderForStandAlone('Messaging', ChatIcon, {
-    showNew: false, showFilter: false, showFacets: false, showViewActions: false,
-    showLayoutToggle: false, showControlBarToggle: false,
+    showNew: false,
+    showFilter: false,
+    showFacets: false,
+    showViewActions: false,
+    showLayoutToggle: false,
+    showControlBarToggle: false,
   })
   header.clearFooter()
 })

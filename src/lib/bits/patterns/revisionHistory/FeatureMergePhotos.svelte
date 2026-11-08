@@ -2,7 +2,10 @@
 // IMAGE INTENTS
 import { getImageIntentOptions } from '#lib/api/image.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
-import { DEFAULT_IMAGE_INTENTS, type ImageIntentDefinition } from '#lib/images/intents.js'
+import {
+  DEFAULT_IMAGE_INTENTS,
+  type ImageIntentDefinition,
+} from '#lib/images/intents.js'
 
 // COMPONENTS
 import ThumbnailIntent from '#lib/bits/patterns/images/components/ThumbnailIntent.svelte'
@@ -32,8 +35,21 @@ let intentOptions = $state<ImageIntentDefinition[]>([...DEFAULT_IMAGE_INTENTS])
 $effect(() => {
   const featureId = sources[0]?.featureId
   let active = true
-  if (featureId) void refreshRemoteQuery(getImageIntentOptions({ ctxType: 'feature', ctxId: featureId, meta: { isAdminRequest: true } })).then(policy => { if (active) intentOptions = policy.intents }).catch(cause => console.error('Could not load image intents', cause))
-  return () => { active = false }
+  if (featureId)
+    void refreshRemoteQuery(
+      getImageIntentOptions({
+        ctxType: 'feature',
+        ctxId: featureId,
+        meta: { isAdminRequest: true },
+      }),
+    )
+      .then(policy => {
+        if (active) intentOptions = policy.intents
+      })
+      .catch(cause => console.error('Could not load image intents', cause))
+  return () => {
+    active = false
+  }
 })
 let excludedIntents = $state<Record<string, Intent>>({})
 
@@ -94,7 +110,9 @@ function setIntent(id: string, intent: Intent): void {
   <div class="grid grid-cols-2 gap-4">
     {#each ['Discard', 'Keep'] as side}
       <section class="min-w-0 space-y-3" aria-label={`${side} photos`}>
-        <h5 class={`text-sm font-semibold ${side === 'Discard' ? 'text-right' : ''}`}>{side}</h5>
+        <h5 class={`text-sm font-semibold ${side === 'Discard' ? 'text-right' : ''}`}>
+          {side}
+        </h5>
         <div class="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-3">
           {#each photos.filter(
             photo =>
@@ -142,7 +160,8 @@ function setIntent(id: string, intent: Intent): void {
                 />
               </div>
               {#if sources[0].content.gallery.entries[photo.id]}
-                <span class={`text-muted-foreground block text-xs ${side === 'Discard' ? 'text-right' : ''}`}
+                <span
+                  class={`text-muted-foreground block text-xs ${side === 'Discard' ? 'text-right' : ''}`}
                   >Already in gallery</span
                 >
               {/if}

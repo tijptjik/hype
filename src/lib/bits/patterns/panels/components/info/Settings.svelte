@@ -70,10 +70,10 @@ function toggleSection(sectionId: string) {
 
 {#if isOpen}
   <div
-    class="flex flex-col gap-4 border-b-4 border-primary px-6 py-3 pb-8"
+    class="border-primary flex flex-col gap-4 border-b-4 px-6 py-3 pb-8"
     transition:slide
   >
-    <h2 class="text-xl font-bold text-base-content">{m.these_helpful_moose_bend()}</h2>
+    <h2 class="text-base-content text-xl font-bold">{m.these_helpful_moose_bend()}</h2>
 
     {#each sections as section (section.id)}
       <button
@@ -84,9 +84,9 @@ function toggleSection(sectionId: string) {
       >
         <Icon
           src={section.isOpen ? ChevronDown : ChevronRight}
-          class="h-5 w-5 shrink-0 text-base-content"
+          class="text-base-content h-5 w-5 shrink-0"
         />
-        <h3 class="text-lg text-base-content">{section.titleKey()}</h3>
+        <h3 class="text-base-content text-lg">{section.titleKey()}</h3>
       </button>
 
       {#if section.isOpen}
@@ -99,17 +99,17 @@ function toggleSection(sectionId: string) {
             <h4 class="text-base-content">{m.same_late_parrot_accept()}</h4>
             <p class="text-neutral-content">{m.chunky_giant_worm_feast()}</p>
             <h4 class="text-base-content">{m.sleek_wise_husky_hack()}</h4>
-            <ul class="list-inside list-disc space-y-1 text-neutral-content">
+            <ul class="text-neutral-content list-inside list-disc space-y-1">
               {m.drab_lost_dove_grow()}
-              <li class="pl-4 text-neutral-content">
+              <li class="text-neutral-content pl-4">
                 <b>{m.heroic_wise_ant_grip()}</b>
                 {m.crazy_just_octopus_stop()}
               </li>
-              <li class="pl-4 text-neutral-content">
+              <li class="text-neutral-content pl-4">
                 <b>{m.cute_salty_puma_sew()}</b>
                 {m.long_least_baboon_blend()}
               </li>
-              <li class="pl-4 text-neutral-content">
+              <li class="text-neutral-content pl-4">
                 <b>{m.zippy_game_grizzly_nourish()}</b>
                 {m.bland_honest_crossbill_amuse()}
               </li>
@@ -117,7 +117,7 @@ function toggleSection(sectionId: string) {
           </div>
         {:else if section.contentKey}
           <!-- Standard content for other sections -->
-          <p class="pl-7 text-neutral-content" transition:slide>
+          <p class="text-neutral-content pl-7" transition:slide>
             {@html section.contentKey()}
           </p>
         {/if}

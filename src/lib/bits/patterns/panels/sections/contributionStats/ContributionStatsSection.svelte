@@ -115,14 +115,14 @@ const statsConfig = [
 <!-- 2.1 CONTRIBUTIONS :: STATS -->
 <!-- ═══════════════════════ -->
 
-<div class="border-b border-border px-6 py-5">
+<div class="border-border border-b px-6 py-5">
   <div class="relative mb-3 pr-10">
-    <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <h3 class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
       {m.dry_still_myna_yell()}
     </h3>
     <button
       type="button"
-      class="absolute right-0 -top-2 flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+      class="text-muted-foreground hover:bg-primary/10 hover:text-primary focus-visible:ring-focus absolute -top-2 right-0 flex size-8 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
       aria-label={m.menu_settings()}
       aria-expanded={settingsOpen}
       aria-controls={settingsId}
@@ -136,7 +136,7 @@ const statsConfig = [
     <div id={settingsId} transition:slide={{ duration: 220 }}>
       <div class="mb-4 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-4 py-3">
         {#if !model.isSingleOrganisation}
-          <span class="text-xs font-medium text-muted-foreground"
+          <span class="text-muted-foreground text-xs font-medium"
             >{m.maps__title()}:</span
           >
           <div class="justify-self-end">
@@ -150,7 +150,7 @@ const statsConfig = [
             />
           </div>
         {/if}
-        <span class="text-xs font-medium text-muted-foreground"
+        <span class="text-muted-foreground text-xs font-medium"
           >{m.filters__status()}:</span
         >
         <div class="justify-self-end">
@@ -170,12 +170,12 @@ const statsConfig = [
   {#if isLoading}
     <div class="flex items-center justify-center py-4">
       <div class="loading loading-spinner loading-sm text-primary"></div>
-      <span class="ml-2 text-sm text-base-content/60"
+      <span class="text-base-content/60 ml-2 text-sm"
         >{m.plain_watery_macaw_grace()}</span
       >
     </div>
   {:else if error}
-    <div class="flex items-center justify-center py-4 text-error">
+    <div class="text-error flex items-center justify-center py-4">
       <Icon src={ExclamationTriangle} class="mr-1 h-4 w-4" />
       <span class="text-sm">{error}</span>
     </div>
@@ -184,18 +184,18 @@ const statsConfig = [
       {#each statsConfig as stat}
         <button
           type="button"
-          class="flex min-w-0 flex-col gap-2 rounded-md border border-border bg-surface px-3 py-3 text-left transition-colors enabled:hover:border-primary/50 enabled:hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          class="border-border bg-surface enabled:hover:border-primary/50 enabled:hover:bg-primary/5 focus-visible:ring-focus flex min-w-0 flex-col gap-2 rounded-md border px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
           disabled={!stat.targetId || stats[stat.key] === 0}
           onclick={() => stat.targetId && scrollToSection(stat.targetId)}
         >
           <!-- Small icons identify each contribution type without dominating the count. -->
-          <Icon src={stat.icon} class="h-4 w-4 text-primary" />
+          <Icon src={stat.icon} class="text-primary h-4 w-4" />
           <!-- Counts and labels use the same typography as the other panels. -->
           <span
-            class="text-2xl font-semibold leading-none tabular-nums text-base-content"
+            class="text-base-content text-2xl leading-none font-semibold tabular-nums"
             >{stats[stat.key]}</span
           >
-          <span class="max-w-full break-words text-xs text-muted-foreground"
+          <span class="text-muted-foreground max-w-full text-xs break-words"
             >{stat.label}</span
           >
         </button>

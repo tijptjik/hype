@@ -4,7 +4,7 @@ let { component }: { component: string } = $props()
 
 <!-- Percentage coordinates let the examples fill the available width without stretching icons. -->
 <svg
-  class="h-7 w-full min-w-0 text-secondary dark:brightness-150 dark:[&_line]:opacity-90 dark:[&_rect]:opacity-90 [&_line]:text-primary [&_path]:text-accent [&_circle]:text-accent"
+  class="text-secondary [&_line]:text-primary [&_path]:text-accent [&_circle]:text-accent h-7 w-full min-w-0 dark:brightness-150 dark:[&_line]:opacity-90 dark:[&_rect]:opacity-90"
   fill="none"
   stroke="currentColor"
   stroke-width="1.25"

@@ -107,11 +107,11 @@ const onNavigate = (e: MouseEvent) => {
 >
   {#if usesCompactHeader}
     <div
-      class="flex shrink-0 items-center pr-6 hover:bg-surface focus-within:bg-surface"
+      class="hover:bg-surface focus-within:bg-surface flex shrink-0 items-center pr-6"
     >
       <button
         type="button"
-        class="flex h-14 min-w-0 flex-1 items-center gap-4 pl-6 pr-0 text-left text-base-content outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+        class="text-base-content focus-visible:ring-focus flex h-14 min-w-0 flex-1 items-center gap-4 pr-0 pl-6 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
         aria-expanded={isOpen}
         aria-controls={contentId}
         onclick={onToggle}
@@ -122,7 +122,7 @@ const onNavigate = (e: MouseEvent) => {
           {@const SectionIcon = icon}
           <SectionIcon class="size-5 shrink-0" aria-hidden="true" />
         {/if}
-        <span class="min-w-0 flex-1 text-sm font-normal uppercase tracking-[0.1em]"
+        <span class="min-w-0 flex-1 text-sm font-normal tracking-[0.1em] uppercase"
           >{title}</span
         >
         <ChevronDown

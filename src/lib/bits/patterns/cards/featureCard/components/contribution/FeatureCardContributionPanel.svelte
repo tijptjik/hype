@@ -107,11 +107,11 @@ function handleSlideStart(): void {
 </script>
 
 <div
-  class="pointer-events-auto w-full shrink-0 bg-(--theme-panel) px-3 pb-0 pt-0 w-100:px-6"
+  class="w-100:px-6 pointer-events-auto w-full shrink-0 bg-(--theme-panel) px-3 pt-0 pb-0"
 >
   <div
     bind:this={panelElement}
-    class="overflow-hidden bg-(--theme-panel) text-base-content"
+    class="text-base-content overflow-hidden bg-(--theme-panel)"
   >
     <button
       type="button"
@@ -119,7 +119,7 @@ function handleSlideStart(): void {
       onclick={toggleInfo}
     >
       <div
-        class="flex min-h-10 min-w-10 items-center justify-center rounded-full bg-base-content/8"
+        class="bg-base-content/8 flex min-h-10 min-w-10 items-center justify-center rounded-full"
       >
         {#if titleIcon}
           <Icon src={titleIcon} size="sm" class={titleIconClass} />
@@ -133,19 +133,19 @@ function handleSlideStart(): void {
           </div>
         {:else}
           <p
-            class="font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground"
+            class="text-muted-foreground font-mono text-[11px] tracking-[0.32em] uppercase"
           >
             {eyebrow}
           </p>
         {/if}
         <h3
-          class="mt-2 text-[1.05rem] font-semibold uppercase tracking-[0.16em] text-base-content"
+          class="text-base-content mt-2 text-[1.05rem] font-semibold tracking-[0.16em] uppercase"
         >
           {title}
         </h3>
         {#if helperText}
           <p
-            class="mx-auto mt-2 w-full max-w-80 text-sm leading-6 text-muted-foreground"
+            class="text-muted-foreground mx-auto mt-2 w-full max-w-80 text-sm leading-6"
           >
             {helperText}
           </p>
@@ -153,18 +153,18 @@ function handleSlideStart(): void {
       </div>
 
       <div
-        class="flex min-h-10 min-w-10 items-center justify-center rounded-full bg-base-200"
+        class="bg-base-200 flex min-h-10 min-w-10 items-center justify-center rounded-full"
       >
         <Icon
           src={isInfoExpanded ? X : Info}
-          class="h-6 w-6 text-muted-foreground transition-colors duration-300"
+          class="text-muted-foreground h-6 w-6 transition-colors duration-300"
         />
       </div>
     </button>
 
     {#if isInfoExpanded}
       <ul
-        class="grid gap-2 border-t border-border-input bg-(--theme-panel) px-4 py-2 text-left text-sm leading-6 text-muted-foreground"
+        class="border-border-input text-muted-foreground grid gap-2 border-t bg-(--theme-panel) px-4 py-2 text-left text-sm leading-6"
         transition:slide={{ duration: 400 }}
         onintrostart={handleSlideStart}
       >
@@ -174,7 +174,7 @@ function handleSlideStart(): void {
       </ul>
     {/if}
 
-    <div class="border-t border-border-input bg-(--theme-panel)">
+    <div class="border-border-input border-t bg-(--theme-panel)">
       {@render children()}
     </div>
   </div>

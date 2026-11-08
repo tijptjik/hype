@@ -96,7 +96,7 @@ onMount(() => {
       }
       void model.select(item, event.currentTarget)
     }}
-    class="select-none [-webkit-touch-callout:none] flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg bg-surface p-1 hover:bg-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+    class="bg-surface hover:bg-raised focus-visible:outline-primary flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg p-1 select-none [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
   >
     {#if model.urls[item.id]}
       <CatalogPreview
@@ -106,7 +106,7 @@ onMount(() => {
         playbackLimit={item.kind === 'gif' ? 1 : undefined}
       />
     {:else if model.previewErrors[item.id]}
-      <span class="p-2 text-center text-xs text-muted-foreground"
+      <span class="text-muted-foreground p-2 text-center text-xs"
         >Preview unavailable</span
       >
     {:else}
@@ -115,7 +115,7 @@ onMount(() => {
   </button>
   {#if !['GIF', 'Sticker'].includes(item.title)}
     <p
-      class="mt-1 whitespace-normal break-words text-center text-xs text-muted-foreground"
+      class="text-muted-foreground mt-1 text-center text-xs break-words whitespace-normal"
     >
       {item.title}
     </p>

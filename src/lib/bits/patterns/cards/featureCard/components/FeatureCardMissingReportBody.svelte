@@ -31,7 +31,7 @@ const infoItems = [
     <textarea
       id="missing-reason"
       bind:value={cardCtx.userData.missingReason}
-      class="min-h-18 w-full rounded-none border border-border-input bg-base-200 px-4 py-2 text-sm leading-6 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
+      class="border-border-input bg-base-200 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover min-h-18 w-full rounded-none border px-4 py-2 text-sm leading-6 focus:outline-none"
       rows="3"
       placeholder={m.report_missing__placeholder()}
     ></textarea>

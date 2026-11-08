@@ -110,7 +110,7 @@ function animateRow(
 
 <div
   bind:this={container}
-  class="scrollbar-thin relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-panel"
+  class="bg-panel relative min-h-0 flex-1 scrollbar-thin overflow-x-hidden overflow-y-auto overscroll-contain"
   aria-busy={loading}
 >
   <div class="py-1" bind:clientHeight={contentHeight}>
@@ -139,7 +139,7 @@ function animateRow(
     {#if loading && !items.length}
       <div
         role="status"
-        class="h-8 animate-pulse bg-base-200"
+        class="bg-base-200 h-8 animate-pulse"
         aria-label={m.resource_loading()}
       ></div>
     {:else if error}

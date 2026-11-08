@@ -23,7 +23,7 @@ function getDisplayValue(value: string): string {
 >
   {#if title}
     <h3
-      class="mb-4 border-b border-border px-4 py-3 text-sm font-semibold text-foreground"
+      class="border-border text-foreground mb-4 border-b px-4 py-3 text-sm font-semibold"
     >
       {title}
     </h3>
@@ -32,7 +32,7 @@ function getDisplayValue(value: string): string {
   <div class="flex min-h-0 flex-col gap-4 overflow-auto">
     {#each items as item (`${item.label}:${item.value}`)}
       <div class="flex flex-col gap-1 px-4">
-        <div class="text-xs font-semibold text-muted-foreground">
+        <div class="text-muted-foreground text-xs font-semibold">
           {item.label}
         </div>
         <div

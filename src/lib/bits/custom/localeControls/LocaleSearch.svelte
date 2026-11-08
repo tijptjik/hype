@@ -73,7 +73,7 @@ function onEscape(event: KeyboardEvent): void {
 <!-- biome-ignore lint/a11y/noStaticElementInteractions: Escape is delegated from the search and result controls. -->
 <div
   onkeydown={onEscape}
-  class="w-full min-w-0 rounded-xl border border-border/20 bg-panel p-3 text-foreground shadow-xl"
+  class="border-border/20 bg-panel text-foreground w-full min-w-0 rounded-xl border p-3 shadow-xl"
 >
   <div class="flex min-w-0 items-center gap-2">
     <input
@@ -91,14 +91,14 @@ function onEscape(event: KeyboardEvent): void {
       }}
       onkeydown={onKeydown}
       placeholder={labels.search}
-      class="min-h-11 min-w-0 flex-1 rounded-md border border-border/30 bg-foreground/3 px-3 text-sm text-foreground! focus-visible:outline-1 focus-visible:outline-primary/30"
+      class="border-border/30 bg-foreground/3 text-foreground! focus-visible:outline-primary/30 min-h-11 min-w-0 flex-1 rounded-md border px-3 text-sm focus-visible:outline-1"
     >
     <button
       type="button"
       tabindex="-1"
       aria-label={labels.close}
       onclick={onClose}
-      class="size-11 shrink-0 rounded-md text-foreground outline-none! ring-0! hover:bg-foreground/10 hover:text-primary focus:text-primary!"
+      class="text-foreground hover:bg-foreground/10 hover:text-primary focus:text-primary! size-11 shrink-0 rounded-md ring-0! outline-none!"
     >
       ×
     </button>
@@ -120,23 +120,23 @@ function onEscape(event: KeyboardEvent): void {
           onfocus={() => (active = index)}
           onpointerdown={event => event.preventDefault()}
           onclick={() => onSelect(option.tag)}
-          class={`grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground! transition-colors outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/30 hover:bg-primary/8 ${index === activeIndex ? 'bg-primary/10 ring-1 ring-inset ring-primary/25' : ''}`}
+          class={`text-foreground! focus-visible:ring-primary/30 hover:bg-primary/8 grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors outline-none focus-visible:ring-1 focus-visible:ring-inset ${index === activeIndex ? 'bg-primary/10 ring-primary/25 ring-1 ring-inset' : ''}`}
         >
-          <span class="min-w-0 whitespace-normal break-words"
+          <span class="min-w-0 break-words whitespace-normal"
             ><span
               lang={option.tag}
               dir="auto"
               style:font-family={languageFont(option.tag)}
-              class="font-semibold text-foreground!"
+              class="text-foreground! font-semibold"
               >{option.autonym}</span
-            ><span class="block text-muted-foreground">{option.name}</span></span
+            ><span class="text-muted-foreground block">{option.name}</span></span
           >
-          <span class="text-right text-xs text-muted-foreground">{option.tag} </span>
+          <span class="text-muted-foreground text-right text-xs">{option.tag} </span>
         </button>
       </li>
     {/each}
   </ul>
   {#if results.length === 0}
-    <p role="status" class="p-3 text-sm text-muted-foreground">{labels.noResults}</p>
+    <p role="status" class="text-muted-foreground p-3 text-sm">{labels.noResults}</p>
   {/if}
 </div>

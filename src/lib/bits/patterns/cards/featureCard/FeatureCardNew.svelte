@@ -339,7 +339,7 @@ const imageProviderModel = useImageProviderModel(
           <div
             bind:this={bottomSpacerElement}
             aria-hidden="true"
-            class="shrink-0 bg-panel"
+            class="bg-panel shrink-0"
             style={`height: ${layout.bottomSpacerPx}px;`}
           ></div>
         {/if}

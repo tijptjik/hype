@@ -312,9 +312,9 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
           }}
         />
         {#if open}
-          <p class="text-sm text-muted-foreground">{m.location_identity_preserve()}</p>
+          <p class="text-muted-foreground text-sm">{m.location_identity_preserve()}</p>
           {#if isDirty}
-            <p role="status" class="text-sm text-muted-foreground">
+            <p role="status" class="text-muted-foreground text-sm">
               {m.feature_location_save_first()}
             </p>
           {/if}
@@ -343,7 +343,7 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
             />
           </div>
           {#if results?.length === 0}
-            <p class="text-sm text-muted-foreground">
+            <p class="text-muted-foreground text-sm">
               {m.feature_location_no_results()}
             </p>
           {/if}
@@ -353,7 +353,7 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                 <li>
                   <button
                     type="button"
-                    class="w-full rounded-xl border border-border bg-panel p-4 text-left hover:bg-muted disabled:opacity-50"
+                    class="border-border bg-panel hover:bg-muted w-full rounded-xl border p-4 text-left disabled:opacity-50"
                     disabled={busy || isDirty}
                     onclick={() => void select(candidate)}
                   >
@@ -361,12 +361,12 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                       >{candidate.nameText ?? candidate.placeId}</span
                     >
                     {#if candidate.previouslyRejected}
-                      <span class="block text-sm text-muted-foreground"
+                      <span class="text-muted-foreground block text-sm"
                         >{m.location_identity_previously_rejected()}</span
                       >
                     {/if}
                     {#if candidate.brandText}
-                      <span class="block text-sm text-muted-foreground"
+                      <span class="text-muted-foreground block text-sm"
                         >{candidate.brandText}</span
                       >
                     {/if}
@@ -376,7 +376,7 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
             </ul>
           {/if}
           {#if detail}
-            <div class="space-y-4 rounded-xl border border-border bg-panel p-4">
+            <div class="border-border bg-panel space-y-4 rounded-xl border p-4">
               <div class="grid gap-4 md:grid-cols-2">
                 {#each [
                   { title: m.location_identity_current(), facts: detail.before },
@@ -390,8 +390,8 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                     <dl class="space-y-3">
                       {#each rows(column.facts) as row}
                         <div>
-                          <dt class="text-sm text-muted-foreground">{row.label}</dt>
-                          <dd class="break-words text-sm">{row.value}</dd>
+                          <dt class="text-muted-foreground text-sm">{row.label}</dt>
+                          <dd class="text-sm break-words">{row.value}</dd>
                         </div>
                       {/each}
                     </dl>
@@ -399,17 +399,17 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                 {/each}
               </div>
               {#if detail.candidate.issueKinds.length}
-                <p role="status" class="text-sm text-muted-foreground">
+                <p role="status" class="text-muted-foreground text-sm">
                   {m.location_identity_incomplete()}
                 </p>
               {/if}
               {#if detail.stale}
-                <p role="alert" class="text-sm text-error">
+                <p role="alert" class="text-error text-sm">
                   {m.location_identity_stale()}
                 </p>
               {/if}
               {#if outcome === 'merge-required'}
-                <p role="status" class="text-sm text-muted-foreground">
+                <p role="status" class="text-muted-foreground text-sm">
                   {m.location_identity_merge()}
                 </p>
                 <Button
@@ -419,20 +419,20 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                   onClick={reviewMerge}
                 />
                 {#if merge}
-                  <div class="space-y-3 rounded-xl border border-border p-4">
+                  <div class="border-border space-y-3 rounded-xl border p-4">
                     <h3 class="font-semibold">{m.location_merge_title()}</h3>
                     <p class="text-sm">
                       {m.location_merge_impact({
                         count: String(merge.affectedFeatures),
                       })}
                     </p>
-                    <p class="text-sm text-muted-foreground">
+                    <p class="text-muted-foreground text-sm">
                       {merge.visibility === 'private'
                         ? m.location_merge_private()
                         : m.location_merge_shared()}
                     </p>
                     {#if merge.stale || merge.applied}
-                      <p role="status" class="text-sm text-error">
+                      <p role="status" class="text-error text-sm">
                         {m.location_identity_stale()}
                       </p>
                     {:else}
@@ -453,15 +453,15 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                   </div>
                 {/if}
               {:else if outcome === 'merged'}
-                <p role="status" class="text-sm text-muted-foreground">
+                <p role="status" class="text-muted-foreground text-sm">
                   {m.location_merge_saved()}
                 </p>
               {:else if outcome === 'rejected' || detail.rejected}
-                <p role="status" class="text-sm text-muted-foreground">
+                <p role="status" class="text-muted-foreground text-sm">
                   {m.location_identity_rejected()}
                 </p>
               {:else if outcome}
-                <p role="status" class="text-sm text-muted-foreground">
+                <p role="status" class="text-muted-foreground text-sm">
                   {m.location_identity_saved()}
                 </p>
               {:else}
@@ -488,17 +488,17 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
             </div>
           {/if}
           {#if busy}
-            <p role="status" class="text-sm text-muted-foreground">
+            <p role="status" class="text-muted-foreground text-sm">
               {m.feature_location_loading()}
             </p>
           {/if}
           {#if failure}
-            <p role="alert" class="text-sm text-error">{failure}</p>
+            <p role="alert" class="text-error text-sm">{failure}</p>
           {/if}
         {/if}
       </div>
     </section>
   {/if}
 {:catch}
-  <p class="text-sm text-error" role="alert">{m.resource_action_failed()}</p>
+  <p class="text-error text-sm" role="alert">{m.resource_action_failed()}</p>
 {/await}

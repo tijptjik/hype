@@ -14,19 +14,19 @@ const lines = $derived.by(() => {
 </script>
 
 <div
-  class="min-w-0 max-w-full space-y-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+  class="max-w-full min-w-0 space-y-1 [overflow-wrap:anywhere] break-words whitespace-pre-wrap"
 >
   {#each lines as line, index}
     {#if line.quoted}
       <blockquote
-        class="flow-root border-l-2 border-primary pl-3 text-muted-foreground"
+        class="border-primary text-muted-foreground flow-root border-l-2 pl-3"
       >
         <span data-quote-offset={line.offset} data-quote-length={line.text.length}
           >{line.text || ' '}</span
         >
         {#if index === lines.length - 1 && trailing}
           <span
-            class="float-right ml-2 inline-flex min-h-[1lh] items-end select-none whitespace-normal"
+            class="float-right ml-2 inline-flex min-h-[1lh] items-end whitespace-normal select-none"
             >{@render trailing()}</span
           >
         {/if}
@@ -38,7 +38,7 @@ const lines = $derived.by(() => {
         >
         {#if index === lines.length - 1 && trailing}
           <span
-            class="float-right ml-2 inline-flex min-h-[1lh] items-end select-none whitespace-normal"
+            class="float-right ml-2 inline-flex min-h-[1lh] items-end whitespace-normal select-none"
             >{@render trailing()}</span
           >
         {/if}

@@ -46,7 +46,7 @@ const onPrimaryAction = (event: MouseEvent): void => {
 <div class="bits-theme flex flex-1 items-start">
   <button
     type="button"
-    class="flex shrink-0 items-center justify-center pl-4 pr-3 focus:outline-none focus:ring-0"
+    class="flex shrink-0 items-center justify-center pr-3 pl-4 focus:ring-0 focus:outline-none"
     onclick={onToggle}
     aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${title} section`}
   >
@@ -54,16 +54,16 @@ const onPrimaryAction = (event: MouseEvent): void => {
   </button>
   <button
     type="button"
-    class="w-full text-left focus:outline-none focus:ring-0"
+    class="w-full text-left focus:ring-0 focus:outline-none"
     onclick={onPrimaryAction}
     aria-label={`${title} section header`}
   >
     <div class="w-full space-y-0.5">
       <div class="flex w-full items-center">
-        <h3 class="text-sm uppercase tracking-widest">{title}</h3>
+        <h3 class="text-sm tracking-widest uppercase">{title}</h3>
       </div>
       {#if description}
-        <p class="text-left text-sm text-base-content/60">{description}</p>
+        <p class="text-base-content/60 text-left text-sm">{description}</p>
       {/if}
     </div>
   </button>

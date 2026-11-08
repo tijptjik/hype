@@ -165,7 +165,7 @@ $effect(() => {
           }}
           onClick={config.onInvertSelection}
         />
-        <label for={actionId} class="ml-2 text-sm font-medium text-foreground"
+        <label for={actionId} class="text-foreground ml-2 text-sm font-medium"
           >Action</label
         >
         <Select

@@ -17,11 +17,11 @@ let {
 }: Props = $props()
 </script>
 
-<div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-base-content/65">
+<div class="text-base-content/65 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
   <span>{m.hub__subscription_subject_to()}</span>
   <button
     type="button"
-    class="font-medium text-primary underline underline-offset-4 transition hover:text-primary-content"
+    class="text-primary hover:text-primary-content font-medium underline underline-offset-4 transition"
     onclick={() => onPrivacyClick?.()}
   >
     {privacyText}
@@ -29,7 +29,7 @@ let {
   <span>{m.filters__and()}</span>
   <button
     type="button"
-    class="font-medium text-primary underline underline-offset-4 transition hover:text-primary-content"
+    class="text-primary hover:text-primary-content font-medium underline underline-offset-4 transition"
     onclick={() => onTermsClick?.()}
   >
     {termsText}

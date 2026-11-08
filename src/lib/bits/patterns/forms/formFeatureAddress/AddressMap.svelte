@@ -124,12 +124,12 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
     >
       <div
         id={mapId}
-        class="h-full w-full overflow-hidden border-b border-border [&_.bits-feature-map]:min-h-0 [&_.bits-feature-map]:rounded-none"
+        class="border-border h-full w-full overflow-hidden border-b [&_.bits-feature-map]:min-h-0 [&_.bits-feature-map]:rounded-none"
       >
         {@render map?.()}
       </div>
       {#if locationMapControls}
-        <div class="absolute right-3 top-3 z-10" data-location-map-controls>
+        <div class="absolute top-3 right-3 z-10" data-location-map-controls>
           {@render locationMapControls()}
         </div>
       {/if}
@@ -144,7 +144,7 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
         aria-valuemin={minimumHeight}
         aria-valuemax={maximumHeight}
         aria-valuenow={height}
-        class="absolute inset-x-0 bottom-[-6px] z-10 flex h-3 touch-none cursor-ns-resize items-center justify-end pr-8 outline-none hover:bg-primary/15 focus-visible:bg-primary/20"
+        class="hover:bg-primary/15 focus-visible:bg-primary/20 absolute inset-x-0 bottom-[-6px] z-10 flex h-3 cursor-ns-resize touch-none items-center justify-end pr-8 outline-none"
         onpointerdown={startResize}
         onpointermove={event => {
           if (drag?.pointerId === event.pointerId)
@@ -161,7 +161,7 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
         onkeydown={resizeWithKeyboard}
         ondblclick={() => resize(320)}
       >
-        <span aria-hidden="true" class="h-1 w-10 rounded-full bg-foreground/35"></span>
+        <span aria-hidden="true" class="bg-foreground/35 h-1 w-10 rounded-full"></span>
       </div>
     </div>
   {/if}
@@ -177,7 +177,7 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
       </div>
     {/if}
     {#if locationControl}
-      <div class="min-w-0 basis-64 flex-1">
+      <div class="min-w-0 flex-1 basis-64">
         {@render locationControl(
           coordinatesInLocationControl && showCoordinates
             ? coordinatesControl
@@ -192,7 +192,7 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
     {/if}
     {#if showLookup && (isEditing || sourceId)}
       <div class="shrink-0">
-        <div class="inline-flex items-center text-foreground">
+        <div class="text-foreground inline-flex items-center">
           <SimpleTooltip>
             {#snippet trigger()}
               <button
@@ -240,7 +240,7 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
       </div>
     {/if}
     {#if isEditing && showLookup}
-      <div class="min-w-0 basis-72 grow">
+      <div class="min-w-0 grow basis-72">
         {@render lookupControl()}
       </div>
     {/if}

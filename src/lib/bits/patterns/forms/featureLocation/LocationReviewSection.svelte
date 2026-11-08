@@ -288,7 +288,7 @@ function blocked(group: Group): boolean {
     />
     {#if page}
       {#if !page.reviews.length}
-        <p class="text-sm text-muted-foreground">{m.location_review_empty()}</p>
+        <p class="text-muted-foreground text-sm">{m.location_review_empty()}</p>
       {/if}
       <div class="flex flex-wrap gap-2">
         {#each page.reviews as review}
@@ -320,8 +320,8 @@ function blocked(group: Group): boolean {
     {/if}
     {#if detail}
       {@const plan = detail.proposal.evidence.plan}
-      <div class="space-y-4 rounded-xl border border-border bg-panel p-4">
-        <p class="text-sm text-muted-foreground">{m.location_review_overrides()}</p>
+      <div class="border-border bg-panel space-y-4 rounded-xl border p-4">
+        <p class="text-muted-foreground text-sm">{m.location_review_overrides()}</p>
         {#if isDirty}
           <p class="text-sm">{m.location_review_clean_form()}</p>
         {/if}
@@ -355,7 +355,7 @@ function blocked(group: Group): boolean {
             }}
             {@const previousRows = rows(before, fieldGroup)}
             {@const nextRows = rows(plan.source.candidate, fieldGroup)}
-            <div class="space-y-3 rounded-xl border border-border p-4">
+            <div class="border-border space-y-3 rounded-xl border p-4">
               <h3 class="font-semibold">
                 {group === 'facts'
                   ? m.location_review_facts()
@@ -372,32 +372,32 @@ function blocked(group: Group): boolean {
                   </thead>
                   <tbody>
                     {#each previousRows as row, index}
-                      <tr class="border-t border-border align-top">
-                        <th class="break-words p-2 font-medium">{row.label}</th>
-                        <td class="break-words p-2">{row.value}</td>
-                        <td class="break-words p-2">{nextRows[index].value}</td>
+                      <tr class="border-border border-t align-top">
+                        <th class="p-2 font-medium break-words">{row.label}</th>
+                        <td class="p-2 break-words">{row.value}</td>
+                        <td class="p-2 break-words">{nextRows[index].value}</td>
                       </tr>
                     {/each}
                     {#if fieldGroup === 'facts'}
-                      <tr class="border-t border-border align-top">
-                        <th class="break-words p-2 font-medium">
+                      <tr class="border-border border-t align-top">
+                        <th class="p-2 font-medium break-words">
                           {m.location_review_category()}
                         </th>
-                        <td class="break-words p-2">
+                        <td class="p-2 break-words">
                           {categories(plan.source.establishmentBefore)}
                         </td>
-                        <td class="break-words p-2">
+                        <td class="p-2 break-words">
                           {categories(plan.source.establishmentCandidate)}
                         </td>
                       </tr>
-                      <tr class="border-t border-border align-top">
-                        <th class="break-words p-2 font-medium">
+                      <tr class="border-border border-t align-top">
+                        <th class="p-2 font-medium break-words">
                           {m.location_review_operating_status()}
                         </th>
-                        <td class="break-words p-2">
+                        <td class="p-2 break-words">
                           {plan.source.establishmentBefore?.operatingStatus ?? '—'}
                         </td>
-                        <td class="break-words p-2">
+                        <td class="p-2 break-words">
                           {plan.source.establishmentCandidate?.operatingStatus ?? '—'}
                         </td>
                       </tr>
@@ -424,7 +424,7 @@ function blocked(group: Group): boolean {
                     ? m.location_review_accepted()
                     : m.location_review_rejected()}
                 </p>
-                <p class="text-sm text-muted-foreground">{decision.reason}</p>
+                <p class="text-muted-foreground text-sm">{decision.reason}</p>
               {:else}
                 {#if blocked(fieldGroup)}
                   <p class="text-sm">{m.location_review_dependencies()}</p>
@@ -456,7 +456,7 @@ function blocked(group: Group): boolean {
       </div>
     {/if}
     {#if failure}
-      <p class="text-sm text-error" role="alert">{failure}</p>
+      <p class="text-error text-sm" role="alert">{failure}</p>
     {/if}
   </div>
 </section>

@@ -164,15 +164,20 @@ function changeDates(values: number[]): void {
               label="Resource type"
               placeholder="All resource types"
               value={filters.resourceType ?? ''}
-              items={['hub', 'organisation', 'project', 'layer', 'feature', 'property'].map(
-                value => ({
-                  value,
-                  label:
-                    value === 'property'
-                      ? 'Field'
-                      : value[0].toUpperCase() + value.slice(1),
-                }),
-              )}
+              items={[
+                'hub',
+                'organisation',
+                'project',
+                'layer',
+                'feature',
+                'property',
+              ].map(value => ({
+                value,
+                label:
+                  value === 'property'
+                    ? 'Field'
+                    : value[0].toUpperCase() + value.slice(1),
+              }))}
               onValueChange={value =>
                 change({
                   resourceType: (value ||

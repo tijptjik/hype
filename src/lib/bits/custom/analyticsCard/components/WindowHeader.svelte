@@ -13,10 +13,10 @@ let {
     .filter(Boolean)
     .join(' ')}
 >
-  <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-foreground-alt">
+  <p class="text-foreground-alt text-[10px] font-semibold tracking-[0.24em] uppercase">
     {leftLabel}
   </p>
-  <h2 class="mt-1 text-3xl font-semibold uppercase tracking-[0.06em] text-foreground">
+  <h2 class="text-foreground mt-1 text-3xl font-semibold tracking-[0.06em] uppercase">
     {rightLabel}
   </h2>
 </header>

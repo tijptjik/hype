@@ -53,8 +53,8 @@ function dismissGuestReminder(): void {
 </script>
 
 {#if isReady && !isDismissed}
-  <aside class="mx-4 my-3 rounded-xl bg-base-100/60 p-4">
-    <p class="text-sm leading-5 text-base-content/75">{m.guest__reminder()}</p>
+  <aside class="bg-base-100/60 mx-4 my-3 rounded-xl p-4">
+    <p class="text-base-content/75 text-sm leading-5">{m.guest__reminder()}</p>
     <div class="mt-3 flex justify-end gap-2">
       <Button
         text={m.guest__close()}

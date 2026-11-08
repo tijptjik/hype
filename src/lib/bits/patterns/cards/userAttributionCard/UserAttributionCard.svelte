@@ -102,9 +102,7 @@ const getDisplayName = (user: UserHydrationResult): string => {
 </script>
 
 {#if userId && resolvedAttribution}
-  {#snippet AttributionContent(
-    attribution: AttributionCardDisplay,
-  )}
+  {#snippet AttributionContent(attribution: AttributionCardDisplay)}
     {@const adminUser = isAdminUser(attribution.user) ? attribution.user : null}
     {@const displayName = getDisplayName(attribution.user)}
     <div class="bits-feature-attribution__body">
@@ -167,9 +165,7 @@ const getDisplayName = (user: UserHydrationResult): string => {
               duration={180}
               {persistenceKey}
             >
-              {#snippet children(
-                attribution: AttributionCardDisplay,
-              )}
+              {#snippet children(attribution: AttributionCardDisplay)}
                 {@render AttributionContent(attribution)}
               {/snippet}
             </TransitionStack>

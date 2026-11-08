@@ -72,14 +72,14 @@ function setUnitExpression(
 }
 </script>
 
-<fieldset {disabled} class="space-y-4 rounded-xl border border-border p-4">
+<fieldset {disabled} class="border-border space-y-4 rounded-xl border p-4">
   <legend class="px-2 font-medium">{m.feature__address()}</legend>
-  <p class="text-sm text-muted-foreground">{m.location_address_authoring_help()}</p>
+  <p class="text-muted-foreground text-sm">{m.location_address_authoring_help()}</p>
   <LocalAddressParseReview bind:value {disabled} {onParsed} />
   <div class="grid gap-3 sm:grid-cols-2">
     <label class="flex flex-col gap-1"
       >{m.location_address_language()}
-      <select class="rounded-lg border border-border bg-panel p-2" bind:value={locale}>
+      <select class="border-border bg-panel rounded-lg border p-2" bind:value={locale}>
         <option value="en">English</option>
         <option value="zh-hant">繁體中文</option>
         <option value="zh-hans">简体中文</option>
@@ -88,7 +88,7 @@ function setUnitExpression(
     <label class="flex flex-col gap-1"
       >{m.location_address_granularity()}
       <select
-        class="rounded-lg border border-border bg-panel p-2"
+        class="border-border bg-panel rounded-lg border p-2"
         bind:value={value.granularity}
       >
         {#each ADDRESS_GRANULARITIES as kind}
@@ -100,7 +100,7 @@ function setUnitExpression(
       <label class="flex flex-col gap-1"
         >{label}
         <input
-          class="rounded-lg border border-border bg-panel p-2"
+          class="border-border bg-panel rounded-lg border p-2"
           maxlength="4000"
           value={value.i18n[locale]?.[key as keyof typeof labels] ?? ''}
           oninput={event => setField(key, event.currentTarget.value)}
@@ -110,7 +110,7 @@ function setUnitExpression(
     <label class="flex flex-col gap-1"
       >{m.feature_address_blockType()}
       <select
-        class="rounded-lg border border-border bg-panel p-2"
+        class="border-border bg-panel rounded-lg border p-2"
         value={value.i18n[locale]?.blockType ?? ''}
         onchange={event => setField('blockType', event.currentTarget.value || null)}
       >
@@ -123,7 +123,7 @@ function setUnitExpression(
     <label class="flex flex-col gap-1"
       >{m.feature_address_blockTypeBeforeNumber()}
       <select
-        class="rounded-lg border border-border bg-panel p-2"
+        class="border-border bg-panel rounded-lg border p-2"
         value={String(value.i18n[locale]?.blockTypeBeforeNumber ?? '')}
         onchange={event =>
           setField(
@@ -166,7 +166,7 @@ function setUnitExpression(
       <label class="flex flex-col gap-1"
         >{m.feature_address_floorExpression()}
         <input
-          class="rounded-lg border border-border bg-panel p-2"
+          class="border-border bg-panel rounded-lg border p-2"
           maxlength="4000"
           bind:value={value.unit.floorRef}
           oninput={() => {
@@ -177,7 +177,7 @@ function setUnitExpression(
       <label class="flex flex-col gap-1"
         >{m.feature_address_floor_type()}
         <select
-          class="rounded-lg border border-border bg-panel p-2"
+          class="border-border bg-panel rounded-lg border p-2"
           bind:value={value.unit.floorType}
           onchange={() => {
             value.unitI18n = {}
@@ -191,7 +191,7 @@ function setUnitExpression(
       <label class="flex flex-col gap-1"
         >{m.feature_address_unitExpression()}
         <input
-          class="rounded-lg border border-border bg-panel p-2"
+          class="border-border bg-panel rounded-lg border p-2"
           maxlength="4000"
           bind:value={value.unit.unitRef}
           oninput={() => {
@@ -202,7 +202,7 @@ function setUnitExpression(
       <label class="flex flex-col gap-1"
         >{m.feature_address_unit_type()}
         <select
-          class="rounded-lg border border-border bg-panel p-2"
+          class="border-border bg-panel rounded-lg border p-2"
           bind:value={value.unit.unitType}
           onchange={() => {
             value.unitI18n = {}
@@ -216,7 +216,7 @@ function setUnitExpression(
       <label class="flex flex-col gap-1"
         >{m.feature_address_unitPortion()}
         <input
-          class="rounded-lg border border-border bg-panel p-2"
+          class="border-border bg-panel rounded-lg border p-2"
           maxlength="4000"
           value={value.unit.unitPortion ?? ''}
           oninput={event => {
@@ -233,7 +233,7 @@ function setUnitExpression(
               : m.feature_address_formattedAddress()}
           ({locale})
           <input
-            class="rounded-lg border border-border bg-panel p-2"
+            class="border-border bg-panel rounded-lg border p-2"
             maxlength="4000"
             value={value.unitI18n[locale]?.[
               key as 'floorExpression' | 'unitExpression' | 'formattedAddressPart'

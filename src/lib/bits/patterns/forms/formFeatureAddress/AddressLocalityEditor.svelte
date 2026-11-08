@@ -97,7 +97,7 @@ function close(): void {
     >
       {#each path as division, index (division.id)}
         <li
-          class="flex min-w-0 max-w-full items-start gap-3"
+          class="flex max-w-full min-w-0 items-start gap-3"
           transition:slide={{
             axis: 'x',
             duration: prefersReducedMotion.current ? 0 : 180,
@@ -105,13 +105,13 @@ function close(): void {
         >
           {#if index > 0}
             <ChevronRightIcon
-              class="mt-2 size-3.5 shrink-0 text-muted-foreground/60"
+              class="text-muted-foreground/60 mt-2 size-3.5 shrink-0"
               aria-hidden="true"
             />
           {/if}
           <button
             type="button"
-            class="text-left hover:text-primary"
+            class="hover:text-primary text-left"
             aria-label={index === path.length - 1
               ? m.address_neighbourhood_choose()
               : addressDivisionName(division, getLocaleKey())}
@@ -127,8 +127,8 @@ function close(): void {
     </ol>
   {/each}
   {#if searching}
-    <div class="space-y-2 rounded-lg border border-border bg-panel p-3">
-      <label class="block text-xs text-muted-foreground" for={`${uid}-search`}
+    <div class="border-border bg-panel space-y-2 rounded-lg border p-3">
+      <label class="text-muted-foreground block text-xs" for={`${uid}-search`}
         >{m.address_neighbourhood_search()}</label
       >
       <div class="flex items-center gap-2">
@@ -137,7 +137,7 @@ function close(): void {
           id={`${uid}-search`}
           type="search"
           bind:value={query}
-          class="min-h-10 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm"
+          class="border-border bg-background min-h-10 min-w-0 flex-1 rounded-md border px-3 text-sm"
           autocomplete="off"
           oninput={() => {
             pending = null
@@ -158,7 +158,7 @@ function close(): void {
         >
         <button
           type="button"
-          class="min-h-10 rounded-md px-2 text-sm text-muted-foreground hover:bg-muted"
+          class="text-muted-foreground hover:bg-muted min-h-10 rounded-md px-2 text-sm"
           onclick={close}
         >
           {m.cancel()}
@@ -176,13 +176,13 @@ function close(): void {
               name: addressDivisionName(pending, getLocaleKey()),
             })}
           </legend>
-          <p class="text-xs text-muted-foreground">
+          <p class="text-muted-foreground text-xs">
             {m.address_neighbourhood_paths_help()}
           </p>
           {#each candidates as path (JSON.stringify(path.map(item => item.id)))}
             <button
               type="button"
-              class="block min-h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted focus-visible:bg-muted"
+              class="border-border bg-background hover:bg-muted focus-visible:bg-muted block min-h-11 w-full rounded-md border px-3 py-2 text-left text-sm"
               onclick={() => pending && commit([...path, pending])}
             >
               {[...path, pending]
@@ -192,26 +192,26 @@ function close(): void {
           {/each}
         </fieldset>
       {:else if unavailable}
-        <p role="alert" class="text-sm text-destructive">
+        <p role="alert" class="text-destructive text-sm">
           {m.address_neighbourhood_unavailable()}
         </p>
       {:else if query.trim()}
         <fieldset
-          class="max-h-64 min-w-0 overflow-y-auto rounded-md border border-border bg-background"
+          class="border-border bg-background max-h-64 min-w-0 overflow-y-auto rounded-md border"
           aria-label={m.address_locality_results()}
         >
           {#each matching as option (option.id)}
             <button
               type="button"
-              class="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted focus-visible:bg-muted"
+              class="hover:bg-muted focus-visible:bg-muted flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm"
               aria-label={`${addressDivisionName(option, getLocaleKey())} ${labels[option.class]}`}
               onclick={() => choose(option)}
             >
               <span>{addressDivisionName(option, getLocaleKey())}</span
-              ><span class="text-xs text-muted-foreground">{labels[option.class]}</span>
+              ><span class="text-muted-foreground text-xs">{labels[option.class]}</span>
             </button>
           {:else}
-            <p class="px-3 py-2 text-sm text-muted-foreground">
+            <p class="text-muted-foreground px-3 py-2 text-sm">
               {m.address_locality_no_results()}
             </p>
           {/each}
@@ -221,13 +221,13 @@ function close(): void {
   {:else}
     <div
       class={paths.length
-        ? 'absolute right-0 top-0 flex items-center gap-1 opacity-0 transition-opacity group-hover/selection:opacity-100 group-focus-within/selection:opacity-100'
+        ? 'absolute top-0 right-0 flex items-center gap-1 opacity-0 transition-opacity group-focus-within/selection:opacity-100 group-hover/selection:opacity-100'
         : 'flex flex-wrap items-center gap-2'}
     >
       {#if !paths.length}
         <button
           type="button"
-          class="min-h-9 text-sm text-primary hover:underline"
+          class="text-primary min-h-9 text-sm hover:underline"
           onclick={() => {
             searching = true
             query = ''
@@ -239,7 +239,7 @@ function close(): void {
       {#if paths.length}
         <button
           type="button"
-          class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 sm:opacity-0 sm:group-hover/selection:opacity-100 sm:group-focus-within/selection:opacity-100"
+          class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex size-7 items-center justify-center rounded-md focus-visible:opacity-100 sm:opacity-0 sm:group-focus-within/selection:opacity-100 sm:group-hover/selection:opacity-100"
           aria-label={m.address_neighbourhood_clear()}
           title={m.address_neighbourhood_clear()}
           onclick={() => {
@@ -252,7 +252,7 @@ function close(): void {
       {/if}
       <button
         type="button"
-        class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+        class="text-muted-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md"
         aria-label={m.address_divisions_from_marker()}
         title={m.address_divisions_from_marker()}
         onclick={() => {

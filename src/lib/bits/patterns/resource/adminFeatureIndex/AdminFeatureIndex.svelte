@@ -700,7 +700,7 @@ async function selectAllFeatureMatches(): Promise<void> {
             filters: adminCtx.view.filters.viewFilters.feature,
             idsOnly: true,
             includeCount: false,
-        summaryOnly: true,
+            summaryOnly: true,
             q: query,
             pagination: { limit: 100, offset },
             meta,
@@ -1032,7 +1032,9 @@ $effect(() => {
         )
           matchingCount = result.totalCount
       })
-      .catch(() => { /* Rows remain usable when an optional total fails. */ })
+      .catch(() => {
+        /* Rows remain usable when an optional total fails. */
+      })
       .finally(() => {
         if (latestRemoteRequestId === nextRequestId) matchingCountLoading = false
       })

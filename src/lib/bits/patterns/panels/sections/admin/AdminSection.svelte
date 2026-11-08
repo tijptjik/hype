@@ -72,14 +72,14 @@ const preferencesConfig: {
     <div class="flex min-h-0 w-full flex-col gap-1 px-6 pb-5">
       {#each preferencesConfig as preference}
         <div class="flex w-full flex-row items-start justify-between gap-4 py-3">
-          <div class="min-w-0 grow flex flex-col gap-0.5">
+          <div class="flex min-w-0 grow flex-col gap-0.5">
             <label
               for={`${preferenceId}-${preference.code}`}
-              class="cursor-pointer text-sm font-medium text-base-content"
+              class="text-base-content cursor-pointer text-sm font-medium"
               >{preference.name}</label
             >
             {#if preference.description}
-              <p class="text-sm leading-relaxed text-muted-foreground">
+              <p class="text-muted-foreground text-sm leading-relaxed">
                 {preference.description}
               </p>
             {/if}

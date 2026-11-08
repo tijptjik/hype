@@ -31,7 +31,7 @@ const hasRails = $derived(Boolean(leftLabel || rightLabel || right))
     <div class="min-w-0 justify-self-start text-left">
       {#if leftLabel}
         <p
-          class="text-[10px] font-semibold uppercase tracking-[0.28em] text-foreground-alt"
+          class="text-foreground-alt text-[10px] font-semibold tracking-[0.28em] uppercase"
         >
           {leftLabel}
         </p>
@@ -46,7 +46,7 @@ const hasRails = $derived(Boolean(leftLabel || rightLabel || right))
         )}
       >
         <h2
-          class="text-2xl font-semibold uppercase tracking-[0.08em] text-foreground sm:text-3xl"
+          class="text-foreground text-2xl font-semibold tracking-[0.08em] uppercase sm:text-3xl"
         >
           {title}
         </h2>
@@ -55,7 +55,7 @@ const hasRails = $derived(Boolean(leftLabel || rightLabel || right))
           {#snippet trigger()}
             <button
               type="button"
-              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-foreground-alt transition hover:text-foreground"
+              class="text-foreground-alt hover:text-foreground inline-flex h-6 w-6 items-center justify-center rounded-full transition"
               aria-label={`About ${title}`}
             >
               <InfoIcon class="h-3.5 w-3.5" />
@@ -73,7 +73,7 @@ const hasRails = $derived(Boolean(leftLabel || rightLabel || right))
         </div>
       {:else if rightLabel}
         <p
-          class="text-[11px] font-semibold uppercase tracking-[0.28em] text-foreground"
+          class="text-foreground text-[11px] font-semibold tracking-[0.28em] uppercase"
         >
           {rightLabel}
         </p>

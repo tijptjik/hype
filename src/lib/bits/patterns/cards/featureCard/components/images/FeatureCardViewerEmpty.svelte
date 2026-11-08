@@ -25,20 +25,20 @@ function handleAddPhoto(): void {
 </script>
 
 <div
-  class="flex h-full w-full flex-col items-center justify-center gap-4 rounded-[1.75rem] border border-dashed border-border-input bg-base-200 px-6 text-center text-base-content"
+  class="border-border-input bg-base-200 text-base-content flex h-full w-full flex-col items-center justify-center gap-4 rounded-[1.75rem] border border-dashed px-6 text-center"
 >
   <div class="space-y-2">
-    <p class="font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
+    <p class="text-muted-foreground font-mono text-[11px] tracking-[0.32em] uppercase">
       Missing Image
     </p>
-    <h3 class="text-2xl font-semibold tracking-[-0.03em] text-base-content">
+    <h3 class="text-base-content text-2xl font-semibold tracking-[-0.03em]">
       Add yours?
     </h3>
   </div>
 
   <button
     type="button"
-    class="inline-flex items-center gap-2 rounded-full border border-border-input bg-base-content/8 px-4 py-2 text-sm font-medium text-base-content backdrop-blur-sm"
+    class="border-border-input bg-base-content/8 text-base-content inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm"
     onclick={handleAddPhoto}
   >
     <CameraIcon class="h-4 w-4" />

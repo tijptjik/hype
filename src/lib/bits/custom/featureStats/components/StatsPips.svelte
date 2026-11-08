@@ -12,18 +12,18 @@ let {
 </script>
 
 <div class="bits-theme bits-feature-stat">
-  <span class="text-xs leading-4 text-base-content/60">
+  <span class="text-base-content/60 text-xs leading-4">
     {#if showTitle}
       <span class="bits-feature-stat__title-text">{title}</span>
       {#if icon}
         {@const IconComponent = icon}
         <span class="bits-feature-stat__title-icon">
-          <IconComponent class="w-4 h-4" />
+          <IconComponent class="h-4 w-4" />
         </span>
       {/if}
     {:else if icon}
       {@const IconComponent = icon}
-      <IconComponent class="w-4 h-4" />
+      <IconComponent class="h-4 w-4" />
     {/if}
   </span>
 

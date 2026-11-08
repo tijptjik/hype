@@ -185,7 +185,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
 </script>
 
 {#if allowed}
-  <div class="space-y-4 rounded-xl border border-border p-4" data-create-location-form>
+  <div class="border-border space-y-4 rounded-xl border p-4" data-create-location-form>
     {#if !hideTrigger}
       <Button
         type="button"
@@ -207,24 +207,24 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
         {/if}
       </div>
       {#if preparing}
-        <p role="status" class="text-sm text-muted-foreground">
+        <p role="status" class="text-muted-foreground text-sm">
           {m.feature_location_geocoding()}
         </p>
       {/if}
       {#if geocodeFailed}
-        <p role="alert" class="text-sm text-error">{m.feature_address_failed()}</p>
+        <p role="alert" class="text-error text-sm">{m.feature_address_failed()}</p>
       {/if}
       {#if geocodeEmpty}
-        <p role="status" class="text-sm text-muted-foreground">
+        <p role="status" class="text-muted-foreground text-sm">
           {m.feature_address_no_match()}
         </p>
       {/if}
       {#if geocodeChoices.length}
-        <p class="text-sm text-muted-foreground">{m.feature_address_choose_result()}</p>
+        <p class="text-muted-foreground text-sm">{m.feature_address_choose_result()}</p>
         {#each geocodeChoices as choice}
           <button
             type="button"
-            class="w-full rounded-lg border border-border p-3 text-left text-sm hover:bg-primary/5"
+            class="border-border hover:bg-primary/5 w-full rounded-lg border p-3 text-left text-sm"
             onclick={() => {
               if (initialAddress)
                 address = prepareLocalLocationAddress(initialAddress, choice)
@@ -235,7 +235,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
           </button>
         {/each}
       {/if}
-      <p class="text-sm text-muted-foreground">{m.feature_location_create_help()}</p>
+      <p class="text-muted-foreground text-sm">{m.feature_location_create_help()}</p>
       <SelectField
         id="local-location-kind"
         label={m.feature_location_kind()}
@@ -265,10 +265,10 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
           parseSource = source
         }}
       />
-      <p class="text-sm text-muted-foreground">
+      <p class="text-muted-foreground text-sm">
         {m.feature_location_local_coordinates()} {coordinates.join(', ')}
       </p>
-      <p class="text-sm text-muted-foreground">{m.feature_location_sharing_help()}</p>
+      <p class="text-muted-foreground text-sm">{m.feature_location_sharing_help()}</p>
       <div class="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -285,7 +285,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
         />
       </div>
       {#if failed}
-        <p role="alert" class="text-sm text-destructive">
+        <p role="alert" class="text-destructive text-sm">
           {m.feature_location_failed()}
         </p>
       {/if}

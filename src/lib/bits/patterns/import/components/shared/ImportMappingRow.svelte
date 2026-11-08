@@ -24,7 +24,7 @@ let { source, target, actionLabel, class: className = '' }: Props = $props()
     <div class="flex min-w-0 items-center px-4 py-3">{@render source()}</div>
 
     <div
-      class="flex items-center justify-center bg-base-300/70 px-4 mr-4 py-3 text-xs font-bold uppercase tracking-wide text-base-content/70"
+      class="bg-base-300/70 text-base-content/70 mr-4 flex items-center justify-center px-4 py-3 text-xs font-bold tracking-wide uppercase"
       style="clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%)"
     >
       {actionLabel}

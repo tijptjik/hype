@@ -5,14 +5,14 @@ let { isGuest = false }: { isGuest?: boolean } = $props()
 {#if isGuest}
   <!-- Soft geometric arcs frame the guest avatar, with a quieter center for the actions. -->
   <div
-    class="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-panel"
+    class="bg-panel pointer-events-none absolute inset-0 z-0 overflow-hidden"
     style="background-image: radial-gradient(ellipse at 50% 32%, color-mix(in oklab, var(--theme-primary) 12%, transparent), transparent 72%);"
     aria-hidden="true"
   >
     <svg
       viewBox="0 0 432 288"
       preserveAspectRatio="xMidYMid slice"
-      class="absolute inset-0 h-full w-full text-primary"
+      class="text-primary absolute inset-0 h-full w-full"
       style="mask-image: radial-gradient(ellipse at 50% 48%, rgb(0 0 0 / 20%) 12%, #000 85%);"
       fill="none"
       focusable="false"
@@ -41,14 +41,14 @@ let { isGuest = false }: { isGuest?: boolean } = $props()
 {:else}
   <!-- Theme-colored contour waves frame the profile without overpowering its content. -->
   <div
-    class="pointer-events-none absolute inset-0 overflow-hidden bg-panel"
+    class="bg-panel pointer-events-none absolute inset-0 overflow-hidden"
     aria-hidden="true"
   >
     <!-- A subtle geometric treatment keeps the profile readable across all themes. -->
     <svg
       viewBox="0 0 380 256"
       preserveAspectRatio="xMidYMid slice"
-      class="h-full w-full text-primary opacity-10 dark:opacity-30 [mask-image:linear-gradient(to_bottom,black,transparent)]"
+      class="text-primary h-full w-full [mask-image:linear-gradient(to_bottom,black,transparent)] opacity-10 dark:opacity-30"
       fill="none"
       stroke="currentColor"
       stroke-width="1"

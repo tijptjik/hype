@@ -15,10 +15,10 @@ let { title, isNarrow, onTogglePanel }: Props = $props()
 </script>
 
 <div
-  class="bits-theme flex h-18 shrink-0 flex-row items-center justify-between bg-panel p-4"
+  class="bits-theme bg-panel flex h-18 shrink-0 flex-row items-center justify-between p-4"
 >
   {#if !isNarrow}
-    <h1 class="text-lg font-semibold uppercase text-white pl-2">{title}</h1>
+    <h1 class="pl-2 text-lg font-semibold text-white uppercase">{title}</h1>
     <div class="flex gap-2">
       <Button
         text="Toggle admin panel"

@@ -17,7 +17,7 @@ const IconComponent = $derived(iconComponent)
 </script>
 
 <div class={`min-w-0 flex-1 ${className}`}>
-  <h3 class="break-words text-[15px] font-semibold leading-5">{name || '-'}</h3>
+  <h3 class="text-[15px] leading-5 font-semibold break-words">{name || '-'}</h3>
   <div class="mt-1.5 flex flex-wrap items-center gap-2">
     {#if IconComponent}
       <SimpleTooltip disabled={!iconTitle}>

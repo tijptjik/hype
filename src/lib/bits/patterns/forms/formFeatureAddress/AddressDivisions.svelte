@@ -161,7 +161,9 @@ function resetPaths(): void {
   )}
   <div
     class="group/division flex min-w-0 items-start gap-2 py-1.5"
-    data-tooltip={factual ? m.address_divisions_factual() : m.address_divisions_subjective()}
+    data-tooltip={factual
+      ? m.address_divisions_factual()
+      : m.address_divisions_subjective()}
   >
     <Icon class="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden="true" />
     <div class="min-w-0">

@@ -39,7 +39,7 @@ function getDirections(): void {
 </script>
 
 {#snippet directionsIcon()}
-  <Icon src={MapIcon} class="h-6 w-6 stroke-2 font-bold text-primary" />
+  <Icon src={MapIcon} class="text-primary h-6 w-6 stroke-2 font-bold" />
 {/snippet}
 
 <FeatureCardActionButton

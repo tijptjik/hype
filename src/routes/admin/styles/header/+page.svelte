@@ -23,38 +23,38 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
 
 <main class="h-full overflow-y-auto p-6">
   <section
-    class="bits-theme space-y-8 rounded-xl border border-base-300 bg-base-100 p-6"
+    class="bits-theme border-base-300 bg-base-100 space-y-8 rounded-xl border p-6"
   >
-    <h1 class="text-xl font-semibold text-foreground">Bits Header Variations</h1>
+    <h1 class="text-foreground text-xl font-semibold">Bits Header Variations</h1>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Optional Props
       </h2>
       <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">
+          <p class="text-foreground-alt text-xs font-semibold tracking-wide uppercase">
             Text only
           </p>
           <Header text="Secret Societies" />
         </div>
 
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">
+          <p class="text-foreground-alt text-xs font-semibold tracking-wide uppercase">
             Description only
           </p>
           <Header description="Global domination has never been easier" />
         </div>
 
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">
+          <p class="text-foreground-alt text-xs font-semibold tracking-wide uppercase">
             Icon only
           </p>
           <Header icon={Globe} />
         </div>
 
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">
+          <p class="text-foreground-alt text-xs font-semibold tracking-wide uppercase">
             Text + description
           </p>
           <Header
@@ -64,14 +64,14 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
         </div>
 
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">
+          <p class="text-foreground-alt text-xs font-semibold tracking-wide uppercase">
             Icon + text
           </p>
           <Header text="Secret Societies" icon={Heart} />
         </div>
 
         <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-foreground-alt">
+          <p class="text-foreground-alt text-xs font-semibold tracking-wide uppercase">
             Icon + text + description
           </p>
           <Header
@@ -84,7 +84,7 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Sizes
       </h2>
       <div class="flex flex-col items-start gap-5">
@@ -100,7 +100,7 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Showcase
       </h2>
       <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -112,7 +112,7 @@ const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
         <Header text="Tooling Bureau" icon={Wrench} size="md" />
       </div>
       <h2
-        class="text-sm font-semibold uppercase tracking-wide text-foreground-alt py-4"
+        class="text-foreground-alt py-4 text-sm font-semibold tracking-wide uppercase"
       >
         With Descriptions
       </h2>

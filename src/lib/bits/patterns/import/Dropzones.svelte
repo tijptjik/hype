@@ -25,7 +25,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
 <Heading level={4}>{m.import_data()}</Heading>
 <Subheading level={4} class="pb-4">{m.import_data_csv_only()}</Subheading>
 
-<div class="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
+<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
   <ImportPrimitive.Dropzone
     type="features"
     title={m.omni__title_features()}

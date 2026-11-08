@@ -259,7 +259,6 @@ async function handlePresentationModeChange(
             iconClasses="h-[22px] w-[22px]"
           />
         {/if}
-
       </div>
     </div>
   {/if}

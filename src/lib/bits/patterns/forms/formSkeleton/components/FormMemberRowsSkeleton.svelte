@@ -6,7 +6,7 @@ let { count = 3 }: { count?: number } = $props()
 
 <div aria-hidden="true">
   <div
-    class="mx-6 flex justify-between border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground"
+    class="border-border text-muted-foreground mx-6 flex justify-between border-b px-3 py-2 text-xs font-medium"
   >
     <span>Name</span><span class="w-36 pr-3 text-right">Role</span>
   </div>

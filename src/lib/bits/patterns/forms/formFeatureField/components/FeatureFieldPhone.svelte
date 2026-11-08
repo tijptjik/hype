@@ -54,14 +54,14 @@ export function canAdd(): boolean {
   {#each numbers as number, index}
     {#if !isEditing}
       {@const display = phoneDisplay(number)}
-      <div class="flex min-h-12 items-center gap-3 text-base text-foreground">
+      <div class="text-foreground flex min-h-12 items-center gap-3 text-base">
         {#if display.flag}
           <span role="img" aria-label={display.country} class="text-xl leading-none"
             >{display.flag}</span
           >
         {/if}
         {#if display.href}
-          <a href={display.href} class="tabular-nums hover:text-primary"
+          <a href={display.href} class="hover:text-primary tabular-nums"
             >{display.text}</a
           >
         {:else}
@@ -89,7 +89,7 @@ export function canAdd(): boolean {
         {#if isEditing && numbers.length > 1}
           <button
             type="button"
-            class="mt-1.5 flex size-9 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive mt-1.5 flex size-9 shrink-0 items-center justify-center rounded"
             data-tooltip="Remove number"
             aria-label={`Remove phone number ${index + 1}`}
             onclick={() => save(numbers.filter((_, i) => i !== index))}

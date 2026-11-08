@@ -124,13 +124,13 @@ function handleResolutionReset(): void {
 <ImportMappingRow actionLabel={m.feature_import__users_assign_action()}>
   {#snippet source()}
     <div class="min-w-0 space-y-1.5">
-      <h4 class="text-xs font-bold uppercase tracking-wide text-error">
+      <h4 class="text-error text-xs font-bold tracking-wide uppercase">
         {m.feature_import__users_invalid_value_label()}
       </h4>
       <div class="flex items-center gap-2">
-        <Icon src={XCircle} class="h-4 w-4 shrink-0 text-error" />
+        <Icon src={XCircle} class="text-error h-4 w-4 shrink-0" />
         <span
-          class="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm"
+          class="overflow-hidden font-mono text-sm text-ellipsis whitespace-nowrap"
           data-tooltip={invalidValue}
         >
           {invalidValue}

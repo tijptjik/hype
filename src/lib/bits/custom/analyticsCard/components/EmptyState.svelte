@@ -27,6 +27,6 @@ const toneClass = $derived.by(() => {
 </script>
 
 <div class={cx('rounded-[1.25rem] border px-5 py-8 text-center', toneClass, className)}>
-  <p class="text-sm font-semibold text-foreground">{title}</p>
-  <p class="mt-2 text-sm leading-6 text-foreground-alt">{description}</p>
+  <p class="text-foreground text-sm font-semibold">{title}</p>
+  <p class="text-foreground-alt mt-2 text-sm leading-6">{description}</p>
 </div>

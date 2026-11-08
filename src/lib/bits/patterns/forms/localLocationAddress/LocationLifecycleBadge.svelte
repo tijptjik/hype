@@ -12,7 +12,7 @@ const status = $derived(lifecycleStatus(value))
 
 {#if status !== 'unknown'}
   <span
-    class="inline-flex rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+    class="border-border bg-muted text-muted-foreground inline-flex rounded border px-2 py-0.5 text-xs"
     data-tooltip={m.location_lifecycle_title()}
     >{lifecycleLabel(status)}</span
   >

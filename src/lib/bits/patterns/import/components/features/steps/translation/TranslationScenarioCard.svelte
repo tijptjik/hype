@@ -19,31 +19,31 @@ const accentClass = $derived.by(() => {
 </script>
 
 <section
-  class={`flex min-h-48 flex-col justify-between rounded-3xl border bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl ${accentClass}`}
+  class={`bg-panel/[0.45] flex min-h-48 flex-col justify-between rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl ${accentClass}`}
 >
   <div class="space-y-3">
     <div class="flex items-start justify-between gap-4">
       <div>
-        <p class="text-xs font-bold uppercase tracking-[0.2em] text-base-content/45">
+        <p class="text-base-content/45 text-xs font-bold tracking-[0.2em] uppercase">
           Scenario {summary.scenario}
         </p>
-        <h4 class="mt-1 text-xl font-black tracking-tight text-base-content">
+        <h4 class="text-base-content mt-1 text-xl font-black tracking-tight">
           {summary.title}
         </h4>
       </div>
-      <div class="font-mono text-4xl font-black leading-none text-base-content/85">
+      <div class="text-base-content/85 font-mono text-4xl leading-none font-black">
         {summary.count}
       </div>
     </div>
 
-    <p class="text-sm leading-relaxed text-base-content/60">
+    <p class="text-base-content/60 text-sm leading-relaxed">
       {summary.description}
     </p>
     {#if summary.directions.length > 0}
-      <div class="flex flex-col -gap-1">
+      <div class="-gap-1 flex flex-col">
         {#each summary.directions as direction}
           <div
-            class="px-1 py-1 font-mono text-[11px] tracking-[0.12em] text-base-content/60"
+            class="text-base-content/60 px-1 py-1 font-mono text-[11px] tracking-[0.12em]"
           >
             {direction}
           </div>

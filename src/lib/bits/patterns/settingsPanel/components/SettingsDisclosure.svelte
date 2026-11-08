@@ -35,7 +35,7 @@ function onExpanded(): void {
 <div bind:this={sectionElement}>
   <button
     type="button"
-    class="flex min-h-11 w-full cursor-pointer items-center gap-2 text-left text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-base-content focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-focus"
+    class="text-muted-foreground hover:text-base-content focus-visible:ring-focus flex min-h-11 w-full cursor-pointer items-center gap-2 text-left text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2"
     aria-expanded={open}
     aria-controls={id}
     onclick={() => {

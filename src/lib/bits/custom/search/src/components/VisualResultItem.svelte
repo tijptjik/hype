@@ -58,7 +58,7 @@ $effect(() => {
         >
       {:else}
         <div
-          class="flex h-full w-full items-center justify-center text-lg font-semibold uppercase text-neutral-content/70"
+          class="text-neutral-content/70 flex h-full w-full items-center justify-center text-lg font-semibold uppercase"
         >
           {title?.charAt(0) ?? '?'}
         </div>
@@ -81,7 +81,7 @@ $effect(() => {
       aria-hidden="true"
     >
       <span
-        class="text-[10px] font-semibold uppercase tracking-[0.16em] text-base-content/58"
+        class="text-base-content/58 text-[10px] font-semibold tracking-[0.16em] uppercase"
         >{resolvedDisabledLabel}</span
       >
       {#if resolvedDisabledValue}

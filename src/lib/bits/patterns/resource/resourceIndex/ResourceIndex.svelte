@@ -192,12 +192,14 @@ $effect(() => {
 })
 </script>
 
-{#snippet children(
-  item: IndexItem,
-  index: number,
-)}
+{#snippet children(item: IndexItem, index: number)}
   {#if !item.value}
-    <div class="px-2" role="status" aria-busy={isLoadingMore} aria-label={m.resource_loading()}>
+    <div
+      class="px-2"
+      role="status"
+      aria-busy={isLoadingMore}
+      aria-label={m.resource_loading()}
+    >
       {@render scrollPlaceholder(TABLE_ROW_HEIGHT_PX)}
     </div>
   {:else if layoutMode === 'card'}
@@ -222,10 +224,7 @@ $effect(() => {
   {/if}
 {/snippet}
 
-{#snippet cardCell(
-  cell: IndexCell,
-  _index: number,
-)}
+{#snippet cardCell(cell: IndexCell, _index: number)}
   {#if !cell.entity}
     <div role="status" aria-busy={isLoadingMore} aria-label={m.resource_loading()}>
       {@render scrollPlaceholder(CARD_ROW_HEIGHT_PX)}
@@ -237,12 +236,10 @@ $effect(() => {
   {/if}
 {/snippet}
 
-{#snippet scrollPlaceholder(
-  contentHeight: number,
-)}
+{#snippet scrollPlaceholder(contentHeight: number)}
   <div
     aria-hidden="true"
-    class="flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-panel px-4"
+    class="border-border bg-panel flex items-center gap-4 overflow-hidden rounded-xl border px-4"
     style:height={`${contentHeight}px`}
   >
     <Skeleton class="size-10 shrink-0 rounded-lg" />
@@ -254,7 +251,7 @@ $effect(() => {
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
-  class="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-auto caret-transparent @container/grid"
+  class="@container/grid flex min-h-0 flex-1 flex-col overflow-hidden overscroll-auto caret-transparent"
 >
   {#if isInitialised}
     {#if entities.length > 0 && items.length > 0}

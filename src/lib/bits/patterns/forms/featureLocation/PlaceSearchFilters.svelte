@@ -92,10 +92,10 @@ function choose(node: PlaceTaxonomyNode): void {
     y: prefersReducedMotion.current ? 0 : 36,
     duration: prefersReducedMotion.current ? 0 : 180,
   }}
-  class="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-t-xl border border-border bg-panel text-foreground shadow-xl outline-none"
+  class="border-border bg-panel text-foreground flex h-full min-h-0 w-full flex-col overflow-hidden rounded-t-xl border shadow-xl outline-none"
 >
   <div
-    class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3"
+    class="border-border flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3"
   >
     <h3 class="flex items-center gap-2 font-semibold">
       <FilterIcon class="size-4" />{m.feature_search_filters()}
@@ -106,7 +106,7 @@ function choose(node: PlaceTaxonomyNode): void {
         aria-label={m.feature_search_status()}
         aria-expanded={settingsOpen}
         onclick={() => (settingsOpen = !settingsOpen)}
-        class="rounded-md p-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+        class="hover:bg-muted focus-visible:outline-primary rounded-md p-2 focus-visible:outline-2"
       >
         <SettingsIcon class="size-4" />
       </button>
@@ -114,14 +114,14 @@ function choose(node: PlaceTaxonomyNode): void {
         type="button"
         onclick={onClose}
         aria-label={m.feature_search_close_filters()}
-        class="rounded-md p-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+        class="hover:bg-muted focus-visible:outline-primary rounded-md p-2 focus-visible:outline-2"
       >
         <CloseIcon class="size-4" />
       </button>
     </div>
   </div>
   {#if settingsOpen}
-    <fieldset class="flex shrink-0 flex-wrap gap-2 border-b border-border px-4 py-3">
+    <fieldset class="border-border flex shrink-0 flex-wrap gap-2 border-b px-4 py-3">
       <legend class="sr-only">{m.feature_search_status()}</legend>
       {#each [
         { value: 'open', label: m.feature_search_operating() },
@@ -130,7 +130,7 @@ function choose(node: PlaceTaxonomyNode): void {
         { value: 'any', label: m.feature_search_any() },
       ] as status}
         <label
-          class="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm"
+          class="border-border flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm"
           ><input
             type="radio"
             name="place-operating-status"
@@ -143,7 +143,7 @@ function choose(node: PlaceTaxonomyNode): void {
           >{status.label}</label
         >
       {/each}
-      <p class="w-full text-xs text-muted-foreground">
+      <p class="text-muted-foreground w-full text-xs">
         {m.feature_search_status_help()}
       </p>
     </fieldset>
@@ -153,9 +153,9 @@ function choose(node: PlaceTaxonomyNode): void {
       bind:value={search}
       aria-label={m.feature_search_category()}
       placeholder={m.feature_search_category_search()}
-      class="w-full rounded-lg border border-border bg-panel px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
+      class="border-border bg-panel focus:ring-primary w-full rounded-lg border px-3 py-2 outline-none focus:ring-2"
     >
-    <p class="text-xs text-muted-foreground">
+    <p class="text-muted-foreground text-xs">
       {path.length
         ? path.map(node => node.label).join(' › ')
         : m.feature_search_filter_help()}
@@ -168,7 +168,7 @@ function choose(node: PlaceTaxonomyNode): void {
       {#each matches as node (node.name)}
         <button
           type="button"
-          class="rounded-md px-3 py-2 text-left text-sm hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+          class="hover:bg-muted focus-visible:outline-primary rounded-md px-3 py-2 text-left text-sm focus-visible:outline-2 focus-visible:-outline-offset-2"
           onclick={() => choose(node)}
         >
           {node.label}
@@ -181,11 +181,11 @@ function choose(node: PlaceTaxonomyNode): void {
   {:else}
     <div
       bind:this={columnsElement}
-      class="flex min-h-0 flex-1 overflow-x-auto border-t border-border"
+      class="border-border flex min-h-0 flex-1 overflow-x-auto border-t"
     >
       {#each columns as nodes, level}
         <fieldset
-          class="h-full min-h-0 min-w-56 flex-1 overflow-y-auto border-r border-border p-2"
+          class="border-border h-full min-h-0 min-w-56 flex-1 overflow-y-auto border-r p-2"
           aria-label={`${m.feature_search_category()} ${level + 1}`}
         >
           {#each nodes as node (node.name)}
@@ -193,7 +193,7 @@ function choose(node: PlaceTaxonomyNode): void {
               type="button"
               aria-pressed={path[level]?.name === node.name}
               class={[
-                'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
+                'hover:bg-muted focus-visible:outline-primary flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm focus-visible:outline-2 focus-visible:-outline-offset-2',
                 path[level]?.name === node.name && 'bg-primary/15',
               ]}
               class:text-primary={path[level]?.name === node.name}
@@ -210,26 +210,26 @@ function choose(node: PlaceTaxonomyNode): void {
     </div>
   {/if}
   <div
-    class="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3"
+    class="border-border flex shrink-0 flex-wrap items-center justify-end gap-2 border-t px-4 py-3"
   >
     <button
       type="button"
       onclick={() => onApply({ operatingStatus: 'open' })}
-      class="mr-auto rounded-md px-2 py-2 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+      class="hover:bg-muted focus-visible:outline-primary mr-auto rounded-md px-2 py-2 text-sm focus-visible:outline-2"
     >
       {m.feature_search_reset_filters()}
     </button>
     <button
       type="button"
       onclick={onClose}
-      class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+      class="border-border hover:bg-muted rounded-md border px-3 py-2 text-sm"
     >
       {m.feature_search_cancel_filters()}
     </button>
     <button
       type="button"
       onclick={() => onApply(draft)}
-      class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-primary"
+      class="bg-primary focus-visible:outline-primary rounded-md px-3 py-2 text-sm font-medium text-white focus-visible:outline-2"
     >
       {m.feature_search_accept_filters()}
     </button>

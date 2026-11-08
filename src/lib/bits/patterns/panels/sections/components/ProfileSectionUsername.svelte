@@ -138,7 +138,7 @@ function handleUsernameAction(): void {
   <div class="relative flex min-w-0 items-center justify-center">
     {#if hideEditableFields}
       <span
-        class="tooltip font-medium text-base-content"
+        class="tooltip text-base-content font-medium"
         data-tip={userAttribution || 'No attribution set'}
       >
         {userDisplayName}
@@ -163,7 +163,7 @@ function handleUsernameAction(): void {
           placeholder={usernameInputPlaceholder}
         >
       {:else}
-        <span class="min-w-0 px-2 text-center font-medium text-base-content">
+        <span class="text-base-content min-w-0 px-2 text-center font-medium">
           {displayedUsername}
         </span>
       {/if}
@@ -178,7 +178,7 @@ function handleUsernameAction(): void {
         modifier="square"
         hideLabel={true}
         hideLabelInstantly={true}
-        class="min-h-0 h-4 w-4 rounded-none border-0 p-0 text-base-content/80 shadow-none [--btn-size:1rem] [--btn-icon-ratio:1] hover:text-base-content focus-visible:text-base-content"
+        class="text-base-content/80 hover:text-base-content focus-visible:text-base-content h-4 min-h-0 w-4 rounded-none border-0 p-0 shadow-none [--btn-icon-ratio:1] [--btn-size:1rem]"
         attrs={{
           'data-tooltip': isEditingUsername ? 'Save username' : 'Edit username',
         }}

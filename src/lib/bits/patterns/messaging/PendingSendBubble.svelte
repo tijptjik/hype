@@ -71,7 +71,7 @@ const message = $derived<WhatsAppMessage>(
   />
   {#if row.state === 'uncertain' || error || (row.state === 'pending' && canReset)}
     <div
-      class="ml-auto flex max-w-80 flex-col items-end gap-1 text-right text-xs text-muted-foreground"
+      class="text-muted-foreground ml-auto flex max-w-80 flex-col items-end gap-1 text-right text-xs"
     >
       {#if row.state === 'uncertain'}
         <p role="status">

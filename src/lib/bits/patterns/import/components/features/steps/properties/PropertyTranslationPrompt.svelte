@@ -228,43 +228,43 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
 
 <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+    class="border-info/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
   >
     <div class="mb-5 flex items-start justify-between gap-4">
       <div>
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-info"
+          class="text-info font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
         >
           Existing translatable property
         </div>
         <h3 class="mt-2 text-2xl font-black tracking-tight">{property.key}</h3>
       </div>
       <div
-        class="rounded-full border border-info/25 bg-info/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-info"
+        class="border-info/25 bg-info/10 text-info rounded-full border px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.08em] uppercase"
       >
         Scenario {property.scenario}
       </div>
     </div>
 
     <div class="space-y-3">
-      <div class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
+      <div class="border-foreground/10 bg-foreground/[0.055] rounded-2xl border p-4">
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+          class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {m.locale_analysis()}
         </div>
         <div class="mt-3 grid gap-3 md:grid-cols-3">
           {#each localeCoverage as coverage}
-            <div class="rounded-2xl border border-foreground/10 bg-panel/20 p-3">
+            <div class="border-foreground/10 bg-panel/20 rounded-2xl border p-3">
               <div
-                class="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-base-content/45"
+                class="text-base-content/45 font-mono text-[11px] font-semibold tracking-[0.16em] uppercase"
               >
                 {coverage.locale}
               </div>
-              <div class="mt-2 text-lg font-black text-base-content/90">
+              <div class="text-base-content/90 mt-2 text-lg font-black">
                 {coverage.count}
               </div>
-              <div class="text-sm text-base-content/65">
+              <div class="text-base-content/65 text-sm">
                 {m.non_empty_values()}
               </div>
             </div>
@@ -272,11 +272,11 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
         </div>
 
         {#if !localeAnalysis.hasCompleteData}
-          <div class="mt-4 rounded-2xl border border-warning/25 bg-warning/8 p-4">
-            <div class="font-semibold text-warning">
+          <div class="border-warning/25 bg-warning/8 mt-4 rounded-2xl border p-4">
+            <div class="text-warning font-semibold">
               {m.incomplete_locale_data_warning()}
             </div>
-            <p class="mt-2 text-sm text-warning/80">
+            <p class="text-warning/80 mt-2 text-sm">
               Missing locale values will be filled from the source locale you choose
               below.
             </p>
@@ -284,9 +284,9 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
         {/if}
       </div>
 
-      <div class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
+      <div class="border-foreground/10 bg-foreground/[0.055] rounded-2xl border p-4">
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+          class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {m.translation_method()}
         </div>
@@ -308,7 +308,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
             >
             <div>
               <div class="font-semibold">{m.translate_values()}</div>
-              <div class="mt-1 text-sm text-base-content/70">
+              <div class="text-base-content/70 mt-1 text-sm">
                 {m.translate_values_description()}
               </div>
             </div>
@@ -330,7 +330,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
             >
             <div>
               <div class="font-semibold">{m.copy_values()}</div>
-              <div class="mt-1 text-sm text-base-content/70">
+              <div class="text-base-content/70 mt-1 text-sm">
                 {m.copy_values_description()}
               </div>
             </div>
@@ -338,16 +338,16 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
         </div>
       </div>
 
-      <div class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
+      <div class="border-foreground/10 bg-foreground/[0.055] rounded-2xl border p-4">
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+          class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {m.source_language()}
         </div>
-        <div class="mt-2 font-mono text-base text-base-content/90">
+        <div class="text-base-content/90 mt-2 font-mono text-base">
           {localeAnalysis.suggestedSourceLocale}
         </div>
-        <p class="mt-2 text-sm text-base-content/65">
+        <p class="text-base-content/65 mt-2 text-sm">
           {translationChoice === 'translate'
             ? `Translations will use ${localeAnalysis.suggestedSourceLocale} as the source locale.`
             : `Missing locales will be copied from ${localeAnalysis.suggestedSourceLocale}.`}
@@ -357,11 +357,11 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
   </section>
 
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+    class="border-warning/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
   >
     <div class="mb-5">
       <div
-        class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-warning"
+        class="text-warning font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
       >
         {sampleValues.length} {sampleValues.length === 1 ? 'sample' : 'samples'}
       </div>
@@ -369,24 +369,24 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
     </div>
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04]"
+      class="border-foreground/10 bg-foreground/[0.04] min-h-0 flex-1 overflow-y-auto rounded-2xl border"
     >
       {#each sampleValues as value}
         <div
-          class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+          class="border-foreground/10 text-base-content/80 border-b px-4 py-3 font-mono text-sm last:border-b-0"
         >
           {value}
         </div>
       {/each}
     </div>
 
-    <div class="mt-4 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
+    <div class="border-foreground/10 bg-foreground/[0.055] mt-4 rounded-2xl border p-4">
       <div
-        class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+        class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
       >
         Translation plan
       </div>
-      <p class="mt-2 text-sm leading-relaxed text-base-content/70">
+      <p class="text-base-content/70 mt-2 text-sm leading-relaxed">
         {translationChoice === 'translate'
           ? `Missing locale values will be translated from ${localeAnalysis.suggestedSourceLocale} to ${localeAnalysis.suggestedTargetLocales.join(', ') || 'none'}.`
           : `Missing locale values will be copied from ${localeAnalysis.suggestedSourceLocale} to ${localeAnalysis.suggestedTargetLocales.join(', ') || 'none'}.`}

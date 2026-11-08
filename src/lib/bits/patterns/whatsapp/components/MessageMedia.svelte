@@ -143,7 +143,7 @@ $effect(() => {
       <button
         type="button"
         aria-label="Open image preview"
-        class="block w-full cursor-zoom-in rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        class="focus-visible:outline-primary block w-full cursor-zoom-in rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2"
         onclick={() => void setPreview(true)}
       >
         <img
@@ -173,7 +173,7 @@ $effect(() => {
           <button
             type="button"
             aria-label="Close image preview"
-            class="absolute right-2 top-2 flex size-10 items-center justify-center rounded-full bg-black/70 text-2xl focus-visible:outline-2 focus-visible:outline-white"
+            class="absolute top-2 right-2 flex size-10 items-center justify-center rounded-full bg-black/70 text-2xl focus-visible:outline-2 focus-visible:outline-white"
             onclick={() => void setPreview(false)}
           >
             ×
@@ -249,7 +249,7 @@ $effect(() => {
     {/if}
   {/if}
   {#if error}
-    <p role="alert" class="break-words text-xs text-muted-foreground">{error}</p>
+    <p role="alert" class="text-muted-foreground text-xs break-words">{error}</p>
   {/if}
 </div>
 

@@ -52,17 +52,17 @@ function showManualClose(): void {
 
 <main class="h-full overflow-y-auto p-6">
   <section
-    class="bits-theme space-y-10 rounded-xl border border-base-300 bg-base-100 p-6"
+    class="bits-theme border-base-300 bg-base-100 space-y-10 rounded-xl border p-6"
   >
     <header class="space-y-2">
-      <h1 class="text-xl font-semibold text-foreground">Toast Variations</h1>
-      <p class="text-sm text-foreground-alt">
+      <h1 class="text-foreground text-xl font-semibold">Toast Variations</h1>
+      <p class="text-foreground-alt text-sm">
         Trigger all supported toast variants and options.
       </p>
     </header>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Variants
       </h2>
       <div class="flex flex-wrap gap-3">
@@ -75,7 +75,7 @@ function showManualClose(): void {
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Options
       </h2>
       <div class="flex flex-wrap gap-3">

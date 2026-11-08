@@ -24,7 +24,7 @@ let {
 <label class="flex flex-col gap-1.5 text-sm">
   <span>{label}</span>
   <input
-    class="rounded-lg border border-border bg-foreground/5 px-3 py-2 text-foreground"
+    class="border-border bg-foreground/5 text-foreground rounded-lg border px-3 py-2"
     {type}
     {autocomplete}
     {required}

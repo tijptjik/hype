@@ -10,8 +10,12 @@ let { title, siteName, siteDescription, socialImage }: AppHeadMetaProps = $props
 const resource = $derived(page.data.shareResource)
 const metaTitle = $derived(resource?.title ?? title)
 const description = $derived(resource?.description || siteDescription)
-const socialImageUrl = $derived(new URL(resource?.image ?? socialImage.image, page.url.origin).href)
-const canonicalUrl = $derived(new URL(resource?.path ?? page.url.pathname, page.url.origin).href)
+const socialImageUrl = $derived(
+  new URL(resource?.image ?? socialImage.image, page.url.origin).href,
+)
+const canonicalUrl = $derived(
+  new URL(resource?.path ?? page.url.pathname, page.url.origin).href,
+)
 </script>
 
 <svelte:head>

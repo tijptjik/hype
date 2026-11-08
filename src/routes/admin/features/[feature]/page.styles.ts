@@ -33,7 +33,6 @@ export const FEATURE_EDITOR_COLLECTIONS_SECTION_CLASS = cx(
   'h-auto',
 )
 
-
 /**
  * Positions the active workspace beneath the expanded or collapsed preview.
  * @param state - Current preview visibility and expansion state.

@@ -65,7 +65,7 @@ function resolvePropertyLabel(
         issues={[]}
       >
         {#snippet left()}
-          <TranslateIcon class="size-6 text-primary" />
+          <TranslateIcon class="text-primary size-6" />
         {/snippet}
       </FormFeatureSectionHeader>
 
@@ -80,9 +80,7 @@ function resolvePropertyLabel(
             {isEditing}
             showTranslationBar={true}
           >
-            {#snippet children(
-              locale,
-            )}
+            {#snippet children(locale)}
               <div class="flex flex-col gap-4">
                 {#each translatableSpecifierItems as property (property.propertyId)}
                   {@const label = resolvePropertyLabel(property, locale)}

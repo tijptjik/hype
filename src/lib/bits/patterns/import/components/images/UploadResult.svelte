@@ -48,24 +48,24 @@ let shouldShowError = $derived(Boolean(result.error && result.status !== 'upload
     <div class="flex min-w-0 items-start gap-3">
       <div class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
         {#if result.status === 'success'}
-          <Icon src={CheckCircle} class="h-5 w-5 text-success" />
+          <Icon src={CheckCircle} class="text-success h-5 w-5" />
         {:else if result.status === 'conflict'}
-          <Icon src={CopyX} class="h-5 w-5 text-warning" />
+          <Icon src={CopyX} class="text-warning h-5 w-5" />
         {:else if result.status === 'error'}
-          <Icon src={CircleAlert} class="h-5 w-5 text-error" />
+          <Icon src={CircleAlert} class="text-error h-5 w-5" />
         {:else if result.status === 'uploading'}
           <span class="loading loading-ring loading-sm text-warning"></span>
         {:else}
-          <Icon src={Photo} class="h-5 w-5 text-base-content/50" />
+          <Icon src={Photo} class="text-base-content/50 h-5 w-5" />
         {/if}
       </div>
 
       <div class="min-w-0 space-y-1">
-        <div class="overflow-hidden text-ellipsis whitespace-nowrap font-medium">
+        <div class="overflow-hidden font-medium text-ellipsis whitespace-nowrap">
           {result.file.name}
         </div>
         <div
-          class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.16em] text-base-content/50"
+          class="text-base-content/50 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tracking-[0.16em] uppercase"
         >
           <span>{formatImportFileSize(result.file.size)}</span>
           <span>{result.file.type || 'unknown format'}</span>
@@ -73,13 +73,13 @@ let shouldShowError = $derived(Boolean(result.error && result.status !== 'upload
         {#if shouldShowError}
           <div
             class={result.status === 'conflict'
-              ? 'text-sm text-warning'
-              : 'text-sm text-error'}
+              ? 'text-warning text-sm'
+              : 'text-error text-sm'}
           >
             {result.error}
           </div>
         {:else}
-          <div class="text-sm text-base-content/70">
+          <div class="text-base-content/70 text-sm">
             {m.batch_upload__feature_id()}:
             {#if result.featureId}
               <a
@@ -98,7 +98,7 @@ let shouldShowError = $derived(Boolean(result.error && result.status !== 'upload
       </div>
     </div>
 
-    <div class="mr-2 mt-2 flex shrink-0 items-start gap-3">
+    <div class="mt-2 mr-2 flex shrink-0 items-start gap-3">
       {#if result.status === 'conflict' && onReplace}
         <Button
           text={m.replace()}

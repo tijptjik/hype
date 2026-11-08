@@ -516,11 +516,11 @@ async function handleAccept() {
 {:else}
   <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
     <section
-      class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+      class="border-warning/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
     >
       <div class="mb-5">
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-warning"
+          class="text-warning font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
         >
           {m.match_property_values({ key: property.key })}
         </div>
@@ -530,25 +530,25 @@ async function handleAccept() {
       </div>
 
       <div
-        class="mb-4 grid gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-2"
+        class="border-foreground/10 bg-foreground/[0.055] mb-4 grid gap-3 rounded-2xl border p-4 md:grid-cols-2"
       >
         <div>
           <div
-            class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+            class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
           >
             {m.property_id()}
           </div>
-          <div class="mt-1 font-mono text-sm text-base-content/85">
+          <div class="text-base-content/85 mt-1 font-mono text-sm">
             {existingProperty.id}
           </div>
         </div>
         <div>
           <div
-            class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+            class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
           >
             {m.existing_values()}
           </div>
-          <div class="mt-1 font-mono text-sm text-base-content/85">
+          <div class="text-base-content/85 mt-1 font-mono text-sm">
             {existingProperty.values?.length || 0}
           </div>
         </div>
@@ -557,26 +557,26 @@ async function handleAccept() {
       <div class="space-y-3">
         {#each valueMatches as match, index}
           <div
-            class="grid gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[5rem_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.1fr)] md:items-center"
+            class="border-foreground/10 bg-foreground/[0.055] grid gap-3 rounded-2xl border p-4 md:grid-cols-[5rem_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.1fr)] md:items-center"
           >
             <div
-              class="justify-self-start rounded-full border border-info/25 bg-info/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-info"
+              class="border-info/25 bg-info/10 text-info justify-self-start rounded-full border px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
             >
               {match.locale}
             </div>
             <div class="min-w-0">
               <div
-                class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+                class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
               >
                 {m.csv_value()}
               </div>
-              <div class="mt-1 break-all font-mono text-sm text-base-content/85">
+              <div class="text-base-content/85 mt-1 font-mono text-sm break-all">
                 {match.value}
               </div>
             </div>
             <div>
               <div
-                class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+                class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
               >
                 {m.exists_in_system()}
               </div>
@@ -590,16 +590,16 @@ async function handleAccept() {
             </div>
             <div>
               <div
-                class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+                class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
               >
                 {m.match_to()}
               </div>
               <div class="mt-1">
                 {#if match.exists}
-                  <span class="text-sm text-success">✓ {m.exists()}</span>
+                  <span class="text-success text-sm">✓ {m.exists()}</span>
                 {:else}
                   <select
-                    class="select select-bordered select-sm w-full bg-panel/30 font-mono text-sm"
+                    class="select select-bordered select-sm bg-panel/30 w-full font-mono text-sm"
                     onchange={event =>
                       updateMatch(
                         index,
@@ -625,22 +625,22 @@ async function handleAccept() {
       </div>
 
       {#if hasNewValues()}
-        <div class="mt-4 rounded-2xl border border-warning/25 bg-warning/10 p-4">
+        <div class="border-warning/25 bg-warning/10 mt-4 rounded-2xl border p-4">
           <h4 class="font-semibold">{m.new_values_detected()}</h4>
-          <p class="mt-1 text-sm text-base-content/75">
+          <p class="text-base-content/75 mt-1 text-sm">
             {m.new_values_will_be_created()}
           </p>
         </div>
       {/if}
 
       {#if cannotCreateNewValues() && valueAppendAccess}
-        <div class="mt-4 rounded-2xl border border-error/30 bg-error/15 p-4">
-          <h4 class="font-semibold text-error">Cannot add new values</h4>
-          <p class="mt-1 text-sm text-base-content/80">
+        <div class="border-error/30 bg-error/15 mt-4 rounded-2xl border p-4">
+          <h4 class="text-error font-semibold">Cannot add new values</h4>
+          <p class="text-base-content/80 mt-1 text-sm">
             This property is specified at the {getScopeLabel(valueAppendAccess.scope)}
             level, and you do not have permission to add new values.
           </p>
-          <p class="mt-2 text-sm text-base-content/80">
+          <p class="text-base-content/80 mt-2 text-sm">
             If you still want to import these values, create a new property in step 1.
           </p>
         </div>
@@ -659,11 +659,11 @@ async function handleAccept() {
     </section>
 
     <section
-      class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+      class="border-info/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
     >
       <div class="mb-5">
         <div
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-info"
+          class="text-info font-mono text-[11px] font-semibold tracking-[0.22em] uppercase"
         >
           Scenario {property.scenario} / {property.columns[0]?.header}
         </div>
@@ -673,14 +673,14 @@ async function handleAccept() {
       </div>
 
       <div
-        class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04] p-4"
+        class="border-foreground/10 bg-foreground/[0.04] min-h-0 flex-1 overflow-y-auto rounded-2xl border p-4"
       >
         <div class="space-y-4">
           {#each existingProperty.values || [] as propertyValue}
             <div
-              class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-3"
+              class="border-foreground/10 bg-foreground/[0.055] rounded-2xl border p-3"
             >
-              <div class="font-mono text-sm text-base-content/85">
+              <div class="text-base-content/85 font-mono text-sm">
                 {propertyValue.i18n?.en?.value ||
                   propertyValue.value ||
                   propertyValue.id}
@@ -689,11 +689,11 @@ async function handleAccept() {
                 {#each Object.values(propertyValue.i18n || {}) as translation}
                   <div class="flex items-center gap-2 text-sm">
                     <span
-                      class="rounded-full border border-foreground/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.18em] text-base-content/60"
+                      class="border-foreground/10 text-base-content/60 rounded-full border px-2 py-0.5 font-mono text-[11px] tracking-[0.18em] uppercase"
                     >
                       {translation.locale}
                     </span>
-                    <span class="break-all font-mono text-base-content/85">
+                    <span class="text-base-content/85 font-mono break-all">
                       {translation.value}
                     </span>
                   </div>

@@ -40,7 +40,7 @@ const displayName = $derived(
 {#if row.count > 0}
   <button
     type="button"
-    class="group flex w-full cursor-pointer items-center justify-between gap-4 bg-panel py-2 pl-8 pr-7 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+    class="group bg-panel focus-visible:outline-focus flex w-full cursor-pointer items-center justify-between gap-4 py-2 pr-7 pl-8 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2"
     aria-pressed={row.selected}
     onclick={() => onToggle(row.id)}
     onpointerenter={() => onPreview?.(row.id, true)}
@@ -63,12 +63,12 @@ const displayName = $derived(
           ? 'bg-primary'
           : 'bg-transparent group-hover:bg-base-content/30'}"
       ></span>
-      <Icon class="size-5 shrink-0 text-base-content/60" aria-hidden="true" />
+      <Icon class="text-base-content/60 size-5 shrink-0" aria-hidden="true" />
       <span class="flex min-w-0 flex-col">
-        <span class="text-xs text-base-content/60"
+        <span class="text-base-content/60 text-xs"
           >{divisionClassLabel(row.class)}</span
         >
-        <span class="font-normal text-base-content">{displayName}</span>
+        <span class="text-base-content font-normal">{displayName}</span>
       </span>
     </span>
     <span

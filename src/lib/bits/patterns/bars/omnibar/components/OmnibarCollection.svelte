@@ -122,7 +122,7 @@ $effect(() => {
     style="max-height: {scrollAreaMaxHeight};"
   >
     {#if items.length === 0}
-      <div class="p-4 text-center text-base-content/60">
+      <div class="text-base-content/60 p-4 text-center">
         {loading ? m.resource_loading() : m.omni__no_results()}
       </div>
     {:else}
@@ -140,11 +140,11 @@ $effect(() => {
               {#if isNavigationMode}
                 <div class="relative h-2 w-2 rounded-full">
                   <div
-                    class="absolute left-0 top-0 h-2 w-2 rounded-full bg-primary group-hover:opacity-100"
+                    class="bg-primary absolute top-0 left-0 h-2 w-2 rounded-full group-hover:opacity-100"
                     style="opacity: {indicatorOpacities.primaryOpacity}%"
                   ></div>
                   <div
-                    class="absolute right-0 top-0 h-2 w-2 rounded-full bg-white/90 group-hover:opacity-100"
+                    class="absolute top-0 right-0 h-2 w-2 rounded-full bg-white/90 group-hover:opacity-100"
                     style="opacity: {indicatorOpacities.whiteOpacity}%"
                   ></div>
                 </div>
@@ -161,7 +161,7 @@ $effect(() => {
   {#if hasMore && onLoadMore}
     <button
       type="button"
-      class="px-4 py-2 text-left text-sm text-primary disabled:opacity-50"
+      class="text-primary px-4 py-2 text-left text-sm disabled:opacity-50"
       disabled={loading}
       onclick={onLoadMore}
     >
@@ -170,7 +170,7 @@ $effect(() => {
   {/if}
   {#if isNavigationMode}
     <div class={OMNIBAR_COLLECTION_FOOTER_CLASSES}>
-      <span class="text-xs uppercase tracking-wider text-base-content/60">
+      <span class="text-base-content/60 text-xs tracking-wider uppercase">
         {navTitle}
       </span>
       <Button

@@ -64,7 +64,7 @@ const message = $derived<WhatsAppMessage>({
     onReact={() => {}}
   />
   {#if row.error}
-    <div class="ml-auto max-w-80 text-right text-xs text-muted-foreground" role="alert">
+    <div class="text-muted-foreground ml-auto max-w-80 text-right text-xs" role="alert">
       <p>{row.error}</p>
       <button
         type="button"

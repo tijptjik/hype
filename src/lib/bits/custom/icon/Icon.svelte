@@ -87,8 +87,20 @@ function resolveTransition(
     class="inline-flex shrink-0"
     transition:resolvedTransition|global={transitionOpts}
   >
-    <DynamicIcon class={classes} style={styles} data-tooltip={title} aria-label={title} {...restProps} />
+    <DynamicIcon
+      class={classes}
+      style={styles}
+      data-tooltip={title}
+      aria-label={title}
+      {...restProps}
+    />
   </span>
 {:else}
-  <DynamicIcon class={classes} style={styles} data-tooltip={title} aria-label={title} {...restProps} />
+  <DynamicIcon
+    class={classes}
+    style={styles}
+    data-tooltip={title}
+    aria-label={title}
+    {...restProps}
+  />
 {/if}

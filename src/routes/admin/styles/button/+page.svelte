@@ -30,14 +30,14 @@ function onButtonClick(variant: string) {
 
 <main
   data-theme={previewTheme}
-  class="bits-theme h-full overflow-y-auto bg-canvas p-6 text-base-content"
+  class="bits-theme bg-canvas text-base-content h-full overflow-y-auto p-6"
 >
   <div class="mb-8 max-w-2xl">
     <ThemePicker value={previewTheme} onSelect={theme => (previewTheme = theme)} />
     <a
       data-sveltekit-reload
       href="/themes"
-      class="mt-4 inline-block text-primary underline"
+      class="text-primary mt-4 inline-block underline"
       >Open the theme composition preview →</a
     >
   </div>
@@ -59,21 +59,17 @@ function onButtonClick(variant: string) {
     </svg>
   {/snippet}
 
-  {#snippet buttonDemoColumn(
-    title: string,
-    shellClasses: string,
-    titleClasses: string,
-  )}
+  {#snippet buttonDemoColumn(title: string, shellClasses: string, titleClasses: string)}
     <section class={shellClasses}>
       <div class="space-y-1">
         <h1 class={titleClasses}>{title}</h1>
-        <p class="text-sm text-base-content/70">
+        <p class="text-base-content/70 text-sm">
           Same button set, different surrounding surface.
         </p>
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
           Colors
         </h2>
         <div class="flex flex-wrap gap-3">
@@ -88,14 +84,14 @@ function onButtonClick(variant: string) {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
           Styles
         </h2>
         <div class="space-y-3">
           {#each BUTTON_STYLES_WITH_VARIANTS as styleVariant}
             <div class="space-y-2">
               <p
-                class="text-xs font-semibold uppercase tracking-wider text-foreground-alt"
+                class="text-foreground-alt text-xs font-semibold tracking-wider uppercase"
               >
                 {styleVariant}
               </p>
@@ -116,7 +112,7 @@ function onButtonClick(variant: string) {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
           Sizes
         </h2>
         <div class="flex flex-wrap items-end gap-3">
@@ -145,7 +141,7 @@ function onButtonClick(variant: string) {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
           Modifiers
         </h2>
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -171,7 +167,7 @@ function onButtonClick(variant: string) {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+        <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
           Icon, href, and disabled
         </h2>
         <div class="flex flex-wrap gap-3">

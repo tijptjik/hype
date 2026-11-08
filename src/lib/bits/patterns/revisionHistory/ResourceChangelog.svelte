@@ -23,7 +23,10 @@ import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 import RefreshIcon from 'virtual:icons/proicons/arrow-sync'
 // PRESENTATION
 import HistoryLocaleValues from './components/HistoryLocaleValues.svelte'
-import { groupHistoryLocales, localeGroupAction } from '#lib/revisions/historyLocaleGroups.js'
+import {
+  groupHistoryLocales,
+  localeGroupAction,
+} from '#lib/revisions/historyLocaleGroups.js'
 import { fieldLabel, historyOperation } from './presentation'
 import { featureReviewLabel } from '#lib/revisions/featureReviewDisplay.js'
 import {
@@ -607,9 +610,7 @@ $effect(() => {
                               class="border-border bg-muted/30 grid min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start gap-x-8 gap-y-2 border-b px-4 py-3 pr-14"
                               data-changelog-change-heading
                             >
-                              <div
-                                class="min-w-0 space-y-1"
-                              >
+                              <div class="min-w-0 space-y-1">
                                 <dt class="text-muted-foreground text-xs font-medium">
                                   Field
                                 </dt>
@@ -622,14 +623,17 @@ $effect(() => {
                                   {changeFieldLabel(entry, group.path)}
                                 </dd>
                               </div>
-                              <div
-                                class="min-w-0 space-y-1"
-                              >
+                              <div class="min-w-0 space-y-1">
                                 <dt class="text-muted-foreground text-xs font-medium">
                                   Action
                                 </dt>
                                 <dd class="font-medium break-words">
-                                  {group.rows[0].locale !== null ? localeGroupAction(group) : historyOperation(change, entry.category === 'fields').label}
+                                  {group.rows[0].locale !== null
+                                    ? localeGroupAction(group)
+                                    : historyOperation(
+                                        change,
+                                        entry.category === 'fields',
+                                      ).label}
                                 </dd>
                               </div>
                             </dl>
@@ -657,7 +661,9 @@ $effect(() => {
                           </div>
                           {#if group.rows[0].locale !== null}
                             <HistoryLocaleValues rows={group.rows}>
-                              {#snippet value(row, side)}<ChangelogValue {entry} change={row} {side} />{/snippet}
+                              {#snippet value(row, side)}
+                                <ChangelogValue {entry} change={row} {side} />
+                              {/snippet}
                             </HistoryLocaleValues>
                           {:else}
                             <div

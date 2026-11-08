@@ -16,12 +16,12 @@ let { issues = [] }: SectionHeaderIssues = $props()
     {#each issues as message (message)}
       {@const chip = toIssueChipParts(message)}
       <span
-        class="inline-flex items-stretch overflow-hidden rounded-md border border-error/40 bg-error/10 text-foreground"
+        class="border-error/40 bg-error/10 text-foreground inline-flex items-stretch overflow-hidden rounded-md border"
       >
         <SimpleTooltip disabled={!chip.code}>
           {#snippet trigger()}
             <span
-              class="inline-flex items-center justify-center border-r border-error/25 px-3 py-1 text-error"
+              class="border-error/25 text-error inline-flex items-center justify-center border-r px-3 py-1"
             >
               <TriangleAlert class="bits-form__section-header-issue-icon-svg" />
             </span>

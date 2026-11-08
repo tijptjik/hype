@@ -313,9 +313,7 @@ $effect(() => {
           onclick={event => toggleHistoryBlock(event, entry)}
         >
           <!-- Keep profile navigation independent of the comparison disclosure. -->
-          <header
-            class={styles.resourceSummary}
-          >
+          <header class={styles.resourceSummary}>
             <div class="col-span-full min-w-0 @[64rem]:col-span-1">
               <div class="mb-1 flex flex-wrap items-center gap-2 text-xs">
                 <span class="text-muted-foreground">
@@ -440,20 +438,28 @@ $effect(() => {
               </dl>
               {#if field.rows[0].locale !== null}
                 <HistoryLocaleValues rows={field.rows}>
-                  {#snippet value(row, side)}<HistoryValue {...{ slot: row[side] }} path={row.path} />{/snippet}
+                  {#snippet value(row, side)}
+                    <HistoryValue {...{ slot: row[side] }} path={row.path} />
+                  {/snippet}
                 </HistoryLocaleValues>
               {:else}
                 <dl class={styles.values}>
                   <div class={styles.before}>
                     <dt class={styles.label}>Before</dt>
                     <dd class="min-w-0">
-                      <HistoryValue slot={field.change.before} path={field.change.path} />
+                      <HistoryValue
+                        slot={field.change.before}
+                        path={field.change.path}
+                      />
                     </dd>
                   </div>
                   <div class={styles.after}>
                     <dt class={styles.label}>After</dt>
                     <dd class="min-w-0">
-                      <HistoryValue slot={field.change.after} path={field.change.path} />
+                      <HistoryValue
+                        slot={field.change.after}
+                        path={field.change.path}
+                      />
                     </dd>
                   </div>
                 </dl>

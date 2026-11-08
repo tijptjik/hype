@@ -27,12 +27,12 @@ let labelHoverOnly = $state(false)
 
 <main class="h-full overflow-y-auto p-6">
   <section
-    class="bits-theme space-y-10 rounded-xl border border-base-300 bg-base-100 p-6"
+    class="bits-theme border-base-300 bg-base-100 space-y-10 rounded-xl border p-6"
   >
-    <h1 class="text-xl font-semibold text-foreground">Checkbox Variations</h1>
+    <h1 class="text-foreground text-xl font-semibold">Checkbox Variations</h1>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Interactive
       </h2>
       <div class="flex flex-wrap items-center gap-8">
@@ -48,7 +48,7 @@ let labelHoverOnly = $state(false)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Sizes
       </h2>
       <div class="flex flex-wrap items-center gap-6">
@@ -60,7 +60,7 @@ let labelHoverOnly = $state(false)
               color="primary"
               id={`checkbox-size-${size}`}
             />
-            <span class="text-xs uppercase tracking-wide text-foreground-alt"
+            <span class="text-foreground-alt text-xs tracking-wide uppercase"
               >{size}</span
             >
           </div>
@@ -69,7 +69,7 @@ let labelHoverOnly = $state(false)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Sizes With Labels
       </h2>
       <div class="flex flex-wrap items-center gap-6">
@@ -86,14 +86,14 @@ let labelHoverOnly = $state(false)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Colors
       </h2>
       <div class="flex flex-wrap items-center gap-5">
         {#each colors as color}
           <div class="flex flex-col items-center gap-2">
             <Checkbox checked={true} {color} id={`checkbox-color-${color}`} />
-            <span class="text-xs uppercase tracking-wide text-foreground-alt"
+            <span class="text-foreground-alt text-xs tracking-wide uppercase"
               >{color}</span
             >
           </div>
@@ -102,7 +102,7 @@ let labelHoverOnly = $state(false)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Disabled
       </h2>
       <div class="flex flex-wrap items-center gap-8">
@@ -118,7 +118,7 @@ let labelHoverOnly = $state(false)
     </div>
 
     <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Labels
       </h2>
       <div class="flex flex-wrap items-center gap-8">

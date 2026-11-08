@@ -25,18 +25,18 @@ async function copyMapping(): Promise<void> {
 
 <main class="h-full overflow-y-auto p-6">
   <section
-    class="bits-theme space-y-6 rounded-xl border border-base-300 bg-base-100 p-6"
+    class="bits-theme border-base-300 bg-base-100 space-y-6 rounded-xl border p-6"
   >
     <div
-      class="flex flex-col gap-4 border-b border-base-300 pb-6 lg:flex-row lg:items-end lg:justify-between"
+      class="border-base-300 flex flex-col gap-4 border-b pb-6 lg:flex-row lg:items-end lg:justify-between"
     >
       <div class="space-y-2">
-        <h1 class="text-2xl font-semibold text-foreground">Icon Usage Audit</h1>
-        <p class="max-w-3xl text-sm text-foreground-alt">
+        <h1 class="text-foreground text-2xl font-semibold">Icon Usage Audit</h1>
+        <p class="text-foreground-alt max-w-3xl text-sm">
           This page audits every interface icon currently imported in the app, shows the
           rendered icon, and tracks how many import sites and files use it.
         </p>
-        <p class="text-xs uppercase tracking-[0.2em] text-foreground-alt">
+        <p class="text-foreground-alt text-xs tracking-[0.2em] uppercase">
           {ICON_USAGES.length}
           unique icons across {TOTAL_IMPORT_SITES} import sites
         </p>
@@ -44,7 +44,7 @@ async function copyMapping(): Promise<void> {
 
       <div class="flex flex-wrap items-center gap-3">
         <Button text="Copy usage export" color="primary" onClick={copyMapping} />
-        <span class="text-sm text-foreground-alt">
+        <span class="text-foreground-alt text-sm">
           {#if copyState === 'copied'}
             Copied icon usage export
           {:else if copyState === 'error'}
@@ -59,26 +59,26 @@ async function copyMapping(): Promise<void> {
     <div class="flex flex-wrap gap-4">
       {#each ICON_USAGES as icon}
         <article
-          class="flex w-full max-w-[24rem] flex-1 flex-col gap-4 rounded-2xl border border-base-300 bg-base-50 p-4 shadow-sm"
+          class="border-base-300 bg-base-50 flex w-full max-w-[24rem] flex-1 flex-col gap-4 rounded-2xl border p-4 shadow-sm"
         >
           <div class="flex items-start justify-between gap-3">
             <div>
-              <h2 class="font-mono text-sm font-semibold text-foreground">
+              <h2 class="text-foreground font-mono text-sm font-semibold">
                 {icon.name}
               </h2>
-              <p class="mt-1 break-all text-[11px] text-foreground-alt">
+              <p class="text-foreground-alt mt-1 text-[11px] break-all">
                 {icon.importPath}
               </p>
             </div>
             <div class="flex flex-col items-end gap-2">
               <span
-                class="rounded-full border border-base-300 bg-base-100 px-2 py-1 text-xs text-foreground-alt"
+                class="border-base-300 bg-base-100 text-foreground-alt rounded-full border px-2 py-1 text-xs"
               >
                 {icon.usageCount}
                 import{icon.usageCount === 1 ? '' : 's'}
               </span>
               <span
-                class="rounded-full border border-base-300 bg-base-100 px-2 py-1 text-xs text-foreground-alt"
+                class="border-base-300 bg-base-100 text-foreground-alt rounded-full border px-2 py-1 text-xs"
               >
                 {icon.fileCount}
                 file{icon.fileCount === 1 ? '' : 's'}
@@ -87,7 +87,7 @@ async function copyMapping(): Promise<void> {
           </div>
 
           <div
-            class="flex h-28 items-center justify-center rounded-xl border border-dashed border-success/30 bg-base-100 text-success"
+            class="border-success/30 bg-base-100 text-success flex h-28 items-center justify-center rounded-xl border border-dashed"
           >
             <svg
               class="h-16 w-16"
@@ -104,16 +104,16 @@ async function copyMapping(): Promise<void> {
             </svg>
           </div>
 
-          <div class="space-y-2 rounded-xl border border-base-300 bg-base-100 p-3">
+          <div class="border-base-300 bg-base-100 space-y-2 rounded-xl border p-3">
             <p
-              class="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-alt"
+              class="text-foreground-alt text-[11px] font-semibold tracking-[0.18em] uppercase"
             >
               Local Names
             </p>
             <div class="flex flex-wrap gap-2">
               {#each icon.localNames as localName}
                 <span
-                  class="rounded-full border border-base-300 bg-base-50 px-2 py-1 font-mono text-[11px] text-foreground-alt"
+                  class="border-base-300 bg-base-50 text-foreground-alt rounded-full border px-2 py-1 font-mono text-[11px]"
                 >
                   {localName}
                 </span>

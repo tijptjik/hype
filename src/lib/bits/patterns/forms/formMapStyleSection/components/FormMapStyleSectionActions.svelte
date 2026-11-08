@@ -28,7 +28,7 @@ let {
       iconComponent={isAdding ? XIcon : ReplaceIcon}
       onClick={() => onToggleAdding()}
       disabled={!isEditing || isSubmitting}
-      class="bits-form__parent-resource-replace-btn whitespace-nowrap h-10"
+      class="bits-form__parent-resource-replace-btn h-10 whitespace-nowrap"
     />
   </div>
 {/if}

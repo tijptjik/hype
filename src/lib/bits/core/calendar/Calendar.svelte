@@ -40,30 +40,27 @@ const parsed = $derived.by(() => {
   weekdayFormat="short"
   fixedWeeks
   preventDeselect
-  class="w-72 p-3 text-foreground"
+  class="text-foreground w-72 p-3"
 >
-  {#snippet children({
-    months,
-    weekdays,
-  })}
+  {#snippet children({ months, weekdays })}
     <Calendar.Header class="mb-3 flex items-center gap-2">
       <Calendar.PrevButton
         aria-label="Previous month"
-        class="flex size-8 items-center justify-center rounded hover:bg-primary/10 disabled:opacity-30"
+        class="hover:bg-primary/10 flex size-8 items-center justify-center rounded disabled:opacity-30"
         ><ChevronLeft class="size-4" /></Calendar.PrevButton
       >
       <Calendar.MonthSelect
         aria-label="Month"
-        class="min-w-0 flex-1 rounded border border-border bg-panel p-1 text-sm"
+        class="border-border bg-panel min-w-0 flex-1 rounded border p-1 text-sm"
       />
       <Calendar.YearSelect
         {years}
         aria-label="Year"
-        class="rounded border border-border bg-panel p-1 text-sm"
+        class="border-border bg-panel rounded border p-1 text-sm"
       />
       <Calendar.NextButton
         aria-label="Next month"
-        class="flex size-8 items-center justify-center rounded hover:bg-primary/10 disabled:opacity-30"
+        class="hover:bg-primary/10 flex size-8 items-center justify-center rounded disabled:opacity-30"
         ><ChevronRight class="size-4" /></Calendar.NextButton
       >
     </Calendar.Header>
@@ -73,7 +70,7 @@ const parsed = $derived.by(() => {
           ><Calendar.GridRow
             >{#each weekdays as weekday}
               <Calendar.HeadCell
-                class="h-8 text-center text-xs font-normal text-muted-foreground"
+                class="text-muted-foreground h-8 text-center text-xs font-normal"
                 >{weekday.slice(0, 2)}</Calendar.HeadCell
               >
             {/each}</Calendar.GridRow
@@ -85,7 +82,7 @@ const parsed = $derived.by(() => {
               {#each week as date}
                 <Calendar.Cell {date} month={month.value} class="p-0 text-center">
                   <Calendar.Day
-                    class="flex size-9 items-center justify-center rounded text-sm hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary data-selected:bg-primary data-selected:text-primary-foreground data-today:ring-1 data-today:ring-primary/50 data-outside-month:opacity-30 data-disabled:pointer-events-none data-disabled:opacity-20"
+                    class="hover:bg-primary/10 focus-visible:outline-primary data-selected:bg-primary data-selected:text-primary-foreground data-today:ring-primary/50 flex size-9 items-center justify-center rounded text-sm focus-visible:outline-2 data-disabled:pointer-events-none data-disabled:opacity-20 data-outside-month:opacity-30 data-today:ring-1"
                     >{date.day}</Calendar.Day
                   >
                 </Calendar.Cell>

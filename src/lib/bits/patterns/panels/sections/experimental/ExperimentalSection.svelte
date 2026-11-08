@@ -47,10 +47,10 @@ const toggleExperimental = (...args: Parameters<typeof model.toggleExperimental>
   <div class="flex min-w-0 flex-col gap-4 px-6 pt-2 pb-6">
     {#each featuresConfig as feature}
       <div class="flex w-full flex-row items-start justify-between gap-3 py-2">
-        <div class="min-w-0 grow flex flex-col gap-0.5">
-          <p class="font-normal text-base-content">{feature.name}</p>
+        <div class="flex min-w-0 grow flex-col gap-0.5">
+          <p class="text-base-content font-normal">{feature.name}</p>
           {#if feature.description}
-            <p class="text-sm text-muted-foreground">{feature.description}</p>
+            <p class="text-muted-foreground text-sm">{feature.description}</p>
           {/if}
         </div>
         <Switch

@@ -83,7 +83,7 @@ function open(): void {
   }}
 >
   <div class="flex min-w-0 flex-1 items-center gap-4 px-4">
-    <LocationIcon kind={entity.kind} class="size-7 shrink-0 text-muted-foreground" />
+    <LocationIcon kind={entity.kind} class="text-muted-foreground size-7 shrink-0" />
     <div class="min-w-0 flex-1">
       <a
         {href}
@@ -92,12 +92,12 @@ function open(): void {
         onclick={event => event.stopPropagation()}
         >{name}</a
       >
-      <p class="truncate text-sm text-muted-foreground" data-tooltip={description}>
+      <p class="text-muted-foreground truncate text-sm" data-tooltip={description}>
         {description}
       </p>
     </div>
     <div
-      class="hidden min-w-0 max-w-48 flex-col text-right text-xs text-muted-foreground @min-[800px]/grid:flex"
+      class="text-muted-foreground hidden max-w-48 min-w-0 flex-col text-right text-xs @min-[800px]/grid:flex"
       data-tooltip={owner ?? state}
     >
       <span class="truncate">{owner || state}</span>
@@ -107,7 +107,7 @@ function open(): void {
     </div>
     <div class="flex shrink-0 flex-col items-end gap-1 text-xs">
       <span>{locationKindLabel(entity.kind)}</span>
-      <span class="rounded-full bg-muted px-2 py-0.5 text-muted-foreground"
+      <span class="bg-muted text-muted-foreground rounded-full px-2 py-0.5"
         >{lifecycleLabel(lifecycleStatus(entity.facts))}</span
       >
     </div>

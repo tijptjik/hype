@@ -80,8 +80,7 @@ $effect(() => {
       message = ''
     }
     void load()
-      .then(() => {
-      })
+      .then(() => {})
       .catch(cause => {
         if (featureId === requestedId)
           message =
@@ -91,10 +90,7 @@ $effect(() => {
 })
 </script>
 
-<section
-  class="w-full min-w-0 space-y-4 pb-12"
-  aria-label="Feature revisions"
->
+<section class="w-full min-w-0 space-y-4 pb-12" aria-label="Feature revisions">
   <FormSurface class="mb-0!">
     <SectionHeader>
       {#snippet left()}

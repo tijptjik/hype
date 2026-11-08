@@ -36,7 +36,7 @@ function getGroupLabel(): string {
 </script>
 
 <div
-  class="flex h-10 flex-row items-center justify-between gap-2 rounded-2xl bg-transparent px-3  @container"
+  class="@container flex h-10 flex-row items-center justify-between gap-2 rounded-2xl bg-transparent px-3"
 >
   <button
     type="button"
@@ -45,19 +45,19 @@ function getGroupLabel(): string {
     onclick={() => onToggle?.()}
   >
     <div
-      class="rotate-90 text-base-content transition-transform duration-200"
+      class="text-base-content rotate-90 transition-transform duration-200"
       class:rotate-0={isCollapsed}
       aria-hidden="true"
     >
       <Icon src={ChevronRightIcon} size="md" strokeWidth={3.5} class="h-5 w-5" />
     </div>
-    <h3 class="flex-shrink-1 text-xl font-bold uppercase text-base-content">
+    <h3 class="text-base-content flex-shrink-1 text-xl font-bold uppercase">
       {getGroupLabel()}
     </h3>
   </button>
 
   <small
-    class="hidden select-text pr-3 text-sm capitalize text-base-content/50 @sm:block"
+    class="text-base-content/50 hidden pr-3 text-sm capitalize select-text @sm:block"
   >
     {entityCount} {entityCount === 1 ? 'Task' : 'Tasks'}
   </small>

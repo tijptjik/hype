@@ -22,10 +22,10 @@ let { errors, onEdit, onSkip }: Props = $props()
       </p>
       <ul class="mb-4 list-inside list-disc space-y-2">
         {#each errors as error}
-          <li class="text-sm text-base-content/70">{error}</li>
+          <li class="text-base-content/70 text-sm">{error}</li>
         {/each}
       </ul>
-      <p class="text-sm text-base-content/70">
+      <p class="text-base-content/70 text-sm">
         {m.feature_import__empty_columns_prompt()}
       </p>
     </div>

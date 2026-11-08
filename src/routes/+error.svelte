@@ -13,7 +13,7 @@ import { m } from '#lib/i18n.js'
   <a
     draggable="false"
     href="/"
-    class="text-s btn btn-neutral btn-sm mt-4 select-none font-light"
+    class="text-s btn btn-neutral btn-sm mt-4 font-light select-none"
   >
     {m.http_404__go_home()}
   </a>

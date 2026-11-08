@@ -16,11 +16,11 @@ let {
 </script>
 
 <label
-  class="mx-3 mb-2 flex shrink-0 items-center gap-2 overflow-hidden rounded-xl border border-border bg-surface px-3 text-muted-foreground focus-within:border-focus"
+  class="border-border bg-surface text-muted-foreground focus-within:border-focus mx-3 mb-2 flex shrink-0 items-center gap-2 overflow-hidden rounded-xl border px-3"
 >
   <Search class="size-4 shrink-0" aria-hidden="true" />
   <input
-    class="focus-override h-10 min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
+    class="focus-override text-base-content h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
     type="search"
     autocomplete="off"
     aria-label={label}

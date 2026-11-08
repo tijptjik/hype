@@ -90,7 +90,7 @@ $effect(() => {
   onclick={event => {
     if (event.target === dialog && !enlarged) model.close()
   }}
-  class="fixed inset-0 z-50 m-auto max-h-[85dvh] w-[min(44rem,calc(100vw-1.5rem))] max-w-none overflow-hidden rounded-xl border border-border bg-panel p-0 text-base-content shadow-xl backdrop:bg-black/50"
+  class="border-border bg-panel text-base-content fixed inset-0 z-50 m-auto max-h-[85dvh] w-[min(44rem,calc(100vw-1.5rem))] max-w-none overflow-hidden rounded-xl border p-0 shadow-xl backdrop:bg-black/50"
 >
   <div
     inert={Boolean(enlarged)}
@@ -101,7 +101,7 @@ $effect(() => {
         <button
           type="button"
           aria-pressed={model.kind === 'gif'}
-          class="rounded-lg px-3 py-2 text-sm aria-pressed:bg-primary aria-pressed:text-primary-content"
+          class="aria-pressed:bg-primary aria-pressed:text-primary-content rounded-lg px-3 py-2 text-sm"
           onclick={() => model.show('gif')}
         >
           GIFs
@@ -109,7 +109,7 @@ $effect(() => {
         <button
           type="button"
           aria-pressed={model.kind === 'sticker'}
-          class="rounded-lg px-3 py-2 text-sm aria-pressed:bg-primary aria-pressed:text-primary-content"
+          class="aria-pressed:bg-primary aria-pressed:text-primary-content rounded-lg px-3 py-2 text-sm"
           onclick={() => model.show('sticker')}
         >
           Stickers
@@ -129,7 +129,7 @@ $effect(() => {
     </div>
     {#if model.kind === 'sticker' && model.packs.length}
       <fieldset
-        class="flex w-full min-w-0 shrink-0 gap-2 overflow-x-auto overscroll-x-contain pb-2 pt-1"
+        class="flex w-full min-w-0 shrink-0 gap-2 overflow-x-auto overscroll-x-contain pt-1 pb-2"
         aria-label="Sticker packs"
         onwheel={event => {
           const row = event.currentTarget
@@ -146,7 +146,7 @@ $effect(() => {
       >
         <button
           type="button"
-          class="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs aria-pressed:bg-raised"
+          class="border-border aria-pressed:bg-raised shrink-0 rounded-full border px-3 py-1.5 text-xs"
           aria-pressed={!model.pack}
           onclick={() => model.choosePack('')}
         >
@@ -155,7 +155,7 @@ $effect(() => {
         {#each model.packs as pack (pack.id)}
           <button
             type="button"
-            class="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs aria-pressed:bg-primary aria-pressed:text-primary-content"
+            class="border-border aria-pressed:bg-primary aria-pressed:text-primary-content shrink-0 rounded-full border px-3 py-1.5 text-xs"
             aria-pressed={model.pack === pack.id}
             onclick={() => model.choosePack(pack.id)}
           >
@@ -174,7 +174,7 @@ $effect(() => {
         value={model.query}
         maxlength="200"
         placeholder={model.kind === 'gif' ? 'Search GIFs…' : 'Try a word or emoji…'}
-        class="w-full rounded-lg border border-border bg-surface px-3 py-2 outline-offset-2 focus-visible:outline-primary"
+        class="border-border bg-surface focus-visible:outline-primary w-full rounded-lg border px-3 py-2 outline-offset-2"
         oninput={event => model.search(event.currentTarget.value)}
         onkeydown={event => {
           if (event.key === 'Enter') event.preventDefault()
@@ -187,7 +187,7 @@ $effect(() => {
       aria-busy={model.loading}
     >
       {#if !model.query && !model.pack}
-        <p class="mb-3 text-xs text-muted-foreground">
+        <p class="text-muted-foreground mb-3 text-xs">
           {model.kind === 'gif'
             ? 'Saved GIFs · Search for more'
             : 'Recent stickers · Search for more'}
@@ -218,7 +218,7 @@ $effect(() => {
           <Button text="Retry search" style="soft" onClick={() => void model.retry()} />
         </div>
       {:else if !model.items.length}
-        <p role="status" class="py-6 text-center text-sm text-muted-foreground">
+        <p role="status" class="text-muted-foreground py-6 text-center text-sm">
           {model.query
             ? 'No results. Try another word or emoji.'
             : 'Search to find something to share.'}
@@ -249,7 +249,7 @@ $effect(() => {
     {/if}
     <p class="sr-only">Select a result to send it instantly.</p>
     <div
-      class="flex shrink-0 items-center justify-between gap-2 border-t border-border pt-2 text-xs text-muted-foreground"
+      class="border-border text-muted-foreground flex shrink-0 items-center justify-between gap-2 border-t pt-2 text-xs"
     >
       {#if model.kind === 'sticker'}
         <Button
@@ -297,13 +297,13 @@ $effect(() => {
   {#if enlarged}
     <section
       aria-label="Media preview"
-      class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-panel/95 p-6 backdrop-blur-sm"
+      class="bg-panel/95 absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 p-6 backdrop-blur-sm"
     >
       <button
         type="button"
         aria-label="Close preview"
         bind:this={closePreviewButton}
-        class="absolute right-3 top-3 rounded-full p-2 hover:bg-raised focus-visible:outline-2 focus-visible:outline-primary"
+        class="hover:bg-raised focus-visible:outline-primary absolute top-3 right-3 rounded-full p-2 focus-visible:outline-2"
         onclick={() => void changePreview(null)}
       >
         <XIcon class="size-5" />
@@ -322,7 +322,7 @@ $effect(() => {
           <MediaSkeleton />
         {/if}
       </div>
-      <p class="max-w-full break-words text-center text-sm">{enlarged.title}</p>
+      <p class="max-w-full text-center text-sm break-words">{enlarged.title}</p>
     </section>
   {/if}
 </dialog>

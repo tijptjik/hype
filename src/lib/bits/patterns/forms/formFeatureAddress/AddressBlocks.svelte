@@ -97,16 +97,16 @@ $effect(() => {
   >
     {#if before}
       <span></span
-      ><span class="font-medium text-muted-foreground"
+      ><span class="text-muted-foreground font-medium"
         >{m.location_review_before()}</span
-      ><span class="font-medium text-warning">{m.location_review_candidate()}</span>
+      ><span class="text-warning font-medium">{m.location_review_candidate()}</span>
     {/if}
     {#each visible as key (key)}
-      <div class="border-t border-border pt-3 font-medium text-muted-foreground">
+      <div class="border-border text-muted-foreground border-t pt-3 font-medium">
         {labels[key]}
       </div>
       {#if previous}
-        <div class="min-w-0 break-words border-t border-border pt-3">
+        <div class="border-border min-w-0 border-t pt-3 break-words">
           {previous[key] || '—'}
         </div>
       {/if}
@@ -121,21 +121,21 @@ $effect(() => {
     {/each}
   </div>
   {#if !visible.length && !loading}
-    <p class="text-sm text-muted-foreground">
+    <p class="text-muted-foreground text-sm">
       {before ? m.address_blocks_unchanged() : m.address_blocks_empty()}
     </p>
   {/if}
   {#if loading}
-    <p class="text-xs text-muted-foreground">{m.feature_location_loading()}</p>
+    <p class="text-muted-foreground text-xs">{m.feature_location_loading()}</p>
   {/if}
   {#if failed}
-    <p class="text-xs text-muted-foreground" role="status">
+    <p class="text-muted-foreground text-xs" role="status">
       {m.address_blocks_divisions_unavailable()}
     </p>
   {/if}
   <button
     type="button"
-    class="text-sm text-primary hover:underline"
+    class="text-primary text-sm hover:underline"
     aria-expanded={expanded}
     onclick={() => (expanded = !expanded)}
   >

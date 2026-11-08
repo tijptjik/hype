@@ -16,20 +16,20 @@ type Props = {
 let { results }: Props = $props()
 </script>
 
-<div class="space-y-2 pt">
+<div class="pt space-y-2">
   {#each results as result}
     <ImportRow contentClass="p-3">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           {#if result.isValid}
-            <Icon src={CheckCircle} class="h-5 w-5 text-success" />
+            <Icon src={CheckCircle} class="text-success h-5 w-5" />
           {:else}
-            <Icon src={XCircle} class="h-5 w-5 text-error" />
+            <Icon src={XCircle} class="text-error h-5 w-5" />
           {/if}
           <div>
             <div class="font-medium">{result.value}</div>
             {#if result.error}
-              <div class="text-sm text-error">{result.error}</div>
+              <div class="text-error text-sm">{result.error}</div>
             {/if}
           </div>
         </div>

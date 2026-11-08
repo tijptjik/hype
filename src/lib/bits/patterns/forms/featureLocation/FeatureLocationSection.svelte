@@ -581,7 +581,6 @@ async function nearby(mode: 'nearby' | 'matches'): Promise<void> {
   }
 }
 
-
 /** Start creation only after source matching, retaining the selected address proposal.
  * @returns Nothing; creation still requires an explicit sharing choice.
  */
@@ -686,10 +685,10 @@ async function link(): Promise<void> {
 {#snippet locationWidget()}
   <div class="flex min-w-0 flex-1 items-center gap-2" data-location-widget>
     {#await accepted}
-      <span class="text-sm text-muted-foreground">{m.feature_location_loading()}</span>
+      <span class="text-muted-foreground text-sm">{m.feature_location_loading()}</span>
     {:then association}
       {#if creating}
-        <LocationIcon class="size-6 shrink-0 text-primary" aria-hidden="true" />
+        <LocationIcon class="text-primary size-6 shrink-0" aria-hidden="true" />
         <span class="text-sm font-semibold">{m.feature_location_create()}</span>
       {:else if isEditing && (!association || replacementRevision)}
         {#if replacementRevision}
@@ -706,11 +705,11 @@ async function link(): Promise<void> {
           />
         {/if}
       {:else}
-        <span class="relative shrink-0 text-primary" aria-hidden="true"
+        <span class="text-primary relative shrink-0" aria-hidden="true"
           ><LocationIcon class="size-6" />
           {#if !association}
             <span
-              class="absolute left-0 top-1/2 h-0.5 w-7 -rotate-45 bg-current"
+              class="absolute top-1/2 left-0 h-0.5 w-7 -rotate-45 bg-current"
             ></span>
           {/if}</span
         >
@@ -718,7 +717,7 @@ async function link(): Promise<void> {
           {#if association}
             <a
               href={`/admin/locations/${encodeURIComponent(association.locationId)}`}
-              class="block truncate text-sm font-semibold text-primary"
+              class="text-primary block truncate text-sm font-semibold"
               >{association.effective.names[localeTag] ||
                 Object.values(association.effective.names).find(Boolean)}</a
             >
@@ -742,7 +741,7 @@ async function link(): Promise<void> {
         {/if}
       {/if}
     {:catch}
-      <span role="alert" class="text-sm text-error">{m.feature_location_failed()}</span>
+      <span role="alert" class="text-error text-sm">{m.feature_location_failed()}</span>
     {/await}
   </div>
 {/snippet}
@@ -756,7 +755,7 @@ async function link(): Promise<void> {
         attrs={{ 'data-tooltip': m.location_find_nearby() }}
         size="sm"
         style="outline"
-        class="min-h-11 shrink-0 rounded-lg border-border bg-panel px-3 text-sm font-normal text-foreground"
+        class="border-border bg-panel text-foreground min-h-11 shrink-0 rounded-lg px-3 text-sm font-normal"
         disabled={busy || !radiusValid || !discoveryTypes.length}
         onClick={() => nearby('nearby')}
       />
@@ -775,7 +774,7 @@ async function link(): Promise<void> {
         attrs={{ 'data-tooltip': m.feature_location_find() }}
         size="sm"
         style="outline"
-        class="min-h-11 shrink-0 rounded-lg border-border bg-panel px-3 text-sm font-normal text-foreground"
+        class="border-border bg-panel text-foreground min-h-11 shrink-0 rounded-lg px-3 text-sm font-normal"
         disabled={busy}
         onClick={() => {
           discoveryMode = 'text'
@@ -796,7 +795,7 @@ async function link(): Promise<void> {
             attrs={{ 'data-tooltip': m.feature_location_create() }}
             size="sm"
             style="outline"
-            class="min-h-11 shrink-0 rounded-lg border-border bg-panel px-3 text-sm font-normal text-foreground"
+            class="border-border bg-panel text-foreground min-h-11 shrink-0 rounded-lg px-3 text-sm font-normal"
             disabled={busy || !radiusValid}
             onClick={startCreate}
           />
@@ -808,7 +807,7 @@ async function link(): Promise<void> {
 {#snippet locationMapControls()}
   {#if isEditing && (!accepted.current || replacementRevision)}
     <label
-      class="flex w-52 flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-panel px-3 py-2 text-sm text-foreground shadow-sm"
+      class="border-border bg-panel text-foreground flex w-52 flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm"
     >
       {m.feature_location_radius()}
       <output class="tabular-nums">{radius} m</output>
@@ -823,7 +822,7 @@ async function link(): Promise<void> {
         }}
         disabled={busy}
         aria-label={m.feature_location_radius()}
-        class="h-4 w-full cursor-pointer accent-primary"
+        class="accent-primary h-4 w-full cursor-pointer"
       >
     </label>
   {/if}
@@ -831,17 +830,17 @@ async function link(): Promise<void> {
 {#snippet locationNotices()}
   {#if isEditing && (!accepted.current || replacementRevision)}
     {#if !radiusValid}
-      <p role="alert" class="text-sm text-error">
+      <p role="alert" class="text-error text-sm">
         {m.feature_location_radius_help()}
       </p>
     {/if}
     {#if searchFailed}
-      <p role="alert" class="text-sm text-muted-foreground">
+      <p role="alert" class="text-muted-foreground text-sm">
         {m.feature_location_search_partial()}
       </p>
     {/if}
     {#if limited}
-      <p role="status" class="text-sm text-muted-foreground">
+      <p role="status" class="text-muted-foreground text-sm">
         {m.feature_location_discovery_limited()}
       </p>
     {/if}
@@ -856,16 +855,16 @@ async function link(): Promise<void> {
     failed ||
     searchFailed ||
     accepted.current}
-    <section class="border-b border-border/60" aria-label={m.feature_location_title()}>
+    <section class="border-border/60 border-b" aria-label={m.feature_location_title()}>
       <div class="space-y-4 px-6 py-5">
         {@render locationNotices()}
         {#if addressStaged}
-          <p role="status" class="text-sm text-muted-foreground">
+          <p role="status" class="text-muted-foreground text-sm">
             {m.feature_location_address_staged()}
           </p>
         {/if}
         {#await accepted}
-          <p class="text-sm text-muted-foreground" role="status">
+          <p class="text-muted-foreground text-sm" role="status">
             {m.feature_location_loading()}
           </p>
         {:then association}
@@ -902,7 +901,7 @@ async function link(): Promise<void> {
                 />
               </FormDisclosureGroup>
             {:else if association.effective.brands?.length}
-              <p class="text-sm text-muted-foreground">
+              <p class="text-muted-foreground text-sm">
                 {association.effective.brands
                   .map(brand => Object.values(brand.names).find(Boolean))
                   .join(' · ')}
@@ -917,7 +916,7 @@ async function link(): Promise<void> {
                   placeholder={m.feature_location_look_for()}
                   bind:value={query}
                   disabled={busy}
-                  class="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-panel px-3 text-sm"
+                  class="border-border bg-panel min-h-11 min-w-0 flex-1 rounded-lg border px-3 text-sm"
                   onkeydown={event => {
                     if (event.key === 'Enter') {
                       event.preventDefault()
@@ -935,7 +934,7 @@ async function link(): Promise<void> {
               </div>
             {/if}
             {#if chosenAddress && !creating}
-              <p class="text-sm text-muted-foreground">
+              <p class="text-muted-foreground text-sm">
                 {m.feature_location_selected_address()}:
                 {getAddressDisplay(chosenAddress, getLocaleKey())}
               </p>
@@ -948,7 +947,7 @@ async function link(): Promise<void> {
               />
             {/if}
             {#if discoveryMode === 'matches' && !creating}
-              <p class="text-sm text-muted-foreground">
+              <p class="text-muted-foreground text-sm">
                 {m.feature_location_match_help()}
               </p>
               {#if matchChecked && !busy}
@@ -972,7 +971,7 @@ async function link(): Promise<void> {
             {/if}
             {#if busy}
               <div class="flex items-center gap-3">
-                <p role="status" class="text-sm text-muted-foreground">
+                <p role="status" class="text-muted-foreground text-sm">
                   {m.feature_location_loading()}
                 </p>
                 <Button
@@ -1010,7 +1009,7 @@ async function link(): Promise<void> {
                       >
                       <span class="min-w-0 flex-1">
                         <span
-                          class="mb-1 flex items-center gap-1 text-xs text-muted-foreground"
+                          class="text-muted-foreground mb-1 flex items-center gap-1 text-xs"
                         >
                           {#if row.kind === 'address'}
                             <AddressIcon class="size-3.5" aria-hidden="true" />
@@ -1026,20 +1025,20 @@ async function link(): Promise<void> {
                           >{row.address
                             ? getAddressDisplay(row.address, getLocaleKey())
                             : locationName(row.facts, localeTag)}</span
-                        ><span class="mt-1 block text-sm text-muted-foreground"
+                        ><span class="text-muted-foreground mt-1 block text-sm"
                           >{(row.address
                             ? m.feature_location_address_result()
                             : addressDisplay(row.facts)) ||
                             m.feature_location_address_missing()}</span
                         >
                         {#if row.evidence.addressAgreement >= 0.2}
-                          <span class="mt-1 block text-xs text-primary"
+                          <span class="text-primary mt-1 block text-xs"
                             >{m.feature_location_address_agrees()}</span
                           >
                         {/if}
                       </span>
                       <span
-                        class="shrink-0 text-sm tabular-nums text-muted-foreground"
+                        class="text-muted-foreground shrink-0 text-sm tabular-nums"
                         data-tooltip={m.feature_location_distance_direct()}
                         >{Math.round(
                           locationDistance(
@@ -1054,30 +1053,30 @@ async function link(): Promise<void> {
                 {/each}
               </ol>
             {:else if !busy && results && !searchFailed && !creating}
-              <p class="text-sm text-muted-foreground">
+              <p class="text-muted-foreground text-sm">
                 {m.feature_location_no_results()}
               </p>
             {/if}
             {#if selected?.status === 'source-import-needed'}
-              <p role="status" class="text-sm text-muted-foreground">
+              <p role="status" class="text-muted-foreground text-sm">
                 {m.feature_location_import_needed()}
               </p>
             {:else if selected?.status === 'ready'}
-              <div class="space-y-3 rounded-xl border border-border bg-panel p-4">
+              <div class="border-border bg-panel space-y-3 rounded-xl border p-4">
                 <p class="font-medium">
                   {Object.values(selected.facts.names).join(' · ')}
                 </p>
                 <p class="text-sm">
                   {addressDisplay(selected.facts)}
                 </p>
-                <p class="text-sm text-muted-foreground">
+                <p class="text-muted-foreground text-sm">
                   {selected.facts.location.geometry.coordinates.join(', ')}
                 </p>
-                <p class="text-sm text-muted-foreground">
+                <p class="text-muted-foreground text-sm">
                   {m.feature_location_preserve()}
                 </p>
                 {#if isDirty}
-                  <p class="text-sm text-muted-foreground">
+                  <p class="text-muted-foreground text-sm">
                     {m.feature_location_save_first()}
                   </p>
                 {/if}
@@ -1092,7 +1091,7 @@ async function link(): Promise<void> {
               </div>
             {/if}
             {#if isDirty && selected?.status !== 'ready'}
-              <p class="text-sm text-muted-foreground">
+              <p class="text-muted-foreground text-sm">
                 {m.feature_location_save_first()}
               </p>
             {/if}
@@ -1121,7 +1120,7 @@ async function link(): Promise<void> {
             {/if}
           {/if}
         {:catch}
-          <p role="alert" class="text-sm text-destructive">
+          <p role="alert" class="text-destructive text-sm">
             {m.feature_location_failed()}
           </p>
         {/await}
@@ -1156,7 +1155,7 @@ async function link(): Promise<void> {
           </FormDisclosureGroup>
         {/if}
         {#if failed}
-          <p role="alert" class="text-sm text-destructive">
+          <p role="alert" class="text-destructive text-sm">
             {m.feature_location_failed()}
           </p>
         {/if}

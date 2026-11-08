@@ -5,12 +5,12 @@ import { Separator } from '#lib/bits/index.js'
 
 <main class="h-full overflow-y-auto p-6">
   <section
-    class="bits-theme space-y-8 rounded-xl border border-base-300 bg-base-100 p-6"
+    class="bits-theme border-base-300 bg-base-100 space-y-8 rounded-xl border p-6"
   >
-    <h1 class="text-xl font-semibold text-foreground">Bits Separator Variations</h1>
+    <h1 class="text-foreground text-xl font-semibold">Bits Separator Variations</h1>
 
     <div class="space-y-1">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Default
       </h2>
       <div class="space-y-1">
@@ -28,7 +28,7 @@ import { Separator } from '#lib/bits/index.js'
     </div>
 
     <div class="space-y-1">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Dot
       </h2>
       <div class="flex items-center text-sm">
@@ -41,7 +41,7 @@ import { Separator } from '#lib/bits/index.js'
     </div>
 
     <div class="space-y-1">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Dot Vertical
       </h2>
       <div class="flex w-56 flex-col items-center text-sm">
@@ -54,10 +54,10 @@ import { Separator } from '#lib/bits/index.js'
     </div>
 
     <div class="space-y-1">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+      <h2 class="text-foreground-alt text-sm font-semibold tracking-wide uppercase">
         Vertical Aligned
       </h2>
-      <div class="w-56 rounded-lg border border-base-300/70 p-3">
+      <div class="border-base-300/70 w-56 rounded-lg border p-3">
         <div class="flex flex-col text-sm">
           <div class="py-1">Dashboard</div>
           <Separator />

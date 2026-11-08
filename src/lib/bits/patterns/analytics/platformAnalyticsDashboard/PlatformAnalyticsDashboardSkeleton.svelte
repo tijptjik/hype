@@ -37,7 +37,7 @@ const gridClass = 'grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3'
         <Card.SkeletonBlock class="h-4 w-40 rounded-full motion-safe:animate-pulse" />
       </div>
       {#if facet !== 'data'}
-        <div class="flex items-center gap-3 text-sm text-foreground">
+        <div class="text-foreground flex items-center gap-3 text-sm">
           Hostname
           <Card.SkeletonBlock class="h-10 w-40 rounded-lg motion-safe:animate-pulse" />
         </div>
@@ -51,7 +51,7 @@ const gridClass = 'grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3'
       leftLabel="Trend"
       rightLabel="Last 30 days"
     />
-    <div class="mt-5 rounded-[1.4rem] border border-foreground/10 bg-surface p-4 pt-8">
+    <div class="border-foreground/10 bg-surface mt-5 rounded-[1.4rem] border p-4 pt-8">
       <Card.SkeletonBlock
         class="h-64 w-full rounded-[1rem] motion-safe:animate-pulse"
       />
@@ -67,7 +67,7 @@ const gridClass = 'grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3'
           <div class="grid grid-cols-2 gap-3">
             {#each Array.from({ length: presentation.metricCount }) as _}
               <article
-                class="space-y-3 rounded-[1.2rem] border border-border bg-surface px-3 py-3"
+                class="border-border bg-surface space-y-3 rounded-[1.2rem] border px-3 py-3"
               >
                 <Card.SkeletonBlock
                   class="h-3 w-20 max-w-full rounded-full motion-safe:animate-pulse"
@@ -95,12 +95,12 @@ const gridClass = 'grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3'
         <div class={gridClass}>
           {#each DEFAULT_VISIBLE_WINDOWS as window}
             <section
-              class="min-w-0 space-y-4 rounded-[1.25rem] border border-border bg-surface p-4"
+              class="border-border bg-surface min-w-0 space-y-4 rounded-[1.25rem] border p-4"
             >
               <Card.SectionHeader {title} />
               {#each Array.from({ length: 5 }) as _}
                 <div
-                  class="grid grid-cols-[minmax(0,1fr)_3rem_2rem] gap-3 border-t border-border pt-3"
+                  class="border-border grid grid-cols-[minmax(0,1fr)_3rem_2rem] gap-3 border-t pt-3"
                 >
                   <Card.SkeletonBlock
                     class="h-4 w-full max-w-40 rounded-full motion-safe:animate-pulse"

@@ -31,10 +31,10 @@ function handleCommit(): void {
 </script>
 
 <div
-  class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
+  class="border-foreground/10 bg-foreground/[0.055] grid min-h-[4.35rem] gap-3 rounded-2xl border p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
 >
   <div
-    class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
+    class="text-base-content/50 font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
   >
     {label}
   </div>
@@ -42,13 +42,13 @@ function handleCommit(): void {
     <div class="flex items-center gap-2">
       {#if localePrefix}
         <span
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-warning"
+          class="text-warning font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {localePrefix}
         </span>
       {/if}
       <input
-        class="input input-bordered w-full bg-panel/30 px-3 py-2 font-mono text-sm"
+        class="input input-bordered bg-panel/30 w-full px-3 py-2 font-mono text-sm"
         {value}
         oninput={event => onInput(event.currentTarget.value)}
         onblur={handleCommit}
@@ -63,13 +63,13 @@ function handleCommit(): void {
     <div class="flex min-w-0 items-center gap-2">
       {#if localePrefix}
         <span
-          class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-warning"
+          class="text-warning font-mono text-[11px] font-semibold tracking-[0.18em] uppercase"
         >
           {localePrefix}
         </span>
       {/if}
       <span
-        class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm text-base-content/85"
+        class="text-base-content/85 min-w-0 overflow-hidden font-mono text-sm text-ellipsis whitespace-nowrap"
       >
         {value}
       </span>

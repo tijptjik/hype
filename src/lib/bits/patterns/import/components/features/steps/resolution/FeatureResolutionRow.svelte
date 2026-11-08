@@ -91,12 +91,12 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
 
 <div
   data-feature-resolution-row={index}
-  class="relative rounded-2xl border border-base-content/15 bg-panel/[0.28] p-4 shadow-[var(--shadow-mini)] transition-colors hover:border-base-content/25 hover:bg-panel/[0.36]"
+  class="border-base-content/15 bg-panel/[0.28] hover:border-base-content/25 hover:bg-panel/[0.36] relative rounded-2xl border p-4 shadow-[var(--shadow-mini)] transition-colors"
   transition:fade={{ duration: 200 }}
 >
   <button
     type="button"
-    class="absolute inset-0 z-0 cursor-pointer rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+    class="focus-visible:ring-primary/60 absolute inset-0 z-0 cursor-pointer rounded-2xl focus:outline-none focus-visible:ring-2"
     onclick={() => onShowPreview(index)}
     aria-label={m.feature_import__resolution_inspect_row({ row: index + 1 })}
   ></button>
@@ -108,12 +108,12 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
       {#if statusIcon}
         <Icon src={statusIcon} class="h-5 w-5 {getStatusColor(result.status)}" />
       {:else}
-        <div class="h-5 w-5 rounded-full bg-base-content/20"></div>
+        <div class="bg-base-content/20 h-5 w-5 rounded-full"></div>
       {/if}
 
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2 font-medium">
-          <code class="font-mono text-sm text-base-content/70">{index + 1}</code>
+          <code class="text-base-content/70 font-mono text-sm">{index + 1}</code>
           <span class="overflow-hidden text-ellipsis whitespace-nowrap"
             >{getFeatureResolutionDisplayName(result)}</span
           >
@@ -121,30 +121,30 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
             <Badge
               text="IGNORE"
               tone="neutral"
-              class="border-base-content/20 bg-base-content/8 font-mono text-base-content/55"
+              class="border-base-content/20 bg-base-content/8 text-base-content/55 font-mono"
             />
           {:else if isCreateResult}
             <Badge
               text="NEW"
               tone="success"
-              class="border-success/35 bg-success/12 font-mono text-success"
+              class="border-success/35 bg-success/12 text-success font-mono"
             />
           {:else}
             <Badge
               text="UPDATE"
               tone="neutral"
-              class="border-info/30 bg-info/12 font-mono text-info"
+              class="border-info/30 bg-info/12 text-info font-mono"
             />
           {/if}
         </div>
 
         <div class="mt-1 flex flex-wrap items-center gap-2">
           {#if result.status === 'skipped'}
-            <div class="text-sm text-base-content/50">
+            <div class="text-base-content/50 text-sm">
               {m.feature_import__resolution_skipped()}
             </div>
           {:else if result.error}
-            <div class="text-sm text-error">
+            <div class="text-error text-sm">
               {#if result.error.includes('Validation errors:')}
                 <div class="whitespace-pre-line">{result.error}</div>
               {:else}
@@ -152,21 +152,21 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
               {/if}
             </div>
           {:else if result.status === 'success'}
-            <div class="text-sm text-success">
+            <div class="text-success text-sm">
               {isCreateResult
                 ? m.feature_import__resolution_created()
                 : m.feature_import__resolution_updated()}
             </div>
           {:else if result.status === 'unchanged'}
-            <div class="text-sm text-info">
+            <div class="text-info text-sm">
               {m.feature_import__resolution_no_changes()}
             </div>
           {:else if result.status === 'processing'}
-            <div class="text-sm text-warning">
+            <div class="text-warning text-sm">
               {m.feature_import__resolution_processing()}
             </div>
           {:else}
-            <div class="text-sm text-base-content/70">
+            <div class="text-base-content/70 text-sm">
               {m.feature_import__resolution_ready()}
             </div>
           {/if}
@@ -176,11 +176,11 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
 
     <div class="pointer-events-auto flex items-center justify-end">
       <div
-        class="inline-flex overflow-hidden rounded-full border border-base-content/10 bg-base-content/[0.04]"
+        class="border-base-content/10 bg-base-content/[0.04] inline-flex overflow-hidden rounded-full border"
       >
         <button
           type="button"
-          class={`inline-flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-base-content/10 ${showPreview ? 'bg-base-content/10 text-primary' : 'text-base-content/75'}`}
+          class={`hover:bg-base-content/10 inline-flex items-center gap-2 px-3 py-2 text-sm transition-colors ${showPreview ? 'bg-base-content/10 text-primary' : 'text-base-content/75'}`}
           onclick={event => {
             event.stopPropagation()
             onShowPreview(index)
@@ -196,7 +196,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
             href="/admin/features/{currentFeatureId}"
             target="_blank"
             rel="noreferrer"
-            class="inline-flex items-center gap-2 border-l border-base-content/10 px-3 py-2 text-sm text-base-content/75 transition-colors hover:bg-base-content/10 hover:text-primary"
+            class="border-base-content/10 text-base-content/75 hover:bg-base-content/10 hover:text-primary inline-flex items-center gap-2 border-l px-3 py-2 text-sm transition-colors"
             data-tooltip={m.feature_import__resolution_see_current_title()}
             onclick={event => event.stopPropagation()}
           >
@@ -205,7 +205,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
           </a>
         {:else}
           <span
-            class="inline-flex cursor-not-allowed items-center gap-2 border-l border-base-content/10 px-3 py-2 text-sm text-base-content/30"
+            class="border-base-content/10 text-base-content/30 inline-flex cursor-not-allowed items-center gap-2 border-l px-3 py-2 text-sm"
             data-tooltip={m.feature_import__resolution_no_current_title()}
           >
             <Icon src={MapPin} class="h-4 w-4" />
@@ -231,7 +231,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
       {:else if result.status === 'skipped'}
         <button
           type="button"
-          class="btn btn-outline btn-sm min-w-24 border-success/30 text-success hover:bg-success/10"
+          class="btn btn-outline btn-sm border-success/30 text-success hover:bg-success/10 min-w-24"
           onclick={event => {
             event.stopPropagation()
             onInclude(index)

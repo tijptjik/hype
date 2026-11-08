@@ -83,11 +83,11 @@ function cancelEditing(propertyId: Id): void {
 
 {#if cardCtx.isNewMode && availableFeatureProperties.length > 0}
   <div class="space-y-3">
-    <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
+    <p class="text-muted-foreground font-mono text-[11px] tracking-[0.28em] uppercase">
       Details
     </p>
 
-    <div class="grid grid-cols-1 gap-4 w-100:grid-cols-2">
+    <div class="w-100:grid-cols-2 grid grid-cols-1 gap-4">
       {#each availableFeatureProperties as availableProperty (availableProperty.propertyId)}
         {@const property = availableProperty.property}
         {@const propertyId = availableProperty.propertyId}
@@ -96,7 +96,7 @@ function cancelEditing(propertyId: Id): void {
           {@const displayValue = getCurrentValue(propertyId, property)}
           <div class="space-y-2">
             <span
-              class="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground"
+              class="text-muted-foreground font-mono text-[11px] tracking-[0.22em] uppercase"
             >
               {getI18n(property, 'label', userPreferences)}
             </span>
@@ -117,7 +117,7 @@ function cancelEditing(propertyId: Id): void {
               />
             {:else if property.component === 'SelectField' && propertyValues.size > 0}
               <select
-                class="h-11 w-full rounded-full border border-border-input bg-base-200 px-4 text-sm text-base-content focus:border-border-input-hover focus:outline-none"
+                class="border-border-input bg-base-200 text-base-content focus:border-border-input-hover h-11 w-full rounded-full border px-4 text-sm focus:outline-none"
                 value={getClassifierValueId(appCtx, propertyId)}
                 onchange={event =>
                   handleCategoricalChange(
@@ -139,7 +139,7 @@ function cancelEditing(propertyId: Id): void {
                   <textarea
                     bind:this={textareaElements[propertyId]}
                     bind:value={currentValues[propertyId]}
-                    class="min-h-24 min-w-0 w-full rounded-[1.5rem] border border-border-input bg-base-200 px-4 py-3 text-sm leading-6 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
+                    class="border-border-input bg-base-200 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover min-h-24 w-full min-w-0 rounded-[1.5rem] border px-4 py-3 text-sm leading-6 focus:outline-none"
                     placeholder={getI18n(property, 'placeholder', userPreferences)}
                     rows="2"
                     onkeydown={event => {
@@ -154,28 +154,28 @@ function cancelEditing(propertyId: Id): void {
                   ></textarea>
                   <button
                     type="button"
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
+                    class="border-border-input bg-base-content/8 text-base-content hover:bg-base-content/12 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition"
                     onclick={() => saveValue(propertyId, property)}
                     disabled={!(currentValues[propertyId] || '').trim()}
                   >
-                    <Icon src={Check} class="h-5 w-5 text-primary" />
+                    <Icon src={Check} class="text-primary h-5 w-5" />
                   </button>
                 </div>
               {:else}
                 <button
                   type="button"
-                  class="flex min-h-24 w-full items-start justify-between gap-3 rounded-[1.5rem] border border-border-input bg-base-200 px-4 py-3 text-left transition hover:bg-base-300"
+                  class="border-border-input bg-base-200 hover:bg-base-300 flex min-h-24 w-full items-start justify-between gap-3 rounded-[1.5rem] border px-4 py-3 text-left transition"
                   onclick={() => startEditing(propertyId, property)}
                 >
                   <span
-                    class={`text-sm leading-6 ${displayValue ? 'text-muted-foreground' : 'font-semibold text-muted-foreground'}`}
+                    class={`text-sm leading-6 ${displayValue ? 'text-muted-foreground' : 'text-muted-foreground font-semibold'}`}
                   >
                     {displayValue ||
                       `Enter ${getI18n(property, 'label', userPreferences)}`}
                   </span>
                   <Icon
                     src={PencilSquare}
-                    class="mt-0.5 h-5 w-5 shrink-0 text-base-content"
+                    class="text-base-content mt-0.5 h-5 w-5 shrink-0"
                   />
                 </button>
               {/if}
@@ -186,7 +186,7 @@ function cancelEditing(propertyId: Id): void {
                     bind:this={inputElements[propertyId]}
                     bind:value={currentValues[propertyId]}
                     type="text"
-                    class="h-11 min-w-0 w-full rounded-full border border-border-input bg-base-200 px-4 text-sm text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
+                    class="border-border-input bg-base-200 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover h-11 w-full min-w-0 rounded-full border px-4 text-sm focus:outline-none"
                     placeholder={getI18n(property, 'placeholder', userPreferences)}
                     onkeydown={event => {
                       event.stopPropagation()
@@ -198,32 +198,32 @@ function cancelEditing(propertyId: Id): void {
                   >
                   <button
                     type="button"
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
+                    class="border-border-input bg-base-content/8 text-base-content hover:bg-base-content/12 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition"
                     onclick={() => saveValue(propertyId, property)}
                     disabled={!(currentValues[propertyId] || '').trim()}
                   >
-                    <Icon src={Check} class="h-5 w-5 text-primary" />
+                    <Icon src={Check} class="text-primary h-5 w-5" />
                   </button>
                 </div>
               {:else}
                 <button
                   type="button"
-                  class="flex h-11 w-full items-center justify-between gap-3 rounded-full border border-border-input bg-base-200 px-4 text-left transition hover:bg-base-300"
+                  class="border-border-input bg-base-200 hover:bg-base-300 flex h-11 w-full items-center justify-between gap-3 rounded-full border px-4 text-left transition"
                   onclick={() => startEditing(propertyId, property)}
                 >
                   <span
-                    class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm ${displayValue ? 'text-base-content' : 'font-semibold text-muted-foreground'}`}
+                    class={`!block min-w-0 flex-1 overflow-hidden text-sm text-ellipsis whitespace-nowrap ${displayValue ? 'text-base-content' : 'text-muted-foreground font-semibold'}`}
                   >
                     {displayValue ||
                       `Enter ${getI18n(property, 'label', userPreferences)}`}
                   </span>
-                  <Icon src={PencilSquare} class="h-5 w-5 shrink-0 text-base-content" />
+                  <Icon src={PencilSquare} class="text-base-content h-5 w-5 shrink-0" />
                 </button>
               {/if}
             {:else}
               <input
                 type="text"
-                class="h-11 w-full rounded-full border border-border-input bg-base-200 px-4 text-sm text-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
+                class="border-border-input bg-base-200 text-base-content placeholder:text-muted-foreground focus:border-border-input-hover h-11 w-full rounded-full border px-4 text-sm focus:outline-none"
                 value={getUniversalSpecifierValue(appCtx, propertyId)}
                 placeholder={m.key_full_raven_wish()}
                 onchange={event =>

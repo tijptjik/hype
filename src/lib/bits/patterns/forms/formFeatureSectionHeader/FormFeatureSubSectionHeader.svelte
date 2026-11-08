@@ -50,7 +50,7 @@ function handleToggleAdding(): void {
     {/if}
   </div>
 
-  <div class="flex flex-col items-center justify-center w-full min-w-0 text-center">
+  <div class="flex w-full min-w-0 flex-col items-center justify-center text-center">
     {#if shouldShowTitle}
       <h3 class="bits-feature-sub-section-header__title">{title}</h3>
       {#if subtitle}
@@ -81,7 +81,7 @@ function handleToggleAdding(): void {
         iconComponent={actionIcon}
         onClick={handleToggleAdding}
         disabled={isActionDisabled}
-        class="min-h-8 px-2 self-center"
+        class="min-h-8 self-center px-2"
       />
     {/if}
   </div>

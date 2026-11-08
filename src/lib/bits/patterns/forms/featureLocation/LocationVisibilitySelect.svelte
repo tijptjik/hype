@@ -20,7 +20,7 @@ let {
 } = $props()
 </script>
 
-<div class="bits-theme flex items-center gap-2 text-foreground">
+<div class="bits-theme text-foreground flex items-center gap-2">
   <div class="relative">
     <span
       class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
@@ -36,7 +36,14 @@ let {
       value={value ?? ''}
       {disabled}
       placeholder={m.location_visibility()}
-      triggerAttrs={{ 'data-tooltip': value === 'exclusive' ? m.location_visibility_exclusive() : value === 'shared' ? m.location_visibility_shared() : m.location_visibility() }}
+      triggerAttrs={{
+        'data-tooltip':
+          value === 'exclusive'
+            ? m.location_visibility_exclusive()
+            : value === 'shared'
+              ? m.location_visibility_shared()
+              : m.location_visibility(),
+      }}
       items={[
         { value: 'shared', label: m.location_visibility_shared() },
         { value: 'exclusive', label: m.location_visibility_exclusive() },
@@ -51,7 +58,7 @@ let {
   <!-- biome-ignore format: Keep translated punctuation adjacent to the bold labels. -->
   <SimpleTooltip triggerProps={{ 'aria-label': m.location_visibility(), role: 'button' }}>
     {#snippet trigger()}
-      <span class="inline-flex size-8 items-center justify-center text-muted-foreground"
+      <span class="text-muted-foreground inline-flex size-8 items-center justify-center"
         ><InfoIcon class="size-4" aria-label={m.location_visibility()} /></span
       >
     {/snippet}

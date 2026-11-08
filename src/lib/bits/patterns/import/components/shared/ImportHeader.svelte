@@ -27,11 +27,11 @@ const rootClass = $derived(
 <div class={rootClass}>
   <div class="flex items-start justify-between gap-4">
     <div class="min-w-0 flex-1">
-      <h2 class="text-2xl font-black leading-tight tracking-tight text-base-content">
+      <h2 class="text-base-content text-2xl leading-tight font-black tracking-tight">
         {title}
       </h2>
       {#if subtitle}
-        <p class="mt-2 max-w-4xl text-sm leading-relaxed text-base-content/75">
+        <p class="text-base-content/75 mt-2 max-w-4xl text-sm leading-relaxed">
           {subtitle}
         </p>
       {/if}
@@ -39,7 +39,7 @@ const rootClass = $derived(
 
     {#if dataLabel}
       <div
-        class="rounded-lg border border-base-content/10 bg-base-100/60 px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] text-base-content/65"
+        class="border-base-content/10 bg-base-100/60 text-base-content/65 rounded-lg border px-3 py-2 font-mono text-xs tracking-[0.18em] uppercase"
       >
         {dataLabel}
       </div>
@@ -57,9 +57,9 @@ const rootClass = $derived(
   </div>
 
   {#if normalizedProgress !== null}
-    <div class="absolute inset-x-0 bottom-0 h-px bg-base-content/10">
+    <div class="bg-base-content/10 absolute inset-x-0 bottom-0 h-px">
       <div
-        class="h-full bg-primary transition-[width] duration-200"
+        class="bg-primary h-full transition-[width] duration-200"
         style={`width:${normalizedProgress}%`}
       ></div>
     </div>

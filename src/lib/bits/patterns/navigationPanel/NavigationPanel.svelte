@@ -45,12 +45,12 @@ function distance(metres: number): string {
   <Header {...panelProps} title="Navigation" onClose={() => model.close()} />
   <div class="flex flex-col gap-6 px-6 py-6 pb-24" data-navigation-panel>
     <section aria-label="Transport mode" class="flex flex-col gap-3">
-      <div class="grid grid-cols-4 gap-1 rounded-xl bg-base-content/5 p-1">
+      <div class="bg-base-content/5 grid grid-cols-4 gap-1 rounded-xl p-1">
         {#each ROUTING_MODES as mode}
           <button
             type="button"
             aria-pressed={model.mode === mode.id}
-            class="rounded-lg px-1 py-3 text-xs font-medium transition-colors hover:bg-base-content/10 focus-visible:outline-2 focus-visible:outline-primary"
+            class="hover:bg-base-content/10 focus-visible:outline-primary rounded-lg px-1 py-3 text-xs font-medium transition-colors focus-visible:outline-2"
             class:bg-primary={model.mode === mode.id}
             class:text-primary-content={model.mode === mode.id}
             onclick={() => void model.selectMode(mode.id)}
@@ -59,24 +59,24 @@ function distance(metres: number): string {
           </button>
         {/each}
       </div>
-      <p class="text-xs text-base-content/60">
+      <p class="text-base-content/60 text-xs">
         Bus, MTR and ferry planning coming later.
       </p>
     </section>
 
     <section
       aria-label="Journey endpoints"
-      class="flex flex-col gap-3 border-b border-border pb-5"
+      class="border-border flex flex-col gap-3 border-b pb-5"
     >
       <div class="flex items-center gap-3 text-sm">
         <span
-          class="h-2.5 w-2.5 shrink-0 rounded-full bg-primary"
+          class="bg-primary h-2.5 w-2.5 shrink-0 rounded-full"
           aria-hidden="true"
         ></span>{developmentOrigin?.label ?? 'Your current location'}
       </div>
       <div class="flex items-start gap-3">
         <span
-          class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-primary"
+          class="border-primary mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2"
           aria-hidden="true"
         ></span>
         <h3 class="text-base font-medium">
@@ -102,7 +102,7 @@ function distance(metres: number): string {
         {:else if model.state.phase === 'error'}
           <div
             role="alert"
-            class="flex flex-col gap-4 rounded-xl border border-border bg-base-content/5 p-4"
+            class="border-border bg-base-content/5 flex flex-col gap-4 rounded-xl border p-4"
           >
             <p class="text-sm">{model.state.message}</p>
             <Button text="Try again" onClick={() => void model.retry()} />
@@ -115,19 +115,19 @@ function distance(metres: number): string {
       <Button text="View map" onClick={() => model.showMap()} />
       <section
         aria-label="Journey estimate"
-        class="grid grid-cols-2 gap-4 rounded-xl border border-border p-4"
+        class="border-border grid grid-cols-2 gap-4 rounded-xl border p-4"
       >
         <div>
-          <p class="text-xs text-base-content/60">Estimated time</p>
+          <p class="text-base-content/60 text-xs">Estimated time</p>
           <p class="mt-1 text-xl font-semibold">{duration(journey.seconds)}</p>
-          <p class="mt-1 text-xs text-base-content/60">{distance(journey.metres)}</p>
+          <p class="text-base-content/60 mt-1 text-xs">{distance(journey.metres)}</p>
         </div>
         <div>
-          <p class="text-xs text-base-content/60">Estimated cost</p>
+          <p class="text-base-content/60 text-xs">Estimated cost</p>
           <p class="mt-1 text-lg font-semibold">
             {journey.cost.amount === null ? 'Unavailable' : `HK$${journey.cost.amount}`}
           </p>
-          <p class="mt-1 text-xs text-base-content/60">
+          <p class="text-base-content/60 mt-1 text-xs">
             {journey.cost.amount === 0
               ? 'No transport fare'
               : journey.hasFerry
@@ -137,25 +137,25 @@ function distance(metres: number): string {
         </div>
       </section>
       {#if journey.hasFerry}
-        <p class="rounded-xl border border-border p-4 text-sm">
+        <p class="border-border rounded-xl border p-4 text-sm">
           This route includes a ferry connection. Departure times, waiting time and
           fares are not included. Check the service before travelling.
         </p>
       {/if}
       <section aria-label="Journey segments">
         <h3
-          class="mb-4 text-xs font-medium uppercase tracking-widest text-base-content/60"
+          class="text-base-content/60 mb-4 text-xs font-medium tracking-widest uppercase"
         >
           Journey segments
         </h3>
         <ol class="flex flex-col">
           {#each journey.segments as segment, index}
-            <li class="border-b border-border last:border-0">
+            <li class="border-border border-b last:border-0">
               <button
                 type="button"
                 aria-label={`Highlight step ${index + 1}: ${segment.instruction}`}
                 class={[
-                  'flex w-full gap-3 rounded-lg px-2 py-4 text-left transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary',
+                  'hover:bg-primary/10 focus-visible:outline-primary flex w-full gap-3 rounded-lg px-2 py-4 text-left transition-colors focus-visible:outline-2',
                   model.highlightedSegment === index && 'bg-primary/10',
                 ]}
                 onmouseenter={() => model.highlightSegment(index, 'pointer')}
@@ -164,13 +164,13 @@ function distance(metres: number): string {
                 onblur={() => model.highlightSegment(null, 'focus')}
               >
                 <span
-                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-base-content/5 text-xs font-medium"
+                  class="bg-base-content/5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium"
                   >{index + 1}</span
                 >
                 <span class="min-w-0">
                   <span class="text-sm leading-relaxed">{segment.instruction}</span>
                   {#if segment.metres > 0 || segment.seconds > 0}
-                    <span class="mt-1 block text-xs text-base-content/60">
+                    <span class="text-base-content/60 mt-1 block text-xs">
                       {distance(segment.metres)}
                       · {duration(segment.seconds)}
                     </span>
@@ -181,7 +181,7 @@ function distance(metres: number): string {
           {/each}
         </ol>
       </section>
-      <p class="text-xs leading-relaxed text-base-content/50">
+      <p class="text-base-content/50 text-xs leading-relaxed">
         Estimates from OpenStreetMap. No live traffic or elevation data. Always follow
         signs and local access rules.
       </p>

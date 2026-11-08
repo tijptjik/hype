@@ -8,7 +8,7 @@ let { label }: Props = $props()
 
 <div class="flex min-h-48 items-center justify-center py-8 text-center">
   <div
-    class="font-mono text-xs font-semibold uppercase tracking-[0.28em] text-base-content/60"
+    class="text-base-content/60 font-mono text-xs font-semibold tracking-[0.28em] uppercase"
   >
     {label}
   </div>

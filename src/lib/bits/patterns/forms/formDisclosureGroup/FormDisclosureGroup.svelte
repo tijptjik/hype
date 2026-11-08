@@ -29,7 +29,7 @@ const contentId = $props.id()
   <h3>
     <button
       type="button"
-      class="flex min-h-12 w-full cursor-pointer items-center gap-3 bg-primary/3 px-6 py-3 text-left text-foreground transition-colors hover:bg-primary/8 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+      class="bg-primary/3 text-foreground hover:bg-primary/8 focus-visible:outline-primary flex min-h-12 w-full cursor-pointer items-center gap-3 px-6 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2"
       aria-expanded={!collapsed}
       aria-controls={contentId}
       onclick={() => onCollapsedChange(!collapsed)}
@@ -41,9 +41,9 @@ const contentId = $props.id()
         )}
         aria-hidden="true"
       />
-      <span class="min-w-0 flex-1 break-words text-sm font-semibold">{title}</span>
+      <span class="min-w-0 flex-1 text-sm font-semibold break-words">{title}</span>
       {#if count}
-        <span class="shrink-0 text-xs font-normal text-muted-foreground">{count}</span>
+        <span class="text-muted-foreground shrink-0 text-xs font-normal">{count}</span>
       {/if}
     </button>
   </h3>

@@ -87,7 +87,7 @@ const items = $derived(getItems())
 </script>
 
 <section
-  class="min-h-0 rounded-[1.4rem] border border-border bg-surface px-4 pt-4 pb-6"
+  class="border-border bg-surface min-h-0 rounded-[1.4rem] border px-4 pt-4 pb-6"
 >
   <div class="mb-3 flex items-start justify-between gap-3">
     <AnalyticsCardPrimitive.SectionHeader
@@ -95,7 +95,7 @@ const items = $derived(getItems())
       title={sectionCopy[kind].header}
       tooltip={sectionCopy[kind].tooltip}
     />
-    <span class="text-xs text-foreground-alt"
+    <span class="text-foreground-alt text-xs"
       >{formatAnalyticsCount(items.length)}</span
     >
   </div>
@@ -110,21 +110,21 @@ const items = $derived(getItems())
         : 'This time range has not been emitted by the analytics engine yet.'}
     />
   {:else if items.length === 0}
-    <p class="text-sm text-foreground-alt">{sectionCopy[kind].empty}</p>
+    <p class="text-foreground-alt text-sm">{sectionCopy[kind].empty}</p>
   {:else if kind === 'transformations'}
     <div class="max-h-[24rem] overflow-y-auto">
       <table class="w-full text-left text-sm">
         <thead
-          class="sticky top-0 text-xs uppercase tracking-[0.18em] text-foreground-alt"
+          class="text-foreground-alt sticky top-0 text-xs tracking-[0.18em] uppercase"
         >
           <tr>
-            <th class="pb-2 pr-3 font-medium">Instructions</th>
+            <th class="pr-3 pb-2 font-medium">Instructions</th>
             <th class="w-[5.5rem] pb-2 text-right font-medium">Requests</th>
           </tr>
         </thead>
         <tbody>
           {#each (items as AssetAnalyticsRankedTransformation[]).slice(0, 25) as item}
-            <tr class="border-t border-foreground/8 align-top">
+            <tr class="border-foreground/8 border-t align-top">
               <td class="py-2 pr-3">
                 <div class="flex max-w-full flex-wrap gap-1.5">
                   {#each getTransformationBadges(item.transformKey) as badge}
@@ -139,7 +139,7 @@ const items = $derived(getItems())
                   {/each}
                 </div>
               </td>
-              <td class="w-14 py-2 text-right text-foreground">
+              <td class="text-foreground w-14 py-2 text-right">
                 {formatAnalyticsCount(item.requests)}
               </td>
             </tr>
@@ -151,10 +151,10 @@ const items = $derived(getItems())
     <div class="max-h-[24rem] overflow-y-auto">
       <table class="w-full table-fixed text-left text-sm">
         <thead
-          class="sticky top-0 text-xs uppercase tracking-[0.18em] text-foreground-alt"
+          class="text-foreground-alt sticky top-0 text-xs tracking-[0.18em] uppercase"
         >
           <tr>
-            <th class="pb-2 pr-3 font-medium">{m.analytics__public_id()}</th>
+            <th class="pr-3 pb-2 font-medium">{m.analytics__public_id()}</th>
             <th class="pb-2 text-right font-medium">
               {kind === 'missingImages'
                 ? '404s'
@@ -166,7 +166,7 @@ const items = $derived(getItems())
         </thead>
         <tbody>
           {#each (items as AssetAnalyticsRankedImage[]).slice(0, 25) as item}
-            <tr class="border-t border-foreground/8 align-top">
+            <tr class="border-foreground/8 border-t align-top">
               <td class="py-2 pr-3">
                 <ImagePopoverCell
                   publicId={item.publicId}

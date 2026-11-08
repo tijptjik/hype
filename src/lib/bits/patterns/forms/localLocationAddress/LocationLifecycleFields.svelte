@@ -64,7 +64,7 @@ function update(status: string): void {
 
 {#if supported}
   <section
-    class="space-y-4 border-b border-border pb-6"
+    class="border-border space-y-4 border-b pb-6"
     aria-label={m.location_lifecycle_title()}
   >
     <h2 class="text-lg font-semibold">{m.location_lifecycle_title()}</h2>
@@ -78,7 +78,7 @@ function update(status: string): void {
           {items}
           onValueChange={update}
         />
-        <p class="text-sm text-muted-foreground">{m.location_lifecycle_help()}</p>
+        <p class="text-muted-foreground text-sm">{m.location_lifecycle_help()}</p>
         <TextInput
           id={`${uid}-successor`}
           name=""

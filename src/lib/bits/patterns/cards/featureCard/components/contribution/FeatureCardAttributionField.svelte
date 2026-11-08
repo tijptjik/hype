@@ -114,10 +114,10 @@ $effect(() => {
 })
 </script>
 
-<div class="flex w-full flex-col gap-3 text-base-content">
+<div class="text-base-content flex w-full flex-col gap-3">
   <div class="space-y-1 text-center">
     <p
-      class="font-mono pt-2 text-[11px] uppercase tracking-[0.28em] text-muted-foreground"
+      class="text-muted-foreground pt-2 font-mono text-[11px] tracking-[0.28em] uppercase"
     >
       {m.photo_credit_credited_as()}
     </p>
@@ -128,7 +128,7 @@ $effect(() => {
       <input
         id="feature-card-attribution-input"
         type="text"
-        class="h-11 min-w-0 w-full rounded-full border border-border-input bg-base-200 px-4 text-center text-base font-semibold text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
+        class="border-border-input bg-base-200 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover h-11 w-full min-w-0 rounded-full border px-4 text-center text-base font-semibold focus:outline-none"
         placeholder={m.photo_credit_input_placeholder()}
         bind:value={editedAttribution}
         onkeydown={handleKeydown}
@@ -136,7 +136,7 @@ $effect(() => {
       >
     {:else}
       <p
-        class="flex h-11 min-w-0 w-full items-center justify-center rounded-full border border-border-input bg-base-200 px-4 text-center text-base font-semibold text-base-content"
+        class="border-border-input bg-base-200 text-base-content flex h-11 w-full min-w-0 items-center justify-center rounded-full border px-4 text-center text-base font-semibold"
       >
         {editedAttribution}
       </p>
@@ -146,7 +146,7 @@ $effect(() => {
       <button
         type="button"
         id="feature-card-attribution-save-button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
+        class="border-border-input bg-base-content/8 text-base-content hover:bg-base-content/12 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition"
         onclick={() => {
           void saveAttribution()
         }}
@@ -160,7 +160,7 @@ $effect(() => {
       <button
         type="button"
         id="feature-card-attribution-edit-button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-200 text-base-content transition hover:bg-base-300"
+        class="border-border-input bg-base-200 text-base-content hover:bg-base-300 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition"
         onclick={startEdit}
       >
         <Icon src={PencilSquare} class="h-5 w-5" />

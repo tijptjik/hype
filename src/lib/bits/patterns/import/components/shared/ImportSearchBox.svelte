@@ -90,7 +90,7 @@ function handleSelect(item: ImportSearchBoxItem<TValue>, event: MouseEvent): voi
         {#each results as item, index (item.id)}
           <button
             type="button"
-            class="flex w-full items-center gap-3 p-3 text-left transition-colors first:rounded-t-lg last:rounded-b-lg hover:bg-base-200 focus:bg-base-200 focus:outline-none"
+            class="hover:bg-base-200 focus:bg-base-200 flex w-full items-center gap-3 p-3 text-left transition-colors first:rounded-t-lg last:rounded-b-lg focus:outline-none"
             data-invalid-value={searchFor}
             data-result-index={index}
             tabindex="0"

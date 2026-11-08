@@ -42,10 +42,10 @@ let {
 <section class="py-4">
   <div class="space-y-3">
     <div class="space-y-1">
-      <h3 class="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/70">
+      <h3 class="text-base-content/70 text-sm font-semibold tracking-[0.2em] uppercase">
         {title}
       </h3>
-      <p class="text-sm leading-6 text-base-content/80">{description}</p>
+      <p class="text-base-content/80 text-sm leading-6">{description}</p>
     </div>
 
     <Button

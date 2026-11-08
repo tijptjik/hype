@@ -22,21 +22,17 @@ let {
 >
   <table class="w-full min-w-[28rem] table-fixed border-collapse text-left text-sm">
     <colgroup>
-      <col class="w-20" />
-      <col />
-      <col />
+      <col class="w-20">
+      <col>
+      <col>
     </colgroup>
     <thead class="text-muted-foreground text-xs">
       <tr>
         <th scope="col" class="border-border/40 border-b px-3 py-2 font-medium">
           Locale
         </th>
-        <th scope="col" class="border-border/40 border-b p-3 font-medium">
-          Before
-        </th>
-        <th scope="col" class="border-border/40 border-b p-3 font-medium">
-          After
-        </th>
+        <th scope="col" class="border-border/40 border-b p-3 font-medium">Before</th>
+        <th scope="col" class="border-border/40 border-b p-3 font-medium">After</th>
       </tr>
     </thead>
     <tbody>

@@ -20,7 +20,7 @@ const visibleItems = $derived(items.filter(item => item.value.trim().length > 0)
 >
   {#if title}
     <h3
-      class="mb-4 border-b border-border px-4 py-3 text-sm font-semibold text-foreground"
+      class="border-border text-foreground mb-4 border-b px-4 py-3 text-sm font-semibold"
     >
       {title}
     </h3>
@@ -30,16 +30,16 @@ const visibleItems = $derived(items.filter(item => item.value.trim().length > 0)
     <div class="flex min-h-0 flex-wrap gap-2 overflow-auto px-4">
       {#each visibleItems as item (`${item.label}:${item.value}`)}
         <div
-          class="min-w-[8.5rem] flex-1 rounded-xl border border-foreground/8 bg-foreground/[0.04] px-3 py-2"
+          class="border-foreground/8 bg-foreground/[0.04] min-w-[8.5rem] flex-1 rounded-xl border px-3 py-2"
         >
-          <div class="text-xs font-semibold text-muted-foreground">
+          <div class="text-muted-foreground text-xs font-semibold">
             {item.label}
           </div>
-          <div class="text-sm leading-6 text-foreground">{item.value}</div>
+          <div class="text-foreground text-sm leading-6">{item.value}</div>
         </div>
       {/each}
     </div>
   {:else}
-    <div class="px-4 py-2 text-sm text-muted-foreground">{emptyLabel}</div>
+    <div class="text-muted-foreground px-4 py-2 text-sm">{emptyLabel}</div>
   {/if}
 </section>

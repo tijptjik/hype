@@ -16,7 +16,7 @@ const fallbackLoadingItems: FormFieldsSectionLoadingItem[] = [
 const loadingItems = $derived(items.length > 0 ? items : fallbackLoadingItems)
 </script>
 
-<div class="flex flex-col gap-3 w-full" aria-hidden="true">
+<div class="flex w-full flex-col gap-3" aria-hidden="true">
   {#each loadingItems as item (item.id)}
     <article class="bits-project-field-card bits-project-field-card--skeleton">
       <div

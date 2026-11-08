@@ -31,8 +31,8 @@ function providerIcon(providerId: AuthProviderId) {
   {@const Icon = providerIcon(provider.id)}
   <button
     class={compact
-      ? 'flex h-10 w-10 items-center justify-center rounded-lg border border-border transition hover:border-foreground/40 hover:bg-foreground hover:text-canvas disabled:cursor-not-allowed disabled:opacity-40'
-      : 'flex min-h-12 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition hover:border-foreground/40 hover:bg-white/90 hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-transparent disabled:hover:text-inherit'}
+      ? 'border-border hover:border-foreground/40 hover:bg-foreground hover:text-canvas flex h-10 w-10 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40'
+      : 'border-border hover:border-foreground/40 disabled:hover:border-border flex min-h-12 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm transition hover:bg-white/90 hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-inherit'}
     class:bg-zinc-100={!compact && provider.enabled}
     class:text-black={!compact && provider.enabled}
     type="button"

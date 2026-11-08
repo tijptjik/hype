@@ -61,5 +61,5 @@ $effect(() => {
   class="h-full w-full [&>svg]:max-h-full [&>svg]:max-w-full"
 ></section>
 {#if error}
-  <span class="text-xs text-muted-foreground">{error}</span>
+  <span class="text-muted-foreground text-xs">{error}</span>
 {/if}

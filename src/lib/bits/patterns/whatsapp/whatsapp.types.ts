@@ -1,6 +1,14 @@
 // TYPES
 import type { TextQuote } from '#lib/messaging/types.js'
-import type { WhatsAppAttachment, WhatsAppProfile, WhatsAppMessage, WhatsAppRequest, WhatsAppSend, WhatsAppStatus, WhatsAppCalls } from '#lib/api/services/whatsover.types.js'
+import type {
+  WhatsAppAttachment,
+  WhatsAppProfile,
+  WhatsAppMessage,
+  WhatsAppRequest,
+  WhatsAppSend,
+  WhatsAppStatus,
+  WhatsAppCalls,
+} from '#lib/api/services/whatsover.types.js'
 
 export interface Conversation {
   id: string
@@ -75,17 +83,17 @@ export interface WhatsAppConsoleModel {
   readonly requestId: string | null
   readonly pendingRequest?: WhatsAppRequest | null
   readonly attempt: WhatsAppSend | null
-  readonly attachments?: (WhatsAppAttachment & {name:string})[]
+  readonly attachments?: (WhatsAppAttachment & { name: string })[]
   uploadFiles?(files: File[]): Promise<void>
-  removeQueuedAttachment?(id:string): void
+  removeQueuedAttachment?(id: string): void
   canOpenQuote?(message: WhatsAppMessage): boolean
   quoteOriginal?(message: WhatsAppMessage): WhatsAppMessage | null
   loadQuotePreview?(message: WhatsAppMessage): Promise<WhatsAppMessage | null>
   resolveQuote?(message: WhatsAppMessage): Promise<WhatsAppMessage | null>
-  searchMessages?(query:string):Promise<WhatsAppMessage[]>
+  searchMessages?(query: string): Promise<WhatsAppMessage[]>
   markRead?(): Promise<void>
-  deleteMessage?(message:WhatsAppMessage): Promise<void>
-  downloadForward?(message:WhatsAppMessage): Promise<File | null>
+  deleteMessage?(message: WhatsAppMessage): Promise<void>
+  downloadForward?(message: WhatsAppMessage): Promise<File | null>
   readonly attachment: (WhatsAppAttachment & { name: string }) | null
   readonly recording: boolean
   readonly recordingSeconds: number

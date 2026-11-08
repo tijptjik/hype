@@ -44,15 +44,15 @@ function handleUserSelect(user: UserValidationResult): void {
   <ImportMappingRow actionLabel={m.feature_import__users_assign_action()}>
     {#snippet source()}
       <div class="min-w-0 space-y-1.5">
-        <h4 class="text-xs font-bold uppercase tracking-wide text-base-content/55">
+        <h4 class="text-base-content/55 text-xs font-bold tracking-wide uppercase">
           {m.feature_import__users_no_column_title()}
         </h4>
         <div
-          class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold text-base-content"
+          class="text-base-content overflow-hidden text-sm font-semibold text-ellipsis whitespace-nowrap"
         >
           {m.feature_import__users_all_features_label()}
         </div>
-        <p class="text-xs leading-relaxed text-base-content/60">
+        <p class="text-base-content/60 text-xs leading-relaxed">
           {m.feature_import__users_no_column_description()}
         </p>
       </div>
@@ -74,11 +74,11 @@ function handleUserSelect(user: UserValidationResult): void {
             />
           {:else}
             <div class="min-w-0">
-              <div class="text-sm font-semibold text-success">
+              <div class="text-success text-sm font-semibold">
                 {m.feature_import__users_selected_title()}
               </div>
               <div
-                class="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-success/70"
+                class="text-success/70 overflow-hidden text-xs text-ellipsis whitespace-nowrap"
               >
                 {m.feature_import__users_selected_id({
                   id: userValidation.fallbackUserId,

@@ -33,7 +33,7 @@ let {
 </script>
 
 <div
-  class={`bits-theme relative flex shrink-0 w-full flex-col items-center overflow-hidden ${
+  class={`bits-theme relative flex w-full shrink-0 flex-col items-center overflow-hidden ${
     isGuest ? 'min-h-[17rem] justify-center' : ''
   }`}
 >

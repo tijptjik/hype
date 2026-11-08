@@ -8,7 +8,10 @@ import { createMessagingModel } from '#lib/adapters/messaging/useMessagingModel.
 // TYPES
 import type { MessagingPlatform } from '#lib/messaging/types.js'
 import type { WhatsAppConsoleModel } from '#lib/bits/patterns/whatsapp/whatsapp.types.js'
-let { account, register }: {
+let {
+  account,
+  register,
+}: {
   account: { id: string; platform: MessagingPlatform; organisationCode: string }
   register: (id: string, model: WhatsAppConsoleModel) => () => void
 } = $props()

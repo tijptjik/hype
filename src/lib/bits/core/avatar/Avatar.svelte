@@ -51,7 +51,7 @@ const rootClass = $derived(
     />
   {/if}
   <Avatar.Fallback
-    class="flex h-full w-full items-center justify-center bg-base-200 text-sm font-semibold uppercase text-base-content"
+    class="bg-base-200 text-base-content flex h-full w-full items-center justify-center text-sm font-semibold uppercase"
   >
     {resolvedFallback}
   </Avatar.Fallback>

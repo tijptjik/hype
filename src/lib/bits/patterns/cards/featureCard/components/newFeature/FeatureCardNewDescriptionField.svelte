@@ -46,7 +46,7 @@ function cancelEditing(): void {
 </script>
 
 <div class="space-y-2">
-  <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
+  <p class="text-muted-foreground font-mono text-[11px] tracking-[0.28em] uppercase">
     Description
   </p>
 
@@ -55,7 +55,7 @@ function cancelEditing(): void {
       <textarea
         bind:this={descriptionInput}
         bind:value={draftDescription}
-        class="min-h-28 min-w-0 w-full rounded-[1.5rem] border border-border-input bg-base-200 px-4 py-3 text-left text-sm leading-6 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
+        class="border-border-input bg-base-200 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover min-h-28 w-full min-w-0 rounded-[1.5rem] border px-4 py-3 text-left text-sm leading-6 focus:outline-none"
         placeholder={m.zany_merry_seahorse_treasure()}
         onkeydown={event => {
           event.stopPropagation()
@@ -68,27 +68,27 @@ function cancelEditing(): void {
       ></textarea>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
+        class="border-border-input bg-base-content/8 text-base-content hover:bg-base-content/12 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition"
         onclick={saveDescription}
         disabled={!draftDescription.trim()}
       >
-        <Icon src={Check} class="h-5 w-5 text-primary" />
+        <Icon src={Check} class="text-primary h-5 w-5" />
       </button>
     {:else}
       <button
         type="button"
-        class="flex min-h-28 min-w-0 w-full items-start rounded-[1.5rem] border border-border-input bg-base-200 px-4 py-3 text-left transition hover:bg-base-300"
+        class="border-border-input bg-base-200 hover:bg-base-300 flex min-h-28 w-full min-w-0 items-start rounded-[1.5rem] border px-4 py-3 text-left transition"
         onclick={startEditing}
       >
         <p
-          class={`text-sm leading-6 ${currentDescription ? 'text-muted-foreground' : 'font-semibold text-muted-foreground'}`}
+          class={`text-sm leading-6 ${currentDescription ? 'text-muted-foreground' : 'text-muted-foreground font-semibold'}`}
         >
           {currentDescription || m.zany_merry_seahorse_treasure()}
         </p>
       </button>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-200 text-base-content transition hover:bg-base-300"
+        class="border-border-input bg-base-200 text-base-content hover:bg-base-300 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition"
         onclick={startEditing}
         aria-label="Edit description"
       >

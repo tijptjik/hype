@@ -85,7 +85,7 @@ async function continueAsGuest(): Promise<void> {
 }
 </script>
 
-<FlightSurface class="px-4 py-8 text-foreground">
+<FlightSurface class="text-foreground px-4 py-8">
   <div class="relative z-10 w-fit max-w-full">
     <AuthPanel
       title={m.login__title()}
@@ -108,7 +108,7 @@ async function continueAsGuest(): Promise<void> {
   <Dialog.Portal>
     <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm" />
     <Dialog.Content
-      class="bits-theme fixed left-1/2 top-1/2 z-[1001] -translate-x-1/2 -translate-y-1/2"
+      class="bits-theme fixed top-1/2 left-1/2 z-[1001] -translate-x-1/2 -translate-y-1/2"
     >
       <AccountCreatedDialogContent onClose={handleAccountCreatedClose} />
     </Dialog.Content>

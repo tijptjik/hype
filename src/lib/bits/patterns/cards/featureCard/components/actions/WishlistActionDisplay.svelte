@@ -152,9 +152,7 @@ $effect(() => {
 })
 </script>
 
-{#snippet wishlistContent(
-  isCollapsed: boolean,
-)}
+{#snippet wishlistContent(isCollapsed: boolean)}
   <!-- Root: the fixed action slot owns hover colour and never moves the star icon. -->
   <div class="flex min-w-0 flex-1 items-center gap-2">
     <!-- Icon: it changes fill only; its position is independent of the label fade. -->

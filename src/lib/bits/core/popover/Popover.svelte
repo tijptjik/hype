@@ -26,9 +26,7 @@ const popoverContentClass = $derived(
 
 <PopoverPrimitive.Root bind:open {...restProps}>
   <PopoverPrimitive.Trigger {...triggerProps}>
-    {#snippet child({
-      props,
-    })}
+    {#snippet child({ props })}
       <div {...props} class={popoverTriggerClass}>{@render trigger()}</div>
     {/snippet}
   </PopoverPrimitive.Trigger>

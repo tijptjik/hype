@@ -178,7 +178,7 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
   {:else}
     <div class="mt-5">
       <div
-        class="mb-4 flex flex-wrap items-center justify-center gap-2 text-xs uppercase tracking-[0.18em]"
+        class="mb-4 flex flex-wrap items-center justify-center gap-2 text-xs tracking-[0.18em] uppercase"
       >
         {#each ASSET_ANALYTICS_SERIES as series}
           {@const isActive = timelineSeriesKeys.includes(series.key)}
@@ -204,9 +204,9 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
         {/each}
       </div>
 
-      <div class="rounded-[1.4rem] border border-foreground/10 bg-surface p-4 pt-8">
+      <div class="border-foreground/10 bg-surface rounded-[1.4rem] border p-4 pt-8">
         <div
-          class="relative h-64 overflow-x-auto rounded-[1rem] "
+          class="relative h-64 overflow-x-auto rounded-[1rem]"
           bind:this={timelineChartContainer}
         >
           <svg
@@ -278,18 +278,18 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
 
           {#if timelineTooltip}
             <div
-              class="pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-[1rem] border border-border bg-panel px-3 py-2 shadow-xl"
+              class="border-border bg-panel pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-[1rem] border px-3 py-2 shadow-xl"
               style={`left: ${timelineTooltip.left}px; top: ${timelineTooltip.top}px;`}
             >
               <p
-                class="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground-alt"
+                class="text-foreground-alt text-[10px] font-semibold tracking-[0.18em] uppercase"
               >
                 {timelineTooltip.date}
               </p>
-              <p class="mt-1 text-sm font-semibold text-foreground">
+              <p class="text-foreground mt-1 text-sm font-semibold">
                 {timelineTooltip.label}: {timelineTooltip.value}
               </p>
-              <p class="mt-1 text-xs text-foreground-alt">
+              <p class="text-foreground-alt mt-1 text-xs">
                 Active total: {timelineTooltip.total}
               </p>
             </div>

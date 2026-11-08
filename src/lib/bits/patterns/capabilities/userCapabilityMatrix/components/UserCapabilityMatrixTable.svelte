@@ -68,7 +68,7 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
           class="bits-user-capability-matrix__head-cell bits-user-capability-matrix__head-cell--user"
         >
           <div class="flex items-end justify-between gap-2">
-            <span class="text-xs font-semibold uppercase tracking-wide text-primary/90"
+            <span class="text-primary/90 text-xs font-semibold tracking-wide uppercase"
               >User</span
             >
             <span class="bits-user-capability-matrix__sort-buttons">
@@ -107,7 +107,7 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
           >
             <div class="flex h-full w-full flex-col items-center justify-end gap-1">
               <span
-                class="block w-full text-center text-sm leading-snug normal-case whitespace-normal"
+                class="block w-full text-center text-sm leading-snug whitespace-normal normal-case"
                 >{capabilityLabelByKey[capabilityKey] ?? capabilityKey}</span
               >
               <span
@@ -141,13 +141,13 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
     </thead>
     <tbody>
       {#each sortedRows as row (row.userId)}
-        <tr class="border-t border-primary/25">
+        <tr class="border-primary/25 border-t">
           <th class="bits-user-capability-matrix__user-cell" scope="row">
             <span
-              class="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold max-w-80"
+              class="block max-w-80 overflow-hidden text-sm font-semibold text-ellipsis whitespace-nowrap"
               >{row.name}</span
             >
-            <span class="block text-xxs uppercase tracking-wide text-muted-foreground"
+            <span class="text-xxs text-muted-foreground block tracking-wide uppercase"
               >{row.role}</span
             >
           </th>

@@ -26,8 +26,8 @@ const enabledSet = $derived(new Set(enabledCapabilityKeys))
   {#each availableCapabilityKeys as capabilityKey (capabilityKey)}
     <ResourceCard.Root class="w-full">
       <Card.Media class="bg-base-100/76" size="md">
-        <div class="flex w-full h-full items-center justify-center" aria-hidden="true">
-          <ShieldCheckIcon class="h-6 w-6 text-primary" />
+        <div class="flex h-full w-full items-center justify-center" aria-hidden="true">
+          <ShieldCheckIcon class="text-primary h-6 w-6" />
         </div>
       </Card.Media>
       <ResourceCard.Body

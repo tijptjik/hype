@@ -48,7 +48,7 @@ const layerName = $derived(
 </script>
 
 <div
-  class="group flex items-center gap-3 bg-panel py-2 pl-8 pr-4 caret-transparent transition-colors duration-200"
+  class="group bg-panel flex items-center gap-3 py-2 pr-4 pl-8 caret-transparent transition-colors duration-200"
   in:slide={{ axis: 'y', duration: 200 }}
   out:slide={{ axis: 'y', duration: 200 }}
 >
@@ -79,7 +79,7 @@ const layerName = $derived(
   </button>
   <button
     type="button"
-    class="inline-flex shrink-0 items-center justify-center text-base-content/45 hover:text-base-content/80 focus-visible:text-base-content/80"
+    class="text-base-content/45 hover:text-base-content/80 focus-visible:text-base-content/80 inline-flex shrink-0 items-center justify-center"
     aria-label={m.panel__isolate_layer({ name: layerName })}
     data-tooltip={m.panel__isolate_layer({ name: layerName })}
     onclick={onIsolate}

@@ -27,7 +27,7 @@ let returnFocus: HTMLElement | null = null
   <Dialog.Portal>
     <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm" />
     <Dialog.Content
-      class="fixed left-1/2 top-1/2 z-[1001] max-h-[90dvh] w-[min(92vw,36rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-panel p-6 text-foreground shadow-2xl"
+      class="border-border bg-panel text-foreground fixed top-1/2 left-1/2 z-[1001] max-h-[90dvh] w-[min(92vw,36rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border p-6 shadow-2xl"
       onOpenAutoFocus={() => {
         returnFocus =
           document.activeElement instanceof HTMLElement ? document.activeElement : null

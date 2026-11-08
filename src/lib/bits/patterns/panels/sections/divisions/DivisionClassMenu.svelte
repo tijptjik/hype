@@ -25,7 +25,7 @@ let {
     <button
       type="button"
       aria-label="Division visibility settings"
-      class="flex size-8 cursor-pointer items-center justify-center rounded-md text-base-content/60 hover:bg-base-content/10 hover:text-base-content focus-visible:outline-2 focus-visible:outline-focus"
+      class="text-base-content/60 hover:bg-base-content/10 hover:text-base-content focus-visible:outline-focus flex size-8 cursor-pointer items-center justify-center rounded-md focus-visible:outline-2"
     >
       <SettingsIcon class="size-4" aria-hidden="true" />
     </button>
@@ -34,13 +34,13 @@ let {
     <legend class="mb-2 text-sm font-medium">Show division classes</legend>
     {#each options as option (option.value)}
       <label
-        class="flex cursor-pointer items-center gap-3 rounded px-2 py-2 text-sm hover:bg-base-content/10"
+        class="hover:bg-base-content/10 flex cursor-pointer items-center gap-3 rounded px-2 py-2 text-sm"
       >
         <input
           type="checkbox"
           checked={option.visible}
           onchange={() => onToggle(option.value)}
-          class="size-4 accent-primary"
+          class="accent-primary size-4"
         >
         {divisionClassLabel(option.value)}
       </label>

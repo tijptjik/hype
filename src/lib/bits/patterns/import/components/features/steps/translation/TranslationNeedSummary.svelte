@@ -25,21 +25,21 @@ const progressLabel = $derived(
 </script>
 
 <section
-  class="relative z-10 mx-auto w-full max-w-md overflow-hidden rounded-[2rem] bg-base-content/[0.08] px-8 py-7 text-center shadow-[0_0_60px_rgba(0,0,0,0.22)] backdrop-blur-xl"
+  class="bg-base-content/[0.08] relative z-10 mx-auto w-full max-w-md overflow-hidden rounded-[2rem] px-8 py-7 text-center shadow-[0_0_60px_rgba(0,0,0,0.22)] backdrop-blur-xl"
 >
   <div class="mx-auto max-w-xl">
     <p
-      class="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-base-content/45"
+      class="text-base-content/45 font-mono text-[11px] font-semibold tracking-[0.24em] uppercase"
     >
       Translation Queue
     </p>
     <h3
-      class="mt-3 text-5xl font-black leading-none tracking-[-0.06em] text-base-content sm:text-6xl"
+      class="text-base-content mt-3 text-5xl leading-none font-black tracking-[-0.06em] sm:text-6xl"
     >
       {rowsNeedingTranslation}
       <span class="text-primary">{featureLabel}</span>
     </h3>
-    <p class="mt-3 text-lg font-semibold text-base-content/60">
+    <p class="text-base-content/60 mt-3 text-lg font-semibold">
       {rowsNeedingTranslation === 0
         ? m.feature_import__translation_require_no_translation()
         : m.feature_import__translation_require_translation()}

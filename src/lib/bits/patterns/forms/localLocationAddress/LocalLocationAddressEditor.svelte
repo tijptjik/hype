@@ -96,12 +96,12 @@ async function save(): Promise<void> {
       <Button text={m.location_address_edit()} onClick={edit} />
     {/if}
     {#if saved}
-      <p role="status" class="text-sm text-muted-foreground">
+      <p role="status" class="text-muted-foreground text-sm">
         {m.location_address_saved()}
       </p>
     {/if}
     {#if failed}
-      <p role="alert" class="text-sm text-destructive">{m.location_address_failed()}</p>
+      <p role="alert" class="text-destructive text-sm">{m.location_address_failed()}</p>
     {/if}
   </div>
 {/if}

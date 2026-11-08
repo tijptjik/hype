@@ -138,7 +138,7 @@ function handleCurrentItemLoad(item: ViewerRenderable): void {
     {/if}
 
     {#if currentItem && !rightRail}
-      <div class="pointer-events-none absolute bottom-4 right-4 z-40">
+      <div class="pointer-events-none absolute right-4 bottom-4 z-40">
         <div class="pointer-events-auto">
           <ImagePrimitive.ViewerCounter
             requestedIndex={activeIndex}

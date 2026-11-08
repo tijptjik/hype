@@ -18,7 +18,7 @@ let { stats, totalColumns, showColumns = true }: Props = $props()
   {#if showColumns}
     <div class="font-mono"><span class="text-success">{totalColumns}</span> COLS x</div>
   {/if}
-  <div class="font-mono text-success">
+  <div class="text-success font-mono">
     {stats.valid}
   </div>
   {#if stats.invalid > 0}

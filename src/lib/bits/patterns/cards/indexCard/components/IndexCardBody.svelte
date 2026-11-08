@@ -13,7 +13,7 @@ let { title, description, actions }: IndexCardBodyProps = $props()
   <p class="bits-index-card__description"><ScrollableText text={description} /></p>
 
   {#if actions}
-    <div class="flex items-center justify-between w-full mt-[0.35rem]">
+    <div class="mt-[0.35rem] flex w-full items-center justify-between">
       {@render actions()}
     </div>
   {/if}

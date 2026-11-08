@@ -6,15 +6,15 @@ let { title, description }: EmptyStateProps = $props()
 </script>
 
 <div
-  class="flex h-full w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-base-100 p-6 text-center"
+  class="border-border bg-base-100 flex h-full w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-6 text-center"
 >
-  <ImageIcon class="h-8 w-8 text-muted-foreground" />
+  <ImageIcon class="text-muted-foreground h-8 w-8" />
   <div class="space-y-1">
-    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+    <p class="text-muted-foreground text-sm font-semibold tracking-[0.18em] uppercase">
       {title}
     </p>
     {#if description}
-      <p class="text-sm text-muted-foreground">{description}</p>
+      <p class="text-muted-foreground text-sm">{description}</p>
     {/if}
   </div>
 </div>

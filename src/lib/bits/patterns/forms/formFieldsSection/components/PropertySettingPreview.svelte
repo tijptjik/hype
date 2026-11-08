@@ -20,7 +20,7 @@ const examples: Record<string, string> = {
 
 <!-- Examples are decorative; the select supplies the accessible option name. -->
 <svg
-  class="h-7 w-full min-w-0 text-secondary dark:brightness-150"
+  class="text-secondary h-7 w-full min-w-0 dark:brightness-150"
   aria-hidden="true"
   focusable="false"
 >

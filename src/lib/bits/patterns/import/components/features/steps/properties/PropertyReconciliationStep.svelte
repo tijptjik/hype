@@ -454,22 +454,22 @@ function getScenarioForKey(key: string): number {
   {:else if currentProperty}
     <div class="mx-auto w-full max-w-5xl">
       <div
-        class="grid gap-3 rounded-3xl border border-info/25 bg-panel/[0.45] p-4 shadow-[var(--shadow-mini)] backdrop-blur-xl md:grid-cols-[auto_minmax(0,1fr)] md:items-center"
+        class="border-info/25 bg-panel/[0.45] grid gap-3 rounded-3xl border p-4 shadow-[var(--shadow-mini)] backdrop-blur-xl md:grid-cols-[auto_minmax(0,1fr)] md:items-center"
       >
         <div
-          class="flex h-16 w-16 items-center justify-center rounded-2xl border border-info/25 bg-info/10 font-mono text-2xl font-black text-info"
+          class="border-info/25 bg-info/10 text-info flex h-16 w-16 items-center justify-center rounded-2xl border font-mono text-2xl font-black"
         >
           S{currentProperty.scenario}
         </div>
         <div class="min-w-0 space-y-2">
           <div
-            class="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/55"
+            class="text-base-content/55 font-mono text-[11px] font-semibold tracking-[0.2em] uppercase"
           >
             Scenario {currentProperty.scenario}
           </div>
           <div class="flex flex-wrap gap-2">
             {#each currentProperty.columns as column}
-              <span class="rounded-full  font-mono text-sm text-base-content">
+              <span class="text-base-content rounded-full font-mono text-sm">
                 {column.header}
               </span>
             {/each}
@@ -523,7 +523,7 @@ function getScenarioForKey(key: string): number {
     {/if}
   {:else}
     <div class="p-8 text-center">
-      <div class="mb-2 text-lg font-semibold text-success">
+      <div class="text-success mb-2 text-lg font-semibold">
         {m.feature_import__properties_complete_title()}
       </div>
       <p class="text-base-content/70">

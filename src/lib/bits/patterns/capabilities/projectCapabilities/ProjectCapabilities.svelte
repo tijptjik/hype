@@ -44,7 +44,7 @@ const rootClass = $derived(
       icon={ShieldIcon}
       {title}
       description={subtitle}
-      class="min-h-16 h-16 items-center pt-0 pb-0"
+      class="h-16 min-h-16 items-center pt-0 pb-0"
     />
 
     {#if capabilityIssues.length > 0}

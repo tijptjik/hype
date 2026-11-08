@@ -19,10 +19,10 @@ const valueClass = $derived(
 </script>
 
 <div
-  class="flex items-center gap-2 rounded-lg border border-base-content/10 bg-base-100/60 px-3 py-2"
+  class="border-base-content/10 bg-base-100/60 flex items-center gap-2 rounded-lg border px-3 py-2"
 >
   <span
-    class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/55"
+    class="text-base-content/55 text-[0.68rem] font-semibold tracking-[0.18em] uppercase"
   >
     {label}
   </span>

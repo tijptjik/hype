@@ -50,7 +50,7 @@ function handleUnset(): void {
   {#if !isEditing}
     <!-- biome-ignore lint/a11y/useSemanticElements: Native meter hides the custom fill-end label; expose equivalent meter semantics here. -->
     <div
-      class="relative flex h-12 items-center overflow-hidden rounded-md bg-primary/10"
+      class="bg-primary/10 relative flex h-12 items-center overflow-hidden rounded-md"
       role="meter"
       aria-label="Value within range"
       aria-valuemin={resolvedMin}
@@ -58,11 +58,11 @@ function handleUnset(): void {
       aria-valuenow={resolvedValue}
     >
       <div
-        class="absolute inset-y-0 left-0 bg-primary/25"
+        class="bg-primary/25 absolute inset-y-0 left-0"
         style:width={`${fillPercent}%`}
       ></div>
       <output
-        class="relative flex h-full min-w-fit items-center justify-end px-3 text-base font-medium text-foreground"
+        class="text-foreground relative flex h-full min-w-fit items-center justify-end px-3 text-base font-medium"
         style:width={`${fillPercent}%`}
         >{hasValue ? resolvedValue : '—'}</output
       >

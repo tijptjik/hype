@@ -20,21 +20,21 @@ let { canDownloadResults, downloadResultsAction }: Props = $props()
     {#if canDownloadResults && downloadResultsAction}
       <button
         type="button"
-        class="rounded-full border border-primary/20 bg-primary/10 p-6 text-primary transition-colors hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        class="border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 focus:ring-primary/30 rounded-full border p-6 transition-colors focus:ring-2 focus:outline-none"
         onclick={downloadResultsAction}
         aria-label={m.feature_import__finished_download_title()}
-              data-tooltip={m.feature_import__finished_download_title()}
+        data-tooltip={m.feature_import__finished_download_title()}
       >
         <Icon src={ArrowDownTray} class="h-12 w-12" />
       </button>
     {:else}
-      <div class="rounded-full border border-primary/20 bg-primary/10 p-6 text-primary">
+      <div class="border-primary/20 bg-primary/10 text-primary rounded-full border p-6">
         <Icon src={ArrowDownTray} class="h-12 w-12" />
       </div>
     {/if}
     <div class="space-y-2">
       <h3 class="text-2xl font-semibold">{m.feature_import__finished_title()}</h3>
-      <p class="text-sm text-base-content/70">
+      <p class="text-base-content/70 text-sm">
         {m.feature_import__finished_description()}
       </p>
     </div>

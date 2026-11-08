@@ -29,14 +29,21 @@ async function loadPage(
 ): Promise<ChangelogPage> {
   return await refreshRemoteQuery(
     getUserChangelog({
-      userId, locale, before, filters, includeFilterOptions,
+      userId,
+      locale,
+      before,
+      filters,
+      includeFilterOptions,
       meta: { isAdminRequest: true },
     }),
   )
 }
 </script>
 
-<section aria-label="User change log" class="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+<section
+  aria-label="User change log"
+  class="flex min-h-0 min-w-0 flex-1 flex-col gap-4"
+>
   <ResourceChangelog
     identity={`user:${userId}`}
     description="This user's recorded changes to resources you manage · newest first"

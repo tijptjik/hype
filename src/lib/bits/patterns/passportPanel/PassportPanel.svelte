@@ -444,13 +444,13 @@ onMount(() => {
     title={headerTitle}
   />
 
-  <div class="relative flex min-h-full flex-col bg-panel">
+  <div class="bg-panel relative flex min-h-full flex-col">
     <section
       class="border-b border-white/10 bg-[linear-gradient(180deg,#141218_0%,#101116_100%)] px-4 py-4"
     >
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0 space-y-2">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.35em] text-accent">
+          <p class="text-accent text-[11px] font-semibold tracking-[0.35em] uppercase">
             {subtitle}
           </p>
           <p class="text-sm leading-6 text-white/72">
@@ -460,7 +460,7 @@ onMount(() => {
         </div>
 
         <div
-          class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-accent/20 bg-accent/[0.06] text-accent"
+          class="border-accent/20 bg-accent/[0.06] text-accent flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border"
         >
           <ScanLineIcon class="h-7 w-7" />
         </div>
@@ -469,13 +469,13 @@ onMount(() => {
 
     {#if isLoading}
       <div
-        class="flex flex-1 items-center justify-center px-6 py-12 text-sm text-base-content/60"
+        class="text-base-content/60 flex flex-1 items-center justify-center px-6 py-12 text-sm"
       >
         Building passport...
       </div>
     {:else if errorMessage}
       <div
-        class="m-4 rounded-3xl border border-warning/30 bg-warning/10 px-4 py-5 text-sm leading-6 text-base-content/80"
+        class="border-warning/30 bg-warning/10 text-base-content/80 m-4 rounded-3xl border px-4 py-5 text-sm leading-6"
       >
         {errorMessage}
       </div>
@@ -485,10 +485,10 @@ onMount(() => {
       >
         <div class="mb-4 flex items-end justify-between gap-3 px-1">
           <div class="min-w-0">
-            <h3 class="text-sm font-semibold leading-5 text-white">{sectionTitle}</h3>
+            <h3 class="text-sm leading-5 font-semibold text-white">{sectionTitle}</h3>
           </div>
           <div
-            class="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-white/72"
+            class="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium tracking-[0.22em] text-white/72 uppercase"
           >
             {stampCountLabel}
           </div>
@@ -498,12 +498,12 @@ onMount(() => {
             <section class="space-y-4">
               <div class="flex items-end justify-between gap-3 px-1">
                 <div class="min-w-0">
-                  <h4 class="text-sm font-semibold leading-5 text-white">
+                  <h4 class="text-sm leading-5 font-semibold text-white">
                     {section.layerName}
                   </h4>
                 </div>
                 <div
-                  class="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-white/60"
+                  class="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium tracking-[0.22em] text-white/60 uppercase"
                 >
                   {section.stampCountLabel}
                 </div>
@@ -523,7 +523,7 @@ onMount(() => {
                           ></div>
                         {/if}
                         <div
-                          class="absolute inset-[6px] rounded-full bg-panel/88 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_28px_color-mix(in_oklab,var(--color-accent)_18%,transparent)]"
+                          class="bg-panel/88 absolute inset-[6px] rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_28px_color-mix(in_oklab,var(--color-accent)_18%,transparent)]"
                         ></div>
                         <div
                           class="absolute inset-[13px] overflow-hidden rounded-full bg-[#0f1115] ring-1 ring-white/12"
@@ -537,7 +537,7 @@ onMount(() => {
                             >
                           {:else}
                             <div
-                              class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#1f2937_0%,#111827_100%)] px-2 text-center text-[9px] font-semibold uppercase tracking-[0.18em] text-white/70"
+                              class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#1f2937_0%,#111827_100%)] px-2 text-center text-[9px] font-semibold tracking-[0.18em] text-white/70 uppercase"
                             >
                               {stamp.country ?? 'Site'}
                             </div>
@@ -548,12 +548,12 @@ onMount(() => {
 
                     <div class="mt-3 min-w-0 space-y-1 text-center">
                       <h4
-                        class="line-clamp-2 text-xs font-semibold leading-5 text-white"
+                        class="line-clamp-2 text-xs leading-5 font-semibold text-white"
                       >
                         {stamp.title}
                       </h4>
                       <p
-                        class="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-4 text-white/55"
+                        class="overflow-hidden text-[11px] leading-4 text-ellipsis whitespace-nowrap text-white/55"
                       >
                         {stamp.addressLine}
                       </p>

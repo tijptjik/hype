@@ -54,13 +54,13 @@ function handleSelect(e: CustomEvent): void {
     : ''}"
   disableDefaultStyles={true}
 >
-  <Icon src={icon} class="mx-auto h-12 w-12 text-base-content/50" />
+  <Icon src={icon} class="text-base-content/50 mx-auto h-12 w-12" />
   <div class="space-y-0">
     <p class="text-lg font-medium">{title}</p>
     {#if isUploading && uploadProgress}
-      <p class="text-sm text-warning">{uploadProgress}</p>
+      <p class="text-warning text-sm">{uploadProgress}</p>
     {:else}
-      <p class="text-sm text-base-content/70">{subtitle}</p>
+      <p class="text-base-content/70 text-sm">{subtitle}</p>
     {/if}
   </div>
 </SvelteDropzone>

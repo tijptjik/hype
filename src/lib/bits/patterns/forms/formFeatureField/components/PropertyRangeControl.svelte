@@ -73,7 +73,7 @@ function editEndpoint(index: number, text: string): void {
   }
 }
 </script>
-<div class="min-w-0 w-full">
+<div class="w-full min-w-0">
   <div id={inputId} class="flex h-[72px] items-center">
     {#if !showInputs}
       <div
@@ -100,7 +100,7 @@ function editEndpoint(index: number, text: string): void {
     {:else}
       <div class="mx-auto grid w-full max-w-sm min-w-0 grid-cols-2 gap-4">
         {#each [0, 1] as index}
-          <div class="min-w-0 text-center text-xs text-muted-foreground">
+          <div class="text-muted-foreground min-w-0 text-center text-xs">
             <span class="mb-1 block">{index === 0 ? 'From' : 'To'}</span>
             {#if isDay}
               <DatePicker
@@ -117,7 +117,7 @@ function editEndpoint(index: number, text: string): void {
             {:else}
               <input
                 aria-label={index === 0 ? 'From' : 'To'}
-                class="min-h-11 w-full rounded-lg border border-border/60 bg-foreground/4 text-center text-sm text-foreground"
+                class="border-border/60 bg-foreground/4 text-foreground min-h-11 w-full rounded-lg border text-center text-sm"
                 type="text"
                 {disabled}
                 value={format(values[index])}
@@ -139,7 +139,7 @@ function editEndpoint(index: number, text: string): void {
       {#if onReset}
         <button
           type="button"
-          class="flex size-8 items-center justify-center rounded text-muted-foreground hover:bg-primary/10 hover:text-primary disabled:opacity-30"
+          class="text-muted-foreground hover:bg-primary/10 hover:text-primary flex size-8 items-center justify-center rounded disabled:opacity-30"
           disabled={!hasValue || disabled}
           aria-label="Reset range value"
           data-tooltip="Reset range"
@@ -150,12 +150,14 @@ function editEndpoint(index: number, text: string): void {
       {/if}
       <button
         type="button"
-        class="flex size-8 items-center justify-center rounded text-muted-foreground hover:bg-primary/10 hover:text-primary disabled:opacity-30"
+        class="text-muted-foreground hover:bg-primary/10 hover:text-primary flex size-8 items-center justify-center rounded disabled:opacity-30"
         {disabled}
         aria-label={definition.dataType === 'dateRange'
           ? 'Toggle date inputs'
           : 'Toggle time inputs'}
-        data-tooltip={definition.dataType === 'dateRange' ? 'Choose dates' : 'Enter times'}
+        data-tooltip={definition.dataType === 'dateRange'
+          ? 'Choose dates'
+          : 'Enter times'}
         aria-expanded={showInputs}
         aria-controls={inputId}
         onclick={() => (showInputs = !showInputs)}
@@ -186,7 +188,7 @@ function editEndpoint(index: number, text: string): void {
             <button
               type="button"
               {disabled}
-              class={`block w-full rounded px-3 py-2 text-left text-sm hover:bg-primary/10 ${timeStep === option.value ? 'bg-primary/10 text-primary' : ''}`}
+              class={`hover:bg-primary/10 block w-full rounded px-3 py-2 text-left text-sm ${timeStep === option.value ? 'bg-primary/10 text-primary' : ''}`}
               aria-pressed={timeStep === option.value}
               onclick={() => {
                 timeStep = option.value
@@ -202,12 +204,12 @@ function editEndpoint(index: number, text: string): void {
   {/if}
   {#if showInputs}
     {#if definition.dataType === 'timeRange' && definition.timeMaxHour === 36}
-      <p class="pb-2 text-xs text-muted-foreground">
+      <p class="text-muted-foreground pb-2 text-xs">
         24:00 is midnight; 36:00 is noon the next day.
       </p>
     {/if}
     {#if inputError}
-      <p role="alert" class="text-xs text-destructive">{inputError}</p>
+      <p role="alert" class="text-destructive text-xs">{inputError}</p>
     {/if}
   {/if}
 </div>

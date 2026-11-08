@@ -53,7 +53,7 @@ function cancelEditing(): void {
 </script>
 
 <div class="space-y-2">
-  <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
+  <p class="text-muted-foreground font-mono text-[11px] tracking-[0.28em] uppercase">
     Title
   </p>
 
@@ -63,7 +63,7 @@ function cancelEditing(): void {
         bind:this={titleInput}
         bind:value={draftTitle}
         type="text"
-        class="h-11 min-w-0 w-full rounded-full border border-border-input bg-base-200 px-4 text-left text-base font-semibold text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
+        class="border-border-input bg-base-200 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover h-11 w-full min-w-0 rounded-full border px-4 text-left text-base font-semibold focus:outline-none"
         placeholder={m.fluffy_wide_ladybug_file()}
         oninput={() => {
           appCtx.draft.updateI18n('title', draftTitle)
@@ -77,27 +77,27 @@ function cancelEditing(): void {
       >
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
+        class="border-border-input bg-base-content/8 text-base-content hover:bg-base-content/12 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition"
         onclick={saveTitle}
         disabled={!draftTitle.trim()}
       >
-        <Icon src={Check} class="h-5 w-5 text-primary" />
+        <Icon src={Check} class="text-primary h-5 w-5" />
       </button>
     {:else}
       <button
         type="button"
-        class="flex h-11 min-w-0 w-full items-center rounded-full border border-border-input bg-base-200 px-4 text-left transition hover:bg-base-300"
+        class="border-border-input bg-base-200 hover:bg-base-300 flex h-11 w-full min-w-0 items-center rounded-full border px-4 text-left transition"
         onclick={startEditing}
       >
         <p
-          class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold ${currentTitle ? 'text-base-content' : 'text-muted-foreground'}`}
+          class={`!block min-w-0 flex-1 overflow-hidden text-base font-semibold text-ellipsis whitespace-nowrap ${currentTitle ? 'text-base-content' : 'text-muted-foreground'}`}
         >
           {currentTitle || m.empty_lofty_meerkat_support()}
         </p>
       </button>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-200 text-base-content transition hover:bg-base-300"
+        class="border-border-input bg-base-200 text-base-content hover:bg-base-300 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition"
         onclick={startEditing}
         aria-label="Edit title"
       >

@@ -378,9 +378,9 @@ onMount(() => {
     title={headerTitle}
   />
 
-  <div class="bits-theme relative flex min-h-full flex-col bg-background-alt">
+  <div class="bits-theme bg-background-alt relative flex min-h-full flex-col">
     <section
-      class="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_color-mix(in_oklab,var(--color-accent)_16%,transparent),_transparent_34%),radial-gradient(circle_at_top_right,_color-mix(in_oklab,var(--color-primary)_12%,transparent),_transparent_32%),linear-gradient(180deg,#19161f_0%,#11141a_58%,#000000_100%)] px-4 py-4 text-foreground"
+      class="text-foreground border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_color-mix(in_oklab,var(--color-accent)_16%,transparent),_transparent_34%),radial-gradient(circle_at_top_right,_color-mix(in_oklab,var(--color-primary)_12%,transparent),_transparent_32%),linear-gradient(180deg,#19161f_0%,#11141a_58%,#000000_100%)] px-4 py-4"
     >
       <div class="space-y-3">
         {#if projectImageUrl}
@@ -392,17 +392,17 @@ onMount(() => {
           >
         {:else}
           <div
-            class="float-right ml-4 flex h-18 w-18 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-accent"
+            class="text-accent float-right ml-4 flex h-18 w-18 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]"
           >
             <CalendarHeartIcon class="h-7 w-7" />
           </div>
         {/if}
 
         <div class="min-w-0 space-y-2">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.35em] text-accent">
+          <p class="text-accent text-[11px] font-semibold tracking-[0.35em] uppercase">
             {subtitle}
           </p>
-          <h3 class="text-lg font-semibold leading-6 text-white">
+          <h3 class="text-lg leading-6 font-semibold text-white">
             Thank you for attending.
           </h3>
           <p class="text-sm leading-6 text-white/72">
@@ -438,28 +438,28 @@ onMount(() => {
 
     {#if isLoading}
       <div
-        class="flex flex-1 items-center justify-center px-6 py-12 text-sm text-muted-foreground"
+        class="text-muted-foreground flex flex-1 items-center justify-center px-6 py-12 text-sm"
       >
         Folding leaflet...
       </div>
     {:else if errorMessage}
       <div
-        class="m-4 rounded-[var(--radius-card-lg)] border border-warning/30 bg-warning/10 px-4 py-5 text-sm leading-6 text-foreground-alt"
+        class="border-warning/30 bg-warning/10 text-foreground-alt m-4 rounded-[var(--radius-card-lg)] border px-4 py-5 text-sm leading-6"
       >
         {errorMessage}
       </div>
     {:else}
       <section
-        class="flex-1 bg-[linear-gradient(180deg,#050608_0%,#000000_100%)] px-3 py-4 pb-8 text-foreground"
+        class="text-foreground flex-1 bg-[linear-gradient(180deg,#050608_0%,#000000_100%)] px-3 py-4 pb-8"
       >
         <div class="space-y-4">
           {#each sessionCards as session (session.featureId)}
             <article
-              class="overflow-hidden rounded-[var(--radius-card-lg)] border border-white/10 bg-background-alt shadow-[var(--shadow-card)]"
+              class="bg-background-alt overflow-hidden rounded-[var(--radius-card-lg)] border border-white/10 shadow-[var(--shadow-card)]"
             >
-              <div class="flex gap-3 border-b border-border-card px-3 py-3">
+              <div class="border-border-card flex gap-3 border-b px-3 py-3">
                 <div
-                  class="h-24 w-20 shrink-0 overflow-hidden rounded-[var(--radius-card-sm)] bg-muted"
+                  class="bg-muted h-24 w-20 shrink-0 overflow-hidden rounded-[var(--radius-card-sm)]"
                 >
                   {#if session.imageUrl}
                     <img
@@ -477,7 +477,7 @@ onMount(() => {
                     >
                   {:else}
                     <div
-                      class="flex h-full w-full items-center justify-center bg-dark px-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-accent-foreground"
+                      class="bg-dark text-accent-foreground flex h-full w-full items-center justify-center px-2 text-center text-[10px] font-semibold tracking-[0.18em] uppercase"
                     >
                       Session
                     </div>
@@ -485,7 +485,7 @@ onMount(() => {
                 </div>
 
                 <div class="min-w-0 flex-1">
-                  <div class="float-right ml-3 mb-2">
+                  <div class="float-right mb-2 ml-3">
                     <Button
                       text="Buy"
                       iconComponent={BookOpenIcon}
@@ -501,17 +501,17 @@ onMount(() => {
                   </div>
                   {#if session.follows.author}
                     <p
-                      class="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+                      class="text-muted-foreground text-[11px] font-semibold tracking-[0.2em] uppercase"
                     >
                       {session.follows.author.label}
                     </p>
                   {/if}
                   <h4
-                    class="line-clamp-2 text-sm font-semibold leading-5 text-foreground"
+                    class="text-foreground line-clamp-2 text-sm leading-5 font-semibold"
                   >
                     {session.title}
                   </h4>
-                  <p class="mt-1 text-xs leading-5 text-foreground-alt">
+                  <p class="text-foreground-alt mt-1 text-xs leading-5">
                     {session.addressLine}
                   </p>
                   <div class="clear-both"></div>
@@ -521,17 +521,17 @@ onMount(() => {
               <div class="bg-panel">
                 <div class="">
                   {#each companionRoles as role}
-                    <div class="px-4 py-2 border-1">
+                    <div class="border-1 px-4 py-2">
                       {#if session.follows[role]}
                         <div class="flex items-center gap-3">
                           <div class="min-w-0 flex-1">
                             <p
-                              class="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/45"
+                              class="text-[10px] font-semibold tracking-[0.24em] text-white/45 uppercase"
                             >
                               {role}
                             </p>
                             <p
-                              class="mt-1 line-clamp-3 text-xs font-medium leading-5 text-white"
+                              class="mt-1 line-clamp-3 text-xs leading-5 font-medium text-white"
                             >
                               {session.follows[role]?.label}
                             </p>
@@ -562,7 +562,7 @@ onMount(() => {
                           <div class="h-10 w-1 shrink-0 rounded-full bg-white/6"></div>
                           <div class="min-w-0 flex-1">
                             <p
-                              class="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/45"
+                              class="text-[10px] font-semibold tracking-[0.24em] text-white/45 uppercase"
                             >
                               {role}
                             </p>
@@ -573,7 +573,7 @@ onMount(() => {
                             </p>
                           </div>
                           <div
-                            class="shrink-0 rounded-full border border-dashed border-border-card bg-background-alt px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                            class="border-border-card bg-background-alt text-muted-foreground shrink-0 rounded-full border border-dashed px-3 py-2 text-center text-[10px] font-semibold tracking-[0.18em] uppercase"
                           >
                             Unavailable
                           </div>

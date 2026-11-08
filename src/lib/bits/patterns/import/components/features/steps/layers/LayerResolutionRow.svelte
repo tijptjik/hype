@@ -136,17 +136,17 @@ function handleLayerResolutionSearchFocus(): void {
   <ImportMappingRow actionLabel="Assign to">
     {#snippet source()}
       <div class="min-w-0 space-y-2">
-        <h4 class="text-xs font-bold uppercase tracking-wide text-error">
+        <h4 class="text-error text-xs font-bold tracking-wide uppercase">
           No Match Found
         </h4>
         <div class="space-y-2 p-3">
           {#each getLayerResolutionParts(invalidValue) as part}
             <div class="flex items-start gap-2 text-sm">
-              <code class="rounded bg-base-200 px-2 py-1 text-xs uppercase">
+              <code class="bg-base-200 rounded px-2 py-1 text-xs uppercase">
                 {part.key}
               </code>
               <span
-                class="overflow-hidden text-ellipsis whitespace-nowrap font-mono"
+                class="overflow-hidden font-mono text-ellipsis whitespace-nowrap"
                 data-tooltip={part.value}
                 >{part.value}</span
               >
@@ -166,19 +166,19 @@ function handleLayerResolutionSearchFocus(): void {
               changeLabel={m.feature_import__users_click_to_change()}
             >
               <div
-                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-xs font-medium text-success-content"
+                class="bg-success text-success-content flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium"
               >
                 {resolvedLayer?.i18n?.en?.name?.charAt(0)?.toUpperCase() || 'L'}
               </div>
               <div class="min-w-0">
                 <div
-                  class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium"
+                  class="overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap"
                 >
                   {resolvedLayer?.i18n?.en?.name || 'Selected Layer'}
                 </div>
                 {#if resolvedLayer?.i18n?.en?.description}
                   <div
-                    class="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-success/70"
+                    class="text-success/70 overflow-hidden text-xs text-ellipsis whitespace-nowrap"
                   >
                     {resolvedLayer.i18n.en.description}
                   </div>

@@ -7,7 +7,13 @@ import { createMessagingModel } from '#lib/adapters/messaging/useMessagingModel.
 import WhatsAppConsole from '#lib/bits/patterns/whatsapp/WhatsAppConsole.svelte'
 // TYPES
 import type { MessagingPlatform } from '#lib/messaging/types.js'
-let { account, openedChat = null }: { openedChat?: { chatId: string; revision: number } | null; account: { id: string; platform: MessagingPlatform; organisationCode: string } } = $props()
+let {
+  account,
+  openedChat = null,
+}: {
+  openedChat?: { chatId: string; revision: number } | null
+  account: { id: string; platform: MessagingPlatform; organisationCode: string }
+} = $props()
 // The parent keys each account so drafts and retries stay pinned to their original platform.
 const model = untrack(() => createMessagingModel(account))
 $effect(() => {

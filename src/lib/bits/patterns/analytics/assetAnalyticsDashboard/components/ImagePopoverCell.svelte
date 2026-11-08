@@ -158,7 +158,7 @@ onDestroy(() => {
   {#snippet trigger()}
     <button
       type="button"
-      class="w-full text-left font-mono text-xs text-foreground underline decoration-dotted underline-offset-4 transition hover:text-info focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info/40"
+      class="text-foreground hover:text-info focus-visible:ring-info/40 w-full text-left font-mono text-xs underline decoration-dotted underline-offset-4 transition focus-visible:ring-2 focus-visible:outline-none"
       onmouseenter={openPopover}
       onmouseleave={closePopoverSoon}
       onfocus={openPopover}
@@ -172,7 +172,7 @@ onDestroy(() => {
   <div class="space-y-3" onmouseenter={openPopover} onmouseleave={closePopoverSoon}>
     {#if previewFailed}
       <div
-        class="flex h-44 items-center justify-center rounded-[1rem] border border-dashed border-border bg-surface px-4 text-center text-sm text-foreground-alt"
+        class="border-border bg-surface text-foreground-alt flex h-44 items-center justify-center rounded-[1rem] border border-dashed px-4 text-center text-sm"
       >
         {m.image__metadata_preview_unavailable()}
       </div>
@@ -180,7 +180,7 @@ onDestroy(() => {
       <img
         src={previewUrl}
         alt={normalizedPublicId}
-        class="h-44 w-full rounded-[1rem] border border-border bg-surface object-cover"
+        class="border-border bg-surface h-44 w-full rounded-[1rem] border object-cover"
         loading="lazy"
         onerror={() => {
           previewFailed = true
@@ -190,30 +190,30 @@ onDestroy(() => {
 
     <div class="space-y-1">
       <div
-        class="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-alt"
+        class="text-foreground-alt text-[11px] font-semibold tracking-[0.18em] uppercase"
       >
         {m.analytics__public_id()}
       </div>
-      <div class="break-all font-mono text-xs text-foreground">
+      <div class="text-foreground font-mono text-xs break-all">
         {normalizedPublicId}
       </div>
     </div>
 
-    <div class="rounded-[1rem] border border-border bg-surface px-3 py-3">
+    <div class="border-border bg-surface rounded-[1rem] border px-3 py-3">
       {#if metadataEntries.length > 0}
         <div class="flex flex-col gap-2">
           {#each metadataEntries as entry}
-            <div class="flex flex-wrap items-center gap-2 text-sm text-foreground-alt">
-              <Icon src={entry.icon} class="h-4 w-4 grow-0 text-foreground" />
-              <span class="font-medium text-foreground">{entry.label}:</span>
+            <div class="text-foreground-alt flex flex-wrap items-center gap-2 text-sm">
+              <Icon src={entry.icon} class="text-foreground h-4 w-4 grow-0" />
+              <span class="text-foreground font-medium">{entry.label}:</span>
               <span>{entry.value}</span>
             </div>
           {/each}
         </div>
       {:else if isMetadataLoading}
-        <div class="text-sm text-foreground-alt">{m.image__metadata_loading()}</div>
+        <div class="text-foreground-alt text-sm">{m.image__metadata_loading()}</div>
       {:else}
-        <div class="text-sm text-foreground-alt">{m.image__metadata_empty_image()}</div>
+        <div class="text-foreground-alt text-sm">{m.image__metadata_empty_image()}</div>
       {/if}
     </div>
   </div>

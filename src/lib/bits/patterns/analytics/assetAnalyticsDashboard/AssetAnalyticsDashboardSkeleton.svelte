@@ -16,18 +16,13 @@ const WINDOW_KEYS = [...DEFAULT_VISIBLE_WINDOWS]
 const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
 </script>
 
-{#snippet skeletonBlock(
-  className: string,
-)}
+{#snippet skeletonBlock(className: string)}
   <AnalyticsCardPrimitive.SkeletonBlock
     class={`analytics-loading-block relative overflow-hidden ${className}`}
   />
 {/snippet}
 
-{#snippet loadingPill(
-  label: string,
-  className = 'h-8 w-14',
-)}
+{#snippet loadingPill(label: string, className = 'h-8 w-14')}
   <div class="relative">
     {@render skeletonBlock(
       `${className} rounded-full border border-foreground/10 bg-raised`,
@@ -42,9 +37,7 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
   {/each}
 {/snippet}
 
-{#snippet analyticsWindowColumnHeaders(
-  leftLabel: string,
-)}
+{#snippet analyticsWindowColumnHeaders(leftLabel: string)}
   <div class={`grid min-w-[min(100%,1240px)] gap-4 ${WINDOW_GRID_CLASS}`}>
     {#each WINDOW_KEYS as windowKey}
       <AnalyticsCardPrimitive.WindowHeader {leftLabel} rightLabel={windowKey} />
@@ -54,11 +47,11 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
 
 {#snippet timelineLegend()}
   <div
-    class="mb-4 flex flex-wrap items-center justify-center gap-2 text-xs uppercase tracking-[0.18em]"
+    class="mb-4 flex flex-wrap items-center justify-center gap-2 text-xs tracking-[0.18em] uppercase"
   >
     {#each ASSET_ANALYTICS_SERIES as series}
       <div
-        class="flex min-w-[8rem] items-center justify-center gap-2 bg-transparent px-3 py-1.5 text-foreground-alt"
+        class="text-foreground-alt flex min-w-[8rem] items-center justify-center gap-2 bg-transparent px-3 py-1.5"
       >
         <span
           class={`h-2.5 w-2.5 rounded-full ${series.textColorClass.replace('text-', 'bg-')}`}
@@ -70,33 +63,33 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
 {/snippet}
 
 {#snippet timelineLoadingChart()}
-  <div class="rounded-[1.4rem] border border-foreground/10 bg-surface p-4 pt-8">
+  <div class="border-foreground/10 bg-surface rounded-[1.4rem] border p-4 pt-8">
     <div class="relative h-64 rounded-[1rem]" aria-hidden="true">
       <div
-        class="pointer-events-none absolute inset-x-0 -translate-y-5 flex justify-center"
+        class="pointer-events-none absolute inset-x-0 flex -translate-y-5 justify-center"
       >
         <div
-          class="inline-flex items-center gap-2 rounded-full border border-foreground/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground-alt backdrop-blur"
+          class="border-foreground/10 text-foreground-alt inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-semibold tracking-[0.22em] uppercase backdrop-blur"
         >
-          <span class="analytics-loading-dot h-2 w-2 rounded-full bg-primary"></span>
+          <span class="analytics-loading-dot bg-primary h-2 w-2 rounded-full"></span>
           Loading
         </div>
       </div>
 
-      <div class="pointer-events-none absolute inset-x-6 bottom-10 top-5">
+      <div class="pointer-events-none absolute inset-x-6 top-5 bottom-10">
         {#each [0.25, 0.5, 0.75, 1] as marker}
           <div
-            class="absolute inset-x-0 border-t border-foreground/10"
+            class="border-foreground/10 absolute inset-x-0 border-t"
             style={`top: ${(1 - marker) * 100}%`}
           ></div>
         {/each}
 
         <div
-          class="analytics-loading-sheen absolute inset-y-0 left-[8%] w-20 rounded-full bg-foreground/8 blur-2xl"
+          class="analytics-loading-sheen bg-foreground/8 absolute inset-y-0 left-[8%] w-20 rounded-full blur-2xl"
         ></div>
 
         <div
-          class="absolute inset-x-0 bottom-0 top-0 flex items-end justify-between gap-3"
+          class="absolute inset-x-0 top-0 bottom-0 flex items-end justify-between gap-3"
         >
           {#each Array.from({ length: 14 }) as _, index}
             <div class="flex flex-1 items-end justify-center gap-1">
@@ -118,7 +111,7 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
       </div>
 
       <div
-        class="absolute inset-x-4 bottom-3 grid grid-cols-7 gap-3 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-alt"
+        class="text-foreground-alt absolute inset-x-4 bottom-3 grid grid-cols-7 gap-3 text-center text-[10px] font-semibold tracking-[0.16em] uppercase"
       >
         {#each [
           'Mar 1',
@@ -136,14 +129,12 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
   </div>
 {/snippet}
 
-{#snippet metricWindowCard(
-  windowKey: string,
-)}
+{#snippet metricWindowCard(windowKey: string)}
   <section class="flex min-h-0 flex-col gap-4">
     <div class="grid grid-cols-2 gap-3">
       {#each [0, 1, 2, 3, 4, 5] as statIndex}
         <article
-          class="flex min-h-[5.9rem] flex-col justify-between rounded-[1.2rem] border border-foreground/10 bg-surface px-3 py-3"
+          class="border-foreground/10 bg-surface flex min-h-[5.9rem] flex-col justify-between rounded-[1.2rem] border px-3 py-3"
         >
           {@render skeletonBlock('h-3 w-20 rounded-full')}
           {@render skeletonBlock('h-8 w-18 rounded-full')}
@@ -153,7 +144,7 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
     </div>
 
     <section
-      class="space-y-4 rounded-[1.25rem] border border-foreground/10 bg-surface p-4"
+      class="border-foreground/10 bg-surface space-y-4 rounded-[1.25rem] border p-4"
     >
       <div class="flex items-center gap-2">
         {@render skeletonBlock('h-4 w-20 rounded-full')}
@@ -168,9 +159,9 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
             {#each [0, 1, 2] as rowIndex}
               <div class="grid grid-cols-[88px_1fr_auto] items-center gap-3">
                 {@render skeletonBlock('h-3 w-16 rounded-full')}
-                <div class="h-2.5 overflow-hidden rounded-full bg-foreground/6">
+                <div class="bg-foreground/6 h-2.5 overflow-hidden rounded-full">
                   <div
-                    class="analytics-loading-bar h-full rounded-full bg-primary"
+                    class="analytics-loading-bar bg-primary h-full rounded-full"
                     style={`width: ${38 + ((tierIndex * 31 + rowIndex * 19) % 48)}%; animation-delay: ${(tierIndex * 3 + rowIndex) * 110}ms;`}
                   ></div>
                 </div>
@@ -185,7 +176,7 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
     </section>
 
     <section
-      class="space-y-5 rounded-[1.25rem] border border-foreground/10 bg-surface p-4"
+      class="border-foreground/10 bg-surface space-y-5 rounded-[1.25rem] border p-4"
     >
       <div class="flex items-center gap-2">
         {@render skeletonBlock('h-4 w-32 rounded-full')}
@@ -214,9 +205,9 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
                   </div>
 
                   <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                    <div class="h-2 overflow-hidden rounded-full bg-foreground/6">
+                    <div class="bg-foreground/6 h-2 overflow-hidden rounded-full">
                       <div
-                        class="analytics-loading-bar h-full rounded-full bg-primary"
+                        class="analytics-loading-bar bg-primary h-full rounded-full"
                         style={`width: ${34 + ((breakdownIndex * 17 + rowIndex * 11) % 58)}%; animation-delay: ${(breakdownIndex * 4 + rowIndex) * 90}ms;`}
                       ></div>
                     </div>
@@ -234,12 +225,9 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
   </section>
 {/snippet}
 
-{#snippet rankedWindowSectionCard(
-  kind: string,
-  windowKey: string,
-)}
+{#snippet rankedWindowSectionCard(kind: string, windowKey: string)}
   <section
-    class="min-h-0 rounded-[1.4rem] border border-foreground/10 bg-surface px-4 pt-4 pb-6"
+    class="border-foreground/10 bg-surface min-h-0 rounded-[1.4rem] border px-4 pt-4 pb-6"
   >
     <div class="mb-3 flex items-start justify-between gap-3">
       <div class="flex min-w-0 flex-1 items-center gap-2">
@@ -252,7 +240,7 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
     <div class="space-y-3">
       {#each [0, 1, 2, 3, 4, 5] as rowIndex}
         <div
-          class="grid grid-cols-[minmax(0,1fr)_4rem] items-center gap-3 border-t border-foreground/8 pt-3 first:border-t-0 first:pt-0"
+          class="border-foreground/8 grid grid-cols-[minmax(0,1fr)_4rem] items-center gap-3 border-t pt-3 first:border-t-0 first:pt-0"
         >
           {#if kind === 'transformations'}
             <div class="flex flex-wrap gap-1.5">

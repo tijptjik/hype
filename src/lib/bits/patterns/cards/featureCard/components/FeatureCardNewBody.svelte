@@ -33,7 +33,7 @@ const infoItems = [
       <FeatureCardNewPrimitive.AddressField />
       <FeatureCardNewPrimitive.DescriptionField />
       <FeatureCardNewPrimitive.PropertiesField {feature} />
-      <div class="border-t border-border-input pt-4">
+      <div class="border-border-input border-t pt-4">
         <FeatureCardAttributionField />
       </div>
     </div>

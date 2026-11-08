@@ -130,10 +130,7 @@ $effect(() => {
 })
 </script>
 
-{#snippet children(
-  item: ResourceIndexItem<T>,
-  index: number,
-)}
+{#snippet children(item: ResourceIndexItem<T>, index: number)}
   {#if layoutMode === 'card'}
     {@const cardRow = item as ResourceIndexGridRow<T>}
     <ResourceCardRow
@@ -155,7 +152,7 @@ $effect(() => {
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
-  class="flex min-h-0 flex-1 flex-col gap-12 overflow-hidden overscroll-auto caret-transparent @container/grid"
+  class="@container/grid flex min-h-0 flex-1 flex-col gap-12 overflow-hidden overscroll-auto caret-transparent"
 >
   {#if isInitialised}
     {#if entities.length > 0 && items.length > 0}

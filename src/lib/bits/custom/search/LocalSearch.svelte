@@ -163,10 +163,10 @@ $effect(() => {
 
   {#if isOpen && results.length > 0}
     <SearchPrimitive.ResultWrapper class="bits-search__results mx-3 mt-1">
-      <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
+      <div class="bg-primary/70 rounded-lg px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
           <div
-            class={`flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain ${resultListClass}`}
+            class={`flex max-h-80 flex-col gap-1 overflow-y-auto overscroll-contain ${resultListClass}`}
           >
             {#each results as item, index (index)}
               {#if resultMap.variant?.(item) === 'visual' ||
@@ -203,11 +203,11 @@ $effect(() => {
     </SearchPrimitive.ResultWrapper>
   {:else if shouldShowEmptyState}
     <SearchPrimitive.ResultWrapper class="bits-search__results mx-3 mt-1">
-      <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
+      <div class="bg-primary/70 rounded-lg px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
-          <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
+          <div class="flex max-h-80 flex-col gap-1 overflow-y-auto overscroll-contain">
             <div
-              class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-panel px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-muted-foreground"
+              class="bg-panel text-muted-foreground flex min-h-[60px] w-full items-center justify-center rounded-md px-3 py-3 text-center text-sm font-medium tracking-[0.08em]"
               aria-live="polite"
             >
               {noResultsText}

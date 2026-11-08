@@ -103,24 +103,24 @@ const oldTertiary = originalColours[1].value
   >
 </svelte:head>
 
-<main data-theme="breadline-light" class="min-h-screen bg-canvas text-base-content">
+<main data-theme="breadline-light" class="bg-canvas text-base-content min-h-screen">
   <div class="mx-auto max-w-[1440px] px-5 py-6 sm:px-10 lg:px-14">
     <header
-      class="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6"
+      class="border-border flex flex-wrap items-center justify-between gap-4 border-b pb-6"
     >
       <a
         href="/themes"
         class="flex items-center gap-3 text-sm font-semibold tracking-[0.16em]"
       >
         <span
-          class="grid size-9 place-items-center rounded-xl bg-primary text-primary-content"
+          class="bg-primary text-primary-content grid size-9 place-items-center rounded-xl"
           >H</span
         >
-        HYPE <span class="font-normal text-muted-foreground">/ MILQUE COLOURS</span>
+        HYPE <span class="text-muted-foreground font-normal">/ MILQUE COLOURS</span>
       </a>
       <a
         href="/themes"
-        class="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
+        class="text-muted-foreground hover:text-primary flex items-center gap-2 text-xs"
       >
         Theme studio <ArrowUpRight class="size-4" />
       </a>
@@ -129,34 +129,34 @@ const oldTertiary = originalColours[1].value
     <section class="grid gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
       <div>
         <p
-          class="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-secondary"
+          class="text-secondary mb-4 text-xs font-semibold tracking-[0.22em] uppercase"
         >
           Breadline · Milque
         </p>
         <h1
-          class="max-w-3xl text-4xl font-medium leading-[1.08] tracking-[-0.045em] sm:text-6xl"
+          class="max-w-3xl text-4xl leading-[1.08] font-medium tracking-[-0.045em] sm:text-6xl"
         >
           Three ingredients.<br>
           <span class="text-muted-foreground">More ways to make them sing.</span>
         </h1>
-        <p class="mt-6 max-w-2xl text-sm leading-7 text-muted-foreground">
+        <p class="text-muted-foreground mt-6 max-w-2xl text-sm leading-7">
           This is an open colour study for the Milque application. Every direction keeps
           the original blueberry, frosting, and peach vocabulary, then shifts hue and
           saturation to see which one feels most alive on the real interface surfaces.
         </p>
       </div>
-      <div class="rounded-3xl border border-border bg-panel p-5">
+      <div class="border-border bg-panel rounded-3xl border p-5">
         <p
-          class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+          class="text-muted-foreground text-xs font-semibold tracking-[0.18em] uppercase"
         >
           How to read this
         </p>
         <p class="mt-4 text-sm leading-6">
           The page itself uses the live Milque background tokens. Inside each study,
-          compare <span class="font-medium text-primary">canvas</span>,
-          <span class="font-medium text-primary">panel</span>,
-          <span class="font-medium text-primary">surface</span>, and
-          <span class="font-medium text-primary">raised</span>
+          compare <span class="text-primary font-medium">canvas</span>,
+          <span class="text-primary font-medium">panel</span>,
+          <span class="text-primary font-medium">surface</span>, and
+          <span class="text-primary font-medium">raised</span>
           from outside in.
         </p>
       </div>
@@ -166,7 +166,7 @@ const oldTertiary = originalColours[1].value
       <div class="mb-4 flex items-end justify-between gap-4">
         <div>
           <p
-            class="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+            class="text-muted-foreground text-[10px] font-semibold tracking-[0.18em] uppercase"
           >
             01 / Palette evolution
           </p>
@@ -174,24 +174,24 @@ const oldTertiary = originalColours[1].value
             The source and the current translation.
           </h2>
         </div>
-        <span class="hidden text-xs text-muted-foreground sm:block"
+        <span class="text-muted-foreground hidden text-xs sm:block"
           >Original → Milque</span
         >
       </div>
 
       <div class="grid gap-4 lg:grid-cols-2">
-        <div class="rounded-3xl border border-border bg-panel p-5 sm:p-6">
+        <div class="border-border bg-panel rounded-3xl border p-5 sm:p-6">
           <div class="mb-5 flex items-center justify-between">
             <h3 class="font-medium">Original Breadline</h3>
             <span
-              class="rounded-full bg-surface px-3 py-1 text-[10px] uppercase tracking-wider text-muted-foreground"
+              class="bg-surface text-muted-foreground rounded-full px-3 py-1 text-[10px] tracking-wider uppercase"
               >Reference</span
             >
           </div>
           <div class="space-y-2">
             {#each originalColours as colour}
               <div
-                class="grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-3 rounded-xl border border-border p-2"
+                class="border-border grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-3 rounded-xl border p-2"
               >
                 <div class="flex min-w-0 items-center gap-3">
                   <span
@@ -200,10 +200,10 @@ const oldTertiary = originalColours[1].value
                   ></span>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-medium">{colour.name}</p>
-                    <p class="text-xs text-muted-foreground">{colour.use}</p>
+                    <p class="text-muted-foreground text-xs">{colour.use}</p>
                   </div>
                 </div>
-                <code class="text-right text-xs text-muted-foreground"
+                <code class="text-muted-foreground text-right text-xs"
                   >{colour.value}</code
                 >
               </div>
@@ -212,19 +212,19 @@ const oldTertiary = originalColours[1].value
         </div>
 
         <div
-          class="rounded-3xl border border-primary/35 bg-panel p-5 shadow-lg shadow-primary/5 sm:p-6"
+          class="border-primary/35 bg-panel shadow-primary/5 rounded-3xl border p-5 shadow-lg sm:p-6"
         >
           <div class="mb-5 flex items-center justify-between">
             <h3 class="font-medium">Milque application</h3>
             <span
-              class="rounded-full bg-primary px-3 py-1 text-[10px] uppercase tracking-wider text-primary-content"
+              class="bg-primary text-primary-content rounded-full px-3 py-1 text-[10px] tracking-wider uppercase"
               >Revised</span
             >
           </div>
           <div class="space-y-2">
             {#each newColours as colour}
               <div
-                class="grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-3 rounded-xl border border-border p-2"
+                class="border-border grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-3 rounded-xl border p-2"
               >
                 <div class="flex min-w-0 items-center gap-3">
                   <span
@@ -233,10 +233,10 @@ const oldTertiary = originalColours[1].value
                   ></span>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-medium">{colour.name}</p>
-                    <p class="text-xs text-muted-foreground">{colour.use}</p>
+                    <p class="text-muted-foreground text-xs">{colour.use}</p>
                   </div>
                 </div>
-                <code class="text-right text-xs text-muted-foreground"
+                <code class="text-muted-foreground text-right text-xs"
                   >{colour.value}</code
                 >
               </div>
@@ -249,14 +249,14 @@ const oldTertiary = originalColours[1].value
     <section class="mt-12" aria-labelledby="experiments-heading">
       <div class="mb-5 max-w-2xl">
         <p
-          class="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+          class="text-muted-foreground text-[10px] font-semibold tracking-[0.18em] uppercase"
         >
           02 / Experimental directions
         </p>
         <h2 id="experiments-heading" class="mt-2 text-2xl font-medium tracking-tight">
           Same palette family, different energy.
         </h2>
-        <p class="mt-2 text-sm leading-6 text-muted-foreground">
+        <p class="text-muted-foreground mt-2 text-sm leading-6">
           Each specimen keeps the application background hierarchy intact. The coloured
           controls are deliberately shown in the raised layer, where primary, secondary,
           and tertiary roles have to earn their place.
@@ -267,29 +267,29 @@ const oldTertiary = originalColours[1].value
         {#each colourVariants as variant}
           <article
             data-variant={variant.name}
-            class={`overflow-hidden rounded-3xl border bg-panel ${
+            class={`bg-panel overflow-hidden rounded-3xl border ${
               variant.isCurrent
-                ? 'border-primary/40 shadow-lg shadow-primary/5'
+                ? 'border-primary/40 shadow-primary/5 shadow-lg'
                 : 'border-border'
             }`}
           >
             <div
-              class="flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-6"
+              class="border-border flex flex-wrap items-start justify-between gap-4 border-b px-5 py-5 sm:px-6"
             >
               <div>
                 <p
-                  class="text-[10px] font-semibold uppercase tracking-[0.18em] text-secondary"
+                  class="text-secondary text-[10px] font-semibold tracking-[0.18em] uppercase"
                 >
                   {variant.eyebrow}
                 </p>
                 <h3 class="mt-1 text-xl font-medium tracking-tight">{variant.name}</h3>
-                <p class="mt-2 max-w-md text-xs leading-5 text-muted-foreground">
+                <p class="text-muted-foreground mt-2 max-w-md text-xs leading-5">
                   {variant.intent}
                 </p>
               </div>
               {#if variant.isCurrent}
                 <span
-                  class="rounded-full bg-primary px-3 py-1 text-[10px] uppercase tracking-wider text-primary-content"
+                  class="bg-primary text-primary-content rounded-full px-3 py-1 text-[10px] tracking-wider uppercase"
                 >
                   In use
                 </span>
@@ -303,10 +303,10 @@ const oldTertiary = originalColours[1].value
                     class="h-16 rounded-xl border border-black/10"
                     style={`background:${variant.primary}`}
                   ></div>
-                  <p class="mt-2 text-[10px] font-medium uppercase tracking-wider">
+                  <p class="mt-2 text-[10px] font-medium tracking-wider uppercase">
                     Blueberry
                   </p>
-                  <code class="text-[10px] text-muted-foreground"
+                  <code class="text-muted-foreground text-[10px]"
                     >{variant.primary}</code
                   >
                 </div>
@@ -315,10 +315,10 @@ const oldTertiary = originalColours[1].value
                     class="h-16 rounded-xl border border-black/10"
                     style={`background:${variant.secondary}`}
                   ></div>
-                  <p class="mt-2 text-[10px] font-medium uppercase tracking-wider">
+                  <p class="mt-2 text-[10px] font-medium tracking-wider uppercase">
                     Frosting
                   </p>
-                  <code class="text-[10px] text-muted-foreground"
+                  <code class="text-muted-foreground text-[10px]"
                     >{variant.secondary}</code
                   >
                 </div>
@@ -327,28 +327,28 @@ const oldTertiary = originalColours[1].value
                     class="h-16 rounded-xl border border-black/10"
                     style={`background:${variant.tertiary}`}
                   ></div>
-                  <p class="mt-2 text-[10px] font-medium uppercase tracking-wider">
+                  <p class="mt-2 text-[10px] font-medium tracking-wider uppercase">
                     Peach
                   </p>
-                  <code class="text-[10px] text-muted-foreground"
+                  <code class="text-muted-foreground text-[10px]"
                     >{variant.tertiary}</code
                   >
                 </div>
               </div>
 
-              <div class="rounded-2xl border border-border bg-canvas p-3">
+              <div class="border-border bg-canvas rounded-2xl border p-3">
                 <div class="mb-2 flex items-center justify-between px-1">
                   <p
-                    class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                    class="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
                   >
                     Canvas
                   </p>
-                  <span class="text-[10px] text-muted-foreground">live token</span>
+                  <span class="text-muted-foreground text-[10px]">live token</span>
                 </div>
-                <div class="rounded-xl border border-border bg-panel p-3">
+                <div class="border-border bg-panel rounded-xl border p-3">
                   <div class="mb-2 flex items-center justify-between">
                     <p
-                      class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                      class="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
                     >
                       Panel
                     </p>
@@ -357,20 +357,20 @@ const oldTertiary = originalColours[1].value
                       style={`background:${variant.secondary}`}
                     ></span>
                   </div>
-                  <div class="rounded-lg border border-border bg-surface p-3">
+                  <div class="border-border bg-surface rounded-lg border p-3">
                     <div class="mb-2 flex items-center justify-between">
                       <p
-                        class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                        class="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
                       >
                         Surface
                       </p>
-                      <span class="text-[10px] text-muted-foreground">collection</span>
+                      <span class="text-muted-foreground text-[10px]">collection</span>
                     </div>
-                    <div class="rounded-lg border border-border bg-raised p-3">
+                    <div class="border-border bg-raised rounded-lg border p-3">
                       <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="min-w-0">
                           <p class="text-sm font-medium">Evening collection</p>
-                          <p class="mt-1 text-xs text-muted-foreground">
+                          <p class="text-muted-foreground mt-1 text-xs">
                             Raised row · selected state
                           </p>
                         </div>
@@ -388,14 +388,14 @@ const oldTertiary = originalColours[1].value
                         </div>
                       </div>
                       <div
-                        class="mt-4 flex items-center gap-3 text-xs text-muted-foreground"
+                        class="text-muted-foreground mt-4 flex items-center gap-3 text-xs"
                       >
                         <Clock class="size-4" style={`color:${variant.primary}`} />
                         Tonight, 19:00 <span>·</span>
                         <MapPin class="size-4" style={`color:${variant.secondary}`} />
                         Central
                       </div>
-                      <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-panel">
+                      <div class="bg-panel mt-4 h-1.5 overflow-hidden rounded-full">
                         <div
                           class="h-full w-2/3 rounded-full"
                           style={`background:${variant.secondary}`}
@@ -414,7 +414,7 @@ const oldTertiary = originalColours[1].value
     <section class="mt-12" aria-labelledby="components-heading">
       <div class="mb-4">
         <p
-          class="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+          class="text-muted-foreground text-[10px] font-semibold tracking-[0.18em] uppercase"
         >
           03 / Before and after
         </p>
@@ -424,17 +424,17 @@ const oldTertiary = originalColours[1].value
       </div>
 
       <div class="grid gap-4 xl:grid-cols-3">
-        <article class="overflow-hidden rounded-3xl border border-border bg-panel">
-          <div class="border-b border-border px-5 py-4">
+        <article class="border-border bg-panel overflow-hidden rounded-3xl border">
+          <div class="border-border border-b px-5 py-4">
             <h3 class="font-medium">Action hierarchy</h3>
-            <p class="mt-1 text-xs text-muted-foreground">
+            <p class="text-muted-foreground mt-1 text-xs">
               Warmth becomes a deliberate signal.
             </p>
           </div>
           <div class="grid gap-5 p-5">
             <div>
               <p
-                class="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground"
+                class="text-muted-foreground mb-2 text-[10px] tracking-wider uppercase"
               >
                 Original
               </p>
@@ -455,9 +455,9 @@ const oldTertiary = originalColours[1].value
                 </button>
               </div>
             </div>
-            <div class="border-t border-border pt-5">
+            <div class="border-border border-t pt-5">
               <p
-                class="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground"
+                class="text-muted-foreground mb-2 text-[10px] tracking-wider uppercase"
               >
                 Milque
               </p>
@@ -481,10 +481,10 @@ const oldTertiary = originalColours[1].value
           </div>
         </article>
 
-        <article class="overflow-hidden rounded-3xl border border-border bg-panel">
-          <div class="border-b border-border px-5 py-4">
+        <article class="border-border bg-panel overflow-hidden rounded-3xl border">
+          <div class="border-border border-b px-5 py-4">
             <h3 class="font-medium">A place card</h3>
-            <p class="mt-1 text-xs text-muted-foreground">
+            <p class="text-muted-foreground mt-1 text-xs">
               Frosting teal carries quiet surfaces.
             </p>
           </div>
@@ -500,45 +500,45 @@ const oldTertiary = originalColours[1].value
                 7-Eleven · Tsim Sha Tsui
               </div>
             </div>
-            <div class="my-4 flex justify-center text-muted-foreground">↓</div>
+            <div class="text-muted-foreground my-4 flex justify-center">↓</div>
             <div
-              class="overflow-hidden rounded-2xl border border-border bg-secondary text-secondary-content"
+              class="border-border bg-secondary text-secondary-content overflow-hidden rounded-2xl border"
             >
               <div class="p-4 text-sm font-medium">Milque route stop</div>
-              <div class="bg-panel px-4 py-3 text-xs text-base-content">
+              <div class="bg-panel text-base-content px-4 py-3 text-xs">
                 7-Eleven · Tsim Sha Tsui
               </div>
             </div>
           </div>
         </article>
 
-        <article class="overflow-hidden rounded-3xl border border-border bg-panel">
-          <div class="border-b border-border px-5 py-4">
+        <article class="border-border bg-panel overflow-hidden rounded-3xl border">
+          <div class="border-border border-b px-5 py-4">
             <h3 class="font-medium">Application chrome</h3>
-            <p class="mt-1 text-xs text-muted-foreground">
+            <p class="text-muted-foreground mt-1 text-xs">
               The palette survives dense navigation.
             </p>
           </div>
           <div class="p-5">
-            <div class="rounded-2xl border border-border bg-surface p-4">
+            <div class="border-border bg-surface rounded-2xl border p-4">
               <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2 text-sm font-medium">
-                  <span class="size-2 rounded-full bg-secondary"></span>
+                  <span class="bg-secondary size-2 rounded-full"></span>
                   Evening collection
                 </div>
                 <span
-                  class="rounded-full bg-tertiary px-2.5 py-1 text-[10px] font-medium text-tertiary-content"
+                  class="bg-tertiary text-tertiary-content rounded-full px-2.5 py-1 text-[10px] font-medium"
                   >Open</span
                 >
               </div>
-              <div class="mt-5 flex items-center gap-3 text-xs text-muted-foreground">
-                <Clock class="size-4 text-primary" />
+              <div class="text-muted-foreground mt-5 flex items-center gap-3 text-xs">
+                <Clock class="text-primary size-4" />
                 Tonight, 19:00 <span>·</span>
-                <MapPin class="size-4 text-primary" />
+                <MapPin class="text-primary size-4" />
                 Central
               </div>
-              <div class="mt-4 h-2 overflow-hidden rounded-full bg-panel">
-                <div class="h-full w-2/3 rounded-full bg-secondary"></div>
+              <div class="bg-panel mt-4 h-2 overflow-hidden rounded-full">
+                <div class="bg-secondary h-full w-2/3 rounded-full"></div>
               </div>
             </div>
           </div>
@@ -546,7 +546,7 @@ const oldTertiary = originalColours[1].value
       </div>
     </section>
 
-    <footer class="mt-10 border-t border-border pt-5 text-xs text-muted-foreground">
+    <footer class="border-border text-muted-foreground mt-10 border-t pt-5 text-xs">
       The experiments keep the original three colour families. The next step is to
       choose the direction that best supports Milque's maps, panels, and actions.
     </footer>

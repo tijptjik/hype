@@ -15,7 +15,7 @@ let {
 </script>
 
 <div class={cx('flex items-center gap-2', className)}>
-  <h3 class="text-sm font-semibold uppercase tracking-[0.14em] text-foreground">
+  <h3 class="text-foreground text-sm font-semibold tracking-[0.14em] uppercase">
     {title}
   </h3>
 
@@ -23,7 +23,7 @@ let {
     {#snippet trigger()}
       <button
         type="button"
-        class="inline-flex h-5 w-5 items-center justify-center rounded-full text-foreground-alt transition hover:text-foreground"
+        class="text-foreground-alt hover:text-foreground inline-flex h-5 w-5 items-center justify-center rounded-full transition"
         aria-label={`About ${title}`}
       >
         <InfoIcon class="h-3 w-3" />

@@ -74,10 +74,7 @@ async function handleDelete(): Promise<void> {
       {onError}
     />
 
-    {#if !isDeleteMode &&
-      !isConfirmingDelete &&
-      !isUploading &&
-      !isUploadError}
+    {#if !isDeleteMode && !isConfirmingDelete && !isUploading && !isUploadError}
       <ImagePrimitive.ThumbnailIntent
         {item}
         disabled={isIntentDisabled}
@@ -100,7 +97,6 @@ async function handleDelete(): Promise<void> {
         <span>{badgeLabel ?? m.gallery__new_badge()}</span>
       </div>
     {/if}
-
 
     <ImagePrimitive.ThumbnailOverlays
       {isUploading}

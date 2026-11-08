@@ -31,6 +31,6 @@ const classes = $derived(
 
 <SeparatorPrimitive.Root {orientation} {decorative} class={classes} {...restProps}>
   {#if variant === 'dot'}
-    <Dot class="h-full w-full block text-secondary" aria-hidden="true" />
+    <Dot class="text-secondary block h-full w-full" aria-hidden="true" />
   {/if}
 </SeparatorPrimitive.Root>

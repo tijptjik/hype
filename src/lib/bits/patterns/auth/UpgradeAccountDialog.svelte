@@ -101,7 +101,7 @@ async function handleCompletionClose(): Promise<void> {
   <Dialog.Portal>
     <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm" />
     <Dialog.Content
-      class="bits-theme fixed left-1/2 top-1/2 z-[1001] -translate-x-1/2 -translate-y-1/2"
+      class="bits-theme fixed top-1/2 left-1/2 z-[1001] -translate-x-1/2 -translate-y-1/2"
     >
       {#if !isAccountComplete}
         <Dialog.Title class="sr-only">{m.guest__upgrade_title()}</Dialog.Title>
@@ -129,7 +129,7 @@ async function handleCompletionClose(): Promise<void> {
           />
         {/key}
         <Dialog.Close
-          class="absolute right-3 top-3 flex size-7 items-center justify-center rounded text-xl leading-none text-muted-foreground transition-colors hover:text-foreground"
+          class="text-muted-foreground hover:text-foreground absolute top-3 right-3 flex size-7 items-center justify-center rounded text-xl leading-none transition-colors"
           aria-label={m.guest__close()}
           >×</Dialog.Close
         >
@@ -140,7 +140,7 @@ async function handleCompletionClose(): Promise<void> {
               <p>{m.bootstrap__error()}</p>
               <button
                 type="button"
-                class="mt-4 rounded-lg bg-primary px-4 py-2 text-primary-content"
+                class="bg-primary text-primary-content mt-4 rounded-lg px-4 py-2"
                 onclick={() => void loadAuthPanel().catch(() => {})}
               >
                 {m.bootstrap__retry()}
@@ -155,7 +155,7 @@ async function handleCompletionClose(): Promise<void> {
           {/if}
         </div>
         <Dialog.Close
-          class="absolute right-3 top-3 flex size-7 items-center justify-center rounded text-xl leading-none text-muted-foreground transition-colors hover:text-foreground"
+          class="text-muted-foreground hover:text-foreground absolute top-3 right-3 flex size-7 items-center justify-center rounded text-xl leading-none transition-colors"
           aria-label={m.guest__close()}
           >×</Dialog.Close
         >

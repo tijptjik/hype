@@ -23,7 +23,7 @@ let {
     >
       <div class="-translate-y-1/2">
         <div
-          class="max-w-[min(28rem,70vw)] truncate rounded-r-md bg-panel px-3 py-2 text-sm text-base-content shadow-lg"
+          class="bg-panel text-base-content max-w-[min(28rem,70vw)] truncate rounded-r-md px-3 py-2 text-sm shadow-lg"
           transition:fly={{ x: -10, duration: 160, easing: cubicOut }}
         >
           {label.name}

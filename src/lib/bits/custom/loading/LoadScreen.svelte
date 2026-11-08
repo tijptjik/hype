@@ -33,7 +33,7 @@ const classes = $derived(
     {#if label}
       <p
         role="status"
-        class="whitespace-nowrap text-xs font-medium tracking-[0.18em] text-base-content/70 motion-safe:animate-pulse motion-safe:[animation-duration:3s]"
+        class="text-base-content/70 text-xs font-medium tracking-[0.18em] whitespace-nowrap motion-safe:animate-pulse motion-safe:[animation-duration:3s]"
       >
         {label}
       </p>

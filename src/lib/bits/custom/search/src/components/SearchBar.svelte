@@ -59,19 +59,19 @@ $effect(() => {
     value={query}
     {placeholder}
     {disabled}
-    class="h-12 w-full rounded-lg border border-[var(--form-control-border)] bg-[var(--search-control-fill)] px-4 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+    class="text-foreground placeholder:text-muted-foreground h-12 w-full rounded-lg border border-[var(--form-control-border)] bg-[var(--search-control-fill)] px-4 pr-11 text-sm outline-none"
     autocomplete="off"
     oninput={handleInput}
     onfocus={handleFocus}
     onkeydown={handleKeydown}
   >
   <div
-    class="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center"
+    class="pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2 items-center"
   >
     {#if query}
       <button
         type="button"
-        class="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md leading-none hover:bg-base-300/60"
+        class="hover:bg-base-300/60 pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md leading-none"
         onclick={clear}
         tabindex="-1"
         aria-label="Clear search"

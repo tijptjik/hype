@@ -51,15 +51,15 @@ const licenseTitle = $derived(
 >
   <div class="flex min-w-0 items-start justify-between gap-3">
     <div class="flex min-w-0 items-start gap-2">
-      <span class="mt-0.5 shrink-0 text-primary" aria-hidden="true">
+      <span class="text-primary mt-0.5 shrink-0" aria-hidden="true">
         <Icon src={attributionIcon} size="md" tone="inherit" />
       </span>
-      <h3 class="min-w-0 text-base font-semibold leading-6 [overflow-wrap:anywhere]">
+      <h3 class="min-w-0 text-base leading-6 font-semibold [overflow-wrap:anywhere]">
         {licenseTitle}
       </h3>
     </div>
     <span
-      class="flex shrink-0 items-center gap-1.5 text-xs font-medium leading-6 text-muted-foreground"
+      class="text-muted-foreground flex shrink-0 items-center gap-1.5 text-xs leading-6 font-medium"
     >
       <span aria-hidden="true"><Icon src={mediaIcon} size="xs" tone="inherit" /></span>
       {mediaLabel}
@@ -68,7 +68,7 @@ const licenseTitle = $derived(
   {#if conditions.length}
     <ul class="mt-2 space-y-1.5">
       {#each conditions as condition (condition.key)}
-        <li class="flex items-start gap-2 text-sm leading-5 text-muted-foreground">
+        <li class="text-muted-foreground flex items-start gap-2 text-sm leading-5">
           {#if !isPublicDomain && !isAllRightsReserved}
             <span class="mt-0.5 shrink-0" aria-hidden="true"
               ><Icon src={condition.icon} size="sm" tone="inherit" /></span
@@ -79,9 +79,9 @@ const licenseTitle = $derived(
       {/each}
     </ul>
   {/if}
-  <dl class="mt-4 min-w-0 border-t border-foreground/10 pt-3">
-    <dt class="text-xs font-medium text-muted-foreground">{m.field_attribution()}</dt>
-    <dd class="mt-1 text-sm font-medium leading-5 [overflow-wrap:anywhere]">
+  <dl class="border-foreground/10 mt-4 min-w-0 border-t pt-3">
+    <dt class="text-muted-foreground text-xs font-medium">{m.field_attribution()}</dt>
+    <dd class="mt-1 text-sm leading-5 font-medium [overflow-wrap:anywhere]">
       {attributionLabel ?? '—'}
     </dd>
   </dl>
