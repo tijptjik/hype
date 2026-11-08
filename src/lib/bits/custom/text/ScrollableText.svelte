@@ -214,8 +214,11 @@ onMount(() => {
 
   if (!container || !primaryContent) return
 
+  // Overflow changes the track contents; defer writes beyond the observer delivery cycle.
+  let measureFrame = 0
   const observer = new ResizeObserver(() => {
-    measureOverflow()
+    cancelAnimationFrame(measureFrame)
+    measureFrame = requestAnimationFrame(measureOverflow)
   })
 
   observer.observe(container)
@@ -224,6 +227,7 @@ onMount(() => {
 
   return () => {
     stopAutoScroll()
+    cancelAnimationFrame(measureFrame)
     observer.disconnect()
   }
 })
@@ -246,32 +250,27 @@ onMount(() => {
   onpointercancel={finishDrag}
 >
   <span class="block w-full min-w-0 overflow-hidden whitespace-nowrap">
-    {#if hasOverflow}
-      <span class="bits-scrollable-text__track" style={trackStyle}>
-        <span
-          bind:this={primaryContentElement}
-          class={`bits-scrollable-text__content ${textClass}`.trim()}
-          >{content}</span
-        >
-        <span
-          bind:this={separatorElement}
-          class="inline-flex flex-none items-center text-base-content/56 min-w-max"
-          aria-hidden="true"
-        >
-          {loopSeparator}
-        </span>
-        <span
-          class={`bits-scrollable-text__content bits-scrollable-text__content--clone ${textClass}`.trim()}
-          aria-hidden="true"
-          >{content}</span
-        >
-      </span>
-    {:else}
+    <!-- Keep the measured nodes mounted when overflow changes so ResizeObserver never watches detached text. -->
+    <span class="bits-scrollable-text__track" style={trackStyle}>
       <span
         bind:this={primaryContentElement}
         class={`bits-scrollable-text__content ${textClass}`.trim()}
         >{content}</span
       >
-    {/if}
+      <span
+        bind:this={separatorElement}
+        class="text-base-content/56 inline-flex min-w-max flex-none items-center"
+        aria-hidden="true"
+        style:display={hasOverflow ? undefined : 'none'}
+      >
+        {loopSeparator}
+      </span>
+      <span
+        class={`bits-scrollable-text__content bits-scrollable-text__content--clone ${textClass}`.trim()}
+        aria-hidden="true"
+        style:display={hasOverflow ? undefined : 'none'}
+        >{content}</span
+      >
+    </span>
   </span>
 </span>
