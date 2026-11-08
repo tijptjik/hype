@@ -10,7 +10,10 @@ import { feature, featureImage, image } from '#lib/db/schema/index.js'
 import { ImageCaptureSchema, ImageCaptureSourceSchema } from '#lib/images/capture.js'
 import { ImageListFields } from './imageList.js'
 import { isSupportedUploadImageContentType } from '#lib/images/accept.js'
-import { DEFAULT_UPLOAD_IMAGE_PRESENTATION, IMAGE_PRESENTATION_MODES } from '#lib/images/presentation.js'
+import {
+  DEFAULT_UPLOAD_IMAGE_PRESENTATION,
+  IMAGE_PRESENTATION_MODES,
+} from '#lib/images/presentation.js'
 import {
   ImageCDN,
   ImageContextResource,
@@ -91,7 +94,9 @@ export const ImageBasic = ImageBase.pick({
   presentationMode: true,
 })
 export const ImageInsert = createInsertSchema(image).extend({
-  presentationMode: z.enum(IMAGE_PRESENTATION_MODES).prefault(DEFAULT_UPLOAD_IMAGE_PRESENTATION),
+  presentationMode: z
+    .enum(IMAGE_PRESENTATION_MODES)
+    .prefault(DEFAULT_UPLOAD_IMAGE_PRESENTATION),
   id: z.string().optional(),
   publicId: z.string().min(1, 'Public ID is required'),
   cdn: z
@@ -111,8 +116,7 @@ export const ImageUpdate = createUpdateSchema(image)
 export const FeatureImageBase = createSelectSchema(featureImage)
 export const FeatureImageInsert = createInsertSchema(featureImage).extend({
   featureId: z.string(),
-  intent: ImageIntentIdSchema
-    .prefault(ImageIntent.undefined),
+  intent: ImageIntentIdSchema.prefault(ImageIntent.undefined),
   isPublished: z.boolean().prefault(false),
   publishedAt: z.string().nullish(),
 })
@@ -155,9 +159,7 @@ export const ImageAPI = ImageBase.extend({
   altText: z.string().nullish(),
   featureId: z.string().optional(),
   attribution: z.string().nullish(),
-  intent: ImageIntentIdSchema
-    .prefault(ImageIntent.undefined)
-    .optional(),
+  intent: ImageIntentIdSchema.prefault(ImageIntent.undefined).optional(),
   isPublished: z.boolean().prefault(false).optional(),
   publishedAt: z.string().optional(),
   preview: z.string().optional(),
@@ -325,9 +327,13 @@ export const FinalizeImageUploadLinkSchema = z.discriminatedUnion('type', [
 ])
 
 export const AuthImageUploadSchema = z.object({
+  attachment: z.enum(['immediate', 'deferred']).default('immediate'),
   cdn: z.enum(Object.values(ImageCDN) as [string, ...string[]]),
   env: z.enum(Object.values(ImageEnv) as [string, ...string[]]),
-  ctxType: z.union([z.enum(ImageContextResource), z.literal(ImageContextResourceExtended.task)]),
+  ctxType: z.union([
+    z.enum(ImageContextResource),
+    z.literal(ImageContextResourceExtended.task),
+  ]),
   ctxId: z.string().min(1),
   organisationId: z.string().optional(),
   projectId: z.string().optional(),

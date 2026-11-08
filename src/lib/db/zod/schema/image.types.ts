@@ -157,6 +157,7 @@ export type UploadedPhoto = {
 }
 
 export type ImageUploadCtx = {
+  attachment?: 'immediate' | 'deferred'
   ctxType: ImageContextResource | ImageContextResourceExtended
   ctxId: Id
   hub?: HubDB

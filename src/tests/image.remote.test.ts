@@ -9,7 +9,21 @@ import { withRemoteMeta } from './remote-function-mock'
 
 // These legacy-path fixtures intentionally model a database before logo rollout.
 // Enrolled logo transactions and permissions use SQLite fixtures in resource-logo tests.
-vi.mock('#lib/db/services/resourceLogoSnapshot.js', () => ({ hasResourceLogoStorage: vi.fn(async () => false) }))
+vi.mock('#lib/db/services/resourceLogoSnapshot.js', () => ({
+  hasResourceLogoStorage: vi.fn(async () => false),
+}))
+
+// Remote tests isolate staging persistence; the actual D1 transaction is exercised in single-image-upload.services.
+vi.mock('#lib/db/services/singleImageUpload.js', async original => ({
+  ...(await original<typeof import('#lib/db/services/singleImageUpload.js')>()),
+  listImageUploadsForCleanup: vi.fn(async () => []),
+  stageImageUpload: vi.fn(async (_db, input) => ({
+    ...input,
+    imageId: 'img-1',
+    state: 'pending',
+    data: { ...input.data, id: 'img-1' },
+  })),
+}))
 
 const {
   mockAuthorizeImageList,
@@ -51,7 +65,9 @@ const {
   mockReadImageRevisionDelivery,
   mockSaveFeatureImageMetadata,
 } = vi.hoisted(() => ({
-  mockSaveFeatureImageMetadata: vi.fn(async (): Promise<unknown> => ({ status: 'legacy' })),
+  mockSaveFeatureImageMetadata: vi.fn(
+    async (): Promise<unknown> => ({ status: 'legacy' }),
+  ),
   mockReadImageRevisionDelivery: vi.fn(async (): Promise<unknown> => null),
   mockRemoveOrganisationImage: vi.fn(async () => true),
   mockHasImageStorageReference: vi.fn(async () => false),
@@ -132,7 +148,11 @@ vi.mock('#lib/db/services/imageRevisionDelivery.js', () => ({
 }))
 vi.mock('#lib/db/services/featureGalleryCommands.js', () => ({
   removeAcceptedFeatureImage: vi.fn(async () => 'legacy'),
-  prepareFeatureGalleryAssignmentCapture: vi.fn(async () => ({ before: [], after: [], revisionId: null })),
+  prepareFeatureGalleryAssignmentCapture: vi.fn(async () => ({
+    before: [],
+    after: [],
+    revisionId: null,
+  })),
 }))
 vi.mock('#lib/db/services/featureImageMetadataRevision.js', () => ({
   saveFeatureImageMetadata: mockSaveFeatureImageMetadata,
@@ -286,7 +306,8 @@ vi.mock('#lib/images/storage.js', async importOriginal => {
 vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
 vi.mock('#lib/db/zod/index.js', async () => ({
-  ImageMetadataFullSchema: (await import('#lib/db/zod/schema/image.js')).ImageMetadataFullSchema,
+  ImageMetadataFullSchema: (await import('#lib/db/zod/schema/image.js'))
+    .ImageMetadataFullSchema,
   AuthImageUploadSchema: {},
   DeleteImageSchema: {},
   FinalizeImageUploadSchema: {},
@@ -525,7 +546,9 @@ describe('image.remote', () => {
       db: buildDbWithContextRow({
         isPublished: true,
         isArchived: false,
-        featureId: 'feature-1', projectId: 'project-1', organisationId: 'org-1',
+        featureId: 'feature-1',
+        projectId: 'project-1',
+        organisationId: 'org-1',
       }),
     })
     await remote.getImagesForContext({
@@ -671,13 +694,33 @@ describe('image.remote', () => {
     })
   })
 
+  it('rejects legacy avatar insertion without a verified upload receipt', async () => {
+    const { createUploadedImage } = await import('#lib/db/services/image.js')
+    await expect(
+      remote.createImage({
+        data: {
+          ctxType: 'user',
+          ctxId: 'target-user',
+          publicId: 'h/users/target-user/avatar',
+          env: 'local',
+          cdn: 'cloudflareR2',
+          contributorId: 'forged-contributor',
+        },
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+    expect(createUploadedImage).not.toHaveBeenCalled()
+  })
 
   it('captures Feature ancestry before legacy creation authorization', async () => {
     const { getFeatureImageCreationScope } = await import(
       '#lib/db/services/imageUpload.js'
     )
     await remote.createImage({
-      data: { ctxType: ImageContextResource.feature, ctxId: 'feature-1', featureImage: {} },
+      data: {
+        ctxType: ImageContextResource.feature,
+        ctxId: 'feature-1',
+        featureImage: {},
+      },
     })
     expect(
       vi.mocked(getFeatureImageCreationScope).mock.invocationCallOrder[0],
@@ -696,13 +739,21 @@ describe('image.remote', () => {
     vi.mocked(getFeatureImageCreationScope).mockResolvedValueOnce(null)
     await expect(
       remote.createImage({
-        data: { ctxType: ImageContextResource.feature, ctxId: 'feature-1', featureImage: {} },
+        data: {
+          ctxType: ImageContextResource.feature,
+          ctxId: 'feature-1',
+          featureImage: {},
+        },
       }),
     ).rejects.toMatchObject({ status: 409 })
     expect(mockCreateUploadedFeatureImage).not.toHaveBeenCalled()
   })
 
-  it.each([ImageContextResource.project, ImageContextResource.organisation, ImageContextResource.hub] as const)(
+  it.each([
+    ImageContextResource.project,
+    ImageContextResource.organisation,
+    ImageContextResource.hub,
+  ] as const)(
     'creates a legacy %s image through the guarded pointer transaction',
     async ctxType => {
       const snapshot = {
@@ -731,7 +782,10 @@ describe('image.remote', () => {
         expect.anything(),
         snapshot,
         expect.any(String),
-        { actorId: 'u-1', reason: ctxType === 'hub' ? 'Hub image updated' : 'Resource image updated' },
+        {
+          actorId: 'u-1',
+          reason: ctxType === 'hub' ? 'Hub image updated' : 'Resource image updated',
+        },
         undefined,
       )
       expect(mockUpdateProjectById).not.toHaveBeenCalled()
@@ -743,7 +797,11 @@ describe('image.remote', () => {
     mockGetResourceUploadSnapshot.mockResolvedValueOnce(null)
     await expect(
       remote.createImage({
-        data: { ctxType: ImageContextResource.project, ctxId: 'missing', publicId: 'legacy-key' },
+        data: {
+          ctxType: ImageContextResource.project,
+          ctxId: 'missing',
+          publicId: 'legacy-key',
+        },
       }),
     ).rejects.toMatchObject({ status: 409 })
     expect(mockCreateUploadedResourceImage).not.toHaveBeenCalled()
@@ -964,18 +1022,33 @@ describe('image.remote', () => {
     },
   )
 
-  it.each([true, false])('detaches organisation logos without deleting retained assets: %s', async committed => {
-    mockRemoveOrganisationImage.mockResolvedValueOnce(committed)
-    mockLoadImageById.mockResolvedValue({ id: 'img-1', publicId: 'logo-key', env: 'local' } as never)
-    const result = remote.deleteImage({ id: 'img-1', ctxId: 'org', ctxType: 'organisation' })
-    if (committed) await expect(result).resolves.toMatchObject({ type: 'success' })
-    else await expect(result).rejects.toMatchObject({ status: 409 })
-    expect(mockRemoveOrganisationImage).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      organisationId: 'org', imageId: 'img-1',
-      actor: { actorId: 'u-1', reason: 'Organisation image removed' },
-    }))
-    expect(mockWaitUntil).not.toHaveBeenCalled()
-  })
+  it.each([true, false])(
+    'detaches organisation logos without deleting retained assets: %s',
+    async committed => {
+      mockRemoveOrganisationImage.mockResolvedValueOnce(committed)
+      mockLoadImageById.mockResolvedValue({
+        id: 'img-1',
+        publicId: 'logo-key',
+        env: 'local',
+      } as never)
+      const result = remote.deleteImage({
+        id: 'img-1',
+        ctxId: 'org',
+        ctxType: 'organisation',
+      })
+      if (committed) await expect(result).resolves.toMatchObject({ type: 'success' })
+      else await expect(result).rejects.toMatchObject({ status: 409 })
+      expect(mockRemoveOrganisationImage).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          organisationId: 'org',
+          imageId: 'img-1',
+          actor: { actorId: 'u-1', reason: 'Organisation image removed' },
+        }),
+      )
+      expect(mockWaitUntil).not.toHaveBeenCalled()
+    },
+  )
 
   it('authImageUpload returns a direct R2 upload session', async () => {
     const result = await remote.authImageUpload({
@@ -998,7 +1071,11 @@ describe('image.remote', () => {
     })
   })
 
-  it.each([ImageContextResource.project, ImageContextResource.organisation, ImageContextResource.hub] as const)(
+  it.each([
+    ImageContextResource.project,
+    ImageContextResource.organisation,
+    ImageContextResource.hub,
+  ] as const)(
     'authImageUpload signs the original %s state before authorization',
     async ctxType => {
       const snapshot = {
@@ -1048,7 +1125,12 @@ describe('image.remote', () => {
     expect(mockCreatePresignedR2UploadUrl).not.toHaveBeenCalled()
   })
 
-  it.each([ImageContextResource.feature, ImageContextResource.project, ImageContextResource.organisation, ImageContextResource.hub] as const)(
+  it.each([
+    ImageContextResource.feature,
+    ImageContextResource.project,
+    ImageContextResource.organisation,
+    ImageContextResource.hub,
+  ] as const)(
     'authorizes a %s replacement on a fresh key with the original signed snapshot',
     async ctxType => {
       mockLoadImageById.mockResolvedValueOnce({
@@ -1388,24 +1470,55 @@ describe('image.remote', () => {
     )
   })
 
-  it.each(['rotation', 'presentation'] as const)('saves enrolled %s edits without mutable image writes or sidecars', async kind => {
-    mockLoadImageById.mockResolvedValue({ id: 'img-1', env: 'local', publicId: 'old-key', version: 1 })
-    const draft = { status: 'accepted', revisionId: 'r', imageRevisionId: 'ir', assetVersionId: 'asset' }
-    mockSaveFeatureImageMetadata.mockResolvedValueOnce(draft)
-    const result = kind === 'rotation'
-      ? await remote.rotateImage({ id: 'img-1', ctxType: ImageContextResource.feature, ctxId: 'feature-1', imageRevisionId: 'ir-base', rotation: 90 })
-      : await remote.updateImage({ id: 'img-1', ctxType: ImageContextResource.feature, ctxId: 'feature-1', imageRevisionId: 'ir-base', data: { presentationMode: 'cover' } })
-    expect(result).toEqual({ data: null, revisionAccepted: draft })
-    expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
-    expect(mockSaveFeatureImageMetadata).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      featureId: 'feature-1', expectedImageRevisionId: 'ir-base', actorId: 'u-1',
-    }))
-    expect(mockUpdateImageForContext).not.toHaveBeenCalled()
-    expect(mockReadMetadataDocument).not.toHaveBeenCalled()
-    expect(mockWaitUntil).not.toHaveBeenCalled()
-    const ctx = await mockGuardedContext()
-    expect(ctx.event.locals.platform.env.ASSET_RAW_DEV.put).not.toHaveBeenCalled()
-  })
+  it.each(['rotation', 'presentation'] as const)(
+    'saves enrolled %s edits without mutable image writes or sidecars',
+    async kind => {
+      mockLoadImageById.mockResolvedValue({
+        id: 'img-1',
+        env: 'local',
+        publicId: 'old-key',
+        version: 1,
+      })
+      const draft = {
+        status: 'accepted',
+        revisionId: 'r',
+        imageRevisionId: 'ir',
+        assetVersionId: 'asset',
+      }
+      mockSaveFeatureImageMetadata.mockResolvedValueOnce(draft)
+      const result =
+        kind === 'rotation'
+          ? await remote.rotateImage({
+              id: 'img-1',
+              ctxType: ImageContextResource.feature,
+              ctxId: 'feature-1',
+              imageRevisionId: 'ir-base',
+              rotation: 90,
+            })
+          : await remote.updateImage({
+              id: 'img-1',
+              ctxType: ImageContextResource.feature,
+              ctxId: 'feature-1',
+              imageRevisionId: 'ir-base',
+              data: { presentationMode: 'cover' },
+            })
+      expect(result).toEqual({ data: null, revisionAccepted: draft })
+      expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
+      expect(mockSaveFeatureImageMetadata).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          featureId: 'feature-1',
+          expectedImageRevisionId: 'ir-base',
+          actorId: 'u-1',
+        }),
+      )
+      expect(mockUpdateImageForContext).not.toHaveBeenCalled()
+      expect(mockReadMetadataDocument).not.toHaveBeenCalled()
+      expect(mockWaitUntil).not.toHaveBeenCalled()
+      const ctx = await mockGuardedContext()
+      expect(ctx.event.locals.platform.env.ASSET_RAW_DEV.put).not.toHaveBeenCalled()
+    },
+  )
 
   it.each([
     'new',
@@ -1638,7 +1751,13 @@ describe('image.remote', () => {
       { failDatabase: false, sameAsset: false, staleContext: true },
       { failDatabase: false, sameAsset: false, missingSnapshot: true },
     ].flatMap(scenario =>
-      ([ImageContextResource.project, ImageContextResource.organisation, ImageContextResource.hub] as const).map(ctxType => ({
+      (
+        [
+          ImageContextResource.project,
+          ImageContextResource.organisation,
+          ImageContextResource.hub,
+        ] as const
+      ).map(ctxType => ({
         ...scenario,
         ctxType,
       })),
@@ -1886,43 +2005,83 @@ describe('image.remote', () => {
   )
 
   it('reads public pinned metadata without consulting mutable sidecars', async () => {
-    mockGuardedContext.mockResolvedValue({ ...(await mockGuardedContext()), isAdminRequest: false })
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
     mockReadImageRevisionDelivery.mockResolvedValue({
-      storageKey: 'retained/photo', storageNamespace: 'local', metadata: { rotation: 90, credit: 'Original credit' },
+      storageKey: 'retained/photo',
+      storageNamespace: 'local',
+      metadata: { rotation: 90, credit: 'Original credit' },
     })
     const response = await remote.getMetadata({
-      publicId: 'retained/photo', env: 'local', imageRevisionId: 'retained-r1', profile: 'basic',
+      publicId: 'retained/photo',
+      env: 'local',
+      imageRevisionId: 'retained-r1',
+      profile: 'basic',
     })
     expect(response.data).toMatchObject({ rotation: 90, credit: 'Original credit' })
-    expect(mockReadImageRevisionDelivery).toHaveBeenCalledWith(expect.anything(), 'retained-r1')
+    expect(mockReadImageRevisionDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      'retained-r1',
+    )
     expect(mockReadMetadataDocument).not.toHaveBeenCalled()
   })
 
-  it.each(['missing', 'wrong-key', 'wrong-namespace'])('does not fall back from a %s pin', async scenario => {
-    mockGuardedContext.mockResolvedValue({ ...(await mockGuardedContext()), isAdminRequest: false })
-    if (scenario !== 'missing') mockReadImageRevisionDelivery.mockResolvedValue({
-      storageKey: scenario === 'wrong-key' ? 'another/photo' : 'retained/photo',
-      storageNamespace: scenario === 'wrong-namespace' ? 'production' : 'local', metadata: {},
-    })
-    await expect(remote.getMetadata({
-      publicId: 'retained/photo', env: 'local', imageRevisionId: 'retained-r1', profile: 'basic',
-    })).rejects.toMatchObject({ status: 404 })
-    expect(mockReadMetadataDocument).not.toHaveBeenCalled()
-  })
+  it.each(['missing', 'wrong-key', 'wrong-namespace'])(
+    'does not fall back from a %s pin',
+    async scenario => {
+      mockGuardedContext.mockResolvedValue({
+        ...(await mockGuardedContext()),
+        isAdminRequest: false,
+      })
+      if (scenario !== 'missing')
+        mockReadImageRevisionDelivery.mockResolvedValue({
+          storageKey: scenario === 'wrong-key' ? 'another/photo' : 'retained/photo',
+          storageNamespace: scenario === 'wrong-namespace' ? 'production' : 'local',
+          metadata: {},
+        })
+      await expect(
+        remote.getMetadata({
+          publicId: 'retained/photo',
+          env: 'local',
+          imageRevisionId: 'retained-r1',
+          profile: 'basic',
+        }),
+      ).rejects.toMatchObject({ status: 404 })
+      expect(mockReadMetadataDocument).not.toHaveBeenCalled()
+    },
+  )
 
   it('refuses full pinned metadata without current admin intent', async () => {
-    mockGuardedContext.mockResolvedValue({ ...(await mockGuardedContext()), isAdminRequest: false })
-    await expect(remote.getMetadata({ publicId: 'retained/photo', imageRevisionId: 'retained-r1', profile: 'full' }))
-      .rejects.toMatchObject({ status: 403 })
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
+    await expect(
+      remote.getMetadata({
+        publicId: 'retained/photo',
+        imageRevisionId: 'retained-r1',
+        profile: 'full',
+      }),
+    ).rejects.toMatchObject({ status: 403 })
     expect(mockReadImageRevisionDelivery).not.toHaveBeenCalled()
   })
 
   it('does not use admin intent alone to reveal a private image revision', async () => {
     const current = await mockGuardedContext()
-    mockGuardedContext.mockResolvedValue({ ...current, db: { ...current.db, get: vi.fn(async () => ({ imageId: 'private-image' })) } })
+    mockGuardedContext.mockResolvedValue({
+      ...current,
+      db: { ...current.db, get: vi.fn(async () => ({ imageId: 'private-image' })) },
+    })
     mockGetImagesByIds.mockResolvedValue([])
-    await expect(remote.getMetadata({ publicId: 'private/photo', imageRevisionId: 'private-r1', profile: 'full' }))
-      .rejects.toMatchObject({ status: 404 })
+    await expect(
+      remote.getMetadata({
+        publicId: 'private/photo',
+        imageRevisionId: 'private-r1',
+        profile: 'full',
+      }),
+    ).rejects.toMatchObject({ status: 404 })
     expect(mockReadMetadataDocument).not.toHaveBeenCalled()
   })
 
@@ -2018,30 +2177,45 @@ describe('image.remote', () => {
     expect(mockLoadFeatureCanonicalImageOccupancy).not.toHaveBeenCalled()
   })
 
-  it.each([false, true])('does not save unchanged logo metadata (stale=%s)', async stale => {
-    const storage = await import('#lib/db/services/resourceLogoSnapshot.js')
-    const editing = await import('#lib/api/services/resourceLogoEditing.js')
-    vi.mocked(storage.hasResourceLogoStorage).mockResolvedValue(true)
-    const baseline = vi.spyOn(editing, 'ensureLogoBaseline').mockResolvedValue({
-      imageRevisionId: 'current', assetVersionId: 'asset',
-      metadata: { version: 1234, presentationMode: 'contain' },
-      asset: { storageNamespace: 'local', storageKey: 'logo', contentHash: 'a'.repeat(64), byteSize: 100, mediaType: 'image/png' },
-    })
-    const owners = vi.spyOn(editing, 'authorizeLogoOwners').mockResolvedValue(undefined as never)
-    try {
-      const operation = remote.updateImage({
-        id: 'img-1', ctxType: ImageContextResource.project, ctxId: 'project-1',
-        imageRevisionId: stale ? 'old' : 'current', data: { presentationMode: 'contain' },
+  it.each([false, true])(
+    'does not save unchanged logo metadata (stale=%s)',
+    async stale => {
+      const storage = await import('#lib/db/services/resourceLogoSnapshot.js')
+      const editing = await import('#lib/api/services/resourceLogoEditing.js')
+      vi.mocked(storage.hasResourceLogoStorage).mockResolvedValue(true)
+      const baseline = vi.spyOn(editing, 'ensureLogoBaseline').mockResolvedValue({
+        imageRevisionId: 'current',
+        assetVersionId: 'asset',
+        metadata: { version: 1234, presentationMode: 'contain' },
+        asset: {
+          storageNamespace: 'local',
+          storageKey: 'logo',
+          contentHash: 'a'.repeat(64),
+          byteSize: 100,
+          mediaType: 'image/png',
+        },
       })
-      if (stale) await expect(operation).rejects.toMatchObject({ status: 409 })
-      else await expect(operation).resolves.toMatchObject({ unchanged: true })
-      expect(mockUpdateImageForContext).not.toHaveBeenCalled()
-    } finally {
-      baseline.mockRestore()
-      owners.mockRestore()
-      vi.mocked(storage.hasResourceLogoStorage).mockResolvedValue(false)
-    }
-  })
+      const owners = vi
+        .spyOn(editing, 'authorizeLogoOwners')
+        .mockResolvedValue(undefined as never)
+      try {
+        const operation = remote.updateImage({
+          id: 'img-1',
+          ctxType: ImageContextResource.project,
+          ctxId: 'project-1',
+          imageRevisionId: stale ? 'old' : 'current',
+          data: { presentationMode: 'contain' },
+        })
+        if (stale) await expect(operation).rejects.toMatchObject({ status: 409 })
+        else await expect(operation).resolves.toMatchObject({ unchanged: true })
+        expect(mockUpdateImageForContext).not.toHaveBeenCalled()
+      } finally {
+        baseline.mockRestore()
+        owners.mockRestore()
+        vi.mocked(storage.hasResourceLogoStorage).mockResolvedValue(false)
+      }
+    },
+  )
 
   it.each([
     'success',

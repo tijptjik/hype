@@ -203,6 +203,7 @@ export async function prepareImageUpload(
     replaceImageRevisionId:
       uploadCtx.imageToReplace?.image.imageRevisionId ?? undefined,
     links: uploadCtx.links,
+    attachment: uploadCtx.attachment,
     meta: { isAdminRequest },
   })
 

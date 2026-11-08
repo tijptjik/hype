@@ -8,6 +8,7 @@ import {
 const encoder = new TextEncoder()
 
 export type UploadTokenPayload = {
+  attachment?: 'immediate' | 'deferred'
   publicId: string
   env: string
   ctxType: string
@@ -130,6 +131,9 @@ const isUploadTokenPayload = (value: unknown): value is UploadTokenPayload => {
       key =>
         typeof claims[key] === 'string' && (claims[key] as string).trim().length > 0,
     ) &&
+    (claims.attachment === undefined ||
+      claims.attachment === 'immediate' ||
+      claims.attachment === 'deferred') &&
     typeof claims.size === 'number' &&
     Number.isSafeInteger(claims.size) &&
     claims.size > 0 &&
@@ -137,7 +141,9 @@ const isUploadTokenPayload = (value: unknown): value is UploadTokenPayload => {
     Number.isSafeInteger(claims.exp) &&
     claims.exp > 0 &&
     (claims.replaceImageRevisionId === undefined ||
-      (typeof claims.replaceImageRevisionId === 'string' && claims.replaceImageRevisionId.length > 0 && typeof claims.replaceImageId === 'string')) &&
+      (typeof claims.replaceImageRevisionId === 'string' &&
+        claims.replaceImageRevisionId.length > 0 &&
+        typeof claims.replaceImageId === 'string')) &&
     (claims.resourceSnapshot === undefined ||
       isResourceUploadSnapshot(claims.resourceSnapshot)) &&
     (claims.replaceImageId === undefined

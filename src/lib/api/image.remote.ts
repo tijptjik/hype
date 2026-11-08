@@ -10,6 +10,7 @@ import { and, eq, inArray, or, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 // API SERVICES
+import { completeSingleImageUpload } from './services/singleImageUpload.js'
 import {
   isLogoContext,
   readLogoEvidence,
@@ -27,6 +28,16 @@ import type {
 } from '#lib/db/services/resourceLogoRevision.js'
 import { hasResourceLogoStorage } from '#lib/db/services/resourceLogoSnapshot.js'
 // DB
+import { imageUpload } from '#lib/db/schema/imageUpload.js'
+import {
+  isSingleImageContext,
+  stageImageUpload,
+  loadStagedImageUpload,
+  discardStagedImageUpload,
+  getUserImageUploadSnapshot,
+  listImageUploadsForCleanup,
+  type StagedImageUpload,
+} from '#lib/db/services/singleImageUpload.js'
 import { removeAcceptedFeatureImage } from '#lib/db/services/featureGalleryCommands.js'
 import { saveFeatureImageMetadata } from '#lib/db/services/featureImageMetadataRevision.js'
 import {
@@ -1460,18 +1471,40 @@ export const getImagesForContext = guardedQuery(
  * @returns Ordered intent choices and the Project upload default.
  * @remarks Scope is resolved server-side; task evidence never grants access to unrelated galleries.
  */
-export const getImageIntentOptions = guardedQuery(ImagesByContextSchema, async (params, ctx) => {
-  const context = await probeContextState(ctx.db, params.ctxType as ImageContextType, params.ctxId)
-  const decision = authorizeImageList(toImageAccessActor(ctx.user, ctx.userRoles), {
-    ctxType: params.ctxType as ImageContextType, ctxId: params.ctxId,
-    resourceHubId: context.resourceHubId, projectId: context.projectId, organisationId: context.organisationId,
-  }, context.requestedState, { isAdminRequest: ctx.isAdminRequest })
-  if (!decision.allowed) error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
-  const scope = context.projectId ? { type: 'project' as const, id: context.projectId }
-    : context.resourceHubId ? { type: 'hub' as const, id: context.resourceHubId } : null
-  const policy = scope ? await readImageIntentPolicy(ctx.db, scope) : null
-  return { intents: policy?.intents ?? [...DEFAULT_IMAGE_INTENTS], autoPublishUnclassified: policy?.autoPublishUnclassified ?? true }
-})
+export const getImageIntentOptions = guardedQuery(
+  ImagesByContextSchema,
+  async (params, ctx) => {
+    const context = await probeContextState(
+      ctx.db,
+      params.ctxType as ImageContextType,
+      params.ctxId,
+    )
+    const decision = authorizeImageList(
+      toImageAccessActor(ctx.user, ctx.userRoles),
+      {
+        ctxType: params.ctxType as ImageContextType,
+        ctxId: params.ctxId,
+        resourceHubId: context.resourceHubId,
+        projectId: context.projectId,
+        organisationId: context.organisationId,
+      },
+      context.requestedState,
+      { isAdminRequest: ctx.isAdminRequest },
+    )
+    if (!decision.allowed)
+      error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+    const scope = context.projectId
+      ? { type: 'project' as const, id: context.projectId }
+      : context.resourceHubId
+        ? { type: 'hub' as const, id: context.resourceHubId }
+        : null
+    const policy = scope ? await readImageIntentPolicy(ctx.db, scope) : null
+    return {
+      intents: policy?.intents ?? [...DEFAULT_IMAGE_INTENTS],
+      autoPublishUnclassified: policy?.autoPublishUnclassified ?? true,
+    }
+  },
+)
 
 export const getImagesForContextByProfile =
   getImagesForContext as typeof getImagesForContext &
@@ -1766,14 +1799,26 @@ export const authImageUpload = guardedCommand(
     }
 
     // Capture before authorization so subsequent reparenting invalidates this grant.
-    const isSingleResource = ['project', 'organisation', 'hub'].includes(params.ctxType)
+    const isSingleResource = isSingleImageContext(params.ctxType)
+    if (
+      params.attachment === 'deferred' &&
+      (!isSingleResource || params.replaceImageId)
+    )
+      throw error(
+        400,
+        'Deferred uploads require a single-image destination and a new asset',
+      )
+    if (params.ctxType === 'user' && params.replaceImageId)
+      throw error(400, 'Upload a new avatar asset to replace the profile selection')
     const resourceSnapshot =
       !params.replaceImageId && isSingleResource
-        ? await getResourceUploadSnapshot(
-            db,
-            params.ctxType as ResourceUploadType,
-            params.ctxId,
-          )
+        ? params.ctxType === 'user'
+          ? await getUserImageUploadSnapshot(db, params.ctxId)
+          : await getResourceUploadSnapshot(
+              db,
+              params.ctxType as ResourceUploadType,
+              params.ctxId,
+            )
         : undefined
     const replacementSnapshot = params.replaceImageId
       ? await getImageMutationSnapshot(
@@ -1794,6 +1839,10 @@ export const authImageUpload = guardedCommand(
     )
 
     if (resourceSnapshot === null) throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
+    if (isSingleResource)
+      await cleanupExpiredImageUploads(ctx).catch(cause => {
+        console.error('Abandoned image cleanup will be retried:', cause)
+      })
 
     const stage = toImageStage(event.locals.platform?.env.ENVIRONMENT ?? params.env)
     const bucket = getOriginalsBucketForStage(event.locals.platform, stage)
@@ -1838,6 +1887,7 @@ export const authImageUpload = guardedCommand(
         replaceImageId: params.replaceImageId,
         replaceImageRevisionId: params.replaceImageRevisionId,
         resourceSnapshot,
+        attachment: params.attachment,
         replacementSnapshot: replacementSnapshot ?? undefined,
         contentType: params.contentType,
         size: params.size,
@@ -1896,7 +1946,7 @@ export const finalizeImageUpload = guardedCommand(
     // Older single-resource grants lack a revision and cannot safely confirm after a new selection.
     if (
       !payload.replaceImageId &&
-      ['project', 'organisation', 'hub'].includes(payload.ctxType) &&
+      isSingleImageContext(payload.ctxType) &&
       !payload.resourceSnapshot
     ) {
       throw error(409, 'STALE_IMAGE_UPLOAD_CONTEXT')
@@ -2090,12 +2140,11 @@ export const finalizeImageUpload = guardedCommand(
               bytes,
               taskIds: (params.persist?.links ?? []).map(link => link.taskId),
               draftContributor: creationAccess === 'draft-contribution',
-              intent: ImageIntentIdSchema
-                .parse(
-                  creationAccess === 'draft-contribution'
-                    ? 'undefined'
-                    : (params.persist?.featureImage?.intent ?? 'undefined'),
-                ),
+              intent: ImageIntentIdSchema.parse(
+                creationAccess === 'draft-contribution'
+                  ? 'undefined'
+                  : (params.persist?.featureImage?.intent ?? 'undefined'),
+              ),
               replacement: payload.replaceImageId
                 ? {
                     imageId: payload.replaceImageId,
@@ -2255,63 +2304,83 @@ export const finalizeImageUpload = guardedCommand(
       logoUpload && payload.replaceImageId
         ? await authorizeLogoOwners(ctx, payload.replaceImageId)
         : undefined
-    const created = payload.replaceImageId
-      ? await updateImageForContext({
-          db,
-          user,
-          userId,
-          userRoles,
-          event,
-          isAdminRequest: ctx.isAdminRequest,
-          id: payload.replaceImageId as Id,
-          logoRevision: logoEvidence
-            ? {
-                ...logoEvidence,
-                guard: logoGuard,
-                expectedRevisionId: payload.replaceImageRevisionId,
-              }
-            : undefined,
-          replacement: {
-            snapshot: payload.replacementSnapshot!,
-            publicId: payload.publicId,
-            env: stage,
-          },
-          ctxType: payload.ctxType as ImageContextType,
-          ctxId: payload.ctxId,
-          data: {
-            ...imageData,
-            ...(payload.ctxType === ImageContextResource.feature && featureImageData
+    const staged =
+      !payload.replaceImageId && isSingleImageContext(payload.ctxType)
+        ? await stageImageUpload(db, {
+            data: imageData,
+            actorId: userId,
+            ctxType: payload.ctxType,
+            ctxId: payload.ctxId,
+            snapshot: payload.resourceSnapshot!,
+            evidence: logoEvidence,
+            expiresAt: payload.exp + 24 * 60 * 60 * 1000,
+          })
+        : null
+    const created = staged
+      ? {
+          data: await completeSingleImageUpload(
+            ctx,
+            staged,
+            payload.attachment ?? 'immediate',
+          ),
+        }
+      : payload.replaceImageId
+        ? await updateImageForContext({
+            db,
+            user,
+            userId,
+            userRoles,
+            event,
+            isAdminRequest: ctx.isAdminRequest,
+            id: payload.replaceImageId as Id,
+            logoRevision: logoEvidence
               ? {
-                  imageId: payload.replaceImageId,
-                  featureId: featureImageData.featureId,
-                  intent: featureImageData.intent,
-                  isPublished: featureImageData.isPublished,
+                  ...logoEvidence,
+                  guard: logoGuard,
+                  expectedRevisionId: payload.replaceImageRevisionId,
                 }
-              : {}),
-          },
-        })
-      : await createImageInContext({
-          db,
-          userId,
-          retryableUpload: true,
-          logoEvidence,
-          featureScope,
-          resourceSnapshot: payload.resourceSnapshot,
-          taskIds: (params.persist?.links ?? []).map(link => link.taskId),
-          draftContributorId:
-            creationAccess === 'draft-contribution' ? user.id : undefined,
-          imageData:
-            payload.ctxType === ImageContextResource.feature
-              ? {
-                  ...imageData,
-                  featureImage: imageData.featureImage ?? {
-                    featureId: payload.ctxId,
-                    intent: 'undefined',
-                    isPublished: false,
-                  },
-                }
-              : imageData,
-        })
+              : undefined,
+            replacement: {
+              snapshot: payload.replacementSnapshot!,
+              publicId: payload.publicId,
+              env: stage,
+            },
+            ctxType: payload.ctxType as ImageContextType,
+            ctxId: payload.ctxId,
+            data: {
+              ...imageData,
+              ...(payload.ctxType === ImageContextResource.feature && featureImageData
+                ? {
+                    imageId: payload.replaceImageId,
+                    featureId: featureImageData.featureId,
+                    intent: featureImageData.intent,
+                    isPublished: featureImageData.isPublished,
+                  }
+                : {}),
+            },
+          })
+        : await createImageInContext({
+            db,
+            userId,
+            retryableUpload: true,
+            logoEvidence,
+            featureScope,
+            resourceSnapshot: payload.resourceSnapshot,
+            taskIds: (params.persist?.links ?? []).map(link => link.taskId),
+            draftContributorId:
+              creationAccess === 'draft-contribution' ? user.id : undefined,
+            imageData:
+              payload.ctxType === ImageContextResource.feature
+                ? {
+                    ...imageData,
+                    featureImage: imageData.featureImage ?? {
+                      featureId: payload.ctxId,
+                      intent: 'undefined',
+                      isPublished: false,
+                    },
+                  }
+                : imageData,
+          })
 
     // A retry reuses the stored row version; never publish a manifest for an uncommitted version.
     const persistedVersion = created.data?.image?.version ?? version
@@ -2361,7 +2430,11 @@ export const finalizeImageUpload = guardedCommand(
       stage,
       event,
     })
-    if (previousResourceImage && previousResourceImage.id !== created.data?.image?.id) {
+    if (
+      payload.attachment !== 'deferred' &&
+      previousResourceImage &&
+      previousResourceImage.id !== created.data?.image?.id
+    ) {
       event.locals.platform?.context.waitUntil(
         cleanupDetachedResourceImage({
           db,
@@ -2982,3 +3055,121 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
 
   return { type: 'success', message: 'Image deleted successfully' }
 })
+
+/** Discard a pending asset without ever detaching an attached resource image.
+ * @param params Verified upload identity.
+ * @returns Whether the receipt was canceled; repeat cleanup is safe after storage failures.
+ * @remarks The tombstone commits before deleting bytes, excluding concurrent attachment and replay.
+ */
+export const discardImageUpload = guardedCommand(
+  z.object({ imageId: z.string().min(1) }),
+  async (params, ctx) => {
+    const receipt = await discardStagedImageUpload(ctx.db, params.imageId, ctx.user.id)
+    if (receipt) await cleanupStagedImageUpload(ctx, receipt)
+    return { discarded: Boolean(receipt) }
+  },
+)
+
+/** Finish tombstoned cleanup; failures retain a retryable receipt.
+ * @param ctx Request storage bindings.
+ * @param receipt Canceled receipt, never an attached resource.
+ * @returns Completion after storage cleanup has succeeded.
+ */
+async function cleanupStagedImageUpload(
+  ctx: Parameters<typeof readLogoEvidence>[0],
+  receipt: StagedImageUpload,
+): Promise<void> {
+  // Retired avatars have a persisted row; pending assets have never been attached.
+  if (receipt.selectedUrl) await deleteDetachedImage(ctx.db, receipt.imageId)
+  await cleanupImageAssets({
+    db: ctx.db,
+    platform: ctx.event.locals.platform,
+    image: receipt.data,
+  })
+  await ctx.db
+    .update(imageUpload)
+    .set({ expiresAt: 0 })
+    .where(
+      and(eq(imageUpload.imageId, receipt.imageId), eq(imageUpload.state, 'discarded')),
+    )
+}
+
+/** Reclaim this actor's expired uploads and a bounded set of already discarded assets.
+ * @param ctx Authorized upload request.
+ * @returns Completion; a storage failure remains retryable on the next upload.
+ */
+async function cleanupExpiredImageUploads(
+  ctx: Parameters<typeof readLogoEvidence>[0],
+): Promise<void> {
+  const expired = await listImageUploadsForCleanup(ctx.db, ctx.user.id)
+  for (const candidate of expired) {
+    const receipt = await discardStagedImageUpload(
+      ctx.db,
+      candidate.imageId,
+      candidate.actorId,
+    )
+    if (receipt) await cleanupStagedImageUpload(ctx, receipt)
+  }
+}
+
+/** Retry bounded cleanup after a form has consumed or abandoned its pending image.
+ * @param params Empty request; cleanup only sees expired own uploads or terminal tombstones.
+ * @returns Completion without exposing another uploader's receipt identities.
+ */
+export const cleanupImageUploads = guardedCommand(
+  z.object({}),
+  async (_params, ctx) => {
+    if (ctx.user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
+    await cleanupExpiredImageUploads(ctx)
+    return { cleaned: true }
+  },
+)
+
+/** Attach a previously verified single-resource asset by identity.
+ * @param params Image ID and its destination.
+ * @returns Selected image envelope.
+ * @remarks Authorization is rechecked; the original snapshot prevents stale attachment.
+ */
+export const attachImageUpload = guardedCommand(
+  z.object({
+    imageId: z.string().min(1),
+    ctxType: z.enum(['user', 'project', 'organisation', 'hub']),
+    ctxId: z.string().min(1),
+    meta: z.object({ isAdminRequest: z.boolean().optional() }).optional(),
+  }),
+  async (params, ctx) => {
+    await assertPermissionsToCreateImage(
+      ctx.db,
+      ctx.user,
+      ctx.isAdminRequest,
+      ctx.userRoles,
+      params.ctxType as ImageContextResource,
+      params.ctxId,
+    )
+    const receipt = await loadStagedImageUpload(
+      ctx.db,
+      params.imageId,
+      ctx.user.id,
+      params.ctxType,
+      params.ctxId,
+    )
+    const previous =
+      params.ctxType === 'user'
+        ? null
+        : await loadCurrentResourceImage(
+            ctx.db,
+            params.ctxType as ImageContextResource,
+            params.ctxId,
+          )
+    const data = await completeSingleImageUpload(ctx, receipt, 'immediate')
+    if (previous && previous.id !== data.image.id)
+      ctx.event.locals.platform?.context.waitUntil(
+        cleanupDetachedResourceImage({
+          db: ctx.db,
+          platform: ctx.event.locals.platform,
+          image: previous,
+        }),
+      )
+    return { data }
+  },
+)
