@@ -4,7 +4,7 @@ import {
   VISUAL_RESIZE_CONTEXT,
   type VisualResizeContext,
 } from '#lib/bits/custom/main/visualResize.js'
-import LegacyMap from '#lib/bits/patterns/maps/Maplet.svelte'
+import LazyMaplet from '#lib/bits/patterns/maps/Maplet.svelte'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // THEME
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
@@ -60,7 +60,7 @@ const initialCollapsed =
 </script>
 
 <div class="bits-feature-map">
-  <LegacyMap
+  <LazyMaplet
     {pinHighlightRequest}
     {showMarker}
     {onMapReady}
