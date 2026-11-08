@@ -3,7 +3,7 @@
 import { fade } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 // BITS
-import { cx } from '#lib/bits/index.js'
+import { cx } from '#lib/bits/utils.js'
 import * as ImagePrimitive from '#lib/bits/patterns/images/components/index.js'
 import { VISUAL_TRANSITION_MS } from './visualTransition.js'
 import type { MainVisualSectionImageProps } from './main.types'
@@ -70,21 +70,21 @@ const imageItem = $derived(
       {/key}
     {:else}
       <div
-        class="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-primary/8 via-panel to-secondary/10 text-center text-muted-foreground"
+        class="from-primary/8 via-panel to-secondary/10 text-muted-foreground relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden bg-gradient-to-br text-center"
       >
         <div
           aria-hidden="true"
-          class="absolute -right-12 -top-12 size-64 rounded-full border border-primary/10"
+          class="border-primary/10 absolute -top-12 -right-12 size-64 rounded-full border"
         ></div>
         <div
           aria-hidden="true"
-          class="absolute -bottom-20 -left-12 size-72 rounded-full border border-secondary/15"
+          class="border-secondary/15 absolute -bottom-20 -left-12 size-72 rounded-full border"
         ></div>
         <div class="relative flex flex-col items-center gap-3 px-6 py-8">
           <svg
             aria-hidden="true"
             viewBox="0 0 160 112"
-            class="h-28 w-40 text-primary/60"
+            class="text-primary/60 h-28 w-40"
             fill="none"
           >
             <rect
@@ -114,8 +114,8 @@ const imageItem = $derived(
             />
             <path d="m57 49 9 10-9-3-8 3" class="stroke-primary/35" />
           </svg>
-          <p class="text-sm font-medium text-foreground/75">{emptyText}</p>
-          <p class="max-w-56 text-xs text-muted-foreground">
+          <p class="text-foreground/75 text-sm font-medium">{emptyText}</p>
+          <p class="text-muted-foreground max-w-56 text-xs">
             A photo will appear here when added.
           </p>
         </div>
