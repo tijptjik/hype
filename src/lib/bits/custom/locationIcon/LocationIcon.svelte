@@ -30,4 +30,23 @@ const icons = {
 const Icon = $derived(icons[kind ?? 'unknown'] ?? PinIcon)
 </script>
 
-<Icon aria-hidden="true" {...props} />
+{#if kind === 'premises'}
+  <!-- A shared site with separate buildings and a courtyard distinguishes premises from one building. -->
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path
+      d="M2 21h20M3 15V5h6v10M15 15V3h6v12M6 8v1m0 3v1m12-7v1m0 3v1M9 21v-2a3 3 0 0 1 6 0v2M4 21v-3m16 3v-3"
+    />
+    <path d="m2 18 2-3 2 3Zm16 0 2-3 2 3Z" />
+  </svg>
+{:else}
+  <Icon aria-hidden="true" {...props} />
+{/if}
