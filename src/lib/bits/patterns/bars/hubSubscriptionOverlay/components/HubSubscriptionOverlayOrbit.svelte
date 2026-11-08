@@ -140,7 +140,7 @@ function handleCardCirclePointerLeave(): void {
       <img
         src={featureImage.src}
         alt=""
-        class="h-full w-full rotate-[var(--decorative-image-rotation)] object-cover saturate-[0.9] contrast-[1.02]"
+        class="h-full w-full rotate-[var(--decorative-image-rotation)] object-cover contrast-[1.02] saturate-[0.9]"
         loading="lazy"
         decoding="async"
         onload={() => handleDecorativeImageLoad(featureImage.id)}
@@ -154,7 +154,7 @@ function handleCardCirclePointerLeave(): void {
 
   <button
     type="button"
-    class="absolute z-20 flex size-11 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--color-map-base)_34%,white_10%)] bg-[color-mix(in_oklab,var(--color-base-400)_90%,var(--color-map-primary)_10%)] text-white/84 transition-[transform,opacity,border-color,background-color,color] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[color-mix(in_oklab,var(--color-map-primary)_34%,white_8%)] hover:bg-[color-mix(in_oklab,var(--color-map-primary)_14%,var(--color-base-400))] hover:text-white disabled:pointer-events-none disabled:opacity-48"
+    class="absolute z-20 flex size-11 items-center justify-center rounded-full border border-[color-mix(in_oklab,var(--color-map-base)_34%,white_10%)] bg-sky-950 text-white/84 transition-[transform,opacity,border-color,background-color,color] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[color-mix(in_oklab,var(--color-map-primary)_34%,white_8%)] hover:bg-sky-900 hover:text-white disabled:pointer-events-none disabled:opacity-48"
     style={getDismissButtonStyle({
       angleDegrees: DISMISS_BUTTON_ANGLE_DEGREES,
       orbitRadius: DISMISS_BUTTON_ORBIT_RADIUS_PX,
