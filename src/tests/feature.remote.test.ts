@@ -106,10 +106,7 @@ const {
   mockSaveFeatureFormRevision: vi.fn<
     (
       ...args: unknown[]
-    ) => Promise<
-      | { status: 'legacy' }
-      | { status: 'saved'; proposalId: string; candidateRevisionId: string }
-    >
+    ) => Promise<{ status: 'legacy' } | { status: 'applied'; revisionId: string }>
   >(async () => ({ status: 'legacy' })),
   mockSaveUnlinkedFeatureForm: vi.fn(
     async (): Promise<unknown> => ({
@@ -820,11 +817,10 @@ describe('feature.remote authz matrix', () => {
     )
   })
 
-  it('enrolled form saves return a draft token without running either live writer', async () => {
+  it('enrolled staff form saves return the accepted revision without rerunning legacy writers', async () => {
     mockSaveFeatureFormRevision.mockResolvedValueOnce({
-      status: 'saved',
-      proposalId: 'proposal',
-      candidateRevisionId: 'candidate',
+      status: 'applied',
+      revisionId: 'accepted',
     })
     const result = await remote.featureForm(
       {
@@ -850,10 +846,7 @@ describe('feature.remote authz matrix', () => {
       throwingInvalid,
     )
 
-    expect(result).toEqual({
-      data: { id: 'feature-1', modifiedAt: '2026-03-18T00:00:00.000Z' },
-      revisionDraft: { proposalId: 'proposal', candidateRevisionId: 'candidate' },
-    })
+    expect(result).toEqual({ data: { id: 'feature-1' }, revisionApplied: 'accepted' })
     expect(mockSaveLinkedFeatureForm).not.toHaveBeenCalled()
     expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
   })

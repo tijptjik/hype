@@ -889,7 +889,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     authorizeLocationCorrection: () =>
       requireLocationOrganisationManager(ctx, current.organisationId),
   }
-  // Staff saves update accepted content directly; contributor edits remain isolated proposals.
+  // Authorized staff saves update accepted content directly, including translation-only edits.
   try {
     const revision = await saveFeatureFormRevision(db, {
       ...saveInput,
@@ -915,14 +915,6 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, current.id)
       return { data: { id: current.id }, revisionApplied: revision.revisionId }
     }
-    if (revision.status === 'saved')
-      return {
-        data: { id: current.id, modifiedAt: current.modifiedAt },
-        revisionDraft: {
-          proposalId: revision.proposalId,
-          candidateRevisionId: revision.candidateRevisionId,
-        },
-      }
   } catch (cause) {
     invalid(
       issue(
