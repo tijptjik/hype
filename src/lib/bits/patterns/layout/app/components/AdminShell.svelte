@@ -3,6 +3,7 @@
 import { page } from '$app/state'
 // CUSTOM
 import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
+import { m } from '#lib/i18n.js'
 // LAYOUT
 import { AutoHide } from '../../autoHide'
 import { Header, HeaderControlBar } from '../../header'
@@ -18,6 +19,8 @@ let {
   widthLabel,
   icon = null,
   isReady,
+  isContentReady = true,
+  pending,
   isPrimaryPanelAutoHide = false,
   isAdminPanelOpen = false,
   onOpenVisual,
@@ -73,10 +76,19 @@ const footerConfig = $derived(headerProps.footer ?? null)
           </AutoHide>
 
           <main bind:this={mainElement} class="bits-admin-shell__main">
-            <HeaderControlBar controlBar={headerProps.controlBar} />
-            {@render children()}
+            {#if isContentReady}
+              <HeaderControlBar controlBar={headerProps.controlBar} />
+              {@render children()}
+            {:else if pending}
+              {@render pending()}
+            {:else}
+              <div class="flex h-full items-center justify-center" role="status">
+                <span class="loading loading-ring loading-lg" aria-hidden="true"></span>
+                <span class="sr-only">{m.resource_loading()}</span>
+              </div>
+            {/if}
 
-            {#if footerConfig?.component}
+            {#if isContentReady && footerConfig?.component}
               {@const Footer = footerConfig.component}
               <Footer {...footerConfig.props ?? {}} />
             {/if}

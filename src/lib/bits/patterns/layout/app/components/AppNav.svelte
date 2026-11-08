@@ -3,7 +3,7 @@
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 // AUTH
-import { canAccessAdminPanel } from '#lib/api/services/authz/index.js'
+import { canAccessAdminPanel } from '#lib/api/services/authz/user.js'
 import { useSession } from '#lib/auth/client.js'
 import { requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // SERVICES

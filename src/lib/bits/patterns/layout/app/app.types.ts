@@ -47,6 +47,8 @@ export interface AdminShellProps {
   widthLabel: string
   icon?: Component<Record<string, unknown>> | null
   isReady: boolean
+  isContentReady?: boolean
+  pending?: Snippet
   isPrimaryPanelAutoHide?: boolean
   isAdminPanelOpen?: boolean
   onOpenVisual?: () => void

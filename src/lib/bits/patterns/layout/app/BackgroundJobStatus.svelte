@@ -14,12 +14,12 @@ beforeNavigate(navigation => {
 
 {#if jobs.jobs.length}
   <div
-    class="fixed bottom-4 right-4 z-[1200] flex max-w-sm flex-col gap-2"
+    class="fixed right-4 bottom-4 z-[1200] flex max-w-sm flex-col gap-2"
     aria-live="polite"
   >
     {#each jobs.jobs as job (job.id)}
       <div
-        class="rounded-lg border bg-background p-3 text-foreground shadow-lg"
+        class="bg-background text-foreground rounded-lg border p-3 shadow-lg"
         role="status"
       >
         <div class="flex items-center gap-2">
