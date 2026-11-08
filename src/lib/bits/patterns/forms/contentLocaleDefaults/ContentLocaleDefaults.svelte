@@ -61,26 +61,30 @@ const differs = $derived(
           : m.content_languages_help()}
       </p>
     </div>
-    {#if !disabled}
-      <button
-        type="button"
-        aria-label={m.content_languages_reset()}
-        data-tooltip={m.content_languages_reset()}
-        disabled={!differs}
-        tabindex={differs ? 0 : -1}
-        aria-hidden={!differs}
-        style:opacity={differs ? 1 : 0}
-        onclick={() => onChange(undefined)}
-        class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-9 shrink-0 items-center justify-center rounded transition-opacity duration-200 focus-visible:outline-2 disabled:pointer-events-none motion-reduce:transition-none"
-      >
-        <ResetIcon class="size-4" aria-hidden="true" />
-      </button>
-    {/if}
+    <button
+      type="button"
+      aria-label={m.content_languages_reset()}
+      data-tooltip={m.content_languages_reset()}
+      disabled={disabled || !differs}
+      tabindex={!disabled && differs ? 0 : -1}
+      aria-hidden={disabled || !differs}
+      style:opacity={!disabled && differs ? 1 : 0}
+      onclick={() => onChange(undefined)}
+      class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-9 shrink-0 items-center justify-center rounded transition-opacity duration-200 focus-visible:outline-2 disabled:pointer-events-none motion-reduce:transition-none"
+    >
+      <ResetIcon class="size-4" aria-hidden="true" />
+    </button>
   </div>
-  {#if !disabled}
-    <div class="mt-4">
+  <!-- Both presentations share a grid cell so editing never changes the card height. -->
+  <div class="mt-4 grid">
+    <div
+      class="col-start-1 row-start-1"
+      class:invisible={disabled}
+      inert={disabled}
+      aria-hidden={disabled}
+    >
       <LocaleToolbar
-        allowAdd={!disabled}
+        allowAdd={true}
         selectedLocales={effective}
         visibleLocales={effective}
         {options}
@@ -93,8 +97,12 @@ const differs = $derived(
         onChange={change => onChange(change.selectedLocales)}
       />
     </div>
-  {:else}
-    <ol class="mt-4 flex flex-wrap gap-2">
+    <ol
+      class="col-start-1 row-start-1 flex flex-wrap content-start items-start gap-2"
+      class:invisible={!disabled}
+      inert={!disabled}
+      aria-hidden={!disabled}
+    >
       {#each effective as tag, index (tag)}
         <li
           class="border-border/30 bg-foreground/3 min-w-0 rounded-lg border px-3 py-2 text-sm break-words whitespace-normal"
@@ -106,7 +114,7 @@ const differs = $derived(
         </li>
       {/each}
     </ol>
-  {/if}
+  </div>
   {#each issues as issue}
     <p role="alert" class="text-destructive mt-2 text-sm">{issue}</p>
   {/each}

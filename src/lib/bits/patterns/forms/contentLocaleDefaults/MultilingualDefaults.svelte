@@ -51,21 +51,19 @@ const id = $props.id()
         {/if}
       </div>
       <div class="flex shrink-0 items-center gap-3">
-        {#if !disabled}
-          <button
-            type="button"
-            disabled={!differs}
-            tabindex={differs ? 0 : -1}
-            aria-hidden={!differs}
-            style:opacity={differs ? 1 : 0}
-            aria-label={m.content_languages_reset()}
-            data-tooltip={m.content_languages_reset()}
-            class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-9 items-center justify-center rounded transition-opacity duration-200 focus-visible:outline-2 disabled:pointer-events-none motion-reduce:transition-none"
-            onclick={() => onChange({ [key]: null })}
-          >
-            <ResetIcon class="size-4" aria-hidden="true" />
-          </button>
-        {/if}
+        <button
+          type="button"
+          disabled={disabled || !differs}
+          tabindex={!disabled && differs ? 0 : -1}
+          aria-hidden={disabled || !differs}
+          style:opacity={!disabled && differs ? 1 : 0}
+          aria-label={m.content_languages_reset()}
+          data-tooltip={m.content_languages_reset()}
+          class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-9 items-center justify-center rounded transition-opacity duration-200 focus-visible:outline-2 disabled:pointer-events-none motion-reduce:transition-none"
+          onclick={() => onChange({ [key]: null })}
+        >
+          <ResetIcon class="size-4" aria-hidden="true" />
+        </button>
         <Switch
           id={`${id}-${key}`}
           checked={value[key] ?? inherited[key] ?? false}

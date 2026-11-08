@@ -59,17 +59,17 @@ it('finds canonical tags, legacy aliases, localized names and autonyms', () => {
 
 it('adds by keyboard, returns focus quietly to Add and excludes existing languages', async () => {
   render(Fixture)
-  await fireEvent.click(profile().getByRole('button', { name: '+ Add' }))
+  await fireEvent.click(profile().getByRole('button', { name: 'Add' }))
   // JSDOM has no layout, so Floating UI keeps the overlay visually hidden.
   const input = await screen.findByRole('combobox', { hidden: true })
   expect(document.activeElement).toBe(input)
   await fireEvent.input(input, { target: { value: 'Japanese' } })
   await fireEvent.keyDown(input, { key: 'Enter' })
   expect(state().selectedLocales).toEqual(['en', 'zh-Hant', 'zh-Hans', 'ja'])
-  expect(document.activeElement).toBe(profile().getByRole('button', { name: '+ Add' }))
+  expect(document.activeElement).toBe(profile().getByRole('button', { name: 'Add' }))
   await fireEvent.click(profile().getByRole('button', { name: 'Japanese' }))
   expect(state().visibleLocales).not.toContain('ja')
-  await fireEvent.click(profile().getByRole('button', { name: '+ Add' }))
+  await fireEvent.click(profile().getByRole('button', { name: 'Add' }))
   await fireEvent.input(await screen.findByRole('combobox', { hidden: true }), {
     target: { value: '日本語' },
   })
@@ -130,7 +130,7 @@ it('follows external state updates and does not keep rejected optimistic selecti
 
 it('supports arrow navigation, empty results and Escape focus restoration without submitting', async () => {
   render(Fixture)
-  const add = profile().getByRole('button', { name: '+ Add' })
+  const add = profile().getByRole('button', { name: 'Add' })
   await fireEvent.click(add)
   // JSDOM has no layout, so Floating UI keeps the overlay visually hidden.
   const input = await screen.findByRole('combobox', { hidden: true })
@@ -243,7 +243,7 @@ it('allows viewing existing languages without offering language additions', asyn
     onExpandedChange: vi.fn(),
     onChange,
   })
-  expect(screen.queryByRole('button', { name: '+ Add' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Add' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Traditional Chinese' }))
   expect(onChange).toHaveBeenLastCalledWith(
     expect.objectContaining({
@@ -267,8 +267,8 @@ it.each(['organisation', 'project'] as const)(
       onChange: vi.fn(),
     })
     expect(screen.queryByRole('button', { name: 'Add language' })).toBeNull()
-    expect(screen.queryByRole('button', { name: '+ Add' })).toBeNull()
-    expect(screen.getByText('繁體中文')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull()
+    expect(within(screen.getByRole('list')).getByText('繁體中文')).toBeTruthy()
   },
 )
 
@@ -285,7 +285,7 @@ it.each(['allowAdd', 'disabled'] as const)(
       onExpandedChange: vi.fn(),
       onChange,
     })
-    await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Add' }))
     const search = await screen.findByRole('combobox', { hidden: true })
     await fireEvent.input(search, { target: { value: 'Japanese' } })
     const choice = screen.getByRole('option', { hidden: true })
@@ -325,7 +325,7 @@ it('uses the backend patch contract without writing inherited defaults and retai
 
 it('tabs from search to the result after its highlight and keeps Close out of the tab order', async () => {
   render(Fixture)
-  await fireEvent.click(profile().getByRole('button', { name: '+ Add' }))
+  await fireEvent.click(profile().getByRole('button', { name: 'Add' }))
   const input = await screen.findByRole('combobox', { hidden: true })
   const results = screen.getAllByRole('option', { hidden: true })
   expect(input.parentElement?.querySelector('button')?.tabIndex).toBe(-1)
