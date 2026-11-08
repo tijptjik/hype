@@ -1,17 +1,5 @@
-// IMAGE INTENT POLICY
-import { ImageIntentSettingsFormData } from '#lib/images/intents.js'
-// DOMAIN
-import { HUB_CODE_PATTERN } from '#lib/hub-domains.js'
 // I18N
 import { contentLocaleMap, ContentTagInput } from '#lib/i18n/contentRecords.js'
-import { m } from '#lib/i18n.js'
-// ENUMS
-import { HubSubscriptionService } from '#lib/enums.js'
-// API
-import {
-  normalizeSubstackSessionCookie,
-  normalizeSubstackSubscriptionId,
-} from '#lib/api/external/substack.shared.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -33,11 +21,7 @@ import {
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
 import { ImageBase, ImageContextEnvelopeAPI } from './image'
-import {
-  ProjectPropertyFormData,
-  PropertyAdminProfileAPI,
-  PropertyRecordRaw,
-} from './property'
+import { PropertyAdminProfileAPI, PropertyRecordRaw } from './property'
 import { UserBasic } from './user'
 
 // ═══════════════════════
@@ -167,151 +151,19 @@ export const HubRaw = HubBase.extend({
 // 2. REMOTE FORM SCHEMAS
 // ═══════════════════════
 
-export const HubI18nFormData = z.object({
-  name: z
-    .string()
-    .max(128, { message: m.admin__validation_lte_128_chars() })
-    .default(''),
-  nameShort: z
-    .string()
-    .max(32, { message: m.admin__validation_short_name_lte_32_chars() })
-    .default(''),
-  description: z
-    .string()
-    .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
-    .optional(),
-  subscriptionBenefits: z
-    .union([z.literal(''), z.string().max(8000), z.null()])
-    .optional()
-    .transform(value => (typeof value === 'string' ? value.trim() : '')),
-  nameGen: FormBoolean.default(false),
-  nameShortGen: FormBoolean.default(false),
-  descriptionGen: FormBoolean.optional(),
-  subscriptionBenefitsGen: FormBoolean.default(false),
-  privacyPolicy: z
-    .string()
-    .max(16000, { message: 'Privacy policy must be 16,000 characters or fewer.' })
-    .optional(),
-  privacyPolicyGen: FormBoolean.default(false),
-  termsOfService: z
-    .string()
-    .max(16000, { message: 'Terms of service must be 16,000 characters or fewer.' })
-    .optional(),
-  termsOfServiceGen: FormBoolean.default(false),
-})
-
-export const HubRoleFormData = z.object({
-  userId: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_user() }) }),
-  role: HubRoleBase.shape.role,
-})
-
-// Content languages are independent of the compiled application UI languages.
-// A policy-only translation may omit names; the hub still needs a complete display identity.
-export const HubI18nByLocaleFormData = contentLocaleMap(HubI18nFormData).refine(
-  rows => Object.values(rows).some(row => row.name.trim() && row.nameShort.trim()),
-  'Add a hub name and short name in at least one language.',
-)
-
-export const HubUserRolesFormData = z.preprocess(
-  value => (value === undefined || value === null ? [] : value),
-  z.array(HubRoleFormData).refine(schema => schema.length > 0, 'Add a User'),
-)
-
-export const HubOrganisationFormData = z.object({
-  organisationId: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
-  isCoreInclusive: FormBoolean.default(true),
-  isHubExclusive: FormBoolean.default(false),
-})
-
-export const HubLayerFormData = z.object({
-  hubId: z.string().min(1),
-  layerId: z.string().min(1),
-  isDefaultVisible: FormBoolean.default(false),
-})
-
-export const HubSubscriptionPlacementFormData = z.object({
-  hubPanel: FormBoolean.default(false),
-  topBar: FormBoolean.default(false),
-  menu: FormBoolean.default(true),
-})
-
-export const HubEntityFormData = z
-  .object({
-    code: z
-      .string()
-      .min(1, { message: m.field_is_required({ field: m.field_code() }) })
-      .min(2, { message: m.admin__validation_code_is_required() })
-      .max(24, { message: m.admin__validation_code_lte_24_chars() })
-      .regex(HUB_CODE_PATTERN, {
-        message:
-          'Use 2–24 lowercase letters, digits or hyphens; start and end with a letter or digit.',
-      }),
-    domain: z.union([z.literal(''), z.string().min(3).max(255)]),
-    legalContactAddress: z
-      .preprocess(
-        (value: string | undefined) =>
-          typeof value === 'string' ? value.trim() : value,
-        z.union([z.literal(''), z.string().email().max(512)]),
-      )
-      .optional()
-      .default('')
-      .transform(value => value ?? ''),
-    isSubscriptionAvailable: FormBoolean.default(false),
-    subscriptionService: z
-      .union([z.nativeEnum(HubSubscriptionService), z.null()])
-      .optional()
-      .transform(value => value ?? null),
-    subscriptionId: z
-      .union([z.literal(''), z.string().max(255), z.null()])
-      .optional()
-      .transform(value =>
-        typeof value === 'string' ? normalizeSubstackSubscriptionId(value) : '',
-      ),
-    subscriptionSessionCookie: z
-      .union([z.literal(''), z.string().max(4096), z.null()])
-      .optional()
-      .transform(value =>
-        typeof value === 'string' ? normalizeSubstackSessionCookie(value) : '',
-      ),
-    subscriptionPlacement: HubSubscriptionPlacementFormData.default({
-      hubPanel: false,
-      topBar: false,
-      menu: true,
-    }),
-    i18n: HubI18nByLocaleFormData,
-    userRoles: HubUserRolesFormData,
-    organisations: z.array(HubOrganisationFormData).default([]),
-    layerDefaults: z.array(HubLayerFormData).default([]),
-    imageIntentSettings: ImageIntentSettingsFormData,
-    properties: z.array(ProjectPropertyFormData).default([]),
-  })
-  .superRefine((data, ctx) => {
-    if (data.isSubscriptionAvailable && data.subscriptionService === null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['subscriptionService'],
-        message: m.field_is_required({ field: m.field_subscription_service() }),
-      })
-    }
-  })
-
-export const HubFormMeta = z.object({
-  id: z.string().optional(),
-  updatedAt: z.string().min(1).optional(),
-  mode: z.enum(['create', 'replace', 'update']).optional(),
-  isAdminRequest: FormBoolean.optional(),
-})
-
-export const HubFormData = z.object({
-  meta: HubFormMeta.optional(),
-  data: HubEntityFormData,
-})
-
-export const HubPreflightFormData = HubFormData
+export {
+  HubI18nFormData,
+  HubRoleFormData,
+  HubI18nByLocaleFormData,
+  HubUserRolesFormData,
+  HubOrganisationFormData,
+  HubLayerFormData,
+  HubSubscriptionPlacementFormData,
+  HubEntityFormData,
+  HubFormMeta,
+  HubFormData,
+  HubPreflightFormData,
+} from './hub.form'
 
 // ═══════════════════════
 // 3. REMOTE COMMAND SCHEMAS

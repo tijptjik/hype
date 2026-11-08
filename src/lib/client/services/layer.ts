@@ -1,5 +1,5 @@
 // SCHEMA
-import { LayerMetadataSchema } from '#lib/db/zod/schema/layer.js'
+import { LayerMetadataSchema } from '#lib/db/zod/schema/layerMetadata.js'
 import type { ParentSectionProjectItem } from '#lib/bits/patterns/forms/formParentSection/formParentSection.types.js'
 import { getI18n, m, normalizeI18nLocaleRecord, toFormLocaleRecord } from '#lib/i18n.js'
 import {

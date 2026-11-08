@@ -1,9 +1,7 @@
 import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
-import { RelocationPolicySchema } from '#lib/locations/model.js'
 import { CompactAncestorsSchema } from './api'
 // I18N
-import { m } from '#lib/i18n.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -15,6 +13,7 @@ import { MAP_STYLE_KEYS } from '#lib/map/styles/metadata.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'
+import { LayerMetadataSchema } from './layerMetadata'
 // ZOD SCHEMAS
 import { PropertyAdminProfileAPI } from './property'
 import { UserBasic } from './user'
@@ -64,38 +63,7 @@ import { UserBasic } from './user'
 // 1. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
-/** Layer presentation overrides; empty form values explicitly select User Preference. */
-export const LayerMetadataSchema = z
-  .object({
-    allowFeatureDescriptions: FormBoolean.nullable().optional(),
-    locationBasedFeatureNames: FormBoolean.nullable().optional(),
-    markerStyleCode: z
-      .preprocess(
-        value => (value === '' ? null : value),
-        z.enum(MARKER_STYLE_CODES).nullable(),
-      )
-      .optional(),
-    cardStyleCode: z
-      .preprocess(
-        value => (value === '' ? null : value),
-        z.enum(CARD_STYLE_CODES).nullable(),
-      )
-      .optional(),
-    mapStyleCode: z
-      .preprocess(
-        value => (value === '' ? null : value),
-        z.enum(MAP_STYLE_KEYS).nullable(),
-      )
-      .optional(),
-  })
-  .passthrough()
-  .transform(metadata => {
-    // Inheritance has one canonical representation so unchanged translation forms
-    // do not accidentally submit a restricted metadata change.
-    if (metadata.markerStyleCode === null) delete metadata.markerStyleCode
-    if (metadata.cardStyleCode === null) delete metadata.cardStyleCode
-    return metadata
-  })
+export { LayerMetadataSchema } from './layerMetadata'
 
 export const LayerRecord = createSelectSchema(layer)
 
@@ -143,85 +111,16 @@ export const UserLayerRecordUpdate = createUpdateSchema(userLayer)
 // 2. REMOTE FORM SCHEMAS
 // ═══════════════════════
 
-export const LayerI18nFormData = z.object({
-  name: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_name() }) })
-    .max(128, { message: m.admin__validation_lte_128_chars() }),
-  nameShort: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_short_name() }) })
-    .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
-  description: z
-    .string()
-    .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
-    .optional(),
-  nameGen: FormBoolean.default(false),
-  nameShortGen: FormBoolean.default(false),
-  descriptionGen: FormBoolean.optional(),
-})
-
-export const LayerI18nByLocaleFormData = z.object({
-  en: LayerI18nFormData,
-  zhHans: LayerI18nFormData,
-  zhHant: LayerI18nFormData,
-})
-
-export const LayerPropertyFormData = z.object({
-  propertyId: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_code() }) }),
-  isVisible: FormBoolean.default(false),
-  isUserContributable: FormBoolean.default(false),
-})
-
-/** Layer policy edits use the same JSON transport and revision fence as Project settings. */
-export const LayerRelocationPolicyFormData = z.preprocess(
-  value => {
-    if (typeof value !== 'string') return value
-    try {
-      return JSON.parse(value)
-    } catch {
-      return value
-    }
-  },
-  z
-    .strictObject({
-      policy: RelocationPolicySchema.nullable(),
-      expectedRevision: z
-        .number()
-        .int()
-        .nonnegative()
-        .max(Number.MAX_SAFE_INTEGER - 1),
-    })
-    .optional(),
-)
-
-export const LayerEntityFormData = z.object({
-  relocationUpdatePolicy: LayerRelocationPolicyFormData,
-  organisationId: z.string().optional(),
-  projectId: z
-    .string({ message: m.field_is_required({ field: 'Project' }) })
-    .min(1, { message: m.field_is_required({ field: 'Project' }) }),
-  i18n: LayerI18nByLocaleFormData,
-  properties: z.array(LayerPropertyFormData).optional(),
-  isDefaultVisible: FormBoolean.default(true),
-  metadata: LayerMetadataSchema.optional().default({}),
-})
-
-export const LayerFormMeta = z.object({
-  id: z.string().optional(),
-  updatedAt: z.string().min(1).optional(),
-  mode: z.enum(['create', 'replace', 'update']).optional(),
-  isAdminRequest: FormBoolean.optional(),
-})
-
-export const LayerFormData = z.object({
-  meta: LayerFormMeta.optional(),
-  data: LayerEntityFormData,
-})
-
-export const LayerPreflightFormData = LayerFormData
+export {
+  LayerI18nFormData,
+  LayerI18nByLocaleFormData,
+  LayerPropertyFormData,
+  LayerRelocationPolicyFormData,
+  LayerEntityFormData,
+  LayerFormMeta,
+  LayerFormData,
+  LayerPreflightFormData,
+} from './layer.form'
 
 // ═══════════════════════
 // 3. REMOTE COMMAND SCHEMAS

@@ -78,9 +78,9 @@ import { getProjectProperties } from '#lib/api/property.remote.js'
 import {
   resolveLayerProjectSelectionScope,
   toLayerAuthActor,
-} from '#lib/api/services/authz/index.js'
+} from '#lib/api/services/authz/layerPolicy.js'
 // SCHEMA
-import { LayerPreflightFormData } from '#lib/db/zod/index.js'
+import { LayerPreflightFormData } from '#lib/db/zod/schema/layer.form.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS

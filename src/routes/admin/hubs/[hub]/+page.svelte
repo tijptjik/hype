@@ -94,10 +94,10 @@ import { getLayers } from '#lib/api/layer.remote.js'
 import {
   toHubAuthActor,
   resolveHubActionPermissions,
-} from '#lib/api/services/authz/index.js'
+} from '#lib/api/services/authz/hubPolicy.js'
 import { getOrganisations } from '#lib/api/organisation.remote.js'
 // SCHEMA
-import { HubPreflightFormData } from '#lib/db/zod/schema/hub.js'
+import { HubPreflightFormData } from '#lib/db/zod/schema/hub.form.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // PROFILE
