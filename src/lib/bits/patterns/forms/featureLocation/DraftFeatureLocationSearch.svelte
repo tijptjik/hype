@@ -2,7 +2,6 @@
 // SVELTE
 import { onDestroy, tick, untrack, type Snippet } from 'svelte'
 import { flip } from 'svelte/animate'
-import { slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 // COMPONENTS
 import { searchBuildingNames } from '#lib/locations/buildingSearch.js'

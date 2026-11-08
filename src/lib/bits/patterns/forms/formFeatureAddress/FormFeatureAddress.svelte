@@ -5,7 +5,7 @@ import { onDestroy, type Snippet } from 'svelte'
 import { getLocaleKey, m } from '#lib/i18n.js'
 // BITS
 import { Button } from '#lib/bits/core/index.js'
-import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
+import { SelectField } from '#lib/bits/custom/form/index.js'
 // ICONS
 import CopyIcon from 'virtual:icons/proicons/copy'
 import CheckIcon from 'virtual:icons/proicons/checkmark'

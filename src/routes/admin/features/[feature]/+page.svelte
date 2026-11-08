@@ -43,7 +43,7 @@ import {
 } from '#lib/client/formNavigationSnapshot.js'
 
 import { page } from '$app/state'
-import { onMount, untrack, tick, type Snippet } from 'svelte'
+import { untrack, tick, type Snippet } from 'svelte'
 import { slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
@@ -57,7 +57,6 @@ import { publicationPreviewUrl } from '#lib/publication/preview.js'
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // I18N
 import {
-  getLocale,
   getLocaleKey,
   getLocaleOrder,
   m,
@@ -205,7 +204,6 @@ import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.t
 import type { Id, Locale } from '#lib/types.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type {
-  Feature,
   FeatureFormInput,
   FeatureGetState,
 } from '#lib/db/zod/schema/feature.types.js'
@@ -314,7 +312,6 @@ const noopHeaderAction = (): void => {}
 // - selectedOrganisationById
 // - selectedProjectById
 // - selectedLayerById
-// - isReplacingParentOrganisation
 // - isReplacingParentProject
 // - isReplacingParentLayer
 // - selectedOrganisation
@@ -1520,7 +1517,6 @@ let selectedOrganisationById = $state<Record<string, ParentSectionOrganisationIt
 
 let selectedProjectById = $state<Record<string, ParentSectionProjectItem>>({})
 let selectedLayerById = $state<Record<string, ParentSectionLayerItem>>({})
-let isReplacingParentOrganisation = $state(false)
 let isReplacingParentProject = $state(false)
 let isReplacingParentLayer = $state(false)
 const organisationIdValue = $derived(String(currentFeatureData.organisationId ?? ''))
@@ -2065,7 +2061,6 @@ let isAddressLookupLoading = $state(false)
 let addressLookupMessage = $state('')
 let addressLookupRevision = 0
 let addressCandidates = $state<FeatureAddress[]>([])
-let addressCandidateQuery = $state('')
 
 const editorAddress = $derived.by((): FeatureAddress => {
   if (currentFeatureData.addressMeta?.address)
@@ -2156,7 +2151,6 @@ async function lookupFeatureAddress(query?: string): Promise<void> {
     addressCandidates = results.flatMap(result =>
       result.addressMeta.address ? [result.addressMeta.address] : [],
     )
-    addressCandidateQuery = query?.trim() ?? ''
     if (!addressCandidates.length) addressLookupMessage = m.feature_address_no_match()
   } catch {
     if (isCurrent()) addressLookupMessage = m.feature_address_failed()
@@ -2949,9 +2943,6 @@ const featureParentSectionCtrl = createFeatureParentSectionController({
   getLayerIdValue: () => layerIdValue,
   getIsReplacingParentProject: () => isReplacingParentProject,
   getIsReplacingParentLayer: () => isReplacingParentLayer,
-  setIsReplacingParentOrganisation: value => {
-    isReplacingParentOrganisation = value
-  },
   setIsReplacingParentProject: value => {
     isReplacingParentProject = value
   },

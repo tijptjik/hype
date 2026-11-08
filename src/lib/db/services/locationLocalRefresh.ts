@@ -2,11 +2,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
 import { locationRefreshItem } from '../schema/locationRefresh'
-import {
-  featureLocation,
-  locationRevision,
-  location as locationTable,
-} from '../schema/location'
+import { featureLocation, locationRevision } from '../schema/location'
 import { feature } from '../schema/feature'
 // SERVICES
 import { proposeFeatureLocationAdoption } from './locationAdoptionReview'

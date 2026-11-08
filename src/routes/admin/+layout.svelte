@@ -51,7 +51,7 @@ type AdminRootProps = LayoutProps & {
 }
 
 // PROPS
-let { children, data }: AdminRootProps = $props()
+let { children }: AdminRootProps = $props()
 
 // CONTEXT :: APP
 // Admin owns its resource view; it never constructs the public AppCtx.

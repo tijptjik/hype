@@ -19,7 +19,6 @@ import { proposeFeatureLocationAdoption } from '#lib/db/services/locationAdoptio
 import { applyLocationAdoptionGroup } from '#lib/db/services/locationAdoptionApply.js'
 import { processLocationRefresh } from '#lib/db/services/locationRefreshProcess.js'
 import { featureLocationLifecycleSQL } from '#lib/db/services/locationLifecycleProjection.js'
-import { prepareOrganisationLocationWrite } from '#lib/db/services/organisationLocation.js'
 import {
   LocationLifecycleSummarySchema,
   mapOperatingStatus,

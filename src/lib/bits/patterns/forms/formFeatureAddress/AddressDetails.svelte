@@ -15,8 +15,6 @@ import AddressBlocks from './AddressBlocks.svelte'
 import { Button } from '#lib/bits/core/index.js'
 import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 // ICONS
-import BuildingIcon from 'virtual:icons/lucide/building-2'
-import StreetIcon from 'virtual:icons/lucide/road'
 import UnitIcon from 'virtual:icons/lucide/door-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 // ADDRESS

@@ -14,10 +14,6 @@ import {
   normalizeProjectRoleCapabilities,
 } from '#lib/capabilities.js'
 // SERVICES
-import {
-  overrideResourceEntityBoolean,
-  overrideResourceListItemBoolean,
-} from '#lib/client/services/resource.js'
 // TYPES
 import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
 import type { Locale, LocaleKey } from '#lib/types.js'
@@ -27,7 +23,6 @@ import type { User } from '#lib/db/zod/schema/user.types.js'
 import type { ProjectParentOrganisationScope } from '#lib/api/services/authz/project.js'
 import type {
   Project,
-  ProjectBooleanField,
   ProjectCapabilities,
   ProjectFormInput,
   ProjectOwnerRoleSeedOrganisation,
@@ -363,20 +358,7 @@ export function toProjectFormInput(
   }
 }
 
-export function overrideProjectEntityBoolean(
-  field: ProjectBooleanField,
-  value: boolean,
-) {
-  return overrideResourceEntityBoolean(field, value)
-}
 
-export function overrideProjectListItemBoolean(
-  projectId: string,
-  field: ProjectBooleanField,
-  value: boolean,
-) {
-  return overrideResourceListItemBoolean(projectId, field, value)
-}
 
 export function toProjectIdentityPatch(
   formData: ProjectFormInput,

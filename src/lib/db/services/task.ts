@@ -8,7 +8,7 @@ import { taskIndexSearchCondition } from './taskIndexFilters.js'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { and, asc, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, ne, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   featureI18n,
@@ -22,7 +22,7 @@ import {
   taskImage,
 } from '#lib/db/schema/index.js'
 // CRUD
-import { update, del } from '../crud'
+import { update } from '../crud'
 // SERVICES
 import { getProjectForFeatureId } from './project'
 import { getOrganisationForProjectId } from './organisation'
@@ -66,7 +66,6 @@ import type {
   TaskFeatureReviewCommit,
   TaskReviewCommitContext,
 } from '#lib/db/services/taskReview.types.js'
-import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type { Image, ImageUploadCtx } from '#lib/db/zod/schema/image.types.js'
 // API SERVICES
 import { createUserContributedFeatureTask } from '#lib/api/services/feature.js'
@@ -348,15 +347,6 @@ export const updateTask = async (
   ref: Id,
 ): Promise<TaskDB> => await update(db, task, data, task.id, ref)
 
-/**
- * Deletes a task from the database
- * @param db - The database instance
- * @param ref - The ID of the task to delete
- * @returns The result of the operation
- * @throws {Error} If task deletion fails
- */
-export const deleteTask = async (db: Database, ref: Id): Promise<TaskDB> =>
-  await del(db, task, task.id, ref)
 
 // ═══════════════════════
 // 2. CRUD :: IMAGE HANDLING

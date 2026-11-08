@@ -1,7 +1,7 @@
 import { addressRevision } from '../schema/locationRelationships'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 // DRIZZLE
-import { and, eq, isNull, or, sql } from 'drizzle-orm'
+import { and, eq, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 // SCHEMA
 import {

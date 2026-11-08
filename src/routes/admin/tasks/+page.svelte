@@ -102,7 +102,6 @@ let scrollIndexByEntityId = $state.raw<Map<string, number>>(new Map())
 
 let selectedImage = $state<ImageCtxEnvelope | null>(null)
 let selectedTask = $state<Task | null>(null)
-let selectedTaskIndex = $state<number>(-1)
 
 const indexQuery = useAdminIndexQuery(adminCtx, 'task')
 let entities: Task[] = $derived(indexQuery.rows as Task[])
@@ -156,67 +155,11 @@ $effect(() => {
   headerCtrl.clearFooter()
 })
 
-function navigateToNextTask() {
-  if (selectedTaskIndex < 0) return
-  // Find the next feature with an image
-  for (let i = selectedTaskIndex + 1; i < entities.length; i++) {
-    const nextTask = entities[i]
-    if (nextTask?.images?.[0]) {
-      selectedTask = nextTask
-      selectedImage = nextTask.images?.[0] as unknown as ImageCtxEnvelope
-      selectedTaskIndex = i
-      updateRowFocus(i)
-      return
-    }
-  }
-}
 
-function navigateToPreviousTask() {
-  if (selectedTaskIndex <= 0) return
-
-  // Find the previous feature with an image
-  for (let i = selectedTaskIndex - 1; i >= 0; i--) {
-    const prevTask = entities[i]
-    if (prevTask?.images?.[0]) {
-      selectedTask = prevTask
-      selectedImage = prevTask.images?.[0] as unknown as ImageCtxEnvelope
-      selectedTaskIndex = i
-      updateRowFocus(i)
-      return
-    }
-  }
-}
 
 // Derived states for navigation capability
-let canNavigatePrevious = $derived(() => {
-  if (selectedTaskIndex <= 0) return false
-  // Check if there's any feature with an image before the current index
-  for (let i = selectedTaskIndex - 1; i >= 0; i--) {
-    if (entities[i]?.images?.[0]) return true
-  }
-  return false
-})
 
-let canNavigateNext = $derived(() => {
-  if (selectedTaskIndex < 0) return false
-  // Check if there's any feature with an image after the current index
-  for (let i = selectedTaskIndex + 1; i < entities.length; i++) {
-    if (entities[i]?.images?.[0]) return true
-  }
-  return false
-})
 
-function closeModal() {
-  // Store the index before clearing state
-  const indexToFocus = selectedTaskIndex
-  selectedImage = null
-  selectedTask = null
-  selectedTaskIndex = -1
-  // Restore focus to the last active row
-  if (indexToFocus >= 0) {
-    setTimeout(() => updateRowFocus(indexToFocus), 25)
-  }
-}
 
 /**
  * Opens the review workspace from a queue thumbnail.
@@ -228,41 +171,6 @@ function openModal(_image: ImageCtxEnvelope, task: Task): void {
   navigateOnAdmin(adminCtx, FirstClassResource.task, task.id)
 }
 
-function updateRowFocus(index: number) {
-  const targetEntity = entities[index]
-  if (!targetEntity?.id) return
-
-  const scrollIndex = scrollIndexByEntityId.get(targetEntity.id)
-  const rowSelector = `[data-entity-id="${targetEntity.id}"][role="button"]`
-
-  // Use the virtual list's scrollToIndex method
-  const virtualList = listContainer?.querySelector<
-    HTMLElement & {
-      scrollToIndex?: (index: number, smooth: boolean, align: boolean) => void
-    }
-  >('svelte-virtual-list-viewport')
-
-  if (virtualList?.scrollToIndex && scrollIndex != null) {
-    // Scroll to the index using the virtual list's built-in method
-    virtualList.scrollToIndex(scrollIndex, true, false)
-
-    // Focus the row after scrolling
-    setTimeout(() => {
-      const targetRow = listContainer?.querySelector(rowSelector) as HTMLElement
-      if (targetRow) {
-        targetRow.focus()
-      }
-    }, 50)
-  } else {
-    // Fallback: focus immediately if row is already visible
-    setTimeout(() => {
-      const targetRow = listContainer?.querySelector(rowSelector) as HTMLElement
-      if (targetRow) {
-        targetRow.focus()
-      }
-    }, 0)
-  }
-}
 </script>
 
 <div class="text-foreground flex min-h-0 flex-1 flex-col overflow-hidden">

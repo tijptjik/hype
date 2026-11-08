@@ -53,7 +53,6 @@ import {
   loadTask,
   listTasks,
   probeTaskQuery,
-  updateTask,
   commitTaskImageReview,
   commitTaskFeatureReview,
   commitTaskFeatureDraftFinalization,

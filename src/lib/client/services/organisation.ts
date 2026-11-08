@@ -9,25 +9,18 @@ import { toOrganisationSettingsForm } from '#lib/organisations/settings.js'
 // CAPABILITIES
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '#lib/capabilities.js'
 // I18N
-import { toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
+import { toLocaleKebab } from '#lib/i18n.js'
 import { adaptContentMap } from '#lib/i18n/contentRecords.js'
 // SERVICES
-import {
-  overrideResourceEntityBoolean,
-  overrideResourceListItemBoolean,
-} from '#lib/client/services/resource.js'
 // TYPES
 import type {
   CapabilityDefinition,
   CapabilityDefinitions,
 } from '#lib/capabilities.types.js'
-import type { Locale } from '#lib/types.js'
 import type {
-  OrganisationBooleanField,
   OrganisationFormInput,
   OrganisationFormLocaleSource,
   OrganisationFormSource,
-  OrganisationIdentityPatch,
   OrganisationPropertySource,
   OrganisationSubmitUpdatesParams,
 } from '#lib/db/zod/schema/organisation.types.js'
@@ -187,35 +180,8 @@ export function toOrganisationFormInput(
   }
 }
 
-export function overrideOrganisationEntityBoolean(
-  field: OrganisationBooleanField,
-  value: boolean,
-) {
-  return overrideResourceEntityBoolean(field, value)
-}
 
-export function overrideOrganisationListItemBoolean(
-  organisationId: string,
-  field: OrganisationBooleanField,
-  value: boolean,
-) {
-  return overrideResourceListItemBoolean(organisationId, field, value)
-}
 
-export function toOrganisationIdentityPatch(
-  formData: OrganisationFormInput,
-  locale: Locale,
-): OrganisationIdentityPatch {
-  const localeKey = toLocaleKey(locale)
-  const localeData = formData.data?.i18n?.[localeKey]
-
-  return {
-    code: formData.data?.code ?? '',
-    locale,
-    name: localeData?.name ?? '',
-    nameShort: localeData?.nameShort ?? '',
-  }
-}
 
 type OrganisationFormI18nValue = OrganisationFormInput['data']['i18n']['en']
 
@@ -310,48 +276,8 @@ export function overrideOrganisationEntityFromFormInput(
   })
 }
 
-function mergeOrganisationIdentityAtLocale(
-  source: Record<string, unknown>,
-  patch: OrganisationIdentityPatch,
-): Record<string, unknown> {
-  return {
-    ...source,
-    code: patch.code,
-    i18n: {
-      ...(source.i18n as Record<string, Record<string, unknown>> | undefined),
-      [patch.locale]: {
-        ...((source.i18n as Record<string, Record<string, unknown>> | undefined)?.[
-          patch.locale
-        ] ?? {}),
-        name: patch.name,
-        nameShort: patch.nameShort,
-      },
-    },
-  }
-}
 
-export function overrideOrganisationEntityIdentity(patch: OrganisationIdentityPatch) {
-  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
-    ...current,
-    data: current.data ? mergeOrganisationIdentityAtLocale(current.data, patch) : null,
-  })
-}
 
-export function overrideOrganisationListItemIdentity(
-  organisationId: string,
-  patch: OrganisationIdentityPatch,
-) {
-  return <T extends { data?: Array<Record<string, unknown>> | null }>(
-    current: T,
-  ): T => ({
-    ...current,
-    data: (current.data ?? []).map(item =>
-      item.id === organisationId
-        ? mergeOrganisationIdentityAtLocale(item, patch)
-        : item,
-    ),
-  })
-}
 
 export function getOrganisationSubmitUpdates<
   TEntityCurrent,

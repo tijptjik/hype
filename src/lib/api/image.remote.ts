@@ -132,7 +132,6 @@ import {
   IMAGE_PRESENTATION_MODES,
 } from '#lib/images/presentation.js'
 // TYPES
-import type { SQL } from 'drizzle-orm'
 import type { ResourceUploadType } from '#lib/db/services/resourceImageUpload.js'
 import type { ResourceUploadSnapshot } from '#lib/images/uploadContext.js'
 import type { Database, EntityResponse, Id, UserRoleDisco } from '#lib/types.js'
@@ -645,35 +644,6 @@ const normalizeEditorTool = (value: string | null | undefined): string | null =>
   return normalized.length > 1 ? normalized : null
 }
 
-/**
- * Reads an originals-bucket object while tolerating provider-level get errors.
- *
- * @param bucket Bound raw/originals bucket.
- * @param key Object key to read.
- * @returns The object when available, otherwise `null`.
- */
-const safeOriginalsBucketGet = async (
-  bucket: ReturnType<typeof getOriginalsBucketForStage>,
-  key: string,
-): Promise<
-  Awaited<ReturnType<ReturnType<typeof getOriginalsBucketForStage>['get']>>
-> => {
-  try {
-    return await bucket.get(key)
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : String(cause)
-    const isLocalReadFailure = message.includes('get: Unspecified error (0)')
-
-    if (!isLocalReadFailure) {
-      console.error('[image.remote.safeOriginalsBucketGet] get failed', {
-        key,
-        cause,
-      })
-    }
-
-    return null
-  }
-}
 
 /**
  * Reads originals-bucket object metadata while tolerating provider-level head errors.

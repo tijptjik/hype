@@ -33,10 +33,6 @@ export const FEATURE_EDITOR_COLLECTIONS_SECTION_CLASS = cx(
   'h-auto',
 )
 
-export const FEATURE_EDITOR_PLACEHOLDER_CLASS = cx(
-  'flex min-h-72 flex-col items-center justify-center gap-8 p-8 text-center',
-  'text-[color:color-mix(in_oklab,var(--color-base-content)_68%,transparent)]',
-)
 
 /**
  * Positions the active workspace beneath the expanded or collapsed preview.

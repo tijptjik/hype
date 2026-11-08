@@ -11,7 +11,7 @@ import { tick, untrack } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
-import { getI18n, getLocale, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
+import { getI18n, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 import { renderMarkdown as renderPolicyMarkdown } from '#lib/services/markdown.js'

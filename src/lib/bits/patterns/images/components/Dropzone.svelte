@@ -11,7 +11,6 @@ import type { Snippet } from 'svelte'
 let {
   children,
   disabled = false,
-  hasItems = false,
   rounded = 'rounded-2xl',
   class: className = '',
   showPrompt = true,
@@ -36,7 +35,6 @@ let {
 } = $props()
 
 let isDragActive = $state(false)
-let isHoveringDropzone = $state(false)
 const isSingleUpload = $derived(uploadSelectionMode === 'single')
 const emptyTitle = m.gallery__empty_upload_title()
 const idleLabel = $derived(

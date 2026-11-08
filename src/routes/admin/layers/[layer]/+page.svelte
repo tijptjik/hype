@@ -9,7 +9,7 @@ import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
 import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
-import type { RemoteForm, RemoteFormInput, RemoteFormFields } from '$app/server'
+import type { RemoteForm, RemoteFormFields } from '$app/server'
 
 // SVELTE
 import { page } from '$app/state'
@@ -29,7 +29,6 @@ import {
   createResourceFormConfig,
   focusFacetFromHash,
   getEditorCtrl,
-  handleResourceBooleanStateToggle,
   revalidateAfterSubmitAttempt,
   resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,

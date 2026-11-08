@@ -11,12 +11,9 @@ import type { OrganisationDB } from '#lib/db/zod/schema/organisation.types.js'
 import type { ProjectDB } from '#lib/db/zod/schema/project.types.js'
 import type {
   FeatureImageBase,
-  FeatureImageInsert,
-  FeatureImageUpdate,
   ImageAdminProfileAPI,
   ImageAPI,
   ImageBase,
-  ImageBaseRaw,
   ImageBasic,
   ImageDetailProfileAPI,
   ImageFlat,
@@ -27,16 +24,12 @@ import type {
   ImageInsert,
   ImageInsertAPI,
   ImageInsertWithFeatureAPI,
-  ImageInsertWithProjectOrOrganisationAPI,
   ImageProfile as ImageProfileSchema,
   FinalizeImageUploadLinkSchema,
   ImageListProfileAPI,
   ImageUpdate,
-  ImageUpdateAPI,
   GetImageMetadataSchema,
-  AuthImageUploadSchema,
   FinalizeImageUploadSchema,
-  RotateImageSchema,
 } from '#lib/db/zod/schema/image.js'
 
 export type ImageDB = z.infer<typeof ImageBase>
@@ -45,7 +38,6 @@ export type ImageDBNew = z.infer<typeof ImageInsert>
 export type ImageDBPartial = z.infer<typeof ImageUpdate>
 export type ImageDBFlat = z.infer<typeof ImageFlat>
 export type ImageDBFlatUpdate = z.infer<typeof ImageFlatUpdate>
-export type ImageDBRaw = z.infer<typeof ImageBaseRaw>
 
 export type Image = z.infer<typeof ImageAPI>
 export type ImageListProfile = z.infer<typeof ImageListProfileAPI>
@@ -57,11 +49,6 @@ export type ImageMetadataFull = z.infer<typeof ImageMetadataFullSchema>
 export type ImageMetadataProfile = z.infer<typeof ImageMetadataProfileSchema>
 export type ImageNew = z.infer<typeof ImageInsertAPI>
 export type ImageNewWithFeature = z.infer<typeof ImageInsertWithFeatureAPI>
-export type ImageNewWithProjectOrOrganisation = z.infer<
-  typeof ImageInsertWithProjectOrOrganisationAPI
->
-export type ImagePartial = z.infer<typeof ImageUpdateAPI>
-export type ImageUpdateData = Omit<ImagePartial, 'ctxType' | 'refId'>
 export type ImageEntityByProfile<P extends ImageProfile> = P extends 'list'
   ? ImageListProfile
   : P extends 'card'
@@ -109,12 +96,8 @@ export type ImageCtxEnvelope = Omit<ImageContextEnvelope<'detail'>, 'image'> & {
 }
 
 export type FeatureImageDB = z.infer<typeof FeatureImageBase>
-export type FeatureImageDBNew = z.infer<typeof FeatureImageInsert>
-export type FeatureImageDBPartial = z.infer<typeof FeatureImageUpdate>
 
 export type FeatureImage = z.infer<typeof FeatureImageBase>
-export type FeatureImageNew = z.infer<typeof FeatureImageInsert>
-export type FeatureImagePartial = z.infer<typeof FeatureImageUpdate>
 
 export type EXIF = {
   CopyrightNotice: string
@@ -129,17 +112,11 @@ export type EXIF = {
   [key: string]: string
 }
 
-export type LngLat = {
-  latitude?: string
-  longitude?: string
-}
 
 export type Metadata = Record<string, string>
-export type AuthImageUploadParams = z.infer<typeof AuthImageUploadSchema>
 export type FinalizeImageUploadLink = z.infer<typeof FinalizeImageUploadLinkSchema>
 export type FinalizeImageUploadParams = z.infer<typeof FinalizeImageUploadSchema>
 export type GetImageMetadataParams = z.infer<typeof GetImageMetadataSchema>
-export type RotateImageParams = z.infer<typeof RotateImageSchema>
 export type ImageUploadSession = {
   cdn: `${ImageCDN}`
   env: `${ImageEnv}`
@@ -252,50 +229,11 @@ export type CreateImageParams = {
   meta?: ImageRemoteMeta
 }
 
-export type UpdateImageParams = {
-  id: Id
-  ctxType: ImageContextType
-  ctxId: Id
-  data: Record<string, unknown>
-  meta?: ImageRemoteMeta
-}
 
-export type SetImageIntentParams = {
-  id: Id
-  ctxType: ImageContextType
-  ctxId: Id
-  intent: Intent
-  featureId?: Id
-  isPublished?: boolean
-  meta?: ImageRemoteMeta
-}
 
-export type SetImagePublishedParams = {
-  id: Id
-  ctxType: ImageContextType
-  ctxId: Id
-  featureId?: Id
-  isPublished: boolean
-  meta?: ImageRemoteMeta
-}
 
-export type DeleteImageParams = {
-  id: Id
-  ctxType: ImageContextType
-  ctxId: Id
-  meta?: ImageRemoteMeta
-}
 
-export type ImageCollectionResponse<P extends ImageProfile = 'list'> = EntityResponse<
-  Array<ImageContextEnvelope<P>>
-> & {
-  profile: P
-}
 
-export type ImageByIdResponse<P extends ImageProfile = 'detail'> =
-  EntityResponse<ImageContextEnvelope<P> | null> & {
-    profile: P
-  }
 
 export type ImageMetadataResponse = EntityResponse<
   ImageMetadataBasic | ImageMetadataFull | null

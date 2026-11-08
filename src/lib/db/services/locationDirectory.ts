@@ -1,7 +1,7 @@
 // SNAPSHOT CONTRACT
 import { locationFactsFieldSql } from './locationFactsSql'
 // DRIZZLE
-import { and, eq, gt, isNull, or, sql } from 'drizzle-orm'
+import { and, eq, gt, or, sql } from 'drizzle-orm'
 // SCHEMA
 import { location as locationTable, locationRevision } from '../schema/location'
 // LOCATION

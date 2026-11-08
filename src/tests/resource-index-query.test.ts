@@ -2,7 +2,7 @@
 // NODE
 import { DatabaseSync } from 'node:sqlite'
 // DRIZZLE
-import { and, eq, getTableColumns, getTableName, sql } from 'drizzle-orm'
+import { and, getTableColumns, getTableName, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 // TESTS
 import { afterEach, describe, expect, it } from 'vitest'

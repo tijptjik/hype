@@ -27,7 +27,7 @@ import {
 } from '#lib/client/services/fieldComponents.js'
 // I18N
 import { m } from '#lib/i18n.js'
-import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '#lib/i18n.js'
+import { getI18n, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 // CONTENT LOCALES
 import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
 import MultilingualDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/MultilingualDefaults.svelte'
@@ -50,13 +50,9 @@ import { publicationPreviewUrl } from '#lib/publication/preview.js'
 import { canPreviewPublication } from '#lib/publication/permissions.js'
 // SERVICES
 import {
-  buildProjectLicense,
-  createDefaultProjectLicense,
-  getProjectLicenseIntent,
   isCustomProjectLicense,
   normalizeProjectLicense as normalizeSharedProjectLicense,
   projectLicenseLeafMediaTypes,
-  type ProjectLicenseIntent,
 } from '#lib/client/services/licence.js'
 import {
   addUserRoleSelection,
@@ -224,11 +220,7 @@ import type {
 } from '#lib/client/services/form.types.js'
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
 import type { ResourceContext, Id } from '#lib/types.js'
-import type {
-  ProjectLicense,
-  ProjectLicenseRights,
-  ProjectLicenseMediaType,
-} from '#lib/db/zod/schema/projectLicense.types.js'
+import type { ProjectLicense } from '#lib/db/zod/schema/projectLicense.types.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type {
   Property,
@@ -1467,9 +1459,6 @@ const hasLicenseChanges = $derived.by(
     toStableSignature(formProjectLicense) !== toStableSignature(baselineProjectLicense),
 )
 
-const currentProjectLicenseIntent = $derived.by(() =>
-  getProjectLicenseIntent(formProjectLicense),
-)
 
 const licenseWizardChoiceCards = [
   {
@@ -1541,39 +1530,6 @@ function syncLicenseEditorStateFromForm(): void {
   }
 }
 
-function updateProjectLicense(
-  params: Partial<{
-    intent: ProjectLicenseIntent
-    attribution: string
-    allMediaSameRights: boolean
-    rights: Partial<Record<ProjectLicenseMediaType, Partial<ProjectLicenseRights>>>
-    useCustomLabels: boolean
-    customLabels: typeof customLicenseLabels
-  }> = {},
-): void {
-  const nextUseCustomLabels = params.useCustomLabels ?? useCustomLicenseLabels
-  const nextCustomLabels = params.customLabels ?? customLicenseLabels
-  const nextLicense = buildProjectLicense({
-    attribution: params.attribution ?? formProjectLicense.meta.attribution,
-    intent: params.intent ?? currentProjectLicenseIntent,
-    allMediaSameRights:
-      params.allMediaSameRights ?? formProjectLicense.meta.allMediaSameRights,
-    rights: params.rights ?? {
-      all: formProjectLicense.media.all,
-      image: formProjectLicense.media.image,
-      text: formProjectLicense.media.text,
-      data: formProjectLicense.media.data,
-    },
-    useCustomLabels: nextUseCustomLabels,
-    customLabels: nextCustomLabels,
-  })
-
-  updateFormData(projectEntityUpdaterForm, data => {
-    data.license = nextLicense
-    return data
-  })
-  revalidateAfterProgrammaticChange()
-}
 
 // Select field names keyed by userId for role dropdown binding.
 const roleFieldNameByUserId = $derived.by(() => {

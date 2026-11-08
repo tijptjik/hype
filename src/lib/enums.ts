@@ -234,7 +234,6 @@ export enum FieldDiscriminator {
   specifier = 'specifier',
   display = 'display',
 }
-export const fieldDiscriminators = Object.values(FieldDiscriminator)
 
 /* ----------------- */
 // COMPONENT TYPES
@@ -250,13 +249,11 @@ export enum PropertyComponentType {
   TextareaField = 'TextareaField',
   ToggleField = 'ToggleField',
 }
-export const propertyComponentTypes = Object.values(PropertyComponentType)
 export enum PropertyScope {
   project = 'project',
   organisation = 'organisation',
   hub = 'hub',
 }
-export const propertyScopes = Object.values(PropertyScope)
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const
 export const specifierComponentTypes = [
   'InputField',

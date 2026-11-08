@@ -4,13 +4,11 @@ import { and, eq, sql } from 'drizzle-orm'
 import { feature } from '../schema/feature'
 import {
   featureLocation,
-  location as locationTable,
   locationRevision,
   locationAdoptionProposal,
   type LocationAdoptionDecisionRecord,
 } from '../schema/location'
 // SERVICES
-import { locationOwnerForProject } from './locationScope'
 import { previewFeatureLocationAdoption } from './locationAdoption'
 import { readOrganisationLocation } from './organisationLocation'
 // TYPES

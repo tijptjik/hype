@@ -4570,7 +4570,7 @@ describe('retained negative Location identity decisions', () => {
     expect(sqlite.prepare('SELECT state FROM location').get()?.state).toBe('manual')
   })
   it('retains an immutable rejection, suppresses only its scoped source, and permits deliberate new review', async () => {
-    const { db, sqlite, local, baseline, candidate, input } = await fixture()
+    const { db, sqlite, baseline, candidate, input } = await fixture()
     const before = sqlite.prepare('SELECT * FROM featureLocation').all()
     expect(await rejectLocationIdentityReview(db, input)).toEqual({
       status: 'rejected',
@@ -4627,7 +4627,7 @@ describe('retained negative Location identity decisions', () => {
     ).toBe(1)
   })
   it('rejects wrong ownership, stale source baselines, and already accepted reviews', async () => {
-    const { db, local, input } = await fixture()
+    const { db, input } = await fixture()
     expect(
       await rejectLocationIdentityReview(db, {
         ...input,
@@ -5282,7 +5282,7 @@ describe('structured Location address editor writes', () => {
   })
 
   it('preserves populated lifecycle rows, associations and guards when extending the kind constraint', async () => {
-    const { db, sqlite } = setup(true, false, false)
+    const { sqlite } = setup(true, false, false)
     const created = { locationId: 'migration-local', revisionId: 'migration-revision' }
     sqlite
       .prepare(
@@ -5913,7 +5913,7 @@ describe('Organisation-wide Location corrections', () => {
   })
 
   it('does not let another Organisation read, link or edit a manual Location', async () => {
-    const { db, sqlite, link } = await fixture()
+    const { db, sqlite } = await fixture()
     const privateLocation = await createLocalLocation(
       db,
       'p',
@@ -6268,7 +6268,7 @@ describe('shared Location footprint persistence', () => {
 })
 
 it('rehearses the address contract migration with the real Location tables and guards', async () => {
-  const { db, sqlite } = setup(false, true, false)
+  const { sqlite } = setup(false, true, false)
   const created = { locationId: 'migration-local', revisionId: 'migration-revision' }
   sqlite
     .prepare(

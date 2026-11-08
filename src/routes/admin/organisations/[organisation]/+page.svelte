@@ -13,7 +13,6 @@ import OrganisationUserSettings from '#lib/bits/patterns/organisationUsers/Organ
 import OrganisationUsers from '#lib/bits/patterns/organisationUsers/OrganisationUsers.svelte'
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import ResourceIndex from '#lib/bits/patterns/resource/resourceIndex/ResourceIndex.svelte'
-import { runRemoteQuery } from '#lib/remote/index.js'
 // MESSAGING
 import OrganisationMessaging from '#lib/bits/patterns/messaging/OrganisationMessaging.svelte'
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
@@ -127,11 +126,10 @@ import {
   FormUserRolesSection,
   Main,
 } from '#lib/bits/index.js'
-import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ADAPTERS
 import {
   useOrganisationEditorModel,
-  type OrganisationEditorFormInput,
 } from '#lib/adapters/organisation/useOrganisationEditorModel.svelte.js'
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // CLIENT SERVICES
@@ -144,7 +142,7 @@ import {
 } from '#lib/navigation/index.js'
 import type { OrganisationFacet } from '#lib/navigation/index.js'
 // UTILS
-import { createSchemaRequiredInferer, toIssueMessages } from '#lib/utils/form-schema.js'
+import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
 import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
 import Blend from 'virtual:icons/proicons/shape-intersect'

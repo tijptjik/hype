@@ -1241,40 +1241,6 @@ export function setHubImagePresentationMode(
   return setEntityImagePresentationMode(state, mode)
 }
 
-/**
- * Checks if the device has camera access available
- */
-export async function checkCameraAvailability() {
-  try {
-    // Check if MediaDevices API is available
-    if (!navigator.mediaDevices?.enumerateDevices) {
-      return false
-    }
-
-    // Check for video input devices
-    const devices = await navigator.mediaDevices.enumerateDevices()
-
-    const hasVideoInput = devices.some(device => device.kind === 'videoinput')
-
-    if (!hasVideoInput) {
-      return false
-    }
-
-    // Test camera access (will prompt user for permission if needed)
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
-    })
-
-    // If we get here, camera access is available
-    stream.getTracks().forEach(track => {
-      track.stop()
-    }) // Clean up
-    return true
-  } catch {
-    // Camera access denied or not available
-    return false
-  }
-}
 
 export const intentDisplay: Record<Intent, string> = {
   canonical: m.intent__canonical(),

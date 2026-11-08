@@ -6,7 +6,6 @@ import type { AdminThumbnailProps } from './images.types'
 
 let {
   item,
-  fit = 'fit',
   size = 88,
   isActive = false,
   isHighlighted = false,

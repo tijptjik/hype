@@ -1,5 +1,5 @@
 // I18N
-import { m, toLocaleKey, translateI18nFields } from '#lib/i18n.js'
+import { toLocaleKey, translateI18nFields } from '#lib/i18n.js'
 // SCHEMA
 import { PropertyDetailProfileAPI, PropertyValueDetailProfileAPI } from '#lib/db/zod/schema/property.js'
 // API
@@ -65,29 +65,6 @@ const LAYER_TRANSLATABLE_FIELDS = [
 ] as const satisfies readonly LayerTranslatableField[]
 
 // LAYER FORM CONFIGURATION
-export const LAYER_FIELDS = {
-  name: {
-    label: m.admin__forms_common_name_full(),
-    component: 'InputField',
-    isArray: false,
-    isTranslated: true,
-    isNested: false,
-  },
-  nameShort: {
-    label: m.admin__forms_common_name_short(),
-    component: 'InputField',
-    isArray: false,
-    isTranslated: true,
-    isNested: false,
-  },
-  description: {
-    label: m.feature__description(),
-    component: 'TextareaField',
-    isArray: false,
-    isTranslated: true,
-    isNested: false,
-  },
-}
 
 // Helper function to safely transform i18n data
 function transformI18nSafely(i18n: unknown): DynamicRecord {
@@ -241,41 +218,7 @@ export function searchLayers(query: string, allLayers: Layer[]): Layer[] {
 }
 
 // Layer validation functions
-export async function validateLayerById(
-  layerId: string,
-  projectId: string,
-): Promise<boolean> {
-  try {
-    const layers = await preloadLayers(projectId)
-    return layers.some(layer => layer.id === layerId)
-  } catch (error) {
-    console.error('Error validating layer by ID:', error)
-    return false
-  }
-}
 
-export async function validateLayerByName(
-  layerName: string,
-  projectId: string,
-  locale: string = 'en',
-): Promise<{ isValid: boolean; layerId?: string }> {
-  try {
-    const layers = await preloadLayers(projectId)
-
-    // Search through the layers to find one with matching name in the specified locale
-    for (const layer of layers) {
-      const layerName_i18n = layer.i18n?.[toLocaleKey(locale as Locale)]?.name
-      if (layerName_i18n && layerName_i18n.toLowerCase() === layerName.toLowerCase()) {
-        return { isValid: true, layerId: layer.id }
-      }
-    }
-
-    return { isValid: false }
-  } catch (error) {
-    console.error('Error validating layer by name:', error)
-    return { isValid: false }
-  }
-}
 
 // Layer selection functions
 export function handleLayerSearch(query: string, allLayers: Layer[]): Layer[] {

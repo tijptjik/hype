@@ -14,7 +14,6 @@ export const SUBJECTIVE_DIVISIONS = {
   microhoodId: 'microhood',
   hamletId: 'hamlet',
 } as const
-export type SubjectiveDivisionField = keyof typeof SUBJECTIVE_DIVISIONS
 const divisionSelection = z
   .union([z.string().min(1).max(200), z.strictObject({ mode: z.literal('marker') })])
   .nullable()

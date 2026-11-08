@@ -581,15 +581,6 @@ async function nearby(mode: 'nearby' | 'matches'): Promise<void> {
   }
 }
 
-/** Stage an address independently of entity selection, retaining the Feature's access pin.
- * @returns Nothing; the regular Feature form owns persistence.
- */
-function useAddress(): void {
-  if (!chosenAddress || busy || !isEditing) return
-  onAddressSelected({ ...chosenAddress, coordinates: [coordinates[0], coordinates[1]] })
-  cancelDiscovery()
-  addressStaged = true
-}
 
 /** Start creation only after source matching, retaining the selected address proposal.
  * @returns Nothing; creation still requires an explicit sharing choice.
