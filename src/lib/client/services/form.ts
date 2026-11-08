@@ -64,7 +64,7 @@ type ResourceEditorHeaderController = FormHeaderController &
 
 type HeaderFormActionHandlers = Pick<
   HeaderFormActionsState,
-  'reset' | 'submit' | 'togglePublish' | 'toggleDelete'
+  'reset' | 'submit' | 'togglePublish' | 'toggleDelete' | 'preview'
 >
 
 type HeaderFormActionStatus = Pick<
@@ -1214,7 +1214,7 @@ function wireHeaderFormActionHandlers({
   headerCtrl,
   handlers,
 }: WireHeaderFormActionHandlersParams): void {
-  headerCtrl.setFormActions(handlers)
+  headerCtrl.setFormActions({ preview: null, ...handlers })
 }
 
 /**
@@ -1300,7 +1300,12 @@ export function resolveOptimisticHeaderFacets(
     >
   | HeaderFacetItem[] {
   if (isSettled) return resolvedFacets
-  if (snapshot.facets.length === 0) return resolvedFacets
+  // Start with Profile until optional facets have been resolved for the destination.
+  if (snapshot.facets.length === 0) {
+    return Array.isArray(resolvedFacets)
+      ? resolvedFacets.filter(facet => facet.ref === 'core')
+      : new Map([...resolvedFacets].filter(([ref]) => ref === 'core'))
+  }
 
   return snapshot.facets
 }
