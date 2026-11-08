@@ -1130,6 +1130,7 @@ export function useImageEditorGalleryModel(
             ...intentErrorByImageId,
             [imageId]: message,
           }
+          toast.error(message)
         }
       },
       async rotateLeft(): Promise<void> {
