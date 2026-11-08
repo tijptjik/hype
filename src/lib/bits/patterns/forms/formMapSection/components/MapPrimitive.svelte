@@ -4,7 +4,7 @@ import {
   VISUAL_RESIZE_CONTEXT,
   type VisualResizeContext,
 } from '#lib/bits/custom/main/visualResize.js'
-import LazyMaplet from '#lib/bits/patterns/maps/Maplet.svelte'
+import LazyMaplet from '#lib/bits/patterns/maps/LazyMaplet.svelte'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // THEME
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
@@ -13,6 +13,7 @@ import { THEME_MAP_STYLES } from '#lib/themes/themes.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 
 type Props = {
+  pinControls?: import('svelte').Snippet
   pinHighlightRequest?: number
   showMarker?: boolean
   onMapReady?: (
@@ -26,12 +27,14 @@ type Props = {
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
   draggable?: boolean
+  draggingLocked?: boolean
   onCoordinateChange?: (coordinates: number[]) => void
   onToggleFullscreen?: (isFullscreen: boolean) => void
   onToggleCollapsed?: (isCollapsed: boolean) => void
 }
 
 let {
+  pinControls,
   pinHighlightRequest = 0,
   showMarker = true,
   onMapReady,
@@ -43,6 +46,7 @@ let {
   initialZoom = 20,
   addressMeta,
   draggable = false,
+  draggingLocked = false,
   onCoordinateChange,
   onToggleFullscreen,
   onToggleCollapsed,
@@ -61,6 +65,7 @@ const initialCollapsed =
 
 <div class="bits-feature-map">
   <LazyMaplet
+    {pinControls}
     {pinHighlightRequest}
     {showMarker}
     {onMapReady}
@@ -74,6 +79,7 @@ const initialCollapsed =
     {addressMeta}
     {mapStyleCode}
     {draggable}
+    {draggingLocked}
     {initialCollapsed}
     activeResourceRef={adminCtx.activeResourceRef}
     dragEndCallback={onCoordinateChange}
