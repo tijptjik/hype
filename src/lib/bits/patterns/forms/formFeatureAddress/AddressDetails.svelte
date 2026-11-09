@@ -927,7 +927,7 @@ onMount(() => {
       aria-label={m.address_parts_show()}
       data-tooltip={m.address_parts_show()}
       aria-expanded="false"
-      class="border-border bg-panel text-muted-foreground hover:text-primary sticky top-3 flex w-8 flex-col items-center gap-3 self-start rounded-md border py-3"
+      class="border-border bg-panel text-muted-foreground hover:text-primary sticky top-5 my-5 flex w-8 flex-col items-center gap-3 self-start rounded-md border py-3"
       onclick={onToggleParts}
     >
       <PanelLeftIcon class="size-4" />
@@ -941,25 +941,29 @@ onMount(() => {
     </button>
   {:else}
     <div
-      class="self-start min-w-0 {partsOverlay
+      class="min-w-0 {partsOverlay
         ? 'z-30 overflow-visible'
-        : 'overflow-hidden'} {hasAvailableParts ? '' : 'hidden'}"
+        : 'border-border/60 bg-muted/20 -ml-6 overflow-hidden border-r pl-6'} {hasAvailableParts
+        ? ''
+        : 'hidden'}"
       inert={!hasAvailableParts}
       aria-hidden={!hasAvailableParts}
     >
       <!-- Reveal fixed-width content through the expanding grid track without rewrapping its buttons.
        Let its full height size the shared editor row; the containing panel owns scrolling. -->
       <section
-        class="flex w-72 min-w-0 flex-col gap-5 {partsOverlay
-          ? 'absolute left-0 top-3 z-30 rounded-lg border border-border bg-panel p-3 shadow-lg'
-          : ''} transition-[transform,opacity] duration-250 motion-reduce:transition-none {hasAvailableParts
+        class="flex min-w-0 flex-col gap-6 {partsOverlay
+          ? 'absolute left-0 top-3 z-30 w-80 rounded-lg border border-border bg-panel p-4 shadow-lg'
+          : 'w-80 px-4 py-5'} transition-[transform,opacity] duration-250 motion-reduce:transition-none {hasAvailableParts
           ? 'translate-x-0 opacity-100'
           : '-translate-x-full opacity-0'}"
         aria-label={m.feature_address_title()}
         data-address-additions
       >
-        <div class="space-y-5">
-          <div class="flex min-h-10 items-center justify-between gap-2">
+        <div class="space-y-6">
+          <div
+            class="border-border/60 flex min-h-14 items-center justify-between gap-2 border-b pb-4"
+          >
             <h2 class="text-lg font-semibold">{m.feature_address_title()}</h2>
             {#if onToggleParts}
               <button
@@ -988,7 +992,7 @@ onMount(() => {
 
 <section
   use:measureEditorMinimum={`${visibleFields.join(',')}:${getStructuredAddressType(address, 'floorExpression')}:${getStructuredAddressType(address, 'unitExpression')}:${getLocaleKey()}`}
-  class="min-w-0 space-y-5"
+  class="min-w-0 space-y-6 {splitColumns && isEditing ? 'py-5' : ''}"
   aria-label={splitColumns ? m.feature_location_title() : m.feature_address_title()}
   data-address-details
 >
@@ -1206,6 +1210,7 @@ onMount(() => {
                       )}</span
                     >
                   </legend>
+                  <!-- The fieldset legend owns the label; inline controls must not reserve a second label row. -->
                   <div
                     class="grid min-w-0 gap-2 {field === 'blockExpression'
                       ? 'grid-cols-[max-content_max-content_max-content]'
@@ -1364,7 +1369,7 @@ onMount(() => {
                               contentClass="bg-panel! text-foreground! [&_*]:text-foreground!"
                               triggerAttrs={{ 'aria-label': m.address_block_type() }}
                               triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
-                              class="w-full shrink-0 gap-0!"
+                              class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
                               isEditing={true}
                               items={ADDRESS_BLOCK_TYPES.map(code => ({
                                 value: code,
@@ -1386,7 +1391,7 @@ onMount(() => {
                                 'aria-label': m.feature_address_phaseExpression(),
                               }}
                               triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
-                              class="w-full shrink-0 gap-0!"
+                              class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
                               isEditing={true}
                               items={[
                                 {
@@ -1427,7 +1432,7 @@ onMount(() => {
                                 'aria-label': m.feature_address_floor_type(),
                               }}
                               triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
-                              class="w-max shrink-0 gap-0!"
+                              class={String.raw`w-max shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
                               isEditing={true}
                               items={FLOOR_TYPES.map(code => ({
                                 value: code,
@@ -1459,7 +1464,7 @@ onMount(() => {
                               }}
                               triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
                               placeholder={m.feature_address_unit_type()}
-                              class="w-max shrink-0 gap-0!"
+                              class={String.raw`w-max shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
                               isEditing={true}
                               items={UNIT_TYPES.map(code => ({
                                 value: code,
@@ -1553,10 +1558,7 @@ onMount(() => {
                               'buildingNumberExpression' && numberError
                               ? 'border-destructive!'
                               : ''}"
-                            class="gap-0! w-max min-w-0 max-w-full flex-initial {translations &&
-                            !shared
-                              ? ''
-                              : '[&_.bits-form__label]:hidden'}"
+                            class={String.raw`gap-0! w-max min-w-0 max-w-full flex-initial [&_.bits-form\_\_label]:hidden`}
                             value={field === 'blockExpression'
                               ? (referenceDrafts[`${locale}-${field}`] ??
                                 String(

@@ -201,7 +201,7 @@ let partsRequested = $state(true)
 let divisionsRequested = $state(true)
 let panelPriority = $state<'parts' | 'divisions'>('divisions')
 let overlayPanel = $state<'parts' | 'divisions' | null>(null)
-const sidePanelWidth = 288
+const sidePanelWidth = 320
 const collapsedPanelWidth = 32
 const availableEditorWidth = $derived(
   editorLayoutWidth ||
@@ -210,12 +210,8 @@ const availableEditorWidth = $derived(
     responsive.window.width ||
     1280,
 )
-// Grow desktop gaps with the available form width, up to twice the base spacing.
-const columnGap = $derived(
-  availableEditorWidth < minimumEditorWidth + 192
-    ? 12
-    : Math.min(80, Math.max(40, availableEditorWidth * 0.05)),
-)
+// Keep a consistent gutter between the sidebar boundaries and the main editor.
+const columnGap = $derived(availableEditorWidth < minimumEditorWidth + 192 ? 12 : 32)
 // Reserve a usable editor before allowing either side panel to consume its width.
 const openPanels = $derived.by(() => {
   // Match the rendered padding, visible column gaps and collapsed rails exactly.
@@ -808,10 +804,10 @@ $effect(() => {
         ? `${hasAvailableParts ? `${openPanels.parts ? sidePanelWidth : collapsedPanelWidth}px ` : ''}minmax(0, 1fr)${showDivisions ? ` ${openPanels.divisions ? sidePanelWidth : collapsedPanelWidth}px` : ''}`
         : undefined}
       style:column-gap={isEditing && showAddressDetails ? `${columnGap}px` : undefined}
-      class="relative grid w-full min-w-0 max-w-full items-start gap-y-8 overflow-visible border-t border-border/60 px-6 pt-3 pb-3 transition-[grid-template-columns] duration-250 motion-reduce:transition-none {isEditing &&
+      class="relative grid w-full min-w-0 max-w-full items-stretch gap-y-8 overflow-visible border-t border-border/60 px-6 transition-[grid-template-columns] duration-250 motion-reduce:transition-none {isEditing &&
       showAddressDetails
-        ? ''
-        : 'lg:grid-cols-2 lg:gap-x-10'}"
+        ? 'min-h-120'
+        : 'py-5 lg:grid-cols-2 lg:gap-x-10'}"
       data-address-editor-layout
     >
       {#if showAddressDetails}
@@ -853,7 +849,12 @@ $effect(() => {
         />
       {/if}
       {#if showDivisions}
-        <div class="min-w-0 self-start" data-address-divisions-panel>
+        <div
+          class="min-w-0 {isEditing && showAddressDetails && openPanels.divisions
+            ? 'border-border/60 bg-muted/20 -mr-6 border-l px-4 py-5 pr-6'
+            : 'py-5'}"
+          data-address-divisions-panel
+        >
           {#if isEditing &&
             showAddressDetails &&
             !openPanels.divisions &&
@@ -882,6 +883,7 @@ $effect(() => {
               overlayPanel !== 'divisions'}
           >
             <AddressDivisions
+              sidebar={isEditing && showAddressDetails}
               compact={editorLayoutWidth < 1100}
               stacked={true}
               onToggle={isEditing && showAddressDetails

@@ -42,12 +42,14 @@ let {
   onResolved,
   stacked = true,
   compact = false,
+  sidebar = false,
   onToggle,
   class: className = '',
 }: {
   class?: string
   stacked?: boolean
   compact?: boolean
+  sidebar?: boolean
   onToggle?: () => void
   address: FeatureAddress
   coordinates: number[]
@@ -215,7 +217,11 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
   data-address-divisions
   aria-busy={loading}
 >
-  <div class="flex min-h-10 items-center justify-between gap-3">
+  <div
+    class="flex min-h-10 items-center justify-between gap-3 {sidebar
+      ? 'border-border/60 min-h-14 border-b pb-4'
+      : ''}"
+  >
     <h2 class="text-lg font-semibold">{m.feature_address_divisions()}</h2>
     <div class="flex items-center gap-1">
       <SimpleTooltip contentProps={{ role: 'tooltip' }}>
@@ -267,7 +273,9 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
   {:else if context}
     <!-- Share one cell with the empty message while outgoing geography rows slide away. -->
     <div
-      class="border-border/70 bg-background/40 grid grid-cols-[minmax(0,1fr)] rounded-xl border px-4"
+      class="grid grid-cols-[minmax(0,1fr)] {sidebar
+        ? ''
+        : 'border-border/70 bg-background/40 rounded-xl border px-4'}"
     >
       <div class="divide-border/60 col-start-1 row-start-1 min-w-0 divide-y">
         {#each displayedGroups as group (group.key)}
