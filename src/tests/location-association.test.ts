@@ -135,6 +135,40 @@ it('splits known premises and block without changing source evidence or unrelate
   })
 })
 
+it('preserves multilingual building names on both sides of association review', () => {
+  const original = address('Hollywood Road', '195')
+  const names = {
+    en: 'Wah Koon Building',
+    'zh-hant': '華冠大廈',
+    'zh-hans': '华冠大厦',
+  }
+  for (const [tag, buildingName] of Object.entries(names))
+    original.source.authored!.i18n[tag] = { formattedAddress: '', buildingName }
+  const before = structuredClone(original)
+  const initial = normalizeAssociationComponents(original)
+  const recommended = normalizeAssociationComponents(structuredClone(original), initial)
+  for (const value of [initial, recommended]) {
+    for (const locale of ['en', 'zhHant', 'zhHans'] as const) {
+      expect(getAddressLocale(value, locale).buildingName).toBe(
+        names[locale === 'en' ? 'en' : locale === 'zhHant' ? 'zh-hant' : 'zh-hans'],
+      )
+      expect(getAddressLocale(value, locale).blockRef).toBeFalsy()
+    }
+  }
+  expect(original).toEqual(before)
+})
+
+it.each(['Tower B', 'Building 2', 'B座', '二座'])(
+  'still splits explicit block identifiers: %s',
+  buildingName => {
+    const original = address('Hollywood Road', '195')
+    original.overrides.en = { buildingName }
+    const normalized = normalizeAssociationComponents(original)
+    expect(getAddressLocale(normalized, 'en').buildingName).toBeNull()
+    expect(getAddressLocale(normalized, 'en').blockRef).toBeTruthy()
+  },
+)
+
 it('stores custom corrections and explicit clears while preserving both source publications', () => {
   const original = address('Hollywood Road', '123'),
     matched = address('Queen Road', '118')

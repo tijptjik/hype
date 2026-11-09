@@ -273,10 +273,13 @@ export function normalizeAssociationComponents(
       }
     }
     const parsed = parseAddressExpression('blockExpression', remainder)
+    // A proper Chinese building name is not a block reference merely because it ends in 大廈.
     const explicitBlock =
       typeof parsed.blockType === 'string' &&
       typeof parsed.blockRef === 'string' &&
-      /^[\p{L}\p{N}][\p{L}\p{N}/-]{0,15}$/u.test(parsed.blockRef)
+      /^(?:[A-Za-z0-9][A-Za-z0-9/-]{0,15}|[零〇一二三四五六七八九十百]+)$/.test(
+        parsed.blockRef,
+      )
     if ((!removedPremises && !explicitBlock) || (remainder && !explicitBlock)) continue
     if (
       explicitBlock &&
