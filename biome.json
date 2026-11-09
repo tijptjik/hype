@@ -100,6 +100,14 @@
   },
   "overrides": [
     {
+      "includes": ["docs/policies/*.md"],
+      "markdown": {
+        "formatter": {
+          "proseWrap": "preserve"
+        }
+      }
+    },
+    {
       "includes": ["static/mocks/saanseoi/streets/names/data.json"],
       "formatter": {
         "enabled": false
@@ -152,7 +160,11 @@
   ],
   "markdown": {
     "formatter": {
-      "enabled": false
+      "enabled": true,
+      "proseWrap": "always"
+    },
+    "parser": {
+      "frontmatter": true
     }
   }
 }

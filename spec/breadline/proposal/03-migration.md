@@ -331,8 +331,8 @@ Migration `0095_breadline_phone_brand_properties.sql` upgrades the existing core
 Breadline `brand` (`WhWlW8KcN2wq`) to the HKFoodWorks organisation. Established property
 and value IDs, project opt-ins, layer visibility and feature references are retained.
 The five brand options have English, Simplified Chinese and Traditional Chinese labels:
-Maxim's / 美心西餅, Arome / 東海堂, 7-Eleven, Saint Honore / 聖安娜餅屋, and Yamazaki
-/ 山崎麵包. Unrelated/custom options are preserved. Conflicting scoped catalogs fail
+Maxim's / 美心西餅, Arome / 東海堂, 7-Eleven, Saint Honore / 聖安娜餅屋, and Yamazaki /
+山崎麵包. Unrelated/custom options are preserved. Conflicting scoped catalogs fail
 closed rather than being silently merged.
 
 `PhoneField` is a non-translatable specifier in the existing property component model;

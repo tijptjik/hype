@@ -785,15 +785,15 @@ Tracking: [user import #194](https://github.com/tijptjik/hype/issues/194),
 [account support #189](https://github.com/tijptjik/hype/issues/189).
 
 - [ ] Decide and implement import handling for the legacy donor/group accounts below.
-      Distinguish shared service identities from individual users assigned the `group`
-      role; do not exclude all users with that role. Preserve history and selection
-      ownership, and record decisions in the offline crosswalk before applying imports.
+  Distinguish shared service identities from individual users assigned the `group` role;
+  do not exclude all users with that role. Preserve history and selection ownership, and
+  record decisions in the offline crosswalk before applying imports.
 - [ ] Review the four accounts sharing pseudonym Person A under the phone-group policy.
-      Two share a phone number; their emails and Google subjects differ, so they form a
-      latent group rather than an automatically claimed user. Confirm
-      shared/service-number exceptions before applying.
+  Two share a phone number; their emails and Google subjects differ, so they form a
+  latent group rather than an automatically claimed user. Confirm shared/service-number
+  exceptions before applying.
 - [ ] Add import tests for the agreed treatment of shared identities, individual group
-      accounts, and associated history/drop-off selections.
+  accounts, and associated history/drop-off selections.
 
 The identifiers below are legacy `users.id` values (not OAuth `users.uid` subjects).
 Names and email addresses are pseudonymized; email labels use the reserved

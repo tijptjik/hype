@@ -124,11 +124,20 @@ describe('staged lint snapshot', () => {
     expect(() => checkStaged(root)).toThrow('differs from installed')
   })
 
+  test('checks staged llms.txt as Markdown instead of skipping an unknown extension', () => {
+    const root = fixture()
+    write(root, 'llms.txt', '#  Title\n\n- item\n')
+    git(root, ['add', 'llms.txt'])
+    write(root, 'llms.txt', '# Title\n\n- item\n')
+    expect(() => checkStaged(root)).toThrow('llms.txt: Markdown formatting differs')
+    expect(readFileSync(join(root, 'llms.txt'), 'utf8')).toBe('# Title\n\n- item\n')
+  })
+
   test('checks Markdown without rewriting it', () => {
     const root = fixture()
-    write(root, 'notes.md', '# Title\n\n-   item\n')
+    write(root, 'notes.md', '#  Title\n\n- item\n')
     git(root, ['add', 'notes.md'])
     expect(() => checkStaged(root)).toThrow()
-    expect(readFileSync(join(root, 'notes.md'), 'utf8')).toBe('# Title\n\n-   item\n')
+    expect(readFileSync(join(root, 'notes.md'), 'utf8')).toBe('#  Title\n\n- item\n')
   })
 })

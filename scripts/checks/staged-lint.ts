@@ -10,6 +10,9 @@ import {
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
+// LOCAL
+import { formatMarkdown } from './markdown'
+
 // TOC: Process helpers | Staged snapshot validation | CLI
 
 const toolsRoot = resolve(import.meta.dir, '../..')
@@ -131,14 +134,16 @@ export function checkStaged(cwd = process.cwd()): void {
         toolEnv,
       )
     }
-    const markdown = files.filter(file => file.endsWith('.md')).map(file => `./${file}`)
-    if (markdown.length > 0) {
-      run(
-        [join(toolsRoot, 'node_modules/.bin/prettier'), '--check', ...markdown],
-        snapshot,
-        toolEnv,
-      )
-    }
+    // Biome checks .md above; adapt .txt inputs using the same staged configuration.
+    const llmsCandidates = fullTree
+      ? run(['git', 'ls-files', '-z'], repository, gitEnv).split('\0')
+      : files
+    formatMarkdown(
+      llmsCandidates.filter(file => /(^|\/)llms\.txt$/.test(file)),
+      snapshot,
+      false,
+      toolEnv,
+    )
   } finally {
     rmSync(temporary, { recursive: true, force: true })
   }
