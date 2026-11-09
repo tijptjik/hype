@@ -39,6 +39,18 @@ vi.mock('#lib/addresses/nameCatalogue.js', async importOriginal => ({
   ...(await importOriginal<typeof import('#lib/addresses/nameCatalogue.js')>()),
   loadAddressNames: vi.fn().mockResolvedValue([]),
 }))
+// Worker lifecycle is tested separately; component tests retain the real parser.
+vi.mock('#lib/addresses/placeAddressWorker.js', async () => {
+  const { structurePlaceAddress } = await import('#lib/addresses/nameCatalogue.js')
+  return {
+    createPlaceAddressWorker: () => ({
+      structure: async (
+        addresses: import('#lib/addresses/featureAddress.js').FeatureAddress[],
+      ) => addresses.map(address => structurePlaceAddress(address, [])),
+      destroy: vi.fn(),
+    }),
+  }
+})
 // Accepted source previews resolve their details link without a live SvelteKit client.
 vi.mock('#lib/api/locationDirectory.remote.js', () => ({
   getSharedLocationIdBySource: () => ({ current: null }),

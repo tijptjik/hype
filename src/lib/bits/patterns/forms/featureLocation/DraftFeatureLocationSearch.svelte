@@ -26,10 +26,7 @@ import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // ICONS
 import ReplaceIcon from 'virtual:icons/lucide/replace'
-import {
-  loadAddressNames,
-  structurePlaceAddress,
-} from '#lib/addresses/nameCatalogue.js'
+import { createPlaceAddressWorker } from '#lib/addresses/placeAddressWorker.js'
 import BackIcon from 'virtual:icons/lucide/arrow-left'
 import SearchIcon from 'virtual:icons/lucide/search'
 import ClearIcon from 'virtual:icons/lucide/x'
@@ -64,6 +61,8 @@ import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { ParsedReverseGeocodeResult } from '#lib/utils/geocoding.types.js'
 
 // DOMAIN
+
+const placeAddressWorker = createPlaceAddressWorker()
 
 const searchKinds = ['establishment', 'building', 'address'] as const
 
@@ -555,10 +554,8 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
             : searchDraftLocations({ q, locale: getLocale(), limit: 20, filters }),
         )
           .then(async places => {
-            const [streets, buildings] = await Promise.all([
-              loadAddressNames('streets').catch(() => []),
-              loadAddressNames('buildings').catch(() => []),
-            ])
+            if (!isCurrent('establishment')) return
+            const fresh = await placeSearchRows(places.rows)
             if (!isCurrent('establishment')) return
             placesPartial = places.partial
             placesLimited = 'limited' in places && places.limited === true
@@ -573,10 +570,7 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
                       ? places.nextCursor
                       : null,
                 }
-            replaceRows(
-              'establishment',
-              placeSearchRows(places.rows, streets, buildings),
-            )
+            replaceRows('establishment', fresh)
           })
           .catch(() => {
             if (isCurrent('establishment')) placesFailed = true
@@ -625,32 +619,27 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
 }
 /** Project a Place page into the same rows used by initial discovery and map markers.
  * @param places Verified source previews.
- * @param streets Published street name catalogue.
- * @param buildings Published building name catalogue.
  * @returns Stable result identities with structured address labels.
  */
-function placeSearchRows(
+async function placeSearchRows(
   places: Awaited<ReturnType<typeof searchDraftLocations>>['rows'],
-  streets: Awaited<ReturnType<typeof loadAddressNames>>,
-  buildings: Awaited<ReturnType<typeof loadAddressNames>>,
-): Result[] {
-  return places.map(place => ({
+): Promise<Result[]> {
+  const addresses = await placeAddressWorker.structure(
+    places.map(place => ({
+      version: 1 as const,
+      source: place.facts.location.address,
+      coordinates: place.facts.location.geometry.coordinates,
+      matchStatus: place.facts.location.address.status,
+      overrides: {},
+    })),
+  )
+  return places.map((place, index) => ({
     id: `place:${place.id}`,
     kind: 'establishment',
     source: { ssId: place.id, resourceReleaseId: place.resourceReleaseId },
     names: place.facts.names,
     taxonomyLabel: placeTaxonomyLabel(place.facts.classification),
-    address: structurePlaceAddress(
-      {
-        version: 1,
-        source: place.facts.location.address,
-        coordinates: place.facts.location.geometry.coordinates,
-        matchStatus: place.facts.location.address.status,
-        overrides: {},
-      },
-      streets,
-      buildings,
-    ),
+    address: addresses[index],
   }))
 }
 /** Project every fetched address without changing provider order or canonical identity.
@@ -778,12 +767,9 @@ async function loadMoreLocations(kind: 'establishment' | 'building'): Promise<vo
         limit: 20,
         cursor: current.nextCursor!,
       })
-      const [streets, buildings] = await Promise.all([
-        loadAddressNames('streets').catch(() => []),
-        loadAddressNames('buildings').catch(() => []),
-      ])
       if (!isCurrent()) return
-      fresh = placeSearchRows(page.rows, streets, buildings)
+      fresh = await placeSearchRows(page.rows)
+      if (!isCurrent()) return
       placePaging = { ...current, nextCursor: page.nextCursor }
       placesPartial ||= page.partial
     } else if (kind === 'building' && buildingPaging) {
@@ -1360,6 +1346,7 @@ function resultLabels(result: Result): { title: string; detail: string } {
   return { title, detail }
 }
 onDestroy(() => {
+  placeAddressWorker.destroy()
   invalidateAssociationLookup()
   onFilterPanelChange?.(undefined)
   version++
