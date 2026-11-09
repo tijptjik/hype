@@ -4,6 +4,7 @@ import { onMount, tick } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
+import { reverseTabStop } from '#lib/bits/custom/form/reverseTabStop.js'
 import AccessibilityFields from './AccessibilityFields.svelte'
 // ICONS
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
@@ -39,6 +40,7 @@ onMount(() => {
     <h3 class="text-sm font-semibold">{m.accessibility_mobility_heading()}</h3>
     <button
       type="button"
+      use:reverseTabStop
       aria-label={changed ? m.forms__reset() : m.admin__forms_common_remove()}
       class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-7 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/subsection:opacity-100 group-hover/subsection:opacity-100 focus-visible:opacity-100 focus-visible:outline-2"
       onclick={() => {

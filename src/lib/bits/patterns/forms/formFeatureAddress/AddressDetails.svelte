@@ -9,6 +9,7 @@ import { MediaQuery } from 'svelte/reactivity'
 // I18N
 import { getLocaleKey, m, translateText, toLocaleKey } from '#lib/i18n.js'
 // COMPONENTS
+import { reverseTabStop } from '#lib/bits/custom/form/reverseTabStop.js'
 import LocationAssociationStatus from '../featureLocation/LocationAssociationStatus.svelte'
 import DraftLocationAccessibility from '../featureLocation/DraftLocationAccessibility.svelte'
 import LocationAccessibility from '../featureLocation/LocationAccessibility.svelte'
@@ -945,6 +946,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       (referenceDrafts[`${locale}-${field}`] ??
         String(getAddressPresentationLocale(address, locale).blockRef ?? ''))}
       <button
+        use:reverseTabStop
         type="button"
         aria-label={m.filters__clear()}
         data-tooltip={m.filters__clear()}
@@ -980,6 +982,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
         target => !addressComponentValue(original, target, field),
       )}
       <button
+        use:reverseTabStop
         type="button"
         aria-label={unchanged && !emptySource
           ? m.filters__clear()

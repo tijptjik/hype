@@ -12,6 +12,7 @@ import MarkerIcon from 'virtual:icons/lucide/map-pin'
 import UnlockIcon from 'virtual:icons/lucide/lock-keyhole-open'
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
 // BITS COMPONENTS
+import { reverseTabStop } from '#lib/bits/custom/form/reverseTabStop.js'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 // ADDRESS
@@ -158,6 +159,7 @@ let input = $state<HTMLTextAreaElement>()
       </div>
       {#if isEditing}
         <button
+          use:reverseTabStop={custom}
           type="button"
           aria-label={custom
             ? m.feature_address_reset()

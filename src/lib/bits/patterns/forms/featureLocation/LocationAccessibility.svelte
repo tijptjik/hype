@@ -1,4 +1,6 @@
 <script lang="ts">
+// FORM CONTROLS
+import { reverseTabStop } from '#lib/bits/custom/form/reverseTabStop.js'
 // SVELTE
 import { tick, untrack } from 'svelte'
 // I18N
@@ -158,6 +160,7 @@ async function remove(view: AccessibilityView): Promise<void> {
             <button
               type="button"
               disabled={busy}
+              use:reverseTabStop
               aria-label={changed ? m.forms__reset() : m.admin__forms_common_remove()}
               class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-7 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/subsection:opacity-100 group-hover/subsection:opacity-100 focus-visible:opacity-100 focus-visible:outline-2"
               onclick={() => {

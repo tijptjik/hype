@@ -12,6 +12,7 @@ import PanelRightIcon from 'virtual:icons/lucide/panel-right'
 import { divisionClassLabel } from '#lib/divisions/classes.js'
 import { divisionIcons } from '#lib/divisions/icons.js'
 // BITS
+import { reverseTabStop } from '#lib/bits/custom/form/reverseTabStop.js'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // COMPONENTS
 import AddressLocalityEditor from './AddressLocalityEditor.svelte'
@@ -292,6 +293,7 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
                 <button
                   type="button"
                   disabled={stale}
+                  use:reverseTabStop
                   aria-label={m.address_divisions_from_marker()}
                   data-tooltip={m.address_divisions_from_marker()}
                   class="text-muted-foreground hover:bg-muted mt-1 flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within/division-row:opacity-100 group-hover/division-row:opacity-100 focus-visible:opacity-100"

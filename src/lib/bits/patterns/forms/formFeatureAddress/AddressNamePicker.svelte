@@ -48,6 +48,7 @@ let rows = $state<AddressName[]>([])
 let query = $state('')
 let open = $state(false)
 let replacing = $state(false)
+let selectionChanged = false
 let input: HTMLInputElement | undefined = $state()
 let selection: HTMLButtonElement | undefined = $state()
 let failed = $state(false)
@@ -101,7 +102,11 @@ function focusout(
   setTimeout(() => {
     if (root.isConnected && !root.contains(document.activeElement)) {
       cancel()
-      onBlur?.()
+      // Leaving an unchanged tile or a cancelled search is navigation, not a new association.
+      if (selectionChanged) {
+        selectionChanged = false
+        onBlur?.()
+      }
     }
   }, 0)
 }
@@ -121,6 +126,7 @@ async function load(): Promise<void> {
 }
 /** Commit a source selection and restore the display value. @param row Chosen name. @returns Nothing. */
 function select(row: AddressName | null): void {
+  selectionChanged = true
   onSelect(row)
   cancel(true)
 }
@@ -184,13 +190,13 @@ onMount(() => {
   <div class="relative min-w-0 flex-1" onfocusout={focusout}>
     {#if value && !replacing}
       <div
-        class="group/name hover:bg-muted focus-within:bg-muted relative flex items-center rounded-md"
+        class="group/name hover:bg-foreground/5 has-[:focus-visible]:outline-foreground/40 relative flex items-center rounded-md has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2"
       >
         <button
           bind:this={selection}
           type="button"
           aria-label={`${m.replace()}: ${displayValue}`}
-          class="group/tile focus-visible:outline-primary grid min-w-0 flex-1 grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-2"
+          class="group/tile grid min-w-0 flex-1 grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-none"
           onclick={() => void replace()}
         >
           {#if family === 'buildings'}
@@ -218,7 +224,7 @@ onMount(() => {
             >{label}</span
           >
           <span
-            class="text-primary col-start-2 row-start-2 hidden text-xs group-hover/tile:block group-focus-visible/tile:block"
+            class="text-foreground col-start-2 row-start-2 hidden text-xs group-hover/tile:block group-focus-visible/tile:block"
             >{m.replace()}</span
           >
         </button>
