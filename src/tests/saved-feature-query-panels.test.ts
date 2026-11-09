@@ -57,6 +57,13 @@ const mocks = vi.hoisted(() => {
   }
 })
 
+vi.mock('#lib/api/featureIdentity.remote.js', () => ({
+  getSavedFeatureSuccessors: () =>
+    Object.assign(Promise.resolve({ rows: [], nextOffset: null }), {
+      refresh: async () => {},
+    }),
+}))
+
 vi.mock('#lib/context/app.svelte.js', () => ({ getAppCtx: () => mocks.app }))
 vi.mock('#lib/context/omni.svelte.js', () => ({ getOmniCtx: () => ({}) }))
 vi.mock(
@@ -192,6 +199,9 @@ describe.each([
   it('keeps a settled empty state until the replacement rows arrive', async () => {
     const model = {
       title: 'Saved places (0)',
+      splitGuidance: [],
+      guidanceLoading: false,
+      guidanceError: '',
       rows: [],
       totalCount: 0,
       loading: false,
