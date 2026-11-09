@@ -34,7 +34,7 @@ export const FEATURE_EDITOR_COLLECTIONS_SECTION_CLASS = cx(
 )
 
 /**
- * Positions the active workspace beneath the expanded or collapsed preview.
+ * Positions the active workspace beneath the development draft bar and preview.
  * @param state - Current preview visibility and expansion state.
  * @returns Theme-independent facet positioning classes.
  */
@@ -46,10 +46,12 @@ export function getFeatureEditorFacetClass({
   return cx(
     'left-0! right-0! bottom-0 transition-[opacity,transform]! duration-300! ease-out! motion-reduce:transition-none!',
     isVisible ? 'translate-y-0' : 'translate-y-2',
-    !showsVisualSection && 'top-0',
-    showsVisualSection && isVisualSectionCollapsed && 'top-16',
+    !showsVisualSection && 'top-[var(--feature-draft-offset,0px)]',
+    showsVisualSection &&
+      isVisualSectionCollapsed &&
+      'top-[calc(4rem+var(--feature-draft-offset,0px))]',
     showsVisualSection &&
       !isVisualSectionCollapsed &&
-      'top-[var(--feature-preview-height,520px)]',
+      'top-[calc(var(--feature-preview-height,520px)+var(--feature-draft-offset,0px))]',
   )
 }
