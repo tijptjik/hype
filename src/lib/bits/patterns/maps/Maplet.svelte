@@ -266,7 +266,14 @@ $effect(() => {
       marker.on('dragend', () => {
         pinIsDragging = false
         const position = marker?.getLngLat()
-        if (position) mapProps.dragEndCallback?.(position.toArray())
+        if (position) {
+          // Resolve the current edit callback; marker instances outlive review state changes.
+          const current = mapProps.locationCandidates?.find(
+            row => row.id === candidate.id,
+          )
+          if (current?.onReposition) current.onReposition(position.toArray())
+          else if (!current?.previewOnly) mapProps.dragEndCallback?.(position.toArray())
+        }
       })
       candidateMarkers.set(candidate.id, marker)
       if (!prefersReducedMotion.current && !candidate.hidden) {
@@ -280,10 +287,9 @@ $effect(() => {
     }
     marker.setDraggable(
       Boolean(
-        candidate.selected &&
-          !candidate.previewOnly &&
-          mapProps.draggable &&
-          !mapProps.draggingLocked,
+        !mapProps.draggingLocked &&
+          (candidate.onReposition ||
+            (candidate.selected && !candidate.previewOnly && mapProps.draggable)),
       ),
     )
     marker.setLngLat(
@@ -377,10 +383,11 @@ const candidateFitKey = $derived(
     .filter(candidate => !candidate.hidden)
     .map(
       candidate =>
-        `${candidate.fitGroup ?? ''}:${candidate.id}:${candidate.coordinates.join(',')}`,
+        `${candidate.fitGroup ?? ''}:${candidate.id}:${candidate.coordinates.join(',')}:${Boolean(candidate.onReposition)}`,
     )
     .join('|'),
 )
+let editingCandidateIds = ''
 $effect(() => {
   const target = activeMapInstance
   const key = candidateFitKey
@@ -391,6 +398,17 @@ $effect(() => {
   const review = candidates.some(candidate =>
     candidate.fitGroup?.startsWith('association:'),
   )
+  // Explicit pin editing retains the user's camera while draft coordinates change.
+  const ids = candidates.map(candidate => candidate.id).join('|')
+  if (candidates.some(candidate => candidate.onReposition)) {
+    editingCandidateIds = ids
+    return
+  }
+  if (editingCandidateIds) {
+    const sameReview = editingCandidateIds === ids
+    editingCandidateIds = ''
+    if (sameReview) return
+  }
   if (!review && candidates.some(candidate => candidate.selected)) return
   if (
     review &&
