@@ -25,9 +25,11 @@ beforeEach(() => {
   db = drizzle(
     {
       prepare: (sql: string) => ({
+        all: async () => ({ results: sqlite.prepare(sql).all() }),
         bind: (...params: never[]) => ({
           sql,
           params,
+          all: async () => ({ results: sqlite.prepare(sql).all(...params) }),
           raw: async () => {
             if (params.length > 100) throw new Error('D1 parameter budget exceeded')
             const statement = sqlite.prepare(sql)
@@ -156,7 +158,7 @@ describe('property-value ownership', () => {
   })
 
   it('does not combine concurrent full replacement sets', async () => {
-    await Promise.all([
+    const decisions = await Promise.allSettled([
       syncPropertyValues(
         db,
         [{ id: 'first', value: 'first' }] as PropertyValue[],
@@ -172,7 +174,8 @@ describe('property-value ownership', () => {
       sqlite
         .prepare("SELECT id FROM propertyValue WHERE propertyId = 'property'")
         .all(),
-    ).toEqual([{ id: 'second' }])
+    ).toEqual([{ id: 'first' }])
+    expect(decisions.map(result => result.status)).toEqual(['fulfilled', 'rejected'])
   })
 
   it('rolls back other changes when an expected update target disappears', async () => {
@@ -189,7 +192,7 @@ describe('property-value ownership', () => {
         ] as PropertyValue[],
         'property',
       ),
-    ).rejects.toMatchObject({ status: 404 })
+    ).rejects.toMatchObject({ status: 409 })
     expect(row('removed')).toMatchObject({ value: 'keep me' })
     expect(row('new')).toBeUndefined()
   })
@@ -227,7 +230,7 @@ describe('property-value ownership', () => {
         [{ id: 'owned', value: 'attacker', rank: 3 }] as PropertyValue[],
         'property',
       ),
-    ).rejects.toMatchObject({ status: 404 })
+    ).rejects.toMatchObject({ status: 409 })
     expect(row('owned')).toMatchObject({
       propertyId: 'other-property',
       value: 'original',
@@ -240,7 +243,9 @@ describe('property-value ownership', () => {
       sqlite.exec(
         "UPDATE propertyValue SET propertyId = 'other-property' WHERE id = 'owned'",
       )
-    expect(await syncPropertyValues(db, [], 'property')).toEqual([])
+    await expect(syncPropertyValues(db, [], 'property')).rejects.toMatchObject({
+      status: 409,
+    })
     expect(row('owned')).toMatchObject({
       propertyId: 'other-property',
       value: 'original',

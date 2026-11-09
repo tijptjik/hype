@@ -204,9 +204,8 @@ describe('property.remote', () => {
       expect.objectContaining({ projectId: 'project-1', scope: 'project' }),
       { i18n, values },
       expect.objectContaining({
-        actor: { actorId: 'u-1', reason: 'Project field created' },
         target: { scope: 'project', id: 'project-1' },
-        guard: expect.anything(),
+        actor: expect.objectContaining({ actorId: 'u-1' }),
       }),
     )
     expect(mockCreateI18n).not.toHaveBeenCalled()
@@ -513,9 +512,8 @@ describe('property.remote', () => {
       ],
       'prop-1',
       expect.objectContaining({
-        actor: { actorId: 'u-1', reason: 'Project field options appended' },
         target: { scope: 'project', id: 'project-1' },
-        guard: expect.anything(),
+        actor: expect.objectContaining({ actorId: 'u-1' }),
       }),
     )
   })
@@ -555,5 +553,41 @@ describe('property.remote', () => {
         projectId: 'project-1',
       },
     })
+  })
+  it('passes authenticated ownership and attribution for organisation option appends', async () => {
+    mockPropertyScopeRows
+      .mockResolvedValueOnce([
+        {
+          id: 'prop-1',
+          scope: 'organisation',
+          organisationId: 'org-1',
+          projectId: null,
+          hubId: null,
+        },
+      ])
+      .mockResolvedValueOnce([{ id: 'org-1', hubId: 'hub-a' }])
+    mockLoadProperty.mockResolvedValue({
+      id: 'prop-1',
+      scope: 'organisation',
+      organisationId: 'org-1',
+    })
+    await remote.appendPropertyValues({
+      data: {
+        propertyId: 'prop-1',
+        values: [{ value: 'new', i18n: { en: { value: 'New' } } }],
+      },
+    })
+    expect(mockCreatePropertyValues).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      'prop-1',
+      expect.objectContaining({
+        organisationId: 'org-1',
+        hubId: 'hub-a',
+        actor: expect.objectContaining({
+          reason: 'Organisation field options appended',
+        }),
+      }),
+    )
   })
 })

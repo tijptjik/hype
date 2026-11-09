@@ -1,9 +1,11 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
-import { getTableColumns, getTableName } from 'drizzle-orm'
+import { sql, getTableColumns, getTableName } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  createPropertyValues,
   listResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject,
   syncProjectInheritedProperties,
@@ -29,6 +31,7 @@ import {
 } from '#lib/db/services/organisation.js'
 // FIXTURES
 import { createOrganisationUserTables } from './fixtures/organisationUserTables.js'
+import { listOrganisationPropertyHistory } from '#lib/db/services/propertyCatalogRevision.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { ProjectPropertyForm } from '#lib/db/zod/schema/property.types.js'
@@ -46,6 +49,7 @@ beforeEach(() => {
   sqlite.exec('PRAGMA foreign_keys = ON')
   // Include every real selected column so nested hydration runs through Drizzle SQL.
   for (const table of [
+    schema.user,
     schema.hubRole,
     schema.hubI18n,
     schema.organisationRole,
@@ -142,6 +146,11 @@ beforeEach(() => {
             statement.setReturnArrays(true)
             return statement.all(...params)
           },
+          all: async () => ({
+            results: sqlite.prepare(sql).all(...params),
+            success: true,
+            meta: {},
+          }),
         }),
       }),
       batch: async (statements: { sql: string; params: never[] }[]) => {
@@ -221,6 +230,111 @@ describe.each(['hub', 'organisation'] as const)(
         values: [{ value: 'option', i18n: { en: { value: 'Option' } } }],
       },
     ]
+    it.each([false, true])(
+      'replaces a removed field with the same API key atomically (failure=%s)',
+      async fail => {
+        sqlite.exec(
+          `CREATE UNIQUE INDEX catalog_key ON property(scope, ${ownerColumn}, key)`,
+        )
+        const previousKey = retainedId
+        const before = catalogSnapshot()
+        if (fail)
+          sqlite.exec(
+            `CREATE TRIGGER fail_replacement_translation BEFORE INSERT ON propertyI18n WHEN NEW.propertyId='replacement' BEGIN SELECT RAISE(ABORT,'replacement translation failed'); END`,
+          )
+        const saving = save([
+          {
+            id: 'replacement',
+            key: previousKey,
+            component: 'SelectField',
+            i18n: {
+              en: { label: 'Hits' },
+              ko: { label: '히트곡' },
+              ja: { label: '', placeholder: ' ', labelGen: true },
+            },
+            values: [
+              {
+                value: 'my',
+                i18n: {
+                  en: { value: 'My' },
+                  ko: { value: '내' },
+                  ja: { value: '', valueGen: true },
+                },
+              },
+            ],
+          },
+        ])
+        if (fail) {
+          await expect(saving).rejects.toThrow('replacement translation failed')
+          expect(catalogSnapshot()).toEqual(before)
+        } else {
+          await expect(saving).resolves.toBeDefined()
+          expect(
+            sqlite.prepare('SELECT id FROM property WHERE id=?').get(retainedId),
+          ).toBeUndefined()
+          expect(
+            sqlite.prepare('SELECT key FROM property WHERE id=?').get('replacement'),
+          ).toEqual({ key: previousKey })
+          expect(
+            sqlite
+              .prepare('SELECT label FROM propertyI18n WHERE propertyId=? AND locale=?')
+              .get('replacement', 'ko'),
+          ).toEqual({ label: '히트곡' })
+          expect(
+            sqlite
+              .prepare(
+                "SELECT count(*) n FROM propertyI18n WHERE propertyId='replacement' AND locale='ja'",
+              )
+              .get(),
+          ).toEqual({ n: 0 })
+          expect(
+            sqlite
+              .prepare(
+                "SELECT count(*) n FROM propertyValueI18n i JOIN propertyValue v ON v.id=i.propertyValueId WHERE v.propertyId='replacement' AND i.locale='ja'",
+              )
+              .get(),
+          ).toEqual({ n: 0 })
+        }
+        expect(batches).toHaveLength(1)
+      },
+    )
+
+    it('rejects changing a populated Range field to Dropdown before writing translations or options', async () => {
+      sqlite
+        .prepare(
+          "UPDATE property SET component='RangeField',dataType='number' WHERE id=?",
+        )
+        .run(retainedId)
+      sqlite
+        .prepare(
+          "INSERT INTO featureProperty(featureId,propertyId,value) VALUES ('feature',?, '2')",
+        )
+        .run(retainedId)
+      const before = catalogSnapshot()
+      await expect(
+        save([
+          {
+            id: retainedId,
+            key: retainedId,
+            component: 'SelectField',
+            dataType: 'text',
+            i18n: { en: { label: 'Grade' }, ja: { label: 'グレード' } },
+            values: [
+              {
+                value: 'hits',
+                i18n: { en: { value: 'Hits' }, ja: { value: 'ヒット曲' } },
+              },
+            ],
+          },
+        ]),
+      ).rejects.toMatchObject({
+        status: 400,
+        body: { message: 'PROPERTY_CONTRACT_HAS_VALUES' },
+      })
+      expect(catalogSnapshot()).toEqual(before)
+      expect(batches).toHaveLength(0)
+    })
+
     const hubData = {
       code: 'changed',
       domain: null,
@@ -1364,4 +1478,448 @@ it('keeps populated calendar coordinates tied to their resolution', async () => 
       'project',
     ),
   ).rejects.toMatchObject({ status: 400 })
+})
+
+describe('revisioned organisation field catalogue through the existing form', () => {
+  /** Install additive revision storage on the schema-shaped fixture.
+   * @returns Nothing; the fixture remains private to each test.
+   */
+  function enableHistory(): void {
+    sqlite.exec(
+      'CREATE TABLE revisionChangeSet(id TEXT PRIMARY KEY,actorId TEXT NOT NULL,origin TEXT NOT NULL,reason TEXT,createdAt TEXT NOT NULL)',
+    )
+    sqlite.exec(readFileSync('migrations/0173_organisation_revisions.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0176_property_catalog_revisions.sql', 'utf8'))
+    sqlite.exec(
+      "UPDATE organisation SET code='org', modifiedAt='before' WHERE id='org'",
+    )
+  }
+  const definition = {
+    id: 'old',
+    key: 'old',
+    component: 'SelectField',
+    dataType: 'text',
+    cardinality: 'one',
+    i18n: { en: { label: 'Category' }, zhHant: { label: '分類' } },
+    values: [
+      {
+        id: 'choice',
+        value: 'a',
+        rank: 0,
+        i18n: { en: { value: 'First' }, zhHant: { value: '第一' } },
+      },
+    ],
+  }
+  /** Save through the production organisation form service, including its concurrency fence.
+   * @param properties Complete submitted catalogue.
+   * @param updatedAt Expected parent revision.
+   * @returns Persisted parent token or stale result.
+   */
+  function save(properties: Record<string, unknown>[], updatedAt: string) {
+    return updateOrganisationByIdWithConcurrency(db, {
+      id: 'org',
+      actorId: 'editor',
+      updatedAt,
+      data: { code: 'org', url: null },
+      properties,
+    })
+  }
+
+  it('retains definition/option translations through edits, no-ops and removal', async () => {
+    enableHistory()
+    let saved = await save([definition], 'before')
+    expect(saved).toBeTruthy()
+    const initial = await listOrganisationPropertyHistory(db, {
+      organisationId: 'org',
+      hubId: 'scoped',
+    })
+    expect(initial.entries).toHaveLength(2)
+    expect(initial.entries[0].actorId).toBe('editor')
+    const beforeCount = sqlite
+      .prepare('SELECT count(*) n FROM propertyCatalogRevision')
+      .get()
+    saved = await save([definition], saved!.modifiedAt)
+    expect(
+      sqlite.prepare('SELECT count(*) n FROM propertyCatalogRevision').get(),
+    ).toEqual(beforeCount)
+    saved = await save(
+      [
+        {
+          ...definition,
+          i18n: { en: { label: 'Updated category' }, zhHant: { label: '更新分類' } },
+          values: [
+            { ...definition.values[0], i18n: { en: { value: 'Updated option' } } },
+          ],
+        },
+      ],
+      saved!.modifiedAt,
+    )
+    const edited = await listOrganisationPropertyHistory(db, {
+      organisationId: 'org',
+      hubId: 'scoped',
+    })
+    expect(edited.entries[0].changes).toContainEqual({
+      path: ['old', 'i18n', 'en', 'label'],
+      before: { present: true, value: 'Category' },
+      after: { present: true, value: 'Updated category' },
+    })
+    expect(edited.entries[0].changes).toContainEqual({
+      path: ['old', 'values', 'choice', 'i18n', 'en', 'value'],
+      before: { present: true, value: 'First' },
+      after: { present: true, value: 'Updated option' },
+    })
+    await save([], saved!.modifiedAt)
+    const removed = await listOrganisationPropertyHistory(db, {
+      organisationId: 'org',
+      hubId: 'scoped',
+    })
+    expect(removed.entries[0].changes[0]).toMatchObject({
+      path: ['old'],
+      before: { present: true },
+      after: { present: false },
+    })
+    expect(
+      sqlite.prepare("SELECT 1 FROM property WHERE id='old'").get(),
+    ).toBeUndefined()
+    expect(sqlite.prepare('SELECT * FROM propertyCatalogRevisionWrite').all()).toEqual(
+      [],
+    )
+    expect(
+      (
+        await listOrganisationPropertyHistory(db, {
+          organisationId: 'org',
+          hubId: 'wrong',
+        })
+      ).entries,
+    ).toEqual([])
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+  })
+
+  it.each(['stale', 'late-failure'])(
+    'rolls back both histories and the field projection: %s',
+    async mode => {
+      enableHistory()
+      if (mode === 'late-failure')
+        sqlite.exec(
+          "CREATE TRIGGER fail_catalog_receipt BEFORE DELETE ON propertyCatalogRevisionWrite BEGIN SELECT RAISE(ABORT,'late failure'); END",
+        )
+      const before = sqlite.prepare('SELECT * FROM property ORDER BY id').all()
+      const pending = save([definition], mode === 'stale' ? 'wrong' : 'before')
+      if (mode === 'stale') expect(await pending).toBeNull()
+      else await expect(pending).rejects.toThrow('late failure')
+      expect(sqlite.prepare('SELECT * FROM property ORDER BY id').all()).toEqual(before)
+      for (const table of [
+        'revisionChangeSet',
+        'organisationRevision',
+        'organisationRevisionHead',
+        'organisationRevisionWrite',
+        'propertyCatalogRevision',
+        'propertyCatalogRevisionHead',
+        'propertyCatalogRevisionWrite',
+      ])
+        expect(sqlite.prepare(`SELECT * FROM ${table}`).all()).toEqual([])
+    },
+  )
+
+  it('blocks uncaptured edits to enrolled definitions and their children', async () => {
+    enableHistory()
+    await save([definition], 'before')
+    for (const statement of [
+      "UPDATE property SET key='bypass' WHERE id='old'",
+      "DELETE FROM property WHERE id='old'",
+      "UPDATE propertyI18n SET label='bypass' WHERE propertyId='old'",
+      "DELETE FROM propertyValue WHERE id='choice'",
+      "UPDATE propertyValueI18n SET value='bypass' WHERE propertyValueId='choice'",
+    ])
+      expect(() => sqlite.exec(statement)).toThrow('requires catalog capture')
+    expect(() => sqlite.exec('DELETE FROM propertyCatalogRevision')).toThrow(
+      'immutable',
+    )
+    expect(() =>
+      sqlite.exec("UPDATE propertyCatalogRevision SET content='{}'"),
+    ).toThrow('immutable')
+  })
+  it('revisions independent option appends and fences stale forms and moved ownership', async () => {
+    enableHistory()
+    const saved = await save([definition], 'before')
+    if (!saved) throw new Error('Expected saved catalogue')
+    const rows = await createPropertyValues(
+      db,
+      [{ id: 'appended', value: 'second', rank: 1, i18n: { en: { value: 'Second' } } }],
+      'old',
+      {
+        organisationId: 'org',
+        hubId: 'scoped',
+        actor: { actorId: 'appender', reason: 'Option appended' },
+      },
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].id).toBe('appended')
+    const page = await listOrganisationPropertyHistory(db, {
+      organisationId: 'org',
+      hubId: 'scoped',
+    })
+    expect(page.entries[0].actorId).toBe('appender')
+    expect(page.entries[0].changes[0].path).toEqual(['old', 'values', 'appended'])
+    expect(await save([definition], saved.modifiedAt)).toBeNull()
+    const count = sqlite.prepare('SELECT count(*) n FROM propertyCatalogRevision').get()
+    await expect(
+      createPropertyValues(db, [{ id: 'wrong', value: 'wrong' }], 'old', {
+        organisationId: 'org',
+        hubId: 'different',
+        actor: { actorId: 'appender' },
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+    expect(
+      sqlite.prepare("SELECT 1 FROM propertyValue WHERE id='wrong'").get(),
+    ).toBeUndefined()
+    expect(
+      sqlite.prepare('SELECT count(*) n FROM propertyCatalogRevision').get(),
+    ).toEqual(count)
+  })
+
+  it('captures initial fields when creating an organisation through its existing form service', async () => {
+    enableHistory()
+    const created = await createOrganisation(
+      db,
+      { id: 'new-org', code: 'new-org', settings: {} },
+      {
+        properties: [{ ...definition, id: 'new-field', values: [] }],
+      },
+      { actorId: 'creator', reason: 'Organisation created' },
+    )
+    expect(created.id).toBe('new-org')
+    const history = await listOrganisationPropertyHistory(db, {
+      organisationId: 'new-org',
+      hubId: null,
+    })
+    expect(history.entries).toHaveLength(2)
+    expect(history.entries[0]).toMatchObject({
+      actorId: 'creator',
+      fieldLabels: { 'new-field': 'Category' },
+    })
+    expect(history.entries[0].changes[0]).toMatchObject({
+      path: ['new-field'],
+      before: { present: false },
+      after: { present: true },
+    })
+  })
+
+  it('tracks option ordering without changing stable option identities', async () => {
+    enableHistory()
+    const first = await save(
+      [
+        {
+          ...definition,
+          values: [
+            ...definition.values,
+            {
+              id: 'second-choice',
+              value: 'b',
+              rank: 1,
+              i18n: { en: { value: 'Second' } },
+            },
+          ],
+        },
+      ],
+      'before',
+    )
+    if (!first) throw new Error('Expected catalogue')
+    await save(
+      [
+        {
+          ...definition,
+          values: [
+            {
+              id: 'second-choice',
+              value: 'b',
+              rank: 0,
+              i18n: { en: { value: 'Second' } },
+            },
+            { ...definition.values[0], rank: 1 },
+          ],
+        },
+      ],
+      first.modifiedAt,
+    )
+    const history = await listOrganisationPropertyHistory(db, {
+      organisationId: 'org',
+      hubId: 'scoped',
+    })
+    expect(history.entries[0].changes).toContainEqual({
+      path: ['old', 'values', 'choice', 'record', 'rank'],
+      before: { present: true, value: 0 },
+      after: { present: true, value: 1 },
+    })
+    expect(history.entries[0].changes).toContainEqual({
+      path: ['old', 'values', 'second-choice', 'record', 'rank'],
+      before: { present: true, value: 1 },
+      after: { present: true, value: 0 },
+    })
+  })
+})
+
+// All three resource gates enabled: exercise the existing form and independent write paths together.
+describe('live admin revision integration', () => {
+  /** Installs complete additive storage on the relational transaction fixture.
+   * @returns Nothing; each test owns its SQLite database.
+   */
+  function enableLiveHistory(): void {
+    for (const table of [
+      schema.projectI18n,
+      schema.layerI18n,
+      schema.hubLayer,
+      schema.projectMapStyles,
+      schema.projectRole,
+    ]) {
+      if (
+        sqlite
+          .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")
+          .get(getTableName(table))
+      )
+        continue
+      sqlite.exec(
+        `CREATE TABLE "${getTableName(table)}" (${Object.values(getTableColumns(table))
+          .map(column => `"${column.name}" ${column.getSQLType()}`)
+          .join(',')})`,
+      )
+    }
+    // Rebuild these two simplified fixture tables with their production property cascade FKs.
+    sqlite.exec(
+      "INSERT OR IGNORE INTO property(id,key,scope) VALUES ('other','other','project')",
+    )
+    for (const table of [schema.projectProperty, schema.layerProperty]) {
+      const name = getTableName(table),
+        owner = name === 'projectProperty' ? 'projectId' : 'layerId'
+      const columns = Object.values(getTableColumns(table)).map(
+        column =>
+          `"${column.name}" ${column.getSQLType()}${column.name === 'propertyId' ? ' REFERENCES property(id) ON DELETE CASCADE' : ''}`,
+      )
+      sqlite.exec(
+        `CREATE TABLE replacement_${name} (${columns.join(',')},UNIQUE(${owner},propertyId)); INSERT INTO replacement_${name} SELECT * FROM ${name}; DROP TABLE ${name}; ALTER TABLE replacement_${name} RENAME TO ${name}`,
+      )
+    }
+    sqlite.exec(`CREATE UNIQUE INDEX live_project_id ON project(id);
+      CREATE UNIQUE INDEX live_layer_id ON layer(id);
+      CREATE UNIQUE INDEX live_hub_id ON hub(id);
+      CREATE UNIQUE INDEX live_layer_i18n ON layerI18n(layerId,locale);
+      CREATE TABLE revisionChangeSet(id TEXT PRIMARY KEY,actorId TEXT NOT NULL,origin TEXT NOT NULL,reason TEXT,createdAt TEXT NOT NULL);
+      UPDATE project SET code=id,modifiedAt='before',flags='{}',isPublished=0,isArchived=0 WHERE id='project';
+      UPDATE layer SET organisationId='org',modifiedAt='before',isPublished=0,isArchived=0 WHERE projectId='project';
+      UPDATE organisation SET code='org',modifiedAt='before' WHERE id='org';
+      UPDATE hub SET modifiedAt='before' WHERE id='scoped';`)
+    for (const migration of [
+      '0173_organisation_revisions.sql',
+      '0176_property_catalog_revisions.sql',
+      '0177_admin_resource_revisions.sql',
+    ])
+      sqlite.exec(readFileSync(`migrations/${migration}`, 'utf8'))
+    sqlite.exec('UPDATE adminResourceRevisionRollout SET enabled=1')
+  }
+  const localField = {
+    id: 'local',
+    key: 'local',
+    component: 'SelectField',
+    dataType: 'text',
+    cardinality: 'one',
+    i18n: { en: { label: 'Local category' } },
+    values: [],
+  }
+
+  it('records project field edits and independent option appends; rejects a stale full form', async () => {
+    enableLiveHistory()
+    const saved = await updateProjectByIdWithConcurrency(db, {
+      id: 'project',
+      actorId: 'editor',
+      updatedAt: 'before',
+      data: { organisationId: 'org', code: 'project' },
+      properties: [localField],
+    } as never)
+    expect(saved).toBeTruthy()
+    await createPropertyValues(
+      db,
+      [{ id: 'appended', value: 'New', i18n: { en: { value: 'New' } } }] as never,
+      'local',
+      {
+        target: { scope: 'project', id: 'project' },
+        actor: { actorId: 'appender' },
+        guard: sql`1`,
+      },
+    )
+    expect(
+      await updateProjectByIdWithConcurrency(db, {
+        id: 'project',
+        actorId: 'stale-editor',
+        updatedAt: saved!.modifiedAt,
+        data: { organisationId: 'org', code: 'project' },
+        properties: [localField],
+      } as never),
+    ).toBeNull()
+    expect(
+      sqlite.prepare("SELECT count(*) n FROM propertyValue WHERE id='appended'").get()
+        ?.n,
+    ).toBe(1)
+    expect(
+      sqlite
+        .prepare("SELECT count(*) n FROM propertyCatalogRevision WHERE scope='project'")
+        .get()?.n,
+    ).toBe(3)
+  })
+
+  it('captures deleted shared assignments without nesting duplicate write scopes', async () => {
+    enableLiveHistory()
+    // Enrol the affected project/layers before the organisation removes its shared definition.
+    await updateProjectByIdWithConcurrency(db, {
+      id: 'project',
+      actorId: 'editor',
+      updatedAt: 'before',
+      data: { organisationId: 'org', code: 'project' },
+    } as never)
+    const before = sqlite
+      .prepare("SELECT modifiedAt FROM project WHERE id='project'")
+      .get()!.modifiedAt
+    const saved = await updateOrganisationByIdWithConcurrency(db, {
+      id: 'org',
+      actorId: 'owner',
+      updatedAt: 'before',
+      data: { code: 'org', url: null },
+      properties: [],
+    } as never)
+    expect(saved).toBeTruthy()
+    const latest = sqlite
+      .prepare(
+        "SELECT content FROM projectRevision WHERE projectId='project' ORDER BY rowid DESC LIMIT 1",
+      )
+      .get()!
+    expect(JSON.parse(latest.content as string).properties.old).toBeUndefined()
+    expect(
+      sqlite.prepare("SELECT modifiedAt FROM project WHERE id='project'").get()!
+        .modifiedAt,
+    ).not.toBe(before)
+    expect(sqlite.prepare('SELECT count(*) n FROM projectRevisionWrite').get()?.n).toBe(
+      0,
+    )
+  })
+
+  it('keeps hub catalogue and parent revision atomic on a late failure', async () => {
+    enableLiveHistory()
+    sqlite.exec(
+      "CREATE TRIGGER fail_hub_revision BEFORE INSERT ON hubRevision WHEN NEW.previousRevisionId IS NOT NULL BEGIN SELECT RAISE(ABORT,'injected history failure'); END",
+    )
+    await expect(
+      updateHubByIdWithConcurrency(db, {
+        id: 'scoped',
+        actorId: 'admin',
+        updatedAt: 'before',
+        data: { code: 'changed' },
+        properties: [],
+      } as never),
+    ).rejects.toThrow()
+    expect(sqlite.prepare("SELECT code FROM hub WHERE id='scoped'").get()?.code).toBe(
+      'scoped',
+    )
+    expect(
+      sqlite.prepare('SELECT count(*) n FROM propertyCatalogRevision').get()?.n,
+    ).toBe(0)
+  })
 })
