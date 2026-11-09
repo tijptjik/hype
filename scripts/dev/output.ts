@@ -39,7 +39,9 @@ export function getDevOutput(
  * @param command Vite command, separating development output from build output.
  * @returns The process-owned directory for generated Paraglide modules.
  * @remarks CLI tests retain `src/lib/paraglide`; builds may use a different layout.
+ * SvelteKit ignores outDir siblings of `generated`, so live translations must live
+ * beneath `generated` for file changes to invalidate Vite client and SSR modules.
  */
 export function getParaglideOutput(argv: string[], command: string): string {
-  return `${getDevOutput(argv, command).outDir}/paraglide-${command === 'serve' ? 'dev' : 'build'}`
+  return `${getDevOutput(argv, command).outDir}/generated/paraglide-${command === 'serve' ? 'dev' : 'build'}`
 }
