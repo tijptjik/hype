@@ -15,10 +15,12 @@ const paths = {
 
 /** Inline an escaped code-owned projection constant without spending a D1 binding.
  * @param value Fixed field name, JSON path or empty fallback, never request data.
- * @returns A SQL literal escaped by Drizzle.
+ * @returns An escaped SQL string literal, or SQL NULL.
+ * @remarks Relational query aliasing clones SQL nodes and drops inlineParams flags.
+ * Store code-owned constants as literal chunks so they survive that transformation.
  */
 function projectionConstant(value: string | null): SQL {
-  return sql`${value}`.inlineParams()
+  return sql.raw(value === null ? 'NULL' : `'${value.replaceAll("'", "''")}'`)
 }
 
 /** Read one fixed projection field without deserializing complete revision histories.

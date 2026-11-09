@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core'
+import { drizzle } from 'drizzle-orm/d1'
 // TEST
 import { afterEach, expect, it } from 'vitest'
 // SERVICES
@@ -11,6 +12,7 @@ import { featureLocationBrandsSQL } from '#lib/db/services/locationBrandProjecti
 import { featureLocationLifecycleSQL } from '#lib/db/services/locationLifecycleProjection.js'
 import { featureLocationNamesSQL } from '#lib/db/services/locationNameProjection.js'
 import { FeatureListProfileAPI, FeatureListRow } from '#lib/db/zod/schema/feature.js'
+import * as schema from '#lib/db/schema/index.js'
 
 const stores: DatabaseSync[] = []
 afterEach(() => {
@@ -149,6 +151,24 @@ it('leaves the D1 binding budget for request filters across all location project
     SELECT ${featureLocationBrandsSQL()}, ${featureLocationNamesSQL()},
       ${featureLocationLifecycleSQL()} FROM feature WHERE id=${requestedId}
   `)
+  expect(query.params).toEqual([requestedId])
+  expect(query.sql).not.toContain(requestedId)
+})
+
+it('preserves the binding budget when relational queries alias projection extras', () => {
+  const requestedId = "feature' OR 1=1 --"
+  const db = drizzle({} as D1Database, { schema })
+  const query = db.query.feature
+    .findMany({
+      columns: { id: true },
+      extras: {
+        locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+        locationNames: featureLocationNamesSQL().as('locationNames'),
+        locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+      },
+      where: sql`${schema.feature.id} = ${requestedId}`,
+    })
+    .toSQL()
   expect(query.params).toEqual([requestedId])
   expect(query.sql).not.toContain(requestedId)
 })
