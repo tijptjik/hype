@@ -123,7 +123,7 @@ function handleTitleClick(): void {
 }
 
 function handleDescriptionClick(): void {
-  navigateOnAdmin(adminCtx, FirstClassResource.feature, entity.id, 'address')
+  navigateOnAdmin(adminCtx, FirstClassResource.feature, entity.id, 'location')
 }
 </script>
 
