@@ -1,0 +1,78 @@
+digraph HypeLocationProposal {
+  graph [rankdir=TB, bgcolor="white", fontname="Arial", fontsize=21, label="Location, address and relocation proposal — Refs #194", labelloc=t, pad=0.35, nodesep=0.5, ranksep=0.8, splines=polyline, compound=true];
+  node [shape=plain, fontname="Arial", fontsize=12];
+  edge [fontname="Arial", fontsize=10, color="#64748b", arrowsize=0.7];
+
+  subgraph clusterPolicy {
+    label="1. Who decides relocation?";
+    color="#f59e0b";
+    style=rounded;
+    margin=18;
+    project [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#d97706"><TR><TD BGCOLOR="#fef3c7"><B>1. project</B> — extend</TD></TR><TR><TD ALIGN="LEFT">id / organisationId<BR ALIGN="LEFT"/>locationPolicy.relocation<BR ALIGN="LEFT"/>locationPolicyRevision</TD></TR></TABLE>>];
+    layer [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#d97706"><TR><TD BGCOLOR="#fef3c7"><B>2. layer</B> — extend</TD></TR><TR><TD ALIGN="LEFT">id / projectId / organisationId<BR ALIGN="LEFT"/>relocationPolicy (null = inherit)<BR ALIGN="LEFT"/>relocationPolicyRevision</TD></TR></TABLE>>];
+    feature [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#94a3b8"><TR><TD BGCOLOR="#e2e8f0"><B>11. feature</B> — extend</TD></TR><TR><TD ALIGN="LEFT">id / projectId / layerId / organisationId<BR ALIGN="LEFT"/>accepted geometry<BR ALIGN="LEFT"/>derived buildingId / premisesId / streetId</TD></TR></TABLE>>];
+    featureProperty [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#94a3b8"><TR><TD BGCOLOR="#e2e8f0"><B>featureProperty</B> — existing</TD></TR><TR><TD ALIGN="LEFT">featureId / propertyId / propertyValueId<BR ALIGN="LEFT"/>sign condition uses configured property values<BR ALIGN="LEFT"/>definitions: property / propertyValue</TD></TR></TABLE>>];
+    project -> layer [label="projectId"];
+    layer -> feature [label="layerId"];
+    feature -> featureProperty [label="featureId"];
+    policyRule [shape=note, fontsize=12, label="Layer override → Project default → review\nfixed: keep accepted placement\nreview: ask about this move\nfollow: adopt an eligible verified move\nPolicy changes do not move existing Features."];
+    feature -> policyRule [style=invis];
+  }
+
+  subgraph clusterIdentity {
+    label="2. What exists, and where did it operate?";
+    color="#94a3b8";
+    style=rounded;
+    margin=18;
+    location [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#94a3b8"><TR><TD BGCOLOR="#e2e8f0"><B>3. location</B> — extend</TD></TR><TR><TD ALIGN="LEFT">id / kind / ownerOrganisationId<BR ALIGN="LEFT"/>premises / building / establishment / ...<BR ALIGN="LEFT"/>stable identity survives a move or closure</TD></TR></TABLE>>];
+    transition [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#3b82f6"><TR><TD BGCOLOR="#dbeafe"><B>3a. locationTransition</B> — new assertions</TD></TR><TR><TD ALIGN="LEFT">id / transitionId / previousRevisionId<BR ALIGN="LEFT"/>type / basis / scopeOrganisationId<BR ALIGN="LEFT"/>evidence / known dates / provenance</TD></TR></TABLE>>];
+    participant [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#3b82f6"><TR><TD BGCOLOR="#dbeafe"><B>3b. locationTransitionParticipant</B> — new</TD></TR><TR><TD ALIGN="LEFT">transitionRevisionId / locationId / side<BR ALIGN="LEFT"/>before A + B → after C + D<BR ALIGN="LEFT"/>lineage does not redirect or move Features</TD></TR></TABLE>>];
+    locationRevision [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#94a3b8"><TR><TD BGCOLOR="#e2e8f0"><B>4. locationRevision</B> — retain / evolve</TD></TR><TR><TD ALIGN="LEFT">id / locationId / version<BR ALIGN="LEFT"/>immutable names / geometry / entity status<BR ALIGN="LEFT"/>rawSource / local provenance</TD></TR></TABLE>>];
+    address [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#3b82f6"><TR><TD BGCOLOR="#dbeafe"><B>5. address</B> — new mirror</TD></TR><TR><TD ALIGN="LEFT">id / typed sourceKey<BR ALIGN="LEFT"/>canonical authority: SaanSeoi</TD></TR></TABLE>>];
+    addressRevision [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#3b82f6"><TR><TD BGCOLOR="#dbeafe"><B>6. addressRevision</B> — new mirror</TD></TR><TR><TD ALIGN="LEFT">id / addressId / parentAddressRevisionId<BR ALIGN="LEFT"/>scope / components / geometry<BR ALIGN="LEFT"/>sourceVersion / rawSource / sourceReferences</TD></TR></TABLE>>];
+    locationAddress [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#3b82f6"><TR><TD BGCOLOR="#dbeafe"><B>7. locationAddress</B> — new revisions</TD></TR><TR><TD ALIGN="LEFT">locationId / addressRevisionId<BR ALIGN="LEFT"/>priority (optional) / addressState<BR ALIGN="LEFT"/>several addresses; no required primary</TD></TR></TABLE>>];
+    locationMembership [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#3b82f6"><TR><TD BGCOLOR="#dbeafe"><B>8. locationMembership</B> — new revisions</TD></TR><TR><TD ALIGN="LEFT">childLocationId / parentLocationId<BR ALIGN="LEFT"/>membershipState<BR ALIGN="LEFT"/>building or premises → premises</TD></TR></TABLE>>];
+    locationOccupancy [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#3b82f6"><TR><TD BGCOLOR="#dbeafe"><B>9. locationOccupancy</B> — new revisions</TD></TR><TR><TD ALIGN="LEFT">establishmentLocationId<BR ALIGN="LEFT"/>containerLocationId (optional)<BR ALIGN="LEFT"/>addressRevisionId (optional) / occupancyState<BR ALIGN="LEFT"/>one relationshipId per tenancy episode</TD></TR></TABLE>>];
+    {rank=same; location; address;}
+    {rank=same; locationRevision; addressRevision;}
+    {rank=same; locationAddress; locationMembership;}
+    location -> locationRevision [label="locationId"];
+    transition -> participant [label="transitionRevisionId"];
+    location -> participant [label="locationId (before / after)"];
+    address -> addressRevision [label="addressId"];
+    location -> locationAddress [label="locationId"];
+    addressRevision -> locationAddress [label="addressRevisionId"];
+    location -> locationMembership [label="child / parent Location IDs"];
+    location -> locationOccupancy [label="establishment / container Location IDs", penwidth=1.4];
+    addressRevision -> locationOccupancy [label="optional addressRevisionId"];
+    locationAddress -> locationOccupancy [style=invis];
+  }
+
+  subgraph clusterAcceptance {
+    label="3. Where has each Feature accepted placement?";
+    color="#10b981";
+    style=rounded;
+    margin=18;
+    organisationLocation [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#94a3b8"><TR><TD BGCOLOR="#e2e8f0"><B>10. organisationLocation</B> — immutable rows</TD></TR><TR><TD ALIGN="LEFT">id / organisationId / locationId<BR ALIGN="LEFT"/>previousRevisionId / overrides / provenance<BR ALIGN="LEFT"/>local fields + baseAddressRevisionId<BR ALIGN="LEFT"/>cannot edit canonical address revisions</TD></TR></TABLE>>];
+    featureLocation [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#10b981"><TR><TD BGCOLOR="#d1fae5"><B>12. featureLocation</B> — extend</TD></TR><TR><TD ALIGN="LEFT">featureId / locationId / version<BR ALIGN="LEFT"/>factsRevisionId / locationRevisionId<BR ALIGN="LEFT"/>accepted Organisation correction snapshots<BR ALIGN="LEFT"/>occupancyRevisionId / addressRevisionId<BR ALIGN="LEFT"/>membershipRevisionIds / placementOverrides.accessHints<BR ALIGN="LEFT"/><B>no editable Feature relocation policy</B></TD></TR></TABLE>>];
+    proposal [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#94a3b8"><TR><TD BGCOLOR="#e2e8f0"><B>13. locationAdoptionProposal</B> — extend</TD></TR><TR><TD ALIGN="LEFT">featureId / candidate / expected revisions<BR ALIGN="LEFT"/>Project + Layer policy fences<BR ALIGN="LEFT"/>evidence.placement / evidence.addressReview<BR ALIGN="LEFT"/>factsDecision / locationDecision</TD></TR></TABLE>>];
+    history [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#94a3b8"><TR><TD BGCOLOR="#e2e8f0"><B>14. featureLocationHistory</B> — extend</TD></TR><TR><TD ALIGN="LEFT">retained binding / geometry / exact references<BR ALIGN="LEFT"/>policySnapshot / adoptionProposalId<BR ALIGN="LEFT"/>survives live binding / Feature removal</TD></TR></TABLE>>];
+    projection [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#3b82f6"><TR><TD BGCOLOR="#dbeafe"><B>15. featureLocationMembership</B> — new derived</TD></TR><TR><TD ALIGN="LEFT">featureId / containerLocationId / role<BR ALIGN="LEFT"/>bindingVersion / optional singular proof FKs<BR ALIGN="LEFT"/>groups by accepted buildings / premises</TD></TR></TABLE>>];
+    {rank=same; organisationLocation; proposal;}
+    {rank=same; history; projection;}
+    organisationLocation -> featureLocation [label="accepted correction row IDs", style=dotted];
+    proposal -> featureLocation [label="audited acceptance", style=dotted, color="#059669", penwidth=1.8];
+    featureLocation -> history [label="logical retained timeline", style=dashed];
+    featureLocation -> projection [label="derive from accepted paths", style=dotted, color="#059669"];
+    proposal -> history [label="adoptionProposalId"];
+  }
+
+  feature -> featureLocation [label="featureId", penwidth=1.5];
+  locationRevision -> featureLocation [label="accepted facts / position revisions", color="#94a3b8"];
+  locationOccupancy -> featureLocation [label="exact accepted occupancyRevisionId", color="#059669", penwidth=1.8];
+  addressRevision -> featureLocation [label="selected addressRevisionId", color="#94a3b8"];
+
+  legend [shape=note, fontsize=11, label="Orange: Project / Layer rule    Blue: new table    Grey: existing / extended    Green: accepted placement\nSolid: selected identity / version references. Dashed: logical history. Dotted: policy, acceptance or derivation.\nEach relationship revision also has root / predecessor, Organisation scope, evidence and known dates.\nReplacement keeps distinct identities; redirect is only for reviewed duplicate identity.\nConsumers pin exact revisions. Public building views never grant access to private tenants or Features.\nDiagram numbers match the walkthrough. This is a proposal, not an installed schema."];
+  history -> legend [style=invis];
+  projection -> legend [style=invis];
+}
