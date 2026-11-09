@@ -420,13 +420,13 @@ it('does not offer missing-address lookup once a street is present', () => {
   expect(view.queryByRole('button', { name: 'Lookup Address' })).toBeNull()
 })
 
-it('marks Multilingual when another locale has a custom override', () => {
+it('marks Multilingual when another locale contains text', () => {
   const address = emptyFeatureAddress()
   address.overrides['zh-hant'] = { buildingName: '自訂名稱' }
   const view = render(Fixture, { initialAddress: address })
   expect(
-    view.getByRole('button', { name: /Multilingual/ }).getAttribute('data-tooltip'),
-  ).toBe('Custom overrides in another language')
+    view.getByRole('button', { name: /Multilingual/ }).querySelector('[role="img"]'),
+  ).not.toBeNull()
 })
 
 it('does not mark Multilingual for an unchanged unlocked source display', () => {
@@ -762,7 +762,7 @@ it('clears only one street-name language and does not offer machine translation 
   expect(view.getByRole('button', { name: 'Replace: 荷李活道' })).toBeInTheDocument()
   const field = view
     .getByRole('button', { name: 'Replace: Hollywood Road' })
-    .closest('fieldset')!
+    .closest<HTMLElement>('[data-address-group]')!
   expect(within(field).queryByRole('button', { name: /Translate from/ })).toBeNull()
   expect(
     within(field).getByRole('combobox', { name: 'Street name' }),
@@ -808,4 +808,29 @@ it('clears one building language without restoring its previous name', async () 
   await fireEvent.click(view.getByRole('button', { name: 'Clear: Test Building · EN' }))
   expect(view.queryByRole('button', { name: 'Replace: Test Building' })).toBeNull()
   expect(view.getByRole('button', { name: 'Replace: 測試大廈' })).toBeInTheDocument()
+})
+
+it('reorders localized address rows without changing their values', async () => {
+  const initialAddress = emptyFeatureAddress()
+  initialAddress.overrides = {
+    en: { unitPortion: 'Side door' },
+    'zh-hant': { unitPortion: '側門' },
+  }
+  const view = render(FormFixture, { initialAddress, translations: true })
+  await fireEvent.keyDown(view.getByRole('button', { name: 'Traditional Chinese' }), {
+    key: 'ArrowLeft',
+    altKey: true,
+  })
+  const rows = view.container.querySelectorAll(
+    '[data-address-group="unitPortion"] [data-address-locale]',
+  )
+  expect(
+    [...rows].map(row => row.getAttribute('data-address-locale')).slice(0, 3),
+  ).toEqual(['zhHant', 'en', 'zhHans'])
+  expect(view.container.querySelector('#address-en-unitPortion')).toHaveValue(
+    'Side door',
+  )
+  expect(view.container.querySelector('#address-zhHant-unitPortion')).toHaveValue(
+    '側門',
+  )
 })

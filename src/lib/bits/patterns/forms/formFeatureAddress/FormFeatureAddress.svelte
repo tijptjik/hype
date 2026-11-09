@@ -34,6 +34,7 @@ import {
   getAddressUnits,
 } from '#lib/addresses/featureAddress.js'
 // TYPES
+import type { ProfileLocaleState } from '../featureLocation/profileLocales.js'
 import type { AccessibilityDraft } from '#lib/locations/accessibility.js'
 import type { NearbyStreet } from '#lib/map/nearbyStreets.js'
 import type { AddressName } from '#lib/addresses/nameCatalogue.js'
@@ -52,6 +53,8 @@ let {
   activeLocationNames,
   isLocationReplacementDraft = false,
   onMakeBuildingActive,
+  localeState,
+  onLocaleStateChange,
   translations = $bindable(false),
   onBuildingNameBlur,
   onSuggestStreetNumber,
@@ -107,6 +110,8 @@ let {
     address: FeatureAddress
     names: Record<string, string>
   }) => void
+  localeState?: ProfileLocaleState
+  onLocaleStateChange?: (state: ProfileLocaleState) => void
   translations?: boolean
   onBuildingNameBlur?: () => void
   onSuggestStreetNumber?: () => Promise<string | null>
@@ -839,6 +844,8 @@ $effect(() => {
     >
       {#if showAddressDetails}
         <AddressDetails
+          {localeState}
+          {onLocaleStateChange}
           {activeBuildingSource}
           {activeLocationNames}
           {isLocationReplacementDraft}

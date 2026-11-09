@@ -4,11 +4,20 @@ import { addressLocaleLabel } from './addressLocaleLabel.js'
 // SVELTE
 import { onMount, onDestroy, tick, type Snippet } from 'svelte'
 import { slide, type SlideParams, type TransitionConfig } from 'svelte/transition'
+import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
 import { MediaQuery } from 'svelte/reactivity'
 // I18N
 import { getLocaleKey, m, translateText, toLocaleKey } from '#lib/i18n.js'
 // COMPONENTS
+import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import {
+  displayedLocales,
+  shortLocaleLabel,
+} from '#lib/bits/custom/localeControls/localeControls.js'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
+import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions.js'
+import type { ProfileLocaleState } from '../featureLocation/profileLocales.js'
 import { reverseTabStop } from '#lib/bits/custom/form/reverseTabStop.js'
 import LocationAssociationStatus from '../featureLocation/LocationAssociationStatus.svelte'
 import DraftLocationAccessibility from '../featureLocation/DraftLocationAccessibility.svelte'
@@ -44,7 +53,6 @@ import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 import SearchIcon from 'virtual:icons/lucide/search'
 import LoaderIcon from 'virtual:icons/lucide/loader-circle'
 import UnitIcon from 'virtual:icons/lucide/door-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
 import SwapIcon from 'virtual:icons/lucide/arrow-left-right'
 import XIcon from 'virtual:icons/lucide/x'
@@ -108,6 +116,8 @@ import type { FloorType } from '#lib/addresses/address3d.js'
 
 let {
   address,
+  localeState,
+  onLocaleStateChange,
   activeBuildingSource,
   activeLocationNames = {},
   isLocationReplacementDraft = false,
@@ -142,6 +152,8 @@ let {
   onChange,
 }: {
   address: FeatureAddress
+  localeState?: ProfileLocaleState
+  onLocaleStateChange?: (state: ProfileLocaleState) => void
   activeBuildingSource?: BuildingSource
   activeLocationNames?: Record<string, string>
   isLocationReplacementDraft?: boolean
@@ -562,7 +574,7 @@ function makeSelectedBuildingActive(): void {
 const addressSelectContentClass =
   'bg-panel! [&>div]:bg-transparent! [&_[role=option]]:bg-transparent! [&_[role=option][data-highlighted]]:bg-foreground/5! [&_[role=option][data-state=checked]]:bg-foreground/5!'
 const uid = $props.id()
-let accessHintBeforeEdit = $state<Partial<Record<LocaleKey, string>>>({})
+let accessHintBeforeEdit = $state<Partial<Record<string, string>>>({})
 let replacingNames = $state<Record<string, boolean>>({})
 let activeBlockLocale = $state<LocaleKey | null>(null)
 let typeOverrides = $state<Record<string, boolean>>({})
@@ -804,6 +816,11 @@ const visibleFields = $derived(
         Boolean(identityFields) &&
         locationKind === 'establishment') ||
       addedFields.includes(field) ||
+      Object.keys(address.overrides).some(
+        tag => !addressLocaleKey(tag) && Boolean(additionalLocaleValue(tag, field)),
+      ) ||
+      (field === 'accessHint' &&
+        Object.values(address.accessHints ?? {}).some(value => value?.trim())) ||
       locales.some(
         locale =>
           Boolean(addressComponentValue(address, locale, field)) ||
@@ -838,27 +855,105 @@ const examples = {
   streetName: m.address_example_street,
   accessHint: m.address_example_access,
 }
-const activeLocales = $derived(translations ? locales : [getLocaleKey()])
-const hasOtherLocaleOverrides = $derived(
-  locales.some(
-    locale =>
-      locale !== getLocaleKey() &&
-      Object.entries(address.overrides[ADDRESS_LOCALES[locale]] ?? {}).some(
-        ([field, value]) =>
-          value !== undefined &&
-          value !==
-            (field === 'formattedAddress'
-              ? getAddressDisplay(
-                  setAddressOverride(address, locale, 'formattedAddress', undefined),
-                  locale,
-                  divisions,
-                )
-              : getAddressLocale({ ...address, overrides: {} }, locale)[
-                  field as keyof ReturnType<typeof getAddressLocale>
-                ]),
-      ),
+let localLocaleState = $state<ProfileLocaleState>({
+  selectedLocales: ['en', 'zh-Hant', 'zh-Hans'],
+  visibleLocales: ['en', 'zh-Hant', 'zh-Hans'],
+  expanded: false,
+})
+const addressLocaleState = $derived(localeState ?? localLocaleState)
+const contentLocales = $derived(
+  normalizeContentLocales([
+    ...Object.keys(address.overrides),
+    ...Object.keys(address.accessHints ?? {}),
+    ...Object.keys(
+      (
+        address.association?.content ??
+        address.canonical?.content ??
+        address.source.canonical?.content ??
+        address.source.authored
+      )?.i18n ?? {},
+    ),
+  ]),
+)
+const selectedLocales = $derived(
+  normalizeContentLocales([...addressLocaleState.selectedLocales, ...contentLocales]),
+)
+const shownLocales = $derived(
+  displayedLocales(
+    {
+      selectedLocales,
+      visibleLocales: [
+        ...addressLocaleState.visibleLocales,
+        ...selectedLocales.filter(
+          tag => !addressLocaleState.selectedLocales.includes(tag),
+        ),
+      ],
+    },
+    translations,
   ),
 )
+const activeLocales = $derived(
+  shownLocales.flatMap(tag => {
+    const key = addressLocaleKey(tag)
+    return key ? [key] : []
+  }),
+)
+/** Resolve structured address languages without treating other content languages as English.
+ * @param tag Content language tag. @returns Supported structured locale, if present.
+ */
+function addressLocaleKey(tag: string): LocaleKey | undefined {
+  return locales.find(key => ADDRESS_LOCALES[key] === tag.toLowerCase())
+}
+/** Accept shared form-local visibility and ordering.
+ * @param state New locale state. @returns Nothing.
+ */
+function changeLocaleState(state: ProfileLocaleState): void {
+  localLocaleState = state
+  translations = state.expanded
+  onLocaleStateChange?.(state)
+}
+/** Read additional content languages without borrowing another language's text.
+ * @param tag Content language. @param field Address field. @returns Exact localized text.
+ */
+function additionalLocaleValue(tag: string, field: EditableAddressField): string {
+  const key = tag.toLowerCase()
+  if (field === 'accessHint') return address.accessHints?.[key] ?? ''
+  const content =
+    address.association?.content ??
+    address.canonical?.content ??
+    address.source.canonical?.content ??
+    address.source.authored
+  const raw = address.source.rawSource.data as
+    | { attributes?: { i18n?: Record<string, Record<string, unknown>> } }
+    | undefined
+  const row = Object.entries(content?.i18n ?? raw?.attributes?.i18n ?? {}).find(
+    ([locale]) => locale.toLowerCase() === key,
+  )?.[1]
+  const corrections = address.overrides[key] ?? {}
+  const value = Object.hasOwn(corrections, field)
+    ? corrections[field]
+    : Object.entries(row ?? {}).find(([name]) => name === field)?.[1]
+  return typeof value === 'string' ? value : ''
+}
+/** Store additional content languages as explicit draft corrections.
+ * @param tag Content language. @param field Edited field. @param value Authored text.
+ * @returns Nothing; source identity stays intact.
+ */
+function editAdditionalLocale(
+  tag: string,
+  field: EditableAddressField,
+  value: string,
+): void {
+  const key = tag.toLowerCase()
+  onChange(
+    field === 'accessHint'
+      ? {
+          ...address,
+          accessHints: { ...address.accessHints, [key]: value.trim() || null },
+        }
+      : setAddressOverride(address, key, field, value.trim() || null),
+  )
+}
 
 /** Reserve reference-entry space beside intrinsic type selectors before the owning layout fits side panels.
  * @param node Editor root. @param signature Visible fields and selected labels. @returns Observer lifecycle.
@@ -993,11 +1088,14 @@ async function translatePart(source: Locale): Promise<void> {
 /** Read the authored locale without display fallbacks, so missing translations remain editable targets.
  * @param locale Requested editor locale. @returns Its saved hint, or an empty string.
  */
-function accessHintValue(locale: LocaleKey): string {
-  return address.accessHints?.[ADDRESS_LOCALES[locale]] ?? ''
+function accessHintValue(locale: string): string {
+  const key =
+    addressLocaleKey(locale) ??
+    (locales.includes(locale as LocaleKey) ? (locale as LocaleKey) : undefined)
+  return address.accessHints?.[key ? ADDRESS_LOCALES[key] : locale.toLowerCase()] ?? ''
 }
 const accessHintSources = $derived(
-  locales.filter(locale => accessHintValue(locale).trim()),
+  selectedLocales.filter(locale => accessHintValue(locale).trim()),
 )
 let accessHintTranslationSource = $state<string | null>(null)
 let accessHintTranslationFailed = $state(false)
@@ -1009,10 +1107,9 @@ let accessHintTranslationFailed = $state(false)
  */
 async function translateAccessHints(source: string): Promise<void> {
   if (accessHintTranslationSource || !isEditing) return
-  const sourceKey = toLocaleKey(source as Locale)
-  const text = accessHintValue(sourceKey)
-  const targets = locales.filter(
-    locale => locale !== sourceKey && !accessHintValue(locale).trim(),
+  const text = accessHintValue(source)
+  const targets = selectedLocales.filter(
+    locale => locale !== source && !accessHintValue(locale).trim(),
   )
   if (!text.trim() || !targets.length) return
   const originalAddress = address
@@ -1023,11 +1120,22 @@ async function translateAccessHints(source: string): Promise<void> {
     // Apply the batch together so one completed request cannot invalidate another target.
     const results = await Promise.all(
       targets.map(async locale => {
-        const [translated] = await translateText(
-          source as Locale,
-          ADDRESS_LOCALES[locale],
-          [text],
-        )
+        const sourceKey = addressLocaleKey(source)
+        const targetKey = addressLocaleKey(locale)
+        let translated: string | undefined
+        if (sourceKey && targetKey) {
+          ;[translated] = await translateText(
+            ADDRESS_LOCALES[sourceKey],
+            ADDRESS_LOCALES[targetKey],
+            [text],
+          )
+        } else {
+          const { translateContentField } = await import(
+            '#lib/api/translation.remote.js'
+          )
+          const result = await translateContentField({ source, target: locale, text })
+          if (result.status === 'translated') translated = result.text
+        }
         if (!translated?.trim()) throw new Error('Empty access hint translation')
         return { locale, translated }
       }),
@@ -1041,7 +1149,10 @@ async function translateAccessHints(source: string): Promise<void> {
       return
     let next = address
     for (const { locale, translated } of results)
-      next = setAddressExpression(next, locale, 'accessHint', translated)
+      next = {
+        ...next,
+        accessHints: { ...next.accessHints, [locale.toLowerCase()]: translated },
+      }
     onChange(next)
   } catch {
     if (
@@ -1072,7 +1183,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
   <SelectField
     contentClass={addressSelectContentClass}
     triggerAttrs={{ 'aria-label': m.address_block_type() }}
-    triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
+    triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
     class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
     isEditing={true}
     items={ADDRESS_BLOCK_TYPES.map(code => ({
@@ -1168,7 +1279,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       <button
         use:reverseTabStop
         type="button"
-        aria-label={unchanged && !emptySource
+        aria-label={field !== 'accessHint' && unchanged && !emptySource
           ? m.filters__clear()
           : m.feature_address_reset()}
         class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-7 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/subsection:opacity-100 group-hover/subsection:opacity-100 focus-visible:opacity-100 focus-visible:outline-2"
@@ -1202,7 +1313,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           )
         }}
       >
-        {#if unchanged && !emptySource}
+        {#if field !== 'accessHint' && unchanged && !emptySource}
           <XIcon class="size-4" />
         {:else}
           <ResetIcon class="size-4" />
@@ -1382,26 +1493,17 @@ function blockTypeFirst(locale: LocaleKey): boolean {
         </button>
       {/if}
       {@render identityControls?.()}
-      <button
-        type="button"
-        class="text-muted-foreground hover:bg-primary/10 hover:text-primary focus-visible:outline-primary flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm focus-visible:outline-2"
-        class:text-primary={hasOtherLocaleOverrides}
-        data-tooltip={hasOtherLocaleOverrides
-          ? m.address_other_locale_overrides()
-          : undefined}
-        aria-pressed={translations}
-        onclick={() => (translations = !translations)}
-      >
-        <LanguagesIcon class="size-4" aria-hidden="true" />
-        {m.location_address_languages()}
-        {#if hasOtherLocaleOverrides}
-          <span
-            role="img"
-            aria-label={m.address_other_locale_overrides()}
-            class="bg-primary size-1.5 rounded-full"
-          ></span>
-        {/if}
-      </button>
+      <LocaleToolbar
+        {selectedLocales}
+        visibleLocales={addressLocaleState.visibleLocales}
+        expanded={translations}
+        options={contentLocaleOptions(getLocaleKey())}
+        allowAdd={isEditing}
+        {contentLocales}
+        onExpandedChange={expanded =>
+          changeLocaleState({ ...addressLocaleState, expanded })}
+        onChange={change => changeLocaleState({ ...change, expanded: translations })}
+      />
       {@render identityInfo?.()}
     </div>
   </div>
@@ -1434,23 +1536,34 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     </fieldset>
   {/if}
   {#if !isEditing}
-    {#each activeLocales as locale (locale)}
+    {#each shownLocales as tag (tag)}
+      {@const locale = addressLocaleKey(tag)}
       <div
+        animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}
         transition:localeSlide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
         class="space-y-3"
-        lang={ADDRESS_LOCALES[locale]}
+        lang={tag}
       >
         {#if translations}
-          <p class="text-muted-foreground text-xs">{ADDRESS_LOCALES[locale]}</p>
+          <p class="text-muted-foreground text-xs">{shortLocaleLabel(tag)}</p>
         {/if}
-        <p class="text-xl leading-relaxed font-medium" data-address-display>
-          {getAddressDisplay(address, locale) || '—'}
+        <p
+          class="min-w-0 text-xl leading-relaxed font-medium break-words whitespace-normal"
+          data-address-display
+        >
+          {(locale
+            ? getAddressDisplay(address, locale)
+            : additionalLocaleValue(tag, 'formattedAddress')) || '—'}
         </p>
-        <AddressBlocks {address} {locale} includeDivisions={false} />
-        {#if showAccessHints && addressComponentValue(address, locale, 'accessHint')}
-          <p class="text-muted-foreground text-sm">
-            {addressComponentValue(address, locale, 'accessHint')}
-          </p>
+        {#if locale}
+          <AddressBlocks {address} {locale} includeDivisions={false} />
+          {#if showAccessHints && addressComponentValue(address, locale, 'accessHint')}
+            <p class="text-muted-foreground text-sm">
+              {addressComponentValue(address, locale, 'accessHint')}
+            </p>
+          {/if}
+        {:else if accessHintValue(tag)}
+          <p class="text-muted-foreground text-sm">{accessHintValue(tag)}</p>
         {/if}
       </div>
     {/each}
@@ -1468,24 +1581,51 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           <div
             class="grid min-w-0 grid-cols-1 items-start gap-x-6 gap-y-1 @min-[40rem]:grid-cols-2"
           >
-            {#each locales.filter(locale => locale !== getLocaleKey()) as locale}
-              <AddressDisplayField
-                {locationKind}
-                {divisions}
-                {address}
-                {locale}
-                {isEditing}
-                showLocale={true}
-                compact={true}
-                scrollWhenConstrained={true}
-                {onChange}
-              />
+            {#each shownLocales.filter(
+              tag => addressLocaleKey(tag) !== getLocaleKey(),
+            ) as tag (tag)}
+              {@const locale = addressLocaleKey(tag)}
+              <div
+                animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}
+                class="flex min-w-0 items-center gap-2"
+              >
+                <span class="text-muted-foreground w-[3em] shrink-0 font-mono text-xs"
+                  >{shortLocaleLabel(tag)}</span
+                >
+                {#if locale}
+                  <AddressDisplayField
+                    {locationKind}
+                    {divisions}
+                    {address}
+                    {locale}
+                    {isEditing}
+                    showLocale={translations}
+                    localeLabelOutside
+                    compact={true}
+                    scrollWhenConstrained={true}
+                    {onChange}
+                  />
+                {:else}
+                  <input
+                    aria-label={labels.formattedAddress}
+                    class="border-border bg-panel h-12 min-w-0 rounded-lg border px-3"
+                    value={additionalLocaleValue(tag, 'formattedAddress')}
+                    oninput={event =>
+                      editAdditionalLocale(
+                        tag,
+                        'formattedAddress',
+                        event.currentTarget.value,
+                      )}
+                  >
+                {/if}
+              </div>
             {/each}
           </div>
         </fieldset>
       {/if}
       {#each visibleGroups as { fields: group, title }, groupIndex (group[0])}
         <div
+          data-address-group={group[0]}
           class="col-span-6 min-w-0 {groupIndex
             ? 'border-t border-border/40 pt-6'
             : ''}"
@@ -1501,714 +1641,841 @@ function blockTypeFirst(locale: LocaleKey): boolean {
               {@render fieldAction('accessHint', getLocaleKey(), false)}
             </div>
           {/if}
-          <div class="flex min-w-0 flex-wrap items-start gap-4" data-address-field-row>
-            {#each group as field (field)}
-              {@const structured =
-                field === 'floorExpression' || field === 'unitExpression'}
-              {@const shared = structured || field === 'buildingNumberExpression'}
-              {#if field === 'accessHint'}
-                <fieldset class="w-full min-w-0">
-                  <legend
-                    class="mb-1 flex min-h-7 flex-wrap items-center gap-2 text-sm font-medium"
-                  >
-                    <UnitIcon
-                      class="text-muted-foreground size-4 shrink-0"
-                      aria-hidden="true"
-                    />
-                    {labels.accessHint}
-                    <FormI18nSourceBar
-                      compact
-                      visible={isEditing && accessHintSources.length > 0}
-                      label={m.address_translate_from()}
-                      sources={accessHintSources.map(locale => ({
-                        locale: ADDRESS_LOCALES[locale],
-                        label: addressLocaleLabel(locale),
-                        accessibleLabel: `${labels.accessHint}: ${m.address_translate_from()} ${addressLocaleLabel(locale)}`,
-                      }))}
-                      hasTargets={accessHintSources.length < locales.length}
-                      busy={accessHintTranslationSource !== null}
-                      busySource={accessHintTranslationSource ?? undefined}
-                      onTranslate={source => void translateAccessHints(source)}
-                    />
-                  </legend>
-                  {#if accessHintTranslationFailed}
-                    <p role="alert" class="text-destructive text-xs">
-                      {m.address_translate_error()}
-                    </p>
-                  {/if}
-                  {#each activeLocales as locale (locale)}
-                    <div
-                      class="pt-2 first-of-type:pt-0"
-                      transition:localeSlide={{
-                        duration: prefersReducedMotion.current ? 0 : 200,
-                      }}
-                    >
-                      <FormI18nInlineRow
-                        value={accessHintValue(locale)}
-                        label={translations
-                          ? `${labels.accessHint} · ${addressLocaleLabel(locale)}`
-                          : labels.accessHint}
-                        prefix={translations ? addressLocaleLabel(locale) : ''}
-                        editable={isEditing}
-                        showVerification={false}
-                        required={false}
-                        issues={undefined}
-                        attrs={{
-                          id: `${uid}-${locale}-access-hint`,
-                          placeholder: examples.accessHint(
-                            {},
-                            { locale: ADDRESS_LOCALES[locale] },
-                          ),
-                          oninput: (event: Event) =>
+          {#each group[0] === 'accessHint'
+            ? [shownLocales[0]]
+            : shownLocales as rowTag, rowIndex (rowTag)}
+            {@const rowLocale = addressLocaleKey(rowTag)}
+            <div
+              animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}
+              class="flex min-w-0 items-start gap-2 pt-2 first:pt-0"
+            >
+              {#if translations && group[0] !== 'accessHint'}
+                <span
+                  class="text-muted-foreground flex h-12 w-[3em] shrink-0 items-center font-mono text-xs"
+                  class:mt-8={rowIndex === 0}
+                  >{shortLocaleLabel(rowTag)}</span
+                >
+              {/if}
+              <div
+                class="flex min-w-0 flex-wrap items-start gap-4"
+                data-address-field-row
+              >
+                {#if !rowLocale && group[0] !== 'accessHint'}
+                  {#if rowIndex === 0}
+                    {#each group.filter(field =>
+                      [
+                        'floorExpression',
+                        'unitExpression',
+                        'buildingNumberExpression',
+                      ].includes(field),
+                    ) as field (field)}
+                      <label class="flex min-w-0 flex-col gap-2"
+                        ><span class="text-sm font-medium">{labels[field]}</span>
+                        <input
+                          class="border-border bg-panel h-12 w-28 rounded-lg border px-3"
+                          value={addressComponentValue(address, getLocaleKey(), field)}
+                          oninput={event =>
                             onChange(
                               setAddressExpression(
                                 address,
-                                locale,
+                                getLocaleKey(),
                                 field,
-                                (event.currentTarget as HTMLInputElement).value,
+                                event.currentTarget.value,
                               ),
-                            ),
-                        }}
-                        onStart={() => {
-                          accessHintBeforeEdit[locale] = accessHintValue(locale)
-                        }}
-                        onCancel={() =>
-                          onChange(
-                            setAddressExpression(
-                              address,
-                              locale,
-                              field,
-                              accessHintBeforeEdit[locale] ?? '',
-                            ),
-                          )}
-                        onClear={() =>
-                          onChange(setAddressExpression(address, locale, field, ''))}
-                      />
-                    </div>
-                  {/each}
-                </fieldset>
-              {:else}
-                <fieldset
-                  class="group/subsection w-max min-w-0 max-w-full flex-initial space-y-2 {structured ||
-                  field === 'blockExpression' ||
-                  field === 'buildingNumberExpression'
-                    ? 'shrink-0!'
-                    : ''}"
-                >
-                  <legend
-                    class="mb-1 flex flex-wrap items-center gap-2 font-medium {field ===
-                    'formattedAddress'
-                      ? 'text-xs text-muted-foreground'
-                      : 'text-sm'}"
-                  >
-                    <span class="flex min-h-7 items-center gap-2 whitespace-nowrap"
-                      >{field === 'buildingNumberExpression'
-                        ? m.address_field_number()
-                        : field === 'streetName' ||
-                            field === 'buildingName' ||
-                            field === 'premisesName'
-                          ? m.field_name()
-                          : labels[field]}{@render fieldAction(
-                        field,
-                        getLocaleKey(),
-                        structured,
-                      )}</span
-                    >
-                    {#if field === 'unitPortion' && translations}
-                      {@const sources = activeLocales.filter(locale =>
-                        addressComponentValue(address, locale, field).trim(),
-                      )}
-                      {@const target = activeLocales.find(
-                        locale => !addressComponentValue(address, locale, field).trim(),
-                      )}
-                      {#if sources.length && target}
-                        <span class="inline-flex align-middle [&>div]:min-h-7">
-                          <FormI18nTranslationBar
-                            compact
-                            targetLocale={ADDRESS_LOCALES[target]}
-                            availableLocales={sources.map(
-                              locale => ADDRESS_LOCALES[locale],
                             )}
-                            isEditing={true}
-                            isVisible={true}
-                            onTranslate={source => translatePart(source)}
-                          />
-                        </span>
-                      {/if}
-                    {/if}
-                  </legend>
-                  <!-- The fieldset legend owns the label; inline controls must not reserve a second label row. -->
-                  <div
-                    use:animateAddressColumns={field === 'blockExpression' ||
-                      field === 'phaseExpression'}
-                    class="grid min-w-0 {field === 'blockExpression'
-                      ? 'grid-cols-[max-content_max-content_max-content]'
-                      : field === 'phaseExpression'
-                        ? 'grid-cols-[max-content_max-content]'
-                        : ''}"
-                  >
-                    {#each shared ? [getLocaleKey()] : activeLocales as locale (locale)}
-                      {@const value =
-                        field === 'formattedAddress'
-                          ? getAddressDisplay(address, locale)
-                          : addressComponentValue(address, locale, field)}
-                      {@const namedPhase =
-                        field === 'phaseExpression' &&
-                        (phaseTypes[locale] ??
-                          phaseEditorValue(address, locale).type) === 'named'}
-                      {@const inputMinimum =
-                        field === 'unitPortion'
-                          ? '11rem'
-                          : field === 'premisesName'
-                            ? '13rem'
-                            : namedPhase
-                              ? '12rem'
-                              : field === 'buildingNumberExpression'
-                                ? '5rem'
-                                : '4rem'}
-                      {@const suggestions = getExpressionSuggestions(field, locale)}
-                      <div
-                        data-address-locale={locale}
-                        transition:localeSlide={{
-                          duration: prefersReducedMotion.current ? 0 : 200,
-                        }}
-                        use:adaptivePlaceholder={field === 'phaseExpression'
-                          ? (namedPhase
-                              ? m.address_phase_named_example
-                              : m.address_phase_reference_example)(
-                              {},
-                              { locale: ADDRESS_LOCALES[locale] },
-                            )
-                          : field === 'unitExpression'
-                            ? m.address_unit_reference_placeholder(
-                                {},
-                                { locale: ADDRESS_LOCALES[locale] },
-                              )
-                            : examples[field]({}, { locale: ADDRESS_LOCALES[locale] })}
-                        class="min-h-12 min-w-0 items-center gap-2 pt-2 first:pt-0 {field ===
-                          'blockExpression' || field === 'phaseExpression'
-                          ? 'col-span-full grid grid-cols-subgrid'
-                          : 'flex flex-wrap'}"
+                        ></label
                       >
-                        {#if field === 'formattedAddress'}
-                          <AddressDisplayField
-                            {locationKind}
-                            {divisions}
-                            {address}
-                            {locale}
-                            {isEditing}
-                            showLocale={translations}
-                            {onChange}
-                          />
-                        {:else if field === 'streetName' || field === 'buildingName'}
-                          {@const sourceLocales = locales.filter(
-                            source =>
-                              source !== locale &&
-                              addressComponentValue(address, source, field).trim(),
+                    {/each}
+                  {/if}
+                  {#each group.filter(
+                    field =>
+                      ![
+                        'floorExpression',
+                        'unitExpression',
+                        'buildingNumberExpression',
+                      ].includes(field),
+                  ) as field (field)}
+                    <label class="flex min-w-0 flex-col gap-2">
+                      <span class:sr-only={rowIndex > 0} class="text-sm font-medium"
+                        >{labels[field]}</span
+                      >
+                      <input
+                        class="border-border bg-panel h-12 min-w-0 rounded-lg border px-3 text-base font-medium"
+                        aria-label={labels[field]}
+                        value={additionalLocaleValue(rowTag, field)}
+                        oninput={event =>
+                          editAdditionalLocale(
+                            rowTag,
+                            field,
+                            event.currentTarget.value,
                           )}
-                          {#if field === 'buildingName' &&
-                            translations &&
-                            !value &&
-                            sourceLocales.length}
-                            <div class="flex min-h-12 items-center gap-2">
-                              <span
-                                class="text-muted-foreground w-[3em] shrink-0 font-mono text-xs"
-                                >{addressLocaleLabel(locale)}</span
-                              >
-                              <FormI18nTranslationBar
-                                compact
-                                targetLocale={ADDRESS_LOCALES[locale]}
-                                availableLocales={sourceLocales.map(
-                                  source => ADDRESS_LOCALES[source],
+                      >
+                    </label>
+                  {/each}
+                {:else}
+                  {#each group as field (field)}
+                    {@const structured =
+                      field === 'floorExpression' || field === 'unitExpression'}
+                    {@const shared = structured || field === 'buildingNumberExpression'}
+                    {#if field === 'accessHint'}
+                      <fieldset class="w-full min-w-0">
+                        <legend
+                          class="mb-1 flex min-h-7 flex-wrap items-center gap-2 text-sm font-medium"
+                        >
+                          <UnitIcon
+                            class="text-muted-foreground size-4 shrink-0"
+                            aria-hidden="true"
+                          />
+                          {labels.accessHint}
+                          <FormI18nSourceBar
+                            compact
+                            visible={isEditing && accessHintSources.length > 0}
+                            label={m.address_translate_from()}
+                            sources={accessHintSources.map(locale => ({
+                              locale,
+                              label: addressLocaleKey(locale)
+                                ? addressLocaleLabel(addressLocaleKey(locale)!)
+                                : shortLocaleLabel(locale),
+                              accessibleLabel: `${labels.accessHint}: ${m.address_translate_from()} ${addressLocaleKey(locale) ? addressLocaleLabel(addressLocaleKey(locale)!) : shortLocaleLabel(locale)}`,
+                            }))}
+                            hasTargets={accessHintSources.length <
+                              selectedLocales.length}
+                            busy={accessHintTranslationSource !== null}
+                            busySource={accessHintTranslationSource ?? undefined}
+                            onTranslate={source => void translateAccessHints(source)}
+                          />
+                        </legend>
+                        {#if accessHintTranslationFailed}
+                          <p role="alert" class="text-destructive text-xs">
+                            {m.address_translate_error()}
+                          </p>
+                        {/if}
+                        {#each shownLocales as locale (locale)}
+                          <div
+                            animate:flip={{
+                              duration: prefersReducedMotion.current ? 0 : 200,
+                            }}
+                            class="pt-2 first-of-type:pt-0"
+                            transition:localeSlide={{
+                              duration: prefersReducedMotion.current ? 0 : 200,
+                            }}
+                          >
+                            <FormI18nInlineRow
+                              value={accessHintValue(locale)}
+                              label={translations
+                                ? `${labels.accessHint} · ${addressLocaleKey(locale) ? addressLocaleLabel(addressLocaleKey(locale)!) : shortLocaleLabel(locale)}`
+                                : labels.accessHint}
+                              prefix={translations ? shortLocaleLabel(locale) : ''}
+                              editable={isEditing}
+                              showVerification={false}
+                              required={false}
+                              issues={undefined}
+                              attrs={{
+                                id: `${uid}-${locale}-access-hint`,
+                                placeholder: examples.accessHint(
+                                  {},
+                                  {
+                                    locale:
+                                      ADDRESS_LOCALES[
+                                        addressLocaleKey(locale) ?? getLocaleKey()
+                                      ],
+                                  },
+                                ),
+                                oninput: (event: Event) =>
+                                  editAdditionalLocale(
+                                    locale,
+                                    'accessHint',
+                                    (event.currentTarget as HTMLInputElement).value,
+                                  ),
+                              }}
+                              onStart={() => {
+                                accessHintBeforeEdit[locale] = accessHintValue(locale)
+                              }}
+                              onCancel={() =>
+                                editAdditionalLocale(
+                                  locale,
+                                  'accessHint',
+                                  accessHintBeforeEdit[locale] ?? '',
                                 )}
-                                isEditing={true}
-                                isVisible={true}
-                                onTranslate={async (source, target) => {
-                                  const originalAddress = address
-                                  const generation = translationGeneration
-                                  const sourceValue = addressComponentValue(
+                              onClear={() =>
+                                editAdditionalLocale(locale, 'accessHint', '')}
+                            />
+                          </div>
+                        {/each}
+                      </fieldset>
+                    {:else}
+                      <fieldset
+                        class:hidden={shared && rowIndex > 0}
+                        class="group/subsection min-w-0 max-w-full flex-initial space-y-0 {group.length >
+                        1
+                          ? 'grid grid-cols-subgrid'
+                          : 'w-max'} {structured ||
+                        field === 'blockExpression' ||
+                        field === 'buildingNumberExpression'
+                          ? 'shrink-0!'
+                          : ''}"
+                      >
+                        {#if rowIndex === 0}
+                          <legend
+                            class="mb-0 flex h-8 items-center gap-2 px-3 font-medium {field ===
+                            'formattedAddress'
+                              ? 'text-xs text-muted-foreground'
+                              : 'text-sm'}"
+                          >
+                            <span
+                              class="flex min-h-7 items-center gap-2 whitespace-nowrap"
+                              class:invisible={field === 'buildingName' &&
+                                Boolean(
+                                  addressComponentValue(
                                     address,
-                                    toLocaleKey(source),
+                                    rowLocale ?? getLocaleKey(),
                                     field,
+                                  ),
+                                )}
+                              >{field === 'buildingNumberExpression'
+                                ? m.address_field_number()
+                                : field === 'streetName' ||
+                                    field === 'buildingName' ||
+                                    field === 'premisesName'
+                                  ? m.field_name()
+                                  : labels[field]}{@render fieldAction(
+                                field,
+                                getLocaleKey(),
+                                structured,
+                              )}</span
+                            >
+                            {#if field === 'unitPortion' && translations}
+                              {@const sources = activeLocales.filter(locale =>
+                                addressComponentValue(address, locale, field).trim(),
+                              )}
+                              {@const target = activeLocales.find(
+                                locale =>
+                                  !addressComponentValue(address, locale, field).trim(),
+                              )}
+                              {#if sources.length && target}
+                                <span class="inline-flex align-middle [&>div]:min-h-7">
+                                  <FormI18nTranslationBar
+                                    compact
+                                    targetLocale={ADDRESS_LOCALES[target]}
+                                    availableLocales={sources.map(
+                                      locale => ADDRESS_LOCALES[locale],
+                                    )}
+                                    isEditing={true}
+                                    isVisible={true}
+                                    onTranslate={source => translatePart(source)}
+                                  />
+                                </span>
+                              {/if}
+                            {/if}
+                          </legend>
+                        {/if}
+                        <!-- The fieldset legend owns the label; inline controls must not reserve a second label row. -->
+                        <div
+                          use:animateAddressColumns={field === 'blockExpression' ||
+                            field === 'phaseExpression'}
+                          class="grid min-w-0 {field === 'blockExpression'
+                            ? 'grid-cols-[max-content_max-content_max-content]'
+                            : field === 'phaseExpression'
+                              ? 'grid-cols-[max-content_max-content]'
+                              : ''}"
+                        >
+                          {#each shared
+                            ? rowIndex === 0
+                              ? [getLocaleKey()]
+                              : []
+                            : [rowLocale ?? getLocaleKey()] as locale (locale)}
+                            {@const value =
+                              field === 'formattedAddress'
+                                ? getAddressDisplay(address, locale)
+                                : addressComponentValue(address, locale, field)}
+                            {@const namedPhase =
+                              field === 'phaseExpression' &&
+                              (phaseTypes[locale] ??
+                                phaseEditorValue(address, locale).type) === 'named'}
+                            {@const inputMinimum =
+                              field === 'unitPortion'
+                                ? '11rem'
+                                : field === 'premisesName'
+                                  ? '13rem'
+                                  : namedPhase
+                                    ? '12rem'
+                                    : field === 'buildingNumberExpression'
+                                      ? '5rem'
+                                      : '4rem'}
+                            {@const suggestions = getExpressionSuggestions(
+                              field,
+                              locale,
+                            )}
+                            <div
+                              data-address-locale={locale}
+                              transition:localeSlide={{
+                                duration: prefersReducedMotion.current ? 0 : 200,
+                              }}
+                              use:adaptivePlaceholder={field === 'phaseExpression'
+                                ? (namedPhase
+                                    ? m.address_phase_named_example
+                                    : m.address_phase_reference_example)(
+                                    {},
+                                    { locale: ADDRESS_LOCALES[locale] },
                                   )
-                                  const [translated] = await translateText(
-                                    source,
-                                    target,
-                                    [sourceValue],
-                                  )
-                                  // Do not replace edits made while the translation was in flight.
-                                  if (
-                                    translationActive &&
-                                    isEditing &&
-                                    generation === translationGeneration &&
-                                    address === originalAddress &&
-                                    translated &&
-                                    !addressComponentValue(address, locale, field) &&
+                                : field === 'unitExpression'
+                                  ? m.address_unit_reference_placeholder(
+                                      {},
+                                      { locale: ADDRESS_LOCALES[locale] },
+                                    )
+                                  : examples[field](
+                                      {},
+                                      { locale: ADDRESS_LOCALES[locale] },
+                                    )}
+                              class="min-h-12 min-w-0 items-center gap-2 pt-2 first:pt-0 {field ===
+                                'blockExpression' || field === 'phaseExpression'
+                                ? 'col-span-full grid grid-cols-subgrid'
+                                : 'flex flex-wrap'}"
+                            >
+                              {#if field === 'formattedAddress'}
+                                <AddressDisplayField
+                                  {locationKind}
+                                  {divisions}
+                                  {address}
+                                  {locale}
+                                  {isEditing}
+                                  showLocale={translations}
+                                  localeLabelOutside
+                                  {onChange}
+                                />
+                              {:else if field === 'streetName' ||
+                                field === 'buildingName'}
+                                {@const sourceLocales = locales.filter(
+                                  source =>
+                                    source !== locale &&
                                     addressComponentValue(
                                       address,
-                                      toLocaleKey(source),
+                                      source,
                                       field,
-                                    ) === sourceValue
-                                  )
-                                    onChange(
-                                      setAddressExpression(
-                                        address,
+                                    ).trim(),
+                                )}
+                                {#if field === 'buildingName' &&
+                                  translations &&
+                                  !value &&
+                                  sourceLocales.length}
+                                  <div class="flex min-h-12 items-center gap-2">
+                                    <FormI18nTranslationBar
+                                      compact
+                                      targetLocale={ADDRESS_LOCALES[locale]}
+                                      availableLocales={sourceLocales.map(
+                                        source => ADDRESS_LOCALES[source],
+                                      )}
+                                      isEditing={true}
+                                      isVisible={true}
+                                      onTranslate={async (source, target) => {
+                                        const originalAddress = address
+                                        const generation = translationGeneration
+                                        const sourceValue = addressComponentValue(
+                                          address,
+                                          toLocaleKey(source),
+                                          field,
+                                        )
+                                        const [translated] = await translateText(
+                                          source,
+                                          target,
+                                          [sourceValue],
+                                        )
+                                        // Do not replace edits made while the translation was in flight.
+                                        if (
+                                          translationActive &&
+                                          isEditing &&
+                                          generation === translationGeneration &&
+                                          address === originalAddress &&
+                                          translated &&
+                                          !addressComponentValue(
+                                            address,
+                                            locale,
+                                            field,
+                                          ) &&
+                                          addressComponentValue(
+                                            address,
+                                            toLocaleKey(source),
+                                            field,
+                                          ) === sourceValue
+                                        )
+                                          onChange(
+                                            setAddressExpression(
+                                              address,
+                                              locale,
+                                              field,
+                                              translated,
+                                            ),
+                                          )
+                                      }}
+                                    />
+                                  </div>
+                                {:else}
+                                  <div
+                                    class="w-max min-w-0 max-w-full {value &&
+                                    !replacingNames[`${locale}-${field}`]
+                                      ? ''
+                                      : 'min-w-56'}"
+                                  >
+                                    <AddressNamePicker
+                                      onBlur={field === 'buildingName'
+                                        ? onBuildingNameBlur
+                                        : undefined}
+                                      {locale}
+                                      detached={address.detachedNames?.[field]?.[
+                                        ADDRESS_LOCALES[locale]
+                                      ] === value}
+                                      showLocale={false}
+                                      family={field === 'streetName'
+                                        ? 'streets'
+                                        : 'buildings'}
+                                      {value}
+                                      label={labels[field]}
+                                      onClear={() => {
+                                        if (field === 'buildingName') {
+                                          buildingRequest++
+                                          buildingLoading = false
+                                          buildingFailed = false
+                                          buildingSelection = null
+                                          selectedBuilding = null
+                                        }
+                                        translationGeneration++
+                                        onChange(
+                                          setAddressOverride(
+                                            address,
+                                            locale,
+                                            field,
+                                            null,
+                                          ),
+                                        )
+                                      }}
+                                      onReplacingChange={replacing =>
+                                        (replacingNames[`${locale}-${field}`] =
+                                          replacing)}
+                                      onSelect={record =>
+                                        field === 'buildingName'
+                                          ? void selectBuilding(record, locale)
+                                          : onChange(
+                                              setAddressName(address, field, record),
+                                            )}
+                                    />
+                                  </div>
+                                {/if}
+                              {:else}
+                                {#if field === 'blockExpression' &&
+                                  blockTypeFirst(locale)}
+                                  {@render blockTypeSelect(locale)}
+                                {/if}
+                                {#if field === 'phaseExpression'}
+                                  <SelectField
+                                    contentClass={addressSelectContentClass}
+                                    triggerAttrs={{
+                                      'aria-label': m.feature_address_phaseExpression(),
+                                    }}
+                                    triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
+                                    class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
+                                    isEditing={true}
+                                    items={[
+                                      {
+                                        value: 'phase',
+                                        label: m.address_phase_type_phase(
+                                          {},
+                                          { locale: ADDRESS_LOCALES[locale] },
+                                        ),
+                                      },
+                                      {
+                                        value: 'stage',
+                                        label: m.address_phase_type_stage(
+                                          {},
+                                          { locale: ADDRESS_LOCALES[locale] },
+                                        ),
+                                      },
+                                      {
+                                        value: 'named',
+                                        label: `{${m.address_phase_type_named({}, { locale: ADDRESS_LOCALES[locale] })}}`,
+                                      },
+                                    ]}
+                                    value={phaseTypes[locale] ??
+                                      phaseEditorValue(address, locale).type}
+                                    onValueChange={type =>
+                                      chooseLocalizedType(
+                                        'phaseExpression',
                                         locale,
-                                        field,
-                                        translated,
-                                      ),
-                                    )
-                                }}
-                              />
-                            </div>
-                          {:else}
-                            <div
-                              class="w-max min-w-0 max-w-full {value &&
-                              !replacingNames[`${locale}-${field}`]
-                                ? ''
-                                : 'min-w-56'}"
-                            >
-                              <AddressNamePicker
-                                onBlur={field === 'buildingName'
-                                  ? onBuildingNameBlur
-                                  : undefined}
-                                {locale}
-                                detached={address.detachedNames?.[field]?.[
-                                  ADDRESS_LOCALES[locale]
-                                ] === value}
-                                showLocale={translations}
-                                family={field === 'streetName'
-                                  ? 'streets'
-                                  : 'buildings'}
-                                {value}
-                                label={labels[field]}
-                                onClear={() => {
-                                  if (field === 'buildingName') {
-                                    buildingRequest++
-                                    buildingLoading = false
-                                    buildingFailed = false
-                                    buildingSelection = null
-                                    selectedBuilding = null
-                                  }
-                                  translationGeneration++
-                                  onChange(
-                                    setAddressOverride(address, locale, field, null),
-                                  )
-                                }}
-                                onReplacingChange={replacing =>
-                                  (replacingNames[`${locale}-${field}`] = replacing)}
-                                onSelect={record =>
-                                  field === 'buildingName'
-                                    ? void selectBuilding(record, locale)
-                                    : onChange(setAddressName(address, field, record))}
-                              />
-                            </div>
-                          {/if}
-                        {:else}
-                          {#if field === 'blockExpression' && blockTypeFirst(locale)}
-                            {@render blockTypeSelect(locale)}
-                          {/if}
-                          {#if field === 'phaseExpression'}
-                            <SelectField
-                              contentClass={addressSelectContentClass}
-                              triggerAttrs={{
-                                'aria-label': m.feature_address_phaseExpression(),
-                              }}
-                              triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
-                              class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
-                              isEditing={true}
-                              items={[
-                                {
-                                  value: 'phase',
-                                  label: m.address_phase_type_phase(
-                                    {},
-                                    { locale: ADDRESS_LOCALES[locale] },
-                                  ),
-                                },
-                                {
-                                  value: 'stage',
-                                  label: m.address_phase_type_stage(
-                                    {},
-                                    { locale: ADDRESS_LOCALES[locale] },
-                                  ),
-                                },
-                                {
-                                  value: 'named',
-                                  label: `{${m.address_phase_type_named({}, { locale: ADDRESS_LOCALES[locale] })}}`,
-                                },
-                              ]}
-                              value={phaseTypes[locale] ??
-                                phaseEditorValue(address, locale).type}
-                              onValueChange={type =>
-                                chooseLocalizedType(
-                                  'phaseExpression',
-                                  locale,
-                                  String(type),
-                                )}
-                            />
-                          {/if}
-                          {#if field === 'floorExpression'}
-                            <SelectField
-                              contentClass={addressSelectContentClass}
-                              id="address-floorExpression-type"
-                              triggerAttrs={{
-                                id: 'address-floorExpression-type',
-                                'aria-label': m.feature_address_floor_type(),
-                              }}
-                              triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
-                              class={String.raw`w-max shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
-                              isEditing={true}
-                              items={FLOOR_TYPES.map(code => ({
-                                value: code,
-                                label: addressTerm(floorTerms[code], locale),
-                              }))}
-                              value={getStructuredAddressType(address, field)}
-                              onValueChange={code => {
-                                clearTimeout(floorInputTimer)
-                                explicitFloorType = FloorTypeSchema.parse(code)
-                                const reference =
-                                  floorDraft ?? addressFloorReference(address, locale)
-                                floorDraft = reference
-                                onChange(
-                                  setAddressFloorReference(
-                                    address,
-                                    reference,
-                                    explicitFloorType,
-                                  ),
-                                )
-                              }}
-                            />
-                          {:else if field === 'unitExpression'}
-                            <SelectField
-                              contentClass={addressSelectContentClass}
-                              id="address-unitExpression-type"
-                              triggerAttrs={{
-                                id: 'address-unitExpression-type',
-                                'aria-label': m.feature_address_unit_type(),
-                              }}
-                              triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
-                              placeholder={m.feature_address_unit_type()}
-                              class={String.raw`w-max shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
-                              isEditing={true}
-                              items={UNIT_TYPES.map(code => ({
-                                value: code,
-                                label: addressTerm(unitTerms[code], locale),
-                              }))}
-                              value={getStructuredAddressType(address, field)}
-                              onValueChange={code => {
-                                const unitType = UnitTypeSchema.parse(code)
-                                onChange(
-                                  setStructuredAddressExpression(
-                                    address,
-                                    locale,
-                                    field,
-                                    addressUnitReference(address, locale),
-                                    unitType,
-                                  ),
-                                )
-                              }}
-                            />
-                          {/if}
-                          {#if field === 'unitExpression' &&
-                            getStructuredAddressType(address, field) === 'X'}
-                            <TextInput
-                              name=""
-                              class="order-last col-span-full w-full"
-                              inputClass="h-10 px-3! text-base! font-medium! bg-transparent text-foreground! placeholder:text-muted-foreground/65!"
-                              controlClass="bg-panel! text-foreground"
-                              isEditing={true}
-                              value={customAddressType(address, locale, field)}
-                              placeholder={m.address_custom_type_placeholder(
-                                {},
-                                { locale: ADDRESS_LOCALES[locale] },
-                              )}
-                              inputAttrs={{
-                                'aria-label': m.address_custom_unit_type(),
-                              }}
-                              onValueChange={term =>
-                                onChange(
-                                  setCustomAddressUnit(
-                                    address,
-                                    locale,
-                                    addressUnitReference(address, locale),
-                                    term ?? '',
-                                  ),
-                                )}
-                            />
-                          {:else if field === 'blockExpression' &&
-                            getAddressLocale(address, locale).blockType === 'other'}
-                            <TextInput
-                              name=""
-                              class="order-last col-span-full w-full"
-                              inputClass="h-10 px-3! text-base! font-medium! bg-transparent text-foreground! placeholder:text-muted-foreground/65!"
-                              controlClass="bg-panel! text-foreground"
-                              isEditing={true}
-                              value={customAddressType(address, locale, field)}
-                              placeholder={m.address_custom_type_placeholder(
-                                {},
-                                { locale: ADDRESS_LOCALES[locale] },
-                              )}
-                              inputAttrs={{
-                                'aria-label': m.address_custom_block_type(),
-                              }}
-                              onValueChange={term => {
-                                const block = getAddressPresentationLocale(
-                                  address,
-                                  locale,
-                                )
-                                onChange(
-                                  setAddressBlock(
-                                    address,
-                                    locale,
-                                    'other',
-                                    String(block.blockRef ?? ''),
-                                    block.blockTypeBeforeNumber === true,
-                                    term ?? '',
-                                  ),
-                                )
-                              }}
-                            />
-                          {/if}
-                          <TextInput
-                            name=""
-                            id={`address-${locale}-${field}`}
-                            prefix={translations && !shared
-                              ? addressLocaleLabel(locale)
-                              : undefined}
-                            fitValue={true}
-                            fitMinWidth={inputMinimum}
-                            inputClass="h-10 px-3! text-base! font-medium! bg-transparent text-foreground! placeholder:text-muted-foreground/65!"
-                            controlClass="h-12 gap-2 bg-panel! text-foreground [&_span]:text-muted-foreground {field ===
-                              'buildingNumberExpression' && numberError
-                              ? 'border-destructive!'
-                              : ''}"
-                            class={String.raw`gap-0! w-max min-w-0 max-w-full flex-initial [&_.bits-form\_\_label]:hidden`}
-                            value={field === 'blockExpression'
-                              ? (referenceDrafts[`${locale}-${field}`] ??
-                                String(
-                                  getAddressPresentationLocale(address, locale)
-                                    .blockRef || '',
-                                ))
-                              : field === 'unitExpression'
-                                ? (referenceDrafts[`${locale}-${field}`] ??
-                                  addressUnitReference(address, locale))
-                                : field === 'floorExpression'
-                                  ? (floorDraft ??
-                                    addressFloorReference(address, locale))
-                                  : field === 'phaseExpression'
-                                    ? (phaseDrafts[locale] ??
-                                      phaseEditorValue(address, locale).value)
-                                    : value}
-                            isEditing={true}
-                            placeholder={field === 'phaseExpression'
-                              ? (namedPhase
-                                  ? m.address_phase_named_example
-                                  : m.address_phase_reference_example)(
-                                  {},
-                                  { locale: ADDRESS_LOCALES[locale] },
-                                )
-                              : field === 'unitExpression'
-                                ? m.address_unit_reference_placeholder(
-                                    {},
-                                    { locale: ADDRESS_LOCALES[locale] },
-                                  )
-                                : examples[field](
-                                    {},
-                                    { locale: ADDRESS_LOCALES[locale] },
-                                  )}
-                            inputAttrs={{
-                              'aria-label':
-                                translations && !shared
-                                  ? `${labels[field]} · ${ADDRESS_LOCALES[locale]}`
-                                  : labels[field],
-                              onfocus:
-                                field === 'blockExpression'
-                                  ? () => (activeBlockLocale = locale)
-                                  : undefined,
-                              oninput:
-                                field === 'buildingNumberExpression'
-                                  ? (event: Event) => {
-                                      numberInput =
-                                        event.currentTarget as HTMLInputElement
-                                    }
-                                  : undefined,
-                              'aria-invalid':
-                                field === 'buildingNumberExpression' && numberError
-                                  ? true
-                                  : undefined,
-                              'aria-describedby':
-                                field === 'buildingNumberExpression' && numberError
-                                  ? `${uid}-number-error`
-                                  : undefined,
-                              onblur:
-                                field === 'buildingNumberExpression'
-                                  ? (event: FocusEvent) =>
-                                      normalizeNumber(
-                                        event.currentTarget as HTMLInputElement,
+                                        String(type),
+                                      )}
+                                  />
+                                {/if}
+                                {#if field === 'floorExpression'}
+                                  <SelectField
+                                    contentClass={addressSelectContentClass}
+                                    id="address-floorExpression-type"
+                                    triggerAttrs={{
+                                      id: 'address-floorExpression-type',
+                                      'aria-label': m.feature_address_floor_type(),
+                                    }}
+                                    triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
+                                    class={String.raw`w-max shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
+                                    isEditing={true}
+                                    items={FLOOR_TYPES.map(code => ({
+                                      value: code,
+                                      label: addressTerm(floorTerms[code], locale),
+                                    }))}
+                                    value={getStructuredAddressType(address, field)}
+                                    onValueChange={code => {
+                                      clearTimeout(floorInputTimer)
+                                      explicitFloorType = FloorTypeSchema.parse(code)
+                                      const reference =
+                                        floorDraft ??
+                                        addressFloorReference(address, locale)
+                                      floorDraft = reference
+                                      onChange(
+                                        setAddressFloorReference(
+                                          address,
+                                          reference,
+                                          explicitFloorType,
+                                        ),
+                                      )
+                                    }}
+                                  />
+                                {:else if field === 'unitExpression'}
+                                  <SelectField
+                                    contentClass={addressSelectContentClass}
+                                    id="address-unitExpression-type"
+                                    triggerAttrs={{
+                                      id: 'address-unitExpression-type',
+                                      'aria-label': m.feature_address_unit_type(),
+                                    }}
+                                    triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
+                                    placeholder={m.feature_address_unit_type()}
+                                    class={String.raw`w-max shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
+                                    isEditing={true}
+                                    items={UNIT_TYPES.map(code => ({
+                                      value: code,
+                                      label: addressTerm(unitTerms[code], locale),
+                                    }))}
+                                    value={getStructuredAddressType(address, field)}
+                                    onValueChange={code => {
+                                      const unitType = UnitTypeSchema.parse(code)
+                                      onChange(
+                                        setStructuredAddressExpression(
+                                          address,
+                                          locale,
+                                          field,
+                                          addressUnitReference(address, locale),
+                                          unitType,
+                                        ),
+                                      )
+                                    }}
+                                  />
+                                {/if}
+                                {#if field === 'unitExpression' &&
+                                  getStructuredAddressType(address, field) === 'X'}
+                                  <TextInput
+                                    name=""
+                                    class="order-last col-span-full w-full"
+                                    inputClass="h-10 px-3! text-base! font-medium! bg-transparent text-foreground! placeholder:text-muted-foreground/65!"
+                                    controlClass="bg-panel! text-foreground"
+                                    isEditing={true}
+                                    value={customAddressType(address, locale, field)}
+                                    placeholder={m.address_custom_type_placeholder(
+                                      {},
+                                      { locale: ADDRESS_LOCALES[locale] },
+                                    )}
+                                    inputAttrs={{
+                                      'aria-label': m.address_custom_unit_type(),
+                                    }}
+                                    onValueChange={term =>
+                                      onChange(
+                                        setCustomAddressUnit(
+                                          address,
+                                          locale,
+                                          addressUnitReference(address, locale),
+                                          term ?? '',
+                                        ),
+                                      )}
+                                  />
+                                {:else if field === 'blockExpression' &&
+                                  getAddressLocale(address, locale).blockType ===
+                                    'other'}
+                                  <TextInput
+                                    name=""
+                                    class="order-last col-span-full w-full"
+                                    inputClass="h-10 px-3! text-base! font-medium! bg-transparent text-foreground! placeholder:text-muted-foreground/65!"
+                                    controlClass="bg-panel! text-foreground"
+                                    isEditing={true}
+                                    value={customAddressType(address, locale, field)}
+                                    placeholder={m.address_custom_type_placeholder(
+                                      {},
+                                      { locale: ADDRESS_LOCALES[locale] },
+                                    )}
+                                    inputAttrs={{
+                                      'aria-label': m.address_custom_block_type(),
+                                    }}
+                                    onValueChange={term => {
+                                      const block = getAddressPresentationLocale(
+                                        address,
                                         locale,
                                       )
-                                  : field === 'blockExpression' ||
-                                      field === 'unitExpression'
-                                    ? () => {
-                                        activeBlockLocale = null
-                                        normalizeReference(field, locale)
-                                      }
-                                    : field === 'floorExpression'
-                                      ? () => normalizeFloorInput(locale)
-                                      : undefined,
-                              list:
-                                ![
-                                  'floorExpression',
-                                  'unitExpression',
-                                  'blockExpression',
-                                  'phaseExpression',
-                                ].includes(field) && suggestions.length
-                                  ? `${uid}-${locale}-${field}`
-                                  : undefined,
-                            }}
-                            onValueChange={next => {
-                              if (field === 'buildingNumberExpression') {
-                                numberRequest++
-                                numberCaveat = null
-                              }
-                              if (field === 'phaseExpression') {
-                                editPhase(next ?? '', locale)
-                                return
-                              }
-                              if (field === 'floorExpression') {
-                                floorDraft = next ?? ''
-                                clearTimeout(floorInputTimer)
-                                onChange(
-                                  setStructuredAddressExpression(
+                                      onChange(
+                                        setAddressBlock(
+                                          address,
+                                          locale,
+                                          'other',
+                                          String(block.blockRef ?? ''),
+                                          block.blockTypeBeforeNumber === true,
+                                          term ?? '',
+                                        ),
+                                      )
+                                    }}
+                                  />
+                                {/if}
+                                <TextInput
+                                  name=""
+                                  id={`address-${locale}-${field}`}
+                                  fitValue={true}
+                                  fitMinWidth={inputMinimum}
+                                  inputClass="h-10 px-3! text-base! font-medium! bg-transparent text-foreground! placeholder:text-muted-foreground/65!"
+                                  controlClass="h-12 gap-2 bg-panel! text-foreground [&_span]:text-muted-foreground {field ===
+                                    'buildingNumberExpression' && numberError
+                                    ? 'border-destructive!'
+                                    : ''}"
+                                  class={String.raw`gap-0! w-max min-w-0 max-w-full flex-initial [&_.bits-form\_\_label]:hidden`}
+                                  value={field === 'blockExpression'
+                                    ? (referenceDrafts[`${locale}-${field}`] ??
+                                      String(
+                                        getAddressPresentationLocale(address, locale)
+                                          .blockRef || '',
+                                      ))
+                                    : field === 'unitExpression'
+                                      ? (referenceDrafts[`${locale}-${field}`] ??
+                                        addressUnitReference(address, locale))
+                                      : field === 'floorExpression'
+                                        ? (floorDraft ??
+                                          addressFloorReference(address, locale))
+                                        : field === 'phaseExpression'
+                                          ? (phaseDrafts[locale] ??
+                                            phaseEditorValue(address, locale).value)
+                                          : value}
+                                  isEditing={true}
+                                  placeholder={field === 'phaseExpression'
+                                    ? (namedPhase
+                                        ? m.address_phase_named_example
+                                        : m.address_phase_reference_example)(
+                                        {},
+                                        { locale: ADDRESS_LOCALES[locale] },
+                                      )
+                                    : field === 'unitExpression'
+                                      ? m.address_unit_reference_placeholder(
+                                          {},
+                                          { locale: ADDRESS_LOCALES[locale] },
+                                        )
+                                      : examples[field](
+                                          {},
+                                          { locale: ADDRESS_LOCALES[locale] },
+                                        )}
+                                  inputAttrs={{
+                                    'aria-label':
+                                      translations && !shared
+                                        ? `${labels[field]} · ${ADDRESS_LOCALES[locale]}`
+                                        : labels[field],
+                                    onfocus:
+                                      field === 'blockExpression'
+                                        ? () => (activeBlockLocale = locale)
+                                        : undefined,
+                                    oninput:
+                                      field === 'buildingNumberExpression'
+                                        ? (event: Event) => {
+                                            numberInput =
+                                              event.currentTarget as HTMLInputElement
+                                          }
+                                        : undefined,
+                                    'aria-invalid':
+                                      field === 'buildingNumberExpression' &&
+                                      numberError
+                                        ? true
+                                        : undefined,
+                                    'aria-describedby':
+                                      field === 'buildingNumberExpression' &&
+                                      numberError
+                                        ? `${uid}-number-error`
+                                        : undefined,
+                                    onblur:
+                                      field === 'buildingNumberExpression'
+                                        ? (event: FocusEvent) =>
+                                            normalizeNumber(
+                                              event.currentTarget as HTMLInputElement,
+                                              locale,
+                                            )
+                                        : field === 'blockExpression' ||
+                                            field === 'unitExpression'
+                                          ? () => {
+                                              activeBlockLocale = null
+                                              normalizeReference(field, locale)
+                                            }
+                                          : field === 'floorExpression'
+                                            ? () => normalizeFloorInput(locale)
+                                            : undefined,
+                                    list:
+                                      ![
+                                        'floorExpression',
+                                        'unitExpression',
+                                        'blockExpression',
+                                        'phaseExpression',
+                                      ].includes(field) && suggestions.length
+                                        ? `${uid}-${locale}-${field}`
+                                        : undefined,
+                                  }}
+                                  onValueChange={next => {
+                                    if (field === 'buildingNumberExpression') {
+                                      numberRequest++
+                                      numberCaveat = null
+                                    }
+                                    if (field === 'phaseExpression') {
+                                      editPhase(next ?? '', locale)
+                                      return
+                                    }
+                                    if (field === 'floorExpression') {
+                                      floorDraft = next ?? ''
+                                      clearTimeout(floorInputTimer)
+                                      onChange(
+                                        setStructuredAddressExpression(
+                                          address,
+                                          locale,
+                                          field,
+                                          floorDraft,
+                                          FloorTypeSchema.parse(
+                                            getStructuredAddressType(address, field),
+                                          ),
+                                        ),
+                                      )
+                                      floorInputTimer = setTimeout(
+                                        () => normalizeFloorInput(locale),
+                                        650,
+                                      )
+                                      return
+                                    }
+                                    if (
+                                      field === 'unitExpression' ||
+                                      field === 'blockExpression'
+                                    ) {
+                                      const key = `${locale}-${field}`
+                                      referenceDrafts[key] = next ?? ''
+                                      clearTimeout(referenceTimers.get(key))
+                                      referenceTimers.set(
+                                        key,
+                                        setTimeout(
+                                          () => normalizeReference(field, locale),
+                                          650,
+                                        ),
+                                      )
+                                      return
+                                    }
+                                    onChange(
+                                      structured
+                                        ? setStructuredAddressExpression(
+                                            address,
+                                            locale,
+                                            field as
+                                              | 'floorExpression'
+                                              | 'unitExpression'
+                                              | 'unitPortion',
+                                            next,
+                                            field === 'floorExpression'
+                                              ? explicitFloorType
+                                              : undefined,
+                                          )
+                                        : setAddressExpression(
+                                            address,
+                                            locale,
+                                            field,
+                                            next,
+                                          ),
+                                    )
+                                  }}
+                                />
+                                {#if field === 'buildingNumberExpression' &&
+                                  numberError}
+                                  <div class="basis-full">
+                                    <p
+                                      id={`${uid}-number-error`}
+                                      role="alert"
+                                      class="text-destructive max-w-72 text-xs"
+                                    >
+                                      {numberError}
+                                    </p>
+                                  </div>
+                                {/if}
+                                {#if field === 'buildingNumberExpression' &&
+                                  numberCaveat?.key === suggestionKey &&
+                                  numberCaveat?.value === value}
+                                  <aside
+                                    role="status"
+                                    class="border-border text-muted-foreground flex max-w-64 items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                                  >
+                                    <InfoIcon class="mt-0.5 size-4 shrink-0" />
+                                    <span>{m.address_map_number_caveat()}</span>
+                                    <button
+                                      type="button"
+                                      aria-label={m.address_map_number_dismiss()}
+                                      class="hover:text-foreground focus-visible:outline-primary shrink-0 rounded p-1 focus-visible:outline-2"
+                                      onclick={() => (numberCaveat = null)}
+                                    >
+                                      <XIcon class="size-3" />
+                                    </button>
+                                  </aside>
+                                {/if}
+                                {#if field === 'blockExpression'}
+                                  {@const block = getAddressPresentationLocale(
                                     address,
                                     locale,
-                                    field,
-                                    floorDraft,
-                                    FloorTypeSchema.parse(
-                                      getStructuredAddressType(address, field),
-                                    ),
-                                  ),
-                                )
-                                floorInputTimer = setTimeout(
-                                  () => normalizeFloorInput(locale),
-                                  650,
-                                )
-                                return
-                              }
-                              if (
-                                field === 'unitExpression' ||
-                                field === 'blockExpression'
-                              ) {
-                                const key = `${locale}-${field}`
-                                referenceDrafts[key] = next ?? ''
-                                clearTimeout(referenceTimers.get(key))
-                                referenceTimers.set(
-                                  key,
-                                  setTimeout(
-                                    () => normalizeReference(field, locale),
-                                    650,
-                                  ),
-                                )
-                                return
-                              }
-                              onChange(
-                                structured
-                                  ? setStructuredAddressExpression(
-                                      address,
-                                      locale,
-                                      field as
-                                        | 'floorExpression'
-                                        | 'unitExpression'
-                                        | 'unitPortion',
-                                      next,
-                                      field === 'floorExpression'
-                                        ? explicitFloorType
-                                        : undefined,
-                                    )
-                                  : setAddressExpression(address, locale, field, next),
-                              )
-                            }}
-                          />
-                          {#if field === 'buildingNumberExpression' && numberError}
-                            <div class="basis-full">
-                              <p
-                                id={`${uid}-number-error`}
-                                role="alert"
-                                class="text-destructive max-w-72 text-xs"
-                              >
-                                {numberError}
-                              </p>
-                            </div>
-                          {/if}
-                          {#if field === 'buildingNumberExpression' &&
-                            numberCaveat?.key === suggestionKey &&
-                            numberCaveat?.value === value}
-                            <aside
-                              role="status"
-                              class="border-border text-muted-foreground flex max-w-64 items-start gap-2 rounded-md border px-3 py-2 text-xs"
-                            >
-                              <InfoIcon class="mt-0.5 size-4 shrink-0" />
-                              <span>{m.address_map_number_caveat()}</span>
-                              <button
-                                type="button"
-                                aria-label={m.address_map_number_dismiss()}
-                                class="hover:text-foreground focus-visible:outline-primary shrink-0 rounded p-1 focus-visible:outline-2"
-                                onclick={() => (numberCaveat = null)}
-                              >
-                                <XIcon class="size-3" />
-                              </button>
-                            </aside>
-                          {/if}
-                          {#if field === 'blockExpression'}
-                            {@const block = getAddressPresentationLocale(
-                              address,
-                              locale,
-                            )}
-                            {#if !blockTypeFirst(locale)}
-                              {@render blockTypeSelect(locale)}
-                            {/if}
-                            <SimpleTooltip>
-                              {#snippet trigger()}
-                                <button
-                                  type="button"
-                                  aria-label={m.address_block_type_first()}
-                                  aria-pressed={blockTypeFirst(locale)}
-                                  class="text-muted-foreground hover:bg-primary/10 hover:text-primary focus-visible:outline-primary flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
-                                  onclick={() =>
-                                    onChange(
-                                      setAddressBlock(
-                                        address,
-                                        locale,
-                                        String(block.blockType || 'block'),
-                                        String(block.blockRef || ''),
-                                        !blockTypeFirst(locale),
-                                      ),
+                                  )}
+                                  {#if !blockTypeFirst(locale)}
+                                    {@render blockTypeSelect(locale)}
+                                  {/if}
+                                  <SimpleTooltip>
+                                    {#snippet trigger()}
+                                      <button
+                                        type="button"
+                                        aria-label={m.address_block_type_first()}
+                                        aria-pressed={blockTypeFirst(locale)}
+                                        class="text-muted-foreground hover:bg-primary/10 hover:text-primary focus-visible:outline-primary flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
+                                        onclick={() =>
+                                          onChange(
+                                            setAddressBlock(
+                                              address,
+                                              locale,
+                                              String(block.blockType || 'block'),
+                                              String(block.blockRef || ''),
+                                              !blockTypeFirst(locale),
+                                            ),
+                                          )}
+                                      >
+                                        <SwapIcon class="size-4" aria-hidden="true" />
+                                      </button>
+                                    {/snippet}
+                                    {m.address_block_type_first_help(
+                                      {},
+                                      { locale: ADDRESS_LOCALES[locale] },
                                     )}
-                                >
-                                  <SwapIcon class="size-4" aria-hidden="true" />
-                                </button>
-                              {/snippet}
-                              {m.address_block_type_first_help(
-                                {},
-                                { locale: ADDRESS_LOCALES[locale] },
-                              )}
-                            </SimpleTooltip>
-                          {/if}
-                        {/if}
-                        {#if suggestions.length}
-                          <datalist id={`${uid}-${locale}-${field}`}>
-                            {#each suggestions as suggestion}
-                              <option value={suggestion}></option>
-                            {/each}
-                          </datalist>
-                        {/if}
-                      </div>
-                    {/each}
-                  </div>
-                </fieldset>
-              {/if}
-            {/each}
-          </div>
+                                  </SimpleTooltip>
+                                {/if}
+                              {/if}
+                              {#if suggestions.length}
+                                <datalist id={`${uid}-${locale}-${field}`}>
+                                  {#each suggestions as suggestion}
+                                    <option value={suggestion}></option>
+                                  {/each}
+                                </datalist>
+                              {/if}
+                            </div>
+                          {/each}
+                        </div>
+                      </fieldset>
+                    {/if}
+                  {/each}
+                {/if}
+              </div>
+            </div>
+          {/each}
           {#if group.includes('buildingName') && selectedBuilding?.mismatch}
             <div
               role="status"

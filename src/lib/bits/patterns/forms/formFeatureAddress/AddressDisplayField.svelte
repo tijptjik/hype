@@ -33,6 +33,7 @@ let {
   locale,
   isEditing,
   showLocale = false,
+  localeLabelOutside = false,
   compact = false,
   alignEnd = false,
   scrollWhenConstrained = false,
@@ -44,6 +45,7 @@ let {
   locale: LocaleKey
   isEditing: boolean
   showLocale?: boolean
+  localeLabelOutside?: boolean
   compact?: boolean
   alignEnd?: boolean
   scrollWhenConstrained?: boolean
@@ -81,7 +83,7 @@ let input = $state<HTMLTextAreaElement>()
     <label for={uid} class="sr-only">{locale}</label>
   {/if}
   <div class="flex min-w-0 items-center gap-2">
-    {#if showLocale}
+    {#if showLocale && !localeLabelOutside}
       <span
         aria-hidden="true"
         class="text-muted-foreground w-[3em] shrink-0 font-mono text-xs"

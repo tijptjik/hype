@@ -1182,3 +1182,20 @@ does not complete them.
 Placement service acceptance (Refs #194) runs on a private SQLite copy with an explicit
 Wrangler persistence path. Synthetic policy layers must not be written into the normal
 development collection; closed-layer creation remains gated by `showHistoricalLayers`.
+
+### Building selection and multilingual address editing
+
+Selecting a building name is a draft edit. When its catalogue identity or address
+evidence differs from the active Location, the Building section warns about the
+mismatch. Making that building active starts the existing association review with the
+selected building source and its complete address; ambiguous buildings require an
+address candidate first. The name selector does not itself replace the accepted
+Location. Clearing a name invalidates pending selection requests, and names missing from
+a replacement building are explicitly unset.
+
+Address fields use the shared content-language toolbar for language membership,
+visibility, and ordering. Each localized group has one language label at the front of
+its row, keyed movement follows the selected language order, and intrinsic columns share
+the widest content across rows. Section resets include additional content languages.
+Mobility and entrance controls use consistent reset icons; mobility field information
+sits at the right edge of the label.

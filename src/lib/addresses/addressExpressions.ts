@@ -45,6 +45,13 @@ export function resetAddressComponent(
     return setStructuredAddressExpression(address, 'en', field, undefined)
   for (const locale of ['en', 'zhHant', 'zhHans'] as const)
     address = setAddressExpression(address, locale, field, undefined)
+  // Additional content languages reset with the section instead of retaining hidden edits.
+  if (field === 'accessHint') return { ...address, accessHints: {} }
+  for (const tag of Object.keys(address.overrides)) {
+    if (Object.values(ADDRESS_LOCALES).some(locale => locale === tag)) continue
+    for (const key of [field, ...(parsedFields[field] ?? [])])
+      address = setAddressOverride(address, tag, key, undefined)
+  }
   return address
 }
 
@@ -68,6 +75,12 @@ export function clearAddressComponent(
   }
   for (const locale of ['en', 'zhHant', 'zhHans'] as const)
     address = setAddressExpression(address, locale, field, '')
+  if (field === 'accessHint') return { ...address, accessHints: {} }
+  for (const tag of Object.keys(address.overrides)) {
+    if (Object.values(ADDRESS_LOCALES).some(locale => locale === tag)) continue
+    for (const key of [field, ...(parsedFields[field] ?? [])])
+      address = setAddressOverride(address, tag, key, null)
+  }
   return address
 }
 const parsedFields: Partial<Record<EditableAddressField, AddressField[]>> = {

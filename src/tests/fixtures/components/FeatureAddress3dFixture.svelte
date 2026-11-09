@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { onMount } from 'svelte'
 // CONTEXT
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
@@ -9,6 +11,7 @@ import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { NearbyStreet } from '#lib/map/nearbyStreets.js'
 import type { AddressName } from '#lib/addresses/nameCatalogue.js'
 let {
+  responsiveViewport = false,
   isEditing = true,
   translations = $bindable(false),
   coordinates = [114.17023, 22.31872],
@@ -26,6 +29,7 @@ let {
   onCoordinateChange = (_value: number[]) => {},
   initialAddress = emptyFeatureAddress({ en: '70 Sai Yeung Choi St South' }),
 }: {
+  responsiveViewport?: boolean
   onCoordinateChange?: (value: number[]) => void
   translations?: boolean
   onCancelLookup?: () => void
@@ -43,7 +47,16 @@ let {
   initialAddress?: FeatureAddress
 } = $props()
 // Control tests need room for both side panels; browser measurements take precedence.
-setResponsiveCtx().setWindowDimensions(1440, 900)
+const responsive = setResponsiveCtx()
+responsive.setWindowDimensions(1440, 900)
+onMount(() => {
+  if (!responsiveViewport) return
+  const resize = (): void =>
+    responsive.setWindowDimensions(window.innerWidth, window.innerHeight)
+  resize()
+  window.addEventListener('resize', resize)
+  return () => window.removeEventListener('resize', resize)
+})
 // The fixture seeds one editor draft; later prop changes must retain that draft.
 // svelte-ignore state_referenced_locally
 let address = $state(initialAddress)

@@ -4561,6 +4561,8 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                 <LocationControlsInfo />
               {/snippet}
               <FormFeatureAddress
+                localeState={profileLocaleState}
+                onLocaleStateChange={setProfileLocaleState}
                 bind:translations={
                   () => multilingualChoice ?? multilingualDefaults.addresses,
                   expanded => adminCtx.featureMultilingual.set(multilingualAccount, expanded)
