@@ -2,6 +2,7 @@
 // SVELTE
 import { onMount } from 'svelte'
 // COMPONENTS
+import AddressMap from '#lib/bits/patterns/forms/formFeatureAddress/AddressMap.svelte'
 import VisualSection from '#lib/bits/custom/main/VisualSection.svelte'
 import Maplet from '#lib/bits/patterns/maps/Maplet.svelte'
 import DraftSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLocationSearch.svelte'
@@ -234,7 +235,21 @@ onMount(() =>
     onBack={() => (selected = null)}
   >
     {#snippet children(control, results, mapControls)}
-      <div class="border-border shrink-0 border-b p-4">{@render control()}</div>
+      {#snippet emptyControl()}
+      {/snippet}
+      <AddressMap
+        showMap={false}
+        showCoordinates={false}
+        showLookup={true}
+        centerLocationControl={pending}
+        locationControl={control}
+        coordinatesControl={emptyControl}
+        lookupControl={emptyControl}
+        onLookup={() => {}}
+        canLookup={true}
+        isEditing={true}
+        isLoading={false}
+      />
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
         {@render results()}
       </div>

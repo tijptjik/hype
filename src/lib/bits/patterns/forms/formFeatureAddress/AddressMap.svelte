@@ -16,6 +16,7 @@ let {
   measurementCoordinates,
   measurementKey = '',
   locationControl,
+  centerLocationControl = false,
   coordinatesInLocationControl = false,
   locationActions,
   toolbarControls,
@@ -40,6 +41,8 @@ let {
   measurementKey?: string
   coordinatesInLocationControl?: boolean
   locationControl?: Snippet<[Snippet?]>
+  /** Centre the supplied review heading independently of trailing toolbar actions. */
+  centerLocationControl?: boolean
   locationActions?: Snippet
   toolbarControls?: Snippet
   toolbarInfo?: Snippet
@@ -352,9 +355,11 @@ function measureToolbar(
       </div>
     {/if}
     <div
-      class="flex shrink-0 items-center gap-1 empty:hidden {singleRowToolbar
-        ? ''
-        : 'ml-auto'} {singleRowToolbar && toolbarWidth > 0 && toolbarWidth < 640
+      class="flex shrink-0 items-center gap-1 empty:hidden {centerLocationControl
+        ? 'absolute top-1/2 right-6 -translate-y-1/2'
+        : ''} {singleRowToolbar ? '' : 'ml-auto'} {singleRowToolbar &&
+      toolbarWidth > 0 &&
+      toolbarWidth < 640
         ? 'col-start-2 row-start-2'
         : ''}"
       data-address-toolbar-settings
@@ -379,7 +384,11 @@ function measureToolbar(
       {@render toolbarInfo?.()}
     </div>
     {#if showLookup && (isEditing || sourceId) && (!isEditing || !showCoordinates)}
-      <div class="shrink-0">
+      <div
+        class={centerLocationControl
+          ? 'absolute top-1/2 right-6 -translate-y-1/2'
+          : 'shrink-0'}
+      >
         <div class="text-foreground inline-flex items-center">
           <SimpleTooltip>
             {#snippet trigger()}

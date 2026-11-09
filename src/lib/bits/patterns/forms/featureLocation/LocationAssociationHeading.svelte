@@ -11,10 +11,15 @@ import SearchIcon from 'virtual:icons/proicons/search'
 </script>
 
 <header class="min-w-0 flex-1 space-y-1 text-center" data-association-heading>
-  <div class="flex items-center justify-center gap-2">
-    <h2 class="text-base font-semibold sm:text-lg">{m.association_title()}</h2>
+  <div
+    class="grid grid-cols-[1rem_minmax(0,auto)_1rem] items-center justify-center gap-2"
+  >
+    <h2 class="col-start-2 text-base font-semibold sm:text-lg">
+      {m.association_title()}
+    </h2>
     <SimpleTooltip
       showArrow={true}
+      triggerClass="col-start-3 w-4"
       triggerProps={{ 'aria-label': m.association_help_title(), role: 'button' }}
       contentClass="w-[21rem] max-w-[calc(100vw-2rem)] p-4 text-left"
     >

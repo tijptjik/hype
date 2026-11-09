@@ -55,6 +55,7 @@ let {
   identityControls,
   identityInfo,
   locationControl,
+  centerLocationControl = false,
   coordinatesInLocationControl = false,
   displayAddressInToolbar = false,
   locationActions,
@@ -103,6 +104,7 @@ let {
   coordinatesInLocationControl?: boolean
   displayAddressInToolbar?: boolean
   locationControl?: Snippet<[Snippet?]>
+  centerLocationControl?: boolean
   toolbarControls?: Snippet
   toolbarInfo?: Snippet
   locationActions?: Snippet
@@ -608,6 +610,7 @@ $effect(() => {
   measurementCoordinates={expandedCoordinatesControl}
   measurementKey={`${getAddressDisplay(address, getLocaleKey(), divisions, locationKind)}:${Object.hasOwn(address.overrides[ADDRESS_LOCALES[getLocaleKey()]] ?? {}, 'formattedAddress')}`}
   singleRowToolbar={displayAddressInToolbar}
+  {centerLocationControl}
   locationControl={displayAddressInToolbar ? addressToolbar : locationControl}
   {coordinatesInLocationControl}
   {locationActions}
