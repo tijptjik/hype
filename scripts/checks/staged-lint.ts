@@ -126,6 +126,9 @@ export function checkStaged(cwd = process.cwd()): void {
         [
           biome,
           'check',
+          // Advisory warnings must not consume the diagnostic limit and hide blockers.
+          '--diagnostic-level=error',
+          '--max-diagnostics=none',
           '--no-errors-on-unmatched',
           '--files-ignore-unknown=true',
           ...paths,

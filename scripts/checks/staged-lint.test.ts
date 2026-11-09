@@ -76,6 +76,26 @@ describe('staged lint snapshot', () => {
     expect(readFileSync(join(root, 'a space/config.jsonc'), 'utf8')).toBe('{"value":3}')
   })
 
+  test('shows blocking errors without burying them beneath advisory warnings', () => {
+    const root = fixture()
+    write(
+      root,
+      'warnings.ts',
+      'const value: string | null = null\nconsole.log(value!)\n',
+    )
+    write(root, 'broken.json', '{"value":2}')
+    git(root, ['add', 'warnings.ts', 'broken.json'])
+    let diagnostic = ''
+    try {
+      checkStaged(root)
+    } catch (error) {
+      diagnostic = String(error)
+    }
+    expect(diagnostic).toContain('broken.json')
+    expect(diagnostic).toContain('format')
+    expect(diagnostic).not.toContain('noNonNullAssertion')
+  })
+
   test('checks HTML instead of silently omitting its extension', () => {
     const root = fixture()
     write(root, 'example.html', '<img src="example.png">')
