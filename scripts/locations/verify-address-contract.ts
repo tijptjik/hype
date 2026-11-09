@@ -11,7 +11,7 @@ import {
   LocalAddressUnitI18nSchema,
   LocalLocationAddressSchema,
   ADDRESS_BLOCK_TYPES,
-  ADDRESS_GRANULARITIES,
+  ADDRESS_SCOPES,
   ADDRESS_UNIT_TYPES,
   ADDRESS_FLOOR_TYPES,
 } from '../../src/lib/addresses/localLocationAddress'
@@ -96,11 +96,7 @@ sameKeys(
 )
 for (const [file, name, values] of [
   [source('libs/address/src/content.ts'), 'ADDRESS_BLOCK_TYPES', ADDRESS_BLOCK_TYPES],
-  [
-    source('libs/address/src/content.ts'),
-    'ADDRESS_GRANULARITIES',
-    ADDRESS_GRANULARITIES,
-  ],
+  [source('libs/address/src/content.ts'), 'ADDRESS_SCOPES', ADDRESS_SCOPES],
   [source('libs/address/src/content.ts'), 'ADDRESS_UNIT_TYPES', ADDRESS_UNIT_TYPES],
   [source('libs/address/src/content.ts'), 'ADDRESS_FLOOR_TYPES', ADDRESS_FLOOR_TYPES],
 ] as const) {
@@ -113,5 +109,5 @@ for (const [file, name, values] of [
   assert.deepEqual([...values], found, name)
 }
 console.log(
-  'Verified SaanSeoi 2D/3D content keys and all four enum vocabularies; identity and provenance exclusions are explicit.',
+  'Verified SaanSeoi 2D/3D content keys and all four address enum vocabularies; identity and provenance exclusions are explicit.',
 )

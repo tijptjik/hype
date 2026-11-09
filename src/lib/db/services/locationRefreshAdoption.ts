@@ -1,3 +1,5 @@
+import { retainResolvedAddress } from './addressCanonical'
+import { proposeLocationPlacement, decideLocationPlacement } from './locationPlacement'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -22,7 +24,7 @@ export type LocationRefreshAdoptionResult = {
   status: 'processed' | 'review' | 'conflict' | 'superseded' | 'unlinked'
   geometryChanged: boolean
   proposalId?: string
-  reason?: 'publication-order' | 'publication-evidence'
+  reason?: 'publication-order' | 'publication-evidence' | 'sync-opt-out'
   groups: Partial<Record<Group, GroupResult>>
 }
 
@@ -50,6 +52,17 @@ export async function adoptRefreshedLocationForFeature(
     geometryChanged: false,
     groups: {},
   }
+  // Explicit Feature opt-outs remain independent when another Feature links a shared Location.
+  const optedOut = await db.get<{ manual: number }>(
+    sql`SELECT COALESCE(json_extract(addressMeta,'$.address.association.mode')='manual',0) manual FROM feature WHERE id=${input.featureId}`,
+  )
+  if (optedOut?.manual)
+    return { ...result, status: 'processed', reason: 'sync-opt-out' }
+  input = {
+    ...input,
+    guard: sql`${input.guard} AND EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId}
+    AND COALESCE(json_extract(addressMeta,'$.address.association.mode'),'')!='manual')`,
+  }
   /** Read ownership before work. @returns Whether the run fence is currently satisfied. */
   const ownsRun = async (): Promise<boolean> => {
     const row = await db.get<{ owned: number }>(
@@ -69,7 +82,7 @@ export async function adoptRefreshedLocationForFeature(
   > =>
     db
       .select({
-        revision: featureLocation.revision,
+        revision: featureLocation.version,
         modifiedAt: feature.modifiedAt,
         factsRevisionId: featureLocation.factsRevisionId,
         locationRevisionId: featureLocation.locationRevisionId,
@@ -128,13 +141,13 @@ export async function adoptRefreshedLocationForFeature(
     ),
   )
   try {
-    const publication = readLocationPublicationMetadata(candidate?.payload.meta)
+    const publication = readLocationPublicationMetadata(candidate?.rawSource.meta)
     if (
       acceptedSources.some(source => {
         if (!source) return true
         if (source.id === input.candidateRevisionId) return false
         const transition = compareLocationPublications(
-          readLocationPublicationMetadata(source.payload.meta),
+          readLocationPublicationMetadata(source.rawSource.meta),
           publication,
         )
         if (transition === 'forward') return false
@@ -143,9 +156,12 @@ export async function adoptRefreshedLocationForFeature(
         return !(
           transition === 'unchanged' &&
           source.snapshotId === candidate?.snapshotId &&
-          source.payload.resource != null &&
-          candidate?.payload.resource != null &&
-          equalLocationSourceRecord(source.payload.resource, candidate.payload.resource)
+          source.rawSource.resource != null &&
+          candidate?.rawSource.resource != null &&
+          equalLocationSourceRecord(
+            source.rawSource.resource,
+            candidate.rawSource.resource,
+          )
         )
       })
     )
@@ -199,6 +215,42 @@ export async function adoptRefreshedLocationForFeature(
     } else {
       result.groups[fieldGroup] = 'applied'
       result.geometryChanged ||= applied.geometryChanged
+    }
+  }
+  // The source's canonical address refresh is a separate accepted-placement decision.
+  if (candidate) {
+    const mirrored = await retainResolvedAddress(
+      db,
+      candidate.facts.location.address,
+      input.guard,
+    )
+    if (mirrored) {
+      const placement = await proposeLocationPlacement(db, {
+        featureId: input.featureId,
+        projectId: input.projectId,
+        addressRevisionId: mirrored.id,
+        additionalGuard: input.guard,
+      })
+      if (
+        placement &&
+        !placement.locationDecision &&
+        placement.evidence.plan.decision.location === 'adopt'
+      ) {
+        const applied = await decideLocationPlacement(db, {
+          featureId: input.featureId,
+          projectId: input.projectId,
+          proposalId: placement.id,
+          expectedRevision: placement.associationRevision,
+          expectedFeatureModifiedAt: placement.featureModifiedAt,
+          actorId: 'system:location-refresh',
+          reason: 'Follow verified canonical address correction',
+          decision: { action: 'move' },
+          automatic: true,
+          additionalGuard: input.guard,
+        })
+        if (applied.status === 'applied')
+          result.geometryChanged ||= applied.geometryChanged
+      }
     }
   }
   return result

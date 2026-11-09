@@ -142,8 +142,8 @@ export async function rehearseCuratedAdoption(
       'automatic',
       {
         ...DEFAULT_PROJECT_LOCATION_POLICY,
-        address: 'automatic',
-        unit: 'automatic',
+        address: 'follow',
+        unit: 'follow',
       },
       0,
     ),

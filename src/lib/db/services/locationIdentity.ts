@@ -20,6 +20,7 @@ import {
 } from '../schema/location'
 // SERVICES
 import { locationAliasIds } from './locationRedirect'
+import { locationRematchReviewGuard } from './locationRematchGuard'
 import {
   prepareOrganisationLocationWrite,
   readOrganisationLocation,
@@ -89,11 +90,11 @@ export async function acceptLocationIdentity(
     .select({
       id: locationRevision.id,
       facts: locationRevision.facts,
-      payload: locationRevision.payload,
+      rawSource: locationRevision.rawSource,
     })
     .from(locationRevision)
     .where(eq(locationRevision.locationId, input.locationId))
-    .orderBy(sql`${locationRevision.sequence} DESC`)
+    .orderBy(sql`${locationRevision.version} DESC`)
     .get()
   const prepared = await prepareSaanSeoiRevision(input.locationId, projection)
   const revisionId = `identityRevision_${nanoid(24)}`
@@ -127,14 +128,14 @@ export async function acceptLocationIdentity(
 
   const revisionGuard = input.expectedLatestRevisionId
     ? sql`(SELECT id FROM locationRevision WHERE locationId=${input.locationId}
-        ORDER BY sequence DESC LIMIT 1)=${input.expectedLatestRevisionId}`
-    : sql`(SELECT id FROM locationRevision WHERE locationId=${input.locationId} ORDER BY sequence DESC LIMIT 1) IS ${retained?.id ?? null}`
+        ORDER BY version DESC LIMIT 1)=${input.expectedLatestRevisionId}`
+    : sql`(SELECT id FROM locationRevision WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1) IS ${retained?.id ?? null}`
   const availabilityGuard = input.expectedSourceAvailability
     ? sql`(SELECT sourceAvailability FROM location WHERE id=${input.locationId})=${input.expectedSourceAvailability}`
     : sql`1`
   const historyId = nanoid(24)
   // The history tail fences ABA identity changes; the batch rechecks every captured input.
-  const guard = sql`NOT EXISTS (SELECT 1 FROM locationIdentityReview WHERE rejection IS NOT NULL AND id=${input.reviewId ?? null}) AND ${availabilityGuard} AND EXISTS (SELECT 1 FROM location WHERE id=${input.locationId}
+  const guard = sql`${input.reviewId ? locationRematchReviewGuard(input.reviewId) : sql`1`} AND NOT EXISTS (SELECT 1 FROM locationIdentityReview WHERE rejection IS NOT NULL AND id=${input.reviewId ?? null}) AND ${availabilityGuard} AND EXISTS (SELECT 1 FROM location WHERE id=${input.locationId}
     AND state=${input.expectedState} AND ssId IS ${input.expectedSsId}
     AND ownerOrganisationId IS ${input.expectedOwnerOrganisationId})
     AND NOT EXISTS (SELECT 1 FROM location WHERE ssId=${projection.ssId} AND id!=${input.locationId})
@@ -177,9 +178,9 @@ export async function acceptLocationIdentity(
     db
       .insert(locationRevision)
       .select(sql`SELECT ${revisionId},${input.locationId},
-      (SELECT coalesce(max(sequence),0)+1 FROM locationRevision WHERE locationId=${input.locationId}),
+      (SELECT coalesce(max(version),0)+1 FROM locationRevision WHERE locationId=${input.locationId}),
       'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
-      ${projection.snapshotId},${prepared.contentHash},${JSON.stringify(prepared.payload)},
+      ${projection.snapshotId},${prepared.contentHash},${JSON.stringify(prepared.rawSource)},
       ${serializeLocationFacts(prepared.facts, 'establishment')},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${revisionGuard}`)
       .onConflictDoNothing({ target: locationRevision.id }),
     db

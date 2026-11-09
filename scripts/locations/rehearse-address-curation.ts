@@ -274,7 +274,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
       .insert(currentSchema.addressPublicationState)
       .values({
         scopeId: snapshots.get('als')!,
-        snapshotId: snapshots.get('als')!,
+        addressSnapshotId: snapshots.get('als')!,
         divisionSnapshotId,
         status: 'current',
         publicationToken: 'official-rehearsal',
@@ -427,7 +427,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         {
           resourceType: 'address',
           variant: 'hkgov-dpo',
-          snapshotId: snapshots.get('als')!,
+          addressSnapshotId: snapshots.get('als')!,
         },
         { resourceType: 'address', variant: 'overture-places', snapshotId },
       ],
@@ -480,7 +480,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
     const projection = page.places[0]!
     assert.equal(projection.ssId, 'synthetic-canonical-place')
     assert.equal(projection.snapshotId, placeSnapshotId)
-    assert.equal(projection.facts.location.address.addressSnapshotId, snapshotId)
+    assert.equal(projection.facts.location.address.snapshotId, snapshotId)
     const { hydrateSaanSeoiPlaceAddress } = await import(
       '../../src/lib/locations/sourceAddress.ts'
     )
@@ -488,10 +488,10 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
 
     assert.equal(hydrated.facts.location.address.status, 'resolved')
     assert.equal(hydrated.facts.location.address.address2dId, resolution.addressId)
-    assert.equal(hydrated.facts.location.address.addressSnapshotId, snapshotId)
+    assert.equal(hydrated.facts.location.address.snapshotId, snapshotId)
     assert.equal(hydrated.issues.length, 0)
     assert.equal(requests.length, 2)
-    const evidence = hydrated.facts.location.address.records.data as {
+    const evidence = hydrated.facts.location.address.rawSource.data as {
       attributes: {
         i18n: Record<string, { formattedAddress: string }>
         sources: unknown[]
@@ -509,10 +509,10 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
       },
     ])
     const wrongSnapshot = structuredClone(projection)
-    wrongSnapshot.facts.location.address.addressSnapshotId = 'wrong-snapshot'
+    wrongSnapshot.facts.location.address.snapshotId = 'wrong-snapshot'
     const held = await hydrateSaanSeoiPlaceAddress(client as never, wrongSnapshot)
     assert.equal(held.facts.location.address.status, 'unresolved')
-    assert.deepEqual(held.payload.addressHydration, {
+    assert.deepEqual(held.rawSource.addressHydration, {
       status: 'review',
       reason: 'address-dependency-mismatch',
     })
@@ -602,7 +602,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         1,
       )
       const stored = hype
-        .query('SELECT facts FROM locationRevision ORDER BY sequence DESC LIMIT 1')
+        .query('SELECT facts FROM locationRevision ORDER BY version DESC LIMIT 1')
         .get() as {
         facts: string
       }

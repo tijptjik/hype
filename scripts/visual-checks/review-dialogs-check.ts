@@ -477,7 +477,7 @@ for (const [name, engine] of [
               .innerText()
           )
             .toLowerCase()
-            .includes('general')
+            .match(/general|catch-all/)
         )
           throw Error('Cover selection was not unique')
         await dialog

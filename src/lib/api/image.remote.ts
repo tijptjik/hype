@@ -32,7 +32,6 @@ import { imageUpload } from '#lib/db/schema/imageUpload.js'
 import {
   isSingleImageContext,
   stageImageUpload,
-  loadStagedImageUpload,
   discardStagedImageUpload,
   getUserImageUploadSnapshot,
   listImageUploadsForCleanup,
@@ -3121,54 +3120,5 @@ export const cleanupImageUploads = guardedCommand(
     if (ctx.user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
     await cleanupExpiredImageUploads(ctx)
     return { cleaned: true }
-  },
-)
-
-/** Attach a previously verified single-resource asset by identity.
- * @param params Image ID and its destination.
- * @returns Selected image envelope.
- * @remarks Authorization is rechecked; the original snapshot prevents stale attachment.
- */
-export const attachImageUpload = guardedCommand(
-  z.object({
-    imageId: z.string().min(1),
-    ctxType: z.enum(['user', 'project', 'organisation', 'hub']),
-    ctxId: z.string().min(1),
-    meta: z.object({ isAdminRequest: z.boolean().optional() }).optional(),
-  }),
-  async (params, ctx) => {
-    await assertPermissionsToCreateImage(
-      ctx.db,
-      ctx.user,
-      ctx.isAdminRequest,
-      ctx.userRoles,
-      params.ctxType as ImageContextResource,
-      params.ctxId,
-    )
-    const receipt = await loadStagedImageUpload(
-      ctx.db,
-      params.imageId,
-      ctx.user.id,
-      params.ctxType,
-      params.ctxId,
-    )
-    const previous =
-      params.ctxType === 'user'
-        ? null
-        : await loadCurrentResourceImage(
-            ctx.db,
-            params.ctxType as ImageContextResource,
-            params.ctxId,
-          )
-    const data = await completeSingleImageUpload(ctx, receipt, 'immediate')
-    if (previous && previous.id !== data.image.id)
-      ctx.event.locals.platform?.context.waitUntil(
-        cleanupDetachedResourceImage({
-          db: ctx.db,
-          platform: ctx.event.locals.platform,
-          image: previous,
-        }),
-      )
-    return { data }
   },
 )

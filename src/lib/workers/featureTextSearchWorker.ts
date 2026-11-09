@@ -1,3 +1,5 @@
+// SEARCH
+import { foldFeatureSearchText } from '#lib/features/search.js'
 import type {
   FeatureTextSearchIndexItem,
   FeatureTextSearchWorkerRequest,
@@ -8,7 +10,7 @@ let indexedItems: FeatureTextSearchIndexItem[] = []
 let indexedVersion = 0
 
 function normalize(value: string): string {
-  return value.trim().toLowerCase()
+  return foldFeatureSearchText(value.trim())
 }
 
 function matchesQuery(
@@ -18,10 +20,11 @@ function matchesQuery(
   if (normalizedQuery === '') return true
 
   return (
-    item.title?.toLowerCase().includes(normalizedQuery) === true ||
-    item.description?.toLowerCase().includes(normalizedQuery) === true ||
-    item.displayAddress?.toLowerCase().includes(normalizedQuery) === true ||
-    item.contributor?.toLowerCase().includes(normalizedQuery) === true
+    foldFeatureSearchText(item.id).includes(normalizedQuery) ||
+    foldFeatureSearchText(item.title ?? '').includes(normalizedQuery) ||
+    foldFeatureSearchText(item.description ?? '').includes(normalizedQuery) ||
+    foldFeatureSearchText(item.displayAddress ?? '').includes(normalizedQuery) ||
+    foldFeatureSearchText(item.contributor ?? '').includes(normalizedQuery)
   )
 }
 

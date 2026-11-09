@@ -1,4 +1,11 @@
-import { buildingAt, type SelectedBuilding } from './buildingAddress.js'
+import {
+  buildingStreetsAt,
+  buildingNamesAt,
+  streetNumberAt,
+  buildingAt,
+  type SelectedBuilding,
+} from './buildingAddress.js'
+import { nearbyStreetHints, type MapStreetHint } from './nearbyStreets.js'
 import type {
   CameraOptions,
   FitBoundsOptions,
@@ -10,6 +17,10 @@ export type MapController = {
   projectToViewport?: (
     coordinates: [number, number],
   ) => { left: number; top: number } | null
+  getBuildingStreetsAt?: (point: [number, number]) => Promise<string[]>
+  getBuildingNamesAt?: (point: [number, number]) => Promise<string[]>
+  getStreetNumberAt?: (point: [number, number]) => Promise<string | null>
+  getNearbyStreetHints?: (point: [number, number]) => MapStreetHint[]
   getBuildingAt?: (point: [number, number]) => Promise<SelectedBuilding | null>
   getCamera: () => {
     center: [number, number]
@@ -52,6 +63,22 @@ export const createMapController = (
       const point = map.project(coordinates)
       const rect = map.getContainer().getBoundingClientRect()
       return { left: rect.left + point.x, top: rect.top + point.y }
+    },
+    getBuildingStreetsAt: async point => {
+      const map = getMap()
+      return map ? buildingStreetsAt(map, point) : []
+    },
+    getBuildingNamesAt: async point => {
+      const map = getMap()
+      return map ? buildingNamesAt(map, point) : []
+    },
+    getStreetNumberAt: async point => {
+      const map = getMap()
+      return map ? streetNumberAt(map, point) : null
+    },
+    getNearbyStreetHints: point => {
+      const map = getMap()
+      return map ? nearbyStreetHints(map, point) : []
     },
     getBuildingAt: async point => {
       const map = getMap()

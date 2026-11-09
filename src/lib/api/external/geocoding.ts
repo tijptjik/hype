@@ -3,8 +3,8 @@ import type { Polygon, MultiPolygon } from 'geojson'
 import { z } from 'zod'
 // SERVICES
 import { applyAddressAbbreviations } from '#lib/utils/geocoding.js'
+import { recoverAddressNumber } from '#lib/addresses/recoverAddressNumber.js'
 import { addressName } from '#lib/addresses/formatting.js'
-
 // TYPES
 import type { ParsedReverseGeocodeResult } from '#lib/utils/geocoding.types.js'
 import {
@@ -23,6 +23,8 @@ import type { LocaleKey } from '#lib/types.js'
 // - parseGeocodeResult
 // 3. SAANSEOI REQUESTS
 // - geocodeAddress
+// - geocodeAddressCandidates
+// - geocodeAddressPage
 // - loadGeocodedAddressUnits
 // ---
 
@@ -235,8 +237,8 @@ export function parseGeocodeResult(
         ? 'resolved'
         : 'unresolved',
     address2dId: link.id,
-    addressSnapshotId: snapshotId,
-    records: {
+    snapshotId: snapshotId,
+    rawSource: {
       data: resource,
       included: response.included,
       meta: response.meta ?? {},
@@ -245,7 +247,7 @@ export function parseGeocodeResult(
   }
   return {
     addressMeta: {
-      address: canonical,
+      address: recoverAddressNumber(canonical),
       saanseoiAddressId: link.id,
       ...('lng' in input
         ? {
@@ -276,10 +278,14 @@ export function parseGeocodeResult(
  * @remarks Calls SaanSeoi directly from the browser using its whitelisted Origin.
  * No API key, Hype proxy, or government-provider fallback is used. HTTP/schema failures throw.
  */
-export async function geocodeAddressCandidates(
+async function requestGeocodeCandidates(
   input: GeocodeInput,
-  options: GeocodeOptions = {},
-): Promise<ParsedReverseGeocodeResult[]> {
+  options: GeocodeOptions & {
+    paginate?: boolean
+    cursor?: string
+    releaseSet?: string
+  } = {},
+): Promise<{ rows: ParsedReverseGeocodeResult[]; meta: Record<string, unknown> }> {
   const validated = z
     .union([
       z
@@ -304,6 +310,9 @@ export async function geocodeAddressCandidates(
     ...(options.footprint && 'lng' in validated
       ? { footprint: JSON.stringify(options.footprint) }
       : {}),
+    ...(options.paginate ? { paginate: 'true', locatedOnly: 'true' } : {}),
+    ...(options.cursor ? { cursor: options.cursor } : {}),
+    ...(options.releaseSet ? { releaseSet: options.releaseSet } : {}),
     profile: 'full',
     locales: 'en,zh-hant,zh-hans',
     limit: String(
@@ -331,7 +340,7 @@ export async function geocodeAddressCandidates(
       ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)])
       : AbortSignal.timeout(30000),
   })
-  if (!response.ok) throw new Error(`SaanSeoi geocoding failed (${response.status})`)
+  if (!response.ok) throw new GeocodeRequestError(response.status)
   const body: unknown = await response.json()
   if (options.footprint) {
     const parsed = responseSchema.parse(body)
@@ -342,23 +351,79 @@ export async function geocodeAddressCandidates(
           candidate.attributes.status === 'ambiguous',
       )
     )
-      return []
+      return { rows: [], meta: parsed.meta ?? {} }
   }
   const parsed = responseSchema.parse(body)
   // Keep every linked candidate available for explicit selection in the editor.
-  return parsed.data.flatMap(candidate =>
-    (candidate.relationships.address?.data ?? []).flatMap(link => {
-      const result = parseGeocodeResult(
-        {
-          ...parsed,
-          data: [{ ...candidate, relationships: { address: { data: [link] } } }],
-        },
-        validated,
-        options.candidateCoordinates,
-      )
-      return result ? [result] : []
-    }),
-  )
+  return {
+    meta: parsed.meta ?? {},
+    rows: parsed.data.flatMap(candidate =>
+      (candidate.relationships.address?.data ?? []).flatMap(link => {
+        const result = parseGeocodeResult(
+          {
+            ...parsed,
+            data: [{ ...candidate, relationships: { address: { data: [link] } } }],
+          },
+          validated,
+          options.candidateCoordinates,
+        )
+        return result ? [result] : []
+      }),
+    ),
+  }
+}
+
+export class GeocodeRequestError extends Error {
+  constructor(public readonly status: number) {
+    super(`SaanSeoi geocoding failed (${status})`)
+  }
+}
+export type GeocodeAddressPage = {
+  rows: ParsedReverseGeocodeResult[]
+  total: number
+  nextCursor: string | null
+  releaseSet: string
+}
+/** Fetch a single bounded geocoding result set for existing address and pin callers.
+ * @param input Address text or WGS84 pin.
+ * @param options Public transport and lookup constraints.
+ * @returns Ranked candidates for explicit selection, without creating a search session.
+ */
+export async function geocodeAddressCandidates(
+  input: GeocodeInput,
+  options: GeocodeOptions = {},
+): Promise<ParsedReverseGeocodeResult[]> {
+  return (await requestGeocodeCandidates(input, options)).rows
+}
+/** Fetch or continue a publication-pinned Address search without repeating its ranking.
+ * @param input Original address/name query.
+ * @param options Opaque cursor and publication returned by the previous page, with public transport options.
+ * @returns A page, exact match count and its next cursor; expiry throws status 410 for explicit restart.
+ */
+export async function geocodeAddressPage(
+  input: { address: string },
+  options: GeocodeOptions & { cursor?: string; releaseSet?: string } = {},
+): Promise<GeocodeAddressPage> {
+  const page = await requestGeocodeCandidates(input, {
+    ...options,
+    paginate: true,
+    limit: options.limit ?? 20,
+  })
+  const meta = z
+    .object({
+      total: z.number().int().nonnegative(),
+      nextCursor: z.string().nullable(),
+      release: z.object({ apiReleaseSet: z.string().min(1) }),
+    })
+    .parse(page.meta)
+  if (options.releaseSet && meta.release.apiReleaseSet !== options.releaseSet)
+    throw new Error('Address search publication changed')
+  return {
+    rows: page.rows,
+    total: meta.total,
+    nextCursor: meta.nextCursor,
+    releaseSet: meta.release.apiReleaseSet,
+  }
 }
 
 /** Loads the selected address's structured unit inventory from the same publication.
@@ -371,7 +436,7 @@ export async function loadGeocodedAddressUnits(
   address: FeatureAddress,
   options: GeocodeOptions = {},
 ): Promise<FeatureAddress> {
-  const metadata = address.source.records.meta as
+  const metadata = address.source.rawSource.meta as
     | {
         apiReleaseSet?: unknown
         release?: { apiReleaseSet?: unknown }
@@ -382,7 +447,7 @@ export async function loadGeocodedAddressUnits(
     metadata?.addressRelease?.apiReleaseSet ??
     metadata?.release?.apiReleaseSet ??
     metadata?.apiReleaseSet
-  if (!address.source.address2dId || !address.source.addressSnapshotId) return address
+  if (!address.source.address2dId || !address.source.snapshotId) return address
   if (typeof releaseSet !== 'string') throw new Error('Address publication is missing')
   const url = new URL(
     `/addresses/v0.1/${encodeURIComponent(address.source.address2dId)}`,
@@ -418,7 +483,7 @@ export async function loadGeocodedAddressUnits(
     .parse(raw)
   if (
     parsed.data.id !== address.source.address2dId ||
-    parsed.data.attributes.snapshotId !== address.source.addressSnapshotId ||
+    parsed.data.attributes.snapshotId !== address.source.snapshotId ||
     parsed.meta.apiReleaseSet !== releaseSet
   )
     throw new Error('Address inventory publication mismatch')
@@ -426,9 +491,9 @@ export async function loadGeocodedAddressUnits(
     ...address,
     source: {
       ...address.source,
-      records: {
+      rawSource: {
         ...z.record(z.string(), z.unknown()).parse(raw),
-        geocoding: address.source.records,
+        geocoding: address.source.rawSource,
       },
     },
   }

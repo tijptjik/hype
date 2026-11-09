@@ -1,9 +1,11 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
 import { Button } from '#lib/bits/core/index.js'
-import { TextInput } from '#lib/bits/custom/form/index.js'
+import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
 // API
 import { getFeatureLocation } from '#lib/api/location.remote.js'
 import {
@@ -14,6 +16,18 @@ import {
   acceptFeatureLocationReview,
   rejectFeatureLocationReview,
 } from '#lib/api/locationReview.remote.js'
+// COMPONENTS
+import AddressBlocks from '../formFeatureAddress/AddressBlocks.svelte'
+import { positionAddress } from '#lib/addresses/blocks.js'
+import CheckIcon from 'virtual:icons/proicons/checkmark-circle'
+import RejectIcon from 'virtual:icons/proicons/cancel-circle'
+import LocationIcon from 'virtual:icons/proicons/location'
+import RefreshIcon from 'virtual:icons/lucide/refresh-cw'
+import type {
+  LocationReviewActions,
+  LocationReviewPresentation,
+} from '#lib/locations/reviewPresentation.js'
+import PlacementReviewSection from './PlacementReviewSection.svelte'
 // DOMAIN
 import { lifecycleLabel } from '#lib/locations/lifecycle.i18n.js'
 import { lifecycleStatus } from '#lib/locations/lifecycle.js'
@@ -27,17 +41,25 @@ type Page = Awaited<ReturnType<typeof listFeatureLocationReviews>>
 type Group = 'facts' | 'location'
 let {
   featureId,
+  proposalId,
+  onlyGroup,
   associationRevision,
   isLocal = false,
   modifiedAt,
   isDirty,
   onCommitted,
+  onActionsChange,
+  onPresentationChange,
 }: {
   featureId: string
+  proposalId?: string
+  onlyGroup?: Group
   isLocal?: boolean
   associationRevision: string
   modifiedAt: string
   isDirty: boolean
+  onActionsChange?: LocationReviewActions
+  onPresentationChange?: (value: LocationReviewPresentation) => void
   onCommitted: () => Promise<void>
 } = $props()
 let page = $state<Page | null>(null)
@@ -46,6 +68,76 @@ let detail = $state<Review | null>(null)
 let busy = $state(false)
 let failure = $state('')
 let reason = $state('')
+
+// The route owns the header; review components supply guarded actions and immutable map evidence.
+$effect(() => {
+  const plan = detail?.proposal.evidence.plan
+  const placement = detail?.proposal.evidence.placement
+  if (plan?.source)
+    onPresentationChange?.({
+      before: {
+        ...plan.source.beforeLocation,
+        geometry:
+          placement?.beforeGeometry &&
+          typeof placement.beforeGeometry === 'object' &&
+          'coordinates' in placement.beforeGeometry
+            ? (placement.beforeGeometry as LocationPosition['geometry'])
+            : plan.source.beforeLocation.geometry,
+      },
+      after: {
+        ...plan.source.candidate.location,
+        geometry: placement?.geometry ?? plan.source.candidate.location.geometry,
+      },
+    })
+  if (!onActionsChange || placement) return
+  const group = onlyGroup ?? 'location'
+  const decided = detail?.decisions.some(item => item.fieldGroup === group)
+  const disabled =
+    busy || isDirty || !detail || !associationRevision || !reason.trim() || decided
+  onActionsChange([
+    {
+      text: m.location_review_refresh_short(),
+      icon: RefreshIcon,
+      color: 'neutral',
+      style: 'ghost',
+      disabled: busy || isDirty || !detail || decided,
+      onClick: () => void reevaluate(),
+      attrs: { title: m.location_review_refresh_help() },
+    },
+    {
+      text: m.location_review_reject(),
+      icon: RejectIcon,
+      color: 'error',
+      style: 'ghost',
+      disabled,
+      onClick: () => void decide(group, 'reject'),
+    },
+    {
+      text: m.location_review_accept(),
+      icon: CheckIcon,
+      color: 'success',
+      style: 'ghost',
+      disabled: disabled || blocked(group),
+      onClick: () => void decide(group, 'accept'),
+    },
+  ])
+})
+
+// Opening a relevant task loads its pending comparison without another manual history request.
+$effect(() => {
+  const currentFeature = featureId
+  const selectedProposal = proposalId
+  untrack(() => {
+    if (selectedProposal) {
+      void select(selectedProposal)
+      return
+    }
+    void load().then(() => {
+      const pending = page?.reviews.find(review => review.decidedGroups < 2)
+      if (featureId === currentFeature && pending) void select(pending.id)
+    })
+  })
+})
 
 /** Load a bounded page, keeping the settled list visible while the next page arrives. */
 async function load(beforeRow?: number): Promise<void> {
@@ -270,8 +362,14 @@ function blocked(group: Group): boolean {
 }
 </script>
 
-<section class="space-y-4" aria-label={m.location_review_title()}>
-  <div class="space-y-4 py-4">
+<section class="bits-form__section" aria-label={m.location_review_title()}>
+  <SectionHeader
+    title={onlyGroup === 'facts'
+      ? m.location_review_facts()
+      : m.location_reset_location()}
+    icon={LocationIcon}
+  />
+  <div class="flex flex-col gap-5 px-6 pt-5 pb-4">
     {#if isLocal}
       <Button
         text={m.location_address_review_latest()}
@@ -280,71 +378,91 @@ function blocked(group: Group): boolean {
       />
     {/if}
 
-    <Button
-      type="button"
-      text={m.location_review_load()}
-      disabled={busy}
-      onClick={() => void load()}
-    />
-    {#if page}
-      {#if !page.reviews.length}
-        <p class="text-muted-foreground text-sm">{m.location_review_empty()}</p>
-      {/if}
-      <div class="flex flex-wrap gap-2">
-        {#each page.reviews as review}
-          <Button
-            type="button"
-            text={new Date(review.createdAt).toLocaleString(undefined, {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            }) +
-              ' · ' +
-              review.decidedGroups +
-              '/2'}
-            attrs={{ 'aria-pressed': detail?.proposal.id === review.id }}
-            disabled={busy}
-            onClick={() => void select(review.id)}
-          />
-        {/each}
-      </div>
-      {#if page.nextCursor}
+    <details
+      class="border-border text-muted-foreground order-last border-t pt-4 text-sm"
+    >
+      <summary class="cursor-pointer">{m.location_review_history()}</summary>
+      <div class="space-y-3 py-3">
         <Button
           type="button"
-          text={m.location_review_older()}
+          text={m.location_review_load_history()}
           disabled={busy}
-          onClick={() => void load(page?.nextCursor ?? undefined)}
+          onClick={() => void load()}
         />
-      {/if}
-    {/if}
+        {#if page}
+          {#if !page.reviews.length}
+            <p class="text-muted-foreground text-sm">{m.location_review_empty()}</p>
+          {/if}
+          <div class="flex flex-wrap gap-2">
+            {#each page.reviews as review}
+              <Button
+                type="button"
+                text={m.location_review_history_entry({
+                  date: new Date(review.createdAt).toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                  count: String(review.decidedGroups),
+                })}
+                attrs={{ 'aria-pressed': detail?.proposal.id === review.id }}
+                disabled={busy}
+                onClick={() => void select(review.id)}
+              />
+            {/each}
+          </div>
+          {#if page.nextCursor}
+            <Button
+              type="button"
+              text={m.location_review_older()}
+              disabled={busy}
+              onClick={() => void load(page?.nextCursor ?? undefined)}
+            />
+          {/if}
+        {/if}
+      </div>
+    </details>
     {#if detail}
       {@const plan = detail.proposal.evidence.plan}
-      <div class="border-border bg-panel space-y-4 rounded-xl border p-4">
-        <p class="text-muted-foreground text-sm">{m.location_review_overrides()}</p>
+      <div class="space-y-5">
+        {#if !onActionsChange}
+          <p class="text-muted-foreground text-sm">{m.location_review_overrides()}</p>
+        {/if}
         {#if isDirty}
           <p class="text-sm">{m.location_review_clean_form()}</p>
         {/if}
-        <Button
-          type="button"
-          text={m.location_review_reevaluate()}
-          disabled={busy ||
-            isDirty ||
-            !associationRevision ||
-            detail.decisions.length === 2}
-          onClick={() => void reevaluate()}
-        />
-        {#if plan.source && plan.candidate}
-          <TextInput
-            id="location-review-reason"
-            name=""
-            label={m.location_review_reason()}
-            value={reason}
-            isEditing={!busy}
-            inputAttrs={{ maxlength: 2000 }}
-            onValueChange={value => (reason = value)}
+        {#if !onActionsChange}
+          <Button
+            type="button"
+            text={m.location_review_refresh_short()}
+            disabled={busy ||
+              isDirty ||
+              !associationRevision ||
+              detail.decisions.length === 2}
+            onClick={() => void reevaluate()}
+            attrs={{ 'data-tooltip': m.location_review_refresh_help() }}
           />
-          {#each ['facts', 'location'] as group}
+        {/if}
+        {#if detail.proposal.evidence.placement}
+          {#key detail.proposal.id}
+            <PlacementReviewSection
+              {featureId}
+              proposalId={detail.proposal.id}
+              placement={detail.proposal.evidence.placement}
+              beforeAddress={plan.source
+                ? positionAddress(plan.source.beforeLocation)
+                : undefined}
+              {associationRevision}
+              {modifiedAt}
+              {isDirty}
+              decided={detail.decisions.some(d => d.fieldGroup === 'location')}
+              {onCommitted}
+              {onActionsChange}
+            />
+          {/key}
+        {:else if plan.source && plan.candidate}
+          {#each onlyGroup ? [onlyGroup] : ['facts', 'location'] as group}
             {@const fieldGroup = group as Group}
             {@const decision = detail.decisions.find(
               value => value.fieldGroup === group,
@@ -355,68 +473,82 @@ function blocked(group: Group): boolean {
             }}
             {@const previousRows = rows(before, fieldGroup)}
             {@const nextRows = rows(plan.source.candidate, fieldGroup)}
-            <div class="border-border space-y-3 rounded-xl border p-4">
-              <h3 class="font-semibold">
-                {group === 'facts'
-                  ? m.location_review_facts()
-                  : m.location_reset_location()}
-              </h3>
-              <div class="overflow-x-auto">
-                <table class="w-full table-fixed text-left text-sm">
-                  <thead>
-                    <tr>
-                      <th class="w-1/5 p-2"></th>
-                      <th class="p-2">{m.location_review_before()}</th>
-                      <th class="p-2">{m.location_review_candidate()}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {#each previousRows as row, index}
-                      <tr class="border-border border-t align-top">
-                        <th class="p-2 font-medium break-words">{row.label}</th>
-                        <td class="p-2 break-words">{row.value}</td>
-                        <td class="p-2 break-words">{nextRows[index].value}</td>
+            <div class="space-y-4">
+              {#if !onlyGroup}
+                <h3 class="font-semibold">
+                  {group === 'facts'
+                    ? m.location_review_facts()
+                    : m.location_reset_location()}
+                </h3>
+              {/if}
+              {#if fieldGroup === 'location'}
+                <AddressBlocks
+                  before={positionAddress(before.location)}
+                  address={positionAddress(plan.source.candidate.location)}
+                />
+              {:else}
+                <div class="overflow-x-auto">
+                  <table class="w-full table-fixed text-left text-sm">
+                    <thead>
+                      <tr>
+                        <th class="w-1/5 p-2"></th>
+                        <th class="p-2">{m.location_review_before()}</th>
+                        <th class="p-2">{m.location_review_candidate()}</th>
                       </tr>
-                    {/each}
-                    {#if fieldGroup === 'facts'}
-                      <tr class="border-border border-t align-top">
-                        <th class="p-2 font-medium break-words">
-                          {m.location_review_category()}
-                        </th>
-                        <td class="p-2 break-words">
-                          {categories(plan.source.establishmentBefore)}
-                        </td>
-                        <td class="p-2 break-words">
-                          {categories(plan.source.establishmentCandidate)}
-                        </td>
-                      </tr>
-                      <tr class="border-border border-t align-top">
-                        <th class="p-2 font-medium break-words">
-                          {m.location_review_operating_status()}
-                        </th>
-                        <td class="p-2 break-words">
-                          {plan.source.establishmentBefore?.operatingStatus ?? '—'}
-                        </td>
-                        <td class="p-2 break-words">
-                          {plan.source.establishmentCandidate?.operatingStatus ?? '—'}
-                        </td>
-                      </tr>
-                    {/if}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {#each previousRows as row, index}
+                        <tr class="border-border border-t align-top">
+                          <th class="p-2 font-medium break-words">{row.label}</th>
+                          <td class="p-2 break-words">{row.value}</td>
+                          <td class="p-2 break-words">{nextRows[index].value}</td>
+                        </tr>
+                      {/each}
+
+                      {#if fieldGroup === 'facts'}
+                        <tr class="border-border border-t align-top">
+                          <th class="p-2 font-medium break-words">
+                            {m.location_review_category()}
+                          </th>
+                          <td class="p-2 break-words">
+                            {categories(plan.source.establishmentBefore)}
+                          </td>
+                          <td class="p-2 break-words">
+                            {categories(plan.source.establishmentCandidate)}
+                          </td>
+                        </tr>
+                        <tr class="border-border border-t align-top">
+                          <th class="p-2 font-medium break-words">
+                            {m.location_review_operating_status()}
+                          </th>
+                          <td class="p-2 break-words">
+                            {plan.source.establishmentBefore?.operatingStatus ?? '—'}
+                          </td>
+                          <td class="p-2 break-words">
+                            {plan.source.establishmentCandidate?.operatingStatus ?? '—'}
+                          </td>
+                        </tr>
+                      {/if}
+                    </tbody>
+                  </table>
+                </div>
+              {/if}
               <details class="text-sm">
                 <summary class="cursor-pointer">
                   {m.location_review_effective()}
                 </summary>
-                <dl class="mt-2 space-y-2">
-                  {#each rows(plan.candidate, fieldGroup) as row}
-                    <div>
-                      <dt class="font-medium">{row.label}</dt>
-                      <dd class="break-words">{row.value}</dd>
-                    </div>
-                  {/each}
-                </dl>
+                {#if fieldGroup === 'location'}
+                  <AddressBlocks address={positionAddress(plan.candidate.location)} />
+                {:else}
+                  <dl class="mt-2 space-y-2">
+                    {#each rows(plan.candidate, fieldGroup) as row}
+                      <div>
+                        <dt class="font-medium">{row.label}</dt>
+                        <dd class="break-words">{row.value}</dd>
+                      </div>
+                    {/each}
+                  </dl>
+                {/if}
               </details>
               {#if decision}
                 <p class="font-medium">
@@ -429,27 +561,42 @@ function blocked(group: Group): boolean {
                 {#if blocked(fieldGroup)}
                   <p class="text-sm">{m.location_review_dependencies()}</p>
                 {/if}
-                <div class="flex gap-2">
-                  <Button
-                    type="button"
-                    text={m.location_review_accept()}
-                    disabled={busy ||
-                      isDirty ||
-                      !associationRevision ||
-                      !reason.trim() ||
-                      blocked(fieldGroup)}
-                    onClick={() => void decide(fieldGroup, 'accept')}
-                  />
-                  <Button
-                    type="button"
-                    text={m.location_review_reject()}
-                    disabled={busy || isDirty || !associationRevision || !reason.trim()}
-                    onClick={() => void decide(fieldGroup, 'reject')}
-                  />
-                </div>
+                {#if !onActionsChange}
+                  <div class="flex gap-2">
+                    <Button
+                      type="button"
+                      text={m.location_review_accept()}
+                      disabled={busy ||
+                        isDirty ||
+                        !associationRevision ||
+                        !reason.trim() ||
+                        blocked(fieldGroup)}
+                      onClick={() => void decide(fieldGroup, 'accept')}
+                    />
+                    <Button
+                      type="button"
+                      text={m.location_review_reject()}
+                      disabled={busy ||
+                        isDirty ||
+                        !associationRevision ||
+                        !reason.trim()}
+                      onClick={() => void decide(fieldGroup, 'reject')}
+                    />
+                  </div>
+                {/if}
               {/if}
             </div>
           {/each}
+          <p class="text-muted-foreground text-sm">{m.location_review_reason_help()}</p>
+          <TextInput
+            id="location-review-reason"
+            name=""
+            label={m.location_review_reason()}
+            value={reason}
+            isEditing={!busy}
+            inputAttrs={{ maxlength: 2000 }}
+            onValueChange={value => (reason = value)}
+          />
         {:else}
           <p>{m.location_review_refresh_evidence()}</p>
         {/if}

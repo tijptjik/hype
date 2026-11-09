@@ -21,6 +21,7 @@ import { getFeatureQueryCounts } from './featureCounts.js'
 import { retryBusyRead } from './sqlite.js'
 import { featureAuthoringSQL } from './featureAuthoringProjection.js'
 import { featureLocationBrandsSQL } from './locationBrandProjection.js'
+import { featureLocationNamesSQL } from './locationNameProjection.js'
 import { featureLocationLifecycleSQL } from './locationLifecycleProjection.js'
 // SEARCH
 import { rankNearbyFeatures } from '#lib/features/nearby.js'
@@ -206,6 +207,7 @@ export async function queryFeatureIndex(
       with: getFeatureWithRelations('admin') as never,
       extras: {
         locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+        locationNames: featureLocationNamesSQL().as('locationNames'),
         authoring: featureAuthoringSQL().as('authoring'),
         locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
       },

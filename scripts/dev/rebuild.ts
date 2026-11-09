@@ -21,7 +21,6 @@ import { prepareMockSpatial } from './mock-spatial'
 export { prepareMockSpatial } from './mock-spatial'
 import { planBreadlineFeatures } from '../breadline/features'
 import {
-  planUsers,
   userPlanSql,
   type LegacyUser,
   type TargetIdentitySnapshot,
@@ -30,6 +29,9 @@ import { parseUserDecisions } from '../breadline/lib/user-decisions'
 import { applyRebuildAdoptions } from '../breadline/lib/target-adoption'
 import { planLocalLatentUsers } from '../breadline/lib/local-users'
 import { buildSyncSql } from '../sync-map-styles'
+import { reconcilePreparedUsers } from './reconcile-users'
+// TYPES
+import type { UserSyncLocalState } from '../breadline/lib/user-sync-contract'
 
 /**
  * Read matching inputs without exposing credentials or session data in receipts.
@@ -272,10 +274,65 @@ async function main(): Promise<void> {
     )
       throw new Error('Mismatched local identity seed')
     writeFileSync(resolve(directory, 'identity-seed.json'), JSON.stringify(state))
+    // A fresh production mirror needs production's accepted source state and decisions,
+    // including reviewed distinct-person phone overrides; retain them with this rebuild.
+    const manifest = JSON.parse(
+      readFileSync('.local/breadline/users/production/accepted-sync.json', 'utf8'),
+    ) as {
+      version: number
+      targetIdentity: string
+      acceptedState: string
+      decisions: string
+    }
+    const production = Bun.TOML.parse(readFileSync('wrangler.toml', 'utf8')) as {
+      env: {
+        production: { d1_databases: Array<{ binding: string; database_id: string }> }
+      }
+    }
+    const productionDb = production.env.production.d1_databases.filter(
+      row => row.binding === 'DB',
+    )
+    if (
+      manifest.version !== 1 ||
+      productionDb.length !== 1 ||
+      manifest.targetIdentity !== `production:${productionDb[0].database_id}`
+    )
+      throw new Error(
+        'Production user reconciliation baseline does not match the exported target',
+      )
+    const acceptedState = JSON.parse(
+      readFileSync(manifest.acceptedState, 'utf8'),
+    ) as UserSyncLocalState
+    if (
+      acceptedState.version !== 1 ||
+      !Array.isArray(acceptedState.rows) ||
+      acceptedState.checkpoint?.targetIdentity !== manifest.targetIdentity
+    )
+      throw new Error('Invalid accepted production user source state')
+    writeFileSync(
+      resolve(directory, 'user-source-baseline.json'),
+      JSON.stringify(acceptedState),
+    )
+    writeFileSync(
+      resolve(directory, 'user-baseline-manifest.json'),
+      JSON.stringify(manifest),
+    )
     const decisions = parseUserDecisions(
-      JSON.parse(readFileSync('.local/breadline/user-decisions.json', 'utf8')),
+      JSON.parse(readFileSync(manifest.decisions, 'utf8')),
     )
     writeFileSync(resolve(directory, 'user-decisions.json'), JSON.stringify(decisions))
+    receipt.userReconciliationInputs = {
+      productionTarget: manifest.targetIdentity,
+      sourceStateSha256: createHash('sha256')
+        .update(JSON.stringify(acceptedState))
+        .digest('hex'),
+      decisionsSha256: createHash('sha256')
+        .update(JSON.stringify(decisions))
+        .digest('hex'),
+      identitySeedSha256: createHash('sha256')
+        .update(JSON.stringify(state))
+        .digest('hex'),
+    }
     const source = new Database(resolve(inputs, 'breadline.sqlite'), { readonly: true })
     const rows = source
       .query(
@@ -294,23 +351,17 @@ async function main(): Promise<void> {
         resolve(directory, 'identity-adoption'),
       )
     }
-    const userPlan = planUsers(rows, identities(dbPath), state.seed, decisions)
-    writeFileSync(resolve(directory, 'users.json'), JSON.stringify(userPlan))
-    const userSql = resolve(directory, 'users.sql')
-    writeFileSync(userSql, userPlanSql(userPlan))
-    await operation('sql', userSql)
-    const replay = planUsers(rows, identities(dbPath), state.seed, decisions)
-    if (
-      replay.users.length ||
-      replay.accounts.length ||
-      replay.identities.length ||
-      replay.importUsers.length ||
-      replay.phoneUpdates.length ||
-      replay.targetChanges.length ||
-      JSON.stringify(replay.exceptions) !== JSON.stringify(userPlan.exceptions)
-    )
-      throw new Error('User import replay differs')
-    receipt.users = userPlan.counts
+    const reconciliation = reconcilePreparedUsers({
+      databasePath: dbPath,
+      sourcePath: resolve(inputs, 'breadline.sqlite'),
+      directory: resolve(directory, 'user-reconciliation'),
+      targetIdentity: String(receipt.targetIdentity),
+      seed: state.seed,
+      decisions,
+      acceptedState,
+    })
+    receipt.users = reconciliation.counts
+    receipt.userReconciliation = reconciliation
     step = 'breadline-features'
     console.info('Importing Breadline Features…')
     const featureSql = resolve(directory, 'features.sql')
@@ -418,10 +469,34 @@ async function main(): Promise<void> {
     receipt.counts = JSON.parse(await operation('check'))
     if (apply) {
       step = 'install'
+      if (reconciliation.status !== 'passed')
+        throw new Error('User reconciliation must pass before installation')
       const backup = resolve(directory, 'before-development.sqlite')
       await operation('install', destination, backup)
       receipt.applied = true
       receipt.backup = backup
+      // Retain the accepted local checkpoint for incremental syncs after installation.
+      writeFileSync(
+        '.local/breadline/users/local/accepted-sync.json',
+        JSON.stringify(
+          {
+            version: 1,
+            targetIdentity: receipt.targetIdentity,
+            seedFile: resolve(seedPath),
+            decisions: resolve(directory, 'user-decisions.json'),
+            acceptedState: reconciliation.statePath,
+            acceptedDatabase: destination,
+            sourceSnapshot: resolve(inputs, 'breadline.sqlite'),
+            acceptedPlanHash: reconciliation.planHash,
+            reconciliationReceipt: resolve(
+              directory,
+              'user-reconciliation/receipt.json',
+            ),
+          },
+          null,
+          2,
+        ) + '\n',
+      )
     }
     receipt.status = 'passed'
     console.info(

@@ -1,7 +1,10 @@
 <script lang="ts">
+// COMPONENTS
+import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 // API
 import { getAddressDivisionLabel } from '#lib/api/division.remote.js'
 // DOMAIN
+import { fitSearchParts } from './fitSearchParts.js'
 import { addressDivisionName, SUBJECTIVE_DIVISIONS } from '#lib/addresses/divisions.js'
 import { divisionIcons } from '#lib/divisions/icons.js'
 // ADDRESS
@@ -92,37 +95,73 @@ const icons = {
   locality: LocalityIcon,
   address: PinIcon,
 }
+const omissionPriority = {
+  unit: 1,
+  floor: 2,
+  block: 3,
+  building: 4,
+  phase: 5,
+  premises: 6,
+  street: 7,
+  address: 7,
+  locality: 8,
+}
 </script>
 
 <span class="relative block min-w-0">
   <span
-    class="text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-2 text-sm"
+    use:fitSearchParts
+    class="text-muted-foreground flex min-w-0 flex-nowrap items-center gap-x-6 overflow-hidden text-sm whitespace-nowrap"
     data-address-components
   >
     {#if establishmentTitle}
-      <span class="text-foreground font-semibold">{establishmentTitle}</span>
+      <span
+        class="text-foreground flex min-w-0 shrink-0 font-semibold"
+        data-omission-priority="0"
+        ><ScrollableText
+          text={establishmentTitle}
+          title=""
+          class="min-w-0 flex-1"
+          containerClass="h-5 text-sm leading-5"
+          textClass="text-sm font-semibold leading-5"
+        /></span
+      >
     {/if}
-    {#each parts as part (part.text)}
+    {#each parts as part, index (part.text)}
       {@const PartIcon = icons[part.kind]}
       <span
-        class="inline-flex min-w-0 items-center gap-1.5"
+        class="inline-flex min-w-0 shrink-0 items-center gap-1.5"
+        data-tooltip={part.text}
+        data-omission-priority={part.kind === 'locality'
+          ? 20 - localityRank(part.localityClass ?? 'town')
+          : omissionPriority[part.kind]}
         class:font-semibold={Boolean(primaryName) && part.kind === 'building'}
         class:text-foreground={Boolean(primaryName) && part.kind === 'building'}
-        data-tooltip={part.text}
         data-address-part={part.kind}
         data-division-class={part.localityClass}
       >
         {#if !(primaryName && part.kind === 'building')}
           <PartIcon class="size-4 shrink-0" aria-hidden="true" />
         {/if}
-        <span>{part.text}</span>
+        {#if !establishmentTitle && index === 0}
+          <ScrollableText
+            text={part.text}
+            title=""
+            class="min-w-0 flex-1"
+            containerClass="h-5 text-sm leading-5"
+            textClass="text-sm leading-5"
+          />
+        {:else}
+          <span class="whitespace-nowrap">{part.text}</span>
+        {/if}
       </span>
     {/each}
     {#each localities as division (division.id)}
       {@const Locality =
         divisionIcons[division.class as keyof typeof divisionIcons] ?? LocalityIcon}
       <span
-        class="inline-flex min-w-0 items-center gap-1.5"
+        class="inline-flex min-w-0 shrink-0 items-center gap-1.5"
+        data-omission-priority={20 - localityRank(division.class)}
         data-division-class={division.class}
         data-address-part="locality"
       >

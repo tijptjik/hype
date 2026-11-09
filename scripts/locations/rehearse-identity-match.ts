@@ -65,7 +65,7 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
     const source = sqlite
       .query(`SELECT p.id,p.ownerOrganisationId,r.id AS revisionId FROM location p
       JOIN locationRevision r ON r.locationId=p.id WHERE p.ssId=? AND p.state='linked'
-      AND p.sourceAvailability='current' ORDER BY r.sequence DESC LIMIT 1`)
+      AND p.sourceAvailability='current' ORDER BY r.version DESC LIMIT 1`)
       .get(ssId) as {
       id: string
       ownerOrganisationId: string | null

@@ -1,6 +1,9 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, type Snippet } from 'svelte'
+import { onDestroy, tick, type Snippet } from 'svelte'
+// CONTEXT
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import { getSurfaceLayoutCtx } from '#lib/context/surfaceLayout.svelte.js'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // BITS
@@ -9,32 +12,63 @@ import { SelectField } from '#lib/bits/custom/form/index.js'
 // ICONS
 import CopyIcon from 'virtual:icons/proicons/copy'
 import CheckIcon from 'virtual:icons/proicons/checkmark'
+import SatelliteIcon from 'virtual:icons/lucide/satellite'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import SearchIcon from 'virtual:icons/proicons/search'
+import PanelRightIcon from 'virtual:icons/lucide/panel-right'
+import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
 // COMPONENTS
 import AddressMap from './AddressMap.svelte'
 import AddressDetails from './AddressDetails.svelte'
+import AddressDisplayField from './AddressDisplayField.svelte'
 import AddressDivisions from './AddressDivisions.svelte'
 // API
 import { loadGeocodedAddressUnits } from '#lib/api/external/geocoding.js'
 // ADDRESS
+import { parseCoordinateInput } from '#lib/addresses/coordinateInput.js'
+import { nearbyAddressCandidates } from '#lib/addresses/nearbyCandidates.js'
 import {
+  ADDRESS_LOCALES,
   getAddressLocale,
   getAddressDisplay,
   getAddressUnits,
 } from '#lib/addresses/featureAddress.js'
 // TYPES
+import type { AccessibilityDraft } from '#lib/locations/accessibility.js'
+import type { NearbyStreet } from '#lib/map/nearbyStreets.js'
+import type { AddressName } from '#lib/addresses/nameCatalogue.js'
+import { addressNameLabel } from '#lib/addresses/nameSearch.js'
+import type { AddressDivision } from '#lib/addresses/divisions.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
+
+let hasAvailableParts = $state(true)
+const responsive = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx()
 
 let {
   address,
+  translations = $bindable(false),
+  onBuildingNameBlur,
+  onSuggestStreetNumber,
+  locationKind,
+  identityFields,
+  identityControls,
+  identityInfo,
   locationControl,
   coordinatesInLocationControl = false,
+  displayAddressInToolbar = false,
   locationActions,
+  toolbarControls,
+  toolbarInfo,
   locationMapControls,
   fixedMap = false,
   showMap = true,
   onMapControlsChange,
   locationContent,
+  accessibilityLocationId,
+  accessibilityDraft,
+  accessibilityDraftKey,
+  onAccessibilityDraftChange,
   hideDetails = false,
   showAddressDetails = true,
   showDivisions = true,
@@ -48,21 +82,39 @@ let {
   show3dAddressOptions = true,
   message = '',
   candidates = [],
+  streetCandidates = [],
+  onSelectStreet,
+  onCancelLookup,
   onSelectCandidate,
+  onPreviewCandidate,
   map,
   onCoordinateChange,
   onLookup,
   onChange,
 }: {
   address: FeatureAddress
+  translations?: boolean
+  onBuildingNameBlur?: () => void
+  onSuggestStreetNumber?: () => Promise<string | null>
+  locationKind?: string
+  identityFields?: Snippet<[boolean]>
+  identityControls?: Snippet
+  identityInfo?: Snippet
   coordinatesInLocationControl?: boolean
+  displayAddressInToolbar?: boolean
   locationControl?: Snippet<[Snippet?]>
+  toolbarControls?: Snippet
+  toolbarInfo?: Snippet
   locationActions?: Snippet
   locationMapControls?: Snippet
   fixedMap?: boolean
   showMap?: boolean
   onMapControlsChange?: (controls: Snippet | undefined) => void
   locationContent?: Snippet
+  accessibilityLocationId?: string
+  accessibilityDraft?: AccessibilityDraft
+  accessibilityDraftKey?: string
+  onAccessibilityDraftChange?: (value: AccessibilityDraft | undefined) => void
   hideDetails?: boolean
   showAddressDetails?: boolean
   showDivisions?: boolean
@@ -75,7 +127,11 @@ let {
   isLoading: boolean
   show3dAddressOptions?: boolean
   message?: string
+  streetCandidates?: NearbyStreet[]
+  onSelectStreet?: (street: AddressName) => void
+  onCancelLookup?: () => void
   candidates?: FeatureAddress[]
+  onPreviewCandidate?: (address: FeatureAddress | null) => void
   onSelectCandidate: (address: FeatureAddress) => void
   map?: Snippet
   onCoordinateChange: (coordinates: number[]) => void
@@ -83,6 +139,17 @@ let {
   onChange: (address: FeatureAddress) => void
 } = $props()
 
+// A premises name or number still needs a street; source identity alone does not make it complete.
+const needsStreetAddress = $derived(
+  !Object.keys(ADDRESS_LOCALES).some(locale => {
+    const street = getAddressLocale(
+      address,
+      locale as keyof typeof ADDRESS_LOCALES,
+    ).streetName
+    return typeof street === 'string' && Boolean(street.trim())
+  }),
+)
+const nearbyCandidates = $derived(nearbyAddressCandidates(candidates, coordinates))
 let lookupQuery = $state('')
 $effect(() => {
   lookupQuery = getAddressDisplay(address, getLocaleKey())
@@ -91,8 +158,8 @@ let divisionDetails = $state<{ key: string; address: FeatureAddress } | null>(nu
 const divisionDetailsKey = $derived(
   JSON.stringify([
     address.source.address2dId,
-    address.source.addressSnapshotId,
-    address.source.records.meta,
+    address.source.snapshotId,
+    address.source.rawSource.meta,
   ]),
 )
 const divisionAddress = $derived(
@@ -108,7 +175,7 @@ $effect(() => {
   ) {
     return
   }
-  if (!selected.source.address2dId || !selected.source.addressSnapshotId) return
+  if (!selected.source.address2dId || !selected.source.snapshotId) return
   let cancelled = false
   // Hydrate older saved selections without editing their coordinates or corrections.
   loadGeocodedAddressUnits(selected)
@@ -124,6 +191,86 @@ $effect(() => {
   }
 })
 let copiedCoordinates = $state(false)
+let toolbarWidth = $state(0)
+// Surface geometry accounts for open panels; standalone editors use their measured bar.
+let editorLayoutWidth = $state(0)
+let minimumEditorWidth = $state(560)
+let partsRequested = $state(true)
+let divisionsRequested = $state(true)
+let panelPriority = $state<'parts' | 'divisions'>('divisions')
+let overlayPanel = $state<'parts' | 'divisions' | null>(null)
+const sidePanelWidth = 288
+const collapsedPanelWidth = 32
+const availableEditorWidth = $derived(
+  editorLayoutWidth ||
+    toolbarWidth ||
+    surfaceLayout?.getEffectiveAppMainWidth() ||
+    responsive.window.width ||
+    1280,
+)
+// Grow desktop gaps with the available form width, up to twice the base spacing.
+const columnGap = $derived(
+  availableEditorWidth < minimumEditorWidth + 192
+    ? 12
+    : Math.min(80, Math.max(40, availableEditorWidth * 0.05)),
+)
+// Reserve a usable editor before allowing either side panel to consume its width.
+const openPanels = $derived.by(() => {
+  // Match the rendered padding, visible column gaps and collapsed rails exactly.
+  const budget =
+    availableEditorWidth -
+    48 -
+    columnGap * (Number(hasAvailableParts) + Number(showDivisions)) -
+    minimumEditorWidth
+  const parts = hasAvailableParts && partsRequested
+  const divisions = showDivisions && divisionsRequested
+  const preferred =
+    panelPriority === 'parts'
+      ? { parts, divisions: false }
+      : { parts: false, divisions }
+  const alternative =
+    panelPriority === 'parts'
+      ? { parts: false, divisions }
+      : { parts, divisions: false }
+  return (
+    [{ parts, divisions }, preferred, alternative].find(
+      candidate =>
+        (hasAvailableParts
+          ? candidate.parts
+            ? sidePanelWidth
+            : collapsedPanelWidth
+          : 0) +
+          (showDivisions
+            ? candidate.divisions
+              ? sidePanelWidth
+              : collapsedPanelWidth
+            : 0) <=
+        budget,
+    ) ?? { parts: false, divisions: false }
+  )
+})
+$effect(() => {
+  // Once a requested panel fits inline, later resizing should collapse it to its rail.
+  if (overlayPanel && openPanels[overlayPanel]) overlayPanel = null
+})
+/** Toggle a side panel, giving a newly opened panel first claim on spare width. @param panel Side to toggle. @returns Nothing. */
+function togglePanel(panel: 'parts' | 'divisions'): void {
+  const opening = !(openPanels[panel] || overlayPanel === panel)
+  if (panel === 'parts') partsRequested = opening
+  else divisionsRequested = opening
+  panelPriority = panel
+  // On very narrow surfaces, an explicit toggle overlays the editor instead of squeezing it.
+  overlayPanel = opening ? panel : null
+}
+let resolvedDivisions = $state<{
+  coordinates: number[]
+  divisions: AddressDivision[]
+} | null>(null)
+// Latch the last successful geography so pin movement cannot blank the display address.
+const divisions = $derived(resolvedDivisions?.divisions ?? [])
+const coordinateDigits = 5
+// Density is calculated from full-size offscreen groups, never from the collapsed widget.
+let coordinatesCompact = $state(false)
 let coordinateCopyFailed = $state(false)
 let coordinateCopyTimer: ReturnType<typeof setTimeout> | undefined
 onDestroy(() => clearTimeout(coordinateCopyTimer))
@@ -146,6 +293,11 @@ async function copyCoordinates(): Promise<void> {
 }
 
 let focusedCoordinate = $state<'longitude' | 'latitude' | null>(null)
+let lastCoordinate = $state<'longitude' | 'latitude'>('longitude')
+let coordinatesOpen = $state(false)
+let coordinatesTrigger: HTMLSpanElement | undefined = $state()
+let committingCoordinate = false
+const coordinateDialogId = $props.id()
 let longitude = $state('')
 let latitude = $state('')
 let coordinateError = $state('')
@@ -173,7 +325,7 @@ const status = $derived(
  */
 function compactCoordinate(value: string): string {
   return value.trim() && Number.isFinite(Number(value))
-    ? Number(value).toFixed(5)
+    ? Number(value).toFixed(coordinateDigits)
     : value
 }
 
@@ -195,17 +347,70 @@ function moveMarker(): void {
   coordinateError = ''
   if (lng !== coordinates[0] || lat !== coordinates[1]) onCoordinateChange([lng, lat])
 }
+
+/** Apply a pasted pair atomically; ordinary single-value paste keeps native input behavior.
+ * @param event Clipboard event from either coordinate field.
+ * @returns Nothing; valid pairs update both fields and the marker together.
+ */
+function pasteCoordinates(event: ClipboardEvent): void {
+  const point = parseCoordinateInput(event.clipboardData?.getData('text/plain') ?? '')
+  if (!point) return
+  event.preventDefault()
+  longitude = String(point[0])
+  latitude = String(point[1])
+  moveMarker()
+}
+
+/** Commit Enter without losing the keyboard path back into coordinate editing.
+ * @param event Key event from a coordinate input.
+ * @returns Completion after focus returns to the satellite control.
+ */
+async function commitCoordinate(
+  event: KeyboardEvent & { currentTarget: HTMLInputElement },
+): Promise<void> {
+  if (event.key !== 'Enter' || event.isComposing) return
+  event.preventDefault()
+  event.stopPropagation()
+  if (event.repeat) return
+  moveMarker()
+  if (coordinateError) return
+  // The commit already applied this value; blur only leaves editing mode.
+  committingCoordinate = true
+  event.currentTarget.blur()
+  committingCoordinate = false
+  coordinatesOpen = false
+  await tick()
+  coordinatesTrigger?.parentElement?.focus({ preventScroll: true })
+}
+
+/** Reopen the coordinate editor from its trigger and restore the last edited axis.
+ * @param event Keyboard activation of the satellite control.
+ * @returns Completion after the requested input receives focus.
+ */
+async function enterCoordinates(event: KeyboardEvent): Promise<void> {
+  if ((event.key !== 'Enter' && event.key !== ' ') || event.isComposing) return
+  event.preventDefault()
+  event.stopPropagation()
+  if (event.repeat) return
+  coordinatesOpen = true
+  if (!isEditing) return
+  await tick()
+  document
+    .getElementById(coordinateDialogId)
+    ?.querySelector<HTMLInputElement>(`[data-coordinate-axis="${lastCoordinate}"]`)
+    ?.focus({ preventScroll: true })
+}
 // A shared editor map owns the overlay while this form retains the search controls.
 $effect(() => {
   onMapControlsChange?.(locationMapControls)
 })
 </script>
 
-{#snippet coordinatesControl()}
+{#snippet expandedCoordinatesControl()}
   <div
-    class="border-border bg-panel text-foreground flex min-h-11 max-w-full flex-wrap items-center gap-2 rounded-lg border px-3 py-1"
+    class="border-border bg-panel text-foreground flex h-11 w-max flex-nowrap items-center gap-2 rounded-lg border py-0 pr-1 pl-2 whitespace-nowrap"
   >
-    {#if isEditing}
+    {#if isEditing && !displayAddressInToolbar && address.matchStatus !== 'resolved'}
       <button
         type="button"
         aria-label={m.admin__geo_lookup_address_at_location()}
@@ -221,43 +426,56 @@ $effect(() => {
       {#if index}
         <span aria-hidden="true" class="bg-foreground/20 h-6 w-px"></span>
       {/if}
-      <div class="flex min-w-0 items-center gap-2">
+      <div class="flex shrink-0 items-center gap-0.5">
         <span
           class="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
           >{axis === 'longitude' ? 'LNG' : 'LAT'}</span
         >
         {#if isEditing}
-          <input
-            type="text"
-            inputmode="decimal"
-            aria-label={axis === 'longitude'
-              ? m.admin__geo_longitude()
-              : m.admin__geo_latitude()}
-            aria-invalid={Boolean(coordinateError)}
-            value={focusedCoordinate === axis
-              ? axis === 'longitude'
-                ? longitude
-                : latitude
-              : compactCoordinate(axis === 'longitude' ? longitude : latitude)}
-            class="focus:ring-primary w-20 min-w-0 rounded-md bg-transparent py-2 text-sm tabular-nums transition-[width] outline-none focus:w-44 focus:ring-2 @max-[1100px]:focus:w-32"
-            onfocus={() => (focusedCoordinate = axis)}
-            oninput={event => {
-              if (axis === 'longitude') longitude = event.currentTarget.value
-              else latitude = event.currentTarget.value
-            }}
-            onblur={() => {
-              moveMarker()
-              focusedCoordinate = null
-            }}
-            onkeydown={event => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                event.currentTarget.blur()
-              }
-            }}
+          <!-- Measure the rendered value, including its narrower decimal point, rather than reserving whole character cells. -->
+          <div
+            class="grid min-w-0 grid-cols-[minmax(0,1fr)] {focusedCoordinate === axis
+              ? 'w-44 @max-[1100px]:w-32'
+              : 'w-max'}"
           >
+            <span
+              aria-hidden="true"
+              class="invisible col-start-1 row-start-1 px-3 text-sm whitespace-pre tabular-nums"
+              >{compactCoordinate(axis === 'longitude' ? longitude : latitude)}</span
+            >
+            <input
+              type="text"
+              data-coordinate-axis={axis}
+              size="1"
+              inputmode="decimal"
+              aria-label={axis === 'longitude'
+                ? m.admin__geo_longitude()
+                : m.admin__geo_latitude()}
+              aria-invalid={Boolean(coordinateError)}
+              value={focusedCoordinate === axis
+                ? axis === 'longitude'
+                  ? longitude
+                  : latitude
+                : compactCoordinate(axis === 'longitude' ? longitude : latitude)}
+              class="focus:bg-primary/5 col-start-1 row-start-1 w-full min-w-0 rounded-md bg-transparent px-3 py-2 text-sm tabular-nums outline-0! focus:ring-0!"
+              onfocus={() => {
+                focusedCoordinate = axis
+                lastCoordinate = axis
+              }}
+              oninput={event => {
+                if (axis === 'longitude') longitude = event.currentTarget.value
+                else latitude = event.currentTarget.value
+              }}
+              onpaste={pasteCoordinates}
+              onblur={() => {
+                if (!committingCoordinate) moveMarker()
+                focusedCoordinate = null
+              }}
+              onkeydown={commitCoordinate}
+            >
+          </div>
         {:else}
-          <span class="w-20 py-2 text-sm tabular-nums"
+          <span class="px-3 py-2 text-sm tabular-nums"
             >{compactCoordinate(String(coordinates[index] ?? ''))}</span
           >
         {/if}
@@ -266,11 +484,12 @@ $effect(() => {
     <button
       type="button"
       onclick={copyCoordinates}
+      data-coordinate-copy
       aria-label={copiedCoordinates
         ? m.feature_address_coordinates_copied()
         : m.feature_address_copy_coordinates()}
       data-tooltip={m.feature_address_copy_coordinates()}
-      class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-8 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-2"
+      class="text-muted-foreground hover:text-primary focus-visible:outline-primary -ml-1 flex size-7 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-2"
     >
       {#if copiedCoordinates}
         <CheckIcon class="text-success size-4" aria-hidden="true" />
@@ -278,14 +497,48 @@ $effect(() => {
         <CopyIcon class="size-4" aria-hidden="true" />
       {/if}
     </button>
-    <span class="sr-only" role="status"
-      >{coordinateCopyFailed
-        ? m.feature_address_coordinates_copy_failed()
-        : copiedCoordinates
-          ? m.feature_address_coordinates_copied()
-          : ''}</span
-    >
   </div>
+{/snippet}
+{#snippet coordinatesControl()}
+  {#if displayAddressInToolbar || toolbarControls || coordinatesCompact}
+    <SimpleTooltip
+      bind:open={coordinatesOpen}
+      triggerClass="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      triggerProps={{
+        role: 'button',
+        'aria-label': m.location_review_coordinates(),
+        onkeydown: enterCoordinates,
+      }}
+      contentProps={{
+        id: coordinateDialogId,
+        role: 'dialog',
+        'aria-label': m.location_review_coordinates(),
+        side: 'bottom',
+        align: 'end',
+      }}
+      contentClass="w-max max-w-[calc(100vw-2rem)] bg-base-100 p-2"
+    >
+      {#snippet trigger()}
+        <span
+          bind:this={coordinatesTrigger}
+          class="text-muted-foreground hover:bg-primary/10 hover:text-primary flex size-10 items-center justify-center rounded-lg transition"
+          data-compact-coordinates
+        >
+          <SatelliteIcon class="size-5" aria-hidden="true" />
+        </span>
+      {/snippet}
+      {@render expandedCoordinatesControl()}
+    </SimpleTooltip>
+  {:else}
+    {@render expandedCoordinatesControl()}
+  {/if}
+  <span class="sr-only" role="status"
+    >{coordinateCopyFailed
+      ? m.feature_address_coordinates_copy_failed()
+      : copiedCoordinates
+        ? m.feature_address_coordinates_copied()
+        : ''}</span
+  >
 {/snippet}
 {#snippet lookupControl()}
   <div
@@ -319,14 +572,51 @@ $effect(() => {
     />
   </div>
 {/snippet}
+{#snippet addressToolbar(coordinateControl?: Snippet)}
+  <div class="contents">
+    <div
+      class="w-max min-w-0 max-w-full shrink {toolbarWidth > 0 && toolbarWidth < 640
+        ? 'col-span-2 row-start-1'
+        : ''}"
+      data-address-toolbar-location
+    >
+      {@render locationControl?.(coordinateControl)}
+    </div>
+    <div
+      class="w-max min-w-0 max-w-full flex-initial space-y-2 {toolbarWidth > 0 &&
+      toolbarWidth < 640
+        ? 'col-start-1 row-start-2'
+        : ''}"
+      data-address-toolbar-display
+    >
+      <AddressDisplayField
+        {locationKind}
+        {divisions}
+        {address}
+        locale={getLocaleKey()}
+        {isEditing}
+        alignEnd={true}
+        scrollWhenConstrained={true}
+        {onChange}
+      />
+    </div>
+  </div>
+{/snippet}
 <AddressMap
-  {locationControl}
+  bind:toolbarWidth
+  bind:coordinatesCompact
+  measurementCoordinates={expandedCoordinatesControl}
+  measurementKey={`${getAddressDisplay(address, getLocaleKey(), divisions, locationKind)}:${Object.hasOwn(address.overrides[ADDRESS_LOCALES[getLocaleKey()]] ?? {}, 'formattedAddress')}`}
+  singleRowToolbar={displayAddressInToolbar}
+  locationControl={displayAddressInToolbar ? addressToolbar : locationControl}
   {coordinatesInLocationControl}
   {locationActions}
+  {toolbarControls}
+  {toolbarInfo}
   {locationMapControls}
   {fixedMap}
   {showMap}
-  {showLookup}
+  showLookup={showLookup && !displayAddressInToolbar}
   {map}
   {coordinatesControl}
   {showCoordinates}
@@ -340,41 +630,131 @@ $effect(() => {
     : null}
 />
 <div
-  class={fixedMap
+  class="select-none [&_input]:select-text [&_textarea]:select-text {fixedMap
     ? hideDetails
       ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-      : 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-12'
-    : ''}
+      : 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3'
+    : ''}"
   data-address-scroll
 >
   {#if locationContent}
     {@render locationContent()}
   {/if}
   {#if !hideDetails}
-    {#if coordinateError ||
-      message ||
-      address.matchStatus === 'stale' ||
-      address.matchStatus === 'ambiguous'}
+    {#if coordinateError || message || address.matchStatus === 'stale'}
       <div class="px-6 py-3">
         {#if coordinateError}
           <p role="alert" class="text-error text-sm">{coordinateError}</p>
         {/if}
-        {#if message ||
-          address.matchStatus === 'stale' ||
-          address.matchStatus === 'ambiguous'}
+        {#if message || address.matchStatus === 'stale'}
           <p role="status" class="text-muted-foreground text-sm">{message || status}</p>
         {/if}
       </div>
     {/if}
+    {#if onCancelLookup &&
+      !streetCandidates.length &&
+      !candidates.length &&
+      (isLoading || message)}
+      <div class="flex justify-end px-6 py-2">
+        <button
+          type="button"
+          onclick={onCancelLookup}
+          class="text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-primary rounded-md px-3 py-1 text-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          {m.cancel()}
+        </button>
+      </div>
+    {/if}
+    {#if streetCandidates.length && onSelectStreet}
+      <div class="border-border relative border-b">
+        {#if onCancelLookup}
+          <button
+            type="button"
+            onclick={onCancelLookup}
+            class="text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-primary absolute top-3 right-6 z-10 rounded-md px-3 py-1 text-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            {m.cancel()}
+          </button>
+        {/if}
+        <details class="group/streets space-y-2 px-6 py-3">
+          <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden {onCancelLookup
+              ? 'pr-20'
+              : ''}"
+          >
+            <span
+              >{m.feature_address_nearby_streets()}
+              <span class="text-muted-foreground text-xs font-normal"
+                >({streetCandidates.length})</span
+              ></span
+            >
+            <ChevronDownIcon
+              class="size-4 shrink-0 transition-transform group-open/streets:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div class="flex items-start justify-between gap-3 pt-2">
+            <p class="text-muted-foreground text-xs">
+              {m.feature_address_nearby_streets_hint()}
+            </p>
+          </div>
+          <!-- Fit four single-line choices; wrapped names grow and additional results scroll within the review. -->
+          <div
+            class="grid max-h-[calc(4*3rem+3*0.5rem)] grid-cols-1 gap-2 overflow-y-auto overscroll-contain"
+            data-nearby-street-results
+          >
+            {#each streetCandidates as { street, distance } (street.id)}
+              {@const streetLabel =
+                addressNameLabel(street, getLocaleKey()) ||
+                street.name ||
+                addressNameLabel(street, 'en') ||
+                Object.values(street.names).find(name => name.trim())}
+              <button
+                type="button"
+                disabled={isLoading || !isEditing}
+                onclick={() => onSelectStreet?.(street)}
+                class="border-border bg-background text-foreground hover:border-primary hover:bg-primary/10 grid min-h-12 min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-md border px-4 py-3 text-left transition-colors disabled:opacity-50"
+              >
+                <span class="min-w-0 text-sm break-words whitespace-normal"
+                  >{streetLabel}</span
+                >
+                <span class="text-muted-foreground shrink-0 text-xs tabular-nums"
+                  >{Math.round(distance).toLocaleString()}
+                  m</span
+                >
+                <span class="text-primary text-xs whitespace-nowrap"
+                  >{m.feature_address_use_street()}</span
+                >
+              </button>
+            {/each}
+          </div>
+        </details>
+      </div>
+    {/if}
     {#if candidates.length}
       <div class="border-border space-y-2 border-b px-6 py-5">
-        <h3 class="text-sm font-semibold">{m.feature_address_choose_result()}</h3>
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="text-sm font-semibold">{m.feature_address_choose_result()}</h3>
+          {#if onCancelLookup && !(streetCandidates.length && onSelectStreet)}
+            <button
+              type="button"
+              onclick={onCancelLookup}
+              class="text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-primary rounded-md px-3 py-1 text-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {m.cancel()}
+            </button>
+          {/if}
+        </div>
         <div class="grid gap-2">
-          {#each candidates as candidate, index}
+          {#each nearbyCandidates as { candidate, distance }, index}
             <button
               type="button"
               disabled={isLoading}
               onclick={() => onSelectCandidate(candidate)}
+              onmouseenter={() => onPreviewCandidate?.(candidate)}
+              onmouseleave={() => onPreviewCandidate?.(null)}
+              onfocus={() => onPreviewCandidate?.(candidate)}
+              onblur={() => onPreviewCandidate?.(null)}
               class="border-border bg-background text-foreground hover:border-primary hover:bg-primary/10 flex items-center gap-3 rounded-md border px-4 py-3 text-left transition-colors disabled:opacity-50"
             >
               <span class="text-muted-foreground text-xs">{index + 1}</span>
@@ -384,6 +764,12 @@ $effect(() => {
                     getAddressDisplay(candidate, getLocaleKey()),
                 )}</span
               >
+              {#if distance !== null}
+                <span class="text-muted-foreground shrink-0 text-xs tabular-nums"
+                  >{Math.round(distance).toLocaleString()}
+                  m</span
+                >
+              {/if}
               <span class="text-primary text-xs">{m.feature_address_select()}</span>
             </button>
           {/each}
@@ -404,7 +790,7 @@ $effect(() => {
               ...address,
               source: {
                 ...address.source,
-                records: divisionAddress.source.records,
+                rawSource: divisionAddress.source.rawSource,
                 address3dId: selected?.inventoryId ?? null,
                 address3dUnitId: selected?.value ?? null,
               },
@@ -414,12 +800,47 @@ $effect(() => {
       </div>
     {/if}
     <div
-      class="border-border/60 grid items-start gap-8 border-t px-6 py-6 lg:grid-cols-2"
+      bind:clientWidth={editorLayoutWidth}
+      style:grid-template-columns={isEditing && showAddressDetails
+        ? `${hasAvailableParts ? `${openPanels.parts ? sidePanelWidth : collapsedPanelWidth}px ` : ''}minmax(0, 1fr)${showDivisions ? ` ${openPanels.divisions ? sidePanelWidth : collapsedPanelWidth}px` : ''}`
+        : undefined}
+      style:column-gap={isEditing && showAddressDetails ? `${columnGap}px` : undefined}
+      class="relative grid w-full min-w-0 max-w-full items-start gap-y-8 overflow-visible border-t border-border/60 px-6 pt-3 pb-3 transition-[grid-template-columns] duration-250 motion-reduce:transition-none {isEditing &&
+      showAddressDetails
+        ? ''
+        : 'lg:grid-cols-2 lg:gap-x-10'}"
+      data-address-editor-layout
     >
       {#if showAddressDetails}
         <AddressDetails
+          {onBuildingNameBlur}
+          {onSuggestStreetNumber}
+          suggestionKey={JSON.stringify([
+            coordinates,
+            address.source,
+            accessibilityDraftKey,
+          ])}
+          {identityControls}
+          {identityInfo}
+          {identityFields}
+          {accessibilityDraft}
+          {accessibilityDraftKey}
+          {onAccessibilityDraftChange}
+          {locationKind}
+          {accessibilityLocationId}
+          onLookup={needsStreetAddress && hasLocation ? () => onLookup() : undefined}
+          isLookupLoading={isLoading}
+          {divisions}
           {address}
           {isEditing}
+          splitColumns={isEditing}
+          hideDisplayAddress={displayAddressInToolbar}
+          bind:translations
+          bind:hasAvailableParts
+          bind:minimumEditorWidth
+          partsOpen={openPanels.parts || overlayPanel === 'parts'}
+          partsOverlay={!openPanels.parts && overlayPanel === 'parts'}
+          onToggleParts={() => togglePanel('parts')}
           {show3dAddressOptions}
           {hasLocation}
           onChange={next => {
@@ -429,13 +850,49 @@ $effect(() => {
         />
       {/if}
       {#if showDivisions}
-        <AddressDivisions
-          class="lg:border-t-0 lg:pt-0"
-          {address}
-          {coordinates}
-          {isEditing}
-          {onChange}
-        />
+        <div class="min-w-0 self-start" data-address-divisions-panel>
+          {#if isEditing &&
+            showAddressDetails &&
+            !openPanels.divisions &&
+            overlayPanel !== 'divisions'}
+            <button
+              type="button"
+              aria-label={m.address_divisions_show()}
+              data-tooltip={m.address_divisions_show()}
+              aria-expanded="false"
+              class="border-border bg-panel text-muted-foreground hover:text-primary flex w-8 flex-col items-center gap-3 rounded-md border py-3"
+              onclick={() => togglePanel('divisions')}
+            >
+              <PanelRightIcon class="size-4" />
+              <span class="text-xs font-medium [writing-mode:vertical-rl]"
+                >{m.feature_address_divisions()}</span
+              >
+            </button>
+          {/if}
+          <div
+            class={!openPanels.divisions && overlayPanel === 'divisions'
+              ? 'border-border bg-panel absolute top-3 right-0 z-30 w-72 rounded-lg border p-3 shadow-lg'
+              : ''}
+            hidden={isEditing &&
+              showAddressDetails &&
+              !openPanels.divisions &&
+              overlayPanel !== 'divisions'}
+          >
+            <AddressDivisions
+              compact={editorLayoutWidth < 1100}
+              stacked={true}
+              onToggle={isEditing && showAddressDetails
+                ? () => togglePanel('divisions')
+                : undefined}
+              onResolved={value => (resolvedDivisions = value)}
+              class="border-t-0! pt-0!"
+              {address}
+              {coordinates}
+              {isEditing}
+              {onChange}
+            />
+          </div>
+        </div>
       {/if}
     </div>
   {/if}

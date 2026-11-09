@@ -1,5 +1,7 @@
 // ADDRESS
-import { getAddressLocale } from './featureAddress'
+import { getAddressLocale, getAddressPresentationLocale } from './featureAddress'
+import { streetDisplayName } from './formatting.js'
+import { formatUnit, unitDisplayExpression } from './address3d.js'
 // TYPES
 import type { FeatureAddress } from './featureAddress'
 import type { EditableAddressField } from './addressExpressions'
@@ -14,8 +16,27 @@ export function addressComponentValue(
   locale: LocaleKey,
   field: EditableAddressField,
 ): string {
-  const values = getAddressLocale(address, locale)
-  if (typeof values[field] === 'string' && values[field]) return values[field] as string
+  if (
+    field === 'unitExpression' &&
+    address.unitDetails &&
+    Object.hasOwn(address.unitDetails, 'unitRef')
+  )
+    return address.unitDetails.unitType === 'X'
+      ? String(
+          getAddressLocale(address, locale).unitExpression ??
+            address.unitDetails.unitRef ??
+            '',
+        )
+      : formatUnit(address.unitDetails, locale)
+  const values = getAddressPresentationLocale(address, locale)
+  if (typeof values[field] === 'string' && values[field]) {
+    const value = values[field] as string
+    return field === 'streetName'
+      ? streetDisplayName(value, locale)
+      : field === 'unitExpression'
+        ? unitDisplayExpression(value, locale)
+        : value
+  }
   const text = (key: keyof typeof values): string =>
     typeof values[key] === 'string' ? (values[key] as string) : ''
   if (field === 'buildingNumberExpression')

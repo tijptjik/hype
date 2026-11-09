@@ -82,6 +82,20 @@ function choose(node: PlaceTaxonomyNode): void {
   onkeydown={event => {
     if (event.key === 'Enter' && event.target instanceof HTMLInputElement)
       event.preventDefault()
+    if (
+      event.key === 'Enter' &&
+      !event.isComposing &&
+      path.length &&
+      !search.trim() &&
+      (event.target === panel ||
+        event.target instanceof HTMLInputElement ||
+        (event.target instanceof HTMLElement &&
+          event.target.closest('[aria-pressed="true"]')))
+    ) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (!event.repeat) onApply(draft)
+    }
     if (event.key === 'Escape') {
       event.preventDefault()
       event.stopPropagation()

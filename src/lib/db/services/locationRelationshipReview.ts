@@ -93,7 +93,7 @@ export async function readRelationshipPage(
     : relationshipScopeSql(input.table, input.scope)
   const labels = keys.map(
     key =>
-      sql`(SELECT COALESCE(json_extract(v.facts,'$.common.names.en'),l.id) FROM location l LEFT JOIN locationRevision v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.sequence DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
+      sql`(SELECT COALESCE(json_extract(v.facts,'$.common.names.en'),l.id) FROM location l LEFT JOIN locationRevision v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.version DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
   )
   const addressLabel =
     input.table === 'locationAddress'

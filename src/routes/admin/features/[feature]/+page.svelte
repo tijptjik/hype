@@ -1,15 +1,14 @@
 <script lang="ts">
+// DEFERRED FACETS
+import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
-// FEATURE LIFECYCLE
-import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIdentityDialog.svelte'
-import FeatureGalleryImageTextEditor from '#lib/bits/patterns/revisionHistory/FeatureGalleryImageTextEditor.svelte'
-import FeatureHistory from '#lib/bits/patterns/revisionHistory/FeatureHistory.svelte'
 
-// PROFILE POLICY
+// REVISION WORKSPACE
+import FeatureIdentityDialog from '#lib/bits/patterns/revisionHistory/FeatureIdentityDialog.svelte'
+
 import FeatureProfileEditor from '#lib/bits/patterns/forms/featureLocation/FeatureProfileEditor.svelte'
-import { resolveFeaturePresentationPolicy } from '#lib/features/presentationPolicy.js'
 // PROFILE CONTENT
 import {
   contentFormKey,
@@ -27,29 +26,29 @@ import {
 } from '#lib/bits/patterns/forms/featureLocation/profileLocales.js'
 import type { ProfileField } from '#lib/bits/patterns/forms/featureLocation/profileTranslation.js'
 import { translateContentField } from '#lib/api/translation.remote.js'
-
+import DraftLocationNameFields from '#lib/bits/patterns/forms/featureLocation/DraftLocationNameFields.svelte'
+import LocationVisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationVisibilitySelect.svelte'
+import LocationControlsInfo from '#lib/bits/patterns/forms/featureLocation/LocationControlsInfo.svelte'
+// MAP STREET MATCHING
+import { loadAddressNames, setAddressName } from '#lib/addresses/nameCatalogue.js'
+import { matchStreetHints, type NearbyStreet } from '#lib/map/nearbyStreets.js'
 import { isRangeProperty } from '#lib/properties/range.js'
 import { show3dAddressOptions } from '#lib/projects/flags.js'
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 
 // SVELTE
-import { goto, pushState, snapshot } from '$app/navigation'
-// FORM HISTORY
-import {
-  captureFormNavigationSnapshot,
-  isCurrentFormNavigationSnapshot,
-  invalidateFormNavigationSnapshots,
-  type FormNavigationSnapshot,
-} from '#lib/client/formNavigationSnapshot.js'
+import { goto, pushState, replaceState, snapshot } from '$app/navigation'
 
 import { page } from '$app/state'
 import { untrack, tick, type Snippet } from 'svelte'
-import { slide } from 'svelte/transition'
+import { fade, slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
 
 // TOAST
 import { toast } from 'svelte-sonner'
+// FEATURE AUTHORING POLICY
+import { resolveFeaturePresentationPolicy } from '#lib/features/presentationPolicy.js'
 // PUBLICATION
 import { canPreviewPublication } from '#lib/publication/permissions.js'
 import { publicationPreviewUrl } from '#lib/publication/preview.js'
@@ -64,6 +63,13 @@ import {
   translateI18nFields,
 } from '#lib/i18n.js'
 // SERVICES
+import { createDevFormDraft } from '#lib/client/devFormDraft.js'
+import {
+  captureFormNavigationSnapshot,
+  isCurrentFormNavigationSnapshot,
+  invalidateFormNavigationSnapshots,
+  type FormNavigationSnapshot,
+} from '#lib/client/formNavigationSnapshot.js'
 import {
   bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
@@ -115,24 +121,24 @@ import {
   publishFeature,
 } from '#lib/api/feature.remote.js'
 import { getLayer, getLayers } from '#lib/api/layer.remote.js'
-import { getOrganisationsWhichHaveLayers } from '#lib/api/organisation.remote.js'
+import {
+  getOrganisation,
+  getOrganisationsWhichHaveLayers,
+} from '#lib/api/organisation.remote.js'
 import { getProjectsWhichHaveLayers } from '#lib/api/project.remote.js'
 // SCHEMA
 import { FeaturePreflightFormData } from '#lib/db/zod/schema/feature.form.js'
 // FACTORIES
 import { configureForm } from '#lib/factories.svelte.js'
 // BITS
-import {
-  cx,
-  FormFeatureFields,
-  FormFeatureParentSection,
-  FormFeatureVisualSection,
-  FeatureImageEditor,
-  FormI18nDescriptorFields,
-  FormI18nSection,
-  FormMapSection,
-  Main,
-} from '#lib/bits/index.js'
+import { cx } from '#lib/bits/utils.js'
+import FormFeatureFields from '#lib/bits/patterns/forms/formFeatureFields/FormFeatureFields.svelte'
+import FormFeatureParentSection from '#lib/bits/patterns/forms/formFeatureParentSection/FormFeatureParentSection.svelte'
+import FormFeatureVisualSection from '#lib/bits/custom/form/src/formFeatureVisualSection/FormFeatureVisualSection.svelte'
+
+import FormI18nDescriptorFields from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nDescriptorFields.svelte'
+import FormMapSection from '#lib/bits/patterns/forms/formMapSection/FormMapSection.svelte'
+import * as Main from '#lib/bits/custom/main/index.js'
 import {
   createFeatureParentSearchPrisms,
   createFeatureParentSectionController,
@@ -161,10 +167,49 @@ import {
   getFeatureDetachedBrands,
   unlinkFeatureLocation,
 } from '#lib/api/location.remote.js'
+import {
+  addressBuildingNames,
+  localIdentityFromAddress,
+} from '#lib/locations/addressIdentity.js'
+import {
+  linkDraftLocalLocation,
+  type DraftLocalLocationIntent,
+} from '#lib/locations/linkDraftLocalLocation.js'
+import {
+  BuildingSourceSchema,
+  type BuildingSource,
+} from '#lib/locations/buildingSource.js'
+import { LocalLocationInputSchema } from '#lib/locations/local.js'
+import {
+  AccessibilityDraftSchema,
+  type AccessibilityDraft,
+} from '#lib/locations/accessibility.js'
+import { saveDraftAccessibility } from '#lib/locations/saveDraftAccessibility.js'
 import { linkDraftPlace } from '#lib/locations/linkDraftPlace.js'
 import DraftFeatureLocationSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLocationSearch.svelte'
 import { Button } from '#lib/bits/core/index.js'
+import FeatureLocationUpdates from '#lib/bits/patterns/forms/featureLocation/FeatureLocationUpdates.svelte'
 import FeatureLocationSection from '#lib/bits/patterns/forms/featureLocation/FeatureLocationSection.svelte'
+import {
+  addressCandidatePoint,
+  nearbyAddressCandidates,
+} from '#lib/addresses/nearbyCandidates.js'
+import { recoverAddressNumber } from '#lib/addresses/recoverAddressNumber.js'
+import {
+  missingMapParts,
+  applyMapMissingParts,
+  type MapMissingParts,
+} from '#lib/addresses/mapMissingParts.js'
+import LocationMoveConfirmation from '#lib/bits/patterns/forms/featureLocation/LocationMoveConfirmation.svelte'
+import {
+  resolveMapAddressChange,
+  type MapAddressChange,
+} from '#lib/locations/resolveMapAddressChange.js'
+import { locationDistance } from '#lib/locations/searchPresentation.js'
+import { mapAddressDisagreements } from '#lib/addresses/mapAddressDisagreement.js'
+import { exactAddressChangeMatch } from '#lib/addresses/mapAddressChange.js'
+import MapAddressConflict from '#lib/bits/patterns/forms/formFeatureAddress/MapAddressConflict.svelte'
+import MapAddressSuggestion from '#lib/bits/patterns/forms/formFeatureAddress/MapAddressSuggestion.svelte'
 import FormFeatureAddress from '#lib/bits/patterns/forms/formFeatureAddress/FormFeatureAddress.svelte'
 import {
   geocodeAddressCandidates,
@@ -198,6 +243,7 @@ import { FirstClassResource } from '#lib/enums.js'
 // TYPES
 import type { LocationSearchMarker } from '#lib/locations/searchPresentation.js'
 import type { Point } from 'geojson'
+import type { DraftLocationSearchProgress } from '#lib/bits/patterns/forms/featureLocation/draftLocationSearch.types.js'
 
 import type { FacetType } from '#lib/context/facets.js'
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
@@ -297,6 +343,7 @@ const noopHeaderAction = (): void => {}
 // - isDirty
 // - isRequiredInPreflight
 // - currentFormValue
+// - development draft restoration and persistence
 //
 // USER + RESOURCE DERIVATIONS
 // - currentUser
@@ -364,7 +411,6 @@ const noopHeaderAction = (): void => {}
 // - nonTranslatableItems
 // - translatableSpecifierItems
 // - featureDescriptorFieldConfigs
-// - featureDescriptorTranslatableFields
 // - commitFeatureState
 // - commitSettledFeatureState
 // - isCurrentRefLoaded
@@ -380,8 +426,8 @@ const noopHeaderAction = (): void => {}
 // - programmaticFeatureInputEntries
 //
 // TRANSLATION ACTIONS
-// - onTranslateDescriptorLocale
-// - onResetDescriptorLocale
+// - setProfileLocaleState
+// - applyProfileTranslation
 // - onTranslateTranslatableValues
 // - onResetTranslatableValues
 //
@@ -390,13 +436,20 @@ const noopHeaderAction = (): void => {}
 // - updateAddressDraft
 // - lookupFeatureAddress
 // - selectAddressCandidate
+// - acceptMapAddressChange
+// - applyAcceptedMapAddressChange
+// - confirmMapAddressChange
 // - startLocationSearch
 // - startManualLocation
 // - selectDraftLocation
 // - undoDraftLocationSelection
 // - recoverDraftSearchHistory
+// - handlePinDrop
+// - cancelMapAddressMove
 // - handleCoordinateChange
+// - handleManualCoordinateChange
 // - handleFeatureStateToggle
+// - captureFeatureAction
 // - onPublishToggle
 // - onPreview
 // - onDeleteToggle
@@ -404,6 +457,7 @@ const noopHeaderAction = (): void => {}
 // FORM ACTIONS
 // - revalidateAfterProgrammaticChange
 // - onSubmit
+// - resetNewFeatureFlow
 // - onReset
 //
 // HEADER WIRING
@@ -439,7 +493,10 @@ const headerCtrl = getHeaderCtrl()
 const facetTabs = getAdminFacetTabsForResource(FirstClassResource.feature)
 
 const editorCtrl = getEditorCtrl({ headerCtrl, icon: FeatureIcon, facetTabs })
-const featureRef = $derived(page.params.feature as string)
+// Successful creation replaces the URL shallowly while keeping this editor mounted.
+const featureRef = $derived(
+  (page.shallow?.params?.feature ?? page.params.feature) as string,
+)
 let locationSearchMarkers = $state<LocationSearchMarker[]>([])
 let selectLocationMarker = $state<(id: string) => void>(() => {})
 $effect(() => {
@@ -480,14 +537,20 @@ const isImagesFacet = $derived(activeFacet === 'images')
  *  INTERNAL NAVIGATION ACTIONS
  ************/
 
+/** Navigate within the mounted editor and retain a browser history entry.
+ * @param facet Destination tab. @returns Nothing.
+ */
 function goToFacet(facet: FacetType): void {
   if ((facet === 'images' || facet === 'updates') && isNewFeatureRef) return
   if (facet === 'fields' && !hasSelectedLayer) return
+  if (facet === 'location' && needsLayerSelection) return
   if (facet === activeFacet) return
   // The current route ref also covers unsaved Features, which have no cache record.
   const href = `/admin/features/${encodeURIComponent(featureRef)}#${facet}`
   adminCtx.setFacet(facet, featureRef, FirstClassResource.feature)
   void goto(href, {
+    shallow: true,
+    state: page.state,
     reset: false,
     replace: false,
   })
@@ -498,7 +561,9 @@ const buildFacetNavAction = createFacetNavActionBuilder<FacetType>({
   getFacetOrder: () => featureFacetOrder,
   getActiveFacet: () => activeFacet as FacetType,
   navigateToFacet: goToFacet,
-  isFacetDisabled: facet => facet === 'fields' && !hasSelectedLayer,
+  isFacetDisabled: facet =>
+    (facet === 'fields' && !hasSelectedLayer) ||
+    (facet === 'location' && needsLayerSelection),
 })
 
 /********************
@@ -531,9 +596,13 @@ bindAdminFacetHistorySync({
 
 // Delegate feature-ref transitions to the shared editor controller so load/reset behavior stays centralized.
 $effect(() => {
+  const ref = featureRef
+  // Creation hydrates the saved record before changing the URL, so keep its form intact.
+  if (untrack(() => settledFeatureRef === ref && committedFeature?.data?.id === ref))
+    return
   const resolvedFacetTabsSnapshot = untrack(() => facetTabs)
   return editorCtrl.syncRouteAndLoad({
-    ref: featureRef,
+    ref,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
@@ -594,7 +663,10 @@ $effect(() => {
     )
     .map(facet => ({
       ...facet,
-      disabled: facet.ref === 'fields' ? !hasSelectedLayer : Boolean(facet.disabled),
+      disabled:
+        (facet.ref === 'fields' && !hasSelectedLayer) ||
+        (facet.ref === 'location' && needsLayerSelection) ||
+        Boolean(facet.disabled),
     }))
 
   const facetKey = displayFacets
@@ -646,7 +718,7 @@ let draftHasAddress = $state(false)
 let editorViewportHeight = $state(1040)
 let draftFindMode = $state<'search' | 'pin'>('search')
 let pinHighlightRequest = $state(0)
-// Inactive facets mount on first visit, then retain drafts across tab switches.
+// Inactive facets are deferred until visited, then retained so switching tabs preserves drafts.
 let visitedUpdatesRef = $state<string | null>(null)
 let visitedLocationRef = $state<string | null>(null)
 let visitedImagesRef = $state<string | null>(null)
@@ -660,10 +732,22 @@ const mountLocationFacet = $derived(
 )
 
 let draftSearch:
-  | { backToResults: () => void; addManualLocation: () => void }
+  | {
+      adoptAddressChange: (address: FeatureAddress) => void
+      syncSelectedAddress: (address: FeatureAddress) => void
+      resolveAssociation: (
+        address: FeatureAddress,
+        names: Record<string, string>,
+      ) => Promise<void>
+      backToResults: () => void
+      addManualLocation: () => void
+      getProgress: () => DraftLocationSearchProgress
+      restoreProgress: (progress: DraftLocationSearchProgress | null) => void
+    }
   | undefined = $state()
 let draftSearchFilterPanel: Snippet | undefined = $state()
 let draftSearchHasResults = $state(false)
+let draftResolutionPending = $state(false)
 let draftResultHistoryId: string | null = $state(null)
 /** Recover a selected draft only for history traversal, not ordinary facet navigation.
  * @returns Nothing after SvelteKit has applied the shallow history state.
@@ -699,10 +783,11 @@ $effect(() => {
   draftHasPin = false
   draftHasAddress = false
   draftSelectionBefore = null
+  draftSelectionSaved = false
 })
 
 $effect(() => {
-  if (isNewFeatureRef && isLocationFacet) namingChosen = true
+  if (isNewFeatureRef && isLocationFacet && !needsLayerSelection) namingChosen = true
 })
 
 /** Open draft Location discovery and request focus after the facet becomes visible.
@@ -717,6 +802,8 @@ function startLocationSearch(): void {
  * @returns Nothing; an existing pin is preserved, otherwise the visible map centre supplies it.
  */
 function startManualLocation(): void {
+  draftAccessibility = undefined
+  draftLocalKind = undefined
   // Wait for the map instead of fabricating a position before its camera is available.
   if (!draftHasPin && !dropDraftPin()) return
   draftPlaceSource = null
@@ -727,24 +814,70 @@ function startManualLocation(): void {
   draftLocationAccepted = true
 }
 
+let draftReplacementLocationId = $state<string | undefined>()
+let draftAccessibility = $state<AccessibilityDraft | undefined>()
 let draftLocationAccepted = $state(false)
+let draftSelectionSaved = $state(false)
+let draftAddressIdentity = $state<MapAddressChange['identity']>()
 let draftLocalKind = $state<
-  | 'establishment'
-  | 'building'
-  | 'address'
-  | 'premises'
-  | 'unknown'
-  | 'natural'
-  | undefined
+  'address' | 'premises' | 'building' | 'establishment' | undefined
 >()
+let draftCatalogueBuilding = $state(false)
+let draftBuildingSource = $state<BuildingSource | undefined>()
+let draftVisibilityOverride = $state<'shared' | 'exclusive' | undefined>()
+let organisationVisibilityReady = $state(false)
+let organisationVisibilityFailed = $state(false)
+let organisationLocationVisibility = $state<'shared' | 'exclusive'>('shared')
+const draftLocationVisibility = $derived(
+  draftVisibilityOverride ?? organisationLocationVisibility,
+)
+
+// Resolve defaults without overwriting a deliberate draft choice or accepting stale parent responses.
+$effect(() => {
+  const id = selectedProject?.organisationId ?? organisationIdValue
+  organisationLocationVisibility = 'shared'
+  organisationVisibilityReady = false
+  organisationVisibilityFailed = false
+  if (!isNewFeatureRef || !id) {
+    organisationVisibilityReady = true
+    return
+  }
+  let current = true
+  void getOrganisation({
+    ref: id,
+    refKey: 'id',
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'detail' },
+  })
+    .then(response => {
+      if (!current) return
+      if (!response.data) {
+        organisationVisibilityFailed = true
+        return
+      }
+      organisationLocationVisibility =
+        response.data.defaultLocationVisibility ?? 'shared'
+      organisationVisibilityReady = true
+    })
+    .catch(() => {
+      if (current) organisationVisibilityFailed = true
+    })
+  return () => {
+    current = false
+  }
+})
+
 let draftLocationNames = $state<Record<string, string>>({})
 let draftLocalNameMode = $state<'independent' | 'inherit'>('inherit')
+let pendingLocalLink = $state<DraftLocalLocationIntent | null>(null)
 let draftPlaceSource = $state<{
   ssId: string
   resourceReleaseId: string
   nameMode?: 'independent' | 'inherit'
 } | null>(null)
 let pendingPlaceLink = $state<{
+  replacementLocationId?: string
+  replacementRevision?: string
+  accessibility?: AccessibilityDraft
   featureId: string
   ssId: string
   resourceReleaseId: string
@@ -752,6 +885,21 @@ let pendingPlaceLink = $state<{
 } | null>(null)
 let placeLinkBusy = $state(false)
 let placeLinkError = $state(false)
+
+/** Build the local entity from the current reviewed names and address.
+ * @returns Validated creation input with selected visibility; missing names or coordinates fail before Feature submission.
+ */
+function draftLocalInput(): ReturnType<typeof localIdentityFromAddress> {
+  if (!draftLocalKind) throw new Error('No local identity selected')
+  if (!draftVisibilityOverride && !organisationVisibilityReady)
+    throw new Error(m.location_visibility_default_unavailable())
+  return localIdentityFromAddress(
+    draftLocalKind,
+    draftLocationNames,
+    editorAddress,
+    draftLocationVisibility,
+  )
+}
 
 /** Complete an explicitly requested association after the Feature has an ID.
  * @param saved Persisted identity and concurrency token. @returns Completion.
@@ -762,10 +910,59 @@ async function finishDraftPlaceLink(saved: {
   id: string
   modifiedAt: string
 }): Promise<void> {
+  if (draftLocalKind || pendingLocalLink?.featureId === saved.id) {
+    placeLinkBusy = true
+    placeLinkError = false
+    try {
+      const intent =
+        pendingLocalLink?.featureId === saved.id
+          ? pendingLocalLink
+          : {
+              featureId: saved.id,
+              projectId: projectIdValue,
+              replacementLocationId: draftReplacementLocationId,
+              accessibility: draftAccessibility,
+              nameMode: draftLocalNameMode,
+              input: draftAddressIdentity ? undefined : draftLocalInput(),
+              buildingSource: draftBuildingSource,
+              identity: draftAddressIdentity,
+            }
+      const retain = (value: DraftLocalLocationIntent): void => {
+        pendingLocalLink = value
+        sessionStorage.setItem(`feature-local-link:${saved.id}`, JSON.stringify(value))
+      }
+      retain(intent)
+      await linkDraftLocalLocation(intent, saved.modifiedAt, retain)
+      await saveDraftAccessibility(saved.id, intent.accessibility)
+      draftAccessibility = undefined
+      sessionStorage.removeItem(`feature-local-link:${saved.id}`)
+      pendingLocalLink = null
+      draftLocalKind = undefined
+      draftReplacementLocationId = undefined
+      draftAddressIdentity = undefined
+    } catch (cause) {
+      placeLinkError = true
+      toast.error(
+        cause instanceof Error && cause.message === 'ACCESSIBILITY_REVIEW_REQUIRED'
+          ? m.accessibility_draft_review()
+          : m.feature_search_link_failed(),
+      )
+    } finally {
+      placeLinkBusy = false
+    }
+    return
+  }
   const source =
     pendingPlaceLink?.featureId === saved.id ? pendingPlaceLink : draftPlaceSource
   if (!source) return
   pendingPlaceLink = {
+    replacementLocationId:
+      draftReplacementLocationId ?? pendingPlaceLink?.replacementLocationId,
+    replacementRevision: pendingPlaceLink?.replacementRevision,
+    accessibility:
+      pendingPlaceLink?.featureId === saved.id
+        ? pendingPlaceLink.accessibility
+        : draftAccessibility,
     featureId: saved.id,
     ssId: source.ssId,
     resourceReleaseId: source.resourceReleaseId,
@@ -779,19 +976,28 @@ async function finishDraftPlaceLink(saved: {
       JSON.stringify(pendingPlaceLink),
     )
     await linkDraftPlace({
+      replacementLocationId: pendingPlaceLink.replacementLocationId,
+      replacementRevision: pendingPlaceLink.replacementRevision,
       featureId: saved.id,
       modifiedAt: saved.modifiedAt,
       ssId: source.ssId,
       resourceReleaseId: source.resourceReleaseId,
       nameMode: source.nameMode,
     })
+    await saveDraftAccessibility(saved.id, pendingPlaceLink.accessibility)
+    draftAccessibility = undefined
     sessionStorage.removeItem(`feature-place-link:${saved.id}`)
     pendingPlaceLink = null
     draftPlaceSource = null
+    draftReplacementLocationId = undefined
     await getFeatureLocation({ featureId: saved.id }).refresh()
-  } catch {
+  } catch (cause) {
     placeLinkError = true
-    toast.error(m.feature_search_link_failed())
+    toast.error(
+      cause instanceof Error && cause.message === 'ACCESSIBILITY_REVIEW_REQUIRED'
+        ? m.accessibility_draft_review()
+        : m.feature_search_link_failed(),
+    )
   } finally {
     placeLinkBusy = false
     draftPlaceSource = null
@@ -801,13 +1007,35 @@ async function finishDraftPlaceLink(saved: {
 $effect(() => {
   if (isNewFeatureRef || typeof sessionStorage === 'undefined') return
   try {
+    const localRaw = sessionStorage.getItem(`feature-local-link:${featureRef}`)
+    if (localRaw) {
+      const value = JSON.parse(localRaw)
+      const input = LocalLocationInputSchema.safeParse(value.input)
+      if (
+        value.featureId === featureRef &&
+        typeof value.projectId === 'string' &&
+        (input.success || (value.input === undefined && value.identity)) &&
+        (value.buildingSource === undefined ||
+          BuildingSourceSchema.safeParse(value.buildingSource).success) &&
+        (value.accessibility === undefined ||
+          AccessibilityDraftSchema.safeParse(value.accessibility).success) &&
+        (!value.identity ||
+          (typeof value.identity.locationId === 'string' &&
+            typeof value.identity.revisionId === 'string'))
+      ) {
+        pendingLocalLink = { ...value, input: input.success ? input.data : undefined }
+        placeLinkError = true
+      }
+    }
     const raw = sessionStorage.getItem(`feature-place-link:${featureRef}`)
     if (!raw) return
     const intent = JSON.parse(raw)
     if (
       intent.featureId === featureRef &&
       typeof intent.ssId === 'string' &&
-      typeof intent.resourceReleaseId === 'string'
+      typeof intent.resourceReleaseId === 'string' &&
+      (intent.accessibility === undefined ||
+        AccessibilityDraftSchema.safeParse(intent.accessibility).success)
     ) {
       pendingPlaceLink = intent
       placeLinkError = true
@@ -829,6 +1057,16 @@ function previewDraftLocation(result: { address: FeatureAddress }): void {
     })
 }
 
+/** Restore the search map to 35% of the visible editor, independent of previous review height.
+ * @returns Nothing; scrollable form content does not enlarge the viewport budget.
+ */
+function restoreLocationSearchMap(): void {
+  isVisualSectionCollapsed = false
+  const top = Math.max(0, contentsElement?.getBoundingClientRect().top ?? 0)
+  const availableHeight = Math.max(0, editorViewportHeight - top)
+  featureVisualSection?.restoreAfterFit(Math.round(availableHeight * 0.35))
+}
+
 /** Use source names as an editable starting point without replacing authored titles.
  * @param result Explicitly selected search preview. @returns Nothing.
  * @remarks Place linking is deferred until successful creation supplies a Feature ID.
@@ -836,23 +1074,61 @@ function previewDraftLocation(result: { address: FeatureAddress }): void {
 function selectDraftLocation(result: {
   address: FeatureAddress
   names: Record<string, string>
-  kind?: 'establishment' | 'address'
+  kind?: 'establishment' | 'premises' | 'building' | 'address'
+  localKind?: 'address' | 'premises' | 'building' | 'establishment'
   nameMode?: 'independent' | 'inherit'
   source?: {
     ssId: string
     resourceReleaseId: string
     nameMode?: 'independent' | 'inherit'
   }
+  buildingSource?: BuildingSource
+  identity?: { locationId: string; revisionId: string }
+  associationConfirmed?: boolean
 }): void {
-  draftLocalKind = result.kind
-  draftLocationNames = { ...result.names }
-  draftLocalNameMode = featurePresentationPolicy.locationBasedNames
-    ? 'inherit'
-    : (result.nameMode ?? 'independent')
+  draftAccessibility = undefined
+  draftAddressIdentity = result.identity
+  const previousSelection = draftSelectionBefore
+  // Catalogue buildings supply address evidence, so persist a local building without a Places import.
+  draftCatalogueBuilding =
+    result.kind === 'building' &&
+    !result.source &&
+    Object.keys(addressBuildingNames(result.address)).length > 0
+  draftBuildingSource = result.kind === 'building' ? result.buildingSource : undefined
+  draftLocalKind =
+    result.localKind ??
+    (result.kind === 'address'
+      ? 'address'
+      : draftCatalogueBuilding
+        ? 'building'
+        : undefined)
+  if (result.associationConfirmed) draftLocationNames = { ...result.names }
+  else if (
+    !draftSelectionBefore ||
+    (draftLocalKind && !Object.values(draftLocationNames).some(value => value.trim()))
+  ) {
+    draftLocationNames =
+      draftLocalKind === 'building' ? addressBuildingNames(result.address) : {}
+  }
+  draftLocalNameMode =
+    featurePresentationPolicy.locationBasedNames ||
+    currentFeatureData.locationNameMode === 'inherit'
+      ? 'inherit'
+      : (result.nameMode ?? 'independent')
   draftPlaceSource =
     result.kind === 'establishment' && result.source
       ? { ...result.source, nameMode: draftLocalNameMode }
       : null
+  // Type changes and relinking must retain edits and the original reset snapshot.
+  if (draftSelectionBefore && draftLocationAccepted) {
+    if (
+      (draftBuildingSource || result.associationConfirmed) &&
+      result.address.coordinates
+    )
+      handleCoordinateChange(result.address.coordinates)
+    if (result.associationConfirmed) updateAddressDraft(result.address)
+    return
+  }
   draftResultHistoryId = crypto.randomUUID()
   pushState(page.url.href, { ...page.state, draftLocationResult: draftResultHistoryId })
   // Capture only Location-owned draft fields; recovery must preserve unrelated edits.
@@ -893,14 +1169,16 @@ function selectDraftLocation(result: {
         {
           ...value,
           title:
-            result.kind === 'establishment' && result.nameMode === 'inherit'
-              ? result.names[ADDRESS_LOCALES[locale as keyof typeof ADDRESS_LOCALES]] ||
-                ''
+            draftLocalNameMode === 'inherit'
+              ? Object.entries(result.names).find(
+                  ([tag]) => canonicalContentTag(tag) === canonicalContentTag(locale),
+                )?.[1] || ''
               : value.title || '',
         },
       ]),
     ) as typeof data.i18n,
   }))
+  if (previousSelection) draftSelectionBefore = previousSelection
   draftSelectionBefore.appliedTitles = Object.fromEntries(
     Object.entries(currentFeatureData.i18n).map(([locale, value]) => [
       locale,
@@ -914,6 +1192,14 @@ function selectDraftLocation(result: {
  * @returns Nothing; restores the previous Location fields, pin visibility and camera.
  */
 function undoDraftLocationSelection(): void {
+  draftVisibilityOverride = undefined
+  draftLocationNames = {}
+  draftCatalogueBuilding = false
+  draftBuildingSource = undefined
+  draftAddressIdentity = undefined
+  draftLocalNameMode = 'independent'
+  draftAccessibility = undefined
+  draftLocalKind = undefined
   draftPlaceSource = null
   const before = draftSelectionBefore
   if (!before) return
@@ -921,6 +1207,7 @@ function undoDraftLocationSelection(): void {
   isAddressLookupLoading = false
   addressLookupMessage = ''
   addressCandidates = []
+  streetCandidates = []
   updateFeatureData(
     data => ({
       ...data,
@@ -976,7 +1263,6 @@ function ensureDraftPin(): boolean {
 
 // § Header
 let lastHeaderKey = ''
-
 let identityOpen = $state(false)
 let identityKind = $state<'split' | 'merge'>('split')
 $effect(() => {
@@ -1011,7 +1297,6 @@ $effect(() => {
   return () => headerCtrl.setTitleMenuItems([])
 })
 
-let revisionWorkspaceVersion = $state(0)
 let lastFormActionsSignature = ''
 
 // Preserve the last known header affordances while the next ref is still loading.
@@ -1035,6 +1320,7 @@ let isVisualSectionCollapsed = $state(
   adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
 )
 let visualSectionHeight = $state(520)
+let featureVisualSection = $state<FormFeatureVisualSection>()
 let visualSectionReopenScrollStartAt: number | null = null
 let visualSectionReopenBufferTimeout: ReturnType<typeof setTimeout> | null = null
 let visualSectionReopenSettleTimeout: ReturnType<typeof setTimeout> | null = null
@@ -1061,7 +1347,11 @@ $effect(() => {
     isNewRef: isNewFeatureRef,
     dirty: isDirty,
     isSubmitting: formCtx.submitting,
-    hasIssues: visibleAllIssues.length > 0,
+    hasIssues:
+      visibleAllIssues.length > 0 ||
+      draftResolutionPending ||
+      mapAddressChangeBusy ||
+      Boolean(pendingMapAddressChange),
     isPublished: Boolean(feature?.data?.isPublished),
     isDeleted: Boolean(feature?.data?.isArchived),
     canEdit: true,
@@ -1140,11 +1430,15 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (activeFacet !== 'fields') return
   if (!isCurrentRefSettled) return
   // The resource settles before configureForm hydrates its fields; wait for this form's identity.
   if (!isNewFeatureRef && currentFormValue.meta?.id !== featureRef) return
-  if (hasSelectedLayer) return
+  // Keep direct links and parent removal behind the same prerequisite as facet navigation.
+  if (
+    !(activeFacet === 'fields' && !hasSelectedLayer) &&
+    !(activeFacet === 'location' && needsLayerSelection)
+  )
+    return
   untrack(() => {
     adminCtx.setFacet('core', featureRef, FirstClassResource.feature)
   })
@@ -1208,6 +1502,7 @@ $effect(() => {
  *  FORM STATE
  ************/
 let hasProgrammaticDirtyChanges = $state(false)
+let revisionWorkspaceVersion = $state(0)
 
 let suppressFormLevelIssues = $state(false)
 const initialEmptyFeatureFormSeed = toEmptyFeatureFormInput()
@@ -1217,7 +1512,26 @@ let featureFormSource = $state<FeatureFormInput>(initialEmptyFeatureFormSeed)
 const configuredFeatureForm = configureForm(() => ({
   form: featureForm as never,
   onsubmit: (({ data }: { data: FeatureFormInput }) => {
-    if (!ensureDraftPin()) return false
+    if (
+      draftResolutionPending ||
+      mapAddressChangeBusy ||
+      pendingMapAddressChange ||
+      !ensureDraftPin()
+    )
+      return false
+    if (draftLocalKind && !draftAddressIdentity) {
+      try {
+        draftLocalInput()
+      } catch {
+        toast.error(
+          !draftVisibilityOverride && !organisationVisibilityReady
+            ? m.location_visibility_default_unavailable()
+            : m.feature_search_identity_required(),
+        )
+        adminCtx.setFacet('location', featureRef, FirstClassResource.feature)
+        return false
+      }
+    }
     // Stamp create/update submit metadata late so the payload always matches the active ref.
     const submittedPayload = prepareSubmitPayloadMeta(data, {
       defaultMode: isNewFeatureRef ? 'create' : 'update',
@@ -1261,7 +1575,7 @@ const configuredFeatureForm = configureForm(() => ({
     headerCtrl,
     resourceType: FirstClassResource.feature,
     getEntity: () => feature,
-    refreshResource: async ({ success, result }) => {
+    refreshResource: async ({ data, success, result }) => {
       // Every successful save invalidates older history drafts before refreshing can fail.
       if (success) {
         invalidateFormNavigationSnapshots(navigationDraftScope)
@@ -1278,22 +1592,16 @@ const configuredFeatureForm = configureForm(() => ({
         revisionWorkspaceVersion++
         return
       }
-      if (
-        success &&
-        result &&
-        typeof result === 'object' &&
-        'revisionDraft' in result
-      ) {
-        await refreshFeature()
-        hasProgrammaticDirtyChanges = false
-        revisionWorkspaceVersion++
-        toast.success('Proposed changes saved for review.')
-        return
+      // Persistence ends discovery undo, even while linking or refreshing the saved record is pending.
+      if (success) {
+        savedLocationNameDraft = null
+        draftSelectionSaved = true
+        if (import.meta.env.DEV && isNewFeatureRef) devDraftStore.clear()
+        draftSelectionBefore = null
       }
-
       if (
         success &&
-        draftPlaceSource &&
+        (draftPlaceSource || draftLocalKind) &&
         result &&
         typeof result === 'object' &&
         'data' in result
@@ -1301,6 +1609,31 @@ const configuredFeatureForm = configureForm(() => ({
         const saved = result.data as { id?: unknown; modifiedAt?: unknown }
         if (typeof saved?.id === 'string' && typeof saved.modifiedAt === 'string')
           await finishDraftPlaceLink({ id: saved.id, modifiedAt: saved.modifiedAt })
+      }
+      // Adopt the persisted ID without remounting the editor or its shared success toast.
+      if (
+        success &&
+        data.meta?.mode === 'create' &&
+        isNewFeatureRef &&
+        result &&
+        typeof result === 'object' &&
+        'data' in result
+      ) {
+        const saved = result.data as { id?: unknown } | null
+        if (typeof saved?.id === 'string' && saved.id) {
+          // Settle the saved form first so adopting its ID cannot flash an empty editor.
+          await refreshFeature(saved.id, { adoptCreated: true })
+          if (!isNewFeatureRef) return
+          const url = new URL((page.shallow?.url ?? page.url).href)
+          url.pathname = `/admin/features/${encodeURIComponent(saved.id)}`
+          await goto(url, {
+            shallow: true,
+            replace: true,
+            reset: false,
+            state: { ...page.state, draftLocationResult: undefined },
+          })
+          return
+        }
       }
       await refreshFeature()
     },
@@ -1323,88 +1656,6 @@ const showNameFields = $derived(
     namingChosen ||
     Object.values(currentFeatureData.i18n ?? {}).some(value => Boolean(value?.title)),
 )
-
-// History for existing features is independent of new-location discovery state.
-type FeatureFormCheckpoint = {
-  data: FeatureFormInput['data']
-  profileLocales: ProfileLocaleState
-  facet: typeof activeFacet
-  editing: boolean
-  dirty: boolean
-}
-const navigationDraftScope = $derived(
-  JSON.stringify([adminCtx.view.user?.id ?? '', featureRef]),
-)
-let pendingNavigationRestore =
-  $state.raw<FormNavigationSnapshot<FeatureFormCheckpoint> | null>(null)
-
-/** Capture independent form values for a browser history entry.
- * @returns Serializable fields and presentation state for an existing feature.
- */
-function captureFeatureFormCheckpoint(): FeatureFormCheckpoint {
-  return JSON.parse(
-    JSON.stringify({
-      data: currentFeatureData,
-      profileLocales: profileLocaleState,
-      facet: activeFacet,
-      editing: isEditing,
-      dirty: isDirty,
-    }),
-  )
-}
-
-/** Restore a captured editor after the current resource has finished loading.
- * @param saved Captured form and presentation state.
- * @returns Nothing; restoration never creates another history entry.
- */
-function restoreFeatureFormCheckpoint(saved: FeatureFormCheckpoint): void {
-  formCtx.form.fields.set({ ...currentFormValue, data: saved.data })
-  setProfileLocaleState(
-    restoreProfileLocales(profileDefaults, saved.data.i18n, saved.profileLocales),
-  )
-  headerCtrl.setEditing(saved.editing)
-  hasProgrammaticDirtyChanges = saved.dirty
-  const facet = (page.shallow?.url ?? page.url).hash.slice(1) || saved.facet
-  if (featureFacetOrder.includes(facet as FacetType)) {
-    adminCtx.setFacet(facet as FacetType, featureRef, FirstClassResource.feature)
-  }
-}
-
-snapshot<FormNavigationSnapshot<FeatureFormCheckpoint> | null>({
-  id: 'admin-feature-form-v1',
-  capture: () =>
-    currentUser?.id && !isNewFeatureRef && isCurrentRefSettled
-      ? captureFormNavigationSnapshot(
-          navigationDraftScope,
-          captureFeatureFormCheckpoint(),
-        )
-      : null,
-  restore: saved => {
-    pendingNavigationRestore =
-      saved && isCurrentFormNavigationSnapshot(navigationDraftScope, saved)
-        ? saved
-        : null
-  },
-  reset: () => {
-    pendingNavigationRestore = null
-  },
-})
-
-// Wait for form hydration and reject obsolete restore requests after navigation or saving.
-$effect(() => {
-  const saved = pendingNavigationRestore
-  const scope = navigationDraftScope
-  if (!saved || !isCurrentRefSettled) return
-  let cancelled = false
-  void tick().then(() => {
-    if (cancelled || !isCurrentFormNavigationSnapshot(scope, saved)) return
-    restoreFeatureFormCheckpoint(saved.value)
-    pendingNavigationRestore = null
-  })
-  return () => {
-    cancelled = true
-  }
-})
 
 // Hide form-level issues during programmatic resets so transient invalid states do not flash.
 const visibleAllIssues = $derived.by((): unknown[] =>
@@ -1510,6 +1761,230 @@ function applyProfileTranslation(
   )
 }
 
+// Development drafts belong to this account and creation form, never a saved Feature.
+let devDraftReady = $state(false)
+type FeatureDraftCheckpoint = {
+  data: FeatureFormInput['data']
+  profileLocales?: ProfileLocaleState
+  facet: FacetType
+  namingChosen: boolean
+  hasPin: boolean
+  hasAddress: boolean
+  accessibility?: AccessibilityDraft
+  addressIdentity?: MapAddressChange['identity']
+  localKind?: typeof draftLocalKind
+  catalogueBuilding: boolean
+  buildingSource?: BuildingSource
+  visibility?: typeof draftVisibilityOverride
+  names: Record<string, string>
+  nameMode: typeof draftLocalNameMode
+  placeSource: typeof draftPlaceSource
+  selectionBefore: typeof draftSelectionBefore
+  resultHistoryId: string | null
+  search: DraftLocationSearchProgress | null
+  accepted?: boolean
+  findMode?: typeof draftFindMode
+  editing?: boolean
+  dirty?: boolean
+  savedNames?: typeof savedLocationNameDraft
+}
+const devDraftStore = $derived(
+  createDevFormDraft<FeatureDraftCheckpoint>(
+    `hype:dev:new-feature:v1:${adminCtx.view.user?.id ?? ''}`,
+  ),
+)
+
+// History recovery is available in production; development refresh recovery stays separate.
+const navigationDraftScope = $derived(
+  JSON.stringify([adminCtx.view.user?.id ?? '', featureRef]),
+)
+let navigationRestoreRequested = false
+let pendingNavigationRestore =
+  $state.raw<FormNavigationSnapshot<FeatureDraftCheckpoint> | null>(null)
+let pendingSearchRestore = $state.raw<{
+  scope: string
+  search: DraftLocationSearchProgress | null
+} | null>(null)
+
+/** Capture form values and non-field editor state without retaining reactive proxies.
+ * @returns A serializable checkpoint for history or development refresh recovery.
+ */
+function captureFeatureCheckpoint(): FeatureDraftCheckpoint {
+  const search =
+    pendingSearchRestore?.scope === navigationDraftScope
+      ? pendingSearchRestore.search
+      : (draftSearch?.getProgress() ?? null)
+  return JSON.parse(
+    JSON.stringify({
+      data: currentFeatureData,
+      profileLocales: profileLocaleState,
+      facet: activeFacet,
+      namingChosen,
+      hasPin: draftHasPin,
+      hasAddress: draftHasAddress,
+      accessibility: draftAccessibility,
+      addressIdentity: draftAddressIdentity,
+      localKind: draftLocalKind,
+      catalogueBuilding: draftCatalogueBuilding,
+      buildingSource: draftBuildingSource,
+      visibility: draftVisibilityOverride,
+      names: draftLocationNames,
+      nameMode: draftLocalNameMode,
+      placeSource: draftPlaceSource,
+      selectionBefore: draftSelectionBefore,
+      resultHistoryId: draftResultHistoryId,
+      search,
+      accepted: draftLocationAccepted,
+      findMode: draftFindMode,
+      editing: isEditing,
+      dirty: isDirty,
+      savedNames: savedLocationNameDraft,
+    }),
+  )
+}
+
+/** Apply a checkpoint after the form's initial resource load has settled.
+ * @param saved Captured editor state. @param restoreHistoryMarker Whether development refresh needs a selection entry.
+ * @returns Nothing; history traversal itself never pushes an additional entry.
+ */
+function restoreFeatureCheckpoint(
+  saved: FeatureDraftCheckpoint,
+  restoreHistoryMarker = false,
+): void {
+  formCtx.form.fields.set({ ...currentFormValue, data: saved.data })
+  if (saved.profileLocales)
+    setProfileLocaleState(
+      restoreProfileLocales(profileDefaults, saved.data.i18n, saved.profileLocales),
+    )
+  namingChosen = saved.namingChosen
+  draftHasPin = saved.hasPin
+  draftHasAddress = saved.hasAddress
+  draftAccessibility = saved.accessibility
+  draftAddressIdentity = saved.addressIdentity
+  draftLocalKind = saved.localKind
+  draftCatalogueBuilding = saved.catalogueBuilding
+  draftBuildingSource = saved.buildingSource
+  draftVisibilityOverride = saved.visibility
+  draftLocationNames = saved.names
+  draftLocalNameMode = saved.nameMode
+  draftPlaceSource = saved.placeSource
+  draftSelectionBefore = saved.selectionBefore
+  draftResultHistoryId = saved.resultHistoryId
+  if (
+    restoreHistoryMarker &&
+    saved.resultHistoryId &&
+    page.state.draftLocationResult !== saved.resultHistoryId
+  ) {
+    pushState(page.url.href, {
+      ...page.state,
+      draftLocationResult: saved.resultHistoryId,
+    })
+  }
+  pendingSearchRestore = { scope: navigationDraftScope, search: saved.search }
+  draftLocationAccepted = saved.accepted ?? Boolean(saved.selectionBefore)
+  draftFindMode = saved.findMode ?? 'search'
+  savedLocationNameDraft = saved.savedNames ?? null
+  if (saved.editing !== undefined) headerCtrl.setEditing(saved.editing)
+  hasProgrammaticDirtyChanges = saved.dirty ?? true
+  const facet = (page.shallow?.url ?? page.url).hash.slice(1) || saved.facet
+  if (featureFacetOrder.includes(facet as FacetType)) {
+    adminCtx.setFacet(facet as FacetType, featureRef, FirstClassResource.feature)
+  }
+}
+
+snapshot<FormNavigationSnapshot<FeatureDraftCheckpoint> | null>({
+  id: 'admin-feature-form-v1',
+  capture: () =>
+    currentUser?.id && isCurrentRefSettled && !(isNewFeatureRef && draftSelectionSaved)
+      ? captureFormNavigationSnapshot(navigationDraftScope, captureFeatureCheckpoint())
+      : null,
+  restore: saved => {
+    navigationRestoreRequested = Boolean(
+      saved && isCurrentFormNavigationSnapshot(navigationDraftScope, saved),
+    )
+    pendingNavigationRestore = navigationRestoreRequested ? saved : null
+  },
+  reset: () => {
+    pendingNavigationRestore = null
+    navigationRestoreRequested = false
+  },
+})
+
+// Resource hydration and remote-form effects must finish before restoring history values.
+$effect(() => {
+  const saved = pendingNavigationRestore
+  const scope = navigationDraftScope
+  if (!saved || !isCurrentRefSettled) return
+  let cancelled = false
+  void tick().then(() => {
+    if (cancelled || !isCurrentFormNavigationSnapshot(scope, saved)) return
+    restoreFeatureCheckpoint(saved.value)
+    pendingNavigationRestore = null
+    devDraftReady = true
+  })
+  return () => {
+    cancelled = true
+  }
+})
+
+// The Location facet mounts lazily, so retain search progress until its component exists.
+$effect(() => {
+  const pending = pendingSearchRestore
+  if (!pending || pending.scope !== navigationDraftScope || !draftSearch) return
+  untrack(() => draftSearch?.restoreProgress(pending.search))
+  pendingSearchRestore = null
+})
+
+// Restore after bootstrap resets have settled; never persist the initial empty render over a draft.
+$effect(() => {
+  const accountId = currentUser?.id
+  const isNew = isNewFeatureRef
+  const store = devDraftStore
+  devDraftReady = false
+  if (!import.meta.env.DEV || !isNew || !accountId) return
+  let cancelled = false
+  void tick().then(() => {
+    if (cancelled || navigationRestoreRequested) return
+    const saved = store.read()
+    if (
+      saved?.data &&
+      saved.names &&
+      (!saved.search || Array.isArray(saved.search.receivedRows))
+    ) {
+      restoreFeatureCheckpoint(saved, true)
+    }
+    devDraftReady = true
+  })
+  return () => {
+    cancelled = true
+  }
+})
+
+// Read nested field proxies synchronously so typing, selection and facet changes all checkpoint.
+$effect(() => {
+  if (!import.meta.env.DEV || !devDraftReady || !isNewFeatureRef || draftSelectionSaved)
+    return
+  const checkpoint = captureFeatureCheckpoint()
+  const search = checkpoint.search
+  if (
+    profileLocaleDraft?.key === profileScope ||
+    isDirty ||
+    namingChosen ||
+    draftHasPin ||
+    search?.query ||
+    search?.accepted
+  ) {
+    devDraftStore.write(checkpoint)
+  } else devDraftStore.clear()
+})
+
+/** Discard the development checkpoint and return the creation flow to its first step.
+ * @returns Nothing; no server records are changed.
+ */
+function startOverDevDraft(): void {
+  onReset()
+}
+
 /********************
  *  SECTION : CORE STATE
  ************/
@@ -1523,6 +1998,10 @@ const organisationIdValue = $derived(String(currentFeatureData.organisationId ??
 const projectIdValue = $derived(String(currentFeatureData.projectId ?? ''))
 const layerIdValue = $derived(String(currentFeatureData.layerId ?? ''))
 const hasSelectedLayer = $derived(layerIdValue.trim().length > 0)
+// Location choices depend on the organisation and project resolved by layer selection.
+const needsLayerSelection = $derived(
+  isNewFeatureRef && (!hasSelectedLayer || !organisationIdValue || !projectIdValue),
+)
 
 // Resolve the currently selected hydrated parent records from the local caches keyed by form ids.
 const selectedOrganisation = $derived.by(() => {
@@ -1696,8 +2175,6 @@ const featureDescriptorFieldConfigs = $derived([
     : []),
 ])
 
-const featureDescriptorTranslatableFields = ['title', 'description'] as const
-
 /********************
  *  SECTION : CORE ISSUES
  ************/
@@ -1817,6 +2294,11 @@ async function handleFeatureStateToggle(
   }
 }
 
+// The modal follows a successful publication and is scoped to that exact Feature.
+$effect(() => {
+  headerCtrl.setFormActions({ publishPrompt: null })
+})
+
 const canPreview = $derived.by(() => {
   const savedFeature = feature?.data
   if (!currentUser || !savedFeature) return false
@@ -1865,91 +2347,6 @@ function onDeleteToggle(): void {
 /********************
  *  SECTION : CORE I18N
  ************/
-async function onTranslateDescriptorLocale(
-  sourceLocale: Locale,
-  targetLocale: Locale,
-): Promise<boolean> {
-  const sourceLocaleKey = toLocaleKey(sourceLocale)
-  const targetLocaleKey = toLocaleKey(targetLocale)
-
-  const fieldsToTranslate = featureDescriptorTranslatableFields.filter(field => {
-    const currentValue = currentFeatureData.i18n?.[targetLocaleKey]?.[field] ?? ''
-
-    return currentValue.trim().length === 0
-  })
-
-  if (fieldsToTranslate.length === 0) return false
-
-  const translated = await translateI18nFields({
-    source: sourceLocaleKey,
-    target: targetLocaleKey,
-    fields: [...fieldsToTranslate],
-    i18n: {
-      en: Object.fromEntries(
-        fieldsToTranslate.map(field => [
-          field,
-          currentFeatureData.i18n?.en?.[field] ?? '',
-        ]),
-      ),
-      zhHans: Object.fromEntries(
-        fieldsToTranslate.map(field => [
-          field,
-          currentFeatureData.i18n?.zhHans?.[field] ?? '',
-        ]),
-      ),
-      zhHant: Object.fromEntries(
-        fieldsToTranslate.map(field => [
-          field,
-          currentFeatureData.i18n?.zhHant?.[field] ?? '',
-        ]),
-      ),
-    },
-  })
-
-  updateFeatureData(
-    data => ({
-      ...data,
-      i18n: {
-        ...data.i18n,
-        [targetLocaleKey]: {
-          ...data.i18n[targetLocaleKey],
-          ...Object.fromEntries(
-            fieldsToTranslate.map(field => [field, translated[field] ?? '']),
-          ),
-          ...Object.fromEntries(
-            fieldsToTranslate.map(field => [
-              `${field}Gen`,
-              Boolean((translated[field] ?? '').trim()),
-            ]),
-          ),
-        },
-      },
-    }),
-    { revalidate: true },
-  )
-  return true
-}
-
-function onResetDescriptorLocale(targetLocale: Locale): void {
-  const targetLocaleKey = toLocaleKey(targetLocale)
-  updateFeatureData(
-    data => ({
-      ...data,
-      i18n: {
-        ...data.i18n,
-        [targetLocaleKey]: {
-          ...data.i18n[targetLocaleKey],
-          title: '',
-          titleGen: false,
-          description: '',
-          descriptionGen: false,
-        },
-      },
-    }),
-    { revalidate: true },
-  )
-}
-
 async function onTranslateTranslatableValues(
   sourceLocale: Locale,
   targetLocale: Locale,
@@ -2060,7 +2457,203 @@ const initialMapCenter = $derived(getUserLocationCoordinates(adminCtx.view))
 let isAddressLookupLoading = $state(false)
 let addressLookupMessage = $state('')
 let addressLookupRevision = 0
+let streetCandidates = $state<NearbyStreet[]>([])
 let addressCandidates = $state<FeatureAddress[]>([])
+let mapAddressChangeBusy = $state(false)
+let mapAddressChangeError = $state('')
+let mapAddressChangeButton = $state<HTMLButtonElement>()
+let pendingMapAddressChange = $state<{
+  change: MapAddressChange
+  signature: string
+  origin: [number, number]
+  ref: string
+} | null>(null)
+let mapPartsRequest = 0
+let mapPartsSuggestion = $state<{
+  ref: string
+  point: string
+  parts: MapMissingParts
+  labels: string[]
+  number: string | null
+  streets: string[]
+  conflictsDismissed?: boolean
+  reviewRequired?: boolean
+} | null>(null)
+let mapMoveBefore = $state.raw<{
+  ref: string
+  geometry: typeof currentFeatureData.geometry
+  addressMeta: typeof currentFeatureData.addressMeta
+  hasPin: boolean
+  camera: ReturnType<import('#lib/map/controller.js').MapController['getCamera']>
+} | null>(null)
+$effect(() => {
+  featureRef
+  isEditing
+  mapPartsRequest++
+  mapPartsSuggestion = null
+  mapMoveBefore = null
+  pendingMapAddressChange = null
+  mapAddressChangeBusy = false
+  mapAddressChangeError = ''
+})
+// Edits or navigation invalidate the decision together with the candidate marker.
+$effect(() => {
+  if (
+    pendingMapAddressChange &&
+    (pendingMapAddressChange.ref !== featureRef ||
+      pendingMapAddressChange.signature !== JSON.stringify(currentFeatureData))
+  )
+    pendingMapAddressChange = null
+})
+const missingPartsSuggestion = $derived.by((): MapMissingParts | null => {
+  if (
+    !isEditing ||
+    !isLocationFacet ||
+    !mapPartsSuggestion ||
+    mapPartsSuggestion.ref !== featureRef ||
+    mapPartsSuggestion.point !== JSON.stringify(featureCoordinates)
+  )
+    return null
+  const { parts } = mapPartsSuggestion
+  const missing = missingMapParts(
+    editorAddress,
+    parts.block ? [parts.block.label] : [],
+    parts.number ?? null,
+  )
+  return missing.block || missing.number ? missing : null
+})
+const mapConflicts = $derived.by(() =>
+  mapPartsSuggestion &&
+  !mapPartsSuggestion.conflictsDismissed &&
+  isEditing &&
+  isLocationFacet &&
+  mapPartsSuggestion.ref === featureRef &&
+  mapPartsSuggestion.point === JSON.stringify(featureCoordinates)
+    ? mapAddressDisagreements(
+        editorAddress,
+        mapPartsSuggestion.labels,
+        mapPartsSuggestion.number,
+        mapPartsSuggestion.streets,
+      )
+    : [],
+)
+// Keep the current pin stationary until every notice or candidate-move decision is handled.
+const hasMapAddressNotice = $derived(
+  Boolean(missingPartsSuggestion || mapConflicts.length || pendingMapAddressChange),
+)
+/** Inspect map evidence after a drop; stale responses cannot follow the user to another pin.
+ * @param point Dropped coordinate pair. @returns Completion of the optional suggestion lookup.
+ */
+async function suggestMapParts(point: number[]): Promise<void> {
+  const request = ++mapPartsRequest
+  const ref = featureRef
+  const key = JSON.stringify(point)
+  const controller = draftMapController
+  try {
+    const pin: [number, number] = [point[0], point[1]]
+    const [labels, number, streets] = await Promise.allSettled([
+      controller?.getBuildingNamesAt?.(pin) ?? [],
+      controller?.getStreetNumberAt?.(pin) ?? null,
+      controller?.getBuildingStreetsAt?.(pin) ?? [],
+    ])
+    if (
+      request !== mapPartsRequest ||
+      ref !== featureRef ||
+      controller !== draftMapController ||
+      key !== JSON.stringify(featureCoordinates) ||
+      !isEditing ||
+      !isLocationFacet
+    )
+      return
+    // Independent evidence: an ambiguous number must not suppress a usable tower label.
+    const names = labels.status === 'fulfilled' ? labels.value : []
+    const mapNumber = number.status === 'fulfilled' ? number.value : null
+    const mapStreets = streets.status === 'fulfilled' ? streets.value : []
+    const parts = missingMapParts(editorAddress, names, mapNumber)
+    mapPartsSuggestion = {
+      ref,
+      point: key,
+      parts,
+      labels: names,
+      number: mapNumber,
+      streets: mapStreets,
+    }
+    if (
+      !parts.block &&
+      !parts.number &&
+      !mapAddressDisagreements(editorAddress, names, mapNumber, mapStreets).length
+    )
+      mapMoveBefore = null
+  } catch {
+    /* Missing/ambiguous map evidence leaves manual editing available. */
+  }
+}
+
+let hoveredAddressCandidate = $state<FeatureAddress | null>(null)
+let addressPreviewZoom: number | undefined
+const rankedAddressCandidates = $derived(
+  nearbyAddressCandidates(addressCandidates, featureCoordinates ?? []),
+)
+const mapAddressChangeMarkers = $derived(
+  pendingMapAddressChange?.change.address.coordinates
+    ? [
+        {
+          id: 'address-change',
+          kind: 'address' as const,
+          number: 0,
+          coordinates: pendingMapAddressChange.change.address.coordinates,
+          label: getAddressDisplay(
+            pendingMapAddressChange.change.address,
+            getLocaleKey(),
+          ),
+          highlighted: true,
+          previewOnly: true,
+        },
+      ]
+    : [],
+)
+const addressSearchMarkers = $derived(
+  rankedAddressCandidates.flatMap(({ candidate }, index): LocationSearchMarker[] => {
+    const coordinates = addressCandidatePoint(candidate)
+    return coordinates
+      ? [
+          {
+            id: `enrichment:${index}`,
+            kind: 'address',
+            number: index + 1,
+            coordinates,
+            label: getAddressDisplay(candidate, getLocaleKey()),
+            previewOnly: true,
+            compact: true,
+            highlighted: candidate === hoveredAddressCandidate,
+          },
+        ]
+      : []
+  }),
+)
+/** Preview a result without moving the saved Location pin; restore that pin on leave.
+ * @param candidate Hovered/focused result or null. @returns Nothing.
+ */
+function previewAddressCandidate(candidate: FeatureAddress | null): void {
+  const controller = draftMapController
+  if (!controller) return
+  const point = candidate ? addressCandidatePoint(candidate) : featureCoordinates
+  if (!point) return
+  if (candidate && !hoveredAddressCandidate)
+    addressPreviewZoom = controller.getCamera()?.zoom
+  hoveredAddressCandidate = candidate
+  controller.easeTo({
+    center: [point[0], point[1]],
+    zoom: candidate ? Math.max(addressPreviewZoom ?? 17, 18) : addressPreviewZoom,
+    duration: prefersReducedMotion.current ? 0 : 350,
+  })
+  if (!candidate) addressPreviewZoom = undefined
+}
+// Dismissal or selection removes all enrichment markers and any active preview.
+$effect(() => {
+  if (!addressCandidates.length && hoveredAddressCandidate)
+    previewAddressCandidate(null)
+})
 
 const editorAddress = $derived.by((): FeatureAddress => {
   if (currentFeatureData.addressMeta?.address)
@@ -2088,6 +2681,7 @@ $effect(() => {
   isAddressLookupLoading = false
   addressLookupMessage = ''
   addressCandidates = []
+  streetCandidates = []
 })
 
 /** Updates the canonical address and its display-only projections in one draft mutation.
@@ -2095,10 +2689,18 @@ $effect(() => {
  * @returns Nothing; persistence uses the existing authorized Save/Cancel workflow.
  */
 function updateAddressDraft(address: FeatureAddress): void {
+  // Reviewed Location identity survives Feature-owned address corrections; unreviewed map matches remain exact.
+  if (
+    draftAddressIdentity &&
+    address.association?.mode !== 'linked' &&
+    !exactAddressChangeMatch(editorAddress, address)
+  )
+    draftAddressIdentity = undefined
   addressLookupRevision += 1
   isAddressLookupLoading = false
   addressLookupMessage = ''
   addressCandidates = []
+  streetCandidates = []
   updateFeatureData(data => ({
     ...data,
     addressMeta: { ...data.addressMeta, address },
@@ -2125,7 +2727,7 @@ function updateAddressDraft(address: FeatureAddress): void {
 }
 
 /** Fetches the selected pin or an address query without overwriting a newer draft.
- * @param query Optional forward search; reverse lookup preserves the selected pin.
+ * @param query Optional forward search; lookup alone never changes the selected pin.
  * @returns Completion of the lookup; errors leave settled address data intact.
  */
 async function lookupFeatureAddress(query?: string): Promise<void> {
@@ -2136,22 +2738,39 @@ async function lookupFeatureAddress(query?: string): Promise<void> {
   isAddressLookupLoading = true
   addressLookupMessage = ''
   addressCandidates = []
+  streetCandidates = []
   const isCurrent = (): boolean =>
     revision === addressLookupRevision &&
     ref === featureRef &&
     isEditing &&
     JSON.stringify(currentFeatureData) === draftSignature
   try {
-    const results = await geocodeAddressCandidates(
-      query?.trim()
-        ? { address: query.trim() }
-        : { lng: featureCoordinates[0], lat: featureCoordinates[1] },
-    )
+    const pin: [number, number] = [featureCoordinates[0], featureCoordinates[1]]
+    // Resolve map hints independently so a provider failure cannot hide usable streets.
+    const hints = query?.trim()
+      ? []
+      : (draftMapController?.getNearbyStreetHints?.(pin) ?? [])
+    const [addresses, streets] = await Promise.allSettled([
+      geocodeAddressCandidates(
+        query?.trim() ? { address: query.trim() } : { lng: pin[0], lat: pin[1] },
+        { candidateCoordinates: true },
+      ),
+      hints.length
+        ? loadAddressNames('streets').then(names => matchStreetHints(hints, names))
+        : Promise.resolve([]),
+    ])
     if (!isCurrent()) return
-    addressCandidates = results.flatMap(result =>
-      result.addressMeta.address ? [result.addressMeta.address] : [],
-    )
-    if (!addressCandidates.length) addressLookupMessage = m.feature_address_no_match()
+    addressCandidates =
+      addresses.status === 'fulfilled'
+        ? addresses.value.flatMap(result =>
+            result.addressMeta.address ? [result.addressMeta.address] : [],
+          )
+        : []
+    streetCandidates = streets.status === 'fulfilled' ? streets.value : []
+    if (addresses.status === 'rejected' || streets.status === 'rejected')
+      addressLookupMessage = m.feature_address_failed()
+    else if (!addressCandidates.length && !streetCandidates.length)
+      addressLookupMessage = m.feature_address_no_match()
   } catch {
     if (isCurrent()) addressLookupMessage = m.feature_address_failed()
   } finally {
@@ -2166,10 +2785,10 @@ async function selectAddressCandidate(candidate: FeatureAddress): Promise<void> 
   const revision = ++addressLookupRevision
   const signature = JSON.stringify(currentFeatureData)
   const previous = editorAddress
-  const forward = Boolean(addressCandidateQuery)
   isAddressLookupLoading = true
   try {
-    const address = await loadGeocodedAddressUnits(candidate)
+    const address = recoverAddressNumber(await loadGeocodedAddressUnits(candidate))
+    address.coordinates = addressCandidatePoint(address) ?? address.coordinates
     if (
       revision !== addressLookupRevision ||
       !isEditing ||
@@ -2190,14 +2809,119 @@ async function selectAddressCandidate(candidate: FeatureAddress): Promise<void> 
         address.source.address3dUnitId = unit.value
       }
     }
-    if (forward && address.coordinates) handleCoordinateChange(address.coordinates)
+    // Explicit selection uses the candidate's actual point for both the pin and numbered marker.
+    if (address.coordinates) handleCoordinateChange(address.coordinates)
     updateAddressDraft(address)
+    draftSearch?.syncSelectedAddress(address)
+    previewDraftLocation({ address })
   } catch {
     if (revision === addressLookupRevision)
       addressLookupMessage = m.feature_address_failed()
   } finally {
     if (revision === addressLookupRevision) isAddressLookupLoading = false
   }
+}
+
+/** Resolve the displayed differences against complete addresses and existing scoped Locations.
+ * @returns Completion without replacing a newer draft or accepting an unconfirmed marker move.
+ */
+async function acceptMapAddressChange(): Promise<void> {
+  if (
+    !isNewFeatureRef ||
+    mapAddressChangeBusy ||
+    mapPartsSuggestion?.reviewRequired ||
+    !mapConflicts.length ||
+    !featureCoordinates
+  )
+    return
+  const request = ++mapPartsRequest
+  const ref = featureRef
+  const signature = JSON.stringify(currentFeatureData)
+  const origin: [number, number] = [featureCoordinates[0], featureCoordinates[1]]
+  const isCurrent = (): boolean =>
+    request === mapPartsRequest &&
+    ref === featureRef &&
+    isEditing &&
+    signature === JSON.stringify(currentFeatureData)
+  mapAddressChangeBusy = true
+  mapAddressChangeError = ''
+  try {
+    const change = await resolveMapAddressChange(
+      {
+        address: structuredClone($state.snapshot(editorAddress)),
+        pin: origin,
+        conflicts: mapConflicts,
+        projectId: projectIdValue,
+        visibility: draftLocationVisibility,
+      },
+      isCurrent,
+    )
+    if (!change || !isCurrent()) return
+    const point = change.address.coordinates
+    if (point && origin.some((value, index) => value !== point[index])) {
+      pendingMapAddressChange = { change, signature, origin, ref }
+      previewDraftLocation(change)
+      void tick().then(() => mapAddressChangeButton?.focus())
+    } else applyAcceptedMapAddressChange(change)
+  } catch (cause) {
+    if (isCurrent()) {
+      const reviewRequired =
+        cause instanceof Error &&
+        (cause.message.includes('ADDRESS_MATCH_REVIEW_REQUIRED') ||
+          ('status' in cause && cause.status === 409))
+      // Keep this suggestion review-only once its identity lookup proves ambiguous.
+      if (reviewRequired && mapPartsSuggestion)
+        mapPartsSuggestion = { ...mapPartsSuggestion, reviewRequired: true }
+      mapAddressChangeError = reviewRequired
+        ? m.address_map_change_ambiguous()
+        : m.feature_address_failed()
+    }
+  } finally {
+    if (ref === featureRef && request === mapPartsRequest) mapAddressChangeBusy = false
+  }
+}
+
+/** Apply an accepted correction through the existing draft and deferred association workflow.
+ * @param change Exact existing identity or custom address, after any movement confirmation.
+ * @returns Nothing; normal Save/Cancel controls persistence and retryable linking.
+ */
+function applyAcceptedMapAddressChange(change: MapAddressChange): void {
+  pendingMapAddressChange = null
+  mapMoveBefore = null
+  const point = change.address.coordinates
+  if (point && featureCoordinates?.some((value, index) => value !== point[index]))
+    handleCoordinateChange(point)
+  updateAddressDraft(change.address)
+  draftLocalKind = 'address'
+  draftLocalNameMode = 'independent'
+  draftPlaceSource = null
+  draftBuildingSource = undefined
+  draftCatalogueBuilding = false
+  draftAddressIdentity = change.identity
+  draftAccessibility = undefined
+  draftHasAddress = true
+  draftLocationAccepted = true
+  draftSearch?.adoptAddressChange(change.address)
+  mapPartsRequest++
+  mapPartsSuggestion = null
+  mapAddressChangeBusy = false
+  mapAddressChangeError = ''
+  // Inspect the new point through the same drop flow, so further differences need acceptance again.
+  if (point) void tick().then(() => suggestMapParts(point))
+}
+
+/** Confirm only the marker destination and draft version currently displayed by the move prompt.
+ * @returns Nothing; Cancel and stale drafts retain the previous address and association.
+ */
+function confirmMapAddressChange(): void {
+  const pending = pendingMapAddressChange
+  if (
+    !pending ||
+    pending.ref !== featureRef ||
+    pending.signature !== JSON.stringify(currentFeatureData)
+  )
+    return
+  applyAcceptedMapAddressChange(pending.change)
 }
 
 /********************
@@ -2211,7 +2935,19 @@ async function selectAddressCandidate(candidate: FeatureAddress): Promise<void> 
 function handlePinDrop(nextCoordinates: number[]): void {
   const controller = draftMapController
   const camera = controller?.getCamera()
-  handleCoordinateChange(nextCoordinates)
+  // Snapshot Location-owned fields only; cancelling must not undo Profile or other form edits.
+  mapMoveBefore = {
+    ref: featureRef,
+    geometry: structuredClone($state.snapshot(currentFeatureData.geometry)),
+    addressMeta: structuredClone($state.snapshot(currentFeatureData.addressMeta)),
+    hasPin: draftHasPin,
+    camera: camera ?? null,
+  }
+  handleCoordinateChange(nextCoordinates, true)
+  draftSearch?.syncSelectedAddress({
+    ...editorAddress,
+    coordinates: [nextCoordinates[0], nextCoordinates[1]],
+  })
   if (!controller || !camera) return
   // Let Maplet synchronize the marker before starting the drop's camera animation.
   void tick().then(() => {
@@ -2221,19 +2957,67 @@ function handlePinDrop(nextCoordinates: number[]): void {
       zoom: Math.max(camera.zoom, Math.min(camera.zoom + 2, BUILDING_ZOOM)),
       duration: prefersReducedMotion.current ? 0 : 520,
     })
+    void suggestMapParts(nextCoordinates)
+  })
+}
+
+/** Cancel the current pin move, invalidating lookups before restoring its address and marker.
+ * @returns Nothing; unrelated form fields and edits remain untouched.
+ */
+function cancelMapAddressMove(): void {
+  const before = mapMoveBefore
+  mapMoveBefore = null
+  mapPartsRequest++
+  mapPartsSuggestion = pendingMapAddressChange = null
+  mapAddressChangeBusy = false
+  mapAddressChangeError = ''
+  addressLookupRevision++
+  isAddressLookupLoading = false
+  addressLookupMessage = ''
+  addressCandidates = []
+  streetCandidates = []
+  if (!before) {
+    if (featureCoordinates)
+      previewDraftLocation({
+        address: {
+          ...editorAddress,
+          coordinates: [featureCoordinates[0], featureCoordinates[1]],
+        },
+      })
+    return
+  }
+  if (before.ref !== featureRef) return
+  updateFeatureData(
+    data => ({ ...data, geometry: before.geometry, addressMeta: before.addressMeta }),
+    { revalidate: true },
+  )
+  draftHasPin = before.hasPin
+  if (before.addressMeta?.address)
+    draftSearch?.syncSelectedAddress(before.addressMeta.address)
+  void tick().then(() => {
+    if (before.ref === featureRef && before.camera)
+      draftMapController?.flyTo({
+        ...before.camera,
+        duration: prefersReducedMotion.current ? 0 : 350,
+      })
   })
 }
 
 /** Moves the draft marker and invalidates any address tied to the previous point.
  * @param nextCoordinates Selected longitude/latitude.
+ * @param preserveMove Retain the pre-drop snapshot until its move decision is handled.
  * @returns Nothing; the address is retained for review until a new lookup.
  */
-function handleCoordinateChange(nextCoordinates: number[]): void {
+function handleCoordinateChange(nextCoordinates: number[], preserveMove = false): void {
+  if (!preserveMove) mapMoveBefore = null
+  mapPartsRequest++
+  mapPartsSuggestion = null
   if (isNewFeatureRef) draftHasPin = true
   addressLookupRevision += 1
   isAddressLookupLoading = false
   addressLookupMessage = ''
   addressCandidates = []
+  streetCandidates = []
   updateFeatureData(
     data => ({
       ...data,
@@ -2246,6 +3030,33 @@ function handleCoordinateChange(nextCoordinates: number[]): void {
     }),
     { revalidate: true },
   )
+}
+
+/** Apply a manually edited coordinate pair and recenter the current map.
+ * @param nextCoordinates Validated longitude/latitude from the coordinate editor.
+ * @returns Nothing; camera movement follows the reactive marker update.
+ */
+function handleManualCoordinateChange(nextCoordinates: number[]): void {
+  const controller = draftMapController
+  const ref = featureRef
+  handleCoordinateChange(nextCoordinates)
+  draftSearch?.syncSelectedAddress({
+    ...editorAddress,
+    coordinates: [nextCoordinates[0], nextCoordinates[1]],
+  })
+  // Preserve zoom and orientation, and never move a different Feature's map after navigation.
+  void tick().then(() => {
+    if (ref !== featureRef || controller !== draftMapController) return
+    if (
+      featureCoordinates?.[0] !== nextCoordinates[0] ||
+      featureCoordinates?.[1] !== nextCoordinates[1]
+    )
+      return
+    controller?.easeTo({
+      center: [nextCoordinates[0], nextCoordinates[1]],
+      duration: prefersReducedMotion.current ? 0 : 420,
+    })
+  })
 }
 
 /********************
@@ -2530,15 +3341,20 @@ function togglePropertyI18nValueGen(
   )
 }
 
+let layerPropertiesRevision = 0
+
 /**
  * Refreshes layer-backed feature properties for the current layer selection.
  *
  * @param layerId Selected layer id, if any.
  * @returns A promise that resolves after property state is synchronized.
+ * @remarks Reset, route changes and newer selections invalidate pending property responses.
  */
 async function syncLayerBackedProperties(
   layerId: string | null | undefined,
 ): Promise<void> {
+  const revision = ++layerPropertiesRevision
+  const requestedRef = featureRef
   const resolvedLayerId = layerId?.trim() ?? ''
 
   if (!resolvedLayerId) {
@@ -2556,6 +3372,13 @@ async function syncLayerBackedProperties(
       refKey: 'id',
       meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
     })
+    // A response for the discarded draft must not mark the reset form dirty again.
+    if (
+      revision !== layerPropertiesRevision ||
+      requestedRef !== featureRef ||
+      currentFeatureData.layerId !== resolvedLayerId
+    )
+      return
     const layer = (result?.data ?? null) as Layer | null
     syncSelectedLayer(toParentLayerItem(layer as never))
     updateFeatureData(data => ({
@@ -2563,6 +3386,12 @@ async function syncLayerBackedProperties(
       properties: toLayerBackedFeatureProperties(layer, data.properties),
     }))
   } catch {
+    if (
+      revision !== layerPropertiesRevision ||
+      requestedRef !== featureRef ||
+      currentFeatureData.layerId !== resolvedLayerId
+    )
+      return
     updateFeatureData(data => {
       if ((data.properties ?? []).length === 0) return data
 
@@ -2615,7 +3444,14 @@ function commitSettledFeatureState(value: FeaturePageState): void {
  */
 async function onSubmit(): Promise<void> {
   suppressFormLevelIssues = false
-  if (!isCurrentRefLoaded || !ensureDraftPin()) return
+  if (
+    draftResolutionPending ||
+    mapAddressChangeBusy ||
+    pendingMapAddressChange ||
+    !isCurrentRefLoaded ||
+    !ensureDraftPin()
+  )
+    return
   // Flush the last input edit before serializing custom property controls.
   await tick()
   const phoneInputs = Array.from(
@@ -2660,28 +3496,82 @@ const isCurrentRefSettled = $derived(
  *  FORM RESET
  ************/
 
+/** Clear creation-only choices and invalidate Location discovery before resetting fields.
+ * @returns Nothing; explicit Back to results remains the discovery undo action.
+ */
+function resetNewFeatureFlow(): void {
+  mapMoveBefore = null
+  draftSearch?.restoreProgress(null)
+  namingChosen = false
+  locationFocusRequest = 0
+  draftHasPin = draftHasAddress = draftLocationAccepted = false
+  draftSelectionSaved = false
+  draftFindMode = 'search'
+  draftAccessibility = draftLocalKind = draftVisibilityOverride = undefined
+  draftCatalogueBuilding = false
+  draftBuildingSource = undefined
+  draftAddressIdentity = undefined
+  draftLocationNames = {}
+  draftLocalNameMode = 'inherit'
+  draftPlaceSource = draftSelectionBefore = draftResultHistoryId = null
+  draftSearchHasResults = false
+  locationSearchMarkers = []
+  mapPartsRequest++
+  mapPartsSuggestion = null
+  // Remove the discarded selection's history marker without traversing browser history.
+  if (page.state.draftLocationResult) {
+    replaceState(page.url.href, { ...page.state, draftLocationResult: undefined })
+  }
+}
+
+/** Reset all NEW creation state; saved Features restore their committed form values.
+ * @returns Nothing; NEW returns to Profile and discards its development checkpoint.
+ * @remarks Discovery undo retains query/results only through its explicit Back action.
+ */
 function onReset(): void {
   invalidateFormNavigationSnapshots(navigationDraftScope)
   pendingNavigationRestore = null
+  pendingSearchRestore = null
+  profileEpoch++
+  // Cancel resets content, not the user's locale order or multilingual presentation.
+  setProfileLocaleState(profileLocaleState)
+  savedLocationNameDraft = null
+  mapMoveBefore = null
+  layerPropertiesRevision++
+  if (isNewFeatureRef) resetNewFeatureFlow()
+  draftAddressIdentity = undefined
+  pendingMapAddressChange = null
+  mapPartsRequest++
+  mapPartsSuggestion = null
+  mapAddressChangeBusy = false
+  mapAddressChangeError = ''
   addressLookupRevision += 1
   isAddressLookupLoading = false
   addressLookupMessage = ''
   addressCandidates = []
+  streetCandidates = []
   suppressFormLevelIssues = true
   const emptyResetValue = toEmptyFeatureFormInput()
-  const resetValue = committedFeature?.data
-    ? toFeatureFormInput(committedFeature.data)
-    : {
-        ...emptyResetValue,
-        data: {
-          ...emptyResetValue.data,
-          contributorId: currentUser?.id ?? null,
-        },
-      }
+  const resetValue =
+    !isNewFeatureRef && committedFeature?.data
+      ? toFeatureFormInput(committedFeature.data)
+      : {
+          ...emptyResetValue,
+          data: {
+            ...emptyResetValue.data,
+            contributorId: currentUser?.id ?? null,
+          },
+        }
 
   featureFormSource = resetValue
   hasProgrammaticDirtyChanges = false
   formCtx.reset(resetValue)
+  if (isNewFeatureRef) {
+    devDraftStore.clear()
+    goToFacet('core')
+  }
+  // Reset can replace shallow history entries; invalidate their intermediate captures too.
+  invalidateFormNavigationSnapshots(navigationDraftScope)
 }
 
 /********************
@@ -2712,8 +3602,9 @@ function revalidateAfterProgrammaticChange(): void {
  *  SEARCH : PARENTS
  ************/
 
-/** Load the requested Feature independently of parent cards and inactive facets.
+/** Load the requested Feature independently of its parent cards and inactive facets.
  * @param ref Feature reference captured at the start of navigation.
+ * @param options Allow a newly created record to settle before replacing its draft URL.
  * @returns The loaded Feature; superseded navigation never changes the active form.
  */
 async function refreshFeature(
@@ -2922,16 +3813,18 @@ const featureParentSectionCtrl = createFeatureParentSectionController({
     ).data ?? [],
   searchParentLayers: async ({ query, organisationIds = [], projectIds = [] }) =>
     (
-      await getLayers({
-        q: query,
-        prisms: createFeatureParentSearchPrisms({
-          organisationIds,
-          projectIds,
-        }),
-        conditions: { isArchived: false, isPublished: null },
-        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
-      })
-    ).data ?? [],
+      (
+        await getLayers({
+          q: query,
+          prisms: createFeatureParentSearchPrisms({
+            organisationIds,
+            projectIds,
+          }),
+          conditions: { isArchived: false, isPublished: null },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
+        })
+      ).data ?? []
+    ).filter(candidate => !candidate.historicalSourceLayerId),
   syncSelectedOrganisation,
   syncSelectedProject,
   syncSelectedLayer,
@@ -3006,8 +3899,41 @@ async function getCreatableProjectRecords(
  *  VISUAL SECTION CLEANUP
  ************/
 
-// Scrolling leaves the visual height unchanged; only explicit controls resize it.
+// Scrolling leaves the visual height unchanged. Association content may request more room; explicit controls can restore the map.
 $effect(() => () => clearVisualSectionReopenState())
+
+/** Refresh saved Feature projections after a Location review.
+ * @returns Completion after the Feature and editor projections refresh.
+ */
+async function refreshLocationSource(): Promise<void> {
+  await getFeature({
+    ref: featureRef,
+    refKey: 'id',
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+  }).refresh()
+  await refreshFeature()
+}
+/** Disconnect the saved Location while retaining the current Feature values.
+ * @param expectedRevision Viewed association version. @returns Completion after refresh.
+ */
+async function disconnectSavedLocation(expectedRevision: string): Promise<void> {
+  const current = feature?.data
+  if (!current || isDirty) return
+  await unlinkFeatureLocation({
+    featureId: current.id,
+    expectedFeatureModifiedAt: current.modifiedAt,
+    expectedRevision,
+  }).updates(
+    getFeature({
+      ref: current.id,
+      refKey: 'id',
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+    }),
+    getFeatureLocation({ featureId: current.id }),
+    getFeatureDetachedBrands({ featureId: current.id }),
+  )
+  await refreshFeature()
+}
 </script>
 
 {#if currentFeatureId && feature?.data?.layerId}
@@ -3030,6 +3956,55 @@ $effect(() => () => clearVisualSectionReopenState())
   />
 {/if}
 
+{#snippet mapMissingPartsControls()}
+  <div class="flex flex-col items-center gap-2">
+    {#if pendingMapAddressChange?.change.address.coordinates}
+      <LocationMoveConfirmation
+        kind="address"
+        distance={locationDistance(
+          pendingMapAddressChange.origin,
+          pendingMapAddressChange.change.address.coordinates,
+        )}
+        bind:confirmButton={mapAddressChangeButton}
+        onConfirm={confirmMapAddressChange}
+        onCancel={cancelMapAddressMove}
+      />
+    {:else if mapConflicts.length}
+      <MapAddressConflict
+        conflicts={mapConflicts}
+        busy={mapAddressChangeBusy}
+        error={mapAddressChangeError}
+        reviewRequired={mapPartsSuggestion?.reviewRequired}
+        onCancel={cancelMapAddressMove}
+        onAccept={isNewFeatureRef ? () => void acceptMapAddressChange() : undefined}
+        onReview={() => {
+          if (mapPartsSuggestion) mapPartsSuggestion.conflictsDismissed = true
+          mapAddressChangeError = ''
+          void lookupFeatureAddress()
+        }}
+      />
+    {/if}
+    {#if missingPartsSuggestion && !pendingMapAddressChange}
+      <MapAddressSuggestion
+        parts={missingPartsSuggestion}
+        onApply={() => {
+          if (!missingPartsSuggestion) return
+          const next = applyMapMissingParts(editorAddress, missingPartsSuggestion)
+          mapMoveBefore = null
+          mapPartsSuggestion = null
+          mapPartsRequest++
+          updateAddressDraft(next)
+        }}
+        onDismiss={() => {
+          mapPartsRequest++
+          mapPartsSuggestion = null
+          mapMoveBefore = null
+        }}
+      />
+    {/if}
+  </div>
+{/snippet}
+
 <svelte:window
   bind:innerHeight={editorViewportHeight}
   onpopstate={recoverDraftSearchHistory}
@@ -3049,26 +4024,21 @@ $effect(() => () => clearVisualSectionReopenState())
     isReady={true}
     class={FEATURE_EDITOR_FORM_CLASS}
   >
-    {#if currentFeatureData.locationNameMode}
-      <input
-        {...formCtx.form.fields.data.locationNameMode.as(
-          'hidden',
-          currentFeatureData.locationNameMode,
-        )}
-      >
-    {/if}
     <HiddenInputs inputs={programmaticFeatureInputEntries} />
 
     {#if showsVisualSection}
       <FormFeatureVisualSection
+        bind:this={featureVisualSection}
         expandedHeight={Math.min(1200, editorViewportHeight * 0.5)}
+        minimumHeight={isLocationFacet ? 128 : 64}
         showImage={!isLocationFacet}
         showControls={!isLocationFacet}
         onHeightChange={height => (visualSectionHeight = height)}
         {hasPresentedCanonicalImageSizing}
         {isCanonicalImagePending}
         imageAspectRatio={resolvedCanonicalImageAspectRatio}
-        isCollapsed={isVisualSectionCollapsed}
+        isCollapsed={isVisualSectionCollapsed &&
+          !(isLocationFacet && draftResolutionPending)}
         isNewFeature={isNewFeatureRef}
         contributorUser={currentContributorUser}
         contributorId={feature?.data?.contributorId ?? null}
@@ -3089,13 +4059,50 @@ $effect(() => () => clearVisualSectionReopenState())
         onNavigateNext={() => handleFeatureStepperNavigation('next')}
       >
         {#snippet map()}
-          <Main.VisualSectionMap isCollapsed={isVisualSectionCollapsed}>
+          <Main.VisualSectionMap
+            isCollapsed={isVisualSectionCollapsed &&
+              !(isLocationFacet && draftResolutionPending)}
+          >
             <div class="relative h-full w-full">
+              {#if import.meta.env.DEV && isNewFeatureRef}
+                <div
+                  class="bg-panel/85 text-muted-foreground absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-6 py-1 text-xs backdrop-blur-sm"
+                  data-dev-form-draft
+                >
+                  <span>Development draft · resumes after refresh</span>
+                  <button
+                    type="button"
+                    class="hover:bg-muted hover:text-foreground rounded px-2 py-1"
+                    onclick={startOverDevDraft}
+                  >
+                    Start over
+                  </button>
+                </div>
+              {/if}
               <FormMapSection
+                pinControls={hasMapAddressNotice ? mapMissingPartsControls : undefined}
+                draggingLocked={hasMapAddressNotice}
                 {pinHighlightRequest}
                 onMapReady={controller => (draftMapController = controller)}
-                locationCandidates={isLocationFacet ? locationSearchMarkers : []}
-                onLocationCandidateSelect={selectLocationMarker}
+                locationCandidates={isLocationFacet
+                  ? pendingMapAddressChange
+                    ? mapAddressChangeMarkers
+                    : addressCandidates.length
+                      ? addressSearchMarkers
+                      : locationSearchMarkers
+                  : []}
+                onLocationCandidateSelect={id => {
+                  if (pendingMapAddressChange) {
+                    mapAddressChangeButton?.focus()
+                    return
+                  }
+                  if (addressCandidates.length) {
+                    const row =
+                      rankedAddressCandidates[Number(id.replace('enrichment:', ''))]
+                    if (row && !isAddressLookupLoading)
+                      void selectAddressCandidate(row.candidate)
+                  } else selectLocationMarker(id)
+                }}
                 showMarker={!isNewFeatureRef || draftHasPin}
                 initialCenter={isNewFeatureRef ? DRAFT_MAP_CENTER : initialMapCenter}
                 initialZoom={isNewFeatureRef ? 11.5 : DEFAULT_FEATURE_MAP_ZOOM}
@@ -3116,7 +4123,10 @@ $effect(() => () => clearVisualSectionReopenState())
                 </div>
               {/if}
               {#if isLocationFacet && sharedLocationMapControls}
-                <div class="absolute top-3 right-3 z-10" data-location-map-controls>
+                <div
+                  class="pointer-events-none absolute inset-3 z-10 flex items-start justify-end [&>*]:pointer-events-auto"
+                  data-location-map-controls
+                >
                   {@render sharedLocationMapControls()}
                 </div>
               {/if}
@@ -3130,7 +4140,8 @@ $effect(() => () => clearVisualSectionReopenState())
             src={presentedCanonicalImageSrc}
             alt={presentedCanonicalImageTitle}
             isPending={isCanonicalImagePending}
-            isCollapsed={isVisualSectionCollapsed}
+            isCollapsed={isVisualSectionCollapsed &&
+              !(isLocationFacet && draftResolutionPending)}
             emptyText={m.feature__no_canonical_image_yet()}
           />
         {/snippet}
@@ -3152,90 +4163,111 @@ $effect(() => () => clearVisualSectionReopenState())
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-7! pb-12`}>
-        {#if !showNameFields}
+        {#if needsLayerSelection || !showNameFields}
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-          <div
-            class="flex min-h-44 flex-col items-center justify-center gap-4 py-8"
-            out:slide={{ duration: prefersReducedMotion.current ? 0 : 180 }}
-          >
-            <div class="flex flex-wrap justify-center gap-4">
-              <Button
-                type="button"
-                text={m.feature_start_name()}
-                color="secondary"
-                style="outline"
-                size="md"
-                iconComponent={AddFeatureIcon}
-                onClick={() => (namingChosen = true)}
-              />
-              <Button
-                type="button"
-                text={m.feature_start_find_place()}
-                color="primary"
-                size="md"
-                class="text-white!"
-                iconComponent={FeatureIcon}
-                onClick={startLocationSearch}
-              />
-            </div>
-            <p class="text-muted-foreground text-center">
-              {m.feature_start_description()}
-            </p>
-          </div>
-        {:else}
-          <div in:slide={{ duration: prefersReducedMotion.current ? 0 : 280 }}>
-            <FeatureProfileEditor
-              localeState={profileLocaleState}
-              onLocaleStateChange={setProfileLocaleState}
-              values={currentFeatureData.i18n}
-              contextKey={`${profileScope}:${profileEpoch}:${profileNameMode}:${isEditing}`}
-              {isEditing}
-              loading={!isCurrentRefSettled}
-              retainContent={Boolean(currentFeatureId)}
-              recordKey={currentFeatureId ?? ''}
-              allowDescriptions={featurePresentationPolicy.allowDescriptions}
-              inherited={profileNamesLocked}
-              policyRequired={featurePresentationPolicy.locationBasedNames}
-              offerName={canOfferLocationName}
-              locationNames={profileLocationNames}
-              onUseName={useLocationName}
-              onIndependentName={useIndependentFeatureName}
-              onEditLocation={() => goToFacet('location')}
-              translate={(source, target, text) =>
-                translateContentField({ source, target, text })}
-              onTranslated={applyProfileTranslation}
-            >
-              {#snippet toolbarMessage()}
-                <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-              {/snippet}
-              {#snippet children(field, locale, onEditStart, prefix)}
-                {@const key = contentFormKey(locale)}
-                {@const language = getContentLocaleRecord(locale, getLocaleKey())}
-                {@const config = featureDescriptorFieldConfigs.find(
-                  config => config.key === field,
-                )}
-                {#if config}
-                  <FormI18nDescriptorFields
-                    form={formCtx.form}
-                    fields={formCtx.form.fields.data.i18n[key]}
-                    locale={key}
-                    {isEditing}
-                    inline
-                    {onEditStart}
-                    fieldConfigs={[
-                      {
-                        ...config,
-                        label: prefix,
-                        ariaLabel: `${config.label} · ${language.name}`,
-                      },
-                    ] as never}
-                    {isRequiredInPreflight}
-                  />
-                {/if}
-              {/snippet}
-            </FeatureProfileEditor>
-          </div>
         {/if}
+        <!-- Overlap outgoing and incoming prompts so the layer choice crossfades without shifting the form. -->
+        <div class="grid">
+          {#if needsLayerSelection}
+            <div
+              class="col-start-1 row-start-1 flex min-h-44 flex-col items-center justify-center gap-4 py-8"
+              transition:fade={{ duration: prefersReducedMotion.current ? 0 : 180 }}
+            >
+              <p class="text-center text-lg font-semibold">
+                {m.feature_start_select_layer()}
+              </p>
+              <p class="text-muted-foreground text-center">
+                {m.feature_start_select_layer_description()}
+              </p>
+            </div>
+          {:else if !showNameFields}
+            <div
+              class="col-start-1 row-start-1 flex min-h-44 flex-col items-center justify-center gap-4 py-8"
+              inert={needsLayerSelection || showNameFields}
+              transition:fade={{ duration: prefersReducedMotion.current ? 0 : 180 }}
+            >
+              <div class="flex flex-wrap justify-center gap-4">
+                <Button
+                  type="button"
+                  text={m.feature_start_name()}
+                  color="secondary"
+                  style="outline"
+                  size="md"
+                  iconComponent={AddFeatureIcon}
+                  onClick={() => (namingChosen = true)}
+                />
+                <Button
+                  type="button"
+                  text={m.feature_start_find_place()}
+                  color="primary"
+                  size="md"
+                  class="text-white!"
+                  iconComponent={FeatureIcon}
+                  onClick={startLocationSearch}
+                />
+              </div>
+              <p class="text-muted-foreground text-center">
+                {m.feature_start_description()}
+              </p>
+            </div>
+          {:else}
+            <div
+              class="col-start-1 row-start-1 min-w-0"
+              in:slide={{ duration: prefersReducedMotion.current ? 0 : 280 }}
+            >
+              <FeatureProfileEditor
+                localeState={profileLocaleState}
+                onLocaleStateChange={setProfileLocaleState}
+                values={currentFeatureData.i18n}
+                contextKey={`${profileScope}:${profileEpoch}:${profileNameMode}:${isEditing}`}
+                {isEditing}
+                loading={!isCurrentRefSettled}
+                retainContent={Boolean(currentFeatureId)}
+                recordKey={currentFeatureId ?? ''}
+                allowDescriptions={featurePresentationPolicy.allowDescriptions}
+                inherited={profileNamesLocked}
+                policyRequired={featurePresentationPolicy.locationBasedNames}
+                offerName={canOfferLocationName}
+                locationNames={profileLocationNames}
+                onUseName={useLocationName}
+                onIndependentName={useIndependentFeatureName}
+                onEditLocation={() => goToFacet('location')}
+                translate={(source, target, text) =>
+                  translateContentField({ source, target, text })}
+                onTranslated={applyProfileTranslation}
+              >
+                {#snippet toolbarMessage()}
+                  <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+                {/snippet}
+                {#snippet children(field, locale, onEditStart, prefix)}
+                  {@const key = contentFormKey(locale)}
+                  {@const language = getContentLocaleRecord(locale, getLocaleKey())}
+                  {@const config = featureDescriptorFieldConfigs.find(
+                    config => config.key === field,
+                  )}
+                  {#if config}
+                    <FormI18nDescriptorFields
+                      form={formCtx.form}
+                      fields={formCtx.form.fields.data.i18n[key]}
+                      locale={key}
+                      {isEditing}
+                      inline
+                      {onEditStart}
+                      fieldConfigs={[
+                        {
+                          ...config,
+                          label: prefix,
+                          ariaLabel: `${config.label} · ${language.name}`,
+                        },
+                      ] as never}
+                      {isRequiredInPreflight}
+                    />
+                  {/if}
+                {/snippet}
+              </FeatureProfileEditor>
+            </div>
+          {/if}
+        </div>
 
         <FormFeatureParentSection
           class={cx(
@@ -3341,17 +4373,20 @@ $effect(() => () => clearVisualSectionReopenState())
         </div>
       {:else}
         <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-9! pb-12`}>
-          <FormFeatureFields
-            {localeKey}
-            {locales}
-            {nonTranslatableItems}
-            {translatableSpecifierItems}
-            {isEditing}
-            onTranslate={onTranslateTranslatableValues}
-            onResetLocale={onResetTranslatableValues}
-            onToggleGenAI={togglePropertyI18nValueGen}
-            onValueChange={updatePropertyI18nValue}
-          />
+          <!-- Feature navigation retires field-local async work even when property IDs match. -->
+          {#key currentFeatureId}
+            <FormFeatureFields
+              {localeKey}
+              {locales}
+              {nonTranslatableItems}
+              {translatableSpecifierItems}
+              {isEditing}
+              onTranslate={onTranslateTranslatableValues}
+              onResetLocale={onResetTranslatableValues}
+              onToggleGenAI={togglePropertyI18nValueGen}
+              onValueChange={updatePropertyI18nValue}
+            />
+          {/key}
         </FormSurface>
       {/if}
     </Main.Facet>
@@ -3360,7 +4395,7 @@ $effect(() => () => clearVisualSectionReopenState())
       isVisible={isLocationFacet}
       transition="fade"
       fillHeight={true}
-      contentClass="h-full overflow-y-auto"
+      contentClass="h-full overflow-hidden"
       class={getFeatureEditorFacetClass({
         isVisible: isLocationFacet,
         showsVisualSection,
@@ -3368,27 +4403,43 @@ $effect(() => () => clearVisualSectionReopenState())
       })}
       navMode="overlay"
       previousAction={isNewFeatureRef && draftSelectionBefore
-        ? {
-            text: m.feature_start_back_results(),
-            onClick: () => draftSearch?.backToResults(),
-          }
+        ? null
         : buildFacetNavAction('location', 'previous')}
       nextAction={buildFacetNavAction('location', 'next')}
-      centerAction={isNewFeatureRef && (draftSearchHasResults || draftLocationAccepted)
+      centerAction={isNewFeatureRef &&
+      !draftResolutionPending &&
+      !draftLocationAccepted &&
+      draftSearchHasResults
         ? {
             id: 'draft-manual-entry',
             disabled: !draftHasPin && !draftMapController,
-            centerInContent: !draftSearchHasResults && !draftLocationAccepted,
+            centerInContent: false,
             text: m.feature_search_manual_location(),
             onClick: startManualLocation,
           }
         : null}
       attrs={{ 'data-facet-id': 'location' }}
     >
+      {#if currentFeatureId && !isNewFeatureRef}
+        <FeatureLocationUpdates
+          featureId={currentFeatureId}
+          organisationId={selectedProject?.organisationId}
+          {isEditing}
+          {isDirty}
+          reset={currentFeatureData.locationReset}
+          brandEdit={currentFeatureData.locationBrandEdit}
+          onResetFields={reset =>
+            updateFeatureData(data => ({ ...data, locationReset: reset }))}
+          onBrandEdit={edit =>
+            updateFeatureData(data => ({ ...data, locationBrandEdit: edit }))}
+          onUnlink={disconnectSavedLocation}
+          onSourceUpdate={refreshLocationSource}
+        />
+      {/if}
       {#if mountLocationFacet}
         <FormSurface class="mb-0! flex h-full min-h-0 flex-col overflow-hidden">
           {#key featureRef}
-            {#snippet addressEditor(
+            {#snippet locationEditor(
               locationControl?: Snippet<[Snippet?]>,
               locationContent?: Snippet,
               hideDetails = false,
@@ -3396,24 +4447,154 @@ $effect(() => () => clearVisualSectionReopenState())
               lookupOverride?: (query?: string) => void,
               locationActions?: Snippet,
               locationMapControls?: Snippet,
+              allow3dAddress = true,
+              accessibilityLocationId?: string,
+              locationKind?: string,
+              locationSyncControl?: Snippet<[boolean?]>,
             )}
+              {#snippet identityFields(translations: boolean)}
+                {#if draftLocalKind !== 'address'}
+                  <DraftLocationNameFields
+                    localeState={profileLocaleState}
+                    onBlur={() => {
+                      void draftSearch?.resolveAssociation(
+                        editorAddress,
+                        draftLocationNames,
+                      )
+                    }}
+                    names={draftLocationNames}
+                    kind={draftLocalKind ?? 'establishment'}
+                    {translations}
+                    {isEditing}
+                    recordKey={draftResultHistoryId}
+                    onChange={names => {
+                      draftLocationNames = names
+                      hasProgrammaticDirtyChanges = true
+                    }}
+                  />
+                {/if}
+              {/snippet}
+              {#snippet savedIdentityFields(translations: boolean)}
+                <DraftLocationNameFields
+                  localeState={profileLocaleState}
+                  names={profileLocationNames}
+                  kind={acceptedNameSource?.current?.kind === 'premises'
+                    ? 'premises'
+                    : acceptedNameSource?.current?.kind === 'building'
+                      ? 'building'
+                      : 'establishment'}
+                  {translations}
+                  {isEditing}
+                  recordKey={currentFeatureId}
+                  onChange={names => {
+                    if (currentFeatureId)
+                      savedLocationNameDraft = { featureId: currentFeatureId, names }
+                    inheritLocationNames(names)
+                  }}
+                />
+              {/snippet}
+              {#snippet identityControls()}
+                {@render locationSyncControl?.(!isEditing || placeLinkBusy)}
+                {#if isNewFeatureRef}
+                  {#if !draftVisibilityOverride && organisationVisibilityFailed}
+                    <span role="alert" class="text-muted-foreground max-w-64 text-xs"
+                      >{m.location_visibility_default_unavailable()}</span
+                    >
+                  {/if}
+                  <LocationVisibilitySelect
+                    value={draftLocationVisibility}
+                    showInfo={!locationSyncControl}
+                    disabled={!isEditing ||
+                      placeLinkBusy ||
+                      (!organisationVisibilityReady && !organisationVisibilityFailed)}
+                    onChange={value => {
+                      draftVisibilityOverride = value
+                      hasProgrammaticDirtyChanges = true
+                    }}
+                  />
+                {/if}
+              {/snippet}
+              {#snippet identityInfo()}
+                <LocationControlsInfo />
+              {/snippet}
               <FormFeatureAddress
+                bind:translations={
+                  () => multilingualChoice ?? multilingualDefaults.addresses,
+                  expanded => adminCtx.featureMultilingual.set(multilingualAccount, expanded)
+                }
+                onBuildingNameBlur={isNewFeatureRef && draftLocalKind === 'building'
+                  ? () => {
+                      draftLocationNames = addressBuildingNames(editorAddress)
+                      void draftSearch?.resolveAssociation(
+                        editorAddress,
+                        draftLocationNames,
+                      )
+                    }
+                  : undefined}
+                onSuggestStreetNumber={async () =>
+                  featureCoordinates
+                    ? ((await draftMapController?.getStreetNumberAt?.([
+                        featureCoordinates[0],
+                        featureCoordinates[1],
+                      ])) ?? null)
+                    : null}
+                toolbarControls={!draftResolutionPending &&
+                (!isNewFeatureRef || draftLocationAccepted) &&
+                (locationSyncControl || draftLocalKind)
+                  ? identityControls
+                  : undefined}
+                toolbarInfo={!draftResolutionPending &&
+                (!isNewFeatureRef || draftLocationAccepted) &&
+                locationSyncControl
+                  ? identityInfo
+                  : undefined}
+                identityFields={draftLocalKind === 'establishment'
+                  ? identityFields
+                  : !isNewFeatureRef &&
+                      profileNamesLocked &&
+                      acceptedNameSource?.current
+                    ? savedIdentityFields
+                    : undefined}
+                locationKind={locationKind ?? draftLocalKind}
+                {accessibilityLocationId}
+                accessibilityDraft={draftAccessibility}
+                accessibilityDraftKey={draftResultHistoryId ?? undefined}
+                onAccessibilityDraftChange={isNewFeatureRef &&
+                (draftPlaceSource || draftLocalKind)
+                  ? value => {
+                      draftAccessibility = value
+                      if (value && Object.keys(value).length)
+                        hasProgrammaticDirtyChanges = true
+                    }
+                  : undefined}
                 fixedMap={true}
-                hasLocation={!isNewFeatureRef || draftHasPin}
-                coordinatesInLocationControl={isNewFeatureRef && !draftLocationAccepted}
+                coordinatesInLocationControl={isNewFeatureRef &&
+                  (!draftLocationAccepted || draftResolutionPending)}
+                displayAddressInToolbar={!draftResolutionPending &&
+                  (isNewFeatureRef
+                    ? draftLocationAccepted && draftHasAddress
+                    : !hideDetails && Boolean(locationControl))}
                 showMap={false}
                 onMapControlsChange={controls => (sharedLocationMapControls = controls)}
                 {locationActions}
                 {locationMapControls}
                 {locationControl}
                 {locationContent}
-                hideDetails={hideDetails || (isNewFeatureRef && !draftLocationAccepted)}
-                showAddressDetails={!isNewFeatureRef || draftHasAddress}
+                hideDetails={hideDetails ||
+                  draftResolutionPending ||
+                  (isNewFeatureRef && !draftLocationAccepted)}
+                showAddressDetails={!isNewFeatureRef ||
+                  draftHasAddress ||
+                  Boolean(draftLocalKind)}
                 showDivisions={!isNewFeatureRef || draftHasPin}
-                showCoordinates={!isNewFeatureRef ||
-                  (draftHasPin && (draftFindMode === 'pin' || draftLocationAccepted))}
+                hasLocation={!isNewFeatureRef || draftHasPin}
+                showCoordinates={!draftResolutionPending &&
+                  (!isNewFeatureRef ||
+                    (draftHasPin &&
+                      (draftFindMode === 'pin' || draftLocationAccepted)))}
                 {showLookup}
-                show3dAddressOptions={show3dAddressOptions(selectedProject?.flags)}
+                show3dAddressOptions={allow3dAddress &&
+                  show3dAddressOptions(selectedProject?.flags)}
                 address={editorAddress}
                 coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
                 {isEditing}
@@ -3424,19 +4605,43 @@ $effect(() => () => clearVisualSectionReopenState())
                   editorAddress.matchStatus === 'unresolved'
                     ? ''
                     : '')}
+                {streetCandidates}
+                onSelectStreet={street =>
+                  updateAddressDraft(
+                    setAddressName(editorAddress, 'streetName', street),
+                  )}
                 candidates={addressCandidates}
                 onSelectCandidate={selectAddressCandidate}
-                onCoordinateChange={handleCoordinateChange}
+                onPreviewCandidate={previewAddressCandidate}
+                onCancelLookup={() => {
+                  if (mapMoveBefore) {
+                    cancelMapAddressMove()
+                    return
+                  }
+                  // Invalidate pending lookups so dismissed choices cannot reappear.
+                  addressLookupRevision += 1
+                  isAddressLookupLoading = false
+                  addressLookupMessage = ''
+                  addressCandidates = []
+                  streetCandidates = []
+                }}
+                onCoordinateChange={handleManualCoordinateChange}
                 onLookup={lookupOverride ?? lookupFeatureAddress}
                 onChange={updateAddressDraft}
               />
             {/snippet}
-            {#if placeLinkError && pendingPlaceLink?.featureId === currentFeatureId}
+            {#if placeLinkError &&
+              (pendingPlaceLink?.featureId === currentFeatureId ||
+                pendingLocalLink?.featureId === currentFeatureId)}
               <div
                 role="alert"
                 class="border-border flex shrink-0 flex-wrap items-center gap-3 border-b px-6 py-3 text-sm"
               >
-                <span>{m.feature_search_link_pending_saved()}</span>
+                <span
+                  >{pendingPlaceLink?.accessibility || pendingLocalLink?.accessibility
+                    ? m.accessibility_draft_pending()
+                    : m.feature_search_link_pending_saved()}</span
+                >
                 <button
                   type="button"
                   class="bg-primary rounded-lg px-3 py-2 text-white"
@@ -3458,15 +4663,50 @@ $effect(() => () => clearVisualSectionReopenState())
                       )
                     pendingPlaceLink = null
                     draftPlaceSource = null
+                    draftAccessibility = undefined
+                    if (pendingLocalLink)
+                      sessionStorage.removeItem(
+                        `feature-local-link:${pendingLocalLink.featureId}`,
+                      )
+                    pendingLocalLink = null
+                    draftLocalKind = undefined
                     placeLinkError = false
                   }}
                 >
-                  {m.feature_search_keep_address()}
+                  {pendingPlaceLink?.accessibility || pendingLocalLink?.accessibility
+                    ? m.accessibility_draft_discard()
+                    : m.feature_search_keep_address()}
                 </button>
               </div>
             {/if}
             {#if currentFeatureId && feature?.data?.modifiedAt}
               <FeatureLocationSection
+                organisationId={selectedProject?.organisationId}
+                onAssociationPending={pending => (draftResolutionPending = pending)}
+                onAssociationSpaceNeeded={overflow =>
+                  featureVisualSection?.makeRoom(overflow)}
+                onSelectionStart={() => featureVisualSection?.rememberHeight()}
+                onReturnToResults={restoreLocationSearchMap}
+                onAssociationSelected={(result, previousLocationId) => {
+                  draftReplacementLocationId = previousLocationId
+                  draftLocalKind = result.localKind
+                  draftLocationNames = { ...result.names }
+                  draftAddressIdentity = result.identity
+                  draftBuildingSource = result.buildingSource
+                  draftLocalNameMode =
+                    featurePresentationPolicy.locationBasedNames ||
+                    (currentFeatureData.locationNameMode ??
+                      acceptedNameSource?.current?.nameMode) === 'inherit'
+                      ? 'inherit'
+                      : 'independent'
+                  draftPlaceSource = result.source
+                    ? { ...result.source, nameMode: draftLocalNameMode }
+                    : null
+                  updateAddressDraft(result.address)
+                  if (result.address.coordinates)
+                    handleCoordinateChange(result.address.coordinates)
+                  hasProgrammaticDirtyChanges = true
+                }}
                 onAddressSelected={updateAddressDraft}
                 address={editorAddress}
                 featureName={currentFeatureData.i18n?.[getLocaleKey()]?.title ?? ''}
@@ -3480,38 +4720,7 @@ $effect(() => () => clearVisualSectionReopenState())
                 modifiedAt={feature.data.modifiedAt}
                 {isEditing}
                 {isDirty}
-                onSourceUpdate={async () => {
-                  await getFeature({
-                    ref: featureRef,
-                    refKey: 'id',
-                    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-                  }).refresh()
-                  await refreshFeature()
-                }}
-                onUnlink={async expectedRevision => {
-                  const current = feature?.data
-                  if (!current || isDirty) return
-                  await unlinkFeatureLocation({
-                    featureId: current.id,
-                    expectedFeatureModifiedAt: current.modifiedAt,
-                    expectedRevision,
-                  }).updates(
-                    getFeature({
-                      ref: current.id,
-                      refKey: 'id',
-                      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-                    }),
-                    getFeatureLocation({ featureId: current.id }),
-                    getFeatureDetachedBrands({ featureId: current.id }),
-                  )
-                  await refreshFeature()
-                }}
-                reset={currentFeatureData.locationReset}
-                onResetFields={reset =>
-                  updateFeatureData(data => ({ ...data, locationReset: reset }))}
-                brandEdit={currentFeatureData.locationBrandEdit}
-                onBrandEdit={edit =>
-                  updateFeatureData(data => ({ ...data, locationBrandEdit: edit }))}
+                onSourceUpdate={refreshLocationSource}
               >
                 {#snippet children(
                   locationControl,
@@ -3521,8 +4730,12 @@ $effect(() => () => clearVisualSectionReopenState())
                   lookupOverride,
                   locationActions,
                   locationMapControls,
+                  allow3dAddress,
+                  accessibilityLocationId,
+                  locationKind,
+                  locationSyncControl,
                 )}
-                  {@render addressEditor(
+                  {@render locationEditor(
                     locationControl,
                     locationContent,
                     hideDetails,
@@ -3530,25 +4743,57 @@ $effect(() => () => clearVisualSectionReopenState())
                     lookupOverride,
                     locationActions,
                     locationMapControls,
+                    allow3dAddress,
+                    accessibilityLocationId,
+                    locationKind,
+                    locationSyncControl,
                   )}
                 {/snippet}
               </FeatureLocationSection>
             {:else}
               <DraftFeatureLocationSearch
+                projectId={projectIdValue}
                 bind:this={draftSearch}
                 onFilterPanelChange={panel => (draftSearchFilterPanel = panel)}
                 onResultsChange={hasResults => (draftSearchHasResults = hasResults)}
+                onResolutionPendingChange={pending =>
+                  (draftResolutionPending = pending)}
+                onAssociationSpaceNeeded={overflow =>
+                  featureVisualSection?.makeRoom(overflow)}
+                onSelectionStart={() => featureVisualSection?.rememberHeight()}
+                onReturnToResults={restoreLocationSearchMap}
                 onResultsEnd={() => {
                   const button = document.getElementById('draft-manual-entry')
                   if (!button) return false
                   button.focus()
                   return document.activeElement === button
                 }}
-                active={isLocationFacet}
+                active={isLocationFacet && !needsLayerSelection}
+                canReturnToResults={isNewFeatureRef && !draftSelectionSaved}
                 focusRequest={locationFocusRequest}
                 onSelect={selectDraftLocation}
+                currentAddress={editorAddress}
+                currentNameMode={profileNameMode}
+                locationName={draftLocationNames[ADDRESS_LOCALES[getLocaleKey()]] ?? ''}
                 onPreview={previewDraftLocation}
-                onUnlink={() => (draftPlaceSource = null)}
+                onUnlink={() => {
+                  draftAccessibility = undefined
+                  draftPlaceSource = null
+                  draftLocalKind = undefined
+                  draftBuildingSource = undefined
+                  draftAddressIdentity = undefined
+                  // Turning sync off retains the reviewed address, Location kind and name.
+                  if (editorAddress.association)
+                    updateAddressDraft({
+                      ...editorAddress,
+                      association: {
+                        ...editorAddress.association,
+                        mode: 'manual',
+                        lookup: 'not-checked',
+                        targetId: undefined,
+                      },
+                    })
+                }}
                 onAcceptedChange={accepted => (draftLocationAccepted = accepted)}
                 onBack={undoDraftLocationSelection}
                 hasPin={draftHasPin}
@@ -3563,15 +4808,24 @@ $effect(() => () => clearVisualSectionReopenState())
                   selectLocationMarker = select
                 }}
               >
-                {#snippet children(searchControl, searchResults, mapControls)}
-                  {@render addressEditor(
+                {#snippet children(
+                  searchControl,
+                  searchResults,
+                  mapControls,
+                  syncControl,
+                )}
+                  {@render locationEditor(
                     searchControl,
                     searchResults,
                     false,
-                    false,
+                    draftLocationAccepted,
                     undefined,
                     undefined,
                     mapControls,
+                    true,
+                    undefined,
+                    undefined,
+                    syncControl,
                   )}
                 {/snippet}
               </DraftFeatureLocationSearch>
@@ -3584,17 +4838,25 @@ $effect(() => () => clearVisualSectionReopenState())
     <Main.Facet
       isVisible={isUpdatesFacet}
       transition="fade"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'updates' }}
     >
       {#if currentFeatureId &&
         !isNewFeatureRef &&
         (isUpdatesFacet || visitedUpdatesRef === featureRef)}
         {#key currentFeatureId}
-          <FeatureHistory
-            featureId={currentFeatureId}
-            {isDirty}
-            refreshVersion={revisionWorkspaceVersion}
-          />
+          <Deferred
+            load={() =>
+              import('#lib/bits/patterns/revisionHistory/FeatureHistory.svelte')}
+          >
+            {#snippet children(module)}
+              <module.default
+                featureId={currentFeatureId}
+                {isDirty}
+                refreshVersion={revisionWorkspaceVersion}
+              />
+            {/snippet}
+          </Deferred>
         {/key}
       {/if}
     </Main.Facet>
@@ -3610,27 +4872,50 @@ $effect(() => () => clearVisualSectionReopenState())
       {#if featureImageProviderProps.isValid &&
         (isImagesFacet || visitedImagesRef === featureRef)}
         <ImageProvider model={featureImageProviderModel}>
-          <FeatureImageEditor featureId={currentFeatureId ?? undefined}>
-            {#snippet textControls(imageId, hasText)}
-              {#if currentFeatureId}
-                {#key currentFeatureId}
-                  <FeatureGalleryImageTextEditor
-                    {hasText}
-                    featureId={currentFeatureId}
-                    {imageId}
-                    {isDirty}
-                    onSaved={() => {
-                      revisionWorkspaceVersion++
-                      toast.success('Image text saved.')
-                    }}
-                  />
-                {/key}
-              {/if}
+          <Deferred
+            load={() => import('#lib/bits/patterns/images/FeatureImageEditor.svelte')}
+          >
+            {#snippet children(gallery)}
+              <gallery.default featureId={currentFeatureId ?? undefined}>
+                {#snippet textControls(imageId, hasText)}
+                  {#if currentFeatureId}
+                    {#key currentFeatureId}
+                      <Deferred
+                        load={() =>
+                          import(
+                            '#lib/bits/patterns/revisionHistory/FeatureGalleryImageTextEditor.svelte'
+                          )}
+                      >
+                        {#snippet children(module)}
+                          <module.default
+                            featureId={currentFeatureId}
+                            {imageId}
+                            {hasText}
+                            {isDirty}
+                            onSaved={() => {
+                              revisionWorkspaceVersion++
+                              toast.success('Image text saved.')
+                            }}
+                          />
+                        {/snippet}
+                      </Deferred>
+                    {/key}
+                  {/if}
+                {/snippet}
+              </gallery.default>
             {/snippet}
-          </FeatureImageEditor>
+          </Deferred>
         </ImageProvider>
       {/if}
     </Main.Facet>
+    {#if currentFeatureData.locationNameMode}
+      <input
+        {...formCtx.form.fields.data.locationNameMode.as(
+          'hidden',
+          currentFeatureData.locationNameMode,
+        )}
+      >
+    {/if}
   </Main.Form>
 </Main.Root>
 

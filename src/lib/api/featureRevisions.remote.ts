@@ -52,15 +52,8 @@ import {
 import { readFeatureImageMetadataChanges } from '#lib/db/services/featureImageRevisionReview.js'
 import { readFeatureUploadAttachmentGrant } from '#lib/db/services/featureImageUploadRevision.js'
 import { prepareFeatureUploadTaskCompletion } from '#lib/db/services/featureUploadTasks.js'
-import {
-  createFeatureTranslationProposal,
-  saveFeatureTranslationProposal,
-  acceptFeatureEditorialRevision,
-} from '#lib/db/services/featureEditorialRevision.js'
-import {
-  saveFeatureStaffDraft,
-  publishFeatureStaffDraft,
-} from '#lib/db/services/featureStaffRevision.js'
+import { acceptFeatureEditorialRevision } from '#lib/db/services/featureEditorialRevision.js'
+import { publishFeatureStaffDraft } from '#lib/db/services/featureStaffRevision.js'
 import {
   submitFeatureRevisionProposal,
   rejectFeatureRevisionProposal,

@@ -24,7 +24,7 @@ export const LIFECYCLE_STATUSES = [
 export type LifecycleStatus = (typeof LIFECYCLE_STATUSES)[number]
 
 /** Read the source vocabulary without interpreting missing inventory as closure.
- * @param value Source operatingStatus, retained unchanged in the raw source payload.
+ * @param value Source operatingStatus, retained unchanged in the raw source rawSource.
  * @returns Supported operatingStatus, or undefined for unknown/missing values.
  */
 export function mapOperatingStatus(value: unknown): OperatingStatus | undefined {

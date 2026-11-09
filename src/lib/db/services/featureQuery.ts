@@ -1,4 +1,5 @@
 import { featureAuthoringSQL } from './featureAuthoringProjection'
+import { historicalFeatureVisibility } from '#lib/db/services/historicalLayers.js'
 // DRIZZLE
 import {
   and,
@@ -32,6 +33,7 @@ import {
 } from '#lib/db/schema/index.js'
 import { featureSearchDocument } from '#lib/db/schema/featureQuery.js'
 import { featureLocationBrandsSQL } from './locationBrandProjection'
+import { featureLocationNamesSQL } from './locationNameProjection'
 import { featureLocationLifecycleSQL } from './locationLifecycleProjection'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
@@ -230,6 +232,7 @@ export function buildFeatureQueryConditions(
   hub: HubOptsExtended,
 ): SQL[] {
   const conditions = [...authorizedConditions]
+  if (!input.meta.isAdminRequest) conditions.push(historicalFeatureVisibility())
   const hubFilter = getFeatureHubFilter(db, hub)
   if (hubFilter) conditions.push(hubFilter)
   const filters = input.filters
@@ -517,6 +520,7 @@ export async function queryFeaturePage(
           with: getFeatureWithRelations('list') as never,
           extras: {
             locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+            locationNames: featureLocationNamesSQL().as('locationNames'),
             authoring: featureAuthoringSQL().as('authoring'),
             locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
           },

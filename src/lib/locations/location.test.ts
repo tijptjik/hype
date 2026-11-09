@@ -15,8 +15,8 @@ const location: LocationPosition = {
     address2dId: null,
     address3dId: null,
     address3dUnitId: null,
-    addressSnapshotId: null,
-    records: {},
+    snapshotId: null,
+    rawSource: {},
     fallbackDisplay: {},
   },
 }
@@ -61,7 +61,7 @@ describe('project-controlled Location adoption', () => {
         { ...evidence, unitChanged: true },
         {
           ...DEFAULT_PROJECT_LOCATION_POLICY,
-          coordinates: { mode: 'automatic' },
+          coordinates: { mode: 'follow' },
         },
       ),
     ).toMatchObject({ location: 'review', facts: 'adopt', reasons: ['unit'] })

@@ -92,7 +92,7 @@ export function materializeLocationReset(input: {
       if (!i18n[locale]) continue
       i18n[locale] = {
         ...i18n[locale],
-        displayAddress: getAddressDisplay(address, locale),
+        displayAddress: getAddressDisplay(address, locale, [], facts.entity?.kind),
         displayAddressGen: true,
         addressProperties: {},
       }

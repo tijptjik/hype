@@ -78,6 +78,7 @@ function fixture() {
     '0138_location_storage.sql',
     '0139_organisation_location_corrections.sql',
     '0142_location_facts_snapshots.sql',
+    '0154_location_version_names.sql',
   ])
     target.exec(readFileSync(`migrations/${migration}`, 'utf8'))
   const generate = () =>
@@ -321,6 +322,27 @@ test(
       expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 0 })
     } finally {
       target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
+
+test(
+  'refuses legacy import planning after Feature revision cutover',
+  () => {
+    const f = fixture()
+    try {
+      f.target.exec(
+        'CREATE TABLE featureRevisionCreationPolicy(singleton INTEGER PRIMARY KEY,enabled INTEGER); INSERT INTO featureRevisionCreationPolicy VALUES(1,1)',
+      )
+      expect(() => f.generate()).toThrow('attributed import writer')
+      f.target.exec(
+        "UPDATE featureRevisionCreationPolicy SET enabled=0; CREATE TABLE featureRevisionHead(featureId TEXT); INSERT INTO featureRevisionHead VALUES('enrolled')",
+      )
+      f.target.exec("INSERT INTO feature(id,projectId) VALUES('enrolled','p')")
+      expect(() => f.generate()).toThrow('revision-backed Features')
+    } finally {
+      f.target.close()
     }
   },
   MIGRATED_IMPORT_TIMEOUT_MS,

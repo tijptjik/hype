@@ -7,11 +7,11 @@ import { Button } from '#lib/bits/core/index.js'
 import { LocationResetSchema, type LocationReset } from '#lib/locations/reset.js'
 
 let {
-  revision,
+  version,
   reset,
   onChange,
 }: {
-  revision: string
+  version: string
   reset?: unknown
   onChange: (reset: LocationReset | undefined) => void
 } = $props()
@@ -25,11 +25,11 @@ const choices = $derived([
   { key: 'location', label: m.location_reset_location() },
 ] as const)
 
-/** Toggle deferred reset intent, keeping the first viewed association revision. */
+/** Toggle deferred reset intent, keeping the first viewed association version. */
 function toggle(key: (typeof choices)[number]['key']): void {
   const next: LocationReset = pending
     ? structuredClone($state.snapshot(pending))
-    : { expectedRevision: revision, names: [], phoneNumber: false, location: false }
+    : { expectedRevision: version, names: [], phoneNumber: false, location: false }
   if (key === 'phoneNumber' || key === 'location') next[key] = !next[key]
   else
     next.names = next.names.includes(key)

@@ -59,10 +59,10 @@ export function resolveSaanSeoiPlaceAddress(
   const parsed = responseSchema.parse(response)
   if (
     !reference.address2dId ||
-    !reference.addressSnapshotId ||
+    !reference.snapshotId ||
     parsed.meta.apiReleaseSet !== pin.apiReleaseSet ||
     parsed.data.id !== reference.address2dId ||
-    parsed.data.attributes.snapshotId !== reference.addressSnapshotId
+    parsed.data.attributes.snapshotId !== reference.snapshotId
   ) {
     throw new Error(
       'Address publication or identity does not match the Location reference',
@@ -95,7 +95,7 @@ export function resolveSaanSeoiPlaceAddress(
       throw new Error('Expected exactly one referenced Address inventory')
     const inventory = unitsSchema.parse(candidates[0])
     if (
-      inventory.attributes.snapshotId !== reference.addressSnapshotId ||
+      inventory.attributes.snapshotId !== reference.snapshotId ||
       inventory.attributes.address2dId !== coverage.ownerAddress2dId ||
       (reference.address3dUnitId &&
         inventory.attributes.units.filter(unit => unit.id === reference.address3dUnitId)
@@ -113,10 +113,10 @@ export function resolveSaanSeoiPlaceAddress(
       ...projection.facts,
       location: {
         ...projection.facts.location,
-        address: { ...reference, status: 'resolved', records: evidence },
+        address: { ...reference, status: 'resolved', rawSource: evidence },
       },
     },
-    payload: { ...projection.payload, address: evidence },
+    rawSource: { ...projection.rawSource, address: evidence },
     issues: projection.issues.filter(issue => issue.kind !== 'addressRecordsPending'),
   }
 }

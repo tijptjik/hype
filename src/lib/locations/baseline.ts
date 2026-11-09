@@ -58,7 +58,7 @@ function preserveField<T>(
 
 /**
  * Derive initial inheritance inputs without changing existing effective Feature values.
- * @param baseline Complete persisted Feature projection, never a client preservation payload.
+ * @param baseline Complete persisted Feature projection, never a client preservation rawSource.
  * @param facts Accepted Location facts.
  * @param location Independently accepted Location location.
  * @returns Minimal overrides; matching fields remain eligible for future source updates.

@@ -1,3 +1,4 @@
+import { classifyLocationFactsKind } from '#lib/locations/factsKind.js'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -61,7 +62,7 @@ export async function applyUnresolvedFeatureSplit(
         ownerOrganisationId: locationTable.ownerOrganisationId,
         ssId: locationTable.ssId,
         facts: locationRevision.facts,
-        payload: locationRevision.payload,
+        rawSource: locationRevision.rawSource,
         origin: locationRevision.origin,
       })
       .from(locationTable)
@@ -85,7 +86,7 @@ export async function applyUnresolvedFeatureSplit(
         association.locationRevisionId === plan.revisionId &&
         equalLocationValue(association.overrides, plan.overrides) &&
         equalLocationValue(prior.facts, plan.facts) &&
-        equalLocationValue(prior.payload.plan, plan)
+        equalLocationValue(prior.rawSource.plan, plan)
           ? 'already-applied'
           : 'conflict',
     }
@@ -96,10 +97,10 @@ export async function applyUnresolvedFeatureSplit(
     .where(eq(locationTable.id, plan.locationId))
     .get()
   if (collision) return { status: 'conflict' }
-  const payload = { kind: 'existing-feature-split', actorId, plan }
+  const rawSource = { kind: 'existing-feature-split', actorId, plan }
   const digest = await crypto.subtle.digest(
     'SHA-256',
-    new TextEncoder().encode(JSON.stringify(payload)),
+    new TextEncoder().encode(JSON.stringify(rawSource)),
   )
   const contentHash = Array.from(new Uint8Array(digest), byte =>
     byte.toString(16).padStart(2, '0'),
@@ -135,12 +136,12 @@ export async function applyUnresolvedFeatureSplit(
   const results = await db.batch([
     db
       .insert(locationTable)
-      .select(sql`SELECT ${plan.locationId},NULL,'unknown',${ownerOrganisationId},'unresolved','current',
+      .select(sql`SELECT ${plan.locationId},NULL,${classifyLocationFactsKind('unknown', plan.facts)},${ownerOrganisationId},'unresolved','current',
       NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
     db
       .insert(locationRevision)
       .select(sql`SELECT ${plan.revisionId},${plan.locationId},1,'local',
-      NULL,NULL,NULL,NULL,${contentHash},${JSON.stringify(payload)},${serializeLocationFacts(plan.facts, 'unknown')},
+      NULL,NULL,NULL,NULL,${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(plan.facts, 'unknown')},
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
     ...correction.queries,
     associationWrite.query,

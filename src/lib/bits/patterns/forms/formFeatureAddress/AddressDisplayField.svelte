@@ -21,11 +21,14 @@ import {
   setAddressOverride,
 } from '#lib/addresses/featureAddress.js'
 // TYPES
+import type { AddressDivision } from '#lib/addresses/divisions.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { LocaleKey } from '#lib/types.js'
 
 let {
   address,
+  locationKind,
+  divisions = [],
   locale,
   isEditing,
   showLocale = false,
@@ -34,6 +37,8 @@ let {
   onChange,
 }: {
   address: FeatureAddress
+  locationKind?: string
+  divisions?: AddressDivision[]
   locale: LocaleKey
   isEditing: boolean
   showLocale?: boolean
@@ -51,7 +56,7 @@ $effect(() => {
   if (!isEditing) editGeneration += 1
 })
 const uid = $props.id()
-const value = $derived(getAddressDisplay(address, locale))
+const value = $derived(getAddressDisplay(address, locale, divisions, locationKind))
 const unlocked = $derived(
   Object.hasOwn(address.overrides[ADDRESS_LOCALES[locale]] ?? {}, 'formattedAddress'),
 )
@@ -61,6 +66,8 @@ const custom = $derived(
       getAddressDisplay(
         setAddressOverride(address, locale, 'formattedAddress', undefined),
         locale,
+        divisions,
+        locationKind,
       ),
 )
 let input = $state<HTMLTextAreaElement>()
@@ -107,6 +114,7 @@ let input = $state<HTMLTextAreaElement>()
             {#if scrollWhenConstrained && !unlocked}
               <ScrollableText
                 text={value}
+                title=""
                 padding={24}
                 class="col-start-1 row-start-1 min-w-0 [contain:inline-size]"
                 containerClass="h-10 border border-transparent px-3 py-2 text-left"
@@ -184,7 +192,9 @@ let input = $state<HTMLTextAreaElement>()
 
   {#if isEditing && showLocale && !value.trim()}
     {@const sources = (Object.keys(ADDRESS_LOCALES) as LocaleKey[]).filter(
-      source => source !== locale && getAddressDisplay(address, source).trim(),
+      source =>
+        source !== locale &&
+        getAddressDisplay(address, source, divisions, locationKind).trim(),
     )}
     {#if sources.length}
       <div class="pl-20">
@@ -198,7 +208,12 @@ let input = $state<HTMLTextAreaElement>()
             const originalAddress = address
             const originalLocale = locale
             const generation = editGeneration
-            const original = getAddressDisplay(address, toLocaleKey(source))
+            const original = getAddressDisplay(
+              address,
+              toLocaleKey(source),
+              divisions,
+              locationKind,
+            )
             const [translated] = await translateText(source, target, [original])
             // A changed address or manual input invalidates this pending translation.
             if (
@@ -208,7 +223,7 @@ let input = $state<HTMLTextAreaElement>()
               generation === editGeneration &&
               locale === originalLocale &&
               address === originalAddress &&
-              !getAddressDisplay(address, locale).trim()
+              !getAddressDisplay(address, locale, divisions, locationKind).trim()
             )
               onChange(
                 setAddressOverride(

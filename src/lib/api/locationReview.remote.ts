@@ -1,3 +1,8 @@
+import {
+  proposeLocationPlacement,
+  decideLocationPlacement,
+} from '#lib/db/services/locationPlacement.js'
+import { PlacementDecisionSchema } from '#lib/locations/placement.js'
 // SVELTE
 import { error } from '@sveltejs/kit'
 // VALIDATION
@@ -103,6 +108,22 @@ export const reevaluateFeatureLocationReview = guardedCommand(
     const projectId = await requireReviewer(ctx, input.featureId)
     const current = await readLocationAdoptionReview(ctx.db, { ...input, projectId })
     if (!current) error(404, 'LOCATION_REVIEW_NOT_FOUND')
+    if (current.proposal.evidence.placement) {
+      const target = current.proposal.evidence.placement
+      const proposal = await proposeLocationPlacement(ctx.db, {
+        featureId: input.featureId,
+        projectId,
+        ...(target.kind === 'relocation'
+          ? { occupancyRevisionId: target.occupancyRevisionId! }
+          : { addressRevisionId: target.addressRevisionId ?? undefined }),
+      })
+      if (!proposal) error(409, 'LOCATION_REVIEW_CHANGED')
+      return readLocationAdoptionReview(ctx.db, {
+        ...input,
+        projectId,
+        proposalId: proposal.id,
+      })
+    }
     const result = await proposeFeatureLocationAdoption(ctx.db, {
       featureId: input.featureId,
       projectId,
@@ -172,5 +193,32 @@ export const reviewLatestLocalLocation = guardedCommand(
   async (input, ctx) => {
     const projectId = await requireReviewer(ctx, input.featureId)
     return proposeLatestLocalLocationAdoption(ctx.db, { ...input, projectId })
+  },
+)
+
+/** Decide an occupancy/address review using current Feature authority and persisted ancestry.
+ * @param input Exact candidate, editor versions and explicit placement choices.
+ * @returns Applied/rejected/deferred result; stale or inaccessible evidence fails closed.
+ */
+export const decideFeaturePlacement = guardedCommand(
+  reviewInput.extend({
+    expectedRevision: z.string().min(1),
+    expectedFeatureModifiedAt: z.string().min(1),
+    reason: z.string().trim().min(1).max(2000),
+    decision: PlacementDecisionSchema,
+  }),
+  async (input, ctx) => {
+    const projectId = await requireReviewer(ctx, input.featureId)
+    if (!(await readLocationAdoptionReview(ctx.db, { ...input, projectId })))
+      error(404, 'LOCATION_REVIEW_NOT_FOUND')
+    const result = await decideLocationPlacement(ctx.db, {
+      ...input,
+      projectId,
+      actorId: ctx.user.id,
+    })
+    if (result.status === 'conflict') error(409, 'LOCATION_REVIEW_CHANGED')
+    if (result.status === 'applied' && result.geometryChanged)
+      scheduleFeatureMtr(ctx.event.locals.platform, input.featureId)
+    return result
   },
 )

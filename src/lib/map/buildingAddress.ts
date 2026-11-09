@@ -1,6 +1,6 @@
 // TYPES
 import type { Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
-import type { Polygon, MultiPolygon, Position } from 'geojson'
+import type { Polygon, MultiPolygon, Position, Point } from 'geojson'
 
 export type SelectedBuilding = {
   id: string
@@ -46,14 +46,16 @@ export function containsBuildingPoint(
   )
 }
 
-/** Selects a unique containing building. @param features Rendered candidates. @param point Pin. @returns Building or null outdoors. @remarks Overlapping independent footprints require manual resolution. */
-export function selectBuilding(
+/** Collects every containing footprint, merging duplicate tile fragments by source identity.
+ * @param features Loaded candidates. @param point Pin. @returns All containing buildings, including overlapping podiums and towers.
+ */
+export function selectBuildings(
   features: Pick<
     MapGeoJSONFeature,
     'id' | 'source' | 'sourceLayer' | 'properties' | 'geometry'
   >[],
   point: [number, number],
-): SelectedBuilding | null {
+): SelectedBuilding[] {
   const buildings = new Map<string, SelectedBuilding>()
   for (const feature of features) {
     if (
@@ -84,17 +86,28 @@ export function selectBuilding(
   }
   for (const [key, building] of buildings)
     if (!containsBuildingPoint(point, building.geometry)) buildings.delete(key)
-  if (buildings.size > 1) throw new Error('More than one building contains this pin')
-  return buildings.values().next().value ?? null
+  return [...buildings.values()]
 }
 
-/** Reads buildings only once the tiles at the pin are ready. @param map Owning map. @param point Pin. @returns A containing building, or null outdoors. */
-export async function buildingAt(
+/** Selects a unique containing building. @param features Rendered candidates. @param point Pin. @returns Building or null outdoors. @remarks Overlapping independent footprints require manual resolution. */
+export function selectBuilding(
+  features: Parameters<typeof selectBuildings>[0],
+  point: [number, number],
+): SelectedBuilding | null {
+  const buildings = selectBuildings(features, point)
+  if (buildings.length > 1) throw new Error('More than one building contains this pin')
+  return buildings[0] ?? null
+}
+
+/** Reads all containing buildings once tiles at the pin are ready.
+ * @param map Owning map. @param point Pin. @returns Containing footprints, including podium/tower overlaps.
+ */
+export async function buildingsAt(
   map: MapLibreMap,
   point: [number, number],
-): Promise<SelectedBuilding | null> {
+): Promise<SelectedBuilding[]> {
   if (map.getZoom() < 15) throw new Error('Zoom in to identify a building')
-  if (!map.areTilesLoaded()) {
+  if (!map.areTilesLoaded() || map.isMoving?.()) {
     await new Promise<void>((resolve, reject) => {
       const finish = (): void => {
         clearTimeout(timer)
@@ -137,5 +150,125 @@ export async function buildingAt(
         sourceLayer: 'buildings',
       })),
   )
-  return selectBuilding(features, point)
+  return selectBuildings(features, point)
+}
+
+/** Reads buildings only once the tiles at the pin are ready. @param map Owning map. @param point Pin. @returns A containing building, or null outdoors. */
+export async function buildingAt(
+  map: MapLibreMap,
+  point: [number, number],
+): Promise<SelectedBuilding | null> {
+  const buildings = await buildingsAt(map, point)
+  if (buildings.length > 1) throw new Error('More than one building contains this pin')
+  return buildings[0] ?? null
+}
+
+/** Finds an unambiguous number on the footprint or its contained address labels.
+ * @param building Unique building containing the pin.
+ * @param labels Address-point features from the same map source.
+ * @returns A literal number or range, or null when missing or conflicting.
+ * @remarks Never substitutes a nearby label or a building name for address evidence.
+ */
+export function buildingStreetNumber(
+  building: SelectedBuilding,
+  labels: Pick<MapGeoJSONFeature, 'geometry' | 'properties'>[],
+): string | null {
+  const numbers = new Set<string>()
+  const collect = (properties: Record<string, unknown>): void => {
+    for (const key of ['addr_housenumber', 'addr:housenumber']) {
+      const value = properties[key]
+      if (
+        (typeof value === 'string' || typeof value === 'number') &&
+        String(value).trim()
+      )
+        numbers.add(String(value).trim())
+    }
+  }
+  collect(building.properties)
+  for (const label of labels) {
+    if (
+      label.properties.kind === 'address' &&
+      label.geometry.type === 'Point' &&
+      containsBuildingPoint(label.geometry.coordinates, building.geometry)
+    )
+      collect(label.properties)
+  }
+  return numbers.size === 1 ? [...numbers][0] : null
+}
+
+/** Looks up a street number using the pin's unique containing footprint.
+ * @param map Owning map. @param point Current pin. @returns A suggested number or null.
+ */
+export async function streetNumberAt(
+  map: MapLibreMap,
+  point: [number, number],
+): Promise<string | null> {
+  const building = await buildingAt(map, point)
+  if (!building) return null
+  return buildingStreetNumber(
+    building,
+    map.querySourceFeatures(building.source, {
+      sourceLayer: 'buildings',
+      filter: ['==', 'kind', 'address'],
+    }),
+  )
+}
+
+/** Read names on every containing footprint and their interior label points.
+ * @param map Owning map. @param point Dropped pin. @returns Contained names, never nearby outside labels.
+ */
+export async function buildingNamesAt(
+  map: MapLibreMap,
+  point: [number, number],
+): Promise<string[]> {
+  const buildings = await buildingsAt(map, point)
+  if (!buildings.length) return []
+  const properties = buildings.map(building => building.properties)
+  if (map.getSource('building-labels')) {
+    for (const label of map.querySourceFeatures('building-labels')) {
+      if (
+        label.geometry.type === 'Point' &&
+        buildings.some(building =>
+          containsBuildingPoint(
+            (label.geometry as Point).coordinates,
+            building.geometry,
+          ),
+        )
+      )
+        properties.push(label.properties)
+    }
+  }
+  return [
+    ...new Set(
+      properties.flatMap(values =>
+        Object.entries(values).flatMap(([key, value]) =>
+          /^(name|name:en|name_en)$/.test(key) &&
+          typeof value === 'string' &&
+          value.trim()
+            ? [value.trim()]
+            : [],
+        ),
+      ),
+    ),
+  ]
+}
+
+/** Read explicit street names attached to containing footprints.
+ * @param map Owning map. @param point Dropped pin. @returns Source street names, excluding mere nearby roads.
+ */
+export async function buildingStreetsAt(
+  map: MapLibreMap,
+  point: [number, number],
+): Promise<string[]> {
+  const buildings = await buildingsAt(map, point)
+  return [
+    ...new Set(
+      buildings.flatMap(building =>
+        ['addr_street', 'addr:street'].flatMap(key => {
+          const value = building.properties[key]
+          return typeof value === 'string' && value.trim() ? [value.trim()] : []
+        }),
+      ),
+    ),
+  ]
 }

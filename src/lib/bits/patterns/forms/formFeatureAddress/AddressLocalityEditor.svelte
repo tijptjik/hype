@@ -7,8 +7,7 @@ import { prefersReducedMotion } from 'svelte/motion'
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import XIcon from 'virtual:icons/lucide/x'
-import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
+import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
 // DOMAIN
 import {
   addressDivisionName,
@@ -24,14 +23,12 @@ let {
   node,
   labels,
   onChange,
-  onReset,
 }: {
   paths: AddressDivision[][]
   options: AddressDivision[]
   node: Snippet<[AddressDivision]>
   labels: Record<string, string>
   onChange: (paths: AddressDivision[][]) => void
-  onReset: () => void
 } = $props()
 const uid = $props.id()
 let searching = $state(false)
@@ -39,12 +36,15 @@ let query = $state('')
 let pending = $state<AddressDivision | null>(null)
 let unavailable = $state(false)
 let input = $state<HTMLInputElement | null>(null)
-const candidates = $derived(pending ? localityParentPaths(pending, options) : [])
+let panel = $state<HTMLDivElement | null>(null)
+let childOf = $state<AddressDivision[] | null>(null)
+const candidates = $derived(pending ? availableParents(pending) : [])
 const matching = $derived(
   options
     .filter(
       item =>
         addressLocalityLevel(item) !== null &&
+        (!childOf || availableParents(item).length > 0) &&
         Object.values(item.names).some(value =>
           value.name?.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
         ),
@@ -55,15 +55,46 @@ const matching = $derived(
       ),
     ),
 )
-$effect(() => {
-  if (searching) void tick().then(() => input?.focus())
-})
+
+/** Restrict child selection to direct children of the selected source chain.
+ * @param division Candidate child. @returns Existing parent paths allowed in this picker.
+ */
+function availableParents(division: AddressDivision): AddressDivision[][] {
+  return localityParentPaths(division, options).filter(
+    path => !childOf || samePath(path, childOf),
+  )
+}
+
+/** Compare exact root-to-leaf chains. @param a Candidate path. @param b Selected path. @returns Whether both chains match. */
+function samePath(a: AddressDivision[], b: AddressDivision[]): boolean {
+  return (
+    a.length === b.length && a.every((division, index) => division.id === b[index].id)
+  )
+}
+
+/** Check for a resolvable direct child. @param path Selected ancestor prefix. @returns Whether Add can extend this prefix. */
+function hasChildren(path: AddressDivision[]): boolean {
+  return options.some(option =>
+    localityParentPaths(option, options).some(parents => samePath(parents, path)),
+  )
+}
+
+/** Open global or child selection and clear any incomplete chain choice.
+ * @param prefix Optional source chain to extend. @returns Nothing.
+ */
+function open(prefix: AddressDivision[] | null = null): void {
+  close()
+  if (prefix && !hasChildren(prefix)) return
+  childOf = prefix
+  searching = true
+  void tick().then(() => input?.focus())
+}
 
 /** Choose one neighbourhood, filling its unique ancestry or requesting one existing source branch.
  * @param selected Existing mirrored locality. @returns Nothing; no parent or edge can be authored here.
  */
 function choose(selected: AddressDivision): void {
-  const source = localityParentPaths(selected, options)
+  const source = availableParents(selected)
   unavailable = source.length === 0
   if (source.length === 1) commit([...source[0], selected])
   else pending = source.length ? selected : null
@@ -80,7 +111,8 @@ function commit(path: AddressDivision[]): void {
 /** Close an incomplete selection without changing the saved draft.
  * @returns Nothing.
  */
-function close(): void {
+export function close(): void {
+  childOf = null
   searching = false
   pending = null
   unavailable = false
@@ -88,47 +120,76 @@ function close(): void {
 }
 </script>
 
-<div class="group/selection relative min-w-0 space-y-3 pr-16">
+<div class="group/selection relative min-w-0 space-y-3">
   {#each paths as path, pathIndex (pathIndex)}
     <ol
-      class="flex flex-wrap items-start gap-x-3 gap-y-1"
+      class="flex flex-col items-stretch"
       transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
       aria-label={m.address_neighbourhood_current()}
     >
       {#each path as division, index (division.id)}
         <li
-          class="flex max-w-full min-w-0 items-start gap-3"
-          transition:slide={{
-            axis: 'x',
-            duration: prefersReducedMotion.current ? 0 : 180,
-          }}
+          class="min-w-0"
+          transition:slide={{ duration: prefersReducedMotion.current ? 0 : 180 }}
         >
-          {#if index > 0}
-            <ChevronRightIcon
-              class="text-muted-foreground/60 mt-2 size-3.5 shrink-0"
+          <div class="flex min-w-0 items-start gap-1">
+            <button
+              type="button"
+              class="hover:text-primary min-w-0 flex-1 text-left"
+              aria-label={index === path.length - 1
+                ? m.address_neighbourhood_choose()
+                : addressDivisionName(division, getLocaleKey())}
+              onclick={() => {
+                open()
+              }}
+            >
+              {@render node(division)}
+            </button>
+            <button
+              type="button"
+              class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive mt-1 flex size-7 shrink-0 items-center justify-center rounded-md"
+              aria-label={`${m.address_neighbourhood_clear()}: ${addressDivisionName(division, getLocaleKey())}`}
+              data-tooltip={m.address_neighbourhood_clear()}
+              onclick={() => {
+                // Keep the valid ancestor prefix when removing this branch of the hierarchy.
+                onChange(
+                  paths
+                    .map((current, currentIndex) =>
+                      currentIndex === pathIndex ? current.slice(0, index) : current,
+                    )
+                    .filter(current => current.length),
+                )
+                close()
+              }}
+            >
+              <XIcon class="size-3.5" aria-hidden="true" />
+            </button>
+          </div>
+          {#if index < path.length - 1}
+            <ChevronDownIcon
+              class="text-muted-foreground/60 ml-0.5 size-3.5"
               aria-hidden="true"
             />
           {/if}
-          <button
-            type="button"
-            class="hover:text-primary text-left"
-            aria-label={index === path.length - 1
-              ? m.address_neighbourhood_choose()
-              : addressDivisionName(division, getLocaleKey())}
-            onclick={() => {
-              searching = true
-              query = ''
-            }}
-          >
-            {@render node(division)}
-          </button>
         </li>
       {/each}
+      {#if path.length && hasChildren(path)}
+        <li class="flex items-start gap-3" data-locality-child-slot>
+          <button
+            type="button"
+            aria-label={`${m.address_neighbourhood_add()}: ${addressDivisionName(path[path.length - 1], getLocaleKey())}`}
+            class="text-primary hover:bg-muted focus-visible:outline-primary mt-1 rounded-md px-2 py-1 text-xs focus-visible:outline-2"
+            onclick={() => open(path)}
+          >
+            {m.address_neighbourhood_add()}
+          </button>
+        </li>
+      {/if}
     </ol>
   {/each}
-  {#if searching}
-    <div class="border-border bg-panel space-y-2 rounded-lg border p-3">
-      <label class="text-muted-foreground block text-xs" for={`${uid}-search`}
+  {#if searching && (!childOf || hasChildren(childOf))}
+    <div bind:this={panel} class="min-w-0 space-y-2">
+      <label class="sr-only" for={`${uid}-search`}
         >{m.address_neighbourhood_search()}</label
       >
       <div class="flex items-center gap-2">
@@ -136,6 +197,7 @@ function close(): void {
           bind:this={input}
           id={`${uid}-search`}
           type="search"
+          placeholder={m.address_neighbourhood_search()}
           bind:value={query}
           class="border-border bg-background min-h-10 min-w-0 flex-1 rounded-md border px-3 text-sm"
           autocomplete="off"
@@ -144,11 +206,22 @@ function close(): void {
             unavailable = false
           }}
           onkeydown={event => {
-            if (event.key === 'Escape') close()
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              event.stopPropagation()
+              close()
+            }
+            if (event.key === 'Tab' && !event.shiftKey) {
+              const first = panel?.querySelector<HTMLButtonElement>('fieldset button')
+              if (first) {
+                event.preventDefault()
+                first.focus()
+              }
+            }
             if (
               event.key === 'Enter' &&
               !pending &&
-              query.trim() &&
+              (query.trim() || childOf) &&
               matching.length === 1
             ) {
               event.preventDefault()
@@ -158,10 +231,11 @@ function close(): void {
         >
         <button
           type="button"
-          class="text-muted-foreground hover:bg-muted min-h-10 rounded-md px-2 text-sm"
+          aria-label={m.cancel()}
+          class="text-muted-foreground hover:bg-muted focus-visible:outline-primary flex size-10 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
           onclick={close}
         >
-          {m.cancel()}
+          <XIcon class="size-4" aria-hidden="true" />
         </button>
       </div>
       {#if pending}
@@ -176,9 +250,6 @@ function close(): void {
               name: addressDivisionName(pending, getLocaleKey()),
             })}
           </legend>
-          <p class="text-muted-foreground text-xs">
-            {m.address_neighbourhood_paths_help()}
-          </p>
           {#each candidates as path (JSON.stringify(path.map(item => item.id)))}
             <button
               type="button"
@@ -195,7 +266,7 @@ function close(): void {
         <p role="alert" class="text-destructive text-sm">
           {m.address_neighbourhood_unavailable()}
         </p>
-      {:else if query.trim()}
+      {:else if query.trim() || childOf}
         <fieldset
           class="border-border bg-background max-h-64 min-w-0 overflow-y-auto rounded-md border"
           aria-label={m.address_locality_results()}
@@ -218,50 +289,13 @@ function close(): void {
         </fieldset>
       {/if}
     </div>
-  {:else}
-    <div
-      class={paths.length
-        ? 'absolute top-0 right-0 flex items-center gap-1 opacity-0 transition-opacity group-focus-within/selection:opacity-100 group-hover/selection:opacity-100'
-        : 'flex flex-wrap items-center gap-2'}
+  {:else if !paths.length}
+    <button
+      type="button"
+      class="text-primary min-h-9 text-sm hover:underline"
+      onclick={() => open()}
     >
-      {#if !paths.length}
-        <button
-          type="button"
-          class="text-primary min-h-9 text-sm hover:underline"
-          onclick={() => {
-            searching = true
-            query = ''
-          }}
-        >
-          {m.address_neighbourhood_choose()}
-        </button>
-      {/if}
-      {#if paths.length}
-        <button
-          type="button"
-          class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex size-7 items-center justify-center rounded-md focus-visible:opacity-100 sm:opacity-0 sm:group-focus-within/selection:opacity-100 sm:group-hover/selection:opacity-100"
-          aria-label={m.address_neighbourhood_clear()}
-          title={m.address_neighbourhood_clear()}
-          onclick={() => {
-            onChange([])
-            searching = true
-          }}
-        >
-          <XIcon class="size-3.5" aria-hidden="true" />
-        </button>
-      {/if}
-      <button
-        type="button"
-        class="text-muted-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md"
-        aria-label={m.address_divisions_from_marker()}
-        title={m.address_divisions_from_marker()}
-        onclick={() => {
-          close()
-          onReset()
-        }}
-      >
-        <ResetIcon class="size-3.5" aria-hidden="true" />
-      </button>
-    </div>
+      {m.address_neighbourhood_choose()}
+    </button>
   {/if}
 </div>

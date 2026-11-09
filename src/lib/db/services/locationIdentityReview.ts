@@ -29,6 +29,7 @@ import { LocationFactsSchema } from '#lib/locations/validation.js'
 import { equalLocationValue } from '#lib/locations/baseline.js'
 // SERVICES
 import { acceptLocationIdentity } from './locationIdentity'
+import { locationRematchReviewGuard } from './locationRematchGuard'
 import { prepareSaanSeoiRevision } from './locationSource'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -106,7 +107,7 @@ export async function readLocationIdentityBaseline(
       and(
         eq(locationTable.id, locationId),
         sql`${locationTable.ownerOrganisationId} IS ${ownerOrganisationId}`,
-        sql`${locationRevision.sequence}=(SELECT max(r.sequence) FROM locationRevision r WHERE r.locationId=${locationTable.id})`,
+        sql`${locationRevision.version}=(SELECT max(r.version) FROM locationRevision r WHERE r.locationId=${locationTable.id})`,
       ),
     )
     .get()
@@ -146,7 +147,7 @@ export async function captureLocationIdentityReview(
     (SELECT 1 FROM location WHERE id=${baseline.locationId} AND ownerOrganisationId IS ${baseline.expectedOwnerOrganisationId}
       AND state=${baseline.expectedState} AND ssId IS ${baseline.expectedSsId}
       AND sourceAvailability=${baseline.expectedSourceAvailability})
-    AND (SELECT id FROM locationRevision WHERE locationId=${baseline.locationId} ORDER BY sequence DESC LIMIT 1)
+    AND (SELECT id FROM locationRevision WHERE locationId=${baseline.locationId} ORDER BY version DESC LIMIT 1)
       =${baseline.expectedLatestRevisionId}
     AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=${baseline.locationId}
       AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id))
@@ -177,7 +178,7 @@ export async function captureMirroredLocationIdentityReview(
       apiVersion: locationRevision.apiVersion,
       releaseId: locationRevision.releaseId,
       snapshotId: locationRevision.snapshotId,
-      payload: locationRevision.payload,
+      rawSource: locationRevision.rawSource,
       facts: locationRevision.facts,
     })
     .from(locationRevision)
@@ -202,7 +203,7 @@ export async function captureMirroredLocationIdentityReview(
     )
     .get()
   if (!row?.ssId || !row.apiVersion || !row.releaseId || !row.snapshotId) return null
-  const { issues: rawIssues, ...payload } = row.payload
+  const { issues: rawIssues, ...rawSource } = row.rawSource
   const issues = z
     .array(
       z.discriminatedUnion('kind', [
@@ -224,7 +225,7 @@ export async function captureMirroredLocationIdentityReview(
       apiVersion: row.apiVersion,
       releaseId: row.releaseId,
       snapshotId: row.snapshotId,
-      payload,
+      rawSource,
       issues,
     },
     actorId,
@@ -235,7 +236,7 @@ export async function captureMirroredLocationIdentityReview(
  * Read the comparison shown to an authorized identity reviewer.
  * @param db Request-local database.
  * @param input Persisted target scope and immutable review identity.
- * @returns Projected before/after facts and source identifiers; raw payload stays server-side.
+ * @returns Projected before/after facts and source identifiers; raw rawSource stays server-side.
  * @remarks A stale review remains readable but cannot be accepted without recapturing evidence.
  */
 export async function readLocationIdentityReview(
@@ -261,6 +262,12 @@ export async function readLocationIdentityReview(
   }
   createdAt: string
   rejected: boolean
+  rematch?: {
+    score: number
+    distance: number
+    numberConflict: boolean
+    incomplete: boolean
+  }
 } | null> {
   const row = await db
     .select()
@@ -294,7 +301,13 @@ export async function readLocationIdentityReview(
   return {
     id: row.id,
     locationId: input.locationId,
-    stale: !equalLocationValue(current, row.baseline),
+    stale:
+      !equalLocationValue(current, row.baseline) ||
+      !(
+        await db.get<{ valid: number }>(
+          sql`SELECT ${locationRematchReviewGuard(row.id)} valid`,
+        )
+      ).valid,
     previousSsId: row.baseline.expectedSsId,
     previousState: row.baseline.expectedState,
     before: LocationFactsSchema.parse(baseline.facts),
@@ -311,6 +324,26 @@ export async function readLocationIdentityReview(
       ),
     ),
     createdAt: row.createdAt,
+    ...(() => {
+      const metadata = z
+        .object({
+          evidence: z.object({
+            score: z.number(),
+            distance: z.number(),
+            numberConflict: z.boolean(),
+          }),
+          incomplete: z.boolean(),
+        })
+        .safeParse(row.projection.rawSource.hypeRematch)
+      return metadata.success
+        ? {
+            rematch: {
+              ...metadata.data.evidence,
+              incomplete: metadata.data.incomplete,
+            },
+          }
+        : {}
+    })(),
   }
 }
 
@@ -355,6 +388,14 @@ export async function acceptLocationIdentityReview(
     input.ownerOrganisationId,
   )
   if (!equalLocationValue(current, row.baseline)) return { status: 'conflict' }
+  if (
+    !(
+      await db.get<{ valid: number }>(
+        sql`SELECT ${locationRematchReviewGuard(row.id)} valid`,
+      )
+    ).valid
+  )
+    return { status: 'conflict' }
   return acceptLocationIdentity(
     db,
     { ...row.baseline, reviewId: row.id, actorId: input.actorId, reason: input.reason },

@@ -14,7 +14,7 @@ import type { SaanSeoiPlaceProjection } from './saanseoi'
  */
 export function retainAuthoredAddress(
   projection: SaanSeoiPlaceProjection,
-  retained?: { facts: LocationFacts; payload: Record<string, unknown> } | null,
+  retained?: { facts: LocationFacts; rawSource: Record<string, unknown> } | null,
   seedLocal = false,
 ): SaanSeoiPlaceProjection {
   if (!retained) return projection
@@ -25,7 +25,7 @@ export function retainAuthoredAddress(
       : null
   const authored = old.authored ?? parsed?.content
   if (!authored) return projection
-  const localAddress = retained.payload.localAddress ?? {
+  const localAddress = retained.rawSource.localAddress ?? {
     kind: parsed ? 'parsed-local-baseline' : 'retained-local-address',
     ...(parsed
       ? {
@@ -39,10 +39,10 @@ export function retainAuthoredAddress(
   }
   return {
     ...projection,
-    payload: {
-      ...projection.payload,
+    rawSource: {
+      ...projection.rawSource,
       sourceAddress:
-        projection.payload.sourceAddress ?? projection.facts.location.address,
+        projection.rawSource.sourceAddress ?? projection.facts.location.address,
       localAddress,
     },
     facts: {
@@ -54,8 +54,8 @@ export function retainAuthoredAddress(
           address2dId: null,
           address3dId: null,
           address3dUnitId: null,
-          addressSnapshotId: null,
-          records: {},
+          snapshotId: null,
+          rawSource: {},
           fallbackDisplay: { ...old.fallbackDisplay },
           ...(old.displayOverrides
             ? { displayOverrides: { ...old.displayOverrides } }

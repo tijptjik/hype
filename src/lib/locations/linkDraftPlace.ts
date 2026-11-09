@@ -4,6 +4,7 @@ import {
   getFeatureLocationCandidate,
   importFeatureLocationCandidate,
   linkFeatureLocation,
+  relinkFeatureLocation,
 } from '#lib/api/location.remote.js'
 
 /** Resolve a pinned discovery identity and link it to a successfully saved Feature.
@@ -14,6 +15,8 @@ import {
  */
 export async function linkDraftPlace(input: {
   featureId: string
+  replacementRevision?: string
+  replacementLocationId?: string
   nameMode?: 'independent' | 'inherit'
   modifiedAt: string
   ssId: string
@@ -33,14 +36,26 @@ export async function linkDraftPlace(input: {
   if (candidate.status !== 'ready') throw new Error('Place is unavailable')
   if (existing) {
     if (existing.locationId === candidate.locationId) return
-    throw new Error('Feature already has a different place')
+    if (
+      !input.replacementRevision &&
+      existing.locationId === input.replacementLocationId
+    )
+      input = { ...input, replacementRevision: existing.version }
+    if (!input.replacementRevision || existing.version !== input.replacementRevision)
+      throw new Error('Feature already has a different place')
   }
-  await linkFeatureLocation({
+  const link = {
     featureId: input.featureId,
     locationId: candidate.locationId,
     revisionId: candidate.revisionId,
     expectedFeatureModifiedAt: input.modifiedAt,
     ...(input.nameMode ? { nameMode: input.nameMode } : {}),
-  })
+  }
+  if (existing && input.replacementRevision) {
+    await relinkFeatureLocation({
+      ...link,
+      expectedRevision: input.replacementRevision,
+    })
+  } else await linkFeatureLocation(link)
   await query.refresh()
 }

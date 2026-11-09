@@ -838,8 +838,8 @@ describe('Location directory index filters', () => {
     ).toBe(true)
     const second = await listLocationResources(db, {
       ...filters,
-      includeCount: true,
       after: first.nextCursor!,
+      includeCount: true,
     })
     expect(second.totalCount).toBe(26)
     expect(second.data).toHaveLength(1)

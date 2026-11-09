@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Refs #194. Transactional SQLite operations for the normal development rebuild."""
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
 import sqlite3
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -70,7 +72,30 @@ def main():
                 assert historical.inventory(db) == after
                 Path(args[0]).with_name('historical-setup.json').write_text(json.dumps(dict(before=before, after=after, counts=counts)))
                 db.row_factory = None
-            applied = migration.apply_pending(db, ROOT, prepare_dependency)
+            # Keep shared migrations unchanged; retain exact local variants beside the receipt.
+            variants = {}
+            source_hashes = {}
+            with tempfile.TemporaryDirectory(prefix='hype-local-migrations-') as temporary:
+                migration_root = Path(temporary)
+                (migration_root / 'migrations').mkdir()
+                done = {row[0] for row in db.execute('SELECT name FROM d1_migrations')}
+                for path in sorted((ROOT / 'migrations').glob('*.sql')):
+                    original = path.read_text()
+                    source_hashes[path.name] = hashlib.sha256(original.encode()).hexdigest()
+                    sql = local_migration_sql(db, path.name, original) if path.name not in done else original
+                    destination = migration_root / 'migrations' / path.name
+                    if sql == original:
+                        destination.write_text(original)
+                    else:
+                        destination.write_text(sql)
+                        retained = Path(args[0]).with_name(path.stem + '.local.sql')
+                        retained.write_text(sql)
+                        variants[path.name] = str(retained)
+                applied = migration.apply_pending(db, migration_root, prepare_dependency)
+                for row in applied:
+                    if row['name'] in variants:
+                        row['sourceSha256'] = source_hashes[row['name']]
+                        row['localVariant'] = variants[row['name']]
             checked(db)
             assert not migration.apply_pending(db, ROOT)
             Path(args[0]).write_text(json.dumps(applied, indent=2))

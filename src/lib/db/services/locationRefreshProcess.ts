@@ -84,7 +84,7 @@ export async function processLocationRefresh(
         projection.ssId !== row.ssId ||
         compareLocationPublications(
           input.target,
-          readLocationPublicationMetadata(projection.payload.meta),
+          readLocationPublicationMetadata(projection.rawSource.meta),
         ) !== 'unchanged'
       )
         return hold('publication-mismatch')

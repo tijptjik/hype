@@ -5,8 +5,27 @@ import { saveLinkedFeatureForm } from '#lib/db/services/locationEdit.js'
 // @vitest-environment node
 import { afterEach, describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { getTableColumns, sql } from 'drizzle-orm'
-import { feature } from '#lib/db/schema/feature.js'
+import { getTableColumns, getTableName, sql } from 'drizzle-orm'
+import {
+  feature,
+  featureI18n,
+  featureProperty,
+  featurePropertyI18n,
+} from '#lib/db/schema/feature.js'
+import { image, featureImage } from '#lib/db/schema/image.js'
+import {
+  property,
+  propertyI18n,
+  propertyValue,
+  propertyValueI18n,
+} from '#lib/db/schema/property.js'
+import { readFeatureRevisionSource } from '#lib/db/services/featureRevisionSource.js'
+import { unlinkFeatureLocation } from '#lib/db/services/locationUnlink.js'
+import { linkInitialFeatureLocation } from '#lib/db/services/locationLink.js'
+import { relinkFeatureLocation } from '#lib/db/services/locationRelink.js'
+import { buildFeatureRevisionBaselineContent } from '#lib/db/services/featureRevisionContent.js'
+import { initializeFeatureRevision } from '#lib/db/services/featureRevision.js'
+import { featureContentProjectionMatches } from '#lib/db/services/featureRevisionProjection.js'
 import { setupLifecycleDatabase } from './fixtures/locationLifecycleDatabase'
 import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
@@ -38,9 +57,7 @@ async function setup(policy: 'follow' | 'fixed' | 'review' = 'review', hints = f
   )
   for (const col of Object.values(getTableColumns(feature)))
     if (!columns.has(col.name))
-      s.sqlite.exec(
-        `ALTER TABLE feature ADD COLUMN "${col.name}" ${col.dataType === 'number' ? 'REAL' : 'TEXT'}`,
-      )
+      s.sqlite.exec(`ALTER TABLE feature ADD COLUMN "${col.name}" ${col.getSQLType()}`)
   s.sqlite.exec(
     `CREATE TABLE layer(id TEXT PRIMARY KEY,projectId TEXT,organisationId TEXT); INSERT INTO layer VALUES('layer','p','p');`,
   )
@@ -154,6 +171,308 @@ function decision(
     decision: { action },
   }
 }
+
+/** Completes the isolated lifecycle fixture with revision source columns and enrolls its published Feature. */
+async function enroll(s: Awaited<ReturnType<typeof setup>>): Promise<string> {
+  for (const table of [
+    featureI18n,
+    featureProperty,
+    featurePropertyI18n,
+    image,
+    featureImage,
+    property,
+    propertyI18n,
+    propertyValue,
+    propertyValueI18n,
+  ]) {
+    const name = getTableName(table)
+    const columns = Object.values(getTableColumns(table))
+    const existing = new Set(
+      s.sqlite
+        .prepare(`PRAGMA table_info("${name}")`)
+        .all()
+        .map(row => row.name),
+    )
+    if (!existing.size)
+      s.sqlite.exec(
+        `CREATE TABLE "${name}" (${columns.map(column => `"${column.name}" ${column.getSQLType()}${column.primary ? ' PRIMARY KEY' : ''}`).join(',')})`,
+      )
+    else
+      for (const column of columns)
+        if (!existing.has(column.name))
+          s.sqlite.exec(
+            `ALTER TABLE "${name}" ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+          )
+  }
+  s.sqlite.exec(
+    'UPDATE feature SET isPublished=1,localIsPublished=1,isVisitable=1,visitableAsOf=NULL',
+  )
+  s.sqlite.exec(
+    "INSERT INTO featureI18n(featureId,locale,title,titleGen,descriptionGen,displayAddressGen) VALUES('f','en','Shop',0,0,0)",
+  )
+  s.sqlite.exec(readFileSync('migrations/0171_feature_revisions.sql', 'utf8'))
+  s.sqlite.exec(readFileSync('migrations/0172_image_revisions.sql', 'utf8'))
+  const source = required(await readFeatureRevisionSource(s.db, 'f', sql`1`))
+  const content = buildFeatureRevisionBaselineContent(source.snapshot, {
+    revisions: {},
+    order: [],
+  })
+  expect(
+    await s.db.get(
+      sql`SELECT ${featureContentProjectionMatches('f', content)} AS matches`,
+    ),
+  ).toEqual({ matches: 1 })
+  return required(
+    await initializeFeatureRevision(s.db, {
+      featureId: 'f',
+      actorId: 'baseline',
+      guard: source.unchanged,
+      content,
+      published: true,
+    }),
+  )
+}
+
+describe('Feature revisions during placement acceptance', () => {
+  it.each(['inherit', 'independent'] as const)(
+    'captures relinking materialization while respecting %s names',
+    async nameMode => {
+      const s = await setup()
+      const baseline = await enroll(s)
+      s.sqlite.exec(
+        "INSERT INTO hub VALUES('core','core'); INSERT INTO property(id,key,scope,hubId,type,component,dataType,audience,isTranslatable,dateResolution,timeMaxHour,cardinality,presentation) VALUES('phone','phoneNumber','hub','core','field','input','text','public',0,'day',24,'many','text')",
+      )
+      s.sqlite.exec(
+        "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('replacement','establishment','unresolved','p'); INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'replacement-r','replacement',1,origin,contentHash,rawSource,json_set(facts,'$.common.names.en','Replacement') FROM locationRevision WHERE id='r'",
+      )
+      const result = await relinkFeatureLocation(s.db, {
+        featureId: 'f',
+        projectId: 'p',
+        locationId: 'replacement',
+        revisionId: 'replacement-r',
+        expectedFeatureModifiedAt: 'original',
+        expectedRevision: 'initial',
+        actorId: 'relink-editor',
+        nameMode,
+      })
+      expect(result.status).toBe('linked')
+      const row = required(
+        s.sqlite
+          .prepare(
+            'SELECT r.content,r.previousRevisionId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId',
+          )
+          .get(),
+      )
+      const content = JSON.parse(String(row.content))
+      expect(row.previousRevisionId).toBe(baseline)
+      expect(content.translations.en.title.value).toBe(
+        nameMode === 'inherit' ? 'Replacement' : 'Shop',
+      )
+      expect(content.properties.phone.selection.value).toBe('[]')
+      expect(
+        await s.db.get(
+          sql`SELECT ${featureContentProjectionMatches('f', content)} AS matches`,
+        ),
+      ).toEqual({ matches: 1 })
+    },
+  )
+  it('records an initial link after detachment without losing either accepted history', async () => {
+    const s = await setup()
+    await enroll(s)
+    await unlinkFeatureLocation(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: 'initial',
+      actorId: 'unlink-editor',
+    })
+    const detached = required(
+      s.sqlite.prepare('SELECT publishedRevisionId FROM featureRevisionHead').get(),
+    ).publishedRevisionId
+    const modifiedAt = String(
+      required(s.sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='f'").get())
+        .modifiedAt,
+    )
+    const result = await linkInitialFeatureLocation(s.db, {
+      featureId: 'f',
+      projectId: 'p',
+      locationId: 'shop',
+      revisionId: 'r',
+      expectedFeatureModifiedAt: modifiedAt,
+      actorId: 'link-editor',
+    })
+    expect(result.status).toBe('linked')
+    const row = required(
+      s.sqlite
+        .prepare(
+          'SELECT r.content,r.previousRevisionId,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
+        )
+        .get(),
+    )
+    const content = JSON.parse(String(row.content))
+    expect(row.previousRevisionId).toBe(detached)
+    expect(row.actorId).toBe('link-editor')
+    expect(content.placement.location.locationId).toBe('shop')
+    expect(
+      await s.db.get(
+        sql`SELECT ${featureContentProjectionMatches('f', content)} AS matches`,
+      ),
+    ).toEqual({ matches: 1 })
+  })
+  it.each([false, true])(
+    'captures relinking atomically including a late receipt failure (%s)',
+    async fail => {
+      const s = await setup()
+      const baseline = await enroll(s)
+      s.sqlite.exec(
+        "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('replacement','establishment','unresolved','p'); INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'replacement-r','replacement',1,origin,contentHash,rawSource,facts FROM locationRevision WHERE id='r'",
+      )
+      if (fail)
+        s.sqlite.exec(
+          "CREATE TRIGGER fail_feature_receipt BEFORE INSERT ON featureRevisionPublication WHEN NEW.generation=1 BEGIN SELECT RAISE(ABORT,'feature receipt failed'); END",
+        )
+      const action = () =>
+        relinkFeatureLocation(s.db, {
+          featureId: 'f',
+          projectId: 'p',
+          locationId: 'replacement',
+          revisionId: 'replacement-r',
+          expectedFeatureModifiedAt: 'original',
+          expectedRevision: 'initial',
+          actorId: 'relink-editor',
+        })
+      if (fail) {
+        await expect(action()).rejects.toThrow()
+        expect(
+          s.sqlite.prepare('SELECT publishedRevisionId FROM featureRevisionHead').get()
+            ?.publishedRevisionId,
+        ).toBe(baseline)
+        expect(
+          s.sqlite.prepare('SELECT locationId FROM featureLocation').get()?.locationId,
+        ).toBe('shop')
+      } else {
+        expect((await action()).status).toBe('linked')
+        const row = required(
+          s.sqlite
+            .prepare(
+              'SELECT r.content,r.previousRevisionId,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
+            )
+            .get(),
+        )
+        expect(row.previousRevisionId).toBe(baseline)
+        expect(row.actorId).toBe('relink-editor')
+        const content = JSON.parse(String(row.content))
+        expect(content.placement.location.locationId).toBe('replacement')
+        expect(
+          await s.db.get(
+            sql`SELECT ${featureContentProjectionMatches('f', content)} AS matches`,
+          ),
+        ).toEqual({ matches: 1 })
+      }
+    },
+  )
+  it('records detachment while retaining materialized fields and the earlier Location pins', async () => {
+    const s = await setup()
+    const baseline = await enroll(s)
+    expect(
+      (
+        await unlinkFeatureLocation(s.db, {
+          featureId: 'f',
+          projectId: 'p',
+          expectedFeatureModifiedAt: 'original',
+          expectedRevision: 'initial',
+          actorId: 'unlink-editor',
+        })
+      ).status,
+    ).toBe('unlinked')
+    const row = required(
+      s.sqlite
+        .prepare(
+          'SELECT r.content,r.previousRevisionId,c.actorId FROM featureRevisionHead h JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId',
+        )
+        .get(),
+    )
+    const content = JSON.parse(String(row.content))
+    expect(row.previousRevisionId).toBe(baseline)
+    expect(row.actorId).toBe('unlink-editor')
+    expect(content.placement.location).toBeNull()
+    expect(content.placement.geometry.coordinates).toEqual([114, 22])
+    expect(content.translations.en.title.value).toBe('Shop')
+    const old = required(
+      s.sqlite.prepare('SELECT content FROM featureRevision WHERE id=?').get(baseline),
+    )
+    expect(JSON.parse(String(old.content)).placement.location.locationId).toBe('shop')
+  })
+  it.each([false, true])(
+    'records approved placement and trigger-built memberships together (automatic: %s)',
+    async automatic => {
+      const s = await setup(automatic ? 'follow' : 'review')
+      const baseline = await enroll(s)
+      const proposal = required(
+        await proposeLocationPlacement(s.db, {
+          featureId: 'f',
+          projectId: 'p',
+          occupancyRevisionId: 'move',
+        }),
+      )
+      expect(
+        (await decideLocationPlacement(s.db, { ...decision(proposal), automatic }))
+          .status,
+      ).toBe('applied')
+      const head = required(s.sqlite.prepare('SELECT * FROM featureRevisionHead').get())
+      expect(head.generation).toBe(1)
+      const row = required(
+        s.sqlite
+          .prepare(
+            'SELECT r.*,c.origin,c.actorId FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.id=?',
+          )
+          .get(head.publishedRevisionId),
+      )
+      const content = JSON.parse(String(row.content))
+      expect(row.previousRevisionId).toBe(baseline)
+      expect(row.origin).toBe(automatic ? 'system' : 'user')
+      expect(row.actorId).toBe('editor')
+      expect(content.placement.geometry.coordinates).toEqual([114.1, 22.1])
+      expect(content.placement.location.acceptanceProposalId).toBe(proposal.id)
+      expect(content.placement.location.memberships).toMatchObject([
+        { containerLocationId: 'new', role: 'building', occupancyRevisionId: 'move' },
+      ])
+      expect(content.placement.location.memberships[0].bindingVersion).toBe(
+        content.placement.location.associationVersion,
+      )
+    },
+  )
+  it('rolls back the move, memberships and Location decision if the Feature receipt fails', async () => {
+    const s = await setup()
+    const baseline = await enroll(s)
+    const proposal = required(
+      await proposeLocationPlacement(s.db, {
+        featureId: 'f',
+        projectId: 'p',
+        occupancyRevisionId: 'move',
+      }),
+    )
+    s.sqlite.exec(
+      "CREATE TRIGGER fail_feature_receipt BEFORE INSERT ON featureRevisionPublication WHEN NEW.generation=1 BEGIN SELECT RAISE(ABORT,'feature receipt failed'); END",
+    )
+    await expect(decideLocationPlacement(s.db, decision(proposal))).rejects.toThrow()
+    expect(
+      s.sqlite.prepare('SELECT publishedRevisionId FROM featureRevisionHead').get()
+        ?.publishedRevisionId,
+    ).toBe(baseline)
+    expect(s.sqlite.prepare('SELECT version FROM featureLocation').get()?.version).toBe(
+      'initial',
+    )
+    expect(
+      s.sqlite
+        .prepare('SELECT locationDecision FROM locationAdoptionProposal WHERE id=?')
+        .get(proposal.id)?.locationDecision,
+    ).toBeNull()
+    expect(
+      s.sqlite.prepare('SELECT count(*) n FROM featureLocationMembership').get()?.n,
+    ).toBe(0)
+  })
+})
 describe('occupancy and canonical address acceptance', () => {
   it('fixed does not propose or move; layer override resolves independently', async () => {
     const s = await setup('fixed')

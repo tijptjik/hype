@@ -8,10 +8,14 @@ export type LocationSearchMarker = {
   id: string
   kind?: import('#lib/locations/kinds.js').LocationKind | 'address'
   number: number
+  /** Fit this result subset independently of the Feature pin. */
+  fitGroup?: string
+  color?: string
   coordinates: [number, number]
   label: string
   hidden?: boolean
   selected?: boolean
+  compact?: boolean
   previewOnly?: boolean
   highlighted?: boolean
 }

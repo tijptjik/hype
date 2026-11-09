@@ -1,3 +1,7 @@
+// REVISIONS
+import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
+import type { OrganisationRevisionActor } from './organisationRevision.js'
 import { addressRevision } from '../schema/locationRelationships'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 // DRIZZLE
@@ -78,6 +82,8 @@ export async function getProjectLocationSettings(
  * @param projectId Authorized project identity.
  * @param input Policy to validate before persistence.
  * @param expectedRevision Zero for first creation, otherwise the last read revision.
+ * @param actor Authenticated editor for project history.
+ * @param expectedScope Persisted ancestry captured before authorization.
  * @returns Saved settings, or null if another editor won the race.
  * @remarks Updating settings does not replay rejected or pending source decisions.
  */
@@ -86,6 +92,8 @@ export async function saveProjectLocationSettings(
   projectId: string,
   input: unknown,
   expectedRevision: number,
+  actor?: OrganisationRevisionActor,
+  expectedScope?: { organisationId: string; hubId: string | null },
 ): Promise<ProjectLocationSettings | null> {
   const policy = ProjectLocationPolicySchema.parse(input)
   if (
@@ -95,7 +103,7 @@ export async function saveProjectLocationSettings(
   )
     throw new Error('Invalid policy revision')
   // Policy and revision live on their Project and change under one compare-and-swap.
-  const rows = await db
+  const updateCore = db
     .update(project)
     .set({ locationPolicy: policy, locationPolicyRevision: expectedRevision + 1 })
     .where(
@@ -108,6 +116,27 @@ export async function saveProjectLocationSettings(
       policy: project.locationPolicy,
       revision: project.locationPolicyRevision,
     })
+  const capture = await prepareAdminResourceRevisionCapture(
+    db,
+    'project',
+    sql`SELECT ${projectId} AS id`,
+    actor,
+  )
+  const scopeGuard = expectedScope
+    ? sql`EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.id=${projectId} AND p.organisationId=${expectedScope.organisationId} AND o.hubId IS ${expectedScope.hubId})`
+    : sql`1`
+  const results = await executeRevisionBatch(
+    db,
+    sql`(${scopeGuard}) AND EXISTS(SELECT 1 FROM project WHERE id=${projectId} AND locationPolicyRevision=${expectedRevision})`,
+    [
+      ...capture.before,
+      updateCore,
+      prepareRevisionCheck(db, sql`changes()=1`),
+      ...capture.after,
+    ],
+  )
+  if (!results) return null
+  const rows = results[capture.before.length] as { policy: unknown; revision: number }[]
   return rows[0]
     ? {
         policy: ProjectLocationPolicySchema.parse(rows[0].policy),

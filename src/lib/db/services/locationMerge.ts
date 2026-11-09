@@ -1,3 +1,12 @@
+import { guardedRelationshipInsert } from './locationRelationshipReview'
+import { locationRematchReviewGuard } from './locationRematchGuard'
+import {
+  locationTransition,
+  locationTransitionParticipant,
+} from '../schema/locationRelationships'
+import { assessMergeDependencies, mergeDependencyToken } from './locationMergeImpact'
+import { prepareFeatureLocationMergeCapture } from './featureLocationMergeRevision'
+import { executeRevisionBatch } from './revisionBatch'
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -55,7 +64,7 @@ function baselineGuard(value: LocationIdentityBaseline): SQL {
   return sql`EXISTS(SELECT 1 FROM location WHERE id=${value.locationId} AND state=${value.expectedState}
     AND ssId IS ${value.expectedSsId} AND ownerOrganisationId IS ${value.expectedOwnerOrganisationId}
     AND sourceAvailability=${value.expectedSourceAvailability})
-    AND (SELECT id FROM locationRevision WHERE locationId=${value.locationId} ORDER BY sequence DESC LIMIT 1)
+    AND (SELECT id FROM locationRevision WHERE locationId=${value.locationId} ORDER BY version DESC LIMIT 1)
       =${value.expectedLatestRevisionId}
     AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=${value.locationId}
       AND NOT EXISTS(SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id))
@@ -68,8 +77,8 @@ function baselineGuard(value: LocationIdentityBaseline): SQL {
  * @returns Scalar JSON expression stable across query plans and request retries.
  */
 function featureTokenSQL(locationId: string): SQL {
-  return sql`(SELECT json_group_array(json_object('featureId',featureId,'revision',revision,'projectId',projectId))
-    FROM (SELECT fp.featureId,fp.revision,f.projectId FROM featureLocation fp JOIN feature f ON f.id=fp.featureId
+  return sql`(SELECT json_group_array(json_object('featureId',featureId,'version',version,'projectId',projectId))
+    FROM (SELECT fp.featureId,fp.version,f.projectId FROM featureLocation fp JOIN feature f ON f.id=fp.featureId
       WHERE fp.locationId=${locationId} ORDER BY fp.featureId))`
 }
 
@@ -81,16 +90,20 @@ function featureTokenSQL(locationId: string): SQL {
 function mergeGuard(
   row: Pick<
     MergeReview,
-    'targetBaseline' | 'sourceBaseline' | 'sourceFeatureToken' | 'identityReviewId'
+    | 'targetBaseline'
+    | 'sourceBaseline'
+    | 'sourceFeatureToken'
+    | 'identityReviewId'
+    | 'dependencies'
   >,
+  allowBlocked = false,
 ): SQL {
   const target = row.targetBaseline,
     source = row.sourceBaseline
-  return sql`NOT EXISTS (SELECT 1 FROM locationIdentityReview WHERE rejection IS NOT NULL AND id=${row.identityReviewId})
+  return sql`${locationRematchReviewGuard(row.identityReviewId)} AND NOT EXISTS (SELECT 1 FROM locationIdentityReview WHERE rejection IS NOT NULL AND id=${row.identityReviewId})
     AND ${baselineGuard(target)} AND ${baselineGuard(source)}
+    AND ${row.dependencies ? sql`${mergeDependencyToken(source.locationId, target.locationId)}=${row.dependencies.token} AND ${Number(allowBlocked || !row.dependencies.blockers.length)}` : sql`0`}
     AND ${featureTokenSQL(source.locationId)}=${row.sourceFeatureToken}
-    AND NOT EXISTS(SELECT 1 FROM organisationLocation a JOIN organisationLocation b ON a.organisationId=b.organisationId
-      WHERE a.locationId=${source.locationId} AND b.locationId=${target.locationId})
     AND (${source.expectedOwnerOrganisationId} IS NULL OR ${source.expectedOwnerOrganisationId} IS ${target.expectedOwnerOrganisationId})
     AND NOT EXISTS(SELECT 1 FROM featureLocation fp JOIN feature f ON f.id=fp.featureId
       WHERE fp.locationId=${source.locationId} AND (f.isDraft!=0 OR
@@ -173,6 +186,8 @@ export async function readLocationMergeReview(
   visibility: 'private' | 'shared'
   stale: boolean
   applied: boolean
+  dependencies: MergeReview['dependencies']
+  canApply: boolean
 } | null> {
   const row = await readMergeEvidence(db, input)
   if (
@@ -185,10 +200,17 @@ export async function readLocationMergeReview(
   const state = await db.get<{
     current: number
     applied: number
-  }>(sql`SELECT CASE WHEN ${mergeGuard(row)} THEN 1 ELSE 0 END AS current,
+  }>(sql`SELECT CASE WHEN ${mergeGuard(row, true)} THEN 1 ELSE 0 END AS current,
     EXISTS(SELECT 1 FROM location WHERE json_extract(redirect,'$.reviewId')=${row.id}) AS applied`)
   return {
     reviewId: row.id,
+    dependencies: row.dependencies,
+    canApply: Boolean(
+      row.dependencies &&
+        !row.dependencies.blockers.length &&
+        state?.current &&
+        !state?.applied,
+    ),
     affectedFeatures: row.sourceFeatureCount,
     visibility: input.ownerOrganisationId === null ? 'shared' : 'private',
     stale: !state?.current,
@@ -255,7 +277,7 @@ export async function captureLocationMergeReview(
     .select({
       id: locationRevision.id,
       facts: locationRevision.facts,
-      payload: locationRevision.payload,
+      rawSource: locationRevision.rawSource,
       contentHash: locationRevision.contentHash,
     })
     .from(locationRevision)
@@ -266,7 +288,7 @@ export async function captureLocationMergeReview(
         eq(locationRevision.ssId, identity.projection.ssId),
       ),
     )
-    .orderBy(locationRevision.sequence)
+    .orderBy(locationRevision.version)
   // Compare immutable source evidence without mixing in Organisation-authored addresses.
   let candidate: (typeof candidates)[number] | undefined
   for (const revision of candidates) {
@@ -296,12 +318,14 @@ export async function captureLocationMergeReview(
     (target.expectedOwnerOrganisationId !== null && Boolean(outsideOwner))
   )
     return { status: 'scope-conflict' }
-  const overlapping = await db.get(
-    sql`SELECT 1 FROM organisationLocation a JOIN organisationLocation b ON a.organisationId=b.organisationId WHERE a.locationId=${source.locationId} AND b.locationId=${target.locationId} LIMIT 1`,
+  const dependencies = await assessMergeDependencies(
+    db,
+    source.locationId,
+    target.locationId,
   )
-  if (overlapping) return { status: 'scope-conflict' }
   const id = nanoid(24)
   const review: MergeReview = {
+    dependencies,
     id,
     identityReviewId: identity.id,
     targetLocationId: target.locationId,
@@ -319,7 +343,7 @@ export async function captureLocationMergeReview(
     .set({
       mergeReviews: sql`json_insert(mergeReviews,'$[#]',json(${JSON.stringify(review)}))`,
     })
-    .where(and(eq(locationIdentityReview.id, identity.id), mergeGuard(review)))
+    .where(and(eq(locationIdentityReview.id, identity.id), mergeGuard(review, true)))
     .returning({ id: locationIdentityReview.id })
   return rows.length
     ? { status: 'ready', reviewId: id, affectedFeatures: affected.length }
@@ -368,7 +392,7 @@ export async function applyLocationMergeReview(
   )
     return { status: 'conflict' }
   const targetLatest = await db
-    .select({ sequence: locationRevision.sequence })
+    .select({ version: locationRevision.version })
     .from(locationRevision)
     .where(
       and(
@@ -378,7 +402,7 @@ export async function applyLocationMergeReview(
     )
     .get()
   const candidate = await db
-    .select({ sequence: locationRevision.sequence })
+    .select({ version: locationRevision.version })
     .from(locationRevision)
     .where(
       and(
@@ -392,8 +416,16 @@ export async function applyLocationMergeReview(
     prefix = `mergeRevision_${id}_`,
     historyId = nanoid(24)
   const receipt = sql`EXISTS(SELECT 1 FROM location WHERE json_extract(redirect,'$.id')=${id})`
+  const capture = await prepareFeatureLocationMergeCapture(db, {
+    sourceLocationId: input.sourceLocationId,
+    targetLocationId: input.locationId,
+    mergeId: id,
+    actorId: input.actorId,
+    guard: mergeGuard(row),
+  })
   // The absorbed Location's redirect is the unique receipt; subsequent writes require it.
-  const result = await db.batch([
+  const result = await executeRevisionBatch(db, mergeGuard(row), [
+    ...capture.before,
     db
       .update(locationTable)
       .set({
@@ -412,25 +444,24 @@ export async function applyLocationMergeReview(
       .where(and(eq(locationTable.id, input.sourceLocationId), mergeGuard(row))),
     db
       .insert(locationRevision)
-      .select(sql`SELECT ${prefix}||sequence,${input.locationId},${targetLatest.sequence}+sequence,
-      origin,ssId,apiVersion,releaseId,snapshotId,contentHash,payload,facts,createdAt FROM locationRevision
-      WHERE locationId=${input.sourceLocationId} AND ${receipt} ORDER BY sequence`),
-    // Retain the original correction histories on the redirect; copy their snapshots into the survivor.
-    db
-      .insert(organisationLocation)
-      .select(sql`SELECT organisationId,${input.locationId},
-      ${'merge:' + id + ':'}||organisationId,overrides,
-      json_insert(history,'$[#]',json_object('revision',${'merge:' + id + ':'}||organisationId,'overrides',json(overrides),'actorId',${input.actorId},'createdAt',strftime('%Y-%m-%dT%H:%M:%fZ','now'))),
-      ${input.actorId},createdAt,strftime('%Y-%m-%dT%H:%M:%fZ','now') FROM organisationLocation
-      WHERE locationId=${input.sourceLocationId} AND ${receipt}`),
+      .select(sql`SELECT ${prefix}||version,${input.locationId},${targetLatest.version}+version,
+      origin,ssId,apiVersion,releaseId,snapshotId,contentHash,rawSource,facts,createdAt FROM locationRevision
+      WHERE locationId=${input.sourceLocationId} AND ${receipt} ORDER BY version`),
+    // Preserve original correction chains; copy their complete immutable lineage to the survivor.
+    db.insert(organisationLocation).select(sql`SELECT
+      ${'merge:' + id + ':'}||id,organisationId,${input.locationId},CASE WHEN previousRevisionId IS NULL THEN NULL ELSE ${'merge:' + id + ':'}||previousRevisionId END,overrides,
+      json_object('process','identity-merge','sourceRevisionId',id),${input.actorId},createdAt
+      FROM organisationLocation WHERE locationId=${input.sourceLocationId} AND ${receipt} ORDER BY rowid`),
     db
       .update(featureLocation)
       .set({
         locationId: input.locationId,
-        factsRevisionId: sql`${prefix}||(SELECT sequence FROM locationRevision WHERE id=${featureLocation.factsRevisionId})`,
-        locationRevisionId: sql`${prefix}||(SELECT sequence FROM locationRevision WHERE id=${featureLocation.locationRevisionId})`,
-        revision: sql`${`mergeAssociation_${id}_`}||${featureLocation.featureId}`,
+        factsRevisionId: sql`${prefix}||(SELECT version FROM locationRevision WHERE id=${featureLocation.factsRevisionId})`,
+        locationRevisionId: sql`${prefix}||(SELECT version FROM locationRevision WHERE id=${featureLocation.locationRevisionId})`,
+        version: sql`${`mergeAssociation_${id}_`}||${featureLocation.featureId}`,
         actorId: input.actorId,
+        factsOrganisationRevision: sql`CASE WHEN factsOrganisationRevision IS NULL THEN NULL ELSE ${'merge:' + id + ':'}||factsOrganisationRevision END`,
+        locationOrganisationRevision: sql`CASE WHEN locationOrganisationRevision IS NULL THEN NULL ELSE ${'merge:' + id + ':'}||locationOrganisationRevision END`,
       })
       .where(and(eq(featureLocation.locationId, input.sourceLocationId), receipt)),
     db
@@ -451,11 +482,73 @@ export async function applyLocationMergeReview(
       .insert(locationIdentityHistory)
       .select(sql`SELECT ${historyId},${input.locationId},
       ${row.targetBaseline.expectedHistoryId},${row.targetBaseline.expectedState},${row.targetBaseline.expectedSsId},
-      ${row.sourceBaseline.expectedSsId},${prefix + candidate.sequence},${input.actorId},${reason},
+      ${row.sourceBaseline.expectedSsId},${prefix + candidate.version},${input.actorId},${reason},
       ${row.identityReviewId},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${receipt}`)
       .returning({ id: locationIdentityHistory.id }),
+    // Rebuild dependent container projections without changing accepted pins, addresses or immutable references.
+    db
+      .update(featureLocation)
+      .set({
+        version: sql`${'mergePlacement_' + id + '_'}||featureId`,
+        actorId: input.actorId,
+      })
+      .where(
+        sql`${receipt} AND locationId!=${input.locationId} AND featureId IN(SELECT featureId FROM featureLocationMembership WHERE containerLocationId=${input.sourceLocationId})`,
+      ),
+    guardedRelationshipInsert(
+      db,
+      locationTransition,
+      {
+        id: 'merge:' + id,
+        transitionId: 'merge:' + id,
+        scopeOrganisationId: null,
+        assertionState: 'asserted',
+        evidence: JSON.stringify([
+          {
+            source: {
+              kind: 'record',
+              resourceType: 'locationRevision',
+              revisionId: row.sourceRevisionId,
+            },
+            supports: ['before', 'after'],
+            quotedText: null,
+            description: reason,
+            sourceDate: null,
+          },
+        ]),
+        type: 'merge',
+        basis: 'identity_correction',
+        actorId: input.actorId,
+        provenance: JSON.stringify({
+          process: 'reviewed-identity-merge',
+          reviewId: row.id,
+        }),
+      },
+      receipt,
+    ),
+    guardedRelationshipInsert(
+      db,
+      locationTransitionParticipant,
+      {
+        transitionRevisionId: 'merge:' + id,
+        locationId: input.sourceLocationId,
+        side: 'before',
+      },
+      receipt,
+    ),
+    guardedRelationshipInsert(
+      db,
+      locationTransitionParticipant,
+      {
+        transitionRevisionId: 'merge:' + id,
+        locationId: input.locationId,
+        side: 'after',
+      },
+      receipt,
+    ),
+    ...capture.after,
   ])
-  return result[6].length
+  return result && (result[capture.before.length + 6] as unknown[]).length
     ? { status: 'applied', redirectId: id, affectedFeatures: row.sourceFeatureCount }
     : { status: 'conflict' }
 }

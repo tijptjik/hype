@@ -24,6 +24,16 @@ export const PlaceSearchFiltersSchema = z.strictObject({
 })
 export type PlaceSearchFilters = z.infer<typeof PlaceSearchFiltersSchema>
 
+/** Check whether discovery is constrained by a category rather than status alone.
+ * @param filters Accepted category and operating-status controls.
+ * @returns Whether a category permits discovery without search text.
+ */
+export function hasPlaceSearchCategory(filters?: PlaceSearchFilters): boolean {
+  return Boolean(
+    filters?.basicCategory || filters?.taxonomyPrimary || filters?.taxonomyCategory,
+  )
+}
+
 /** Encode the same exact category filters supported by SaanSeoi's Places collection.
  * @param filters Accepted search controls, never unvalidated URL fragments.
  * @returns Bounded query parameters combined with AND by the upstream API.

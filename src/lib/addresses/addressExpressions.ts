@@ -8,7 +8,13 @@ import {
   type UnitType,
   type StructuredAddressField,
 } from './address3d.js'
-import { ADDRESS_LOCALES, getAddressUnits, setAddressOverride } from './featureAddress'
+import {
+  ADDRESS_LOCALES,
+  getAddressLocale,
+  getAddressUnits,
+  setAddressOverride,
+} from './featureAddress'
+import { parseStreetNumber } from './streetNumber.js'
 // TYPES
 import type { AddressField, FeatureAddress } from './featureAddress'
 import type { LocaleKey } from '#lib/types.js'
@@ -18,8 +24,8 @@ export const EDITABLE_ADDRESS_FIELDS = [
   'unitPortion',
   'unitExpression',
   'floorExpression',
-  'blockExpression',
   'buildingName',
+  'blockExpression',
   'phaseExpression',
   'premisesName',
   'buildingNumberExpression',
@@ -27,6 +33,43 @@ export const EDITABLE_ADDRESS_FIELDS = [
   'accessHint',
 ] as const
 export type EditableAddressField = (typeof EDITABLE_ADDRESS_FIELDS)[number]
+
+/** Restore a component's source values in every language.
+ * @param address Draft. @param field Component. @returns Draft with only this component's corrections removed.
+ */
+export function resetAddressComponent(
+  address: FeatureAddress,
+  field: EditableAddressField,
+): FeatureAddress {
+  if (field === 'unitExpression' || field === 'floorExpression')
+    return setStructuredAddressExpression(address, 'en', field, undefined)
+  for (const locale of ['en', 'zhHant', 'zhHans'] as const)
+    address = setAddressExpression(address, locale, field, undefined)
+  return address
+}
+
+/** Explicitly omit a component without unlinking or mutating its source record.
+ * @param address Draft. @param field Component. @returns Draft with null corrections, including shared unit semantics.
+ */
+export function clearAddressComponent(
+  address: FeatureAddress,
+  field: EditableAddressField,
+): FeatureAddress {
+  if (field === 'unitExpression' || field === 'floorExpression') {
+    const details = { ...address.unitDetails }
+    if (field === 'unitExpression') {
+      details.unitRef = null
+      details.unitType = null
+    } else {
+      details.floorRef = null
+      details.floorType = null
+    }
+    address = { ...address, unitDetails: details }
+  }
+  for (const locale of ['en', 'zhHant', 'zhHans'] as const)
+    address = setAddressExpression(address, locale, field, '')
+  return address
+}
 const parsedFields: Partial<Record<EditableAddressField, AddressField[]>> = {
   buildingNumberExpression: [
     'buildingNumberFrom',
@@ -50,6 +93,29 @@ const blockTerms = [
   ['Garage', '車房', '车房', 'garage'],
 ] as const
 
+/** Extract a block vocabulary term from a reference entry.
+ * @param expression Typed reference. @param selectedType Current block type.
+ * @returns Clean reference and inferred type without guessing partial words.
+ */
+export function parseBlockReference(
+  expression: string,
+  selectedType: string,
+): { blockRef: string; blockType: string; extracted: boolean } {
+  const raw = expression.trim()
+  for (const [en, hant, hans, type] of blockTerms) {
+    for (const term of [en, hant, hans]) {
+      if (raw.toLowerCase() === term.toLowerCase())
+        return { blockRef: '', blockType: type, extracted: true }
+      const match =
+        term === en
+          ? new RegExp(`^${term}\\s+(.*)$`, 'i').exec(raw)
+          : new RegExp(`^(.*?)${term}$`).exec(raw)
+      if (match) return { blockRef: match[1].trim(), blockType: type, extracted: true }
+    }
+  }
+  return { blockRef: raw, blockType: selectedType, extracted: false }
+}
+
 /** Provides a bounded vocabulary for expression completion, while allowing free text.
  * @param field Visible expression. @param locale Editor locale. @returns Localised suggestions.
  */
@@ -68,6 +134,7 @@ export function getExpressionSuggestions(
 
 /** Parses an expression without guessing unknown components.
  * @param field Visible expression. @param raw User text. @returns Upstream scalar fields.
+ * @remarks Invalid numeric input retains its text for editor/schema validation and clears parsed endpoints rather than reusing old values.
  */
 export function parseAddressExpression(
   field: EditableAddressField,
@@ -79,12 +146,12 @@ export function parseAddressExpression(
   }
   for (const key of parsedFields[field] ?? []) result[key] = null
   if (field === 'buildingNumberExpression') {
-    const match = /^(\d+[A-Za-z]?)(?:\s*(-|–|—|至|to)\s*(\d+[A-Za-z]?))?$/i.exec(value)
-    if (match)
+    const parsed = parseStreetNumber(value)
+    if (parsed.valid)
       Object.assign(result, {
-        buildingNumberFrom: match[1],
-        buildingNumberTo: match[3] ?? null,
-        buildingNumberConnector: match[2] ?? null,
+        buildingNumberFrom: parsed.number.from,
+        buildingNumberTo: parsed.number.to,
+        buildingNumberConnector: parsed.number.connector,
       })
   } else if (field === 'blockExpression') {
     const aliases: Record<string, string> = {
@@ -162,7 +229,7 @@ export function getAddressDivisions(
   address: FeatureAddress,
   locale: LocaleKey,
 ): Array<{ id: string; role: string; name: string }> {
-  const records = address.source.records as {
+  const records = address.source.rawSource as {
     data?: {
       relationships?: {
         divisions?: { data?: Array<{ id: string; meta?: { role?: string } }> }
@@ -231,7 +298,7 @@ export function getAddressDivisions(
  * @param address Retained canonical address. @returns Whether the detail response contains memberships.
  */
 export function hasAddressDivisionDetails(address: FeatureAddress): boolean {
-  const data = address.source.records.data as
+  const data = address.source.rawSource.data as
     | { relationships?: { divisions?: { data?: unknown } } }
     | undefined
   return Array.isArray(data?.relationships?.divisions?.data)
@@ -245,7 +312,7 @@ export function hasAddressDivisionDetails(address: FeatureAddress): boolean {
  * @param value Original input; undefined resets to the source.
  * @param type Explicit dropdown code.
  * @returns Canonical local semantics plus generated expressions for other locales.
- * @remarks Source inventory and its IDs remain unchanged; ambiguous input is retained as X.
+ * @remarks Source inventory and its IDs remain unchanged; ambiguous input is retained as X. Unit input stores only the reference; its type comes from the selector.
  */
 export function setStructuredAddressExpression(
   address: FeatureAddress,
@@ -261,6 +328,15 @@ export function setStructuredAddressExpression(
       locale,
       field,
       value?.trim() || (value === undefined ? undefined : null),
+    )
+  if (field === 'unitExpression' && type === 'X' && value !== undefined)
+    return setCustomAddressUnit(
+      address,
+      locale,
+      value,
+      getStructuredAddressType(address, field) === 'X'
+        ? customAddressType(address, locale, 'unitExpression')
+        : '',
     )
   const details = { ...address.unitDetails }
   const keys =
@@ -285,7 +361,9 @@ export function setStructuredAddressExpression(
       value === undefined
         ? undefined
         : target === locale
-          ? value
+          ? field === 'unitExpression'
+            ? (details.unitRef ?? '')
+            : value
           : field === 'floorExpression'
             ? formatFloor(details, target)
             : field === 'unitExpression'
@@ -311,14 +389,111 @@ export function getStructuredAddressType(
     item => item.value === address.source.address3dUnitId,
   )
   return field === 'floorExpression'
-    ? (address.unitDetails?.floorType ?? unit?.floorType ?? 'F')
-    : (address.unitDetails?.unitType ?? unit?.unitType ?? 'U')
+    ? (address.unitDetails?.floorType ??
+        (
+          address.canonical?.content ??
+          address.source.canonical?.content ??
+          address.source.authored
+        )?.unit?.floorType ??
+        unit?.floorType ??
+        'F')
+    : (address.unitDetails?.unitType ??
+        (
+          address.canonical?.content ??
+          address.source.canonical?.content ??
+          address.source.authored
+        )?.unit?.unitType ??
+        unit?.unitType ??
+        parseUnit(String(getAddressLocale(address, 'en').unitExpression ?? ''))
+          .unitType ??
+        'U')
+}
+
+/** Read only the identifier for the unit input, with its type represented by the separate selector.
+ * @param address Current source and corrections. @param locale Editor language.
+ * @returns Unit number/letter or retained unknown reference, without recognized type terms.
+ */
+export function addressUnitReference(
+  address: FeatureAddress,
+  locale: LocaleKey,
+): string {
+  if (address.unitDetails && Object.hasOwn(address.unitDetails, 'unitRef'))
+    return (
+      parseUnit(
+        address.unitDetails.unitRef ?? '',
+        address.unitDetails.unitType ?? undefined,
+      ).unitRef ?? ''
+    )
+  const sourceUnit = (
+    address.canonical?.content ??
+    address.source.canonical?.content ??
+    address.source.authored
+  )?.unit
+  if (sourceUnit?.unitType === 'X') return sourceUnit.unitRef ?? ''
+  return (
+    parseUnit(
+      String(getAddressLocale(address, locale).unitExpression ?? ''),
+      getStructuredAddressType(address, 'unitExpression') as UnitType,
+    ).unitRef ?? ''
+  )
+}
+
+/** Read a floor's clean reference independently of its composed display expression.
+ * @param address Draft or loaded address. @param locale Editor language. @returns Reference without the floor type.
+ */
+export function addressFloorReference(
+  address: FeatureAddress,
+  locale: LocaleKey,
+): string {
+  if (address.unitDetails && Object.hasOwn(address.unitDetails, 'floorRef'))
+    return address.unitDetails.floorRef ?? ''
+  const sourceUnit = (
+    address.canonical?.content ??
+    address.source.canonical?.content ??
+    address.source.authored
+  )?.unit
+  if (sourceUnit) return sourceUnit.floorRef ?? ''
+  return (
+    parseFloor(String(getAddressLocale(address, locale).floorExpression ?? ''))
+      .floorRef ?? ''
+  )
+}
+
+/** Store an already parsed floor reference and compose localized expressions without parsing the type twice.
+ * @param address Draft. @param ref Clean reference. @param type Selected floor type.
+ * @returns Draft with shared floor semantics and composed expressions.
+ */
+export function setAddressFloorReference(
+  address: FeatureAddress,
+  ref: string,
+  type: FloorType,
+): FeatureAddress {
+  let next = {
+    ...address,
+    unitDetails: {
+      ...address.unitDetails,
+      floorType: type,
+      floorRef: ref.trim() || (type === 'F' || type === 'X' ? null : ''),
+    },
+  }
+  for (const locale of ['en', 'zhHant', 'zhHans'] as const)
+    next = {
+      ...next,
+      overrides: setAddressOverride(
+        next,
+        locale,
+        'floorExpression',
+        formatFloor(next.unitDetails, locale),
+      ).overrides,
+    }
+  return next
 }
 
 /** Edit a block's type, reference and locale-specific order as one coherent expression.
  * @param address Current draft. @param locale Edited language. @param type Block vocabulary code.
  * @param ref Block reference. @param before Whether the type precedes the reference.
- * @returns Corrections with a matching display expression and typed components.
+ * @param customType Optional authored label for Other; otherwise retains the existing custom label.
+ * @returns Corrections with matching expressions; Chinese references are shared while each locale retains its type and order.
  */
 export function setAddressBlock(
   address: FeatureAddress,
@@ -326,19 +501,93 @@ export function setAddressBlock(
   type: string,
   ref: string,
   before: boolean,
+  customType?: string,
 ): FeatureAddress {
-  const term = addressBlockTypeLabel(type, locale)
-  const expression = (before ? [term, ref] : [ref, term])
-    .filter(Boolean)
-    .join(locale === 'en' ? ' ' : '')
-  for (const [key, value] of Object.entries({
-    blockType: type,
-    blockRef: ref,
-    blockTypeBeforeNumber: before,
-    blockExpression: ref ? expression : '',
-  }))
-    address = setAddressOverride(address, locale, key as AddressField, value)
+  const targets: LocaleKey[] =
+    locale === 'en' ? [locale] : [locale, locale === 'zhHant' ? 'zhHans' : 'zhHant']
+  for (const target of targets) {
+    const existing = getAddressLocale(address, target)
+    const targetType = target === locale ? type : String(existing.blockType || type)
+    const targetBefore =
+      target === locale ? before : existing.blockTypeBeforeNumber === true
+    const term =
+      targetType === 'other'
+        ? (target === locale
+            ? (customType ?? customAddressType(address, target, 'blockExpression'))
+            : customAddressType(address, target, 'blockExpression')
+          ).trim()
+        : addressBlockTypeLabel(targetType, target)
+    const expression = (targetBefore ? [term, ref.trim()] : [ref.trim(), term])
+      .filter(Boolean)
+      .join(target === 'en' ? ' ' : '')
+    for (const [key, value] of Object.entries({
+      blockType: targetType,
+      blockRef: ref.trim(),
+      blockTypeBeforeNumber: targetBefore,
+      blockExpression: ref || targetType === 'other' ? expression : '',
+    }))
+      address = setAddressOverride(address, target, key as AddressField, value)
+  }
   return address
+}
+
+/** Recover an authored custom type from its composed expression and clean reference.
+ * @param address Draft. @param locale Language. @param field Unit or block expression.
+ * @returns Custom type text without the reference; unknown legacy expressions are preserved as text.
+ */
+export function customAddressType(
+  address: FeatureAddress,
+  locale: LocaleKey,
+  field: 'unitExpression' | 'blockExpression',
+): string {
+  const values = getAddressLocale(address, locale)
+  const expression = String(values[field] ?? '').trim()
+  const ref =
+    field === 'unitExpression'
+      ? addressUnitReference(address, locale)
+      : String(values.blockRef ?? '')
+  if (!ref) return expression
+  if (expression === ref) return ''
+  if (expression.startsWith(ref)) return expression.slice(ref.length).trim()
+  if (expression.endsWith(ref)) return expression.slice(0, -ref.length).trim()
+  return expression
+}
+
+/** Store an Other unit with a clean shared reference and separately composed locale expressions.
+ * @param address Draft. @param locale Edited language. @param ref Unit identifier only.
+ * @param typeLabel Custom type text. @returns Draft retaining X semantics and authored expressions.
+ */
+export function setCustomAddressUnit(
+  address: FeatureAddress,
+  locale: LocaleKey,
+  ref: string,
+  typeLabel: string,
+): FeatureAddress {
+  let next = {
+    ...address,
+    unitDetails: {
+      ...address.unitDetails,
+      unitType: 'X' as const,
+      unitRef: ref.trim(),
+    },
+  }
+  for (const target of ['en', 'zhHant', 'zhHans'] as const) {
+    const term =
+      target === locale
+        ? typeLabel.trim()
+        : getStructuredAddressType(address, 'unitExpression') === 'X'
+          ? customAddressType(address, target, 'unitExpression')
+          : ''
+    const expression = (target === 'en' ? [term, ref.trim()] : [ref.trim(), term])
+      .filter(Boolean)
+      .join(target === 'en' ? ' ' : '')
+    next = {
+      ...next,
+      overrides: setAddressOverride(next, target, 'unitExpression', expression)
+        .overrides,
+    }
+  }
+  return next
 }
 
 /** Translate a controlled block type for its selector and composed address.

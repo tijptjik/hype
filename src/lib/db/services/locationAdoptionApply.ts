@@ -1,5 +1,7 @@
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
+// VALIDATION
+import { z } from 'zod'
 // SCHEMA
 import { feature, featureI18n } from '../schema/feature'
 import {
@@ -18,10 +20,20 @@ import { previewFeatureLocationAdoption } from './locationAdoption'
 import { readLocationResetSources, prepareLocationPhoneReset } from './locationReset'
 import { prepareFeatureLocationAssociationWrite } from './locationAssociation'
 import { prepareFeatureLocationRelations } from './locationRelations'
+import { prepareFeatureAcceptedCapture } from './featureAcceptedCapture'
+import { readFeatureLocationRevisionMemberships } from './featureLocationRevision'
+import {
+  parseFeatureRevisionSource,
+  buildFeatureRevisionBaselineContent,
+} from './featureRevisionContent'
+import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
+import { property, propertyI18n } from '../schema/property'
+import { hub } from '../schema/hub'
 // OWNERSHIP
 import { locationOwnerForProject } from './locationScope'
 // TYPES
 import type { SQL } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
 import type { FeatureDB } from '#lib/db/zod/schema/feature.types.js'
 
@@ -72,6 +84,11 @@ export async function applyLocationAdoptionGroup(
   if (!review || review.decisions.some(row => row.fieldGroup === input.fieldGroup))
     return { status: 'conflict' }
   const proposal = review.proposal
+  if (proposal.evidence.placement)
+    return {
+      status: 'review',
+      reason: 'Use the placement review decisions for this candidate',
+    }
   const current = await db
     .select()
     .from(featureLocation)
@@ -79,11 +96,20 @@ export async function applyLocationAdoptionGroup(
       and(
         eq(featureLocation.featureId, input.featureId),
         eq(featureLocation.locationId, proposal.locationId),
-        eq(featureLocation.revision, input.expectedRevision),
+        eq(featureLocation.version, input.expectedRevision),
       ),
     )
     .get()
   if (!current) return { status: 'conflict' }
+  if (
+    input.fieldGroup === 'location' &&
+    (current.occupancyRevisionId || current.addressRevisionId)
+  )
+    return {
+      status: 'review',
+      reason:
+        'Review the accepted occupancy/address placement before changing its position',
+    }
   const preview = await previewFeatureLocationAdoption(db, {
     ...input,
     candidateRevisionId: proposal.candidateRevisionId,
@@ -198,13 +224,13 @@ export async function applyLocationAdoptionGroup(
       AND (p.state!='manual' OR p.ownerOrganisationId=${locationOwnerForProject(input.projectId)})
       AND ap.rowid=(SELECT MAX(newer.rowid) FROM locationAdoptionProposal newer
         WHERE newer.featureId=ap.featureId AND newer.projectId=ap.projectId
-          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId AND newer.organisationRevision=ap.organisationRevision)
+          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId AND newer.organisationRevision=ap.organisationRevision AND json_extract(newer.evidence,'$.placement') IS NULL)
       AND ((ap.associationRevision=${input.expectedRevision} AND ap.featureModifiedAt=${input.expectedFeatureModifiedAt})
         OR EXISTS (SELECT 1 FROM json_each(json_array(json(ap.factsDecision),json(ap.locationDecision))) prior
           WHERE json_extract(prior.value,'$.action')='applied' AND json_extract(prior.value,'$.associationRevision')=${input.expectedRevision}))
       AND NOT EXISTS (SELECT 1 FROM locationAdoptionProposal older
         WHERE older.featureId=ap.featureId AND older.projectId=ap.projectId
-          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId AND older.organisationRevision=ap.organisationRevision
+          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId AND older.organisationRevision=ap.organisationRevision AND json_extract(older.evidence,'$.placement') IS NULL
           AND (CASE WHEN ${input.fieldGroup}='facts' THEN older.factsDecision ELSE older.locationDecision END) IS NOT NULL)
       AND (${Number(input.mode !== 'automatic')} OR
         COALESCE((SELECT locationPolicyRevision FROM project WHERE id=ap.projectId),0)=ap.policyRevision)
@@ -226,9 +252,16 @@ export async function applyLocationAdoptionGroup(
       input.fieldGroup === 'facts' ? candidate.id : current.factsRevisionId,
     locationRevisionId:
       input.fieldGroup === 'location' ? candidate.id : current.locationRevisionId,
-    additionalGuard: and(proposalGuard, input.additionalGuard),
+    ...(materialized.data.geometry?.type === 'Point'
+      ? { acceptedGeometry: materialized.data.geometry }
+      : {}),
+    additionalGuard: and(
+      proposalGuard,
+      input.additionalGuard,
+      sql`EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND COALESCE(json_extract(addressMeta,'$.address.association.mode'),'')!='manual')`,
+    ),
   })
-  const guard = sql`EXISTS (SELECT 1 FROM featureLocation WHERE featureId=${input.featureId} AND revision=${association.revision})`
+  const guard = sql`EXISTS (SELECT 1 FROM featureLocation WHERE featureId=${input.featureId} AND version=${association.version})`
   const geometry = materialized.data.geometry!
   const geometryChanged = !equalLocationValue(geometry, parentBefore.geometry)
   const parent = db
@@ -253,7 +286,7 @@ export async function applyLocationAdoptionGroup(
       phones = await prepareLocationPhoneReset(
         db,
         input.featureId,
-        association.revision,
+        association.version,
         materialized.phones,
       )
   } catch (error) {
@@ -263,13 +296,136 @@ export async function applyLocationAdoptionGroup(
     }
   }
   // A final decision failure rolls back the association, projections and routing jobs.
+  const capture = await prepareFeatureAcceptedCapture(db, {
+    revisionBoundary: true,
+    featureId: input.featureId,
+    actorId: input.actorId,
+    origin: input.mode === 'automatic' ? 'system' : 'user',
+    reason: `Location adoption ${proposal.id} (${input.fieldGroup}, ${input.mode}): ${input.reason.trim()}`,
+    guard: and(proposalGuard, input.additionalGuard)!,
+    derive: async (previous, captured) => {
+      const next = parseFeatureRevisionSource(captured.snapshot)
+      next.record.geometry = z.json().parse(geometry)
+      if (input.fieldGroup === 'location')
+        next.record.addressMeta = z.json().parse(materialized.data.addressMeta ?? {})
+      const link = next.location[0]
+      if (!link || link.version !== input.expectedRevision)
+        throw new Error('Feature association changed')
+      Object.assign(link, {
+        version: association.version,
+        actorId: input.actorId,
+        overrides: nextOverrides,
+        factsRevisionId:
+          input.fieldGroup === 'facts' ? candidate.id : current.factsRevisionId,
+        locationRevisionId:
+          input.fieldGroup === 'location' ? candidate.id : current.locationRevisionId,
+        factsOrganisationRevision:
+          input.fieldGroup === 'facts' && proposal.organisationRevision
+            ? proposal.organisationRevision
+            : current.factsOrganisationRevision,
+        locationOrganisationRevision:
+          input.fieldGroup === 'location' && proposal.organisationRevision
+            ? proposal.organisationRevision
+            : current.locationOrganisationRevision,
+        acceptedGeometry:
+          geometry.type === 'Point' ? geometry : current.acceptedGeometry,
+        acceptanceProposalId: null,
+      })
+      for (const [locale, value] of Object.entries(
+        contentMapToStorage(materialized.i18n),
+      )) {
+        let row = next.translations.find(row => row.locale === locale)
+        const independent = current.acceptancePolicy?.nameMode === 'independent'
+        if (!row) {
+          row = {
+            featureId: input.featureId,
+            locale,
+            title: '',
+            titleGen: true,
+            description: null,
+            descriptionGen: true,
+            displayAddress: null,
+            displayAddressGen: true,
+            addressProperties: null,
+          }
+          next.translations.push(row)
+        }
+        for (const key of [
+          'title',
+          'titleGen',
+          'description',
+          'descriptionGen',
+          'displayAddress',
+          'displayAddressGen',
+          'addressProperties',
+        ] as const) {
+          if (independent && (key === 'title' || key === 'titleGen')) continue
+          if (value[key] !== undefined) row[key] = value[key] as never
+        }
+      }
+      if (materialized.phones !== undefined) {
+        const definitions = await db
+          .select({ definition: property })
+          .from(property)
+          .innerJoin(hub, eq(hub.id, property.hubId))
+          .where(
+            and(
+              eq(property.key, 'phoneNumber'),
+              eq(property.scope, 'hub'),
+              eq(hub.code, 'core'),
+            ),
+          )
+        if (definitions.length !== 1)
+          throw new Error('Universal phone property changed')
+        const definition = definitions[0].definition
+        if (!next.fieldDefinitions.some(row => row.id === definition.id)) {
+          next.fieldDefinitions.push(definition as never)
+          next.fieldTranslations.push(
+            ...(await db
+              .select()
+              .from(propertyI18n)
+              .where(eq(propertyI18n.propertyId, definition.id))),
+          )
+        }
+        next.properties = next.properties.filter(
+          row => row.propertyId !== definition.id,
+        )
+        next.properties.push({
+          featureId: input.featureId,
+          propertyId: definition.id,
+          propertyValueId: null,
+          value: JSON.stringify(materialized.phones),
+          valueJson: null,
+        })
+        next.propertyTranslations = next.propertyTranslations.filter(
+          row => row.propertyId !== definition.id,
+        )
+      }
+      const content = buildFeatureRevisionBaselineContent(next, {
+        revisions: Object.fromEntries(
+          Object.entries(previous.gallery.entries).map(([id, entry]) => [
+            id,
+            entry.imageRevisionId,
+          ]),
+        ),
+        order: previous.gallery.order,
+      })
+      // Location adoption does not alter gallery captions, ordering or image-version selection.
+      content.gallery = previous.gallery
+      if (content.placement.location)
+        content.placement.location.memberships =
+          await readFeatureLocationRevisionMemberships(db, content.placement.location)
+      return content
+    },
+  })
   const result = await db.batch([
+    ...capture.before,
     association.query,
     parent,
     ...prepareFeatureLocationRelations(
       db,
       input.featureId,
-      association.revision,
+      association.version,
       materialized.i18n,
     ),
     ...phones,
@@ -283,18 +439,19 @@ export async function applyLocationAdoptionGroup(
           action: 'applied',
           actorId: input.actorId,
           reason: input.reason.trim(),
-          associationRevision: association.revision,
+          associationRevision: association.version,
           createdAt: new Date().toISOString(),
         },
       })
       .where(and(eq(locationAdoptionProposal.id, proposal.id), guard)),
-  ])
-  const saved = (result[1] as FeatureDB[])[0]
+    ...capture.after,
+  ] as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]])
+  const saved = (result[capture.before.length + 1] as FeatureDB[])[0]
   return saved
     ? {
         status: 'applied',
         feature: saved,
-        revision: association.revision,
+        revision: association.version,
         geometryChanged,
       }
     : { status: 'conflict' }

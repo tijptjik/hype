@@ -1,12 +1,30 @@
-import { AddressAssociationSchema } from '#lib/locations/association.js'
+import { simplifiedChinese, traditionalChinese } from './chinese.js'
+import { formatStreetNumber, streetNumberIssue } from './streetNumber.js'
+import {
+  addressName,
+  streetDisplayName,
+  applyAddressAbbreviations,
+} from './formatting.js'
 import { LocalLocationAddressSchema } from './localLocationAddress.js'
-import { UnitDetailsSchema, formatFloor, formatUnit } from './address3d.js'
-import { AddressDivisionOverridesSchema } from './divisions.js'
+import {
+  UnitDetailsSchema,
+  formatFloor,
+  formatUnit,
+  unitDisplayExpression,
+  parseFloor,
+} from './address3d.js'
+import {
+  addressDivisionName,
+  addressLocalityLevel,
+  AddressDivisionOverridesSchema,
+} from './divisions.js'
 // VALIDATION
 import { z } from 'zod'
+import { AddressAssociationSchema } from '#lib/locations/association.js'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
 // TYPES
 import type { AddressMeta } from '#lib/utils/address.types.js'
+import type { AddressDivision } from './divisions.js'
 import type { LocaleKey } from '#lib/types.js'
 
 // +++ Table Of Contents
@@ -75,6 +93,13 @@ const featureAddressBase = z.strictObject({
     .nullable(),
   matchStatus: z.enum(['resolved', 'ambiguous', 'unresolved', 'stale']),
   overrides: z.record(z.string(), fields),
+  // Retained names absent from the latest catalogue selection need locale-specific review.
+  detachedNames: z
+    .object({
+      buildingName: z.record(z.string(), z.string()).optional(),
+      streetName: z.record(z.string(), z.string()).optional(),
+    })
+    .optional(),
   // Subjective geography is shared across locales; factual geography always follows the marker.
   divisionOverrides: AddressDivisionOverridesSchema.optional(),
   // Feature-local semantics follow SaanSeoi unit fields without inventing inventory IDs.
@@ -87,6 +112,19 @@ const featureAddressBase = z.strictObject({
 export type FeatureAddress = z.infer<typeof featureAddressBase>
 export const FeatureAddressSchema = featureAddressBase.superRefine(
   (address, context) => {
+    // Validate explicit edits without rejecting or rewriting retained provider evidence.
+    for (const [locale, corrections] of Object.entries(address.overrides)) {
+      const issue = streetNumberIssue(corrections)
+      if (issue)
+        context.addIssue({
+          code: 'custom',
+          message:
+            issue === 'descending'
+              ? 'The last street number must not be lower than the first.'
+              : 'Invalid street number expression.',
+          path: ['overrides', locale, 'buildingNumberExpression'],
+        })
+    }
     if (address.source.address2dId) {
       const resource = z
         .object({
@@ -184,7 +222,12 @@ export function getAddressLocale(
   const parsed = z
     .record(z.string(), z.unknown())
     .safeParse(
-      address.source.authored?.i18n[ADDRESS_LOCALES[locale]] ??
+      (
+        address.association?.content ??
+        address.canonical?.content ??
+        address.source.canonical?.content ??
+        address.source.authored
+      )?.i18n[ADDRESS_LOCALES[locale]] ??
         data?.attributes?.i18n?.[ADDRESS_LOCALES[locale]],
     )
   const result: Partial<Record<AddressField, string | boolean | null>> = {}
@@ -192,7 +235,11 @@ export function getAddressLocale(
     for (const key of ADDRESS_FIELDS) {
       const value = parsed.data[key]
       if (typeof value === 'string' || typeof value === 'boolean' || value === null)
-        result[key] = value
+        result[key] =
+          typeof value === 'string' &&
+          (key === 'buildingName' || key === 'premisesName')
+            ? addressName(value, locale)
+            : value
     }
   // Selected inventory supplies defaults; local floor/unit corrections remain independent.
   const unit = getAddressUnits(address, locale).find(
@@ -202,14 +249,21 @@ export function getAddressLocale(
     result.floorExpression = unit.floorExpression
     result.unitExpression = unit.unitExpression
   }
-  const authored = address.source.authored
+  const authored =
+    address.association?.content ??
+    address.canonical?.content ??
+    address.source.canonical?.content ??
+    address.source.authored
   const localUnit = authored?.unit
   const localExpressions = authored?.unitI18n[ADDRESS_LOCALES[locale]]
   if (localUnit) {
     result.floorExpression =
       localExpressions?.floorExpression ?? formatFloor(localUnit, locale)
     result.unitExpression =
-      localExpressions?.unitExpression ?? formatUnit(localUnit, locale)
+      localExpressions?.unitExpression &&
+      localExpressions.unitExpression !== localUnit.unitRef
+        ? localExpressions.unitExpression
+        : formatUnit(localUnit, locale)
   }
   result.unitPortion =
     address.unitDetails?.unitPortion ?? localUnit?.unitPortion ?? unit?.unitPortion
@@ -217,8 +271,74 @@ export function getAddressLocale(
   return { ...result, ...address.overrides[ADDRESS_LOCALES[locale]] }
 }
 
-/** Resolves display text without rewriting canonical evidence. @param address Address and corrections. @param locale HYPE locale. @returns Effective display label, including explicit clearing. @remarks Structured corrections compose a local label; an explicit formattedAddress override is the complete user-authored label, including any unit text. */
-export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): string {
+/** Derive Chinese script fallbacks for presentation without changing source evidence.
+ * @param address Original source and explicit corrections. @param locale Display language.
+ * @returns Effective components; distinct custom values and explicit clears never fall back.
+ * @remarks Traditional names may use published Simplified text when the source slot is absent or duplicates English.
+ */
+export function getAddressPresentationLocale(
+  address: FeatureAddress,
+  locale: LocaleKey,
+): ReturnType<typeof getAddressLocale> {
+  const exact = { ...getAddressLocale(address, locale) }
+  // References identify the same part in both Chinese scripts; source-only gaps must not appear as empty inputs.
+  if (locale !== 'en') {
+    const other = getAddressLocale(address, locale === 'zhHant' ? 'zhHans' : 'zhHant')
+    for (const field of ['blockRef', 'phaseRef'] as const) {
+      if (
+        !exact[field] &&
+        !Object.hasOwn(address.overrides[ADDRESS_LOCALES[locale]] ?? {}, field)
+      )
+        exact[field] = other[field]
+    }
+  }
+  if (locale === 'zhHant') {
+    const simplified = getAddressLocale(address, 'zhHans')
+    const english = getAddressLocale(address, 'en')
+    const result = { ...exact }
+    // An English duplicate is fallback text; catalogue selection can also have copied it into street overrides.
+    for (const field of ['streetName', 'buildingName', 'premisesName'] as const) {
+      const candidate = simplified[field]
+      const current = exact[field]
+      const duplicatesEnglish =
+        typeof current === 'string' &&
+        Boolean(current.trim()) &&
+        current.trim().toLowerCase() ===
+          String(english[field] ?? '')
+            .trim()
+            .toLowerCase()
+      if (
+        (!Object.hasOwn(address.overrides['zh-hant'] ?? {}, field) ||
+          (field === 'streetName' && duplicatesEnglish)) &&
+        typeof candidate === 'string' &&
+        /\p{Script=Han}/u.test(candidate) &&
+        ((!current &&
+          !exact.formattedAddress &&
+          !address.source.fallbackDisplay['zh-hant']) ||
+          duplicatesEnglish)
+      )
+        result[field] = traditionalChinese(candidate)
+    }
+    return result
+  }
+  if (locale !== 'zhHans') return exact
+  const traditional = getAddressLocale(address, 'zhHant')
+  const result = { ...exact }
+  for (const [field, value] of Object.entries(traditional)) {
+    const key = field as AddressField
+    if (!result[key] && !Object.hasOwn(address.overrides['zh-hans'] ?? {}, key))
+      result[key] = typeof value === 'string' ? simplifiedChinese(value) : value
+  }
+  return result
+}
+
+/** Resolves display text without rewriting canonical evidence. @param address Address and corrections. @param locale HYPE locale. @param divisions Resolved effective marker geography, when available. @param locationKind Entity displayed above this supporting address; buildings omit their building component. @returns Effective display label, including explicit clearing. @remarks Structured corrections compose a local label; an explicit formattedAddress override is the complete user-authored label, including any unit text. */
+export function getAddressDisplay(
+  address: FeatureAddress,
+  locale: LocaleKey,
+  divisions: AddressDivision[] = [],
+  locationKind?: string,
+): string {
   const tag = ADDRESS_LOCALES[locale]
   const overrides = address.overrides[tag] ?? {}
   const hasDisplayOverride = Object.hasOwn(overrides, 'formattedAddress')
@@ -232,9 +352,9 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
   ) {
     return retainedDisplay[tag]
   }
-  const value = getAddressLocale(address, locale)
+  const value = getAddressPresentationLocale(address, locale)
   // A partial component edit must not discard retained text that has not been structured yet.
-  const original = getAddressLocale({ ...address, overrides: {} }, locale)
+  const original = getAddressPresentationLocale({ ...address, overrides: {} }, locale)
   const hasStructuredBase = [
     'buildingName',
     'premisesName',
@@ -246,13 +366,31 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
   ].some(field => Boolean(original[field as AddressField]))
   let display = hasDisplayOverride
     ? String(overrides.formattedAddress)
-    : (address.source.fallbackDisplay[tag] ??
-      address.source.authored?.i18n[tag]?.formattedAddress ??
+    : ((
+        address.association?.content ??
+        address.canonical?.content ??
+        address.source.canonical?.content ??
+        address.source.authored
+      )?.i18n[tag]?.formattedAddress ??
+      address.source.fallbackDisplay[tag] ??
       String(value.formattedAddress ?? ''))
+  // A missing Simplified label can use retained Traditional text even when it is not structured.
+  if (locale === 'zhHans' && !display) {
+    const content =
+      address.association?.content ??
+      address.canonical?.content ??
+      address.source.canonical?.content ??
+      address.source.authored
+    const traditional =
+      content?.i18n['zh-hant']?.formattedAddress ??
+      address.source.fallbackDisplay['zh-hant'] ??
+      getAddressLocale(address, 'zhHant').formattedAddress
+    if (typeof traditional === 'string') display = simplifiedChinese(traditional)
+  }
   if (hasStructuredBase || !display || value.streetName) {
     const text = (key: AddressField): string =>
       typeof value[key] === 'string' ? (value[key] as string) : ''
-    const number = Object.hasOwn(overrides, 'buildingNumberExpression')
+    const numberExpression = Object.hasOwn(overrides, 'buildingNumberExpression')
       ? text('buildingNumberExpression')
       : Object.hasOwn(overrides, 'buildingNumberFrom') ||
           Object.hasOwn(overrides, 'buildingNumberTo')
@@ -263,6 +401,7 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
           [text('buildingNumberFrom'), text('buildingNumberTo')]
             .filter(Boolean)
             .join(text('buildingNumberConnector') || '-')
+    const number = formatStreetNumber(numberExpression)
     const block = Object.hasOwn(overrides, 'blockExpression')
       ? text('blockExpression')
       : Object.hasOwn(overrides, 'blockRef') ||
@@ -293,12 +432,22 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
             .join(locale === 'en' ? ' ' : '')
     const premises = [
       ...new Set(
-        [block, phase, text('buildingName'), text('premisesName')].filter(Boolean),
+        [
+          locale === 'en' ? applyAddressAbbreviations(block) : block,
+          phase,
+          locationKind === 'building' ? '' : text('buildingName'),
+          text('premisesName'),
+        ].filter(Boolean),
       ),
     ]
     display =
       locale === 'en'
-        ? [...premises, [number, text('streetName')].filter(Boolean).join(' ')]
+        ? [
+            ...premises,
+            [number, streetDisplayName(text('streetName'), locale)]
+              .filter(Boolean)
+              .join(' '),
+          ]
             .filter(Boolean)
             .join(', ')
         : `${text('streetName')}${number ? number + (locale === 'zhHans' ? '号' : '號') : ''}${premises.reverse().join('')}`
@@ -307,18 +456,37 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
     item => item.value === address.source.address3dUnitId,
   )
   // Parsed shared values generate display text; original expressions remain editable evidence.
-  const details = address.unitDetails
+  const content =
+    address.association?.content ??
+    address.canonical?.content ??
+    address.source.canonical?.content ??
+    address.source.authored
+  const details = address.unitDetails ?? content?.unit ?? unit
+  const sourceFloor = String(value.floorExpression ?? '')
+  const parsedFloor = parseFloor(sourceFloor)
   const floor =
-    details && Object.hasOwn(details, 'floorRef')
+    details &&
+    Object.hasOwn(details, 'floorRef') &&
+    (address.unitDetails || !Object.hasOwn(overrides, 'floorExpression'))
       ? formatFloor(details, locale)
-      : String(value.floorExpression ?? '')
+      : !Object.hasOwn(overrides, 'floorExpression') &&
+          parsedFloor.floorType &&
+          parsedFloor.floorType !== 'X'
+        ? formatFloor(parsedFloor, locale)
+        : sourceFloor
   const flat =
-    details && Object.hasOwn(details, 'unitRef')
-      ? formatUnit(details, locale)
-      : String(value.unitExpression ?? '')
+    details?.unitType === 'X' && value.unitExpression
+      ? String(value.unitExpression)
+      : details &&
+          Object.hasOwn(details, 'unitRef') &&
+          (address.unitDetails || !Object.hasOwn(overrides, 'unitExpression'))
+        ? formatUnit(details, locale)
+        : unitDisplayExpression(String(value.unitExpression ?? ''), locale)
   const portion = String(value.unitPortion ?? '')
   const hasUnitCorrections =
     Boolean(details) ||
+    floor !== sourceFloor ||
+    flat !== String(value.unitExpression ?? '') ||
     ['floorExpression', 'unitExpression', 'unitPortion'].some(key =>
       Object.hasOwn(overrides, key),
     )
@@ -327,7 +495,12 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
         .filter(Boolean)
         .join(locale === 'en' ? ', ' : '')
     : (unit?.label ??
-      address.source.authored?.unitI18n[tag]?.formattedAddressPart ??
+      (
+        address.association?.content ??
+        address.canonical?.content ??
+        address.source.canonical?.content ??
+        address.source.authored
+      )?.unitI18n[tag]?.formattedAddressPart ??
       (locale === 'en'
         ? [value.unitPortion, value.unitExpression, value.floorExpression]
             .filter(Boolean)
@@ -335,11 +508,31 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
         : [value.floorExpression, value.unitExpression, value.unitPortion]
             .filter(Boolean)
             .join('')))
-  return unitPart
+  const displayUnit =
+    locationKind === 'building' ? '' : unitDisplayExpression(unitPart, locale)
+  const composed = displayUnit
     ? locale === 'en'
-      ? [unitPart, display].filter(Boolean).join(', ')
-      : display + unitPart
+      ? [displayUnit, display].filter(Boolean).join(', ')
+      : display + displayUnit
     : display
+  // Prefer the most specific available locality, including urban neighbourhoods.
+  const locality = divisions
+    .filter(division => addressLocalityLevel(division) !== null)
+    .sort(
+      (a, b) =>
+        addressLocalityLevel(b)! - addressLocalityLevel(a)! || a.id.localeCompare(b.id),
+    )[0]
+  if (!locality) return composed
+  const name = addressDivisionName(locality, locale)
+  if (!composed) return name
+  const alreadyIncluded =
+    locale === 'en'
+      ? composed
+          .split(/\s*,\s*/)
+          .some(part => part.toLocaleLowerCase() === name.toLocaleLowerCase())
+      : !value.streetName && composed.startsWith(name)
+  if (alreadyIncluded) return composed
+  return locale === 'en' ? `${composed}, ${name}` : name + composed
 }
 
 /** Applies or resets one locale correction. @param address Current envelope. @param locale HYPE locale. @param field Upstream field name. @param value Undefined resets to source; null explicitly clears. @returns New envelope with original source untouched. */
@@ -353,7 +546,16 @@ export function setAddressOverride(
   const fields = { ...address.overrides[tag] }
   if (value === undefined) delete fields[field]
   else fields[field] = value
-  return { ...address, overrides: { ...address.overrides, [tag]: fields } }
+  const next = { ...address, overrides: { ...address.overrides, [tag]: fields } }
+  if (
+    (field === 'buildingName' || field === 'streetName') &&
+    address.detachedNames?.[field]?.[tag] !== undefined
+  ) {
+    const retained = { ...address.detachedNames[field] }
+    delete retained[tag]
+    next.detachedNames = { ...address.detachedNames, [field]: retained }
+  }
+  return next
 }
 
 /** Marks retained address evidence stale when its pin moves. @param meta Existing metadata. @param coordinates New marker point. @returns Metadata retaining source and corrections, requiring a new lookup. */
@@ -530,14 +732,17 @@ export function projectFeatureAddress<
     i18n: Object.fromEntries(
       Object.entries(data.i18n).map(([locale, translation]) => [
         locale,
-        {
-          ...translation,
-          displayAddress: getAddressDisplay(address, locale as LocaleKey),
-          displayAddressGen:
-            Object.keys(address.overrides[ADDRESS_LOCALES[locale as LocaleKey]] ?? {})
-              .length === 0,
-          addressProperties: {},
-        },
+        !(locale in ADDRESS_LOCALES)
+          ? translation
+          : {
+              ...translation,
+              displayAddress: getAddressDisplay(address, locale as LocaleKey),
+              displayAddressGen:
+                Object.keys(
+                  address.overrides[ADDRESS_LOCALES[locale as LocaleKey]] ?? {},
+                ).length === 0,
+              addressProperties: {},
+            },
       ]),
     ),
   }

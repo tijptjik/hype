@@ -1,22 +1,32 @@
 <script lang="ts">
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // SVELTE
-import { onDestroy, untrack, type Snippet } from 'svelte'
+import { onDestroy, untrack, tick, type Snippet } from 'svelte'
 import { flip } from 'svelte/animate'
-import LocationIcon from 'virtual:icons/lucide/store'
-import AddressIcon from 'virtual:icons/lucide/map-pin-house'
+// ICONS
+import ReplaceIcon from 'virtual:icons/lucide/replace'
+import BackIcon from 'virtual:icons/lucide/arrow-left'
+import PencilIcon from 'virtual:icons/lucide/pencil'
 import CreateLocationIcon from 'virtual:icons/lucide/plus'
 import SearchIcon from 'virtual:icons/proicons/search'
 // LOCATION
+import { locationSyncMode } from '#lib/locations/associationSync.js'
+import LocationAssociationIcon from '#lib/bits/custom/locationAssociationIcon/LocationAssociationIcon.svelte'
+import LocationAssociationHeading from './LocationAssociationHeading.svelte'
+import LocationAssociationPicker from './LocationAssociationPicker.svelte'
+import { searchAssociationCandidates } from '#lib/locations/associationSearch.js'
+import type { DraftLocationSearchResult } from './draftLocationSearch.types.js'
 import {
-  DEFAULT_DISCOVERY_TYPES,
-  type AvailableDiscoveryType,
+  locationDiscoveryTypes,
+  type LocationDiscoveryType,
   type LocationKind,
 } from '#lib/locations/kinds.js'
 import {
-  discoverLocations,
+  discoverLocationKind,
   type LocationCandidatePage,
 } from '#lib/locations/combinedDiscovery.js'
-import LocationTypeFilter from './LocationTypeFilter.svelte'
+import LocationKindField from '../localLocationAddress/LocationKindField.svelte'
+import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 import {
   locationDistance,
   locationName,
@@ -52,15 +62,9 @@ import {
   searchFeatureLocalLocations,
 } from '#lib/api/location.remote.js'
 // COMPONENTS
-import LocationLifecycleFields from '../localLocationAddress/LocationLifecycleFields.svelte'
+import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
+import { addressBuildingNames } from '#lib/locations/addressIdentity.js'
 import CreateLocalLocation from './CreateLocalLocation.svelte'
-import FormDisclosureGroup from '#lib/bits/patterns/forms/formDisclosureGroup/FormDisclosureGroup.svelte'
-import LocationBrandEditor from './LocationBrandEditor.svelte'
-import LocationResetFields from './LocationResetFields.svelte'
-import LocationReviewSection from './LocationReviewSection.svelte'
-import LocationIdentityReviewSection from './LocationIdentityReviewSection.svelte'
-import type { LocationReset } from '#lib/locations/reset.js'
-import type { LocationBrandEdit } from '#lib/locations/brandEdit.js'
 // TYPES
 import type { LocationSearchCandidate } from '#lib/locations/sourceClient.js'
 import type { LocalLocationCandidate } from '#lib/db/services/locationCandidate.js'
@@ -76,19 +80,28 @@ let {
   onMapCandidates,
   featureId,
   projectId,
+  organisationId,
   coordinates,
   modifiedAt,
   isEditing,
   isDirty,
-  brandEdit,
-  onBrandEdit,
-  reset,
-  onResetFields,
-  onUnlink,
   onSourceUpdate,
   onAddressSelected,
+  onAssociationSelected,
+  onAssociationPending,
+  onAssociationSpaceNeeded,
+  onReturnToResults,
+  onSelectionStart,
 }: {
   address: FeatureAddress
+  onAssociationSelected?: (
+    result: DraftLocationSearchResult,
+    previousLocationId?: string,
+  ) => void
+  onAssociationSpaceNeeded?: (overflow: number) => void
+  onReturnToResults?: () => void
+  onSelectionStart?: () => void
+  onAssociationPending?: (pending: boolean) => void
   onAddressSelected: (address: FeatureAddress) => void
   featureName?: string
   children: Snippet<
@@ -100,6 +113,10 @@ let {
       ((query?: string) => void) | undefined,
       Snippet,
       Snippet,
+      boolean,
+      string | undefined,
+      LocationKind | undefined,
+      Snippet<[boolean?]> | undefined,
     ]
   >
   onMapCandidates: (
@@ -108,23 +125,23 @@ let {
   ) => void
   featureId: string
   projectId: string
+  organisationId?: string
   coordinates: number[]
   modifiedAt: string
   isEditing: boolean
   isDirty: boolean
-  brandEdit?: unknown
-  onBrandEdit: (edit: LocationBrandEdit) => void
-  reset?: unknown
-  onResetFields: (reset: LocationReset | undefined) => void
-  onUnlink: (expectedRevision: string) => Promise<void>
   onSourceUpdate: () => Promise<void>
 } = $props()
 const accepted = $derived(getFeatureLocation({ featureId }))
-let tasksCollapsed = $state(true)
-let settingsCollapsed = $state(true)
+let associationOrigin = $state<DraftLocationSearchResult | null>(null)
+$effect(() => {
+  onAssociationPending?.(Boolean(associationOrigin))
+  if (associationOrigin) untrack(() => onSelectionStart?.())
+})
 let creating = $state(false)
 let discoveryMode = $state<'idle' | 'text' | 'nearby' | 'matches'>('idle')
-let discoveryTypes = $state<AvailableDiscoveryType[]>([...DEFAULT_DISCOVERY_TYPES])
+let intendedKind = $state<LocationKind>('unknown')
+let discoveryUnavailable = $state<LocationDiscoveryType[]>([])
 let radius = $state(300)
 let radiusEdited = $state(false)
 let limited = $state(false)
@@ -212,7 +229,8 @@ const markers = $derived(
   })),
 )
 $effect(() => {
-  onMapCandidates(isEditing && !creating ? markers : [], selectRow)
+  if (!associationOrigin)
+    onMapCandidates(isEditing && !creating ? markers : [], selectRow)
 })
 /** Select the same result from a row or its numbered map marker.
  * @param id Stable preview key. @returns Nothing; source imports require the explicit preview action.
@@ -227,8 +245,70 @@ function selectRow(id: string): void {
     selected = null
     return
   }
+  if (
+    onAssociationSelected &&
+    ['premises', 'building', 'establishment'].includes(row.kind)
+  ) {
+    selected = null
+    chosenAddress = undefined
+    return
+  }
   if (row.local) selected = { status: 'ready', ...row.local }
   else if (row.source) void preview(row.source)
+}
+
+/** Review a discovered identity using its preview; import/link only after Feature Save.
+ * @param row Selected discovery record. @param manual Whether only its address is wanted.
+ * @returns Nothing; the parent retains the reviewed association intent.
+ */
+function associateDiscovery(row: Result, manual = false): void {
+  if (!['address', 'premises', 'building', 'establishment'].includes(row.kind)) return
+  const origin: DraftLocationSearchResult = {
+    id: row.id,
+    kind: row.kind as DraftLocationSearchResult['kind'],
+    names: row.facts.names,
+    address: row.address ?? {
+      version: 1,
+      source: row.facts.location.address,
+      coordinates: row.facts.location.geometry.coordinates,
+      matchStatus: row.facts.location.address.status,
+      overrides: {},
+    },
+    identity: row.local
+      ? { locationId: row.local.locationId, revisionId: row.local.revisionId }
+      : undefined,
+    source: row.source
+      ? { ssId: row.source.placeId, resourceReleaseId: row.source.resourceReleaseId }
+      : undefined,
+  }
+  if (!manual) {
+    associationOrigin = origin
+    return
+  }
+  onAssociationSelected?.(
+    {
+      ...origin,
+      kind: 'address',
+      names: {},
+      source: undefined,
+      identity: undefined,
+      localKind: 'address',
+      associationConfirmed: true,
+      address: {
+        ...origin.address,
+        association: {
+          originKind: origin.kind,
+          kind: 'address',
+          mode: 'manual',
+          lookup: 'not-checked',
+          names: {},
+        },
+      },
+    },
+    accepted.current?.locationId,
+  )
+  cancelDiscovery()
+  addressStaged = true
 }
 
 let results = $state<LocationSearchCandidate[] | null>(null)
@@ -267,12 +347,14 @@ function cancelDiscovery(): void {
   searchFailed = false
   failed = false
   limited = false
+  discoveryUnavailable = []
   discoveryMode = 'idle'
 }
 
 // Leaving edit mode discards discovery UI, never the accepted Feature address.
 $effect(() => {
   if (isEditing) return
+  associationOrigin = null
   requestVersion++
   busy = false
   creating = false
@@ -285,93 +367,63 @@ $effect(() => {
   discoveryMode = 'idle'
   chosenAddress = undefined
   matchChecked = false
+  discoveryUnavailable = []
 })
 
-/** Preserve values through the parent-owned unlink command and refresh the regular form. */
-async function unlink(expectedRevision: string): Promise<void> {
-  if (busy || !isEditing || isDirty) return
-  busy = true
-  failed = false
-  try {
-    await onUnlink(expectedRevision)
-    await accepted.refresh()
-    replacementRevision = null
-    selected = null
-    results = null
-    localResults = null
-    searchRows = []
-    selectedRow = null
-    creating = false
-  } catch {
-    failed = true
-  } finally {
-    busy = false
-  }
-}
-
-/** Search source and organisation-local Locations independently, retaining settled results while loading. */
+/** Search only families compatible with the intended type; retain successful previews on partial failure.
+ * @returns Nothing; late responses are fenced by the current discovery generation.
+ */
 async function search(): Promise<void> {
   if (!query.trim() || busy || !isEditing) return
   const version = ++requestVersion
   discoveryMode = 'text'
   matchChecked = false
-  limited = false
-  searchFailed = false
+  limited = searchFailed = failed = false
   busy = true
-  failed = false
   selected = null
   selectedRow = null
   creating = false
   searchRows = []
   try {
-    const sourceQuery = searchFeatureLocations({
-      featureId,
-      q: query.trim(),
-      locale: localeTag,
-    })
-    const localQuery = searchFeatureLocalLocations({ featureId, q: query.trim() })
-    const [source, local] = await Promise.allSettled([
-      sourceQuery.refresh().then(() => sourceQuery),
-      localQuery.refresh().then(() => localQuery),
-    ])
-    if (version === requestVersion) {
-      results = source.status === 'fulfilled' ? source.value.candidates : null
-      localResults = local.status === 'fulfilled' ? local.value : null
-      searchFailed = source.status === 'rejected' || local.status === 'rejected'
-      const localRows: Result[] = (localResults ?? []).map(row => ({
-        id: `local:${row.locationId}`,
-        facts: row.facts,
-        kind: row.kind,
-        local: row,
-      }))
-      searchRows = localRows
-      // Read latest-source display details in bounded groups; stale searches cannot replace current results.
-      const sourceRows: Result[] = []
-      for (let start = 0; start < (results?.length ?? 0); start += 3) {
-        const group = (results ?? []).slice(start, start + 3)
-        const resolved = await Promise.allSettled(
-          group.map(async candidate => {
-            const details = await getFeatureLocationDiscoveryDetails({
-              featureId,
-              ssId: candidate.placeId,
-              resourceReleaseId: candidate.resourceReleaseId,
-            })
-            return {
-              id: `source:${candidate.placeId}`,
-              facts: details.facts,
-              kind: 'establishment' as const,
-              source: candidate,
-            }
-          }),
-        )
-        if (version !== requestVersion) return
-        for (const result of resolved) {
-          if (result.status === 'fulfilled') sourceRows.push(result.value)
-          else searchFailed = true
+    const found = await discoverLocationKind<Result>(intendedKind, {
+      address: () => nearbyAddresses(query.trim()),
+      establishment: async () => {
+        const sourceQuery = searchFeatureLocations({
+          featureId,
+          q: query.trim(),
+          locale: localeTag,
+        })
+        const localQuery = searchFeatureLocalLocations({ featureId, q: query.trim() })
+        const [source, local] = await Promise.allSettled([
+          sourceQuery.refresh().then(() => sourceQuery),
+          localQuery.refresh().then(() => localQuery),
+        ])
+        if (version !== requestVersion)
+          return { rows: [], partial: false, limited: false }
+        results = source.status === 'fulfilled' ? source.value.candidates : null
+        localResults = local.status === 'fulfilled' ? local.value : null
+        const rows: Result[] = (localResults ?? [])
+          .filter(row => row.kind === 'unknown' || row.kind === 'establishment')
+          .map(row => ({
+            id: `local:${row.locationId}`,
+            facts: row.facts,
+            kind: row.kind,
+            local: row,
+          }))
+        rows.push(...(await hydrate(results ?? [], version)))
+        return {
+          rows,
+          partial: source.status === 'rejected' || local.status === 'rejected',
+          limited: false,
         }
-        searchRows = [...localRows, ...sourceRows]
-      }
-    }
+      },
+    })
+    if (version !== requestVersion) return
+    searchRows = found.rows
+    results ??= []
+    discoveryUnavailable = found.unavailable
+    searchFailed ||= found.partial
+    limited = found.limited
   } catch {
     if (version === requestVersion) failed = true
   } finally {
@@ -417,9 +469,9 @@ async function hydrate(
 /** Retrieve bounded address previews without turning them into entity identities.
  * @returns Address rows and explicit truncation; errors propagate to the combined search.
  */
-async function nearbyAddresses(): Promise<LocationCandidatePage<Result>> {
+async function nearbyAddresses(query?: string): Promise<LocationCandidatePage<Result>> {
   const found = await geocodeAddressCandidates(
-    { lng: coordinates[0], lat: coordinates[1] },
+    query ? { address: query } : { lng: coordinates[0], lat: coordinates[1] },
     { maxDistance: radius, limit: 50, candidateCoordinates: true },
   )
   const unique = new Map<string, Result>()
@@ -428,7 +480,7 @@ async function nearbyAddresses(): Promise<LocationCandidatePage<Result>> {
     if (
       !candidate?.coordinates ||
       !candidate.source.address2dId ||
-      locationDistance(coordinates, candidate.coordinates) > radius
+      (!query && locationDistance(coordinates, candidate.coordinates) > radius)
     )
       continue
     const id = `address:${candidate.source.address2dId}`
@@ -539,7 +591,7 @@ async function nearby(mode: 'nearby' | 'matches'): Promise<void> {
     busy ||
     !isEditing ||
     !radiusValid ||
-    (mode === 'nearby' && !discoveryTypes.length)
+    !locationDiscoveryTypes(intendedKind).length
   )
     return
   const version = ++requestVersion
@@ -556,15 +608,13 @@ async function nearby(mode: 'nearby' | 'matches'): Promise<void> {
   results = []
   if (mode === 'nearby') chosenAddress = undefined
   try {
-    const found = await discoverLocations<Result>(
-      mode === 'matches' ? ['establishment'] : discoveryTypes,
-      {
-        address: nearbyAddresses,
-        establishment: () => nearbyEstablishments(mode, version),
-      },
-    )
+    const found = await discoverLocationKind<Result>(intendedKind, {
+      address: nearbyAddresses,
+      establishment: () => nearbyEstablishments(mode, version),
+    })
     if (version !== requestVersion) return
     searchRows = found.rows
+    discoveryUnavailable = found.unavailable
     searchFailed ||= found.partial
     limited = found.limited
     if (mode === 'matches') {
@@ -684,66 +734,145 @@ async function link(): Promise<void> {
 
 {#snippet locationWidget()}
   <div class="flex min-w-0 flex-1 items-center gap-2" data-location-widget>
-    {#await accepted}
-      <span class="text-muted-foreground text-sm">{m.feature_location_loading()}</span>
-    {:then association}
-      {#if creating}
-        <LocationIcon class="text-primary size-6 shrink-0" aria-hidden="true" />
-        <span class="text-sm font-semibold">{m.feature_location_create()}</span>
-      {:else if isEditing && (!association || replacementRevision)}
-        {#if replacementRevision}
-          <Button
-            text={m.feature_location_change_cancel()}
-            size="sm"
-            style="ghost"
-            onClick={() => {
-              replacementRevision = null
-              searchRows = []
-              selected = null
-              creating = false
-            }}
-          />
-        {/if}
-      {:else}
-        <span class="text-primary relative shrink-0" aria-hidden="true"
-          ><LocationIcon class="size-6" />
-          {#if !association}
-            <span
-              class="absolute top-1/2 left-0 h-0.5 w-7 -rotate-45 bg-current"
-            ></span>
-          {/if}</span
+    {#if associationOrigin}
+      <button
+        type="button"
+        aria-label={m.association_back_editor()}
+        class="text-primary hover:bg-primary/10 focus-visible:outline-primary flex size-8 shrink-0 items-center justify-center rounded focus-visible:outline-2"
+        onclick={() => {
+          associationOrigin = null
+          void tick().then(() => onReturnToResults?.())
+        }}
+      >
+        <BackIcon class="size-5" />
+      </button><LocationAssociationHeading />
+    {:else}
+      {#await accepted}
+        <span class="text-muted-foreground text-sm"
+          >{m.feature_location_loading()}</span
         >
-        <div class="min-w-0 flex-1">
-          {#if association}
+      {:then association}
+        {#if creating}
+          <LocationIcon class="text-primary size-6 shrink-0" aria-hidden="true" />
+          <span class="text-sm font-semibold">{m.feature_location_create()}</span>
+        {:else if isEditing && (!association || replacementRevision)}
+          {#if replacementRevision}
+            <Button
+              text={m.feature_location_change_cancel()}
+              size="sm"
+              style="ghost"
+              onClick={() => {
+                replacementRevision = null
+                searchRows = []
+                selected = null
+                creating = false
+              }}
+            />
+          {/if}
+        {:else}
+          <span class="text-primary relative shrink-0" aria-hidden="true"
+            ><SimpleTooltip>
+              {#snippet trigger()}
+                <LocationIcon kind={association?.kind} class="size-6" />
+              {/snippet}
+              {locationKindLabel(association?.kind ?? 'unknown')}
+            </SimpleTooltip>
+            {#if !association}
+              <span
+                class="absolute top-1/2 left-0 h-0.5 w-7 -rotate-45 bg-current"
+              ></span>
+            {/if}</span
+          >
+          <div class="min-w-0 flex-1">
+            {#if association}
+              <a
+                href={`/admin/locations/${encodeURIComponent(association.locationId)}`}
+                class="text-primary block min-w-0 text-base font-medium break-words whitespace-normal"
+                >{association.effective.names[localeTag] ||
+                  Object.values(association.effective.names).find(Boolean)}</a
+              >
+            {:else}
+              <span class="text-sm font-medium"
+                >{m.feature_location_no_association()}</span
+              >
+            {/if}
+          </div>
+          {#if isEditing && association}
             <a
-              href={`/admin/locations/${encodeURIComponent(association.locationId)}`}
-              class="text-primary block truncate text-sm font-semibold"
-              >{association.effective.names[localeTag] ||
-                Object.values(association.effective.names).find(Boolean)}</a
+              href={`/admin/locations/${encodeURIComponent(association.locationId)}${organisationId ? `?organisation=${encodeURIComponent(organisationId)}` : ''}`}
+              aria-label={m.forms__edit()}
+              data-tooltip={m.feature_address_corrections_help()}
+              class="text-muted-foreground hover:text-primary focus-visible:outline-primary inline-flex size-7 shrink-0 items-center justify-center rounded focus-visible:outline-2"
+              ><PencilIcon class="size-4" /></a
             >
-          {:else}
-            <span class="text-sm font-medium"
-              >{m.feature_location_no_association()}</span
+            <SimpleTooltip triggerProps={{ tabindex: -1 }}
+              >{#snippet trigger()}
+                <button
+                  type="button"
+                  aria-label={m.association_change()}
+                  class="text-primary hover:bg-primary/10 focus-visible:outline-primary inline-flex size-8 shrink-0 items-center justify-center rounded focus-visible:outline-2 disabled:opacity-40"
+                  disabled={busy || isDirty}
+                  onclick={() => {
+                    const kind =
+                      association.kind === 'premises' ||
+                      association.kind === 'building' ||
+                      association.kind === 'establishment'
+                        ? association.kind
+                        : 'address'
+                    associationOrigin = {
+                      id: `location:${association.locationId}`,
+                      kind,
+                      names: Object.fromEntries(
+                        Object.entries(association.effective.names).filter(
+                          (entry): entry is [string, string] =>
+                            typeof entry[1] === 'string',
+                        ),
+                      ),
+                      address,
+                      identity: {
+                        locationId: association.locationId,
+                        revisionId: association.factsRevisionId,
+                      },
+                    }
+                  }}
+                >
+                  <ReplaceIcon class="size-4" />
+                </button>
+              {/snippet}
+              {m.association_change()}</SimpleTooltip
             >
           {/if}
-        </div>
-        {#if isEditing && association}
-          <Button
-            text={m.feature_location_change()}
-            size="sm"
-            style="ghost"
-            onClick={() => {
-              replacementRevision = association.revision
-              selected = null
-            }}
-            disabled={busy || isDirty}
-          />
         {/if}
-      {/if}
-    {:catch}
-      <span role="alert" class="text-error text-sm">{m.feature_location_failed()}</span>
-    {/await}
+      {:catch}
+        <span role="alert" class="text-error text-sm"
+          >{m.feature_location_failed()}</span
+        >
+      {/await}
+    {/if}
   </div>
+{/snippet}
+{#snippet savedSyncControl(_disabled?: boolean)}
+  {#if accepted.current && !associationOrigin}
+    {@const mode = locationSyncMode(
+      address.association?.mode ??
+        (accepted.current.kind === 'address' ? 'manual' : undefined),
+      { identity: { ssId: accepted.current.ssId ?? undefined } },
+    )}
+    <a
+      href={`/admin/features/${encodeURIComponent(featureId)}#updates`}
+      class="text-primary hover:bg-primary/10 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm"
+      aria-label={m.feature_updates_connection()}
+    >
+      <LocationAssociationIcon {mode} />
+      <span
+        >{mode === 'manual'
+          ? m.location_sync_unsynced()
+          : mode === 'linked'
+            ? m.association_linked()
+            : m.association_unlinked()}</span
+      >
+    </a>
+  {/if}
 {/snippet}
 {#snippet locationActions()}
   {#if isEditing && (!accepted.current || replacementRevision)}
@@ -756,16 +885,8 @@ async function link(): Promise<void> {
         size="sm"
         style="outline"
         class="border-border bg-panel text-foreground min-h-11 shrink-0 rounded-lg px-3 text-sm font-normal"
-        disabled={busy || !radiusValid || !discoveryTypes.length}
+        disabled={busy || !radiusValid}
         onClick={() => nearby('nearby')}
-      />
-      <LocationTypeFilter
-        value={discoveryTypes}
-        disabled={busy}
-        onChange={value => {
-          cancelDiscovery()
-          discoveryTypes = value
-        }}
       />
       <Button
         text={m.feature_location_find()}
@@ -847,14 +968,38 @@ async function link(): Promise<void> {
   {/if}
 {/snippet}
 {#snippet locationContent()}
-  {#if isEditing ||
-    creating ||
-    results !== null ||
-    selected ||
-    busy ||
-    failed ||
-    searchFailed ||
-    accepted.current}
+  {#if associationOrigin}
+    {#key associationOrigin}
+      <LocationAssociationPicker
+        showHeading={false}
+        {onMapCandidates}
+        onSpaceNeeded={onAssociationSpaceNeeded}
+        origin={associationOrigin}
+        {projectId}
+        search={searchAssociationCandidates}
+        onAccept={result => {
+          onAssociationSelected?.(result, accepted.current?.locationId)
+          associationOrigin = null
+          cancelDiscovery()
+          addressStaged = true
+        }}
+        onCancel={() => {
+          associationOrigin = null
+          void tick().then(() => onReturnToResults?.())
+        }}
+      />
+    {/key}
+  {/if}
+  {#if !associationOrigin &&
+    ((isEditing && !accepted.current) ||
+      creating ||
+      results !== null ||
+      selected ||
+      busy ||
+      failed ||
+      searchFailed ||
+      addressStaged ||
+      replacementRevision)}
     <section class="border-border/60 border-b" aria-label={m.feature_location_title()}>
       <div class="space-y-4 px-6 py-5">
         {@render locationNotices()}
@@ -868,47 +1013,23 @@ async function link(): Promise<void> {
             {m.feature_location_loading()}
           </p>
         {:then association}
-          {#if association}
-            <LocationLifecycleFields
-              value={association.effective}
-              successorLocationId={association.effective.successorLocationId}
-              kind={association.kind}
-            />
-            {#if isEditing}
-              <FormDisclosureGroup
-                title={m.feature_location_settings()}
-                collapsed={settingsCollapsed}
-                onCollapsedChange={value => {
-                  settingsCollapsed = value
+          {#if isEditing && (!association || replacementRevision)}
+            <div class="max-w-72">
+              <LocationKindField
+                value={intendedKind}
+                disabled={busy}
+                onChange={kind => {
+                  cancelDiscovery()
+                  intendedKind = kind
                 }}
-              >
-                <Button
-                  type="button"
-                  text={m.feature_location_unlink()}
-                  disabled={busy || isDirty}
-                  onClick={() => void unlink(association.revision)}
-                />
-                <LocationResetFields
-                  revision={association.revision}
-                  {reset}
-                  onChange={onResetFields}
-                />
-                <LocationBrandEditor
-                  {association}
-                  edit={brandEdit}
-                  {isEditing}
-                  onChange={onBrandEdit}
-                />
-              </FormDisclosureGroup>
-            {:else if association.effective.brands?.length}
-              <p class="text-muted-foreground text-sm">
-                {association.effective.brands
-                  .map(brand => Object.values(brand.names).find(Boolean))
-                  .join(' · ')}
+              />
+            </div>
+            {#if discoveryUnavailable.length}
+              <p role="status" class="text-muted-foreground text-sm">
+                {m.location_search_incomplete()}:
+                {discoveryUnavailable.map(type => locationKindLabel(type)).join(', ')}.
               </p>
             {/if}
-          {/if}
-          {#if isEditing && (!association || replacementRevision)}
             {#if discoveryMode === 'text' && !creating}
               <div class="flex items-center gap-2">
                 <input
@@ -939,11 +1060,50 @@ async function link(): Promise<void> {
                 {getAddressDisplay(chosenAddress, getLocaleKey())}
               </p>
               <Button
-                text={m.location_use_address()}
+                text={m.association_locate()}
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  if (chosenAddress)
+                    associationOrigin = {
+                      id: 'selected-address',
+                      kind: 'address',
+                      names: {},
+                      address: chosenAddress,
+                    }
+                }}
+              />
+              <Button
+                text={m.feature_search_use_address()}
+                labelClasses="dark:text-white"
                 size="sm"
                 style="outline"
                 disabled={busy}
-                onClick={useAddress}
+                onClick={() => {
+                  if (chosenAddress) {
+                    onAssociationSelected?.(
+                      {
+                        id: 'selected-address',
+                        kind: 'address',
+                        localKind: 'address',
+                        names: {},
+                        associationConfirmed: true,
+                        address: {
+                          ...chosenAddress,
+                          association: {
+                            originKind: 'address',
+                            kind: 'address',
+                            mode: 'manual',
+                            lookup: 'not-checked',
+                            names: {},
+                          },
+                        },
+                      },
+                      accepted.current?.locationId,
+                    )
+                    cancelDiscovery()
+                  }
+                }}
               />
             {/if}
             {#if discoveryMode === 'matches' && !creating}
@@ -1011,16 +1171,21 @@ async function link(): Promise<void> {
                         <span
                           class="text-muted-foreground mb-1 flex items-center gap-1 text-xs"
                         >
-                          {#if row.kind === 'address'}
-                            <AddressIcon class="size-3.5" aria-hidden="true" />
-                          {:else}
-                            <LocationIcon class="size-3.5" aria-hidden="true" />
-                          {/if}
+                          <SimpleTooltip>
+                            {#snippet trigger()}
+                              <LocationIcon kind={row.kind} class="size-3.5" />
+                            {/snippet}
+                            {locationKindLabel(row.kind)}
+                          </SimpleTooltip>
                           {row.kind === 'address'
                             ? m.location_type_address()
                             : row.kind === 'establishment'
                               ? m.location_type_establishment()
-                              : m.location_type_unknown()}
+                              : row.kind === 'building'
+                                ? m.location_type_buildings()
+                                : row.kind === 'natural'
+                                  ? m.location_type_natural()
+                                  : m.location_type_unknown()}
                         </span><span class="block font-medium"
                           >{row.address
                             ? getAddressDisplay(row.address, getLocaleKey())
@@ -1049,6 +1214,24 @@ async function link(): Promise<void> {
                         m</span
                       >
                     </button>
+                    {#if onAssociationSelected &&
+                      selectedRow === row.id &&
+                      ['premises', 'building', 'establishment'].includes(row.kind)}
+                      <div class="flex flex-wrap gap-2 px-4 pt-2 pb-3">
+                        <Button
+                          text={m.association_locate()}
+                          size="sm"
+                          onClick={() => associateDiscovery(row)}
+                        />
+                        <Button
+                          text={m.feature_search_use_address()}
+                          labelClasses="dark:text-white"
+                          size="sm"
+                          style="outline"
+                          onClick={() => associateDiscovery(row, true)}
+                        />
+                      </div>
+                    {/if}
                   </li>
                 {/each}
               </ol>
@@ -1102,7 +1285,13 @@ async function link(): Promise<void> {
                 initialAddress={address}
                 selectedAddress={chosenAddress}
                 lookupRequest={creationLookup}
-                initialName={featureName}
+                initialName={intendedKind === 'address' && chosenAddress
+                  ? getAddressDisplay(chosenAddress, getLocaleKey())
+                  : featureName}
+                initialKind={intendedKind}
+                initialNames={intendedKind === 'building' && chosenAddress
+                  ? addressBuildingNames(chosenAddress)
+                  : undefined}
                 onCancel={() => {
                   creating = false
                 }}
@@ -1124,36 +1313,6 @@ async function link(): Promise<void> {
             {m.feature_location_failed()}
           </p>
         {/await}
-        {#if accepted.current && !creating && results === null}
-          <FormDisclosureGroup
-            title={m.location_review_title()}
-            collapsed={tasksCollapsed}
-            onCollapsedChange={value => {
-              tasksCollapsed = value
-            }}
-          >
-            {#if !tasksCollapsed}
-              {#if isEditing && accepted.current}
-                {#key featureId + ':' + accepted.current.locationId}
-                  <LocationIdentityReviewSection
-                    {featureId}
-                    locationId={accepted.current.locationId}
-                    {isDirty}
-                    onCommitted={onSourceUpdate}
-                  />
-                {/key}
-              {/if}
-              <LocationReviewSection
-                isLocal={isEditing && Boolean(accepted.current)}
-                {featureId}
-                associationRevision={accepted.current?.revision ?? ''}
-                {modifiedAt}
-                {isDirty}
-                onCommitted={onSourceUpdate}
-              />
-            {/if}
-          </FormDisclosureGroup>
-        {/if}
         {#if failed}
           <p role="alert" class="text-destructive text-sm">
             {m.feature_location_failed()}
@@ -1168,13 +1327,18 @@ async function link(): Promise<void> {
     ? undefined
     : locationWidget,
   locationContent,
-  creating ||
+  Boolean(associationOrigin) ||
+    creating ||
     discoveryMode !== 'idle' ||
     searchRows.length > 0 ||
     results !== null ||
     busy,
-  creating,
+  creating || Boolean(accepted.current),
   creating ? lookupCreation : undefined,
   locationActions,
   locationMapControls,
+  (accepted.current?.kind ?? intendedKind) !== 'building',
+  accepted.current?.locationId,
+  accepted.current?.kind,
+  accepted.current && !associationOrigin ? savedSyncControl : undefined,
 )}

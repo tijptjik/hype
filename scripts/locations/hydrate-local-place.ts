@@ -55,7 +55,7 @@ async function main(): Promise<void> {
     const row = target.sqlite
       .query(`SELECT r.* FROM locationRevision r JOIN location p ON p.id=r.locationId
       WHERE p.id=? AND p.state='linked' AND p.sourceAvailability='current' AND r.origin='saanseoi' AND r.ssId=p.ssId
-      AND r.sequence=(SELECT max(sequence) FROM locationRevision WHERE locationId=p.id)`)
+      AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id)`)
       .get(locationId) as {
       id: string
       ssId: string
@@ -63,17 +63,17 @@ async function main(): Promise<void> {
       releaseId: string
       snapshotId: string
       facts: string
-      payload: string
+      rawSource: string
     } | null
     assert.ok(row, 'Location needs a current source-backed latest revision')
-    const { issues = [], ...payload } = JSON.parse(row.payload)
+    const { issues = [], ...rawSource } = JSON.parse(row.rawSource)
     const projection: SaanSeoiPlaceProjection = {
       ssId: row.ssId,
       apiVersion: row.apiVersion,
       releaseId: row.releaseId,
       snapshotId: row.snapshotId,
       facts: readLocationFacts(row.facts),
-      payload,
+      rawSource,
       issues,
     }
     const hydrated = await hydrateSaanSeoiPlaceAddress(source.client, projection)
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
       'resolved',
       'Address remains unresolved; inspect private evidence',
     )
-    assert.deepEqual(hydrated.payload.resource, projection.payload.resource)
+    assert.deepEqual(hydrated.rawSource.resource, projection.rawSource.resource)
     assert.deepEqual(hydrated.facts.names, projection.facts.names)
     assert.deepEqual(hydrated.facts.brands, projection.facts.brands)
     assert.deepEqual(hydrated.facts.phoneNumber, projection.facts.phoneNumber)
@@ -134,7 +134,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
         target.db,
         hydrated,
         sql`EXISTS(SELECT 1 FROM location p WHERE p.id=${locationId} AND p.ssId=${row.ssId} AND p.state='linked' AND p.sourceAvailability='current'
-          AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY sequence DESC LIMIT 1)=${row.id})`,
+          AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1)=${row.id})`,
       )
       assert.equal(result.locationId, locationId)
       revisionId = result.revisionId
@@ -160,7 +160,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
       previousRevisionId: row.id,
       revisionId,
       addressId: hydrated.facts.location.address.address2dId,
-      addressSnapshotId: hydrated.facts.location.address.addressSnapshotId,
+      snapshotId: hydrated.facts.location.address.snapshotId,
       requests: source.requests.length,
       unchangedFeatureTables,
       sourceModified: false,

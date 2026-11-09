@@ -6,8 +6,10 @@ import { prefersReducedMotion } from 'svelte/motion'
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import LockIcon from 'virtual:icons/lucide/lock-keyhole'
+import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
 import InfoIcon from 'virtual:icons/proicons/info'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
+import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
+import PanelRightIcon from 'virtual:icons/lucide/panel-right'
 import { divisionClassLabel } from '#lib/divisions/classes.js'
 import { divisionIcons } from '#lib/divisions/icons.js'
 // BITS
@@ -37,13 +39,21 @@ let {
   coordinates,
   isEditing = false,
   onChange,
+  onResolved,
+  stacked = true,
+  compact = false,
+  onToggle,
   class: className = '',
 }: {
   class?: string
+  stacked?: boolean
+  compact?: boolean
+  onToggle?: () => void
   address: FeatureAddress
   coordinates: number[]
   isEditing?: boolean
   onChange: (address: FeatureAddress) => void
+  onResolved?: (value: { coordinates: number[]; divisions: AddressDivision[] }) => void
 } = $props()
 let result = $state<{ key: string; context: AddressDivisionContext } | null>(null)
 let loading = $state(false)
@@ -59,13 +69,17 @@ const overrides = $derived({
   ...address.divisionOverrides,
 })
 const divisions = $derived(context ? effectiveAddressDivisions(context, overrides) : [])
+$effect(() => {
+  if (context?.available && !stale)
+    onResolved?.({ coordinates: JSON.parse(key), divisions })
+})
 const groups = $derived(groupAddressDivisions(divisions))
 const groupLabels = $derived({
   administrative: m.address_divisions_administration(),
   locality: m.address_divisions_localities(),
   landform: m.address_divisions_landforms(),
 })
-const displayedGroups = $derived(
+const availableGroups = $derived(
   isEditing && !groups.some(group => group.key === 'locality')
     ? [
         ...groups.filter(group => group.key === 'administrative'),
@@ -73,6 +87,12 @@ const displayedGroups = $derived(
         ...groups.filter(group => group.key === 'landform'),
       ]
     : groups,
+)
+// Present specific geography first without changing the stored ancestry order.
+const displayedGroups = $derived(
+  ['locality', 'landform', 'administrative'].flatMap(key =>
+    availableGroups.filter(group => group.key === key),
+  ),
 )
 const labels = $derived<Record<string, string>>({
   country: m.address_division_country(),
@@ -105,6 +125,11 @@ $effect(() => {
   Promise.resolve(refresh ? request.refresh().then(() => request) : request)
     .then(value => {
       if (cancelled) return
+      // Unavailable is not an empty successful result; retain the last usable projection.
+      if (!value.available) {
+        failed = true
+        return
+      }
       result = { key: requestKey, context: value }
     })
     .catch(() => {
@@ -133,27 +158,24 @@ function changePaths(paths: AddressDivision[][]): void {
 }
 
 /** Restore dynamic marker membership, including when a Location has inherited authored paths.
- * @returns Nothing; explicit marker selections supersede inherited corrections.
+ * @returns Nothing; a null path supersedes inherited corrections.
  */
 function resetPaths(): void {
   if (stale) return
+  localityEditor?.close()
   onChange({
     ...address,
     divisionOverrides: {
       ...address.divisionOverrides,
-      ...Object.fromEntries(
-        Object.keys(SUBJECTIVE_DIVISIONS).map(field => [
-          field,
-          { mode: 'marker' as const },
-        ]),
-      ),
-      localityPaths: null,
+      localityPath: null,
     },
   })
 }
+let localityEditor: AddressLocalityEditor | undefined = $state()
 </script>
 
 {#snippet divisionNode(division: AddressDivision)}
+  {@const name = addressDivisionName(division, getLocaleKey())}
   {@const Icon =
     divisionIcons[division.class as keyof typeof divisionIcons] ?? divisionIcons.area}
   {@const factual = !Object.values(SUBJECTIVE_DIVISIONS).some(
@@ -166,11 +188,15 @@ function resetPaths(): void {
       : m.address_divisions_subjective()}
   >
     <Icon class="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden="true" />
-    <div class="min-w-0">
-      <span class="text-sm leading-5 font-medium [overflow-wrap:anywhere]">
-        {addressDivisionName(division, getLocaleKey())}
+    <div
+      class="flex min-w-0 flex-1 {compact
+        ? 'flex-col items-start gap-0'
+        : 'items-baseline justify-between gap-2'}"
+    >
+      <span class="block text-sm leading-5 font-medium [overflow-wrap:anywhere]">
+        {division.class === 'district' ? name.replace(/\s+District$/, '') : name}
       </span>
-      <span class="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
+      <span class="text-muted-foreground flex shrink-0 items-center gap-1.5 text-xs">
         {labels[division.class] ?? divisionClassLabel(division.class)}
         {#if factual && isEditing}
           <LockIcon
@@ -189,22 +215,36 @@ function resetPaths(): void {
   data-address-divisions
   aria-busy={loading}
 >
-  <div class="flex items-center justify-between gap-3">
-    <h3 class="font-semibold">{m.feature_address_divisions()}</h3>
-    <SimpleTooltip contentProps={{ role: 'tooltip' }}>
-      {#snippet trigger()}
+  <div class="flex min-h-10 items-center justify-between gap-3">
+    <h2 class="text-lg font-semibold">{m.feature_address_divisions()}</h2>
+    <div class="flex items-center gap-1">
+      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+        {#snippet trigger()}
+          <button
+            type="button"
+            class="text-muted-foreground hover:text-foreground inline-flex size-7 items-center justify-center rounded-full transition"
+            aria-label={m.address_divisions_about()}
+          >
+            <InfoIcon class="size-4" aria-hidden="true" />
+          </button>
+        {/snippet}
+        <span class="block max-w-xs text-sm leading-5"
+          >{m.address_divisions_policy()}</span
+        >
+      </SimpleTooltip>
+      {#if onToggle}
         <button
           type="button"
-          class="text-muted-foreground hover:text-foreground inline-flex size-7 items-center justify-center rounded-full transition"
-          aria-label={m.address_divisions_about()}
+          aria-label={m.address_divisions_hide()}
+          data-tooltip={m.address_divisions_hide()}
+          aria-expanded="true"
+          class="text-muted-foreground hover:text-primary flex size-7 items-center justify-center rounded"
+          onclick={onToggle}
         >
-          <InfoIcon class="size-4" aria-hidden="true" />
+          <PanelRightIcon class="size-4" />
         </button>
-      {/snippet}
-      <span class="block max-w-xs text-sm leading-5"
-        >{m.address_divisions_policy()}</span
-      >
-    </SimpleTooltip>
+      {/if}
+    </div>
   </div>
   {#if loading}
     <p role="status" class={context ? 'sr-only' : 'text-muted-foreground text-sm'}>
@@ -232,50 +272,67 @@ function resetPaths(): void {
       <div class="divide-border/60 col-start-1 row-start-1 min-w-0 divide-y">
         {#each displayedGroups as group (group.key)}
           <section
-            class="grid gap-2 py-4 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
+            class="group/division-row grid gap-2 py-3 {stacked
+              ? ''
+              : 'grid-cols-[6rem_minmax(0,1fr)] gap-x-3'}"
             aria-label={groupLabels[group.key]}
             data-division-group={group.key}
             transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
           >
-            <h4 class="text-muted-foreground pt-1.5 text-xs font-medium tracking-wide">
-              {groupLabels[group.key]}
-            </h4>
+            <div class="flex items-center justify-between gap-2">
+              <h3
+                class="text-muted-foreground pt-1.5 text-xs font-medium tracking-wide"
+              >
+                {groupLabels[group.key]}
+              </h3>
+              {#if isEditing && group.key === 'locality'}
+                <button
+                  type="button"
+                  disabled={stale}
+                  aria-label={m.address_divisions_from_marker()}
+                  data-tooltip={m.address_divisions_from_marker()}
+                  class="text-muted-foreground hover:bg-muted mt-1 flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within/division-row:opacity-100 group-hover/division-row:opacity-100 focus-visible:opacity-100"
+                  onclick={resetPaths}
+                >
+                  <ResetIcon class="size-3.5" aria-hidden="true" />
+                </button>
+              {/if}
+            </div>
             <div class="min-w-0 space-y-2">
               {#if isEditing && group.key === 'locality' && context}
                 <div inert={stale} aria-disabled={stale}>
                   <AddressLocalityEditor
+                    bind:this={localityEditor}
                     paths={group.paths}
                     options={context.options}
                     node={divisionNode}
                     {labels}
                     onChange={changePaths}
-                    onReset={resetPaths}
                   />
                 </div>
               {:else}
                 {#each group.paths as path, pathIndex (pathIndex)}
                   <ol
-                    class="flex flex-wrap items-start gap-x-3 gap-y-1"
+                    class="flex flex-col items-stretch"
                     transition:slide={{
                       duration: prefersReducedMotion.current ? 0 : 200,
                     }}
                     aria-label={`${groupLabels[group.key]} ${pathIndex + 1}`}
                   >
-                    {#each path as division, index (division.id)}
+                    {#each [...path].reverse() as division, index (division.id)}
                       <li
-                        class="flex max-w-full min-w-0 items-start gap-3"
+                        class="min-w-0"
                         transition:slide={{
-                          axis: 'x',
                           duration: prefersReducedMotion.current ? 0 : 180,
                         }}
                       >
-                        {#if index > 0}
-                          <ChevronRightIcon
-                            class="text-muted-foreground/60 mt-2 size-3.5 shrink-0"
+                        {@render divisionNode(division)}
+                        {#if index < path.length - 1}
+                          <ChevronDownIcon
+                            class="text-muted-foreground/60 ml-0.5 size-3.5"
                             aria-hidden="true"
                           />
                         {/if}
-                        {@render divisionNode(division)}
                       </li>
                     {/each}
                   </ol>

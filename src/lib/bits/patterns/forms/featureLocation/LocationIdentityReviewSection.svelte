@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
@@ -24,6 +24,16 @@ import {
   acceptLocationMergeReview,
 } from '#lib/api/locationIdentity.remote.js'
 // DOMAIN
+import AddressBlocks from '../formFeatureAddress/AddressBlocks.svelte'
+import { positionAddress } from '#lib/addresses/blocks.js'
+import CheckIcon from 'virtual:icons/proicons/checkmark-circle'
+import RejectIcon from 'virtual:icons/proicons/cancel-circle'
+import LocationIcon from 'virtual:icons/proicons/location'
+import MergeIcon from 'virtual:icons/lucide/merge'
+import type {
+  LocationReviewActions,
+  LocationReviewPresentation,
+} from '#lib/locations/reviewPresentation.js'
 import { getAddressDisplay } from '#lib/addresses/featureAddress.js'
 // TYPES
 import type { LocationFacts } from '#lib/locations/model.js'
@@ -33,12 +43,22 @@ type Review = Awaited<ReturnType<typeof getLocationIdentityReview>>
 let {
   featureId,
   locationId,
+  initialReviewId,
+  initialMergeReviewId,
+  mergeRequired = false,
   isDirty,
   onCommitted,
+  onActionsChange,
+  onPresentationChange,
 }: {
   featureId: string
   locationId: string
+  initialReviewId?: string
+  initialMergeReviewId?: string | null
+  mergeRequired?: boolean
   isDirty: boolean
+  onActionsChange?: LocationReviewActions
+  onPresentationChange?: (value: LocationReviewPresentation) => void
   onCommitted: () => Promise<void>
 } = $props()
 const access = $derived(getLocationIdentityReviewAccess({ locationId }))
@@ -57,6 +77,97 @@ let mergeReason = $state('')
 let alive = true
 onDestroy(() => {
   alive = false
+})
+
+// Retained identity evidence drives the same Profile map and toolbar as address reviews.
+$effect(() => {
+  if (detail)
+    onPresentationChange?.({
+      before: detail.before.location,
+      after: detail.candidate.facts.location,
+    })
+  if (!onActionsChange) return
+  const disabled = busy || isDirty || !detail || detail.stale || detail.rejected
+  onActionsChange(
+    outcome === 'merge-required'
+      ? [
+          {
+            text: m.location_merge_review(),
+            icon: MergeIcon,
+            style: 'ghost',
+            color: 'warning',
+            disabled: busy || isDirty || !detail,
+            onClick: () => void reviewMerge(),
+          },
+          ...(merge
+            ? [
+                {
+                  text: m.location_merge_confirm(),
+                  icon: CheckIcon,
+                  style: 'ghost' as const,
+                  color: 'success' as const,
+                  disabled:
+                    disabled ||
+                    !mergeReason.trim() ||
+                    !merge.canApply ||
+                    merge.stale ||
+                    merge.applied,
+                  onClick: () => void confirmMerge(),
+                },
+              ]
+            : []),
+        ]
+      : [
+          {
+            text: m.location_identity_reject(),
+            icon: RejectIcon,
+            style: 'ghost',
+            color: 'error',
+            disabled: disabled || Boolean(outcome) || !reason.trim(),
+            onClick: () => void reject(),
+          },
+          {
+            text: m.location_identity_accept(),
+            icon: CheckIcon,
+            style: 'ghost',
+            color: 'success',
+            disabled: disabled || Boolean(outcome) || !reason.trim(),
+            onClick: () => void accept(),
+          },
+        ],
+  )
+})
+
+// Queue navigation reads the exact retained comparison, never preparing or accepting a new one.
+$effect(() => {
+  const reviewId = initialReviewId
+  const mergeId = initialMergeReviewId
+  const target = locationId
+  if (!reviewId) return
+  untrack(() => {
+    void (async () => {
+      busy = true
+      try {
+        const comparison = await getLocationIdentityReview({
+          locationId: target,
+          reviewId,
+        })
+        if (!alive) return
+        detail = comparison
+        open = true
+        if (mergeRequired) outcome = 'merge-required'
+        if (mergeId)
+          merge = await getLocationMergeReview({
+            locationId: target,
+            reviewId: mergeId,
+          })
+      } catch {
+        if (alive) failure = m.location_identity_stale()
+      } finally {
+        if (alive) busy = false
+      }
+    })()
+  })
 })
 
 /** Keep settled candidates and comparisons visible while a new search is pending. */
@@ -296,52 +407,60 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
 
 {#await access then permission}
   {#if permission.allowed}
-    <section class="space-y-4" aria-label={m.location_identity_title()}>
+    <section class="bits-form__section" aria-label={m.location_identity_title()}>
       <SectionHeader
         title={m.location_identity_title()}
-        description={m.location_identity_description()}
+        icon={mergeRequired ? MergeIcon : LocationIcon}
       />
-      <div class="space-y-4 px-6 pb-4">
-        <Button
-          type="button"
-          text={m.location_identity_open()}
-          disabled={busy}
-          attrs={{ 'aria-expanded': open }}
-          onClick={() => {
-            open = !open
-          }}
-        />
+      <div class="space-y-4 px-6 pt-5 pb-4">
+        {#if !onActionsChange}
+          <Button
+            type="button"
+            text={m.location_identity_open()}
+            disabled={busy}
+            attrs={{ 'aria-expanded': open }}
+            onClick={() => {
+              open = !open
+            }}
+          />
+        {/if}
         {#if open}
-          <p class="text-muted-foreground text-sm">{m.location_identity_preserve()}</p>
+          {#if !onActionsChange}
+            <p class="text-muted-foreground text-sm">
+              {m.location_identity_preserve()}
+            </p>
+          {/if}
           {#if isDirty}
             <p role="status" class="text-muted-foreground text-sm">
               {m.feature_location_save_first()}
             </p>
           {/if}
-          <div class="flex items-end gap-3">
-            <TextInput
-              id="location-identity-search"
-              name=""
-              label={m.feature_location_search_label()}
-              bind:value={query}
-              class="min-w-0 flex-1"
-              inputAttrs={{
-                maxlength: 200,
-                onkeydown: (event: KeyboardEvent) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    void search()
-                  }
-                },
-              }}
-            />
-            <Button
-              type="button"
-              text={m.feature_location_search()}
-              disabled={busy || !query.trim()}
-              onClick={search}
-            />
-          </div>
+          {#if !onActionsChange}
+            <div class="flex items-end gap-3">
+              <TextInput
+                id="location-identity-search"
+                name=""
+                label={m.feature_location_search_label()}
+                bind:value={query}
+                class="min-w-0 flex-1"
+                inputAttrs={{
+                  maxlength: 200,
+                  onkeydown: (event: KeyboardEvent) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      void search()
+                    }
+                  },
+                }}
+              />
+              <Button
+                type="button"
+                text={m.feature_location_search()}
+                disabled={busy || !query.trim()}
+                onClick={search}
+              />
+            </div>
+          {/if}
           {#if results?.length === 0}
             <p class="text-muted-foreground text-sm">
               {m.feature_location_no_results()}
@@ -376,8 +495,25 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
             </ul>
           {/if}
           {#if detail}
-            <div class="border-border bg-panel space-y-4 rounded-xl border p-4">
-              <div class="grid gap-4 md:grid-cols-2">
+            <div class="space-y-5">
+              {#if detail.rematch}
+                <p class="text-muted-foreground text-sm">
+                  {m.location_rematch_evidence({
+                    score: String(detail.rematch.score),
+                    distance: String(Math.round(detail.rematch.distance)),
+                  })}
+                </p>
+                <p class="text-muted-foreground text-sm">
+                  {m.location_rematch_preserve()}
+                </p>
+                {#if detail.rematch.numberConflict}
+                  <p role="status">{m.location_rematch_number_conflict()}</p>
+                {/if}
+                {#if detail.rematch.incomplete}
+                  <p role="status">{m.location_rematch_coverage()}</p>
+                {/if}
+              {/if}
+              <div class="md:divide-border grid gap-y-5 md:grid-cols-2 md:divide-x">
                 {#each [
                   { title: m.location_identity_current(), facts: detail.before },
                   {
@@ -385,19 +521,36 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                     facts: detail.candidate.facts,
                   },
                 ] as column}
-                  <div class="min-w-0 space-y-3">
+                  <div class="min-w-0 space-y-3 md:first:pr-6 md:last:pl-6">
                     <h3 class="font-semibold">{column.title}</h3>
-                    <dl class="space-y-3">
-                      {#each rows(column.facts) as row}
-                        <div>
-                          <dt class="text-muted-foreground text-sm">{row.label}</dt>
-                          <dd class="text-sm break-words">{row.value}</dd>
-                        </div>
+                    <div class="space-y-3">
+                      {#each rows(column.facts).filter(
+                        row =>
+                          row.label !== m.location_review_coordinates() &&
+                          row.label !== m.location_reset_location(),
+                      ) as row, index}
+                        <TextInput
+                          id={`location-identity-${column.title}-${index}`}
+                          name=""
+                          label={row.label}
+                          value={row.value}
+                          isEditing={false}
+                        />
                       {/each}
-                    </dl>
+                    </div>
                   </div>
                 {/each}
               </div>
+              <div class="-mx-6">
+                <SectionHeader
+                  title={m.location_reset_location()}
+                  icon={LocationIcon}
+                />
+              </div>
+              <AddressBlocks
+                before={positionAddress(detail.before.location)}
+                address={positionAddress(detail.candidate.facts.location)}
+              />
               {#if detail.candidate.issueKinds.length}
                 <p role="status" class="text-muted-foreground text-sm">
                   {m.location_identity_incomplete()}
@@ -412,14 +565,16 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                 <p role="status" class="text-muted-foreground text-sm">
                   {m.location_identity_merge()}
                 </p>
-                <Button
-                  type="button"
-                  text={m.location_merge_review()}
-                  disabled={busy || isDirty}
-                  onClick={reviewMerge}
-                />
+                {#if !onActionsChange}
+                  <Button
+                    type="button"
+                    text={m.location_merge_review()}
+                    disabled={busy || isDirty}
+                    onClick={reviewMerge}
+                  />
+                {/if}
                 {#if merge}
-                  <div class="border-border space-y-3 rounded-xl border p-4">
+                  <div class="border-border space-y-3 border-t pt-5">
                     <h3 class="font-semibold">{m.location_merge_title()}</h3>
                     <p class="text-sm">
                       {m.location_merge_impact({
@@ -431,6 +586,33 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                         ? m.location_merge_private()
                         : m.location_merge_shared()}
                     </p>
+                    {#if merge.dependencies}
+                      <p class="text-sm">
+                        {m.location_merge_dependencies({
+                          relationships: String(
+                            merge.dependencies.relationshipVersions,
+                          ),
+                          corrections: String(merge.dependencies.correctionVersions),
+                          placements: String(merge.dependencies.acceptedPlacements),
+                        })}
+                      </p>
+                      {#if merge.dependencies.blockers.length}
+                        <p role="alert" class="text-error text-sm">
+                          {m.location_merge_blocked()}
+                        </p>
+                        <ul class="list-disc pl-5 text-sm">
+                          {#each merge.dependencies.blockers as blocker}
+                            <li>
+                              {blocker === 'incompatible-location-kinds'
+                                ? m.location_merge_kind_conflict()
+                                : blocker === 'overlapping-organisation-corrections'
+                                  ? m.location_merge_correction_conflict()
+                                  : m.location_merge_membership_conflict()}
+                            </li>
+                          {/each}
+                        </ul>
+                      {/if}
+                    {/if}
                     {#if merge.stale || merge.applied}
                       <p role="status" class="text-error text-sm">
                         {m.location_identity_stale()}
@@ -443,12 +625,17 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                         bind:value={mergeReason}
                         inputAttrs={{ maxlength: 2000 }}
                       />
-                      <Button
-                        type="button"
-                        text={m.location_merge_confirm()}
-                        onClick={confirmMerge}
-                        disabled={busy || isDirty || !mergeReason.trim()}
-                      />
+                      {#if !onActionsChange}
+                        <Button
+                          type="button"
+                          text={m.location_merge_confirm()}
+                          onClick={confirmMerge}
+                          disabled={busy ||
+                            isDirty ||
+                            !mergeReason.trim() ||
+                            !merge.canApply}
+                        />
+                      {/if}
                     {/if}
                   </div>
                 {/if}
@@ -465,6 +652,9 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                   {m.location_identity_saved()}
                 </p>
               {:else}
+                <p class="text-muted-foreground text-sm">
+                  {m.location_review_reason_help()}
+                </p>
                 <TextInput
                   id="location-identity-reason"
                   name=""
@@ -472,18 +662,22 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
                   bind:value={reason}
                   inputAttrs={{ maxlength: 2000 }}
                 />
-                <Button
-                  type="button"
-                  text={m.location_identity_accept()}
-                  onClick={accept}
-                  disabled={busy || isDirty || detail.stale || !reason.trim()}
-                />
-                <Button
-                  type="button"
-                  text={m.location_identity_reject()}
-                  onClick={reject}
-                  disabled={busy || isDirty || detail.stale || !reason.trim()}
-                />
+                {#if !onActionsChange}
+                  <Button
+                    type="button"
+                    text={m.location_identity_accept()}
+                    onClick={accept}
+                    disabled={busy || isDirty || detail.stale || !reason.trim()}
+                  />
+                {/if}
+                {#if !onActionsChange}
+                  <Button
+                    type="button"
+                    text={m.location_identity_reject()}
+                    onClick={reject}
+                    disabled={busy || isDirty || detail.stale || !reason.trim()}
+                  />
+                {/if}
               {/if}
             </div>
           {/if}

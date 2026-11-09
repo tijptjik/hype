@@ -19,7 +19,7 @@ const accounts = [
   'owner@project.com',
   'maintainer@project.com',
   'member@project.com',
-  'user@project.com',
+  'user@organisation.com',
 ]
 const results: Array<Record<string, unknown>> = []
 const sessions = new Map<string, Awaited<ReturnType<BrowserContext['storageState']>>>()
@@ -58,7 +58,7 @@ for (const [engineName, engine] of [
           document && document.status() < 400,
           `Project list HTTP ${document?.status()}`,
         )
-        if (email === 'user@project.com') {
+        if (email === 'user@organisation.com') {
           await page.waitForURL(url => !url.pathname.startsWith('/admin'), {
             timeout: 20000,
           })

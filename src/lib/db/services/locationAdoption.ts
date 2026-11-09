@@ -57,7 +57,7 @@ export async function previewFeatureLocationAdoption(
     .where(
       and(
         eq(featureLocation.featureId, input.featureId),
-        eq(featureLocation.revision, accepted.revision),
+        eq(featureLocation.version, accepted.version),
         eq(feature.projectId, input.projectId),
         eq(locationTable.sourceAvailability, 'current'),
       ),
@@ -108,7 +108,7 @@ export async function previewFeatureLocationAdoption(
       candidateOverrides,
       policy: settings.policy,
     }),
-    expectedRevision: accepted.revision,
+    expectedRevision: accepted.version,
     expectedFeatureModifiedAt: association.modifiedAt,
     settings,
   }

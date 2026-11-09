@@ -16,10 +16,12 @@ let {
   value = $bindable(),
   disabled = false,
   onParsed,
+  onValueChange,
 }: {
   value: AddressContent
   disabled?: boolean
   onParsed?: (source: Record<string, string>) => void
+  onValueChange?: (content: AddressContent) => void
 } = $props()
 let proposal = $state<AddressParseResult | null>(null)
 /** Parse a copy; the editable address changes only when the proposal is accepted. */
@@ -80,6 +82,7 @@ function display(content: AddressContent, tag: string): string {
           if (!proposal) return
           onParsed?.(proposal.source)
           value = proposal.content
+          onValueChange?.(value)
           proposal = null
         }}
       />

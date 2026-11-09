@@ -3,7 +3,7 @@
 import { getLocaleKey, m } from '#lib/i18n.js'
 // BITS
 import { Button } from '#lib/bits/core/index.js'
-import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
+import { SelectField } from '#lib/bits/custom/form/index.js'
 // API
 import {
   createLocalLocation,
@@ -21,6 +21,10 @@ import {
 import LocalLocationAddressFields from '#lib/bits/patterns/forms/localLocationAddress/LocalLocationAddressFields.svelte'
 import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
+import { LocationNamesEditSchema } from '#lib/locations/validation.js'
+import LocationKindField from '../localLocationAddress/LocationKindField.svelte'
+import LocationNameFields from '../localLocationAddress/LocationNameFields.svelte'
+import type { LocationKind } from '#lib/locations/kinds.js'
 // TYPES
 import type { LocationFacts } from '#lib/locations/model.js'
 
@@ -31,6 +35,8 @@ let {
   selectedAddress,
   lookupRequest,
   initialName = '',
+  initialNames,
+  initialKind = 'establishment',
   onCancel,
   projectId,
   coordinates,
@@ -42,7 +48,9 @@ let {
   initialAddress?: FeatureAddress
   selectedAddress?: FeatureAddress
   lookupRequest?: { query: string; revision: number }
+  initialNames?: Record<string, string>
   initialName?: string
+  initialKind?: LocationKind
   onCancel?: () => void
   projectId: string
   coordinates: number[]
@@ -74,7 +82,19 @@ $effect(() => {
 })
 // The initial name belongs to this creation draft, not subsequent parent edits.
 // svelte-ignore state_referenced_locally
-let name = $state(initialName)
+let names = $state<Record<string, string>>(
+  initialNames ?? {
+    [getLocaleKey() === 'en'
+      ? 'en'
+      : getLocaleKey() === 'zhHant'
+        ? 'zh-hant'
+        : 'zh-hans']: initialName,
+  },
+)
+// The caller supplies the intended entity type; matching state stays a separate choice.
+// svelte-ignore state_referenced_locally
+let kind = $state<LocationKind>(initialKind)
+const namesValid = $derived(LocationNamesEditSchema.safeParse(names).success)
 let address = $state(createLocalLocationAddress())
 let parseSource = $state<Record<string, string> | undefined>()
 let locationState = $state<'manual' | 'unresolved'>('unresolved')
@@ -141,18 +161,17 @@ const kinds = $derived([
  * @returns Nothing; emits the created revision for explicit association.
  */
 async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<void> {
-  if (!allowed || busy || disabled || !name.trim()) return
+  if (!allowed || busy || disabled || !namesValid) return
   busy = true
   failed = false
   try {
-    const key = getLocaleKey()
-    const locale = key === 'zhHant' ? 'zh-hant' : key === 'zhHans' ? 'zh-hans' : 'en'
     const input = LocalLocationInputSchema.parse({
       state: locationState,
+      kind,
       sharingPreference,
       parseSource,
       facts: {
-        names: { [locale]: name.trim() },
+        names: LocationNamesEditSchema.parse(names),
         phoneNumber: [],
         brands: [],
         location: {
@@ -162,10 +181,11 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
             address2dId: null,
             address3dId: null,
             address3dUnitId: null,
-            addressSnapshotId: null,
-            records: {},
+            snapshotId: null,
+            rawSource: {},
             fallbackDisplay: {},
-            authored: address,
+            authored:
+              kind === 'building' ? { ...address, unit: null, unitI18n: {} } : address,
           },
         },
       },
@@ -173,7 +193,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
     const identity = await createLocalLocation({ projectId, ...input })
     onCreated({ ...identity, facts: input.facts })
     open = false
-    name = ''
+    names = {}
     address = createLocalLocationAddress()
     parseSource = undefined
   } catch {
@@ -238,7 +258,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
       <p class="text-muted-foreground text-sm">{m.feature_location_create_help()}</p>
       <SelectField
         id="local-location-kind"
-        label={m.feature_location_kind()}
+        label={m.location_record_matching_state()}
         value={locationState}
         items={kinds}
         disabled={busy || disabled || preparing}
@@ -246,21 +266,21 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
           if (value === 'manual' || value === 'unresolved') locationState = value
         }}
       />
-      <TextInput
-        name=""
-        id="local-location-name"
-        label={m.feature_location_name()}
-        bind:value={name}
-        inputAttrs={{
-          onkeydown: (event: KeyboardEvent) => {
-            if (event.key === 'Enter') event.preventDefault()
-          },
-        }}
+      <LocationKindField
+        value={kind}
         disabled={busy || disabled || preparing}
+        onChange={next => (kind = next)}
+      />
+      <LocationNameFields
+        {names}
+        disabled={busy || disabled || preparing}
+        onChange={next => (names = next)}
       />
       <LocalLocationAddressFields
+        locationKind={kind}
         bind:value={address}
         disabled={busy || disabled || preparing}
+        show3dAddressOptions={kind !== 'building'}
         onParsed={source => {
           parseSource = source
         }}
@@ -274,14 +294,14 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
           type="button"
           text={m.feature_location_create_share()}
           onClick={() => create('allow-sharing')}
-          disabled={busy || disabled || preparing || !name.trim()}
+          disabled={busy || disabled || preparing || !namesValid}
         />
         <Button
           type="button"
           style="outline"
           text={m.feature_location_create_private()}
           onClick={() => create('private')}
-          disabled={busy || disabled || preparing || !name.trim()}
+          disabled={busy || disabled || preparing || !namesValid}
         />
       </div>
       {#if failed}

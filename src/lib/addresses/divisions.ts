@@ -1,3 +1,4 @@
+import { localizedAddressName } from './chinese.js'
 // VALIDATION
 import { z } from 'zod'
 // TYPES
@@ -14,24 +15,9 @@ export const SUBJECTIVE_DIVISIONS = {
   microhoodId: 'microhood',
   hamletId: 'hamlet',
 } as const
-const divisionSelection = z
-  .union([z.string().min(1).max(200), z.strictObject({ mode: z.literal('marker') })])
-  .nullable()
-  .optional()
+/** One selected source hierarchy: absent inherits, null follows the marker, [] omits localities. */
 export const AddressDivisionOverridesSchema = z.strictObject({
-  // Select at most one existing source path for one neighbourhood.
-  localityPaths: z
-    .array(z.array(z.string().min(1).max(200)).min(1).max(4))
-    .max(1)
-    .nullable()
-    .optional(),
-  townId: divisionSelection,
-  ruralAreaId: divisionSelection,
-  macrohoodId: divisionSelection,
-  neighbourhoodId: divisionSelection,
-  villageId: divisionSelection,
-  microhoodId: divisionSelection,
-  hamletId: divisionSelection,
+  localityPath: z.array(z.string().min(1).max(200)).max(4).nullable().optional(),
 })
 export type AddressDivisionOverrides = z.infer<typeof AddressDivisionOverridesSchema>
 const hierarchyEntry = z.object({
@@ -67,11 +53,11 @@ export type AddressDivisionContext = {
 export function authoredDivisionOverrides(
   content?: LocalLocationAddress,
 ): AddressDivisionOverrides {
-  return Object.fromEntries(
-    Object.keys(SUBJECTIVE_DIVISIONS)
-      .filter(key => content && Object.hasOwn(content, key))
-      .map(key => [key, content?.[key as keyof LocalLocationAddress]]),
-  )
+  const path = Object.keys(SUBJECTIVE_DIVISIONS).flatMap(key => {
+    const id = content?.[key as keyof LocalLocationAddress]
+    return typeof id === 'string' ? [id] : []
+  })
+  return path.length ? { localityPath: path } : {}
 }
 
 /** Remove factual geographic IDs from authored corrections, without changing original content.
@@ -96,12 +82,13 @@ export function addressDivisionName(
   division: AddressDivision,
   locale: LocaleKey,
 ): string {
-  const tag = locale === 'zhHant' ? 'zh-hant' : locale === 'zhHans' ? 'zh-hans' : 'en'
   return (
-    division.names[tag]?.name ||
-    division.names.en?.name ||
-    Object.values(division.names).find(value => value.name)?.name ||
-    division.id
+    localizedAddressName(
+      Object.fromEntries(
+        Object.entries(division.names).map(([tag, value]) => [tag, value.name]),
+      ),
+      locale,
+    ) ?? division.id
   )
 }
 
@@ -132,7 +119,7 @@ export function orderAddressDivisions(divisions: AddressDivision[]): AddressDivi
   return result
 }
 
-/** Replace only interpretive classes; explicit null omits a class and absence inherits the pin.
+/** Replace interpretive memberships with one source path; null follows the marker and [] omits localities.
  * @param context Current marker lookup. @param overrides Explicit local selections.
  * @returns Effective, ordered divisions. Factual memberships always come from the marker.
  */
@@ -140,45 +127,20 @@ export function effectiveAddressDivisions(
   context: AddressDivisionContext,
   overrides: AddressDivisionOverrides,
 ): AddressDivision[] {
-  const result = [...context.memberships]
-  for (const [field, kind] of Object.entries(SUBJECTIVE_DIVISIONS)) {
-    if (!Object.hasOwn(overrides, field)) continue
-    const id = overrides[field as SubjectiveDivisionField]
-    if (id && typeof id === 'object') continue
-    for (let i = result.length - 1; i >= 0; i--)
-      if (result[i].class === kind) result.splice(i, 1)
-    const selected = context.options.find(item => item.id === id && item.class === kind)
-    if (selected) result.push(selected)
-  }
-  if (Array.isArray(overrides.localityPaths)) {
-    const options = new Map(context.options.map(item => [item.id, item]))
-    const chosen = new Map<string, AddressDivision>()
-    const selectedPaths =
-      overrides.localityPaths.length <= 1 ? overrides.localityPaths : []
-    // One selected source path replaces interpretive memberships without inventing ancestry.
-    for (const path of selectedPaths) {
-      if (!isApprovedLocalityPath(path, options)) continue
-      const members = path
-        .map(id => options.get(id))
-        .filter((item): item is AddressDivision => item !== undefined)
-      for (const [index, member] of members.entries()) {
-        const copy: AddressDivision = chosen.get(member.id) ?? {
-          ...member,
-          selectedLocalityAncestors: members
-            .slice(0, index)
-            .map(ancestor => ancestor.id),
-        }
-        chosen.set(copy.id, copy)
-      }
-    }
-    return orderAddressDivisions([
-      ...result.filter(
-        item => !Object.values(SUBJECTIVE_DIVISIONS).some(kind => kind === item.class),
-      ),
-      ...chosen.values(),
-    ])
-  }
-  return orderAddressDivisions(result)
+  const factual = context.memberships.filter(
+    item => !Object.values(SUBJECTIVE_DIVISIONS).some(kind => kind === item.class),
+  )
+  const path = overrides.localityPath
+  if (path == null) return orderAddressDivisions(context.memberships)
+  if (!path.length) return orderAddressDivisions(factual)
+  const options = new Map(context.options.map(item => [item.id, item]))
+  if (!isApprovedLocalityPath(path, options)) return orderAddressDivisions(factual)
+  // The selected path supplies ancestry once, without duplicating individual division IDs.
+  const members = path.map((id, index) => ({
+    ...options.get(id)!,
+    selectedLocalityAncestors: path.slice(0, index),
+  }))
+  return orderAddressDivisions([...factual, ...members])
 }
 
 /** Read the source locality level, falling back to its supported taxonomy when metadata is absent.
@@ -268,25 +230,14 @@ export function localityParentPaths(
     )
 }
 
-/** Save one source path alongside scalar selections for shared authored-address consumers.
+/** Save one source path as the complete locality selection.
  * @param paths The chosen source path, or an empty selection. @returns Locale-independent corrections including explicit omissions.
  */
 export function localityPathOverrides(
   paths: AddressDivision[][],
 ): AddressDivisionOverrides {
   if (paths.length > 1) throw new Error('MULTIPLE_LOCALITY_SELECTIONS')
-  const members = paths.flat()
-  return {
-    ...Object.fromEntries(
-      Object.entries(SUBJECTIVE_DIVISIONS).map(([field, kind]) => {
-        const ids = [
-          ...new Set(members.filter(item => item.class === kind).map(item => item.id)),
-        ]
-        return [field, ids.length === 1 ? ids[0] : null]
-      }),
-    ),
-    localityPaths: paths.map(path => path.map(item => item.id)),
-  }
+  return { localityPath: paths.flat().map(item => item.id) }
 }
 
 /** Separate administrative ancestry, locality membership and physical islands.

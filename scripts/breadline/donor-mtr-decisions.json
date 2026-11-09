@@ -590,7 +590,7 @@
     },
     {
       "sourceId": "729",
-      "sourceHash": "e96ec0fc52a349ac840a26ecb99f21d7e60b153a06a680709e5d4fca57a1a98e",
+      "sourceHash": "b0a6d3b33d301bb2e686923380d0f6be949889738133392ae300538c66cca455",
       "coordinates": [114.172573, 22.32226],
       "choice": "source",
       "station": "MKK",
@@ -599,7 +599,16 @@
       "distance": 173,
       "reviewRevision": "310379acf1e3b8a00ecb",
       "reviewedAt": "2026-10-19T13:48:50.508864+00:00",
-      "graphVersion": "gba-2026-10-01-valhalla-6291"
+      "graphVersion": "gba-2026-10-01-valhalla-6291",
+      "sourceRevalidations": [
+        {
+          "acceptedAt": "2026-11-06T05:17:48.571043+00:00",
+          "previousSourceHash": "e96ec0fc52a349ac840a26ecb99f21d7e60b153a06a680709e5d4fca57a1a98e",
+          "sourceHash": "b0a6d3b33d301bb2e686923380d0f6be949889738133392ae300538c66cca455",
+          "changedFields": { "active": { "before": 1, "after": 0 } },
+          "reason": "User accepted upstream deactivation after comparing all 21 source fields; coordinates and MTR reference are unchanged."
+        }
+      ]
     },
     {
       "sourceId": "732",

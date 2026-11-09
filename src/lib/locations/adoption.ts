@@ -13,14 +13,14 @@ import type { EffectiveLocationFacts } from './resolve'
 export type AdoptionSourceRevision = {
   id: string
   locationId: string
-  sequence: number
+  version: number
   ssId: string | null
   origin: 'local' | 'saanseoi'
   facts: LocationFacts
-  payload: Record<string, unknown>
+  rawSource: Record<string, unknown>
 }
 export type LocationAdoptionPlan = {
-  evidence: LocationChangeEvidence
+  comparison: LocationChangeEvidence
   decision: LocationAdoptionDecision
   blockers: Array<
     | 'source-identity'
@@ -49,6 +49,25 @@ export type LocationAdoptionPlan = {
       operatingStatus: string | null
     } | null
   }
+}
+
+/** Persisted assessments may retain the original inner `evidence` key. */
+export type StoredLocationAdoptionPlan =
+  | LocationAdoptionPlan
+  | (Omit<LocationAdoptionPlan, 'comparison'> & { evidence: LocationChangeEvidence })
+
+/**
+ * Expose historical assessments using the current comparison name.
+ * @param plan Stored assessment with the current or legacy comparison key.
+ * @returns Plan with an unambiguous comparison field.
+ * @remarks Normalizes reads only; immutable stored evidence is never rewritten.
+ */
+export function readLocationAdoptionPlan(
+  plan: StoredLocationAdoptionPlan,
+): LocationAdoptionPlan {
+  if ('comparison' in plan) return plan
+  const { evidence, ...assessment } = plan
+  return { ...assessment, comparison: evidence }
 }
 
 const establishmentSchema = z.object({
@@ -84,7 +103,7 @@ function addressContent(address: LocationFacts['location']['address']): unknown 
     } = attributes as Record<string, unknown>
     return { ...rest, attributes: content }
   }
-  const { meta: _meta, links: _links, data, included, ...rest } = address.records
+  const { meta: _meta, links: _links, data, included, ...rest } = address.rawSource
   return {
     authored: address.authored
       ? { ...address.authored, unit: undefined, unitI18n: undefined }
@@ -93,7 +112,7 @@ function addressContent(address: LocationFacts['location']['address']): unknown 
     address2dId: address.address2dId,
     address3dId: address.address3dId,
     fallbackDisplay: address.fallbackDisplay,
-    records: {
+    rawSource: {
       ...rest,
       data: resource(data),
       included: Array.isArray(included) ? included.map(resource) : included,
@@ -107,8 +126,8 @@ function addressContent(address: LocationFacts['location']['address']): unknown 
  * @returns Unit identity and retained structured content.
  */
 function unitContent(address: LocationFacts['location']['address']): unknown {
-  const inventories = Array.isArray(address.records.included)
-    ? address.records.included
+  const inventories = Array.isArray(address.rawSource.included)
+    ? address.rawSource.included
     : []
   const inventory = inventories.find(
     value =>
@@ -152,12 +171,12 @@ export function planLocationAdoption(input: {
     if (
       !revision.id ||
       revision.locationId !== candidate.locationId ||
-      !Number.isSafeInteger(revision.sequence) ||
-      revision.sequence < 1
+      !Number.isSafeInteger(revision.version) ||
+      revision.version < 1
     )
       throw new Error('Invalid Location adoption revision identity')
   }
-  if (candidate.sequence < Math.max(facts.sequence, location.sequence))
+  if (candidate.version < Math.max(facts.version, location.version))
     throw new Error('Location adoption cannot move accepted revisions backwards')
   const oldFacts = LocationFactsSchema.parse(facts.facts)
   const oldLocation = LocationFactsSchema.parse(location.facts).location
@@ -174,8 +193,8 @@ export function planLocationAdoption(input: {
   )
   const comparedBefore = effectiveBefore.location ?? oldLocation
   const comparedAfter = effectiveCandidate.location ?? next.location
-  const beforeEstablishment = establishmentSchema.safeParse(facts.payload)
-  const afterEstablishment = establishmentSchema.safeParse(candidate.payload)
+  const beforeEstablishment = establishmentSchema.safeParse(facts.rawSource)
+  const afterEstablishment = establishmentSchema.safeParse(candidate.rawSource)
   const blockers: LocationAdoptionPlan['blockers'] = []
   // A local revision chain has no publisher identity; crossing into source data still requires identity review.
   const localChain = [facts, location, candidate].every(
@@ -197,8 +216,8 @@ export function planLocationAdoption(input: {
   )
     blockers.push('address-dependencies')
   if (
-    Array.isArray(candidate.payload.issues) &&
-    candidate.payload.issues.some(
+    Array.isArray(candidate.rawSource.issues) &&
+    candidate.rawSource.issues.some(
       issue =>
         typeof issue === 'object' &&
         issue !== null &&
@@ -207,7 +226,7 @@ export function planLocationAdoption(input: {
     )
   )
     blockers.push('source-phone-omissions')
-  const evidence: LocationChangeEvidence = {
+  const comparison: LocationChangeEvidence = {
     before: comparedBefore,
     after: comparedAfter,
     addressChanged: !equalLocationValue(
@@ -231,7 +250,7 @@ export function planLocationAdoption(input: {
           !afterEstablishment.success ||
           !equalLocationValue(beforeEstablishment.data, afterEstablishment.data))),
   }
-  const decision = evaluateLocationAdoption(evidence, input.policy)
+  const decision = evaluateLocationAdoption(comparison, input.policy)
   // Status and successor changes require review even under an automatic adoption policy.
   if (
     ['operatingStatus', 'buildingStatus', 'successorLocationId'].some(key => {
@@ -274,7 +293,7 @@ export function planLocationAdoption(input: {
       acceptedOverrides.location = candidateOverrides.location
   }
   return {
-    evidence,
+    comparison,
     decision,
     blockers,
     factsRevisionId: decision.facts === 'adopt' ? candidate.id : facts.id,

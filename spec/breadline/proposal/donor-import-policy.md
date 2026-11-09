@@ -50,6 +50,15 @@ Source-hash or coordinate changes fail closed. Accepted parent labels remain in
 shortest validated walking route among those sub-exits. Explicit individual choices take
 precedence over the inside-station default.
 
+On 6 November 2026, donor #729 (Saint Honore, Mong Kok East MTR paid concourse) was
+revalidated against the fresh source: only `active` changed from 1 to 0 across all 21
+source fields. The user accepted the upstream deactivation. The decision now binds to
+the new source hash and retains the original hash in `sourceRevalidations`; the existing
+coordinates, Mong Kok East exit D choice, 173 m route and original MTR review provenance
+are unchanged. Its 280 recorded runs retain import eligibility, while the source's
+inactive status keeps the imported Feature unpublished and unavailable for visits.
+Further source or coordinate changes still fail closed.
+
 Donors #558 (Hong Kong A2) and #727 (Hung Hom C2) have accepted source labels but no
 matching catalog entrance. Their station and review label are retained, with null
 entrance/distance and `unsupported` resolution. Catalog mapping remains outstanding; do

@@ -71,13 +71,13 @@ const projectInput = z.strictObject({ projectId: z.string().min(1) })
  * Authorize settings management using persisted ancestry and project field policy.
  * @param ctx Authenticated request context.
  * @param projectId Project to probe before loading settings.
- * @returns Nothing when allowed; throws for missing or unauthorized projects.
+ * @returns Persisted authorized scope; throws for missing or unauthorized projects.
  * @remarks Translators and unrelated project maintainers cannot change adoption policy.
  */
 async function requireProjectPolicyManager(
   ctx: GuardedBaseContext,
   projectId: string,
-): Promise<void> {
+): Promise<NonNullable<Awaited<ReturnType<typeof probeProjectQuery>>>> {
   const probe = await probeProjectQuery(ctx.db, { ref: projectId, refKey: 'id' })
   if (!probe) error(404, 'PROJECT_NOT_FOUND')
   const decision = authorizeProjectUpdateForSubmission({
@@ -87,6 +87,7 @@ async function requireProjectPolicyManager(
     submittedData: { locationUpdatePolicy: true },
   })
   if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+  return probe
 }
 
 /**
@@ -118,12 +119,14 @@ export const setLocationUpdatePolicy = guardedCommand(
       .max(Number.MAX_SAFE_INTEGER - 1),
   }),
   async (input, ctx) => {
-    await requireProjectPolicyManager(ctx, input.projectId)
+    const scope = await requireProjectPolicyManager(ctx, input.projectId)
     const saved = await saveProjectLocationSettings(
       ctx.db,
       input.projectId,
       input.policy,
       input.expectedRevision,
+      { actorId: ctx.user.id, reason: 'Project location policy updated' },
+      { organisationId: scope.organisationId, hubId: scope.hubId },
     )
     if (!saved) error(409, 'LOCATION_POLICY_CHANGED')
     return saved
@@ -223,6 +226,7 @@ export const createLocalLocation = guardedCommand(
       project.organisationId,
       {
         state: input.state,
+        kind: input.kind,
         facts: input.facts,
         parseSource: input.parseSource,
         sharingPreference: input.sharingPreference,
@@ -404,7 +408,7 @@ export const linkFeatureLocation = guardedCommand(
  * `id:<canonical ID>` and canonical ss-UUIDs use a pinned exact lookup, never name search.
  */
 export const searchFeatureLocations = guardedQuery(
-  PlaceSearchInputSchema.extend({ featureId: z.string().min(1) }),
+  PlaceSearchInputSchema.safeExtend({ featureId: z.string().min(1) }),
   async (input, ctx) => {
     const probe = await probeFeatureQuery(ctx.db, {
       ref: input.featureId,
@@ -479,6 +483,7 @@ export const searchFeatureLocations = guardedQuery(
         q: input.q,
         locale: input.locale,
         limit: input.limit,
+        ...(input.filters ? { filters: input.filters } : {}),
       })
       return {
         source: 'saanseoi-latest' as const,

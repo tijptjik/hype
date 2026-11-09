@@ -1,5 +1,6 @@
 // RUNTIME
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -37,7 +38,7 @@ export async function preserveReviewedFeature(
       JOIN location p ON p.id=h.locationId WHERE h.reviewId=? AND h.locationId=? AND h.ssId=?
       AND p.ssId=h.ssId AND p.state='linked' AND p.sourceAvailability='current'
       AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)
-      AND h.sourceRevisionId=(SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY sequence DESC LIMIT 1)`)
+      AND h.sourceRevisionId=(SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1)`)
       .get(
         application.identityReviewId,
         application.retainedLocationId,
@@ -68,17 +69,84 @@ export async function preserveReviewedFeature(
         .all() as { name: string }[]
     )
       .map(row => row.name)
-      .filter(name => !['featureLocation', 'featureLocationHistory'].includes(name))
-    /** Capture domain rows outside the single association/history write. @returns Sorted table bytes. */
+      .filter(
+        name =>
+          ![
+            'featureLocation',
+            'featureLocationHistory',
+            'featureCountRevision',
+          ].includes(name),
+      )
+    const revisionTables = new Set([
+      'featureRevision',
+      'featureRevisionHead',
+      'featureRevisionPublication',
+    ])
+    const headBefore = tables.includes('featureRevisionHead')
+      ? (target.sqlite
+          .query(
+            'SELECT publishedRevisionId,generation FROM featureRevisionHead WHERE featureId=?',
+          )
+          .get(application.featureId) as {
+          publishedRevisionId: string | null
+          generation: number
+        } | null)
+      : null
+    assert.ok(
+      !headBefore || headBefore.publishedRevisionId,
+      'This preservation rehearsal requires an accepted published Feature head',
+    )
+    const countRevisionBefore = target.sqlite
+      .query('SELECT revision FROM featureCountRevision WHERE id=1')
+      .get() as { revision: number }
+    /** Canonicalize JSON object keys without changing arrays or values. @param value Stored JSON. @returns Semantic serialization value. */
+    const canonical = (value: unknown): unknown =>
+      Array.isArray(value)
+        ? value.map(canonical)
+        : value && typeof value === 'object'
+          ? Object.fromEntries(
+              Object.entries(value)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([key, child]) => [key, canonical(child)]),
+            )
+          : value
+    /** Capture unrelated domain rows, retaining revision changes only for the selected Feature.
+     * @returns Per-table hashes; the selected Feature permits its mutation token and JSON key normalization only.
+     */
     const snapshot = (): string[] =>
       tables.map(table =>
-        JSON.stringify(
-          target.sqlite
-            .query(`SELECT * FROM "${table.replaceAll('"', '""')}"`)
-            .all()
-            .map(row => JSON.stringify(row))
-            .sort(),
-        ),
+        createHash('sha256')
+          .update(
+            JSON.stringify(
+              target.sqlite
+                .query(
+                  `SELECT * FROM "${table.replaceAll('"', '""')}"${
+                    revisionTables.has(table)
+                      ? ' WHERE featureId != ?'
+                      : table === 'featureRevisionImage'
+                        ? ' WHERE featureRevisionId NOT IN (SELECT id FROM featureRevision WHERE featureId=?)'
+                        : ''
+                  }`,
+                )
+                .all(
+                  ...(revisionTables.has(table) || table === 'featureRevisionImage'
+                    ? [application.featureId]
+                    : []),
+                )
+                .map(row => {
+                  const values = row as Record<string, unknown>
+                  if (table === 'feature' && values.id === application.featureId) {
+                    const { modifiedAt: _token, ...content } = values
+                    if (typeof content.addressMeta === 'string')
+                      content.addressMeta = canonical(JSON.parse(content.addressMeta))
+                    return JSON.stringify(content)
+                  }
+                  return JSON.stringify(row)
+                })
+                .sort(),
+            ),
+          )
+          .digest('hex'),
       )
     const rowsBefore = snapshot()
     const associationsBefore = target.sqlite
@@ -107,7 +175,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
       locationId: application.retainedLocationId,
       revisionId: identity.sourceRevisionId,
       expectedFeatureModifiedAt: feature.modifiedAt,
-      expectedRevision: before.revision,
+      expectedRevision: before.version,
       actorId: 'system:reviewed-place-migration',
     }
     const result = await relinkFeatureLocation(target.db, input)
@@ -122,7 +190,42 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     assert.equal(after.locationId, before.locationId)
     assert.equal(after.factsRevisionId, identity.sourceRevisionId)
     assert.equal(after.locationRevisionId, identity.sourceRevisionId)
-    assert.deepEqual(snapshot(), rowsBefore)
+    const rowsAfter = snapshot()
+    for (const [index, table] of tables.entries())
+      assert.equal(
+        rowsAfter[index],
+        rowsBefore[index],
+        `Preserved table changed: ${table}`,
+      )
+    // Projection triggers may invalidate count caches even when all effective values stay equal.
+    const countRevisionAfter = target.sqlite
+      .query('SELECT revision FROM featureCountRevision WHERE id=1')
+      .get() as { revision: number }
+    assert.ok(countRevisionAfter.revision >= countRevisionBefore.revision)
+    if (headBefore) {
+      const headAfter = target.sqlite
+        .query(
+          'SELECT publishedRevisionId,generation FROM featureRevisionHead WHERE featureId=?',
+        )
+        .get(application.featureId) as {
+        publishedRevisionId: string | null
+        generation: number
+      }
+      assert.equal(headAfter.generation, headBefore.generation + 1)
+      assert.notEqual(headAfter.publishedRevisionId, headBefore.publishedRevisionId)
+      const recorded = target.sqlite
+        .query(`SELECT r.previousRevisionId,c.actorId,
+        json_extract(r.content,'$.placement.location.factsRevisionId') factsRevisionId
+        FROM featureRevision r JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.id=?`)
+        .get(headAfter.publishedRevisionId) as {
+        previousRevisionId: string
+        actorId: string
+        factsRevisionId: string
+      }
+      assert.equal(recorded.previousRevisionId, headBefore.publishedRevisionId)
+      assert.equal(recorded.actorId, input.actorId)
+      assert.equal(recorded.factsRevisionId, identity.sourceRevisionId)
+    }
     assert.deepEqual(
       target.sqlite
         .query('SELECT * FROM featureLocation WHERE featureId != ? ORDER BY featureId')
@@ -158,14 +261,17 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
       featureId: application.featureId,
       locationId: before.locationId,
       sourceRevisionId: identity.sourceRevisionId,
-      previousRevision: before.revision,
-      revision: after.revision,
+      previousRevision: before.version,
+      revision: after.version,
       overrideFields: Object.keys(overrides),
       phoneMode: overrides.phoneNumber?.mode ?? 'inherit',
       effectiveValuesUnchanged: true,
       otherAssociationsUnchanged: true,
       newHistoryRows: 1,
       unchangedTables: tables.length,
+      countCacheInvalidations:
+        countRevisionAfter.revision - countRevisionBefore.revision,
+      featureRevisionVerified: Boolean(headBefore),
       staleReplayRefused: true,
       integrity: 'ok',
       productionModified: false,

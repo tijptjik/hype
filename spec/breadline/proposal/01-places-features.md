@@ -19,15 +19,170 @@ Accepted architecture, 20 October 2026. Delivery tracking:
 [#213](https://github.com/tijptjik/hype/issues/213). Schedule import remains under
 #195/#196. Production application is a separate release step.
 
-Feature editor loading (Refs #194, parent #180): a known Feature mounts when its own
-authorized read completes. Parent cards hydrate independently without delaying or
-reseeding the form. Location and Photos defer mounting until first visit and retain
-drafts across tabs. Previous/Next requests bounded IDs after the Feature loads; editor
-submits refresh only the first 50 collection records. Collection pagination and ID-only
-traversal were introduced in `3b504c45c`. The editor route and
-`feature-profile-navigation.test.ts` cover readiness with unresolved parents and
-stale-navigation rejection. Authenticated browser timing remains unverified; this does
-not complete broader migration acceptance.
+Feature revision integration must preserve these Location ownership/adoption rules. The
+[Feature write-boundary contract](../../../docs/refactor-guides/Feature-Revisions-Write-Boundaries.md)
+identifies accepted references, shared Organisation corrections and the requirement that
+pending Feature proposals cannot mutate Location projections. Source refresh, Feature
+adoption and Location identity changes remain distinct operations. The user confirmed
+that policy-approved automatic adoption continues with attributed accepted Feature
+revisions. Shared Location corrections save immediately for Organisation managers;
+Feature-only editors require separate Organisation review. Enrolled Features now capture
+those changes through the attributed revision boundary. Live Feature enrollment remains
+disabled pending the full legacy-media cutover rehearsal.
+
+Feature editor loading (29 October 2026, Refs #194, parent #180):
+
+A known Feature mounts as soon as its own authorized read completes. Admin bootstrap
+does not await the Feature collection, and Project/Layer/Organisation cards hydrate
+independently through the shared resource cache. The single-record read projects only
+the effective description and Location-name policy flags needed before parents arrive;
+the persisted parents remain authoritative. Parent hydration must not reseed edited form
+values. Profile locale defaults reuse cached parent settings. Location and Photos defer
+their component requests until first visit and retain drafts across tab switches.
+
+The index and remote search read 50 records per page. Previous/Next uses bounded
+authorized ID pages (maximum 250) and stops once the requested neighbour is known.
+Content/property filters use bounded card pages with the existing predicates; text
+search uses the index's server search. Complete retained index sequences preserve their
+exact order. Scope changes discard stale responses, concurrent scroll requests are
+deduplicated, and native first-page overrides preserve appended pages. A filtered empty
+page continues while more pages remain; failed pages retain results and offer retry.
+Whole-collection completion statistics wait until every matching page is known.
+
+Implementation: `AdminCtx`, the admin Feature index/detail routes, `getFeatureIds`, and
+the ID-only `listFeatures` projection. Regression coverage lives in
+`admin-feature-pagination.test.ts`, `admin-feature-navigation.test.ts`,
+`feature-index-search-loading.test.ts`, `feature-profile-navigation.test.ts`,
+`feature.remote.test.ts`, `feature-query.services.test.ts` and
+`feature-presentation-policy.test.ts`. This change requires no migration. Authenticated
+browser acceptance and post-change timing remain pending explicit approval to reuse the
+existing local Hype session. Broader migration acceptance remains open on the linked
+issue.
+
+Category-only discovery (29 October 2026, Refs #194, parent #180): a selected basic,
+primary or parent taxonomy category permits empty/whitespace search text. Operating
+status alone does not. Applying a category searches automatically; Clear removes results
+while retaining the category and enabling Search/Enter. Building/address providers still
+require text. `sourceClient.ts` uses the filtered Places collection for category-only
+requests because Atlas FTS requires text; parent categories include descendants through
+exact primary-category requests. Each page consumes at most four sequential collection
+reads under a shared 30-second deadline and hydrates up to 20 candidates. Continuations
+retain the category position and publication pin. Preview category/status verification
+remains in place, including continuation through empty filtered pages. Regression
+evidence is in `draft-feature-location-search.test.ts`, `location-source-client.test.ts`
+and `draft-location.remote.test.ts`. Local Atlas returned 20 Bakery and 20 Japanese
+Restaurant candidates with verified previews; Chromium/Firefox component checks passed
+with those previews at desktop and 390px. Authenticated admin acceptance remains
+unverified because browser access exposed no session. This does not complete the broader
+migration acceptance TODOs.
+
+Per-kind lazy discovery (29 October 2026, Refs #194, parent #180): Search-mode Places,
+Buildings and Addresses load the next page when their own result boundary comes within
+160 px of the viewport. Places hydrate 20 candidates per request; Buildings fetch
+details for ten matching buildings and keep each building's address alternatives
+together; Addresses retain their existing 20-result pages. Appending deduplicates stable
+identities and preserves provider order, focus and scroll position. Pending pages show
+one skeleton row matching the result layout, with an accessible loading label and
+reduced-motion support. Hidden kinds and selected/grouped views do not request pages.
+Empty kinds have no count/footer; the shared empty state appears only when all requested
+kinds have finished with no results and no remaining continuation. Failures keep
+existing rows and offer retry; changed query/publication cursors require Search again.
+Nearby Map pin discovery retains its bounded contract.
+
+Text Places discovery uses SaanSeoi's `paginate=true` and opaque `meta.nextCursor`
+contract, with name/brand hits before contextual hits across pages and HTTP 410 for
+changed search/publication identity. Hype and SaanSeoi API changes must ship together.
+The create-a-map hand-over reference and coverage matrix document the upstream contract.
+Focused source/API/building and component tests cover continued, empty, failed and stale
+pages. Chromium and Firefox component checks verified Places 20→40 using live local
+SaanSeoi data, Buildings 10→20 and Addresses 20→40 using fixture providers, distinct
+candidate marker IDs and no 390 px overflow. This evidence does not establish
+authenticated admin acceptance.
+
+A
+[revised draft for Location identity, address scope and relocation](drafts/location-address-occupancy.md)
+separates continuing establishment identity from Feature placement, proposes shared
+address references and explicit occupancy/membership history, and describes the
+building/premises query model. An A–Z scenario catalogue links each case to the
+participating tables and their field effects. The table-by-table walkthrough specifies
+Project relocation defaults, inheriting Layer overrides and `fixed | review | follow`
+behavior, with `review` as the unspecified default. Relationship storage, placement
+decisions and canonical address reconciliation are implemented locally; the complete A–Z
+workflow and production rollout remain unaccepted. The draft now separates
+replacement/merge/split lineage from duplicate-identity redirects, uses target
+`version`/`rawSource` revision names, keeps sign condition in the existing Feature
+property system, and retains address `premisesType` only as raw source evidence. It also
+replaces the proposed Organisation correction history array with immutable
+`organisationLocation` rows linked by `previousRevisionId`; accepted correction tokens
+reference row IDs. Migrations 0149 and 0154 implement the guarded correction-row
+conversion and naming changes. Operational checks use the normal development database
+through `scripts/locations/accept-placement-local.ts` and
+`scripts/locations/accept-address-local.ts`; see the
+[rollout guide](../../../docs/refactor-guides/Location-Lifecycle-Rollout.md) for
+prerequisites and the distinction between fixture navigation and accepted decisions.
+Identity split and arbitrary local-building deduplication remain separate unfinished
+execution paths. The application deploy helper now includes both database refresh
+consumers; migrations and exact dataset plans must still be verified before rollout.
+
+## Establishment substring discovery
+
+Refs #194 (parent #180), with upstream SaanSeoi Places search. Discovery matches literal
+fragments inside words (`axim`, `cake`, or `axim ca` find `Maxim's Cakes`). Names and
+brands take precedence over address/category matches. Terms of at least three characters
+use the trigram index; shorter fragments use a bounded scan. The existing 300 ms
+debounce remains, with up to 20 previews per page. A broad query such as `a` can match a
+business on a later page; exact upstream category filters narrow the candidate set
+before each page limit. The continuation determines whether more candidates remain; the
+page size does not imply an exact total.
+
+SaanSeoi's `placesSearch.test.ts` covers fragments, short/CJK queries, punctuation,
+filtering, parameter bounds, publication guards and atomic index upgrades. Local live
+API checks find Maxim's Cakes for `ax`, `axim`, `cake`, and `axim ca`. Authenticated
+admin-page acceptance remains unchecked because browser session access is unavailable.
+Production requires the upstream trigram-index upgrade and API deployment.
+
+## Historical presentation layers — local implementation
+
+Refs #194. `project.flags.showHistoricalLayers` now controls persistent derived Layers.
+Migration `0147_historical_layers.sql` gives each derivative a unique source Layer; new
+IDs use `history:<sourceLayerId>`. Membership follows the Feature's explicit
+`isIntangible` flag and never changes canonical operating/building status. The public
+query excludes historical Features unless their derivative is enabled and both source
+and derivative are published and unarchived. Feature publication, archive and privacy
+rules still apply. Turning the toggle off retains the derivative's configuration.
+
+Derived Layers retain editable translations, field configuration and map/marker styles.
+Their parent and membership are system-managed, and manual deletion is rejected.
+Source-layer archive restoration applies saved Feature archive state before the source
+update can provision a historical derivative and route intangible Features. Both
+operations share one guarded transaction, so failed/skipped source updates roll back
+restoration too. `src/tests/archive-transaction.services.test.ts` exercises this
+ordering with the real `0147_historical_layers.sql` triggers (Refs #194).
+
+Migration `0152_historical_layer_descriptions.sql` persists English, Traditional Chinese
+and Simplified Chinese descriptions for Ghost Signs Historic, Neon Dismantled and
+Bookstores Permanently Closed. It requires the configured derivatives and translations
+to exist, distinguishes sign removal from business closure, and leaves names and
+source-layer descriptions unchanged. The Black/White marker desaturates only the
+displayed photograph. Physical condition continues to use the existing Feature property
+system.
+
+The guarded local setup script is `scripts/locations/setup-historical-layers.py`; it
+defaults to rehearsal and requires `--apply` for the named local SQLite database. It
+preserves Neon's existing Dismantled ID and captures before-images, exact-ID changes,
+counts, replay checks, foreign-key checks and retained history/media hashes. Local
+application produced Neon 405 Current / 198 Dismantled, Ghost Signs 503 Current / 14
+Historic, and Bookstores 86 Open / 42 Permanently Closed (including existing drafts and
+archives in these inventory counts). These are not public-visible count claims.
+
+SQLite routing runs in the write transaction. Form services read back the committed
+layer assignment after routing, and the existing resource refresh updates the admin
+prism. Browser QA in an isolated database verified Project toggle saves, retained
+settings, managed-layer controls and linked Feature historical/current round trips. The
+QA copy also required the existing address-contract migrations 0145/0146; those broader
+migrations remain unapplied to the primary local database by this task. Production
+rollout remains unexecuted. Correction-row redesign, placement access-hint storage and
+simplified accepted membership references remain proposal changes.
 
 ## Identity and ownership
 
@@ -35,8 +190,318 @@ A Location is a shared physical entity; a Feature is a Project's interpretation 
 bakery is an establishment Location; its Breadline donor role is a Feature. Multiple
 Features can share one Location. Deleting a Feature never deletes its Location.
 Intangible Features can remain unassociated. Establishments are the currently supported
-source kind; buildings and natural features remain unavailable. SaanSeoi's upstream
-`places` family retains its source name.
+canonical source kind. Building exports support verified catalogue association with
+retained provenance; building refresh and natural-feature source adapters remain
+unavailable. Local authoring supports unknown, establishment, building, address and
+natural types. SaanSeoi's upstream `places` family retains its source name.
+
+Location presentation uses the accepted association's `kind`: establishments use a shop
+icon, buildings a building, and natural features a mountain. Discovery rows and type
+filters share `LocationIcon`; address previews use a house pin and unclassified or
+absent identities use a plain pin. The icon component also accepts `street` for road
+presentation; this does not enable street storage, authoring or discovery, which still
+require a domain kind and source adapter (Refs #194).
+
+### Partial street discovery and building association (28 October 2026, Refs #194, parent #180)
+
+Text discovery matches partial structured street names against Address records; streets
+are not a separate result type. SaanSeoi's forward address scorer includes `streetName`
+alongside formatted address, building name and premises name. Queries containing a
+street number retain the existing number/range/parity checks.
+
+Building search alternatives collapse only when their normalized building name and both
+coordinates are identical. Different coordinates remain separate even within 100 metres.
+Expansion retains the real individual Address alternatives. Address-result premises
+grouping keeps its existing street and proximity rules.
+
+**Use as Building** first resolves the Address's exact building name against cached
+Building results. If unavailable there, a dedicated exact-name lookup considers only
+published building points within 100 metres of the Address marker, including records
+listed under another street/address. Building-name editor blur performs this lookup in
+the background; changing the name or marker invalidates stale responses. Equally near
+distinct building identities require review rather than an arbitrary association.
+Premises-only addresses never establish a building match.
+
+The target remains separate from the accepted draft until the explicit Building action.
+If the point changes, the map focuses the target and a warning requests **Move marker
+and link building** confirmation. Cancel leaves the existing choice intact. Cached
+building targets retain their result number, including while viewing an expanded Address
+group; targets absent from discovery use a blue building icon.
+
+The deferred save intent retains the actual building ID, export release and selected
+spatial Address ID, independently of Places `ssId`. Organisation-authorised import
+verifies those exports server-side, records immutable `building-export-baseline`
+provenance, and reuses an import-owned shared Location identity for that building ID.
+Exclusive identities are scoped to the owning Organisation. Retries retain the returned
+Location/revision before linking. Reviewed entity-name edits use the existing
+Organisation correction writer without replacing the verified export baseline. These
+catalogue-backed baselines retain existing Shared/Exclusive state semantics; this does
+not enable Places refresh for building exports or claim an Address ID as a building
+identity. Unmatched buildings still support local authoring. No database migration or
+historical rewrite is required.
+
+Focused evidence: `building-match.test.ts`, `building-search.test.ts`,
+`draft-search-groups.test.ts`, `draft-feature-location-search.test.ts`,
+`building-location.remote.test.ts`, `location-building.services.test.ts` and
+`link-draft-local-location.test.ts`. The sibling SaanSeoi regression cases live in
+`apps/atlas-api/src/services/addressParsing.test.ts`; indexed recall is checked by
+`db/geocoding.test.ts` and `db/geocodingText.test.ts`. Browser evidence uses the real
+building/address exports and `BuildingDiscoveryFixture.svelte`; establishment and
+division remotes are isolated. Authenticated admin save/reload acceptance remains
+outstanding, as do upstream refresh/reconciliation workflows.
+
+### Local identity from address discovery (26 October 2026, Refs #194)
+
+**Address association correction (28 October 2026, Refs #194, parent #180):** In a new
+Feature draft, **Use location only** now schedules creation and association of an
+`address`-kind Location after the Feature saves. It uses the existing
+Organisation-authorized local creation and Feature association APIs, with the chosen
+Shared/Exclusive visibility. The effective localized address supplies the Location
+label; no separate venue name is required and the Feature title stays independent.
+Unlink cancels the pending association while retaining the address; relink restores it.
+The retained creation intent reuses the same Location when association needs a retry.
+Back to results still undoes the draft choice.
+
+The baseline contains authored address content without claiming an unverified upstream
+identity. The accepted Feature placement retains its selected canonical Address ID,
+snapshot, raw evidence, local corrections and pin through the existing link preservation
+path. This does not infer a Building identity, add canonical Address import/refresh, or
+deduplicate independently created local Locations by address text. Existing saved
+Feature address staging and explicit reassociation remain separate workflows.
+
+Evidence: `address-identity.test.ts`, `draft-feature-location-search.test.ts`,
+`link-draft-local-location.test.ts`, and the address-kind initial-link case in
+`location-services.test.ts`. The six-file run passes 212 of 214 tests; the two existing
+Location-service failures (rejection race fixture parameter count and explicit empty
+display clearing) reproduce with the pre-change identity helper. Svelte check reports
+zero errors and 19 existing warnings. The Chromium address fixture verifies acceptance,
+unlink/relink, no separate name field, and 390px layout without horizontal overflow or
+browser errors (`output/playwright/address-location-{linked,mobile}.png`). No
+authenticated session was exposed by the browser connector; actual admin save/reload
+acceptance remains open.
+
+An Address result also supplies address evidence independently of building or
+establishment identity. Named building components offer **Use as Building**;
+**Establishment here** creates a separately named local establishment even when
+discovery finds no matching Place. Premises/estate names alone do not imply a building.
+The draft shows editable localized entity names. Creating from the Feature draft uses
+the selected Shared/Exclusive visibility and existing Organisation-authorized local
+creation and Feature association APIs after the Feature has an ID. A successful local
+creation is retained before association so association retries reuse that Location. The
+existing saved-Feature discovery flow offers the same choices through its local creation
+form.
+
+The inline entity Name edits the local Location creation draft, independently of the
+Feature's Profile title and name-inheritance policy. Its toolbar label follows the
+edited locale. Address-only selections show their pending association control and
+building/establishment creation actions instead of a separate entity-name input,
+including addresses carrying building-name evidence. The canonical address reference is
+retained, but does not establish a Building or Establishment identity. Type menus close
+on outside click, Escape, or choosing an option. Saved linked Locations open the
+Organisation-scoped Location editor for name corrections; these corrections do not
+rename the shared source record. Private visibility and Feature association are
+independent: a private manual Location can still have linked Features.
+
+The Feature facet and generated navigation links use `location` (`#location`); legacy
+`#address` bookmarks resolve to Location. Link glyphs display current state. Inline
+local Name fields replace the draft pencil action. Shared/Exclusive appears beside
+Multilingual: Shared creates `unresolved`, Exclusive creates `manual`. This is
+independent of `sharingPreference`, which remains private consent by default.
+Organisation Advanced stores `defaultLocationVisibility` (migration 0156); existing
+organisations default to Shared. The default only seeds new drafts, never changes
+existing Location visibility, and a deliberate draft selection wins over late fetches.
+Reset returns to cached search results and clears the visibility override. Without a
+selected organisation, Shared is immediately available; loading an existing organisation
+default temporarily disables the selector rather than showing a generic resource-loading
+message. The information trigger sits outside the selector. Localized draft names use
+locale, kind icon, and input rows. Empty draft names and formatted address overrides
+offer the existing Translate-from controls; pending translations must preserve user
+edits and cannot apply to another selected identity.
+
+The selected Feature address retains its address publication/reference. The local entity
+baseline copies effective structured components without claiming an upstream entity or
+Address identity. Catalogue building association uses the independently verified export
+match described above; address IDs are never used as building ssIDs.
+
+A building's supporting display address omits its building-name and unit components,
+retaining street number, street, estate/premises, phase/block and locality context.
+Establishment addresses retain building and unit guidance. Complete address evidence and
+explicit custom display text remain intact; omission is component-based and never a
+substring deletion from a name or freeform address.
+
+### Shared address presentation and editing (Refs #194)
+
+The Feature association review presents the original Address on the left and the
+Location record on the right. Components run from street and number through complex,
+phase, building, block, level, unit and access hints. Corrections edit the selected cell
+in place and remain Feature-owned; switching sides discards that correction. English UI
+labels use **Complex**, while the stored `premises` kind and source keys stay stable.
+Reselection uses an accessible icon button with a tooltip. A separate marker row repeats
+the discovery map's marker numbers/colours with the same direction switch and distance
+between positions; it defaults to the candidate pin when available, with an explicit
+choice to keep the original coordinates. Hover/focus on each compact marker card
+highlights its map marker. The map retains at least 128 usable pixels while the review
+scrolls independently. Review sizing uses intrinsic content height: long comparisons can
+shrink the map, while compact proposals return spare body space to it, capped at 65% of
+the viewport. Manual resizing remains authoritative until the content requirements
+change. Change triggers a fresh layout calculation, reserving a bounded
+candidate-results area rather than letting streaming result counts repeatedly resize the
+map. Comparison framing includes only these two markers, with 20% margins plus the
+marker radius, and refits after resize. The unnumbered blue marker uses a location-pin
+icon. This avoids creating two extra map canvases for the comparison.
+
+The specificity selector fills a recessed strip flush beneath the header. Its content is
+vertically centered with expansion and ring-legend buttons at the far right; the
+collapsed view retains only titles and the compact track. Selecting a record collapses
+it. The legend explains address evidence, available matches, the selected level and
+lookup state. The outer green ring pulses during lookup, then shows the strongest
+candidate's evidence strength as an arc once it reaches 60/100. An exact match or the
+original published record fills the ring. This is a heuristic score, not a probability:
+exact names contribute 55, distinctive contained names 45, distance contributes up to
+25, street and number agreement 10 each, and overlapping contradictions subtract 15
+each. Missing components are unknown, not contradictions. Partial scores cap at 95 and
+never trigger automatic selection. Exact inference retains the name, street, number,
+proximity and complete address agreement gate. The nearby theatre example scores 70/100;
+proximity alone cannot reach the threshold. Establishment discovery also runs for an
+initial Building so those candidates can draw attention before the user switches kinds.
+The ring does not encode selection. Keyboard focus outlines only the notch. Reselecting
+the active level preserves its comparison and unsaved corrections. Switching levels and
+returning restores the selected record and review for that level. Notches have opaque
+backgrounds and a single solid centre dot for the selected level only. Evidence is
+encoded by the rings. Hovering an unselected notch previews the choice with a semiopaque
+primary dot; leaving removes it. Hover never scales the notch. Search begins the
+following section.
+
+When comparing different records, the original selection and candidate each have a
+column header with their own kind icon and full name. The candidate header retains the
+name editor and reselection action. It is highlighted as the selected identity, while
+the original is visually unselected; a fixed, noninteractive arrow points right. The
+address component rows remain independently selectable and aligned under both
+identities. Populated candidate fields are the default, with original values filling
+missing fields; explicit normalized clears remain deliberate. Additional details expand
+and collapse with reduced-motion-aware transitions. Map-position descriptors are
+centered in their respective columns. Multilingual shares the comparison heading row,
+allowing the title to wrap within its column.
+
+A single-record proposal uses an emphasized card with a kind icon, record name,
+kind/sync metadata and any supporting address (without repeating a Building's name). The
+primary Use action includes a checkmark; the secondary Change action includes the
+reselection icon. An inline pencil edits the establishment name. This proposal does not
+offer address-part editing; component disambiguation remains in the two-record
+comparison. Acceptance controls live on the proposal instead of being duplicated in the
+footer. There is no Cancel button in association review; the header back action supplies
+navigation. Back from the accepted editor first reopens the proposal, preserving the
+accepted identity and reviewed address. Its header restores the association heading and
+hides address/sync/visibility form controls until Use returns to the editor; a further
+back action returns to discovery results.
+
+The selected identity and establishment-name editor share one field card. Corrections
+return to clickable text on blur, retaining their primary-colour override dots; Wrapped
+names edit in an autosizing textarea whose minimum height matches the displayed name;
+component labels retain their space during editing. Reset is offered only for a real
+value difference (including unconfirmed street text), and restores the chosen source
+value and Edit action. Outside pointer clicks finish before the field switches
+presentation, so wrapped text cannot move an action away from the pointer. Multilingual
+adds native locale prefixes beside the other languages; the active user's language has
+no label, and each field opens independently. Street numbers, levels and flat/unit
+identifiers are shared and have no translation rows. Level and Flat / Unit corrections
+use the regular address editor's type vocabulary, reference parsers and semantic
+setters, keeping type and reference separate. The Map pin title, distance and switch
+stack in the centre column between the marker cards. Street corrections require an
+explicit selection from the shared street catalogue and retain that street ID; building
+names offer the known catalogue and allow custom text. Catalogue selections apply their
+available language variants together. Name edits belong to the accepted draft, retaining
+the selected Location identity and immutable source evidence; they do not rename the
+source record.
+
+The standalone Location detail puts the marker map above the record. Its left column
+contains identity, owner, state, contacts and public revision/publication metadata; its
+right column uses the same `AddressDetails` and `AddressDivisions` components as the
+Feature address form. Building number ranges, blocks, phases, floor and unit expressions
+are combined inputs; their parsed components and language-specific ordering stay out of
+the field list. Translated fields are shown on request. A partial component correction
+must retain any display text that has not yet been structured; lookup choices and parser
+proposals require explicit selection before they replace the draft.
+
+The detail uses the standard `Main.Root`/`Main.Facet`/`FormSurface` resource workspace.
+`FormFeatureAddress` owns the full-width map, resize handle, Location toolbar and
+coordinate/copy controls. The resource header owns the record title, Locations
+breadcrumb and Edit/Cancel/Save actions. Section gutters provide the content inset; the
+map meets the header and sidebar edges.
+
+The same header Edit/Cancel/Save flow owns localized Location names. Existing language
+variants appear in the metadata column when viewing. Editing places type and names above
+the address in the main column, with full-width name controls; each name can be edited
+or assigned to an unused language, and Add language creates a translation only on
+request. Removing a language explicitly clears it, while at least one non-empty name
+must remain. Names and address changes save atomically behind both revision fences.
+Name-only saves retain the entire address and canonical publication evidence.
+Source-linked names become Organisation corrections; owner-controlled manual records
+advance their immutable baseline. Linked Features are not rewritten.
+
+The owner displays the Organisation's localized short name. Created/revision timestamps
+are formatted in Hong Kong time. Baseline sequence, Location revision ID and
+Organisation correction revision ID have distinct labels; opaque tokens and publication
+IDs are grouped under Record identifiers. The correction revision token versions
+Organisation-specific corrections and is not an Organisation ID.
+
+The owner can change an unmatched/manual Location's type through the same atomic Save
+flow, with stale revision/type rejection and immutable type-change provenance.
+Source-linked records cannot be reclassified this way. Migration
+`0140_location_address_kind.sql` extends the type constraint by replacing only the kind
+column; it preserves the lifecycle tables, foreign keys, records and triggers. It is
+rehearsed against populated associations and applied locally; remote rollout remains
+outstanding.
+
+Discovery follows the intended type: unknown/establishment requests Places, Buildings
+and Addresses; building requests Buildings and Addresses; address requests Addresses
+only. Both text and nearby discovery use this policy. Missing providers are explicit
+incomplete coverage while successful previews remain selectable. Nearby discovery
+reports its 20-preview cap and upstream pagination limits separately from incomplete
+coverage (Refs #194). The UI offers a narrower-search hint for limits, a retry for
+incomplete results, and an unavailable warning only for a failed request. Nearby
+category and operating-status filters run on the cell response before the nearest-50
+candidate and 20-preview caps. Unrelated closer places must not crowd out matching
+establishments; detail previews recheck the selected filters. The current SaanSeoi
+integration has no Buildings adapter, so Buildings results remain blocked; this does not
+infer a building identity from an address point. Standalone Place previews can supply
+details without asserting canonical identity; source-identity acceptance remains a
+separate reviewed operation.
+
+Selecting an address for an establishment asks for the establishment's localized names
+and exposes floor/unit authoring. Feature creation uses the same name and address
+components. Building editors hide every 3D option, including source unit inventory;
+local building writes remove authored unit/floor details. Address editors retain 3D
+controls to specify a more precise location. Focused acceptance tests cover type
+routing, metadata, migration preservation, atomic type/fact saves and stale guards.
+Browser evidence in `.local/locations/type-editor-20261021/` covers the real Location
+shell and local persistence, with intercepted search fixtures rather than live upstream
+search acceptance.
+
+The reverse lookup lists current `featureLocation` associations with localized Feature,
+Project and Layer names and publication/archive state. Each row passes
+`authorizeFeatureAdminReadForProbe` independently of Location ownership. Internal scans
+are bounded; accessible results are paginated after authorization and all pages
+reauthorize. Only current links appear, including drafts or archives when permitted. No
+selected sidebar prism narrows this reverse lookup.
+
+Address divisions are resolved from the current marker against mirrored SaanSeoi
+membership polygons, rather than copied from a nearby address. Missing geography and
+failed lookups remain explicit. Administrative and landform memberships are read-only.
+Hood and locality choices use stable, class-validated IDs, explicit omission, or a
+dynamic `{ mode: 'marker' }` reset. Cities remain excluded under the existing
+address-division rules. No editable country, area, district or island keys are accepted
+in the override contract; authored factual IDs are removed at the Location write
+boundary. These display choices do not rewrite canonical publication evidence or the
+Feature's spatial membership index.
+
+The Location save submits marker, authored content and subjective selections together
+through its existing Organisation-authorized correction flow, with both the baseline and
+Organisation revision captured when editing begins. Feature forms retain their own save
+and adoption flow. Focused acceptance coverage lives in
+`address-division-editor.test.ts`, `address-division-context.test.ts`,
+`address-divisions-ui.test.ts` and the structured editor write case in
+`location-services.test.ts`.
 
 HYPE owns the permanent `location.id`. New Locations have opaque 12-character IDs using
 HYPE's NanoID alphabet. Manual creation uses `nanoid(12)`; repeatable Breadline imports,
@@ -184,14 +649,65 @@ and derived jobs together.
 
 ## Project policy and source adoption
 
-The **Places** tab follows **Fields** and saves with the regular Project form. Policy
-and Project fields update in one statement, guarded by both revisions. Defaults require
-review for location and establishment changes. Each Project can configure coordinate
-adoption (automatic, all reviewed, or a displacement limit in metres), address identity,
-shop/unit and establishment evidence changes. The policy editor presents these as four
-auto-fitting scenario cards under **Upstream Change Acceptance Policy**, with the
-distance limit shown only for distance-based coordinate acceptance. Controls retain
-scenario-specific accessible names.
+`locationAdoptionProposal.evidence` retains the complete immutable assessment: `policy`,
+`plan`, and optional `candidateOverrides`. Within the plan, `comparison` contains the
+before/after positions and address/unit/establishment change flags. Historical plans
+using the inner `evidence` key are normalized to `comparison` on review reads without
+rewriting stored assessments. Decisions remain separate in `factsDecision` and
+`locationDecision` (Refs #194).
+
+Project **Advanced → Location Policies** saves with the regular Project form. Policy and
+Project fields update atomically, guarded by both revisions. Six cards cover relocation,
+coordinates, address, unit, establishment evidence and discovery radius. Radius is a
+50–1,000 m slider in 50 m steps, displayed last. Loading renders six matching skeleton
+cards. The distance limit appears only for distance-based coordinate acceptance.
+Controls retain scenario-specific accessible names.
+
+### Pre-release policy v1 and relocation settings (22 October 2026, Refs #194)
+
+Canonical `project.locationPolicy` reads/writes use `version: 1`. Coordinate, address,
+unit and establishment adoption use `follow` instead of `automatic`; coordinate
+`review`/`withinDistance` behavior is unchanged. This feature set has not reached
+production; revise the initial contract in place and carry any data conversion in the
+current migration plan. No v2 contract or compatibility reader for superseded
+unpublished vocabulary is required. The new `relocation` rule defaults to `review`,
+including for absent/null policies. JSON `version` identifies the contract;
+`locationPolicyRevision` remains the write fence.
+
+Project **Advanced → Location Policies** groups relocation and upstream acceptance cards
+with the discovery radius. The separate Project Locations tab is removed. It stores
+`relocation: fixed | review | follow` in that same JSON. Layer **Advanced** stores a
+nullable `relocationPolicy` override and independent `relocationPolicyRevision`; null
+inherits the Project setting. Read settings through persisted ancestry and existing
+Project/Layer management authorization. Project policy sections merge into one draft
+without erasing each other's edits or rebasing stale heads. The regular Layer form
+commits core fields and policy/counter in one guarded update. Saving/clearing a policy
+does not replay Feature adoption or rejected candidates.
+
+The additive SQL is numbered `migrations/0143_layer_relocation_policy.sql` in the
+current migration plan. It must be installed before code reads the new Layer columns. No
+primary or remote database is migrated by this implementation. The read-only-source
+rehearsal is `scripts/locations/rehearse-location-policy.py`; it retains exact-ID plans,
+before-images, all-table preservation hashes, integrity/FK results and no-op replay
+receipts in an explicitly selected ignored local directory.
+
+The setting contract and editors are implemented locally. The proposed occupancy,
+address mirror and relocation adoption workflow remain separate work. The editor omits
+the implementation-status notice; this does not activate relocation handling. Existing
+ordinary adoption still uses its current evidence checks, independent groups and
+rejection rules with the current v1 contract. Named dataset policies are not
+bulk-applied by this settings change.
+
+The v1 adjustment passes 280 focused Vitest cases across 11 files, 16 Bun Location
+tests, the Location refresh Worker typecheck and scoped Biome checks. Prior Chromium
+acceptance exercised the real Project/Layer controls on an isolated migrated copy: save,
+reset/cancel, Layer inheritance/override/clear, Advanced deep links and combined Project
+policy drafts. Light and dark panels were inspected; the acceptance run had no page
+errors and left Features, Location revisions/corrections and binding history unchanged.
+The read-only-source migration rehearsal preserved all existing values across 76 tables
+and 12 Layers, with zero conflicts/FK violations, valid integrity and no-op replay. Full
+application checking retains 10 unrelated errors and 19 warnings; no policy-path
+diagnostics remain. The implementation is local and uncommitted.
 
 The shared mirror advances independently of each Project's accepted data.
 `featureLocation` accepts facts and location revisions independently. Two Projects can
@@ -380,10 +896,10 @@ task. Simply opening a task never adopts a revision.
 Tasks should be a presentation of existing identity/adoption review state, with stable
 keys derived from Feature, review kind and candidate revision. Do not add a second task
 lifecycle/table that can disagree with review decisions. Organisation permissions still
-control editing a Place; Feature permissions control adoption. The basic review section
-now presents pending adoption reviews as **Tasks**, with a count and an action to
-prepare the latest locally authored address for review. The dedicated tab, unified
-identity tasks and richer component comparisons remain UI follow-up work; they do not
+control editing a Place; Feature permissions control adoption. The Feature Updates tab
+and Review Queue share source-backed task rows for adoption, identity and merge reviews,
+with counts and an explicit latest-local review action in Updates (see the 29 October
+separation below). Richer component comparisons remain UI follow-up work; they do not
 require another persistence model.
 
 ### Location tasks in the shared Review Queue (22 October 2026, Refs #194)
@@ -471,6 +987,16 @@ without a verified match action. A selected Address seeds the structured proposa
 retaining the Feature's unit evidence. Choosing an existing Place retains the prepared
 address as a Feature draft after association; the normal Feature Save persists that
 correction.
+
+After successful Feature creation, hydrate the saved record and replace
+`/admin/features/new` with its persisted ID through shallow navigation. Retain the
+current facet, query parameters, focus and scroll without adding a history entry or
+resetting the editor. Clear the draft discovery undo marker; subsequent saves update the
+persisted Feature. Shared save confirmations begin their toast lifetime after post-save
+linking, refresh and navigation, retaining the original confirmation time. Regression
+coverage: `src/tests/feature-create-navigation.test.ts` and
+`src/tests/feature-profile-navigation.test.ts`. An authenticated creation check remains
+separate from the browser fixture for shallow navigation and toast persistence.
 
 Local creation requires Create & allow sharing or Create privately. Both preserve
 Organisation ownership and the independent manual/unresolved distinction. The default is
@@ -789,10 +1315,11 @@ Results and map markers distinguish address candidates with an amber colour; tex
 badges/icons make the distinction independent of colour. Hover/focus highlights the
 matching marker. The existing fixed map/control bar and independently scrolling results
 remain. Search reports partial/truncated coverage, including when one selected family
-fails. Address-only selection stages the address through the regular Feature form; it
-neither creates an establishment, changes the existing association, nor moves the
-Feature's map/routing pin. Saving/Canceling remains the parent Feature form's
-responsibility.
+fails. For an existing saved Feature, address-only selection stages the address through
+the regular Feature form; it neither creates an establishment, changes the existing
+association, nor moves the Feature's map/routing pin. New Feature drafts additionally
+schedule the address-kind association described above. Saving/Canceling remains the
+parent Feature form's responsibility.
 
 #### Address identity versus retained address content
 
@@ -862,6 +1389,25 @@ Origin; the raw port-4173 origin is not allowlisted. A pre-existing layer previe
 remains outside this slice. Full application type-check reports ten unrelated errors and
 nineteen warnings; no changed Location file is among those diagnostics.
 
+### Deterministic Location kind seed
+
+Refs [#194](https://github.com/tijptjik/hype/issues/194). The
+[guarded dataset kind seed](../../../scripts/locations/seed-location-kinds.md) resolves
+persisted ancestry for Ghost Signs buildings, ELN venue establishments, Independent
+Bookstores and Breadline donors. It inventories archives, shared identities and
+unassociated Features, excludes Neon/dropoffs, and authors only unknown owner-controlled
+local kinds using immutable type-change provenance. Contradictory/source-linked
+identities and mixed dataset requirements require review; accepted Feature projections
+and Organisation corrections are preserved.
+
+The populated local-copy rehearsal covers 995 Features and 913 associated Locations: 601
+eligible changes, 312 already-correct kinds and 82 unassociated Features retained as
+unresolved assertions. Exact-plan replay, stale rejection, source/shared conflicts,
+foreign keys and compensating rollback were verified. Normal baseline triggers retain
+their refresh queue evidence. Agent 7 assigns the unnumbered data plan after contract
+integration; regenerate against the final schema and target snapshot. No primary-local
+or remote application is implied.
+
 ### Description-derived image capture metadata (21 October 2026)
 
 Refs [#194](https://github.com/tijptjik/hype/issues/194) and existing image-date issue
@@ -925,6 +1471,27 @@ Location and cannot name itself. Shared records cannot link to private successor
 Removing the relation sets it to null through the same revisioned save flow. Research
 source URLs remain in local review material; researched names must still be supported
 before application.
+
+Successor visibility is checked again inside creation/correction transactions. If a
+successor becomes private or unavailable after validation, the save creates no new
+identity, baseline or correction. Omitted status fields stay absent, so saving an
+unchanged status does not append a revision. Accepted Feature projections carry their
+correction revision tokens alongside the accepted baseline tokens.
+
+[The operating-state rehearsal](../../../scripts/locations/rehearse-operating-status.ts)
+checks a disposable populated `rehearsal.sqlite` next to its `before.sqlite` backup
+under `.local/locations/`: immutable history, unchanged Feature associations before
+adoption, explicit reviewed adoption, stale/no-change replay and public projection. Its
+synthetic manifest is acceptance evidence only and must never be applied as a researched
+closure claim.
+
+The seed's
+[offline review tool](../../../scripts/locations/seed-location-kinds.md#offline-review-tool)
+shows each missing association with the original split exclusion and saved Feature
+evidence. All 82 exclusions are verified against that receipt: 56 intangible records and
+26 drafts were skipped before matching. Reviews export expected revisions and
+recommendations as JSONL; they do not mutate flags or associations. Nearby saved
+Locations are investigation leads, without an identity match claim.
 
 ## Versioned Location facts and building preparation (21 October 2026)
 
@@ -1031,22 +1598,41 @@ and primary input databases are read-only during rehearsal. Regression coverage 
 wrong subtype/version rejection, addressless buildings, typed-detail retention on edits,
 optional geometry, immutable reference pins, source replay and import SQL.
 
-### Development discovery latency (22 October 2026, Refs #194)
+### Policy coherence with occupancy history (22 October 2026, Refs #194)
 
-Development address and Place discovery use `http://api.atlas.localhost`; production
-uses the hosted SaanSeoi API. The new-Feature search publishes each provider's results
-independently, appends later results without renumbering existing rows, and cancels
-obsolete address requests. Local preview requests use a development credential.
+`locationPlacement` now assesses and executes occupancy-only targets independently of
+the ordinary facts evaluator. Project/Layer `fixed`, `review`, and `follow` policies
+control relocation. A `fixed` Feature produces no routine move proposal; review
+candidates enter the existing Task Queue; eligible verified `follow` candidates commit
+their accepted placement atomically. Missing destination addresses, unverified or
+planned occupancies, competing current occupancies, local pin/address corrections, unit
+details and access directions prevent automatic movement.
 
-Coverage lives in `src/tests/draft-feature-location-search.test.ts`,
-`src/tests/draft-location.remote.test.ts`, `src/tests/geocoding.test.ts` and
-`src/tests/location-source-endpoint.test.ts`. Chrome verification of the real component
-with controlled responses displayed addresses in 785 ms while Places remained pending
-for four seconds; selection survived the late response. Authenticated end-to-end
-verification remains outstanding. Local Central searches measured approximately 3.5
-seconds for addresses and 3.4 seconds for Places before preview hydration. Indexed
-address lookup and fewer Place preview round trips remain optimisation opportunities;
-backend streaming has not been introduced.
+The executor classifies each candidate as a correction to the same accepted placement or
+a changed occupancy. It uses resolved Project/Layer relocation consent for the latter,
+captures exact occupancy/address/membership versions, and appends accepted placement
+history. The address, unit and coordinate policies must not bypass `fixed` or a pending
+relocation review. A renamed building or corrected address is not itself a move; a
+coordinate distance threshold is not move consent. Name/brand changes assess identity
+evidence, never automatically reassociate a Feature. Search radius affects discovery
+only. Local overrides, access directions, ambiguous identities and incompatible address
+groups retain their review gates. Canonical address correction/rebase review remains
+distinct from Feature placement acceptance, even when both involve the same address
+revision.
+
+Local lifecycle storage and migration rehearsal are described in the
+[Location lifecycle rollout guide](../../../docs/refactor-guides/Location-Lifecycle-Rollout.md),
+Refs #194. Migration 0151 captures accepted geometry, policy and proposal receipts with
+immutable binding history. Curated address imports require the expected canonical
+predecessor; Organisation editors cannot author canonical content. Address review
+accepts canonical values or reasserts sparse differences against the reviewed version;
+equal differences retire automatically under eligible follow policy. Access directions
+remain on the accepted binding and in its immutable history, with a Feature envelope
+projection for existing readers. Task Queue actions are Move, Keep here and Review
+later. Bounded reconciliation returns a continuation cursor that ingestion callers must
+exhaust. The focused relocation/address/queue workflow is locally verified; complete A–Z
+identity merge/split execution and production activation are separate work. Breadline
+import follow-up is documented there.
 
 ### Locations directory index (22 October 2026, Refs #194)
 
@@ -1068,19 +1654,58 @@ an authenticated account remains pending; the local browser redirects to sign-in
 New Features begin with “Find an existing Place” (primary) or “Add your own”
 (secondary), with icons and a short explanation. The Profile form expands and fades in,
 and visiting Location permanently dismisses this chooser for that draft. The unplaced
-map starts over Hong Kong at a harbour-wide zoom without a marker. Location follows
-Profile in navigation. Draft discovery searches read-only Places previews and
-building/address geocoding without requiring a Feature ID; selecting a result copies its
-marker/address and fills empty localized titles while remaining on Location. Search
-results animate in flow beneath the search control, with five visible rows before
-scrolling. Numbered map previews fit all results and highlight on hover or keyboard
-focus. New drafts have no accepted pin until a result is selected or Drop Pin places one
-at the current map centre. Divisions appear after placement; address fields appear only
-after an address result is selected. Titles remain editable and independent; this is
-neither a canonical Location link nor a new name-following policy. Existing authored
-titles are retained. The Photos facet and image pane are omitted until the Feature has a
-saved ID. Draft search reports partial provider failures and discards superseded
-responses.
+map starts over Hong Kong at a harbour-wide zoom without a marker. Profile and Location
+share one mounted map and its resize state, initially half the viewport height. Only the
+form panes fade and slide when switching tabs; reduced-motion preferences disable that
+animation. Location follows Profile in navigation. Draft discovery searches read-only
+Places previews and building/address geocoding without requiring a Feature ID; selecting
+a result copies its marker/address and fills empty localized titles while remaining on
+Location. Search results animate in flow beneath the search control, with five visible
+rows before scrolling. Numbered map previews fit all results and highlight on hover or
+keyboard focus. New drafts have no accepted pin until a result is selected or Drop Pin
+places one at the current map centre. Divisions appear after placement; address fields
+appear only after an address result is selected. Titles remain editable and independent;
+this is neither a canonical Location link nor a new name-following policy. Existing
+authored titles are retained. The Photos facet and image pane are omitted until the
+Feature has a saved ID. Draft search reports partial provider failures and discards
+superseded responses. A building move requires an explicit primary-colour confirmation;
+Save remains blocked during the requested lookup and until the move is confirmed or
+cancelled. Accepted markers retain the building result number, or the originating row
+number for a building resolved outside the result list. Returning to results exits
+nested street-address alternatives to the grouped overview. The current building export
+contains footprint-matched address alternatives, without a designated whole-building
+address or division memberships; these must not be inferred from a numeric span. Refs
+#194.
+
+Migration 0153 extends reviewed identity consolidation with dependency snapshots,
+immutable relationship alias resolution and explicit lineage; it adds atomic address
+ordering receipts and removes address coverage. Migration 0154 applies the v1
+`version`/`rawSource` naming without rewriting retained content hashes. The Location
+editor offers paginated relationships, immutable history and evidenced lineage events.
+See the rollout guide for exact verification and remaining identity-variant acceptance;
+no remote activation is implied. Refs #194.
+
+### Development discovery latency (22 October 2026, Refs #194)
+
+Development address and Place discovery use `http://api.atlas.localhost`; production
+uses the hosted SaanSeoi API. The new-Feature search publishes each provider's results
+independently, appends later results without renumbering existing rows, and cancels
+obsolete address requests. Local preview requests use a development credential.
+
+Coverage lives in `src/tests/draft-feature-location-search.test.ts`,
+`src/tests/draft-location.remote.test.ts`, `src/tests/geocoding.test.ts` and
+`src/tests/location-source-endpoint.test.ts`. Chrome verification of the real component
+with controlled responses displayed addresses in 785 ms while Places remained pending
+for four seconds; selection survived the late response. Authenticated end-to-end
+verification remains outstanding. Local Central searches measured approximately 3.5
+seconds for addresses and 3.4 seconds for Places before preview hydration. Indexed
+address lookup and fewer Place preview round trips remain optimisation opportunities;
+backend streaming has not been introduced.
+
+Development setup follows
+[the normal database rebuild](../../../docs/refactor-guides/Development-Database-Rebuild.md):
+fresh HYPE and Breadline exports, migrations and reviewed conversions, then
+development-only mocks. Refs #194.
 
 Draft-discovery recovery and presentation (22 October 2026, Refs #194): result rows
 expose the source type with an icon and label, use the map's numbered badge colours, and
@@ -1120,30 +1745,111 @@ immediately and remains distinct from Drop Pin. Empty type selection prompts the
 enable a type. Desktop and 390px-wide Chrome checks and ten focused component tests
 verify the controls and request selection.
 
-## Discovery coverage messages
+Location queue presentation and seed coverage (Refs #194): queue rows retain the linked
+Feature title and fall back to the Location's localized names when no visible authored
+title is available. The review action appears beneath the name, and badges wrap within
+their grid column. The local rebuild seeds all seven task types on separate unpublished
+Features; Location tasks use persisted adoption or identity evidence and the normal
+queue/editor routes. Replaying the seed must preserve decisions rather than reopen
+completed reviews.
 
-Refs #194. Nearby discovery reports its 20-preview cap and upstream pagination limits
-separately from incomplete coverage. The UI offers a narrower-search hint for limits, a
-retry for incomplete results, and an unavailable warning only for a failed request.
+### Draft discovery presentation and nearby search (23 October 2026, Refs #194)
 
-Nearby category and operating-status filters run on the cell response before the
-nearest-50 candidate and 20-preview caps (Refs #194). Unrelated closer places must not
-crowd out matching establishments; detail previews recheck the selected filters.
+Draft results use primary-theme numbered markers and matching row badges. Selection
+retains the same marker elements, flies to the chosen result and fades the others; Back
+restores them. Selected markers remain draggable. Search Tab navigation goes directly
+into results, with Shift+Tab returning to search and the preceding type controls.
 
-Verified locally at 114.15095, 22.28334 with a 1,000 m radius: Health care restored from
-0 to 20 results, Shopping from 2 to 20, and Food and drink from 7 to 20. All 60 restored
-previews loaded and matched their filters. Authenticated browser verification of this
-correction remains outstanding.
+Address rows show source component blocks, keeping street number and street together.
+Locality labels use cached public lookups of explicit source division IDs;
+administrative areas are omitted. Free-form evidence remains intact rather than being
+guessed into structured components. Drop Pin requests current device geolocation, with
+an explicit error when unavailable. Search Nearby uses the selected types and a 50–1000m
+radius control in the map's upper-right corner. Public Place discovery is account-gated,
+bounded and read-only; it does not create a canonical association.
+
+Verification: 23 focused tests passed. Authenticated browser checks against an isolated
+local database confirmed six retained markers, fading/restoration, theme colours,
+structured street/locality blocks, keyboard navigation, and device coordinates with a
+500m nearby radius. Basemap tile rendering remains unverified on the local test origin.
+The whole-app check retains its existing 10 errors and 19 warnings outside this scope.
+
+Location review Profile presentation (Refs #194): Location tasks reuse the Feature
+visual section with the linked Feature photo and a camera-synchronized OLD/NEW movement
+overlay. The distance is straight-line displacement, not a route. Map source failures
+remain explicit while the movement evidence stays visible. Reviews use the shared
+seven-level address blocks (unit/floor, section/building, block/phase/premises,
+number/street, administration, locality and islands), hiding unchanged blocks until Show
+all. Feature Location and Location detail reuse the same renderer. Retained source
+content remains authoritative; an absent section name is not inferred from a building or
+block.
+
+Location review detail uses the same FormSurface and SectionHeader components as
+Organisation and Feature admin details: full-width tinted icon headings, flat comparison
+bodies and divided field columns. Task labels and Feature breadcrumbs appear only in the
+page toolbar; nested comparison cards are not used.
+
+Task header actions retain the existing reason, stale-evidence, dependency and
+permission guards. History is collapsed and refresh explains that it checks newer
+evidence without reopening decisions. Demo seeds reuse mirrored Feature photos and
+append richer address snapshots only for untouched synthetic review examples;
+accepted/rejected examples and existing source snapshots remain intact.
+
+Local verification covers all four Location task editors, both shared address views,
+changed/all expansion and movement overlays. The local basemap request returned HTTP
+401; geographic overlays and photos were verified without claiming successful basemap
+delivery.
+
+### Temporary Street catalogue transport (Refs #194)
+
+Hype's temporary catalogue is served at `/mocks/saanseoi/streets/names/manifest.json`.
+`loadStreetCatalogue` in `src/lib/addresses/streetCatalogue.ts` accepts an absolute
+manifest URL and an injected fetch implementation. It fetches the JSON array
+representation and verifies chunk hashes, byte lengths, counts and unique canonical IDs
+before returning the complete inventory. The mock is a transport fixture; address form
+selection and automatic translation adoption are not connected to it yet.
+
+Regenerate with `bun scripts/addresses/generate-street-catalogue-mock.ts` using the
+sibling SaanSeoi checkout. The fixture contains the reviewed LandsD baseline's 4,053
+canonical identities, English and Traditional Chinese names, and `divisionCodes`
+resolved to the SaanSeoi geographic district code registry. Combined publisher district
+labels expand to multiple codes. Simplified Chinese is absent pending an authoritative
+translation policy. The manifest records the baseline evidence hash and division-code
+registry hash, declares `mock: true` and leaves `apiReleaseSetId` null. It does not
+claim to represent a currently published API release or include subsequent lifecycle
+changes.
+
+Proposed upstream discovery convention, subject to SaanSeoi's API design:
+`/{family}/{version}/exports/{domain}/{variant}/{projection}/manifest.json?region=hk`.
+For example, `/divisions/v0.2/exports/geographic/saanseoi/names/manifest.json`. The
+manifest lists available format/envelope combinations and exact immutable file URLs,
+including chunks when needed. JSON arrays, NDJSON records and Parquet rows are
+representations of the same logical projection. The mock implements only JSON arrays.
+Format is independent of envelope; clients negotiate using manifest metadata, rather
+than inferring semantics from file extensions alone.
+
+Production manifests must pin a published API release set, region, schema and
+projection, define active membership and locale policy, and identify the exact Divisions
+release used for code references. Optional `release` selection resolves an exact
+historical release; omitted selection resolves latest once. Required artefacts must be
+built and verified before publication exposes their manifest. Immutable release
+manifests and files receive long-lived caching; latest discovery revalidates. File
+hashes describe decoded representation bytes. Public object serving needs appropriate
+CORS, HTTP range support for Parquet, and licensing and attribution metadata. These
+upstream publication requirements are not implemented by this Hype fixture.
 
 ### Draft discovery and address entry controls (Refs #194)
 
 Discovery rows show publisher taxonomy until explicitly previewed. Preview focuses that
 candidate while retaining all map markers; only the selected row exposes link or address
 acceptance actions. Accepted establishments keep their source name and Unlink action in
-the toolbar, independently of whether the Feature inherits the name. The last result's
-forward Tab reaches Add Manual Entry; reverse Tab retains footer navigation. The empty
-state centers three guided entry options. Manual entry remains available in the footer
-once results are available.
+the toolbar, independently of whether the Feature inherits the name. Unlink removes the
+pending association and venue identity while keeping the current address, marker and
+edits as an accepted manual entry. Add Manual Entry is offered only during discovery,
+never after accepting or unlinking a record. Linking and Use Address actions have
+explicit offset keyboard-focus rings. The last result's forward Tab reaches Add Manual
+Entry; reverse Tab retains footer navigation. Manual entry is centered before results
+and moves to the footer once results are available, respecting reduced motion.
 
 The shared editor separates editable address details from marker-derived divisions. Only
 locality membership is editable. Display text is generated from structured components
@@ -1174,9 +1880,1028 @@ with nearby search and coordinates while retaining inclusion and taxonomy filter
 actions focus the search input or highlight the draft pin, respecting reduced motion.
 Manual entry keeps the editable address workflow and resolves divisions from its pin.
 
-Pin placement uses the current map center and zooms one level per drop, capped at zoom
-20 without zooming out. Entry highlights flash three times over 1.14 seconds and respect
-reduced-motion preferences.
+### Linked draft address toolbar (Refs #233, parent #180)
+
+The accepted draft toolbar keeps the place name visible, followed by Unlink and the
+editable display address with its lock on the right. Missing establishment/building
+names use explicit kind-specific nameless labels; address records retain their address
+label. The toolbar always displays only the user's locale; Languages expands the
+component editor without adding display-address rows or changing toolbar height. Address
+and Divisions share the same heading level and size. Example text appears only as
+placeholders, and shared numeric fields omit a redundant language label. The accepted
+toolbar keeps marker lookup in the coordinate control; it has no secondary
+forward-search field. The marker, display text and lock align to the right, leaving
+spare space between Unlink and the marker. Back to results uses the primary button
+treatment. In a constrained toolbar, coordinates progressively show fewer decimal places
+before Unlink becomes icon-only; focus and copy retain the full stored precision.
+Coordinate labels and copy use tighter gaps. Escape clears discovery input, results and
+pending responses. Result keyboard focus and pointer hover share one background tint and
+marker highlight. Keyboard focus takes precedence while a result or its action buttons
+have focus, so hovering another row cannot produce a second highlighted result. When
+streamed results reorder the list, the highlighted result stays centred by its stable ID
+after the reorder animation, preserving keyboard focus. Pending centring is cancelled if
+the query changes or the highlight moves elsewhere. Enter in the populated search
+selects and previews the first visible result; Enter on an already-selected
+establishment confirms Link and use Name. Repeated keydown events do not accept a
+result. Acceptance buttons use a 1px solid accent outline with a 2px offset so focus
+contrasts with the primary button fill. Include icons pulse independently until their
+provider settles, respecting reduced motion and ignoring completions from superseded
+searches. Typing optimistically filters cached discovery rows by multilingual names and
+address components, with case/width normalization and common street abbreviations such
+as `rd`/`Road`. Filtering starts in a separate task, caches text by provider-row
+identity and yields between small batches so address parsing does not block keystrokes.
+Superseded queries, fresh responses, clearing, selection and unmount invalidate pending
+filter work; unchanged matches retain their array identity to avoid regrouping and
+republishing markers on every keystroke. Matching rows and map candidates remain visible
+through debounce and provider loading. Each successful provider response replaces only
+its own kind, including authoritative empty responses; failed providers retain matching
+cached rows alongside the existing error feedback. Clearing the input still clears
+results. Regression evidence (28 October 2026): 65 focused search/filter/grouping tests
+pass and Svelte checking reports zero errors. A Chromium component fixture verifies
+rapid typing, optimistic rejection, retained DOM identity and fresh replacement without
+an empty-list flash. With 249 cached rows, local fixture input-handler timings fell from
+130–200 ms to 0.1–0.4 ms after cooperative filtering and text caching. Authenticated
+admin acceptance remains unverified.
+
+When an unassociated Place matches one controlled street, its published street-name
+translations populate the draft with the shared building number. Terminal compass
+abbreviations (for example, Chatham Rd S) resolve through controlled street aliases. An
+unambiguous published building-name match also supplies translated building names.
+Traditional Chinese supplies a script-converted Simplified fallback through OpenCC when
+no Simplified value is published, including locality names; an explicit correction or
+clear takes precedence. Unparsed translated source text remains intact; no canonical
+address identity or unpublished venue-name translation is inferred. The parser's 2D
+remainder supplies the base display, so extracted units are not prepended to source text
+that still contains them. The generated display label receives the same effective
+divisions shown in the editor: the single most-specific available locality follows the
+English street and precedes the Chinese street, including Hong Kong Island and Kowloon.
+For example, `57 Wang Wo Tsai Street, Tsuen Wan` and
+`198-200 Tsat Tsz Mui Road, Tsat Tsz Mui`. A neighbourhood takes precedence over its
+macrohood or town; the nearest available broader locality is used when no finer locality
+exists. Administrative divisions are not substituted for locality. Locality
+changes/reset recompose the label, while a complete unlocked label remains untouched.
+Resolved geography is a read-only projection, never a formatted-address override. Each
+locality node removes its branch while retaining the valid ancestor prefix. Marker reset
+appears below the Locality label on row hover or keyboard focus and closes an incomplete
+custom search or chain choice. Ancestors with resolvable children expose Add in a
+separate next-child slot on row hover/focus. The × stays with its own division; an
+occupied child slot has no Add action. This picker offers only direct children of the
+selected source chain. Ambiguous selections ask "Choose the neighbourhood chain for
+{name}". Forward Tab from neighbourhood and street/building search skips Cancel to the
+first result or chain; Shift+Tab can return to the visibly focused Cancel.
+
+The editable address panel uses three desktop columns in reading order: **Address**
+contains Add detail controls, **Location** contains the fields and Languages toggle, and
+**Division** contains the geography editor. They stack in that order on narrow screens;
+selecting a detail opens its field in Location. The same AddressDetails component
+retains its compact layout when used outside the three-column form.
+
+### Unit references and street presentation (Refs #233, parent #180)
+
+The unit editor separates the full type label from the reference: select Room and enter
+`3308`. Pasting recognized type words or abbreviations, including repeated ones, strips
+them from the reference and shows a short inline warning to choose the type in the
+selector. The selected type takes precedence over pasted wording. Generated display
+addresses and component/search blocks use the existing canonical abbreviation table
+(`Room` → `Rm`, `Suite` → `St`); Chinese unit ordering remains localized. Changing the
+selector preserves the reference. Saving authored content persists the composed unit
+expression alongside its semantic type/reference, so reloading cannot lose the type
+prefix.
+
+English street names use title case in generated addresses, selected street tiles,
+search results and address component blocks, including apostrophes and initials.
+Published source names remain intact for matching and provenance; explicit custom
+display-address overrides remain authored text.
+
+Regression coverage includes unchanged-reference pastes, repeated labels, selector
+precedence, Chinese suite suffixes, canonical display blocks and street casing. Desktop
+and 390px Playwright fixture checks cover normalization, warning clearing, selector
+changes and layout. These component checks do not establish authenticated admin
+acceptance.
+
+### Venue identity on the FeatureCard (Refs #233, parent #180)
+
+The display-address toolbar uses an inline locked field with a marker tooltip ("Display
+address") and the lock on the right; it has no repeated label above it. Venue identity
+remains a separate presentation field: the shared FeatureCard map portal shows the
+accepted linked Location name as a horizontal label along its lower edge, while the
+postal address retains its existing angled layout. Long venue names wrap to at most two
+lines within the portal; absent names render no placeholder. The Feature title and
+stored display address are unchanged.
+
+Read-only `locationNames` is projected with the existing Feature list/detail reads from
+`factsRevisionId` plus the accepted Organisation name corrections. It observes the same
+draft/private-owner guards as accepted brands, honors per-locale clearing, and never
+follows an unaccepted latest revision or substitutes an independent Feature title. The
+UI uses the current language and configured fallback languages. This requires no new
+database column or migration.
+
+## Shared accessibility observations (26 October 2026)
+
+Refs #194, parent #180. `locationAccessibility` is an independent append-only shared
+fact stream for establishments, buildings and premises. It does not modify imported
+`locationRevision` snapshots or Organisation corrections. Each revision stores four
+independent answers: wheelchair access (`yes | limited | no | unknown`), step-free
+entrance (`yes | no | unknown`), lift on the access route
+(`yes | no | not_needed | unknown`), and wheelchair-accessible toilet
+(`yes | limited | no | unknown`). Missing observations display Unknown. No evidence
+fields, attachments, approval queue or standalone assistance-required flag are used.
+Limited wheelchair/toilet access may include needing assistance; a lift's presence alone
+does not establish wheelchair suitability. These are reported facilities, not regulatory
+compliance certifications or an ordered whole-building score.
+
+Every authenticated admin-panel contributor may save these shared facts using the
+separate accessibility action in a linked Feature's Location section or the Location
+record. Source identity/address permissions remain unchanged. Manual private Locations
+are excluded from this shared contribution surface. Save records actor/date and an
+immutable predecessor, fencing both the observation head and authoritative Location
+revision. Previous values can be restored by saving a new revision. Shared facts are
+read live in this explicitly labelled section; they are not silently incorporated into
+historical Feature snapshots or their existing facts-adoption decisions.
+
+Building/premises records separately show attributed reports from current, asserted,
+shared direct occupants, including venue names and recorded dates. They never copy venue
+answers into building answers or imply access to all entrances, floors, tenants, or
+communal toilets. A venue may have an independent street entrance. Scoped/private
+occupancy, former occupancy, all-unknown reports and reports needing a placement recheck
+are excluded. The first 50 observed tenants are bounded and truncation is labelled. No
+proximity/address-text inference or recursive propagation through a premises is used.
+
+Observations retain an internal placement token from the source Location position and
+shared occupancy heads. Position/occupancy changes flag the original observation for
+rechecking and remove its current building signal. Non-placement source updates retain
+its validity. Identity redirects do not automatically transfer observations to a
+survivor. Migration 0155 adds only this new table, indexes, head view and
+immutable-chain guards. Production application remains a separate release step.
+
+The address editor exposes Accessibility as an optional **Add parts to edit** item. For
+a linked shared Location with no recorded accessibility, adding the part reveals and
+focuses the four controls inline beneath the address fields; it does not write until
+**Save shared accessibility**. Existing direct observations or venue reports remain
+visible automatically. The shared editor also remains available to contributors who can
+read a Location but cannot edit its address.
+
+New Features also offer this part after selecting an upstream place or choosing a new
+local building/establishment. These four controls stage only explicitly edited answers
+until the Feature is saved and linked. Changing the selected place clears the draft. The
+retained link intent includes the accessibility draft so failed saves can be retried
+after reload. Existing known answers are never silently overwritten: conflicts or stale
+observations require review on the linked Location. Untouched fields retain their shared
+values, and retries do not duplicate an applied report.
+
+Access hints and mobility answers are independent optional parts under Accessibility in
+the address editor. Standard form fields place icons and labels above answer selectors,
+using two columns when the editor has room and one column in narrow panels. Access hints
+use the same full-width text input as other address fields; field explanations are
+available through keyboard-focusable information tooltips. A small Accessibility heading
+groups Finding the entrance and Mobility access; sharing/publishing implementation
+guidance is omitted from this editor. Draft and saved-Location editors use the same
+answer-field component.
+
+Building catalogue selections enable the same draft accessibility controls as Places
+selections. Since catalogue rows carry address evidence rather than an importable Places
+identity, Feature creation retains a local building intent using its building names,
+while preserving the selected Feature name-inheritance choice.
+
+The established reset/remove icon follows each subsection title. Access hints use the
+address source/reset rules; mobility answers use their own observation baseline.
+Resetting an unsaved mobility part discards it and restores its add-part button.
+Removing saved mobility answers appends an all-unknown observation using the existing
+revision checks, then hides the part only after a successful save. Neither operation
+changes the other record type.
+
+### Street-number expressions
+
+Refs [#194](https://github.com/tijptjik/hype/issues/194), parent #180.
+`src/lib/addresses/streetNumber.ts` parses one number, a range, or a pair into
+`buildingNumberFrom`, `buildingNumberTo`, and `buildingNumberConnector`. A hyphen
+retains range semantics; commas and ampersands describe a pair. Shared numeric bases
+shorten only suffix pairs, never ranges or missing numeric digits.
+
+| Input         | From   | To     | Connector | Display number |
+| ------------- | ------ | ------ | --------- | -------------- |
+| `128-132`     | `128`  | `132`  | `-`       | `128-132`      |
+| `124B-124C`   | `124B` | `124C` | `-`       | `124B-124C`    |
+| `124B,124C`   | `124B` | `124C` | `/`       | `124B/C`       |
+| `124B & 124C` | `124B` | `124C` | `/`       | `124B/C`       |
+| `124B & 126A` | `124B` | `126A` | `&`       | `124B & 126A`  |
+| `124B-126A`   | `124B` | `126A` | `-`       | `124B-126A`    |
+| `124-126A`    | `124`  | `126A` | `-`       | `124-126A`     |
+
+Lowercase/full-width characters and dash variants normalize for display. `238-A` becomes
+the single number `238A`; `124B/C` and `124B-C` expand their structured last endpoint to
+`124C`, while retaining pair/range semantics. Descending numeric or suffix endpoints,
+incomplete expressions, decimals and lists with more than two entries are rejected.
+Equal range endpoints remain valid. `124-6` is descending; it never silently expands to
+`124-126`.
+
+The input retains incomplete text during typing, normalizes on blur, and shows localized
+errors with native form validity. Feature override validation and the local Location
+submission schema reject invalid edits. Saving authored content and composing display
+addresses use the same parser; source evidence is retained unchanged when its number
+syntax is unrecognized. No intermediate address members are inferred from a range.
+Parser, editor, schema and persisted display round trips are covered by
+`street-number.test.ts` and `street-number-editor.test.ts`.
+
+### Map-derived street number suggestion
+
+Refs [#194](https://github.com/tijptjik/hype/issues/194), parent
+[#180](https://github.com/tijptjik/hype/issues/180). Adding the Street number part in
+the Feature or local Location address editor queries the current map pin's unique
+containing building footprint. Number evidence comes from explicit `addr_housenumber` /
+`addr:housenumber` properties on that footprint and address-point labels contained by
+it, from the same map source. A single distinct literal number or range fills the empty
+field using the ordinary editable address override; conflicting numbers, courtyards,
+neighbouring labels, unavailable tiles and overlapping buildings do not produce a
+suggestion. The adjacent dismissible note asks the editor to verify this map-derived
+number. Dismissing the note retains the value. Typing, resetting, changing the pin or
+changing the selected address prevents pending results from replacing user work. This
+does not establish a source address identity or infer a street name. Implementation:
+`src/lib/map/buildingAddress.ts`, the map controller and
+`formFeatureAddress/AddressDetails.svelte`. Geometry tests are in
+`src/tests/map-street-number.test.ts`; editor interaction checks are in
+`src/tests/address-editor-controls.test.ts`. Exact live-map visual acceptance is still
+required with the authenticated Pretty Garden workflow.
+
+Street enrichment remains available whenever the pinned draft lacks a structured street
+name, including premises-only results and drafts with a number already filled. A source
+address ID does not suppress this offer. Adding the Street name part also starts the
+existing pin lookup, which samples named road segments within 100 metres and offers
+catalogue-matched streets nearest first. Selection remains explicit: proximity is a
+suggestion, not proof that a number belongs to that road. Nearby streets start collapsed
+because this is an optional enrichment path. Every choice shows a non-empty catalogue
+name, its distance and the selection action; missing active-language text falls back to
+the catalogue default name or a known non-empty translation. A default English catalogue
+name can also populate the English street field without inventing Chinese translations.
+The nearby-street review shows at most four rows at once; additional streets stay
+available by scrolling within the list, including keyboard focus navigation. Its Cancel
+action remains outside the collapsed choices at the section's top right. Cancelling a
+lookup started to review a pin move also restores that move's prior marker and address;
+ordinary enrichment cancellation only closes the lookup. The Pretty Garden
+premises/number cases and Add street interaction are covered by
+`src/tests/address-editor-controls.test.ts`; road proximity and canonical matching are
+covered by `src/tests/nearby-streets.test.ts`. Live Pretty Garden/Ko Po Road acceptance
+remains unverified without an exposed authenticated browser session.
+
+### Address enrichment results and source-number recovery
+
+Refs [#194](https://github.com/tijptjik/hype/issues/194), parent #180. Lookup Address
+keeps its label stable, with a leading search icon replaced by an animated loading
+indicator. Address candidates use small numbered markers from their retained source
+geometry, ordered identically to the distance-sorted rows. Hover/focus previews the
+candidate; leaving restores the Location pin and previous zoom without mutating
+coordinates. Selecting/dismissing removes transient markers.
+
+A live public SaanSeoi check found Pretty Garden's DPO records retain village numbers
+only in formatted text, with null structured number/street fields. Hype recovers a
+single standalone numeric token only for DPO records with explicit hamlet membership, as
+an editable override; original records remain unchanged. Conflicting tokens and existing
+numbers/explicit clears are preserved. Ko Po Tsuen is not inferred as a street. Recovery
+also makes the initial collapsed premises group expose its 71–75 alternatives. Text
+search and pin lookup both use SaanSeoi's Address API; map-road hints remain a separate
+100 m street-only lookup.
+
+Evidence: `recover-address-number.test.ts`, `nearby-address-candidates.test.ts`,
+`address-editor-controls.test.ts` and `draft-search-groups.test.ts`. The live source
+check used release `data-hk-addresses-2026-09-23.0`, publisher `hkgov-dpo`.
+Authenticated full-map camera acceptance remains pending; no save or publication is
+implied by the local draft and component checks.
+
+### Optional map parts after a marker drop
+
+Refs [#194](https://github.com/tijptjik/hype/issues/194), parent #180. After a Location
+marker drop and camera settling, the editor checks all containing building footprints,
+including overlapping podiums and towers. Names include the separate `building-labels`
+interior-point dataset; labels outside the footprint are excluded. Unambiguous terminal
+English Block/Tower/Building/House/Villa references can suggest missing block type and
+reference; the existing footprint/address-point number lookup can also suggest a missing
+number. The initial scope does not infer arbitrary address parts or assign nearby road
+names automatically.
+
+An anchored **Add missing parts** button below the marker previews the proposed parts,
+with an independent dismiss control. It follows camera movement, hides during dragging,
+and does not alter the draft until explicitly clicked. Existing values and explicit
+clears take precedence, including edits made while a lookup was pending. Changing pin,
+Feature or editing mode invalidates old requests. Ambiguous/unavailable map evidence
+leaves ordinary manual editing unchanged.
+
+`map-missing-parts.test.ts` covers Hollywood Terrace Tower B, conflicting labels,
+inside/outside footprint labels, and preservation of existing or cleared fields.
+`map-address-suggestion.test.ts` checks review/apply/dismiss behavior. Exact live map
+acceptance with the user's authenticated Hollywood Terrace record remains unverified;
+the component preview does not establish that full workflow.
+
+Podium overlap correction: suggestion-only building-name sampling retains every
+containing footprint and deduplicates label names across them. A podium cannot suppress
+a tower simply because both contain the pin; conflicting Tower A/B names remain
+unresolved. Name and number queries settle independently, so an ambiguous number lookup
+does not discard usable block evidence. Explicit building/address identity selection
+retains its unique-footprint requirement. Regression coverage in
+`map-missing-parts.test.ts` checks nested podium/tower geometry in both source orders
+and conflicting overlapping names. Live Hollywood Terrace geometry remains unverified in
+an authenticated browser.
+
+### Latched geography and map disagreement review
+
+Refs [#194](https://github.com/tijptjik/hype/issues/194), parent #180. Marker moves
+retain the last successfully resolved divisions in both the panel and canonical display
+caption while replacement geography is pending. Unavailable or rejected lookups retain
+the same projection; a successful empty result may replace it. Stale geography remains
+non-editable until the current pin resolves.
+
+Containing-building labels, explicit footprint street names and unique numbers produce a
+structured **Address differs** notice, with a warning icon in its own vertically
+centered left section and centered actions in a content-sized card, the existing
+selected → mapped comparisons and explicit actions. Missing evidence or conflicting map
+labels do not prove a mismatch; nearby road proximity is not used as contradictory
+street evidence. Pin/Feature/edit changes cancel old evidence and ordinary edits
+recompute disagreement against the current draft.
+
+In the new-Feature flow, **Accept Change** applies the displayed corrections and looks
+for an exact structured Address. Standard name abbreviations are normalized; number
+ranges, blocks, floors and units must agree. Nearby, partial-number and display-only
+matches do not establish identity. A complete no-match result becomes a custom authored
+address with original source evidence retained separately and canonical identity
+removed. Provider lookup, optional unit enrichment and local identity discovery are
+optional for an explicitly accepted custom draft. Their unavailability cannot block that
+draft; normal Save still authorizes creation. Ambiguous exact identities and truncated
+results continue to require review. Once ambiguity is known, **Accept Change** is
+removed and guarded against retries for that suggestion. The expanded explanation card
+retains its existing layout and offers **Review Change** for explicit selection.
+
+The existing Organisation-authorized local discovery query checks visible latest address
+Location revisions within 1 km of the corrected address point. One exact Location with
+the requested shared/exclusive visibility is retained in the normal deferred association
+intent; Feature Save links it without creating a duplicate. Otherwise Save creates the
+custom address Location through the existing retryable creation/linking flow. A changed
+physical address invalidates a retained match. **Review Change** opens the existing
+address lookup for explicit result selection. Saved Features preserve this review path:
+automatic reassociation is restricted to new Features because ordinary saved-Feature
+edits can write shared Location corrections and require a separate reassociation
+workflow.
+
+If the exact Address or Location changes the marker position, the editor previews that
+candidate and reuses `LocationMoveConfirmation.svelte`, extracted from the existing
+building-association flow. The accepted marker and address stay unchanged until **Move
+marker and use address** is confirmed. The notice's × action and move-confirmation
+Cancel restore the pre-drop geometry, address metadata, pin visibility and camera, while
+preserving unrelated form edits. Cancellation also invalidates pending lookups,
+preventing late results from restoring the move. Confirmation re-inspects map evidence
+at the new point so further differences require another explicit decision. Saving is
+blocked while lookup or move confirmation is pending; stale draft responses cannot
+apply.
+
+Custom corrections use the current dropped pin, supplied separately from the stale
+address's retained coordinates. Accepting an address updates the chosen discovery
+marker's geometry and caption while preserving its number and cached source result.
+Reverse-lookup choices retain each record's actual point, and an explicit **Use
+address** selection moves the marker to that point. Lookup alone never moves it.
+
+Pointer focus does not recenter search rows before click dispatch. After selection and
+action rendering, the chosen row is centered with its actions visible; narrow layouts
+wrap those actions below the result. Streaming reorder still follows the stable
+highlighted ID without replacing keyboard focus. Scrolling the list closes its tooltip.
+`scripts/visual-checks/location-flow-check.ts` exercises these pointer and scroll
+gestures, offline custom fallback, move rollback, stable marker 17 and the rendered
+marker position through a real MapLibre component on a blank local basemap.
+Authenticated admin acceptance remains separate.
+
+While either **Address differs** or **Add missing parts** is visible, camera panning and
+both the ordinary pin and selected discovery marker are locked against dragging.
+Handling one notice keeps dragging locked if another remains; reviewing or applying the
+last notice restores the editor's existing drag permissions.
+
+Browser gestures against the real map component verified both marker kinds, camera
+locking until the final notice is dismissed, restored dragging afterward, and
+preservation of read-only marker permissions. This fixture used a local blank basemap;
+authenticated admin acceptance remains pending.
+
+The 28 October prompt update is local working-tree implementation (Refs #194, parent
+#180). Focused coverage includes `map-address-change.test.ts`,
+`resolve-map-address-change.test.ts`, `address-location.remote.test.ts`,
+`map-address-conflict.test.ts`, `location-move-confirmation.test.ts` and the existing
+identity/linking/building tests. Chromium fixture checks verify light and dark
+rendering, both action callbacks and no horizontal overflow at 320 px. The combined
+number, street and address-change run passes 121 tests across 13 files. The final full
+Svelte check has zero errors and 19 existing warnings after the shared tooltip changes
+settled. Authenticated admin creation/association and persistence remain unverified
+because no authenticated browser session was exposed to this run. Existing broad
+delivery acceptance remains open; there is no deployment or production data mutation.
+
+English canonical block expressions use the shared display abbreviation table; editor
+type selectors and original expressions retain full labels. Tower uses Twr, Building
+Bldg, Block Blk, House Hse, Apartment Apt, Mansion Mans, Quarters Qtrs, Carpark CP and
+Garage Gar. Block descriptors Phase/Stage use Ph/Stg. Recognized units use the same
+table (Room Rm, Suite St, Office Off); Unit remains Unit. Flat, Shop, Stall, Kiosk,
+Villa, Commercial and Retail remain spelled out pending abbreviation review. Chinese
+labels and semantic type codes are unchanged. Regression coverage:
+`address-divisions-ui.test.ts`, `map-address-disagreement.test.ts`,
+`map-address-conflict.test.ts`, `address-formatting.test.ts` and
+`address-expressions.test.ts`. Full authenticated map-drag acceptance remains
+unverified; component tests/preview do not replace that workflow.
+
+### Indexed partial names and lazy Address batches (Refs #194)
+
+Feature discovery requests 20 publication-pinned Address results initially and loads
+subsequent batches when the result list is within 160 px of its end. Short lists fill
+automatically. Appending preserves the highlighted identity, keyboard focus and scroll
+position, deduplicates Address IDs and updates candidate markers. Search changes abort
+and discard older continuations. Network failures retain existing rows and retry the
+same cursor; expired sessions require the explicit Search again action.
+
+SaanSeoi retrieves normalised partial street/building names through a derived Unicode
+gram index and verifies candidates with the component scorer. The initial request ranks
+once and retains IDs/scores in a five-minute edge cache. Continuations hydrate only
+their slice. Queries and resolved geographic filters, publication tokens and coordinate
+requirements bind the session; unavailable preparation fails closed. `locatedOnly=true`
+excludes unlocated records from both the map picker and its exact total. These remain
+available from the general Address API. This does not introduce Street-type discovery
+results.
+
+Local verification: Hollywood loads 249 usable addresses in 13 batches, with stable
+focus and no duplicate Address IDs. The other 29 text matches have no coordinates. SQL
+tests verify indexed rowid retrieval, one ranking across continuations, exact filtered
+counts, changed-publication rejection and cursor expiry. UI tests cover scroll guards,
+stale responses, retry and explicit restart. The live API plus real component/map
+fixture exercises desktop and mobile; authenticated admin save remains separate
+acceptance. SaanSeoi's `docs/geocoding.md` and Address family processing documentation
+define the API and finalisation contract.
+
+### Feature association levels (28 October 2026, Refs #194)
+
+**Locate feature here**, beside **Just use address**, opens the shared association
+picker for draft discovery and saved-Feature discovery. Existing associations have
+**Change location association**. Opening, previewing or switching levels writes no
+identity; the reviewed intent is persisted after Feature Save.
+
+The Address → Premises → Building → Establishment track expresses three independent
+evidence states: filled for address-component evidence, filled with an outer ring for a
+resolved matching-kind identity, and hollow for neither. The outer ring pulses during
+lookup. A central dot denotes selection, with a faint hover/focus dot on other levels.
+There is no recommendation state. Unit/floor evidence offers Add establishment without
+inferring an occupant. Premises evidence never becomes a Building identity merely
+because a building record is absent.
+
+Existing scoped Locations, published Buildings and Places are cross-referenced
+independently of discovery filters. Names reconcile after a 250 ms typing pause, with
+immediate filtering of retained candidates, using normalized partial matches and a 100 m
+circle; candidates require explicit confirmation. Results are bounded, and partial
+coverage/provider failure is distinct from a complete no-match. Building address
+alternatives remain separate; existing mirrored Place identities are preferred over
+duplicate source suggestions. No-match checks stay quiet.
+
+A selected candidate opens Location values / per-component switches / original Address
+values. Populated Location values are the default, with original values retained for
+gaps. Street IDs, number ranges and translated floor/unit semantics travel with their
+structured groups. Both source envelopes are retained. Marker movement requires its own
+checkbox. Reviewed placement belongs to the Feature and survives save, reassociation and
+source materialization without changing a shared Location's address corrections.
+
+Just use/keep address records Manual intent and does not reconcile Establishments. Named
+custom records retain Unlinked intent; explicitly selected matching records retain
+Linked intent. These UI modes are separate from Location sharing/ownership and lookup
+status. Failed or unfinished lookups preserve failed/deferred status, not a false
+no-match. The compact status strip shows discovery kind, selected kind and mode at the
+bottom of Address additions. Entity creation/import and association reuse the existing
+guarded save/retry paths; retries retain created identities and only replace the
+explicitly selected prior Location.
+
+Implementation: `LocationAssociationPicker.svelte`, `LocationAssociationStatus.svelte`,
+`locations/association{,Address,Search}.ts`, `locationAssociation.remote.ts`,
+`locationAssociationCandidates.ts`, and the draft/saved Feature editor integrations.
+English, Traditional Chinese and Simplified Chinese strings are included.
+
+Acceptance evidence: 272 tests pass across the 15-file focused/regression run; two
+broader Location service tests fail identically with the saved pre-change files
+(rejection fixture parameter mismatch and existing explicit-address-clear behavior).
+Svelte checking reports zero errors and 19 existing warnings. The reproducible
+`scripts/visual-checks/location-association-check.ts` passes in Chromium and Firefox:
+actual discovery/picker components, deferred acceptance, structured component choices,
+390 px layout without horizontal overflow, and no page errors. Provider boundaries are
+fixtures. Screenshots are local under `output/playwright/association-*`.
+
+Remaining acceptance: no authenticated admin browser session was exposed, so the full
+live admin save flow is not browser-verified. SQLite integration covers initial link,
+subsequent save and reassociation. The existing publication-refresh worker only scans
+source-linked identities: automatic rematching/review of custom records on a future
+publication remains a separate outstanding workflow. Persisted lookup states do not
+claim that such a background review has been queued. Work remains uncommitted and
+undeployed; broad #194/#180 acceptance and completion counts are unchanged.
+
+#### Association picker presentation refinement (28 October 2026)
+
+The visible track runs from most to least specific: Establishment → Building → Premises
+→ Address. It is centered with a 768 px maximum width, a 6 px connecting line and 40 px
+notches. Examples distinguish venues/shops/businesses/restaurants, named
+buildings/towers/blocks, malls/estates/campuses/airports, and address-only placement
+when no more specific location applies. The centered title has the subtitle “Select the
+most appropriate location”. Notches select the type; the centered actions are “Use
+selected location” and “Cancel”.
+
+The toolbar uses a tooltip-equipped settings icon after the association icon.
+`LocationAssociationIcon.svelte` is shared with the tiny status list without bullets:
+chain with checkmark = Matched location (`linked`), chain = Custom location
+(`unlinked`), broken chain = Address only (`manual`). These labels describe the matching
+intent, independently of whether a Feature/Location database association has been
+persisted. Detaching retains the address and updates its status to address-only;
+restoring the association restores its prior matching state.
+
+Validation: the existing 62 picker/discovery tests pass; Svelte checking reports zero
+errors and 19 existing warnings. Chromium and Firefox fixture checks cover wide/narrow
+layouts, track order/maximum width, all three icon states and the settings tooltip. This
+is component browser evidence; authenticated live-admin acceptance remains outstanding
+as noted above.
+
+#### Association selection and component review refinement (28 October 2026, Refs #194)
+
+The picker scrolls independently inside the available panel height; confirmation, Cancel
+and the compact status remain in a fixed footer. Opening the picker from an accepted
+custom record also switches the parent panel back to this constrained layout. The
+floating manual-entry action is hidden during association review. Address additions
+scroll above their retained status footer. Address-only actions use white text in dark
+mode.
+
+Typing filters retained candidates immediately and debounces reconciliation by 250 ms.
+Blur does not launch another request: that previously refreshed the result under the
+pointer during selection. Late responses cannot replace a newer query. **Use selected
+location** requires an explicit candidate (or the Address notch). Creating an unmatched
+entity requires **Create premises/building/establishment here**, then **Use custom
+location**. Custom mode can return to existing-location search.
+
+Comparison rows use icon, bold value and a smaller component label, with centered
+switches under **Use**. Each row has **Edit** for a Feature-owned correction when
+neither source is right; **Edit other address details** reveals unchanged components.
+Identical addresses show a short agreement message instead of an empty comparison.
+Invalid street numbers prevent confirmation. Custom choices retain both source
+publications and the selected identity; a custom street drops its source street ID. The
+editor's save path no longer clears an explicitly reviewed Location identity when its
+Feature address is corrected.
+
+Known premises plus explicit block terminology are split into structured components. For
+example, **Hollywood Terrace Tower B** retains its full Location identity name, while
+the address stores **Hollywood Terrace** as premises, **tower** as block type, and **B**
+as block reference, with no duplicate Building name. Arbitrary named buildings and
+conflicting existing block references are preserved. Custom premises and buildings seed
+their address component before this normalization. The separate identity-name editor is
+now reserved for Establishments, avoiding duplicate Building and Premises inputs.
+
+Verification: 84 focused tests pass, including association selection, search, SQLite
+services, source preservation, custom corrections and component parsing. Two broader
+3D-input tests fail identically when loading the pre-change AddressDetails component
+(immediate normalization expectations); they are unrelated to these picker changes.
+Browser fixtures pass in Chromium and Firefox at 1500 px and 390 px: live matching
+without blur, explicit custom acceptance, corrections, scrolling with a stationary
+footer, dark-mode text, parsed building components, reopening custom associations, all
+three status icons and schema validation. Provider responses are fixtures; authenticated
+admin save remains unverified.
+
+#### Compact association search and adaptive map space (28 October 2026, Refs #194)
+
+The selector displays distinct shop, building, campus and street-address icons. A
+retained published Address identity now gets the resolved outer ring. Help uses the
+agreed friendly explanation of address specificity, automatic address updates and
+discovery on Location profiles. Address-only preview reuses the header display address
+component. Diagnostic metadata stays hidden throughout the picker and appears in the
+address-component editor after acceptance.
+
+Search is a centered, bounded row with the type label before the input and a spinner
+inside its trailing edge. The searching status remains accessible without visible status
+text. Unresolved types explain why to search or create; the redundant results heading
+and separator are removed. Browsing results always offers **Create new
+premises/building/establishment** in the footer instead of disabled confirmation. A
+completed empty lookup adds **No results, you can**. Explicit creation stages the custom
+record directly; selecting an existing candidate still requires reviewing and confirming
+it. Provider failure never claims a complete no-match.
+
+**Back to results** is restored to the selection header. Cancel returns a draft
+association to its retained discovery results. The development-draft notice overlays the
+map instead of consuming vertical layout space.
+
+The picker measures intrinsic content and requests additional editor space when its
+requirements change. The shared visual section slides up only as far as needed, retains
+at least 64 px of visible map (including mobile layouts), and never grows back
+automatically when content becomes shorter. Drag/keyboard resizing takes priority over
+queued automatic measurements so the user can restore the map while the picker is open.
+Ordinary scrolling does not resize the map.
+
+Premises lookup currently reads accessible HYPE Location records of kind `premises`
+within 100 m; it has no SaanSeoi premises/group provider. Empty results therefore do not
+establish a globally empty catalogue. SaanSeoi retains site/complex vocabulary in
+`libs/db/src/premises.ts`, while address `premisesName` remains component evidence. A
+future integration should consume stable, independently identified premises/site records
+with explicit membership relationships to buildings; it must not promote an address name
+or a proximity cluster into an established group identity. This future provider is not
+implemented by this UI refinement.
+
+Validation: 65 picker/discovery tests pass. Chromium and Firefox fixture checks cover
+wide and 390 px layouts, the four icons, Address ring, metadata visibility, live
+filtering, empty-result creation, reviewed corrections, Cancel/back navigation,
+scroll/footer stability, the visible 64 px map minimum and manual restoration during
+review. Provider boundaries and the map content are fixtures; the actual picker and
+visual resize components are exercised. No authenticated admin browser was exposed by
+the current browser inventory, so full admin/map integration remains unverified.
+
+#### Association evidence track and map result continuity (28 October 2026, Refs #194)
+
+Icons and labels appear above the track, with examples below. Notches stay hollow: green
+double rings denote resolved matching-kind records, amber outlines denote
+address-component evidence, and neutral outlines denote absent evidence. A bright pink
+center dot denotes the user's selection; unselected available levels retain only a faint
+dot. Lookup pulses and textual tooltips remain, so color is not the only state cue. The
+picker footer has no horizontal separator.
+
+The unresolved message separates **No confirmed match yet.** from the smaller action
+**Search nearby records or create a new location below.** This avoids declaring that no
+record exists while plausible candidates are being reviewed.
+
+Association rows and map markers now share one-based result numbers. Pointer hover and
+keyboard focus highlight the corresponding marker. Clicking a candidate marker opens
+component review, without accepting the association or moving the Feature's pin. While
+association review is open, the picker owns the marker set so the parent discovery
+effect cannot replace it with stale search markers. The original pin is retained
+separately; the marker comparison uses the same candidate numbering.
+
+Back to results and Cancel restore the map height captured before automatic fitting,
+with the same sliding transition. They do not impose a fixed viewport percentage.
+Ordinary acceptance and switching to shorter content continue to retain the fitted
+height. Saved-Feature discovery and new-Feature discovery both receive the marker and
+map-restoration callbacks.
+
+Building association candidates combine accessible HYPE Building Locations, retained
+search results, and name matches from SaanSeoi's published building names/detail
+catalogue. Candidates are filtered to within 100 m of the original address. An empty
+query can show nearby HYPE/cached records; new catalogue requests require a name.
+Different published address alternatives remain separate candidates, so repeated
+building names do not necessarily mean duplicate identities.
+
+Validation: 73 focused picker, discovery and association-search tests pass; Svelte
+checking reports zero errors and 19 existing warnings. Chromium and Firefox checks pass
+at wide, 390 px and 320 px widths, including numbered hover/focus markers, marker-click
+review and restoration of the prior map height. Browser verification uses actual
+picker/visual components with fixture provider and marker boundaries; it does not
+establish authenticated live-admin acceptance.
+
+#### Provisional results and compact association review (28 October 2026, Refs #194)
+
+The association heading and subtitle live in the Location toolbar. Type icons, titles
+and descriptions precede the hollow track. Address evidence uses an amber inner ring,
+resolved identities add a green outer ring, and the selected level has a pink center
+dot. The action footer has additional bottom space; address metadata has no separate
+panel background.
+
+The no-match status and search/create guidance appear centrally in the empty results
+area. Typing immediately filters retained candidates where possible; an empty filtered
+set does not clear the previous results while providers are still responding. A settled
+empty message remains visible during the next lookup. Late responses cannot replace
+results for a newer query.
+
+A provisional custom Location appears as a preselected result alongside possible
+matches. Its record name and identity are independent of the search query. Reset
+restores the original query and preselects that record; **Use Location** confirms it.
+Explicit creation first adds a provisional row and requires confirmation. Selecting an
+existing local record retains its identity. Synced, custom and manual Locations have
+distinct icons/labels and source-backed rows use solid borders. This record provenance
+is separate from the Feature's association intent.
+
+Every explicit discovery selection captures the map height, including **Just use
+address**. Back/Cancel restores that snapshot; resumed drafts without a snapshot use 35%
+of the available editor height. Pointer hover takes precedence over a previously focused
+row and keyboard highlighting resumes after mouse leave. Grouped-address markers fit to
+their own bounds with 20% padding on each edge, independently of the Feature pin.
+Association candidate sets also carry a fit-group identity so their map treatment
+follows the reviewed subset.
+
+Verification uses `location-association-picker.test.ts`,
+`draft-feature-location-search.test.ts`, `location-association-search.test.ts`,
+`location-association.services.test.ts` and
+`scripts/visual-checks/location-association-check.ts`. Chromium and Firefox exercise
+actual components at wide, 390 px and 320 px widths, including provisional reset,
+immutable names, direct-address Back, footer scrolling and map-height restoration. The
+Chromium grouped-address check uses the actual MapLibre renderer, asserting marker hover
+and projected edge padding. Its basemap did not render, so that check proves
+marker/camera behavior only. Provider responses are fixtures; authenticated admin
+persistence remains unverified. No broad importer acceptance is implied.
+
+The reproducible browser scope for this refinement is
+`ASSOCIATION_SCOPE=provisional bun run scripts/visual-checks/location-association-check.ts`
+(with the local base URL/browser paths configured). It excludes the independently
+changing address-component editor. The four focused suites passed 79 tests before those
+concurrent editor changes; final targeted verification rechecked five
+provisional/evidence/marker regressions and three Location service tests. Whole-app
+Svelte checking finishes with zero errors and 19 existing warnings. Broader
+comparison-editor acceptance remains separate.
+
+#### Sync-state vocabulary and viewport restoration (28 October 2026, Refs #194)
+
+User-facing association states are **Synced**, **Open to Sync**, and **Not Synced**. The
+existing persisted values remain `linked`, `unlinked`, and `manual` respectively. A
+primary-colour chain denotes Synced, a foreground-colour chain denotes Open to Sync, and
+a broken chain denotes Not Synced. A local Location ID alone does not prove a source
+match; a published Places/Building identity or upstream `ssId` does. The draft toolbar
+shows the current state and the action suffix **- toggle to sync** or **- toggle to
+unsync**. Turning sync on chooses Synced only with source identity; otherwise it chooses
+Open to Sync. Turning it off preserves the reviewed address, Location kind and name, and
+re-enabling it retains the selected identity and edits.
+
+Multilingual controls appear only while editing address details or names (updated 29
+October 2026); selecting or preselecting a record alone does not reveal them. Search is
+a single centered field with an inline search icon, pending spinner and Reset control,
+without the former wrapper background, repeated label or bottom rule.
+
+This supersedes the earlier snapshot-first Back behavior: returning to discovery
+explicitly restores the map to **35% of visible editor height**. The visible budget uses
+the window height minus the editor's on-screen top; the scrollable form's full content
+height is not a viewport measurement. An explicit return height takes precedence over
+any retained pre-review snapshot.
+
+Chromium/Firefox component checks cover current-state icons, tooltips, both sync opt-in
+paths, editing-gated Multilingual, the search layout and proportional map restoration.
+These remain fixture checks; authenticated admin persistence is not established by them.
+
+#### Selected Location editing (29 October 2026, Refs #194, parent #180)
+
+Search-list map sizing correction: result count and asynchronous search updates must not
+shrink the map. The list uses the available scroll viewport; only selected record
+review/editing may request extra map space. Chromium and Firefox checks with 30 results
+retain the initial 300 px map height and confirm the list can scroll
+(`ASSOCIATION_SCOPE=map-results`). All 22 picker tests pass. The user's authenticated
+admin page is not exposed to browser tools, so live-page acceptance remains open.
+
+Association result rows group distance and the compact sync-state badge on the right,
+leaving names and addresses room to wrap. Selecting the original Location does not
+compare it against itself or show a two-record agreement message. **Edit address
+details** opens one set of editable fields for that Location. Distinct records with
+differing address components retain the source-choice comparison. Corrections remain
+Feature-owned overrides and preserve the selected Location identity and canonical source
+values.
+
+Multilingual is an editing control, not a selection indicator: it stays hidden in result
+browsing and read-only selected-record views, and appears after entering address or name
+editing. This supersedes the earlier selection-only condition.
+
+The 22 focused picker tests pass, including direct Location editing, preservation of
+identity, and editing-only Multilingual. Svelte check reports no errors and 19 existing
+warnings. Chromium and Firefox component fixture checks pass for right-aligned result
+metadata, editing-only Multilingual, single-record editing, identity-preserving address
+overrides, and narrow layouts without overflow. Authenticated admin persistence remains
+unverified; broad acceptance counts on #194 and #180 are unchanged.
+
+#### Ghost entries and Feature naming policy (29 October 2026, Refs #194, parent #180)
+
+This supersedes the two-step custom-Location creation described above. A dashed entry
+immediately below search previews the authored name and address, explains that the
+record can be matched as data coverage improves, and offers a single **Use this …**
+action. It does not promise automatic reconciliation. The ghost is not repeated in the
+result list or a second confirmation card. Camera fitting ignores selection-only changes
+and skips coincident association positions.
+
+The full-width specificity selector has a recessed background and 24 px vertical
+padding, a centered maximum-width four-item track, animated expansion, and horizontal
+top-right legend/collapse controls. Neutral rings mean unspecified, blue means address
+evidence, and emerald means a known match; primary marks the chosen level. Comparison
+headings are **Chosen address** and **Matched record**; pins are **Chosen position** and
+**Match position**. Inline edits retain icons, hide the type subtitle, and return to
+text on blur with stable horizontal padding.
+
+Project flags `allowFeatureDescriptions` (default true) and `locationBasedFeatureNames`
+(default false) control Feature authoring. Layer metadata can explicitly override either
+flag; absent/null means inherit. Turning off description authoring hides its Profile
+fields and retains existing stored descriptions on save. It does not delete historical
+content.
+
+Location naming uses the existing record-level
+`featureLocation.acceptancePolicy.nameMode`, not a second ownership model. Profile
+offers Location naming when every title is empty. Inherited titles follow edited
+Location translations, become read-only in Profile and link to **Edit Location**. When
+parent policy permits it, the Feature can return to independent naming. Link/relink and
+normal saves persist that intent; parent-required inheritance wins over submitted
+independent intent. These settings apply during authoring and linking; this change does
+not bulk rewrite existing Features when a Project setting changes.
+
+Hydrated Feature list and admin responses include an `authoring.nameMode` read
+projection of association ownership. Parent policy is not copied into Features: the
+editor resolves Project flags and Layer metadata from the app's shared,
+authorization-scoped ResourceDetail/CacheCtx through the hierarchy read-or-fetch
+helpers. Navigation waits for those cached parent records before settling. Core Profile
+does not fetch the full Location association; Location editing still loads that detailed
+model. The minimal `compact` identity response does not carry naming data. Refs #194.
+
+Search remains bounded to 100 m, with at most 50 building-catalogue candidates per query
+and 20 upstream establishment text candidates. A limited/partial warning is not an exact
+total or proof that further matches exist.
+
+Validation: 65 focused policy, form, association and picker tests pass. Chromium and
+Firefox component fixtures pass at desktop, 390 px and 320 px, including the one-step
+ghost flow, wrapping names, hover highlights and real MapLibre camera bounds. External
+map tiles return HTTP 401 in the fixture environment. No connected authenticated admin
+session is exposed, so signed-in Profile/settings acceptance and full admin persistence
+remain unverified. The broader Location suite still reports unrelated source-endpoint
+expectation, identity-rejection fixture and address-clearing failures. No migration,
+commit or deployment is included; #194/#180 importer acceptance counts remain unchanged.
+
+#### Exact association matches and ranked alternatives (29 October 2026, Refs #194)
+
+For a uniquely inferred match, **Use Location** appears directly in the selected
+Location row beside Change selection. It uses the same validation and acceptance path as
+the footer action, without duplicating that action below; **Cancel** stays in the fixed
+footer. Explicitly selected alternatives retain the footer Use action.
+
+Association review compares meaningful localized components rather than storage IDs,
+optional empty flags, or range formatting. Translation-only enrichment does not force a
+choice between visibly identical fields. A unique complete match of kind, name, street,
+number and remaining components within 100 m preselects the matching kind and candidate,
+unless the user already chose a level or opted out. A blue outer ring and explicit
+suggested-Location caption distinguish this inference from a chosen identity.
+Confirmation remains required; lookup completion never saves. Incomplete coverage and
+ambiguous exact matches retain manual selection.
+
+Alternatives sort by evidence score (40 for an exact localized name, 30 for street, 30
+for number, minus 5 for each other differing component), retaining distance order for
+ties. This is a transparent ranking score, not a probability. Every row has a visible
+Use action; the custom-record action is compact and fixed below the list, with Cancel
+still available. Reopening/reselecting the same identity retains its name-inheritance
+intent, and a Feature with an existing independent title can still explicitly choose its
+Location name.
+
+Automatic future-publication rematching remains separate. The next-thread brief is
+[Open to Sync rematching handoff](../../../docs/refactor-guides/Open-To-Sync-Rematching-Handoff.md).
+
+#### Unused address parts and review rhythm (29 October 2026, Refs #194)
+
+Compact comparison rows require a visible value in either source or the edited result.
+Metadata-only differences such as an unused block type must not produce two empty cells.
+Expanded details offer a small **Hide unused parts** action; collapsing preserves newly
+authored values and source selections.
+
+Map marker choices and their switch share one aligned row, with the title and distance
+above the central control. Selected markers use the same muted surface as selected
+address cells. Ghost entries retain the content maximum width and place their action at
+the right, wrapping below the text on narrow screens.
+
+The thread audit also restored the empty-titles-only naming prompt and active locale
+first in the separate multilingual name editor. Remaining acceptance work includes a
+complete independent Feature-title/Location-name editing flow, parent naming-policy
+precedence for already-independent records during later source projection (current
+projection respects stored record intent), and authenticated admin settings/save
+verification. Future automatic matching of ghost records must not be claimed solely from
+their eligibility for matching.
+
+#### Field-oriented Profile and comparison clarity (29 October 2026, Refs #194)
+
+Profile groups Title and Description into field columns, with the active locale first
+and attached translations revealed by a header toggle. Collapsed locale controls remain
+mounted to preserve remote-form registration. Translation actions operate on one field;
+HumanVerified controls remain attached to their fields. Inherited titles carry a
+read-only badge, an explanation, and Edit Location. A separate-name action is available
+when parent policy permits. Persisted intent remains
+`featureLocation.acceptancePolicy.nameMode` (`inherit` / `independent`).
+
+Association comparisons default to the matched coordinates when available and label
+positions by kind. Selection alone no longer emphasizes comparison markers; hover/focus
+does. Known matching-kind evidence survives kind switching, ring hover scaling is
+reduced and animated, and sublist Back lives in the search header.
+
+Validation: 28 picker tests and 2 Profile tests pass; Svelte check reports zero errors
+and 19 existing warnings. Chromium Profile fixtures were inspected at 1200px and 390px,
+including inherited titles and expanded translations. This is component evidence, not
+authenticated admin persistence acceptance. The broader discovery suite currently has 10
+failing assertions requiring reconciliation with concurrent selection/creation changes;
+it is not reported as passing.
+
+Accessibility field presentation (29 October 2026, Refs #194): Access hints and mobility
+selectors use the same panel background, 48 px control height, foreground text and
+typography as the surrounding address controls. Dropdown surfaces follow the panel theme
+too. This replaces the default filled form styling previously left on these separate
+rendering paths. Chromium and Firefox fixture checks verify both light/dark themes,
+matching computed surfaces and font sizes, and working selection; wide/narrow
+screenshots were inspected. Svelte check: zero errors, 19 existing warnings. No change
+to accessibility values or persistence.
+
+## Background Open to Sync rematching (29 October 2026, Refs #194)
+
+Tracking: [#194](https://github.com/tijptjik/hype/issues/194), parent
+[#180](https://github.com/tijptjik/hype/issues/180). The implementation lives in
+`src/lib/db/services/locationRematch.ts`, with migration `0157_location_rematching.sql`,
+the existing Location refresh Worker, and the existing Tasks projection. This section
+supersedes any assumption that persisting `association.lookup = deferred` alone queues
+work.
+
+Opt-in is the persisted **Feature** `addressMeta.address.association.mode = unlinked`,
+not the shared Location's `manual`/`unresolved` state. A manual Location may be private
+while its owning Feature opts into matching. One Feature's `manual` intent neither opts
+other Features out nor authorizes adoption into that Feature. Missing intent is not
+opt-in. Archived/draft Features, inaccessible Locations, redirects, existing upstream
+identities, and mismatched kinds are excluded. The full authored address, association
+version, Feature edit token, ancestry, owner, Location revision and identity-history
+tail form the retained intent snapshot.
+
+The Worker polls canonical Places publication metadata daily, independently of the
+existing linked-identity refresh cadence. A forward publication creates a new
+generation; identical publications do not duplicate work. Daily keyset sweeps also find
+newly authored opt-ins. Each step seeds at most 25 eligible Features or advances one
+lookup stage. A cron invocation drains at most ten steps and starts no further step
+after a 60-second budget; an in-flight source request finishes under its existing
+timeout and lease. Nearby discovery covers 100 m with the existing bounded
+cell/page/candidate limits (at most 50 candidate identities); canonical verification and
+optional Address hydration process one candidate per invocation. No whole Location or
+source catalogue is loaded. Database-clock leases, publication generations,
+authored-intent fences and atomic review/receipt/cursor writes make interruption and
+replay safe. Candidate receipt IDs depend on source identity, not result ordering.
+
+Names use the existing localized normalization; structured address agreement ranks above
+distance. Number ranges and individual entrances remain different evidence. Matching
+names and proximity produce proposals, never identity proof or automatic acceptance.
+Multiple plausible identities remain separate ranked review tasks. A candidate retains
+publication, source identity, evidence score, distance, address conflicts, proposed
+identity-only changes, provenance and concurrency tokens.
+
+**Coverage boundaries:** canonical establishment evidence can use the existing guarded
+identity promotion/merge workflow. The nearby discovery index does not attest to an
+immutable publication's complete coverage, so even a successful candidate carries
+incomplete-coverage information; an empty result is deferred, never a definitive
+no-match. Buildings and premises are deferred with `PROVIDER_UNAVAILABLE`. The current
+interactive Building export importer requires a complete name catalogue and explicitly
+does not implement Places identity promotion; it is not silently repurposed for this
+bounded worker. Supporting Building rematching requires bounded publication discovery
+and a reviewed Building identity transition contract. Missing coordinates or names and
+provider failures retain separate reasons. A missing premises provider is never absence
+of a matching premises.
+
+Tasks reuse `locationIdentity`/`locationMerge` and the existing review editor. Deferred,
+failed and in-progress lookups appear in that same queue, with owner-authorized retry.
+The candidate tasks are restricted to their originating opted-in Feature. Acceptance
+rechecks intent at the final transactional write as well as on read; explicit merge
+reviews use the same fence. Existing Location authority, source-identity uniqueness,
+optimistic concurrency and audit history remain authoritative. Promotion retains the
+custom Location ID where unoccupied; occupied identities require explicit merge review.
+It does not adopt source names, move pins, alter selected addresses, change Feature name
+mode, or rewrite accepted Feature snapshots. Automatic source/local adoption and
+automatic placement cannot override explicit Feature opt-outs.
+
+Rejection suppresses that source identity for the same Feature, Location and authored
+intent across retries and later publications. Retry does not clear a rejection. Changed
+authored intent or Location revision establishes a new comparison baseline; explicit
+interactive source review remains the deliberate reconsideration path. New publication
+generations invalidate prior proposals until recaptured. Publication chronology
+conflicts hold the pipeline and invalidate actionable background reviews.
+
+### Rematching operations and recovery
+
+Apply migration 0157 before running the updated application or Worker. It adds durable
+state and views without rewriting existing rows. Source deployments/publications are not
+required to validate the local integration. Structured Worker logs report
+`task: location-rematch` and a phase, without coordinates, source payloads or
+credentials.
+
+Use these read-only probes on the intended environment:
+
+```sql
+SELECT generation,scanning,cursor,checkedAt,leaseUntil,failures,retryAt,lastError
+FROM locationRematchRun WHERE id=1;
+SELECT status,reason,count(*) FROM locationRematchCurrent GROUP BY status,reason;
+SELECT generation,count(*) FROM locationRematchReview GROUP BY generation;
+```
+
+Discovery/storage failures use exponential backoff; per-Feature failures start at five
+minutes and stop automatic retries after five attempts. Unavailable coverage retries
+daily, also capped at five attempts. Task retry resets the current eligible lookup's
+attempt budget, preserving rejection receipts. A healthy expired lease is reclaimed on
+the next invocation; never force-release an active lease. An interrupted candidate batch
+rolls back completely. For a publication chronology hold, investigate the canonical
+release/catalogue metadata before requesting rediscovery; do not edit pins or advance
+generations to bypass it. Daily discovery retries the chronology check. Old jobs and
+immutable reviews remain audit evidence, while current views exclude stale intent.
+Retention pruning is a separate operational policy, not part of retry.
+
+The local migration was rehearsed on a database copy and then applied as the sole
+pending migration after a backup. Existing rows and hashes were preserved: 1,656
+Features, 1,368 associations, 1,448 Locations and 2,062 revisions; integrity and foreign
+keys passed. There are currently no persisted Open to Sync associations in that local
+database, so it is not live rematching acceptance evidence. Migrated SQLite/D1-adapter
+tests exercise publication-to-review-to-acceptance, concurrency, retries, rejection,
+shared opt-outs and bounded batches. Chromium and Firefox exercise the actual review and
+retry components with fixture APIs, including save/reopen and 390 px layout.
+Authenticated admin acceptance remains unverified because no authenticated browser
+session is exposed. See #194 for the current scoped verification results and blockers.
+
+The proposed next iteration is documented in
+[Profile locales handoff](../../../docs/refactor-guides/Profile-Locales-Handoff.md):
+inline locale-prefixed editing, header translation controls, reorderable locale
+visibility, Organisation defaults and Project overrides, and the required dynamic
+content-locale persistence work. This remains a proposal, not implemented acceptance
+evidence (Refs #194).
+
+The locale foundation uses the
+[LLM 1 content-locale contract](../../../docs/refactor-guides/profile-locales/01-contract.md):
+canonical content tags remain separate from compiled UI locales; ordered
+`settings.contentLocales` on Organisation and Project replace inherited defaults without
+touching Project boolean flags. Migration `0158_content_locale_settings.sql` adds the
+two JSON-object columns and must precede deployment. Existing form writes accept an
+optional settings patch, preserve unrelated keys, and remove `contentLocales` on
+explicit null reset under the existing resource authorization and concurrency guard. The
+maintained catalogue controls new default choices, not which stored record translations
+may survive. Feature/Location content migration and rendered Profile/Advanced acceptance
+remain separate workstreams (Refs #194).
 
 The
 [LLM 3 locale-control contract](../../../docs/refactor-guides/profile-locales/03-contract.md)
@@ -1191,17 +2916,11 @@ horizontal overflow. Authenticated Advanced save/reload remains unverified becau
 browser inventory exposes no existing session. Feature Profile integration belongs to
 LLM 4 and final acceptance to LLM 5; this work does not close #194 or its parent.
 
-The locale foundation uses the
-[LLM 1 content-locale contract](../../../docs/refactor-guides/profile-locales/01-contract.md):
-canonical content tags remain separate from compiled UI locales; ordered
-`settings.contentLocales` on Organisation and Project replace inherited defaults without
-touching Project boolean flags. Migration `0158_content_locale_settings.sql` adds the
-two JSON-object columns and must precede deployment. Existing form writes accept an
-optional settings patch, preserve unrelated keys, and remove `contentLocales` on
-explicit null reset under the existing resource authorization and concurrency guard. The
-maintained catalogue controls new default choices, not which stored record translations
-may survive. Feature/Location content migration and rendered Profile/Advanced acceptance
-remain separate workstreams (Refs #194).
+Feature Profile Title/Description fill (29 October 2026, Refs #194): use the panel
+surface for all locale input/textarea shells, matching the lighter address inputs. The
+scoped profile rule retains existing borders, focus and validation styling. Chromium
+fixture verification confirms all six locale control fills match the panel in light and
+dark themes; screenshots inspected.
 
 ### Dynamic authored content persistence (29 October 2026, Refs #194)
 
@@ -1287,111 +3006,156 @@ language remains visible at the end of the locale toolbar. Boolean reset control
 reserve their space to avoid moving switches when overrides change. See the acceptance
 report for browser coverage and remaining persistence checks.
 
-## Location association review (Refs #194, parent #180)
+### Saved Feature address and Updates separation (29 October 2026, Refs #194, parent #180)
 
-The Feature association review presents the original Address on the left and the
-Location record on the right. Components run from street and number through complex,
-phase, building, block, level, unit and access hints. Corrections edit the selected cell
-in place and remain Feature-owned; switching sides discards that correction. English UI
-labels use **Complex**, while the stored `premises` kind and source keys stay stable.
-Reselection uses an accessible icon button with a tooltip. A separate marker row repeats
-the discovery map's marker numbers/colours with the same direction switch and distance
-between positions; it defaults to the candidate pin when available, with an explicit
-choice to keep the original coordinates. Hover/focus on each compact marker card
-highlights its map marker. The map retains at least 128 usable pixels while the review
-scrolls independently. Review sizing uses intrinsic content height: long comparisons can
-shrink the map, while compact proposals return spare body space to it, capped at 65% of
-the viewport. Manual resizing remains authoritative until the content requirements
-change. Change triggers a fresh layout calculation, reserving a bounded
-candidate-results area rather than letting streaming result counts repeatedly resize the
-map. Comparison framing includes only these two markers, with 20% margins plus the
-marker radius, and refits after resize. The unnumbered blue marker uses a location-pin
-icon. This avoids creating two extra map canvases for the comparison.
+Saved Features use the same compact Location-name/address/coordinate toolbar as accepted
+new drafts. The Location tab contains address selection and editing; it no longer
+inserts lifecycle, accepted-reference diagnostics, brands, or source administration
+above the address columns. The connection status links to Updates. Saved Location
+visibility is managed on the Location record rather than presenting the new-draft
+visibility default as if it were persisted state.
 
-The specificity selector fills a recessed strip flush beneath the header. Its content is
-vertically centered with expansion and ring-legend buttons at the far right; the
-collapsed view retains only titles and the compact track. Selecting a record collapses
-it. The legend explains address evidence, available matches, the selected level and
-lookup state. The outer green ring pulses during lookup, then shows the strongest
-candidate's evidence strength as an arc once it reaches 60/100. An exact match or the
-original published record fills the ring. This is a heuristic score, not a probability:
-exact names contribute 55, distinctive contained names 45, distance contributes up to
-25, street and number agreement 10 each, and overlapping contradictions subtract 15
-each. Missing components are unknown, not contradictions. Partial scores cap at 95 and
-never trigger automatic selection. Exact inference retains the name, street, number,
-proximity and complete address agreement gate. The nearby theatre example scores 70/100;
-proximity alone cannot reach the threshold. Establishment discovery also runs for an
-initial Building so those candidates can draw attention before the user switches kinds.
-The ring does not encode selection. Keyboard focus outlines only the notch. Reselecting
-the active level preserves its comparison and unsaved corrections. Switching levels and
-returning restores the selected record and review for that level. Notches have opaque
-backgrounds and a single solid centre dot for the selected level only. Evidence is
-encoded by the rings. Hovering an unselected notch previews the choice with a semiopaque
-primary dot; leaving removes it. Hover never scales the notch. Search begins the
-following section.
+The saved-only **Updates** facet (`#updates`) owns pending Location tasks, explicit
+latest-local review, source identity matching, reset-to-Location drafts, brand
+inheritance, and disconnection. It mounts on first visit and retains drafts across tab
+changes. Matching and reset/disconnection tools remain progressively disclosed. Review
+preparation and unlink retain dirty-form and expected-version guards; merely opening the
+tab does not accept a revision or create a review.
 
-When comparing different records, the original selection and candidate each have a
-column header with their own kind icon and full name. The candidate header retains the
-name editor and reselection action. It is highlighted as the selected identity, while
-the original is visually unselected; a fixed, noninteractive arrow points right. The
-address component rows remain independently selectable and aligned under both
-identities. Populated candidate fields are the default, with original values filling
-missing fields; explicit normalized clears remain deliberate. Additional details expand
-and collapse with reduced-motion-aware transitions. Map-position descriptors are
-centered in their respective columns. Multilingual shares the comparison heading row,
-allowing the title to wrap within its column.
+A known operating/building status appears as **Location status** in Updates and links to
+the owning Location record. Unknown status is omitted. Location lifecycle does not
+assert whether the Feature still exists, so it does not get a separate Feature Lifecycle
+tab. The local `lifecycle-demo-e-feature` (permanently closed establishment) and
+`lifecycle-demo-f-building` (demolished building) illustrate this boundary. No new
+persistence or policy model is introduced.
 
-A single-record proposal uses an emphasized card with a kind icon, record name,
-kind/sync metadata and any supporting address (without repeating a Building's name). The
-primary Use action includes a checkmark; the secondary Change action includes the
-reselection icon. An inline pencil edits the establishment name. This proposal does not
-offer address-part editing; component disambiguation remains in the two-record
-comparison. Acceptance controls live on the proposal instead of being duplicated in the
-footer. There is no Cancel button in association review; the header back action supplies
-navigation. Back from the accepted editor first reopens the proposal, preserving the
-accepted identity and reviewed address. Its header restores the association heading and
-hides address/sync/visibility form controls until Use returns to the editor; a further
-back action returns to discovery results.
+### Feature revision integration design
 
-The selected identity and establishment-name editor share one field card. Corrections
-return to clickable text on blur, retaining their primary-colour override dots; Wrapped
-names edit in an autosizing textarea whose minimum height matches the displayed name;
-component labels retain their space during editing. Reset is offered only for a real
-value difference (including unconfirmed street text), and restores the chosen source
-value and Edit action. Outside pointer clicks finish before the field switches
-presentation, so wrapped text cannot move an action away from the pointer. Multilingual
-adds native locale prefixes beside the other languages; the active user's language has
-no label, and each field opens independently. Street numbers, levels and flat/unit
-identifiers are shared and have no translation rows. Level and Flat / Unit corrections
-use the regular address editor's type vocabulary, reference parsers and semantic
-setters, keeping type and reference separate.
+The
+[resource revision implementation plan](../../../docs/refactor-guides/Resource-Revisions-Implementation-Plan.md)
+defines the Feature contribution boundary. Independent proposals retain their base and
+submitted revisions. Acceptance merges against the inspected published head and
+publishes atomically; rejection preserves evidence without changing public content.
+Location adoption must retain its existing source/correction evidence and pass through
+that same publication boundary when the revision rollout is enabled.
 
-#### Feature authoring presentation policy (Refs #194, parent #180)
+Ordinary revision parents remain within one Feature identity. Merging or splitting
+Features uses explicit multi-identity input/output lineage with revision guards on all
+sources. This does not merge upstream Location identities or redistribute operational
+history automatically. Gallery snapshots pin image metadata and immutable file versions;
+removal from a gallery does not erase earlier associations or files.
 
-Project flags `allowFeatureDescriptions` (default true) and `locationBasedFeatureNames`
-(default false) control Feature authoring. Layer metadata can explicitly override either
-flag; absent/null means inherit. Turning off description authoring hides its Profile
-fields and retains existing stored descriptions on save. It does not delete historical
+Staff saves apply accepted content directly and record attributed history while
+preserving publication state. Published/unpublished controls visibility only. New staff
+records and split successors begin unpublished, without staff draft proposals. External
+contributions remain proposed changes reviewed in the task queue; the Feature's History
+tab is read-only. Gallery ordering and captions are edited in Images.
+
+Gallery sorting controls retain their place while an image-intent save is pending;
+temporary write restrictions disable the controls without removing the rail. Image
+publication is derived from the selected intent, including Catch-All assignment when
+accepting unclassified photos. Unavailable intent identities return a validation error
+before any image or assignment writes. The
+[review UI check](../../../scripts/visual-checks/task-image-review-check.ts) and
+[image transaction tests](../../../src/tests/image-edit-transaction.services.test.ts)
+cover these boundaries.
+
+The title menu opens Split (two names and an optional redirect) or Merge (same-layer
+search, side-by-side values, inline text editing and photo selection). A split copies
+content into two new identities and unpublishes/archives its source. A staff merge
+preserves the primary identity and visibility, and archives the secondary. Tasks, visits
+and their evidence remain attached to their original identities. The task queue's
+Duplicate action either discards the contribution with an attributed rejection or merges
+it into an existing primary and completes review in the same atomic batch. Selected
+photos retain immutable revision pins and original attribution; Last Seen keeps the
+latest inspected observation date rather than the operation date.
+
+Merge redirect choices live on `featureRevisionHead.redirectFeatureId`. A split's
+optional choice lives in its immutable
+`featureIdentityOperation.dispositions.redirectFeatureId`, linked to the source by the
+input operation member. Public resolution follows only that chosen chain and checks
+current destination visibility and hub scope on every request. Publication activates the
+redirect; unpublication suspends it without changing the stored choice or requiring a
+background job. Migration 0199 permits unpublished active merge survivors. Retired
+identities retain history while their active Location/property/gallery projections are
+removed.
+
+Organisation-owned field definitions now have catalogue revision capture in the existing
+organisation form and independent option-append API (migration 0176). This preserves
+definition/option identities, translations and order for audit, including removed
+definitions. It does not restore feature answers removed by existing field-deletion
+behavior or enrol hub/project catalogue writers. The
+[resource revision implementation plan](../../../docs/refactor-guides/Resource-Revisions-Implementation-Plan.md)
+records the integration boundaries and local rehearsal.
+
+The strict `feature-content/v1` snapshots preserve translations, property storage,
+accepted Location references and immutable image pins. Contributor acceptance updates an
+already-published Feature and cannot reactivate an unpublished identity. Staff Save
+remains separate from Publish. Approved maintenance while unpublished records a private
+capture without publishing. Shared Location name/phone/brand corrections require their
+own Organisation review.
+
+The
+[write-boundary guide](../../../docs/refactor-guides/Feature-Revisions-Write-Boundaries.md#application-integration-and-activation-boundary)
+records the remaining activation requirements: verified legacy-media baselines, full
+cutover rehearsal, relationship reassignment policy, and an attributed replacement for
+legacy bulk imports where required. Migrations 0184–0190 and browser verification have
+only been exercised on isolated fixtures/copies; this does not enable live Feature
+recording or complete the broader #194/#180/#213 acceptance criteria.
+
+### Feature identity relationship boundaries (Refs #194, parent #180)
+
+Accepted Feature merges and splits publish all outputs atomically with reviewed
+open-task assignments. Merge review defaults each task to the surviving identity; split
+review requires an explicit output, including tasks that stay on a retained original.
+Visits and completed tasks remain on their original Feature. Merge wishlists move to the
+survivor with duplicate links combined and visit history preserved. Split wishlists
+remain attached to the original identity and show public successor guidance.
+
+Import crosswalks retain their original Feature IDs. A mapped Feature may later be
+merged or split; identity publication does not rewrite crosswalks or infer a new
+mapping. This policy does not authorize importer replay to overwrite reviewed Feature
 content.
 
-Location naming uses the existing record-level
-`featureLocation.acceptancePolicy.nameMode`, not a second ownership model. Profile
-offers Location naming when every title is empty. Inherited titles follow edited
-Location translations, become read-only in Profile and link to **Edit Location**. When
-parent policy permits it, the Feature can return to independent naming. Link/relink and
-normal saves persist that intent; parent-required inheritance wins over submitted
-independent intent. These settings apply during authoring and linking; this change does
-not bulk rewrite existing Features when a Project setting changes.
+Migration `0191_feature_identity_relationships.sql` records immutable task moves and
+photo-proposal forwarding. Forwarded proposals retain the original upload and
+contributor, use the selected output revision as their base, and carry only the photo
+gallery change. Draft task evidence remains private until submitted. Legacy task photos
+without verified revision evidence require enrollment before reassignment. See the
+[Feature write-boundary guide](../../../docs/refactor-guides/Feature-Revisions-Write-Boundaries.md)
+for writer coverage and activation prerequisites; live enrollment remains separately
+gated.
 
-Hydrated Feature list and admin responses include an `authoring.nameMode` read
-projection of association ownership. Parent policy is not copied into Features: the
-editor resolves Project flags and Layer metadata from the app's shared,
-authorization-scoped ResourceDetail/CacheCtx. A small policy projection on the
-authorized Feature read covers its first editable frame while either parent is still
-loading. Once both parents are available, their current settings take precedence;
-navigation does not wait for those independent reads. Core Profile does not fetch the
-full Location association; Location editing still loads that detailed model. The minimal
-`compact` identity response does not carry naming data. Refs #194.
+### Revision-aware Feature import and legacy enrollment (6 November 2026)
+
+Refs #194, parent #180; Feature review integration also relates to #213.
+`scripts/breadline/features.ts --revisions` is the attributed offline writer after
+Feature revision cutover. It commits new identities, owned relations, Location
+associations, stable crosswalks and initial revisions together. Unchanged source replay
+preserves reviewed content and creates no extra revisions. Retired mapped identities
+remain mapped directly; the importer neither follows redirects nor chooses split
+successors. Changed accepted source hashes still require explicit reconciliation.
+
+The legacy SQL planner remains guarded for fresh rebuilds. Verified media enrollment and
+activation are separate commands, so installing schema or replaying an import does not
+silently enroll existing Features. Missing exact versioned media evidence blocks the
+affected Feature; pending task photos retain their author and review state. Local
+activation completed after database-refresh coordination and a fresh rehearsal: 1,647
+legacy Features and 2,093 images are enrolled, with new-Feature revision creation
+enabled. Subsequent explicitly authorized recovery enrolled all four previously blocked
+Features, including the book, with seven marked empty metadata baselines and verified
+original bytes. No local Feature remains unenrolled. Missing sidecars outside Feature
+galleries/tasks are a separate media follow-up. Existing publication/review state and
+normalized projections remain unchanged; production is unchanged. The
+[write-boundary guide](../../../docs/refactor-guides/Feature-Revisions-Write-Boundaries.md#verified-local-enrollment-tooling-6-november-2026-refs-194--180--213)
+contains commands, evidence coverage and remaining media exceptions.
+
+Organisation, project and hub logos also retain immutable image-content and metadata
+pins in their resource revision histories (migration 0197). Shared-logo edits capture
+all affected resource owners atomically and require their editing permissions. Legacy
+history remains identity-only until an exact baseline is verified; it never substitutes
+the current image for missing historical evidence. See
+[the resource revision implementation plan](../../../docs/refactor-guides/Resource-Revisions-Implementation-Plan.md).
 
 ### Contribution and duplicate review (Refs #194, #213)
 

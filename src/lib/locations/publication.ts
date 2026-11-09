@@ -106,7 +106,7 @@ export async function discoverLocationPublication(
 }
 
 /**
- * Compare authoritative publication chronology rather than local ingestion sequence.
+ * Compare authoritative publication chronology rather than local ingestion version.
  * @param accepted Last completely processed publication, or null on first discovery.
  * @param candidate Verified newly discovered publication.
  * @returns Whether to bootstrap, skip, scan forward, or retain accepted state for review.

@@ -62,14 +62,14 @@ export function buildFeatureFormCandidate(
 ): FeatureRevisionContent {
   const source = parseFeatureRevisionSource(snapshot)
   if (data.locationReset || (previous.placement.location && data.locationBrandEdit))
-    throw new Error('Edit shared Location changes through separate review')
+    throw new Error('Edit shared Location changes in the Location editor')
   if (
     previous.placement.location &&
     data.locationNameMode &&
     data.locationNameMode !==
       (previous.placement.location.acceptancePolicy?.nameMode ?? 'inherit')
   )
-    throw new Error('Location name inheritance requires separate Location review')
+    throw new Error('Edit Location name inheritance in the Location editor')
   // Apply only authored fields; identity, authorship, visibility and workflow stay server-owned.
   source.record.geometry = data.geometry as unknown as RevisionValue
   source.record.addressMeta = (data.addressMeta ?? {}) as RevisionValue

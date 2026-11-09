@@ -1,12 +1,24 @@
 // SHARED ADDRESS CONTRACT
 import { parseAddressContent } from '@saanseoi/address'
+import { formatFloor, formatUnit } from './address3d'
+import { parseStreetNumber } from './streetNumber.js'
 import {
   LocalAddressI18nSchema,
   LocalLocationAddressSchema,
 } from './localLocationAddress'
 import type { LocalLocationAddress } from './localLocationAddress'
 // FEATURE ADDRESS
-import { ADDRESS_LOCALES, getAddressDisplay, getAddressLocale } from './featureAddress'
+import {
+  ADDRESS_LOCALES,
+  emptyFeatureAddress,
+  getAddressDisplay,
+  getAddressLocale,
+} from './featureAddress'
+import {
+  SUBJECTIVE_DIVISIONS,
+  authoredDivisionOverrides,
+  markerDerivedAddressContent,
+} from './divisions'
 import type { FeatureAddress } from './featureAddress'
 
 /** Copy geocoded content into a locally authored proposal without claiming canonical IDs.
@@ -28,7 +40,7 @@ export function prepareLocalLocationAddress(
     ? structuredClone(original.source.authored)
     : parseAddressContent(labels).content
   if (!geocoded) return content
-  const record = geocoded.source.records.data
+  const record = geocoded.source.rawSource.data
   const attributes =
     record && typeof record === 'object' && 'attributes' in record
       ? record.attributes
@@ -55,4 +67,114 @@ export function prepareLocalLocationAddress(
     if (parsed.success) content.i18n[tag] = parsed.data
   }
   return content
+}
+
+/** Wrap authored content for the shared Feature and Location component editor.
+ * @param content Local address, independent of publication identity. @returns An editable envelope.
+ */
+export function localAddressDraft(content: LocalLocationAddress): FeatureAddress {
+  const draft = emptyFeatureAddress()
+  draft.source.authored = structuredClone(content)
+  draft.divisionOverrides = authoredDivisionOverrides(content)
+  return draft
+}
+
+/** Materialize combined-expression edits into the shared authored content contract.
+ * @param draft Editor envelope. @returns Structured local content without invented source IDs.
+ * @remarks Source evidence is never modified. Parsed number/block/phase fields and generated
+ * floor/unit translations are persisted together; changing structure invalidates stale display text.
+ */
+export function localAddressContent(draft: FeatureAddress): LocalLocationAddress {
+  const content = structuredClone(
+    draft.association?.content ??
+      draft.source.authored ??
+      prepareLocalLocationAddress(draft, draft),
+  )
+  for (const [tag, corrections] of Object.entries(draft.overrides)) {
+    const changes = Object.fromEntries(
+      Object.entries(corrections).filter(
+        ([key]) => key in LocalAddressI18nSchema.shape,
+      ),
+    )
+    if (!Object.keys(changes).length) continue
+    if (typeof changes.buildingNumberExpression === 'string') {
+      const parsed = parseStreetNumber(changes.buildingNumberExpression)
+      if (parsed.valid)
+        Object.assign(changes, {
+          buildingNumberExpression: parsed.number.expression || null,
+          buildingNumberFrom: parsed.number.from,
+          buildingNumberTo: parsed.number.to,
+          buildingNumberConnector: parsed.number.connector,
+        })
+    }
+    const hasStructure = Object.keys(changes).some(key => key !== 'formattedAddress')
+    // Preserve unparsed display text until there is enough structure to rebuild it safely.
+    const canRebuild =
+      Boolean(changes.streetName) ||
+      [
+        'buildingName',
+        'premisesName',
+        'streetName',
+        'blockExpression',
+        'blockRef',
+        'phaseExpression',
+        'phaseRef',
+      ].some(key =>
+        Boolean(content.i18n[tag]?.[key as keyof typeof LocalAddressI18nSchema.shape]),
+      )
+    content.i18n[tag] = LocalAddressI18nSchema.parse({
+      ...content.i18n[tag],
+      formattedAddress:
+        hasStructure && canRebuild ? '' : (content.i18n[tag]?.formattedAddress ?? ''),
+      ...changes,
+    })
+  }
+  if (draft.unitDetails) {
+    content.unit = {
+      unitRef: Object.hasOwn(draft.unitDetails, 'unitRef')
+        ? (draft.unitDetails.unitRef ?? '')
+        : (content.unit?.unitRef ?? ''),
+      unitType: Object.hasOwn(draft.unitDetails, 'unitType')
+        ? (draft.unitDetails.unitType ?? 'U')
+        : (content.unit?.unitType ?? 'U'),
+      floorRef: Object.hasOwn(draft.unitDetails, 'floorRef')
+        ? (draft.unitDetails.floorRef ?? '')
+        : (content.unit?.floorRef ?? ''),
+      floorType: Object.hasOwn(draft.unitDetails, 'floorType')
+        ? (draft.unitDetails.floorType ?? 'F')
+        : (content.unit?.floorType ?? 'F'),
+      unitPortion: Object.hasOwn(draft.unitDetails, 'unitPortion')
+        ? (draft.unitDetails.unitPortion ?? null)
+        : (content.unit?.unitPortion ?? null),
+    }
+    content.unitI18n = {}
+    for (const [tag, corrections] of Object.entries(draft.overrides)) {
+      if (
+        typeof corrections.floorExpression === 'string' ||
+        typeof corrections.unitExpression === 'string'
+      ) {
+        const locale = Object.entries(ADDRESS_LOCALES).find(
+          ([, value]) => value === tag,
+        )?.[0] as keyof typeof ADDRESS_LOCALES | undefined
+        if (!locale) continue
+        const fields = getAddressLocale(draft, locale)
+        content.unitI18n[tag] = {
+          floorExpression:
+            content.unit.floorType === 'X'
+              ? String(fields.floorExpression ?? content.unit.floorRef ?? '')
+              : formatFloor(content.unit, locale),
+          // Persist a composed expression; the editor input intentionally contains only the reference.
+          unitExpression:
+            content.unit.unitType === 'X'
+              ? String(fields.unitExpression ?? content.unit.unitRef ?? '')
+              : formatUnit(content.unit, locale),
+        }
+      }
+    }
+  }
+  // Geography selections live in divisionOverrides, not a duplicate authored ID set.
+  for (const field of Object.keys(SUBJECTIVE_DIVISIONS))
+    delete content[field as keyof typeof content]
+  // Administrative and landform IDs are derived from the marker, never authored corrections.
+  return markerDerivedAddressContent(LocalLocationAddressSchema.parse(content))
 }

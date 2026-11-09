@@ -11,19 +11,20 @@ import { guardedQuery } from '#lib/api/server/guarded.js'
 import { NearbyPlacesInputSchema } from '#lib/locations/discovery.js'
 import { searchNearbySaanSeoiPlaces } from '#lib/locations/nearbySource.js'
 import {
-  PlaceSearchInputSchema,
-  searchSaanSeoiPlaces,
+  PlaceSearchPageInputSchema,
+  PlaceSearchPageError,
+  searchSaanSeoiPlacesPage,
 } from '#lib/locations/sourceClient.js'
 import { readSaanSeoiPlacePreview } from '#lib/locations/sourcePreview.js'
 import { locationSourceEndpoint } from '#lib/locations/sourceEndpoint.server.js'
 
 /** Search public Place previews before a Feature has an identity.
- * @param input Bounded search text and display locale.
+ * @param input Bounded search text or category-only filters, and display locale.
  * @returns Read-only facts and explicit partial coverage when a preview fails.
  * @remarks Requires an account; creates no Location or Feature association.
  */
 export const searchDraftLocations = guardedQuery(
-  PlaceSearchInputSchema,
+  PlaceSearchPageInputSchema,
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
     const env = ctx.event.locals.platform?.env
@@ -31,7 +32,15 @@ export const searchDraftLocations = guardedQuery(
     const endpoint = locationSourceEndpoint(apiKey ?? '')
     if (!endpoint.apiKey.trim()) error(503, 'LOCATION_SEARCH_UNAVAILABLE')
     const client = { ...endpoint, fetch: ctx.event.fetch }
-    const candidates = await searchSaanSeoiPlaces(client, { ...input, limit: 20 })
+    // Keep each lookup bounded; cursors advance independently of preview/filter failures.
+    const page = await searchSaanSeoiPlacesPage(client, { ...input, limit: 20 }).catch(
+      cause => {
+        if (cause instanceof PlaceSearchPageError && cause.status === 410)
+          error(410, 'LOCATION_SEARCH_EXPIRED')
+        throw cause
+      },
+    )
+    const candidates = page.candidates
     const settled = await Promise.allSettled(
       candidates.map(async candidate => {
         const facts = await readSaanSeoiPlacePreview(client, {
@@ -60,7 +69,8 @@ export const searchDraftLocations = guardedQuery(
           : [],
       ),
       partial: settled.some(result => result.status === 'rejected'),
-      limited: candidates.length === 20,
+      nextCursor: page.nextCursor,
+      limited: false,
     }
   },
 )

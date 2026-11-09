@@ -44,17 +44,20 @@ export async function hydrateSaanSeoiPlaceAddress(
       ...projection.facts,
       location: {
         ...projection.facts.location,
-        address: { ...address, status: 'unresolved', records: {} },
+        address: { ...address, status: 'unresolved', rawSource: {} },
       },
     },
     issues: projection.issues.some(issue => issue.kind === 'addressRecordsPending')
       ? projection.issues
       : [...projection.issues, { kind: 'addressRecordsPending' }],
-    payload: { ...projection.payload, addressHydration: { status: 'review', reason } },
+    rawSource: {
+      ...projection.rawSource,
+      addressHydration: { status: 'review', reason },
+    },
   })
-  if (!address.address2dId || !address.addressSnapshotId)
+  if (!address.address2dId || !address.snapshotId)
     return review('incomplete-address-reference')
-  const locationPublication = readLocationPublicationMetadata(projection.payload.meta)
+  const locationPublication = readLocationPublicationMetadata(projection.rawSource.meta)
   const path = `/addresses/v0.1/${encodeURIComponent(address.address2dId)}`
   const base = {
     region: 'hk',
@@ -117,8 +120,8 @@ export async function hydrateSaanSeoiPlaceAddress(
     })
     return {
       ...resolved,
-      payload: {
-        ...resolved.payload,
+      rawSource: {
+        ...resolved.rawSource,
         addressHydration: { status: 'resolved', ...pin },
       },
     }

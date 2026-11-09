@@ -38,12 +38,6 @@ beforeEach(() => {
       `CREATE TABLE IF NOT EXISTS "${getTableName(table)}" (${columns.map(column => `"${column.name}" ${column.getSQLType()}`).join(',')})`,
     )
   }
-  // The existing authoring projection reads this migrated column before the typed schema catches up.
-  const linkColumns = sqlite.prepare('PRAGMA table_info(featureLocation)').all() as {
-    name: string
-  }[]
-  if (!linkColumns.some(column => column.name === 'acceptancePolicy'))
-    sqlite.exec('ALTER TABLE featureLocation ADD COLUMN acceptancePolicy TEXT')
   sqlite.exec(`INSERT INTO user (id,isArchived) VALUES ('target',0),('archived',1);
     INSERT INTO layer (id,isPublished,isArchived) VALUES ('layer',1,0),('hidden',0,0);`)
   db = drizzle(
@@ -60,16 +54,20 @@ afterEach(() => sqlite.close())
 
 function addFeature(id: string, owner = 'target'): void {
   sqlite
-    .prepare(`INSERT INTO feature
+    .prepare(
+      `INSERT INTO feature
     (id,createdAt,modifiedAt,contributorId,organisationId,projectId,layerId,isPublished,isArchived,isDraft,isPendingReview,isVisitable,isIntangible,addressMeta,geometry)
-    VALUES (?,'2026-01-01','2026-01-01',?,'org','project','layer',1,0,0,0,1,0,'{}','{"type":"Point","coordinates":[114,22]}')`)
+    VALUES (?,'2026-01-01','2026-01-01',?,'org','project','layer',1,0,0,0,1,0,'{}','{"type":"Point","coordinates":[114,22]}')`,
+    )
     .run(id, owner)
 }
 function addPhoto(id: string, featureId: string, owner = 'target'): void {
   sqlite
-    .prepare(`INSERT INTO image
+    .prepare(
+      `INSERT INTO image
     (id,createdAt,modifiedAt,contributorId,isArchived,cdn,env,publicId,version,presentationMode)
-    VALUES (?,'2026-01-01','2026-01-01',?,0,'cloudflareR2','local',?,1,'contain')`)
+    VALUES (?,'2026-01-01','2026-01-01',?,0,'cloudflareR2','local',?,1,'contain')`,
+    )
     .run(id, owner, `images/${id}`)
   sqlite
     .prepare(
@@ -220,6 +218,22 @@ it('omits absent and archived contributors', async () => {
       ids: ['photo'],
     }),
   ).toEqual([])
+})
+
+it('preserves public historical visibility while allowing the admin surface', async () => {
+  addFeature('historical')
+  addPhoto('historical-photo', 'historical')
+  sqlite.exec("UPDATE feature SET isIntangible=1 WHERE id='historical'")
+  const publicParams = { ...params, isAdminRequest: false }
+  expect(
+    await readUserContributedFeatures(db, { ...publicParams, ids: ['historical'] }),
+  ).toEqual([])
+  expect(
+    await readUserContributedImages(db, { ...publicParams, ids: ['historical-photo'] }),
+  ).toEqual([])
+  expect(
+    await readUserContributedFeatures(db, { ...params, ids: ['historical'] }),
+  ).toHaveLength(1)
 })
 
 it('checks core hub membership without selecting unrelated parent columns', async () => {

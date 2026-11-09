@@ -24,6 +24,7 @@ import { nanoid } from 'nanoid'
 // SERVICES
 import { updateFeatureRevisionState } from '#lib/db/services/featureStateRevision.js'
 // ADDRESS
+import { validateAddressDivisionOverrides } from '#lib/db/services/addressDivisions.js'
 import { projectFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
 import { publicationPreviewConditions } from './services/publicationPreview.js'
@@ -543,6 +544,16 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     geometry: normalizeFeatureFormGeometry(params.data.geometry),
   })
 
+  if (
+    data.addressMeta?.address?.divisionOverrides ||
+    data.addressMeta?.address?.source.divisionOverrides
+  ) {
+    await validateAddressDivisionOverrides(db, {
+      ...data.addressMeta.address.source.divisionOverrides,
+      ...data.addressMeta.address.divisionOverrides,
+    })
+  }
+
   const featureId = meta?.id?.trim()
   const mode = meta?.mode
   const isSupportedMode = mode === 'create' || mode === 'update'
@@ -611,6 +622,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       )
     }
 
+    if (await historicalSourceLayerId(db, data.layerId))
+      invalid(issue('HISTORICAL_LAYER_MEMBERSHIP_AUTOMATIC'))
     const presentationPolicy = await readFeaturePresentationPolicy(db, data.layerId)
     if (!presentationPolicy.allowDescriptions) {
       for (const row of Object.values(data.i18n)) row.description = ''

@@ -16,6 +16,8 @@
 // - prepareLocationMergeReview
 // - getLocationMergeReview
 // - acceptLocationMergeReview
+// 5. BACKGROUND LOOKUP RETRY
+// - retryLocationRematch
 // ---
 // SVELTE
 import { error, isHttpError } from '@sveltejs/kit'
@@ -28,6 +30,7 @@ import { requireLocationOrganisationManager } from '#lib/api/services/locationOw
 import { canManageSharedLocationIdentity } from '#lib/api/services/authz/location.js'
 // SERVICES
 import { rejectLocationIdentityReview as persistIdentityRejection } from '#lib/db/services/locationIdentityRejection.js'
+import { retryLocationRematch as persistRematchRetry } from '#lib/db/services/locationRematch.js'
 import {
   probeLocationIdentityScope,
   readLocationIdentityBaseline,
@@ -355,5 +358,20 @@ export const acceptLocationMergeReview = guardedCommand(
     })
     if (result.status === 'conflict') error(409, 'LOCATION_MERGE_CHANGED')
     return result
+  },
+)
+
+// 5. BACKGROUND LOOKUP RETRY
+/** Retry an eligible background lookup using the existing Location management authority.
+ * @param input Stable Location and durable lookup job IDs.
+ * @returns Whether work was queued; stale intent and rejected candidates are never reset.
+ */
+export const retryLocationRematch = guardedCommand(
+  identityInput.extend({ jobId: z.string().min(1).max(200) }),
+  async (input, ctx) => {
+    await requireIdentityManager(ctx, input.locationId)
+    if (!(await persistRematchRetry(ctx.db, input)))
+      error(409, 'LOCATION_REMATCH_CHANGED_OR_BUSY')
+    return { queued: true }
   },
 )

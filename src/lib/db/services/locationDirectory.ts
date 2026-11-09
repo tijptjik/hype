@@ -18,7 +18,7 @@ import type { LocationResource } from '#lib/locations/resource.js'
 /**
  * Read a bounded page of standalone Location projections within an authorized scope.
  * @param db Request-local database.
- * @param input Authorized private owner (or shared only), literal search and ID cursor.
+ * @param input Authorized owner scope, optional Organisation subset, kind/lifecycle, literal search and ID cursor.
  * @returns Latest facts only, without raw provenance or associated Feature identities.
  * @remarks Authorization precedes this query; ownership is fenced in the read itself.
  */
@@ -27,6 +27,7 @@ export async function listLocationResources(
   input: {
     includeCount?: boolean
     organisationId?: string
+    /** Narrow index results without changing detail-read authorization scope. */
     restrictToOrganisation?: boolean
     kind?: LocationKind
     q?: string
@@ -41,7 +42,7 @@ export async function listLocationResources(
 }> {
   const revisionJoin = and(
     eq(locationRevision.locationId, locationTable.id),
-    sql`${locationRevision.sequence} = (SELECT max(r.sequence) FROM locationRevision r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
+    sql`${locationRevision.version} = (SELECT max(r.version) FROM locationRevision r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
   )
   const match = and(
     input.organisationId
@@ -64,11 +65,11 @@ export async function listLocationResources(
     // Filter the scoped effective assertion before pagination, retaining historic rows by default.
     input.lifecycleStatus
       ? sql`COALESCE(
-          CASE WHEN EXISTS(SELECT 1 FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.operatingStatus.mode')='override')
-            THEN (SELECT json_extract(o.overrides,'$.operatingStatus.value') FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
+          CASE WHEN EXISTS(SELECT 1 FROM organisationLocationHead o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.operatingStatus.mode')='override')
+            THEN (SELECT json_extract(o.overrides,'$.operatingStatus.value') FROM organisationLocationHead o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
             ELSE ${locationFactsFieldSql(locationRevision.facts, 'operatingStatus')} END,
-          CASE WHEN EXISTS(SELECT 1 FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.buildingStatus.mode')='override')
-            THEN (SELECT json_extract(o.overrides,'$.buildingStatus.value') FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
+          CASE WHEN EXISTS(SELECT 1 FROM organisationLocationHead o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.buildingStatus.mode')='override')
+            THEN (SELECT json_extract(o.overrides,'$.buildingStatus.value') FROM organisationLocationHead o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
             ELSE ${locationFactsFieldSql(locationRevision.facts, 'buildingStatus')} END,
           'unknown')=${input.lifecycleStatus}`
       : undefined,
@@ -99,14 +100,22 @@ export async function listLocationResources(
       sourceAvailability: locationTable.sourceAvailability,
       ownerOrganisationId: locationTable.ownerOrganisationId,
       ownerOrganisationNames: sql<string>`(SELECT json_group_object(locale, COALESCE(NULLIF(nameShort,''),name)) FROM organisationI18n WHERE organisationId=${locationTable.ownerOrganisationId})`,
+      editingOrganisationNames: sql<string>`(SELECT json_group_object(locale, COALESCE(NULLIF(nameShort,''),name)) FROM organisationI18n WHERE organisationId=${input.organisationId ?? null})`,
       revisionId: locationRevision.id,
+      createdAt: locationTable.createdAt,
+      revisionCreatedAt: locationRevision.createdAt,
+      origin: locationRevision.origin,
+      version: locationRevision.version,
+      apiVersion: locationRevision.apiVersion,
+      releaseId: locationRevision.releaseId,
+      snapshotId: locationRevision.snapshotId,
       facts: locationRevision.facts,
       organisationOverrides: sql<
         string | null
-      >`(SELECT overrides FROM organisationLocation WHERE locationId=${locationTable.id} AND organisationId=${input.organisationId ?? null})`,
+      >`(SELECT overrides FROM organisationLocationHead WHERE locationId=${locationTable.id} AND organisationId=${input.organisationId ?? null})`,
       organisationRevision: sql<
         string | null
-      >`(SELECT revision FROM organisationLocation WHERE locationId=${locationTable.id} AND organisationId=${input.organisationId ?? null})`,
+      >`(SELECT revision FROM organisationLocationHead WHERE locationId=${locationTable.id} AND organisationId=${input.organisationId ?? null})`,
     })
     .from(locationTable)
     .leftJoin(locationRevision, revisionJoin)
@@ -115,46 +124,70 @@ export async function listLocationResources(
     .limit(26)
   const data = rows
     .slice(0, 25)
-    .map(({ organisationOverrides, ownerOrganisationNames, ...row }) => {
-      let facts = row.facts === null ? null : LocationFactsSchema.parse(row.facts)
-      if (facts && organisationOverrides) {
-        const effective = resolveFeatureLocation(
-          facts,
-          facts.location,
-          JSON.parse(organisationOverrides) as FeatureLocationOverrides,
-        )
-        facts = {
-          ...facts,
+    .map(
+      ({
+        organisationOverrides,
+        ownerOrganisationNames,
+        editingOrganisationNames,
+        createdAt,
+        revisionCreatedAt,
+        origin,
+        version,
+        apiVersion,
+        releaseId,
+        snapshotId,
+        ...row
+      }) => {
+        let facts = row.facts === null ? null : LocationFactsSchema.parse(row.facts)
+        if (facts && organisationOverrides) {
+          const effective = resolveFeatureLocation(
+            facts,
+            facts.location,
+            JSON.parse(organisationOverrides) as FeatureLocationOverrides,
+          )
+          facts = {
+            ...facts,
 
-          ...(effective.footprint !== undefined
-            ? { footprint: effective.footprint }
-            : {}),
-          names: Object.fromEntries(
-            Object.entries(effective.names).filter(
-              (pair): pair is [string, string] => pair[1] !== null,
+            ...(effective.footprint !== undefined
+              ? { footprint: effective.footprint }
+              : {}),
+            names: Object.fromEntries(
+              Object.entries(effective.names).filter(
+                (pair): pair is [string, string] => pair[1] !== null,
+              ),
             ),
-          ),
-          phoneNumber: effective.phoneNumber ?? [],
-          brands: effective.brands ?? [],
-          ...(effective.operatingStatus !== undefined
-            ? { operatingStatus: effective.operatingStatus }
-            : {}),
-          ...(effective.buildingStatus !== undefined
-            ? { buildingStatus: effective.buildingStatus }
-            : {}),
-          ...(effective.successorLocationId !== undefined
-            ? { successorLocationId: effective.successorLocationId }
-            : {}),
-          location: effective.location ?? facts.location,
+            phoneNumber: effective.phoneNumber ?? [],
+            brands: effective.brands ?? [],
+            ...(effective.operatingStatus !== undefined
+              ? { operatingStatus: effective.operatingStatus }
+              : {}),
+            ...(effective.buildingStatus !== undefined
+              ? { buildingStatus: effective.buildingStatus }
+              : {}),
+            ...(effective.successorLocationId !== undefined
+              ? { successorLocationId: effective.successorLocationId }
+              : {}),
+            location: effective.location ?? facts.location,
+          }
         }
-      }
-      return {
-        ...row,
-        ownerOrganisationNames: JSON.parse(ownerOrganisationNames),
-        editingOrganisationId: input.organisationId ?? null,
-        sourceReference: locationSourceReference(row.ssId),
-        facts,
-      }
-    })
+        return {
+          ...row,
+          ownerOrganisationNames: JSON.parse(ownerOrganisationNames),
+          editingOrganisationNames: JSON.parse(editingOrganisationNames),
+          metadata: {
+            createdAt,
+            revisionCreatedAt,
+            origin,
+            version,
+            apiVersion,
+            releaseId,
+            snapshotId,
+          },
+          editingOrganisationId: input.organisationId ?? null,
+          sourceReference: locationSourceReference(row.ssId),
+          facts,
+        }
+      },
+    )
   return { data, totalCount, nextCursor: rows.length > 25 ? data.at(-1)!.id : null }
 }

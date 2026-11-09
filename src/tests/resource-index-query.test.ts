@@ -56,7 +56,7 @@ function setup() {
     )
   }
   sqlite.exec(
-    'create table organisationLocation(locationId text, organisationId text, overrides text, revision text)',
+    'create table organisationLocationHead(locationId text, organisationId text, overrides text, revision text)',
   )
   const statements: string[] = []
   const prepare = (query: string, params: unknown[] = []) => ({

@@ -38,10 +38,12 @@ HKFoodWorks this permission as the reviewed exception, preserving existing revis
 history and leaving every other organisation unchanged. Advanced → Organization
 Permissions exposes the grant; only explicit SuperAdmins may change it. Profile saves
 recheck the live permission alongside the same-organisation membership, so revocation
-also blocks already-open editors. Other admin roles receive public profile data only.
-The editor covers identity/contact details, account status, language, appearance,
-contribution/admin display preferences, experimental flags, and separate messaging
-settings. Saves use revision conflict checks and database identity uniqueness.
+also blocks already-open editors. Organisation form saves persist the grant atomically
+with the parent revision; default-off snapshots remain compatible with pre-permission
+history. Other admin roles receive public profile data only. The editor covers
+identity/contact details, account status, language, appearance, contribution/admin
+display preferences, experimental flags, and separate messaging settings. Saves use
+revision conflict checks and database identity uniqueness.
 
 Avatar uploads share the single-image lifecycle with organisation, project and hub logos
 (Refs #189). Migration `0206_image_upload_attachment.sql` records verified assets
@@ -160,6 +162,14 @@ included in a new production deployment. Private screenshots/logs are retained u
 
 ### Repeatable source reconciliation
 
+The development refresh now requires this reconciliation after both fresh source exports
+and schema preparation, before donor/dropoff import or installation. It uses the
+production accepted-sync manifest's source state and reviewed decisions, copied to the
+local target identity, with the durable local ID seed. The refresh records a successful
+reconciliation receipt only after zero exceptions and a zero-write replay; manual
+recovery must satisfy the same gate. See the
+[development rebuild workflow](../../../docs/refactor-guides/Development-Database-Rebuild.md).
+
 1. Plan against the last accepted local target state; consecutive runs do not pull HYPE
    production again. Pin a complete source snapshot, target identity, private decisions
    and durable per-target seed. Apply the established E.164 normalization, email
@@ -245,6 +255,17 @@ also updates `user.updatedAt`. Newly ambiguous source cohorts do not clear an
 established claimed profile. Primary email, verification, credentials, runtime claims,
 HYPE edits and staff roles remain HYPE-owned. On first adoption of an existing local
 import, state and membership are established without rewriting its profile.
+
+Local refresh verification on 6 November 2026 reconciled 14,314 source users against the
+fresh HYPE production mirror: five new users, six existing name updates and 51 updated
+existing source snapshots, with no removals, restorations or exceptions. The seven
+reviewed exclusions remain. In total, 14,307 source identities map to 13,499 local HYPE
+owners. All 14,302 prior source owners, 13,568 existing account rows and existing
+organisation roles were preserved. Source evidence includes related records; these
+counts do not establish imported HYPE run history. Installed replay has zero mutations,
+exceptions and checkpoint changes. Private plans, before-images, read-back verification
+and accepted local state are retained under
+`.local/database-refresh-20261106/user-reconciliation/`. Production was unchanged.
 
 Use an explicit complete source mirror, retained seed, decisions and accepted target
 file. The default mirror may be older than the reviewed rebuild input; never choose it

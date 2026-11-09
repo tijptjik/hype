@@ -42,7 +42,7 @@ export async function accessibilitySubject(
     JOIN locationRevision v ON v.locationId=l.id
     WHERE l.id=${locationId} AND l.state IN ('linked','unresolved')
     AND l.kind IN ('establishment','building','premises') AND (l.state!='linked' OR v.origin='saanseoi')
-    ORDER BY v.sequence DESC LIMIT 1`)) ?? null
+    ORDER BY v.version DESC LIMIT 1`)) ?? null
   )
 }
 
@@ -104,7 +104,7 @@ export async function readLocationAccessibility(
     FROM locationOccupancyHead r JOIN location l ON l.id=${canonicalLocationSQL(sql`r.establishmentLocationId`)}
     JOIN locationAccessibilityHead a ON a.locationId=l.id
     JOIN locationRevision v ON v.id=(SELECT latest.id FROM locationRevision latest
-      WHERE latest.locationId=l.id AND (l.state!='linked' OR latest.origin='saanseoi') ORDER BY latest.sequence DESC LIMIT 1)
+      WHERE latest.locationId=l.id AND (l.state!='linked' OR latest.origin='saanseoi') ORDER BY latest.version DESC LIMIT 1)
     WHERE ${canonicalLocationSQL(sql`r.containerLocationId`)}=${locationId}
     AND r.scopeOrganisationId IS NULL AND r.assertionState='asserted' AND r.occupancyState='current'
     AND l.state IN ('linked','unresolved') AND l.kind='establishment' ORDER BY l.id LIMIT 51`)
@@ -161,7 +161,7 @@ export async function saveLocationAccessibility(
     AND (SELECT v.id FROM locationRevision v JOIN location l ON l.id=v.locationId
       WHERE l.id=${input.locationId} AND l.state IN ('linked','unresolved')
       AND l.kind IN ('establishment','building','premises')
-      AND (l.state!='linked' OR v.origin='saanseoi') ORDER BY v.sequence DESC LIMIT 1)=${subject.revisionId}
+      AND (l.state!='linked' OR v.origin='saanseoi') ORDER BY v.version DESC LIMIT 1)=${subject.revisionId}
     AND (SELECT json_group_array(id) FROM (SELECT id FROM locationOccupancyHead
       WHERE establishmentLocationId=${subject.id} AND scopeOrganisationId IS NULL
       AND assertionState='asserted' AND occupancyState='current' ORDER BY id))=${JSON.stringify(JSON.parse(key).occupancy)}

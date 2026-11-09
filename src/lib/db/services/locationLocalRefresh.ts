@@ -36,7 +36,7 @@ export async function processLocalLocationChanges(
     .select({
       id: feature.id,
       projectId: feature.projectId,
-      associationRevision: featureLocation.revision,
+      associationRevision: featureLocation.version,
       factsRevisionId: featureLocation.factsRevisionId,
       locationRevisionId: featureLocation.locationRevisionId,
       factsOrganisationRevision: featureLocation.factsOrganisationRevision,
@@ -48,6 +48,7 @@ export async function processLocalLocationChanges(
       and(
         eq(featureLocation.locationId, item.locationId),
         eq(feature.isDraft, false),
+        sql`COALESCE(json_extract(${feature.addressMeta},'$.address.association.mode'),'')!='manual'`,
         sql`${feature.id}>${item.featureCursor}`,
         item.organisationId
           ? sql`(SELECT organisationId FROM project WHERE id=${feature.projectId})=${item.organisationId}`
@@ -79,7 +80,7 @@ export async function processLocalLocationChanges(
         sql`EXISTS(SELECT 1 FROM location p WHERE p.id=${item.locationId} AND (p.state!='linked' OR ${locationRevision.origin}='saanseoi'))`,
       ),
     )
-    .orderBy(sql`sequence DESC`)
+    .orderBy(sql`version DESC`)
     .get()
   if (!baseline) return 'conflict'
   const candidateRevisionId = baseline.id
@@ -103,7 +104,7 @@ export async function processLocalLocationChanges(
           eq(locationRefreshItem.runId, item.runId),
           eq(locationRefreshItem.locationId, item.locationId),
           guard,
-          sql`EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${row.id} AND revision=${row.associationRevision})`,
+          sql`EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${row.id} AND version=${row.associationRevision})`,
         ),
       )
       .returning({ id: locationRefreshItem.locationId })
@@ -123,7 +124,7 @@ export async function processLocalLocationChanges(
     for (const fieldGroup of ['facts', 'location'] as const) {
       if (review.decisions.some(d => d.fieldGroup === fieldGroup)) continue
       const current = await db
-        .select({ revision: featureLocation.revision, modifiedAt: feature.modifiedAt })
+        .select({ revision: featureLocation.version, modifiedAt: feature.modifiedAt })
         .from(featureLocation)
         .innerJoin(feature, eq(feature.id, featureLocation.featureId))
         .where(eq(feature.id, row.id))

@@ -180,18 +180,18 @@ for (const [name, engine] of [
         await page.mouse.up()
         const share = Number(await splitter.getAttribute('aria-valuenow'))
         if (Math.abs(share - 30) > 1)
-          throw Error(`Pointer split resize failed: ${share}`)
+          throw Error('Pointer split resize failed: ' + share)
         const bounds = await page.evaluate(() => {
           const widthOf = (selector: string) =>
-            document.querySelector(selector)?.getBoundingClientRect().width
+            document.querySelector(selector)!.getBoundingClientRect().width
           return {
             map: widthOf('.bits-feature-visual__map'),
             image: widthOf('.bits-feature-visual__image'),
             overview: widthOf('[aria-label="Location context map"]'),
             detail: widthOf('[aria-label="Detailed location map"]'),
             track: document
-              .querySelector('[aria-label="Gallery thumbnails"]')
-              ?.parentElement?.parentElement?.getBoundingClientRect().width,
+              .querySelector('[aria-label="Gallery thumbnails"]')!
+              .parentElement!.parentElement!.getBoundingClientRect().width,
           }
         })
         if (
@@ -200,7 +200,7 @@ for (const [name, engine] of [
           Math.abs(bounds.detail - bounds.map) > 2 ||
           Math.abs(bounds.track - bounds.image) > 2
         )
-          throw Error(`Pane contents did not follow split: ${JSON.stringify(bounds)}`)
+          throw Error('Pane contents did not follow split: ' + JSON.stringify(bounds))
         if ((await activePhoto.getAttribute('aria-pressed')) !== 'true')
           throw Error('Resizing changed image selection')
         await page.screenshot({
@@ -253,7 +253,7 @@ for (const [name, engine] of [
       const inset = await page
         .locator('[data-form-surface]')
         .evaluate(node => getComputedStyle(node).padding)
-      if (inset !== '0px') throw Error(`Unexpected task panel gutter: ${inset}`)
+      if (inset !== '0px') throw Error('Unexpected task panel gutter: ' + inset)
       const contextMap = page.getByRole('region', { name: 'Location context map' })
       if (await contextMap.getByRole('button', { name: 'Open fullscreen map' }).count())
         throw Error('Context map must not show maximize control')
@@ -293,17 +293,16 @@ for (const [name, engine] of [
         !reject ||
         !separator ||
         language.y >=
-          (
-            await page
-              .getByRole('region', { name: 'Location context map' })
-              .boundingBox()
-          )?.y ||
+          (await page
+            .getByRole('region', { name: 'Location context map' })
+            .boundingBox())!.y ||
         language.x >= reject.x ||
         separator.x < language.x + language.width ||
         separator.x >= reject.x
       )
         throw Error(
-          `Separator must sit between language control and Reject: ${JSON.stringify({ language, reject, separator })}`,
+          'Separator must sit between language control and Reject: ' +
+            JSON.stringify({ language, reject, separator }),
         )
       const hiddenContentDot = page.getByRole('img', {
         name: 'Hidden multilingual content',

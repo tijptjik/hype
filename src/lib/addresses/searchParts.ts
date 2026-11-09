@@ -6,6 +6,8 @@ import {
   getAddressDisplay,
   type FeatureAddress,
 } from './featureAddress'
+import { streetDisplayName } from './formatting.js'
+import { addressComponentValue } from './presentation.js'
 import { getAddressDivisions } from './addressExpressions'
 // TYPES
 import type { LocaleKey } from '#lib/types.js'
@@ -46,7 +48,9 @@ export function addressSearchParts(
       .filter(Boolean)
       .join(text('buildingNumberConnector') || '-')
   const street = (
-    locale === 'en' ? [number, text('streetName')] : [text('streetName'), number]
+    locale === 'en'
+      ? [number, streetDisplayName(text('streetName'), locale)]
+      : [text('streetName'), number]
   )
     .filter(Boolean)
     .join(locale === 'en' ? ' ' : '')
@@ -64,7 +68,7 @@ export function addressSearchParts(
     })
     .safeParse(address.source.rawSource)
   const parts: AddressSearchPart[] = [
-    { kind: 'unit', text: text('unitExpression') },
+    { kind: 'unit', text: addressComponentValue(address, locale, 'unitExpression') },
     { kind: 'floor', text: text('floorExpression') },
     {
       kind: 'block',

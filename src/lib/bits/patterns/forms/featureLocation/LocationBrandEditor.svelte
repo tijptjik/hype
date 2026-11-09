@@ -20,7 +20,7 @@ let {
   onChange,
   canInherit = true,
 }: {
-  association: Pick<AcceptedFeatureLocation, 'revision' | 'brandMode'> & {
+  association: Pick<AcceptedFeatureLocation, 'version' | 'brandMode'> & {
     effective: Pick<AcceptedFeatureLocation['effective'], 'brands'>
   }
   canInherit?: boolean
@@ -46,7 +46,7 @@ const modes = $derived([
 function change(choice: LocationBrandEdit['choice']): void {
   if (!isEditing) return
   onChange({
-    expectedRevision: pending?.expectedRevision ?? association.revision,
+    expectedRevision: pending?.expectedRevision ?? association.version,
     choice,
   })
 }

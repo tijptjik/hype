@@ -40,13 +40,21 @@ export function materializeEffectiveLocation(input: {
     },
   )
   if (!effective.location) throw new Error('A Feature requires Location coordinates')
-  const address = FeatureAddressSchema.parse({
-    version: 1,
-    source: effective.location.address,
-    coordinates: effective.location.geometry.coordinates,
-    matchStatus: effective.location.address.status,
-    overrides: {},
-  })
+  const retainedAddress = FeatureAddressSchema.safeParse(
+    input.data.addressMeta?.address,
+  )
+  const independentPlacement =
+    retainedAddress.success && Boolean(retainedAddress.data.association)
+  const address =
+    independentPlacement && retainedAddress.success
+      ? retainedAddress.data
+      : FeatureAddressSchema.parse({
+          version: 1,
+          source: effective.location.address,
+          coordinates: effective.location.geometry.coordinates,
+          matchStatus: effective.location.address.status,
+          overrides: {},
+        })
   const i18n = adaptContentMap(structuredClone(input.i18n))
   const names = adaptContentMap(effective.names)
   if (input.fieldGroup !== 'location')
@@ -62,8 +70,10 @@ export function materializeEffectiveLocation(input: {
         displayAddress: getAddressDisplay(
           address,
           locale as keyof typeof ADDRESS_LOCALES,
+          [],
+          input.facts.entity?.kind,
         ),
-        displayAddressGen: false,
+        displayAddressGen: input.facts.entity?.kind === 'building',
         addressProperties: {},
       }
   return {
@@ -72,7 +82,9 @@ export function materializeEffectiveLocation(input: {
         ? input.data
         : {
             ...input.data,
-            geometry: effective.location.geometry,
+            geometry: independentPlacement
+              ? (input.data.geometry ?? effective.location.geometry)
+              : effective.location.geometry,
             addressMeta: { ...input.data.addressMeta, address },
           },
     i18n,

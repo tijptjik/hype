@@ -1,10 +1,11 @@
 // ADDRESS
 import { getAddressLocale, type FeatureAddress } from '#lib/addresses/featureAddress.js'
 import { locationDistance } from './searchPresentation'
+import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
 
 export type DraftSearchResult = {
   id: string
-  kind: 'establishment' | 'building' | 'address'
+  kind: 'establishment' | 'premises' | 'building' | 'address'
   names: Record<string, string>
   address: FeatureAddress
 }
@@ -15,11 +16,11 @@ export type DraftSearchGroup<T> = {
   expandable: boolean
 }
 
-/** Collapse nearby address alternatives for the same named premises and street.
+/** Collapse address alternatives and co-located named building alternatives.
  * @param rows Unmodified provider records.
  * @returns Ordered groups; actual source ranges precede naturally sorted numbers.
  * @remarks Never invent a range identity or merge establishments. Coordinates must
- * be within 100 metres of the first record to avoid merging distant namesakes.
+ * be within 100 metres for addresses; buildings require identical coordinates.
  */
 export function groupDraftSearchResults<T extends DraftSearchResult>(
   rows: T[],
@@ -42,16 +43,25 @@ export function groupDraftSearchResults<T extends DraftSearchResult>(
   for (const row of rows) {
     const values = parts(row)
     const building = values.premisesName || values.buildingName
+    const buildingName = normalizeNameSearch(
+      row.names.en ||
+        row.names.und ||
+        Object.values(row.names).find(Boolean) ||
+        (typeof values.buildingName === 'string' ? values.buildingName : ''),
+    )
     const key =
-      row.kind === 'address' && building
-        ? JSON.stringify([
-            building,
-            values.premisesName,
-            values.streetName,
-            values.premisesName ? undefined : values.blockExpression,
-            values.premisesName ? undefined : values.phaseExpression,
-          ]).toLowerCase()
-        : ''
+      row.kind === 'building' && buildingName && row.address.coordinates
+        ? JSON.stringify(['building', buildingName, row.address.coordinates])
+        : row.kind === 'address' && building
+          ? JSON.stringify([
+              'address',
+              building,
+              values.premisesName,
+              values.streetName,
+              values.premisesName ? undefined : values.blockExpression,
+              values.premisesName ? undefined : values.phaseExpression,
+            ]).toLowerCase()
+          : ''
     const group =
       key &&
       row.address.coordinates &&
@@ -59,10 +69,11 @@ export function groupDraftSearchResults<T extends DraftSearchResult>(
         group =>
           group.key === key &&
           group.members[0].address.coordinates &&
-          locationDistance(
-            group.members[0].address.coordinates,
-            row.address.coordinates!,
-          ) <= 100,
+          (row.kind === 'building' ||
+            locationDistance(
+              group.members[0].address.coordinates,
+              row.address.coordinates!,
+            ) <= 100),
       )
     if (group) group.members.push(row)
     else

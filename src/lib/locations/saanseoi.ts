@@ -44,7 +44,7 @@ export type SaanSeoiPlaceProjection = {
   releaseId: string
   snapshotId: string
   facts: LocationFacts
-  payload: Record<string, unknown>
+  rawSource: Record<string, unknown>
   issues: Array<
     | { kind: 'invalidPhone'; index: number; value: string }
     | { kind: 'addressRecordsPending' }
@@ -56,7 +56,7 @@ export type SaanSeoiPlaceProjection = {
  * @param resource Full JSON:API Location resource, retained unchanged as source evidence.
  * @param meta Collection metadata, including the publication and schema version.
  * @param pin Expected publication and Location snapshot from the sync checkpoint.
- * @returns Location facts plus explicit phone/address omissions and original source payload.
+ * @returns Location facts plus explicit phone/address omissions and original source rawSource.
  * @remarks The legacy detail/search endpoints are latest-only. Use the collection's
  * releaseSet selector, profile=full and all supported locales for reproducible reads.
  * Address references remain unresolved until their pinned structured records are loaded.
@@ -118,13 +118,13 @@ export function projectSaanSeoiPlace(
           address2dId: source.address2dId,
           address3dId: source.address3dId,
           address3dUnitId: source.address3dUnitId,
-          addressSnapshotId: source.addressSnapshotId,
-          records: {},
+          snapshotId: source.addressSnapshotId,
+          rawSource: {},
           fallbackDisplay,
         },
       },
     }),
-    payload: {
+    rawSource: {
       resource: z.record(z.string(), z.unknown()).parse(resource),
       meta: z.record(z.string(), z.unknown()).parse(meta),
     },

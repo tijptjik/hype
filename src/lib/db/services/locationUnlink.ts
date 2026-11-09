@@ -5,6 +5,8 @@ import { feature } from '../schema/feature'
 import { featureLocation } from '../schema/location'
 // SERVICES
 import { getAcceptedFeatureLocation } from './location'
+import { prepareFeatureAcceptedCapture } from './featureAcceptedCapture'
+import { executeRevisionBatch } from './revisionBatch'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -30,18 +32,33 @@ export async function unlinkFeatureLocation(
   if (Object.values(input).some(value => !value))
     throw new Error('Incomplete Location unlink')
   const current = await getAcceptedFeatureLocation(db, input.featureId, input.projectId)
-  if (!current || current.revision !== input.expectedRevision)
+  if (!current || current.version !== input.expectedRevision)
     return { status: 'conflict' }
   const revision = crypto.randomUUID()
   const guard = sql`EXISTS (SELECT 1 FROM feature f JOIN featureLocation fp ON fp.featureId=f.id
     JOIN location p ON p.id=fp.locationId
     WHERE f.id=${input.featureId} AND f.projectId=${input.projectId} AND f.isDraft=0
       AND (p.state!='manual' OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=f.projectId))
-      AND f.modifiedAt=${input.expectedFeatureModifiedAt} AND fp.revision=${input.expectedRevision})`
+      AND f.modifiedAt=${input.expectedFeatureModifiedAt} AND fp.version=${input.expectedRevision})`
   const detachedGuard = sql`EXISTS (SELECT 1 FROM feature f
     WHERE f.id=${input.featureId} AND json_extract(f.localLocationBrands,'$.revision')=${revision})`
   // The unique detached token fences every subsequent write; batch failure restores all rows.
-  const results = await db.batch([
+  const capture = await prepareFeatureAcceptedCapture(db, {
+    featureId: input.featureId,
+    actorId: input.actorId,
+    guard,
+    reason: 'Feature detached from shared Location',
+    derive: previous => {
+      const content = structuredClone(previous)
+      if (content.placement.location?.associationVersion !== input.expectedRevision)
+        throw new Error('Accepted Feature Location changed')
+      content.placement.location = null
+      content.detachedBrands = current.effective.brands ?? []
+      return content
+    },
+  })
+  const results = await executeRevisionBatch(db, guard, [
+    ...capture.before,
     db
       .update(feature)
       .set({
@@ -59,8 +76,11 @@ export async function unlinkFeatureLocation(
     db
       .delete(featureLocation)
       .where(sql`${featureLocation.featureId}=${input.featureId}
-      AND ${featureLocation.revision}=${input.expectedRevision} AND ${detachedGuard}`)
+      AND ${featureLocation.version}=${input.expectedRevision} AND ${detachedGuard}`)
       .returning({ featureId: featureLocation.featureId }),
+    ...capture.after,
   ])
-  return results[1].length ? { status: 'unlinked', revision } : { status: 'conflict' }
+  return results && (results[capture.before.length + 1] as unknown[]).length
+    ? { status: 'unlinked', revision }
+    : { status: 'conflict' }
 }

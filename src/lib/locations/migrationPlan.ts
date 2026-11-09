@@ -60,8 +60,8 @@ export function planUnresolvedFeatureSplit(
           address2dId: null,
           address3dId: null,
           address3dUnitId: null,
-          addressSnapshotId: null,
-          records: {},
+          snapshotId: null,
+          rawSource: {},
           fallbackDisplay: location.address.fallbackDisplay,
           authored:
             location.address.authored ??

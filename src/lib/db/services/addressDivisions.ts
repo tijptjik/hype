@@ -125,13 +125,7 @@ export async function validateAddressDivisionOverrides(
   const shape = AddressDivisionOverridesSchema.safeParse(overrides)
   if (!shape.success) throw new Error('INVALID_ADDRESS_DIVISION')
   const definitions = new Map<string, AddressDivision>()
-  const ids = new Set([
-    ...Object.keys(SUBJECTIVE_DIVISIONS).flatMap(field => {
-      const id = overrides[field as keyof typeof SUBJECTIVE_DIVISIONS]
-      return typeof id === 'string' ? [id] : []
-    }),
-    ...(overrides.localityPaths?.flat() ?? []),
-  ])
+  const ids = new Set(overrides.localityPath ?? [])
   // Resolve the selected neighbourhood and validate its existing source path, never client-authored edges.
   for (const id of ids) {
     const record = await db
@@ -151,15 +145,11 @@ export async function validateAddressDivisionOverrides(
       hierarchies: parsed.data.hierarchies,
     })
   }
-  for (const [field, kind] of Object.entries(SUBJECTIVE_DIVISIONS)) {
-    const id = overrides[field as keyof typeof SUBJECTIVE_DIVISIONS]
-    if (typeof id !== 'string') continue
-    if (definitions.get(id)?.class !== kind) throw new Error('INVALID_ADDRESS_DIVISION')
-  }
-  for (const path of overrides.localityPaths ?? []) {
-    if (!isApprovedLocalityPath(path, definitions))
-      throw new Error('INVALID_ADDRESS_DIVISION')
-  }
+  if (
+    overrides.localityPath?.length &&
+    !isApprovedLocalityPath(overrides.localityPath, definitions)
+  )
+    throw new Error('INVALID_ADDRESS_DIVISION')
 }
 
 // ---

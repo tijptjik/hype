@@ -104,7 +104,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     assert.deepEqual(snapshot(), before)
     const requests = source.requests.length
     const revisionsBeforeReplay = target.sqlite
-      .query('SELECT * FROM locationRevision ORDER BY locationId,sequence')
+      .query('SELECT * FROM locationRevision ORDER BY locationId,version')
       .all()
     await mirrorSourceSubset({
       db: target.db,
@@ -118,22 +118,22 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     assert.equal(source.requests.length, requests)
     assert.deepEqual(
       target.sqlite
-        .query('SELECT * FROM locationRevision ORDER BY locationId,sequence')
+        .query('SELECT * FROM locationRevision ORDER BY locationId,version')
         .all(),
       revisionsBeforeReplay,
     )
     const addressStates: Record<string, number> = {}
     for (const id of final.revisions) {
       const row = target.sqlite
-        .query('SELECT facts,payload FROM locationRevision WHERE id=?')
-        .get(id) as { facts: string; payload: string }
+        .query('SELECT facts,rawSource FROM locationRevision WHERE id=?')
+        .get(id) as { facts: string; rawSource: string }
       assert.ok(row)
       const facts = readLocationFacts(row.facts),
-        payload = JSON.parse(row.payload)
+        rawSource = JSON.parse(row.rawSource)
       const state =
         facts.location.address.status === 'resolved'
           ? 'resolved'
-          : (payload.addressHydration?.reason ?? 'no-reference')
+          : (rawSource.addressHydration?.reason ?? 'no-reference')
       addressStates[state] = (addressStates[state] ?? 0) + 1
     }
     assert.deepEqual(target.sqlite.query('PRAGMA foreign_key_check').all(), [])

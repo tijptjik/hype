@@ -16,8 +16,8 @@ import {
 import { LocationFactsSchema } from '#lib/locations/validation.js'
 // DOMAIN
 import {
-  serializeLocationFacts,
   readLocationFacts,
+  serializeLocationFacts,
 } from '#lib/locations/factsSnapshot.js'
 import { deriveLocationId } from '#lib/locations/id.server.js'
 import { equalLocationSourceRecord } from '#lib/locations/sourceEvidence.js'
@@ -69,7 +69,7 @@ async function hash(value: unknown): Promise<string> {
  * Prepare immutable source evidence for a specific stable HYPE Location identity.
  * @param locationId Existing or deterministically allocated HYPE identity.
  * @param projection Trusted publication-pinned projection.
- * @returns Validated facts, retained payload, content hash and deterministic revision ID.
+ * @returns Validated facts, retained rawSource, content hash and deterministic revision ID.
  * @remarks Does not write or accept an identity; callers must authorize and fence writes.
  */
 export async function prepareSaanSeoiRevision(
@@ -77,7 +77,7 @@ export async function prepareSaanSeoiRevision(
   projection: SaanSeoiPlaceProjection,
 ): Promise<{
   facts: SaanSeoiPlaceProjection['facts']
-  payload: Record<string, unknown>
+  rawSource: Record<string, unknown>
   contentHash: string
   revisionId: string
 }> {
@@ -89,10 +89,10 @@ export async function prepareSaanSeoiRevision(
     !projection.apiVersion
   )
     throw new Error('Source Location requires complete publication identity')
-  const payload = { ...projection.payload, issues: projection.issues }
-  const contentHash = await hash({ payload, facts })
+  const rawSource = { ...projection.rawSource, issues: projection.issues }
+  const contentHash = await hash({ payload: rawSource, facts })
   const revisionId = `ssRevision_${await hash({ locationId, ssId: projection.ssId, contentHash })}`
-  return { facts, payload, contentHash, revisionId }
+  return { facts, rawSource, contentHash, revisionId }
 }
 
 /**
@@ -101,7 +101,7 @@ export async function prepareSaanSeoiRevision(
  * @param projection Validated, publication-pinned source and Address projection.
  * @param guard Optional trusted sync ownership/identity fence for every write.
  * @returns Stable HYPE Location identity and idempotent source revision identity.
- * @remarks Trusted ingestion only: never expose this as an arbitrary client payload
+ * @remarks Trusted ingestion only: never expose this as an arbitrary client rawSource
  * mutation. Existing identity wins over generated identity; no Feature is linked,
  * adopted or materialized here. Replayed payloads do not create new revisions.
  * With a guard, returned deterministic IDs are not proof of persistence: the caller
@@ -130,15 +130,15 @@ export async function persistSaanSeoiPlace(
     .select({
       id: locationRevision.id,
       facts: locationRevision.facts,
-      payload: locationRevision.payload,
+      rawSource: locationRevision.rawSource,
     })
     .from(locationRevision)
     .where(eq(locationRevision.locationId, locationId))
-    .orderBy(sql`${locationRevision.sequence} DESC`)
+    .orderBy(sql`${locationRevision.version} DESC`)
     .get()
   const {
     facts,
-    payload,
+    rawSource,
     contentHash,
     revisionId: generatedRevisionId,
   } = await prepareSaanSeoiRevision(locationId, projection)
@@ -154,11 +154,11 @@ export async function persistSaanSeoiPlace(
         eq(locationRevision.origin, 'saanseoi'),
       ),
     )
-    .orderBy(locationRevision.sequence)
+    .orderBy(locationRevision.version)
     .get()
   const revisionId = retainedRevision?.id ?? generatedRevisionId
-  guard = sql`(${guard}) AND ((SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY sequence DESC LIMIT 1) IS ${latest?.id ?? null}
-    OR (SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY sequence DESC LIMIT 1)=${revisionId})`
+  guard = sql`(${guard}) AND ((SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1) IS ${latest?.id ?? null}
+    OR (SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${revisionId})`
   const identityGuard = sql`EXISTS (SELECT 1 FROM location WHERE id=${locationId}
     AND ssId=${projection.ssId} AND state='linked')`
   const creationGuard = sql`${guard} AND NOT EXISTS
@@ -172,9 +172,9 @@ export async function persistSaanSeoiPlace(
     db
       .insert(locationRevision)
       .select(sql`SELECT ${revisionId},${locationId},
-        (SELECT coalesce(max(sequence),0)+1 FROM locationRevision WHERE locationId=${locationId}),
+        (SELECT coalesce(max(version),0)+1 FROM locationRevision WHERE locationId=${locationId}),
         'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
-        ${projection.snapshotId},${contentHash},${JSON.stringify(payload)},${serializeLocationFacts(facts, 'establishment')},
+        ${projection.snapshotId},${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(facts, 'establishment')},
         strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${identityGuard}`)
       .onConflictDoNothing({ target: locationRevision.id }),
     db
@@ -207,7 +207,7 @@ export async function persistForwardSaanSeoiPlace(
   projection: SaanSeoiPlaceProjection,
   ownershipGuard: SQL = sql`1`,
 ): Promise<{ locationId: string; revisionId: string }> {
-  const publication = readLocationPublicationMetadata(projection.payload.meta)
+  const publication = readLocationPublicationMetadata(projection.rawSource.meta)
   const existing = await db.get<{
     id: string
     ownerOrganisationId: string | null
@@ -215,23 +215,23 @@ export async function persistForwardSaanSeoiPlace(
     sourceAvailability: string
     latestId: string | null
     historyId: string | null
-    payload: string | null
+    rawSource: string | null
     facts: string | null
   }>(sql`SELECT p.id,p.ownerOrganisationId,p.state,p.sourceAvailability,r.id AS latestId,
-    r.payload,r.facts,(SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=p.id
+    r.rawSource,r.facts,(SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=p.id
       AND NOT EXISTS(SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)) AS historyId
     FROM location p LEFT JOIN locationRevision r ON r.locationId=p.id
-      AND r.sequence=(SELECT max(sequence) FROM locationRevision WHERE locationId=p.id)
+      AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id)
     WHERE p.ssId=${projection.ssId}`)
   if (existing) {
     if (
       existing.state !== 'linked' ||
       !existing.latestId ||
-      !existing.payload ||
+      !existing.rawSource ||
       !existing.facts
     )
       throw new LocationSourceReviewError('Source mirror identity requires review')
-    const previousPayload = JSON.parse(existing.payload)
+    const previousPayload = JSON.parse(existing.rawSource)
     const transition = compareLocationPublications(
       readLocationPublicationMetadata(previousPayload.meta),
       publication,
@@ -244,10 +244,10 @@ export async function persistForwardSaanSeoiPlace(
       if (
         existing.sourceAvailability !== 'current' ||
         !previousPayload.resource ||
-        !projection.payload.resource ||
+        !projection.rawSource.resource ||
         !equalLocationSourceRecord(
           previousPayload.resource,
-          projection.payload.resource,
+          projection.rawSource.resource,
         )
       )
         throw new LocationSourceReviewError(
@@ -274,7 +274,7 @@ export async function persistForwardSaanSeoiPlace(
       AND p.sourceAvailability=${existing.sourceAvailability}
       AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=p.id AND NOT EXISTS
         (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing.historyId}
-      AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY sequence DESC LIMIT 1)
+      AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1)
         IN (${existing.latestId},${prepared.revisionId}))`
     : sql`NOT EXISTS(SELECT 1 FROM location p WHERE p.ssId=${projection.ssId} AND
       (p.id!=${locationId} OR p.state!='linked' OR p.ownerOrganisationId IS NOT NULL OR p.sourceAvailability!='current'
@@ -293,7 +293,7 @@ export async function persistForwardSaanSeoiPlace(
       AND p.state='linked' AND p.sourceAvailability='current' AND p.ownerOrganisationId IS ${existing?.ownerOrganisationId ?? null}
       AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=p.id AND NOT EXISTS
         (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing?.historyId ?? null}
-      AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY sequence DESC LIMIT 1)
+      AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1)
         IN (${existing?.latestId ?? null},${prepared.revisionId},${receipt.revisionId})`)
   if (!retained || receipt.locationId !== locationId)
     throw new LocationSourceConflictError(

@@ -1,4 +1,10 @@
 import {
+  readLocationCorrectionContext,
+  applyLocationCorrection,
+  proposeLocationCorrection,
+  decideLocationCorrection,
+} from '#lib/db/services/locationCorrectionReview.js'
+import {
   rejectLocationIdentityReview,
   rejectedFeatureLocationSourceIds,
 } from '#lib/db/services/locationIdentityRejection.js'
@@ -743,6 +749,105 @@ describe('immutable SaanSeoi Place ingestion', () => {
       },
     }
   }
+
+  it('records merged Location bindings in Feature history and rolls the identity merge back on receipt failure', async () => {
+    const f = await mergeFixture()
+    const { getTableColumns, getTableName } = await import('drizzle-orm')
+    const schema = await import('#lib/db/schema/index.js')
+    const { readFeatureRevisionSource } = await import(
+      '#lib/db/services/featureRevisionSource.js'
+    )
+    const { buildFeatureRevisionBaselineContent } = await import(
+      '#lib/db/services/featureRevisionContent.js'
+    )
+    const { initializeFeatureRevision } = await import(
+      '#lib/db/services/featureRevision.js'
+    )
+    // Extend the real Location-trigger fixture with the current Feature content contract.
+    for (const table of [
+      schema.feature,
+      schema.featureI18n,
+      schema.featurePropertyI18n,
+      schema.image,
+      schema.featureImage,
+      schema.property,
+      schema.propertyI18n,
+      schema.propertyValue,
+      schema.propertyValueI18n,
+      schema.featureLocationMembership,
+    ]) {
+      const name = getTableName(table)
+      const existing = new Set(
+        f.sqlite
+          .prepare(`PRAGMA table_info(${name})`)
+          .all()
+          .map(row => row.name),
+      )
+      if (!existing.size)
+        f.sqlite.exec(
+          `CREATE TABLE ${name} (${Object.values(getTableColumns(table))
+            .map(
+              column =>
+                `"${column.name}" ${column.getSQLType()}${column.name === 'id' ? ' PRIMARY KEY' : ''}`,
+            )
+            .join(',')})`,
+        )
+      else
+        for (const column of Object.values(getTableColumns(table)))
+          if (!existing.has(column.name))
+            f.sqlite.exec(
+              `ALTER TABLE ${name} ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+            )
+    }
+    f.sqlite.exec(`UPDATE feature SET organisationId='p',layerId='l',isPublished=1,localIsPublished=1,isVisitable=0,
+      geometry='{"type":"Point","coordinates":[114,22]}',addressMeta='{}';`)
+    f.sqlite.exec(readFileSync('migrations/0171_feature_revisions.sql', 'utf8'))
+    f.sqlite.exec(readFileSync('migrations/0172_image_revisions.sql', 'utf8'))
+    const captured = (await readFeatureRevisionSource(f.db, 'g', sql`1`))!
+    const content = buildFeatureRevisionBaselineContent(captured.snapshot, {
+      revisions: {},
+      order: [],
+    })
+    const baseline = await initializeFeatureRevision(f.db, {
+      featureId: 'g',
+      actorId: 'baseline',
+      guard: captured.unchanged,
+      content,
+      published: true,
+    })
+    f.sqlite.exec(
+      "CREATE TRIGGER fail_merge_revision BEFORE INSERT ON featureRevisionPublication WHEN NEW.generation>0 BEGIN SELECT RAISE(ABORT,'merge receipt failed'); END",
+    )
+    await expect(applyLocationMergeReview(f.db, f.input)).rejects.toThrow()
+    expect(
+      f.sqlite
+        .prepare('SELECT redirectTargetId FROM location WHERE id=?')
+        .get(f.source.locationId)?.redirectTargetId,
+    ).toBeNull()
+    expect(
+      f.sqlite
+        .prepare(
+          "SELECT publishedRevisionId FROM featureRevisionHead WHERE featureId='g'",
+        )
+        .get()?.publishedRevisionId,
+    ).toBe(baseline)
+    f.sqlite.exec('DROP TRIGGER fail_merge_revision')
+    expect(await applyLocationMergeReview(f.db, f.input)).toMatchObject({
+      status: 'applied',
+    })
+    const revision = f.sqlite
+      .prepare(`SELECT r.content,r.previousRevisionId,c.actorId FROM featureRevisionHead h
+      JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE h.featureId='g'`)
+      .get()!
+    expect(revision.previousRevisionId).toBe(baseline)
+    expect(revision.actorId).toBe('reviewer')
+    const accepted = JSON.parse(String(revision.content))
+    expect(accepted.placement.location.locationId).toBe(f.target.locationId)
+    expect(accepted.placement.location.acceptedOverrides).toEqual(
+      content.placement.location?.acceptedOverrides,
+    )
+    expect(accepted.placement.geometry).toEqual(content.placement.geometry)
+  })
 
   it('reviews relationship dependencies and preserves their historical endpoint after merge', async () => {
     const { db, sqlite, source, target, input, identityReviewId } = await mergeFixture()
@@ -3558,6 +3663,98 @@ describe('atomic source group application', () => {
     }
     return { db, sqlite, binding, input, first, next, nextSource }
   }
+
+  it('records policy-approved adoption and its source decision in one Feature revision transaction', async () => {
+    const f = await fixture(true)
+    const { getTableColumns, getTableName } = await import('drizzle-orm')
+    const schema = await import('#lib/db/schema/index.js')
+    const { readFeatureRevisionSource } = await import(
+      '#lib/db/services/featureRevisionSource.js'
+    )
+    const { buildFeatureRevisionBaselineContent } = await import(
+      '#lib/db/services/featureRevisionContent.js'
+    )
+    const { initializeFeatureRevision } = await import(
+      '#lib/db/services/featureRevision.js'
+    )
+    // Complete the older Location fixture with current content columns and real revision triggers.
+    for (const table of [
+      schema.image,
+      schema.featureImage,
+      schema.property,
+      schema.propertyI18n,
+      schema.propertyValue,
+      schema.propertyValueI18n,
+      schema.featureLocationMembership,
+    ]) {
+      const name = getTableName(table)
+      const existing = new Set(
+        f.sqlite
+          .prepare(`PRAGMA table_info(${name})`)
+          .all()
+          .map(row => row.name),
+      )
+      if (!existing.size) {
+        f.sqlite.exec(
+          `CREATE TABLE ${name} (${Object.values(getTableColumns(table))
+            .map(
+              column =>
+                `"${column.name}" ${column.getSQLType()}${column.name === 'id' ? ' PRIMARY KEY' : ''}`,
+            )
+            .join(',')})`,
+        )
+      } else
+        for (const column of Object.values(getTableColumns(table))) {
+          if (!existing.has(column.name))
+            f.sqlite.exec(
+              `ALTER TABLE ${name} ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+            )
+        }
+    }
+    f.sqlite.exec(`UPDATE feature SET organisationId='p',layerId='l',isPublished=1,localIsPublished=1,isVisitable=0;
+      UPDATE featureI18n SET titleGen=1,descriptionGen=1,displayAddressGen=1;
+      UPDATE property SET type='specifier',component='PhoneField',dataType='text',dateResolution='day',timeMaxHour=24,
+        cardinality='many',presentation='text',isTranslatable=0;
+    `)
+    f.sqlite.exec(readFileSync('migrations/0171_feature_revisions.sql', 'utf8'))
+    f.sqlite.exec(readFileSync('migrations/0172_image_revisions.sql', 'utf8'))
+    const source = (await readFeatureRevisionSource(f.db, 'f', sql`1`))!
+    const content = buildFeatureRevisionBaselineContent(source.snapshot, {
+      revisions: {},
+      order: [],
+    })
+    const baseline = await initializeFeatureRevision(f.db, {
+      featureId: 'f',
+      actorId: 'baseline',
+      guard: source.unchanged,
+      content,
+      published: true,
+    })
+    expect(baseline).not.toBeNull()
+    f.sqlite.exec(
+      "CREATE TRIGGER fail_adoption_revision BEFORE INSERT ON featureRevisionPublication WHEN NEW.generation>0 BEGIN SELECT RAISE(ABORT,'adoption receipt failure'); END",
+    )
+    await expect(applyLocationAdoptionGroup(f.db, f.input)).rejects.toThrow()
+    expect(
+      f.sqlite.prepare('SELECT publishedRevisionId FROM featureRevisionHead').get(),
+    ).toEqual({ publishedRevisionId: baseline })
+    expect(
+      f.sqlite.prepare('SELECT factsDecision FROM locationAdoptionProposal').get(),
+    ).toEqual({ factsDecision: null })
+    f.sqlite.exec('DROP TRIGGER fail_adoption_revision')
+    expect((await applyLocationAdoptionGroup(f.db, f.input)).status).toBe('applied')
+    const accepted = f.sqlite
+      .prepare(`SELECT r.content,cs.origin,cs.actorId,cs.reason FROM featureRevisionHead h
+      JOIN featureRevision r ON r.id=h.publishedRevisionId JOIN revisionChangeSet cs ON cs.id=r.changeSetId`)
+      .get()!
+    expect(accepted.origin).toBe('system')
+    expect(accepted.actorId).toBe(f.input.actorId)
+    expect(accepted.reason).toContain(f.input.proposalId)
+    const after = (await readFeatureRevisionSource(f.db, 'f', sql`1`))!
+    expect(JSON.parse(String(accepted.content))).toEqual(
+      buildFeatureRevisionBaselineContent(after.snapshot, { revisions: {}, order: [] }),
+    )
+  })
 
   it.each(['success', 'mismatch', 'retry', 'expired'])(
     'hydrates a bounded refresh item before fenced ingestion: %s',
@@ -6583,5 +6780,215 @@ describe('Feature-owned names on a linked Place', () => {
         .prepare("SELECT title FROM featureI18n WHERE featureId='f' AND locale='en'")
         .get()?.title,
     ).toBe('My independent feature')
+  })
+})
+
+describe('separate shared Location correction review', () => {
+  /** Arrange a shared source with a Feature whose accepted values remain independently pinned. */
+  async function correctionFixture() {
+    const { db, sqlite } = setup(true)
+    sqlite.exec(
+      "ALTER TABLE feature ADD COLUMN organisationId TEXT; UPDATE feature SET organisationId='p';",
+    )
+    sqlite.exec(
+      readFileSync('migrations/0185_location_correction_proposals.sql', 'utf8'),
+    )
+    const source = await createLocalLocation(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'creator',
+    )
+    sqlite
+      .prepare(
+        'INSERT INTO featureLocation(featureId,locationId,factsRevisionId,locationRevisionId) VALUES(?,?,?,?)',
+      )
+      .run('f', source.locationId, source.revisionId, source.revisionId)
+    const context = await readLocationCorrectionContext(db, {
+      featureId: 'f',
+      projectId: 'p',
+      organisationId: 'p',
+      guard: sql`1`,
+    })
+    if (!context) throw new Error('Expected correction context')
+    const command = {
+      featureId: 'f',
+      projectId: 'p',
+      organisationId: 'p',
+      guard: sql`1`,
+      actorId: 'contributor',
+      reason: 'Correct spelling',
+      expectedAssociationVersion: context.association.version,
+      expectedOrganisationRevision: null,
+      patch: { names: { en: { mode: 'override' as const, value: 'Reviewed bakery' } } },
+    }
+    return { db, sqlite, command, source }
+  }
+  it('applies manager corrections directly, preserves Feature pins and rejects stale saves', async () => {
+    const f = await correctionFixture()
+    const before = f.sqlite.prepare('SELECT * FROM featureLocation').all()
+    const revision = await applyLocationCorrection(f.db, {
+      ...f.command,
+      actorId: 'manager',
+    })
+    expect(revision).toBeTruthy()
+    expect(f.sqlite.prepare('SELECT * FROM featureLocation').all()).toEqual(before)
+    expect(
+      f.sqlite.prepare('SELECT actorId FROM organisationLocation').get()?.actorId,
+    ).toBe('manager')
+    expect(
+      f.sqlite.prepare('SELECT count(*) n FROM locationCorrectionProposal').get()?.n,
+    ).toBe(0)
+    expect(await applyLocationCorrection(f.db, f.command)).toBeNull()
+    expect(
+      f.sqlite
+        .prepare(
+          'SELECT count(*) n FROM locationRefreshItem WHERE organisationRevision IS NOT NULL',
+        )
+        .get()?.n,
+    ).toBe(1)
+  })
+  it('rolls direct shared corrections back when the refresh receipt fails', async () => {
+    const f = await correctionFixture()
+    f.sqlite.exec(
+      "CREATE TRIGGER fail_staff_refresh BEFORE INSERT ON locationRefreshItem BEGIN SELECT RAISE(ABORT,'refresh failed'); END",
+    )
+    await expect(applyLocationCorrection(f.db, f.command)).rejects.toThrow()
+    expect(
+      f.sqlite.prepare('SELECT count(*) n FROM organisationLocation').get()?.n,
+    ).toBe(0)
+    expect(
+      f.sqlite.prepare('SELECT count(*) n FROM locationCorrectionProposal').get()?.n,
+    ).toBe(0)
+  })
+  it('keeps proposals isolated and requires fresh comparison after another shared acceptance', async () => {
+    const f = await correctionFixture()
+    const first = await proposeLocationCorrection(f.db, f.command)
+    const second = await proposeLocationCorrection(f.db, {
+      ...f.command,
+      patch: { phoneNumber: { mode: 'inherit' } },
+    })
+    expect(first).toBeTruthy()
+    expect(second).toBeTruthy()
+    expect(
+      f.sqlite.prepare('SELECT count(*) n FROM organisationLocation').get()?.n,
+    ).toBe(0)
+    const before = f.sqlite.prepare('SELECT * FROM featureLocation').all()
+    expect(
+      await decideLocationCorrection(f.db, {
+        ...f.command,
+        proposalId: first!,
+        actorId: 'reviewer',
+        outcome: 'accepted',
+      }),
+    ).toBe(true)
+    expect(f.sqlite.prepare('SELECT * FROM featureLocation').all()).toEqual(before)
+    expect(
+      f.sqlite.prepare('SELECT actorId FROM organisationLocation').get()?.actorId,
+    ).toBe('reviewer')
+    expect(
+      f.sqlite
+        .prepare('SELECT actorId FROM locationCorrectionProposal WHERE id=?')
+        .get(first!)?.actorId,
+    ).toBe('contributor')
+    expect(
+      await decideLocationCorrection(f.db, {
+        ...f.command,
+        proposalId: second!,
+        actorId: 'reviewer',
+        outcome: 'accepted',
+      }),
+    ).toBe(false)
+    expect(
+      await decideLocationCorrection(f.db, {
+        ...f.command,
+        proposalId: second!,
+        actorId: 'reviewer',
+        outcome: 'rejected',
+      }),
+    ).toBe(true)
+    expect(
+      f.sqlite.prepare('SELECT count(*) n FROM organisationLocation').get()?.n,
+    ).toBe(1)
+    expect(
+      f.sqlite
+        .prepare(
+          "SELECT count(*) n FROM locationRefreshItem WHERE origin='local' AND organisationRevision IS NOT NULL",
+        )
+        .get()?.n,
+    ).toBe(1)
+  })
+  it('rolls back correction and refresh work when its review receipt fails', async () => {
+    const f = await correctionFixture()
+    const id = await proposeLocationCorrection(f.db, f.command)
+    f.sqlite.exec(
+      "CREATE TRIGGER fail_correction_decision BEFORE INSERT ON locationCorrectionDecision BEGIN SELECT RAISE(ABORT,'review receipt failed'); END",
+    )
+    await expect(
+      decideLocationCorrection(f.db, {
+        ...f.command,
+        proposalId: id!,
+        actorId: 'reviewer',
+        outcome: 'accepted',
+      }),
+    ).rejects.toThrow()
+    expect(
+      f.sqlite.prepare('SELECT count(*) n FROM organisationLocation').get()?.n,
+    ).toBe(0)
+    expect(
+      f.sqlite.prepare('SELECT count(*) n FROM locationCorrectionDecision').get()?.n,
+    ).toBe(0)
+    expect(
+      f.sqlite
+        .prepare(
+          'SELECT count(*) n FROM locationRefreshItem WHERE organisationRevision IS NOT NULL',
+        )
+        .get()?.n,
+    ).toBe(0)
+  })
+  it('rejects decision receipts for another owner or Location and rejected receipts with a revision', async () => {
+    const f = await correctionFixture()
+    const id = await proposeLocationCorrection(f.db, f.command)
+    const other = await createLocalLocation(
+      f.db,
+      'p',
+      { state: 'unresolved', facts },
+      'creator',
+    )
+    const insert = f.sqlite.prepare(
+      "INSERT INTO organisationLocation(id,organisationId,locationId,overrides,actorId,createdAt) VALUES(?,?,?,'{}','reviewer','2026-01-01')",
+    )
+    insert.run('foreign-owner', 'other', f.source.locationId)
+    insert.run('foreign-location', 'p', other.locationId)
+    insert.run('matching', 'p', f.source.locationId)
+    const decide = f.sqlite.prepare(
+      "INSERT INTO locationCorrectionDecision(proposalId,outcome,organisationRevision,actorId,reason,createdAt) VALUES(?,?,?,'reviewer','Reviewed','2026-01-01')",
+    )
+    for (const revision of ['foreign-owner', 'foreign-location', null])
+      expect(() => decide.run(id!, 'accepted', revision)).toThrow('owner mismatch')
+    expect(() => decide.run(id!, 'rejected', 'matching')).toThrow('owner mismatch')
+    expect(
+      f.sqlite.prepare('SELECT count(*) n FROM locationCorrectionDecision').get()?.n,
+    ).toBe(0)
+    expect(() => decide.run(id!, 'accepted', 'matching')).not.toThrow()
+  })
+  it('fences association movement and retains immutable proposal evidence', async () => {
+    const f = await correctionFixture()
+    const id = await proposeLocationCorrection(f.db, f.command)
+    expect(() =>
+      f.sqlite
+        .prepare('UPDATE locationCorrectionProposal SET reason=? WHERE id=?')
+        .run('changed', id!),
+    ).toThrow('immutable')
+    f.sqlite.exec("UPDATE featureLocation SET version='moved' WHERE featureId='f'")
+    expect(
+      await decideLocationCorrection(f.db, {
+        ...f.command,
+        proposalId: id!,
+        actorId: 'reviewer',
+        outcome: 'accepted',
+      }),
+    ).toBe(false)
+    expect(await proposeLocationCorrection(f.db, f.command)).toBeNull()
   })
 })
