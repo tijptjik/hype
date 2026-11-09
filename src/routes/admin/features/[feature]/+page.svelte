@@ -4084,13 +4084,16 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
             <div class="relative h-full w-full">
               {#if import.meta.env.DEV && isNewFeatureRef}
                 <div
-                  class="bg-panel/85 text-muted-foreground absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-6 py-1 text-xs backdrop-blur-sm"
+                  class="text-muted-foreground pointer-events-none absolute inset-x-3 top-4 z-20 flex items-start justify-between gap-2 text-xs"
                   data-dev-form-draft
                 >
-                  <span>Development draft · resumes after refresh</span>
+                  <span
+                    class="bg-panel/85 min-w-0 rounded-full px-3 py-1.5 backdrop-blur-sm"
+                    >Development draft · resumes after refresh</span
+                  >
                   <button
                     type="button"
-                    class="hover:bg-muted hover:text-foreground rounded px-2 py-1"
+                    class="bg-panel/85 hover:bg-muted hover:text-foreground focus-visible:ring-ring pointer-events-auto shrink-0 rounded-full px-3 py-1.5 backdrop-blur-sm focus-visible:ring-2 focus-visible:outline-none"
                     onclick={startOverDevDraft}
                   >
                     Start over
