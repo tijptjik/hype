@@ -909,3 +909,48 @@ it('offers address matching from the empty viewer even when a display address ex
   )
   expect(onMatchLocation).toHaveBeenCalledOnce()
 })
+
+it('shows shared address components once and retains only distinct localized values', () => {
+  const initialAddress = emptyFeatureAddress()
+  initialAddress.overrides = {
+    en: {
+      buildingNumberExpression: '500',
+      buildingName: 'Por Mee Factory Building',
+      streetName: 'Castle Peak Road',
+      floorExpression: '3/F',
+      unitExpression: 'Unit 2',
+      premisesName: 'Shared Estate',
+    },
+    'zh-hant': {
+      buildingNumberExpression: '500',
+      buildingName: '百美工業大廈',
+      streetName: '青山道',
+      floorExpression: '3樓',
+      unitExpression: '2室',
+      premisesName: 'Shared Estate',
+    },
+    'zh-hans': {
+      buildingNumberExpression: '500',
+      buildingName: '百美工业大厦',
+      streetName: '青山道',
+      floorExpression: '3楼',
+      unitExpression: '2室',
+      premisesName: 'Shared Estate',
+    },
+  }
+  const view = render(FormFixture, {
+    initialAddress,
+    isEditing: false,
+    translations: true,
+  })
+  const values = (field: string): string[] =>
+    [...view.container.querySelectorAll(`[data-address-part="${field}"] dd`)].map(row =>
+      row.textContent!.trim(),
+    )
+  expect(values('buildingNumberExpression')).toEqual(['500'])
+  expect(values('floorExpression')).toHaveLength(1)
+  expect(values('unitExpression')).toHaveLength(1)
+  expect(values('premisesName')).toEqual(['Shared Estate'])
+  expect(values('buildingName')).toHaveLength(3)
+  expect(values('streetName')).toHaveLength(2)
+})

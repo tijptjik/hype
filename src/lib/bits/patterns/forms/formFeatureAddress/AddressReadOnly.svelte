@@ -51,6 +51,12 @@ const sections = $derived(
     const key = group.fields[0]
     if (!(key in icons)) return []
     const fields = group.fields.flatMap(field => {
+      // Match the editor's shared fields; localized names retain only distinct values.
+      const shared =
+        field === 'buildingNumberExpression' ||
+        field === 'floorExpression' ||
+        field === 'unitExpression'
+      const seen = new Set<string>()
       const values = locales.flatMap(({ tag, key }) => {
         const value = key
           ? field === 'floorExpression' &&
@@ -59,9 +65,12 @@ const sections = $derived(
             ? formatFloor(address.unitDetails, key)
             : addressComponentValue(address, key, field)
           : additionalValue(tag, field)
-        return value.trim() ? [{ tag, value }] : []
+        const normalized = value.trim()
+        if (!normalized || seen.has(normalized) || (shared && seen.size)) return []
+        seen.add(normalized)
+        return [{ tag, value }]
       })
-      return values.length ? [{ field, values }] : []
+      return values.length ? [{ field, values, shared }] : []
     })
     return fields.length
       ? [
@@ -98,7 +107,7 @@ const sections = $derived(
             {section.title}
           </h3>
           <dl class="grid min-w-0 grid-cols-1 gap-x-6 gap-y-3 @min-[24rem]:grid-cols-2">
-            {#each section.fields as { field, values } (field)}
+            {#each section.fields as { field, values, shared } (field)}
               <div class="min-w-0" data-address-part={field}>
                 <dt class="text-muted-foreground mb-1 text-xs">{labels[field]}</dt>
                 {#each values as { tag, value } (tag)}
@@ -111,7 +120,7 @@ const sections = $derived(
                     lang={tag}
                     class="text-foreground flex min-w-0 items-baseline gap-2 text-base leading-relaxed font-medium"
                   >
-                    {#if tag !== primaryLocale}
+                    {#if !shared && tag !== primaryLocale}
                       <span class="text-muted-foreground shrink-0 font-mono text-xs"
                         >{shortLocaleLabel(tag)}</span
                       >
