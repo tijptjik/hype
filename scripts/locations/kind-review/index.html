@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Location review · Hype</title>
+    <style>
+    /* REVIEW_CSS */
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <small>HYPE / DATA REVIEW</small>
+        <h1>Location review<span>Start with what’s missing.</span></h1>
+      </div>
+      <div>
+        <p id="snapshot"></p>
+        <small>Local snapshot · database unchanged</small>
+      </div>
+    </header>
+    <section aria-label="Inventory summary" id="summary">
+      <button type="button" data-scope="unassociated">
+        <strong id="missing-count">82</strong><span>Unassociated</span
+        ><small>Review first →</small>
+      </button>
+      <button type="button" data-scope="supported">
+        <strong id="change-count">601</strong><span>Proposed kind changes</span
+        ><small>Owner baseline only</small>
+      </button>
+      <button type="button" data-scope="no-change">
+        <strong id="correct-count">312</strong><span>Already correct</span
+        ><small>Nothing to change</small>
+      </button>
+      <button type="button" data-scope="all">
+        <strong id="total-count">995</strong><span>Features in scope</span
+        ><small>Includes historic records</small>
+      </button>
+    </section>
+    <section id="why" aria-labelledby="why-title">
+      <div>
+        <small>WHY NO ASSOCIATION?</small>
+        <h2 id="why-title">Skipped before matching.</h2>
+        <p id="why-copy"></p>
+      </div>
+      <p>
+        “Unassociated” means no saved Location link.<br>It does not mean an external
+        search found no match.
+      </p>
+    </section>
+    <nav aria-label="Review controls">
+      <label
+        >Search<input
+          id="search"
+          type="search"
+          placeholder="Title, address, Feature or Location ID…"
+        ></label
+      >
+      <label
+        >Dataset<select id="dataset">
+          <option value="all">All datasets</option>
+        </select></label
+      >
+      <label
+        >Show<select id="scope">
+          <option value="unassociated">Unassociated</option>
+          <option value="supported">Proposed changes</option>
+          <option value="no-change">Already correct</option>
+          <option value="conflict">Conflicts / review</option>
+          <option value="all">All Features</option>
+        </select></label
+      >
+      <label
+        >Skip reason<select id="reason">
+          <option value="all">Any reason</option>
+          <option value="intangible">Marked intangible</option>
+          <option value="draft">Draft</option>
+          <option value="needs-investigation">Other / investigate</option>
+        </select></label
+      >
+      <label
+        >Review<select id="review-filter">
+          <option value="all">All</option>
+          <option value="pending">Not reviewed</option>
+          <option value="reviewed">Reviewed</option>
+        </select></label
+      >
+    </nav>
+    <div id="workspace">
+      <aside aria-label="Feature results">
+        <div>
+          <strong id="result-count" aria-live="polite"></strong
+          ><span id="review-count"></span>
+        </div>
+        <ol id="results"></ol>
+        <p id="empty" hidden>No records match these filters.</p>
+      </aside>
+      <main id="detail" aria-live="polite"></main>
+    </div>
+    <footer>
+      <div>
+        <strong id="save-state">Review notes stay in this browser.</strong
+        ><small
+          >Export a review file to keep or hand off your decisions. This tool does not
+          apply changes.</small
+        >
+      </div>
+      <div>
+        <button id="import" type="button">Import reviews</button>
+        <input id="import-file" type="file" accept=".jsonl,.json" hidden>
+        <button id="export" type="button">
+          Export reviews <span id="export-count">0</span>
+        </button>
+      </div>
+    </footer>
+    <script type="application/json" id="review-data">
+    "REVIEW_DATA_JSON"
+    </script>
+    <script>
+    /* REVIEW_JS */
+    </script>
+  </body>
+</html>
