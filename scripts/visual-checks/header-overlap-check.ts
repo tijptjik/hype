@@ -48,6 +48,27 @@ for (const [name, engine] of [
     await visibleLabel(false)
     await page.getByRole('button', { name: 'Toggle identity width' }).click()
     await visibleLabel(true)
+    // Save adds a fourth labelled action; its intrinsic width must include Preview.
+    await page.getByRole('button', { name: 'Toggle editing' }).click()
+    for (const width of [1920, 1600, 1566, 1280, 1024, 768]) {
+      await page.setViewportSize({ width, height: 500 })
+      await page.waitForTimeout(700)
+      const actions = await page
+        .locator('header > [data-adaptive-toolbar-right-group] button')
+        .evaluateAll(buttons =>
+          buttons.map(button => ({
+            label: button.textContent,
+            left: button.getBoundingClientRect().left,
+            right: button.getBoundingClientRect().right,
+          })),
+        )
+      for (let index = 1; index < actions.length; index++)
+        if (actions[index].left < actions[index - 1].right - 1)
+          throw new Error(`${name} at ${width}: overlapping ${JSON.stringify(actions)}`)
+      const avatar = actions.at(-1)
+      if (!avatar || avatar.right > width)
+        throw new Error(`${name} at ${width}: avatar outside viewport`)
+    }
     console.log(
       `${name}: panel resize and identity reservation collapse/restore labels without overlap`,
     )

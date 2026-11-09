@@ -167,7 +167,7 @@ const rootClass = $derived(
           </div>
         {/if}
 
-        <div class="ml-auto flex min-w-0 items-center">
+        <div class="ml-auto flex shrink-0 items-center">
           {#if formActions.featuresAction || formActions.usersAction || shareAction}
             <div class="mr-2 shrink-0">
               <HeaderPrimitive.FormActions
@@ -181,7 +181,7 @@ const rootClass = $derived(
           <div
             class="grid items-center {showFilter ||
             (reserveFormActionWidth && showButtonText)
-              ? 'w-[408px] min-w-64'
+              ? 'min-w-[408px] shrink-0'
               : 'shrink-0'}"
           >
             {#if showFormActions || (reserveFormActionWidth && showButtonText)}

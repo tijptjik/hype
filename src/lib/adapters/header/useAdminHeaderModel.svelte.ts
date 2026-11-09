@@ -475,7 +475,6 @@ export function useAdminHeaderModel(
   // DERIVED :: FORM ACTION STATE
   const isTainted = $derived(Boolean(formActions?.dirty ?? false))
 
-  const hasIssues = $derived(Boolean(formActions?.hasIssues ?? false))
   const isSubmitting = $derived(Boolean(formActions?.isSubmitting ?? false))
   const isPublishing = $derived(Boolean(formActions?.isPublishing ?? false))
   const isPublished = $derived(Boolean(formActions?.isPublished ?? false))
@@ -864,7 +863,8 @@ export function useAdminHeaderModel(
       style: 'none',
       icon: isSubmitting ? LoaderCircle : Save,
       class: 'bits-pattern-header__form-action-publish',
-      disabled: disableEdit || !isTainted || isInFlight || hasIssues,
+      // Let submit revalidate the current draft and focus errors, including after a save.
+      disabled: disableEdit || !isTainted || isInFlight,
       onClick: handleSave,
     }
   })
