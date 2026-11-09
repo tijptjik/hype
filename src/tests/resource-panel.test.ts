@@ -249,3 +249,25 @@ it('navigates before toggling a compressed resource section', async () => {
       .getAttribute('aria-expanded'),
   ).toBe('true')
 })
+
+it('keeps embed section search available for small and empty scoped lists', async () => {
+  const model = {
+    ...section(2),
+    id: 'feature' as const,
+    title: 'Places',
+    searchable: true,
+  }
+  const view = render(ResourceSection, { section: model })
+  expect(screen.getByRole('searchbox', { name: 'Search Places' })).toBeTruthy()
+  await view.rerender({ section: { ...model, rows: [] } })
+  expect(screen.getByRole('searchbox', { name: 'Search Places' })).toBeTruthy()
+})
+
+it('opens a place without offering a resource-filter mutation', async () => {
+  const row = { ...section(1).rows[0], actionOnly: true, onIsolate: undefined }
+  render(ResourceRow, { row, tone: 'secondary' })
+  expect(screen.queryByRole('button', { name: row.toggleLabel })).toBeNull()
+  await fireEvent.click(screen.getByRole('button', { name: row.primaryLabel }))
+  expect(row.onPrimary).toHaveBeenCalledOnce()
+  expect(row.onToggle).not.toHaveBeenCalled()
+})
