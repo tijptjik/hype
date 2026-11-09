@@ -1275,55 +1275,58 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<ResourceIndex
-  resource={FirstClassResource.feature}
-  entities={displayEntities}
-  isInitialised={indexInitialised &&
-    (displayEntities.length > 0 ||
-      (searchIsReady && !indexHasMore) ||
-      Boolean(remotePageError || adminCtx.featurePageError))}
-  hasMore={indexCanLoadMore && !remotePageError && !adminCtx.featurePageError}
-  isLoadingMore={remotePending || remoteLoadingMore || adminCtx.featureLoadingMore}
-  onNearEnd={() => void loadMoreFeatureResults()}
-  bind:listContainer
-  getRowSelectionState={getFeatureBulkRowSelectionState}
-  onRowSelectionToggle={isBulkEditActive && featureLayoutMode !== 'card'
-    ? toggleFeatureBulkSelection
-    : undefined}
->
-  {#snippet card(entity: Feature)}
-    <IndexCard
-      {...createAdminIndexCardModel({
-        adminCtx,
-        resourceType: FirstClassResource.feature,
-        entity,
-        keyMap: featureIndexCardKeyMap,
-        search: page.url.search,
+<!-- A failed initial request is not a successful search with zero matches. -->
+{#if displayEntities.length > 0 || !(remotePageError || adminCtx.featurePageError)}
+  <ResourceIndex
+    resource={FirstClassResource.feature}
+    entities={displayEntities}
+    isInitialised={indexInitialised &&
+      (displayEntities.length > 0 ||
+        (searchIsReady && !indexHasMore) ||
+        Boolean(remotePageError || adminCtx.featurePageError))}
+    hasMore={indexCanLoadMore && !remotePageError && !adminCtx.featurePageError}
+    isLoadingMore={remotePending || remoteLoadingMore || adminCtx.featureLoadingMore}
+    onNearEnd={() => void loadMoreFeatureResults()}
+    bind:listContainer
+    getRowSelectionState={getFeatureBulkRowSelectionState}
+    onRowSelectionToggle={isBulkEditActive && featureLayoutMode !== 'card'
+      ? toggleFeatureBulkSelection
+      : undefined}
+  >
+    {#snippet card(entity: Feature)}
+      <IndexCard
+        {...createAdminIndexCardModel({
+          adminCtx,
+          resourceType: FirstClassResource.feature,
+          entity,
+          keyMap: featureIndexCardKeyMap,
+          search: page.url.search,
+        })}
+      />
+    {/snippet}
+    {#snippet row(entity, index, selectionState, isSelectionModeActive)}
+      <!-- Calculate only mounted rows, after the virtual list's scrolling placeholder settles. -->
+      {@const rowModel = getCachedFeatureRowModel({
+        appCtx: adminCtx.view,
+        feature: entity,
+        localeKey,
+        activeTranslationLocales,
+        isSuperAdmin,
+        userPreferences: adminCtx.view.getUserPreferences(),
       })}
-    />
-  {/snippet}
-  {#snippet row(entity, index, selectionState, isSelectionModeActive)}
-    <!-- Calculate only mounted rows, after the virtual list's scrolling placeholder settles. -->
-    {@const rowModel = getCachedFeatureRowModel({
-      appCtx: adminCtx.view,
-      feature: entity,
-      localeKey,
-      activeTranslationLocales,
-      isSuperAdmin,
-      userPreferences: adminCtx.view.getUserPreferences(),
-    })}
-    <FeatureRow
-      {entity}
-      model={rowModel}
-      {index}
-      {adminCtx}
-      onImageClick={openModal}
-      isSelected={selectedFeatureIndex === index && selectedImage !== null}
-      {selectionState}
-      isFocusable={!isSelectionModeActive}
-    />
-  {/snippet}
-</ResourceIndex>
+      <FeatureRow
+        {entity}
+        model={rowModel}
+        {index}
+        {adminCtx}
+        onImageClick={openModal}
+        isSelected={selectedFeatureIndex === index && selectedImage !== null}
+        {selectionState}
+        isFocusable={!isSelectionModeActive}
+      />
+    {/snippet}
+  </ResourceIndex>
+{/if}
 {#if remotePageError || adminCtx.featurePageError}
   <div role="alert" class="flex items-center justify-center gap-3 p-4 text-sm">
     <span>{m.bootstrap__error()}</span>
