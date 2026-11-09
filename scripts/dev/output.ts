@@ -32,3 +32,14 @@ export function getDevOutput(
     ignored: [new RegExp(`[/\\\\]\\.svelte-kit[/\\\\](?!${directory}(?:[/\\\\]|$))`)],
   }
 }
+
+/**
+ * Separates live translations from CLI compilation and other Vite processes.
+ * @param argv CLI arguments passed to Vite, including an optional check-server port.
+ * @param command Vite command, separating development output from build output.
+ * @returns The process-owned directory for generated Paraglide modules.
+ * @remarks CLI tests retain `src/lib/paraglide`; builds may use a different layout.
+ */
+export function getParaglideOutput(argv: string[], command: string): string {
+  return `${getDevOutput(argv, command).outDir}/paraglide-${command === 'serve' ? 'dev' : 'build'}`
+}

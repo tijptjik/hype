@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { getDevOutput } from '../../scripts/dev/output'
+import { getDevOutput, getParaglideOutput } from '../../scripts/dev/output'
 
 it('keeps main development and builds on the canonical output', () => {
   expect(getDevOutput([], 'serve').outDir).toBe('.svelte-kit')
@@ -16,4 +16,14 @@ it('isolates explicit check-server ports and watches only their generated output
   expect(ignore.test('/repo/.svelte-kit/dev-4174/generated/dev/server.js')).toBe(true)
   expect(ignore.test('/repo/.svelte-kit/dev-4173/generated/dev/server.js')).toBe(false)
   expect(ignore.test('/repo/src/routes/+page.svelte')).toBe(false)
+})
+
+it('keeps CLI, live servers and build translation layouts in separate directories', () => {
+  const main = getParaglideOutput([], 'serve')
+  const check = getParaglideOutput(['--port', '4173'], 'serve')
+  const build = getParaglideOutput([], 'build')
+  expect(main).toBe('.svelte-kit/paraglide-dev')
+  expect(check).toBe('.svelte-kit/dev-4173/paraglide-dev')
+  expect(build).toBe('.svelte-kit/paraglide-build')
+  expect(new Set(['src/lib/paraglide', main, check, build]).size).toBe(4)
 })
