@@ -1,4 +1,10 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition'
+import { flip } from 'svelte/animate'
+import { cubicInOut } from 'svelte/easing'
+import { MediaQuery } from 'svelte/reactivity'
+
 // ICONS
 import UnitIcon from 'virtual:icons/lucide/door-open'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
@@ -29,6 +35,8 @@ let {
   groups: { fields: EditableAddressField[]; title?: () => string }[]
   labels: Record<EditableAddressField, string>
 } = $props()
+
+const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)')
 
 const icons = {
   unitPortion: UnitIcon,
@@ -71,11 +79,19 @@ const sections = $derived(
 
 {#if sections.length}
   <div
+    transition:slide={{ duration: reducedMotion.current ? 0 : 200, easing: cubicInOut }}
     class="border-border/70 divide-border/60 @container min-w-0 divide-y overflow-hidden rounded-xl border"
     data-address-parts
   >
     {#each sections as section (section.key)}
-      <section class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 px-4 py-4">
+      <section
+        animate:flip={{ duration: reducedMotion.current ? 0 : 200 }}
+        transition:slide={{
+          duration: reducedMotion.current ? 0 : 200,
+          easing: cubicInOut,
+        }}
+        class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 px-4 py-4"
+      >
         <section.Icon class="text-muted-foreground mt-0.5 size-4" aria-hidden="true" />
         <div class="min-w-0 space-y-3">
           <h3 class="text-muted-foreground text-xs font-semibold tracking-wide">
@@ -87,6 +103,11 @@ const sections = $derived(
                 <dt class="text-muted-foreground mb-1 text-xs">{labels[field]}</dt>
                 {#each values as { tag, value } (tag)}
                   <dd
+                    animate:flip={{ duration: reducedMotion.current ? 0 : 200 }}
+                    transition:slide={{
+                      duration: reducedMotion.current ? 0 : 200,
+                      easing: cubicInOut,
+                    }}
                     lang={tag}
                     class="text-foreground flex min-w-0 items-baseline gap-2 text-base leading-relaxed font-medium"
                   >

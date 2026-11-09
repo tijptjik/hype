@@ -1580,6 +1580,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
   {#if !isEditing}
     {#if viewerDisplayAddressRows.length}
       <div
+        transition:localeSlide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
         class="@container min-w-0"
         data-address-display-values
         class:opacity-50={displayStale}
@@ -1590,6 +1591,10 @@ function blockTypeFirst(locale: LocaleKey): boolean {
         >
           {#each viewerDisplayAddressRows as { tag, value } (tag)}
             <p
+              animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}
+              transition:localeSlide={{
+                duration: prefersReducedMotion.current ? 0 : 200,
+              }}
               lang={tag}
               class="flex min-w-0 items-center gap-2 text-sm leading-relaxed"
             >
@@ -1624,7 +1629,13 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {#each shownLocales as tag (tag)}
         {@const hint = accessHintValue(tag)}
         {#if hint}
-          <p lang={tag} class="text-muted-foreground flex items-baseline gap-2 text-sm">
+          <p
+            transition:localeSlide={{
+              duration: prefersReducedMotion.current ? 0 : 200,
+            }}
+            lang={tag}
+            class="text-muted-foreground flex items-baseline gap-2 text-sm"
+          >
             {#if tag !== selectedLocales[0]}
               <span class="shrink-0 font-mono text-xs">{shortLocaleLabel(tag)}</span>
             {/if}
