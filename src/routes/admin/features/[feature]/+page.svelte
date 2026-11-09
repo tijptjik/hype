@@ -170,6 +170,7 @@ import {
 } from '#lib/api/location.remote.js'
 import {
   addressBuildingNames,
+  addressLocationNames,
   localIdentityFromAddress,
 } from '#lib/locations/addressIdentity.js'
 import {
@@ -543,7 +544,7 @@ const isImagesFacet = $derived(activeFacet === 'images')
  */
 function goToFacet(facet: FacetType): void {
   if ((facet === 'images' || facet === 'updates') && isNewFeatureRef) return
-  if (facet === 'fields' && !hasSelectedLayer) return
+  if (facet === 'fields' && (!hasSelectedLayer || !ensureDraftPin())) return
   if (facet === 'location' && needsLayerSelection) return
   if (facet === activeFacet) return
   // The current route ref also covers unsaved Features, which have no cache record.
@@ -563,7 +564,8 @@ const buildFacetNavAction = createFacetNavActionBuilder<FacetType>({
   getActiveFacet: () => activeFacet as FacetType,
   navigateToFacet: goToFacet,
   isFacetDisabled: facet =>
-    (facet === 'fields' && !hasSelectedLayer) ||
+    (facet === 'fields' &&
+      (!hasSelectedLayer || (isNewFeatureRef && !draftLocationReady))) ||
     (facet === 'location' && needsLayerSelection),
 })
 
@@ -1047,13 +1049,18 @@ $effect(() => {
 })
 
 /** Preview the selected candidate without changing any Feature values.
- * @param result Source candidate. @returns Nothing.
+ * @param result Source candidate.
+ * @param preserveZoom Keep the current zoom when switching comparison pins.
+ * @returns Nothing.
  */
-function previewDraftLocation(result: { address: FeatureAddress }): void {
+function previewDraftLocation(
+  result: { address: FeatureAddress },
+  preserveZoom = false,
+): void {
   if (result.address.coordinates)
     draftMapController?.flyTo({
       center: result.address.coordinates as [number, number],
-      zoom: 17,
+      ...(preserveZoom ? {} : { zoom: 17 }),
       duration: prefersReducedMotion.current ? 0 : 900,
     })
 }
@@ -1252,13 +1259,17 @@ function dropDraftPin(): boolean {
   return true
 }
 
-/** Prevent a new Feature from silently saving the editor's default camera coordinates.
- * @returns Whether the user has selected an actual position.
+/** Prevent a new Feature from saving only the editor's marker coordinates.
+ * @returns Whether the user has supplied a position and a Location description.
  */
 function ensureDraftPin(): boolean {
-  if (!isNewFeatureRef || draftHasPin) return true
+  if (!isNewFeatureRef || draftLocationReady) return true
   goToFacet('location')
-  toast.error(m.feature_start_choose_position())
+  toast.error(
+    draftHasPin
+      ? m.feature_search_identity_required()
+      : m.feature_start_choose_position(),
+  )
   return false
 }
 
@@ -2086,16 +2097,16 @@ const profileLocationNames = $derived.by(() => {
             ).map(([locale, name]) => [locale, name ?? '']),
           )
   if (Object.values(names).some(name => name.trim())) return names
-  if (draftLocalKind === 'address' || acceptedNameSource?.current?.kind === 'address') {
-    return Object.fromEntries(
-      Object.entries(ADDRESS_LOCALES).map(([locale, tag]) => [
-        tag,
-        getAddressDisplay(editorAddress, locale as keyof typeof ADDRESS_LOCALES),
-      ]),
-    )
-  }
-  return names
+  // A described position can supply the linked title even without a named venue.
+  return addressLocationNames(editorAddress)
 })
+// A marker supplies geometry; a selected or authored description supplies Location identity.
+const draftLocationReady = $derived(
+  draftHasPin &&
+    draftLocationAccepted &&
+    Object.values(profileLocationNames).some(name => name.trim()),
+)
+
 const profileNameMode = $derived(
   featurePresentationPolicy.locationBasedNames
     ? 'inherit'
@@ -2173,8 +2184,7 @@ $effect(() => {
   const names = profileLocationNames
   const locked = profileNamesLocked
   const editing = isEditing
-  if (isNewFeatureRef && locked && editing && Object.keys(names).length)
-    untrack(() => inheritLocationNames(names))
+  if (isNewFeatureRef && locked && editing) untrack(() => inheritLocationNames(names))
 })
 
 const featureDescriptorFieldConfigs = $derived([
@@ -4430,7 +4440,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
       centerAction={isNewFeatureRef &&
       !draftResolutionPending &&
       !draftLocationAccepted &&
-      draftSearchHasResults
+      (draftSearchHasResults || draftHasPin)
         ? {
             id: 'draft-manual-entry',
             disabled: !draftHasPin && !draftMapController,
@@ -4600,6 +4610,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                 {locationActions}
                 {locationMapControls}
                 {locationControl}
+                centerLocationControl={draftResolutionPending}
                 {locationContent}
                 hideDetails={hideDetails ||
                   draftResolutionPending ||
