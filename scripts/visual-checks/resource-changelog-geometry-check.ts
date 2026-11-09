@@ -1,8 +1,8 @@
 // NODE
 import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
-// PLAYWRIGHT
-import { chromium, firefox } from 'playwright'
+// BROWSER CHECKS
+import { browserCases } from './lib/browser-cases'
 import type { Page } from 'playwright'
 
 const baseUrl = process.env.CHANGELOG_CHECK_URL ?? 'http://127.0.0.1:4173'
@@ -49,69 +49,61 @@ async function assertCoverage(page: Page, label: string): Promise<void> {
   assert.ok(geometry.mounted < 80, `${label}: virtualization mounted too many rows`)
 }
 
-for (const [name, engine] of [
-  ['chromium', chromium],
-  ['firefox', firefox],
-] as const) {
-  const browser = await engine.launch({ headless: true })
-  try {
-    for (const width of [1566, 390]) {
-      const page = await browser.newPage({ viewport: { width, height: 708 } })
-      const errors: string[] = []
-      page.on('pageerror', error => errors.push(error.message))
-      await page.route('**/__changelog-geometry.html', route =>
-        route.fulfill({ contentType: 'text/html', body: html }),
-      )
-      await page.goto(`${baseUrl}/__changelog-geometry.html`)
-      const viewport = page.locator('svelte-virtual-list-viewport')
-      await page.locator('details[data-change-key="first-0"]').waitFor()
-      await assertCoverage(page, `${name} ${width} initial`)
-      // Populate several pages with collapsed measurements before changing row heights.
-      for (let index = 0; index < 5; index++) {
-        await viewport.evaluate(element => {
-          element.scrollTop += 500
-        })
-        await assertCoverage(page, `${name} ${width} collapsed scroll ${index}`)
-      }
+for await (const { name, browser } of browserCases()) {
+  for (const width of [1566, 390]) {
+    const page = await browser.newPage({ viewport: { width, height: 708 } })
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.route('**/__changelog-geometry.html', route =>
+      route.fulfill({ contentType: 'text/html', body: html }),
+    )
+    await page.goto(`${baseUrl}/__changelog-geometry.html`)
+    const viewport = page.locator('svelte-virtual-list-viewport')
+    await page.locator('details[data-change-key="first-0"]').waitFor()
+    await assertCoverage(page, `${name} ${width} initial`)
+    // Populate several pages with collapsed measurements before changing row heights.
+    for (let index = 0; index < 5; index++) {
       await viewport.evaluate(element => {
-        element.scrollTop = 0
+        element.scrollTop += 500
       })
-      await assertCoverage(page, `${name} ${width} return to newest`)
-      await page.getByRole('button', { name: 'Expand all', exact: true }).click()
-      for (let index = 0; index < 5; index++) {
-        await viewport.evaluate(element => {
-          element.scrollTop += 500
-        })
-        await assertCoverage(page, `${name} ${width} expanded scroll ${index}`)
-      }
-      // Collapsing after recycling tall rows used to leave an empty strip above the window.
-      await page.getByRole('button', { name: 'Collapse all', exact: true }).click()
-      await assertCoverage(page, `${name} ${width} collapse all`)
-      await page.screenshot({
-        path: `${directory}/${name}-${width}-collapsed.png`,
-        fullPage: true,
-      })
-      for (const offset of [1000, 0, 2000, 0]) {
-        await viewport.evaluate((element, top) => {
-          element.scrollTop = top
-        }, offset)
-        await assertCoverage(page, `${name} ${width} jump ${offset}`)
-      }
-      // Mixed collapsed/expanded heights must use the same offsets as the rendered spacers.
-      await page.locator('details[data-change-key="first-0"] > summary').click()
-      for (const offset of [500, 1000, 1500, 0]) {
-        await viewport.evaluate((element, top) => {
-          element.scrollTop = top
-        }, offset)
-        await assertCoverage(page, `${name} ${width} mixed heights ${offset}`)
-      }
-      assert.deepEqual(errors, [])
-      console.log(
-        `${name} ${width}: expand/collapse, mixed heights and scroll coverage passed`,
-      )
-      await page.close()
+      await assertCoverage(page, `${name} ${width} collapsed scroll ${index}`)
     }
-  } finally {
-    await browser.close()
+    await viewport.evaluate(element => {
+      element.scrollTop = 0
+    })
+    await assertCoverage(page, `${name} ${width} return to newest`)
+    await page.getByRole('button', { name: 'Expand all', exact: true }).click()
+    for (let index = 0; index < 5; index++) {
+      await viewport.evaluate(element => {
+        element.scrollTop += 500
+      })
+      await assertCoverage(page, `${name} ${width} expanded scroll ${index}`)
+    }
+    // Collapsing after recycling tall rows used to leave an empty strip above the window.
+    await page.getByRole('button', { name: 'Collapse all', exact: true }).click()
+    await assertCoverage(page, `${name} ${width} collapse all`)
+    await page.screenshot({
+      path: `${directory}/${name}-${width}-collapsed.png`,
+      fullPage: true,
+    })
+    for (const offset of [1000, 0, 2000, 0]) {
+      await viewport.evaluate((element, top) => {
+        element.scrollTop = top
+      }, offset)
+      await assertCoverage(page, `${name} ${width} jump ${offset}`)
+    }
+    // Mixed collapsed/expanded heights must use the same offsets as the rendered spacers.
+    await page.locator('details[data-change-key="first-0"] > summary').click()
+    for (const offset of [500, 1000, 1500, 0]) {
+      await viewport.evaluate((element, top) => {
+        element.scrollTop = top
+      }, offset)
+      await assertCoverage(page, `${name} ${width} mixed heights ${offset}`)
+    }
+    assert.deepEqual(errors, [])
+    console.log(
+      `${name} ${width}: expand/collapse, mixed heights and scroll coverage passed`,
+    )
+    await page.close()
   }
 }

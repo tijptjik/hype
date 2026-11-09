@@ -1,190 +1,179 @@
 // NODE
 import { strict as assert } from 'node:assert'
 import { mkdir } from 'node:fs/promises'
-// PLAYWRIGHT
-import { chromium, firefox } from 'playwright'
+// BROWSER CHECKS
+import { browserCases } from './lib/browser-cases'
 
 const base = process.env.HISTORY_CHECK_URL ?? 'http://127.0.0.1:4173'
 const directory = 'output/playwright/resource-history-layout'
 await mkdir(directory, { recursive: true })
-for (const [name, engine] of [
-  ['chromium', chromium],
-  ['firefox', firefox],
-] as const) {
-  const browser = await engine.launch({ headless: true })
-  try {
-    for (const [width, narrow] of [
-      [1280, false],
-      [390, false],
-      [320, false],
-      [1280, true],
-    ] as const) {
-      const page = await browser.newPage({
-        viewport: { width, height: 1000 },
-        reducedMotion: 'reduce',
-      })
-      const errors: string[] = []
-      page.on('pageerror', error => errors.push(error.message))
-      await page.route('**/__history-layout.html*', route =>
-        route.fulfill({
-          contentType: 'text/html',
-          body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/resourceHistoryLayoutCheck.ts"></script></body></html>',
-        }),
-      )
-      await page.route('**/api/images/revisions/*', route =>
-        route.fulfill({
-          contentType: 'image/svg+xml',
-          body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" rx="16" fill="#176078"/><path d="M24 53l18 18 34-42" fill="none" stroke="#fff" stroke-width="9"/></svg>',
-        }),
-      )
-      await page.goto(`${base}/__history-layout.html${narrow ? '?narrow' : ''}`)
-      const latest = page.locator('article').filter({
-        has: page.getByRole('heading', {
-          name: 'Resource image updated',
-          exact: true,
-        }),
-      })
-      await latest.waitFor()
-      const disclosure = latest.getByRole('button', { name: '1 changed field' })
-      assert.equal(await disclosure.getAttribute('aria-expanded'), 'true')
-      const metadata = latest.getByRole('button', { name: 'Metadata', exact: true })
-      const references = latest.locator('[id^="logo-metadata-"]')
-      assert.equal(await references.isVisible(), false)
-      assert.equal(await metadata.getAttribute('aria-expanded'), 'false')
-      const logoHeader = latest
-        .getByRole('region', { name: 'Logo history' })
-        .locator(':scope > div')
+for await (const { name, browser } of browserCases()) {
+  for (const [width, narrow] of [
+    [1280, false],
+    [390, false],
+    [320, false],
+    [1280, true],
+  ] as const) {
+    const page = await browser.newPage({
+      viewport: { width, height: 1000 },
+      reducedMotion: 'reduce',
+    })
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.route('**/__history-layout.html*', route =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/resourceHistoryLayoutCheck.ts"></script></body></html>',
+      }),
+    )
+    await page.route('**/api/images/revisions/*', route =>
+      route.fulfill({
+        contentType: 'image/svg+xml',
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" rx="16" fill="#176078"/><path d="M24 53l18 18 34-42" fill="none" stroke="#fff" stroke-width="9"/></svg>',
+      }),
+    )
+    await page.goto(`${base}/__history-layout.html${narrow ? '?narrow' : ''}`)
+    const latest = page.locator('article').filter({
+      has: page.getByRole('heading', {
+        name: 'Resource image updated',
+        exact: true,
+      }),
+    })
+    await latest.waitFor()
+    const disclosure = latest.getByRole('button', { name: '1 changed field' })
+    assert.equal(await disclosure.getAttribute('aria-expanded'), 'true')
+    const metadata = latest.getByRole('button', { name: 'Metadata', exact: true })
+    const references = latest.locator('[id^="logo-metadata-"]')
+    assert.equal(await references.isVisible(), false)
+    assert.equal(await metadata.getAttribute('aria-expanded'), 'false')
+    const logoHeader = latest
+      .getByRole('region', { name: 'Logo history' })
+      .locator(':scope > div')
+      .first()
+    const metadataBounds = (await metadata.boundingBox())!
+    const logoHeaderBounds = (await logoHeader.boundingBox())!
+    assert.ok(
+      logoHeaderBounds.x +
+        logoHeaderBounds.width -
+        metadataBounds.x -
+        metadataBounds.width <
+        20,
+      'Metadata button must align to the right of the Logo header',
+    )
+    // The secondary metadata button must not collapse the enclosing revision.
+    await metadata.focus()
+    await page.keyboard.press('Enter')
+    await references.getByText(/^upload-/).waitFor()
+    assert.equal(await metadata.getAttribute('aria-expanded'), 'true')
+    assert.equal(await disclosure.getAttribute('aria-expanded'), 'true')
+    if (width === 1280 && !narrow) {
+      const titleBounds = (await latest
+        .locator(':scope > header > div')
         .first()
-      const metadataBounds = (await metadata.boundingBox())!
-      const logoHeaderBounds = (await logoHeader.boundingBox())!
+        .boundingBox())!
+      const changedBounds = (await latest
+        .locator(':scope > header > dl > div')
+        .first()
+        .boundingBox())!
       assert.ok(
-        logoHeaderBounds.x +
-          logoHeaderBounds.width -
-          metadataBounds.x -
-          metadataBounds.width <
-          20,
-        'Metadata button must align to the right of the Logo header',
+        Math.abs(changedBounds.x - titleBounds.x - titleBounds.width - 24) < 2,
+        'Revision metadata must follow the title with a fixed gap',
       )
-      // The secondary metadata button must not collapse the enclosing revision.
-      await metadata.focus()
-      await page.keyboard.press('Enter')
-      await references.getByText(/^upload-/).waitFor()
-      assert.equal(await metadata.getAttribute('aria-expanded'), 'true')
-      assert.equal(await disclosure.getAttribute('aria-expanded'), 'true')
-      if (width === 1280 && !narrow) {
-        const titleBounds = (await latest
-          .locator(':scope > header > div')
-          .first()
-          .boundingBox())!
-        const changedBounds = (await latest
-          .locator(':scope > header > dl > div')
-          .first()
+      const primaryLabel = (await latest
+        .getByText('Revision', { exact: true })
+        .boundingBox())!
+      for (const label of ['Changed', 'Actor', 'Source']) {
+        const bounds = (await latest
+          .locator(':scope > header')
+          .getByText(label, { exact: true })
           .boundingBox())!
         assert.ok(
-          Math.abs(changedBounds.x - titleBounds.x - titleBounds.width - 24) < 2,
-          'Revision metadata must follow the title with a fixed gap',
+          Math.abs(bounds.y - primaryLabel.y) < 2,
+          `${label} must share the primary header row`,
         )
-        const primaryLabel = (await latest
-          .getByText('Revision', { exact: true })
-          .boundingBox())!
-        for (const label of ['Changed', 'Actor', 'Source']) {
-          const bounds = (await latest
-            .locator(':scope > header')
-            .getByText(label, { exact: true })
-            .boundingBox())!
-          assert.ok(
-            Math.abs(bounds.y - primaryLabel.y) < 2,
-            `${label} must share the primary header row`,
-          )
-        }
       }
-      assert.equal(
-        await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
-        false,
-      )
-      await metadata.click()
-      assert.equal(await references.isVisible(), false)
-      await page.getByRole('button', { name: 'Older changes', exact: true }).click()
-      await page
-        .getByRole('heading', { name: 'State captured before revision tracking' })
-        .waitFor()
-      await page.getByRole('button', { name: 'Expand', exact: true }).click()
-      await page.getByText('Neighbourhood Food Collective', { exact: true }).waitFor()
-      await page.getByText('社區食物共享', { exact: true }).waitFor()
-      const profile = page.locator('article').filter({
-        has: page.getByRole('heading', {
-          name: 'Organisation form save',
-          exact: true,
-        }),
-      })
-      assert.equal(
-        await profile.getByRole('region', { name: 'Logo history' }).count(),
-        0,
-        'Unchanged logos must not repeat on every save',
-      )
-      const comparison = profile
-        .getByRole('region', { name: 'Locale comparisons', exact: true })
-        .first()
-      const table = comparison.getByRole('table')
-      const before = table.getByRole('columnheader', { name: 'Before', exact: true })
-      const after = table.getByRole('columnheader', { name: 'After', exact: true })
-      const a = (await before.boundingBox())!,
-        b = (await after.boundingBox())!
-      assert.ok(Math.abs(a.y - b.y) < 1, 'Comparison columns must align')
-      assert.ok(b.x > a.x, 'After must follow Before')
-      // Narrow locale tables scroll within their own keyboard-accessible region.
-      const scrollRegion = comparison
-      assert.equal(await scrollRegion.getAttribute('tabindex'), '0')
-      const scroll = await scrollRegion.evaluate(element => ({
-        width: element.clientWidth,
-        content: element.scrollWidth,
-        overflow: getComputedStyle(element).overflowX,
-      }))
-      assert.equal(scroll.overflow, 'auto')
-      if (width < 448) {
-        assert.ok(
-          scroll.content > scroll.width,
-          'Narrow comparisons must scroll locally',
-        )
-        await scrollRegion.evaluate(element => {
-          element.scrollLeft = element.scrollWidth
-        })
-        assert.ok(await scrollRegion.evaluate(element => element.scrollLeft > 0))
-      }
-      const headerIcon = page.locator('.bits-header__icon-wrap').first()
-      assert.ok(
-        (await headerIcon.boundingBox())!.height < 40,
-        'Fixture must load the themed header styles',
-      )
-      assert.equal(
-        await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
-        false,
-      )
-      await page.screenshot({
-        path: `${directory}/${name}-${width}${narrow ? '-panel' : ''}.png`,
-        fullPage: true,
-      })
-      await page.getByRole('button', { name: 'Collapse', exact: true }).click()
-      assert.equal(await disclosure.getAttribute('aria-expanded'), 'false')
-      await page.getByRole('button', { name: 'Field definitions', exact: true }).click()
-      await page.getByRole('heading', { name: 'Contact options updated' }).waitFor()
-      await page.getByRole('button', { name: 'Expand en', exact: true }).click()
-      await page.getByText('Telegram', { exact: true }).waitFor()
-      assert.equal(
-        await page
-          .getByRole('button', { name: '1 changed field' })
-          .getAttribute('aria-expanded'),
-        'true',
-      )
-      assert.equal(
-        await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
-        false,
-      )
-      assert.deepEqual(errors, [])
-      await page.close()
     }
-  } finally {
-    await browser.close()
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    )
+    await metadata.click()
+    assert.equal(await references.isVisible(), false)
+    await page.getByRole('button', { name: 'Older changes', exact: true }).click()
+    await page
+      .getByRole('heading', { name: 'State captured before revision tracking' })
+      .waitFor()
+    await page.getByRole('button', { name: 'Expand', exact: true }).click()
+    await page.getByText('Neighbourhood Food Collective', { exact: true }).waitFor()
+    await page.getByText('社區食物共享', { exact: true }).waitFor()
+    const profile = page.locator('article').filter({
+      has: page.getByRole('heading', {
+        name: 'Organisation form save',
+        exact: true,
+      }),
+    })
+    assert.equal(
+      await profile.getByRole('region', { name: 'Logo history' }).count(),
+      0,
+      'Unchanged logos must not repeat on every save',
+    )
+    const comparison = profile
+      .getByRole('region', { name: 'Locale comparisons', exact: true })
+      .first()
+    const table = comparison.getByRole('table')
+    const before = table.getByRole('columnheader', { name: 'Before', exact: true })
+    const after = table.getByRole('columnheader', { name: 'After', exact: true })
+    const a = (await before.boundingBox())!,
+      b = (await after.boundingBox())!
+    assert.ok(Math.abs(a.y - b.y) < 1, 'Comparison columns must align')
+    assert.ok(b.x > a.x, 'After must follow Before')
+    // Narrow locale tables scroll within their own keyboard-accessible region.
+    const scrollRegion = comparison
+    assert.equal(await scrollRegion.getAttribute('tabindex'), '0')
+    const scroll = await scrollRegion.evaluate(element => ({
+      width: element.clientWidth,
+      content: element.scrollWidth,
+      overflow: getComputedStyle(element).overflowX,
+    }))
+    assert.equal(scroll.overflow, 'auto')
+    if (width < 448) {
+      assert.ok(scroll.content > scroll.width, 'Narrow comparisons must scroll locally')
+      await scrollRegion.evaluate(element => {
+        element.scrollLeft = element.scrollWidth
+      })
+      assert.ok(await scrollRegion.evaluate(element => element.scrollLeft > 0))
+    }
+    const headerIcon = page.locator('.bits-header__icon-wrap').first()
+    assert.ok(
+      (await headerIcon.boundingBox())!.height < 40,
+      'Fixture must load the themed header styles',
+    )
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    )
+    await page.screenshot({
+      path: `${directory}/${name}-${width}${narrow ? '-panel' : ''}.png`,
+      fullPage: true,
+    })
+    await page.getByRole('button', { name: 'Collapse', exact: true }).click()
+    assert.equal(await disclosure.getAttribute('aria-expanded'), 'false')
+    await page.getByRole('button', { name: 'Field definitions', exact: true }).click()
+    await page.getByRole('heading', { name: 'Contact options updated' }).waitFor()
+    await page.getByRole('button', { name: 'Expand en', exact: true }).click()
+    await page.getByText('Telegram', { exact: true }).waitFor()
+    assert.equal(
+      await page
+        .getByRole('button', { name: '1 changed field' })
+        .getAttribute('aria-expanded'),
+      'true',
+    )
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    )
+    assert.deepEqual(errors, [])
+    await page.close()
   }
 }
 console.log(
