@@ -86,7 +86,8 @@ A wrapper component that initializes and provides `ImageCtx` to child components
     ctxId: feature.id,
     organisation: feature.organisation,
     project: feature.project
-  }}>
+  }}
+>
   <!-- Child components that need image context -->
 </ImageProvider>
 ```
@@ -443,7 +444,8 @@ if (isTransitioning && overlayImage) {
     ctxId: feature.id,
     organisation: feature.organisation,
     project: feature.project
-  }}>
+  }}
+>
   <div class="flex gap-6">
     <!-- Main viewer -->
     <div class="flex-1">
@@ -476,7 +478,8 @@ if (isTransitioning && overlayImage) {
     ctxIdSecondary: task.id,
     organisation: task.organisation,
     project: task.project
-  }}>
+  }}
+>
   <!-- Shows both feature images and task-specific images -->
 </ImageProvider>
 ```

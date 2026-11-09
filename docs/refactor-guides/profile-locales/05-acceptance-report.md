@@ -89,12 +89,12 @@ component-level evidence.
 ## Review refinement: anchored toolbar and priority prefixes
 
 The user's subsequent review supersedes the original user-locale prefix rule: the first
-displayed locale is unlabelled; subsequent rows use compact labels such as
-En, 繁中 and 简中. Reordering and visibility changes recompute that rule. The compact
-Multilingual icon/text action is restored on the right, with Add at the far left of the
-revealed strip and grip icons on draggable locale chips. The reveal clips full-size
-chips from the trigger side instead of animating chip width and causing repeated reflow.
-Narrow screens wrap the strip below the action.
+displayed locale is unlabelled; subsequent rows use compact labels such as En, 繁中 and
+简中. Reordering and visibility changes recompute that rule. The compact Multilingual
+icon/text action is restored on the right, with Add at the far left of the revealed
+strip and grip icons on draggable locale chips. The reveal clips full-size chips from
+the trigger side instead of animating chip width and causing repeated reflow. Narrow
+screens wrap the strip below the action.
 
 Seventeen focused Profile/control tests pass, including the reordered-prefix case.
 Chromium and Firefox pass at 320/390/1440px, including native drag-and-drop, first-row

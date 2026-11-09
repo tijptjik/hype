@@ -113,7 +113,8 @@ deployment strategies, see [docs/Deployment.md](../docs/Deployment.md).
 
 ## Code Style
 
-- Format with [Prettier](https://prettier.io/)
+- Check formatting with `bun run lint`; apply reviewed fixes with `bun run lint:fix`.
+  [Biome](https://biomejs.dev/) formats source, configuration, and Markdown.
 
 ## Git Conventions
 

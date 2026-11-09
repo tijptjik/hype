@@ -9,7 +9,7 @@ Use this checklist for execution tracking. Keep items small enough for one PR.
 - [x] Create/standardize first Bits UI primitives under `src/lib/bits`.
 - [x] Add migration note template for PRs (before/after behavior + screenshots).
 - [x] Review and approve `docs/Resource-Cache-Architecture.md` as the
-      cache/source-of-truth direction.
+  cache/source-of-truth direction.
 
 ## Forms: Superforms -> Remote `form`
 
@@ -30,9 +30,9 @@ Use this checklist for execution tracking. Keep items small enough for one PR.
 ## Svelte / Architecture Items (migrated from old cursor checklist)
 
 - [ ] Evaluate async guidance:
-      https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944
+  https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944
 - [ ] Evaluate `@attach` for replacing action patterns:
-      https://svelte.dev/docs/svelte/@attach
+  https://svelte.dev/docs/svelte/@attach
 - [ ] Use `<svelte:boundary>` where relevant.
 - [x] Use `@debug` for targeted debugging as needed.
 
@@ -55,12 +55,12 @@ Use this checklist for execution tracking. Keep items small enough for one PR.
 
 - [ ] Create `CacheCtx` and inject it as a dependency into `AppCtx`.
 - [ ] Implement organisation-only canonical store (`entities`, `entityMeta`,
-      `queryIndex`) in `CacheCtx`.
+  `queryIndex`) in `CacheCtx`.
 - [ ] Add organisation projection graph and `satisfiesProjection(...)` checks.
 - [ ] Implement `ensureResource(type, id, { minProjection, policy })` with in-flight
-      dedupe.
+  dedupe.
 - [ ] Implement `ensureQuery(queryKey, fetcher, { projection, policy })` with in-flight
-      dedupe.
+  dedupe.
 - [ ] Migrate organisations list/detail to `CacheCtx` read path.
 - [ ] Migrate organisation mutations to `CacheCtx.mutateResource` optimistic flow.
 - [ ] Persist organisation cache to IndexedDB and hydrate on boot.

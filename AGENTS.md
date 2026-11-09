@@ -136,8 +136,11 @@ Watch commands retain the slot until stopped; avoid them for one-shot checks.
 
 - `bun run lint` is read-only. Use `bun run lint:fix` only for an intentional, reviewed
   formatting pass; do not make routine lint checks rewrite the repository.
-- Biome owns supported source/configuration formats. Prettier owns Markdown; keep
-  Biome's Markdown formatter disabled so the tools cannot undo each other.
+- Biome owns source/configuration and Markdown formatting. Use paragraph-level
+  `biome-ignore format` comments to preserve template tokens or Obsidian embeds; do not
+  rename ordinary Markdown documents just because they contain these fragments.
+- `format:markdown` and `format:markdown:check` also handle `llms.txt` as Markdown; the
+  same adapter runs in repository lint and pre-commit checks.
 - Pre-commit validates a temporary snapshot of the Git index, including partially staged
   files. It never formats, stages, or changes working-tree files.
 - Biome policy/version, package manifest, lockfile, and ignore changes trigger a full

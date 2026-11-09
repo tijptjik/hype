@@ -35,12 +35,17 @@ hiding the sole visible tag. Configured/persisted content selection remains
 caller-owned; the toolbar never touches translations, verification or persistence.
 
 ```svelte
-<LocaleToolbar {selectedLocales} {visibleLocales} {expanded} {options}
+<LocaleToolbar
+  {selectedLocales}
+  {visibleLocales}
+  {expanded}
+  {options}
   onExpandedChange={value => expanded = value}
   onChange={change => {
     selectedLocales = change.selectedLocales
     visibleLocales = change.visibleLocales
-  }} />
+  }}
+/>
 ```
 
 Add focuses the searchable combobox. Arrow keys navigate results, Enter selects, Escape
