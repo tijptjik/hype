@@ -25,6 +25,7 @@ import AddressDivisions from './AddressDivisions.svelte'
 // API
 import { loadGeocodedAddressUnits } from '#lib/api/external/geocoding.js'
 // ADDRESS
+import { hasStructuredAddressComponents } from '#lib/addresses/presentation.js'
 import { parseCoordinateInput } from '#lib/addresses/coordinateInput.js'
 import { nearbyAddressCandidates } from '#lib/addresses/nearbyCandidates.js'
 import {
@@ -161,16 +162,14 @@ let {
   onChange: (address: FeatureAddress) => void
 } = $props()
 
-// A premises name or number still needs a street; source identity alone does not make it complete.
-const needsStreetAddress = $derived(
-  !Object.keys(ADDRESS_LOCALES).some(locale => {
-    const street = getAddressLocale(
-      address,
-      locale as keyof typeof ADDRESS_LOCALES,
-    ).streetName
-    return typeof street === 'string' && Boolean(street.trim())
-  }),
+const showEmptyAddressActions = $derived(
+  isEditing &&
+    !hideDetails &&
+    showAddressDetails &&
+    !hasStructuredAddressComponents(address),
 )
+
+// Location matching owns address enrichment, including premises without a street.
 const nearbyCandidates = $derived(nearbyAddressCandidates(candidates, coordinates))
 let lookupQuery = $state('')
 $effect(() => {
@@ -641,7 +640,7 @@ $effect(() => {
   {centerLocationControl}
   locationControl={displayAddressInToolbar ? addressToolbar : locationControl}
   {coordinatesInLocationControl}
-  {locationActions}
+  locationActions={showEmptyAddressActions ? undefined : locationActions}
   {toolbarControls}
   {toolbarInfo}
   {locationMapControls}
@@ -847,6 +846,7 @@ $effect(() => {
       {#if showAddressDetails}
         <AddressDetails
           {onMatchLocation}
+          emptyAddressActions={showEmptyAddressActions ? locationActions : undefined}
           {localeState}
           {onLocaleStateChange}
           {activeBuildingSource}
@@ -869,8 +869,6 @@ $effect(() => {
           {onAccessibilityDraftChange}
           {locationKind}
           {accessibilityLocationId}
-          onLookup={needsStreetAddress && hasLocation ? () => onLookup() : undefined}
-          isLookupLoading={isLoading}
           {divisions}
           {address}
           {isEditing}

@@ -52,7 +52,6 @@ import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 // ICONS
 import SearchIcon from 'virtual:icons/lucide/search'
 import MarkerIcon from 'virtual:icons/lucide/map-pin'
-import LoaderIcon from 'virtual:icons/lucide/loader-circle'
 import UnitIcon from 'virtual:icons/lucide/door-open'
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
 import SwapIcon from 'virtual:icons/lucide/arrow-left-right'
@@ -151,9 +150,8 @@ let {
   partsOpen = true,
   partsOverlay = false,
   onToggleParts,
-  onLookup,
   onMatchLocation,
-  isLookupLoading = false,
+  emptyAddressActions,
   onChange,
 }: {
   address: FeatureAddress
@@ -192,9 +190,8 @@ let {
   partsOpen?: boolean
   partsOverlay?: boolean
   onToggleParts?: () => void
-  onLookup?: () => void
+  emptyAddressActions?: Snippet
   onMatchLocation?: () => void
-  isLookupLoading?: boolean
   onChange: (address: FeatureAddress) => void
 } = $props()
 /** Collapse locale rows and their own spacing as one continuous motion.
@@ -1507,25 +1504,6 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {splitColumns ? m.feature_location_title() : m.feature_address_title()}
     </h2>
     <div class="flex min-w-0 flex-wrap items-center gap-2">
-      {#if onLookup && isEditing}
-        <button
-          type="button"
-          disabled={isLookupLoading}
-          aria-busy={isLookupLoading}
-          class="text-primary hover:bg-primary/10 flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm disabled:opacity-50"
-          onclick={onLookup}
-        >
-          {#if isLookupLoading}
-            <LoaderIcon
-              aria-hidden="true"
-              class="size-4 animate-spin motion-reduce:animate-none"
-            />
-          {:else}
-            <SearchIcon aria-hidden="true" class="size-4" />
-          {/if}
-          {m.feature_address_lookup()}
-        </button>
-      {/if}
       {@render identityControls?.()}
       <LocaleToolbar
         {selectedLocales}
@@ -1569,6 +1547,36 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {/each}
     </fieldset>
   {/if}
+  {#snippet emptyAddressHelp()}
+    {#if !hasStructuredAddress &&
+      !addedFields.length &&
+      (isEditing || onMatchLocation || !displayAddressRows.length)}
+      <div
+        class="flex min-h-64 flex-col items-center justify-center gap-4 px-6 py-10 text-center"
+        data-address-onboarding
+      >
+        <div class="max-w-sm space-y-2">
+          <h3 class="text-foreground text-base font-semibold">
+            {m.address_no_structured_components()}
+          </h3>
+          <p class="text-muted-foreground text-sm leading-relaxed">
+            {m.address_match_location_help()}
+          </p>
+        </div>
+        {#if emptyAddressActions}
+          {@render emptyAddressActions()}
+        {:else if onMatchLocation}
+          <Button
+            text={m.address_match_location()}
+            type="button"
+            iconComponent={SearchIcon}
+            color="primary"
+            onClick={onMatchLocation}
+          />
+        {/if}
+      </div>
+    {/if}
+  {/snippet}
   {#if !isEditing}
     {#if viewerDisplayAddressRows.length}
       <div
@@ -1603,6 +1611,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
         </div>
       </div>
     {/if}
+    {@render emptyAddressHelp()}
     <AddressReadOnly
       {address}
       locales={shownLocales.map(tag => ({ tag, key: addressLocaleKey(tag) }))}
@@ -1679,6 +1688,11 @@ function blockTypeFirst(locale: LocaleKey): boolean {
             {/each}
           </div>
         </fieldset>
+      {/if}
+      {#if !hasStructuredAddress && !addedFields.length}
+        <div class="col-span-6">
+          {@render emptyAddressHelp()}
+        </div>
       {/if}
       {#each visibleGroups as { fields: group, title }, groupIndex (group[0])}
         <div

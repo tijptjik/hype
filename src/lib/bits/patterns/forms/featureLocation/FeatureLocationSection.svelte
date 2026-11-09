@@ -10,6 +10,7 @@ import PencilIcon from 'virtual:icons/lucide/pencil'
 import CreateLocationIcon from 'virtual:icons/lucide/plus'
 import SearchIcon from 'virtual:icons/proicons/search'
 // LOCATION
+import { hasStructuredAddressComponents } from '#lib/addresses/presentation.js'
 import DraftFeatureLocationSearch from './DraftFeatureLocationSearch.svelte'
 import { locationMatchSeed } from '#lib/locations/matchSeed.js'
 import { locationSyncMode } from '#lib/locations/associationSync.js'
@@ -945,36 +946,30 @@ async function link(): Promise<void> {
 {/snippet}
 {#snippet locationActions()}
   {#if isEditing && (!accepted.current || replacementRevision)}
-    <div class="flex items-center gap-2" data-location-discovery-actions>
+    <div
+      class="flex flex-wrap items-center justify-center gap-2"
+      data-location-discovery-actions
+    >
       <Button
         text={m.location_find_nearby()}
         iconComponent={SearchIcon}
-        hideLabelBelow={1000}
-        attrs={{ 'data-tooltip': m.location_find_nearby() }}
         size="sm"
         style="outline"
-        class="border-border bg-panel text-foreground min-h-11 shrink-0 rounded-lg px-3 text-sm font-normal"
-        disabled={busy || !radiusValid}
-        onClick={() => nearby('nearby')}
+        class="border-border bg-panel text-foreground min-h-11 shrink-0 rounded-lg px-3 text-sm"
+        disabled={coordinates.length < 2 ||
+          !coordinates.slice(0, 2).every(Number.isFinite)}
+        onClick={() => startMatching('pin')}
       />
       <Button
-        text={m.feature_location_find()}
+        text={hasStructuredAddressComponents(address)
+          ? m.location_match()
+          : m.address_match_location()}
+        color="primary"
         iconComponent={SearchIcon}
-        hideLabelBelow={1000}
-        attrs={{ 'data-tooltip': m.feature_location_find() }}
         size="sm"
-        style="outline"
-        class="border-border bg-panel text-foreground min-h-11 shrink-0 rounded-lg px-3 text-sm font-normal"
-        disabled={busy}
-        onClick={() => {
-          discoveryMode = 'text'
-          creating = false
-          searchRows = []
-          results = null
-          selected = null
-          limited = false
-          searchFailed = false
-        }}
+        class="min-h-11 shrink-0 rounded-lg px-3 text-sm"
+        onClick={() =>
+          startMatching('search', !hasStructuredAddressComponents(address))}
       />
       {#await creationAccess then access}
         {#if access.allowed}

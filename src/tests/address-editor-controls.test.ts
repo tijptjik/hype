@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/svelte/pure'
+import { createRawSnippet } from 'svelte'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import Fixture from './fixtures/components/AddressDetailsFixture.svelte'
 import FormFixture from './fixtures/components/FeatureAddress3dFixture.svelte'
@@ -385,7 +386,7 @@ it('keeps the street-number action visible and restores the establishment number
   expect(input.value).toBe('25')
 })
 
-it('offers explicit pin lookup for a building without a street address', async () => {
+it('keeps building controls without duplicating lookup in the section header', async () => {
   const address = emptyFeatureAddress()
   address.source.rawSource = {
     data: { attributes: { i18n: { en: { buildingName: 'Martin Hostel' } } } },
@@ -400,8 +401,8 @@ it('offers explicit pin lookup for a building without a street address', async (
     .getByRole('button', { name: 'Replace: Martin Hostel' })
     .closest('fieldset')!
   expect(within(field).getByRole('button', { name: 'Clear' })).toBeTruthy()
-  await fireEvent.click(view.getByRole('button', { name: 'Lookup Address' }))
-  expect(onLookup).toHaveBeenCalledWith()
+  expect(view.queryByRole('button', { name: 'Lookup Address' })).toBeNull()
+  expect(onLookup).not.toHaveBeenCalled()
   expect(view.getByRole('button', { name: 'Replace: Martin Hostel' })).toBeTruthy()
 })
 it('does not offer missing-address lookup once a street is present', () => {
@@ -578,7 +579,7 @@ it.each([false, true])(
 )
 
 it.each(['', '71'])(
-  'offers enrichment for Pretty Garden with number %s and no street',
+  'does not duplicate lookup for Pretty Garden with number %s and no street',
   async number => {
     const address = emptyFeatureAddress()
     address.overrides.en = {
@@ -593,8 +594,8 @@ it.each(['', '71'])(
       displayAddressInToolbar: true,
       onLookup,
     })
-    await fireEvent.click(view.getByRole('button', { name: 'Lookup Address' }))
-    expect(onLookup).toHaveBeenCalledWith()
+    expect(view.queryByRole('button', { name: 'Lookup Address' })).toBeNull()
+    expect(onLookup).not.toHaveBeenCalled()
     expect(
       (view.getByRole('textbox', { name: 'Complex name' }) as HTMLInputElement).value,
     ).toBe('Pretty Garden')
@@ -619,23 +620,24 @@ it('adds Street name inline and only looks up addresses on explicit request', as
   expect(
     (view.getByRole('textbox', { name: 'Street number' }) as HTMLInputElement).value,
   ).toBe('71')
-  await fireEvent.click(
-    view.getByRole('button', { name: 'Lookup Address', exact: true }),
-  )
-  expect(onLookup).toHaveBeenCalledExactlyOnceWith()
+  expect(view.queryByRole('button', { name: 'Lookup Address' })).toBeNull()
+  expect(onLookup).not.toHaveBeenCalled()
 })
 
-it('keeps the lookup label stable and swaps the search icon for a spinner while loading', async () => {
+it('shows an empty-state heading and guidance without a lookup header action', () => {
   const view = render(FormFixture, {
     initialAddress: emptyFeatureAddress(),
     displayAddressInToolbar: true,
   })
-  const button = view.getByRole('button', { name: 'Lookup Address' })
-  expect(button.getAttribute('aria-busy')).toBe('false')
-  await view.rerender({ isLoading: true })
-  expect(button.textContent?.trim()).toBe('Lookup Address')
-  expect(button.getAttribute('aria-busy')).toBe('true')
-  expect(button).toBeDisabled()
+  expect(
+    view.getByRole('heading', { name: 'No structured address available' }),
+  ).toBeTruthy()
+  expect(
+    view.getByText(
+      'Use the display address to find a matching location, or search for locations nearby the marker.',
+    ),
+  ).toBeTruthy()
+  expect(view.queryByRole('button', { name: 'Lookup Address' })).toBeNull()
 })
 
 it('previews numbered address rows on hover and focus, restoring the Location on leave', async () => {
@@ -875,4 +877,35 @@ it('shows translated display addresses with structured fields in the viewer', as
   expect(view.container.querySelector('[data-address-parts]')).toHaveTextContent(
     'Test Building',
   )
+})
+
+it('places discovery actions inside the empty address area instead of the toolbar', () => {
+  const locationActions = createRawSnippet(() => ({
+    render: () =>
+      '<div data-test-discovery><button>Find Nearby</button><button>Match Location</button></div>',
+  }))
+  const view = render(FormFixture, {
+    initialAddress: emptyFeatureAddress({ en: '500 Castle Peak Road' }),
+    locationActions,
+    displayAddressInToolbar: true,
+  })
+  const actions = view.container.querySelectorAll('[data-test-discovery]')
+  expect(actions).toHaveLength(1)
+  expect(actions[0].closest('[data-address-onboarding]')).not.toBeNull()
+})
+
+it('offers address matching from the empty viewer even when a display address exists', async () => {
+  const onMatchLocation = vi.fn()
+  const view = render(FormFixture, {
+    initialAddress: emptyFeatureAddress({ en: '500 Castle Peak Road' }),
+    isEditing: false,
+    displayAddressInToolbar: true,
+    onMatchLocation,
+  })
+  const help = view.container.querySelector('[data-address-onboarding]')!
+  expect(help).toBeTruthy()
+  await fireEvent.click(
+    within(help).getByRole('button', { name: 'Match address to location' }),
+  )
+  expect(onMatchLocation).toHaveBeenCalledOnce()
 })

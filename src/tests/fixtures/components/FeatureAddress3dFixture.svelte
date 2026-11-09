@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { onMount, type Snippet } from 'svelte'
 // CONTEXT
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
@@ -11,6 +11,8 @@ import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { NearbyStreet } from '#lib/map/nearbyStreets.js'
 import type { AddressName } from '#lib/addresses/nameCatalogue.js'
 let {
+  locationActions,
+  onMatchLocation,
   responsiveViewport = false,
   isEditing = true,
   translations = $bindable(false),
@@ -29,6 +31,8 @@ let {
   onCoordinateChange = (_value: number[]) => {},
   initialAddress = emptyFeatureAddress({ en: '70 Sai Yeung Choi St South' }),
 }: {
+  onMatchLocation?: () => void
+  locationActions?: Snippet
   responsiveViewport?: boolean
   onCoordinateChange?: (value: number[]) => void
   translations?: boolean
@@ -71,6 +75,8 @@ let address = $state(initialAddress)
 {/snippet}
 <div class="@container">
   <FormFeatureAddress
+    {locationActions}
+    {onMatchLocation}
     bind:translations
     {address}
     {displayAddressInToolbar}
