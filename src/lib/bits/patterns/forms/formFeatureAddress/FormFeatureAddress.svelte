@@ -684,7 +684,7 @@ $effect(() => {
 />
 <div
   class="select-none [&_input]:select-text [&_textarea]:select-text {fixedMap
-    ? hideDetails || independentScroll
+    ? independentScroll
       ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
       : 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain'
     : ''}"
@@ -873,11 +873,11 @@ $effect(() => {
           emptyAddressActions={showEmptyAddressActions ? locationActions : undefined}
           localeState={addressLocaleState}
           onLocaleStateChange={changeLocaleState}
+          {independentScroll}
           {activeBuildingSource}
           {activeLocationNames}
           {isLocationReplacementDraft}
           {onMakeBuildingActive}
-          {independentScroll}
           {onBuildingNameBlur}
           {onSuggestStreetNumber}
           suggestionKey={JSON.stringify([

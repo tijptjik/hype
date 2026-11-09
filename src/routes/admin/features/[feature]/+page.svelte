@@ -166,7 +166,6 @@ import {
 import {
   getFeatureLocation,
   getFeatureDetachedBrands,
-  unlinkFeatureLocation,
 } from '#lib/api/location.remote.js'
 import {
   addressBuildingNames,
@@ -190,7 +189,6 @@ import { saveDraftAccessibility } from '#lib/locations/saveDraftAccessibility.js
 import { linkDraftPlace } from '#lib/locations/linkDraftPlace.js'
 import DraftFeatureLocationSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLocationSearch.svelte'
 import { Button } from '#lib/bits/core/index.js'
-import FeatureLocationUpdates from '#lib/bits/patterns/forms/featureLocation/FeatureLocationUpdates.svelte'
 import FeatureLocationSection from '#lib/bits/patterns/forms/featureLocation/FeatureLocationSection.svelte'
 import {
   addressCandidatePoint,
@@ -905,7 +903,10 @@ function draftLocalInput(): ReturnType<typeof localIdentityFromAddress> {
     throw new Error(m.location_visibility_default_unavailable())
   return localIdentityFromAddress(
     draftLocalKind,
-    draftLocationNames,
+    // A building has one editable name: its reviewed address component.
+    draftLocalKind === 'building'
+      ? addressBuildingNames(editorAddress)
+      : draftLocationNames,
     editorAddress,
     draftLocationVisibility,
   )
@@ -1101,6 +1102,7 @@ function selectDraftLocation(result: {
   identity?: { locationId: string; revisionId: string }
   associationConfirmed?: boolean
 }): void {
+  featureVisualSection?.restoreAfterFit(320)
   draftAccessibility = undefined
   draftAddressIdentity = result.identity
   const previousSelection = draftSelectionBefore
@@ -3934,6 +3936,11 @@ async function getCreatableProjectRecords(
  *  VISUAL SECTION CLEANUP
  ************/
 
+// Entering the Location editor reserves room for address fields; manual resizing remains available.
+$effect(() => {
+  const section = featureVisualSection
+  if (isLocationFacet && section) untrack(() => section.restoreAfterFit(320))
+})
 // Scrolling leaves the visual height unchanged. Association content may request more room; explicit controls can restore the map.
 $effect(() => () => clearVisualSectionReopenState())
 
@@ -3946,27 +3953,6 @@ async function refreshLocationSource(): Promise<void> {
     refKey: 'id',
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).refresh()
-  await refreshFeature()
-}
-/** Disconnect the saved Location while retaining the current Feature values.
- * @param expectedRevision Viewed association version. @returns Completion after refresh.
- */
-async function disconnectSavedLocation(expectedRevision: string): Promise<void> {
-  const current = feature?.data
-  if (!current || isDirty) return
-  await unlinkFeatureLocation({
-    featureId: current.id,
-    expectedFeatureModifiedAt: current.modifiedAt,
-    expectedRevision,
-  }).updates(
-    getFeature({
-      ref: current.id,
-      refKey: 'id',
-      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-    }),
-    getFeatureLocation({ featureId: current.id }),
-    getFeatureDetachedBrands({ featureId: current.id }),
-  )
   await refreshFeature()
 }
 </script>
@@ -4069,8 +4055,10 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
     {#if showsVisualSection}
       <FormFeatureVisualSection
         bind:this={featureVisualSection}
-        expandedHeight={Math.min(1200, editorViewportHeight * 0.5)}
-        minimumHeight={isLocationFacet ? 128 : 64}
+        expandedHeight={isLocationFacet
+          ? 320
+          : Math.min(1200, editorViewportHeight * 0.5)}
+        minimumHeight={isLocationFacet ? 320 : 64}
         showImage={!isLocationFacet}
         showControls={!isLocationFacet}
         onHeightChange={height => (visualSectionHeight = height)}
@@ -4463,22 +4451,6 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
         : null}
       attrs={{ 'data-facet-id': 'location' }}
     >
-      {#if currentFeatureId && !isNewFeatureRef}
-        <FeatureLocationUpdates
-          featureId={currentFeatureId}
-          organisationId={selectedProject?.organisationId}
-          {isEditing}
-          {isDirty}
-          reset={currentFeatureData.locationReset}
-          brandEdit={currentFeatureData.locationBrandEdit}
-          onResetFields={reset =>
-            updateFeatureData(data => ({ ...data, locationReset: reset }))}
-          onBrandEdit={edit =>
-            updateFeatureData(data => ({ ...data, locationBrandEdit: edit }))}
-          onUnlink={disconnectSavedLocation}
-          onSourceUpdate={refreshLocationSource}
-        />
-      {/if}
       {#if mountLocationFacet}
         <FormSurface class="mb-0! flex h-full min-h-0 flex-col overflow-hidden">
           {#key featureRef}
@@ -4613,15 +4585,16 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                   ? identityFields
                   : !isNewFeatureRef &&
                       profileNamesLocked &&
-                      acceptedNameSource?.current
+                      acceptedNameSource?.current &&
+                      (acceptedNameSource.current.kind !== 'building' ||
+                        !Object.keys(addressBuildingNames(editorAddress)).length)
                     ? savedIdentityFields
                     : undefined}
                 locationKind={locationKind ?? draftLocalKind}
                 {accessibilityLocationId}
                 accessibilityDraft={draftAccessibility}
                 accessibilityDraftKey={draftResultHistoryId ?? undefined}
-                onAccessibilityDraftChange={isNewFeatureRef &&
-                (draftPlaceSource || draftLocalKind)
+                onAccessibilityDraftChange={draftPlaceSource || draftLocalKind
                   ? value => {
                       draftAccessibility = value
                       if (value && Object.keys(value).length)
@@ -4743,6 +4716,15 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
             {/if}
             {#if currentFeatureId && feature?.data?.modifiedAt}
               <FeatureLocationSection
+                pendingLocation={draftLocalKind || draftPlaceSource
+                  ? {
+                      names:
+                        draftLocalKind === 'building'
+                          ? addressBuildingNames(editorAddress)
+                          : draftLocationNames,
+                      kind: draftLocalKind ?? 'establishment',
+                    }
+                  : undefined}
                 onStartEditing={() => headerCtrl.setEditing(true)}
                 onCancelEditing={() => {
                   onReset()
@@ -4760,8 +4742,14 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                 onSelectionStart={() => featureVisualSection?.rememberHeight()}
                 onReturnToResults={restoreLocationSearchMap}
                 onAssociationSelected={(result, previousLocationId) => {
+                  featureVisualSection?.restoreAfterFit(320)
                   draftReplacementLocationId = previousLocationId
-                  draftLocalKind = result.localKind
+                  // Catalogue selections may carry identity evidence without an explicit local kind.
+                  draftLocalKind =
+                    result.localKind ??
+                    (!result.source && result.kind !== 'establishment'
+                      ? result.kind
+                      : undefined)
                   draftLocationNames = { ...result.names }
                   draftAddressIdentity = result.identity
                   draftBuildingSource = result.buildingSource

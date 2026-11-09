@@ -308,7 +308,8 @@ const accessibilityVisible = $derived(
 )
 const canAddAccessibility = $derived(
   Boolean(
-    (accessibilityRequest?.current || onAccessibilityDraftChange) &&
+    isEditing &&
+      (accessibilityLocationId || onAccessibilityDraftChange) &&
       !accessibilityVisible,
   ),
 )
@@ -884,7 +885,10 @@ const contentLocales = $derived(
   ]),
 )
 const selectedLocales = $derived(
-  normalizeContentLocales([...addressLocaleState.selectedLocales, ...contentLocales]),
+  normalizeContentLocales([
+    ...addressLocaleState.selectedLocales,
+    ...contentLocales,
+  ]).filter(tag => !/^und(?:-|$)/i.test(tag)),
 )
 const shownLocales = $derived(
   displayedLocales(
@@ -1213,7 +1217,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
   <SelectField
     contentClass={addressSelectContentClass}
     triggerAttrs={{ 'aria-label': m.address_block_type() }}
-    triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
+    triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
     class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
     isEditing={true}
     items={ADDRESS_BLOCK_TYPES.map(code => ({
@@ -1671,6 +1675,8 @@ function blockTypeFirst(locale: LocaleKey): boolean {
         </div>
       {/if}
       {#each visibleGroups as { fields: group, title }, groupIndex (group[0])}
+        {@const streetWithNumber =
+          group.includes('streetName') && group.includes('buildingNumberExpression')}
         <div
           data-address-group={group[0]}
           class="col-span-6 min-w-0 {groupIndex
@@ -1695,9 +1701,11 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           >
             <div
               class={group.length > 1 ? 'grid w-max min-w-full gap-x-4' : ''}
-              style:grid-template-columns={group.length > 1
-                ? `${translations ? 'max-content ' : ''}repeat(${group.reduce((count, field) => count + fieldColumns(field), 0)}, max-content)`
-                : undefined}
+              style:grid-template-columns={streetWithNumber && translations
+                ? 'max-content max-content max-content'
+                : group.length > 1
+                  ? `${translations ? 'max-content ' : ''}repeat(${group.reduce((count, field) => count + fieldColumns(field), 0)}, max-content)`
+                  : undefined}
             >
               {#each group[0] === 'accessHint'
                 ? [shownLocales[0]]
@@ -1713,16 +1721,22 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                     <span
                       class="text-muted-foreground flex h-12 w-[3em] shrink-0 items-center font-mono text-xs"
                       class:mt-8={rowIndex === 0}
+                      style:grid-column={streetWithNumber ? 2 : undefined}
+                      style:grid-row={streetWithNumber ? 1 : undefined}
                       >{shortLocaleLabel(rowTag)}</span
                     >
                   {/if}
                   <div
-                    class="min-w-0 items-start {group.length > 1
-                      ? 'grid grid-cols-subgrid'
-                      : 'flex flex-wrap gap-4'}"
-                    style:grid-column={group.length > 1
-                      ? `${translations ? 2 : 1} / -1`
-                      : undefined}
+                    class="min-w-0 items-start {streetWithNumber && translations
+                      ? 'contents'
+                      : group.length > 1
+                        ? 'grid grid-cols-subgrid'
+                        : 'flex flex-wrap gap-4'}"
+                    style:grid-column={streetWithNumber && translations
+                      ? undefined
+                      : group.length > 1
+                        ? `${translations ? 2 : 1} / -1`
+                        : undefined}
                     data-address-field-row
                   >
                     {#if !rowLocale && group[0] !== 'accessHint'}
@@ -1882,14 +1896,18 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                           </fieldset>
                         {:else}
                           <fieldset
-                            style:grid-column={group.length > 1
-                              ? `${1 + group.slice(0, group.indexOf(field)).reduce((count, item) => count + fieldColumns(item), 0)} / span ${fieldColumns(field)}`
+                            style:grid-column={streetWithNumber && translations
+                              ? field === 'streetName'
+                                ? '3'
+                                : '1'
+                              : group.length > 1
+                                ? `${1 + group.slice(0, group.indexOf(field)).reduce((count, item) => count + fieldColumns(item), 0)} / span ${fieldColumns(field)}`
+                                : undefined}
+                            style:grid-row={streetWithNumber && translations
+                              ? 1
                               : undefined}
                             class:hidden={shared && rowIndex > 0}
-                            class="group/subsection min-w-0 max-w-full flex-initial space-y-0 {group.length >
-                            1
-                              ? 'grid grid-cols-subgrid'
-                              : 'w-max'} {structured ||
+                            class="group/subsection min-w-0 max-w-full w-max flex-initial space-y-0 {structured ||
                             field === 'blockExpression' ||
                             field === 'buildingNumberExpression'
                               ? 'shrink-0!'
@@ -1904,21 +1922,15 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                               >
                                 <span
                                   class="flex min-h-7 items-center gap-2 whitespace-nowrap"
-                                  class:invisible={field === 'buildingName' &&
-                                    Boolean(
-                                      addressComponentValue(
-                                        address,
-                                        rowLocale ?? getLocaleKey(),
-                                        field,
-                                      ),
-                                    )}
-                                  >{field === 'buildingNumberExpression'
-                                    ? m.address_field_number()
-                                    : field === 'streetName' ||
-                                        field === 'buildingName' ||
-                                        field === 'premisesName'
-                                      ? m.field_name()
-                                      : labels[field]}{@render fieldAction(
+                                >
+                                  {field === 'buildingName' ||
+                                  field === 'streetName' ||
+                                  field === 'premisesName'
+                                    ? m.field_name()
+                                    : field === 'buildingNumberExpression'
+                                      ? m.address_field_number()
+                                      : labels[field]}
+                                  {@render fieldAction(
                                     field,
                                     getLocaleKey(),
                                     structured,
@@ -1959,17 +1971,15 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                 {/if}
                               </legend>
                             {/if}
-                            <!-- The fieldset legend owns the label; inline controls must not reserve a second label row. -->
+                            <!-- The legend owns the label. An explicit inner grid avoids Chromium fieldset subgrid clipping. -->
                             <div
                               use:animateAddressColumns={field === 'blockExpression' ||
                                 field === 'phaseExpression'}
-                              class="grid min-w-0 {group.length > 1
-                                ? 'col-span-full grid-cols-subgrid'
-                                : field === 'blockExpression'
-                                  ? 'grid-cols-[max-content_max-content_max-content]'
-                                  : field === 'phaseExpression'
-                                    ? 'grid-cols-[max-content_max-content]'
-                                    : ''}"
+                              class="grid min-w-0 {field === 'blockExpression'
+                                ? 'grid-cols-[max-content_max-content_max-content]'
+                                : field === 'phaseExpression'
+                                  ? 'grid-cols-[max-content_max-content]'
+                                  : 'grid-cols-[max-content]'}"
                             >
                               {#each shared
                                 ? rowIndex === 0
@@ -2102,61 +2112,57 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                           }}
                                         />
                                       </div>
-                                    {:else}
-                                      <div
-                                        class="w-max min-w-0 max-w-full {value &&
-                                        !replacingNames[`${locale}-${field}`]
-                                          ? ''
-                                          : 'min-w-56'}"
-                                      >
-                                        <AddressNamePicker
-                                          onBlur={field === 'buildingName'
-                                            ? onBuildingNameBlur
-                                            : undefined}
-                                          {locale}
-                                          detached={address.detachedNames?.[field]?.[
-                                            ADDRESS_LOCALES[locale]
-                                          ] === value}
-                                          showLocale={false}
-                                          family={field === 'streetName'
-                                            ? 'streets'
-                                            : 'buildings'}
-                                          {value}
-                                          label={labels[field]}
-                                          onClear={() => {
-                                            if (field === 'buildingName') {
-                                              buildingRequest++
-                                              buildingLoading = false
-                                              buildingFailed = false
-                                              buildingSelection = null
-                                              selectedBuilding = null
-                                            }
-                                            translationGeneration++
-                                            onChange(
-                                              setAddressOverride(
-                                                address,
-                                                locale,
-                                                field,
-                                                null,
-                                              ),
-                                            )
-                                          }}
-                                          onReplacingChange={replacing =>
-                                            (replacingNames[`${locale}-${field}`] =
-                                              replacing)}
-                                          onSelect={record =>
-                                            field === 'buildingName'
-                                              ? void selectBuilding(record, locale)
-                                              : onChange(
-                                                  setAddressName(
-                                                    address,
-                                                    field,
-                                                    record,
-                                                  ),
-                                                )}
-                                        />
-                                      </div>
                                     {/if}
+                                    <div
+                                      class="w-max min-w-0 max-w-full {value &&
+                                      !replacingNames[`${locale}-${field}`]
+                                        ? ''
+                                        : 'min-w-56'}"
+                                    >
+                                      <AddressNamePicker
+                                        prominent={true}
+                                        onBlur={field === 'buildingName'
+                                          ? onBuildingNameBlur
+                                          : undefined}
+                                        {locale}
+                                        detached={address.detachedNames?.[field]?.[
+                                          ADDRESS_LOCALES[locale]
+                                        ] === value}
+                                        showLocale={false}
+                                        family={field === 'streetName'
+                                          ? 'streets'
+                                          : 'buildings'}
+                                        {value}
+                                        label={labels[field]}
+                                        onClear={() => {
+                                          if (field === 'buildingName') {
+                                            buildingRequest++
+                                            buildingLoading = false
+                                            buildingFailed = false
+                                            buildingSelection = null
+                                            selectedBuilding = null
+                                          }
+                                          translationGeneration++
+                                          onChange(
+                                            setAddressOverride(
+                                              address,
+                                              locale,
+                                              field,
+                                              null,
+                                            ),
+                                          )
+                                        }}
+                                        onReplacingChange={replacing =>
+                                          (replacingNames[`${locale}-${field}`] =
+                                            replacing)}
+                                        onSelect={record =>
+                                          field === 'buildingName'
+                                            ? void selectBuilding(record, locale)
+                                            : onChange(
+                                                setAddressName(address, field, record),
+                                              )}
+                                      />
+                                    </div>
                                   {:else}
                                     {#if field === 'blockExpression' &&
                                       blockTypeFirst(locale)}
@@ -2169,7 +2175,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                           'aria-label':
                                             m.feature_address_phaseExpression(),
                                         }}
-                                        triggerClass="h-12 min-h-12 w-auto! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
+                                        triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
                                         class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
                                         isEditing={true}
                                         items={[
@@ -2620,6 +2626,8 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                 {:else if onMakeBuildingActive}
                   <Button
                     text={m.address_building_make_location()}
+                    labelClasses="max-w-none whitespace-normal break-words text-left"
+                    class="h-auto min-h-8 py-1.5"
                     type="button"
                     size="sm"
                     style="outline"

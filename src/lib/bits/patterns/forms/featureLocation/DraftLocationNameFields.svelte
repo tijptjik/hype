@@ -47,7 +47,7 @@ const locales = $derived(
   normalizeContentLocales([
     ...(localeState?.selectedLocales ?? [getLocaleKey(), 'en', 'zh-Hant', 'zh-Hans']),
     ...Object.keys(names).filter(tag => names[tag]?.trim()),
-  ]),
+  ]).filter(tag => !/^und(?:-|$)/i.test(tag)),
 )
 const shown = $derived(
   displayedLocales(

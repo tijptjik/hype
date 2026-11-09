@@ -33,6 +33,7 @@ import { createPlaceAddressWorker } from '#lib/addresses/placeAddressWorker.js'
 import BackIcon from 'virtual:icons/lucide/arrow-left'
 import SearchIcon from 'virtual:icons/lucide/search'
 import ClearIcon from 'virtual:icons/lucide/x'
+import WarningIcon from 'virtual:icons/lucide/triangle-alert'
 import FilterIcon from 'virtual:icons/lucide/list-filter'
 // API
 import { getSharedLocationIdBySource } from '#lib/api/locationDirectory.remote.js'
@@ -105,8 +106,13 @@ let {
   coordinates,
   children,
 }: {
-  searchRequest?: { id: number; mode: 'search' | 'pin'; query: string } | null
   active: boolean
+  searchRequest?: {
+    id: number
+    mode: 'search' | 'pin'
+    query: string
+    seeds?: import('#lib/locations/matchSeed.js').LocationMatchSeed[]
+  } | null
   allowManualEntry?: boolean
   resolutionOrigin?: 'new-feature' | 'existing-feature'
   onExitResolution?: () => void
@@ -429,6 +435,8 @@ $effect(() => {
     loading = false
   })
 })
+let fallbackSeeds: import('#lib/locations/matchSeed.js').LocationMatchSeed[] = []
+let fallbackStatus = $state('')
 let consumedSearchRequest = 0
 $effect(() => {
   const request = searchRequest
@@ -442,6 +450,8 @@ $effect(() => {
     associationOrigin = null
     findMode = request.mode
     query = request.query
+    fallbackSeeds = [...(request.seeds ?? [])]
+    fallbackStatus = ''
     filters = {}
     void search(request.mode === 'pin')
   })
@@ -467,6 +477,8 @@ async function filterMatches(request: number, text: string): Promise<void> {
  * @returns Nothing.
  */
 function schedule(retainMatches = false, runSearch = true): void {
+  fallbackSeeds = []
+  fallbackStatus = ''
   associationOpen = false
   associationOrigin = null
   addressPaging = null
@@ -718,6 +730,37 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
           .finally(() => finish('address'))
       : Promise.resolve(),
   ])
+  // Only complete, current, empty discovery can advance the viewer's component hints.
+  if (
+    !nearby &&
+    !onlyKind &&
+    request === version &&
+    query.trim() === q &&
+    fallbackSeeds[0]?.query === q &&
+    fallbackSeeds.length > 1 &&
+    !receivedRows.length &&
+    !placesFailed &&
+    !placesPartial &&
+    !placesLimited &&
+    !buildingsFailed &&
+    !buildingsLimited &&
+    !addressesFailed &&
+    !placePaging?.nextCursor &&
+    !buildingPaging?.nextCursor &&
+    !addressPaging?.nextCursor
+  ) {
+    const previous = fallbackSeeds.shift()!
+    const next = fallbackSeeds[0]!
+    const label = (
+      kind: import('#lib/locations/matchSeed.js').LocationMatchSeed['kind'],
+    ): string => locationKindLabel(kind)
+    fallbackStatus = m.location_search_fallback({
+      previous: label(previous.kind),
+      next: label(next.kind),
+    })
+    query = next.query
+    await search()
+  }
 }
 /** Project a Place page into the same rows used by initial discovery and map markers.
  * @param places Verified source previews.
@@ -1210,10 +1253,13 @@ async function acceptResult(result: Result): Promise<void> {
   linked = true
 }
 
-/** Open the shared association view while retaining original discovery evidence.
- * @param result Starting record. @returns Nothing; opening never accepts a new identity.
+let autoAcceptSpecific = $state(false)
+/** Open association review, allowing an explicit selection to skip redundant confirmation.
+ * @param result Starting record. @param explicitSelection User chose Locate feature here.
+ * @returns Nothing; any accepted identity remains a draft until the Feature is saved.
  */
-function openAssociation(result: Result): void {
+function openAssociation(result: Result, explicitSelection = false): void {
+  autoAcceptSpecific = explicitSelection
   onSelectionStart?.()
   if (selected?.id !== result.id) choose(result)
   associationOrigin = {
@@ -1925,10 +1971,14 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
   {/if}
 {/snippet}
 {#snippet searchResults()}
+  {#if fallbackStatus && !accepted && !associationOpen}
+    <p role="status" class="text-muted-foreground text-sm">{fallbackStatus}</p>
+  {/if}
   {#if associationOpen && associationOrigin}
     {#key associationOrigin}
       <LocationAssociationPicker
         showHeading={false}
+        {autoAcceptSpecific}
         {onMapCandidates}
         markerNumberFor={result =>
           result.id === selected?.id && selectedResultNumber !== undefined
@@ -2006,24 +2056,6 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             </div>
           {/each}
         </div>
-      {/if}
-      {#if placesFailed && searched}
-        <p role="status" class="py-2 text-sm">{m.feature_start_places_failed()}</p>
-      {/if}
-      {#if placesPartial && searched}
-        <p role="status" class="py-2 text-sm">{m.feature_start_partial()}</p>
-      {/if}
-      {#if placesLimited && searched && !placePaging?.nextCursor}
-        <p role="status" class="py-2 text-sm">{m.feature_start_places_limited()}</p>
-      {/if}
-      {#if buildingsLimited && searched}
-        <p role="status" class="py-2 text-sm">{m.feature_search_buildings_limited()}</p>
-      {/if}
-      {#if buildingsFailed && searched}
-        <p role="status" class="py-2 text-sm">{m.feature_search_buildings_failed()}</p>
-      {/if}
-      {#if addressesFailed && searched}
-        <p role="status" class="py-2 text-sm">{m.feature_start_addresses_failed()}</p>
       {/if}
       <section
         bind:this={resultsElement}
@@ -2144,7 +2176,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   type="button"
                   class="bg-primary focus-visible:outline-primary rounded-md px-3 py-2 text-sm font-medium text-white focus-visible:outline-2"
                   onkeydown={event => handleResultTab(event, index)}
-                  onclick={() => openAssociation(result)}
+                  onclick={() => openAssociation(result, true)}
                 >
                   {m.association_locate()}
                 </button>
@@ -2236,6 +2268,48 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
   {/if}
 {/snippet}
 {#snippet mapControls()}
+  {#if !associationOpen &&
+    !accepted &&
+    searched &&
+    (placesFailed ||
+      placesPartial ||
+      (placesLimited && !placePaging?.nextCursor) ||
+      buildingsFailed ||
+      buildingsLimited ||
+      addressesFailed)}
+    <div
+      role="status"
+      aria-live="polite"
+      data-location-search-notice
+      class="pointer-events-none! absolute inset-x-0 bottom-3 flex justify-center px-3"
+    >
+      <div
+        class="border-border/60 bg-panel/95 text-muted-foreground max-w-lg space-y-1 rounded-lg border px-3 py-2 text-center text-xs shadow-sm backdrop-blur-sm"
+      >
+        {#if placesFailed}
+          <p class="flex items-center justify-center gap-2">
+            <WarningIcon class="size-4 shrink-0" aria-hidden="true" />
+            <span>{m.feature_start_places_failed()}</span>
+          </p>
+        {/if}
+        {#if placesPartial}
+          <p>{m.feature_start_partial()}</p>
+        {/if}
+        {#if placesLimited && !placePaging?.nextCursor}
+          <p>{m.feature_start_places_limited()}</p>
+        {/if}
+        {#if buildingsLimited}
+          <p>{m.feature_search_buildings_limited()}</p>
+        {/if}
+        {#if buildingsFailed}
+          <p>{m.feature_search_buildings_failed()}</p>
+        {/if}
+        {#if addressesFailed}
+          <p>{m.feature_start_addresses_failed()}</p>
+        {/if}
+      </div>
+    </div>
+  {/if}
   {#if findMode === 'pin' && hasPin && !selected}
     <label
       class="border-border bg-panel text-foreground flex w-52 flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm"

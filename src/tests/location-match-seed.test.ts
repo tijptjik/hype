@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
-import { locationMatchSeed } from '#lib/locations/matchSeed.js'
+import { locationMatchSeed, locationMatchSeeds } from '#lib/locations/matchSeed.js'
 
 it('prefers an establishment name over its host building', () => {
   const address = emptyFeatureAddress()
@@ -66,4 +66,24 @@ it('extracts the building from an unpunctuated Chinese display address', () => {
     kind: 'building',
     query: '百美工業大廈',
   })
+})
+
+it('orders fallback hints without floor and unit information', () => {
+  const address = emptyFeatureAddress()
+  address.overrides.en = {
+    buildingName: 'Por Mee Factory Building',
+    premisesName: 'Test Complex',
+    streetName: 'Castle Peak Road',
+    buildingNumberExpression: '500',
+    floorExpression: '4',
+    unitExpression: 'C12',
+  }
+  expect(
+    locationMatchSeeds('Clockwork Cat', address, 'en').map(seed => seed.query),
+  ).toEqual([
+    'Clockwork Cat',
+    'Por Mee Factory Building',
+    'Test Complex',
+    '500 Castle Peak Road',
+  ])
 })

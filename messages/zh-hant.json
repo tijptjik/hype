@@ -1,4 +1,5 @@
 {
+  "location_search_fallback": "找不到{previous}的相符結果；正在搜尋{next}。",
   "admin__forms_common_activate_field": "啟用欄位",
   "admin__forms_common_deactivate_field": "停用欄位",
   "scroll_to_top": "返回頂部",
@@ -2077,6 +2078,7 @@
   "association_existing": "有值得覆核的候選地點",
   "association_address_evidence": "地址記錄已提供",
   "association_missing": "尚未指定",
+  "association_already_specific": "已是最具體的配對。正在使用此地點⋯",
   "association_finding_specific": "正在嘗試尋找更具體的位置。",
   "association_loading_alternatives": "正在載入其他位置…",
   "association_checking": "正在查找相符地點…",

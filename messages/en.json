@@ -1,4 +1,5 @@
 {
+  "location_search_fallback": "No matches for {previous}; searching for {next}.",
   "admin__forms_common_activate_field": "Activate field",
   "admin__forms_common_deactivate_field": "Deactivate field",
   "scroll_to_top": "Scroll to top",
@@ -2077,6 +2078,7 @@
   "association_existing": "Strong candidate available",
   "association_address_evidence": "Present on the Address record",
   "association_missing": "Not specified yet",
+  "association_already_specific": "Already the most specific match. Using this location…",
   "association_finding_specific": "Attempting to find more specific locations.",
   "association_loading_alternatives": "Loading alternatives…",
   "association_checking": "Checking for matching locations…",

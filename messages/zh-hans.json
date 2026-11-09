@@ -1,4 +1,5 @@
 {
+  "location_search_fallback": "找不到{previous}的匹配结果；正在搜索{next}。",
   "admin__forms_common_activate_field": "启用字段",
   "admin__forms_common_deactivate_field": "停用字段",
   "scroll_to_top": "返回顶部",
@@ -2077,6 +2078,7 @@
   "association_existing": "有值得复核的候选地点",
   "association_address_evidence": "地址记录已提供",
   "association_missing": "尚未指定",
+  "association_already_specific": "已是最具体的匹配。正在使用此地点…",
   "association_finding_specific": "正在尝试查找更具体的位置。",
   "association_loading_alternatives": "正在加载其他位置…",
   "association_checking": "正在查找相符地点…",

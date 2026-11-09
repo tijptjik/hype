@@ -92,10 +92,12 @@ let {
   onSpaceNeeded,
   onMapCandidates,
   showHeading = true,
+  autoAcceptSpecific = false,
   markerNumberFor = () => 0,
 }: {
   origin: Result
   showHeading?: boolean
+  autoAcceptSpecific?: boolean
   cached?: Result[]
   projectId?: string
   search: (input: AssociationSearchInput) => Promise<AssociationSearchResult>
@@ -192,6 +194,8 @@ const initialCustom =
     ))
 let custom = $state(initialCustom)
 let initialSearchPending = $state(true)
+let alreadyMostSpecific = $state(false)
+let autoAcceptTimer: ReturnType<typeof setTimeout> | undefined
 const prefilled = untrack(() => $state.snapshot(names))
 let provisional = $state<Partial<Record<AssociationKind, Result>>>(
   initialCustom
@@ -782,7 +786,12 @@ async function changeSelection(): Promise<void> {
  * @returns Nothing; persistence remains with the owner.
  */
 function acceptInitialSelection(): void {
-  onAccept({ ...$state.snapshot(origin), associationConfirmed: true })
+  onAccept({
+    ...$state.snapshot(origin),
+    // Retaining catalogue evidence still needs a local identity when the Feature is saved.
+    localKind: origin.localKind ?? (origin.source ? undefined : origin.kind),
+    associationConfirmed: true,
+  })
 }
 /** Accept one coherent association and reviewed address, leaving persistence to the owner.
  * @param manual Explicit address-only intent. @returns Nothing.
@@ -1057,9 +1066,36 @@ onMount(() => {
       (value === kind || value === 'establishment' || Object.keys(names[value]).length)
     )
       initialSearches.push(reconcile(value))
-  // Reveal suggestions only after all initial location levels have settled.
+  // Only skip a redundant confirmation after an explicit selection and complete lookup evidence.
   void Promise.all(initialSearches).finally(() => {
-    if (alive) initialSearchPending = false
+    if (!alive) return
+    const moreSpecific = ASSOCIATION_KINDS.slice(
+      ASSOCIATION_KINDS.indexOf(origin.kind) + 1,
+    )
+    const complete = Object.values(lookups).every(
+      value => value !== 'failed' && value !== 'checking',
+    )
+    if (
+      autoAcceptSpecific &&
+      complete &&
+      !initialCustom &&
+      origin.kind !== 'address' &&
+      kind === origin.kind &&
+      origin.address.association?.mode !== 'manual' &&
+      matched &&
+      sameRecord(origin, matched) &&
+      canAccept &&
+      moreSpecific.every(
+        value =>
+          !Object.values(names[value]).some(name => name.trim()) &&
+          !candidates[value].some(row => associationMatch(origin, row).exact),
+      )
+    ) {
+      alreadyMostSpecific = true
+      autoAcceptTimer = setTimeout(() => {
+        if (alive) accept()
+      }, 250)
+    } else initialSearchPending = false
   })
   if (
     !initialCustom &&
@@ -1070,6 +1106,7 @@ onMount(() => {
 })
 onDestroy(() => {
   alive = false
+  clearTimeout(autoAcceptTimer)
   for (const timer of Object.values(timers)) clearTimeout(timer)
 })
 </script>
@@ -1408,11 +1445,19 @@ onDestroy(() => {
       role="status"
       class="text-muted-foreground flex min-h-40 flex-1 items-center justify-center gap-3 px-6 py-8 text-sm"
     >
-      <LoaderIcon
-        aria-hidden="true"
-        class="text-primary size-5 shrink-0 motion-safe:animate-spin"
-      />
-      <span>{m.association_finding_specific()}</span>
+      {#if alreadyMostSpecific}
+        <CheckIcon aria-hidden="true" class="text-primary size-5 shrink-0" />
+      {:else}
+        <LoaderIcon
+          aria-hidden="true"
+          class="text-primary size-5 shrink-0 motion-safe:animate-spin"
+        />
+      {/if}
+      <span
+        >{alreadyMostSpecific
+          ? m.association_already_specific()
+          : m.association_finding_specific()}</span
+      >
     </div>
   </section>
 {/if}
@@ -1539,6 +1584,18 @@ onDestroy(() => {
                       class="pointer-events-none absolute top-1/2 left-1/2 size-11 -translate-x-1/2 -translate-y-1/2 -rotate-90 text-emerald-400"
                       data-match-strength={matchStrength(value)}
                     >
+                      <circle
+                        class="text-foreground/25"
+                        cx="20"
+                        cy="20"
+                        r="18"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        pathLength="100"
+                        stroke-dasharray="0 8.333333"
+                      />
                       <circle
                         cx="20"
                         cy="20"

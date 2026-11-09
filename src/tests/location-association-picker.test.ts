@@ -378,34 +378,44 @@ it.each(['original', 'location'] as const)(
   },
 )
 
-it('accepts the initial selection without candidate details or a repositioned pin', async () => {
-  const initial = origin()
-  const onAccept = vi.fn()
-  const onMapCandidates = vi.fn()
-  render(Picker, {
-    origin: initial,
-    search: vi.fn().mockResolvedValue({ candidates: [candidate()], incomplete: false }),
-    onAccept,
-    onMapCandidates,
-    onCancel: vi.fn(),
-  })
-  await fireEvent.click(screen.getByRole('radio', { name: 'Establishment' }))
-  await fireEvent.click(
-    await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
-  )
-  await screen.findByRole('button', { name: 'Use Recommended Location' })
-  await fireEvent.click(screen.getByRole('button', { name: /Address Position$/ }))
-  await fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
-  const markers = onMapCandidates.mock
-    .lastCall?.[0] as import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
-  markers.find(row => row.onReposition)?.onReposition?.([114.16, 22.31])
-  await screen.findByRole('button', { name: /Custom position$/ })
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Initial Selection' }))
-  expect(onAccept).toHaveBeenCalledExactlyOnceWith({
-    ...initial,
-    associationConfirmed: true,
-  })
-})
+it.each(['address', 'building'] as const)(
+  'accepts the initial %s selection with persistence intent and without candidate edits',
+  async kind => {
+    const initial = { ...origin(), kind }
+    const onAccept = vi.fn()
+    const onMapCandidates = vi.fn()
+    render(Picker, {
+      origin: initial,
+      search: vi
+        .fn()
+        .mockResolvedValue({ candidates: [candidate()], incomplete: false }),
+      onAccept,
+      onMapCandidates,
+      onCancel: vi.fn(),
+    })
+    await fireEvent.click(screen.getByRole('radio', { name: 'Establishment' }))
+    await fireEvent.click(
+      await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
+    )
+    await screen.findByRole('button', { name: 'Use Recommended Location' })
+    await fireEvent.click(
+      screen.getByRole('button', {
+        name: kind === 'building' ? /Building Position$/ : /Address Position$/,
+      }),
+    )
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    const markers = onMapCandidates.mock
+      .lastCall?.[0] as import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
+    markers.find(row => row.onReposition)?.onReposition?.([114.16, 22.31])
+    await screen.findByRole('button', { name: /Custom position$/ })
+    await fireEvent.click(screen.getByRole('button', { name: 'Use Initial Selection' }))
+    expect(onAccept).toHaveBeenCalledExactlyOnceWith({
+      ...initial,
+      localKind: initial.localKind ?? (initial.source ? undefined : initial.kind),
+      associationConfirmed: true,
+    })
+  },
+)
 
 it('reveals cached alternatives in the click update without a search or preview flight', async () => {
   const search = vi
@@ -1286,4 +1296,63 @@ it('shows both identities, a partial attention gauge and original fallback for a
   expect(getAddressLocale(onAccept.mock.lastCall?.[0].address, 'en').buildingName).toBe(
     'Disney’s Storybook Theater',
   )
+})
+
+it('automatically uses an explicitly selected most-specific identity after complete discovery', async () => {
+  const onAccept = vi.fn()
+  const building = candidate('building')
+  render(Picker, {
+    origin: building,
+    autoAcceptSpecific: true,
+    search: vi.fn().mockResolvedValue({ candidates: [], incomplete: false }),
+    onAccept,
+    onCancel: vi.fn(),
+  })
+  expect(
+    await screen.findByText('Already the most specific match. Using this location…'),
+  ).toBeTruthy()
+  await waitFor(() => expect(onAccept).toHaveBeenCalledOnce())
+  expect(onAccept.mock.calls[0][0]).toMatchObject({
+    kind: 'building',
+    identity: building.identity,
+    associationConfirmed: true,
+  })
+})
+
+it('keeps confirmation when discovery is incomplete even for the selected identity', async () => {
+  const onAccept = vi.fn()
+  render(Picker, {
+    origin: candidate('building'),
+    autoAcceptSpecific: true,
+    search: vi.fn().mockResolvedValue({ candidates: [], incomplete: true }),
+    onAccept,
+    onCancel: vi.fn(),
+  })
+  expect(
+    await screen.findByRole('button', { name: /^Use(?: Location)?$/ }),
+  ).toBeTruthy()
+  expect(
+    screen.queryByText('Already the most specific match. Using this location…'),
+  ).toBeNull()
+  expect(onAccept).not.toHaveBeenCalled()
+})
+
+it('keeps review when the input names a more-specific building than the selected complex', async () => {
+  const onAccept = vi.fn()
+  const complex = candidate('premises')
+  complex.address.overrides.en = {
+    buildingName: 'Known Tower',
+    streetName: 'Hollywood Road',
+  }
+  render(Picker, {
+    origin: complex,
+    autoAcceptSpecific: true,
+    search: vi.fn().mockResolvedValue({ candidates: [], incomplete: false }),
+    onAccept,
+    onCancel: vi.fn(),
+  })
+  expect(
+    await screen.findByRole('button', { name: /^Use(?: Location)?$/ }),
+  ).toBeTruthy()
+  expect(onAccept).not.toHaveBeenCalled()
 })

@@ -37,14 +37,15 @@ function legacyFields(
  * @param locale Editor locale. @returns Establishment, building, complex or street query, excluding unit/floor text.
  * @remarks Legacy fields are search hints only; this function never changes address facts or accepts identities.
  */
-export function locationMatchSeed(
+export function locationMatchSeeds(
   name: string,
   address: FeatureAddress,
   locale: LocaleKey,
-): LocationMatchSeed {
+): LocationMatchSeed[] {
+  const seeds: LocationMatchSeed[] = []
   const title = name.trim()
   if (title && !/^(new|untitled)\s+(feature|location)$/i.test(title))
-    return { query: title.slice(0, 200), kind: 'establishment' }
+    seeds.push({ query: title.slice(0, 200), kind: 'establishment' })
   const current = getAddressLocale(address, locale)
   const legacy = legacyFields(address, locale)
   const text = (key: string): string => {
@@ -57,11 +58,11 @@ export function locationMatchSeed(
     ['premisesName', 'premises'],
   ] as const) {
     const query = text(field)
-    if (query) return { query: query.slice(0, 200), kind }
+    if (query) seeds.push({ query: query.slice(0, 200), kind })
   }
   const street = text('streetName')
   if (street)
-    return {
+    seeds.push({
       kind: 'address',
       query: [
         text('buildingNumberExpression') ||
@@ -73,7 +74,7 @@ export function locationMatchSeed(
         .filter(Boolean)
         .join(' ')
         .slice(0, 200),
-    }
+    })
   // Display-only imports still offer useful building/complex/street fragments after removing unit labels.
   const parts = getAddressDisplay(address, locale)
     .split(/[,，]/)
@@ -94,18 +95,43 @@ export function locationMatchSeed(
     const namedBuilding = building.match(
       /(?:號|号)\s*([^,，]+?(?:大廈|大厦|大樓|大楼))/,
     )?.[1]
-    return { kind: 'building', query: (namedBuilding ?? building).slice(0, 200) }
+    if (!seeds.some(seed => seed.kind === 'building'))
+      seeds.push({ kind: 'building', query: (namedBuilding ?? building).slice(0, 200) })
   }
   const complex = parts.find(value =>
     /\b(estate|mall|plaza|centre|center)\b|屋邨|商場|商场/i.test(value),
   )
-  if (complex) return { kind: 'premises', query: complex.slice(0, 200) }
-  return {
-    kind: 'address',
-    query: (
-      parts.find(value =>
-        /\b(road|rd|street|st|avenue|ave|lane|circuit)\b|街|道|路/i.test(value),
-      ) ?? ''
-    ).slice(0, 200),
-  }
+  if (complex && !seeds.some(seed => seed.kind === 'premises'))
+    seeds.push({ kind: 'premises', query: complex.slice(0, 200) })
+  if (!street)
+    seeds.push({
+      kind: 'address',
+      query: (
+        parts.find(value =>
+          /\b(road|rd|street|st|avenue|ave|lane|circuit)\b|街|道|路/i.test(value),
+        ) ?? ''
+      ).slice(0, 200),
+    })
+  const order = ['establishment', 'building', 'premises', 'address']
+  return seeds
+    .filter(
+      (seed, index) =>
+        seed.query &&
+        seeds.findIndex(
+          other => other.query.toLowerCase() === seed.query.toLowerCase(),
+        ) === index,
+    )
+    .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
+}
+
+/** Return the first meaningful search hint.
+ * @param name Establishment name. @param address Current address. @param locale Editor locale.
+ * @returns Most specific query, or an empty address query.
+ */
+export function locationMatchSeed(
+  name: string,
+  address: FeatureAddress,
+  locale: LocaleKey,
+): LocationMatchSeed {
+  return locationMatchSeeds(name, address, locale)[0] ?? { kind: 'address', query: '' }
 }

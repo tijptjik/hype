@@ -26,6 +26,7 @@ let {
   label,
   locale,
   showLocale = false,
+  prominent = false,
   detached = false,
   onSelect,
   onClear,
@@ -37,6 +38,7 @@ let {
   label: string
   locale: LocaleKey
   showLocale?: boolean
+  prominent?: boolean
   detached?: boolean
   onClear?: () => void
   onBlur?: () => void
@@ -246,37 +248,53 @@ onMount(() => {
           bind:this={selection}
           type="button"
           aria-label={`${m.replace()}: ${displayValue}`}
-          class="group/tile grid min-w-0 flex-1 grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-none"
+          class="group/tile grid min-w-0 flex-1 {prominent
+            ? 'grid-cols-[1.75rem_minmax(0,1fr)]'
+            : 'grid-cols-[1rem_minmax(0,1fr)]'} items-center gap-x-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-none"
           onclick={() => void replace()}
         >
           {#if family === 'buildings'}
             <BuildingIcon
-              class="text-muted-foreground col-start-1 row-start-1 size-4"
+              class="text-muted-foreground col-start-1 row-start-1 {prominent
+                ? 'size-7'
+                : 'size-4'}"
             />
           {:else}
-            <StreetIcon class="text-muted-foreground col-start-1 row-start-1 size-4" />
+            <StreetIcon
+              class="text-muted-foreground col-start-1 row-start-1 {prominent
+                ? 'size-7'
+                : 'size-4'}"
+            />
           {/if}
           <!-- Measure the single name at its natural width; the Firefox-safe scroller handles constraints. -->
           <span
             aria-hidden="true"
-            class="invisible col-start-2 row-start-1 text-sm leading-5 font-semibold whitespace-pre"
+            class="invisible col-start-2 row-start-1 {prominent
+              ? 'text-base leading-7'
+              : 'text-sm leading-5'} font-semibold whitespace-pre"
             >{displayValue}</span
           >
           <ScrollableText
             text={displayValue}
             title=""
             class="col-start-2 row-start-1 min-w-0 [contain:inline-size]"
-            containerClass="h-5 text-sm leading-5"
-            textClass="text-sm font-semibold leading-5"
+            containerClass={prominent
+              ? 'h-7 text-base leading-7'
+              : 'h-5 text-sm leading-5'}
+            textClass={prominent
+              ? 'text-base font-semibold leading-7'
+              : 'text-sm font-semibold leading-5'}
           />
-          <span
-            class="text-muted-foreground col-start-2 row-start-2 block text-xs group-hover/tile:hidden group-focus-visible/tile:hidden"
-            >{label}</span
-          >
-          <span
-            class="text-foreground col-start-2 row-start-2 hidden text-xs group-hover/tile:block group-focus-visible/tile:block"
-            >{m.replace()}</span
-          >
+          {#if !prominent}
+            <span
+              class="text-muted-foreground col-start-2 row-start-2 block text-xs group-hover/tile:hidden group-focus-visible/tile:hidden"
+              >{label}</span
+            >
+            <span
+              class="text-foreground col-start-2 row-start-2 hidden text-xs group-hover/tile:block group-focus-visible/tile:block"
+              >{m.replace()}</span
+            >
+          {/if}
         </button>
         {#if onClear}
           <button

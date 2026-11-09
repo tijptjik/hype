@@ -1,5 +1,4 @@
 <script lang="ts">
-import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // SVELTE
 import { onDestroy, untrack, tick, type Snippet } from 'svelte'
 import { flip } from 'svelte/animate'
@@ -9,9 +8,10 @@ import BackIcon from 'virtual:icons/lucide/arrow-left'
 import PencilIcon from 'virtual:icons/lucide/pencil'
 import SearchIcon from 'virtual:icons/proicons/search'
 // LOCATION
-import { hasStructuredAddressComponents } from '#lib/addresses/presentation.js'
 import DraftFeatureLocationSearch from './DraftFeatureLocationSearch.svelte'
-import { locationMatchSeed } from '#lib/locations/matchSeed.js'
+import { hasStructuredAddressComponents } from '#lib/addresses/presentation.js'
+import { locationMatchSeeds } from '#lib/locations/matchSeed.js'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import { locationSyncMode } from '#lib/locations/associationSync.js'
 import LocationAssociationIcon from '#lib/bits/custom/locationAssociationIcon/LocationAssociationIcon.svelte'
 import LocationAssociationHeading from './LocationAssociationHeading.svelte'
@@ -98,8 +98,10 @@ let {
   onSelectionStart,
   buildingAssociationRequest,
   onBuildingAssociationRequestConsumed,
+  pendingLocation,
 }: {
   address: FeatureAddress
+  pendingLocation?: { names: Record<string, string>; kind: LocationKind }
   onAssociationSelected?: (
     result: DraftLocationSearchResult,
     previousLocationId?: string,
@@ -158,6 +160,7 @@ let sharedRequest = $state<{
   id: number
   mode: 'search' | 'pin'
   query: string
+  seeds?: import('#lib/locations/matchSeed.js').LocationMatchSeed[]
 } | null>(null)
 let sharedSequence = 0
 let sharedAccepted = $state(false)
@@ -171,15 +174,11 @@ function startMatching(mode: 'search' | 'pin', addressOnly = false): void {
   cancelDiscovery()
   associationOrigin = null
   sharedAccepted = false
-  sharedRequest = {
-    id: ++sharedSequence,
-    mode,
-    query:
-      mode === 'search'
-        ? locationMatchSeed(addressOnly ? '' : featureName, address, getLocaleKey())
-            .query
-        : '',
-  }
+  const seeds =
+    mode === 'search'
+      ? locationMatchSeeds(addressOnly ? '' : featureName, address, getLocaleKey())
+      : []
+  sharedRequest = { id: ++sharedSequence, mode, query: seeds[0]?.query ?? '', seeds }
   onSelectionStart?.()
 }
 let creating = $state(false)
@@ -815,6 +814,15 @@ async function link(): Promise<void> {
       >
         <BackIcon class="size-5" />
       </button><LocationAssociationHeading />
+    {:else if pendingLocation}
+      <!-- The saved association remains authoritative until Save; present the reviewed draft meanwhile. -->
+      <LocationIcon kind={pendingLocation.kind} class="text-primary size-6 shrink-0" />
+      <span
+        data-pending-location
+        class="text-primary min-w-0 flex-1 text-base font-medium break-words whitespace-normal"
+        >{pendingLocation.names[localeTag] ||
+          Object.values(pendingLocation.names).find(Boolean)}</span
+      >
     {:else}
       {#await accepted}
         <span class="text-muted-foreground text-sm"
@@ -920,7 +928,7 @@ async function link(): Promise<void> {
   </div>
 {/snippet}
 {#snippet savedSyncControl(_disabled?: boolean)}
-  {#if accepted.current && !associationOrigin}
+  {#if accepted.current && !associationOrigin && !pendingLocation}
     {@const mode = locationSyncMode(
       address.association?.mode ??
         (accepted.current.kind === 'address' ? 'manual' : undefined),
@@ -1410,12 +1418,12 @@ async function link(): Promise<void> {
       creating ? lookupCreation : undefined,
       locationActions,
       sharedRequest ? mapControls : emptyMapControls,
-      (accepted.current?.kind ?? intendedKind) !== 'building',
-      accepted.current?.locationId,
-      accepted.current?.kind,
+      (pendingLocation?.kind ?? accepted.current?.kind ?? intendedKind) !== 'building',
+      pendingLocation ? undefined : accepted.current?.locationId,
+      pendingLocation?.kind ?? accepted.current?.kind,
       sharedRequest
         ? syncControl
-        : accepted.current && !associationOrigin
+        : accepted.current && !associationOrigin && !pendingLocation
           ? savedSyncControl
           : undefined,
       () => startMatching('search', true),

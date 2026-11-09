@@ -2,16 +2,19 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
+import DraftLocationNameFields from '#lib/bits/patterns/forms/featureLocation/DraftLocationNameFields.svelte'
 import Fixture from './fixtures/components/SharedLocationNameLocalesFixture.svelte'
 import { restoreProfileLocales } from '#lib/bits/patterns/forms/featureLocation/profileLocales.js'
 import { resolveContentLocales } from '#lib/content-locales/resolve.js'
 
 afterEach(() => {
   cleanup()
+  delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations
   vi.unstubAllGlobals()
 })
 beforeEach(() => {
   vi.useRealTimers()
+  HTMLElement.prototype.getAnimations = vi.fn(() => [])
   vi.stubGlobal('matchMedia', () => ({
     matches: true,
     addEventListener() {},
@@ -56,4 +59,27 @@ it('loads project defaults above organisation defaults and appends only populate
       organisationSettings: { contentLocales: normalizeContentLocales(['zh-Hant']) },
     }).locales,
   ).toEqual(['zh-Hant'])
+})
+
+it('omits a legacy undetermined name and locale selection from location rows', () => {
+  const view = render(DraftLocationNameFields, {
+    names: {
+      en: 'Golden Gate Commercial Building',
+      'zh-hant': '金門商業大廈',
+      und: 'Combined legacy title',
+    },
+    translations: true,
+    kind: 'building',
+    isEditing: false,
+    localeState: {
+      selectedLocales: ['und', 'en', 'zh-Hant'],
+      visibleLocales: ['und', 'en', 'zh-Hant'],
+      expanded: true,
+    },
+    onChange: () => {},
+  })
+  expect(view.queryByText('Und')).toBeNull()
+  expect(view.queryByText('Combined legacy title')).toBeNull()
+  expect(view.getByText('Golden Gate Commercial Building')).toBeTruthy()
+  expect(view.getByText('金門商業大廈')).toBeTruthy()
 })

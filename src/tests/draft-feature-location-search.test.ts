@@ -3072,3 +3072,40 @@ it('offers manual entry as an alternative after resolution has results', async (
   await fireEvent.click(await screen.findByRole('button', { name: 'Add Manual Entry' }))
   expect(onManualEntry).toHaveBeenCalledTimes(1)
 })
+
+it.each([false, true])(
+  'advances empty component discovery only when providers succeeded (failure: %s)',
+  async failed => {
+    vi.useRealTimers()
+    mocks.places.mockResolvedValue({ rows: [], partial: failed })
+    mocks.addresses.mockResolvedValue([])
+    render(DraftSearch, {
+      active: true,
+      focusRequest: 0,
+      onSelect: vi.fn(),
+      searchRequest: {
+        id: 1,
+        mode: 'search',
+        query: 'Clockwork Cat',
+        seeds: [
+          { kind: 'establishment', query: 'Clockwork Cat' },
+          { kind: 'building', query: 'Por Mee Factory Building' },
+        ],
+      },
+    })
+    await waitFor(() => expect(mocks.buildingPages).toHaveBeenCalled())
+    if (failed) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      expect(mocks.places).toHaveBeenCalledTimes(1)
+    } else {
+      await waitFor(() =>
+        expect(mocks.places).toHaveBeenCalledWith(
+          expect.objectContaining({ q: 'Por Mee Factory Building' }),
+        ),
+      )
+      expect(
+        screen.getByText(/No matches for Establishment; searching for Building/),
+      ).toBeTruthy()
+    }
+  },
+)
