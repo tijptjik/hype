@@ -23,9 +23,9 @@ export type ViewerRenderable = {
   thumbnailSrc?: string | null
   blurSrc?: string | null
   presentationMode?: ImagePresentation
+  alt?: string | null
   /** Creation timestamp used by review galleries for automatic ordering. */
   createdAt?: string | null
-  alt?: string | null
   galleryPosition?: number
   gallerySortMode?: 'automatic' | 'manual'
   fallbackSeed?: string | null

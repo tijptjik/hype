@@ -70,12 +70,12 @@ import { onDestroy, untrack } from 'svelte'
 // ADAPTERS
 import { useEntityImageViewerModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
-import { UserAttributionCard } from '#lib/bits/index.js'
+import UserAttributionCard from '#lib/bits/patterns/cards/userAttributionCard/UserAttributionCard.svelte'
 import { AdminViewer, Dropzone } from '#lib/bits/patterns/images/index.js'
 import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadataCard.svelte'
 import ViewerControls from '#lib/bits/patterns/images/components/controls/ViewerControls.svelte'
 // COMPONENTS
-import { Icon } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import {
   IMAGE_ATTRIBUTION_CLASSES,
   IMAGE_METADATA_BUTTON_CLASSES,

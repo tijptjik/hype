@@ -2,7 +2,7 @@
 import { cx } from '#lib/bits/utils.js'
 import { m } from '#lib/i18n.js'
 import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '#lib/images/accept.js'
-import { Icon } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import PhotoIcon from 'virtual:icons/proicons/photo'
 import UploadIcon from 'virtual:icons/proicons/arrow-upload'
 import DropzonePrimitive from 'svelte-file-dropzone'
