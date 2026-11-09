@@ -99,6 +99,7 @@ let {
   map,
   onCoordinateChange,
   onLookup,
+  onMatchLocation,
   onChange,
 }: {
   address: FeatureAddress
@@ -155,6 +156,7 @@ let {
   onSelectCandidate: (address: FeatureAddress) => void
   map?: Snippet
   onCoordinateChange: (coordinates: number[]) => void
+  onMatchLocation?: () => void
   onLookup: (query?: string) => void
   onChange: (address: FeatureAddress) => void
 } = $props()
@@ -844,6 +846,7 @@ $effect(() => {
     >
       {#if showAddressDetails}
         <AddressDetails
+          {onMatchLocation}
           {localeState}
           {onLocaleStateChange}
           {activeBuildingSource}

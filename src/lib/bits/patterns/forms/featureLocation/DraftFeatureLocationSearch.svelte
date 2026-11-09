@@ -68,6 +68,7 @@ const searchKinds = ['establishment', 'building', 'address'] as const
 
 let {
   active,
+  searchRequest,
   projectId,
   canReturnToResults = true,
   locationName,
@@ -94,6 +95,7 @@ let {
   coordinates,
   children,
 }: {
+  searchRequest?: { id: number; mode: 'search' | 'pin'; query: string } | null
   active: boolean
   projectId?: string
   canReturnToResults?: boolean
@@ -395,6 +397,23 @@ let moreErrors = $state<
 
 $effect(() => {
   if (active && focusRequest && input) void tick().then(() => input?.focus())
+})
+let consumedSearchRequest = 0
+$effect(() => {
+  const request = searchRequest
+  if (!active || !request || request.id === consumedSearchRequest) return
+  consumedSearchRequest = request.id
+  untrack(() => {
+    clearSearch()
+    selected = null
+    accepted = linked = false
+    associationOpen = false
+    associationOrigin = null
+    findMode = request.mode
+    query = request.query
+    filters = {}
+    void search(request.mode === 'pin')
+  })
 })
 const filterCachedRows = createDraftSearchFilter<Result>()
 /** Check cached names and address text before fresh provider evidence arrives.

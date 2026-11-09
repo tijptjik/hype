@@ -10,6 +10,8 @@ import PencilIcon from 'virtual:icons/lucide/pencil'
 import CreateLocationIcon from 'virtual:icons/lucide/plus'
 import SearchIcon from 'virtual:icons/proicons/search'
 // LOCATION
+import DraftFeatureLocationSearch from './DraftFeatureLocationSearch.svelte'
+import { locationMatchSeed } from '#lib/locations/matchSeed.js'
 import { locationSyncMode } from '#lib/locations/associationSync.js'
 import LocationAssociationIcon from '#lib/bits/custom/locationAssociationIcon/LocationAssociationIcon.svelte'
 import LocationAssociationHeading from './LocationAssociationHeading.svelte'
@@ -76,7 +78,7 @@ type Selection =
 let {
   address,
   featureName = '',
-  children,
+  children: renderEditor,
   onMapCandidates,
   featureId,
   projectId,
@@ -86,6 +88,7 @@ let {
   isEditing,
   isDirty,
   onSourceUpdate,
+  onStartEditing,
   onAddressSelected,
   onAssociationSelected,
   onAssociationPending,
@@ -126,6 +129,7 @@ let {
       string | undefined,
       LocationKind | undefined,
       Snippet<[boolean?]> | undefined,
+      () => void,
     ]
   >
   onMapCandidates: (
@@ -139,6 +143,7 @@ let {
   modifiedAt: string
   isEditing: boolean
   isDirty: boolean
+  onStartEditing?: () => void
   onSourceUpdate: () => Promise<void>
 } = $props()
 const accepted = $derived(getFeatureLocation({ featureId }))
@@ -147,6 +152,34 @@ $effect(() => {
   onAssociationPending?.(Boolean(associationOrigin))
   if (associationOrigin) untrack(() => onSelectionStart?.())
 })
+let sharedRequest = $state<{
+  id: number
+  mode: 'search' | 'pin'
+  query: string
+} | null>(null)
+let sharedSequence = 0
+let sharedAccepted = $state(false)
+/** Open the same discovery and association flow used by new Features.
+ * @param mode Meaningful text matching or discovery around the existing pin.
+ * @param addressOnly Prefer address components for onboarding display-only records.
+ * @returns Nothing; discovery never changes the Feature until a result is accepted.
+ */
+function startMatching(mode: 'search' | 'pin', addressOnly = false): void {
+  onStartEditing?.()
+  cancelDiscovery()
+  associationOrigin = null
+  sharedAccepted = false
+  sharedRequest = {
+    id: ++sharedSequence,
+    mode,
+    query:
+      mode === 'search'
+        ? locationMatchSeed(addressOnly ? '' : featureName, address, getLocaleKey())
+            .query
+        : '',
+  }
+  onSelectionStart?.()
+}
 let creating = $state(false)
 let discoveryMode = $state<'idle' | 'text' | 'nearby' | 'matches'>('idle')
 let intendedKind = $state<LocationKind>('unknown')
@@ -238,7 +271,7 @@ const markers = $derived(
   })),
 )
 $effect(() => {
-  if (!associationOrigin)
+  if (!associationOrigin && !sharedRequest)
     onMapCandidates(isEditing && !creating ? markers : [], selectRow)
 })
 /** Select the same result from a row or its numbered map marker.
@@ -385,6 +418,8 @@ $effect(() => {
 // Leaving edit mode discards discovery UI, never the accepted Feature address.
 $effect(() => {
   if (isEditing) return
+  sharedRequest = null
+  sharedAccepted = false
   associationOrigin = null
   requestVersion++
   busy = false
@@ -786,7 +821,7 @@ async function link(): Promise<void> {
         {#if creating}
           <LocationIcon class="text-primary size-6 shrink-0" aria-hidden="true" />
           <span class="text-sm font-semibold">{m.feature_location_create()}</span>
-        {:else if isEditing && (!association || replacementRevision)}
+        {:else if isEditing && replacementRevision}
           {#if replacementRevision}
             <Button
               text={m.feature_location_change_cancel()}
@@ -905,6 +940,9 @@ async function link(): Promise<void> {
     </a>
   {/if}
 {/snippet}
+{#snippet emptyMapControls()}
+  <!-- Idle discovery has no map controls. -->
+{/snippet}
 {#snippet locationActions()}
   {#if isEditing && (!accepted.current || replacementRevision)}
     <div class="flex items-center gap-2" data-location-discovery-actions>
@@ -1022,7 +1060,7 @@ async function link(): Promise<void> {
     {/key}
   {/if}
   {#if !associationOrigin &&
-    ((isEditing && !accepted.current) ||
+    (discoveryMode !== 'idle' ||
       creating ||
       results !== null ||
       selected ||
@@ -1353,23 +1391,52 @@ async function link(): Promise<void> {
     </section>
   {/if}
 {/snippet}
-{@render children(
-  isEditing && !creating && (!accepted.current || replacementRevision)
-    ? undefined
-    : locationWidget,
-  locationContent,
-  Boolean(associationOrigin) ||
-    creating ||
-    discoveryMode !== 'idle' ||
-    searchRows.length > 0 ||
-    results !== null ||
-    busy,
-  creating || Boolean(accepted.current),
-  creating ? lookupCreation : undefined,
-  locationActions,
-  locationMapControls,
-  (accepted.current?.kind ?? intendedKind) !== 'building',
-  accepted.current?.locationId,
-  accepted.current?.kind,
-  accepted.current && !associationOrigin ? savedSyncControl : undefined,
-)}
+<DraftFeatureLocationSearch
+  active={isEditing && sharedRequest !== null}
+  searchRequest={sharedRequest}
+  focusRequest={0}
+  {projectId}
+  currentAddress={address}
+  locationName={featureName}
+  coordinates={[coordinates[0], coordinates[1]]}
+  hasPin={true}
+  onMapCandidates={(markers, select) => {
+    if (sharedRequest) onMapCandidates(markers, select)
+  }}
+  onResolutionPendingChange={pending => {
+    if (sharedRequest) onAssociationPending?.(pending)
+  }}
+  onAcceptedChange={value => (sharedAccepted = value)}
+  {onAssociationSpaceNeeded}
+  {onSelectionStart}
+  {onReturnToResults}
+  onSelect={result => onAssociationSelected?.(result, accepted.current?.locationId)}
+>
+  {#snippet children(searchControl, searchResults, mapControls, syncControl)}
+    {@render renderEditor(
+      sharedRequest ? searchControl : locationWidget,
+      sharedRequest ? searchResults : locationContent,
+      sharedRequest
+        ? !sharedAccepted
+        : Boolean(associationOrigin) ||
+            creating ||
+            discoveryMode !== 'idle' ||
+            searchRows.length > 0 ||
+            results !== null ||
+            busy,
+      sharedRequest ? sharedAccepted : creating || Boolean(accepted.current),
+      creating ? lookupCreation : undefined,
+      locationActions,
+      sharedRequest ? mapControls : emptyMapControls,
+      (accepted.current?.kind ?? intendedKind) !== 'building',
+      accepted.current?.locationId,
+      accepted.current?.kind,
+      sharedRequest
+        ? syncControl
+        : accepted.current && !associationOrigin
+          ? savedSyncControl
+          : undefined,
+      () => startMatching('search', true),
+    )}
+  {/snippet}
+</DraftFeatureLocationSearch>

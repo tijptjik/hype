@@ -4494,6 +4494,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
               accessibilityLocationId?: string,
               locationKind?: string,
               locationSyncControl?: Snippet<[boolean?]>,
+              onMatchLocation?: () => void,
             )}
               {#snippet identityFields(translations: boolean)}
                 {#if draftLocalKind !== 'address'}
@@ -4561,6 +4562,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                 <LocationControlsInfo />
               {/snippet}
               <FormFeatureAddress
+                {onMatchLocation}
                 localeState={profileLocaleState}
                 onLocaleStateChange={setProfileLocaleState}
                 bind:translations={
@@ -4741,6 +4743,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
             {/if}
             {#if currentFeatureId && feature?.data?.modifiedAt}
               <FeatureLocationSection
+                onStartEditing={() => headerCtrl.setEditing(true)}
                 organisationId={selectedProject?.organisationId}
                 {buildingAssociationRequest}
                 onBuildingAssociationRequestConsumed={requestId => {
@@ -4799,6 +4802,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                   accessibilityLocationId,
                   locationKind,
                   locationSyncControl,
+                  onMatchLocation,
                 )}
                   {@render locationEditor(
                     locationControl,
@@ -4812,6 +4816,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                     accessibilityLocationId,
                     locationKind,
                     locationSyncControl,
+                    onMatchLocation,
                   )}
                 {/snippet}
               </FeatureLocationSection>

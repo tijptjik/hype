@@ -148,6 +148,7 @@ let {
   partsOverlay = false,
   onToggleParts,
   onLookup,
+  onMatchLocation,
   isLookupLoading = false,
   onChange,
 }: {
@@ -188,6 +189,7 @@ let {
   partsOverlay?: boolean
   onToggleParts?: () => void
   onLookup?: () => void
+  onMatchLocation?: () => void
   isLookupLoading?: boolean
   onChange: (address: FeatureAddress) => void
 } = $props()
