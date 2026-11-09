@@ -5,7 +5,11 @@ import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
 import { MediaQuery } from 'svelte/reactivity'
 
+// I18N
+import { m } from '#lib/i18n.js'
+
 // ICONS
+import MarkerIcon from 'virtual:icons/lucide/map-pin'
 import UnitIcon from 'virtual:icons/lucide/door-open'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
 import ComplexIcon from 'virtual:icons/lucide/blocks'
@@ -27,7 +31,11 @@ let {
   additionalValue,
   groups,
   labels,
+  displayRows = [],
+  displayStale = false,
 }: {
+  displayRows?: { tag: string; value: string }[]
+  displayStale?: boolean
   address: FeatureAddress
   locales: { tag: string; key?: LocaleKey }[]
   primaryLocale: string
@@ -86,12 +94,53 @@ const sections = $derived(
 )
 </script>
 
-{#if sections.length}
+{#if sections.length || displayRows.length}
   <div
     transition:slide={{ duration: reducedMotion.current ? 0 : 200, easing: cubicInOut }}
     class="border-border/70 divide-border/60 @container min-w-0 divide-y overflow-hidden rounded-xl border"
     data-address-parts
   >
+    {#if displayRows.length}
+      <section
+        transition:slide={{
+          duration: reducedMotion.current ? 0 : 200,
+          easing: cubicInOut,
+        }}
+        class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 px-4 py-4"
+        data-address-display-values
+        class:opacity-50={displayStale}
+        class:grayscale={displayStale}
+      >
+        <MarkerIcon class="text-muted-foreground mt-0.5 size-4" aria-hidden="true" />
+        <div class="min-w-0 space-y-3">
+          <h3
+            class="text-muted-foreground text-xs font-semibold tracking-wide capitalize"
+          >
+            {m.feature_address_formattedAddress()}
+          </h3>
+          <div class="flex min-w-0 flex-col gap-1">
+            {#each displayRows as { tag, value } (tag)}
+              <p
+                animate:flip={{ duration: reducedMotion.current ? 0 : 200 }}
+                transition:slide={{
+                  duration: reducedMotion.current ? 0 : 200,
+                  easing: cubicInOut,
+                }}
+                lang={tag}
+                class="flex min-w-0 items-baseline gap-2 text-sm leading-relaxed font-medium"
+              >
+                {#if tag !== primaryLocale}
+                  <span class="text-muted-foreground shrink-0 font-mono text-xs"
+                    >{shortLocaleLabel(tag)}</span
+                  >
+                {/if}
+                <span class="min-w-0 break-words whitespace-normal">{value}</span>
+              </p>
+            {/each}
+          </div>
+        </div>
+      </section>
+    {/if}
     {#each sections as section (section.key)}
       <section
         animate:flip={{ duration: reducedMotion.current ? 0 : 200 }}

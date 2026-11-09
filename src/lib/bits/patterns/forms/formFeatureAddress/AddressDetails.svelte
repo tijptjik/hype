@@ -1580,44 +1580,6 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     {/if}
   {/snippet}
   {#if !isEditing}
-    {#if viewerDisplayAddressRows.length}
-      <div
-        transition:localeSlide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
-        class="@container min-w-0"
-        data-address-display-values
-        class:opacity-50={displayStale}
-        class:grayscale={displayStale}
-      >
-        <div
-          class="grid min-w-0 grid-cols-1 items-start gap-x-6 gap-y-1 @min-[40rem]:grid-cols-2"
-        >
-          {#each viewerDisplayAddressRows as { tag, value } (tag)}
-            <p
-              animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}
-              transition:localeSlide={{
-                duration: prefersReducedMotion.current ? 0 : 200,
-              }}
-              lang={tag}
-              class="flex min-w-0 items-center gap-2 text-sm leading-relaxed"
-            >
-              {#if tag !== selectedLocales[0]}
-                <span class="text-muted-foreground w-[3em] shrink-0 font-mono text-xs"
-                  >{shortLocaleLabel(tag)}</span
-                >
-              {/if}
-              <MarkerIcon
-                class="text-muted-foreground size-5 shrink-0"
-                aria-hidden="true"
-              />
-              <span
-                class="min-w-0 px-2 py-1.5 font-medium break-words whitespace-normal"
-                >{value}</span
-              >
-            </p>
-          {/each}
-        </div>
-      </div>
-    {/if}
     {@render emptyAddressHelp()}
     <AddressReadOnly
       {address}
@@ -1625,6 +1587,8 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       primaryLocale={selectedLocales[0]}
       additionalValue={additionalLocaleValue}
       groups={fieldGroups}
+      displayRows={translations ? viewerDisplayAddressRows : []}
+      {displayStale}
       {labels}
     />
     {#if showAccessHints}
