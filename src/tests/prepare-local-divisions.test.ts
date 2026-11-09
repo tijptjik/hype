@@ -14,6 +14,7 @@ vi.mock('../../workers/division-refresh/src/refresh', () => ({
 function fixture() {
   const state = {
     phase: 'idle',
+    catalogueRelease: 'current-release' as string | null,
     appliedRelease: 'current-release' as string | null,
     checkedMonth: new Date().toISOString().slice(0, 7),
   }
@@ -48,6 +49,17 @@ describe('local mirror division preparation', () => {
     const { db } = fixture()
     await prepareLocalDivisions(db, {})
     expect(refreshDivisions).not.toHaveBeenCalled()
+  })
+
+  it('repairs a partial catalogue even with no queued Features', async () => {
+    const { db, state } = fixture()
+    state.catalogueRelease = null
+    vi.mocked(refreshDivisions).mockImplementationOnce(async () => {
+      state.catalogueRelease = state.appliedRelease
+      return 'catalogue'
+    })
+    await prepareLocalDivisions(db, { SAANSEOI_API_KEY: 'test-only' })
+    expect(state.catalogueRelease).toBe('current-release')
   })
 
   it('fails pending work without a server credential', async () => {

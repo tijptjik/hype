@@ -5640,7 +5640,7 @@ describe('structured Location address editor writes', () => {
 
   it('saves marker, components and subjective selections atomically and rejects stale editor revisions', async () => {
     const { db, sqlite } = setup()
-    sqlite.exec(`CREATE TABLE divisionDefinition(id TEXT PRIMARY KEY, apiReleaseSet TEXT, attributes TEXT);
+    sqlite.exec(`CREATE TABLE divisionRefresh(id INTEGER PRIMARY KEY,catalogueRelease TEXT); CREATE TABLE divisionDefinition(id TEXT PRIMARY KEY, apiReleaseSet TEXT, attributes TEXT);
       INSERT INTO divisionDefinition VALUES ('hood','release','{"class":"neighbourhood","names":{"en":{"name":"Neighbourhood"}}}'), ('district','release','{"class":"district"}');`)
     const created = await createLocalLocation(
       db,
@@ -6211,7 +6211,7 @@ describe('Organisation-wide Location corrections', () => {
 it('persists one existing neighbourhood path in immutable Location revisions', async () => {
   const { db, sqlite } = setup()
   sqlite.exec(
-    'CREATE TABLE divisionDefinition(id TEXT PRIMARY KEY, apiReleaseSet TEXT, attributes TEXT)',
+    'CREATE TABLE divisionRefresh(id INTEGER PRIMARY KEY,catalogueRelease TEXT); CREATE TABLE divisionDefinition(id TEXT PRIMARY KEY, apiReleaseSet TEXT, attributes TEXT)',
   )
   const insert = sqlite.prepare('INSERT INTO divisionDefinition VALUES (?,?,?)')
   for (const [id, kind, level] of [

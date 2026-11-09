@@ -1,3 +1,5 @@
+// SERVICES
+import { syncDivisionCatalogue } from './catalogue'
 import { divisionRoles, projectDivisionRoles } from './roles'
 // API
 import {
@@ -18,6 +20,7 @@ import type { ApiOptions, DivisionMetadata, GeocodeResponse } from './api'
 // 1. Durable state and fenced writes
 // 2. Release discovery and change scanning
 // 3. Geocoding and atomic membership replacement
+// Complete catalogue staging/publication lives in catalogue.ts.
 // ═══════════════════════
 
 type State = {
@@ -39,6 +42,7 @@ const FENCE = 'EXISTS(SELECT 1 FROM divisionRefresh WHERE id=1 AND lease=?)'
  * @param db Environment's primary D1 binding.
  * @param api SaanSeoi connection.
  * @param now Clock for monthly discovery, leases and retry scheduling.
+ * @param options Restrict local repair to catalogue work when requested.
  * @returns Work phase or a competing-owner indication.
  * @remarks Frequent ticks drain local work; upstream release discovery occurs once per UTC month.
  */
@@ -46,6 +50,7 @@ export async function refreshDivisions(
   db: RefreshDatabase,
   api: ApiOptions,
   now = Date.now(),
+  options: { catalogueOnly?: boolean } = {},
 ): Promise<string> {
   const lease = crypto.randomUUID()
   const acquired = await db
@@ -63,6 +68,15 @@ export async function refreshDivisions(
       .prepare('SELECT * FROM divisionRefresh WHERE id=1')
       .first<State>()
     if (!state) throw new Error('DIVISION_REFRESH_STATE_MISSING')
+    // Catalogue work is independent of queued Features, including an idle legacy mirror.
+    if (state.phase === 'idle' || state.phase === 'geocode') {
+      const release = state.targetRelease ?? state.appliedRelease
+      if (release && !(await syncDivisionCatalogue(db, api, release, statement)))
+        return 'catalogue'
+      if (options.catalogueOnly && release) return 'idle'
+    } else if (options.catalogueOnly) {
+      throw new Error('DIVISION_CATALOGUE_REFRESH_IN_PROGRESS')
+    }
     const month = new Date(now).toISOString().slice(0, 7)
     if (
       state.phase === 'idle' &&
@@ -163,26 +177,9 @@ async function loadChanges(
         [change.id, JSON.stringify(change)],
       ),
     )
-    if (change.after)
-      writes.push(
-        statement(
-          `INSERT INTO divisionDefinition SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM divisionDefinition WHERE id=?) AND ${FENCE}
-      ON CONFLICT(id) DO UPDATE SET apiReleaseSet=excluded.apiReleaseSet,attributes=excluded.attributes`,
-          [
-            change.divisionId,
-            meta.toApiReleaseSet.code,
-            JSON.stringify({
-              ...change.after.attributes,
-              names:
-                change.after.attributes.names ?? change.after.attributes.i18n ?? {},
-              membershipGeometry: change.after.membershipGeometry,
-            }),
-            change.divisionId,
-          ],
-        ),
-      )
   }
-  // Metadata upserts and the cursor move share the same transaction as durable change work.
+
+  // Change work and its cursor publish together; catalogue metadata publishes as a complete release.
   writes.push(
     statement(
       `UPDATE divisionRefresh SET targetRelease=?,targetReleaseId=?,comparisonId=?,cursor=?,phase=?
@@ -415,10 +412,11 @@ async function geocodeJobs(
         ),
       ]
       for (const member of members.values()) {
+        // Catalogue metadata owns existing rows; a geocode must never replace its complete geometry.
         writes.push(
           guarded(
             `INSERT INTO divisionDefinition SELECT ?,?,? WHERE ${guard}
-          ON CONFLICT(id) DO UPDATE SET apiReleaseSet=excluded.apiReleaseSet,attributes=json_patch(divisionDefinition.attributes,excluded.attributes)`,
+          ON CONFLICT(id) DO NOTHING`,
             [member.id, release, JSON.stringify(member)],
           ),
         )
@@ -468,9 +466,7 @@ async function geocodeJobs(
     }
   }
   if (state.phase === 'geocode') {
-    // Remove definitions no longer referenced, after every affected feature has been resolved.
-    await statement(`DELETE FROM divisionDefinition WHERE NOT EXISTS(SELECT 1 FROM featureDivisionMembership m WHERE m.divisionId=divisionDefinition.id)
-      AND NOT EXISTS(SELECT 1 FROM featureDivisionJob) AND NOT EXISTS(SELECT 1 FROM divisionRefreshChange) AND ${FENCE}`).run()
+    // Keep unused catalogue definitions and retired references independently of Feature usage.
     // A failed or concurrent new job prevents publication; the next tick resumes it.
     await statement(`UPDATE divisionRefresh SET appliedRelease=targetRelease,targetRelease=NULL,
       targetReleaseId=NULL,comparisonId=NULL,cursor=NULL,phase='idle'

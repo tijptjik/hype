@@ -27,7 +27,10 @@ function option(name: string): string | undefined {
 const databasePath = option('--database')
 if (!databasePath) throw new Error('Supply --database with the local HYPE SQLite path.')
 const apply = process.argv.includes('--apply')
+const catalogueOnly = process.argv.includes('--catalogue-only')
 const rebuild = process.argv.includes('--rebuild')
+if (rebuild && catalogueOnly)
+  throw new Error('--catalogue-only cannot rebuild Features.')
 if (rebuild && !apply) throw new Error('--rebuild requires --apply.')
 const maxSteps = Number(option('--max-steps') ?? 100000)
 if (!Number.isSafeInteger(maxSteps) || maxSteps < 1)
@@ -105,6 +108,7 @@ try {
   for (const name of [
     '0082_feature_division_refresh.sql',
     '0083_feature_division_registry.sql',
+    '0208_complete_division_catalogue.sql',
   ]) {
     if (sqlite.query('SELECT 1 FROM d1_migrations WHERE name=?').get(name)) continue
     const migration = await Bun.file(
@@ -175,12 +179,16 @@ try {
           .all() as { featureId: string; generation: number; attempts: number }[]
       ).map(job => [`${job.featureId}:${job.generation}`, job.attempts]),
     )
-    const phase = await refreshDivisions(db, api)
+    const phase = await refreshDivisions(db, api, Date.now(), { catalogueOnly })
     const state = sqlite
       .query(
-        'SELECT appliedRelease,targetRelease,phase,lastError FROM divisionRefresh WHERE id=1',
+        'SELECT appliedRelease,targetRelease,catalogueRelease,phase,lastError FROM divisionRefresh WHERE id=1',
       )
-      .get() as { phase: string; appliedRelease: string | null }
+      .get() as {
+      phase: string
+      appliedRelease: string | null
+      catalogueRelease: string | null
+    }
     const pending = sqlite
       .query(
         'SELECT count(*) AS count,sum(attempts>0) AS failed FROM featureDivisionJob',
@@ -208,6 +216,7 @@ try {
         'Geocoding jobs failed and remain queued. Inspect featureDivisionJob.lastError; rerun after retryAt.',
       )
     if (
+      !catalogueOnly &&
       pending.count &&
       !sqlite
         .query('SELECT 1 FROM featureDivisionJob WHERE retryAt<=? LIMIT 1')
@@ -216,11 +225,17 @@ try {
       console.log(JSON.stringify({ waitingForRetry: true, state, pending }))
       break
     }
-    if (state.phase === 'idle' && !pending.count) {
+    if (
+      (catalogueOnly && phase === 'idle') ||
+      (!catalogueOnly &&
+        phase !== 'catalogue' &&
+        state.phase === 'idle' &&
+        !pending.count)
+    ) {
       console.log(
         JSON.stringify({
           complete: true,
-          release: state.appliedRelease,
+          release: catalogueOnly ? state.catalogueRelease : state.appliedRelease,
           divisions: sqlite
             .query('SELECT count(*) AS count FROM divisionDefinition')
             .get(),

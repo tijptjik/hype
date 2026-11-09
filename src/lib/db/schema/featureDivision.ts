@@ -14,6 +14,11 @@ export const divisionRefresh = sqliteTable('divisionRefresh', {
   phase: text('phase', { enum: ['idle', 'changes', 'scan', 'geocode'] })
     .notNull()
     .default('idle'),
+  catalogueRelease: text('catalogueRelease'),
+  catalogueTarget: text('catalogueTarget'),
+  catalogueOffset: integer('catalogueOffset').notNull().default(0),
+  catalogueTotal: integer('catalogueTotal'),
+  catalogueRevision: text('catalogueRevision'),
   checkedMonth: text('checkedMonth'),
   lease: text('lease'),
   leaseUntil: integer('leaseUntil').notNull().default(0),

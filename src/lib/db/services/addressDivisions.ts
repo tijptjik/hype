@@ -9,13 +9,13 @@
 // ---
 
 // DRIZZLE
-import { eq, gt } from 'drizzle-orm'
+import { and, eq, gt, sql } from 'drizzle-orm'
 // VALIDATION
 import { z } from 'zod'
 // DB
 import { divisionDefinition } from '#lib/db/schema/division.js'
 // DOMAIN
-import { readDivisionPolygons } from '#lib/divisions/geometry.js'
+import { readMirroredDivisionPolygons } from './divisionGeometry.js'
 import { covers } from '../../../../workers/division-refresh/src/api'
 import {
   AddressDivisionHierarchiesSchema,
@@ -67,9 +67,26 @@ export async function readAddressDivisionContext(
   let after: string | undefined
   do {
     const page = await db
-      .select()
+      .select({
+        id: divisionDefinition.id,
+        // Keep the complete choice list, but transfer polygons only near this marker.
+        attributes:
+          sql`CASE WHEN json_type(${divisionDefinition.attributes}, '$.membershipBounds') IS NULL
+          OR (${coordinates[0]} BETWEEN json_extract(${divisionDefinition.attributes}, '$.membershipBounds[0]') AND json_extract(${divisionDefinition.attributes}, '$.membershipBounds[2]')
+          AND ${coordinates[1]} BETWEEN json_extract(${divisionDefinition.attributes}, '$.membershipBounds[1]') AND json_extract(${divisionDefinition.attributes}, '$.membershipBounds[3]'))
+          THEN ${divisionDefinition.attributes}
+          ELSE json_remove(${divisionDefinition.attributes}, '$.membershipGeometry', '$.membershipGeometryExternal') END`.mapWith(
+            divisionDefinition.attributes,
+          ),
+        hasPolygons: sql<number>`(coalesce(json_array_length(${divisionDefinition.attributes}, '$.membershipGeometry'), 0) > 0 OR coalesce(json_extract(${divisionDefinition.attributes}, '$.membershipGeometryExternal'), 0))`,
+      })
       .from(divisionDefinition)
-      .where(after ? gt(divisionDefinition.id, after) : undefined)
+      .where(
+        and(
+          after ? gt(divisionDefinition.id, after) : undefined,
+          sql`${divisionDefinition.apiReleaseSet} = coalesce((SELECT catalogueRelease FROM divisionRefresh WHERE id=1), ${divisionDefinition.apiReleaseSet})`,
+        ),
+      )
       .orderBy(divisionDefinition.id)
       .limit(40)
     for (const row of page) {
@@ -88,8 +105,8 @@ export async function readAddressDivisionContext(
       definitions.set(division.id, division)
       if (Object.values(SUBJECTIVE_DIVISIONS).some(kind => kind === division.class))
         result.options.push(division)
-      const polygons = readDivisionPolygons(row.attributes)
-      if (polygons.length) result.available = true
+      const polygons = await readMirroredDivisionPolygons(db, row.id, row.attributes)
+      if (row.hasPolygons) result.available = true
       if (polygons.some(polygon => covers(coordinates, polygon)))
         result.memberships.push(division)
     }

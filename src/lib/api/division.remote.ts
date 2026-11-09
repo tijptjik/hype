@@ -6,7 +6,8 @@ import { guardedQuery } from '#lib/api/server/guarded.js'
 // DB
 import { divisionDefinition } from '#lib/db/schema/division.js'
 // DOMAIN
-import { readDivisionPolygons, type DivisionGeometry } from '#lib/divisions/geometry.js'
+import type { DivisionGeometry } from '#lib/divisions/geometry.js'
+import { readMirroredDivisionPolygons } from '#lib/db/services/divisionGeometry.js'
 import { readAddressDivisionContext } from '#lib/db/services/addressDivisions.js'
 // TYPES
 import type { EntityResponse } from '#lib/types.js'
@@ -48,7 +49,11 @@ export const getDivisionGeometry = guardedQuery(
         ? {
             id: definition.id,
             apiReleaseSet: definition.apiReleaseSet,
-            geometries: readDivisionPolygons(definition.attributes),
+            geometries: await readMirroredDivisionPolygons(
+              ctx.db,
+              definition.id,
+              definition.attributes,
+            ),
           }
         : null,
     }

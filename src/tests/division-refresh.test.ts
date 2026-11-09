@@ -103,7 +103,7 @@ const page = (data = [change()], nextCursor: string | null = null) => ({
 })
 
 /** Runs production statements and atomic D1 batches against real SQLite. */
-function setup() {
+function setup(catalogueComplete = true) {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
   sqlite.exec(readFileSync('src/tests/fixtures/feature-query-base.sql', 'utf8'))
@@ -116,6 +116,7 @@ function setup() {
     '0083_feature_division_registry',
     '0084_division_facets',
     '0088_feature_division_roles',
+    '0208_complete_division_catalogue',
   ])
     sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
   const prepare = (sql: string, values: unknown[] = []) => ({
@@ -160,11 +161,246 @@ function setup() {
       .run(id, JSON.stringify({ type: 'Point', coordinates: [x, y] }))
   const tick = (
     fetcher: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>,
-  ) => refreshDivisions(db, { baseUrl: 'https://api.saanseoi.hk', fetcher }, now)
+  ) => {
+    // These membership tests assume catalogue sync has completed; integration cases opt out.
+    if (catalogueComplete)
+      sqlite.exec(
+        `UPDATE divisionRefresh SET catalogueRelease=coalesce(targetRelease,appliedRelease,'r2')`,
+      )
+    return refreshDivisions(db, { baseUrl: 'https://api.saanseoi.hk', fetcher }, now)
+  }
   const count = (table: string) =>
     Number(sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n)
   return { sqlite, db, add, tick, count }
 }
+
+/** Small public catalogue with independently linked territory resources. */
+function cataloguePage(offset = 0, total = 12, release = 'r2') {
+  const ids = Array.from(
+    { length: Math.min(10, total - offset) },
+    (_, i) => `hood-${offset + i}`,
+  )
+  return {
+    data: ids.map(id => ({
+      type: 'divisions',
+      id,
+      attributes: {
+        class: 'neighbourhood',
+        category: 'hood',
+        level: 5,
+        i18n: { en: { name: id } },
+        hierarchies: { full: [] },
+        geometry: { type: 'Point', coordinates: [50, 50] },
+      },
+      relationships: {
+        areas: { data: [{ type: 'division-areas', id: `area-${id}` }] },
+      },
+    })),
+    included: ids.map(id => ({
+      type: 'division-areas',
+      id: `area-${id}`,
+      attributes: {
+        divisionId: id,
+        variant: 'saanseoi',
+        geometry: polygon,
+      },
+    })),
+    meta: {
+      apiReleaseSet: release,
+      apiCatalogRevision: 'catalogue-1',
+      schemaVersion: 'sv-division-v1',
+      inventory: 'saanseoi',
+      domain: 'geographic',
+      page: { limit: 10, offset, total },
+    },
+  }
+}
+
+describe('complete division catalogue', () => {
+  it('publishes all pages without Features and keeps unused definitions through refresh', async () => {
+    const s = setup(false)
+    s.sqlite.exec(
+      "UPDATE divisionRefresh SET appliedRelease='r2',checkedMonth='2026-09'",
+    )
+    const fetcher = vi.fn(async (input: URL | RequestInfo) => {
+      const url = new URL(String(input))
+      expect(url.searchParams.get('releaseSet')).toBe('r2')
+      expect(url.searchParams.get('include')).toBe('areas:saanseoi')
+      const offset = Number(url.searchParams.get('page[offset]'))
+      if (offset) expect(url.searchParams.get('catalogRevision')).toBe('catalogue-1')
+      return Response.json(cataloguePage(offset))
+    })
+    await s.tick(fetcher) // initialize
+    await s.tick(fetcher) // first page
+    expect(s.count('divisionDefinition')).toBe(0)
+    expect(s.count('divisionCatalogueStage')).toBe(10)
+    await s.tick(fetcher) // last page remains private
+    expect(s.count('divisionDefinition')).toBe(0)
+    await s.tick(fetcher) // publish
+    expect(s.count('divisionDefinition')).toBe(12)
+    expect(s.count('divisionI18n')).toBe(12)
+    expect(s.count('divisionCatalogueStage')).toBe(0)
+    const attributes = JSON.parse(
+      s.sqlite
+        .prepare("SELECT attributes FROM divisionDefinition WHERE id='hood-0'")
+        .get()?.attributes as string,
+    )
+    expect(attributes.membershipGeometry).toEqual([{ geometry: polygon }])
+    s.sqlite.exec("UPDATE divisionRefresh SET targetRelease='r2',phase='geocode'")
+    await s.tick(fetcher)
+    expect(s.count('divisionDefinition')).toBe(12)
+    expect(s.count('featureDivisionMembership')).toBe(0)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+
+  it('resumes failed final publication atomically without refetching or losing old references', async () => {
+    const s = setup(false)
+    s.sqlite.exec(`UPDATE divisionRefresh SET appliedRelease='r2',catalogueRelease='r1',checkedMonth='2026-09';
+      INSERT INTO divisionDefinition VALUES('retired','r1','{"class":"neighbourhood","names":{}}');`)
+    const fetcher = vi.fn(async () => Response.json(cataloguePage(0, 1)))
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    s.sqlite.exec(
+      `CREATE TRIGGER reject_catalogue BEFORE INSERT ON divisionDefinition BEGIN SELECT RAISE(ABORT,'injected'); END;`,
+    )
+    await expect(s.tick(fetcher)).rejects.toThrow('injected')
+    expect(s.count('divisionDefinition')).toBe(1)
+    expect(
+      s.sqlite.prepare('SELECT catalogueRelease FROM divisionRefresh').get()
+        ?.catalogueRelease,
+    ).toBe('r1')
+    s.sqlite.exec('DROP TRIGGER reject_catalogue')
+    await s.tick(fetcher)
+    expect(s.count('divisionDefinition')).toBe(2)
+    expect(
+      s.sqlite.prepare('SELECT catalogueRelease FROM divisionRefresh').get()
+        ?.catalogueRelease,
+    ).toBe('r2')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['release', 'total', 'offset', 'area', 'duplicate', 'revision'])(
+    'rejects invalid %s pages without advancing',
+    async kind => {
+      const s = setup(false)
+      s.sqlite.exec(
+        "UPDATE divisionRefresh SET appliedRelease='r2',checkedMonth='2026-09'",
+      )
+      await s.tick(async () => {
+        throw new Error('unexpected fetch')
+      })
+      await s.tick(async () => Response.json(cataloguePage()))
+      const next = cataloguePage(10)
+      if (kind === 'release') next.meta.apiReleaseSet = 'r3'
+      if (kind === 'revision') next.meta.apiCatalogRevision = 'catalogue-2'
+      if (kind === 'total') next.meta.page.total = 13
+      if (kind === 'offset') next.meta.page.offset = 0
+      if (kind === 'area') next.included = []
+      if (kind === 'duplicate') {
+        next.data[1] = next.data[0]
+        next.included[1] = next.included[0]
+      }
+      await expect(s.tick(async () => Response.json(next))).rejects.toThrow()
+      expect(s.count('divisionDefinition')).toBe(0)
+      expect(s.count('divisionCatalogueStage')).toBe(10)
+      expect(
+        s.sqlite.prepare('SELECT catalogueOffset FROM divisionRefresh').get()
+          ?.catalogueOffset,
+      ).toBe(10)
+    },
+  )
+
+  it('retains point-only definitions without inventing polygon territory', async () => {
+    const s = setup(false)
+    s.sqlite.exec(
+      "UPDATE divisionRefresh SET appliedRelease='r2',checkedMonth='2026-09'",
+    )
+    const page = cataloguePage(0, 1)
+    const pointOnly = {
+      ...page,
+      included: undefined,
+      data: page.data.map(row => ({ ...row, relationships: {} })),
+    }
+    await s.tick(async () => Response.json(pointOnly))
+    await s.tick(async () => Response.json(pointOnly))
+    await s.tick(async () => Response.json(pointOnly))
+    const attributes = JSON.parse(
+      s.sqlite.prepare('SELECT attributes FROM divisionDefinition').get()
+        ?.attributes as string,
+    )
+    expect(attributes.membershipGeometry).toEqual([])
+    expect(attributes.membershipGeometryExternal).toBe(false)
+  })
+
+  it('publishes oversized MultiPolygons in bounded exact parts', async () => {
+    const s = setup(false)
+    s.sqlite.exec(
+      "UPDATE divisionRefresh SET appliedRelease='r2',checkedMonth='2026-09'",
+    )
+    const ring = Array.from({ length: 16000 }, (_, i) => [
+      114 + i / 100000,
+      22 + i / 100000,
+    ])
+    ring.push(ring[0])
+    const geometry = {
+      type: 'MultiPolygon',
+      coordinates: Array.from({ length: 6 }, () => [ring]),
+    }
+    const page = cataloguePage(0, 1)
+    const large = {
+      ...page,
+      included: page.included.map(row => ({
+        ...row,
+        attributes: { ...row.attributes, geometry },
+      })),
+    }
+    await s.tick(async () => Response.json(large))
+    await s.tick(async () => Response.json(large))
+    expect(s.count('divisionGeometryPart')).toBe(0)
+    expect(s.count('divisionGeometryStage')).toBeGreaterThan(1)
+    await s.tick(async () => Response.json(large))
+    const attributes = JSON.parse(
+      s.sqlite.prepare('SELECT attributes FROM divisionDefinition').get()
+        ?.attributes as string,
+    )
+    expect(attributes.membershipGeometry).toEqual([])
+    expect(attributes.membershipGeometryExternal).toBe(true)
+    const parts = s.sqlite
+      .prepare('SELECT geometries FROM divisionGeometryPart ORDER BY part')
+      .all()
+    for (const part of parts)
+      expect(Buffer.byteLength(part.geometries as string)).toBeLessThanOrEqual(
+        1_500_000,
+      )
+    expect(
+      parts.flatMap(part =>
+        JSON.parse(part.geometries as string).map(
+          (polygon: { coordinates: number[][][] }) => polygon.coordinates,
+        ),
+      ),
+    ).toEqual(geometry.coordinates)
+    expect(s.count('divisionGeometryStage')).toBe(0)
+  })
+
+  it('fences catalogue pages when lease ownership changes during the API request', async () => {
+    const s = setup(false)
+    s.sqlite.exec(
+      "UPDATE divisionRefresh SET appliedRelease='r2',checkedMonth='2026-09'",
+    )
+    await s.tick(async () => {
+      throw new Error('unexpected fetch')
+    })
+    await s.tick(async () => {
+      s.sqlite.exec("UPDATE divisionRefresh SET lease='other-owner'")
+      return Response.json(cataloguePage())
+    })
+    expect(s.count('divisionCatalogueStage')).toBe(0)
+    expect(
+      s.sqlite.prepare('SELECT catalogueOffset FROM divisionRefresh').get()
+        ?.catalogueOffset,
+    ).toBe(0)
+  })
+})
 
 describe('division refresh', () => {
   it('maintains memberships through real feature creation and optimistic geometry writes', async () => {
@@ -711,48 +947,29 @@ describe('division refresh', () => {
     expect(s.count('featureDivisionMembership')).toBe(0)
   })
 
-  it('refreshes used names and variants without geocoding or mirroring unused divisions', async () => {
+  it('keeps change-feed metadata private until the complete catalogue is published', async () => {
     const s = setup()
     s.add('a')
     await s.tick(async () => Response.json(geocoded(['village'], 'r1')))
     await s.tick(async () => Response.json(geocoded(['village'], 'r1')))
     s.sqlite.exec("UPDATE divisionRefresh SET phase='changes'")
-    const renamed = change({
-      canAffectGeocodingMembership: false,
-      after: {
-        ...definition(),
-        attributes: {
-          ...member('village'),
-          names: {
-            en: { name: 'New name', nameAlts: ['Alias'] },
-            'zh-hant': { name: '新名' },
-          },
-        },
-      },
-    })
-    const unused = change({
-      id: 'unused-change',
-      divisionId: 'unused',
-      canAffectGeocodingMembership: false,
-    })
-    const fetcher = vi.fn<
-      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
-    >(async () => Response.json(page([renamed, unused])))
-    await s.tick(fetcher)
-    for (let index = 0; index < 4; index++) await s.tick(fetcher)
-    expect(fetcher).toHaveBeenCalledTimes(1)
-    expect(s.count('divisionDefinition')).toBe(1)
-    expect(
-      s.sqlite
-        .prepare("SELECT name,namedValues FROM divisionI18n WHERE locale='en'")
-        .get(),
-    ).toMatchObject({
-      name: 'New name',
-      namedValues: JSON.stringify({ name: 'New name', nameAlts: ['Alias'] }),
-    })
+    await s.tick(async () =>
+      Response.json(
+        page([
+          change({
+            canAffectGeocodingMembership: false,
+            after: {
+              ...definition(),
+              attributes: { ...member('village'), names: { en: { name: 'New name' } } },
+            },
+          }),
+        ]),
+      ),
+    )
     expect(
       s.sqlite.prepare("SELECT name FROM divisionI18n WHERE locale='en'").get()?.name,
-    ).toBe('New name')
+    ).toBe('village')
+    expect(s.count('divisionRefreshChange')).toBe(1)
   })
 
   it('includes polygon boundaries and excludes hole interiors', () => {

@@ -3179,3 +3179,37 @@ Location merge dependency evidence includes intermediate membership revisions an
 canonical endpoint mappings. A graph change invalidates the prior review before a merge
 can introduce a transitive membership cycle. Feature split execution retains its
 existing atomic retirement, unpublished successors, and explicit redirect choice.
+
+## Complete geographic catalogue (10 November 2026; Refs #194)
+
+The division mirror is a complete SaanSeoi geographic inventory, independent of Feature
+memberships. An unused division must remain available for a new marker, locality
+selection and polygon highlighting. Migration `0208_complete_division_catalogue.sql`
+adds separate catalogue completeness and staging state to the fenced refresh worker.
+Existing partial mirrors repair automatically, even when no Feature jobs are queued.
+
+The worker imports bounded pages pinned to both the selected release and API catalogue
+revision, validates page totals and area relationships, then publishes definitions,
+translations and polygons atomically. Incomplete or failed imports retain the previous
+catalogue. Change-feed scanning still schedules affected Features, but does not publish
+partial definition changes. Feature geocoding cannot overwrite catalogue metadata.
+Retired definitions remain for existing references; marker lookup uses the published
+catalogue release. Point labels never imply polygon membership.
+
+Large MultiPolygons are split at polygon boundaries into exact parts below D1's row
+limit. Marker lookup transfers polygon data only for candidate bounds; the complete
+locality choice list remains available. No coordinate simplification is applied.
+
+Local repair uses `scripts/backfill-feature-divisions.ts --catalogue-only --apply` with
+an explicit `--database` and API credential environment. It creates a consistent SQLite
+backup, applies the catalogue migration and leaves Feature records, memberships and
+pending jobs unchanged. Run on a copied database first. Apply the migration before
+shipping the updated application and refresh worker; remote deployment is separate.
+
+Verification: `division-refresh.test.ts` covers pagination, pinning, partial
+publication, retry, lease fencing, no-polygon records, oversized exact polygon parts and
+unused catalogue retention. `address-division-context.test.ts` covers retired-definition
+exclusion; `prepare-local-divisions.test.ts` requires catalogue completeness even with
+an empty Feature queue. Local rehearsal imported all 2,000 records from
+`data-hk-divisions-2026-10-01.0`; the marker at `114.25234466277902, 22.230438757464853`
+resolves to Shek O and Shek O Village.

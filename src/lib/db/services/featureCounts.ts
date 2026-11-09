@@ -131,7 +131,7 @@ export async function getFeatureQueryCounts(
         string | null
       >`json_extract(${divisionDefinition.attributes}, '$.divisionCode')`,
       hasGeometry:
-        sql<number>`coalesce(json_array_length(json_extract(${divisionDefinition.attributes}, '$.membershipGeometry')), 0) > 0`.mapWith(
+        sql<number>`(coalesce(json_array_length(json_extract(${divisionDefinition.attributes}, '$.membershipGeometry')), 0) > 0 OR coalesce(json_extract(${divisionDefinition.attributes}, '$.membershipGeometryExternal'), 0))`.mapWith(
           Boolean,
         ),
       level: sql<

@@ -5,6 +5,7 @@ import type { D1Database } from '@cloudflare/workers-types'
 
 type DivisionState = {
   phase: string
+  catalogueRelease: string | null
   appliedRelease: string | null
   checkedMonth: string | null
 }
@@ -50,7 +51,7 @@ export async function prepareDivisions(
   for (let step = 0; step <= 10_000; step++) {
     const state = await db
       .prepare(
-        'SELECT phase,appliedRelease,checkedMonth FROM divisionRefresh WHERE id=1',
+        'SELECT phase,appliedRelease,catalogueRelease,checkedMonth FROM divisionRefresh WHERE id=1',
       )
       .first<DivisionState>()
     const pending = await db
@@ -63,6 +64,7 @@ export async function prepareDivisions(
     if (
       state.phase === 'idle' &&
       state.appliedRelease &&
+      state.catalogueRelease === state.appliedRelease &&
       state.checkedMonth === month &&
       pending.count === 0
     ) {

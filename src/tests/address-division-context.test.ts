@@ -16,7 +16,7 @@ function setup() {
   const sqlite = new DatabaseSync(':memory:')
   databases.push(sqlite)
   sqlite.exec(
-    'CREATE TABLE divisionDefinition(id TEXT PRIMARY KEY,apiReleaseSet TEXT,attributes TEXT)',
+    'CREATE TABLE divisionRefresh(id INTEGER PRIMARY KEY,catalogueRelease TEXT); CREATE TABLE divisionDefinition(id TEXT PRIMARY KEY,apiReleaseSet TEXT,attributes TEXT)',
   )
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => {
@@ -53,7 +53,7 @@ function setup() {
       }),
     )
   }
-  return { db, insert }
+  return { db, insert, sqlite }
 }
 const square = {
   type: 'Polygon',
@@ -76,6 +76,17 @@ const square = {
 }
 
 describe('mirrored address geography', () => {
+  it('excludes retired definitions while preserving them for existing references', async () => {
+    const { db, insert, sqlite } = setup()
+    insert('current', 'neighbourhood', square)
+    insert('retired', 'neighbourhood', square)
+    sqlite.exec(
+      "UPDATE divisionDefinition SET apiReleaseSet='old' WHERE id='retired'; INSERT INTO divisionRefresh VALUES(1,'release')",
+    )
+    const result = await readAddressDivisionContext(db, [1, 1])
+    expect(result.memberships.map(item => item.id)).toEqual(['current'])
+    expect(result.options.map(item => item.id)).toEqual(['current'])
+  })
   it('retains separate ancestry and resolves island groups even without a group polygon', async () => {
     const { db, insert } = setup()
     const ancestry = {
