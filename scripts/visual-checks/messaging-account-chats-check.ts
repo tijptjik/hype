@@ -1,10 +1,7 @@
 // NODE
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { createRequire } from 'node:module'
-// BROWSER
-const { chromium, firefox } = (await import(
-  createRequire(import.meta.resolve('@playwright/test')).resolve('playwright')
-)) as Pick<typeof import('@playwright/test'), 'chromium' | 'firefox'>
+// BROWSER CHECKS
+import { browserCases } from './lib/browser-cases'
 
 // Render the real inbox, runtimes and composer with synthetic account APIs; no provider is contacted.
 const init = `
@@ -49,200 +46,188 @@ const api =
   names.map(name => `export const ${name}=${custom[name] ?? 'unavailable'};`).join('\n')
 await mkdir('output/playwright', { recursive: true })
 const results: object[] = []
-for (const [browserName, engine] of [
-  ['chromium', chromium],
-  ['firefox', firefox],
-] as const) {
-  const browser = await engine.launch()
-  try {
-    for (const width of [1120, 320]) {
-      console.log(browserName, width, 'checking account chats')
-      const page = await browser.newPage({ viewport: { width, height: 960 } })
-      page.setDefaultTimeout(15000)
-      const errors: string[] = []
-      page.on('pageerror', error => errors.push(error.stack || error.message))
-      await page.addInitScript({ content: init })
-      await page.route('**/src/lib/api/messaging.remote.ts*', route =>
-        route.fulfill({ contentType: 'text/javascript', body: api }),
-      )
-      await page.route('**/src/lib/api/messagingAppearance.remote.ts*', route =>
-        route.fulfill({
+for await (const { name: browserName, browser } of browserCases()) {
+  for (const width of [1120, 320]) {
+    console.log(browserName, width, 'checking account chats')
+    const page = await browser.newPage({ viewport: { width, height: 960 } })
+    page.setDefaultTimeout(15000)
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.stack || error.message))
+    await page.addInitScript({ content: init })
+    await page.route('**/src/lib/api/messaging.remote.ts*', route =>
+      route.fulfill({ contentType: 'text/javascript', body: api }),
+    )
+    await page.route('**/src/lib/api/messagingAppearance.remote.ts*', route =>
+      route.fulfill({
+        contentType: 'text/javascript',
+        body: `import {DEFAULT_CHAT_APPEARANCE} from '/src/lib/messaging/appearance.ts';export const getMessagingAppearance=()=>Object.assign(Promise.resolve(DEFAULT_CHAT_APPEARANCE),{refresh:async()=>{}});export const setMessagingAppearance=async({appearance})=>appearance;`,
+      }),
+    )
+    for (const context of ['admin', 'root'])
+      await page.route(`**/src/lib/context/${context}.svelte.ts*`, async route => {
+        if (route.request().url().includes('fixture-original')) return route.continue()
+        const getter =
+          context === 'admin'
+            ? 'export const getAdminCtx=()=>({view:{scope:window.threadFixture.scope}})'
+            : "export const getRootCTX=()=>({user:{id:'synthetic-operator'}})"
+        return route.fulfill({
           contentType: 'text/javascript',
-          body: `import {DEFAULT_CHAT_APPEARANCE} from '/src/lib/messaging/appearance.ts';export const getMessagingAppearance=()=>Object.assign(Promise.resolve(DEFAULT_CHAT_APPEARANCE),{refresh:async()=>{}});export const setMessagingAppearance=async({appearance})=>appearance;`,
-        }),
-      )
-      for (const context of ['admin', 'root'])
-        await page.route(`**/src/lib/context/${context}.svelte.ts*`, async route => {
-          if (route.request().url().includes('fixture-original'))
-            return route.continue()
-          const getter =
-            context === 'admin'
-              ? 'export const getAdminCtx=()=>({view:{scope:window.threadFixture.scope}})'
-              : "export const getRootCTX=()=>({user:{id:'synthetic-operator'}})"
-          return route.fulfill({
-            contentType: 'text/javascript',
-            body: `export * from '/src/lib/context/${context}.svelte.ts?fixture-original';${getter};`,
-          })
+          body: `export * from '/src/lib/context/${context}.svelte.ts?fixture-original';${getter};`,
         })
-      await page.route('**/__messaging-account-chats.html', route =>
-        route.fulfill({
-          contentType: 'text/html',
-          body: '<!doctype html><html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/messagingThreadsCheck.ts"></script></body></html>',
-        }),
-      )
-      await page.route('**/_app/remote/**', route => {
-        errors.push('Unexpected remote request')
-        return route.abort()
       })
-      await page.goto('http://127.0.0.1:4173/__messaging-account-chats.html')
-      const nav = page.getByRole('navigation', { name: 'Conversations', exact: true })
-      const mina = nav
-        .getByRole('button')
-        .filter({ has: page.getByText('Mina Ho', { exact: true }) })
-      try {
-        await mina.waitFor()
-      } catch (cause) {
-        console.error({ errors, text: await page.locator('body').innerText() })
-        throw cause
-      }
-      if (!(await mina.locator('[class*=ring-red-]').count()))
-        throw new Error('Unlinked native contact is not labelled')
-      const linked = nav
-        .getByRole('button')
-        .filter({ has: page.getByText('HYPE Member', { exact: true }) })
-      if ((await linked.innerText()).includes('Not linked to HYPE'))
-        throw new Error('Linked HYPE member mislabelled')
-      const group = nav
-        .getByRole('button')
-        .filter({ has: page.getByText('Delivery Team', { exact: true }) })
-      if (!(await group.innerText()).includes('Group / channel'))
-        throw new Error('Group missing distinct label')
-      await mina.click()
-      const chat = page.getByRole('region', { name: 'Conversation', exact: true })
-      await chat.getByText('Not linked to HYPE', { exact: true }).waitFor()
-      await chat.getByText('Telegram @native_handle', { exact: true }).waitFor()
-      await page
+    await page.route('**/__messaging-account-chats.html', route =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: '<!doctype html><html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/messagingThreadsCheck.ts"></script></body></html>',
+      }),
+    )
+    await page.route('**/_app/remote/**', route => {
+      errors.push('Unexpected remote request')
+      return route.abort()
+    })
+    await page.goto('http://127.0.0.1:4173/__messaging-account-chats.html')
+    const nav = page.getByRole('navigation', { name: 'Conversations', exact: true })
+    const mina = nav
+      .getByRole('button')
+      .filter({ has: page.getByText('Mina Ho', { exact: true }) })
+    try {
+      await mina.waitFor()
+    } catch (cause) {
+      console.error({ errors, text: await page.locator('body').innerText() })
+      throw cause
+    }
+    if (!(await mina.locator('[class*=ring-red-]').count()))
+      throw new Error('Unlinked native contact is not labelled')
+    const linked = nav
+      .getByRole('button')
+      .filter({ has: page.getByText('HYPE Member', { exact: true }) })
+    if ((await linked.innerText()).includes('Not linked to HYPE'))
+      throw new Error('Linked HYPE member mislabelled')
+    const group = nav
+      .getByRole('button')
+      .filter({ has: page.getByText('Delivery Team', { exact: true }) })
+    if (!(await group.innerText()).includes('Group / channel'))
+      throw new Error('Group missing distinct label')
+    await mina.click()
+    const chat = page.getByRole('region', { name: 'Conversation', exact: true })
+    await chat.getByText('Not linked to HYPE', { exact: true }).waitFor()
+    await chat.getByText('Telegram @native_handle', { exact: true }).waitFor()
+    await page
+      .getByRole('textbox', { name: 'Message', exact: true })
+      .fill('Keep this native chat draft')
+    const search = page.getByRole('textbox', {
+      name: 'Search chats and HYPE users',
+      exact: true,
+    })
+    await search.fill('Mina')
+    await mina.waitFor()
+    if (await linked.count()) throw new Error('Local native chat search did not filter')
+    await search.fill('')
+    await page.getByRole('button', { name: 'Load more chats', exact: true }).click()
+    await nav.getByText('Older Telegram Contact', { exact: true }).waitFor()
+    if (
+      (await page
         .getByRole('textbox', { name: 'Message', exact: true })
-        .fill('Keep this native chat draft')
-      const search = page.getByRole('textbox', {
-        name: 'Search chats and HYPE users',
+        .inputValue()) !== 'Keep this native chat draft'
+    )
+      throw new Error('Loading more chats discarded draft')
+    await group.click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Pin chat', exact: true }).click()
+    await page.waitForFunction(() =>
+      document
+        .querySelector('nav[aria-label="Conversations"] button')
+        ?.textContent?.includes('Delivery Team'),
+    )
+    if (
+      (await page
+        .getByRole('textbox', { name: 'Message', exact: true })
+        .inputValue()) !== 'Keep this native chat draft'
+    )
+      throw new Error('Pinning changed selection or discarded draft')
+    if (
+      !(await mina.innerText()).includes('Preview for external-tg') ||
+      !(await linked.innerText()).includes('Preview for linked-tg')
+    )
+      throw new Error('Chat previews crossed identities')
+    await page.reload()
+    await group.waitFor()
+    await page.waitForFunction(() =>
+      document
+        .querySelector('nav[aria-label="Conversations"] button')
+        ?.textContent?.includes('Delivery Team'),
+    )
+    await group.click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Unpin chat', exact: true }).click()
+    await page.waitForFunction(() =>
+      document
+        .querySelector('nav[aria-label="Conversations"] button')
+        ?.textContent?.includes('HYPE Member'),
+    )
+    await mina.click()
+    await nav.evaluate(element => {
+      element.scrollTop = 0
+    })
+    if (width < 600) await mina.scrollIntoViewIfNeeded()
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+      throw new Error('Inbox overflows horizontally')
+    const screenshot = `output/playwright/${browserName}-messaging-account-chats-${width}.png`
+    await page.screenshot({
+      path: screenshot,
+      fullPage: true,
+      animations: 'disabled',
+    })
+    const externalWa = nav.getByRole('button').filter({
+      has: page.getByText('Long Native Contact Name That Must Remain Readable', {
+        exact: true,
+      }),
+    })
+    await externalWa.click()
+    await page
+      .getByRole('heading', {
+        name: 'Long Native Contact Name That Must Remain Readable',
         exact: true,
       })
-      await search.fill('Mina')
-      await mina.waitFor()
-      if (await linked.count())
-        throw new Error('Local native chat search did not filter')
-      await search.fill('')
-      await page.getByRole('button', { name: 'Load more chats', exact: true }).click()
-      await nav.getByText('Older Telegram Contact', { exact: true }).waitFor()
-      if (
-        (await page
-          .getByRole('textbox', { name: 'Message', exact: true })
-          .inputValue()) !== 'Keep this native chat draft'
+      .waitFor()
+    const senderHeader = chat.locator('header[title="Synthetic Operator"]')
+    await senderHeader.getByText('Synthetic Organisation', { exact: true }).waitFor()
+    if (
+      (await senderHeader.innerText()).includes('WhatsApp') ||
+      (await senderHeader.innerText()).includes('Synthetic Operator')
+    )
+      throw new Error(
+        'Outgoing header exposes account or operator instead of organisation',
       )
-        throw new Error('Loading more chats discarded draft')
-      await group.click({ button: 'right' })
-      await page.getByRole('menuitem', { name: 'Pin chat', exact: true }).click()
-      await page.waitForFunction(() =>
-        document
-          .querySelector('nav[aria-label="Conversations"] button')
-          ?.textContent?.includes('Delivery Team'),
-      )
-      if (
-        (await page
-          .getByRole('textbox', { name: 'Message', exact: true })
-          .inputValue()) !== 'Keep this native chat draft'
-      )
-        throw new Error('Pinning changed selection or discarded draft')
-      if (
-        !(await mina.innerText()).includes('Preview for external-tg') ||
-        !(await linked.innerText()).includes('Preview for linked-tg')
-      )
-        throw new Error('Chat previews crossed identities')
-      await page.reload()
-      await group.waitFor()
-      await page.waitForFunction(() =>
-        document
-          .querySelector('nav[aria-label="Conversations"] button')
-          ?.textContent?.includes('Delivery Team'),
-      )
-      await group.click({ button: 'right' })
-      await page.getByRole('menuitem', { name: 'Unpin chat', exact: true }).click()
-      await page.waitForFunction(() =>
-        document
-          .querySelector('nav[aria-label="Conversations"] button')
-          ?.textContent?.includes('HYPE Member'),
-      )
-      await mina.click()
-      await nav.evaluate(element => {
-        element.scrollTop = 0
-      })
-      if (width < 600) await mina.scrollIntoViewIfNeeded()
-      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
-        throw new Error('Inbox overflows horizontally')
-      const screenshot = `output/playwright/${browserName}-messaging-account-chats-${width}.png`
-      await page.screenshot({
-        path: screenshot,
-        fullPage: true,
-        animations: 'disabled',
-      })
-      const externalWa = nav.getByRole('button').filter({
-        has: page.getByText('Long Native Contact Name That Must Remain Readable', {
-          exact: true,
-        }),
-      })
-      await externalWa.click()
-      await page
-        .getByRole('heading', {
-          name: 'Long Native Contact Name That Must Remain Readable',
-          exact: true,
-        })
-        .waitFor()
-      const senderHeader = chat.locator('header[title="Synthetic Operator"]')
-      await senderHeader.getByText('Synthetic Organisation', { exact: true }).waitFor()
-      if (
-        (await senderHeader.innerText()).includes('WhatsApp') ||
-        (await senderHeader.innerText()).includes('Synthetic Operator')
-      )
-        throw new Error(
-          'Outgoing header exposes account or operator instead of organisation',
-        )
-      await senderHeader.hover()
-      await page
-        .getByRole('textbox', { name: 'Message', exact: true })
-        .fill('Synthetic native reply')
-      await page.getByRole('button', { name: 'Send message', exact: true }).click()
-      await page.waitForFunction(() =>
-        Boolean(
-          (window as any).threadFixture.events.find(
-            (event: any) => event.kind === 'send',
-          ),
-        ),
-      )
-      const sent = await page.evaluate(() =>
+    await senderHeader.hover()
+    await page
+      .getByRole('textbox', { name: 'Message', exact: true })
+      .fill('Synthetic native reply')
+    await page.getByRole('button', { name: 'Send message', exact: true }).click()
+    await page.waitForFunction(() =>
+      Boolean(
         (window as any).threadFixture.events.find(
           (event: any) => event.kind === 'send',
         ),
-      )
-      if (sent.accountId !== 'whatsapp' || sent.request.to !== '123456789@lid')
-        throw new Error('Native alias redirected the existing chat route')
-      await externalWa.click({ button: 'right' })
-      await page.getByRole('menuitem', { name: 'Archive thread', exact: true }).click()
-      await externalWa.waitFor({ state: 'hidden' })
-      await page.getByRole('button', { name: 'Archived', exact: true }).click()
-      await externalWa.waitFor()
-      if (errors.length) throw new Error(errors.join('\n'))
-      results.push({
-        browser: browserName,
-        width,
-        screenshot,
-        checks:
-          'persistent pins, unpin order, distinct previews, avatar rings, native discovery, linked/unlinked labels, group label, search, pagination, draft preservation, native LID send, archive',
-      })
-      await page.close()
-    }
-  } finally {
-    await browser.close()
+      ),
+    )
+    const sent = await page.evaluate(() =>
+      (window as any).threadFixture.events.find((event: any) => event.kind === 'send'),
+    )
+    if (sent.accountId !== 'whatsapp' || sent.request.to !== '123456789@lid')
+      throw new Error('Native alias redirected the existing chat route')
+    await externalWa.click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Archive thread', exact: true }).click()
+    await externalWa.waitFor({ state: 'hidden' })
+    await page.getByRole('button', { name: 'Archived', exact: true }).click()
+    await externalWa.waitFor()
+    if (errors.length) throw new Error(errors.join('\n'))
+    results.push({
+      browser: browserName,
+      width,
+      screenshot,
+      checks:
+        'persistent pins, unpin order, distinct previews, avatar rings, native discovery, linked/unlinked labels, group label, search, pagination, draft preservation, native LID send, archive',
+    })
+    await page.close()
   }
 }
 await writeFile(
