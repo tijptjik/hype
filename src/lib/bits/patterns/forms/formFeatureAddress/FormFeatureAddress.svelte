@@ -632,7 +632,7 @@ $effect(() => {
   class="select-none [&_input]:select-text [&_textarea]:select-text {fixedMap
     ? hideDetails
       ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-      : 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3'
+      : 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain'
     : ''}"
   data-address-scroll
 >
@@ -806,7 +806,7 @@ $effect(() => {
       style:column-gap={isEditing && showAddressDetails ? `${columnGap}px` : undefined}
       class="relative grid w-full min-w-0 max-w-full items-stretch gap-y-8 overflow-visible border-t border-border/60 px-6 transition-[grid-template-columns] duration-250 motion-reduce:transition-none {isEditing &&
       showAddressDetails
-        ? 'min-h-120'
+        ? 'min-h-120 flex-1'
         : 'py-5 lg:grid-cols-2 lg:gap-x-10'}"
       data-address-editor-layout
     >

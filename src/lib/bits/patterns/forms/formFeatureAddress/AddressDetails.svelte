@@ -90,7 +90,7 @@ import type { AccessibilityDraft } from '#lib/locations/accessibility.js'
 import type { AddressDivision } from '#lib/addresses/divisions.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { EditableAddressField } from '#lib/addresses/addressExpressions.js'
-import type { LocaleKey } from '#lib/types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
 import type { FloorType } from '#lib/addresses/address3d.js'
 
 let {
@@ -744,6 +744,41 @@ onMount(() => {
       console.error(`Could not preload ${family} names`, error),
     )
 })
+/** Translate the Part from one source into its empty languages without replacing edits made in flight.
+ * @param source Source language selected beside the Part heading.
+ * @returns Resolves after all missing translations have been applied together.
+ */
+async function translatePart(source: Locale): Promise<void> {
+  const originalAddress = address
+  const generation = translationGeneration
+  const sourceKey = toLocaleKey(source)
+  const text = addressComponentValue(address, sourceKey, 'unitPortion')
+  const targets = activeLocales.filter(
+    locale =>
+      locale !== sourceKey &&
+      !addressComponentValue(address, locale, 'unitPortion').trim(),
+  )
+  // Gather translations before updating the draft so a partial response cannot invalidate another target.
+  const results = await Promise.all(
+    targets.map(async locale => {
+      const [translated] = await translateText(source, ADDRESS_LOCALES[locale], [text])
+      return { locale, translated }
+    }),
+  )
+  // Preserve any Part edits made while the translation was in flight.
+  if (
+    !translationActive ||
+    !isEditing ||
+    generation !== translationGeneration ||
+    address !== originalAddress
+  )
+    return
+  let next = address
+  for (const { locale, translated } of results) {
+    if (translated) next = setAddressExpression(next, locale, 'unitPortion', translated)
+  }
+  onChange(next)
+}
 </script>
 
 {#snippet fieldAction(
@@ -943,7 +978,7 @@ onMount(() => {
     <div
       class="min-w-0 {partsOverlay
         ? 'z-30 overflow-visible'
-        : 'border-border/60 bg-muted/20 -ml-6 overflow-hidden border-r pl-6'} {hasAvailableParts
+        : 'border-border/60 bg-muted/20 -ml-6 overflow-clip border-r pl-6'} {hasAvailableParts
         ? ''
         : 'hidden'}"
       inert={!hasAvailableParts}
@@ -954,16 +989,14 @@ onMount(() => {
       <section
         class="flex min-w-0 flex-col gap-6 {partsOverlay
           ? 'absolute left-0 top-3 z-30 w-80 rounded-lg border border-border bg-panel p-4 shadow-lg'
-          : 'w-80 px-4 py-5'} transition-[transform,opacity] duration-250 motion-reduce:transition-none {hasAvailableParts
+          : 'h-full w-80 px-4 pt-5'} transition-[transform,opacity] duration-250 motion-reduce:transition-none {hasAvailableParts
           ? 'translate-x-0 opacity-100'
           : '-translate-x-full opacity-0'}"
         aria-label={m.feature_address_title()}
         data-address-additions
       >
         <div class="space-y-6">
-          <div
-            class="border-border/60 flex min-h-14 items-center justify-between gap-2 border-b pb-4"
-          >
+          <div class="flex min-h-10 items-center justify-between gap-2">
             <h2 class="text-lg font-semibold">{m.feature_address_title()}</h2>
             {#if onToggleParts}
               <button
@@ -981,7 +1014,9 @@ onMount(() => {
           {@render addDetails()}
         </div>
         {#if address.association}
-          <div class="mt-auto shrink-0 pt-2">
+          <div
+            class="sticky bottom-0 mt-auto shrink-0 bg-[color-mix(in_oklab,var(--color-muted)_20%,var(--color-panel))] py-5"
+          >
             <LocationAssociationStatus value={address.association} />
           </div>
         {/if}
@@ -1101,7 +1136,7 @@ onMount(() => {
           transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
           class="col-span-6 min-w-0 space-y-4 pb-3"
         >
-          <legend class="text-muted-foreground mb-1 text-xs font-medium">
+          <legend class="sr-only">
             {m.feature_address_formattedAddress()}
           </legend>
           <div class="grid min-w-0 grid-cols-1 items-start gap-4">
@@ -1192,7 +1227,8 @@ onMount(() => {
                     : ''}"
                 >
                   <legend
-                    class="mb-1 font-medium {field === 'formattedAddress'
+                    class="mb-1 flex flex-wrap items-center gap-2 font-medium {field ===
+                    'formattedAddress'
                       ? 'text-xs text-muted-foreground'
                       : 'text-sm'}"
                   >
@@ -1209,6 +1245,28 @@ onMount(() => {
                         structured,
                       )}</span
                     >
+                    {#if field === 'unitPortion' && translations}
+                      {@const sources = activeLocales.filter(locale =>
+                        addressComponentValue(address, locale, field).trim(),
+                      )}
+                      {@const target = activeLocales.find(
+                        locale => !addressComponentValue(address, locale, field).trim(),
+                      )}
+                      {#if sources.length && target}
+                        <span class="inline-flex align-middle [&>div]:min-h-7">
+                          <FormI18nTranslationBar
+                            compact
+                            targetLocale={ADDRESS_LOCALES[target]}
+                            availableLocales={sources.map(
+                              locale => ADDRESS_LOCALES[locale],
+                            )}
+                            isEditing={true}
+                            isVisible={true}
+                            onTranslate={source => translatePart(source)}
+                          />
+                        </span>
+                      {/if}
+                    {/if}
                   </legend>
                   <!-- The fieldset legend owns the label; inline controls must not reserve a second label row. -->
                   <div
@@ -1734,66 +1792,6 @@ onMount(() => {
                                 <XIcon class="size-3" />
                               </button>
                             </aside>
-                          {/if}
-                          {#if field === 'unitPortion' && translations && !value.trim()}
-                            {@const sourceLocales = locales.filter(
-                              source =>
-                                source !== locale &&
-                                addressComponentValue(address, source, field).trim(),
-                            )}
-                            {#if sourceLocales.length}
-                              <div class="basis-full">
-                                <FormI18nTranslationBar
-                                  compact
-                                  targetLocale={ADDRESS_LOCALES[locale]}
-                                  availableLocales={sourceLocales.map(
-                                    source => ADDRESS_LOCALES[source],
-                                  )}
-                                  isEditing={true}
-                                  isVisible={true}
-                                  onTranslate={async (source, target) => {
-                                    const originalAddress = address
-                                    const generation = translationGeneration
-                                    const sourceValue = addressComponentValue(
-                                      address,
-                                      toLocaleKey(source),
-                                      field,
-                                    )
-                                    const [translated] = await translateText(
-                                      source,
-                                      target,
-                                      [sourceValue],
-                                    )
-                                    // Preserve any Part edits made while the translation was in flight.
-                                    if (
-                                      translationActive &&
-                                      isEditing &&
-                                      generation === translationGeneration &&
-                                      address === originalAddress &&
-                                      translated &&
-                                      !addressComponentValue(
-                                        address,
-                                        locale,
-                                        field,
-                                      ).trim() &&
-                                      addressComponentValue(
-                                        address,
-                                        toLocaleKey(source),
-                                        field,
-                                      ) === sourceValue
-                                    )
-                                      onChange(
-                                        setAddressExpression(
-                                          address,
-                                          locale,
-                                          field,
-                                          translated,
-                                        ),
-                                      )
-                                  }}
-                                />
-                              </div>
-                            {/if}
                           {/if}
                           {#if field === 'blockExpression'}
                             {@const block = getAddressPresentationLocale(

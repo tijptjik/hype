@@ -11,6 +11,11 @@ import Fixture from './fixtures/components/AddressDetailsFixture.svelte'
 import FormFixture from './fixtures/components/FeatureAddress3dFixture.svelte'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 import { structurePlaceAddress, setAddressName } from '#lib/addresses/nameCatalogue.js'
+vi.mock('#lib/i18n.js', async original => ({
+  ...(await original<object>()),
+  translateText: async (_source: string, target: string, values: string[]) =>
+    values.map(value => `${target}: ${value}`),
+}))
 vi.mock('#lib/api/division.remote.js', () => ({
   getAddressDivisionContext: () =>
     Promise.resolve({ available: true, memberships: [], options: [] }),
@@ -623,4 +628,31 @@ it('previews numbered address rows on hover and focus, restoring the Location on
   expect(onPreviewCandidate).toHaveBeenLastCalledWith(candidate)
   await fireEvent.blur(row)
   expect(onPreviewCandidate).toHaveBeenLastCalledWith(null)
+})
+
+it('translates empty Part languages from the single control beside its heading', async () => {
+  const initialAddress = emptyFeatureAddress()
+  initialAddress.overrides.en = { unitPortion: 'Backdoor' }
+  const view = render(FormFixture, {
+    initialAddress,
+    translations: true,
+    displayAddressInToolbar: true,
+  })
+  const heading = view
+    .getByText('Part', { selector: 'legend > span' })
+    .closest('legend')
+  if (!heading) throw new Error('Missing Part heading')
+  const source = within(heading).getByRole('button', {
+    name: 'Translate from en to zh-hant',
+  })
+  expect(source.closest('legend')).toHaveTextContent('Part')
+  expect(
+    within(heading).queryByRole('button', { name: 'Translate from en to zh-hans' }),
+  ).toBeNull()
+  await fireEvent.click(source)
+  await waitFor(() => {
+    expect(view.getByDisplayValue('zh-hant: Backdoor')).toBeInTheDocument()
+    expect(view.getByDisplayValue('zh-hans: Backdoor')).toBeInTheDocument()
+  })
+  expect(view.getByDisplayValue('Backdoor')).toBeInTheDocument()
 })

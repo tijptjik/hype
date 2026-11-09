@@ -217,11 +217,7 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
   data-address-divisions
   aria-busy={loading}
 >
-  <div
-    class="flex min-h-10 items-center justify-between gap-3 {sidebar
-      ? 'border-border/60 min-h-14 border-b pb-4'
-      : ''}"
-  >
+  <div class="flex min-h-10 items-center justify-between gap-3">
     <h2 class="text-lg font-semibold">{m.feature_address_divisions()}</h2>
     <div class="flex items-center gap-1">
       <SimpleTooltip contentProps={{ role: 'tooltip' }}>

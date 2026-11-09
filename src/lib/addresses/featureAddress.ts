@@ -509,8 +509,16 @@ export function getAddressDisplay(
         : [value.floorExpression, value.unitExpression, value.unitPortion]
             .filter(Boolean)
             .join('')))
+  // Building identities omit inherited units, but explicitly edited unit details belong in the preview.
+  const hasAuthoredUnit =
+    Boolean(address.unitDetails) ||
+    ['floorExpression', 'unitExpression', 'unitPortion'].some(key =>
+      Object.hasOwn(overrides, key),
+    )
   const displayUnit =
-    locationKind === 'building' ? '' : unitDisplayExpression(unitPart, locale)
+    locationKind === 'building' && !hasAuthoredUnit
+      ? ''
+      : unitDisplayExpression(unitPart, locale)
   const composed = displayUnit
     ? locale === 'en'
       ? [displayUnit, display].filter(Boolean).join(', ')

@@ -145,3 +145,20 @@ it('defaults to shared visibility and keeps exclusive identities organisation-pr
   // Visibility does not silently opt into upstream sharing consent.
   expect(exclusive.sharingPreference).toBe('private')
 })
+
+it('includes explicitly entered rooms in building address previews in every language', async () => {
+  const { setStructuredAddressExpression } = await import(
+    '#lib/addresses/addressExpressions.js'
+  )
+  const value = setStructuredAddressExpression(
+    address(),
+    'en',
+    'unitExpression',
+    '6',
+    'R',
+  )
+  expect(getAddressDisplay(value, 'en', [], 'building')).toContain('6')
+  expect(getAddressDisplay(value, 'zhHant', [], 'building')).toContain('6')
+  expect(getAddressDisplay(value, 'zhHans', [], 'building')).toContain('6')
+  expect(getAddressDisplay(value, 'en', [], 'building')).toContain('Rm 6')
+})
