@@ -1474,8 +1474,8 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           {@render addDetails()}
         </div>
         {#if address.association}
-          <!-- Keep metadata in flow: short panels scroll it below the controls instead of covering them. -->
-          <div class="mt-auto shrink-0 py-5">
+          <!-- Keep metadata in flow at the bottom-right of the Address sidebar. -->
+          <div class="mt-auto flex justify-end py-5 text-right">
             <LocationAssociationStatus value={address.association} />
           </div>
         {/if}
@@ -2701,6 +2701,12 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           startEditing={accessibilityAdded}
         />
       {/key}
+    </div>
+  {/if}
+  {#if isEditing && !splitColumns && address.association}
+    <!-- Keep metadata in flow and away from the left-side profile navigation. -->
+    <div class="mt-auto flex justify-end py-5 text-right">
+      <LocationAssociationStatus value={address.association} />
     </div>
   {/if}
 </section>
