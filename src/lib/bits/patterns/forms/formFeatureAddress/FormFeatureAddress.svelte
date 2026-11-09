@@ -839,7 +839,7 @@ $effect(() => {
         ? independentScroll
           ? 'min-h-0 flex-1 grid-rows-[minmax(0,1fr)]'
           : 'min-h-120 flex-1'
-        : 'py-5 lg:grid-cols-2 lg:gap-x-10'}"
+        : 'shrink-0 pt-5 pb-[320px] lg:grid-cols-2 lg:gap-x-10'}"
       data-address-editor-layout
     >
       {#if showAddressDetails}
