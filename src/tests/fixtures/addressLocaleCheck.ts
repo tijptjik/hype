@@ -15,12 +15,16 @@ address = {
     en: {
       ...address.overrides.en,
       unitPortion: 'Side door',
+      blockType: 'block',
+      blockRef: 'A',
       phaseExpression: 'Phase 2',
       premisesName: 'Test Estate',
     },
     'zh-hant': {
       ...address.overrides['zh-hant'],
       unitPortion: '側門',
+      blockType: 'building',
+      blockRef: '華冠',
       phaseExpression: '二期',
       premisesName: '測試屋苑',
     },
