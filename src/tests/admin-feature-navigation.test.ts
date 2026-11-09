@@ -57,6 +57,21 @@ function setup(): { admin: AdminCtx; view: ResourceViewCtx } {
 }
 
 describe('admin Feature list traversal', () => {
+  it('shares the server total instead of loaded rows and invalidates changed filters', () => {
+    const { admin, view } = setup()
+    expect(admin.featureIndexCount).toBeNull()
+    admin.rememberFeatureIndexCount(122)
+    expect(admin.featureIndexCount).toBe(122)
+    view.queries.rows.feature = []
+    expect(admin.featureIndexCount).toBe(122)
+    view.filters.values.feature.text = 'Coffee'
+    expect(admin.featureIndexCount).toBeNull()
+    admin.rememberFeatureIndexCount(0)
+    expect(admin.featureIndexCount).toBe(0)
+    admin.rememberFeatureIndexCount(null)
+    expect(admin.featureIndexCount).toBeNull()
+  })
+
   it('uses text and view filters with the loaded sort order on a direct visit', () => {
     const { admin } = setup()
     expect(admin.featureNavigationRows.map(row => row.id)).toEqual(['z', 'a', 'm'])

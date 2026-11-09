@@ -86,7 +86,7 @@ $effect(() => {
       void query.refresh().catch(() => {})
     })
 })
-const featureCount = $derived(adminCtx.filteredFeatures.length)
+const featureCount = $derived(adminCtx.featureIndexCount ?? 0)
 
 // Index navigation preserves prisms; empty selections show all server-permitted resources.
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {

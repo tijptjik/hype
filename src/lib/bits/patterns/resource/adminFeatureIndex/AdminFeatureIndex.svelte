@@ -1005,6 +1005,7 @@ $effect(() => {
     remotePending = true
     remotePageError = null
     matchingCount = null
+    adminCtx.rememberFeatureIndexCount(null)
     matchingCountLoading = true
     const input: FeatureIndexQuery = {
       conditions: adminCtx.view.isSuperAdmin()
@@ -1029,8 +1030,10 @@ $effect(() => {
           latestRemoteRequestId === nextRequestId &&
           signature === searchSignature &&
           nextQuery === normalizedTextQuery
-        )
+        ) {
           matchingCount = result.totalCount
+          adminCtx.rememberFeatureIndexCount(result.totalCount)
+        }
       })
       .catch(() => {
         /* Rows remain usable when an optional total fails. */

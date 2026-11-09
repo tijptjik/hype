@@ -804,6 +804,25 @@ export class AdminCtx {
     return this.view.filteredFeatures
   })
 
+  private featureIndexTotal = $state.raw<{ key: string; count: number | null } | null>(
+    null,
+  )
+
+  /** Authoritative index total; loaded pages are never a substitute for this count. */
+  get featureIndexCount(): number | null {
+    return this.featureIndexTotal?.key === this.getFeatureIndexKey()
+      ? this.featureIndexTotal.count
+      : null
+  }
+
+  /** Shares the index total with navigation for the same account and filters.
+   * @param count Server total, or null while loading or unavailable.
+   * @returns Nothing.
+   */
+  rememberFeatureIndexCount(count: number | null): void {
+    this.featureIndexTotal = { key: this.getFeatureIndexKey(), count }
+  }
+
   /** Identifies the filters, ordering and account that own the Feature index.
    * @returns A traversal scope shared by the index and detail route.
    */
