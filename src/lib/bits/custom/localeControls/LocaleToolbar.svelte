@@ -352,7 +352,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                   role="group"
                   aria-label={option.name}
                   animate:flip={{ duration: reducedMotion ? 0 : 160 }}
-                  class="border-border bg-panel text-foreground flex max-w-full min-w-0 cursor-grab items-center rounded-md border shadow-sm select-none"
+                  class="border-border bg-panel text-foreground has-[:focus-visible]:outline-primary flex max-w-full min-w-0 cursor-grab items-center rounded-md border shadow-sm select-none has-[:focus-visible]:outline-2"
                 >
                   <span
                     aria-hidden="true"
@@ -382,7 +382,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                     onclick={() => {
                       if (mode === 'visibility') toggle(tag)
                     }}
-                    class={`focus-visible:outline-primary inline-flex min-h-8 min-w-0 flex-1 cursor-grab items-center gap-1 rounded-md pr-2 pl-1 text-left text-xs break-words whitespace-normal focus-visible:outline-2 active:cursor-grabbing ${mode === 'membership' || visibleLocales.includes(tag) ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}
+                    class={`inline-flex min-h-8 min-w-0 flex-1 cursor-grab items-center gap-1 rounded-md pr-2 pl-1 text-left text-xs break-words whitespace-normal outline-none! active:cursor-grabbing ${mode === 'membership' || visibleLocales.includes(tag) ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}
                   >
                     <span lang={tag} dir="auto" style:font-family={languageFont(tag)}
                       >{mode === 'visibility'
@@ -398,7 +398,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                       onmousedown={event => event.stopPropagation()}
                       ontouchstart={event => event.stopPropagation()}
                       onclick={() => toggle(tag)}
-                      class="hover:text-primary focus-visible:outline-primary flex min-h-8 w-6 shrink-0 items-center justify-center rounded-r-md text-xs focus-visible:outline-2 disabled:opacity-50"
+                      class="hover:text-primary flex min-h-8 w-6 shrink-0 items-center justify-center rounded-r-md text-xs outline-none! disabled:opacity-50"
                     >
                       ×
                     </button>
