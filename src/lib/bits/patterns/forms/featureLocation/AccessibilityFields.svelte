@@ -61,9 +61,9 @@ const choices = $derived({
     {#each ACCESSIBILITY_FIELDS as field}
       {@const Icon = icons[field]}
       <fieldset {disabled} class="min-w-0 space-y-2">
-        <legend class="mb-1 flex min-h-7 items-center gap-2 text-sm font-medium">
+        <legend class="mb-1 flex min-h-7 w-full items-center gap-2 text-sm font-medium">
           <Icon class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-          <label for={`${uid}-${field}`}>{labels[field]}</label>
+          <label class="flex-1" for={`${uid}-${field}`}>{labels[field]}</label>
           <SimpleTooltip>
             {#snippet trigger()}
               <button

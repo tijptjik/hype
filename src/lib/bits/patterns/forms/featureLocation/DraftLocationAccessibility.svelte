@@ -8,7 +8,6 @@ import { reverseTabStop } from '#lib/bits/custom/form/reverseTabStop.js'
 import AccessibilityFields from './AccessibilityFields.svelte'
 // ICONS
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
-import XIcon from 'virtual:icons/lucide/x'
 // TYPES
 import type { AccessibilityDraft } from '#lib/locations/accessibility.js'
 
@@ -41,18 +40,14 @@ onMount(() => {
     <button
       type="button"
       use:reverseTabStop
-      aria-label={changed ? m.forms__reset() : m.admin__forms_common_remove()}
+      aria-label={m.forms__reset()}
       class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-7 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/subsection:opacity-100 group-hover/subsection:opacity-100 focus-visible:opacity-100 focus-visible:outline-2"
       onclick={() => {
         if (changed) onChange({})
         onRemove?.()
       }}
     >
-      {#if changed}
-        <ResetIcon class="size-4" />
-      {:else}
-        <XIcon class="size-4" />
-      {/if}
+      <ResetIcon class="size-4" />
     </button>
   </div>
   <AccessibilityFields {uid} {value} {onChange} />
