@@ -12,7 +12,8 @@ import type { AccessibilityDraft } from '#lib/locations/accessibility.js'
 setResponsiveCtx()
 let address = $state<FeatureAddress>({
   ...emptyFeatureAddress(),
-  overrides: { en: { buildingNumberExpression: '12', accessHint: 'Side entrance' } },
+  overrides: { en: { buildingNumberExpression: '12' } },
+  accessHints: { en: 'Side entrance' },
 })
 let accessibility = $state<AccessibilityDraft | undefined>({})
 </script>

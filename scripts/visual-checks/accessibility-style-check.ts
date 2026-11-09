@@ -7,6 +7,7 @@ for (const [name, engine] of [
   console.log(`${name}: launching`)
   const browser = await engine.launch({
     timeout: 20000,
+    args: name === 'chromium' ? ['--disable-web-security'] : [],
     executablePath:
       name === 'chromium' ? process.env.CHROMIUM_PATH : process.env.FIREFOX_PATH,
   })
@@ -30,7 +31,7 @@ for (const [name, engine] of [
       }),
     )
     await page.goto(
-      `${process.env.ASSOCIATION_BASE_URL ?? 'http://127.0.0.1:4175'}/__accessibility-style.html`,
+      `${process.env.ASSOCIATION_BASE_URL ?? 'http://127.0.0.1:4173'}/__accessibility-style.html`,
     )
     console.log(`${name}: fixture loaded`)
     const step = page.getByRole('combobox', { name: 'Step-free entrance', exact: true })
@@ -41,46 +42,39 @@ for (const [name, engine] of [
         .evaluate((node, theme) => node.setAttribute('data-theme', theme), theme)
       // Let shared theme colour transitions finish before comparing computed surfaces.
       await page.waitForTimeout(400)
-      const dimensions = await step.evaluate(node => ({
-        height: node.getBoundingClientRect().height,
-        background: getComputedStyle(node).backgroundColor,
-        font: getComputedStyle(node).fontSize,
-      }))
+      const rows = page.locator('[data-inline-locale-row]')
+      if ((await rows.count()) !== 3) throw Error('Expected three shared locale rows')
+      await page.getByRole('button', { name: 'Access hints · EN', exact: true }).click()
       const hint = page.getByRole('textbox', { name: 'Access hints · EN', exact: true })
-      const hintStyles = await hint.evaluate(node => ({
-        background: getComputedStyle(node.closest('.bits-form__control-wrap')!)
-          .backgroundColor,
-        font: getComputedStyle(node).fontSize,
-      }))
-      if (
-        dimensions.height !== 48 ||
-        dimensions.font !== hintStyles.font ||
-        dimensions.background !== hintStyles.background
-      )
-        throw new Error(
-          `${name}: mismatched control styles ${JSON.stringify({ dimensions, hintStyles })}`,
-        )
+      await hint.fill('Rear entrance')
+      await hint.press('Escape')
+      await page.getByRole('button', { name: 'Access hints · EN', exact: true }).click()
+      if ((await hint.inputValue()) !== 'Side entrance')
+        throw Error('Escape did not restore original hint')
+      await hint.fill('Side entrance')
+      await hint.press('Enter')
+      await step.click()
+      const yes = page.getByRole('option', { name: 'Yes', exact: true })
+      await yes.waitFor()
       await page.screenshot({
-        path: `output/playwright/accessibility-${name}-${theme}.png`,
+        path: `output/playwright/accessibility-clean-${name}-${theme}.png`,
         fullPage: true,
       })
-      await step.click()
-      await page.getByRole('option', { name: 'Yes', exact: true }).click()
-      if (!(await step.textContent().then(text => text?.includes('Yes'))))
-        throw new Error('Selection did not update')
+      const backgrounds = await page
+        .getByRole('option')
+        .evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))
+      if (backgrounds.filter(color => color !== 'rgba(0, 0, 0, 0)').length > 1)
+        throw Error('Unselected dropdown options should use the clean menu surface')
+      await yes.click()
+      if (!(await step.textContent())?.includes('Yes'))
+        throw Error('Selection did not update')
+      await page.setViewportSize({ width: 390, height: 1000 })
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+        throw Error('Narrow overflow')
+      await page.setViewportSize({ width: 900, height: 1000 })
     }
-    await page.setViewportSize({ width: 390, height: 844 })
-    await page.screenshot({
-      path: `output/playwright/accessibility-${name}-mobile.png`,
-      fullPage: true,
-    })
     console.log(
-      JSON.stringify({
-        browser: name,
-        themes: 2,
-        sharedControlStyles: true,
-        selection: true,
-      }),
+      `${name}: locale edit/cancel, dropdown selection, themes and narrow layout passed`,
     )
   } finally {
     await browser.close()

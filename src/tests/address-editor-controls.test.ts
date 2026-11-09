@@ -696,6 +696,38 @@ it('swaps the block inputs and composed address with the order button', async ()
   ).toBeTruthy()
 })
 
+it.each([false, true])(
+  'translates empty access hints while preserving existing languages (Chinese filled: %s)',
+  async chineseFilled => {
+    const initialAddress = emptyFeatureAddress()
+    initialAddress.accessHints = {
+      en: 'Side entrance',
+      ...(chineseFilled ? { 'zh-hant': 'Existing entrance hint' } : {}),
+    }
+    const view = render(FormFixture, {
+      initialAddress,
+      translations: true,
+      displayAddressInToolbar: true,
+    })
+    const source = view.getByRole('button', { name: 'Access hints: from EN' })
+    expect(source.closest('legend')).toHaveTextContent('Access hints')
+    if (chineseFilled)
+      expect(
+        view.getByRole('button', { name: 'Access hints: from 繁中' }),
+      ).toBeInTheDocument()
+    await fireEvent.click(source)
+    await waitFor(() => {
+      expect(
+        view.getByDisplayValue(
+          chineseFilled ? 'Existing entrance hint' : 'zh-hant: Side entrance',
+        ),
+      ).toBeInTheDocument()
+      expect(view.getByDisplayValue('zh-hans: Side entrance')).toBeInTheDocument()
+    })
+    expect(view.getByDisplayValue('Side entrance')).toBeInTheDocument()
+  },
+)
+
 it('clears only one street-name language and does not offer machine translation for streets', async () => {
   const initialAddress = setAddressName(emptyFeatureAddress(), 'streetName', {
     id: 'hollywood',

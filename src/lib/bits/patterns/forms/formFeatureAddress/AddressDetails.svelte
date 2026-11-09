@@ -14,6 +14,8 @@ import LocationAccessibility from '../featureLocation/LocationAccessibility.svel
 // API
 import { getLocationAccessibility } from '#lib/api/locationAccessibility.remote.js'
 // COMPONENTS
+import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.svelte'
+import FormI18nInlineRow from '../formI18nSection/components/FormI18nInlineRow.svelte'
 import FormI18nTranslationBar from '../formI18nSection/components/FormI18nTranslationBar.svelte'
 import AddressNamePicker from './AddressNamePicker.svelte'
 import { adaptivePlaceholder } from './adaptivePlaceholder.js'
@@ -270,16 +272,12 @@ $effect(() => {
   accessibilityDismissed = false
 })
 /** Reveal the shared fields in the address editor.
- * @returns Completion after the inline fields mount.
+ * @returns Nothing; adding fields preserves the current editor scroll position.
  */
-async function addAccessibility(): Promise<void> {
+function addAccessibility(): void {
   accessibilityAdded = true
   accessibilityDismissed = false
   onAccessibilityDraftChange?.(accessibilityDraft ?? {})
-  await tick()
-  document
-    .getElementById(`${uid}-accessibility`)
-    ?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
 }
 let buildingRequest = 0
 onDestroy(() => {
@@ -362,7 +360,11 @@ function chooseBuildingAddress(candidate: BuildingAddressCandidate): void {
   )
   buildingSelection = null
 }
+// Address selectors use the neutral menu surface, including the portalled viewport and options.
+const addressSelectContentClass =
+  'bg-panel! [&>div]:bg-transparent! [&_[role=option]]:bg-transparent! [&_[role=option][data-highlighted]]:bg-foreground/5! [&_[role=option][data-state=checked]]:bg-foreground/5!'
 const uid = $props.id()
+let accessHintBeforeEdit = $state<Partial<Record<LocaleKey, string>>>({})
 let replacingNames = $state<Record<string, boolean>>({})
 let activeBlockLocale = $state<LocaleKey | null>(null)
 let typeOverrides = $state<Record<string, boolean>>({})
@@ -792,6 +794,71 @@ async function translatePart(source: Locale): Promise<void> {
   }
   onChange(next)
 }
+/** Read the authored locale without display fallbacks, so missing translations remain editable targets.
+ * @param locale Requested editor locale. @returns Its saved hint, or an empty string.
+ */
+function accessHintValue(locale: LocaleKey): string {
+  return address.accessHints?.[ADDRESS_LOCALES[locale]] ?? ''
+}
+const accessHintSources = $derived(
+  locales.filter(locale => accessHintValue(locale).trim()),
+)
+let accessHintTranslationSource = $state<string | null>(null)
+let accessHintTranslationFailed = $state(false)
+
+/** Translate access hints into every empty supported language from the selected source.
+ * @param source Source language chosen in the shared translation bar.
+ * @returns Resolves after applying the complete translation batch or exposing a retryable error.
+ * @remarks Existing values and any draft changed during the request are preserved.
+ */
+async function translateAccessHints(source: string): Promise<void> {
+  if (accessHintTranslationSource || !isEditing) return
+  const sourceKey = toLocaleKey(source as Locale)
+  const text = accessHintValue(sourceKey)
+  const targets = locales.filter(
+    locale => locale !== sourceKey && !accessHintValue(locale).trim(),
+  )
+  if (!text.trim() || !targets.length) return
+  const originalAddress = address
+  const generation = translationGeneration
+  accessHintTranslationSource = source
+  accessHintTranslationFailed = false
+  try {
+    // Apply the batch together so one completed request cannot invalidate another target.
+    const results = await Promise.all(
+      targets.map(async locale => {
+        const [translated] = await translateText(
+          source as Locale,
+          ADDRESS_LOCALES[locale],
+          [text],
+        )
+        if (!translated?.trim()) throw new Error('Empty access hint translation')
+        return { locale, translated }
+      }),
+    )
+    if (
+      !translationActive ||
+      !isEditing ||
+      generation !== translationGeneration ||
+      address !== originalAddress
+    )
+      return
+    let next = address
+    for (const { locale, translated } of results)
+      next = setAddressExpression(next, locale, 'accessHint', translated)
+    onChange(next)
+  } catch {
+    if (
+      translationActive &&
+      isEditing &&
+      generation === translationGeneration &&
+      address === originalAddress
+    )
+      accessHintTranslationFailed = true
+  } finally {
+    accessHintTranslationSource = null
+  }
+}
 /** Resolve the localized block order, retaining the existing default for each language.
  * @param locale Address language. @returns Whether the type precedes the reference.
  */
@@ -807,7 +874,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
 {#snippet blockTypeSelect(locale: LocaleKey)}
   {@const block = getAddressPresentationLocale(address, locale)}
   <SelectField
-    contentClass="bg-panel! text-foreground! [&_*]:text-foreground!"
+    contentClass={addressSelectContentClass}
     triggerAttrs={{ 'aria-label': m.address_block_type() }}
     triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
     class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
@@ -1077,7 +1144,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
 
 <section
   use:measureEditorMinimum={`${visibleFields.join(',')}:${getStructuredAddressType(address, 'floorExpression')}:${getStructuredAddressType(address, 'unitExpression')}:${getLocaleKey()}`}
-  class="min-w-0 space-y-4 {independentScroll
+  class="min-w-0 space-y-4 [overflow-anchor:none] {independentScroll
     ? 'min-h-0 overflow-y-auto overscroll-contain'
     : ''} {splitColumns && isEditing ? 'pt-2 pb-5' : ''}"
   aria-label={splitColumns ? m.feature_location_title() : m.feature_address_title()}
@@ -1239,40 +1306,79 @@ function blockTypeFirst(locale: LocaleKey): boolean {
               {#if field === 'accessHint'}
                 <fieldset class="w-full min-w-0 space-y-2">
                   <legend
-                    class="mb-1 flex min-h-7 items-center gap-2 text-sm font-medium"
+                    class="mb-1 flex min-h-7 flex-wrap items-center gap-2 text-sm font-medium"
                   >
                     <UnitIcon
                       class="text-muted-foreground size-4 shrink-0"
                       aria-hidden="true"
                     />
                     {labels.accessHint}
+                    <FormI18nSourceBar
+                      compact
+                      visible={isEditing && accessHintSources.length > 0}
+                      label={m.address_translate_from()}
+                      sources={accessHintSources.map(locale => ({
+                        locale: ADDRESS_LOCALES[locale],
+                        label: addressLocaleLabel(locale),
+                        accessibleLabel: `${labels.accessHint}: ${m.address_translate_from()} ${addressLocaleLabel(locale)}`,
+                      }))}
+                      hasTargets={accessHintSources.length < locales.length}
+                      busy={accessHintTranslationSource !== null}
+                      busySource={accessHintTranslationSource ?? undefined}
+                      onTranslate={source => void translateAccessHints(source)}
+                    />
                   </legend>
+                  {#if accessHintTranslationFailed}
+                    <p role="alert" class="text-destructive text-xs">
+                      {m.address_translate_error()}
+                    </p>
+                  {/if}
                   {#each activeLocales as locale (locale)}
                     <div
                       transition:slide={{
                         duration: prefersReducedMotion.current ? 0 : 200,
                       }}
                     >
-                      <TextInput
-                        name=""
-                        class="min-w-0 gap-0!"
-                        inputClass="h-10 px-3! text-base! font-medium! bg-transparent text-foreground! placeholder:text-muted-foreground/65!"
-                        controlClass="h-12 gap-2 bg-panel! text-foreground [&_span]:text-muted-foreground"
-                        isEditing={true}
-                        prefix={translations ? addressLocaleLabel(locale) : undefined}
-                        inputAttrs={{
+                      <FormI18nInlineRow
+                        value={accessHintValue(locale)}
+                        label={translations
+                          ? `${labels.accessHint} · ${addressLocaleLabel(locale)}`
+                          : labels.accessHint}
+                        prefix={translations ? addressLocaleLabel(locale) : ''}
+                        editable={isEditing}
+                        showVerification={false}
+                        required={false}
+                        issues={undefined}
+                        attrs={{
                           id: `${uid}-${locale}-access-hint`,
-                          'aria-label': translations
-                            ? `${labels.accessHint} · ${addressLocaleLabel(locale)}`
-                            : labels.accessHint,
+                          placeholder: examples.accessHint(
+                            {},
+                            { locale: ADDRESS_LOCALES[locale] },
+                          ),
+                          oninput: (event: Event) =>
+                            onChange(
+                              setAddressExpression(
+                                address,
+                                locale,
+                                field,
+                                (event.currentTarget as HTMLInputElement).value,
+                              ),
+                            ),
                         }}
-                        value={addressComponentValue(address, locale, field)}
-                        placeholder={examples.accessHint(
-                          {},
-                          { locale: ADDRESS_LOCALES[locale] },
-                        )}
-                        onValueChange={next =>
-                          onChange(setAddressExpression(address, locale, field, next))}
+                        onStart={() => {
+                          accessHintBeforeEdit[locale] = accessHintValue(locale)
+                        }}
+                        onCancel={() =>
+                          onChange(
+                            setAddressExpression(
+                              address,
+                              locale,
+                              field,
+                              accessHintBeforeEdit[locale] ?? '',
+                            ),
+                          )}
+                        onClear={() =>
+                          onChange(setAddressExpression(address, locale, field, ''))}
                       />
                     </div>
                   {/each}
@@ -1496,7 +1602,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                           {/if}
                           {#if field === 'phaseExpression'}
                             <SelectField
-                              contentClass="bg-panel! text-foreground! [&_*]:text-foreground!"
+                              contentClass={addressSelectContentClass}
                               triggerAttrs={{
                                 'aria-label': m.feature_address_phaseExpression(),
                               }}
@@ -1535,7 +1641,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                           {/if}
                           {#if field === 'floorExpression'}
                             <SelectField
-                              contentClass="bg-panel! text-foreground! [&_*]:text-foreground!"
+                              contentClass={addressSelectContentClass}
                               id="address-floorExpression-type"
                               triggerAttrs={{
                                 id: 'address-floorExpression-type',
@@ -1566,7 +1672,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                             />
                           {:else if field === 'unitExpression'}
                             <SelectField
-                              contentClass="bg-panel! text-foreground! [&_*]:text-foreground!"
+                              contentClass={addressSelectContentClass}
                               id="address-unitExpression-type"
                               triggerAttrs={{
                                 id: 'address-unitExpression-type',
