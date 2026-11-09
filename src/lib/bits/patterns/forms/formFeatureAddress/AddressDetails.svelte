@@ -46,7 +46,7 @@ import {
 import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
 import AddressDisplayField from './AddressDisplayField.svelte'
 import { ADDRESS_BLOCK_TYPES } from '@saanseoi/address/content'
-import AddressBlocks from './AddressBlocks.svelte'
+import AddressReadOnly from './AddressReadOnly.svelte'
 import { Button } from '#lib/bits/core/index.js'
 import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 // ICONS
@@ -1465,14 +1465,17 @@ function blockTypeFirst(locale: LocaleKey): boolean {
 
 <section
   use:measureEditorMinimum={`${visibleFields.join(',')}:${getStructuredAddressType(address, 'floorExpression')}:${getStructuredAddressType(address, 'unitExpression')}:${getLocaleKey()}`}
-  class="min-w-0 space-y-4 [overflow-anchor:none] {independentScroll
+  class="min-w-0 {isEditing
+    ? 'space-y-4'
+    : 'space-y-1'} [overflow-anchor:none] {independentScroll
     ? 'min-h-0 overflow-y-auto overscroll-contain'
     : ''} {splitColumns && isEditing ? 'pt-2 pb-5' : ''}"
   aria-label={splitColumns ? m.feature_location_title() : m.feature_address_title()}
   data-address-details
 >
   <div
-    class="flex flex-wrap items-center justify-between gap-2 {splitColumns && isEditing
+    class="flex min-h-10 flex-wrap items-center justify-between gap-2 {splitColumns &&
+    isEditing
       ? 'mb-2!'
       : ''}"
   >
@@ -1543,37 +1546,27 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     </fieldset>
   {/if}
   {#if !isEditing}
-    {#each shownLocales as tag (tag)}
-      {@const locale = addressLocaleKey(tag)}
-      <div
-        animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}
-        transition:localeSlide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
-        class="space-y-3"
-        lang={tag}
-      >
-        {#if translations}
-          <p class="text-muted-foreground text-xs">{shortLocaleLabel(tag)}</p>
+    <AddressReadOnly
+      {address}
+      locales={shownLocales.map(tag => ({ tag, key: addressLocaleKey(tag) }))}
+      primaryLocale={selectedLocales[0]}
+      additionalValue={additionalLocaleValue}
+      groups={fieldGroups}
+      {labels}
+    />
+    {#if showAccessHints}
+      {#each shownLocales as tag (tag)}
+        {@const hint = accessHintValue(tag)}
+        {#if hint}
+          <p lang={tag} class="text-muted-foreground flex items-baseline gap-2 text-sm">
+            {#if tag !== selectedLocales[0]}
+              <span class="shrink-0 font-mono text-xs">{shortLocaleLabel(tag)}</span>
+            {/if}
+            <span class="min-w-0 break-words whitespace-normal">{hint}</span>
+          </p>
         {/if}
-        <p
-          class="min-w-0 text-xl leading-relaxed font-medium break-words whitespace-normal"
-          data-address-display
-        >
-          {(locale
-            ? getAddressDisplay(address, locale)
-            : additionalLocaleValue(tag, 'formattedAddress')) || '—'}
-        </p>
-        {#if locale}
-          <AddressBlocks {address} {locale} includeDivisions={false} />
-          {#if showAccessHints && addressComponentValue(address, locale, 'accessHint')}
-            <p class="text-muted-foreground text-sm">
-              {addressComponentValue(address, locale, 'accessHint')}
-            </p>
-          {/if}
-        {:else if accessHintValue(tag)}
-          <p class="text-muted-foreground text-sm">{accessHintValue(tag)}</p>
-        {/if}
-      </div>
-    {/each}
+      {/each}
+    {/if}
   {:else}
     <div class="grid grid-cols-6 items-start gap-x-4 [&>*]:mb-6 [&>*:last-child]:mb-0">
       {@render identityFields?.(translations)}
