@@ -282,7 +282,7 @@ describe('image creation context authorization', () => {
         account,
         adminRequest,
         [],
-        'user' as never,
+        'unsupported' as never,
         'account',
       ),
     ).rejects.toMatchObject({ status: 400 })
@@ -330,4 +330,41 @@ describe('image creation context authorization', () => {
       }
     },
   )
+})
+
+describe('avatar upload scope', () => {
+  const account = { id: 'actor', isAnonymous: false, superAdmin: false } as never
+  it('rejects avatar uploads outside the persisted organisation audience', async () => {
+    const db = {
+      query: { user: { findFirst: async () => undefined } },
+    } as unknown as Database
+    await expect(
+      assertPermissionsToCreateImage(
+        db,
+        account,
+        true,
+        [],
+        'user' as never,
+        'outsider',
+      ),
+    ).rejects.toMatchObject({ status: 403 })
+  })
+  it('permits an authorized audience target and explicit super admins', async () => {
+    const db = {
+      query: { user: { findFirst: async () => ({ id: 'member' }) } },
+    } as unknown as Database
+    await expect(
+      assertPermissionsToCreateImage(db, account, true, [], 'user' as never, 'member'),
+    ).resolves.toBeUndefined()
+    await expect(
+      assertPermissionsToCreateImage(
+        {} as Database,
+        { id: 'admin', isAnonymous: false, superAdmin: true } as never,
+        true,
+        [],
+        'user' as never,
+        'target',
+      ),
+    ).resolves.toBeUndefined()
+  })
 })
