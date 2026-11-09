@@ -34,11 +34,7 @@ for (const [name, engine] of [
         ) > 250,
     )
     await page.locator('[data-association-proposal]').waitFor()
-    if (
-      await page
-        .getByRole('button', { name: 'Edit address details', exact: true })
-        .count()
-    )
+    if (await page.getByRole('button', { name: 'Edit Details', exact: true }).count())
       throw Error('Proposal offers address editing')
     await page.getByRole('button', { name: 'Use', exact: true }).waitFor()
     await page.getByRole('button', { name: 'Change selection', exact: true }).waitFor()
@@ -80,9 +76,7 @@ for (const [name, engine] of [
     await page.screenshot({ path: 'output/playwright/evidence-' + name + '-wide.png' })
     for (const width of [1100, 390]) {
       await page.setViewportSize({ width, height: 1000 })
-      await page
-        .getByRole('button', { name: 'Edit address details', exact: true })
-        .click()
+      await page.getByRole('button', { name: 'Edit Details', exact: true }).click()
       await page.locator('[data-address-group="unit"]').first().waitFor()
       await page.screenshot({
         path: 'output/playwright/evidence-' + name + '-' + width + '-expanded.png',

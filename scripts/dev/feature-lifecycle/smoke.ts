@@ -203,13 +203,29 @@ export async function smokeFeatureLifecycle(
       expectedRevisionId: selected.revisionId,
       expectedVersion: selected.version,
       reason: 'Disposable migration service smoke check',
-      derive: content => content,
+      derive: content => {
+        const changed = structuredClone(content)
+        const locale = Object.keys(changed.translations)[0]
+        changed.translations[locale].description = {
+          value: `${changed.translations[locale].description.value ?? ''} — migration smoke edit`,
+          generated: false,
+        }
+        return changed
+      },
     })
     assert(edited)
+    // Read the actual concurrency token; no-op saves and coalesced edits need not append a snapshot.
+    const afterEdit = await readCurrentFeatureRevision(db, {
+      featureId: selected.featureId,
+      guard: sql`1`,
+    })
+    assert(afterEdit)
+    assert.equal(afterEdit.revisionId, edited)
+    assert(afterEdit.version > selected.version)
     const split = await splitLifecycleFeature(db, {
       ...common,
       expectedRevisionId: edited,
-      expectedVersion: selected.version + 1,
+      expectedVersion: afterEdit.version,
       titles: ['Smoke left', 'Smoke right'],
       locale: Object.keys(selected.content.translations)[0],
       redirectIndex: 0,

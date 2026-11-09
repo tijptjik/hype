@@ -121,6 +121,36 @@ The general Breadline stage registry is still empty. This command explicitly wir
 existing user and donor/dropoff converters; schedules, events and other source tables
 are retained in the export but are not silently claimed as imported.
 
+## Revision testing after a fresh rebuild
+
+Use `dev-check bun run db:rebuild:local --no-mocks` to export both sources and rehearse
+the base rebuild without replacing the current development database. Numbered SQL
+migrations alone do not enroll revision baselines or perform the current Feature
+lifecycle conversion. A successful rebuild receipt is therefore not revision-readiness
+evidence.
+
+Prepare revisions on a copy through `prepareRelease` in
+`scripts/revisions/production/prepare.ts`, selecting `featureLifecycle: 'current'`. This
+verifies exact R2 originals and metadata, enrolls Feature and resource baselines,
+converts lifecycle records and preserves unfinished contributions as creation proposals.
+Missing sidecars require explicit retained recovery evidence; do not fabricate original
+metadata or skip affected Features. The scoped recovery procedure is documented in
+[Feature revision write boundaries](Feature-Revisions-Write-Boundaries.md).
+
+Run `dev-check bun scripts/dev/feature-lifecycle/smoke.ts PATH/TO/prepared.sqlite`
+against the converted candidate. This reads every Feature history and exercises edits,
+contribution review, split and merge on a disposable copy. Require integrity,
+foreign-key and service checks before installation. Retain the base rebuild's accepted
+user reconciliation checkpoint alongside the converted candidate. Compare and back up
+the current development database before replacing it, including local-only Features,
+tasks and reviews.
+
+Do not use `db:mirror:post:local` as a revision cutover command: it runs ordinary
+numbered migrations and does not perform the managed lifecycle conversion. Follow
+[managed revision deployment](../operations/Revision-Deployment.md) for lifecycle-aware
+migration handling; its deployment commands target remote environments and must not be
+used to install a local candidate.
+
 To recover, stop local writers and use SQLite's backup API to restore the retained
 `before-development.sqlite` to the receipt's exact destination. Check for subsequent
 local edits first; restoring replaces them. Never delete WAL/SHM files from an open

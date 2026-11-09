@@ -19,6 +19,10 @@ for (const [name, engine] of [
   const page = await browser.newPage({ viewport: { width: 1500, height: 1000 } })
   try {
     page.setDefaultTimeout(15000)
+    if (process.env.ASSOCIATION_SCOPE === 'ranking')
+      await page.addInitScript(() =>
+        localStorage.setItem('hype:location-association:expanded', 'false'),
+      )
     page.on('pageerror', error => {
       failures.push(`${name}: ${error.message}`)
       console.error(error)
@@ -94,7 +98,7 @@ for (const [name, engine] of [
     await page.route('**/src/lib/locations/buildingSearch.ts*', route =>
       route.fulfill({
         contentType: 'text/javascript',
-        body: `export async function searchBuildingNames(){return [${JSON.stringify(building)}]}`,
+        body: `export async function searchBuildingNames(){return [${JSON.stringify(building)}]}; export async function searchBuildingNamesPage(){const rows=await searchBuildingNames();return {rows,total:rows.length,nextCursor:null}}`,
       }),
     )
     await page.route('**/src/lib/addresses/nameCatalogue.ts*', async route => {
@@ -149,26 +153,185 @@ for (const [name, engine] of [
       await page.route('**/src/lib/locations/buildingSearch.ts*', route =>
         route.fulfill({
           contentType: 'text/javascript',
-          body: `export async function searchBuildingNames(){return ${JSON.stringify(entries)}}`,
+          body: `export async function searchBuildingNames(){return ${JSON.stringify(entries)}}; export async function searchBuildingNamesPage(){const rows=await searchBuildingNames();return {rows,total:rows.length,nextCursor:null}}`,
         }),
       )
-      await page.goto(`${baseUrl}/__location-association.html?exact=1`, {
-        waitUntil: 'domcontentloaded',
-      })
+      await page.goto(
+        `${baseUrl}/__location-association.html?exact=1${process.env.ASSOCIATION_PIN_EDIT ? '&map=1' : ''}`,
+        {
+          waitUntil: 'domcontentloaded',
+        },
+      )
       await page.locator('[data-result-id]').click()
       await page
         .getByRole('button', { name: 'Locate feature here', exact: true })
         .click()
       await page
-        .getByText('Matching name and address · suggested Location', { exact: true })
+        .locator('[role="radio"][aria-checked="true"]')
+        .filter({ hasText: 'Building' })
         .waitFor()
+      if (process.env.ASSOCIATION_PIN_EDIT) {
+        await page.getByRole('button', { name: 'Edit', exact: true }).click()
+        const marker = page.locator('[data-location-candidate="building:fu:11-16"]')
+        await marker.waitFor()
+        await page.waitForTimeout(700)
+        const before = JSON.parse(
+          (await page
+            .locator('[data-association-fixture]')
+            .getAttribute('data-markers')) ?? '[]',
+        )
+        const box = await marker.boundingBox()
+        if (!box) throw Error('Missing editable map marker')
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+        await page.mouse.down()
+        await page.mouse.move(box.x + box.width / 2 + 65, box.y + box.height / 2 + 20, {
+          steps: 12,
+        })
+        await page.mouse.up()
+        await page.getByRole('button', { name: /Custom position$/ }).waitFor()
+        const after = JSON.parse(
+          (await page
+            .locator('[data-association-fixture]')
+            .getAttribute('data-markers')) ?? '[]',
+        )
+        if (
+          JSON.stringify(before.map(row => row.coordinates)) ===
+          JSON.stringify(after.map(row => row.coordinates))
+        )
+          throw Error('Dragging did not change draft coordinates')
+        await page.getByRole('button', { name: 'Done', exact: true }).click()
+        const card = await page.locator('[data-association-name]').boundingBox()
+        const replace = await page
+          .getByRole('button', { name: 'Change selection', exact: true })
+          .boundingBox()
+        const reset = await page
+          .getByRole('button', { name: 'Reset Building Position', exact: true })
+          .boundingBox()
+        if (
+          !card ||
+          card.height > 60 ||
+          !replace ||
+          !reset ||
+          Math.abs(replace.x - reset.x) > 2
+        )
+          throw Error(
+            'Comparison card is too tall or replace/reset actions are misaligned',
+          )
+        await page.screenshot({
+          path: `output/playwright/association-${name}-custom-pin.png`,
+        })
+        await page
+          .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+          .click()
+        const accepted = JSON.parse(
+          (await page
+            .locator('[data-association-fixture]')
+            .getAttribute('data-selected')) ?? 'null',
+        )
+        if (
+          accepted.address.association.mode !== 'unlinked' ||
+          accepted.buildingSource ||
+          accepted.identity ||
+          accepted.source
+        )
+          throw Error('Moved pin retained a source Location identity')
+        console.log(
+          JSON.stringify({ browser: name, customPinDrag: true, detachedSource: true }),
+        )
+        continue
+      }
       if (
         (await page
           .getByRole('radio', { name: 'Building', exact: true })
           .getAttribute('aria-checked')) !== 'true' ||
-        (await page.getByRole('switch').count())
+        (await page.locator('[data-address-choice]').count())
       )
         throw new Error(`${name}: exact match was not preselected cleanly`)
+      for (const viewport of [
+        { width: 1294, height: 710 },
+        { width: 390, height: 844 },
+      ]) {
+        await page.setViewportSize(viewport)
+        await page.waitForTimeout(500)
+        const alignment = await page
+          .locator('[data-association-columns]')
+          .evaluate(columns => {
+            const box = columns.getBoundingClientRect()
+            const centre = box.x + box.width / 2
+            const labels = columns.parentElement?.querySelectorAll(
+              '[data-association-side]',
+            )
+            const actions = columns
+              .closest('[data-location-association-picker]')
+              ?.querySelector('[data-association-actions]')?.children
+            const initialAction = actions?.[0]?.getBoundingClientRect()
+            const recommendedAction = actions?.[1]?.getBoundingClientRect()
+            const buttonsAligned = Boolean(
+              initialAction &&
+                recommendedAction &&
+                initialAction.right < centre &&
+                recommendedAction.left > centre &&
+                Math.abs((initialAction.right + recommendedAction.left) / 2 - centre) <
+                  2,
+            )
+            const header = columns
+              .querySelector('[data-association-record-headers]')
+              ?.children[1]?.getBoundingClientRect()
+            const pin = columns
+              .querySelector('[data-marker-choice-controls]')
+              ?.getBoundingClientRect()
+            const picker = columns
+              .closest('[data-location-association-picker]')
+              ?.getBoundingClientRect()
+            const heading = document.querySelector('[data-association-heading]')
+            const title = heading?.querySelector('h2')?.getBoundingClientRect()
+            const subtitle = heading
+              ?.querySelector(':scope > p')
+              ?.getBoundingClientRect()
+            return {
+              labelsRemoved: labels?.length === 0,
+              buttonsAligned,
+              centred: [header, pin, picker, title, subtitle].every(
+                rect => rect && Math.abs(rect.x + rect.width / 2 - centre) < 2,
+              ),
+            }
+          })
+        if (!alignment.labelsRemoved || !alignment.buttonsAligned || !alignment.centred)
+          throw Error(`${name}: comparison labels remain or its buttons are off-centre`)
+        const accept = page
+          .locator('[data-association-footer]')
+          .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+        await accept.waitFor()
+        const bounds = await accept.boundingBox()
+        const marker = await page
+          .locator('[data-association-marker-choice]')
+          .boundingBox()
+        if (
+          viewport.width > 640 &&
+          marker &&
+          bounds &&
+          marker.y + marker.height > bounds.y
+        )
+          throw new Error(
+            `${name}: marker comparison is hidden behind the acceptance footer`,
+          )
+        if (!bounds || bounds.y < 0 || bounds.y + bounds.height > viewport.height)
+          throw new Error(`${name}: acceptance button is outside the viewport`)
+        if (
+          await page
+            .locator('[data-association-name] button')
+            .filter({ hasText: 'Use Location' })
+            .count()
+        )
+          throw new Error(`${name}: acceptance remains inside candidate`)
+        if (
+          await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
+        )
+          throw new Error(`${name}: comparison overflows`)
+        await page.screenshot({
+          path: `output/playwright/association-${name}-comparison-${viewport.width}.png`,
+        })
+      }
       await page.getByRole('button', { name: 'Change selection', exact: true }).click()
       const rows = page.locator('[data-association-result]')
       if (
@@ -191,7 +354,9 @@ for (const [name, engine] of [
         })
       }
       await rows.first().click()
-      await page.getByRole('button', { name: 'Use Location', exact: true }).click()
+      await page
+        .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+        .click()
       const selected = JSON.parse(
         (await page.locator('[data-selected]').getAttribute('data-selected'))!,
       )
@@ -348,7 +513,11 @@ for (const [name, engine] of [
     await page
       .getByRole('textbox', { name: 'Establishment · Name' })
       .fill('Hollywood Cafe')
-    if (await page.getByRole('button', { name: 'Use Location', exact: true }).count())
+    if (
+      await page
+        .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+        .count()
+    )
       throw new Error(`${name}: typed text enabled confirmation`)
     const cafeRow = page.locator('[data-association-result="place:cafe"]')
     const metadata = cafeRow.locator('[data-association-result-meta]')
@@ -435,7 +604,7 @@ for (const [name, engine] of [
         .getByRole('combobox', { name: 'Your Street name' })
         .fill('Correct Road')
       await page.getByRole('option', { name: 'Correct Road', exact: true }).click()
-      await page.getByRole('button', { name: 'Edit address details' }).click()
+      await page.getByRole('button', { name: 'Edit Details' }).click()
       await page.waitForFunction(
         () =>
           document.querySelectorAll('[data-address-choice="original"]').length === 9,
@@ -605,7 +774,9 @@ for (const [name, engine] of [
         path: `output/playwright/association-${name}-multilingual.png`,
       })
       await page.getByRole('button', { name: 'Multilingual', exact: true }).click()
-      await page.getByRole('button', { name: 'Use Location', exact: true }).click()
+      await page
+        .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+        .click()
       if ((await page.locator('[data-fixture-map]').boundingBox())!.height > 130)
         throw new Error(`${name}: map grew back automatically`)
       await page.getByRole('button', { name: 'Save fixture', exact: true }).click()
@@ -700,7 +871,9 @@ for (const [name, engine] of [
           .getByRole('textbox', { name: 'Establishment · Name' })
           .fill('Quiet Courtyard')
         if (
-          await page.getByRole('button', { name: 'Use Location', exact: true }).count()
+          await page
+            .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+            .count()
         )
           throw new Error(`${name}: unselected custom name enabled confirmation`)
         await page
@@ -708,7 +881,9 @@ for (const [name, engine] of [
           .click()
       }
       if (mode !== 'unlinked')
-        await page.getByRole('button', { name: 'Use Location', exact: true }).click()
+        await page
+          .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+          .click()
       await page
         .locator('[data-location-association-picker]')
         .waitFor({ state: 'detached' })
@@ -791,7 +966,9 @@ for (const [name, engine] of [
           .getByRole('textbox', { name: 'Establishment · Name' })
           .fill('Hollywood Cafe')
         await page.getByRole('button', { name: /Hollywood Cafe.*Queen Road/ }).click()
-        await page.getByRole('button', { name: 'Use Location', exact: true }).click()
+        await page
+          .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+          .click()
         const synced = page.getByRole('button', {
           name: 'Synced - toggle to unsync',
           exact: true,
@@ -834,7 +1011,9 @@ for (const [name, engine] of [
     await page.screenshot({
       path: `output/playwright/association-${name}-building-mobile.png`,
     })
-    await page.getByRole('button', { name: 'Use Location', exact: true }).click()
+    await page
+      .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+      .click()
     const parsedBuilding = JSON.parse(
       (await page.locator('[data-selected]').getAttribute('data-selected'))!,
     )
@@ -961,7 +1140,7 @@ for (const [name, engine] of [
         .getByRole('textbox', { name: 'Establishment · Name' })
         .fill('Hollywood Cafe')
       await page.getByRole('button', { name: /Hollywood Cafe.*Queen Road/ }).click()
-      await page.getByRole('button', { name: 'Edit address details' }).click()
+      await page.getByRole('button', { name: 'Edit Details' }).click()
       await page.getByRole('separator', { name: 'Resize map' }).press('Home')
       await page.waitForFunction(
         () =>
@@ -1035,9 +1214,7 @@ for (const [name, engine] of [
       throw new Error(
         `${name}: direct selection still shows comparison/editing controls`,
       )
-    await page
-      .getByRole('button', { name: 'Edit address details', exact: true })
-      .click()
+    await page.getByRole('button', { name: 'Edit Details', exact: true }).click()
     await page.locator('[data-association-details]').waitFor()
     if (
       (await page.getByRole('switch').count()) ||
@@ -1056,7 +1233,9 @@ for (const [name, engine] of [
     await page
       .getByRole('textbox', { name: 'Your Street number', exact: true })
       .fill('88')
-    await page.getByRole('button', { name: 'Use Location', exact: true }).click()
+    await page
+      .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+      .click()
     const edited = JSON.parse(
       (await page.locator('[data-selected]').getAttribute('data-selected'))!,
     )
