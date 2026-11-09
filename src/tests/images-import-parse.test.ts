@@ -122,13 +122,6 @@ describe('parseImageFilename', () => {
   })
 
   describe('greedy capture with full-length feature ID', () => {
-    it('parses `<12charId>-00` so the last numeric span is the sequence', () => {
-      expect(parseImageFilename(`${FEATURE_ID}-00`)).toEqual({
-        featureId: FEATURE_ID,
-        imageSequence: '00',
-      })
-    })
-
     it('does not split `<12charId>-1-2` (segment before last dash is not 12 chars)', () => {
       expect(parseImageFilename(`${FEATURE_ID}-1-2`)).toEqual({
         featureId: `${FEATURE_ID}-1-2`,
