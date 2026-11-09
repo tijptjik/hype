@@ -71,7 +71,7 @@ export function fillBuildingDetails(
     const name =
       Object.entries(names).find(
         ([code]) => code.toLowerCase() === tag.toLowerCase(),
-      )?.[1] || (language === locale ? building.name : undefined)
+      )?.[1] || (language === 'en' ? building.name : undefined)
     // Expand the shared parser's unambiguous number expression into editor fields.
     const number = /^(\d+[A-Za-z]?)(?:\s*[-–]\s*(\d+[A-Za-z]?))?$/.exec(
       String(components.buildingNumberExpression ?? ''),

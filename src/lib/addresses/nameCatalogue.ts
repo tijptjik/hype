@@ -5,12 +5,7 @@ import { z } from 'zod'
 // SOURCES
 import { loadSaanseoiNames, loadBuildingNames } from '#lib/sources/saanseoi.js'
 // ADDRESS
-import {
-  ADDRESS_LOCALES,
-  getAddressLocale,
-  getAddressPresentationLocale,
-  setAddressOverride,
-} from './featureAddress'
+import { ADDRESS_LOCALES, getAddressLocale, setAddressOverride } from './featureAddress'
 import { prepareLocalLocationAddress } from './locationDraft'
 import { normalizeNameSearch } from './nameSearch'
 import { addressName, applyAddressAbbreviations } from './formatting'
@@ -113,7 +108,7 @@ export function completeStreetNames(
 /** Apply published names with a Traditional-to-Simplified script fallback.
  * @param address Current draft. @param field Controlled name field.
  * @param record Explicitly chosen record, or null to clear the name.
- * @returns Draft corrections; missing building translations retain prior text with a review marker, while missing street translations are cleared. Source evidence and identity remain untouched.
+ * @returns Draft corrections; missing translations are explicitly cleared. Source evidence and identity remain untouched.
  * @remarks The catalogue's default English name is an English-only fallback; it never supplies missing Chinese translations.
  */
 export function setAddressName(
@@ -121,41 +116,30 @@ export function setAddressName(
   field: 'streetName' | 'buildingName',
   record: AddressName | null,
 ): FeatureAddress {
-  const previous = address
-  for (const [locale, tag] of Object.entries(ADDRESS_LOCALES)) {
+  const content =
+    address.association?.content ??
+    address.canonical?.content ??
+    address.source.canonical?.content ??
+    address.source.authored
+  const raw = address.source.rawSource.data as
+    | { attributes?: { i18n?: Record<string, unknown> } }
+    | undefined
+  // Clear prior localized names even when the new catalogue record omits their language.
+  const tags = new Set(
+    [
+      ...Object.values(ADDRESS_LOCALES),
+      ...Object.keys(address.overrides),
+      ...Object.keys(content?.i18n ?? raw?.attributes?.i18n ?? {}),
+      ...Object.keys(address.detachedNames?.[field] ?? {}),
+      ...Object.keys(record?.names ?? {}),
+    ].map(tag => tag.toLowerCase()),
+  )
+  for (const tag of tags) {
     const value =
       Object.entries(withSimplifiedChinese(record?.names ?? {})).find(
         ([key]) => key.toLowerCase() === tag.toLowerCase(),
-      )?.[1] || (locale === 'en' ? record?.name : undefined)
-    if (record && !value?.trim() && field === 'buildingName') {
-      const retained = getAddressPresentationLocale(
-        previous,
-        locale as keyof typeof ADDRESS_LOCALES,
-      )[field]
-      if (typeof retained === 'string' && retained.trim()) {
-        // Freeze derived translations too, before another locale's selected name can change them.
-        address = setAddressOverride(
-          address,
-          locale as keyof typeof ADDRESS_LOCALES,
-          field,
-          retained,
-        )
-        address = {
-          ...address,
-          detachedNames: {
-            ...address.detachedNames,
-            [field]: { ...address.detachedNames?.[field], [tag]: retained },
-          },
-        }
-      }
-      continue
-    }
-    address = setAddressOverride(
-      address,
-      locale as keyof typeof ADDRESS_LOCALES,
-      field,
-      value ?? null,
-    )
+      )?.[1] || (tag === 'en' ? record?.name : undefined)
+    address = setAddressOverride(address, tag, field, value ?? null)
   }
   return address
 }

@@ -454,7 +454,7 @@ it('shows each street locale as stored instead of converting another locale', as
   expect(view.queryByRole('button', { name: 'Replace: 興芳路' })).toBeNull()
 })
 
-it('shows a warning after retained translations when the new name has no translations', async () => {
+it('unsets previous translations when the new building has no translations', async () => {
   let address = emptyFeatureAddress()
   address.overrides = {
     'zh-hant': { buildingName: '馬田宿舍' },
@@ -467,13 +467,13 @@ it('shows a warning after retained translations when the new name has no transla
   })
   const view = render(Fixture, { initialAddress: address })
   await fireEvent.click(view.getByRole('button', { name: /Multilingual/ }))
-  expect(view.getByRole('button', { name: 'Replace: 馬田宿舍' })).toBeTruthy()
-  expect(view.getByRole('button', { name: 'Replace: 马丁宿舍' })).toBeTruthy()
+  expect(view.queryByRole('button', { name: 'Replace: 馬田宿舍' })).toBeNull()
+  expect(view.queryByRole('button', { name: 'Replace: 马丁宿舍' })).toBeNull()
   expect(
-    view.getAllByLabelText(
+    view.queryAllByLabelText(
       'Kept from the previous selection. The new selection has no name in this language. Check this name.',
     ),
-  ).toHaveLength(2)
+  ).toHaveLength(0)
 })
 
 it('shows the inherited Chinese block reference and synchronizes edits in either script', async () => {

@@ -196,7 +196,7 @@ it('uses the parsed 2D remainder when the street catalogue is unavailable', () =
   )
 })
 
-it('retains missing name translations and marks only those locales as detached', () => {
+it('clears missing building translations instead of retaining the previous names', () => {
   let address = setAddressName(emptyFeatureAddress(), 'buildingName', {
     id: 'old',
     names: { en: 'Old Hostel', 'zh-hant': '馬田宿舍', 'zh-hans': '马丁宿舍' },
@@ -208,19 +208,16 @@ it('retains missing name translations and marks only those locales as detached',
     divisionCodes: [],
   })
   expect(getAddressLocale(address, 'en').buildingName).toBe('Martin Hostel')
-  expect(getAddressLocale(address, 'zhHant').buildingName).toBe('馬田宿舍')
-  expect(getAddressLocale(address, 'zhHans').buildingName).toBe('马丁宿舍')
-  expect(address.detachedNames?.buildingName).toEqual({
-    'zh-hant': '馬田宿舍',
-    'zh-hans': '马丁宿舍',
-  })
+  expect(getAddressLocale(address, 'zhHant').buildingName).toBeNull()
+  expect(getAddressLocale(address, 'zhHans').buildingName).toBeNull()
+  expect(address.detachedNames?.buildingName ?? {}).toEqual({})
   address = setAddressName(address, 'buildingName', {
     id: 'translated',
     names: { en: 'New Hostel', 'zh-hant': '新宿舍' },
     divisionCodes: [],
   })
   expect(getAddressLocale(address, 'zhHant').buildingName).toBe('新宿舍')
-  expect(address.detachedNames?.buildingName).toEqual({})
+  expect(address.detachedNames?.buildingName ?? {}).toEqual({})
 })
 
 it('clears stale street translations when the selected catalogue record has no name for them', () => {
@@ -268,4 +265,20 @@ it('preserves explicit removals and refuses ambiguous street-name matches', () =
   expect(completeStreetNames(address, [street, { ...street, id: 'other' }])).toBe(
     address,
   )
+})
+
+it('clears names in additional languages omitted by the selected building', () => {
+  const address = setAddressOverride(
+    emptyFeatureAddress(),
+    'ja',
+    'buildingName',
+    '以前の建物',
+  )
+  const next = setAddressName(address, 'buildingName', {
+    id: 'replacement',
+    names: { en: 'Replacement Building' },
+    divisionCodes: [],
+  })
+  expect(next.overrides.ja.buildingName).toBeNull()
+  expect(getAddressLocale(next, 'en').buildingName).toBe('Replacement Building')
 })

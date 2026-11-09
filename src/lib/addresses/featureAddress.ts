@@ -544,14 +544,14 @@ export function getAddressDisplay(
   return locale === 'en' ? `${composed}, ${name}` : name + composed
 }
 
-/** Applies or resets one locale correction. @param address Current envelope. @param locale HYPE locale. @param field Upstream field name. @param value Undefined resets to source; null explicitly clears. @returns New envelope with original source untouched. */
+/** Applies or resets one locale correction. @param address Current envelope. @param locale Content language tag or legacy HYPE locale key. @param field Upstream field name. @param value Undefined resets to source; null explicitly clears. @returns New envelope with original source untouched. */
 export function setAddressOverride(
   address: FeatureAddress,
-  locale: LocaleKey,
+  locale: string,
   field: AddressField,
   value: string | boolean | null | undefined,
 ): FeatureAddress {
-  const tag = ADDRESS_LOCALES[locale]
+  const tag = ADDRESS_LOCALES[locale as LocaleKey] ?? locale.toLowerCase()
   const fields = { ...address.overrides[tag] }
   if (value === undefined) delete fields[field]
   else fields[field] = value
