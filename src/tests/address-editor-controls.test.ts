@@ -246,21 +246,37 @@ it('keeps street fields together on their own row when only unit portion is adde
   expect(number.getAttribute('placeholder')).toBe('25, 25A, 25–27')
 })
 
-it('collapses the empty parts tray and restores it when an added part is reset', async () => {
-  const view = render(FormFixture, { displayAddressInToolbar: true })
-  const tray = view.container.querySelector('[data-address-additions]')!
-  while (tray.querySelector('fieldset button'))
-    await fireEvent.click(tray.querySelector('fieldset button')!)
-  await waitFor(() => expect(tray.parentElement).toHaveAttribute('aria-hidden', 'true'))
-  const unit = view.container
-    .querySelector('#address-en-unitExpression')!
-    .closest('fieldset')!
-  await fireEvent.click(within(unit).getByRole('button', { name: 'Use source' }))
-  await waitFor(() =>
-    expect(tray.parentElement).toHaveAttribute('aria-hidden', 'false'),
-  )
-  expect(within(tray as HTMLElement).getByRole('button', { name: 'Unit' })).toBeTruthy()
-})
+it.each([false, true])(
+  'collapses the empty parts tray and restores it when an added part is reset (associated: %s)',
+  async associated => {
+    const initialAddress = emptyFeatureAddress()
+    if (associated)
+      initialAddress.association = {
+        originKind: 'building',
+        kind: 'establishment',
+        mode: 'linked',
+        lookup: 'matched',
+        names: { en: 'Test building' },
+      }
+    const view = render(FormFixture, { displayAddressInToolbar: true, initialAddress })
+    const tray = view.container.querySelector('[data-address-additions]')!
+    while (tray.querySelector('fieldset button'))
+      await fireEvent.click(tray.querySelector('fieldset button')!)
+    await waitFor(() =>
+      expect(tray.parentElement).toHaveAttribute('aria-hidden', 'true'),
+    )
+    const unit = view.container
+      .querySelector('#address-en-unitExpression')!
+      .closest('fieldset')!
+    await fireEvent.click(within(unit).getByRole('button', { name: 'Use source' }))
+    await waitFor(() =>
+      expect(tray.parentElement).toHaveAttribute('aria-hidden', 'false'),
+    )
+    expect(
+      within(tray as HTMLElement).getByRole('button', { name: 'Unit' }),
+    ).toBeTruthy()
+  },
+)
 
 it('keeps actions beside the label and clears an active block reference before offering reset', async () => {
   const view = render(FormFixture, { displayAddressInToolbar: true })

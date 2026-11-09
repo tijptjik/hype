@@ -212,6 +212,8 @@ let panelPriority = $state<'parts' | 'divisions'>('divisions')
 let overlayPanel = $state<'parts' | 'divisions' | null>(null)
 const sidePanelWidth = 320
 const collapsedPanelWidth = 32
+// Retain the header icon inset after the final address part has been selected.
+const emptyPartsInset = 40
 const availableEditorWidth = $derived(
   editorLayoutWidth ||
     toolbarWidth ||
@@ -227,6 +229,7 @@ const openPanels = $derived.by(() => {
   const budget =
     availableEditorWidth -
     48 -
+    (hasAvailableParts ? 0 : emptyPartsInset) -
     columnGap * (Number(hasAvailableParts) + Number(showDivisions)) -
     minimumEditorWidth
   const parts = hasAvailableParts && partsRequested
@@ -810,7 +813,7 @@ $effect(() => {
     <div
       bind:clientWidth={editorLayoutWidth}
       style:grid-template-columns={isEditing && showAddressDetails
-        ? `${hasAvailableParts ? `${openPanels.parts ? sidePanelWidth : collapsedPanelWidth}px ` : ''}minmax(0, 1fr)${showDivisions ? ` ${openPanels.divisions ? sidePanelWidth : collapsedPanelWidth}px` : ''}`
+        ? `${hasAvailableParts ? (openPanels.parts ? sidePanelWidth : collapsedPanelWidth) : emptyPartsInset - columnGap}px minmax(0, 1fr)${showDivisions ? ` ${openPanels.divisions ? sidePanelWidth : collapsedPanelWidth}px` : ''}`
         : undefined}
       style:column-gap={isEditing && showAddressDetails ? `${columnGap}px` : undefined}
       class="relative grid w-full min-w-0 max-w-full items-stretch gap-y-8 overflow-visible border-t border-border/60 px-6 transition-[grid-template-columns] duration-250 ease-out motion-reduce:transition-none {isEditing &&

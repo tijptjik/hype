@@ -3,7 +3,8 @@
 import { addressLocaleLabel } from './addressLocaleLabel.js'
 // SVELTE
 import { onMount, onDestroy, tick, type Snippet } from 'svelte'
-import { slide } from 'svelte/transition'
+import { slide, type SlideParams, type TransitionConfig } from 'svelte/transition'
+import { cubicInOut } from 'svelte/easing'
 import { MediaQuery } from 'svelte/reactivity'
 // I18N
 import { getLocaleKey, m, translateText, toLocaleKey } from '#lib/i18n.js'
@@ -18,6 +19,7 @@ import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.s
 import FormI18nInlineRow from '../formI18nSection/components/FormI18nInlineRow.svelte'
 import FormI18nTranslationBar from '../formI18nSection/components/FormI18nTranslationBar.svelte'
 import AddressNamePicker from './AddressNamePicker.svelte'
+import { animateAddressColumns } from './animateAddressColumns.js'
 import { adaptivePlaceholder } from './adaptivePlaceholder.js'
 import {
   phaseEditorValue,
@@ -160,6 +162,17 @@ let {
   isLookupLoading?: boolean
   onChange: (address: FeatureAddress) => void
 } = $props()
+/** Collapse locale rows and their own spacing as one continuous motion.
+ * @param node Locale row or translated display group. @param options Shared motion duration.
+ * @returns A slide that releases minimum height so the row can shrink all the way to zero.
+ */
+function localeSlide(node: Element, options: SlideParams): TransitionConfig {
+  const transition = slide(node, { ...options, easing: cubicInOut })
+  return {
+    ...transition,
+    css: (t, u) => `${transition.css?.(t, u) ?? ''};min-height:0;`,
+  }
+}
 let translationActive = true
 let translationGeneration = 0
 onDestroy(() => {
@@ -617,9 +630,7 @@ const visibleFields = $derived(
 )
 $effect(() => {
   hasAvailableParts =
-    visibleFields.length < availableFields.length ||
-    canAddAccessibility ||
-    Boolean(address.association)
+    visibleFields.length < availableFields.length || canAddAccessibility
 })
 const addableAddressParts = $derived(
   availableFields.filter(
@@ -1064,8 +1075,13 @@ function blockTypeFirst(locale: LocaleKey): boolean {
 
 {#if splitColumns && isEditing}
   <div
-    class="relative flex min-w-0 flex-col {independentScroll ? 'min-h-0' : ''}"
-    class:hidden={!hasAvailableParts}
+    class="relative flex min-w-0 flex-col transition-opacity duration-250 motion-reduce:transition-none {independentScroll
+      ? 'min-h-0'
+      : ''}"
+    class:opacity-0={!hasAvailableParts}
+    class:pointer-events-none={!hasAvailableParts}
+    inert={!hasAvailableParts}
+    aria-hidden={!hasAvailableParts}
   >
     <button
       inert={partsOpen}
@@ -1233,7 +1249,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
   {#if !isEditing}
     {#each activeLocales as locale (locale)}
       <div
-        transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
+        transition:localeSlide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
         class="space-y-3"
         lang={ADDRESS_LOCALES[locale]}
       >
@@ -1252,12 +1268,12 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       </div>
     {/each}
   {:else}
-    <div class="grid grid-cols-6 items-start gap-x-4 gap-y-6">
+    <div class="grid grid-cols-6 items-start gap-x-4 [&>*]:mb-6 [&>*:last-child]:mb-0">
       {@render identityFields?.(translations)}
       {#if hideDisplayAddress && translations}
         <fieldset
-          transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
-          class="@container col-span-6 min-w-0"
+          transition:localeSlide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
+          class="border-border/40 @container col-span-6 min-w-0 border-b pb-6"
         >
           <legend class="sr-only">
             {m.feature_address_formattedAddress()}
@@ -1283,7 +1299,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {/if}
       {#each visibleGroups as { fields: group, title }, groupIndex (group[0])}
         <div
-          class="col-span-6 min-w-0 {groupIndex || (hideDisplayAddress && translations)
+          class="col-span-6 min-w-0 {groupIndex
             ? 'border-t border-border/40 pt-6'
             : ''}"
         >
@@ -1304,7 +1320,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                 field === 'floorExpression' || field === 'unitExpression'}
               {@const shared = structured || field === 'buildingNumberExpression'}
               {#if field === 'accessHint'}
-                <fieldset class="w-full min-w-0 space-y-2">
+                <fieldset class="w-full min-w-0">
                   <legend
                     class="mb-1 flex min-h-7 flex-wrap items-center gap-2 text-sm font-medium"
                   >
@@ -1335,7 +1351,8 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                   {/if}
                   {#each activeLocales as locale (locale)}
                     <div
-                      transition:slide={{
+                      class="pt-2 first-of-type:pt-0"
+                      transition:localeSlide={{
                         duration: prefersReducedMotion.current ? 0 : 200,
                       }}
                     >
@@ -1435,7 +1452,9 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                   </legend>
                   <!-- The fieldset legend owns the label; inline controls must not reserve a second label row. -->
                   <div
-                    class="grid min-w-0 gap-2 {field === 'blockExpression'
+                    use:animateAddressColumns={field === 'blockExpression' ||
+                      field === 'phaseExpression'}
+                    class="grid min-w-0 {field === 'blockExpression'
                       ? 'grid-cols-[max-content_max-content_max-content]'
                       : field === 'phaseExpression'
                         ? 'grid-cols-[max-content_max-content]'
@@ -1463,7 +1482,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                       {@const suggestions = getExpressionSuggestions(field, locale)}
                       <div
                         data-address-locale={locale}
-                        transition:slide={{
+                        transition:localeSlide={{
                           duration: prefersReducedMotion.current ? 0 : 200,
                         }}
                         use:adaptivePlaceholder={field === 'phaseExpression'
@@ -1479,7 +1498,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                 { locale: ADDRESS_LOCALES[locale] },
                               )
                             : examples[field]({}, { locale: ADDRESS_LOCALES[locale] })}
-                        class="min-h-12 min-w-0 items-center gap-2 {field ===
+                        class="min-h-12 min-w-0 items-center gap-2 pt-2 first:pt-0 {field ===
                           'blockExpression' || field === 'phaseExpression'
                           ? 'col-span-full grid grid-cols-subgrid'
                           : 'flex flex-wrap'}"
