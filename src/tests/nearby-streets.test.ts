@@ -28,7 +28,7 @@ it('applies a catalogue default name when the record has no English translation 
     divisionCodes: [],
   })
   expect(next.overrides.en.streetName).toBe('Hollywood Road')
-  expect(next.overrides['zh-hant']).toBeUndefined()
+  expect(next.overrides['zh-hant']?.streetName).toBeNull()
   expect(next.source).toEqual(source.source)
 })
 

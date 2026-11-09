@@ -61,10 +61,59 @@ export async function loadAddressNames(
   })
 }
 
+/** Complete missing provider street names from one unambiguous catalogue record.
+ * @param address Current editor draft. @param streets Published street catalogue.
+ * @returns The original draft when nothing is missing, otherwise locale-only name corrections.
+ * @remarks Existing text, explicit removals, source evidence and identity are preserved. Simplified Chinese is derived from published Traditional Chinese when necessary.
+ */
+export function completeStreetNames(
+  address: FeatureAddress,
+  streets: AddressName[],
+): FeatureAddress {
+  const existing = Object.entries(ADDRESS_LOCALES).map(([locale, tag]) => ({
+    locale: locale as keyof typeof ADDRESS_LOCALES,
+    tag,
+    value: String(
+      getAddressLocale(address, locale as keyof typeof ADDRESS_LOCALES).streetName ??
+        '',
+    ).trim(),
+  }))
+  const missing = existing.filter(
+    ({ tag, value }) =>
+      !value && !Object.hasOwn(address.overrides[tag] ?? {}, 'streetName'),
+  )
+  if (!missing.length) return address
+  // Resolve the vocabulary identity before borrowing any of its localized names.
+  const names = new Set(
+    existing
+      .filter(({ value }) => value)
+      .map(({ value }) => normalizeNameSearch(value)),
+  )
+  if (!names.size) return address
+  const matches = streets.filter(street =>
+    [...Object.values(withSimplifiedChinese(street.names)), street.name ?? ''].some(
+      name => name && names.has(normalizeNameSearch(name)),
+    ),
+  )
+  if (matches.length !== 1) return address
+  const published = Object.fromEntries(
+    Object.entries(withSimplifiedChinese(matches[0].names)).map(([tag, name]) => [
+      tag.toLowerCase(),
+      name,
+    ]),
+  )
+  let next = address
+  for (const { locale, tag } of missing) {
+    const name = published[tag] || (locale === 'en' ? matches[0].name : undefined)
+    if (name?.trim()) next = setAddressOverride(next, locale, 'streetName', name)
+  }
+  return next
+}
+
 /** Apply published names with a Traditional-to-Simplified script fallback.
  * @param address Current draft. @param field Controlled name field.
  * @param record Explicitly chosen record, or null to clear the name.
- * @returns Draft corrections; missing translations retain their prior text with a review marker. Source evidence and identity remain untouched.
+ * @returns Draft corrections; missing building translations retain prior text with a review marker, while missing street translations are cleared. Source evidence and identity remain untouched.
  * @remarks The catalogue's default English name is an English-only fallback; it never supplies missing Chinese translations.
  */
 export function setAddressName(
@@ -78,7 +127,7 @@ export function setAddressName(
       Object.entries(withSimplifiedChinese(record?.names ?? {})).find(
         ([key]) => key.toLowerCase() === tag.toLowerCase(),
       )?.[1] || (locale === 'en' ? record?.name : undefined)
-    if (record && !value?.trim()) {
+    if (record && !value?.trim() && field === 'buildingName') {
       const retained = getAddressPresentationLocale(
         previous,
         locale as keyof typeof ADDRESS_LOCALES,

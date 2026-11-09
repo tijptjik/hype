@@ -24,7 +24,11 @@ import {
   type PhaseEditorType,
 } from '#lib/addresses/phaseEditor.js'
 import { parseStreetNumber, streetNumberIssue } from '#lib/addresses/streetNumber.js'
-import { loadAddressNames, setAddressName } from '#lib/addresses/nameCatalogue.js'
+import {
+  completeStreetNames,
+  loadAddressNames,
+  setAddressName,
+} from '#lib/addresses/nameCatalogue.js'
 import AddressDisplayField from './AddressDisplayField.svelte'
 import { ADDRESS_BLOCK_TYPES } from '@saanseoi/address/content'
 import AddressBlocks from './AddressBlocks.svelte'
@@ -738,12 +742,20 @@ const visibleGroups = $derived(
     }))
     .filter(group => group.fields.length),
 )
+let streetCatalogue = $state<AddressName[]>([])
+$effect(() => {
+  if (!isEditing || !streetCatalogue.length) return
+  const completed = completeStreetNames(address, streetCatalogue)
+  if (completed !== address) onChange(completed)
+})
 // Warm both vocabularies when the address page loads, even before optional fields are enabled.
 onMount(() => {
   for (const family of ['streets', 'buildings'] as const)
-    void loadAddressNames(family).catch(error =>
-      console.error(`Could not preload ${family} names`, error),
-    )
+    void loadAddressNames(family)
+      .then(rows => {
+        if (translationActive && family === 'streets') streetCatalogue = rows
+      })
+      .catch(error => console.error(`Could not preload ${family} names`, error))
 })
 /** Translate the Part from one source into its empty languages without replacing edits made in flight.
  * @param source Source language selected beside the Part heading.
@@ -1382,7 +1394,10 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                               source !== locale &&
                               addressComponentValue(address, source, field).trim(),
                           )}
-                          {#if translations && !value && sourceLocales.length}
+                          {#if field === 'buildingName' &&
+                            translations &&
+                            !value &&
+                            sourceLocales.length}
                             <div class="flex min-h-12 items-center gap-2">
                               <span
                                 class="text-muted-foreground w-[3em] shrink-0 font-mono text-xs"
@@ -1455,6 +1470,17 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                   : 'buildings'}
                                 {value}
                                 label={labels[field]}
+                                onClear={field === 'streetName'
+                                  ? () =>
+                                      onChange(
+                                        setAddressOverride(
+                                          address,
+                                          locale,
+                                          'streetName',
+                                          null,
+                                        ),
+                                      )
+                                  : undefined}
                                 onReplacingChange={replacing =>
                                   (replacingNames[`${locale}-${field}`] = replacing)}
                                 onSelect={record =>

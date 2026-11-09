@@ -10,6 +10,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import Fixture from './fixtures/components/AddressDetailsFixture.svelte'
 import FormFixture from './fixtures/components/FeatureAddress3dFixture.svelte'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
+import * as nameCatalogue from '#lib/addresses/nameCatalogue.js'
 import { structurePlaceAddress, setAddressName } from '#lib/addresses/nameCatalogue.js'
 vi.mock('#lib/i18n.js', async original => ({
   ...(await original<object>()),
@@ -108,7 +109,9 @@ it('shows the selected name as a tile and restores it when replacement is cancel
   expect(within(streetField).queryByRole('button', { name: 'Use source' })).toBeNull()
   await fireEvent.input(input, { target: { value: 'Uncommitted replacement' } })
   await fireEvent.click(view.getByRole('button', { name: 'Cancel' }))
-  expect(within(streetField).getByRole('button', { name: 'Clear' })).toBeTruthy()
+  expect(
+    within(streetField).getByRole('button', { name: 'Clear: Lyndhurst Terrace · EN' }),
+  ).toBeTruthy()
   expect(view.queryByRole('combobox', { name: 'Street name' })).toBeNull()
   expect(view.getByRole('button', { name: 'Replace: Lyndhurst Terrace' })).toBeTruthy()
   await fireEvent.click(
@@ -691,4 +694,58 @@ it('swaps the block inputs and composed address with the order button', async ()
   expect(
     type().compareDocumentPosition(reference) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy()
+})
+
+it('clears only one street-name language and does not offer machine translation for streets', async () => {
+  const initialAddress = setAddressName(emptyFeatureAddress(), 'streetName', {
+    id: 'hollywood',
+    names: { en: 'Hollywood Road', 'zh-hant': '荷李活道' },
+    divisionCodes: [],
+  })
+  const view = render(FormFixture, {
+    initialAddress,
+    translations: true,
+    displayAddressInToolbar: true,
+  })
+  await fireEvent.click(view.getByRole('button', { name: 'Clear: 荷李活道 · 简中' }))
+  expect(
+    view.getByRole('button', { name: 'Replace: Hollywood Road' }),
+  ).toBeInTheDocument()
+  expect(view.getByRole('button', { name: 'Replace: 荷李活道' })).toBeInTheDocument()
+  const field = view
+    .getByRole('button', { name: 'Replace: Hollywood Road' })
+    .closest('fieldset')!
+  expect(within(field).queryByRole('button', { name: /Translate from/ })).toBeNull()
+  expect(
+    within(field).getByRole('combobox', { name: 'Street name' }),
+  ).toBeInTheDocument()
+})
+
+it('fills missing street locales when a provider address opens without requiring catalogue reselection', async () => {
+  const load = vi.spyOn(nameCatalogue, 'loadAddressNames').mockResolvedValue([
+    {
+      id: 'street',
+      names: { en: 'LYNDHURST TERRACE', 'zh-hant': '擺花街' },
+      divisionCodes: ['CW'],
+    },
+  ])
+  try {
+    const initialAddress = emptyFeatureAddress()
+    initialAddress.overrides.en = { streetName: 'Lyndhurst Terrace' }
+    const view = render(FormFixture, {
+      initialAddress,
+      translations: true,
+      displayAddressInToolbar: true,
+    })
+    await waitFor(() =>
+      expect(
+        view.getByRole('button', { name: 'Replace: 摆花街', exact: true }),
+      ).toBeInTheDocument(),
+    )
+    expect(
+      view.getByRole('button', { name: 'Replace: 擺花街', exact: true }),
+    ).toBeInTheDocument()
+  } finally {
+    load.mockRestore()
+  }
 })

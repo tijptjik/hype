@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { expect, it } from 'vitest'
-import { structurePlaceAddress, setAddressName } from '#lib/addresses/nameCatalogue.js'
+import {
+  completeStreetNames,
+  structurePlaceAddress,
+  setAddressName,
+} from '#lib/addresses/nameCatalogue.js'
 import {
   emptyFeatureAddress,
   getAddressLocale,
@@ -219,7 +223,7 @@ it('retains missing name translations and marks only those locales as detached',
   expect(address.detachedNames?.buildingName).toEqual({})
 })
 
-it('keeps explicit removal and reset distinct from missing catalogue translations', () => {
+it('clears stale street translations when the selected catalogue record has no name for them', () => {
   let address = setAddressOverride(
     emptyFeatureAddress(),
     'zhHant',
@@ -231,10 +235,37 @@ it('keeps explicit removal and reset distinct from missing catalogue translation
     names: { en: 'New Street' },
     divisionCodes: [],
   })
-  expect(address.detachedNames?.streetName?.['zh-hant']).toBe('舊街')
+  expect(getAddressLocale(address, 'zhHant').streetName).toBeNull()
+  expect(address.detachedNames?.streetName?.['zh-hant']).toBeUndefined()
   const reset = setAddressOverride(address, 'zhHant', 'streetName', undefined)
   expect(reset.detachedNames?.streetName?.['zh-hant']).toBeUndefined()
   const cleared = setAddressName(address, 'streetName', null)
   expect(getAddressLocale(cleared, 'zhHant').streetName).toBeNull()
-  expect(cleared.detachedNames?.streetName).toEqual({})
+  expect(cleared.detachedNames?.streetName ?? {}).toEqual({})
+})
+
+it('completes provider street names and derives Simplified Chinese from the catalogue', () => {
+  const original = emptyFeatureAddress()
+  const address = setAddressOverride(original, 'en', 'streetName', 'Lyndhurst Terrace')
+  const completed = completeStreetNames(address, [street])
+  expect(getAddressLocale(completed, 'zhHant').streetName).toBe('擺花街')
+  expect(getAddressLocale(completed, 'zhHans').streetName).toBe('摆花街')
+  expect(completed.source).toBe(address.source)
+  expect(completeStreetNames(completed, [street])).toBe(completed)
+})
+
+it('preserves explicit removals and refuses ambiguous street-name matches', () => {
+  let address = setAddressOverride(
+    emptyFeatureAddress(),
+    'en',
+    'streetName',
+    'Lyndhurst Terrace',
+  )
+  address = setAddressOverride(address, 'zhHans', 'streetName', null)
+  expect(
+    getAddressLocale(completeStreetNames(address, [street]), 'zhHans').streetName,
+  ).toBeNull()
+  expect(completeStreetNames(address, [street, { ...street, id: 'other' }])).toBe(
+    address,
+  )
 })

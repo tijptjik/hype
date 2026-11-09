@@ -6,6 +6,7 @@ import { onMount, tick } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
+import XIcon from 'virtual:icons/lucide/x'
 import WarningIcon from 'virtual:icons/lucide/triangle-alert'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
@@ -27,6 +28,7 @@ let {
   showLocale = false,
   detached = false,
   onSelect,
+  onClear,
   onReplacingChange,
   onBlur,
 }: {
@@ -36,6 +38,7 @@ let {
   locale: LocaleKey
   showLocale?: boolean
   detached?: boolean
+  onClear?: () => void
   onBlur?: () => void
   onSelect: (record: AddressName | null) => void
   onReplacingChange?: (replacing: boolean) => void
@@ -219,6 +222,17 @@ onMount(() => {
             >{m.replace()}</span
           >
         </button>
+        {#if onClear}
+          <button
+            type="button"
+            aria-label={`${m.filters__clear()}: ${displayValue} · ${addressLocaleLabel(locale)}`}
+            data-tooltip={m.filters__clear()}
+            class="text-muted-foreground hover:text-primary focus-visible:outline-primary mr-1 flex size-7 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/name:opacity-100 group-hover/name:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 [@media(hover:none)]:opacity-100"
+            onclick={onClear}
+          >
+            <XIcon class="size-3.5" aria-hidden="true" />
+          </button>
+        {/if}
         {#if detached}
           <SimpleTooltip triggerProps={{ tabindex: -1 }}>
             {#snippet trigger()}
