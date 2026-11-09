@@ -54,10 +54,13 @@ export async function linkInitialFeatureLocation(
     authorizeLocationCorrection?: () => Promise<void>
   },
 ): Promise<InitialLocationLinkResult> {
+  // Historical presentation does not prevent an explicitly reviewed Location association.
   const baseline = await readFeatureLocationBaseline(
     db,
     input.featureId,
     input.projectId,
+    undefined,
+    'explicit',
   )
   if (baseline.status !== 'ready') return baseline
   if (baseline.baseline.modifiedAt !== input.expectedFeatureModifiedAt)

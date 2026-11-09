@@ -299,3 +299,52 @@ it('preserves reviewed address components across a later save and reassociation'
       .get(),
   ).toMatchObject({ title: beforeName, description: 'Feature-specific description' })
 })
+
+it('links a new Location to a historical Feature without changing its historical flag', async () => {
+  const store = setupLifecycleDatabase(true)
+  stores.push(store)
+  const address = {
+    ...emptyFeatureAddress(),
+    coordinates: [114.14032, 22.28555] as [number, number],
+  }
+  store.sqlite
+    .prepare('UPDATE feature SET isIntangible=1,geometry=?,addressMeta=? WHERE id=?')
+    .run(
+      JSON.stringify({ type: 'Point', coordinates: address.coordinates }),
+      JSON.stringify({ address }),
+      'f',
+    )
+  const target = await createLocalLocation(
+    store.db,
+    'p',
+    localIdentityFromAddress('building', { en: 'True Light Building' }, address),
+    'actor',
+  )
+  const input = {
+    featureId: 'f',
+    projectId: 'p',
+    ...target,
+    expectedFeatureModifiedAt: 'original',
+    actorId: 'actor',
+  }
+  expect(
+    await linkInitialFeatureLocation(store.db, {
+      ...input,
+      expectedFeatureModifiedAt: 'stale',
+    }),
+  ).toEqual({ status: 'conflict' })
+  expect(await linkInitialFeatureLocation(store.db, input)).toMatchObject({
+    status: 'linked',
+  })
+  expect(
+    store.sqlite.prepare('SELECT isIntangible FROM feature WHERE id=?').get('f'),
+  ).toEqual({ isIntangible: 1 })
+  expect(
+    store.sqlite
+      .prepare('SELECT locationId FROM featureLocation WHERE featureId=?')
+      .get('f'),
+  ).toEqual({ locationId: target.locationId })
+  expect(await linkInitialFeatureLocation(store.db, input)).toEqual({
+    status: 'conflict',
+  })
+})
