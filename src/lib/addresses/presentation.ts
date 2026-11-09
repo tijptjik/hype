@@ -4,7 +4,10 @@ import { streetDisplayName } from './formatting.js'
 import { formatUnit, unitDisplayExpression } from './address3d.js'
 // TYPES
 import type { FeatureAddress } from './featureAddress'
-import type { EditableAddressField } from './addressExpressions'
+import {
+  EDITABLE_ADDRESS_FIELDS,
+  type EditableAddressField,
+} from './addressExpressions'
 import type { LocaleKey } from '#lib/types.js'
 
 /** Present parsed components as a single editable expression, keeping ordering implicit.
@@ -90,4 +93,38 @@ export function addressComponentValue(
       ? `${text('phaseName') || 'Phase'} ${text('phaseRef')}`
       : `第${text('phaseRef')}期`
   return ''
+}
+
+/** Detect authored address parts across languages, excluding display text and access hints.
+ * @param address Source address with local overrides.
+ * @returns Whether any structured address field has a non-empty value.
+ */
+export function hasStructuredAddressComponents(address: FeatureAddress): boolean {
+  const content =
+    address.association?.content ??
+    address.canonical?.content ??
+    address.source.canonical?.content ??
+    address.source.authored
+  const raw = address.source.rawSource.data as
+    | { attributes?: { i18n?: Record<string, Record<string, unknown>> } }
+    | undefined
+  const rows: Record<string, Record<string, unknown>> = content?.i18n ??
+  raw?.attributes?.i18n ??
+  {}
+  const tags = new Set([...Object.keys(rows), ...Object.keys(address.overrides)])
+  return EDITABLE_ADDRESS_FIELDS.some(
+    field =>
+      field !== 'formattedAddress' &&
+      field !== 'accessHint' &&
+      ((['en', 'zhHant', 'zhHans'] as const).some(locale =>
+        addressComponentValue(address, locale, field).trim(),
+      ) ||
+        [...tags].some(tag => {
+          const overrides = address.overrides[tag.toLowerCase()] ?? {}
+          const value = Object.hasOwn(overrides, field)
+            ? overrides[field]
+            : rows[tag]?.[field]
+          return typeof value === 'string' && Boolean(value.trim())
+        })),
+  )
 }

@@ -51,6 +51,7 @@ import { Button } from '#lib/bits/core/index.js'
 import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 // ICONS
 import SearchIcon from 'virtual:icons/lucide/search'
+import MarkerIcon from 'virtual:icons/lucide/map-pin'
 import LoaderIcon from 'virtual:icons/lucide/loader-circle'
 import UnitIcon from 'virtual:icons/lucide/door-open'
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
@@ -76,7 +77,10 @@ import {
   getAddressPresentationLocale,
   setAddressOverride,
 } from '#lib/addresses/featureAddress.js'
-import { addressComponentValue } from '#lib/addresses/presentation.js'
+import {
+  addressComponentValue,
+  hasStructuredAddressComponents,
+} from '#lib/addresses/presentation.js'
 import {
   EDITABLE_ADDRESS_FIELDS,
   resetAddressComponent,
@@ -802,6 +806,8 @@ const labels = $derived<Record<EditableAddressField, string>>({
   unitPortion: m.feature_address_unitPortion(),
   accessHint: m.feature_address_accessHint(),
 })
+// Display text and access directions do not constitute structured address components.
+const hasStructuredAddress = $derived(hasStructuredAddressComponents(address))
 const availableFields = $derived(
   EDITABLE_ADDRESS_FIELDS.filter(
     field =>
@@ -894,6 +900,21 @@ const shownLocales = $derived(
     },
     translations,
   ),
+)
+// Show translated display text alongside structured parts; retain the primary only when no header displays it.
+const displayAddressRows = $derived(
+  shownLocales.flatMap(tag => {
+    const locale = addressLocaleKey(tag)
+    const value = locale
+      ? getAddressDisplay(address, locale, divisions, locationKind)
+      : additionalLocaleValue(tag, 'formattedAddress')
+    return value.trim() ? [{ tag, value }] : []
+  }),
+)
+const viewerDisplayAddressRows = $derived(
+  hideDisplayAddress || hasStructuredAddress
+    ? displayAddressRows.filter(({ tag }) => tag !== selectedLocales[0])
+    : displayAddressRows,
 )
 const activeLocales = $derived(
   shownLocales.flatMap(tag => {
@@ -1549,6 +1570,39 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     </fieldset>
   {/if}
   {#if !isEditing}
+    {#if viewerDisplayAddressRows.length}
+      <div
+        class="@container min-w-0"
+        data-address-display-values
+        class:opacity-50={displayStale}
+        class:grayscale={displayStale}
+      >
+        <div
+          class="grid min-w-0 grid-cols-1 items-start gap-x-6 gap-y-1 @min-[40rem]:grid-cols-2"
+        >
+          {#each viewerDisplayAddressRows as { tag, value } (tag)}
+            <p
+              lang={tag}
+              class="flex min-w-0 items-center gap-2 text-sm leading-relaxed"
+            >
+              {#if tag !== selectedLocales[0]}
+                <span class="text-muted-foreground w-[3em] shrink-0 font-mono text-xs"
+                  >{shortLocaleLabel(tag)}</span
+                >
+              {/if}
+              <MarkerIcon
+                class="text-muted-foreground size-5 shrink-0"
+                aria-hidden="true"
+              />
+              <span
+                class="min-w-0 px-2 py-1.5 font-medium break-words whitespace-normal"
+                >{value}</span
+              >
+            </p>
+          {/each}
+        </div>
+      </div>
+    {/if}
     <AddressReadOnly
       {address}
       locales={shownLocales.map(tag => ({ tag, key: addressLocaleKey(tag) }))}

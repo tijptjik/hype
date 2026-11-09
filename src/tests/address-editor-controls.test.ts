@@ -834,3 +834,45 @@ it('reorders localized address rows without changing their values', async () => 
     '側門',
   )
 })
+
+it('shows retained display addresses beneath the viewer heading when no structured fields exist', async () => {
+  const initialAddress = emptyFeatureAddress({
+    en: '500 Castle Peak Road',
+    'zh-hant': '青山道500號',
+    'zh-hans': '青山道500号',
+  })
+  const view = render(FormFixture, { initialAddress, isEditing: false })
+  const fallback = (): HTMLElement =>
+    view.container.querySelector('[data-address-display-values]')!
+  expect(fallback()).toHaveTextContent('500 Castle Peak Road')
+  expect(fallback()).not.toHaveTextContent('青山道500號')
+  expect(view.container.querySelector('[data-address-onboarding]')).toBeNull()
+  await fireEvent.click(view.getByRole('button', { name: /^Multilingual$/ }))
+  expect(fallback()).toHaveTextContent('繁中')
+  expect(fallback()).toHaveTextContent('青山道500號')
+  expect(fallback()).toHaveTextContent('简中')
+  expect(fallback()).toHaveTextContent('青山道500号')
+  expect(fallback().querySelector('p')?.textContent?.trim()).toBe(
+    '500 Castle Peak Road',
+  )
+  expect(view.container.querySelector('[data-address-parts]')).toBeNull()
+})
+
+it('shows translated display addresses with structured fields in the viewer', async () => {
+  const initialAddress = emptyFeatureAddress()
+  initialAddress.overrides = {
+    en: { buildingName: 'Test Building', formattedAddress: 'English display address' },
+    'zh-hant': { buildingName: '測試大廈', formattedAddress: '繁體完整地址' },
+    'zh-hans': { buildingName: '测试大厦', formattedAddress: '简体完整地址' },
+  }
+  const view = render(FormFixture, { initialAddress, isEditing: false })
+  expect(view.container.querySelector('[data-address-display-values]')).toBeNull()
+  await fireEvent.click(view.getByRole('button', { name: /^Multilingual$/ }))
+  const displays = view.container.querySelector('[data-address-display-values]')!
+  expect(displays).toHaveTextContent('繁體完整地址')
+  expect(displays).toHaveTextContent('简体完整地址')
+  expect(displays).not.toHaveTextContent('English display address')
+  expect(view.container.querySelector('[data-address-parts]')).toHaveTextContent(
+    'Test Building',
+  )
+})
