@@ -2054,7 +2054,7 @@ const featureCoordinates = $derived(
 const title = $derived(
   currentFeatureData.i18n?.[localeKey]?.title ||
     feature?.data?.i18n?.[localeKey]?.title ||
-    NEW_TITLE,
+    (isNewFeatureRef ? NEW_TITLE : m.resource_loading()),
 )
 
 // Parent records own policy. The Feature's tiny read projection covers the first editable frame.
@@ -4049,9 +4049,14 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
       ...formCtx.attributes,
       style: `--feature-preview-height:${visualSectionHeight}px`,
     }}
-    isReady={true}
+    isReady={isNewFeatureRef || Boolean(currentFeatureId)}
     class={FEATURE_EDITOR_FORM_CLASS}
   >
+    {#snippet fallback()}
+      <p role="status" class="text-muted-foreground px-6 py-6">
+        {m.resource_loading()}
+      </p>
+    {/snippet}
     <HiddenInputs inputs={programmaticFeatureInputEntries} />
 
     {#if showsVisualSection}
@@ -4782,7 +4787,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                   )}
                 {/snippet}
               </FeatureLocationSection>
-            {:else}
+            {:else if isNewFeatureRef}
               <DraftFeatureLocationSearch
                 projectId={projectIdValue}
                 bind:this={draftSearch}
