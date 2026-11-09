@@ -92,3 +92,23 @@ it('does not mix a previously edited building number with source number componen
   expect(getAddressLocale(result, 'en').buildingNumberExpression).toBe('999')
   expect(getAddressLocale(result, 'en').buildingNumberFrom).toBeFalsy()
 })
+
+it('recognizes the selected Chinese building name instead of parsing it as a block', () => {
+  const selected = {
+    id: 'golden',
+    names: { en: 'Golden Gate Commercial Building', 'zh-Hant': '金門商業大廈' },
+    divisionCodes: [],
+  }
+  const addressCandidate = { ...candidate, display: { 'zh-hant': '金門商業大廈' } }
+  const result = fillBuildingDetails(
+    emptyFeatureAddress(),
+    selected,
+    details,
+    addressCandidate,
+    false,
+    'en',
+  )
+  expect(getAddressLocale(result, 'zhHant').buildingName).toBe('金門商業大廈')
+  expect(getAddressLocale(result, 'zhHant').blockRef).toBeFalsy()
+  expect(getAddressLocale(result, 'zhHant').blockExpression).toBeFalsy()
+})

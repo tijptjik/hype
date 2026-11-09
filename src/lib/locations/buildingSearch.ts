@@ -3,6 +3,7 @@ import { z } from 'zod'
 // SOURCES
 import { loadBuildingNames, loadBuildingDetails } from '#lib/sources/saanseoi.js'
 // ADDRESS
+import { buildingNames } from '#lib/addresses/buildingNames.js'
 import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
 import { loadAddressNames } from '#lib/addresses/nameCatalogue.js'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
@@ -94,11 +95,7 @@ export async function searchBuildingNames(
           (options.maxDistance ?? 100)
       )
         return []
-      const names = Object.fromEntries(
-        Object.entries(row.names).filter((entry): entry is [string, string] =>
-          Boolean(entry[1]),
-        ),
-      )
+      const names = buildingNames(row.names, row.name)
       const building = { ...row, names, release: bundle.release }
       const candidates = details.addresses.length ? details.addresses : [undefined]
       return candidates.map(candidate => {
@@ -120,7 +117,7 @@ export async function searchBuildingNames(
         return {
           id: `building:${row.id}:${candidate ? `${candidate.id}:${candidate.snapshotId}` : ''}`,
           kind: 'building' as const,
-          names: { ...names, ...(row.name ? { und: row.name } : {}) },
+          names,
           buildingSource: {
             id: row.id,
             release: bundle.release,

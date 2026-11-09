@@ -180,3 +180,28 @@ it('paginates detail reads without splitting alternatives or revisiting previous
     searchBuildingNamesPage('Tower', 'en', () => true, first.nextCursor!),
   ).rejects.toMatchObject({ status: 410 })
 })
+
+it('does not turn the combined building title into an undetermined locale', async () => {
+  source.names.mockResolvedValue({
+    release: 'r1',
+    records: [
+      {
+        id: 'golden',
+        name: '金門商業大廈 Golden Gate Commercial Building',
+        names: { en: 'Golden Gate Commercial Building', 'zh-Hant': '金門商業大廈' },
+        divisionCodes: [],
+      },
+    ],
+  })
+  source.details.mockResolvedValue({
+    id: 'golden',
+    coordinates: [114, 22],
+    addresses: [],
+  })
+  const [row] = await searchBuildingNames('Golden Gate', 'en')
+  expect(row.names).toEqual({
+    en: 'Golden Gate Commercial Building',
+    'zh-hant': '金門商業大廈',
+    'zh-hans': '金门商业大厦',
+  })
+})

@@ -1,4 +1,5 @@
 // ADDRESS
+import { buildingNames } from './buildingNames.js'
 import {
   ADDRESS_LOCALES,
   emptyFeatureAddress,
@@ -36,8 +37,21 @@ export function fillBuildingDetails(
   let next = { ...address, overrides: { ...address.overrides } }
   if (!hasLocation) next.coordinates = [...details.coordinates]
   const source = emptyFeatureAddress(candidate?.display ?? {})
+  const names = buildingNames(building.names, building.name)
   const matcher = createPlaceAddressMatcher(
-    [],
+    Object.entries(names).map(([locale, buildingName]) => ({
+      addressId: building.id,
+      locale,
+      formattedAddress: null,
+      buildingName,
+      buildingNumberExpression: null,
+      buildingNumberFrom: null,
+      buildingNumberTo: null,
+      blockExpression: null,
+      phaseExpression: null,
+      premisesName: null,
+      streetName: null,
+    })),
     streets.flatMap(street =>
       Object.entries(street.names).map(([locale, name]) => ({
         locale: locale.toLowerCase(),
@@ -55,7 +69,7 @@ export function fillBuildingDetails(
     const original = getAddressLocale(address, language)
     const components = getAddressLocale(source, language)
     const name =
-      Object.entries(building.names).find(
+      Object.entries(names).find(
         ([code]) => code.toLowerCase() === tag.toLowerCase(),
       )?.[1] || (language === locale ? building.name : undefined)
     // Expand the shared parser's unambiguous number expression into editor fields.
