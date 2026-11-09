@@ -1,3 +1,5 @@
+// ADDRESS
+import { simplifiedChinese, traditionalChinese } from './chinese.js'
 // TYPES
 import type { LocaleKey } from '#lib/types.js'
 
@@ -82,4 +84,24 @@ export function addressName(value: string, locale: LocaleKey): string {
     /\b(?:Ii|Iii|Iv|Vi|Vii|Viii|Ix|Xi|Xii)\b/g,
     numeral => numeral.toUpperCase(),
   )
+}
+
+/** Extract one language from a bilingual map address component for comparison.
+ * @param value Raw map or selected component. @param locale Comparison language.
+ * @returns Language-specific text, or empty text when that language is absent.
+ * @remarks Source labels remain unchanged; this does not infer translations.
+ */
+export function addressComparisonName(value: string, locale: LocaleKey): string {
+  const hasChinese = /\p{Script=Han}/u.test(value)
+  if (locale === 'en')
+    return value
+      .replace(/\p{Script=Han}+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  if (!hasChinese) return ''
+  const chinese = value
+    .replace(/[A-Za-z]+(?:['’][A-Za-z]+)*/g, ' ')
+    .replace(/\s+/g, '')
+    .trim()
+  return locale === 'zhHans' ? simplifiedChinese(chinese) : traditionalChinese(chinese)
 }
