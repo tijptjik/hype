@@ -2,6 +2,7 @@
 // I18N
 import { getI18n, m } from '#lib/i18n.js'
 // DOMAIN
+import { featureCreationPreview } from '#lib/revisions/featureCreationPreview.js'
 import { taskRowImage } from './taskRowImage.js'
 // SERVICES
 import { getTaskReviewActionLabel } from '#lib/client/services/task.js'
@@ -68,20 +69,20 @@ const locationTitle = $derived(
     '',
   ),
 )
+const preview = $derived(
+  entity.creationProposal
+    ? featureCreationPreview(entity.creationProposal.content)
+    : entity.feature,
+)
 const title = $derived(
-  getI18n(entity.feature ?? undefined, 'title', appCtx.getUserPreferences(), '') ||
+  getI18n(preview ?? undefined, 'title', appCtx.getUserPreferences(), '') ||
     locationTitle ||
     `${m.feature_location_title()} · ${entity.featureId}`,
 )
 const description = $derived(
   entity.locationTask
     ? locationTaskLabel(entity.type)
-    : getI18n(
-        entity.feature ?? undefined,
-        'displayAddress',
-        appCtx.getUserPreferences(),
-        '',
-      ),
+    : getI18n(preview ?? undefined, 'displayAddress', appCtx.getUserPreferences(), ''),
 )
 const reviewAction = $derived(entity?.reviewAction)
 const reviewActionDisplay = $derived(getTaskReviewActionLabel(reviewAction))
