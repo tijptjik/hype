@@ -1049,12 +1049,11 @@ onMount(() => {
     /* New users and unavailable storage keep the expanded guide. */
   }
   const initialSearches: Promise<void>[] = []
+  // Discover establishment alternatives for address origins too, before revealing match scores.
   for (const value of ASSOCIATION_KINDS)
     if (
       value !== 'address' &&
-      (value === kind ||
-        (value === 'establishment' && origin.kind !== 'address') ||
-        Object.keys(names[value]).length)
+      (value === kind || value === 'establishment' || Object.keys(names[value]).length)
     )
       initialSearches.push(reconcile(value))
   // Reveal suggestions only after all initial location levels have settled.

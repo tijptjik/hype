@@ -70,11 +70,12 @@ const candidate = (kind: Result['kind'] = 'establishment'): Result => ({
 
 it('shows three evidence states, settles a resolving ring, and never changes the selected level', async () => {
   let complete!: (value: { candidates: Result[]; incomplete: boolean }) => void
-  const search = vi.fn(
-    () =>
-      new Promise<{ candidates: Result[]; incomplete: boolean }>(resolve => {
-        complete = resolve
-      }),
+  const search = vi.fn(input =>
+    input.kind === 'premises'
+      ? new Promise<{ candidates: Result[]; incomplete: boolean }>(resolve => {
+          complete = resolve
+        })
+      : Promise.resolve({ candidates: [], incomplete: false }),
   )
   render(Picker, { origin: origin(), search, onAccept: vi.fn(), onCancel: vi.fn() })
   expect(screen.getByRole('status').textContent).toContain(
@@ -117,9 +118,7 @@ it('keeps address-only mode quiet and creates no establishment', async () => {
       }),
     }),
   )
-  expect(search.mock.calls.some(([input]) => input.kind === 'establishment')).toBe(
-    false,
-  )
+  expect(search.mock.calls.some(([input]) => input.kind === 'establishment')).toBe(true)
 })
 
 it('matches while typing without blur, reviews component choices and defaults to the matched pin', async () => {
@@ -1018,7 +1017,7 @@ it('accepts the proposal without comparing it to itself or changing its address'
   )
 })
 
-it('preselects a unique complete exact Building match with inferred styling and preserves explicit acceptance', async () => {
+it('shows establishment strength alongside an exact Building recommendation and preserves explicit acceptance', async () => {
   const address = {
     ...origin().address,
     overrides: {
@@ -1038,9 +1037,23 @@ it('preselects a unique complete exact Building match with inferred styling and 
   }
   const onAccept = vi.fn()
   render(Picker, {
-    origin: { ...origin(), address },
+    origin: { ...origin(), names: { en: 'Fu Yee Court' }, address },
     search: vi.fn(async input => ({
-      candidates: input.kind === 'building' ? [building] : [],
+      candidates:
+        input.kind === 'building'
+          ? [building]
+          : input.kind === 'establishment'
+            ? [
+                {
+                  ...candidate(),
+                  names: { en: 'Fu Yee Court' },
+                  address: {
+                    ...emptyFeatureAddress(),
+                    coordinates: address.coordinates,
+                  },
+                },
+              ]
+            : [],
       incomplete: false,
     })),
     onAccept,
@@ -1053,6 +1066,12 @@ it('preselects a unique complete exact Building match with inferred styling and 
     ).toBe('true'),
   )
   expect(screen.queryAllByRole('switch')).toHaveLength(0)
+  expect(
+    screen
+      .getByRole('radio', { name: 'Establishment' })
+      .querySelector('[data-match-strength]')
+      ?.getAttribute('data-match-strength'),
+  ).toBe('80')
   expect(onAccept).not.toHaveBeenCalled()
   await fireEvent.click(
     screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
