@@ -837,6 +837,35 @@ it('reorders localized address rows without changing their values', async () => 
   )
 })
 
+it('uses the first ordered locale in the toolbar and leaves the others in the form', async () => {
+  const initialAddress = emptyFeatureAddress()
+  initialAddress.overrides = {
+    en: { formattedAddress: 'English address' },
+    'zh-hant': { formattedAddress: '繁體地址' },
+    'zh-hans': { formattedAddress: '简体地址' },
+  }
+  const view = render(FormFixture, {
+    initialAddress,
+    translations: true,
+    displayAddressInToolbar: true,
+  })
+  const toolbar = view.container.querySelector('[data-address-toolbar-display]')!
+  expect(toolbar).toHaveTextContent('English address')
+  // JSDOM omits the animation query used when the secondary locale rows swap.
+  for (const element of view.container.querySelectorAll('*'))
+    element.getAnimations = () => []
+  await fireEvent.keyDown(view.getByRole('button', { name: 'Traditional Chinese' }), {
+    key: 'ArrowLeft',
+    altKey: true,
+  })
+  expect(toolbar).toHaveTextContent('繁體地址')
+  expect(toolbar).not.toHaveTextContent('English address')
+  const details = view.container.querySelector('section[aria-label="Location"]')!
+  expect(details).toHaveTextContent('English address')
+  expect(details).toHaveTextContent('简体地址')
+  expect(details).not.toHaveTextContent('繁體地址')
+})
+
 it('shows retained display addresses beneath the viewer heading when no structured fields exist', async () => {
   const initialAddress = emptyFeatureAddress({
     en: '500 Castle Peak Road',
@@ -892,6 +921,28 @@ it('places discovery actions inside the empty address area instead of the toolba
   const actions = view.container.querySelectorAll('[data-test-discovery]')
   expect(actions).toHaveLength(1)
   expect(actions[0].closest('[data-address-onboarding]')).not.toBeNull()
+})
+
+it('omits the header locale from display-only viewer addresses and marks the alternatives', () => {
+  const initialAddress = emptyFeatureAddress({
+    en: '500 Castle Peak Road',
+    'zh-hant': '青山道500號',
+    'zh-hans': '青山道500号',
+  })
+  const view = render(FormFixture, {
+    initialAddress,
+    isEditing: false,
+    translations: true,
+    displayAddressInToolbar: true,
+  })
+  expect(
+    view.container.querySelector('[data-address-toolbar-display]'),
+  ).toHaveTextContent('500 Castle Peak Road')
+  const displays = view.container.querySelector('[data-address-display-values]')!
+  expect(displays).not.toHaveTextContent('500 Castle Peak Road')
+  expect(displays).toHaveTextContent('青山道500號')
+  expect(displays).toHaveTextContent('青山道500号')
+  expect(displays.querySelectorAll('p')).toHaveLength(2)
 })
 
 it('offers address matching from the empty viewer even when a display address exists', async () => {

@@ -5,7 +5,7 @@ import { onDestroy, tick, type Snippet } from 'svelte'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 import { getSurfaceLayoutCtx } from '#lib/context/surfaceLayout.svelte.js'
 // I18N
-import { getLocaleKey, m } from '#lib/i18n.js'
+import { getLocaleKey, m, toLocaleKey } from '#lib/i18n.js'
 // BITS
 import { Button } from '#lib/bits/core/index.js'
 import { SelectField } from '#lib/bits/custom/form/index.js'
@@ -161,6 +161,23 @@ let {
   onLookup: (query?: string) => void
   onChange: (address: FeatureAddress) => void
 } = $props()
+
+let localLocaleState = $state<ProfileLocaleState>({
+  selectedLocales: ['en', 'zh-Hant', 'zh-Hans'],
+  visibleLocales: ['en', 'zh-Hant', 'zh-Hans'],
+  expanded: false,
+})
+const addressLocaleState = $derived(localeState ?? localLocaleState)
+const displayLocale = $derived(
+  toLocaleKey((addressLocaleState.selectedLocales[0] ?? 'en').toLowerCase()),
+)
+/** Keep the toolbar and editor on the same ordered locale state.
+ * @param state Updated editor locale order and visibility. @returns Nothing.
+ */
+function changeLocaleState(state: ProfileLocaleState): void {
+  localLocaleState = state
+  onLocaleStateChange?.(state)
+}
 
 const showEmptyAddressActions = $derived(
   isEditing &&
@@ -622,7 +639,7 @@ $effect(() => {
         {locationKind}
         {divisions}
         {address}
-        locale={getLocaleKey()}
+        locale={displayLocale}
         {isEditing}
         alignEnd={true}
         scrollWhenConstrained={true}
@@ -635,7 +652,7 @@ $effect(() => {
   bind:toolbarWidth
   bind:coordinatesCompact
   measurementCoordinates={expandedCoordinatesControl}
-  measurementKey={`${getAddressDisplay(address, getLocaleKey(), divisions, locationKind)}:${Object.hasOwn(address.overrides[ADDRESS_LOCALES[getLocaleKey()]] ?? {}, 'formattedAddress')}`}
+  measurementKey={`${getAddressDisplay(address, displayLocale, divisions, locationKind)}:${Object.hasOwn(address.overrides[ADDRESS_LOCALES[displayLocale]] ?? {}, 'formattedAddress')}`}
   singleRowToolbar={displayAddressInToolbar}
   {centerLocationControl}
   locationControl={displayAddressInToolbar ? addressToolbar : locationControl}
@@ -847,8 +864,8 @@ $effect(() => {
         <AddressDetails
           {onMatchLocation}
           emptyAddressActions={showEmptyAddressActions ? locationActions : undefined}
-          {localeState}
-          {onLocaleStateChange}
+          localeState={addressLocaleState}
+          onLocaleStateChange={changeLocaleState}
           {activeBuildingSource}
           {activeLocationNames}
           {isLocationReplacementDraft}

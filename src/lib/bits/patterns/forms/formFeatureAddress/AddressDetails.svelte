@@ -1490,7 +1490,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     ? 'space-y-4'
     : 'space-y-1'} [overflow-anchor:none] {independentScroll
     ? 'min-h-0 overflow-y-auto overscroll-contain'
-    : ''} {splitColumns && isEditing ? 'pt-2 pb-5' : ''}"
+    : ''} {splitColumns && isEditing ? 'pt-2 pb-[320px]' : ''}"
   aria-label={splitColumns ? m.feature_location_title() : m.feature_address_title()}
   data-address-details
 >
@@ -1658,9 +1658,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           <div
             class="grid min-w-0 grid-cols-1 items-start gap-x-6 gap-y-1 @min-[40rem]:grid-cols-2"
           >
-            {#each shownLocales.filter(
-              tag => addressLocaleKey(tag) !== getLocaleKey(),
-            ) as tag (tag)}
+            {#each shownLocales.filter(tag => tag !== selectedLocales[0]) as tag (tag)}
               {@const locale = addressLocaleKey(tag)}
               <div
                 animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}

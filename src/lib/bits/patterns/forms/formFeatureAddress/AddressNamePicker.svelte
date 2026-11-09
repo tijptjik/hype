@@ -49,6 +49,7 @@ let query = $state('')
 let open = $state(false)
 let replacing = $state(false)
 let selectionChanged = false
+let pickerRoot: HTMLDivElement | undefined = $state()
 let input: HTMLInputElement | undefined = $state()
 let selection: HTMLButtonElement | undefined = $state()
 let failed = $state(false)
@@ -98,9 +99,13 @@ function cancel(focus = false): void {
 function focusout(
   event: FocusEvent & { currentTarget: EventTarget & HTMLDivElement },
 ): void {
-  const root = event.currentTarget
+  const root = pickerRoot ?? event.currentTarget
   setTimeout(() => {
-    if (root.isConnected && !root.contains(document.activeElement)) {
+    if (
+      root.isConnected &&
+      !root.contains(document.activeElement) &&
+      !document.getElementById(`${uid}-names`)?.contains(document.activeElement)
+    ) {
       cancel()
       // Leaving an unchanged tile or a cancelled search is navigation, not a new association.
       if (selectionChanged) {
@@ -173,13 +178,58 @@ function keydown(event: KeyboardEvent): void {
     if (matches[active]) select(matches[active])
   }
 }
+/** Keep suggestions outside horizontal field clipping and reveal them in the editor pane.
+ * @param node Suggestion menu. @returns Observer and event cleanup.
+ * @remarks The menu follows its input while scrolling; loaded results trigger a new fit.
+ */
+function revealMenu(node: HTMLElement): { destroy: () => void } {
+  const anchor = node.parentElement
+  if (!anchor) return { destroy: () => {} }
+  document.body.append(node)
+  node.style.position = 'fixed'
+  node.style.right = 'auto'
+  node.style.zIndex = '100'
+  const position = (): void => {
+    const rect = anchor.getBoundingClientRect()
+    node.style.left = `${rect.left}px`
+    node.style.top = `${rect.bottom}px`
+    node.style.width = `${rect.width}px`
+  }
+  const reveal = (): void => {
+    let parent = anchor.parentElement
+    while (parent) {
+      if (/(auto|scroll)/.test(getComputedStyle(parent).overflowY)) {
+        const bottom = Math.min(parent.getBoundingClientRect().bottom, innerHeight)
+        const required = anchor.getBoundingClientRect().bottom + node.offsetHeight + 8
+        if (required > bottom) parent.scrollTop += required - bottom
+      }
+      parent = parent.parentElement
+    }
+    const required = anchor.getBoundingClientRect().bottom + node.offsetHeight + 8
+    if (required > innerHeight) window.scrollBy(0, required - innerHeight)
+    position()
+  }
+  const observer = new ResizeObserver(reveal)
+  observer.observe(node)
+  window.addEventListener('scroll', position, true)
+  window.addEventListener('resize', reveal)
+  position()
+  return {
+    destroy: () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', position, true)
+      window.removeEventListener('resize', reveal)
+      node.remove()
+    },
+  }
+}
 // Preload the catalogue when the containing page mounts its pickers.
 onMount(() => {
   void load()
 })
 </script>
 
-<div class="flex min-w-0 flex-1 items-center gap-2">
+<div bind:this={pickerRoot} class="flex min-w-0 flex-1 items-center gap-2">
   {#if showLocale}
     <span
       aria-hidden="true"
@@ -302,6 +352,8 @@ onMount(() => {
       </div>
       {#if open}
         <div
+          use:revealMenu
+          onfocusout={focusout}
           class="border-border bg-panel absolute inset-x-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-md border p-1 shadow-lg"
         >
           {#if loading}
