@@ -180,7 +180,11 @@ the derivative from public discovery but retains its translations, fields and st
 associated establishment is permanently closed. `isVisitable=false` on an otherwise
 current Feature represents temporary unavailability; it neither selects the historic
 layer nor proves a canonical operating status. Physical condition remains a Feature
-property. These editorial flags must not overwrite evidenced Location lifecycle.
+property. These editorial flags must not overwrite evidenced Location lifecycle. An
+editor may explicitly associate a historical Feature with a Location, including a newly
+created Location. Initial association retains the historical flag and the usual
+ownership, revision and Feature concurrency guards; automatic baseline discovery
+continues to exclude intangible Features.
 
 Membership is system-managed within the same Project. Save responses include the routed
 `feature.layerId` so admin prisms update immediately. Public ordinary-layer queries omit
