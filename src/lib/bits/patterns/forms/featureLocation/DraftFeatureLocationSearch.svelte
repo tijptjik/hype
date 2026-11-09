@@ -77,6 +77,8 @@ let {
   active,
   searchRequest,
   allowManualEntry = true,
+  resolutionOrigin = 'new-feature',
+  onExitResolution,
   projectId,
   canReturnToResults = true,
   locationName,
@@ -106,6 +108,8 @@ let {
   searchRequest?: { id: number; mode: 'search' | 'pin'; query: string } | null
   active: boolean
   allowManualEntry?: boolean
+  resolutionOrigin?: 'new-feature' | 'existing-feature'
+  onExitResolution?: () => void
   projectId?: string
   canReturnToResults?: boolean
   locationName?: string
@@ -148,7 +152,11 @@ $effect(() => onModeChange?.(findMode))
 function setFindMode(mode: 'search' | 'pin'): void {
   clearSearch()
   findMode = mode
-  if (mode === 'pin') onDropPin?.()
+  if (mode === 'pin') {
+    onDropPin?.()
+    if (resolutionOrigin === 'existing-feature' && hasPin && coordinates)
+      void search(true)
+  }
   void tick().then(() => {
     const target = mode === 'search' ? input : nearbyButton
     target?.focus()
@@ -1577,6 +1585,17 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
     {/if}
   {:else}
     <div class="flex flex-wrap items-center gap-3">
+      {#if resolutionOrigin === 'existing-feature' && onExitResolution}
+        <button
+          type="button"
+          aria-label={m.association_back_editor()}
+          class="text-primary hover:bg-primary/10 focus-visible:outline-primary flex shrink-0 items-center gap-2 rounded px-2 py-2 text-sm focus-visible:outline-2"
+          onclick={onExitResolution}
+        >
+          <BackIcon class="size-5" aria-hidden="true" />
+          <span>{m.association_back_editor()}</span>
+        </button>
+      {/if}
       {#if currentGroup}
         <button
           bind:this={subsetBackButton}
@@ -1804,7 +1823,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               ? `${m.feature_find_by()} ${m.feature_find_search()}`
               : m.feature_find_pin()}
             aria-pressed={findMode === mode}
-            disabled={mode === 'pin' && !onDropPin}
+            disabled={mode === 'pin' && !onDropPin && !(hasPin && coordinates)}
             onclick={() => setFindMode(mode as 'search' | 'pin')}
             class="text-muted-foreground aria-pressed:bg-panel aria-pressed:text-foreground hover:text-foreground focus-visible:outline-primary rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 disabled:opacity-40 aria-pressed:shadow-sm"
           >
@@ -1930,49 +1949,39 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       />
     {/key}
   {/if}
-  {#if !associationOpen && !accepted && !loading && !searched && !rows.length}
+  {#if resolutionOrigin === 'new-feature' &&
+    !associationOpen &&
+    !accepted &&
+    !loading &&
+    !searched &&
+    !rows.length}
     <section
       aria-label={m.feature_find_by()}
       class="flex flex-1 items-center justify-center px-6 py-10"
     >
       <div
-        class="sm:divide-border/60 grid w-full max-w-4xl gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x"
+        class="sm:divide-border/60 grid w-full max-w-4xl gap-8 sm:grid-cols-2 sm:gap-0 sm:divide-x"
       >
-        {#each allowManualEntry
-          ? ['search', 'pin', 'manual']
-          : ['search', 'pin'] as choice}
+        {#each ['search', 'pin'] as choice}
           <div class="flex flex-col items-center gap-4 px-6 text-center">
             <p class="text-muted-foreground max-w-64 text-sm leading-relaxed">
               <strong
                 class="text-foreground mb-2 block text-lg leading-snug font-semibold"
                 >{choice === 'search'
                   ? m.feature_find_search_lead()
-                  : choice === 'pin'
-                    ? m.feature_find_pin_lead()
-                    : m.feature_find_manual_lead()}</strong
+                  : m.feature_find_pin_lead()}</strong
               >
               {choice === 'search'
                 ? m.feature_find_search_detail()
-                : choice === 'pin'
-                  ? m.feature_find_pin_detail()
-                  : m.feature_find_manual_detail()}
+                : m.feature_find_pin_detail()}
             </p>
             <button
               type="button"
-              disabled={choice === 'manual'
-                ? !onManualEntry
-                : choice === 'pin' && !coordinates && !onDropPin}
-              onclick={() =>
-                choice === 'manual'
-                  ? onManualEntry?.()
-                  : setFindMode(choice as 'search' | 'pin')}
+              disabled={choice === 'pin' && !coordinates && !onDropPin}
+              onclick={() => setFindMode(choice as 'search' | 'pin')}
               class="text-primary hover:bg-primary/10 focus-visible:outline-primary mt-auto rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 disabled:opacity-40"
             >
-              {choice === 'search'
-                ? m.feature_find_name()
-                : choice === 'pin'
-                  ? m.feature_find_location()
-                  : m.feature_search_manual_location()}
+              {choice === 'search' ? m.feature_find_name() : m.feature_find_location()}
             </button>
           </div>
         {/each}
@@ -2207,6 +2216,22 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
           </div>
         {/if}
       </section>
+    </div>
+  {/if}
+  {#if allowManualEntry &&
+    onManualEntry &&
+    !onResultsEnd &&
+    !associationOpen &&
+    !accepted &&
+    rows.length}
+    <div class="flex justify-center px-6 py-4">
+      <button
+        type="button"
+        class="text-primary hover:bg-primary/10 focus-visible:outline-primary rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-2"
+        onclick={onManualEntry}
+      >
+        {m.feature_search_manual_location()}
+      </button>
     </div>
   {/if}
 {/snippet}

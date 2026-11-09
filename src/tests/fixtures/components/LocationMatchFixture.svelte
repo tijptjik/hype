@@ -7,6 +7,7 @@ import FormFeatureAddress from '#lib/bits/patterns/forms/formFeatureAddress/Form
 // ADDRESS
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 setResponsiveCtx().setWindowDimensions(window.innerWidth, window.innerHeight)
+let isEditing = $state(true)
 const address = emptyFeatureAddress()
 address.source.fallbackDisplay = {
   en: 'C12, 4/F, Por Mee Factory Building, 500 Castle Peak Rd, Cheung Sha Wan',
@@ -20,7 +21,9 @@ address.source.fallbackDisplay = {
     projectId="fixture"
     coordinates={[114.152, 22.34]}
     modifiedAt=""
-    isEditing={true}
+    {isEditing}
+    onStartEditing={() => (isEditing = true)}
+    onCancelEditing={() => (isEditing = false)}
     isDirty={false}
     onMapCandidates={() => {}}
     onAddressSelected={() => {}}
@@ -34,11 +37,17 @@ address.source.fallbackDisplay = {
       lookup,
       actions,
       mapControls,
+      _allow3d,
+      _accessibilityLocationId,
+      _locationKind,
+      _syncControl,
+      onMatchLocation,
     )}
       <FormFeatureAddress
+        {onMatchLocation}
         {address}
         coordinates={[114.152, 22.34]}
-        isEditing={true}
+        {isEditing}
         isLoading={false}
         locationControl={control}
         locationContent={results}

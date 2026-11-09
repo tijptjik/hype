@@ -1260,7 +1260,7 @@ it('hands forward Tab from the last result to manual entry without intercepting 
   expect(onResultsEnd).toHaveBeenCalledTimes(2)
 })
 
-it('guides name, map and manual entry with distinct controls', async () => {
+it('guides name and map discovery without offering manual entry before results', async () => {
   vi.useRealTimers()
   const animation = vi.spyOn(Element.prototype, 'animate')
   const onDropPin = vi.fn()
@@ -1285,8 +1285,8 @@ it('guides name, map and manual entry with distinct controls', async () => {
   expect(animation.mock.contexts).toContain(screen.getByRole('textbox').parentElement)
   expect(animation.mock.contexts).not.toContain(screen.getByRole('textbox'))
   animation.mockRestore()
-  await fireEvent.click(screen.getByRole('button', { name: 'Add Manual Entry' }))
-  expect(onManualEntry).toHaveBeenCalledTimes(1)
+  expect(screen.queryByRole('button', { name: 'Add Manual Entry' })).toBeNull()
+  expect(onManualEntry).not.toHaveBeenCalled()
 })
 
 it.each([['Link location', undefined]] as const)(
@@ -2959,6 +2959,24 @@ it('returns from the accepted editor to its proposal before returning to results
   expect(onBack).toHaveBeenCalledOnce()
 })
 
+it('matches an existing feature from an explicit search request without offering manual creation', async () => {
+  mocks.places.mockResolvedValue({ rows: [], partial: false })
+  mocks.addresses.mockResolvedValue([])
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    allowManualEntry: false,
+    searchRequest: { id: 1, mode: 'search', query: 'Clockwork Cat' },
+    onSelect: vi.fn(),
+  })
+  await waitFor(() =>
+    expect(mocks.places).toHaveBeenCalledWith(
+      expect.objectContaining({ q: 'Clockwork Cat', filters: {} }),
+    ),
+  )
+  expect(screen.queryByRole('button', { name: /Create Location/i })).toBeNull()
+})
+
 it('derives nearby buildings from reverse addresses and retains successful building providers', async () => {
   const address = emptyFeatureAddress()
   address.overrides.en = { buildingName: 'Por Mee Factory Building' }
@@ -3001,20 +3019,56 @@ it('derives nearby buildings from reverse addresses and retains successful build
   ).toBeTruthy()
 })
 
-it('matches an existing feature from an explicit search request without offering manual creation', async () => {
+it('keeps existing-record resolution free of starter prompts and supports coordinates and cancellation', async () => {
+  vi.useRealTimers()
   mocks.places.mockResolvedValue({ rows: [], partial: false })
+  mocks.nearby.mockResolvedValue({ rows: [], partial: false })
   mocks.addresses.mockResolvedValue([])
+  const onExitResolution = vi.fn()
   render(DraftSearch, {
     active: true,
     focusRequest: 0,
+    resolutionOrigin: 'existing-feature',
     allowManualEntry: false,
-    searchRequest: { id: 1, mode: 'search', query: 'Clockwork Cat' },
+    searchRequest: { id: 1, mode: 'search', query: 'Por Mee Factory Building' },
+    hasPin: true,
+    coordinates: [114.152, 22.34],
+    onExitResolution,
     onSelect: vi.fn(),
   })
+  await waitFor(() => expect(mocks.places).toHaveBeenCalled())
+  await fireEvent.click(await screen.findByRole('button', { name: 'Clear search' }))
+  expect(screen.queryByText('Know the name or address?')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Add Manual Entry' })).toBeNull()
+  await fireEvent.click(screen.getByRole('button', { name: 'Map pin', exact: true }))
   await waitFor(() =>
-    expect(mocks.places).toHaveBeenCalledWith(
-      expect.objectContaining({ q: 'Clockwork Cat', filters: {} }),
+    expect(mocks.nearby).toHaveBeenCalledWith(
+      expect.objectContaining({ coordinates: [114.152, 22.34] }),
     ),
   )
-  expect(screen.queryByRole('button', { name: /Create Location/i })).toBeNull()
+  expect(screen.queryByText('Know where it is?')).toBeNull()
+  await fireEvent.click(
+    screen.getByRole('button', { name: 'Back to location', exact: true }),
+  )
+  expect(onExitResolution).toHaveBeenCalledTimes(1)
+})
+
+it('offers manual entry as an alternative after resolution has results', async () => {
+  vi.useRealTimers()
+  const address = emptyFeatureAddress({ en: '1 Test Road' })
+  mocks.places.mockResolvedValue({ rows: [], partial: false })
+  mocks.addresses.mockResolvedValue([])
+  mocks.buildings.mockResolvedValue([
+    { id: 'test-building', kind: 'building', names: { en: 'Test Building' }, address },
+  ])
+  const onManualEntry = vi.fn()
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    searchRequest: { id: 1, mode: 'search', query: 'Test Building' },
+    onManualEntry,
+    onSelect: vi.fn(),
+  })
+  await fireEvent.click(await screen.findByRole('button', { name: 'Add Manual Entry' }))
+  expect(onManualEntry).toHaveBeenCalledTimes(1)
 })

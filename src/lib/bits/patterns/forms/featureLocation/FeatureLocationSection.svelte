@@ -89,6 +89,7 @@ let {
   isDirty,
   onSourceUpdate,
   onStartEditing,
+  onCancelEditing,
   onAddressSelected,
   onAssociationSelected,
   onAssociationPending,
@@ -144,6 +145,7 @@ let {
   isEditing: boolean
   isDirty: boolean
   onStartEditing?: () => void
+  onCancelEditing?: () => void
   onSourceUpdate: () => Promise<void>
 } = $props()
 const accepted = $derived(getFeatureLocation({ featureId }))
@@ -944,7 +946,7 @@ async function link(): Promise<void> {
   <!-- Idle discovery has no map controls. -->
 {/snippet}
 {#snippet locationActions()}
-  {#if isEditing && (!accepted.current || replacementRevision)}
+  {#if isEditing && !sharedRequest && (!accepted.current || replacementRevision)}
     <div
       class="flex flex-wrap items-center justify-center gap-2"
       data-location-discovery-actions
@@ -1353,9 +1355,27 @@ async function link(): Promise<void> {
   {/if}
 {/snippet}
 <DraftFeatureLocationSearch
+  resolutionOrigin="existing-feature"
+  onExitResolution={() => {
+    cancelDiscovery()
+    sharedRequest = null
+    sharedAccepted = false
+    onAssociationPending?.(false)
+    onMapCandidates([], () => {})
+    onCancelEditing?.()
+  }}
   active={isEditing && sharedRequest !== null}
   searchRequest={sharedRequest}
-  allowManualEntry={false}
+  onManualEntry={() => {
+    cancelDiscovery()
+    sharedRequest = null
+    sharedAccepted = false
+    onAssociationPending?.(false)
+    onMapCandidates([], () => {})
+    chosenAddress = address
+    intendedKind = 'address'
+    creating = true
+  }}
   focusRequest={0}
   {projectId}
   currentAddress={address}

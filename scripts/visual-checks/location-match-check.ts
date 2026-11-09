@@ -74,24 +74,44 @@ for (const [engine, width] of [
       path: `output/playwright/location-match-idle-${engine.name()}.png`,
     })
     await page
-      .locator('[data-location-discovery-actions]')
-      .getByRole('button', { name: /Match/ })
+      .locator('[data-address-onboarding]')
+      .getByRole('button', { name: 'Match address to location', exact: true })
       .click()
-    await page.waitForFunction(() =>
-      ['Clockwork Cat', 'Por Mee Factory Building'].includes(
-        (globalThis as any).matchQuery,
-      ),
+    await page.waitForFunction(
+      () => (globalThis as any).matchQuery === 'Por Mee Factory Building',
     )
-    await page.getByRole('button', { name: 'Find Nearby', exact: true }).click()
+    if (await page.locator('[data-location-discovery-actions]').count())
+      throw Error('Entry actions remain visible inside matching')
+    await page.screenshot({
+      path: `output/playwright/location-match-active-${engine.name()}.png`,
+    })
+    await page.getByRole('button', { name: 'Clear search', exact: true }).click()
+    if (await page.getByText('Know the name or address?', { exact: true }).count())
+      throw Error('Record resolution showed starter prompts')
+    await page.getByRole('button', { name: 'Map pin', exact: true }).click()
     await page.waitForFunction(
       () => JSON.stringify((globalThis as any).nearbyPoint) === '[114.152,22.34]',
     )
     await page.screenshot({
       path: `output/playwright/location-match-nearby-${engine.name()}.png`,
     })
+    if (await page.locator('[data-location-discovery-actions]').count())
+      throw Error('Entry actions remain visible inside nearby discovery')
+    await page.getByRole('button', { name: 'Back to location', exact: true }).click()
+    if (
+      await page
+        .getByRole('textbox', {
+          name: 'Search for a Business, Venue, Building, or Address',
+          exact: true,
+        })
+        .count()
+    )
+      throw Error('Back did not leave resolution')
+    if (await page.locator('[data-location-discovery-actions]').count())
+      throw Error('Back did not cancel editing')
     if (errors.length) throw Error(errors.join('\n'))
     console.log(
-      'PASS: idle header, no idle warning or creation, seeded shared search, marker-based nearby search',
+      'PASS: seeded address resolution, no starter prompts or entry actions, coordinate switching, Back cancels editing',
     )
   } finally {
     await browser.close()

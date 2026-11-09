@@ -4452,7 +4452,7 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
       centerAction={isNewFeatureRef &&
       !draftResolutionPending &&
       !draftLocationAccepted &&
-      (draftSearchHasResults || draftHasPin)
+      draftSearchHasResults
         ? {
             id: 'draft-manual-entry',
             disabled: !draftHasPin && !draftMapController,
@@ -4744,6 +4744,10 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
             {#if currentFeatureId && feature?.data?.modifiedAt}
               <FeatureLocationSection
                 onStartEditing={() => headerCtrl.setEditing(true)}
+                onCancelEditing={() => {
+                  onReset()
+                  headerCtrl.setEditing(false)
+                }}
                 organisationId={selectedProject?.organisationId}
                 {buildingAssociationRequest}
                 onBuildingAssociationRequestConsumed={requestId => {
