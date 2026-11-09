@@ -212,14 +212,14 @@ export function isApprovedLocalityPath(
 }
 
 /** Offer only the supplied ancestor paths for a neighbourhood, including boundary alternatives.
- * @param division Selected existing division. @param options Mirrored locality definitions.
+ * @param division Selected existing division. @param definitions Mirrored locality definitions keyed by ID.
  * @returns Distinct resolvable source ancestor paths, excluding the selected division itself.
+ * @remarks Reuse one index when examining multiple candidates; rebuilding it per candidate makes child discovery quadratic.
  */
 export function localityParentPaths(
   division: AddressDivision,
-  options: AddressDivision[],
+  definitions: ReadonlyMap<string, AddressDivision>,
 ): AddressDivision[][] {
-  const definitions = new Map(options.map(item => [item.id, item]))
   return sourceLocalityPathIds(division)
     .filter(path => isApprovedLocalityPath(path, definitions))
     .map(path =>

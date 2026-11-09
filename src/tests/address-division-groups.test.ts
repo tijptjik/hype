@@ -140,7 +140,9 @@ it('preserves standalone and overlapping source alternatives for boundary select
   const parent = division('Mong Kok', 'macrohood', 'hood', 4)
   const child = division('Prince Edward', 'neighbourhood', 'hood', 5)
   child.hierarchies = { locality: [[ancestor(parent, false)], []] }
-  expect(localityParentPaths(child, [parent, child])).toEqual([[parent], []])
+  expect(
+    localityParentPaths(child, new Map([parent, child].map(item => [item.id, item]))),
+  ).toEqual([[parent], []])
 })
 
 it('rejects fabricated ancestry, skipped ancestors and multiple neighbourhood paths', () => {

@@ -37,6 +37,8 @@ let unavailable = $state(false)
 let input = $state<HTMLInputElement | null>(null)
 let panel = $state<HTMLDivElement | null>(null)
 let childOf = $state<AddressDivision[] | null>(null)
+// Reuse the catalogue index across child checks and searches, rebuilding only when definitions change.
+const definitions = $derived(new Map(options.map(item => [item.id, item])))
 const candidates = $derived(pending ? availableParents(pending) : [])
 const matching = $derived(
   options
@@ -59,7 +61,7 @@ const matching = $derived(
  * @param division Candidate child. @returns Existing parent paths allowed in this picker.
  */
 function availableParents(division: AddressDivision): AddressDivision[][] {
-  return localityParentPaths(division, options).filter(
+  return localityParentPaths(division, definitions).filter(
     path => !childOf || samePath(path, childOf),
   )
 }
@@ -74,7 +76,7 @@ function samePath(a: AddressDivision[], b: AddressDivision[]): boolean {
 /** Check for a resolvable direct child. @param path Selected ancestor prefix. @returns Whether Add can extend this prefix. */
 function hasChildren(path: AddressDivision[]): boolean {
   return options.some(option =>
-    localityParentPaths(option, options).some(parents => samePath(parents, path)),
+    localityParentPaths(option, definitions).some(parents => samePath(parents, path)),
   )
 }
 
