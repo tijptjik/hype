@@ -390,16 +390,11 @@
   }
 
   .bits-theme .bits-admin-menu__badge {
-    @apply pointer-events-none absolute right-3 top-1.5 inline-flex size-5 items-center justify-center rounded-full border border-base-100 bg-primary text-[0.7rem] font-semibold leading-none text-primary-content;
-    transform: translate(20%, -12%);
+    @apply pointer-events-none absolute right-2 top-1 block size-5 rounded-full border border-base-100 bg-primary text-primary-content;
   }
 
   .bits-theme .bits-admin-menu__badge--accent {
     @apply bg-accent text-accent-content;
-  }
-
-  .bits-theme .bits-admin-menu__badge--overflow {
-    @apply pb-px text-[0.85rem];
   }
 
   .bits-theme .bits-admin-shell {

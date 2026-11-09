@@ -391,9 +391,34 @@ $effect(() => {
                       class="bits-admin-menu__badge"
                       class:bits-admin-menu__badge--accent={entry.item.tone ===
                         'accent'}
-                      class:bits-admin-menu__badge--overflow={count > 99}
                     >
-                      {count > 99 ? '∞' : count}
+                      <svg
+                        viewBox="0 0 20 20"
+                        class="block size-full"
+                        role="img"
+                        aria-label={String(count)}
+                      >
+                        {#if count > 99}
+                          <path
+                            d="M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8"
+                            transform="translate(3.4 3.4) scale(.55)"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.4"
+                            stroke-linecap="round"
+                          />
+                        {:else}
+                          <text
+                            x="10"
+                            y="14"
+                            text-anchor="middle"
+                            fill="currentColor"
+                            class="font-[Arial,sans-serif] text-[11px] font-bold tracking-normal"
+                          >
+                            {count}
+                          </text>
+                        {/if}
+                      </svg>
                     </span>
                   {/if}
                 </div>
