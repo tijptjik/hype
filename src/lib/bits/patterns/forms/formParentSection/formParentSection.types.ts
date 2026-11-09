@@ -22,6 +22,7 @@ export interface ParentSectionProjectItem extends ParentSectionItemBase {
 }
 
 export interface ParentSectionLayerItem extends ParentSectionItemBase {
+  historicalSourceLayerId?: string | null
   metadata?: import('#lib/db/zod/schema/layerMetadata.types.js').LayerMetadata
   organisationId: string
   projectId: string

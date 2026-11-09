@@ -1,6 +1,7 @@
 export { default as FormFeatureParentSection } from './FormFeatureParentSection.svelte'
 export {
   filterCreatableParentProjects,
+  featureCreationSourceLayerId,
   createFeatureParentSearchPrisms,
   createFeatureParentSectionController,
   toParentLayerItem,

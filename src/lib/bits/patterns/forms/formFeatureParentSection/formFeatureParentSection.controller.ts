@@ -16,6 +16,7 @@ import type {
 // - toParentOrganisationItem
 // - toParentProjectItem
 // - toParentLayerItem
+// - featureCreationSourceLayerId
 // - createFeatureParentSectionController
 
 export type ParentOrganisationRecord = {
@@ -35,6 +36,7 @@ export type ParentProjectRecord = {
 }
 
 export type ParentLayerRecord = {
+  historicalSourceLayerId?: string | null
   metadata?: ParentSectionLayerItem['metadata'] | null
   id?: string | null
   organisationId?: string | null
@@ -50,6 +52,7 @@ type ParentSearchScopeParams = {
 }
 
 type ParentSelectionParams = {
+  isIntangible?: boolean
   organisationId?: string
   projectId?: string
   layerId?: string
@@ -207,6 +210,7 @@ export function toParentLayerItem(
   if (!layer?.id) return null
   return {
     id: layer.id,
+    historicalSourceLayerId: layer.historicalSourceLayerId ?? null,
     metadata: layer.metadata ?? undefined,
     organisationId: layer.organisationId ?? '',
     projectId: layer.projectId ?? '',
@@ -214,6 +218,21 @@ export function toParentLayerItem(
     i18n: layer.i18n ?? null,
     image: layer.image ?? null,
   }
+}
+
+/** Resolve a creation picker selection to the source accepted by the save API.
+ * @param layerId Layer identity in the submitted draft.
+ * @param selectedLayer Hydrated picker selection, including historical ancestry.
+ * @returns Source identity for a matching historical selection, otherwise the submitted identity.
+ * @remarks Historical status is set by selection and remains editable independently.
+ */
+export function featureCreationSourceLayerId(
+  layerId: string,
+  selectedLayer: ParentSectionLayerItem | null | undefined,
+): string {
+  return selectedLayer?.id === layerId
+    ? selectedLayer.historicalSourceLayerId || layerId
+    : layerId
 }
 
 /**
@@ -320,6 +339,7 @@ export function createFeatureParentSectionController(
       organisationId: nextOrganisation?.id ?? layer.organisationId ?? '',
       projectId: nextProject?.id ?? layer.projectId ?? '',
       layerId: layer.id,
+      isIntangible: Boolean(layer.historicalSourceLayerId),
     })
   }
 
@@ -458,6 +478,11 @@ export function createFeatureParentSectionController(
       const accessibleProjects = await deps.getCreatableProjectRecords({
         organisationIds: scopedOrganisationIds,
       })
+      const historicalProjectIds = new Set(
+        accessibleProjects
+          .filter(project => project.flags?.showHistoricalLayers)
+          .map(project => project.id),
+      )
       const allowedProjectIds = accessibleProjects
         .map(project => project.id)
         .filter(Boolean) as string[]
@@ -470,14 +495,21 @@ export function createFeatureParentSectionController(
       if (scopedProjectIds.length === 0) return []
 
       return (
-        await deps.searchParentLayers({
-          query,
-          organisationIds: scopedOrganisationIds,
-          projectIds: scopedProjectIds,
-        })
+        (
+          await deps.searchParentLayers({
+            query,
+            organisationIds: scopedOrganisationIds,
+            projectIds: scopedProjectIds,
+          })
+        )
+          // Disabled historical collections remain persisted but are not creation destinations.
+          .filter(
+            item =>
+              !item.historicalSourceLayerId || historicalProjectIds.has(item.projectId),
+          )
+          .map(item => toParentLayerItem(item))
+          .filter(Boolean) as ParentSectionLayerItem[]
       )
-        .map(item => toParentLayerItem(item))
-        .filter(Boolean) as ParentSectionLayerItem[]
     },
   }
 }

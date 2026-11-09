@@ -143,6 +143,7 @@ import {
   createFeatureParentSearchPrisms,
   createFeatureParentSectionController,
   filterCreatableParentProjects,
+  featureCreationSourceLayerId,
   toParentLayerItem,
   toParentOrganisationItem,
   toParentProjectItem,
@@ -1537,6 +1538,19 @@ const configuredFeatureForm = configureForm(() => ({
       defaultMode: isNewFeatureRef ? 'create' : 'update',
       resolveUpdateId: () => feature?.data?.id ?? committedFeature?.data?.id ?? '',
     })
+    // Historical collection membership is routed from status after creation in the source layer.
+    if (isNewFeatureRef) {
+      return {
+        ...submittedPayload,
+        data: {
+          ...submittedPayload.data,
+          layerId: featureCreationSourceLayerId(
+            submittedPayload.data.layerId,
+            selectedLayer,
+          ),
+        },
+      } as typeof data
+    }
     return submittedPayload as typeof data
   }) as never,
   ...createResourceFormConfig({
@@ -3687,6 +3701,7 @@ function syncSelectedLayer(layer: ParentSectionLayerItem | null | undefined): vo
  * @param params Selected organisation/project/layer ids.
  */
 function applyFeatureParentSelection(params: {
+  isIntangible?: boolean
   organisationId?: string
   projectId?: string
   layerId?: string
@@ -3699,6 +3714,9 @@ function applyFeatureParentSelection(params: {
       organisationId: params.organisationId ?? '',
       projectId: params.projectId ?? '',
       layerId: nextLayerId,
+      ...(isNewFeatureRef && params.isIntangible !== undefined
+        ? { isIntangible: params.isIntangible }
+        : {}),
     }),
     { revalidate: true },
   )
@@ -3824,7 +3842,7 @@ const featureParentSectionCtrl = createFeatureParentSectionController({
           meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
         })
       ).data ?? []
-    ).filter(candidate => !candidate.historicalSourceLayerId),
+    ).filter(candidate => isNewFeatureRef || !candidate.historicalSourceLayerId),
   syncSelectedOrganisation,
   syncSelectedProject,
   syncSelectedLayer,
