@@ -6,6 +6,47 @@ them from the repository root through `dev-check`. They are not a portable or
 automatically executed test suite: inspect their local URLs, browser paths and fixture
 dependencies before reuse.
 
+## Shared runner and suites
+
+Changelog, profile/locale, task-review and messaging checks share
+`lib/browser-cases.ts`. It runs Chromium then Firefox headlessly and closes each browser
+on success, failure or early termination. Map scenarios explicitly opt into Chromium's
+local CORS workaround. Existing engine filters, per-scenario page options, mocks,
+assertions and artifact names remain local to each check.
+
+List the suite contents without launching browsers:
+
+```sh
+bun scripts/visual-checks/run.ts --list
+```
+
+Run one suite, several suites, or individual checks under one managed validation scope:
+
+```sh
+dev-check bun scripts/visual-checks/run.ts changelog
+dev-check bun scripts/visual-checks/run.ts profile-locales messaging
+dev-check bun scripts/visual-checks/run.ts staff-save-check shared-locale-tabs-check
+```
+
+The four suite names are `changelog`, `profile-locales`, `task-review` and `messaging`.
+Each scenario runs in a separate Bun process, sequentially, with inherited environment
+variables. Duplicate selections run once; unknown selections fail before any check
+starts, and the first failed check stops the suite. There is no implicit run-all.
+Original direct commands still work.
+
+The suite launcher does not start a server or normalize existing origin variables.
+Inspect the selected checks' local URLs and overrides (`HYPE_CHECK_ORIGIN`,
+`FEATURE_CHECK_URL`, `CHANGELOG_CHECK_URL`, etc.) before running a suite. Some checks
+still use fixed local URLs. Synthetic fixtures do not establish authenticated mutation
+acceptance, and retaining a scenario in a suite does not certify that it currently
+passes.
+
+The runner's unit tests use fake engines and do not launch browsers:
+
+```sh
+dev-check bun test scripts/visual-checks/lib/browser-cases.test.ts scripts/visual-checks/run.test.ts
+```
+
 Scripts may require a running development server or a temporary fixture. The rendering
 scripts can write to development asset storage using environment credentials; inspect
 their target before running them. Retention does not mean a script has recently passed.
