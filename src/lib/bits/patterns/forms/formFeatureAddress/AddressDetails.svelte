@@ -296,8 +296,9 @@ const hasAccessibility = $derived(
 const accessibilityVisible = $derived(
   !accessibilityDismissed &&
     Boolean(
-      (accessibilityLocationId && (accessibilityAdded || hasAccessibility)) ||
-        (onAccessibilityDraftChange && accessibilityDraft !== undefined),
+      (accessibilityLocationId &&
+        ((isEditing && accessibilityAdded) || hasAccessibility)) ||
+        (isEditing && onAccessibilityDraftChange && accessibilityDraft !== undefined),
     ),
 )
 const canAddAccessibility = $derived(
@@ -2588,16 +2589,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {@render addDetails()}
     {/if}
   {/if}
-  {#if !isEditing && canAddAccessibility}
-    <Button
-      text={m.accessibility_mobility_heading()}
-      type="button"
-      size="sm"
-      style="outline"
-      onClick={addAccessibility}
-    />
-  {/if}
-  {#if accessibilityVisible && onAccessibilityDraftChange}
+  {#if isEditing && accessibilityVisible && onAccessibilityDraftChange}
     <div id={`${uid}-accessibility`}>
       {#key accessibilityDraftKey}
         <DraftLocationAccessibility
@@ -2616,10 +2608,13 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     <div id={`${uid}-accessibility`}>
       {#key accessibilityLocationId}
         <LocationAccessibility
-          onRemove={() => {
-            accessibilityDismissed = true
-            accessibilityAdded = false
-          }}
+          readOnly={!isEditing}
+          onRemove={isEditing
+            ? () => {
+                accessibilityDismissed = true
+                accessibilityAdded = false
+              }
+            : undefined}
           hideHeading={isEditing && visibleFields.includes('accessHint')}
           locationId={accessibilityLocationId}
           startEditing={accessibilityAdded}

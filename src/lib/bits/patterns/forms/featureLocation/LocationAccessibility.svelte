@@ -26,12 +26,14 @@ import type { Accessibility, AccessibilityView } from '#lib/locations/accessibil
 let {
   locationId,
   startEditing = false,
+  readOnly = false,
   hideHeading = false,
   onRemove,
 }: {
   onRemove?: () => void
   locationId: string
   startEditing?: boolean
+  readOnly?: boolean
   hideHeading?: boolean
 } = $props()
 const uid = $props.id()
@@ -75,7 +77,7 @@ $effect(() => {
 // An added address part opens straight into editing once its shared baseline has loaded.
 $effect(() => {
   const view = request.current
-  if (startEditing && view)
+  if (!readOnly && startEditing && view)
     untrack(() => {
       if (!baseline) {
         edit(view)
@@ -155,7 +157,7 @@ async function remove(view: AccessibilityView): Promise<void> {
       <div class="flex items-center justify-between gap-4">
         <div class="group/subsection flex items-center gap-2">
           <h3 class="text-sm font-semibold">{m.accessibility_mobility_heading()}</h3>
-          {#if onRemove}
+          {#if !readOnly && onRemove}
             <button
               type="button"
               disabled={busy}
@@ -173,7 +175,7 @@ async function remove(view: AccessibilityView): Promise<void> {
             </button>
           {/if}
         </div>
-        {#if !editing}
+        {#if !readOnly && !editing}
           <Button
             type="button"
             text={m.accessibility_edit()}
@@ -184,7 +186,7 @@ async function remove(view: AccessibilityView): Promise<void> {
       {#if view.record?.stale}
         <p role="status" class="text-sm text-amber-600">{m.accessibility_stale()}</p>
       {/if}
-      {#if editing}
+      {#if !readOnly && editing}
         <AccessibilityFields
           {uid}
           value={draft}
