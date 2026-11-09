@@ -69,7 +69,7 @@ import {
 } from '#lib/db/services/featureRevisionContent.js'
 import {
   saveFeatureFormRevision,
-  type buildFeatureFormCandidate,
+  buildFeatureFormCandidate,
 } from '#lib/db/services/featureFormRevision.js'
 import {
   routeFeatureRevisionPublication,
@@ -1116,6 +1116,42 @@ describe('existing form revision routing', () => {
         })),
     } as unknown as Parameters<typeof buildFeatureFormCandidate>[2]
   }
+  it.each([null, '', '[]', undefined])(
+    'preserves a stored empty phone when the form submits %s',
+    async value => {
+      const f = fixture()
+      f.sqlite.exec(
+        "UPDATE property SET component='PhoneField', audience='public' WHERE id='private'",
+      )
+      f.sqlite.exec(
+        "UPDATE featureProperty SET value='[]', valueJson=NULL, propertyValueId=NULL WHERE propertyId='private'",
+      )
+      f.sqlite.exec("DELETE FROM featurePropertyI18n WHERE propertyId='private'")
+      const initial = await f.initialize()
+      const source = await f.capture()
+      const data = form(initial.content)
+      if (value !== undefined)
+        data.properties!.push({ propertyId: 'private', value } as never)
+      const result = buildFeatureFormCandidate(
+        initial.content,
+        source.snapshot,
+        data,
+        true,
+      )
+      expect(result.properties.private).toEqual(initial.content.properties.private)
+      data.properties = [
+        ...(data.properties ?? []).filter(row => row.propertyId !== 'private'),
+        { propertyId: 'private', value: '["+85221234567"]' } as never,
+      ]
+      const changed = buildFeatureFormCandidate(
+        initial.content,
+        source.snapshot,
+        data,
+        true,
+      )
+      expect(changed.properties.private.selection.value).toBe('["+85221234567"]')
+    },
+  )
   it('rolls back the form when the destination layer has left the authorized project', async () => {
     const f = fixture(),
       initial = await f.initialize()
@@ -1351,7 +1387,7 @@ describe('existing form revision routing', () => {
         allowDescriptions: true,
         allowedInternalIds: new Set(),
       }),
-    ).rejects.toThrow('Inherited names')
+    ).rejects.toThrow('ORGANISATION_LOCATION_EDIT_FORBIDDEN')
   })
 })
 

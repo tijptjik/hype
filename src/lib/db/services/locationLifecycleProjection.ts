@@ -1,22 +1,27 @@
+import { acceptedLocationOverrideFieldSql } from './locationFactsSql'
 // SNAPSHOT CONTRACT
-import { locationFactsFieldSql } from './locationFactsSql'
+import {
+  acceptedLocationFactsFieldSql,
+  locationFactsFieldSql,
+} from './locationFactsSql'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 
 /** Project accepted operating/building status into an already-authorized Feature read.
+ * @param includeShared False only for pre-migration retained fixtures.
  * @returns JSON status only; absence remains unknown.
  * @remarks Uses accepted immutable revisions/corrections, with the same private-owner/draft fence
  * as accepted brands. An edit to a Location never silently changes a linked Feature's adoption.
  */
-export function featureLocationLifecycleSQL(): SQL<string | null> {
-  const operating = sql`CASE json_extract(fp.acceptedOverrides,'$.operatingStatus.mode')
-    WHEN 'override' THEN json_extract(fp.acceptedOverrides,'$.operatingStatus.value')
-    ELSE ${locationFactsFieldSql(sql.raw('pr.facts'), 'operatingStatus')} END`
-  const building = sql`CASE json_extract(fp.acceptedOverrides,'$.buildingStatus.mode')
-    WHEN 'override' THEN json_extract(fp.acceptedOverrides,'$.buildingStatus.value')
-    ELSE ${locationFactsFieldSql(sql.raw('pr.facts'), 'buildingStatus')} END`
+export function featureLocationLifecycleSQL(includeShared = true): SQL<string | null> {
+  const operating = sql`CASE json_extract(${acceptedLocationOverrideFieldSql('operatingStatus', includeShared)},'$.mode')
+    WHEN 'override' THEN json_extract(${acceptedLocationOverrideFieldSql('operatingStatus', includeShared)},'$.value')
+    ELSE ${includeShared ? acceptedLocationFactsFieldSql('operatingStatus') : locationFactsFieldSql(sql.raw('pr.facts'), 'operatingStatus')} END`
+  const building = sql`CASE json_extract(${acceptedLocationOverrideFieldSql('buildingStatus', includeShared)},'$.mode')
+    WHEN 'override' THEN json_extract(${acceptedLocationOverrideFieldSql('buildingStatus', includeShared)},'$.value')
+    ELSE ${includeShared ? acceptedLocationFactsFieldSql('buildingStatus') : locationFactsFieldSql(sql.raw('pr.facts'), 'buildingStatus')} END`
   return sql<
     string | null
   >`(SELECT CASE WHEN ${operating} IS NOT NULL OR ${building} IS NOT NULL

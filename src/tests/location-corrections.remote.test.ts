@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   edit: vi.fn(),
   manage: vi.fn(),
   requireManager: vi.fn(),
+  sharedRights: vi.fn(),
   apply: vi.fn(),
   propose: vi.fn(),
   decide: vi.fn(),
@@ -45,6 +46,7 @@ vi.mock('#lib/api/services/authz', () => ({
 }))
 vi.mock('#lib/api/services/locationOwnership', () => ({
   requireLocationOrganisationManager: mocks.requireManager,
+  sharedLocationEditRights: mocks.sharedRights,
 }))
 vi.mock('#lib/db/services/locationCorrectionReview.js', () => ({
   applyLocationCorrection: mocks.apply,
@@ -59,6 +61,7 @@ import {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  mocks.sharedRights.mockResolvedValue({ canEdit: false, superAdmin: false })
   mocks.probe.mockResolvedValue({
     id: 'feature',
     organisationId: 'persisted-org',
@@ -113,23 +116,22 @@ it('denies shared facts outside field-edit authority before persistence', async 
   ).rejects.toMatchObject({ status: 403 })
   expect(mocks.propose).not.toHaveBeenCalled()
 })
-it('requires separate Organisation authority even when Feature editing is permitted', async () => {
-  mocks.requireManager.mockRejectedValueOnce(new Error('Organisation review denied'))
-  await expect(reviewLocationCorrection(review)).rejects.toThrow(
-    'Organisation review denied',
-  )
+it('requires scoped reviewer authority and passes separate Organisation rights to the field router', async () => {
+  await expect(reviewLocationCorrection(review)).rejects.toMatchObject({ status: 403 })
   expect(mocks.decide).not.toHaveBeenCalled()
-  expect(mocks.requireManager).toHaveBeenCalledWith(expect.anything(), 'persisted-org')
+  mocks.sharedRights.mockResolvedValue({ canEdit: true, superAdmin: false })
   expect(await reviewLocationCorrection(review)).toEqual({ outcome: 'accepted' })
   expect(mocks.decide).toHaveBeenCalledWith(
     {},
     expect.objectContaining({
+      canEditOrganisation: false,
+      sharedRights: { canEdit: true, superAdmin: false },
       actorId: 'session-actor',
-      organisationId: 'persisted-org',
     }),
   )
 })
 it('reports a stale correction without a false success acknowledgement', async () => {
+  mocks.manage.mockReturnValue({ allowed: true })
   mocks.decide.mockResolvedValue(false)
   await expect(reviewLocationCorrection(review)).rejects.toMatchObject({ status: 409 })
 })
@@ -163,5 +165,18 @@ it('does not queue a proposal when a direct shared save is stale or loses author
     'Permission revoked',
   )
   expect(mocks.apply).toHaveBeenCalledTimes(1)
+  expect(mocks.propose).not.toHaveBeenCalled()
+})
+
+it('saves project-authorized phones as shared corrections without Organisation approval', async () => {
+  mocks.sharedRights.mockResolvedValue({ canEdit: true, superAdmin: false })
+  mocks.apply.mockResolvedValue('shared-revision')
+  expect(
+    await submitLocationCorrection({
+      ...submission,
+      patch: { phoneNumber: { mode: 'override', value: ['+85221234567'] } },
+    }),
+  ).toEqual({ status: 'accepted', revisionId: 'shared-revision' })
+  expect(mocks.requireManager).not.toHaveBeenCalled()
   expect(mocks.propose).not.toHaveBeenCalled()
 })

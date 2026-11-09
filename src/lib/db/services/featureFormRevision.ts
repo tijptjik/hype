@@ -1,3 +1,4 @@
+import { prepareFeatureLocationFormCorrection } from './featureLocationFormCorrection'
 // DRIZZLE
 import { eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -45,6 +46,21 @@ type FeatureFormValues = z.output<typeof FeatureEntityFormData>
 // 2. Transfer-owned text preservation
 // 3. Existing form save routing
 
+/** Recognize only empty phone representations, never malformed or populated values.
+ * @param row Accepted or submitted property. @returns Whether no phone data is present.
+ */
+function emptyPhoneProperty(
+  row: FeatureRevisionContent['properties'][string] | undefined,
+): boolean {
+  return (
+    !row ||
+    (!row.selection.propertyValueId &&
+      !row.selection.valueJson &&
+      [null, '', '[]'].includes(row.selection.value?.trim() ?? null) &&
+      Object.values(row.translations).every(value => !value.value))
+  )
+}
+
 /**
  * Builds a candidate from authorized form values without writing compatibility tables.
  * @param previous Accepted authored content, including hidden fields and exact gallery pins.
@@ -61,8 +77,7 @@ export function buildFeatureFormCandidate(
   retainOmittedInternal = true,
 ): FeatureRevisionContent {
   const source = parseFeatureRevisionSource(snapshot)
-  if (data.locationReset || (previous.placement.location && data.locationBrandEdit))
-    throw new Error('Edit shared Location changes in the Location editor')
+  // Shared changes are authorized and routed separately by the staff save adapter.
   if (
     previous.placement.location &&
     data.locationNameMode &&
@@ -173,6 +188,25 @@ export function buildFeatureFormCandidate(
     order: previous.gallery.order,
   })
   result.gallery = structuredClone(previous.gallery)
+  // Empty phone controls may submit null or omit a stored [] row; neither edits shared contact data.
+  for (const id of new Set([
+    ...Object.keys(previous.properties),
+    ...Object.keys(result.properties),
+  ])) {
+    const before = previous.properties[id]
+    const after = result.properties[id]
+    if (
+      retainOmittedInternal &&
+      (before?.selection.definition.component === 'PhoneField' ||
+        after?.selection.definition.component === 'PhoneField') &&
+      emptyPhoneProperty(before) &&
+      emptyPhoneProperty(after)
+    ) {
+      if (before) result.properties[id] = structuredClone(before)
+      else delete result.properties[id]
+    }
+  }
+
   // Merely changing a shared field label must not rewrite its historical interpretation.
   for (const [id, entry] of Object.entries(result.properties)) {
     const prior = previous.properties[id]
@@ -185,7 +219,7 @@ export function buildFeatureFormCandidate(
     )
       entry.selection.definition = structuredClone(prior.selection.definition)
   }
-  if (data.locationBrandEdit) {
+  if (data.locationBrandEdit && !previous.placement.location) {
     if (data.locationBrandEdit.choice.mode === 'inherit')
       throw new Error('Detached brands cannot inherit')
     const brands = source.record.localLocationBrands
@@ -252,6 +286,8 @@ export async function saveFeatureFormRevision(
     data: FeatureFormValues
     destinationScope?: FeatureDestinationScope
     authorizeDestinationLocation?: () => Promise<unknown>
+    authorizeLocationCorrection?: () => Promise<void>
+    authorizeSharedCorrection?: () => Promise<{ canEdit: boolean; superAdmin: boolean }>
     canPublish: boolean
     allowDescriptions: boolean
     allowedInternalIds: ReadonlySet<string>
@@ -305,6 +341,21 @@ export async function saveFeatureFormRevision(
   const content = buildFeatureFormCandidate(previous, source.snapshot, data, !transfer)
   if (destination) preserveTransferredLocationText(previous, content)
   // Automatic drops and null initialization are transfer operations, not edits to protected fields.
+  const corrections =
+    !transfer && previous.placement.location
+      ? await prepareFeatureLocationFormCorrection(db, {
+          featureId: input.featureId,
+          organisationId: input.expectedScope.organisationId,
+          actorId: input.actorId,
+          guard: input.guard,
+          previous,
+          content,
+          reset: data.locationReset,
+          brandEdit: data.locationBrandEdit,
+          authorizeOrganisation: input.authorizeLocationCorrection,
+          authorizeShared: input.authorizeSharedCorrection,
+        })
+      : { queries: [], comparison: previous, authorized: false }
   const validationPrevious = transfer
     ? {
         ...previous,
@@ -315,7 +366,7 @@ export async function saveFeatureFormRevision(
           ]),
         ),
       }
-    : previous
+    : corrections.comparison
   const validationSource = parseFeatureRevisionSource(source.snapshot)
   if (destination) {
     validationSource.record.projectId = destination.projectId
@@ -364,6 +415,7 @@ export async function saveFeatureFormRevision(
     source,
     previous,
     content,
+    ...(corrections.authorized ? { identity: { actorId: input.actorId } } : {}),
   })
   const locationTransfer =
     destination &&
@@ -444,6 +496,7 @@ export async function saveFeatureFormRevision(
   // Apply the form and its attributed history together without changing visibility.
   const applied = await executeRevisionBatch(db, guard, [
     ...capture.before,
+    ...corrections.queries,
     ...projection.statements,
     ...(projection.afterPublication ?? []),
     prepareRevisionCheck(db, projection.verify),

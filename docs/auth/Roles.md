@@ -263,3 +263,15 @@ Hub Admins can inspect their hub and owned descendants. SuperAdmins and core Hub
 can select global scopes. Assets is restricted to Hub Admins and SuperAdmins; shared
 Data remains restricted to SuperAdmins and core Hub Admins. Analytics delegation does
 not grant contact-directory/user-search access.
+
+## Hype shared Location corrections
+
+Location authority is field-specific and separate from Feature editing authority.
+Project or Organisation editors may correct shared phone numbers, websites, social
+profiles and accessibility. Translation-only rights do not grant this authority. Only
+SuperAdmin may correct shared names, addresses, brands or other sensitive Location
+facts. Organisation-authorized editors may instead maintain those values as Organisation
+overrides; those edits must not rewrite the shared baseline. Third-party submissions
+remain proposals until an authorized staff reviewer accepts them. Acceptance requires
+authority for each destination field, not merely access to the task. Staff edits with
+the required authority save directly.

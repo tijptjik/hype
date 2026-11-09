@@ -2,6 +2,7 @@
 // API
 import { getFeatureLocation } from '#lib/api/location.remote.js'
 // COMPONENTS
+import LocationCorrectionWorkspace from '../../revisionHistory/LocationCorrectionWorkspace.svelte'
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import LocationReviewSection from '../../forms/featureLocation/LocationReviewSection.svelte'
 import LocationIdentityReviewSection from '../../forms/featureLocation/LocationIdentityReviewSection.svelte'
@@ -56,6 +57,12 @@ const accepted = $derived(
           jobId={source.rematchJobId}
           status={source.rematchStatus ?? 'pending'}
           reason={source.rematchReason}
+          {onCommitted}
+        />
+      {:else if source?.correctionProposalId}
+        <LocationCorrectionWorkspace
+          featureId={task.featureId}
+          proposalId={source.correctionProposalId}
           {onCommitted}
         />
       {:else if source?.proposalId && accepted}

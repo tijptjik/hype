@@ -48,10 +48,15 @@ export function taskQueueProjection(mockFeatureId?: string): SQL {
     WHERE f.id=${mockFeatureId} AND f.isDraft=0
   `
       : sql``
-  return sql`WITH "task" AS (
-    SELECT ${columns}, NULL AS locationTask FROM main.task
+  // Bound each compound SELECT so the live queue stays within D1's SQL limits.
+  return sql`WITH location_queue AS MATERIALIZED (
+    SELECT 'locationFacts:correction:'||p.id,f.organisationId,f.projectId,f.id,p.actorId,NULL,0,'locationFacts',p.reason,0,NULL,NULL,NULL,p.createdAt,p.createdAt,
+      json_object('kind','facts','locationId',p.locationId,'correctionProposalId',p.id)
+    FROM locationCorrectionProposal p JOIN feature f ON f.id=p.featureId AND f.organisationId=p.organisationId
+    JOIN featureLocation fl ON fl.featureId=f.id AND fl.locationId=p.locationId
+    WHERE NOT EXISTS(SELECT 1 FROM locationCorrectionDecision d WHERE d.proposalId=p.id)
     UNION ALL
-    SELECT g.type||':'||f.id||':'||p.candidateRevisionId||':'||p.organisationRevision,
+    SELECT g.type||':'||f.id||':'||p.candidateRevisionId||':'||p.organisationRevision||CASE WHEN json_extract(p.evidence,'$.sharedRevision') IS NULL THEN '' ELSE ':'||json_extract(p.evidence,'$.sharedRevision') END,
       f.organisationId,f.projectId,f.id,'system:location',NULL,0,g.type,NULL,0,NULL,NULL,NULL,p.createdAt,p.createdAt,
       json_object('kind',g.kind,'locationId',p.locationId,'proposalId',p.id)
     FROM locationAdoptionProposal p
@@ -67,12 +72,14 @@ export function taskQueueProjection(mockFeatureId?: string): SQL {
       AND json_extract(p.evidence,'$.plan.decision.'||g.fieldGroup)='review'
       AND NOT EXISTS (SELECT 1 FROM locationAdoptionProposal newer WHERE newer.featureId=p.featureId
         AND newer.projectId=p.projectId AND newer.locationId=p.locationId AND newer.candidateRevisionId=p.candidateRevisionId
-        AND newer.organisationRevision=p.organisationRevision AND json_extract(newer.evidence,'$.placement') IS NULL AND newer.rowid>p.rowid)
+        AND newer.organisationRevision=p.organisationRevision AND json_extract(newer.evidence,'$.sharedRevision') IS json_extract(p.evidence,'$.sharedRevision') AND json_extract(newer.evidence,'$.placement') IS NULL AND newer.rowid>p.rowid)
       AND NOT EXISTS (SELECT 1 FROM locationAdoptionProposal decided WHERE decided.featureId=p.featureId
         AND decided.projectId=p.projectId AND decided.locationId=p.locationId AND decided.candidateRevisionId=p.candidateRevisionId
-        AND decided.organisationRevision=p.organisationRevision AND json_extract(decided.evidence,'$.placement') IS NULL
+        AND decided.organisationRevision=p.organisationRevision AND json_extract(decided.evidence,'$.sharedRevision') IS json_extract(p.evidence,'$.sharedRevision') AND json_extract(decided.evidence,'$.placement') IS NULL
         AND (CASE WHEN g.fieldGroup='facts' THEN decided.factsDecision ELSE decided.locationDecision END) IS NOT NULL)
-      AND (candidate.version>CASE WHEN g.fieldGroup='facts' THEN af.version ELSE ap.version END
+      AND (json_extract(p.evidence,'$.sharedRevision') IS NOT NULL
+        AND json_extract(p.evidence,'$.sharedRevision') IS NOT json_extract(fl.acceptancePolicy,CASE WHEN g.fieldGroup='facts' THEN '$.factsSharedRevision' ELSE '$.locationSharedRevision' END)
+        OR candidate.version>CASE WHEN g.fieldGroup='facts' THEN af.version ELSE ap.version END
         OR (candidate.id=CASE WHEN g.fieldGroup='facts' THEN af.id ELSE ap.id END
           AND p.organisationRevision!=''
           AND p.organisationRevision!=COALESCE(CASE WHEN g.fieldGroup='facts' THEN fl.factsOrganisationRevision ELSE fl.locationOrganisationRevision END,'')
@@ -124,6 +131,9 @@ export function taskQueueProjection(mockFeatureId?: string): SQL {
       json_object('kind','identity','locationId',j.locationId,'rematchJobId',j.id,'rematchStatus',j.status,'rematchReason',j.reason)
     FROM locationRematchCurrent j JOIN feature f ON f.id=j.featureId
     WHERE j.status IN ('pending','checking','deferred','failed')
+  ), "task" AS (
+    SELECT ${columns}, NULL AS locationTask FROM main.task
+    UNION ALL SELECT * FROM location_queue
     ${mocks}
   )`
 }

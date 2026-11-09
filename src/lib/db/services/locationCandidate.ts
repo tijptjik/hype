@@ -1,5 +1,5 @@
+import { currentLocationFacts, locationReadFields } from './locationReadProjection'
 // SNAPSHOT CONTRACT
-import { locationFactsFieldSql } from './locationFactsSql'
 // DRIZZLE
 import { and, desc, eq, or, sql } from 'drizzle-orm'
 // SCHEMA
@@ -90,7 +90,16 @@ export async function resolveLocationCandidate(
     ssId: row.ssId,
     resourceReleaseId: row.resourceReleaseId,
     snapshotId: row.snapshotId,
-    facts: LocationFactsSchema.parse(row.facts),
+    facts: await currentLocationFacts(
+      db,
+      row.locationId,
+      LocationFactsSchema.parse(row.facts),
+      (
+        await db.get<{ id: string }>(
+          sql`SELECT organisationId id FROM project WHERE id=${input.projectId}`,
+        )
+      )?.id ?? null,
+    ),
   }
 }
 
@@ -117,6 +126,18 @@ export async function searchLocalLocationCandidates(
 ): Promise<LocalLocationCandidate[]> {
   const query = input.q.trim()
   if (!query || query.length > 200) throw new Error('Invalid local Location query')
+  const organisationId =
+    (
+      await db.get<{ id: string }>(
+        sql`SELECT organisationId id FROM project WHERE id=${input.projectId}`,
+      )
+    )?.id ?? null
+  const fields = await locationReadFields(
+    db,
+    locationTable.id,
+    locationRevision.facts,
+    sql`${organisationId}`,
+  )
   // Scope and latest-revision selection precede name matching and the result bound.
   const rows = await db
     .select({
@@ -140,16 +161,27 @@ export async function searchLocalLocationCandidates(
         or(eq(locationTable.state, 'manual'), eq(locationTable.state, 'unresolved')),
         eq(locationRevision.origin, 'local'),
         sql`${locationRevision.version} = (select max(latest.version) from locationRevision latest where latest.locationId = ${locationTable.id})`,
-        sql`exists (select 1 from json_each(${locationFactsFieldSql(locationRevision.facts, 'names')}) names where names.type = 'text' and instr(lower(names.value), lower(${query})) > 0)`,
+        sql`exists (select 1 from json_each(${fields.names}) names where names.type = 'text' and instr(lower(names.value), lower(${query})) > 0)`,
       ),
     )
     .orderBy(desc(locationTable.createdAt), locationTable.id)
     .limit(20)
-  return rows.map(row => {
-    if (row.state !== 'manual' && row.state !== 'unresolved')
-      throw new Error('Unexpected nonlocal Location')
-    return { ...row, state: row.state, facts: LocationFactsSchema.parse(row.facts) }
-  })
+  return Promise.all(
+    rows.map(async row => {
+      if (row.state !== 'manual' && row.state !== 'unresolved')
+        throw new Error('Unexpected nonlocal Location')
+      return {
+        ...row,
+        state: row.state,
+        facts: await currentLocationFacts(
+          db,
+          row.locationId,
+          LocationFactsSchema.parse(row.facts),
+          organisationId,
+        ),
+      }
+    }),
+  )
 }
 
 /**
@@ -163,6 +195,18 @@ export async function nearbyLocalLocationCandidates(
   db: Database,
   input: { projectId: string; coordinates: [number, number]; radius: number },
 ): Promise<{ candidates: LocalLocationCandidate[]; limited: boolean }> {
+  const organisationId =
+    (
+      await db.get<{ id: string }>(
+        sql`SELECT organisationId id FROM project WHERE id=${input.projectId}`,
+      )
+    )?.id ?? null
+  const fields = await locationReadFields(
+    db,
+    locationTable.id,
+    locationRevision.facts,
+    sql`${organisationId}`,
+  )
   const [lng, lat] = input.coordinates
   const dy = input.radius / 110000
   const dx = dy / Math.cos((lat * Math.PI) / 180)
@@ -189,24 +233,34 @@ export async function nearbyLocalLocationCandidates(
         or(eq(locationTable.state, 'manual'), eq(locationTable.state, 'unresolved')),
         eq(locationRevision.origin, 'local'),
         sql`${locationRevision.version} = (select max(latest.version) from locationRevision latest where latest.locationId = ${locationTable.id})`,
-        sql`json_extract(${locationFactsFieldSql(locationRevision.facts, 'location')}, '$.geometry.coordinates[0]') BETWEEN ${lng - dx} AND ${lng + dx}`,
-        sql`json_extract(${locationFactsFieldSql(locationRevision.facts, 'location')}, '$.geometry.coordinates[1]') BETWEEN ${lat - dy} AND ${lat + dy}`,
+        sql`json_extract(${fields.location}, '$.geometry.coordinates[0]') BETWEEN ${lng - dx} AND ${lng + dx}`,
+        sql`json_extract(${fields.location}, '$.geometry.coordinates[1]') BETWEEN ${lat - dy} AND ${lat + dy}`,
       ),
     )
     .orderBy(locationTable.id)
     .limit(201)
-  const candidates = rows
-    .slice(0, 200)
-    .map(row => {
-      if (row.state !== 'manual' && row.state !== 'unresolved')
-        throw new Error('Unexpected nonlocal Location')
-      return { ...row, state: row.state, facts: LocationFactsSchema.parse(row.facts) }
-    })
-    .filter(
-      row =>
-        locationDistance(input.coordinates, row.facts.location.geometry.coordinates) <=
-        input.radius,
+  const candidates = (
+    await Promise.all(
+      rows.slice(0, 200).map(async row => {
+        if (row.state !== 'manual' && row.state !== 'unresolved')
+          throw new Error('Unexpected nonlocal Location')
+        return {
+          ...row,
+          state: row.state,
+          facts: await currentLocationFacts(
+            db,
+            row.locationId,
+            LocationFactsSchema.parse(row.facts),
+            organisationId,
+          ),
+        }
+      }),
     )
+  ).filter(
+    row =>
+      locationDistance(input.coordinates, row.facts.location.geometry.coordinates) <=
+      input.radius,
+  )
   return { candidates, limited: rows.length > 200 }
 }
 

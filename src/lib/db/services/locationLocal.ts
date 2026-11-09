@@ -1,3 +1,4 @@
+import { sharedLocationFacts } from './locationShared'
 // SNAPSHOT CONTRACT
 import { classifyLocationFactsKind } from '#lib/locations/factsKind.js'
 import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
@@ -169,6 +170,7 @@ export async function updateLocalLocationAddress(
     divisionOverrides?: AddressDivisionOverrides
     parseSource?: Record<string, string>
     actorId: string
+    allowSharedBaseline?: boolean
   },
 ): Promise<{ revisionId: string; organisationRevision: string | null } | null> {
   if (!input.actorId.trim() || !input.organisationId) return null
@@ -211,11 +213,13 @@ export async function updateLocalLocationAddress(
     input.locationId,
   )
   if (
-    input.expectedOrganisationRevision !== undefined &&
-    input.expectedOrganisationRevision !== (current?.revision ?? null)
+    (!input.allowSharedBaseline || input.expectedOrganisationRevision !== undefined) &&
+    (input.expectedOrganisationRevision ?? null) !== (current?.revision ?? null)
   )
     return null
-  const facts = baseline.locationRevision.facts
+  const facts = (
+    await sharedLocationFacts(db, input.locationId, baseline.locationRevision.facts)
+  ).facts
   const before = resolveFeatureLocation(facts, facts.location, current?.overrides ?? {})
   if (!before.location) return null
   // Omitted status fields stay absent, so a no-change save cannot create another revision.
@@ -280,6 +284,7 @@ export async function updateLocalLocationAddress(
     actorId: input.actorId,
     before,
     after,
+    allowSharedBaseline: input.allowSharedBaseline,
     currentOverrides: current?.overrides ?? {},
     ...(input.parseSource
       ? {

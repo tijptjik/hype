@@ -20,6 +20,9 @@ const recordSchema = z.object({
     address3dId: optionalId,
     address3dUnitId: optionalId,
     phones: z.array(z.string()).nullable(),
+    websites: LocationFactsSchema.shape.websites,
+    socials: LocationFactsSchema.shape.socials,
+    accessibility: LocationFactsSchema.shape.accessibility,
     operatingStatus: z.string().nullable().optional(),
     identifiers: z.object({ wikidata: z.object({ brandId: identifier }) }).nullable(),
     i18n: z.record(
@@ -107,6 +110,11 @@ export function projectSaanSeoiPlace(
     facts: LocationFactsSchema.parse({
       names,
       phoneNumber,
+      ...(source.websites !== undefined ? { websites: source.websites } : {}),
+      ...(source.socials !== undefined ? { socials: source.socials } : {}),
+      ...(source.accessibility !== undefined
+        ? { accessibility: source.accessibility }
+        : {}),
       brands,
       ...(mapOperatingStatus(source.operatingStatus)
         ? { operatingStatus: mapOperatingStatus(source.operatingStatus) }

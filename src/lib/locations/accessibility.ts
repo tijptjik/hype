@@ -35,6 +35,7 @@ export type AccessibilityRecord = {
   stale: boolean
 }
 export type AccessibilityView = {
+  observationId?: string | null
   locationRevisionId: string
   record: AccessibilityRecord | null
   venues: {

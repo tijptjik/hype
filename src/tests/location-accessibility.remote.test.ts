@@ -5,6 +5,8 @@ import { withRemoteMeta, mockedRemoteModule } from './remote-function-mock'
 import { UNKNOWN_ACCESSIBILITY } from '#lib/locations/accessibility.js'
 const mocks = vi.hoisted(() => ({
   read: vi.fn(),
+  sharedRights: vi.fn(),
+  all: vi.fn(async () => [{ projectId: 'p' }]),
   save: vi.fn(),
   refresh: vi.fn(async () => {}),
   anonymous: false,
@@ -18,7 +20,7 @@ vi.mock('#lib/api/server/guarded.js', () => {
     const fn = withRemoteMeta(
       async (v: unknown) =>
         handler(schema.parse(v), {
-          db: {},
+          db: { all: mocks.all },
           user: { id: 'session-actor', isAnonymous: mocks.anonymous },
           userRoles: mocks.roles,
         }),
@@ -32,6 +34,9 @@ vi.mock('#lib/api/server/guarded.js', () => {
   }
   return { guardedCommand: wrap, guardedQuery: wrap }
 })
+vi.mock('#lib/api/services/locationOwnership', () => ({
+  sharedLocationEditRights: mocks.sharedRights,
+}))
 vi.mock('#lib/db/services/locationAccessibility.js', () => ({
   readLocationAccessibility: mocks.read,
   saveLocationAccessibility: mocks.save,
@@ -46,6 +51,7 @@ const input = {
 }
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.sharedRights.mockResolvedValue({ canEdit: true, superAdmin: false })
   mocks.anonymous = false
   mocks.roles = []
   mocks.save.mockResolvedValue('new')
@@ -63,10 +69,13 @@ it('rejects anonymous actors and ordinary users before reading or writing', asyn
   expect(mocks.read).not.toHaveBeenCalled()
   expect(mocks.save).not.toHaveBeenCalled()
 })
-it('allows admin-panel contributors without Location ownership and attributes the authenticated actor', async () => {
+it('allows project editors without Location ownership and attributes the authenticated actor', async () => {
   mocks.roles = [{ type: 'project', role: 'maintainer' }]
   await remote.updateLocationAccessibility(input)
-  expect(mocks.save).toHaveBeenCalledWith({}, input, 'session-actor')
+  expect(mocks.save).toHaveBeenCalledWith({ all: mocks.all }, input, 'session-actor', {
+    canEdit: true,
+    superAdmin: false,
+  })
 })
 it('returns a conflict rather than silently overwriting another revision', async () => {
   mocks.roles = [{ type: 'hub', role: 'admin' }]
@@ -93,3 +102,12 @@ it.each(['refresh failed', 'ACCESSIBILITY_CHANGED'])(
     }
   },
 )
+
+it('rejects admin-panel users without project or Organisation editing rights', async () => {
+  mocks.roles = [{ type: 'project', role: 'maintainer' }]
+  mocks.sharedRights.mockResolvedValue({ canEdit: false, superAdmin: false })
+  await expect(remote.updateLocationAccessibility(input)).rejects.toMatchObject({
+    status: 403,
+  })
+  expect(mocks.save).not.toHaveBeenCalled()
+})

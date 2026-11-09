@@ -3213,3 +3213,38 @@ exclusion; `prepare-local-divisions.test.ts` requires catalogue completeness eve
 an empty Feature queue. Local rehearsal imported all 2,000 records from
 `data-hk-divisions-2026-10-01.0`; the marker at `114.25234466277902, 22.230438757464853`
 resolves to Shek O and Shek O Village.
+
+### Three-layer Location correction contract
+
+The Location correction model distinguishes immutable publisher snapshots, Hype-wide
+shared correction revisions, and Organisation override revisions. Resolution uses that
+order, with explicit Organisation suppression taking precedence. Shared contact and
+accessibility edits require Project or Organisation editing authority; shared names,
+addresses, brands and other sensitive facts require SuperAdmin. Organisation-authorized
+sensitive edits remain Organisation overrides.
+
+Shared revisions retain the original source value and its presence, replacement or
+suppression, source revision, editor and time. Repeated publication values and omissions
+preserve contact corrections. Changed publisher contact evidence retires them
+permanently; agreement also retires redundant corrections. Sensitive shared corrections
+require explicit reset. Organisation retain/follow policy governs its own overrides
+against changed underlying evidence.
+
+Direct staff saves must atomically record the correction and adoption by the originating
+Feature. Other Features retain their independent adoption policies and accepted evidence
+pins. Third-party proposals remain Tasks until staff choose and authorize the
+destination changes. Pending reviews must not accept shared evidence that changed after
+assessment. These requirements supersede earlier blanket Organisation-only correction
+routing in this document.
+
+Current Location directory/search projections apply Hype corrections and scoped
+Organisation overrides before search, lifecycle filtering, nearby bounds and pagination.
+Accepted Feature list projections instead use immutable shared revision pins, including
+field-specific pins, beneath accepted Organisation overrides. Search labels never
+replace canonical source identity evidence.
+
+The standalone editor offers SuperAdmin-only Hype shared scope using the existing
+name/address/status controls and brand editor. Organisation scope remains an explicit
+separate destination. Proposal review supports per-field selection and retains the
+accepted subset in an immutable `locationCorrectionMerge` receipt; remaining proposed
+fields are not applied when that review completes.

@@ -1,3 +1,10 @@
+import {
+  prepareSharedLocationCorrection,
+  readSharedLocationCorrection,
+} from './locationShared'
+import { resolveSharedCorrections } from '#lib/locations/sharedCorrection.js'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
+import { locationAccessibility } from '../schema/locationAccessibility'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // DOMAIN
@@ -90,7 +97,20 @@ export async function readLocationAccessibility(
   const row = await db.get<Row>(
     sql`SELECT * FROM locationAccessibilityHead WHERE locationId=${locationId}`,
   )
-  const record = row ? decode(row, await placementKey(db, subject)) : null
+  let record = row ? decode(row, await placementKey(db, subject)) : null
+  const shared = await readSharedLocationCorrection(db, locationId)
+  const facts = readLocationFacts(subject.facts)
+  const effective = shared
+    ? resolveSharedCorrections(facts, JSON.parse(shared.corrections)).facts
+    : facts
+  if (effective.accessibility && (!record || shared))
+    record = {
+      id: row?.id ?? '',
+      locationId,
+      values: effective.accessibility,
+      recordedAt: shared?.createdAt ?? '',
+      stale: record?.stale ?? false,
+    }
   const venues: AccessibilityView['venues'] = []
   // Only explicit shared current tenancy establishes this signal; never infer it from proximity or an address string.
   const children =
@@ -132,6 +152,7 @@ export async function readLocationAccessibility(
   }
   return {
     locationRevisionId: subject.revisionId,
+    observationId: row?.id ?? null,
     record,
     venues,
     moreVenues: children.length > 50,
@@ -146,6 +167,10 @@ export async function saveLocationAccessibility(
   db: Database,
   raw: AccessibilitySave,
   actorId: string,
+  rights: { canEdit: boolean; superAdmin: boolean } = {
+    canEdit: false,
+    superAdmin: false,
+  },
 ): Promise<string> {
   const input = AccessibilitySaveSchema.parse(raw)
   const subject = await accessibilitySubject(db, input.locationId)
@@ -154,9 +179,25 @@ export async function saveLocationAccessibility(
   const key = await placementKey(db, subject)
   const id = crypto.randomUUID()
   // INSERT SELECT makes a stale head, source snapshot or subject eligibility a no-op, including the first-write race.
-  const inserted = await db.get<{ id: string }>(sql`INSERT INTO locationAccessibility
-    (id,locationId,previousRevisionId,locationRevisionId,placementKey,valuesJson,actorId)
-    SELECT ${id},${input.locationId},${input.expectedId},${subject.revisionId},${key},${JSON.stringify(input.values)},${actorId}
+  const head = await readSharedLocationCorrection(db, input.locationId)
+  const shared = await prepareSharedLocationCorrection(db, {
+    locationId: input.locationId,
+    sourceRevisionId: subject.revisionId,
+    expectedRevision: head?.id ?? null,
+    actorId,
+    rights,
+    patch: { accessibility: { mode: 'override', value: input.values } },
+    guard: sql`(SELECT id FROM locationAccessibilityHead WHERE locationId=${input.locationId}) IS ${input.expectedId}`,
+  }).catch(cause => {
+    if (cause instanceof Error && cause.message === 'SHARED_LOCATION_CHANGED')
+      throw new Error('ACCESSIBILITY_CHANGED')
+    throw cause
+  })
+  const inserted = await executeRevisionBatch(db, shared.guard, [
+    ...shared.queries,
+    db
+      .insert(locationAccessibility)
+      .select(sql`    SELECT ${id},${input.locationId},${input.expectedId},${subject.revisionId},${key},${JSON.stringify(input.values)},${actorId},strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE (SELECT id FROM locationAccessibilityHead WHERE locationId=${input.locationId}) IS ${input.expectedId}
     AND (SELECT v.id FROM locationRevision v JOIN location l ON l.id=v.locationId
       WHERE l.id=${input.locationId} AND l.state IN ('linked','unresolved')
@@ -165,7 +206,10 @@ export async function saveLocationAccessibility(
     AND (SELECT json_group_array(id) FROM (SELECT id FROM locationOccupancyHead
       WHERE establishmentLocationId=${subject.id} AND scopeOrganisationId IS NULL
       AND assertionState='asserted' AND occupancyState='current' ORDER BY id))=${JSON.stringify(JSON.parse(key).occupancy)}
-    RETURNING id`)
+`)
+      .returning({ id: locationAccessibility.id }),
+    prepareRevisionCheck(db, sql`changes()=1`),
+  ])
   if (!inserted) throw new Error('ACCESSIBILITY_CHANGED')
   return id
 }

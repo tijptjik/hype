@@ -1,3 +1,7 @@
+import {
+  reconcileSharedLocationSource,
+  reconcileOrganisationSourcePolicies,
+} from './locationShared'
 // ═══════════════════════
 // TABLE OF CONTENTS
 // 1. CANONICAL EVIDENCE PREPARATION
@@ -299,5 +303,7 @@ export async function persistForwardSaanSeoiPlace(
     throw new LocationSourceConflictError(
       'Source mirror changed during persistence; retry required',
     )
+  await reconcileSharedLocationSource(db, receipt.locationId, receipt.revisionId)
+  await reconcileOrganisationSourcePolicies(db, receipt.locationId, receipt.revisionId)
   return receipt
 }

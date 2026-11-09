@@ -250,6 +250,7 @@ export const locationAdoptionProposal = sqliteTable(
       .$type<{
         policy: ProjectLocationPolicy
         plan: StoredLocationAdoptionPlan
+        sharedRevision?: string | null
         candidateOverrides?: FeatureLocationOverrides
         placement?: import('#lib/locations/placement.js').PlacementEvidence
       }>()
@@ -283,6 +284,8 @@ export const locationAdoptionProposal = sqliteTable(
       sql`COALESCE(${table.addressRevisionId},'')`,
       sql`COALESCE(${table.layerId},'')`,
       sql`COALESCE(${table.layerPolicyRevision},-1)`,
+      sql`COALESCE(json_extract(${table.evidence},'$.placement'),'')`,
+      sql`COALESCE(json_extract(${table.evidence},'$.sharedRevision'),'')`,
     ),
     index('location_adoption_project').on(table.projectId, table.featureId),
     check('location_adoption_policy_revision', sql`${table.policyRevision} >= 0`),

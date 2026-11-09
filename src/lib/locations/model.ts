@@ -54,11 +54,20 @@ export type LocationFacts = {
   successorLocationId?: string | null
   names: Record<string, string>
   phoneNumber: string[]
+  websites?: string[]
+  socials?: Record<string, string>
+  accessibility?: import('./accessibility').Accessibility | null
   brands: LocationBrand[]
   location: LocationPosition
 }
 
 export type FeatureLocationOverrides = {
+  /** Explicit consent to supersede an Organisation correction when underlying evidence changes. */
+  freshness?: Record<string, { mode: 'retain' | 'follow'; original: unknown }>
+  websites?: LocationOverride<string[]>
+  socials?: LocationOverride<Record<string, string>>
+  accessibility?: LocationOverride<import('./accessibility').Accessibility>
+
   address?: import('./placement').AddressCorrection
   footprint?: LocationOverride<LocationFootprint>
   operatingStatus?:

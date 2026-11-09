@@ -1,3 +1,4 @@
+import { sharedLocationEditRights } from './services/locationOwnership'
 import { historicalSourceLayerId } from '#lib/db/services/historicalLayers.js'
 import type { RemoteQuery } from '$app/server'
 import { error } from '@sveltejs/kit'
@@ -914,6 +915,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     const revision = await saveFeatureFormRevision(db, {
       ...saveInput,
       data: { ...data, properties: submittedProperties },
+      authorizeSharedCorrection: () => sharedLocationEditRights(ctx, current.projectId),
       expectedScope: current,
       guard: buildFeatureCommandScopeGuard(db, current.id, current),
       destinationScope,

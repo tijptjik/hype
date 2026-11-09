@@ -14,6 +14,9 @@ export type LocationResource = {
     releaseId: string | null
     snapshotId: string | null
   }
+  canEditShared?: boolean
+  sharedFacts?: LocationFacts
+  sharedRevision?: string | null
   canEditAddress?: boolean
   editingOrganisationId?: string | null
   organisationRevision?: string | null

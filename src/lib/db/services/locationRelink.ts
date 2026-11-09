@@ -1,3 +1,4 @@
+import { sharedLocationFacts } from './locationShared'
 // DRIZZLE
 import { and, eq, isNull, ne, or, sql } from 'drizzle-orm'
 // SCHEMA
@@ -101,7 +102,12 @@ export async function relinkFeatureLocation(
     )
     .get()
   if (!destination) return { status: 'place-unavailable' }
-  const facts = LocationFactsSchema.parse(destination.facts)
+  const shared = await sharedLocationFacts(
+    db,
+    input.locationId,
+    LocationFactsSchema.parse(destination.facts),
+  )
+  const facts = shared.facts
   let overrides = preserveFeatureLocationBaseline(
     // Lifecycle describes the selected entity; reassociation cannot copy the old entity's closure.
     {
@@ -122,7 +128,14 @@ export async function relinkFeatureLocation(
       overrides.names[locale] = override
     }
   }
-  for (const key of ['phoneNumber', 'brands', 'location'] as const) {
+  for (const key of [
+    'phoneNumber',
+    'websites',
+    'socials',
+    'accessibility',
+    'brands',
+    'location',
+  ] as const) {
     const override = previousOverrides[key]
     if (override && override.mode !== 'inherit')
       Object.assign(overrides, { [key]: override })
@@ -167,6 +180,18 @@ export async function relinkFeatureLocation(
     ...(!independentPlacement && (input.nameMode ?? current.nameMode)
       ? { acceptancePolicy: { nameMode: input.nameMode ?? current.nameMode } }
       : {}),
+    acceptancePolicy: {
+      nameMode: input.nameMode ?? current.nameMode ?? 'independent',
+      ...(independentPlacement ? { locationMode: 'independent' } : {}),
+      ...(shared.revision
+        ? {
+            factsSharedRevision: shared.revision,
+            locationSharedRevision: shared.revision,
+            lastSharedRevision: shared.revision,
+          }
+        : {}),
+      factsSharedFields: [],
+    },
     factsRevisionId: input.revisionId,
     locationRevisionId: input.revisionId,
     overrides,

@@ -32,3 +32,27 @@ export async function requireLocationOrganisationManager(
   })
   if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
 }
+
+/** Resolve shared contact editing from project/Organisation authority; translation rights do not qualify.
+ * @param ctx Fresh server session. @param projectId Persisted project establishing scope.
+ * @returns Field-authoring rights; sensitive shared fields always require SuperAdmin.
+ */
+export async function sharedLocationEditRights(
+  ctx: GuardedBaseContext,
+  projectId: string,
+): Promise<{ canEdit: boolean; superAdmin: boolean }> {
+  const { probeProjectQuery } = await import('#lib/db/services/project.js')
+  const { authorizeProjectUpdateForSubmission } = await import('./authz/index')
+  const project = await probeProjectQuery(ctx.db, { ref: projectId, refKey: 'id' })
+  const canEdit = Boolean(
+    !ctx.user.isAnonymous &&
+      project &&
+      authorizeProjectUpdateForSubmission({
+        user: ctx.user,
+        userRoles: ctx.userRoles,
+        resource: project,
+        submittedData: { locationUpdatePolicy: true },
+      }).allowed,
+  )
+  return { canEdit, superAdmin: Boolean(!ctx.user.isAnonymous && ctx.user.superAdmin) }
+}

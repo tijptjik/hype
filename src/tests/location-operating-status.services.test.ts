@@ -215,6 +215,7 @@ describe('operating state and historical adoption', () => {
       .prepare('SELECT * FROM locationRevision WHERE id=?')
       .get(revisionId)
     const saved = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId,
       expectedRevisionId: revisionId,
       organisationId: 'p',
@@ -252,6 +253,7 @@ describe('operating state and historical adoption', () => {
   it('requires explicit review, rejects stale acceptance and publishes only accepted operating status', async () => {
     const { db, locationId, revisionId } = await linkedFixture()
     const saved = (await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId,
       expectedRevisionId: revisionId,
       organisationId: 'p',
@@ -294,7 +296,7 @@ describe('operating state and historical adoption', () => {
       (await getAcceptedFeatureLocation(db, 'f', 'p'))?.effective.operatingStatus,
     ).toEqual(closure)
     const row = await db.get<{ value: string }>(
-      sql`SELECT ${featureLocationLifecycleSQL()} AS value FROM feature WHERE id='f'`,
+      sql`SELECT ${featureLocationLifecycleSQL(false)} AS value FROM feature WHERE id='f'`,
     )
     expect(
       LocationLifecycleSummarySchema.parse(JSON.parse(row.value)).operatingStatus,
@@ -646,7 +648,7 @@ describe('operating state and historical adoption', () => {
     })
     await adoption.query
     const row = await db.get<{ value: string }>(
-      sql`SELECT ${featureLocationLifecycleSQL()} AS value FROM feature WHERE id='f'`,
+      sql`SELECT ${featureLocationLifecycleSQL(false)} AS value FROM feature WHERE id='f'`,
     )
     expect(
       LocationLifecycleSummarySchema.parse(JSON.parse(row.value)).operatingStatus,

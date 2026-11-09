@@ -3,6 +3,8 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
+import { spawnSync } from 'node:child_process'
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, sql } from 'drizzle-orm'
 // DB
@@ -52,6 +54,8 @@ function setup() {
     CREATE TABLE projectI18n(projectId TEXT,name TEXT,nameShort TEXT,description TEXT);
     CREATE TABLE organisationI18n(organisationId TEXT,name TEXT,nameShort TEXT,description TEXT);`)
   sqlite.exec(readFileSync('migrations/0157_location_rematching.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0185_location_correction_proposals.sql', 'utf8'))
+  sqlite.exec('ALTER TABLE featureLocation ADD COLUMN acceptancePolicy TEXT')
   const prepare = (text: string) => ({
     bind: (...args: unknown[]) => ({
       all: async () => ({ results: sqlite.prepare(text).all(...(args as never[])) }),
@@ -330,4 +334,38 @@ it('hydrates Location names for an untitled Feature without replacing authored F
     en: 'Harbour Bakery',
     'zh-hant': '海港餅店',
   })
+})
+
+it('executes real and mock queues with a five-term compound SELECT limit', () => {
+  setup()
+  const definitions = sqlite
+    .prepare(
+      "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND type IN ('table','view') ORDER BY type",
+    )
+    .all() as { sql: string }[]
+  const queries = [undefined, 'f'].map(mock =>
+    new SQLiteSyncDialect().sqlToQuery(
+      sql`${taskQueueProjection(mock)} SELECT count(*) AS count FROM task`,
+    ),
+  )
+  // Desktop SQLite defaults are more permissive than the D1 runtime that rejected this queue.
+  const result = spawnSync(
+    'python3',
+    [
+      '-c',
+      `
+import json, sqlite3, sys
+payload = json.load(sys.stdin)
+db = sqlite3.connect(':memory:')
+db.setlimit(sqlite3.SQLITE_LIMIT_COMPOUND_SELECT, 5)
+for definition in payload['definitions']:
+    db.execute(definition['sql'])
+for query in payload['queries']:
+    assert db.execute(query['sql'], query['params']).fetchone()[0] == 0
+`,
+    ],
+    { input: JSON.stringify({ definitions, queries }), encoding: 'utf8' },
+  )
+  expect(result.stderr).toBe('')
+  expect(result.status).toBe(0)
 })

@@ -7,6 +7,8 @@ import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core'
 // TEST
 import { afterEach, expect, it } from 'vitest'
 // SERVICES
+import { featureLocationBrandsSQL } from '#lib/db/services/locationBrandProjection.js'
+import { featureLocationLifecycleSQL } from '#lib/db/services/locationLifecycleProjection.js'
 import { featureLocationNamesSQL } from '#lib/db/services/locationNameProjection.js'
 import { FeatureListProfileAPI, FeatureListRow } from '#lib/db/zod/schema/feature.js'
 
@@ -14,7 +16,7 @@ const stores: DatabaseSync[] = []
 afterEach(() => {
   for (const store of stores.splice(0)) store.close()
 })
-function fixture() {
+function fixture(includeShared = false) {
   const db = new DatabaseSync(':memory:')
   stores.push(db)
   db.exec(`CREATE TABLE project(id TEXT, organisationId TEXT);
@@ -42,8 +44,11 @@ function fixture() {
       common: { names: { en: 'Unaccepted rename' } },
     }),
   )
+  db.exec(
+    'ALTER TABLE featureLocation ADD COLUMN acceptancePolicy TEXT; CREATE TABLE locationSharedRevision(id TEXT,locationId TEXT,corrections TEXT);',
+  )
   const query = new SQLiteSyncDialect().sqlToQuery(
-    sql`SELECT ${featureLocationNamesSQL()} AS value FROM feature`,
+    sql`SELECT ${featureLocationNamesSQL(includeShared)} AS value FROM feature`,
   )
   const read = () =>
     FeatureListProfileAPI.shape.locationNames.parse(
@@ -101,4 +106,49 @@ it('does not expose draft, cross-owner private, unlinked or unsupported revision
   expect(read()).toBeNull()
   db.exec('DELETE FROM featureLocation')
   expect(read()).toBeNull()
+})
+
+it('uses accepted shared pins instead of the latest shared name and applies Organisation precedence', () => {
+  const { db, read } = fixture(true)
+  const insert = db.prepare('INSERT INTO locationSharedRevision VALUES(?,?,?)')
+  insert.run(
+    's1',
+    'venue',
+    JSON.stringify({
+      names: { choice: { mode: 'override', value: { en: 'Accepted Hype name' } } },
+    }),
+  )
+  insert.run(
+    's2',
+    'venue',
+    JSON.stringify({
+      names: { choice: { mode: 'override', value: { en: 'Unaccepted Hype name' } } },
+    }),
+  )
+  db.prepare('UPDATE featureLocation SET acceptancePolicy=?').run(
+    JSON.stringify({ factsSharedRevision: 's1' }),
+  )
+  expect(read()).toEqual({ en: 'Accepted Hype name' })
+  db.prepare('UPDATE featureLocation SET acceptedOverrides=?').run(
+    JSON.stringify({ names: { en: { mode: 'override', value: 'Organisation name' } } }),
+  )
+  expect(read()).toEqual({ en: 'Organisation name' })
+  db.prepare('UPDATE featureLocation SET acceptedOverrides=?,acceptancePolicy=?').run(
+    '{}',
+    JSON.stringify({
+      factsSharedRevision: 's1',
+      factsSharedFields: [{ field: 'names', revision: 's2' }],
+    }),
+  )
+  expect(read()).toEqual({ en: 'Unaccepted Hype name' })
+})
+
+it('leaves the D1 binding budget for request filters across all location projections', () => {
+  const requestedId = "feature' OR 1=1 --"
+  const query = new SQLiteSyncDialect().sqlToQuery(sql`
+    SELECT ${featureLocationBrandsSQL()}, ${featureLocationNamesSQL()},
+      ${featureLocationLifecycleSQL()} FROM feature WHERE id=${requestedId}
+  `)
+  expect(query.params).toEqual([requestedId])
+  expect(query.sql).not.toContain(requestedId)
 })

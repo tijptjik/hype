@@ -715,3 +715,35 @@ Evidence copies, association replacement, parent changes and the accepted Featur
 revision commit in one guarded batch. Source definitions and historical pins remain
 unchanged. Destination ancestry and definition heads are checked inside that batch; role
 authorization follows the request-time checks used by other commands.
+
+## Location correction authority and precedence
+
+Location values resolve in order: upstream evidence, Hype shared corrections, then
+Organisation overrides (including explicit suppression). This supersedes any older rule
+that routes all Location corrections to the Organisation layer.
+
+Shared phone numbers, websites, socials and accessibility require Project or
+Organisation editing authority from persisted resource ancestry. Shared names,
+addresses, brands and other sensitive fields require SuperAdmin. Organisation
+corrections require Organisation authority. Client-submitted owner IDs or field labels
+never establish permission. Apply the same checks to direct saves, reset operations and
+staff acceptance of third-party task proposals.
+
+Every shared correction retains the original source evidence, source revision,
+replacement or suppression, actor and time. Correction revisions are immutable.
+Unchanged or omitted upstream contact evidence retains the correction. Changed upstream
+contact evidence supersedes it durably; agreement retires a redundant correction. A
+later upstream reversion must not reactivate a retired correction. Sensitive SuperAdmin
+corrections remain until explicitly reset. Organisation retain/follow policy applies
+above the shared layer. Accepted Feature revisions pin the evidence they adopted;
+reading history must never substitute the current head.
+
+The standalone Location editor exposes Hype shared scope only to SuperAdmin. Its
+Organisation scope continues to write Organisation overrides, even for SuperAdmin;
+choosing an Organisation never implicitly edits shared evidence. Both commands recheck
+authority and displayed revisions on the server.
+
+Staff may accept a subset of a third-party proposal's fields. The server accepts only
+fields present in the retained proposal and checks each field's destination authority.
+The immutable merge receipt records the selected patch and reviewer. Unchecked fields
+remain unchanged, and the decision completes that proposal.

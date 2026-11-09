@@ -1,3 +1,4 @@
+import { AccessibilitySchema } from './accessibility'
 // AUTHORED CONTENT LOCALES
 import {
   contentLocaleMap,
@@ -100,11 +101,49 @@ export const LocationFactsSchema = z.strictObject({
   successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
   names,
   phoneNumber: z.array(z.string()),
+  websites: z
+    .array(
+      z
+        .string()
+        .url()
+        .refine(value => {
+          const url = new URL(value)
+          return (
+            ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+          )
+        }),
+    )
+    .max(30)
+    .optional(),
+  socials: z
+    .record(
+      z.string().max(50),
+      z
+        .string()
+        .url()
+        .refine(value => {
+          const url = new URL(value)
+          return (
+            ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+          )
+        }),
+    )
+    .optional(),
+  accessibility: AccessibilitySchema.nullable().optional(),
   brands,
   location,
 }) satisfies z.ZodType<LocationFacts>
 
 export const FeatureLocationOverridesSchema = z.strictObject({
+  freshness: z
+    .record(
+      z.string(),
+      z.strictObject({ mode: z.enum(['retain', 'follow']), original: z.unknown() }),
+    )
+    .optional(),
+  websites: override(LocationFactsSchema.shape.websites.unwrap()).optional(),
+  socials: override(LocationFactsSchema.shape.socials.unwrap()).optional(),
+  accessibility: override(AccessibilitySchema).optional(),
   address: AddressCorrectionSchema.optional(),
   footprint: override(LocationFootprintSchema).optional(),
   operatingStatus: z

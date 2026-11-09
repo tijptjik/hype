@@ -111,7 +111,10 @@ async function save(): Promise<void> {
   try {
     await updateLocationAccessibility({
       locationId: subject,
-      expectedId: baseline.record?.id ?? null,
+      expectedId:
+        'observationId' in baseline
+          ? (baseline.observationId ?? null)
+          : (baseline.record?.id ?? null),
       expectedLocationRevisionId: baseline.locationRevisionId,
       values: $state.snapshot(draft),
     })

@@ -7,7 +7,7 @@ import { setupLifecycleDatabase } from './fixtures/locationLifecycleDatabase'
 // SERVICES
 import {
   readLocationAccessibility,
-  saveLocationAccessibility,
+  saveLocationAccessibility as saveWithRights,
 } from '#lib/db/services/locationAccessibility.js'
 import { appendLocationRelationship } from '#lib/db/services/locationRelationships.js'
 // DOMAIN
@@ -18,6 +18,11 @@ import {
 import { createLocationFactsSnapshot } from '#lib/locations/factsSnapshot.js'
 import type { LocationFacts } from '#lib/locations/model.js'
 
+const saveLocationAccessibility = (
+  db: Parameters<typeof saveWithRights>[0],
+  input: Parameters<typeof saveWithRights>[1],
+  actor: string,
+) => saveWithRights(db, input, actor, { canEdit: true, superAdmin: false })
 const stores: ReturnType<typeof setupLifecycleDatabase>[] = []
 afterEach(() => {
   for (const s of stores.splice(0)) s.sqlite.close()
@@ -32,6 +37,7 @@ function setup() {
   const s = setupLifecycleDatabase(true)
   stores.push(s)
   s.sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
+  s.sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
   for (const [id, kind, state] of [
     ['shop', 'establishment', 'unresolved'],
     ['tower', 'building', 'unresolved'],

@@ -1,3 +1,4 @@
+import { sharedLocationFacts } from './locationShared'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -36,6 +37,7 @@ export async function previewFeatureLocationAdoption(
 ): Promise<{
   plan: LocationAdoptionPlan
   candidateOverrides: import('#lib/locations/model.js').FeatureLocationOverrides
+  sharedRevision: string | null
   expectedRevision: string
   expectedFeatureModifiedAt: string
   settings: ProjectLocationSettings
@@ -97,8 +99,32 @@ export async function previewFeatureLocationAdoption(
         )
       : null
   if (input.organisationRevision && !correction) return null
+  const shared = await sharedLocationFacts(db, accepted.locationId, candidate.facts)
+  candidate.facts = shared.facts
+  const pins = await db.get<{ acceptancePolicy: string | null }>(
+    sql`SELECT acceptancePolicy FROM featureLocation WHERE featureId=${input.featureId}`,
+  )
+  const policy = JSON.parse(pins?.acceptancePolicy ?? '{}')
+  facts.facts = (
+    await sharedLocationFacts(
+      db,
+      accepted.locationId,
+      facts.facts,
+      policy.factsSharedRevision ?? null,
+      policy.factsSharedFields,
+    )
+  ).facts
+  location.facts = (
+    await sharedLocationFacts(
+      db,
+      accepted.locationId,
+      location.facts,
+      policy.locationSharedRevision ?? null,
+    )
+  ).facts
   const candidateOverrides = correction?.overrides ?? association.overrides
   return {
+    sharedRevision: shared.revision,
     candidateOverrides,
     plan: planLocationAdoption({
       facts,

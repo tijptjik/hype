@@ -25,6 +25,7 @@ export * from './locationRematch'
 
 export * from './locationRelationships'
 export * from './locationAccessibility'
+export * from './locationShared'
 
 export * from './messaging'
 

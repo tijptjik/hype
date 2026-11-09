@@ -1,5 +1,9 @@
+import { acceptedLocationOverrideFieldSql } from './locationFactsSql'
 // SNAPSHOT CONTRACT
-import { locationFactsFieldSql } from './locationFactsSql'
+import {
+  acceptedLocationFactsFieldSql,
+  locationFactsFieldSql,
+} from './locationFactsSql'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // TYPES
@@ -7,19 +11,20 @@ import type { SQL } from 'drizzle-orm'
 
 /**
  * Project accepted brands into an already-authorized Feature read without extra queries.
+ * @param includeShared False only for pre-migration retained fixtures.
  * @returns A correlated JSON-text expression: null for no accessible brand projection, [] for clear.
  * @remarks Reads the accepted facts revision, never the latest source revision. Private
  * ownership and draft guards apply inside the projection. Use only on root Feature
  * queries: its explicit outer alias prevents Drizzle from stripping correlated qualifiers.
  * This field is read-only and is not a duplicate feature-property assignment.
  */
-export function featureLocationBrandsSQL(): SQL<string | null> {
+export function featureLocationBrandsSQL(includeShared = true): SQL<string | null> {
   return sql<
     string | null
-  >`COALESCE((SELECT CASE json_extract(fp.acceptedOverrides,'$.brands.mode')
+  >`COALESCE((SELECT CASE json_extract(${acceptedLocationOverrideFieldSql('brands', includeShared)},'$.mode')
     WHEN 'clear' THEN '[]'
-    WHEN 'override' THEN json_extract(fp.acceptedOverrides,'$.brands.value')
-    ELSE ${locationFactsFieldSql(sql.raw('pr.facts'), 'brands')} END
+    WHEN 'override' THEN json_extract(${acceptedLocationOverrideFieldSql('brands', includeShared)},'$.value')
+    ELSE ${includeShared ? acceptedLocationFactsFieldSql('brands') : locationFactsFieldSql(sql.raw('pr.facts'), 'brands')} END
     FROM featureLocation fp JOIN location p ON p.id=fp.locationId
     JOIN locationRevision pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
     WHERE fp.featureId="feature"."id" AND "feature"."isDraft"=0

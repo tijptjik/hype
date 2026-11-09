@@ -1,4 +1,8 @@
 <script lang="ts">
+import { saveSharedLocationDirectoryCorrection } from '#lib/api/locationShared.remote.js'
+import type { SharedCorrectionPatch } from '#lib/locations/sharedCorrection.js'
+import type { LocationBrandEdit } from '#lib/locations/brandEdit.js'
+import LocationBrandEditor from '../featureLocation/LocationBrandEditor.svelte'
 // COMPONENTS
 import LocationAccessibility from '../featureLocation/LocationAccessibility.svelte'
 // SVELTE
@@ -63,6 +67,13 @@ let {
   onControlsChange: (controls: Partial<HeaderFormActionsState>) => void
   onSaved: () => Promise<void>
 } = $props()
+let correctionScope = $state<'organisation' | 'shared'>(
+  untrack(() => (place.canEditShared ? 'shared' : 'organisation')),
+)
+let sharedBrandEdit = $state<LocationBrandEdit | undefined>()
+const editableFacts = $derived(
+  correctionScope === 'shared' ? (place.sharedFacts ?? place.facts) : place.facts,
+)
 let draft = $state<FeatureAddress | null>(null)
 let names = $state<Record<string, string>>({})
 let lifecycle = $state<LocationLifecycleSummary>({})
@@ -146,26 +157,31 @@ function edit(): void {
   if (
     !place.canEditAddress ||
     place.state === 'redirect' ||
-    !place.facts ||
+    !editableFacts ||
     !place.revisionId
   )
     return
-  const retained = $state.snapshot(retainedAddress)
+  sharedBrandEdit = undefined
+  const retained = {
+    ...$state.snapshot(retainedAddress),
+    source: editableFacts.location.address,
+    coordinates: editableFacts.location.geometry.coordinates,
+  }
   draft = localAddressDraft(prepareLocalLocationAddress(retained, retained))
   draft.divisionOverrides = {
     ...retained.source.divisionOverrides,
     ...draft.divisionOverrides,
   }
-  coordinates = [...place.facts.location.geometry.coordinates]
+  coordinates = [...editableFacts.location.geometry.coordinates]
   kind = expectedKind = place.kind
   lifecycle = {
-    operatingStatus: place.facts.operatingStatus,
-    buildingStatus: place.facts.buildingStatus,
+    operatingStatus: editableFacts.operatingStatus,
+    buildingStatus: editableFacts.buildingStatus,
   }
-  successorLocationId = place.facts.successorLocationId ?? null
+  successorLocationId = editableFacts.successorLocationId ?? null
   initialLifecycleSignature = JSON.stringify(lifecycle) ?? ''
   names = Object.fromEntries(
-    Object.entries(place.facts.names).filter(([, name]) => name?.trim()),
+    Object.entries(editableFacts.names).filter(([, name]) => name?.trim()),
   )
   if (!Object.keys(names).length)
     names = {
@@ -230,11 +246,11 @@ async function lookup(query?: string): Promise<void> {
         }
       },
       establishment: async () => {
-        if (!place.editingOrganisationId)
+        if (!place.editingOrganisationId && !place.canEditShared)
           return { rows: [], partial: false, limited: false }
         const results = await searchDirectoryLocationPlaces({
           locationId: place.id,
-          organisationId: place.editingOrganisationId,
+          organisationId: place.editingOrganisationId ?? undefined,
           kind,
           q: query?.trim().slice(0, 200) || undefined,
           coordinates,
@@ -337,35 +353,82 @@ async function save(): Promise<void> {
   busy = true
   failed = false
   try {
-    await saveLocalLocationAddress({
-      locationId: place.id,
-      organisationId: place.editingOrganisationId ?? undefined,
-      expectedOrganisationRevision,
-      expectedRevisionId,
-      kind: kind !== expectedKind ? kind : undefined,
-      expectedKind,
-      ...(JSON.stringify(lifecycle) !== initialLifecycleSignature
-        ? $state.snapshot(lifecycle)
-        : {}),
-      successorLocationId:
-        successorLocationId !== (place.facts?.successorLocationId ?? null)
-          ? successorLocationId
-          : undefined,
-      names:
-        JSON.stringify(names) !== initialNamesSignature
-          ? $state.snapshot(names)
-          : undefined,
-      address:
-        JSON.stringify(draft) !== initialAddressSignature
-          ? localAddressContent($state.snapshot(draft))
-          : undefined,
-      divisionOverrides:
-        JSON.stringify(draft) !== initialAddressSignature
-          ? draft.divisionOverrides
-          : undefined,
-      coordinates,
-      parseSource,
-    })
+    if (correctionScope === 'shared') {
+      if (!place.canEditShared || !editableFacts)
+        throw new Error('Shared editing unavailable')
+      const patch: SharedCorrectionPatch = {}
+      if (JSON.stringify(names) !== initialNamesSignature)
+        patch.names = { mode: 'override', value: $state.snapshot(names) }
+      if (
+        JSON.stringify(draft) !== initialAddressSignature ||
+        JSON.stringify(coordinates) !==
+          JSON.stringify(editableFacts.location.geometry.coordinates)
+      ) {
+        const address =
+          JSON.stringify(draft) !== initialAddressSignature
+            ? {
+                status: 'unresolved' as const,
+                address2dId: null,
+                address3dId: null,
+                address3dUnitId: null,
+                snapshotId: null,
+                rawSource: {},
+                fallbackDisplay: {},
+                authored: localAddressContent($state.snapshot(draft)),
+                divisionOverrides: draft.divisionOverrides,
+              }
+            : editableFacts.location.address
+        patch.location = {
+          mode: 'override',
+          value: {
+            geometry: { type: 'Point', coordinates: $state.snapshot(coordinates) },
+            address,
+          },
+        }
+      }
+      for (const field of ['operatingStatus', 'buildingStatus'] as const)
+        if (lifecycle[field] !== editableFacts[field])
+          patch[field] = { mode: 'override', value: lifecycle[field] ?? null }
+      if (successorLocationId !== (editableFacts.successorLocationId ?? null))
+        patch.successorLocationId = { mode: 'override', value: successorLocationId }
+      if (sharedBrandEdit) patch.brands = sharedBrandEdit.choice
+      if (Object.keys(patch).length)
+        await saveSharedLocationDirectoryCorrection({
+          locationId: place.id,
+          sourceRevisionId: expectedRevisionId,
+          expectedRevision: place.sharedRevision ?? null,
+          patch,
+        })
+    } else
+      await saveLocalLocationAddress({
+        locationId: place.id,
+        organisationId: place.editingOrganisationId ?? undefined,
+        expectedOrganisationRevision,
+        expectedRevisionId,
+        kind: kind !== expectedKind ? kind : undefined,
+        expectedKind,
+        ...(JSON.stringify(lifecycle) !== initialLifecycleSignature
+          ? $state.snapshot(lifecycle)
+          : {}),
+        successorLocationId:
+          successorLocationId !== (place.facts?.successorLocationId ?? null)
+            ? successorLocationId
+            : undefined,
+        names:
+          JSON.stringify(names) !== initialNamesSignature
+            ? $state.snapshot(names)
+            : undefined,
+        address:
+          JSON.stringify(draft) !== initialAddressSignature
+            ? localAddressContent($state.snapshot(draft))
+            : undefined,
+        divisionOverrides:
+          JSON.stringify(draft) !== initialAddressSignature
+            ? draft.divisionOverrides
+            : undefined,
+        coordinates,
+        parseSource,
+      })
     await onSaved()
     editing = false
     onEditingChange(false)
@@ -414,14 +477,15 @@ $effect(() => {
   onControlsChange({
     dirty:
       editing &&
-      JSON.stringify([
-        draft,
-        coordinates,
-        names,
-        kind,
-        lifecycle,
-        successorLocationId,
-      ]) !== initialSignature,
+      (Boolean(sharedBrandEdit) ||
+        JSON.stringify([
+          draft,
+          coordinates,
+          names,
+          kind,
+          lifecycle,
+          successorLocationId,
+        ]) !== initialSignature),
     isSubmitting: busy || lookingUp,
     hasIssues: coordinateInvalid || namesInvalid || lifecycleInvalid,
     canEdit: Boolean(place.canEditAddress && place.state !== 'redirect' && place.facts),
@@ -493,10 +557,39 @@ $effect(() => {
               aria-label={m.location_record_identity()}
             >
               <h2 class="text-lg font-semibold">{m.location_record_identity()}</h2>
+              {#if place.canEditShared}
+                <label class="grid gap-1 text-sm"
+                  >Correction scope
+                  <select
+                    class="border-border bg-background rounded border p-2"
+                    value={correctionScope}
+                    disabled={busy}
+                    onchange={event => {
+                      correctionScope =
+                        event.currentTarget.value === 'shared'
+                          ? 'shared'
+                          : 'organisation'
+                      edit()
+                    }}
+                  >
+                    <option value="shared">Hype shared correction</option>
+                    {#if place.editingOrganisationId}
+                      <option value="organisation">Organisation override</option>
+                    {/if}
+                  </select>
+                </label>
+                {#if correctionScope === 'shared'}
+                  <p class="text-muted-foreground text-sm">
+                    These corrections are shared across Hype. Upstream evidence remains
+                    in Location history.
+                  </p>
+                {/if}
+              {/if}
               <div class="max-w-72">
                 <LocationKindField
                   value={kind}
                   disabled={busy ||
+                    correctionScope === 'shared' ||
                     place.ssId !== null ||
                     place.ownerOrganisationId !== place.editingOrganisationId}
                   onChange={next => {
@@ -530,6 +623,18 @@ $effect(() => {
                 disabled={busy}
                 onChange={next => (names = next)}
               />
+              {#if place.canEditShared && correctionScope === 'shared'}
+                <LocationBrandEditor
+                  association={{
+                    version: place.sharedRevision ?? expectedRevisionId,
+                    brandMode: 'inherit',
+                    effective: { brands: editableFacts?.brands ?? [] },
+                  }}
+                  edit={sharedBrandEdit}
+                  isEditing={!busy}
+                  onChange={value => (sharedBrandEdit = value)}
+                />
+              {/if}
               {#if establishmentAddressSelected}
                 <p role="status" class="text-muted-foreground text-sm">
                   {m.location_establishment_address_help()}

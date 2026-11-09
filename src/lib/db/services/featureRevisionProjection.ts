@@ -518,6 +518,12 @@ export function prepareFeatureEditorialProjection(
           .values(values)
           .onConflictDoUpdate({ target: featureLocation.featureId, set: values }),
       )
+      // Legacy grouping triggers derive rows on association writes; restore the exact accepted bindings.
+      statements.push(
+        db
+          .delete(featureLocationMembership)
+          .where(eq(featureLocationMembership.featureId, input.featureId)),
+      )
       for (const member of next.memberships)
         statements.push(
           db

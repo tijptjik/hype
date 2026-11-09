@@ -1,3 +1,7 @@
+import {
+  readSharedLocationCorrection,
+  reconcileOrganisationSourcePolicies,
+} from './locationShared'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -37,6 +41,7 @@ export async function processLocalLocationChanges(
       id: feature.id,
       projectId: feature.projectId,
       associationRevision: featureLocation.version,
+      acceptancePolicy: featureLocation.acceptancePolicy,
       factsRevisionId: featureLocation.factsRevisionId,
       locationRevisionId: featureLocation.locationRevisionId,
       factsOrganisationRevision: featureLocation.factsOrganisationRevision,
@@ -84,12 +89,18 @@ export async function processLocalLocationChanges(
     .get()
   if (!baseline) return 'conflict'
   const candidateRevisionId = baseline.id
+  // Retire follow-policy overrides against the current shared evidence before adoption.
+  if (item.runId.startsWith('shared:'))
+    await reconcileOrganisationSourcePolicies(db, item.locationId, candidateRevisionId)
   const correction = item.organisationId
     ? await readOrganisationLocation(db, item.organisationId, item.locationId)
     : null
+  const shared = await readSharedLocationCorrection(db, item.locationId)
   const guard = sql`EXISTS(SELECT 1 FROM locationRefreshItem WHERE runId=${item.runId} AND locationId=${item.locationId} AND origin='local' AND status='pending' AND featureCursor=${item.featureCursor})`
   // Initial links already accept the head; do not manufacture reviews or Feature writes for them.
   if (
+    (row.acceptancePolicy?.factsSharedRevision ?? null) === (shared?.id ?? null) &&
+    (row.acceptancePolicy?.locationSharedRevision ?? null) === (shared?.id ?? null) &&
     row.factsRevisionId === candidateRevisionId &&
     row.locationRevisionId === candidateRevisionId &&
     (!correction ||

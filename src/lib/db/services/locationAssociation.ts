@@ -98,7 +98,7 @@ export function prepareFeatureLocationAssociationWrite(
         sql`CASE WHEN locationId=${input.locationId} THEN acceptedGeometry ELSE NULL END`,
       // Keep Feature name ownership across adoption, placement and ordinary saves.
       acceptancePolicy: input.acceptancePolicy
-        ? sql`json_patch(COALESCE(acceptancePolicy,'{}'),${JSON.stringify(input.acceptancePolicy)})`
+        ? sql`json_patch(CASE WHEN locationId=${input.locationId} THEN COALESCE(acceptancePolicy,'{}') ELSE '{}' END,${JSON.stringify(input.acceptancePolicy)})`
         : sql`CASE WHEN locationId=${input.locationId} THEN acceptancePolicy ELSE NULL END`,
       acceptanceProposalId: input.acceptanceProposalId ?? null,
       occupancyRevisionId:

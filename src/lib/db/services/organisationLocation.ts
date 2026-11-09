@@ -146,6 +146,8 @@ export async function prepareLocationCorrection(
     after: EffectiveLocationFacts
     currentOverrides: FeatureLocationOverrides
     reset?: boolean
+    /** Trusted SuperAdmin-only baseline administration; ordinary Organisation edits are overrides. */
+    allowSharedBaseline?: boolean
     desiredOverrides?: FeatureLocationOverrides
     provenance?: Record<string, unknown>
     kindChange?: { before: LocationKind; after: LocationKind }
@@ -171,6 +173,8 @@ export async function prepareLocationCorrection(
     (owner.state === 'manual' && owner.ownerOrganisationId !== input.organisationId)
   )
     throw new Error('Location unavailable')
+  if (input.kindChange && !input.allowSharedBaseline)
+    throw new Error('SHARED_LOCATION_FIELD_REQUIRES_SUPERADMIN')
   const capturedKind = classifyLocationFactsKind(
     input.kindChange?.after ?? owner.kind,
     {
@@ -243,6 +247,7 @@ export async function prepareLocationCorrection(
   let guard = authoringGuard
   // Ownership controls baseline authority, independently of shared unmatched visibility.
   if (
+    input.allowSharedBaseline === true &&
     !input.reset &&
     (!equalLocationValue(input.before, input.after) || input.kindChange) &&
     owner.ssId === null &&

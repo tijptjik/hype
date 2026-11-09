@@ -1,3 +1,5 @@
+import { sql } from 'drizzle-orm'
+import { sharedLocationEditRights } from './services/locationOwnership'
 // SVELTE
 import { error } from '@sveltejs/kit'
 // VALIDATION
@@ -45,8 +47,18 @@ export const updateLocationAccessibility = guardedCommand(
   AccessibilitySaveSchema,
   async (input, ctx) => {
     requireContributor(ctx)
+    const projects = await ctx.db.all<{ projectId: string }>(
+      sql`SELECT DISTINCT f.projectId FROM feature f JOIN featureLocation fl ON fl.featureId=f.id WHERE fl.locationId=${input.locationId}`,
+    )
+    let rights = { canEdit: false, superAdmin: Boolean(ctx.user.superAdmin) }
+    for (const project of projects) {
+      rights = await sharedLocationEditRights(ctx, project.projectId)
+      if (rights.canEdit || rights.superAdmin) break
+    }
+    if (!rights.canEdit && !rights.superAdmin)
+      error(403, 'SHARED_LOCATION_EDIT_FORBIDDEN')
     try {
-      const id = await saveLocationAccessibility(ctx.db, input, ctx.user.id)
+      const id = await saveLocationAccessibility(ctx.db, input, ctx.user.id, rights)
       // The revision is committed; a refresh failure must not invite a duplicate save.
       try {
         await getLocationAccessibility({ locationId: input.locationId }).refresh()

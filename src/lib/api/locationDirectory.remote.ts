@@ -1,3 +1,5 @@
+import { sharedLocationFacts } from '#lib/db/services/locationShared.js'
+import { readLocationFacts } from '#lib/locations/factsSnapshot.js'
 // SVELTE
 import { error } from '@sveltejs/kit'
 // VALIDATION
@@ -30,7 +32,7 @@ import { listLocationLinkedFeatures } from '#lib/db/services/locationFeatures.js
 import { authorizeFeatureAdminReadForProbe } from '#lib/api/services/authz/feature.js'
 // TYPES
 import { location as locationTable } from '#lib/db/schema/location.js'
-import { and, eq, ne } from 'drizzle-orm'
+import { and, eq, ne, sql } from 'drizzle-orm'
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 
 /**
@@ -130,12 +132,28 @@ export const getLocation = guardedQuery(
       organisationId: editingOrganisationId ?? undefined,
     })
     const resource = result.data[0]
+    const canEditShared = Boolean(
+      ctx.user.superAdmin && !ctx.user.isAnonymous && identity.state !== 'redirect',
+    )
+    const source =
+      resource?.revisionId && canEditShared
+        ? await ctx.db.get<{ facts: string }>(
+            sql`SELECT facts FROM locationRevision WHERE id=${resource.revisionId} AND locationId=${input.id}`,
+          )
+        : null
+    const shared = source
+      ? await sharedLocationFacts(ctx.db, input.id, readLocationFacts(source.facts))
+      : null
     return resource
       ? {
           ...resource,
           editingOrganisationId,
+          canEditShared,
+          sharedFacts: shared?.facts,
+          sharedRevision: shared?.revision ?? null,
           canEditAddress:
-            editingOrganisationId !== null && identity.state !== 'redirect',
+            (canEditShared || editingOrganisationId !== null) &&
+            identity.state !== 'redirect',
         }
       : null
   },
@@ -184,7 +202,7 @@ export const saveLocalLocationAddress = guardedCommand(
     locationId: z.string().min(1),
     expectedRevisionId: z.string().min(1),
     organisationId: z.string().min(1).optional(),
-    expectedOrganisationRevision: z.string().min(1).nullable().optional(),
+    expectedOrganisationRevision: z.string().min(1).nullable(),
     footprint: LocalLocationFootprintSchema.nullable().optional(),
     names: LocationNamesEditSchema.optional(),
     operatingStatus: OperatingStatusSchema.nullable().optional(),
@@ -218,6 +236,7 @@ export const saveLocalLocationAddress = guardedCommand(
       ...input,
       organisationId,
       actorId: ctx.user.id,
+      allowSharedBaseline: false,
     })
     if (!result) error(409, 'LOCATION_CHANGED')
     return result
@@ -232,7 +251,7 @@ export const saveLocalLocationAddress = guardedCommand(
 export const searchDirectoryLocationPlaces = guardedQuery(
   z.strictObject({
     locationId: z.string().min(1),
-    organisationId: z.string().min(1),
+    organisationId: z.string().min(1).optional(),
     kind: LocationKindSchema,
     q: z.string().trim().min(1).max(200).optional(),
     coordinates: z.tuple([
@@ -242,10 +261,14 @@ export const searchDirectoryLocationPlaces = guardedQuery(
     locale: z.enum(['en', 'zh-hant', 'zh-hans']),
   }),
   async (input, ctx) => {
-    await requireLocationOrganisationManager(ctx, input.organisationId)
+    if (!ctx.user.superAdmin || ctx.user.isAnonymous) {
+      if (!input.organisationId) error(403, 'ORGANISATION_CONTEXT_REQUIRED')
+      await requireLocationOrganisationManager(ctx, input.organisationId)
+    }
     const identity = await probeLocationIdentityScope(ctx.db, input.locationId)
     if (!identity || identity.state === 'redirect') error(404, 'LOCATION_NOT_FOUND')
     if (
+      !ctx.user.superAdmin &&
       identity.state === 'manual' &&
       identity.ownerOrganisationId !== input.organisationId
     )

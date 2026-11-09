@@ -1,3 +1,4 @@
+import { sharedLocationFacts } from './locationShared'
 // DRIZZLE
 import { and, eq, isNull, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
@@ -35,10 +36,11 @@ export async function readLocationResetSources(
     projectId: string
     factsRevisionId: string
     locationRevisionId: string
+    acceptancePolicy?: Record<string, unknown> | null
   },
 ): Promise<{ facts: LocationFacts; locationFacts: LocationFacts } | undefined> {
   const location = alias(locationRevision, 'resetLocation')
-  return db
+  const sources = await db
     .select({ facts: locationRevision.facts, locationFacts: location.facts })
     .from(locationTable)
     .innerJoin(
@@ -68,6 +70,24 @@ export async function readLocationResetSources(
       ),
     )
     .get()
+  if (!sources) return undefined
+  const policy = input.acceptancePolicy
+  const facts = await sharedLocationFacts(
+    db,
+    input.locationId,
+    sources.facts,
+    typeof policy?.factsSharedRevision === 'string' ? policy.factsSharedRevision : null,
+    policy?.factsSharedFields,
+  )
+  const position = await sharedLocationFacts(
+    db,
+    input.locationId,
+    sources.locationFacts,
+    typeof policy?.locationSharedRevision === 'string'
+      ? policy.locationSharedRevision
+      : null,
+  )
+  return { facts: facts.facts, locationFacts: position.facts }
 }
 
 /**

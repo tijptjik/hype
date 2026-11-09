@@ -1,3 +1,4 @@
+import { readSharedLocationCorrection, sharedLocationFacts } from './locationShared'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // VALIDATION
@@ -89,6 +90,10 @@ export async function applyLocationAdoptionGroup(
       status: 'review',
       reason: 'Use the placement review decisions for this candidate',
     }
+  // A review accepts the shared evidence it displayed, never a later correction.
+  const sharedHead = await readSharedLocationCorrection(db, proposal.locationId)
+  if ((sharedHead?.id ?? null) !== (proposal.evidence.sharedRevision ?? null))
+    return { status: 'conflict' }
   const current = await db
     .select()
     .from(featureLocation)
@@ -168,6 +173,13 @@ export async function applyLocationAdoptionGroup(
     )
     .get()
   if (!sources || !candidate || !parentBefore) return { status: 'conflict' }
+  const shared = await sharedLocationFacts(
+    db,
+    current.locationId,
+    candidate.facts,
+    proposal.evidence.sharedRevision ?? null,
+  )
+  candidate.facts = shared.facts
   const translations = await db
     .select()
     .from(featureI18n)
@@ -179,6 +191,9 @@ export async function applyLocationAdoptionGroup(
       'footprint',
       'names',
       'phoneNumber',
+      'websites',
+      'socials',
+      'accessibility',
       'brands',
       'operatingStatus',
       'buildingStatus',
@@ -218,19 +233,25 @@ export async function applyLocationAdoptionGroup(
     }
   }
   // A pending group may follow the other group's application, never an unrelated edit.
-  const proposalGuard = sql`EXISTS (
+  const sharedStorage = await db.get<{ n: number }>(
+    sql`SELECT count(*) n FROM sqlite_master WHERE name='locationSharedRevision' AND type='table'`,
+  )
+  const sharedFence = sharedStorage?.n
+    ? sql`(SELECT id FROM locationSharedHead WHERE locationId=${current.locationId}) IS ${proposal.evidence.sharedRevision ?? null}`
+    : sql`1`
+  const proposalGuard = sql`(${sharedFence}) AND EXISTS (
     SELECT 1 FROM locationAdoptionProposal ap JOIN location p ON p.id=ap.locationId
     WHERE ap.id=${proposal.id} AND p.sourceAvailability='current' AND p.ssId IS ${candidate.ssId}
       AND (p.state!='manual' OR p.ownerOrganisationId=${locationOwnerForProject(input.projectId)})
       AND ap.rowid=(SELECT MAX(newer.rowid) FROM locationAdoptionProposal newer
         WHERE newer.featureId=ap.featureId AND newer.projectId=ap.projectId
-          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId AND newer.organisationRevision=ap.organisationRevision AND json_extract(newer.evidence,'$.placement') IS NULL)
+          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId AND newer.organisationRevision=ap.organisationRevision AND json_extract(newer.evidence,'$.sharedRevision') IS json_extract(ap.evidence,'$.sharedRevision') AND json_extract(newer.evidence,'$.placement') IS NULL)
       AND ((ap.associationRevision=${input.expectedRevision} AND ap.featureModifiedAt=${input.expectedFeatureModifiedAt})
         OR EXISTS (SELECT 1 FROM json_each(json_array(json(ap.factsDecision),json(ap.locationDecision))) prior
           WHERE json_extract(prior.value,'$.action')='applied' AND json_extract(prior.value,'$.associationRevision')=${input.expectedRevision}))
       AND NOT EXISTS (SELECT 1 FROM locationAdoptionProposal older
         WHERE older.featureId=ap.featureId AND older.projectId=ap.projectId
-          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId AND older.organisationRevision=ap.organisationRevision AND json_extract(older.evidence,'$.placement') IS NULL
+          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId AND older.organisationRevision=ap.organisationRevision AND json_extract(older.evidence,'$.sharedRevision') IS json_extract(ap.evidence,'$.sharedRevision') AND json_extract(older.evidence,'$.placement') IS NULL
           AND (CASE WHEN ${input.fieldGroup}='facts' THEN older.factsDecision ELSE older.locationDecision END) IS NOT NULL)
       AND (${Number(input.mode !== 'automatic')} OR
         COALESCE((SELECT locationPolicyRevision FROM project WHERE id=ap.projectId),0)=ap.policyRevision)
@@ -240,6 +261,18 @@ export async function applyLocationAdoptionGroup(
     expectedFeatureModifiedAt: input.expectedFeatureModifiedAt,
     locationId: current.locationId,
     overrides: nextOverrides,
+    ...(shared.revision
+      ? {
+          acceptancePolicy:
+            input.fieldGroup === 'facts'
+              ? {
+                  factsSharedRevision: shared.revision,
+                  lastSharedRevision: shared.revision,
+                  factsSharedFields: [],
+                }
+              : { locationSharedRevision: shared.revision },
+        }
+      : {}),
     factsOrganisationRevision:
       input.fieldGroup === 'facts' && proposal.organisationRevision
         ? proposal.organisationRevision
@@ -312,6 +345,18 @@ export async function applyLocationAdoptionGroup(
       if (!link || link.version !== input.expectedRevision)
         throw new Error('Feature association changed')
       Object.assign(link, {
+        acceptancePolicy: shared.revision
+          ? {
+              ...current.acceptancePolicy,
+              ...(input.fieldGroup === 'facts'
+                ? {
+                    factsSharedRevision: shared.revision,
+                    lastSharedRevision: shared.revision,
+                    factsSharedFields: [],
+                  }
+                : { locationSharedRevision: shared.revision }),
+            }
+          : current.acceptancePolicy,
         version: association.version,
         actorId: input.actorId,
         overrides: nextOverrides,

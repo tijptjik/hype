@@ -1,3 +1,4 @@
+import { equalLocationValue } from './baseline'
 // TYPES
 import type {
   FeatureLocationOverrides,
@@ -21,6 +22,9 @@ export function resolveLocationField<T>(
 }
 
 export type EffectiveLocationFacts = {
+  websites?: LocationFacts['websites']
+  socials?: LocationFacts['socials']
+  accessibility?: LocationFacts['accessibility']
   footprint?: LocationFacts['footprint']
   entity?: LocationFacts['entity']
   operatingStatus?: LocationFacts['operatingStatus']
@@ -45,6 +49,13 @@ export function resolveFeatureLocation(
   location: LocationPosition,
   overrides: FeatureLocationOverrides,
 ): EffectiveLocationFacts {
+  // Organisation policy is explicit; absent policy preserves deliberate corrections.
+  overrides = { ...overrides }
+  for (const [key, policy] of Object.entries(overrides.freshness ?? {})) {
+    if (policy.mode !== 'follow' || !Object.hasOwn(facts, key)) continue
+    if (!equalLocationValue(facts[key as keyof LocationFacts], policy.original))
+      delete (overrides as Record<string, unknown>)[key]
+  }
   const names: Record<string, string | null> = {}
   // Resolve the union of locales to retain local translations absent upstream.
   const locales = new Set([
@@ -77,6 +88,20 @@ export function resolveFeatureLocation(
       : facts.successorLocationId !== undefined
         ? { successorLocationId: facts.successorLocationId }
         : {}),
+    ...(facts.websites !== undefined || overrides.websites
+      ? { websites: resolveLocationField(facts.websites, overrides.websites) ?? [] }
+      : {}),
+    ...(facts.socials !== undefined || overrides.socials
+      ? { socials: resolveLocationField(facts.socials, overrides.socials) ?? {} }
+      : {}),
+    ...(facts.accessibility !== undefined || overrides.accessibility
+      ? {
+          accessibility: resolveLocationField(
+            facts.accessibility,
+            overrides.accessibility,
+          ),
+        }
+      : {}),
     names,
     phoneNumber: resolveLocationField(facts.phoneNumber, overrides.phoneNumber),
     brands: resolveLocationField(facts.brands, overrides.brands),

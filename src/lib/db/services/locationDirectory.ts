@@ -1,5 +1,6 @@
+import { locationReadFields } from './locationReadProjection'
+import { sharedLocationFacts } from './locationShared'
 // SNAPSHOT CONTRACT
-import { locationFactsFieldSql } from './locationFactsSql'
 // DRIZZLE
 import { and, eq, gt, or, sql } from 'drizzle-orm'
 // SCHEMA
@@ -40,6 +41,12 @@ export async function listLocationResources(
   nextCursor: string | null
   totalCount: number | null
 }> {
+  const fields = await locationReadFields(
+    db,
+    locationTable.id,
+    locationRevision.facts,
+    sql`${input.organisationId ?? null}`,
+  )
   const revisionJoin = and(
     eq(locationRevision.locationId, locationTable.id),
     sql`${locationRevision.version} = (SELECT max(r.version) FROM locationRevision r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
@@ -64,21 +71,14 @@ export async function listLocationResources(
     input.kind ? eq(locationTable.kind, input.kind) : undefined,
     // Filter the scoped effective assertion before pagination, retaining historic rows by default.
     input.lifecycleStatus
-      ? sql`COALESCE(
-          CASE WHEN EXISTS(SELECT 1 FROM organisationLocationHead o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.operatingStatus.mode')='override')
-            THEN (SELECT json_extract(o.overrides,'$.operatingStatus.value') FROM organisationLocationHead o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
-            ELSE ${locationFactsFieldSql(locationRevision.facts, 'operatingStatus')} END,
-          CASE WHEN EXISTS(SELECT 1 FROM organisationLocationHead o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.buildingStatus.mode')='override')
-            THEN (SELECT json_extract(o.overrides,'$.buildingStatus.value') FROM organisationLocationHead o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
-            ELSE ${locationFactsFieldSql(locationRevision.facts, 'buildingStatus')} END,
-          'unknown')=${input.lifecycleStatus}`
+      ? sql`COALESCE(${fields.operatingStatus},${fields.buildingStatus},'unknown')=${input.lifecycleStatus}`
       : undefined,
     input.id ? eq(locationTable.id, input.id) : undefined,
     input.q
       ? or(
           eq(locationTable.id, input.q),
           eq(locationTable.ssId, input.q),
-          sql`EXISTS (SELECT 1 FROM json_each(${locationFactsFieldSql(locationRevision.facts, 'names')}) n WHERE n.type='text' AND instr(lower(n.value), lower(${input.q}))>0)`,
+          sql`EXISTS (SELECT 1 FROM json_each(${fields.names}) n WHERE n.type='text' AND instr(lower(n.value), lower(${input.q}))>0)`,
         )
       : undefined,
   )
@@ -122,72 +122,86 @@ export async function listLocationResources(
     .where(and(match, input.after ? gt(locationTable.id, input.after) : undefined))
     .orderBy(locationTable.id)
     .limit(26)
-  const data = rows
-    .slice(0, 25)
-    .map(
-      ({
-        organisationOverrides,
-        ownerOrganisationNames,
-        editingOrganisationNames,
-        createdAt,
-        revisionCreatedAt,
-        origin,
-        version,
-        apiVersion,
-        releaseId,
-        snapshotId,
-        ...row
-      }) => {
-        let facts = row.facts === null ? null : LocationFactsSchema.parse(row.facts)
-        if (facts && organisationOverrides) {
-          const effective = resolveFeatureLocation(
-            facts,
-            facts.location,
-            JSON.parse(organisationOverrides) as FeatureLocationOverrides,
-          )
-          facts = {
-            ...facts,
+  const data = await Promise.all(
+    rows
+      .slice(0, 25)
+      .map(
+        async ({
+          organisationOverrides,
+          ownerOrganisationNames,
+          editingOrganisationNames,
+          createdAt,
+          revisionCreatedAt,
+          origin,
+          version,
+          apiVersion,
+          releaseId,
+          snapshotId,
+          ...row
+        }) => {
+          let facts =
+            row.facts === null
+              ? null
+              : (
+                  await sharedLocationFacts(
+                    db,
+                    row.id,
+                    LocationFactsSchema.parse(row.facts),
+                  )
+                ).facts
+          if (facts && organisationOverrides) {
+            const effective = resolveFeatureLocation(
+              facts,
+              facts.location,
+              JSON.parse(organisationOverrides) as FeatureLocationOverrides,
+            )
+            facts = {
+              ...facts,
 
-            ...(effective.footprint !== undefined
-              ? { footprint: effective.footprint }
-              : {}),
-            names: Object.fromEntries(
-              Object.entries(effective.names).filter(
-                (pair): pair is [string, string] => pair[1] !== null,
+              ...(effective.footprint !== undefined
+                ? { footprint: effective.footprint }
+                : {}),
+              names: Object.fromEntries(
+                Object.entries(effective.names).filter(
+                  (pair): pair is [string, string] => pair[1] !== null,
+                ),
               ),
-            ),
-            phoneNumber: effective.phoneNumber ?? [],
-            brands: effective.brands ?? [],
-            ...(effective.operatingStatus !== undefined
-              ? { operatingStatus: effective.operatingStatus }
-              : {}),
-            ...(effective.buildingStatus !== undefined
-              ? { buildingStatus: effective.buildingStatus }
-              : {}),
-            ...(effective.successorLocationId !== undefined
-              ? { successorLocationId: effective.successorLocationId }
-              : {}),
-            location: effective.location ?? facts.location,
+              phoneNumber: effective.phoneNumber ?? [],
+              websites: effective.websites,
+              socials: effective.socials,
+              accessibility: effective.accessibility,
+              brands: effective.brands ?? [],
+              ...(effective.operatingStatus !== undefined
+                ? { operatingStatus: effective.operatingStatus }
+                : {}),
+              ...(effective.buildingStatus !== undefined
+                ? { buildingStatus: effective.buildingStatus }
+                : {}),
+              ...(effective.successorLocationId !== undefined
+                ? { successorLocationId: effective.successorLocationId }
+                : {}),
+              location: effective.location ?? facts.location,
+            }
           }
-        }
-        return {
-          ...row,
-          ownerOrganisationNames: JSON.parse(ownerOrganisationNames),
-          editingOrganisationNames: JSON.parse(editingOrganisationNames),
-          metadata: {
-            createdAt,
-            revisionCreatedAt,
-            origin,
-            version,
-            apiVersion,
-            releaseId,
-            snapshotId,
-          },
-          editingOrganisationId: input.organisationId ?? null,
-          sourceReference: locationSourceReference(row.ssId),
-          facts,
-        }
-      },
-    )
+          return {
+            ...row,
+            ownerOrganisationNames: JSON.parse(ownerOrganisationNames),
+            editingOrganisationNames: JSON.parse(editingOrganisationNames),
+            metadata: {
+              createdAt,
+              revisionCreatedAt,
+              origin,
+              version,
+              apiVersion,
+              releaseId,
+              snapshotId,
+            },
+            editingOrganisationId: input.organisationId ?? null,
+            sourceReference: locationSourceReference(row.ssId),
+            facts,
+          }
+        },
+      ),
+  )
   return { data, totalCount, nextCursor: rows.length > 25 ? data.at(-1)!.id : null }
 }

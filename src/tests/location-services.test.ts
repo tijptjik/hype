@@ -3068,7 +3068,9 @@ describe('accepted Location brand read projection', () => {
     const query = async () => {
       const row = await db.query.feature.findFirst({
         columns: { id: true },
-        extras: { locationBrands: featureLocationBrandsSQL().as('locationBrands') },
+        extras: {
+          locationBrands: featureLocationBrandsSQL(false).as('locationBrands'),
+        },
       })
       return {
         locationBrands: FeatureListProfileAPI.shape.locationBrands.parse(
@@ -3187,7 +3189,7 @@ describe('explicit Location unlink preservation', () => {
     expect(await getAcceptedFeatureLocation(db, 'f', 'p')).toBeNull()
     const row = await db.query.feature.findFirst({
       columns: { id: true },
-      extras: { locationBrands: featureLocationBrandsSQL().as('locationBrands') },
+      extras: { locationBrands: featureLocationBrandsSQL(false).as('locationBrands') },
     })
     expect(JSON.parse(row!.locationBrands!)).toEqual(brands)
     expect(sqlite.prepare('SELECT geometry,addressMeta FROM feature').get()).toEqual(
@@ -3308,7 +3310,7 @@ describe('explicit Location unlink preservation', () => {
     ).toMatchObject({ status: 'unlinked' })
     const row = await db.query.feature.findFirst({
       columns: { id: true },
-      extras: { locationBrands: featureLocationBrandsSQL().as('locationBrands') },
+      extras: { locationBrands: featureLocationBrandsSQL(false).as('locationBrands') },
     })
     expect(JSON.parse(row!.locationBrands!)).toEqual([])
     const source = sqlite
@@ -4874,6 +4876,7 @@ describe('forward-only bulk source persistence', () => {
     }
     expect(
       await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         locationId: first.locationId,
         organisationId: null,
         expectedRevisionId: first.revisionId,
@@ -4882,6 +4885,7 @@ describe('forward-only bulk source persistence', () => {
       }),
     ).toBeNull()
     const edit = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: first.locationId,
       organisationId: 'p',
       expectedRevisionId: first.revisionId,
@@ -5157,6 +5161,38 @@ describe('Organisation-owned private Locations', () => {
 })
 
 describe('local Location address revisions', () => {
+  it('keeps Organisation name corrections out of the shared local baseline', async () => {
+    const { db, sqlite } = setup()
+    const created = await createLocalLocation(
+      db,
+      'p',
+      { state: 'manual', facts },
+      'actor',
+    )
+    const baseline = sqlite
+      .prepare('SELECT * FROM locationRevision WHERE id=?')
+      .get(created.revisionId)
+    const saved = await updateLocalLocationAddress(db, {
+      locationId: created.locationId,
+      organisationId: 'p',
+      expectedRevisionId: created.revisionId,
+      expectedOrganisationRevision: null,
+      actorId: 'org-editor',
+      names: { en: 'Organisation name' },
+    })
+    expect(saved).not.toBeNull()
+    expect(
+      sqlite
+        .prepare('SELECT * FROM locationRevision WHERE id=?')
+        .get(created.revisionId),
+    ).toEqual(baseline)
+    expect(sqlite.prepare('SELECT count(*) n FROM locationRevision').get()?.n).toBe(1)
+    expect(
+      (await listLocationResources(db, { id: created.locationId, organisationId: 'p' }))
+        .data[0].facts?.names,
+    ).toEqual({ en: 'Organisation name' })
+  })
+
   it('preserves the old revision and fences stale edits and other owners', async () => {
     const { db, sqlite } = setup()
     const created = await createLocalLocation(
@@ -5187,11 +5223,20 @@ describe('local Location address revisions', () => {
       },
     }
     expect(
-      await updateLocalLocationAddress(db, { ...input, organisationId: 'other' }),
+      await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
+        ...input,
+        organisationId: 'other',
+      }),
     ).toBeNull()
-    const updated = await updateLocalLocationAddress(db, input)
+    const updated = await updateLocalLocationAddress(db, {
+      ...input,
+      allowSharedBaseline: true,
+    })
     expect(updated?.revisionId).toBeTruthy()
-    expect(await updateLocalLocationAddress(db, input)).toBeNull()
+    expect(
+      await updateLocalLocationAddress(db, { ...input, allowSharedBaseline: true }),
+    ).toBeNull()
     expect(
       sqlite
         .prepare('SELECT * FROM locationRevision WHERE id=?')
@@ -5272,6 +5317,7 @@ it.each([false, true])(
       unitI18n: {},
     }
     const updated = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: created.locationId,
       organisationId: 'p',
       expectedRevisionId: created.revisionId,
@@ -5394,6 +5440,7 @@ describe('structured Location address editor writes', () => {
     expect(initial.facts?.location.address.authored?.unit).toBeNull()
     expect(initial.facts?.location.address.authored?.unitI18n).toEqual({})
     const saved = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: created.locationId,
       organisationId: 'p',
       expectedRevisionId: created.revisionId,
@@ -5424,9 +5471,16 @@ describe('structured Location address editor writes', () => {
       actorId: 'actor',
     }
     expect(
-      await updateLocalLocationAddress(db, { ...input, organisationId: 'other' }),
+      await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
+        ...input,
+        organisationId: 'other',
+      }),
     ).toBeNull()
-    const saved = await updateLocalLocationAddress(db, input)
+    const saved = await updateLocalLocationAddress(db, {
+      ...input,
+      allowSharedBaseline: true,
+    })
     expect(saved).not.toBeNull()
     expect(
       JSON.parse(
@@ -5441,6 +5495,7 @@ describe('structured Location address editor writes', () => {
     ).toMatchObject({ kind: 'address', facts })
     expect(
       await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         ...input,
         expectedRevisionId: saved!.revisionId,
       }),
@@ -5450,6 +5505,7 @@ describe('structured Location address editor writes', () => {
     )
     await expect(
       updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         ...input,
         expectedRevisionId: saved!.revisionId,
         expectedKind: 'address',
@@ -5469,6 +5525,7 @@ describe('structured Location address editor writes', () => {
     })
     expect(
       await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         locationId: source.locationId,
         organisationId: 'p',
         expectedRevisionId: source.revisionId,
@@ -5558,18 +5615,24 @@ describe('structured Location address editor writes', () => {
       actorId: 'actor',
       names: { en: ' Updated bakery ', ja: 'パン屋', 'zh-hant': '麵包店' },
     }
-    const saved = await updateLocalLocationAddress(db, input)
+    const saved = await updateLocalLocationAddress(db, {
+      ...input,
+      allowSharedBaseline: true,
+    })
     expect(saved).not.toBeNull()
     const resource = (
       await listLocationResources(db, { id: created.locationId, organisationId: 'p' })
     ).data[0]
     expect(resource.facts?.names).toEqual({ ...input.names, en: 'Updated bakery' })
     expect(resource.facts?.location).toEqual(originalFacts.location)
-    expect(await updateLocalLocationAddress(db, input)).toBeNull()
+    expect(
+      await updateLocalLocationAddress(db, { ...input, allowSharedBaseline: true }),
+    ).toBeNull()
     const invalidNames: Record<string, string>[] = [{}, { en: '  ' }]
     for (const names of invalidNames) {
       await expect(
         updateLocalLocationAddress(db, {
+          allowSharedBaseline: true,
           ...input,
           expectedRevisionId: saved!.revisionId,
           names,
@@ -5614,10 +5677,15 @@ describe('structured Location address editor writes', () => {
       actorId: 'actor',
       names: { en: 'Reviewed bakery', 'zh-hans': '面包店', ja: 'パン屋' },
     }
-    const saved = await updateLocalLocationAddress(db, input)
+    const saved = await updateLocalLocationAddress(db, {
+      ...input,
+      allowSharedBaseline: true,
+    })
     expect(saved?.revisionId).toBe(source.revisionId)
     expect(saved?.organisationRevision).toBeTruthy()
-    expect(await updateLocalLocationAddress(db, input)).toBeNull()
+    expect(
+      await updateLocalLocationAddress(db, { ...input, allowSharedBaseline: true }),
+    ).toBeNull()
     const scoped = (
       await listLocationResources(db, { id: source.locationId, organisationId: 'p' })
     ).data[0]
@@ -5664,6 +5732,7 @@ describe('structured Location address editor writes', () => {
       unitI18n: {},
     }
     const saved = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: created.locationId,
       organisationId: 'p',
       expectedRevisionId: created.revisionId,
@@ -5697,6 +5766,7 @@ describe('structured Location address editor writes', () => {
     )
     expect(
       await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         locationId: created.locationId,
         organisationId: 'p',
         expectedRevisionId: created.revisionId,
@@ -5710,6 +5780,7 @@ describe('structured Location address editor writes', () => {
       .get()?.n
     await expect(
       updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         locationId: created.locationId,
         organisationId: 'p',
         expectedRevisionId: saved!.revisionId,
@@ -5802,6 +5873,7 @@ describe('Organisation-wide Location corrections', () => {
     }
     await link('g', 'other')
     const correction = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: local.locationId,
       organisationId: 'other',
       expectedRevisionId: local.revisionId,
@@ -5889,6 +5961,7 @@ describe('Organisation-wide Location corrections', () => {
   it('lets the unmatched owner change the baseline and keeps non-owner corrections independent', async () => {
     const { db, sqlite, local } = await fixture()
     const edit = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       ...local,
       organisationId: 'p',
       expectedRevisionId: local.revisionId,
@@ -5901,6 +5974,7 @@ describe('Organisation-wide Location corrections', () => {
       0,
     )
     const other = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: local.locationId,
       organisationId: 'other',
       expectedRevisionId: edit!.revisionId,
@@ -5922,6 +5996,7 @@ describe('Organisation-wide Location corrections', () => {
       ).data[0].facts?.names.en,
     ).toBe('Our correction')
     const next = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: local.locationId,
       organisationId: 'p',
       expectedRevisionId: edit!.revisionId,
@@ -5945,6 +6020,7 @@ describe('Organisation-wide Location corrections', () => {
     await link('f', 'p')
     await link('g', 'other')
     const correction = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: local.locationId,
       organisationId: 'other',
       expectedRevisionId: local.revisionId,
@@ -6005,6 +6081,61 @@ describe('Organisation-wide Location corrections', () => {
     )
   })
 
+  it('queues and adopts distinct Hype shared revisions without changing the publisher snapshot', async () => {
+    const { db, sqlite, local, link } = await fixture()
+    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
+    await link('g', 'other')
+    await saveProjectLocationSettings(
+      db,
+      'other',
+      {
+        ...DEFAULT_PROJECT_LOCATION_POLICY,
+        coordinates: { mode: 'follow' },
+        address: 'follow',
+        unit: 'follow',
+        establishment: 'follow',
+      },
+      0,
+    )
+    const { prepareSharedLocationCorrection } = await import(
+      '#lib/db/services/locationShared.js'
+    )
+    const { executeRevisionBatch } = await import('#lib/db/services/revisionBatch.js')
+    const { processLocalLocationChanges } = await import(
+      '#lib/db/services/locationLocalRefresh.js'
+    )
+    let expectedRevision: string | null = null
+    for (const name of ['Shared name one', 'Shared name two']) {
+      const write = await prepareSharedLocationCorrection(db, {
+        locationId: local.locationId,
+        sourceRevisionId: local.revisionId,
+        expectedRevision,
+        actorId: 'superadmin',
+        rights: { canEdit: true, superAdmin: true },
+        guard: sql`1`,
+        patch: { names: { mode: 'override', value: { en: name } } },
+      })
+      expect(await executeRevisionBatch(db, write.guard, write.queries)).toBeTruthy()
+      expect(await processLocalLocationChanges(db)).toBe('progress')
+      expect(
+        (await getAcceptedFeatureLocation(db, 'g', 'other'))?.effective.names.en,
+      ).toBe(name)
+      expect(await processLocalLocationChanges(db)).toBe('processed')
+      expectedRevision = write.id
+    }
+    expect(
+      readLocationFacts(
+        sqlite
+          .prepare('SELECT facts FROM locationRevision WHERE id=?')
+          .get(local.revisionId)!.facts,
+      ).names.en,
+    ).toBe('Bakery')
+    expect(
+      sqlite.prepare('SELECT count(*) n FROM locationAdoptionProposal').get()?.n,
+    ).toBe(2)
+  })
+
   it('automatically adopts shared baseline edits under the consuming Project policy', async () => {
     const { db, local, link } = await fixture()
     await link('g', 'other')
@@ -6021,6 +6152,7 @@ describe('Organisation-wide Location corrections', () => {
       0,
     )
     await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: local.locationId,
       organisationId: 'p',
       expectedRevisionId: local.revisionId,
@@ -6040,6 +6172,7 @@ describe('Organisation-wide Location corrections', () => {
   it('prevents accepted corrections from leaking through a cross-Organisation move', async () => {
     const { db, sqlite, local, link } = await fixture()
     await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: local.locationId,
       organisationId: 'other',
       expectedRevisionId: local.revisionId,
@@ -6080,6 +6213,7 @@ describe('Organisation-wide Location corrections', () => {
       0,
     )
     const edit = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: local.locationId,
       organisationId: 'other',
       expectedRevisionId: local.revisionId,
@@ -6127,6 +6261,7 @@ describe('Organisation-wide Location corrections', () => {
     ).toEqual([])
     expect(
       await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         locationId: privateLocation.locationId,
         organisationId: 'other',
         expectedRevisionId: privateLocation.revisionId,
@@ -6161,17 +6296,25 @@ describe('Organisation-wide Location corrections', () => {
       names: { en: 'Our name' },
       actorId: 'editor',
     }
-    const edit = await updateLocalLocationAddress(db, input)
+    const edit = await updateLocalLocationAddress(db, {
+      ...input,
+      allowSharedBaseline: true,
+    })
     expect(edit?.organisationRevision).toBeTruthy()
     const before = sqlite.prepare('SELECT * FROM organisationLocation').all()
     expect(
-      await updateLocalLocationAddress(db, { ...input, names: { en: 'Stale' } }),
+      await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
+        ...input,
+        names: { en: 'Stale' },
+      }),
     ).toBeNull()
     sqlite.exec(
       "CREATE TRIGGER fail_correction AFTER INSERT ON organisationLocation BEGIN SELECT RAISE(ABORT,'late failure'); END",
     )
     await expect(
       updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         ...input,
         expectedOrganisationRevision: edit!.organisationRevision,
         names: { en: 'Fail' },
@@ -6195,6 +6338,7 @@ describe('Organisation-wide Location corrections', () => {
     })
     expect(
       await updateLocalLocationAddress(db, {
+        allowSharedBaseline: true,
         locationId: local.locationId,
         organisationId: 'other',
         expectedRevisionId: local.revisionId,
@@ -6255,6 +6399,7 @@ it('persists one existing neighbourhood path in immutable Location revisions', a
   }
   const divisionOverrides = { localityPath: ['source-parent', 'child'] }
   const saved = await updateLocalLocationAddress(db, {
+    allowSharedBaseline: true,
     locationId: created.locationId,
     organisationId: 'p',
     expectedRevisionId: created.revisionId,
@@ -6275,6 +6420,7 @@ it('persists one existing neighbourhood path in immutable Location revisions', a
   ).toEqual(original)
   await expect(
     updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: created.locationId,
       organisationId: 'p',
       expectedRevisionId: saved?.revisionId ?? '',
@@ -6382,6 +6528,7 @@ describe('shared Location footprint persistence', () => {
       .prepare('SELECT facts FROM locationRevision WHERE id=?')
       .get(created.revisionId)!
     const saved = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       ...created,
       organisationId: 'p',
       expectedRevisionId: created.revisionId,
@@ -6399,6 +6546,7 @@ describe('shared Location footprint persistence', () => {
       common: { footprint, names: { en: 'Corrected building name' } },
     })
     const corrected = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: created.locationId,
       organisationId: 'other',
       expectedRevisionId: saved!.revisionId,
@@ -6422,6 +6570,7 @@ describe('shared Location footprint persistence', () => {
       footprint,
     })
     const cleared = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: created.locationId,
       organisationId: 'other',
       expectedRevisionId: saved!.revisionId,
@@ -6449,6 +6598,7 @@ describe('shared Location footprint persistence', () => {
         .get(saved!.revisionId),
     ).toEqual(latest)
     const ownerEdit = await updateLocalLocationAddress(db, {
+      allowSharedBaseline: true,
       locationId: created.locationId,
       organisationId: 'p',
       expectedRevisionId: saved!.revisionId,
@@ -6511,6 +6661,7 @@ it('classifies an unknown local identity when building status is first establish
     'actor',
   )
   const updated = await updateLocalLocationAddress(db, {
+    allowSharedBaseline: true,
     locationId: created.locationId,
     organisationId: 'p',
     expectedRevisionId: created.revisionId,
@@ -6824,6 +6975,57 @@ describe('separate shared Location correction review', () => {
     }
     return { db, sqlite, command, source }
   }
+  it('merges only selected proposal fields and retains the exact staff decision', async () => {
+    const f = await correctionFixture()
+    f.sqlite.exec(readFileSync('migrations/0210_location_correction_merge.sql', 'utf8'))
+    const patch = { ...f.command.patch, brands: { mode: 'clear' as const } }
+    const id = await proposeLocationCorrection(f.db, { ...f.command, patch })
+    expect(
+      await decideLocationCorrection(f.db, {
+        ...f.command,
+        proposalId: id!,
+        actorId: 'reviewer',
+        outcome: 'accepted',
+        selectedFields: ['names'],
+      }),
+    ).toBe(true)
+    const applied = JSON.parse(
+      f.sqlite.prepare('SELECT patch FROM locationCorrectionMerge').get()!
+        .patch as string,
+    )
+    expect(applied).toEqual(f.command.patch)
+    const overrides = JSON.parse(
+      f.sqlite.prepare('SELECT overrides FROM organisationLocationHead').get()!
+        .overrides as string,
+    )
+    expect(overrides.names.en.value).toBe('Reviewed bakery')
+    expect(overrides.brands).toBeUndefined()
+    expect(() =>
+      f.sqlite.exec("UPDATE locationCorrectionMerge SET actorId='forged'"),
+    ).toThrow('immutable')
+    expect(
+      await decideLocationCorrection(f.db, {
+        ...f.command,
+        proposalId: id!,
+        actorId: 'reviewer',
+        outcome: 'accepted',
+        selectedFields: ['brands'],
+      }),
+    ).toBe(false)
+  })
+  it('rejects field selections not present in the immutable proposal', async () => {
+    const f = await correctionFixture()
+    const id = await proposeLocationCorrection(f.db, f.command)
+    await expect(
+      decideLocationCorrection(f.db, {
+        ...f.command,
+        proposalId: id!,
+        actorId: 'reviewer',
+        outcome: 'accepted',
+        selectedFields: ['phoneNumber'],
+      }),
+    ).rejects.toThrow('INVALID_CORRECTION_SELECTION')
+  })
   it('applies manager corrections directly, preserves Feature pins and rejects stale saves', async () => {
     const f = await correctionFixture()
     const before = f.sqlite.prepare('SELECT * FROM featureLocation').all()
@@ -6990,5 +7192,211 @@ describe('separate shared Location correction review', () => {
       }),
     ).toBe(false)
     expect(await proposeLocationCorrection(f.db, f.command)).toBeNull()
+  })
+})
+
+describe('Hype shared correction storage', () => {
+  it('searches shared corrections and scoped Organisation names before pagination', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
+    const { prepareSharedLocationCorrection } = await import(
+      '#lib/db/services/locationShared.js'
+    )
+    const { executeRevisionBatch } = await import('#lib/db/services/revisionBatch.js')
+    const created = await createLocalLocation(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'editor',
+    )
+    const write = await prepareSharedLocationCorrection(db, {
+      locationId: created.locationId,
+      sourceRevisionId: created.revisionId,
+      expectedRevision: null,
+      actorId: 'sa',
+      rights: { canEdit: true, superAdmin: true },
+      guard: sql`1`,
+      patch: {
+        names: { mode: 'override', value: { en: 'Hype corrected name' } },
+        operatingStatus: { mode: 'override', value: 'permanently_closed' },
+      },
+    })
+    await executeRevisionBatch(db, write.guard, write.queries)
+    expect(
+      (await listLocationResources(db, { q: 'Hype corrected', includeCount: true }))
+        .totalCount,
+    ).toBe(1)
+    expect((await listLocationResources(db, { q: 'Bakery' })).data).toEqual([])
+    expect(
+      (await listLocationResources(db, { lifecycleStatus: 'permanently_closed' })).data,
+    ).toHaveLength(1)
+    expect(
+      (
+        await searchLocalLocationCandidates(db, { projectId: 'p', q: 'Hype corrected' })
+      )[0].facts.names.en,
+    ).toBe('Hype corrected name')
+    await updateLocalLocationAddress(db, {
+      locationId: created.locationId,
+      organisationId: 'p',
+      expectedRevisionId: created.revisionId,
+      expectedOrganisationRevision: null,
+      names: { en: 'Organisation name' },
+      actorId: 'manager',
+    })
+    expect(
+      (await listLocationResources(db, { organisationId: 'p', q: 'Organisation name' }))
+        .data,
+    ).toHaveLength(1)
+    expect(
+      (await listLocationResources(db, { organisationId: 'p', q: 'Hype corrected' }))
+        .data,
+    ).toEqual([])
+    expect((await listLocationResources(db, { q: 'Organisation name' })).data).toEqual(
+      [],
+    )
+  })
+
+  it('accepts a phone correction without implicitly accepting a pending shared name', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
+    const { prepareSharedLocationCorrection, sharedLocationFacts } = await import(
+      '#lib/db/services/locationShared.js'
+    )
+    const { executeRevisionBatch } = await import('#lib/db/services/revisionBatch.js')
+    const created = await createLocalLocation(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'editor',
+    )
+    const write = await prepareSharedLocationCorrection(db, {
+      locationId: created.locationId,
+      sourceRevisionId: created.revisionId,
+      expectedRevision: null,
+      actorId: 'superadmin',
+      rights: { canEdit: true, superAdmin: true },
+      guard: sql`1`,
+      patch: {
+        names: { mode: 'override', value: { en: 'Pending shared name' } },
+        phoneNumber: { mode: 'override', value: ['+85221234567'] },
+      },
+    })
+    expect(await executeRevisionBatch(db, write.guard, write.queries)).toBeTruthy()
+    const accepted = await sharedLocationFacts(
+      db,
+      created.locationId,
+      LocationFactsSchema.parse(facts),
+      null,
+      [{ field: 'phoneNumber', revision: write.id }],
+    )
+    expect(accepted.facts.names).toEqual(facts.names)
+    expect(accepted.facts.phoneNumber).toEqual(['+85221234567'])
+    expect(
+      (
+        await sharedLocationFacts(
+          db,
+          created.locationId,
+          LocationFactsSchema.parse(facts),
+          write.id,
+        )
+      ).facts.names.en,
+    ).toBe('Pending shared name')
+  })
+
+  it('preserves immutable evidence, fences concurrent edits and retires changed-source contacts', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
+    const {
+      prepareSharedLocationCorrection,
+      readSharedLocationCorrection,
+      reconcileSharedLocationSource,
+      sharedLocationFacts,
+    } = await import('#lib/db/services/locationShared.js')
+    const { executeRevisionBatch } = await import('#lib/db/services/revisionBatch.js')
+    const created = await createLocalLocation(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'editor',
+    )
+    const write = await prepareSharedLocationCorrection(db, {
+      locationId: created.locationId,
+      sourceRevisionId: created.revisionId,
+      expectedRevision: null,
+      actorId: 'editor',
+      rights: { canEdit: true, superAdmin: false },
+      guard: sql`1`,
+      patch: { phoneNumber: { mode: 'override', value: ['+85221234567'] } },
+    })
+    expect(await executeRevisionBatch(db, write.guard, write.queries)).not.toBeNull()
+    expect(
+      (
+        await sharedLocationFacts(
+          db,
+          created.locationId,
+          LocationFactsSchema.parse(facts),
+        )
+      ).facts.phoneNumber,
+    ).toEqual(['+85221234567'])
+    expect(
+      (
+        await sharedLocationFacts(
+          db,
+          created.locationId,
+          LocationFactsSchema.parse(facts),
+          null,
+        )
+      ).facts.phoneNumber,
+    ).toEqual(facts.phoneNumber)
+    await expect(
+      prepareSharedLocationCorrection(db, {
+        locationId: created.locationId,
+        sourceRevisionId: created.revisionId,
+        expectedRevision: null,
+        actorId: 'other',
+        rights: { canEdit: true, superAdmin: false },
+        guard: sql`1`,
+        patch: { phoneNumber: { mode: 'clear' } },
+      }),
+    ).rejects.toThrow('CHANGED')
+    expect(() =>
+      sqlite.exec("UPDATE locationSharedRevision SET actorId='forged'"),
+    ).toThrow('immutable')
+    const changed = { ...facts, phoneNumber: ['+85229876543'] }
+    sqlite
+      .prepare(
+        "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES(?,?,2,'local','next','{}',?)",
+      )
+      .run('source-next', created.locationId, JSON.stringify(changed))
+    await reconcileSharedLocationSource(db, created.locationId, 'source-next')
+    const head = await readSharedLocationCorrection(db, created.locationId)
+    expect(JSON.parse(head!.corrections).phoneNumber.supersededBy).toBe('source-next')
+    expect(
+      (
+        await sharedLocationFacts(
+          db,
+          created.locationId,
+          LocationFactsSchema.parse(facts),
+        )
+      ).facts.phoneNumber,
+    ).toEqual(facts.phoneNumber)
+    expect(
+      (
+        await sharedLocationFacts(
+          db,
+          created.locationId,
+          LocationFactsSchema.parse(facts),
+          write.id,
+        )
+      ).facts.phoneNumber,
+    ).toEqual(['+85221234567'])
+    // Rerunning the additive migration neither rewrites nor duplicates accepted history.
+    sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
+    expect(
+      sqlite.prepare('SELECT count(*) n FROM locationSharedRevision').get()?.n,
+    ).toBe(2)
   })
 })

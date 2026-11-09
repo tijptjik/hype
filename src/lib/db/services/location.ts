@@ -1,3 +1,4 @@
+import { sharedLocationFacts } from './locationShared'
 // REVISIONS
 import { prepareAdminResourceRevisionCapture } from './adminResourceRevision.js'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
@@ -269,9 +270,26 @@ export async function getAcceptedFeatureLocation(
     release: buildingSourceRelease,
     ...(buildingSourceAddressId ? { addressId: buildingSourceAddressId } : {}),
   })
-  const effective = resolveFeatureLocation(
+  const sharedFacts = await sharedLocationFacts(
+    db,
+    row.locationId,
     LocationFactsSchema.parse(facts),
-    LocationFactsSchema.parse(location).location,
+    typeof acceptancePolicy?.factsSharedRevision === 'string'
+      ? acceptancePolicy.factsSharedRevision
+      : null,
+    acceptancePolicy?.factsSharedFields,
+  )
+  const sharedPosition = await sharedLocationFacts(
+    db,
+    row.locationId,
+    LocationFactsSchema.parse(location),
+    typeof acceptancePolicy?.locationSharedRevision === 'string'
+      ? acceptancePolicy.locationSharedRevision
+      : null,
+  )
+  const effective = resolveFeatureLocation(
+    sharedFacts.facts,
+    sharedPosition.facts.location,
     FeatureLocationOverridesSchema.parse(overrides),
   )
   if (row.acceptedGeometry && effective.location)

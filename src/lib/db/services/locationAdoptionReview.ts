@@ -1,3 +1,4 @@
+import { readSharedLocationCorrection } from './locationShared'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -69,7 +70,7 @@ export async function listLocationAdoptionReviews(
       WHERE prior.featureId=locationAdoptionProposal.featureId
         AND prior.projectId=locationAdoptionProposal.projectId
         AND prior.locationId=locationAdoptionProposal.locationId
-        AND prior.candidateRevisionId=locationAdoptionProposal.candidateRevisionId AND prior.organisationRevision=locationAdoptionProposal.organisationRevision AND prior.occupancyRevisionId IS locationAdoptionProposal.occupancyRevisionId AND prior.addressRevisionId IS locationAdoptionProposal.addressRevisionId)`,
+        AND prior.candidateRevisionId=locationAdoptionProposal.candidateRevisionId AND prior.organisationRevision=locationAdoptionProposal.organisationRevision AND json_extract(prior.evidence,'$.sharedRevision') IS json_extract(locationAdoptionProposal.evidence,'$.sharedRevision') AND prior.occupancyRevisionId IS locationAdoptionProposal.occupancyRevisionId AND prior.addressRevisionId IS locationAdoptionProposal.addressRevisionId)`,
     })
     .from(locationAdoptionProposal)
     .innerJoin(feature, eq(feature.id, locationAdoptionProposal.featureId))
@@ -87,7 +88,7 @@ export async function listLocationAdoptionReviews(
           AND newer.projectId=locationAdoptionProposal.projectId
           AND newer.locationId=locationAdoptionProposal.locationId
           AND newer.candidateRevisionId=locationAdoptionProposal.candidateRevisionId
-          AND newer.organisationRevision=locationAdoptionProposal.organisationRevision AND newer.occupancyRevisionId IS locationAdoptionProposal.occupancyRevisionId AND newer.addressRevisionId IS locationAdoptionProposal.addressRevisionId
+          AND newer.organisationRevision=locationAdoptionProposal.organisationRevision AND json_extract(newer.evidence,'$.sharedRevision') IS json_extract(locationAdoptionProposal.evidence,'$.sharedRevision') AND newer.occupancyRevisionId IS locationAdoptionProposal.occupancyRevisionId AND newer.addressRevisionId IS locationAdoptionProposal.addressRevisionId
           AND newer.rowid > locationAdoptionProposal.rowid)`,
       ),
     )
@@ -140,6 +141,7 @@ export async function readLocationAdoptionReview(
     .from(locationAdoptionProposal)
     .where(
       and(
+        sql`json_extract(evidence,'$.sharedRevision') IS ${rows.proposal.evidence.sharedRevision ?? null}`,
         eq(locationAdoptionProposal.featureId, rows.proposal.featureId),
         sql`occupancyRevisionId IS ${rows.proposal.occupancyRevisionId} AND addressRevisionId IS ${rows.proposal.addressRevisionId}`,
         eq(locationAdoptionProposal.projectId, rows.proposal.projectId),
@@ -203,7 +205,10 @@ export async function proposeFeatureLocationAdoption(
     )
     .get()
   if (!association) return null
+  const sharedHead = await readSharedLocationCorrection(db, association.locationId)
+  const sharedRevision = sharedHead?.id ?? null
   const identity = and(
+    sql`json_extract(locationAdoptionProposal.evidence,'$.sharedRevision') IS ${sharedRevision}`,
     sql`locationAdoptionProposal.occupancyRevisionId IS NULL AND locationAdoptionProposal.addressRevisionId IS NULL`,
     eq(locationAdoptionProposal.featureId, input.featureId),
     eq(locationAdoptionProposal.projectId, input.projectId),
@@ -228,12 +233,13 @@ export async function proposeFeatureLocationAdoption(
       return retained
   }
   const preview = await previewFeatureLocationAdoption(db, input)
-  if (!preview) return null
+  if (!preview || preview.sharedRevision !== sharedRevision) return null
   const id = crypto.randomUUID()
   const evidence = {
     policy: preview.settings.policy,
     plan: preview.plan,
     candidateOverrides: preview.candidateOverrides,
+    sharedRevision: preview.sharedRevision,
   }
   // Persist only while all inputs still match; concurrent proposers converge on one identity.
   // INSERT SELECT follows the Drizzle column order: createdAt follows the placement fields.
@@ -253,7 +259,7 @@ export async function proposeFeatureLocationAdoption(
     AND COALESCE((SELECT locationPolicyRevision FROM project WHERE id=${input.projectId}),0)=${preview.settings.revision}
     AND (SELECT COALESCE(MAX(ap.factsDecision IS NOT NULL),0) + COALESCE(MAX(ap.locationDecision IS NOT NULL),0) FROM locationAdoptionProposal ap
       WHERE ap.featureId=${input.featureId} AND ap.projectId=${input.projectId} AND json_extract(ap.evidence,'$.placement') IS NULL
-      AND ap.locationId=${association.locationId} AND ap.candidateRevisionId=${input.candidateRevisionId} AND ap.organisationRevision=${input.organisationRevision ?? ''}) < 2
+      AND ap.locationId=${association.locationId} AND ap.candidateRevisionId=${input.candidateRevisionId} AND ap.organisationRevision=${input.organisationRevision ?? ''} AND json_extract(ap.evidence,'$.sharedRevision') IS ${sharedRevision}) < 2
   `)
     .onConflictDoNothing()
   const retained = await db
@@ -327,10 +333,10 @@ export async function rejectLocationAdoptionGroup(
           WHERE json_extract(prior.value,'$.action')='applied' AND json_extract(prior.value,'$.associationRevision')=${input.expectedRevision}))
       AND ap.rowid=(SELECT MAX(newer.rowid) FROM locationAdoptionProposal newer
         WHERE newer.featureId=ap.featureId AND newer.projectId=ap.projectId
-          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId AND newer.organisationRevision=ap.organisationRevision AND newer.occupancyRevisionId IS ap.occupancyRevisionId AND newer.addressRevisionId IS ap.addressRevisionId)
+          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId AND newer.organisationRevision=ap.organisationRevision AND json_extract(newer.evidence,'$.sharedRevision') IS json_extract(ap.evidence,'$.sharedRevision') AND newer.occupancyRevisionId IS ap.occupancyRevisionId AND newer.addressRevisionId IS ap.addressRevisionId)
       AND NOT EXISTS (SELECT 1 FROM locationAdoptionProposal older
         WHERE older.featureId=ap.featureId AND older.projectId=ap.projectId
-          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId AND older.organisationRevision=ap.organisationRevision AND older.occupancyRevisionId IS ap.occupancyRevisionId AND older.addressRevisionId IS ap.addressRevisionId
+          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId AND older.organisationRevision=ap.organisationRevision AND json_extract(older.evidence,'$.sharedRevision') IS json_extract(ap.evidence,'$.sharedRevision') AND older.occupancyRevisionId IS ap.occupancyRevisionId AND older.addressRevisionId IS ap.addressRevisionId
           AND (CASE WHEN ${input.fieldGroup}='facts' THEN older.factsDecision ELSE older.locationDecision END) IS NOT NULL))
   `)
     .returning({ decision: column })

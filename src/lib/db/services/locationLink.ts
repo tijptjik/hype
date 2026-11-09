@@ -1,3 +1,4 @@
+import { sharedLocationFacts } from './locationShared'
 // DRIZZLE
 import { and, eq, isNull, ne, or, sql } from 'drizzle-orm'
 // SCHEMA
@@ -94,7 +95,12 @@ export async function linkInitialFeatureLocation(
     )
     .get()
   if (!selected) return { status: 'place-unavailable' }
-  const facts = LocationFactsSchema.parse(selected.facts)
+  const shared = await sharedLocationFacts(
+    db,
+    input.locationId,
+    LocationFactsSchema.parse(selected.facts),
+  )
+  const facts = shared.facts
   const organisationId = await readProjectLocationOwner(db, input.projectId)
   const corrections = await readOrganisationLocation(
     db,
@@ -123,9 +129,11 @@ export async function linkInitialFeatureLocation(
   const write = prepareFeatureLocationAssociationWrite(db, {
     ...input,
     expectedRevision: null,
-    ...(input.nameMode || independentPlacement
+    ...(input.nameMode || independentPlacement || shared.revision
       ? {
           acceptancePolicy: {
+            factsSharedRevision: shared.revision,
+            locationSharedRevision: shared.revision,
             nameMode: input.nameMode ?? 'independent',
             ...(independentPlacement ? { locationMode: 'independent' } : {}),
           },
@@ -147,7 +155,7 @@ export async function linkInitialFeatureLocation(
     additionalGuard: correction.guard,
   })
   const projections =
-    corrections || input.nameMode
+    corrections || input.nameMode || shared.revision
       ? await prepareLinkedLocationProjection(db, {
           ...input,
           revision: write.version,

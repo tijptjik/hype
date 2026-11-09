@@ -16,6 +16,7 @@ export const LocationTaskSchema = z.object({
     .enum(['unknown', 'establishment', 'building', 'premises', 'address', 'natural'])
     .optional(),
   names: z.record(z.string(), z.string()).optional(),
+  correctionProposalId: z.string().optional(),
   proposalId: z.string().optional(),
   reviewId: z.string().optional(),
   mergeReviewId: z.string().nullish(),

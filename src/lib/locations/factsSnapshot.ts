@@ -18,6 +18,9 @@ const common = z.strictObject({
   names: LocationFactsSchema.shape.names,
   footprint: LocationFactsSchema.shape.footprint,
   phoneNumber: z.array(z.string()).optional(),
+  websites: LocationFactsSchema.shape.websites,
+  socials: LocationFactsSchema.shape.socials,
+  accessibility: LocationFactsSchema.shape.accessibility,
   successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
   location: LocationFactsSchema.shape.location.extend({
     // A mountain or building need not have an address; the display projection supplies an empty one.
@@ -68,6 +71,9 @@ export function createLocationFactsSnapshot(
     kind,
     common: {
       names: facts.names,
+      websites: facts.websites,
+      socials: facts.socials,
+      accessibility: facts.accessibility,
       ...(facts.footprint !== undefined ? { footprint: facts.footprint } : {}),
       location: facts.location,
       ...(facts.phoneNumber.length ? { phoneNumber: facts.phoneNumber } : {}),
@@ -105,6 +111,15 @@ export function readLocationFacts(value: unknown): LocationFacts {
   const details = entity.details
   return LocationFactsSchema.parse({
     names: snapshot.common.names,
+    ...(snapshot.common.websites !== undefined
+      ? { websites: snapshot.common.websites }
+      : {}),
+    ...(snapshot.common.socials !== undefined
+      ? { socials: snapshot.common.socials }
+      : {}),
+    ...(snapshot.common.accessibility !== undefined
+      ? { accessibility: snapshot.common.accessibility }
+      : {}),
     ...(snapshot.common.footprint !== undefined
       ? { footprint: snapshot.common.footprint }
       : {}),
