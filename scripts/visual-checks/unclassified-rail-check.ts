@@ -1,4 +1,4 @@
-import { chromium, firefox } from 'playwright'
+import { browserCases } from './lib/browser-cases'
 import { mkdir, readFile } from 'node:fs/promises'
 const base = process.env.FEATURE_CHECK_URL ?? 'http://127.0.0.1:4173'
 const output = 'output/playwright/unclassified-rail'
@@ -29,87 +29,82 @@ if(input.patch.sortMode)review.content.gallery.sortMode=input.patch.sortMode;
 localStorage.setItem('review',JSON.stringify(review));return structuredClone(review)}
 export async function replaceTaskReviewImage(){} export async function acceptTaskImageReview(){}
 `
-for (const [name, engine] of Object.entries({ chromium, firefox })) {
-  const browser = await engine.launch()
-  try {
-    for (const width of [1280, 390]) {
-      const page = await browser.newPage({ viewport: { width, height: 900 } })
-      const errors: string[] = []
-      page.on('pageerror', e => {
-        errors.push(e.message)
-        console.log('PAGE ERROR', e.message)
-      })
-      await page.route('**/__gallery-sorting.html', r =>
-        r.fulfill({
-          contentType: 'text/html',
-          body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/taskImageReviewCheck.ts"></script></body></html>',
-        }),
-      )
-      await page.route('**/src/lib/api/taskImageReview.remote.*', r =>
-        r.fulfill({ contentType: 'application/javascript', body: mock }),
-      )
-      await page.route('**/src/lib/api/image.remote.*', r =>
-        r.fulfill({
-          contentType: 'application/javascript',
-          body:
-            imageExports +
-            `export async function getImageIntentOptions(){return {intents:[{id:'canonical',label:'Featured',isPublished:true},{id:'general',label:'General',isPublished:true},{id:'undefined',label:'Unclassified',isPublished:false}]}}`,
-        }),
-      )
-      await page.route('**/api/images/revisions/**', r =>
-        r.fulfill({
-          contentType: 'image/svg+xml',
-          body: '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#698675"/></svg>',
-        }),
-      )
-      await page.goto(base + '/__gallery-sorting.html')
-      const thumb = page.locator('[data-gallery-thumb-id="c"]')
-      await thumb.waitFor({ timeout: 60000 })
-      const order = () =>
-        page
-          .locator('[aria-label="Gallery thumbnails"] > [data-gallery-thumb-id]')
-          .evaluateAll(nodes =>
-            nodes.map(n => n.getAttribute('data-gallery-thumb-id')).join(','),
-          )
-      if ((await order()) !== 'c,a,b')
-        throw Error('Unclassified photo was not first: ' + (await order()))
-      const label = thumb.getByText('Unclassified', { exact: true })
-      const fits = await label.evaluate(node => node.scrollWidth <= node.clientWidth)
-      if (!fits) throw Error('Unclassified label is truncated')
-      const labelBox = await label.boundingBox(),
-        thumbBox = await thumb.boundingBox()
-      if (
-        !labelBox ||
-        !thumbBox ||
-        labelBox.x < thumbBox.x ||
-        labelBox.x + labelBox.width > thumbBox.x + thumbBox.width
-      )
-        throw Error('Label exceeds thumbnail width')
-      await page.screenshot({
-        path: output + '/' + name + '-' + width + '.png',
-        fullPage: true,
-      })
-      await label.click()
-      await page.getByRole('button', { name: 'General', exact: true }).click()
-      await page.waitForFunction(
-        () =>
-          Array.from(
-            document.querySelectorAll(
-              '[aria-label="Gallery thumbnails"] > [data-gallery-thumb-id]',
-            ),
-          )
-            .map(n => n.getAttribute('data-gallery-thumb-id'))
-            .join(',') === 'a,b,c',
-      )
-      if (errors.length) throw Error(errors.join('\n'))
-      console.log(
-        name,
-        width,
-        'unclassified first, full label and classification reordering passed',
-      )
-      await page.close()
-    }
-  } finally {
-    await browser.close()
+for await (const { name, browser } of browserCases()) {
+  for (const width of [1280, 390]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 } })
+    const errors: string[] = []
+    page.on('pageerror', e => {
+      errors.push(e.message)
+      console.log('PAGE ERROR', e.message)
+    })
+    await page.route('**/__gallery-sorting.html', r =>
+      r.fulfill({
+        contentType: 'text/html',
+        body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/taskImageReviewCheck.ts"></script></body></html>',
+      }),
+    )
+    await page.route('**/src/lib/api/taskImageReview.remote.*', r =>
+      r.fulfill({ contentType: 'application/javascript', body: mock }),
+    )
+    await page.route('**/src/lib/api/image.remote.*', r =>
+      r.fulfill({
+        contentType: 'application/javascript',
+        body:
+          imageExports +
+          `export async function getImageIntentOptions(){return {intents:[{id:'canonical',label:'Featured',isPublished:true},{id:'general',label:'General',isPublished:true},{id:'undefined',label:'Unclassified',isPublished:false}]}}`,
+      }),
+    )
+    await page.route('**/api/images/revisions/**', r =>
+      r.fulfill({
+        contentType: 'image/svg+xml',
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#698675"/></svg>',
+      }),
+    )
+    await page.goto(base + '/__gallery-sorting.html')
+    const thumb = page.locator('[data-gallery-thumb-id="c"]')
+    await thumb.waitFor({ timeout: 60000 })
+    const order = () =>
+      page
+        .locator('[aria-label="Gallery thumbnails"] > [data-gallery-thumb-id]')
+        .evaluateAll(nodes =>
+          nodes.map(n => n.getAttribute('data-gallery-thumb-id')).join(','),
+        )
+    if ((await order()) !== 'c,a,b')
+      throw Error('Unclassified photo was not first: ' + (await order()))
+    const label = thumb.getByText('Unclassified', { exact: true })
+    const fits = await label.evaluate(node => node.scrollWidth <= node.clientWidth)
+    if (!fits) throw Error('Unclassified label is truncated')
+    const labelBox = await label.boundingBox(),
+      thumbBox = await thumb.boundingBox()
+    if (
+      !labelBox ||
+      !thumbBox ||
+      labelBox.x < thumbBox.x ||
+      labelBox.x + labelBox.width > thumbBox.x + thumbBox.width
+    )
+      throw Error('Label exceeds thumbnail width')
+    await page.screenshot({
+      path: output + '/' + name + '-' + width + '.png',
+      fullPage: true,
+    })
+    await label.click()
+    await page.getByRole('button', { name: 'General', exact: true }).click()
+    await page.waitForFunction(
+      () =>
+        Array.from(
+          document.querySelectorAll(
+            '[aria-label="Gallery thumbnails"] > [data-gallery-thumb-id]',
+          ),
+        )
+          .map(n => n.getAttribute('data-gallery-thumb-id'))
+          .join(',') === 'a,b,c',
+    )
+    if (errors.length) throw Error(errors.join('\n'))
+    console.log(
+      name,
+      width,
+      'unclassified first, full label and classification reordering passed',
+    )
+    await page.close()
   }
 }

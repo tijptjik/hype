@@ -1,4 +1,4 @@
-import { chromium, firefox } from 'playwright'
+import { browserCases } from './lib/browser-cases'
 import { mkdir } from 'node:fs/promises'
 const base = process.env.FEATURE_CHECK_URL ?? 'http://localhost:5175'
 const output = 'output/playwright/task-image-review'
@@ -42,121 +42,109 @@ export async function saveTaskImageReview(input){
 export async function replaceTaskReviewImage(input){return saveTaskImageReview(input)}
 export async function acceptTaskImageReview(input){globalThis.acceptInput=input;review.status='accepted';return {status:'accepted'}}
 `
-for (const [name, engine] of [
-  ['chromium', chromium],
-  ['firefox', firefox],
-] as const) {
-  const browser = await engine.launch()
-  try {
-    for (const width of [1440, 390]) {
-      const page = await browser.newPage({ viewport: { width, height: 900 } }),
-        errors: string[] = []
-      page.on('pageerror', e => errors.push(e.message))
-      await page.route('**/__task-image-review.html*', r =>
-        r.fulfill({
-          contentType: 'text/html',
-          body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/taskImageReviewCheck.ts"></script></body></html>',
-        }),
-      )
-      await page.route('**/src/lib/api/taskImageReview.remote.*', r =>
-        r.fulfill({ contentType: 'application/javascript', body: mock }),
-      )
-      await page.route('**/src/lib/api/image.remote.*', r =>
-        r.fulfill({
-          contentType: 'application/javascript',
-          body: `export async function getImagesForContext(){return null};export async function getImagesForContextByProfile(){return null};export async function getImagesForIds(){return null};export async function getImagesForIdsByProfile(){return null};export async function getFeatureCanonicalImageOccupancy(){return null};export async function getImageById(){return null};export async function getImageByIdByProfile(){return null};export async function getMetadata(){return null};export async function authImageUpload(){return null};export async function finalizeImageUpload(){return null};export async function createImage(){return null};export async function updateImage(){return null};export async function setImageIntent(){return null};export async function setImagePublished(){return null};export async function rotateImage(){return null};export async function deleteImage(){return null};export async function getImageIntentOptions(){return {intents:[{id:'undefined',label:'Unclassified',isPublished:false},{id:'general',label:'General',isPublished:true},{id:'canonical',label:'Featured',isPublished:true}]}}`,
-        }),
-      )
-      await page.route('**/src/lib/api/user.remote.*', r =>
-        r.fulfill({
-          contentType: 'application/javascript',
-          body: `export async function searchUsers(){return null};export async function getAdminUserProfile(){return null};export async function getUserContributionPreviews(){return null};export async function getUserContributedFeatures(){return null};export async function getUserContributedImages(){return null};export async function getUserDirectoryMetrics(){return null};export async function getUser(){return null};export async function updateUserProfile(){return null};export async function getUserLayers(){return null};export async function setUserLayerDefaults(){return null};export async function getUserFeatures(){return null};export async function addUserFeatureToList(){return null};export async function removeUserFeatureFromList(){return null};export async function getUserForAttribution(){return {id:'photographer',name:'Photo Contributor',attribution:'Photo Contributor',username:'photographer',image:null}}`,
-        }),
-      )
-      await page.route('**/api/images/revisions/**', r =>
-        r.fulfill({
-          contentType: 'image/svg+xml',
-          body: '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#698675"/><text x="90" y="120" font-size="50" fill="white">Submitted image</text></svg>',
-        }),
-      )
+for await (const { name, browser } of browserCases()) {
+  for (const width of [1440, 390]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 } }),
+      errors: string[] = []
+    page.on('pageerror', e => errors.push(e.message))
+    await page.route('**/__task-image-review.html*', r =>
+      r.fulfill({
+        contentType: 'text/html',
+        body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/taskImageReviewCheck.ts"></script></body></html>',
+      }),
+    )
+    await page.route('**/src/lib/api/taskImageReview.remote.*', r =>
+      r.fulfill({ contentType: 'application/javascript', body: mock }),
+    )
+    await page.route('**/src/lib/api/image.remote.*', r =>
+      r.fulfill({
+        contentType: 'application/javascript',
+        body: `export async function getImagesForContext(){return null};export async function getImagesForContextByProfile(){return null};export async function getImagesForIds(){return null};export async function getImagesForIdsByProfile(){return null};export async function getFeatureCanonicalImageOccupancy(){return null};export async function getImageById(){return null};export async function getImageByIdByProfile(){return null};export async function getMetadata(){return null};export async function authImageUpload(){return null};export async function finalizeImageUpload(){return null};export async function createImage(){return null};export async function updateImage(){return null};export async function setImageIntent(){return null};export async function setImagePublished(){return null};export async function rotateImage(){return null};export async function deleteImage(){return null};export async function getImageIntentOptions(){return {intents:[{id:'undefined',label:'Unclassified',isPublished:false},{id:'general',label:'General',isPublished:true},{id:'canonical',label:'Featured',isPublished:true}]}}`,
+      }),
+    )
+    await page.route('**/src/lib/api/user.remote.*', r =>
+      r.fulfill({
+        contentType: 'application/javascript',
+        body: `export async function searchUsers(){return null};export async function getAdminUserProfile(){return null};export async function getUserContributionPreviews(){return null};export async function getUserContributedFeatures(){return null};export async function getUserContributedImages(){return null};export async function getUserDirectoryMetrics(){return null};export async function getUser(){return null};export async function updateUserProfile(){return null};export async function getUserLayers(){return null};export async function setUserLayerDefaults(){return null};export async function getUserFeatures(){return null};export async function addUserFeatureToList(){return null};export async function removeUserFeatureFromList(){return null};export async function getUserForAttribution(){return {id:'photographer',name:'Photo Contributor',attribution:'Photo Contributor',username:'photographer',image:null}}`,
+      }),
+    )
+    await page.route('**/api/images/revisions/**', r =>
+      r.fulfill({
+        contentType: 'image/svg+xml',
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#698675"/><text x="90" y="120" font-size="50" fill="white">Submitted image</text></svg>',
+      }),
+    )
 
-      await page.goto(base + '/__task-image-review.html?photo')
-      await page.locator('[data-review-busy="false"]').waitFor()
-      const openText = page.getByRole('button', {
-        name: 'Edit image text',
-        exact: true,
-      })
-      await openText.click()
-      {
-        const multilingual = page
-          .getByRole('dialog')
-          .getByRole('button', { name: 'Multilingual', exact: true })
-        if ((await multilingual.getAttribute('aria-expanded')) === 'false')
-          await multilingual.click()
-      }
-      const dialog = page.getByRole('dialog')
-      const toggle = dialog.getByRole('button', { name: 'Multilingual', exact: true })
-      if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
-      const enCaption = dialog.getByRole('textbox', {
-        name: 'Caption · en',
-        exact: true,
-      })
-      const zhCaption = dialog.getByRole('textbox', {
-        name: 'Caption · zh-Hant',
-        exact: true,
-      })
-      await enCaption.fill('Saved English caption')
-      await zhCaption.fill('已儲存說明')
-      await dialog
-        .getByRole('textbox', { name: 'Alt text · en', exact: true })
-        .fill('Saved English alternative')
-      await dialog.getByRole('button', { name: 'Save', exact: true }).click()
-      await dialog.waitFor({ state: 'hidden' })
-      await page.locator('[data-review-busy="false"]').waitFor()
-      await openText.click()
-      {
-        const multilingual = page
-          .getByRole('dialog')
-          .getByRole('button', { name: 'Multilingual', exact: true })
-        if ((await multilingual.getAttribute('aria-expanded')) === 'false')
-          await multilingual.click()
-      }
-      if ((await enCaption.inputValue()) !== 'Saved English caption')
-        throw Error('Caption did not reload')
-      if ((await zhCaption.inputValue()) !== '已儲存說明')
-        throw Error('Chinese caption did not reload')
-      if (
-        (await dialog
-          .getByRole('textbox', { name: 'Alt text · en', exact: true })
-          .inputValue()) !== 'Saved English alternative'
-      )
-        throw Error('Alt text did not reload')
-      await enCaption.fill('Discard this draft')
-      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
-      await dialog.waitFor({ state: 'hidden' })
-      await openText.click()
-      {
-        const multilingual = page
-          .getByRole('dialog')
-          .getByRole('button', { name: 'Multilingual', exact: true })
-        if ((await multilingual.getAttribute('aria-expanded')) === 'false')
-          await multilingual.click()
-      }
-      if ((await enCaption.inputValue()) !== 'Saved English caption')
-        throw Error('Cancel retained unsaved draft')
-      if ((await page.evaluate(() => globalThis.reviewCalls.length)) !== 1)
-        throw Error('Cancel wrote a review')
-      await page.screenshot({
-        path: output + '/' + name + '-' + width + '-multilingual-readback.png',
-      })
-      console.log(
-        name,
-        width,
-        'multilingual caption and alt save/reopen, cancel passed',
-      )
-      await page.close()
+    await page.goto(base + '/__task-image-review.html?photo')
+    await page.locator('[data-review-busy="false"]').waitFor()
+    const openText = page.getByRole('button', {
+      name: 'Edit image text',
+      exact: true,
+    })
+    await openText.click()
+    {
+      const multilingual = page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Multilingual', exact: true })
+      if ((await multilingual.getAttribute('aria-expanded')) === 'false')
+        await multilingual.click()
     }
-  } finally {
-    await browser.close()
+    const dialog = page.getByRole('dialog')
+    const toggle = dialog.getByRole('button', { name: 'Multilingual', exact: true })
+    if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
+    const enCaption = dialog.getByRole('textbox', {
+      name: 'Caption · en',
+      exact: true,
+    })
+    const zhCaption = dialog.getByRole('textbox', {
+      name: 'Caption · zh-Hant',
+      exact: true,
+    })
+    await enCaption.fill('Saved English caption')
+    await zhCaption.fill('已儲存說明')
+    await dialog
+      .getByRole('textbox', { name: 'Alt text · en', exact: true })
+      .fill('Saved English alternative')
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+    await dialog.waitFor({ state: 'hidden' })
+    await page.locator('[data-review-busy="false"]').waitFor()
+    await openText.click()
+    {
+      const multilingual = page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Multilingual', exact: true })
+      if ((await multilingual.getAttribute('aria-expanded')) === 'false')
+        await multilingual.click()
+    }
+    if ((await enCaption.inputValue()) !== 'Saved English caption')
+      throw Error('Caption did not reload')
+    if ((await zhCaption.inputValue()) !== '已儲存說明')
+      throw Error('Chinese caption did not reload')
+    if (
+      (await dialog
+        .getByRole('textbox', { name: 'Alt text · en', exact: true })
+        .inputValue()) !== 'Saved English alternative'
+    )
+      throw Error('Alt text did not reload')
+    await enCaption.fill('Discard this draft')
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await dialog.waitFor({ state: 'hidden' })
+    await openText.click()
+    {
+      const multilingual = page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Multilingual', exact: true })
+      if ((await multilingual.getAttribute('aria-expanded')) === 'false')
+        await multilingual.click()
+    }
+    if ((await enCaption.inputValue()) !== 'Saved English caption')
+      throw Error('Cancel retained unsaved draft')
+    if ((await page.evaluate(() => globalThis.reviewCalls.length)) !== 1)
+      throw Error('Cancel wrote a review')
+    await page.screenshot({
+      path: output + '/' + name + '-' + width + '-multilingual-readback.png',
+    })
+    console.log(name, width, 'multilingual caption and alt save/reopen, cancel passed')
+    await page.close()
   }
 }
