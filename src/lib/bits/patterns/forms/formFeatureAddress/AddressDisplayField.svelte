@@ -32,6 +32,7 @@ let {
   locale,
   isEditing,
   showLocale = false,
+  compact = false,
   alignEnd = false,
   scrollWhenConstrained = false,
   onChange,
@@ -42,6 +43,7 @@ let {
   locale: LocaleKey
   isEditing: boolean
   showLocale?: boolean
+  compact?: boolean
   alignEnd?: boolean
   scrollWhenConstrained?: boolean
   onChange: (address: FeatureAddress) => void
@@ -93,7 +95,7 @@ let input = $state<HTMLTextAreaElement>()
             aria-label={m.feature_address_formattedAddress()}
             class="text-muted-foreground inline-flex shrink-0 rounded"
           >
-            <MarkerIcon class="size-7" aria-hidden="true" />
+            <MarkerIcon class={compact ? 'size-5' : 'size-7'} aria-hidden="true" />
           </button>
         {/snippet}
         <span class="block">{m.feature_address_formattedAddress()}</span>
@@ -108,7 +110,9 @@ let input = $state<HTMLTextAreaElement>()
           <!-- Intrinsic text width keeps the icons together; the shared scroller handles overflow. -->
           <span
             aria-hidden="true"
-            class="invisible col-start-1 row-start-1 border border-transparent px-3 text-base font-medium whitespace-pre"
+            class="invisible col-start-1 row-start-1 border border-transparent font-medium whitespace-pre {compact
+              ? 'px-2 text-sm'
+              : 'px-3 text-base'}"
             >{value || ' '}</span
           >
         {/if}
@@ -116,10 +120,10 @@ let input = $state<HTMLTextAreaElement>()
           <ScrollableText
             text={value}
             title=""
-            padding={24}
+            padding={compact ? 16 : 24}
             class="col-start-1 row-start-1 min-w-0 [contain:inline-size]"
-            containerClass="h-10 border border-transparent px-3 py-2 text-left"
-            textClass="text-base font-medium"
+            containerClass={`border border-transparent text-left ${compact ? 'h-8 px-2 py-1.5' : 'h-10 px-3 py-2'}`}
+            textClass={`font-medium ${compact ? 'text-sm' : 'text-base'}`}
           />
         {:else}
           <textarea
@@ -134,10 +138,12 @@ let input = $state<HTMLTextAreaElement>()
             {value}
             readonly={!isEditing || !unlocked}
             class="min-w-0 {scrollWhenConstrained
-              ? 'col-start-1 row-start-1 h-10 w-full whitespace-nowrap'
+              ? `col-start-1 row-start-1 ${compact ? 'h-8' : 'h-10'} w-full whitespace-nowrap`
               : alignEnd
                 ? 'w-auto flex-initial text-right [field-sizing:content]'
-                : 'flex-1 [field-sizing:content]'} resize-none rounded-md border border-border bg-panel text-foreground placeholder:text-muted-foreground read-only:text-inherit px-3 py-2 text-base font-medium read-only:border-transparent read-only:bg-transparent"
+                : 'flex-1 [field-sizing:content]'} resize-none rounded-md border border-border bg-panel text-foreground placeholder:text-muted-foreground read-only:text-inherit {compact
+              ? 'px-2 py-1.5 text-sm'
+              : 'px-3 py-2 text-base'} font-medium read-only:border-transparent read-only:bg-transparent"
             oninput={event =>
               onChange(
                 setAddressOverride(

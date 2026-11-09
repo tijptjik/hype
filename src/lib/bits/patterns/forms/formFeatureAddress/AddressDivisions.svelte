@@ -212,7 +212,7 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
 {/snippet}
 
 <section
-  class={`border-border space-y-4 border-t pt-5 ${className}`}
+  class={`border-border space-y-1 border-t pt-5 ${className}`}
   aria-label={m.feature_address_divisions()}
   data-address-divisions
   aria-busy={loading}
@@ -274,11 +274,11 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
         : 'border-border/70 bg-background/40 rounded-xl border px-4'}"
     >
       <div class="divide-border/60 col-start-1 row-start-1 min-w-0 divide-y">
-        {#each displayedGroups as group (group.key)}
+        {#each displayedGroups as group, groupIndex (group.key)}
           <section
-            class="group/division-row grid gap-2 py-3 {stacked
-              ? ''
-              : 'grid-cols-[6rem_minmax(0,1fr)] gap-x-3'}"
+            class="group/division-row grid gap-2 py-3 {sidebar && groupIndex === 0
+              ? 'pt-1'
+              : ''} {stacked ? '' : 'grid-cols-[6rem_minmax(0,1fr)] gap-x-3'}"
             aria-label={groupLabels[group.key]}
             data-division-group={group.key}
             transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}

@@ -49,50 +49,76 @@ for (const [name, engine] of [
       })
     await page.evaluate(() => document.fonts.ready)
     const scroll = page.locator('[data-address-scroll]')
-    const panels = page.locator(
-      '[data-address-additions], [data-address-divisions-panel]',
+    const panes = page.locator(
+      '[data-address-additions], [data-address-details], [data-address-divisions-panel] > div',
     )
-    const geometry = await panels.evaluateAll(nodes =>
-      nodes.map(node => {
-        const row = node.closest('[data-address-editor-layout]')!
-        return {
-          panelHeight: node.getBoundingClientRect().height,
-          rowHeight: row.getBoundingClientRect().height,
-          nestedScrollers: [node, ...node.querySelectorAll('*')].filter(
-            element =>
-              /auto|scroll/.test(getComputedStyle(element).overflowY) &&
-              element.scrollHeight > element.clientHeight + 1,
-          ).length,
-        }
-      }),
+    await page.locator('[data-editor-container]').evaluate(node => {
+      node.style.height = '240px'
+    })
+    const geometry = await panes.evaluateAll(nodes =>
+      nodes.map(node => ({
+        height: node.clientHeight,
+        contentHeight: node.scrollHeight,
+        overflow: getComputedStyle(node).overflowY,
+      })),
     )
     if (
-      geometry.length !== 2 ||
+      geometry.length !== 3 ||
       geometry.some(
-        panel => panel.nestedScrollers || panel.rowHeight < panel.panelHeight,
+        pane => pane.overflow !== 'auto' || pane.contentHeight <= pane.height,
       )
     )
-      throw new Error(JSON.stringify(geometry))
-    if (!(await scroll.evaluate(node => node.scrollHeight > node.clientHeight)))
-      throw new Error('Containing panel should scroll')
-    const before = await panels.evaluateAll(nodes =>
-      nodes.map(node => node.getBoundingClientRect().y),
-    )
-    await scroll.evaluate(node => {
-      node.scrollTop = node.scrollHeight
+      throw Error(JSON.stringify(geometry))
+    const metadata = await page.locator('[data-address-additions]').evaluate(node => {
+      const controls = node.firstElementChild
+      const metadata = node.lastElementChild
+      if (!controls || !metadata) throw Error('Missing sidebar content')
+      return {
+        controlsBottom: controls.getBoundingClientRect().bottom,
+        metadataTop: metadata.getBoundingClientRect().top,
+      }
     })
-    const delta = await scroll.evaluate(node => node.scrollTop)
-    const after = await panels.evaluateAll(nodes =>
-      nodes.map(node => node.getBoundingClientRect().y),
+    if (metadata.metadataTop < metadata.controlsBottom)
+      throw Error('Metadata overlaps controls')
+    for (let index = 0; index < 3; index++) {
+      await panes.nth(index).evaluate(node => {
+        node.scrollTop = node.scrollHeight
+      })
+      const positions = await panes.evaluateAll(nodes =>
+        nodes.map(node => node.scrollTop),
+      )
+      if (
+        !positions[index] ||
+        positions.some((top, other) => other !== index && top !== 0)
+      )
+        throw Error(`Panes did not scroll independently: ${positions}`)
+      await panes.nth(index).evaluate(node => {
+        node.scrollTop = 0
+      })
+    }
+    if (
+      await scroll.evaluate(
+        node => node.scrollTop !== 0 || node.scrollHeight > node.clientHeight + 1,
+      )
     )
-    if (!delta || before.some((y, index) => Math.abs(y - after[index] - delta) > 1))
-      throw new Error('Panels did not scroll together')
+      throw Error('Outer editor should not scroll')
     await page.screenshot({
-      path: `output/playwright/address-panels-${name}-shared-scroll.png`,
+      path: `output/playwright/address-panels-${name}-independent-scroll.png`,
     })
-    if (errors.length) throw new Error(errors.join('\n'))
+    await page.locator('[data-editor-container]').evaluate(node => {
+      node.style.height = '700px'
+    })
+    const bottoms = await panes.evaluateAll(nodes =>
+      nodes.map(node => node.getBoundingClientRect().bottom),
+    )
+    if (Math.max(...bottoms) - Math.min(...bottoms) > 1)
+      throw Error(`Panel bottoms differ: ${bottoms}`)
+    await page.screenshot({
+      path: `output/playwright/address-panels-${name}-full-height.png`,
+    })
+    if (errors.length) throw Error(errors.join('\n'))
     console.log(
-      JSON.stringify({ browser: name, geometry, sharedScrollDistance: delta }),
+      JSON.stringify({ browser: name, geometry, independentScroll: true, bottoms }),
     )
   } finally {
     await browser.close()

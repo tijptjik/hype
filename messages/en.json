@@ -31,7 +31,7 @@
   "address_phase_type_stage": "Stage",
   "address_phase_type_named": "Name",
   "address_floor_type_inferred": "Selected {type} and kept only the reference here.",
-  "address_block_type_first_help": "Put the type before the reference when checked (Block A), or after it when unchecked (A Block).",
+  "address_block_type_first_help": "Swap the block type and number: Block A or A Block.",
   "address_parts_show": "Show address parts",
   "address_parts_hide": "Hide address parts",
   "address_divisions_show": "Show divisions",

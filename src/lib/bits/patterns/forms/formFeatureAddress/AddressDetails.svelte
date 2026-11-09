@@ -16,7 +16,6 @@ import { getLocationAccessibility } from '#lib/api/locationAccessibility.remote.
 // COMPONENTS
 import FormI18nTranslationBar from '../formI18nSection/components/FormI18nTranslationBar.svelte'
 import AddressNamePicker from './AddressNamePicker.svelte'
-import { fitAddressCaption } from './fitAddressCaption.js'
 import { adaptivePlaceholder } from './adaptivePlaceholder.js'
 import {
   phaseEditorValue,
@@ -37,6 +36,7 @@ import LoaderIcon from 'virtual:icons/lucide/loader-circle'
 import UnitIcon from 'virtual:icons/lucide/door-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
+import SwapIcon from 'virtual:icons/lucide/arrow-left-right'
 import XIcon from 'virtual:icons/lucide/x'
 import InfoIcon from 'virtual:icons/lucide/info'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
@@ -113,6 +113,7 @@ let {
   hasLocation = true,
   hideDisplayAddress = false,
   splitColumns = false,
+  independentScroll = false,
   translations = $bindable(false),
   hasAvailableParts = $bindable(true),
   minimumEditorWidth = $bindable(560),
@@ -142,6 +143,7 @@ let {
   hasLocation?: boolean
   hideDisplayAddress?: boolean
   splitColumns?: boolean
+  independentScroll?: boolean
   translations?: boolean
   hasAvailableParts?: boolean
   minimumEditorWidth?: number
@@ -205,7 +207,6 @@ onDestroy(() => {
  */
 async function addField(field: EditableAddressField): Promise<void> {
   addedFields = [...addedFields, field]
-  if (field === 'streetName' && !isLookupLoading) onLookup?.()
   if (field !== 'buildingNumberExpression' || !onSuggestStreetNumber) return
   const request = ++numberRequest
   const key = suggestionKey
@@ -779,7 +780,34 @@ async function translatePart(source: Locale): Promise<void> {
   }
   onChange(next)
 }
+/** Resolve the localized block order, retaining the existing default for each language.
+ * @param locale Address language. @returns Whether the type precedes the reference.
+ */
+function blockTypeFirst(locale: LocaleKey): boolean {
+  const block = getAddressPresentationLocale(address, locale)
+  return (
+    block.blockTypeBeforeNumber === true ||
+    (block.blockTypeBeforeNumber == null && locale === 'en')
+  )
+}
 </script>
+
+{#snippet blockTypeSelect(locale: LocaleKey)}
+  {@const block = getAddressPresentationLocale(address, locale)}
+  <SelectField
+    contentClass="bg-panel! text-foreground! [&_*]:text-foreground!"
+    triggerAttrs={{ 'aria-label': m.address_block_type() }}
+    triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
+    class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
+    isEditing={true}
+    items={ADDRESS_BLOCK_TYPES.map(code => ({
+      value: code,
+      label: addressBlockTypeLabel(code, locale),
+    }))}
+    value={String(block.blockType || 'block')}
+    onValueChange={type => chooseLocalizedType('blockExpression', locale, String(type))}
+  />
+{/snippet}
 
 {#snippet fieldAction(
   field: EditableAddressField,
@@ -927,7 +955,7 @@ async function translatePart(source: Locale): Promise<void> {
     </fieldset>
   {/if}
   {#if canAddAccessHint || canAddAccessibility}
-    <fieldset class="min-w-0">
+    <fieldset class="min-w-0" class:mt-3={addableAddressParts.length > 0}>
       <legend class="text-muted-foreground mb-4 text-sm">
         {m.address_describe_accessibility()}
       </legend>
@@ -956,13 +984,20 @@ async function translatePart(source: Locale): Promise<void> {
 {/snippet}
 
 {#if splitColumns && isEditing}
-  {#if hasAvailableParts && !partsOpen}
+  <div
+    class="relative flex min-w-0 flex-col {independentScroll ? 'min-h-0' : ''}"
+    class:hidden={!hasAvailableParts}
+  >
     <button
+      inert={partsOpen}
+      aria-hidden={partsOpen}
       type="button"
       aria-label={m.address_parts_show()}
       data-tooltip={m.address_parts_show()}
       aria-expanded="false"
-      class="border-border bg-panel text-muted-foreground hover:text-primary sticky top-5 my-5 flex w-8 flex-col items-center gap-3 self-start rounded-md border py-3"
+      class="border-border bg-panel text-muted-foreground hover:text-primary absolute top-5 left-0 flex w-8 flex-col items-center gap-3 self-start rounded-md border py-3 transition-[opacity,transform,visibility] duration-200 motion-reduce:transition-none {partsOpen
+        ? 'invisible -translate-x-2 opacity-0'
+        : 'visible translate-x-0 opacity-100'}"
       onclick={onToggleParts}
     >
       <PanelLeftIcon class="size-4" />
@@ -974,28 +1009,32 @@ async function translatePart(source: Locale): Promise<void> {
           Number(canAddAccessibility)}</span
       >
     </button>
-  {:else}
     <div
-      class="min-w-0 {partsOverlay
+      class="flex min-w-0 flex-col {independentScroll
+        ? 'min-h-0'
+        : ''} transition-[opacity,transform,visibility] duration-250 ease-out motion-reduce:transition-none {partsOpen
+        ? 'visible flex-1 translate-x-0 opacity-100'
+        : 'invisible absolute inset-x-0 top-0 -translate-x-3 opacity-0'} {partsOverlay
         ? 'z-30 overflow-visible'
         : 'border-border/60 bg-muted/20 -ml-6 overflow-clip border-r pl-6'} {hasAvailableParts
         ? ''
         : 'hidden'}"
-      inert={!hasAvailableParts}
-      aria-hidden={!hasAvailableParts}
+      inert={!hasAvailableParts || !partsOpen}
+      aria-hidden={!hasAvailableParts || !partsOpen}
     >
-      <!-- Reveal fixed-width content through the expanding grid track without rewrapping its buttons.
-       Let its full height size the shared editor row; the containing panel owns scrolling. -->
+      <!-- Keep the sidebar text stable while its track expands; bounded editors scroll each pane independently. -->
       <section
-        class="flex min-w-0 flex-col gap-6 {partsOverlay
+        class="flex min-w-0 flex-col gap-4 {independentScroll
+          ? 'min-h-0 overflow-y-auto overscroll-contain'
+          : ''} {partsOverlay
           ? 'absolute left-0 top-3 z-30 w-80 rounded-lg border border-border bg-panel p-4 shadow-lg'
-          : 'h-full w-80 px-4 pt-5'} transition-[transform,opacity] duration-250 motion-reduce:transition-none {hasAvailableParts
+          : 'w-80 flex-1 pr-4 pl-2 pt-2'} transition-[transform,opacity] duration-250 motion-reduce:transition-none {hasAvailableParts
           ? 'translate-x-0 opacity-100'
           : '-translate-x-full opacity-0'}"
         aria-label={m.feature_address_title()}
         data-address-additions
       >
-        <div class="space-y-6">
+        <div class="shrink-0 space-y-1">
           <div class="flex min-h-10 items-center justify-between gap-2">
             <h2 class="text-lg font-semibold">{m.feature_address_title()}</h2>
             {#if onToggleParts}
@@ -1014,24 +1053,29 @@ async function translatePart(source: Locale): Promise<void> {
           {@render addDetails()}
         </div>
         {#if address.association}
-          <div
-            class="sticky bottom-0 mt-auto shrink-0 bg-[color-mix(in_oklab,var(--color-muted)_20%,var(--color-panel))] py-5"
-          >
+          <!-- Keep metadata in flow: short panels scroll it below the controls instead of covering them. -->
+          <div class="mt-auto shrink-0 py-5">
             <LocationAssociationStatus value={address.association} />
           </div>
         {/if}
       </section>
     </div>
-  {/if}
+  </div>
 {/if}
 
 <section
   use:measureEditorMinimum={`${visibleFields.join(',')}:${getStructuredAddressType(address, 'floorExpression')}:${getStructuredAddressType(address, 'unitExpression')}:${getLocaleKey()}`}
-  class="min-w-0 space-y-6 {splitColumns && isEditing ? 'py-5' : ''}"
+  class="min-w-0 space-y-4 {independentScroll
+    ? 'min-h-0 overflow-y-auto overscroll-contain'
+    : ''} {splitColumns && isEditing ? 'pt-2 pb-5' : ''}"
   aria-label={splitColumns ? m.feature_location_title() : m.feature_address_title()}
   data-address-details
 >
-  <div class="flex flex-wrap items-center justify-between gap-2">
+  <div
+    class="flex flex-wrap items-center justify-between gap-2 {splitColumns && isEditing
+      ? 'mb-2!'
+      : ''}"
+  >
     <h2 class="text-lg font-semibold">
       {splitColumns ? m.feature_location_title() : m.feature_address_title()}
     </h2>
@@ -1129,17 +1173,19 @@ async function translatePart(source: Locale): Promise<void> {
       </div>
     {/each}
   {:else}
-    <div class="grid grid-cols-6 items-start gap-x-4 gap-y-3">
+    <div class="grid grid-cols-6 items-start gap-x-4 gap-y-6">
       {@render identityFields?.(translations)}
       {#if hideDisplayAddress && translations}
         <fieldset
           transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
-          class="col-span-6 min-w-0 space-y-4 pb-3"
+          class="@container col-span-6 min-w-0"
         >
           <legend class="sr-only">
             {m.feature_address_formattedAddress()}
           </legend>
-          <div class="grid min-w-0 grid-cols-1 items-start gap-4">
+          <div
+            class="grid min-w-0 grid-cols-1 items-start gap-x-6 gap-y-1 @min-[40rem]:grid-cols-2"
+          >
             {#each locales.filter(locale => locale !== getLocaleKey()) as locale}
               <AddressDisplayField
                 {locationKind}
@@ -1148,6 +1194,7 @@ async function translatePart(source: Locale): Promise<void> {
                 {locale}
                 {isEditing}
                 showLocale={true}
+                compact={true}
                 scrollWhenConstrained={true}
                 {onChange}
               />
@@ -1158,7 +1205,7 @@ async function translatePart(source: Locale): Promise<void> {
       {#each visibleGroups as { fields: group, title }, groupIndex (group[0])}
         <div
           class="col-span-6 min-w-0 {groupIndex || (hideDisplayAddress && translations)
-            ? 'border-t border-border/40 pt-3'
+            ? 'border-t border-border/40 pt-6'
             : ''}"
         >
           {#if title}
@@ -1418,29 +1465,8 @@ async function translatePart(source: Locale): Promise<void> {
                             </div>
                           {/if}
                         {:else}
-                          {#if field === 'blockExpression'}
-                            {@const block = getAddressPresentationLocale(
-                              address,
-                              locale,
-                            )}
-                            <SelectField
-                              contentClass="bg-panel! text-foreground! [&_*]:text-foreground!"
-                              triggerAttrs={{ 'aria-label': m.address_block_type() }}
-                              triggerClass="h-12 min-h-12 w-full! gap-2 rounded-md bg-panel! text-foreground! [&_*]:text-foreground! px-2"
-                              class={String.raw`w-full shrink-0 gap-0! [&_.bits-form\_\_label]:hidden`}
-                              isEditing={true}
-                              items={ADDRESS_BLOCK_TYPES.map(code => ({
-                                value: code,
-                                label: addressBlockTypeLabel(code, locale),
-                              }))}
-                              value={String(block.blockType || 'block')}
-                              onValueChange={type =>
-                                chooseLocalizedType(
-                                  'blockExpression',
-                                  locale,
-                                  String(type),
-                                )}
-                            />
+                          {#if field === 'blockExpression' && blockTypeFirst(locale)}
+                            {@render blockTypeSelect(locale)}
                           {/if}
                           {#if field === 'phaseExpression'}
                             <SelectField
@@ -1798,39 +1824,29 @@ async function translatePart(source: Locale): Promise<void> {
                               address,
                               locale,
                             )}
+                            {#if !blockTypeFirst(locale)}
+                              {@render blockTypeSelect(locale)}
+                            {/if}
                             <SimpleTooltip>
                               {#snippet trigger()}
-                                <label
-                                  class="flex h-10 shrink-0 items-center gap-2 px-1"
-                                  ><input
-                                    type="checkbox"
-                                    aria-label={m.address_block_type_first()}
-                                    checked={block.blockTypeBeforeNumber === true ||
-                                      (block.blockTypeBeforeNumber == null &&
-                                        locale === 'en')}
-                                    onchange={event =>
-                                      onChange(
-                                        setAddressBlock(
-                                          address,
-                                          locale,
-                                          String(block.blockType || 'block'),
-                                          String(block.blockRef || ''),
-                                          event.currentTarget.checked,
-                                        ),
-                                      )}
-                                  ><span
-                                    use:fitAddressCaption={m.address_block_type_first(
-                                      {},
-                                      { locale: ADDRESS_LOCALES[locale] },
+                                <button
+                                  type="button"
+                                  aria-label={m.address_block_type_first()}
+                                  aria-pressed={blockTypeFirst(locale)}
+                                  class="text-muted-foreground hover:bg-primary/10 hover:text-primary focus-visible:outline-primary flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
+                                  onclick={() =>
+                                    onChange(
+                                      setAddressBlock(
+                                        address,
+                                        locale,
+                                        String(block.blockType || 'block'),
+                                        String(block.blockRef || ''),
+                                        !blockTypeFirst(locale),
+                                      ),
                                     )}
-                                    data-block-order-caption
-                                    class="text-muted-foreground text-xs whitespace-nowrap"
-                                    >{m.address_block_type_first(
-                                      {},
-                                      { locale: ADDRESS_LOCALES[locale] },
-                                    )}</span
-                                  ></label
                                 >
+                                  <SwapIcon class="size-4" aria-hidden="true" />
+                                </button>
                               {/snippet}
                               {m.address_block_type_first_help(
                                 {},

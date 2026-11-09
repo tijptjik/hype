@@ -31,7 +31,7 @@
   "address_phase_type_stage": "階段",
   "address_phase_type_named": "名稱",
   "address_floor_type_inferred": "已選擇「{type}」，此欄只保留編號。",
-  "address_block_type_first_help": "勾選時類型放在編號之前（座A）；取消勾選時放在之後（A座）。",
+  "address_block_type_first_help": "交換類型與編號的次序：座A 或 A座。",
   "address_parts_show": "顯示地址部分",
   "address_parts_hide": "隱藏地址部分",
   "address_divisions_show": "顯示區劃",

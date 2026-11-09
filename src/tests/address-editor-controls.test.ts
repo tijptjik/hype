@@ -582,7 +582,7 @@ it.each(['', '71'])(
   },
 )
 
-it('looks for nearby streets when adding the street-name part', async () => {
+it('adds Street name inline and only looks up addresses on explicit request', async () => {
   const address = emptyFeatureAddress()
   address.overrides.en = {
     premisesName: 'Pretty Garden',
@@ -595,11 +595,15 @@ it('looks for nearby streets when adding the street-name part', async () => {
     onLookup,
   })
   await fireEvent.click(view.getByRole('button', { name: 'Street name' }))
-  expect(onLookup).toHaveBeenCalledExactlyOnceWith()
+  expect(onLookup).not.toHaveBeenCalled()
   expect(view.getByRole('combobox', { name: 'Street name' })).toBeTruthy()
   expect(
     (view.getByRole('textbox', { name: 'Street number' }) as HTMLInputElement).value,
   ).toBe('71')
+  await fireEvent.click(
+    view.getByRole('button', { name: 'Lookup Address', exact: true }),
+  )
+  expect(onLookup).toHaveBeenCalledExactlyOnceWith()
 })
 
 it('keeps the lookup label stable and swaps the search icon for a spinner while loading', async () => {
@@ -655,4 +659,36 @@ it('translates empty Part languages from the single control beside its heading',
     expect(view.getByDisplayValue('zh-hans: Backdoor')).toBeInTheDocument()
   })
   expect(view.getByDisplayValue('Backdoor')).toBeInTheDocument()
+})
+
+it('swaps the block inputs and composed address with the order button', async () => {
+  const { setAddressBlock } = await import('#lib/addresses/addressExpressions.js')
+  const initialAddress = setAddressBlock(
+    emptyFeatureAddress(),
+    'en',
+    'block',
+    'A',
+    true,
+  )
+  const view = render(FormFixture, { initialAddress })
+  const swap = view.getByRole('button', { name: 'Type before number' })
+  const reference = view.getByRole('textbox', { name: 'Block', exact: true })
+  const type = () => view.getByRole('combobox', { name: 'Block type' })
+  expect(swap).toHaveAttribute('aria-pressed', 'true')
+  expect(
+    type().compareDocumentPosition(reference) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
+  await fireEvent.click(swap)
+  expect(swap).toHaveAttribute('aria-pressed', 'false')
+  expect(
+    reference.compareDocumentPosition(type()) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
+  expect(
+    view.getByRole('textbox', { name: 'Display address', exact: true }),
+  ).toHaveValue('A Blk')
+  await fireEvent.click(swap)
+  expect(swap).toHaveAttribute('aria-pressed', 'true')
+  expect(
+    type().compareDocumentPosition(reference) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
 })

@@ -192,6 +192,15 @@ $effect(() => {
     cancelled = true
   }
 })
+// Lookup results retain their shared scroll surface; the three-column editor owns separate panes.
+const independentScroll = $derived(
+  fixedMap &&
+    isEditing &&
+    showAddressDetails &&
+    !hideDetails &&
+    !candidates.length &&
+    !streetCandidates.length,
+)
 let copiedCoordinates = $state(false)
 let toolbarWidth = $state(0)
 // Surface geometry accounts for open panels; standalone editors use their measured bar.
@@ -630,7 +639,7 @@ $effect(() => {
 />
 <div
   class="select-none [&_input]:select-text [&_textarea]:select-text {fixedMap
-    ? hideDetails
+    ? hideDetails || independentScroll
       ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
       : 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain'
     : ''}"
@@ -804,14 +813,17 @@ $effect(() => {
         ? `${hasAvailableParts ? `${openPanels.parts ? sidePanelWidth : collapsedPanelWidth}px ` : ''}minmax(0, 1fr)${showDivisions ? ` ${openPanels.divisions ? sidePanelWidth : collapsedPanelWidth}px` : ''}`
         : undefined}
       style:column-gap={isEditing && showAddressDetails ? `${columnGap}px` : undefined}
-      class="relative grid w-full min-w-0 max-w-full items-stretch gap-y-8 overflow-visible border-t border-border/60 px-6 transition-[grid-template-columns] duration-250 motion-reduce:transition-none {isEditing &&
+      class="relative grid w-full min-w-0 max-w-full items-stretch gap-y-8 overflow-visible border-t border-border/60 px-6 transition-[grid-template-columns] duration-250 ease-out motion-reduce:transition-none {isEditing &&
       showAddressDetails
-        ? 'min-h-120 flex-1'
+        ? independentScroll
+          ? 'min-h-0 flex-1 grid-rows-[minmax(0,1fr)]'
+          : 'min-h-120 flex-1'
         : 'py-5 lg:grid-cols-2 lg:gap-x-10'}"
       data-address-editor-layout
     >
       {#if showAddressDetails}
         <AddressDetails
+          {independentScroll}
           {onBuildingNameBlur}
           {onSuggestStreetNumber}
           suggestionKey={JSON.stringify([
@@ -849,22 +861,30 @@ $effect(() => {
         />
       {/if}
       {#if showDivisions}
+        {@const panelOpen =
+          !isEditing ||
+          !showAddressDetails ||
+          openPanels.divisions ||
+          overlayPanel === 'divisions'}
         <div
-          class="min-w-0 {isEditing && showAddressDetails && openPanels.divisions
-            ? 'border-border/60 bg-muted/20 -mr-6 border-l px-4 py-5 pr-6'
-            : 'py-5'}"
+          class="relative flex min-w-0 flex-col {independentScroll
+            ? 'min-h-0'
+            : ''} {isEditing && showAddressDetails && overlayPanel !== 'divisions'
+            ? '-mr-6 overflow-clip pr-6'
+            : ''}"
           data-address-divisions-panel
         >
-          {#if isEditing &&
-            showAddressDetails &&
-            !openPanels.divisions &&
-            overlayPanel !== 'divisions'}
+          {#if isEditing && showAddressDetails}
             <button
               type="button"
+              inert={panelOpen}
+              aria-hidden={panelOpen}
               aria-label={m.address_divisions_show()}
               data-tooltip={m.address_divisions_show()}
               aria-expanded="false"
-              class="border-border bg-panel text-muted-foreground hover:text-primary flex w-8 flex-col items-center gap-3 rounded-md border py-3"
+              class="border-border bg-panel text-muted-foreground hover:text-primary absolute top-5 right-0 flex w-8 flex-col items-center gap-3 rounded-md border py-3 transition-[opacity,transform,visibility] duration-200 motion-reduce:transition-none {panelOpen
+                ? 'invisible translate-x-2 opacity-0'
+                : 'visible flex-1 translate-x-0 opacity-100'}"
               onclick={() => togglePanel('divisions')}
             >
               <PanelRightIcon class="size-4" />
@@ -873,14 +893,20 @@ $effect(() => {
               >
             </button>
           {/if}
+          <!-- Keep the resolved geography mounted and its text width stable while the track expands. -->
           <div
-            class={!openPanels.divisions && overlayPanel === 'divisions'
+            class="{independentScroll
+              ? 'min-h-0 overflow-y-auto overscroll-contain'
+              : ''} transition-[opacity,transform,visibility] duration-250 ease-out motion-reduce:transition-none {panelOpen
+              ? 'visible flex-1 translate-x-0 opacity-100'
+              : 'invisible absolute top-5 right-0 translate-x-3 opacity-0'} {!openPanels.divisions &&
+            overlayPanel === 'divisions'
               ? 'border-border bg-panel absolute top-3 right-0 z-30 w-72 rounded-lg border p-3 shadow-lg'
-              : ''}
-            hidden={isEditing &&
-              showAddressDetails &&
-              !openPanels.divisions &&
-              overlayPanel !== 'divisions'}
+              : isEditing && showAddressDetails
+                ? 'border-border/60 bg-muted/20 -mr-6 w-86 border-l px-4 pt-2 pb-5 pr-6'
+                : ''}"
+            inert={!panelOpen}
+            aria-hidden={!panelOpen}
           >
             <AddressDivisions
               sidebar={isEditing && showAddressDetails}
