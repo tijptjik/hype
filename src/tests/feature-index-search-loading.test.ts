@@ -17,7 +17,8 @@ const section = (start: string, end: string) =>
   route.slice(route.indexOf(start), route.indexOf(end, route.indexOf(start)))
 const source = `
 function create(getFeatureIndexPage) {
-  const adminCtx = { featureHasMore: false, featurePageError: null, view: {
+  let sharedCount = $state(null);
+  const adminCtx = { rememberFeatureIndexCount: count => { sharedCount = count; }, featureHasMore: false, featurePageError: null, view: {
     isSuperAdmin: () => true, scope: { prisms: {} },
     filters: { sorting: { feature: {} }, viewFilters: { feature: {} } }, resources: { queryMeta: {} }
   } };
@@ -44,7 +45,7 @@ function create(getFeatureIndexPage) {
     search: value => { normalizedTextQuery = value; debouncedRemoteQuery = value; },
     scope: value => { searchSignature = value; },
     retry: () => { searchRetry++; },
-    state: () => ({ count: matchingCount, countLoading: matchingCountLoading, ids: remoteMatchesCurrentQuery ? remoteMatchedEntities.map(row => row.id) : [], pending: remotePending, loadingMore: remoteLoadingMore, complete: indexComplete, hasMore: indexHasMore, canLoadMore: indexCanLoadMore, error: remotePageError })
+    state: () => ({ sharedCount, count: matchingCount, countLoading: matchingCountLoading, ids: remoteMatchesCurrentQuery ? remoteMatchedEntities.map(row => row.id) : [], pending: remotePending, loadingMore: remoteLoadingMore, complete: indexComplete, hasMore: indexHasMore, canLoadMore: indexCanLoadMore, error: remotePageError })
   };
 }
 `
@@ -278,13 +279,18 @@ it('replaces the count for an empty search and rejects late counts from older fi
   await settle()
   expect(state.state()).toMatchObject({
     count: 489,
+    sharedCount: 489,
     countLoading: false,
     ids: ['current'],
   })
   expect(request.mock.calls[1][0].includeCount).toBe(false)
   old.resolve({ ...page(['obsolete']), totalCount: 999 })
   await settle()
-  expect(state.state()).toMatchObject({ count: 489, ids: ['current'] })
+  expect(state.state()).toMatchObject({
+    count: 489,
+    sharedCount: 489,
+    ids: ['current'],
+  })
 })
 
 it('retains the exact count while fetching continuation rows without recounting', async () => {
@@ -296,7 +302,11 @@ it('retains the exact count while fetching continuation rows without recounting'
   await settle()
   await state.more()
   expect(request.mock.calls[1][0].includeCount).toBe(false)
-  expect(state.state()).toMatchObject({ count: 489, ids: ['first', 'next'] })
+  expect(state.state()).toMatchObject({
+    count: 489,
+    sharedCount: 489,
+    ids: ['first', 'next'],
+  })
 })
 
 it('shows the first rows while an independent count is still pending', async () => {
@@ -311,6 +321,7 @@ it('shows the first rows while an independent count is still pending', async () 
     pending: false,
     countLoading: true,
     count: null,
+    sharedCount: null,
   })
   count.resolve({ ...page([]), totalCount: 84 })
   await settle()
@@ -318,5 +329,6 @@ it('shows the first rows while an independent count is still pending', async () 
     ids: ['visible'],
     countLoading: false,
     count: 84,
+    sharedCount: 84,
   })
 })
