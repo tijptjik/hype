@@ -7,7 +7,10 @@ import { prefersReducedMotion } from 'svelte/motion'
 import { locationSyncMode } from '#lib/locations/associationSync.js'
 import LocationSyncSelect from './LocationSyncSelect.svelte'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
-import { searchBuildingNamesPage } from '#lib/locations/buildingSearch.js'
+import {
+  searchBuildingNames,
+  searchBuildingNamesPage,
+} from '#lib/locations/buildingSearch.js'
 import { groupDraftSearchResults } from '#lib/locations/draftSearchGroups.js'
 import { createDraftSearchFilter } from '#lib/locations/draftSearchFilter.js'
 import { hasPlaceSearchCategory } from '#lib/locations/placeSearchFilters.js'
@@ -43,6 +46,10 @@ import {
   GeocodeRequestError,
 } from '#lib/api/external/geocoding.js'
 // ADDRESS
+import {
+  loadAddressNames,
+  structurePlaceAddress,
+} from '#lib/addresses/nameCatalogue.js'
 import {
   ADDRESS_LOCALES,
   getAddressDisplay,
@@ -214,7 +221,7 @@ let resultsElement: HTMLElement | undefined = $state()
 let includeShops = $state(true)
 let includeAddresses = $state(true)
 let includeBuildings = $state(true)
-const searchBuildings = $derived(includeBuildings && findMode === 'search')
+const searchBuildings = $derived(includeBuildings)
 const hasPlaceCategory = $derived(hasPlaceSearchCategory(filters))
 const searchAddresses = $derived(includeAddresses && !hasPlaceCategory)
 let subsetBackButton: HTMLButtonElement | undefined = $state()
@@ -331,6 +338,7 @@ let placesPartial = $state(false)
 let placesLimited = $state(false)
 let addressesFailed = $state(false)
 let buildingsFailed = $state(false)
+let buildingsLimited = $state(false)
 let hovered = $state<string | null>(null)
 let focusedResult = $state<string | null>(null)
 const highlightedResult = $derived(hovered ?? focusedResult)
@@ -385,6 +393,7 @@ let searched = $state(false)
 let timer: ReturnType<typeof setTimeout> | undefined
 let version = 0
 let addressController: AbortController | undefined
+let buildingAddressController: AbortController | undefined
 let addressPaging = $state<DraftLocationSearchProgress['addressPaging']>(null)
 let addressLoadingMore = $state(false)
 let addressPageError = $state<'failed' | 'expired' | null>(null)
@@ -397,6 +406,18 @@ let moreErrors = $state<
 
 $effect(() => {
   if (active && focusRequest && input) void tick().then(() => input?.focus())
+})
+// Fence pending providers when the editor closes without discarding an accepted selection.
+$effect(() => {
+  if (active) return
+  untrack(() => {
+    version++
+    buildingAddressController?.abort()
+    addressController?.abort()
+    clearTimeout(timer)
+    pendingKinds = new Set()
+    loading = false
+  })
 })
 let consumedSearchRequest = 0
 $effect(() => {
@@ -454,6 +475,7 @@ function schedule(retainMatches = false, runSearch = true): void {
   expandedGroup = null
   version++
   cachedKinds = new Set()
+  buildingAddressController?.abort()
   addressController?.abort()
   // Keep keystrokes cheap; filter the retained snapshot in cancellable background batches.
   if (retainMatches && query.trim() && !nearbyMode) void filterMatches(version, query)
@@ -463,6 +485,7 @@ function schedule(retainMatches = false, runSearch = true): void {
   placesLimited = false
   addressesFailed = false
   buildingsFailed = false
+  buildingsLimited = false
   searched = false
   loading = runSearch && canSearch
   pendingKinds = new Set(loading ? textSearchKinds : [])
@@ -497,7 +520,7 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
         (kind === 'establishment'
           ? includeShops
           : kind === 'building'
-            ? searchBuildings && !nearby
+            ? searchBuildings
             : searchAddresses),
     ),
   )
@@ -529,6 +552,7 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
     moreLoading.building = false
     moreErrors.building = null
     buildingsFailed = false
+    buildingsLimited = false
   }
   if (!onlyKind) searched = false
   // Replace only the responding provider; other matching rows remain usable while pending.
@@ -548,9 +572,68 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
     loading = pendingKinds.size > 0
     searched = true
   }
+  if (nearby && requestedKinds.has('building')) {
+    buildingAddressController?.abort()
+    buildingAddressController = new AbortController()
+  }
+  const reverse =
+    nearby &&
+    coordinates &&
+    (requestedKinds.has('building') || requestedKinds.has('address'))
+      ? geocodeAddressCandidates(
+          { lng: coordinates[0], lat: coordinates[1] },
+          {
+            signal: requestedKinds.has('building')
+              ? buildingAddressController?.signal
+              : addressController?.signal,
+            maxDistance: radius,
+            limit: 50,
+            candidateCoordinates: true,
+          },
+        )
+      : null
+  // Building discovery uses names extracted from map addresses, constrained to the same circle.
+  const nearbyBuildings = async () => {
+    const candidates = await reverse!
+    const names = new Set(
+      candidates.flatMap(item => {
+        const address = item.addressMeta.address
+        if (!address) return []
+        const fields = getAddressLocale(address, getLocaleKey())
+        return typeof fields.buildingName === 'string' && fields.buildingName.trim()
+          ? [fields.buildingName.trim()]
+          : []
+      }),
+    )
+    if (!isCurrent('building')) return { rows: [], total: 0, nextCursor: null }
+    if (names.size > 12) buildingsLimited = true
+    const found = await Promise.allSettled(
+      [...names].slice(0, 12).map(name =>
+        searchBuildingNames(name, getLocaleKey(), () => isCurrent('building'), {
+          coordinates,
+          maxDistance: radius,
+          candidateLimit: 30,
+          onLimited: () => {
+            if (isCurrent('building')) buildingsLimited = true
+          },
+        }),
+      ),
+    )
+    if (isCurrent('building') && found.some(result => result.status === 'rejected'))
+      buildingsFailed = true
+    const unique = new Map(
+      found
+        .flatMap(result => (result.status === 'fulfilled' ? result.value : []))
+        .map(row => [row.id, row]),
+    )
+    return { rows: [...unique.values()], total: unique.size, nextCursor: null }
+  }
   await Promise.allSettled([
     requestedKinds.has('building')
-      ? searchBuildingNamesPage(q, getLocaleKey(), () => isCurrent('building'))
+      ? (nearby
+          ? nearbyBuildings()
+          : searchBuildingNamesPage(q, getLocaleKey(), () => isCurrent('building'))
+        )
           .then(page => {
             if (!isCurrent('building')) return
             buildingPaging = {
@@ -598,17 +681,7 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
       : Promise.resolve(),
     requestedKinds.has('address')
       ? (nearby
-          ? geocodeAddressCandidates(
-              nearby && coordinates
-                ? { lng: coordinates[0], lat: coordinates[1] }
-                : { address: q },
-              {
-                signal: addressController!.signal,
-                ...(nearby
-                  ? { maxDistance: radius, limit: 50, candidateCoordinates: true }
-                  : {}),
-              },
-            ).then(rows => ({
+          ? reverse!.then(rows => ({
               rows,
               nextCursor: null,
               total: rows.length,
@@ -930,6 +1003,7 @@ export function restoreProgress(progress: DraftLocationSearchProgress | null): v
   invalidateAssociationLookup()
   version++
   cachedKinds = new Set()
+  buildingAddressController?.abort()
   addressController?.abort()
   clearTimeout(timer)
   timer = undefined
@@ -1048,6 +1122,7 @@ function choose(result: Result): void {
   filtersOpen = false
   version++
   cachedKinds = new Set()
+  buildingAddressController?.abort()
   addressController?.abort()
   clearTimeout(timer)
   timer = undefined
@@ -1274,6 +1349,7 @@ export function backToResults(): void {
   const scrollTop = previousScrollTop
   version++
   cachedKinds = new Set()
+  buildingAddressController?.abort()
   addressController?.abort()
   addressController = new AbortController()
   moreLoading = { establishment: false, building: false }
@@ -1370,6 +1446,7 @@ onDestroy(() => {
   onFilterPanelChange?.(undefined)
   version++
   cachedKinds = new Set()
+  buildingAddressController?.abort()
   addressController?.abort()
   clearTimeout(timer)
   timer = undefined
@@ -1535,7 +1612,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 ? includeShops
                 : kind === 'address'
                   ? includeAddresses
-                  : includeBuildings && findMode === 'search'}
+                  : includeBuildings}
             {@const label =
               kind === 'establishment'
                 ? m.feature_search_shops()
@@ -1548,10 +1625,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               aria-label={label}
               aria-pressed={enabled}
               aria-busy={pendingKinds.has(kind)}
-              data-tooltip={kind === 'building' && findMode === 'pin'
-                ? m.feature_search_buildings_name_only()
-                : label}
-              disabled={kind === 'building' && findMode === 'pin'}
+              data-tooltip={label}
               onclick={() => {
                 const wasEnabled = enabled
                 if (kind === 'establishment') {
@@ -1927,6 +2001,9 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       {#if placesLimited && searched && !placePaging?.nextCursor}
         <p role="status" class="py-2 text-sm">{m.feature_start_places_limited()}</p>
       {/if}
+      {#if buildingsLimited && searched}
+        <p role="status" class="py-2 text-sm">{m.feature_search_buildings_limited()}</p>
+      {/if}
       {#if buildingsFailed && searched}
         <p role="status" class="py-2 text-sm">{m.feature_search_buildings_failed()}</p>
       {/if}
@@ -2104,6 +2181,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
           !placesLimited &&
           !addressesFailed &&
           !buildingsFailed &&
+          !buildingsLimited &&
           !placePaging?.nextCursor &&
           !buildingPaging?.nextCursor &&
           !addressPaging?.nextCursor}

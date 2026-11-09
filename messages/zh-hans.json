@@ -1962,6 +1962,7 @@
   "building_choose_address": "选择地址",
   "building_address_candidates_help": "这些地址点位于建筑物范围内。请选择适用的地址。",
   "feature_search_buildings_name_only": "目前只可按名称搜索建筑物。",
+  "feature_search_buildings_limited": "部分附近建筑物候选项目未能显示。请缩小范围或按建筑物名称搜索。",
   "feature_search_buildings_failed": "建筑物搜索暂时无法使用。请重试。",
   "feature_search_nameless_establishment": "未命名场所",
   "feature_search_nameless_building": "未命名建筑物",

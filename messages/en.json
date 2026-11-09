@@ -1962,6 +1962,7 @@
   "building_choose_address": "Choose an address",
   "building_address_candidates_help": "These address points fall inside the building footprint. Choose the address that applies.",
   "feature_search_buildings_name_only": "Buildings can currently be searched by name.",
+  "feature_search_buildings_limited": "Some nearby building candidates could not be shown. Narrow the radius or search by building name.",
   "feature_search_buildings_failed": "Building search is unavailable. Please retry.",
   "feature_search_nameless_establishment": "Nameless Establishment",
   "feature_search_nameless_building": "Nameless Building",

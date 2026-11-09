@@ -2958,3 +2958,45 @@ it('returns from the accepted editor to its proposal before returning to results
   await fireEvent.click(await screen.findByRole('button', { name: 'Back to results' }))
   expect(onBack).toHaveBeenCalledOnce()
 })
+
+it('derives nearby buildings from reverse addresses and retains successful building providers', async () => {
+  const address = emptyFeatureAddress()
+  address.overrides.en = { buildingName: 'Por Mee Factory Building' }
+  const other = emptyFeatureAddress()
+  other.overrides.en = { buildingName: 'Unavailable Tower' }
+  mocks.addresses.mockResolvedValue([
+    { addressMeta: { address } },
+    { addressMeta: { address: other } },
+  ])
+  mocks.nearby.mockResolvedValue({ rows: [], partial: false })
+  mocks.buildings.mockImplementation(async name => {
+    if (name === 'Unavailable Tower') throw Error('unavailable')
+    return [
+      {
+        id: 'por-mee',
+        kind: 'building',
+        names: { en: 'Por Mee Factory Building' },
+        address,
+      },
+    ]
+  })
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    coordinates: [114.152, 22.34],
+    hasPin: true,
+    searchRequest: { id: 1, mode: 'pin', query: '' },
+    onSelect: vi.fn(),
+  })
+  await waitFor(() =>
+    expect(mocks.buildings).toHaveBeenCalledWith(
+      'Por Mee Factory Building',
+      'en',
+      expect.any(Function),
+      expect.objectContaining({ coordinates: [114.152, 22.34], maxDistance: 300 }),
+    ),
+  )
+  expect(
+    await screen.findByRole('button', { name: /Por Mee Factory Building/ }),
+  ).toBeTruthy()
+})
