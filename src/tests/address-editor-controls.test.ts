@@ -422,7 +422,7 @@ it('does not mark Multilingual for an unchanged unlocked source display', () => 
   ).toBeNull()
 })
 
-it('shows the Chinese street in the picker when a catalogue override copied English', async () => {
+it('shows each street locale as stored instead of converting another locale', async () => {
   const address = emptyFeatureAddress()
   address.overrides = {
     en: { streetName: 'Hing Fong Road' },
@@ -431,8 +431,8 @@ it('shows the Chinese street in the picker when a catalogue override copied Engl
   }
   const view = render(Fixture, { initialAddress: address })
   await fireEvent.click(view.getByRole('button', { name: /Multilingual/ }))
-  expect(view.getByRole('button', { name: 'Replace: 興芳路' })).toBeTruthy()
-  expect(view.queryByRole('button', { name: 'Replace: HING FONG ROAD' })).toBeNull()
+  expect(view.getByRole('button', { name: 'Replace: HING FONG ROAD' })).toBeTruthy()
+  expect(view.queryByRole('button', { name: 'Replace: 興芳路' })).toBeNull()
 })
 
 it('shows a warning after retained translations when the new name has no translations', async () => {

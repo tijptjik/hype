@@ -28,7 +28,11 @@ export function addressComponentValue(
             '',
         )
       : formatUnit(address.unitDetails, locale)
-  const values = getAddressPresentationLocale(address, locale)
+  // Editable names expose missing translations instead of filling them from another script.
+  const values =
+    field === 'streetName' || field === 'buildingName' || field === 'premisesName'
+      ? getAddressLocale(address, locale)
+      : getAddressPresentationLocale(address, locale)
   if (typeof values[field] === 'string' && values[field]) {
     const value = values[field] as string
     return field === 'streetName'
