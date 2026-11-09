@@ -92,6 +92,8 @@ let {
   onAssociationSpaceNeeded,
   onReturnToResults,
   onSelectionStart,
+  buildingAssociationRequest,
+  onBuildingAssociationRequestConsumed,
 }: {
   address: FeatureAddress
   onAssociationSelected?: (
@@ -101,6 +103,13 @@ let {
   onAssociationSpaceNeeded?: (overflow: number) => void
   onReturnToResults?: () => void
   onSelectionStart?: () => void
+  buildingAssociationRequest?: {
+    requestId: number
+    source: NonNullable<DraftLocationSearchResult['buildingSource']>
+    address: FeatureAddress
+    names: Record<string, string>
+  } | null
+  onBuildingAssociationRequestConsumed?: (requestId: number) => void
   onAssociationPending?: (pending: boolean) => void
   onAddressSelected: (address: FeatureAddress) => void
   featureName?: string
@@ -350,6 +359,28 @@ function cancelDiscovery(): void {
   discoveryUnavailable = []
   discoveryMode = 'idle'
 }
+
+let consumedBuildingAssociationRequest = 0
+$effect(() => {
+  const request = buildingAssociationRequest
+  if (
+    !request ||
+    request.requestId === consumedBuildingAssociationRequest ||
+    !isEditing
+  )
+    return
+  consumedBuildingAssociationRequest = request.requestId
+  cancelDiscovery()
+  associationOrigin = {
+    id: `building:${request.source.id}:${request.source.addressId ?? ''}`,
+    kind: 'building',
+    localKind: 'building',
+    names: request.names,
+    address: request.address,
+    buildingSource: request.source,
+  }
+  onBuildingAssociationRequestConsumed?.(request.requestId)
+})
 
 // Leaving edit mode discards discovery UI, never the accepted Feature address.
 $effect(() => {

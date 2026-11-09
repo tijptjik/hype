@@ -797,3 +797,15 @@ it('fills missing street locales when a provider address opens without requiring
     load.mockRestore()
   }
 })
+
+it('clears one building language without restoring its previous name', async () => {
+  const initialAddress = setAddressName(emptyFeatureAddress(), 'buildingName', {
+    id: 'building',
+    names: { en: 'Test Building', 'zh-hant': '測試大廈' },
+    divisionCodes: [],
+  })
+  const view = render(FormFixture, { initialAddress, translations: true })
+  await fireEvent.click(view.getByRole('button', { name: 'Clear: Test Building · EN' }))
+  expect(view.queryByRole('button', { name: 'Replace: Test Building' })).toBeNull()
+  expect(view.getByRole('button', { name: 'Replace: 測試大廈' })).toBeInTheDocument()
+})

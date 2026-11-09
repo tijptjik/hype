@@ -30,6 +30,10 @@ import {
   FeatureLocationOverridesSchema,
   LocationFactsSchema,
 } from '#lib/locations/validation.js'
+import {
+  BuildingSourceSchema,
+  type BuildingSource,
+} from '#lib/locations/buildingSource.js'
 // OWNERSHIP
 import { locationOwnerForProject } from './locationScope'
 // TYPES
@@ -153,6 +157,7 @@ export type AcceptedFeatureLocation = {
   kind: LocationKind
   sourceReference: LocationSourceReference | null
   state: 'linked' | 'unresolved' | 'manual'
+  buildingSource?: BuildingSource
   factsRevisionId: string
   locationRevisionId: string
   factsOrganisationRevision: string | null
@@ -171,7 +176,8 @@ export type AcceptedFeatureLocation = {
  * @param featureId Authorized Feature identity.
  * @param projectId Persisted project scope from the authorization probe.
  * @returns Accepted projected values, or null for unlinked/private-incompatible Locations.
- * @remarks Raw source payloads and other projects' Feature records are never returned.
+ * @remarks Only the validated building catalogue reference is projected from source
+ * provenance; raw payloads and other Features are never returned.
  */
 export async function getAcceptedFeatureLocation(
   db: Database,
@@ -200,6 +206,15 @@ export async function getAcceptedFeatureLocation(
       membershipRevisionIds: featureLocation.membershipRevisionIds,
       placementOverrides: featureLocation.placementOverrides,
       acceptedGeometry: featureLocation.acceptedGeometry,
+      buildingSourceId: sql<
+        string | null
+      >`json_extract(${acceptedLocation.rawSource}, '$.buildingSource.id')`,
+      buildingSourceRelease: sql<
+        string | null
+      >`json_extract(${acceptedLocation.rawSource}, '$.buildingSource.release')`,
+      buildingSourceAddressId: sql<
+        string | null
+      >`json_extract(${acceptedLocation.rawSource}, '$.buildingSource.addressId')`,
       facts: acceptedFacts.facts,
       location: acceptedLocation.facts,
       overrides: featureLocation.overrides,
@@ -239,7 +254,21 @@ export async function getAcceptedFeatureLocation(
     )
     .get()
   if (!row || row.state === 'redirect') return null
-  const { facts, location, overrides, acceptancePolicy, ...identity } = row
+  const {
+    facts,
+    location,
+    overrides,
+    acceptancePolicy,
+    buildingSourceId,
+    buildingSourceRelease,
+    buildingSourceAddressId,
+    ...identity
+  } = row
+  const buildingSource = BuildingSourceSchema.safeParse({
+    id: buildingSourceId,
+    release: buildingSourceRelease,
+    ...(buildingSourceAddressId ? { addressId: buildingSourceAddressId } : {}),
+  })
   const effective = resolveFeatureLocation(
     LocationFactsSchema.parse(facts),
     LocationFactsSchema.parse(location).location,
@@ -263,6 +292,7 @@ export async function getAcceptedFeatureLocation(
   }
   return {
     ...identity,
+    ...(buildingSource.success ? { buildingSource: buildingSource.data } : {}),
     nameMode: acceptancePolicy?.nameMode === 'independent' ? 'independent' : 'inherit',
     sourceReference: locationSourceReference(row.ssId),
     state: row.state,

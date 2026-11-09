@@ -40,6 +40,7 @@ import type { AddressName } from '#lib/addresses/nameCatalogue.js'
 import { addressNameLabel } from '#lib/addresses/nameSearch.js'
 import type { AddressDivision } from '#lib/addresses/divisions.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
+import type { BuildingSource } from '#lib/locations/buildingSource.js'
 
 let hasAvailableParts = $state(true)
 const responsive = getResponsiveCtx()
@@ -47,6 +48,10 @@ const surfaceLayout = getSurfaceLayoutCtx()
 
 let {
   address,
+  activeBuildingSource,
+  activeLocationNames,
+  isLocationReplacementDraft = false,
+  onMakeBuildingActive,
   translations = $bindable(false),
   onBuildingNameBlur,
   onSuggestStreetNumber,
@@ -94,6 +99,14 @@ let {
   onChange,
 }: {
   address: FeatureAddress
+  activeBuildingSource?: BuildingSource
+  activeLocationNames?: Record<string, string>
+  isLocationReplacementDraft?: boolean
+  onMakeBuildingActive?: (selection: {
+    source: BuildingSource
+    address: FeatureAddress
+    names: Record<string, string>
+  }) => void
   translations?: boolean
   onBuildingNameBlur?: () => void
   onSuggestStreetNumber?: () => Promise<string | null>
@@ -826,6 +839,10 @@ $effect(() => {
     >
       {#if showAddressDetails}
         <AddressDetails
+          {activeBuildingSource}
+          {activeLocationNames}
+          {isLocationReplacementDraft}
+          {onMakeBuildingActive}
           {independentScroll}
           {onBuildingNameBlur}
           {onSuggestStreetNumber}

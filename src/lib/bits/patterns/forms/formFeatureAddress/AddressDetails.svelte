@@ -34,6 +34,7 @@ import {
   loadAddressNames,
   setAddressName,
 } from '#lib/addresses/nameCatalogue.js'
+import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
 import AddressDisplayField from './AddressDisplayField.svelte'
 import { ADDRESS_BLOCK_TYPES } from '@saanseoi/address/content'
 import AddressBlocks from './AddressBlocks.svelte'
@@ -48,6 +49,7 @@ import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
 import SwapIcon from 'virtual:icons/lucide/arrow-left-right'
 import XIcon from 'virtual:icons/lucide/x'
 import InfoIcon from 'virtual:icons/lucide/info'
+import WarningIcon from 'virtual:icons/lucide/triangle-alert'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import PanelLeftIcon from 'virtual:icons/lucide/panel-left'
 // ADDRESS
@@ -60,6 +62,7 @@ import {
 import type { AddressName } from '#lib/addresses/nameCatalogue.js'
 import {
   ADDRESS_LOCALES,
+  emptyFeatureAddress,
   getAddressDisplay,
   getAddressLocale,
   getAddressPresentationLocale,
@@ -98,12 +101,17 @@ import {
 import type { AccessibilityDraft } from '#lib/locations/accessibility.js'
 import type { AddressDivision } from '#lib/addresses/divisions.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
+import type { BuildingSource } from '#lib/locations/buildingSource.js'
 import type { EditableAddressField } from '#lib/addresses/addressExpressions.js'
 import type { Locale, LocaleKey } from '#lib/types.js'
 import type { FloorType } from '#lib/addresses/address3d.js'
 
 let {
   address,
+  activeBuildingSource,
+  activeLocationNames = {},
+  isLocationReplacementDraft = false,
+  onMakeBuildingActive,
   onBuildingNameBlur,
   onSuggestStreetNumber,
   suggestionKey = '',
@@ -134,6 +142,14 @@ let {
   onChange,
 }: {
   address: FeatureAddress
+  activeBuildingSource?: BuildingSource
+  activeLocationNames?: Record<string, string>
+  isLocationReplacementDraft?: boolean
+  onMakeBuildingActive?: (selection: {
+    source: BuildingSource
+    address: FeatureAddress
+    names: Record<string, string>
+  }) => void
   onBuildingNameBlur?: () => void
   onSuggestStreetNumber?: () => Promise<string | null>
   suggestionKey?: string
@@ -301,10 +317,92 @@ let buildingLoading = $state(false)
 let buildingFailed = $state(false)
 let buildingSelection = $state<{
   name: AddressName
+  source: BuildingSource
   details: BuildingDetails
   locale: LocaleKey
   streets: AddressName[]
+  mismatch: boolean
+  currentName: string
 } | null>(null)
+let selectedBuilding = $state<{
+  source: BuildingSource
+  address?: FeatureAddress
+  names: Record<string, string>
+  selectedName: string
+  mismatch: boolean
+  currentName: string
+  needsAddress: boolean
+} | null>(null)
+$effect(() => {
+  const selected = selectedBuilding
+  if (!selected?.mismatch) return
+  const sourceMatches = activeBuildingSource?.id === selected.source.id
+  const selectedNames = new Set(
+    Object.values(selected.names).map(normalizeNameSearch).filter(Boolean),
+  )
+  const draftNamesMatch =
+    isLocationReplacementDraft &&
+    Object.values(activeLocationNames)
+      .map(normalizeNameSearch)
+      .some(name => selectedNames.has(name))
+  if (sourceMatches || draftNamesMatch)
+    selectedBuilding = { ...selected, mismatch: false }
+})
+/** Compare a catalogue selection with retained identity, then fall back to current address names.
+ * @param record Selected catalogue name. @param details Release-pinned address candidates.
+ * @param previous Address before applying the selection.
+ * @returns Whether the available evidence says the selected building differs from this Location.
+ */
+function buildingDiffersFromLocation(
+  record: AddressName,
+  details: BuildingDetails,
+  previous: FeatureAddress,
+): boolean {
+  if (activeBuildingSource) return activeBuildingSource.id !== record.id
+  if (previous.source.address2dId && details.addresses.length)
+    return !details.addresses.some(
+      candidate => candidate.id === previous.source.address2dId,
+    )
+  const selectedNames = new Set(
+    [record.name, ...Object.values(record.names)]
+      .map(name => normalizeNameSearch(name ?? ''))
+      .filter(Boolean),
+  )
+  const previousBuildingNames = (Object.keys(ADDRESS_LOCALES) as LocaleKey[]).map(
+    locale => String(getAddressPresentationLocale(previous, locale).buildingName ?? ''),
+  )
+  const referenceNames = [
+    ...previousBuildingNames,
+    ...(locationKind === 'building' ? Object.values(activeLocationNames) : []),
+  ]
+    .map(normalizeNameSearch)
+    .filter(Boolean)
+  return Boolean(
+    referenceNames.length &&
+      selectedNames.size &&
+      !referenceNames.some(name => selectedNames.has(name)),
+  )
+}
+
+/** Choose the clearest available label for the Location named by the existing evidence.
+ * @param previous Address before selecting another building.
+ * @returns Current Location name for the warning.
+ */
+function currentBuildingLabel(previous: FeatureAddress): string {
+  const locale = ADDRESS_LOCALES[getLocaleKey()]
+  const locationName =
+    locationKind === 'building'
+      ? activeLocationNames[locale] || Object.values(activeLocationNames).find(Boolean)
+      : undefined
+  if (locationName) return locationName
+  return (
+    (Object.keys(ADDRESS_LOCALES) as LocaleKey[])
+      .map(key =>
+        String(getAddressPresentationLocale(previous, key).buildingName ?? '').trim(),
+      )
+      .find(Boolean) ?? ''
+  )
+}
 /** Resolve an explicit building choice without allowing a late response to replace a newer selection.
  * @param record Selected building, or null to clear. @param locale Active editor language.
  * @returns Completion after detail projection resolution.
@@ -315,8 +413,11 @@ async function selectBuilding(
 ): Promise<void> {
   const request = ++buildingRequest
   buildingSelection = null
+  selectedBuilding = null
   buildingFailed = false
-  buildingLoading = Boolean(record?.release)
+  const release = record?.release
+  buildingLoading = Boolean(release)
+  const previous = address
   const selectedAddress = setAddressName(address, 'buildingName', record)
   const selectionSignature = (draft: FeatureAddress): string =>
     JSON.stringify(
@@ -326,10 +427,10 @@ async function selectBuilding(
     )
   const expectedSelection = selectionSignature(selectedAddress)
   onChange(selectedAddress)
-  if (!record?.release) return
+  if (!record || !release) return
   try {
     const [details, streets] = await Promise.all([
-      loadBuildingDetails(record.id, record.release),
+      loadBuildingDetails(record.id, release),
       loadAddressNames('streets').catch(() => []),
     ])
     if (
@@ -337,13 +438,57 @@ async function selectBuilding(
       selectionSignature(address) !== expectedSelection
     )
       return
-    buildingSelection = { name: record, details, locale, streets }
+    const mismatch = buildingDiffersFromLocation(record, details, previous)
+    const currentName = currentBuildingLabel(previous)
+    const names = {
+      ...record.names,
+      ...(record.name ? { und: record.name } : {}),
+    }
+    const candidate = details.addresses.length === 1 ? details.addresses[0] : undefined
+    const source = {
+      id: record.id,
+      release,
+      ...(candidate ? { addressId: candidate.id } : {}),
+    }
+    buildingSelection = {
+      name: record,
+      source: { id: record.id, release },
+      details,
+      locale,
+      streets,
+      mismatch,
+      currentName,
+    }
+    selectedBuilding = {
+      source,
+      address:
+        details.addresses.length > 1
+          ? undefined
+          : fillBuildingDetails(
+              emptyFeatureAddress(),
+              record,
+              details,
+              candidate,
+              false,
+              locale,
+              streets,
+            ),
+      names,
+      selectedName:
+        record.names[ADDRESS_LOCALES[locale]] ||
+        record.name ||
+        Object.values(record.names).find(Boolean) ||
+        m.address_section_building(),
+      mismatch,
+      currentName,
+      needsAddress: details.addresses.length > 1,
+    }
     onChange(
       fillBuildingDetails(
         address,
         record,
         details,
-        details.addresses.length === 1 ? details.addresses[0] : undefined,
+        candidate,
         hasLocation,
         locale,
         streets,
@@ -360,19 +505,58 @@ async function selectBuilding(
  */
 function chooseBuildingAddress(candidate: BuildingAddressCandidate): void {
   if (!buildingSelection) return
-  const { name, details, locale, streets } = buildingSelection
-  onChange(
-    fillBuildingDetails(
-      address,
+  const { name, source, details, locale, streets, mismatch, currentName } =
+    buildingSelection
+  const next = fillBuildingDetails(
+    address,
+    name,
+    details,
+    candidate,
+    hasLocation,
+    locale,
+    streets,
+  )
+  onChange(next)
+  selectedBuilding = {
+    source: {
+      ...source,
+      addressId: candidate.id,
+    },
+    address: fillBuildingDetails(
+      emptyFeatureAddress(),
       name,
       details,
       candidate,
-      hasLocation,
+      false,
       locale,
       streets,
     ),
-  )
+    names: {
+      ...name.names,
+      ...(name.name ? { und: name.name } : {}),
+    },
+    selectedName:
+      name.names[ADDRESS_LOCALES[locale]] ||
+      name.name ||
+      Object.values(name.names).find(Boolean) ||
+      m.address_section_building(),
+    mismatch,
+    currentName,
+    needsAddress: false,
+  }
   buildingSelection = null
+}
+
+/** Start Location association from the resolved catalogue building selection.
+ * @returns Nothing; association review owns the next confirmation.
+ */
+function makeSelectedBuildingActive(): void {
+  if (!selectedBuilding?.address || selectedBuilding.needsAddress) return
+  onMakeBuildingActive?.({
+    source: selectedBuilding.source,
+    address: selectedBuilding.address,
+    names: selectedBuilding.names,
+  })
 }
 // Address selectors use the neutral menu surface, including the portalled viewport and options.
 const addressSelectContentClass =
@@ -1598,17 +1782,19 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                   : 'buildings'}
                                 {value}
                                 label={labels[field]}
-                                onClear={field === 'streetName'
-                                  ? () =>
-                                      onChange(
-                                        setAddressOverride(
-                                          address,
-                                          locale,
-                                          'streetName',
-                                          null,
-                                        ),
-                                      )
-                                  : undefined}
+                                onClear={() => {
+                                  if (field === 'buildingName') {
+                                    buildingRequest++
+                                    buildingLoading = false
+                                    buildingFailed = false
+                                    buildingSelection = null
+                                    selectedBuilding = null
+                                  }
+                                  translationGeneration++
+                                  onChange(
+                                    setAddressOverride(address, locale, field, null),
+                                  )
+                                }}
                                 onReplacingChange={replacing =>
                                   (replacingNames[`${locale}-${field}`] = replacing)}
                                 onSelect={record =>
@@ -2023,6 +2209,42 @@ function blockTypeFirst(locale: LocaleKey): boolean {
               {/if}
             {/each}
           </div>
+          {#if group.includes('buildingName') && selectedBuilding?.mismatch}
+            <div
+              role="status"
+              aria-live="polite"
+              class="border-warning/40 bg-warning/5 text-foreground mt-3 flex max-w-2xl items-start gap-3 rounded-lg border px-3 py-3 text-sm"
+            >
+              <WarningIcon
+                class="text-warning mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <div class="min-w-0 space-y-2">
+                <p class="font-medium">
+                  {m.address_building_location_mismatch({
+                    selected: selectedBuilding.selectedName,
+                    current: selectedBuilding.currentName || m.feature_location_title(),
+                  })}
+                </p>
+                <p class="text-muted-foreground">
+                  {m.address_building_mismatch_help()}
+                </p>
+                {#if selectedBuilding.needsAddress}
+                  <p class="text-muted-foreground">
+                    {m.address_building_choose_address_before_location()}
+                  </p>
+                {:else if onMakeBuildingActive}
+                  <Button
+                    text={m.address_building_make_location()}
+                    type="button"
+                    size="sm"
+                    style="outline"
+                    onClick={makeSelectedBuildingActive}
+                  />
+                {/if}
+              </div>
+            </div>
+          {/if}
         </div>
       {/each}
     </div>

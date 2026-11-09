@@ -827,6 +827,13 @@ let draftLocalKind = $state<
 >()
 let draftCatalogueBuilding = $state(false)
 let draftBuildingSource = $state<BuildingSource | undefined>()
+let buildingAssociationRequestSequence = 0
+let buildingAssociationRequest = $state<{
+  requestId: number
+  source: BuildingSource
+  address: FeatureAddress
+  names: Record<string, string>
+} | null>(null)
 let draftVisibilityOverride = $state<'shared' | 'exclusive' | undefined>()
 let organisationVisibilityReady = $state(false)
 let organisationVisibilityFailed = $state(false)
@@ -4567,6 +4574,20 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
                       )
                     }
                   : undefined}
+                activeBuildingSource={draftReplacementLocationId
+                  ? draftBuildingSource
+                  : (draftBuildingSource ??
+                    acceptedNameSource?.current?.buildingSource)}
+                activeLocationNames={profileLocationNames}
+                isLocationReplacementDraft={Boolean(draftReplacementLocationId)}
+                onMakeBuildingActive={currentFeatureId && !isNewFeatureRef
+                  ? selection => {
+                      buildingAssociationRequest = {
+                        ...selection,
+                        requestId: ++buildingAssociationRequestSequence,
+                      }
+                    }
+                  : undefined}
                 onSuggestStreetNumber={async () =>
                   featureCoordinates
                     ? ((await draftMapController?.getStreetNumberAt?.([
@@ -4719,6 +4740,11 @@ async function disconnectSavedLocation(expectedRevision: string): Promise<void> 
             {#if currentFeatureId && feature?.data?.modifiedAt}
               <FeatureLocationSection
                 organisationId={selectedProject?.organisationId}
+                {buildingAssociationRequest}
+                onBuildingAssociationRequestConsumed={requestId => {
+                  if (buildingAssociationRequest?.requestId === requestId)
+                    buildingAssociationRequest = null
+                }}
                 onAssociationPending={pending => (draftResolutionPending = pending)}
                 onAssociationSpaceNeeded={overflow =>
                   featureVisualSection?.makeRoom(overflow)}
