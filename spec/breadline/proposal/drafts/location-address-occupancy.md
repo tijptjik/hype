@@ -1183,6 +1183,62 @@ Placement service acceptance (Refs #194) runs on a private SQLite copy with an e
 Wrangler persistence path. Synthetic policy layers must not be written into the normal
 development collection; closed-layer creation remains gated by `showHistoricalLayers`.
 
+### Historical bookstore layer migration
+
+Application is currently blocked by cohort drift: the 2026-11-10 pre-commit rehearsal
+found 43 features, including new feature `XVcVi4bs_Lg4`. Review that record, refresh the
+fixture and regenerate/rehearse the migration before applying it. The guard correctly
+rejects the changed cohort.
+
+Migration `0207_former_bookstore_occupancy.sql` covers **all 42 reviewed features** in
+the Independent Bookstores Permanently Closed layer (`history:RfWMLs_jW6QJ`). The
+reviewed inventory and API evidence are in
+`scripts/locations/fixtures/former-bookstores.json`. An exact layer-cohort guard rejects
+added, removed or moved records before initial application; a prior five-record pilot
+receipt cannot count as completion of this whole-layer migration.
+
+Each record receives a Hype-local permanently closed establishment and a former
+occupancy with unknown dates. Intangible Feature status, map pins and old revisions
+remain intact. The migration appends attributed revisions and accepted placement
+references. It does not publish upstream establishments. Original address text is
+retained and parsed into components; contradictory old geocoder output is kept as
+historical evidence rather than adopted. Bare ambiguous tokens remain visible. The
+existing parser misses some literal floors/rooms (including `7F`, `7/Fl.` and
+`Room 1102`); reviewed corrections are recorded alongside parser evidence.
+
+The building API supports 32 links to 30 distinct host buildings. Shared hosts are
+reused rather than recreated. Apollo's user-confirmed Flat A, 2/F, Wing Lee Building,
+27–33 Kimberley Road is corroborated by the API's Apollo Book / 智源書局 address and
+position evidence and the named Kimberley Road building. No canonical address
+association is invented for that building, and the old Feature pin is not silently
+moved. Source absence does not imply demolition or nonexistence.
+
+The remaining ten establishments receive address-only former occupancy:
+
+| Establishment      | Host result                                                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clockwork Cat      | ambiguous: Two overlapping API building identities carry Por Mee Factory Building, 500 Castle Peak Road.                                                                                                                        |
+| Mellow Out         | ambiguous: Original text contains two different hosts: Tsun Win Factory Building, 60 Tsun Yip Street, and Wing Cheung Industrial Building, 109 How Ming Street. Occupancy order/dates are unknown; do not select or merge them. |
+| Living Bookspace   | ambiguous: Shun Fung Building at Fung Yau Street North maps to a named footprint and an additional footprint carrying 9 Fung Yau Street North. Shop 39 does not disambiguate.                                                   |
+| Trend Gallery      | ambiguous: Two overlapping API building identities carry Carnarvon Plaza, 20 Carnarvon Road.                                                                                                                                    |
+| Mount Zero Books   | not-found: No exact 6B Tai Ping Shan Street building/address association found. A 6 Tai Ping Shan Street candidate is not an exact match.                                                                                       |
+| Old Editor's Study | ambiguous: Block 13 and shopping-centre/podium footprints all carry City Garden, 233 Electric Road; the shop location cannot be assigned uniquely.                                                                              |
+| Evergreen          | not-found: No 214 Johnston Road building/address association found in this API export.                                                                                                                                          |
+| Urban Space        | ambiguous: Two overlapping API building identities carry On Ping Building, 47 Mei King Street.                                                                                                                                  |
+| Fu Tei Bookstore   | not-found: No exact New Academic Building at Lingnan University found. Campus buildings have current names, but no verified alias connects this historical label.                                                               |
+| Boxue Pavilion     | ambiguous: 55–69 Sai Yeung Choi Street South spans several distinct footprints; the original address does not select one.                                                                                                       |
+
+Lookups use release-pinned, SHA-256-verified API exports at
+`overture-2026-09-23.1-alpha-987bfb4ed339c25c`. API manifests and reviewed candidate
+records are retained in the fixture. Unnamed buildings use their own address as a label,
+not an invented building name.
+
+Generate SQL with `scripts/locations/prepare-former-bookstores.py`. Rehearse against a
+disposable database with `scripts/locations/test_former_bookstores.py`, then validate
+application contracts with `scripts/locations/verify-former-bookstores.ts`. Execute the
+SQL as one atomic migration. A complete successful changeset makes replay a no-op;
+conflicting source evidence or identity aborts the initial run.
+
 ### Building selection and multilingual address editing
 
 Selecting a building name is a draft edit. When its catalogue identity or address
