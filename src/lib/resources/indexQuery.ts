@@ -38,17 +38,33 @@ export type ResourceIndexType = 'organisation' | 'project' | 'layer' | 'hub'
 /** Match literal text in the same fields as the authoritative resource query.
  * @param row Loaded resource used for an immediate preview.
  * @param query Current search input.
- * @returns Whether its identity, code, domain or localized content contains the search.
+ * @returns Whether its identity, code, domain, localized content or ancestor names match.
  */
 export function matchesResourceIndexSearch(
-  row: { id: string; code?: string; domain?: string | null; i18n?: unknown },
+  row: {
+    id: string
+    code?: string
+    domain?: string | null
+    i18n?: unknown
+    project?: { i18n?: unknown; organisation?: { i18n?: unknown } | null } | null
+    organisation?: { i18n?: unknown } | null
+  },
   query = '',
 ): boolean {
   const needle = foldFeatureSearchText(query.trim())
   const localized = Object.values(
     (row.i18n ?? {}) as Record<string, Record<string, unknown>>,
   ).flatMap(value => [value.name, value.nameShort, value.description])
-  return [row.id, row.code, row.domain, ...localized].some(
+  const ancestorNames = [
+    row.project,
+    row.organisation,
+    row.project?.organisation,
+  ].flatMap(relation =>
+    Object.values(
+      (relation?.i18n ?? {}) as Record<string, Record<string, unknown>>,
+    ).flatMap(value => [value.name, value.nameShort]),
+  )
+  return [row.id, row.code, row.domain, ...localized, ...ancestorNames].some(
     value => typeof value === 'string' && foldFeatureSearchText(value).includes(needle),
   )
 }
