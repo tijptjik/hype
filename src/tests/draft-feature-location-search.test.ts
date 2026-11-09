@@ -15,6 +15,7 @@ Element.prototype.animate = () => ({ cancel() {} }) as Animation
 Element.prototype.getAnimations = () => []
 Element.prototype.scrollTo = () => {}
 vi.mock('svelte/transition', () => ({
+  fade: () => ({ duration: 0 }),
   fly: () => ({ duration: 0 }),
   slide: () => ({ duration: 0 }),
 }))
@@ -1426,7 +1427,9 @@ it('groups co-located Building alternatives and confirms a cached building marke
   const move = screen.getByRole('button', { name: /Building Position$/ })
   expect(move.getAttribute('aria-pressed')).toBe('true')
   await fireEvent.click(move)
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   expect(onResolutionPendingChange).toHaveBeenLastCalledWith(false)
   expect(onSelect).toHaveBeenLastCalledWith(
     expect.objectContaining({
@@ -1479,7 +1482,7 @@ it('cross-references a building absent from discovery results without accepting 
   )
   await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
   await fireEvent.click(screen.getByRole('radio', { name: 'Building' }))
-  await screen.findByText('Matching name and address · suggested Location')
+  await screen.findByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
   expect(mocks.buildings).toHaveBeenLastCalledWith(
     'Hollywood Building',
     'en',
@@ -1547,7 +1550,9 @@ it('offers an edited-name match on blur without accepting until the user confirm
   expect(onSelect).not.toHaveBeenCalled()
   await fireEvent.click(await screen.findByRole('button', { name: /Edited Building/ }))
   expect(onSelect).not.toHaveBeenCalled()
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   expect(onSelect).toHaveBeenCalledWith(
     expect.objectContaining({
       kind: 'building',

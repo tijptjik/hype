@@ -77,16 +77,25 @@ it('shows three evidence states, settles a resolving ring, and never changes the
       }),
   )
   render(Picker, { origin: origin(), search, onAccept: vi.fn(), onCancel: vi.fn() })
-  const premises = screen.getByRole('radio', { name: 'Complex' })
+  expect(screen.getByRole('status').textContent).toContain(
+    'Attempting to find more specific locations.',
+  )
+  const picker = document.querySelector('[data-location-association-picker]')!
+  expect(picker.classList.contains('hidden')).toBe(true)
+  const premises = screen.getByRole('radio', { name: 'Complex', hidden: true })
   expect(premises.getAttribute('data-evidence')).toBe('address')
   expect(
-    screen.getByRole('radio', { name: 'Building' }).getAttribute('data-evidence'),
+    screen
+      .getByRole('radio', { name: 'Building', hidden: true })
+      .getAttribute('data-evidence'),
   ).toBe('none')
   await waitFor(() => expect(search).toHaveBeenCalled())
   complete({
     candidates: [{ ...candidate('premises'), address: origin().address }],
     incomplete: false,
   })
+  await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+  expect(picker.classList.contains('hidden')).toBe(false)
   await waitFor(() => expect(premises.getAttribute('data-evidence')).toBe('location'))
   expect(
     screen.getByRole('radio', { name: 'Address' }).getAttribute('aria-checked'),
@@ -97,7 +106,9 @@ it('keeps address-only mode quiet and creates no establishment', async () => {
   const search = vi.fn().mockResolvedValue({ candidates: [], incomplete: false })
   const onAccept = vi.fn()
   render(Picker, { origin: origin(), search, onAccept, onCancel: vi.fn() })
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   expect(onAccept).toHaveBeenCalledWith(
     expect.objectContaining({
       localKind: 'address',
@@ -140,7 +151,9 @@ it('matches while typing without blur, reviews component choices and defaults to
       .getByRole('switch', { name: 'Use chosen address for Street name' })
       .getAttribute('aria-checked'),
   ).toBe('true')
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   const result = onAccept.mock.calls[0][0] as Result
   expect(result.identity).toEqual({ locationId: 'l', revisionId: 'r' })
   expect(result.address.coordinates).toEqual(candidate().address.coordinates)
@@ -154,7 +167,9 @@ it('allows a named custom premises after failed lookup and retains its retry sta
   render(Picker, { origin: origin(), search, onAccept, onCancel: vi.fn() })
   await fireEvent.click(screen.getByRole('radio', { name: 'Complex' }))
   await screen.findByText(/Some sources are unavailable/)
-  expect(screen.queryByRole('button', { name: 'Use Location' })).toBeNull()
+  expect(
+    screen.queryByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  ).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Create new complex' }))
   expect(onAccept.mock.calls[0][0]).toMatchObject({
     kind: 'premises',
@@ -192,7 +207,9 @@ it('allows a correction when both sources are wrong without losing the selected 
     .mockResolvedValue({ candidates: [candidate()], incomplete: false })
   render(Picker, { origin: origin(), search, onAccept, onCancel: vi.fn() })
   await fireEvent.click(screen.getByRole('radio', { name: 'Establishment' }))
-  expect(screen.queryByRole('button', { name: 'Use Location' })).toBeNull()
+  expect(
+    screen.queryByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  ).toBeNull()
   await fireEvent.click(
     await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
   )
@@ -204,10 +221,14 @@ it('allows a correction when both sources are wrong without losing the selected 
   expect(document.activeElement).toBe(correction)
   await fireEvent.input(correction, { target: { value: 'Correct Road' } })
   expect(
-    screen.getByRole('button', { name: 'Use Location' }).hasAttribute('disabled'),
+    screen
+      .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+      .hasAttribute('disabled'),
   ).toBe(true)
   await fireEvent.click(await screen.findByRole('option', { name: 'Correct Road' }))
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   const result = onAccept.mock.calls[0][0] as Result
   expect(result.identity).toEqual(candidate().identity)
   expect(getAddressLocale(result.address, 'en').streetName).toBe('Correct Road')
@@ -244,7 +265,9 @@ it.each(['location', 'original'] as const)(
     ).toBe('true')
     if (side === 'original')
       await fireEvent.click(screen.getByRole('button', { name: /Address Position$/ }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+    await fireEvent.click(
+      screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+    )
     const result = onAccept.mock.calls[0][0] as Result
     expect(result.address.coordinates).toEqual(
       (side === 'location' ? candidate() : origin()).address.coordinates,
@@ -252,6 +275,161 @@ it.each(['location', 'original'] as const)(
     expect(getAddressLocale(result.address, 'en').streetName).toBe('Hollywood Road')
   },
 )
+
+it('recentres the preview on each pin switch and direct position selection without accepting', async () => {
+  const onPreview = vi.fn()
+  const onAccept = vi.fn()
+  render(Picker, {
+    origin: origin(),
+    search: vi.fn().mockResolvedValue({ candidates: [candidate()], incomplete: false }),
+    onPreview,
+    onAccept,
+    onCancel: vi.fn(),
+  })
+  await fireEvent.click(screen.getByRole('radio', { name: 'Establishment' }))
+  await fireEvent.click(
+    await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
+  )
+  onPreview.mockClear()
+  const toggle = screen.getByRole('switch', { name: 'Use chosen address for Map pin' })
+  await fireEvent.click(toggle)
+  expect(onPreview.mock.lastCall?.[0].address.coordinates).toEqual(
+    origin().address.coordinates,
+  )
+  await fireEvent.click(toggle)
+  expect(onPreview.mock.lastCall?.[0].address.coordinates).toEqual(
+    candidate().address.coordinates,
+  )
+  await fireEvent.click(screen.getByRole('button', { name: /Address Position$/ }))
+  expect(onPreview.mock.lastCall?.[0].address.coordinates).toEqual(
+    origin().address.coordinates,
+  )
+  await fireEvent.click(screen.getByRole('button', { name: /Establishment Position$/ }))
+  expect(onPreview.mock.lastCall?.[0].address.coordinates).toEqual(
+    candidate().address.coordinates,
+  )
+  expect(onPreview).toHaveBeenCalledTimes(4)
+  expect(onPreview.mock.calls.every(([, preserveZoom]) => preserveZoom === true)).toBe(
+    true,
+  )
+  expect(onAccept).not.toHaveBeenCalled()
+})
+
+it.each(['original', 'location'] as const)(
+  'edits the %s pin as a custom location without mutating source evidence',
+  async side => {
+    const initial = origin()
+    const source = candidate()
+    const onAccept = vi.fn()
+    const onPreview = vi.fn()
+    const onMapCandidates = vi.fn()
+    render(Picker, {
+      origin: initial,
+      search: vi.fn().mockResolvedValue({ candidates: [source], incomplete: false }),
+      onAccept,
+      onPreview,
+      onMapCandidates,
+      onCancel: vi.fn(),
+    })
+    await fireEvent.click(screen.getByRole('radio', { name: 'Establishment' }))
+    await fireEvent.click(
+      await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
+    )
+    if (side === 'original')
+      await fireEvent.click(screen.getByRole('button', { name: /Address Position$/ }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    expect(onPreview.mock.lastCall?.[1]).toBe(true)
+    const markers = onMapCandidates.mock
+      .lastCall?.[0] as import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
+    const editable = markers.filter(row => row.onReposition)
+    expect(editable.map(row => row.id)).toEqual([
+      side === 'original' ? initial.id : source.id,
+    ])
+    editable[0].onReposition?.([114.16, 22.31])
+    await screen.findByRole('button', { name: /Custom position$/ })
+    await fireEvent.click(screen.getByRole('button', { name: /^Reset .* Position$/ }))
+    expect(onPreview.mock.lastCall?.[0].address.coordinates).toEqual(
+      side === 'original' ? initial.address.coordinates : source.address.coordinates,
+    )
+    expect(screen.queryByRole('button', { name: /Custom position$/ })).toBeNull()
+    expect(onAccept).not.toHaveBeenCalled()
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    const restoredMarkers = onMapCandidates.mock
+      .lastCall?.[0] as import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
+    restoredMarkers.find(row => row.onReposition)?.onReposition?.([114.16, 22.31])
+    await screen.findByRole('button', { name: /Custom position$/ })
+    await fireEvent.click(screen.getByRole('button', { name: 'Done', exact: true }))
+    expect(
+      onMapCandidates.mock.lastCall?.[0].some(
+        (row: { onReposition?: unknown }) => row.onReposition,
+      ),
+    ).toBe(false)
+    await fireEvent.click(
+      screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+    )
+    const result = onAccept.mock.lastCall?.[0] as Result
+    expect(result.address.coordinates).toEqual([114.16, 22.31])
+    expect(result.address.association?.mode).toBe('unlinked')
+    expect(result.address.association?.targetId).toBeUndefined()
+    expect(result.identity).toBeUndefined()
+    expect(result.source).toBeUndefined()
+    expect(result.buildingSource).toBeUndefined()
+    expect(initial.address.coordinates).toEqual(origin().address.coordinates)
+    expect(source.address.coordinates).toEqual(candidate().address.coordinates)
+  },
+)
+
+it('accepts the initial selection without candidate details or a repositioned pin', async () => {
+  const initial = origin()
+  const onAccept = vi.fn()
+  const onMapCandidates = vi.fn()
+  render(Picker, {
+    origin: initial,
+    search: vi.fn().mockResolvedValue({ candidates: [candidate()], incomplete: false }),
+    onAccept,
+    onMapCandidates,
+    onCancel: vi.fn(),
+  })
+  await fireEvent.click(screen.getByRole('radio', { name: 'Establishment' }))
+  await fireEvent.click(
+    await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
+  )
+  await screen.findByRole('button', { name: 'Use Recommended Location' })
+  await fireEvent.click(screen.getByRole('button', { name: /Address Position$/ }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+  const markers = onMapCandidates.mock
+    .lastCall?.[0] as import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
+  markers.find(row => row.onReposition)?.onReposition?.([114.16, 22.31])
+  await screen.findByRole('button', { name: /Custom position$/ })
+  await fireEvent.click(screen.getByRole('button', { name: 'Use Initial Selection' }))
+  expect(onAccept).toHaveBeenCalledExactlyOnceWith({
+    ...initial,
+    associationConfirmed: true,
+  })
+})
+
+it('reveals cached alternatives in the click update without a search or preview flight', async () => {
+  const search = vi
+    .fn()
+    .mockResolvedValue({ candidates: [candidate()], incomplete: false })
+  const onAccept = vi.fn()
+  const onPreview = vi.fn()
+  render(Picker, { origin: origin(), search, onAccept, onPreview, onCancel: vi.fn() })
+  await fireEvent.click(screen.getByRole('radio', { name: 'Establishment' }))
+  const alternative = await screen.findByRole('button', {
+    name: /Cafe.*Hollywood Road/,
+  })
+  await fireEvent.click(alternative)
+  const calls = search.mock.calls.length
+  const replace = screen.getByRole('button', { name: 'Change selection' })
+  onPreview.mockClear()
+  await fireEvent.click(replace)
+  expect(screen.getByRole('button', { name: /Cafe.*Hollywood Road/ })).toBe(alternative)
+  expect(onPreview).not.toHaveBeenCalled()
+  expect(search).toHaveBeenCalledTimes(calls)
+  expect(onAccept).not.toHaveBeenCalled()
+  expect(screen.queryByText('Loading alternatives…')).toBeNull()
+})
 
 it('switches an inline correction back to source evidence and resets marker choice on reselection', async () => {
   const onAccept = vi.fn()
@@ -283,7 +461,9 @@ it('switches an inline correction back to source evidence and resets marker choi
       .getByRole('switch', { name: 'Use chosen address for Map pin' })
       .getAttribute('aria-checked'),
   ).toBe('false')
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   const result = onAccept.mock.calls[0][0] as Result
   expect(result.address.coordinates).toEqual(candidate().address.coordinates)
   expect(getAddressLocale(result.address, 'en').streetName).toBe('Hollywood Road')
@@ -305,7 +485,7 @@ it('shows a proposal with metadata and name editing but no address editing', asy
   expect(
     screen.getByRole('button', { name: 'Change selection' }).textContent,
   ).toContain('Change')
-  expect(screen.queryByRole('button', { name: 'Edit address details' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Edit Details' })).toBeNull()
   expect(screen.queryByRole('switch')).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Establishment name' }))
   expect(screen.getByRole('textbox', { name: 'Establishment name' }).tagName).toBe(
@@ -400,7 +580,7 @@ it('publishes numbered nearby markers, highlights hover and focus, and reviews m
     ).highlighted,
   ).toBe(true)
   onMapCandidates.mock.lastCall?.[1]('second')
-  await screen.findByText('Candidate location')
+  await screen.findByRole('button', { name: 'Use Recommended Location' })
   expect(onAccept).not.toHaveBeenCalled()
   expect(
     screen.getByRole('button', { name: /Building Position$/ }).textContent,
@@ -437,7 +617,7 @@ it('keeps a provisional record immutable while searching and resets to its prese
     onAccept,
     onCancel: vi.fn(),
   })
-  await screen.findByRole('button', { name: 'Use Location' })
+  await screen.findByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
   expect(
     view.container.querySelector('[data-association-ghost]')?.textContent,
   ).toContain('My Courtyard')
@@ -453,13 +633,17 @@ it('keeps a provisional record immutable while searching and resets to its prese
   expect(
     view.container.querySelector('[data-association-ghost]')?.textContent,
   ).not.toContain('My Courtyard')
-  expect(screen.queryByRole('button', { name: 'Use Location' })).toBeNull()
+  expect(
+    screen.queryByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  ).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Reset search' }))
   expect(
     (screen.getByRole('textbox', { name: 'Establishment · Name' }) as HTMLInputElement)
       .value,
   ).toBe('My Courtyard')
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   expect(onAccept.mock.lastCall?.[0]).toMatchObject({
     names: { en: 'My Courtyard' },
     identity: local.identity,
@@ -589,9 +773,9 @@ it('edits establishment and building names in attached language fields and reset
   )
   expect(
     screen
-      .getByRole('button', { name: 'Collapse location types' })
+      .getByRole('button', { name: 'Expand location types' })
       .getAttribute('aria-expanded'),
-  ).toBe('true')
+  ).toBe('false')
   expect(screen.queryByRole('button', { name: 'Multilingual' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Establishment name' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
@@ -605,7 +789,7 @@ it('edits establishment and building names in attached language fields and reset
     screen.getByRole('textbox', { name: 'Establishment name · zh-hant' }),
     { target: { value: '我的咖啡店' } },
   )
-  await fireEvent.click(screen.getByRole('button', { name: 'Edit address details' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit Details' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Edit Building' }))
   await fireEvent.input(screen.getByRole('combobox', { name: 'Your Building' }), {
     target: { value: 'Custom Tower' },
@@ -619,7 +803,9 @@ it('edits establishment and building names in attached language fields and reset
     target: { value: 'Known' },
   })
   await fireEvent.click(await screen.findByRole('option', { name: 'Known Tower' }))
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   const result = onAccept.mock.lastCall![0] as Result
   expect(result.names).toMatchObject({
     en: 'My Cafe',
@@ -649,18 +835,24 @@ it('keeps custom buildings but rejects unselected street text until the correcti
     target: { value: 'Invented Street' },
   })
   expect(
-    screen.getByRole('button', { name: 'Use Location' }).hasAttribute('disabled'),
+    screen
+      .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+      .hasAttribute('disabled'),
   ).toBe(true)
   await fireEvent.click(screen.getByRole('button', { name: 'Reset Street name' }))
   expect(
-    screen.getByRole('button', { name: 'Use Location' }).hasAttribute('disabled'),
+    screen
+      .getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+      .hasAttribute('disabled'),
   ).toBe(false)
-  await fireEvent.click(screen.getByRole('button', { name: 'Edit address details' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit Details' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Edit Building' }))
   await fireEvent.input(screen.getByRole('combobox', { name: 'Your Building' }), {
     target: { value: 'Custom Tower' },
   })
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   const result = onAccept.mock.lastCall![0] as Result
   expect(getAddressLocale(result.address, 'en').buildingName).toBe('Custom Tower')
   expect(getAddressLocale(result.address, 'en').streetName).toBe('Hollywood Road')
@@ -699,7 +891,10 @@ it('does not carry name overrides into a different provisional identity', async 
     target: { value: 'Wrong for courtyard' },
   })
   await fireEvent.click(screen.getByRole('button', { name: 'Change selection' }))
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await screen.findByRole('textbox', { name: 'Establishment · Name' })
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   expect(onAccept.mock.lastCall![0].names).toEqual({ en: 'My Courtyard' })
 })
 
@@ -715,7 +910,7 @@ it('returns corrections to clickable text on blur and does not translate shared 
   await fireEvent.click(
     await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
   )
-  await fireEvent.click(screen.getByRole('button', { name: 'Edit address details' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit Details' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
   for (const group of ['number', 'floor', 'unit'])
     expect(
@@ -735,7 +930,9 @@ it('returns corrections to clickable text on blur and does not translate shared 
   const input = screen.getByRole('combobox', { name: 'Your Building' })
   await fireEvent.input(input, { target: { value: 'My Tower' } })
   await fireEvent.focusOut(input, {
-    relatedTarget: screen.getByRole('button', { name: 'Use Location' }),
+    relatedTarget: screen.getByRole('button', {
+      name: /^Use (?:Recommended Location|Location)$/,
+    }),
   })
   expect(screen.queryByRole('combobox', { name: 'Your Building' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Your Building' }).textContent).toContain(
@@ -770,7 +967,7 @@ it('accepts structured level and flat references with shared semantic types', as
   await fireEvent.click(
     await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
   )
-  await fireEvent.click(screen.getByRole('button', { name: 'Edit address details' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit Details' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Edit Level' }))
   await fireEvent.input(screen.getByRole('textbox', { name: 'Your Level' }), {
     target: { value: 'Basement 2' },
@@ -785,7 +982,9 @@ it('accepts structured level and flat references with shared semantic types', as
   expect(screen.getByRole('combobox', { name: 'Unit type' }).textContent).toContain(
     'Room',
   )
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   const result = onAccept.mock.lastCall![0] as Result
   expect(localAddressContent(result.address).unit).toMatchObject({
     floorType: 'B',
@@ -810,7 +1009,7 @@ it('accepts the proposal without comparing it to itself or changing its address'
   })
   await screen.findByText('Proposed location')
   expect(view.container.querySelector('[data-association-details]')).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Edit address details' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Edit Details' })).toBeNull()
   expect(screen.queryByRole('switch')).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Use' }))
   expect(onAccept.mock.lastCall?.[0].identity).toEqual(selected.identity)
@@ -847,13 +1046,17 @@ it('preselects a unique complete exact Building match with inferred styling and 
     onAccept,
     onCancel: vi.fn(),
   })
-  await screen.findByText('Matching name and address · suggested Location')
-  expect(
-    screen.getByRole('radio', { name: 'Building' }).getAttribute('aria-checked'),
-  ).toBe('true')
+  await screen.findByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
+  await waitFor(() =>
+    expect(
+      screen.getByRole('radio', { name: 'Building' }).getAttribute('aria-checked'),
+    ).toBe('true'),
+  )
   expect(screen.queryAllByRole('switch')).toHaveLength(0)
   expect(onAccept).not.toHaveBeenCalled()
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   expect(onAccept.mock.lastCall?.[0].buildingSource).toEqual(building.buildingSource)
 })
 
@@ -872,7 +1075,7 @@ it('keeps the selected Location available after reselect and retains inherited n
   })
   await fireEvent.click(screen.getByRole('button', { name: 'Change selection' }))
   await fireEvent.click(
-    await screen.findByRole('button', { name: /Cafe.*Hollywood Road.*Use/ }),
+    await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
   )
   await fireEvent.click(screen.getByRole('button', { name: 'Use' }))
   expect(onAccept.mock.lastCall?.[0].nameMode).toBe('inherit')
@@ -900,7 +1103,7 @@ it('hides empty source metadata differences and collapses unused parts without l
     await screen.findByRole('button', { name: /Cafe.*Hollywood Road/ }),
   )
   expect(view.container.querySelector('[data-address-group="block"]')).toBeNull()
-  await fireEvent.click(screen.getByRole('button', { name: 'Edit address details' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit Details' }))
   expect(view.container.querySelectorAll('[data-address-group="block"]')).toHaveLength(
     2,
   )
@@ -913,7 +1116,9 @@ it('hides empty source metadata differences and collapses unused parts without l
   )
   expect(view.container.querySelector('[data-address-group="block"]')).toBeNull()
   expect(screen.getByText('Side entrance')).toBeTruthy()
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   expect(getAddressLocale(onAccept.mock.lastCall![0].address, 'en').accessHint).toBe(
     'Side entrance',
   )
@@ -1045,7 +1250,7 @@ it('shows both identities, a partial attention gauge and original fallback for a
   ).toBe('true')
   await fireEvent.click(establishment)
   await fireEvent.click(
-    await screen.findByRole('button', { name: /Storybook Theater.*Use/ }),
+    await screen.findByRole('button', { name: /Storybook Theater/ }),
   )
   const headers = view.container.querySelector('[data-association-record-headers]')!
   expect(headers.textContent).toContain('Disney’s Storybook Theater')
@@ -1055,7 +1260,9 @@ it('shows both identities, a partial attention gauge and original fallback for a
       .getByRole('switch', { name: 'Use chosen address for Building' })
       .getAttribute('aria-checked'),
   ).toBe('true')
-  await fireEvent.click(screen.getByRole('button', { name: 'Use Location' }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
   expect(onAccept.mock.lastCall?.[0].source).toEqual(theatre.source)
   expect(getAddressLocale(onAccept.mock.lastCall?.[0].address, 'en').buildingName).toBe(
     'Disney’s Storybook Theater',

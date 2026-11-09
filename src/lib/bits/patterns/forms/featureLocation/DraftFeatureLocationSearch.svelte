@@ -103,7 +103,7 @@ let {
   currentNameMode?: Result['nameMode']
   focusRequest: number
   onUnlink?: () => void
-  onPreview?: (result: Result) => void
+  onPreview?: (result: Result, preserveZoom?: boolean) => void
   onAcceptedChange?: (accepted: boolean) => void
   onAssociationSpaceNeeded?: (overflow: number) => void
   onReturnToResults?: () => void
@@ -1840,9 +1840,10 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         search={searchAssociationCandidates}
         onAccept={acceptAssociation}
         onCancel={leaveAssociation}
-        onPreview={result => {
+        onPreview={(result, preserveZoom) => {
           associationPreview = result
-          onPreview?.(result)
+          if (preserveZoom) onPreview?.(result, true)
+          else onPreview?.(result)
         }}
       />
     {/key}

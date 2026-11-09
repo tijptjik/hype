@@ -1,7 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onMount, onDestroy, untrack, tick } from 'svelte'
-import { slide } from 'svelte/transition'
+import { fade, slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
@@ -105,7 +105,7 @@ let {
     select: (id: string) => void,
   ) => void
   onCancel: () => void
-  onPreview?: (result: Result) => void
+  onPreview?: (result: Result, preserveZoom?: boolean) => void
   markerNumberFor?: (result: Result) => number
 } = $props()
 const displayKinds = [...ASSOCIATION_KINDS].reverse()
@@ -137,11 +137,49 @@ let lookups = $state<Record<AssociationKind, AssociationLookup>>({
 let hoveredCandidate = $state<string | null>(null)
 let focusedCandidate = $state<string | null>(null)
 let matched = $state<Result | null>(null)
+const viewPhase = $derived(
+  kind === 'address' ? 'address' : matched ? 'review' : 'results',
+)
 let inferred = $state(false)
 let knownMatches = $state<Partial<Record<AssociationKind, Result>>>({})
 let userChoseKind = false
 let choices = $state<AddressChoices | null>(null)
 let moveMarker = $state(false)
+let changingSelection = $state(false)
+let editingPin = $state<string | null>(null)
+let customPins = $state<Record<string, [number, number]>>({})
+const selectedPin = $derived(moveMarker && matched ? matched : origin)
+/** Preview a draft pin without changing the source coordinates or camera zoom.
+ * @param result Reviewed source. @returns A preview with any authored pin position.
+ */
+function pinPreview(result: Result): Result {
+  return customPins[result.id]
+    ? { ...result, address: { ...result.address, coordinates: customPins[result.id] } }
+    : result
+}
+/** Switch the selected pin and leave drag mode.
+ * @param result Selected position. @returns Nothing.
+ */
+function selectPin(result: Result): void {
+  editingPin = null
+  onPreview?.(pinPreview(result), true)
+}
+/** Restore a pin's source coordinates without changing the selected position.
+ * @param result Position whose custom coordinates should be discarded.
+ * @returns Nothing.
+ */
+function resetPin(result: Result): void {
+  delete customPins[result.id]
+  if (editingPin === result.id) editingPin = null
+  onPreview?.(pinPreview(selectedPin), true)
+}
+/** Enable dragging only for the chosen pin, preserving the current camera zoom.
+ * @returns Nothing.
+ */
+function editPin(): void {
+  editingPin = editingPin === selectedPin.id ? null : selectedPin.id
+  if (editingPin) onPreview?.(pinPreview(selectedPin), true)
+}
 const initialCustom =
   initial.kind !== 'address' &&
   (initial.address.association?.mode === 'unlinked' ||
@@ -152,6 +190,7 @@ const initialCustom =
         !initial.buildingSource,
     ))
 let custom = $state(initialCustom)
+let initialSearchPending = $state(true)
 const prefilled = untrack(() => $state.snapshot(names))
 let provisional = $state<Partial<Record<AssociationKind, Result>>>(
   initialCustom
@@ -252,6 +291,13 @@ const differences = $derived(
     : [],
 )
 const comparingRecords = $derived(Boolean(matched && !sameRecord(origin, matched)))
+// Make room for merge details on entry without changing the saved discovery preference.
+$effect(() => {
+  if (comparingRecords) {
+    selectorExpanded = false
+    showLegend = false
+  }
+})
 const firstPresent = $derived(displayKinds.findIndex(value => present(value)))
 // Raw source differences can be metadata-only (for example an unused block type).
 // Keep used/corrected parts visible; empty display rows belong only in the expanded editor.
@@ -278,7 +324,8 @@ const numberValid = $derived(
   ),
 )
 const canAccept = $derived(
-  numberValid &&
+  !changingSelection &&
+    numberValid &&
     !Object.values(pendingInputs).some(Boolean) &&
     (!nameEdits || Object.values(reviewedNames).some(name => name.trim())) &&
     (kind === 'address' ||
@@ -305,7 +352,10 @@ const reviewedAddress = $derived(
 )
 const distance = $derived(
   matched?.address.coordinates && origin.address.coordinates
-    ? locationDistance(origin.address.coordinates, matched.address.coordinates)
+    ? locationDistance(
+        customPins[origin.id] ?? origin.address.coordinates,
+        customPins[matched.id] ?? matched.address.coordinates,
+      )
     : 0,
 )
 const visibleProvisional = $derived(
@@ -403,7 +453,14 @@ $effect(() => {
             id: row.id,
             kind: row.kind,
             number: associationMarkerNumber(row),
-            coordinates: row.address.coordinates,
+            coordinates: customPins[row.id] ?? row.address.coordinates,
+            ...(editingPin === row.id
+              ? {
+                  onReposition: (coordinates: [number, number]): void => {
+                    customPins[row.id] = coordinates
+                  },
+                }
+              : {}),
             ...(rows.some(candidate => candidate.id === row.id)
               ? { fitGroup: `association:${origin.id}:${kind}` }
               : {}),
@@ -607,6 +664,7 @@ const levelReviews: Partial<
 function selectKind(value: AssociationKind): void {
   // Reselecting the active level preserves its comparison and unsaved corrections.
   if (value === kind) return
+  editingPin = null
   discoveryLayoutVersion++
   levelReviews[kind] = $state.snapshot({
     matched,
@@ -655,6 +713,7 @@ function selectKind(value: AssociationKind): void {
 }
 /** Prepare a candidate comparison before association. @param row Explicitly selected candidate. @returns Nothing. */
 function compare(row: Result): void {
+  editingPin = null
   userChoseKind = true
   inferred = false
   if (row.id === provisional[kind]?.id) {
@@ -696,18 +755,33 @@ function compare(row: Result): void {
   onPreview?.(row)
 }
 /** Return to candidates without accepting or changing the original record.
- * @returns Nothing.
+ * @returns Completion after the results have rendered.
+ * @remarks Reveal cached candidates in the click update; do not delay their transition to paint a loading state.
  */
-function changeSelection(): void {
-  discoveryLayoutVersion++
-  matched = null
-  choices = null
-  edits = {}
-  unitEdits = {}
-  activeField = null
-  nameEdits = null
-  selectedStreet = null
-  onPreview?.(origin)
+async function changeSelection(): Promise<void> {
+  if (changingSelection) return
+  changingSelection = true
+  try {
+    editingPin = null
+    discoveryLayoutVersion++
+    matched = null
+    choices = null
+    edits = {}
+    unitEdits = {}
+    activeField = null
+    nameEdits = null
+    selectedStreet = null
+    // Publishing the alternatives fits the map; a separate preview flight would compete with it.
+    await tick()
+  } finally {
+    changingSelection = false
+  }
+}
+/** Keep the initial selection without applying candidate details or custom pin edits.
+ * @returns Nothing; persistence remains with the owner.
+ */
+function acceptInitialSelection(): void {
+  onAccept({ ...$state.snapshot(origin), associationConfirmed: true })
 }
 /** Accept one coherent association and reviewed address, leaving persistence to the owner.
  * @param manual Explicit address-only intent. @returns Nothing.
@@ -720,8 +794,13 @@ function accept(manual = false): void {
     target && choices
       ? $state.snapshot(reviewedAddress)
       : $state.snapshot(custom && target ? target.address : originalAddress)
+  const customPosition = manual ? undefined : customPins[selectedPin.id]
   const mode =
-    selectedKind === 'address' ? 'manual' : locationSyncMode(undefined, target ?? {})
+    selectedKind === 'address'
+      ? 'manual'
+      : customPosition
+        ? 'unlinked'
+        : locationSyncMode(undefined, target ?? {})
   const selectedNames =
     nameEdits && selectedKind === 'establishment'
       ? Object.fromEntries(
@@ -752,8 +831,9 @@ function accept(manual = false): void {
     kind: selectedKind,
     mode,
     names: selectedNames,
-    lookup:
-      mode === 'manual'
+    lookup: customPosition
+      ? 'not-checked'
+      : mode === 'manual'
         ? 'not-checked'
         : target && !custom
           ? 'matched'
@@ -761,20 +841,26 @@ function accept(manual = false): void {
             ? 'deferred'
             : lookups[selectedKind],
     checkedAt: new Date().toISOString(),
-    targetId: custom ? undefined : target?.id,
+    targetId: custom || customPosition ? undefined : target?.id,
   }
   if (target && moveMarker && target.address.coordinates)
     address.coordinates = target.address.coordinates
+  if (customPosition) address.coordinates = [...customPosition]
   onAccept({
-    id: target?.id ?? origin.id,
+    id: customPosition
+      ? `custom:${target?.id ?? origin.id}`
+      : (target?.id ?? origin.id),
     kind: selectedKind,
     names: selectedNames,
     address,
-    source: target?.source,
-    identity: target?.identity,
-    buildingSource: target?.buildingSource,
-    localKind: target?.source ? undefined : selectedKind,
-    nameMode: target && sameRecord(origin, target) ? origin.nameMode : 'independent',
+    source: customPosition ? undefined : target?.source,
+    identity: customPosition ? undefined : target?.identity,
+    buildingSource: customPosition ? undefined : target?.buildingSource,
+    localKind: !customPosition && target?.source ? undefined : selectedKind,
+    nameMode:
+      !customPosition && target && sameRecord(origin, target)
+        ? origin.nameMode
+        : 'independent',
     associationConfirmed: true,
   })
 }
@@ -871,6 +957,38 @@ function groupLabel(group: AddressChoiceGroup): string {
     access: m.feature_address_accessHint,
   }[group]()
 }
+/** Animate a view change without remounting the cached result controls.
+ * @param node Shared content panel. @param phase Initial view phase.
+ * @returns Action update and animation cleanup handlers.
+ */
+function animateView(
+  node: HTMLElement,
+  phase: string,
+): {
+  update: (next: string) => void
+  destroy: () => void
+} {
+  let current = phase
+  let animation: Animation | undefined
+  return {
+    update(next) {
+      if (next === current) return
+      current = next
+      animation?.cancel()
+      if (prefersReducedMotion.current || typeof node.animate !== 'function') return
+      animation = node.animate(
+        [
+          { opacity: 0, transform: 'translateY(6px)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ],
+        { duration: 180, easing: 'ease-out' },
+      )
+    },
+    destroy() {
+      animation?.cancel()
+    },
+  }
+}
 /** Balance selected-record details against the map using their intrinsic content height.
  * @param node Scroll viewport. @returns Observer cleanup; scrolling itself never requests a resize.
  */
@@ -878,6 +996,7 @@ function measureSpace(node: HTMLDivElement): { destroy: () => void } {
   if (typeof ResizeObserver === 'undefined') return { destroy() {} }
   let frame = 0
   let previousContent = ''
+  let previousRecord: string | undefined
   const content = node.firstElementChild
   const footer = node.nextElementSibling
   const observer = new ResizeObserver(() => {
@@ -885,6 +1004,10 @@ function measureSpace(node: HTMLDivElement): { destroy: () => void } {
     frame = requestAnimationFrame(() => {
       // Rebalance a changed view once; streaming candidate counts must not repeatedly shrink the map.
       if (!node.clientHeight || !node.clientWidth) return
+      if (matched?.id !== previousRecord) {
+        previousRecord = matched?.id
+        node.scrollTop = 0
+      }
       const currentFooter = node.nextElementSibling
       const signature = matched
         ? `${content?.getBoundingClientRect().height}:${node.clientWidth}:${currentFooter?.getBoundingClientRect().height}:${window.innerHeight}`
@@ -925,6 +1048,7 @@ onMount(() => {
   } catch {
     /* New users and unavailable storage keep the expanded guide. */
   }
+  const initialSearches: Promise<void>[] = []
   for (const value of ASSOCIATION_KINDS)
     if (
       value !== 'address' &&
@@ -932,7 +1056,11 @@ onMount(() => {
         (value === 'establishment' && origin.kind !== 'address') ||
         Object.keys(names[value]).length)
     )
-      void reconcile(value)
+      initialSearches.push(reconcile(value))
+  // Reveal suggestions only after all initial location levels have settled.
+  void Promise.all(initialSearches).finally(() => {
+    if (alive) initialSearchPending = false
+  })
   if (
     !initialCustom &&
     origin.kind === kind &&
@@ -967,7 +1095,9 @@ onDestroy(() => {
   <div
     data-address-choice={side}
     data-address-group={group}
-    class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-md p-2 {selected
+    class="grid min-w-0 items-start gap-2 rounded-md p-2 {side === 'original'
+      ? 'grid-cols-[minmax(0,1fr)_auto] text-right [&>svg]:order-last [&>div]:col-start-1 [&>div]:row-start-1 [&_button]:text-right'
+      : 'grid-cols-[auto_minmax(0,1fr)]'} {selected
       ? 'bg-muted/50 text-foreground'
       : 'text-muted-foreground'}"
   >
@@ -1065,9 +1195,9 @@ onDestroy(() => {
 {#snippet nameEditor(proposal: boolean = false)}
   {#if nameTarget}
     <section
-      class="grid min-w-0 items-start gap-3 {proposal
-        ? 'grid-cols-[auto_minmax(0,1fr)] rounded-xl border border-primary/25 bg-primary/5 p-5 shadow-sm sm:grid-cols-[auto_minmax(0,1fr)_auto]'
-        : 'grid-cols-1 rounded-md border border-primary/30 bg-primary/10 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]'}"
+      class="relative grid min-w-0 items-start {proposal
+        ? 'grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl border border-primary/25 bg-primary/5 p-5 shadow-sm sm:grid-cols-[auto_minmax(0,1fr)_auto]'
+        : 'grid-cols-[auto_minmax(0,1fr)] gap-1 rounded-md border border-primary/30 bg-primary/10 py-2 pr-10 pl-2 sm:gap-2 sm:pr-12 sm:pl-3'}"
       data-association-name
       data-association-selected-record={Boolean(matched)}
       data-association-proposal={proposal || undefined}
@@ -1075,13 +1205,13 @@ onDestroy(() => {
       <span
         class={proposal
           ? 'bg-primary/10 text-primary flex size-11 items-center justify-center rounded-xl'
-          : 'text-muted-foreground mt-1.5'}
+          : 'text-muted-foreground mt-0.5'}
         ><LocationIcon
           kind={nameTarget.kind}
           class={proposal ? 'size-6' : 'size-4'}
         /></span
       >
-      <div class="min-w-0 flex-1 space-y-2">
+      <div class="min-w-0 flex-1 {proposal ? 'space-y-2' : 'space-y-0.5'}">
         {#if proposal}
           <p class="text-primary text-[10px] font-semibold tracking-wide uppercase">
             {m.association_proposal()}
@@ -1127,8 +1257,8 @@ onDestroy(() => {
                 type="button"
                 aria-label={label}
                 data-association-value
-                class="relative min-h-8 w-full min-w-0 whitespace-normal break-words rounded border border-transparent py-1 pr-4 text-left font-semibold {proposal
-                  ? 'text-base sm:text-lg'
+                class="relative w-full min-w-0 whitespace-normal break-words rounded border border-transparent pr-4 text-left font-semibold {proposal
+                  ? 'min-h-8 py-1 text-base sm:text-lg'
                   : 'text-sm'} hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-primary"
                 onclick={event => {
                   nameEditHeight = event.currentTarget.getBoundingClientRect().height
@@ -1149,8 +1279,8 @@ onDestroy(() => {
               </button>
             {:else}
               <p
-                class="min-h-8 whitespace-normal break-words py-1 font-semibold {proposal
-                  ? 'text-base sm:text-lg'
+                class="whitespace-normal break-words font-semibold {proposal
+                  ? 'min-h-8 py-1 text-base sm:text-lg'
                   : 'text-sm'}"
               >
                 {value || Object.values(nameTarget.names).find(Boolean) || '—'}
@@ -1159,7 +1289,9 @@ onDestroy(() => {
           </div>
         {/each}
         <div
-          class="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+          class="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 {proposal
+            ? 'text-xs'
+            : 'text-[10px]'}"
         >
           <span>{locationKindLabel(kind)}</span>
           {#if proposal && nameTarget.taxonomyLabel}
@@ -1187,8 +1319,8 @@ onDestroy(() => {
       </div>
       <div
         class="{proposal
-          ? 'col-span-2'
-          : 'col-span-1'} flex flex-wrap items-center justify-end gap-2 pt-1 sm:col-span-1 sm:self-center"
+          ? 'col-span-2 flex flex-wrap items-center justify-end gap-2 pt-1 sm:col-span-1 sm:self-center'
+          : 'absolute top-1/2 right-2 -translate-y-1/2'}"
       >
         {#if proposal && matched}
           <button
@@ -1202,32 +1334,43 @@ onDestroy(() => {
           <button
             type="button"
             aria-label={m.association_change_selection()}
+            aria-busy={changingSelection}
+            disabled={changingSelection}
             class="border-secondary/40 bg-secondary/10 text-secondary hover:bg-secondary/20 focus-visible:outline-secondary inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium focus-visible:outline-2"
             onclick={changeSelection}
           >
-            <ReselectIcon class="size-4" />{m.association_change_action()}
+            {#if changingSelection}
+              <LoaderIcon class="size-4 motion-safe:animate-spin" aria-hidden="true" />
+            {:else}
+              <ReselectIcon class="size-4" />
+            {/if}
+            {changingSelection
+              ? m.association_loading_alternatives()
+              : m.association_change_action()}
           </button>
         {:else}
-          {#if inferred && matched}
-            <button
-              type="button"
-              disabled={!canAccept}
-              class="bg-primary focus-visible:outline-primary rounded-md px-3 py-2 text-xs font-medium text-white focus-visible:outline-2 disabled:opacity-40"
-              onclick={() => accept()}
-            >
-              {m.association_use_location()}
-            </button>
-          {/if}
           {#if matched}
             <SimpleTooltip triggerClass="shrink-0" triggerProps={{ tabindex: -1 }}>
               {#snippet trigger()}
                 <button
                   type="button"
                   aria-label={m.association_change_selection()}
-                  class="text-primary hover:bg-primary/10 focus-visible:outline-primary flex size-7 items-center justify-center rounded-full focus-visible:outline-2"
+                  aria-busy={changingSelection}
+                  disabled={changingSelection}
+                  class="text-primary hover:bg-primary/10 focus-visible:outline-primary flex size-8 items-center justify-center rounded focus-visible:outline-2"
                   onclick={changeSelection}
                 >
-                  <ReselectIcon class="size-4" />
+                  {#if changingSelection}
+                    <LoaderIcon
+                      class="size-4 motion-safe:animate-spin"
+                      aria-hidden="true"
+                    />
+                    <span class="sr-only" role="status"
+                      >{m.association_loading_alternatives()}</span
+                    >
+                  {:else}
+                    <ReselectIcon class="size-4" />
+                  {/if}
                 </button>
               {/snippet}
               {m.association_change_selection()}
@@ -1256,8 +1399,28 @@ onDestroy(() => {
   {/if}
 {/snippet}
 
+{#if initialSearchPending}
+  <section class="bg-panel flex min-h-0 flex-1 flex-col" aria-busy="true">
+    {#if showHeading}
+      <LocationAssociationHeading />
+    {/if}
+    <div
+      role="status"
+      class="text-muted-foreground flex min-h-40 flex-1 items-center justify-center gap-3 px-6 py-8 text-sm"
+    >
+      <LoaderIcon
+        aria-hidden="true"
+        class="text-primary size-5 shrink-0 motion-safe:animate-spin"
+      />
+      <span>{m.association_finding_specific()}</span>
+    </div>
+  </section>
+{/if}
 <section
-  class="bg-panel flex min-h-0 flex-1 flex-col overflow-hidden"
+  class={initialSearchPending
+    ? 'hidden'
+    : 'bg-panel flex min-h-0 flex-1 flex-col overflow-hidden'}
+  inert={initialSearchPending}
   data-location-association-picker
 >
   <div
@@ -1373,7 +1536,7 @@ onDestroy(() => {
                     <svg
                       aria-hidden="true"
                       viewBox="0 0 40 40"
-                      class="pointer-events-none absolute -inset-[7px] size-10 -rotate-90 text-emerald-400"
+                      class="pointer-events-none absolute top-1/2 left-1/2 size-11 -translate-x-1/2 -translate-y-1/2 -rotate-90 text-emerald-400"
                       data-match-strength={matchStrength(value)}
                     >
                       <circle
@@ -1383,6 +1546,7 @@ onDestroy(() => {
                         fill="none"
                         stroke="currentColor"
                         stroke-width="3"
+                        stroke-linecap="round"
                         pathLength="100"
                         stroke-dasharray={`${matchStrength(value)} 100`}
                       />
@@ -1476,8 +1640,11 @@ onDestroy(() => {
           </aside>
         {/if}
       </section>
+      <!-- Keep cached results mounted but hidden during review; animate the revealed view without stacking heights. -->
       <div
+        use:animateView={viewPhase}
         class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-4 sm:px-6"
+        data-association-view={viewPhase}
       >
         {#if kind === 'address'}
           <div class="flex justify-center" data-association-address>
@@ -1490,7 +1657,11 @@ onDestroy(() => {
             />
           </div>
         {:else}
-          {#if !matched}
+          <div
+            class={matched ? 'hidden' : 'flex min-w-0 flex-col gap-4'}
+            inert={Boolean(matched)}
+            data-association-discovery
+          >
             <label
               class="relative mx-auto block w-full max-w-lg"
               data-association-search
@@ -1533,22 +1704,28 @@ onDestroy(() => {
                 </button>
               {/if}
             </label>
-          {/if}
-          {#if !matched && lookups[kind] === 'failed'}
-            <p class="text-muted-foreground text-xs" role="status">
-              {m.association_incomplete()}
-              <button type="button" class="underline" onclick={() => reconcile(kind)}>
-                {m.association_retry()}
-              </button>
-            </p>
-          {/if}
-          {#if !matched}
+            {#if lookups[kind] === 'failed'}
+              <p class="text-muted-foreground text-xs" role="status">
+                {m.association_incomplete()}
+                <button type="button" class="underline" onclick={() => reconcile(kind)}>
+                  {m.association_retry()}
+                </button>
+              </p>
+            {/if}
             <div
               class="flex min-h-28 flex-1 flex-col gap-2"
               data-association-results
               aria-busy={lookups[kind] === 'checking'}
             >
               {#each resultRows as row, index (row.id)}
+                {@const statusLabel =
+                  row.id === provisional[kind]?.id
+                    ? m.association_your_record()
+                    : recordMode(row) === 'linked'
+                      ? m.association_record_source()
+                      : recordMode(row) === 'manual'
+                        ? m.association_record_manual()
+                        : m.association_record_custom()}
                 <button
                   type="button"
                   data-match-score={associationMatch(origin, row).score}
@@ -1582,41 +1759,52 @@ onDestroy(() => {
                       >{getAddressDisplay(row.address, getLocaleKey())}</span
                     ></span
                   ><span
-                    class="flex max-w-36 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right"
+                    class="grid shrink-0 justify-items-end gap-1 text-right"
                     data-association-result-meta
                   >
-                    <span class="text-muted-foreground text-[10px]"
-                      >{m.association_match_score({
-                        score: associationMatch(origin, row).score,
-                      })}</span
-                    ><span
-                      class="bg-primary rounded px-2 py-1 text-xs font-medium text-white"
-                      >{m.association_use_column()}</span
-                    >
-                    {#if origin.address.coordinates && row.address.coordinates}
-                      <span class="text-muted-foreground text-xs tabular-nums"
-                        >{Math.round(
-                          locationDistance(
-                            origin.address.coordinates,
-                            row.address.coordinates,
-                          ),
-                        )}
-                        m</span
-                      >
-                    {/if}
                     <span
-                      class="bg-muted/30 text-muted-foreground inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] leading-tight"
-                      ><LocationAssociationIcon mode={recordMode(row)} class="size-3" />
-                      <span
-                        >{row.id === provisional[kind]?.id
-                          ? m.association_your_record()
-                          : recordMode(row) === 'linked'
-                            ? m.association_record_source()
-                            : recordMode(row) === 'manual'
-                              ? m.association_record_manual()
-                              : m.association_record_custom()}</span
-                      ></span
+                      class="inline-flex items-baseline whitespace-nowrap tabular-nums"
                     >
+                      <span class="sr-only"
+                        >{m.association_match_score({
+                          score: associationMatch(origin, row).score,
+                        })}</span
+                      >
+                      <span
+                        aria-hidden="true"
+                        class="text-foreground text-base leading-none font-semibold"
+                        >{associationMatch(origin, row).score}</span
+                      >
+                      <span aria-hidden="true" class="text-muted-foreground text-[10px]"
+                        >/100</span
+                      >
+                    </span>
+                    <span
+                      class="text-muted-foreground flex items-center justify-end gap-2"
+                    >
+                      {#if origin.address.coordinates && row.address.coordinates}
+                        <span class="text-xs whitespace-nowrap tabular-nums">
+                          {Math.round(
+                            locationDistance(
+                              origin.address.coordinates,
+                              row.address.coordinates,
+                            ),
+                          )}
+                          m
+                        </span>
+                      {/if}
+
+                      <span
+                        class="inline-flex size-4 items-center justify-center"
+                        title={statusLabel}
+                      >
+                        <LocationAssociationIcon
+                          mode={recordMode(row)}
+                          class="size-3.5"
+                        />
+                        <span class="sr-only">{statusLabel}</span>
+                      </span>
+                    </span>
                   </span>
                 </button>
               {/each}
@@ -1635,18 +1823,18 @@ onDestroy(() => {
                 </div>
               {/if}
             </div>
-          {/if}
+          </div>
 
           {#if matched && choices}
             <div class="space-y-5" data-association-comparison>
-              {#if inferred}
-                <p class="text-center text-xs text-sky-400">
-                  {m.association_exact_match()}
-                </p>
-              {/if}
               {#if comparingRecords}
-                <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                  <h3 class="text-sm font-semibold">{m.association_compare()}</h3>
+                <div class="relative flex flex-col items-center gap-2">
+                  <div class="space-y-1 text-center">
+                    <h3 class="text-sm font-semibold">{m.association_compare()}</h3>
+                    <p class="text-muted-foreground text-xs">
+                      {m.association_compare_help()}
+                    </p>
+                  </div>
                   {#if editingFields}
                     <button
                       type="button"
@@ -1659,211 +1847,243 @@ onDestroy(() => {
                     </button>
                   {/if}
                 </div>
-                <div
-                  class="grid grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)] items-stretch gap-x-2 gap-y-3 text-sm sm:grid-cols-[minmax(0,1fr)_5rem_minmax(0,1fr)]"
-                  data-association-record-headers
-                >
-                  <div class="min-w-0 space-y-2">
-                    <p class="text-xs font-semibold">
-                      {m.association_original_address()}
-                    </p>
+              {/if}
+              <div class="space-y-5">
+                <div class="flex min-w-0 flex-col gap-5" data-association-columns>
+                  {#if comparingRecords}
                     <div
-                      data-association-original-record
-                      class="text-muted-foreground flex min-w-0 flex-col items-start gap-2 rounded-md border border-transparent p-3 sm:flex-row"
+                      class="grid grid-cols-[minmax(0,1fr)_3.5rem_minmax(0,1fr)] items-stretch gap-x-2 gap-y-3 text-sm sm:grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]"
+                      data-association-record-headers
                     >
-                      <LocationIcon
-                        kind={origin.kind}
-                        class="text-muted-foreground mt-1.5 size-4 shrink-0"
-                      />
-                      <div class="min-w-0">
-                        <p
-                          class="min-h-8 py-1 text-sm font-semibold break-words whitespace-normal"
+                      <div class="min-w-0 space-y-2 text-right">
+                        <div
+                          data-association-original-record
+                          class="text-muted-foreground flex min-w-0 flex-row-reverse items-start gap-2 rounded-md border border-transparent px-3 py-2"
                         >
-                          {localizedName(origin.names, getLocaleKey()) ||
-                            Object.values(origin.names).find(Boolean) ||
-                            getAddressDisplay(originalAddress, getLocaleKey())}
-                        </p>
-                        <p class="text-muted-foreground text-[10px]">
-                          {locationKindLabel(origin.kind)}
-                        </p>
+                          <LocationIcon
+                            kind={origin.kind}
+                            class="text-muted-foreground mt-0.5 size-4 shrink-0"
+                          />
+                          <div class="min-w-0 space-y-0.5">
+                            <p
+                              class="text-sm font-semibold break-words whitespace-normal"
+                            >
+                              {localizedName(origin.names, getLocaleKey()) ||
+                                Object.values(origin.names).find(Boolean) ||
+                                getAddressDisplay(originalAddress, getLocaleKey())}
+                            </p>
+                            <p class="text-muted-foreground text-[10px]">
+                              {locationKindLabel(origin.kind)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="flex flex-col items-center justify-center gap-2">
+                        <span
+                          class="border-primary/30 text-primary flex size-8 items-center justify-center rounded-full border"
+                          role="img"
+                          aria-label={m.association_candidate_selected()}
+                          ><ArrowRightIcon class="size-4" /></span
+                        >
+                        <div class="text-center">
+                          <button
+                            type="button"
+                            aria-expanded={showAllComponents}
+                            class="text-primary text-xs underline"
+                            onclick={() => {
+                              showAllComponents = !showAllComponents
+                              if (!showAllComponents) activeField = null
+                            }}
+                          >
+                            {showAllComponents
+                              ? m.association_hide_unused()
+                              : m.association_edit_details()}
+                          </button>
+                        </div>
+                      </div>
+                      <div class="min-w-0 space-y-2">
+                        {@render nameEditor()}
                       </div>
                     </div>
-                  </div>
-                  <div
-                    class="grid grid-rows-[auto_1fr] items-center justify-items-center gap-2"
-                  >
-                    <span class="text-center text-xs font-semibold"
-                      >{m.association_use_column()}</span
-                    ><span
-                      class="border-primary/30 text-primary flex size-8 items-center justify-center rounded-full border"
-                      role="img"
-                      aria-label={m.association_candidate_selected()}
-                      ><ArrowRightIcon class="size-4" /></span
-                    >
-                  </div>
-                  <div class="min-w-0 space-y-2">
-                    <p class="text-xs font-semibold">
-                      {m.association_location_record()}
-                    </p>
-                    {@render nameEditor()}
-                  </div>
-                </div>
-                <div class="space-y-3">
-                  {#each reviewGroups as group (group)}
-                    <div
-                      transition:slide={{
-                        duration: prefersReducedMotion.current ? 0 : 200,
-                      }}
-                      class="grid grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)] items-stretch gap-x-2 text-sm sm:grid-cols-[minmax(0,1fr)_5rem_minmax(0,1fr)]"
-                    >
-                      {@render comparisonCell(originalAddress, group, 'original')}
-                      <div class="flex flex-col items-center justify-center gap-1">
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={choices[group] === 'original'}
-                          aria-label={m.association_switch({
-                            field: groupLabel(group),
-                          })}
-                          class="border-border text-primary hover:bg-primary/10 focus-visible:outline-primary flex size-8 items-center justify-center rounded-full border focus-visible:outline-2"
-                          onclick={() => {
-                            if (choices)
-                              choices[group] =
-                                choices[group] === 'original' ? 'location' : 'original'
-                            resetGroup(group)
+                    <div class="space-y-3">
+                      {#each reviewGroups as group (group)}
+                        <div
+                          transition:slide={{
+                            duration: prefersReducedMotion.current ? 0 : 200,
                           }}
+                          class="grid grid-cols-[minmax(0,1fr)_3.5rem_minmax(0,1fr)] items-stretch gap-x-2 text-sm sm:grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]"
                         >
-                          {#if choices[group] === 'original'}
-                            <ArrowLeftIcon class="size-4" />
-                          {:else}
-                            <ArrowRightIcon class="size-4" />
-                          {/if}
-                        </button>
+                          {@render comparisonCell(originalAddress, group, 'original')}
+                          <div class="flex flex-col items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={choices[group] === 'original'}
+                              aria-label={m.association_switch({
+                                field: groupLabel(group),
+                              })}
+                              class="border-border text-primary hover:bg-primary/10 focus-visible:outline-primary flex size-8 items-center justify-center rounded-full border focus-visible:outline-2"
+                              onclick={() => {
+                                if (choices)
+                                  choices[group] =
+                                    choices[group] === 'original'
+                                      ? 'location'
+                                      : 'original'
+                                resetGroup(group)
+                              }}
+                            >
+                              {#if choices[group] === 'original'}
+                                <ArrowLeftIcon class="size-4" />
+                              {:else}
+                                <ArrowRightIcon class="size-4" />
+                              {/if}
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={(groupIsEdited(group)
+                                ? m.association_reset_field
+                                : m.association_edit_field)({
+                                field: groupLabel(group),
+                              })}
+                              class="text-primary flex items-center gap-1 text-[10px] underline"
+                              onclick={() =>
+                                groupIsEdited(group)
+                                  ? resetGroup(group)
+                                  : editGroup(group)}
+                            >
+                              {groupIsEdited(group)
+                                ? m.forms__reset()
+                                : m.forms__edit()}
+                            </button>
+                          </div>
+                          {@render comparisonCell(matched.address, group, 'location')}
+                        </div>
+                      {/each}
+                    </div>
+                  {:else}
+                    {#if editingFields}
+                      <div class="flex justify-end">
                         <button
                           type="button"
-                          aria-label={(groupIsEdited(group)
-                            ? m.association_reset_field
-                            : m.association_edit_field)({
-                            field: groupLabel(group),
-                          })}
-                          class="text-primary flex items-center gap-1 text-[10px] underline"
-                          onclick={() =>
-                            groupIsEdited(group) ? resetGroup(group) : editGroup(group)}
+                          aria-pressed={translations}
+                          aria-label={m.location_address_languages()}
+                          class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex items-center gap-2 rounded px-2 py-1 text-xs focus-visible:outline-2"
+                          onclick={() => (translations = !translations)}
                         >
-                          {groupIsEdited(group) ? m.forms__reset() : m.forms__edit()}
+                          <LanguagesIcon class="size-4" />
+                          {m.location_address_languages()}
                         </button>
                       </div>
-                      {@render comparisonCell(matched.address, group, 'location')}
-                    </div>
-                  {/each}
+                    {/if}
+                    {@render nameEditor(true)}
+                  {/if}
+                  {#if !numberValid}
+                    <p role="alert" class="text-destructive text-sm">
+                      {m.association_invalid_number()}
+                    </p>
+                  {/if}
+                  {#if !sameRecord(origin, matched) &&
+                    (distance > 0 || editingPin || Object.keys(customPins).length)}
+                    <AssociationMarkerChoice
+                      origin={pinPreview(origin)}
+                      location={pinPreview(matched)}
+                      {distance}
+                      markerNumberFor={associationMarkerNumber}
+                      onHighlight={id => (hoveredCandidate = id)}
+                      onSelect={selectPin}
+                      onEdit={editPin}
+                      onReset={resetPin}
+                      editing={editingPin === selectedPin.id}
+                      originalCustom={Boolean(customPins[origin.id])}
+                      locationCustom={Boolean(customPins[matched.id])}
+                      bind:moveMarker
+                    />
+                  {/if}
                 </div>
-              {:else}
-                {#if editingFields}
-                  <div class="flex justify-end">
-                    <button
-                      type="button"
-                      aria-pressed={translations}
-                      aria-label={m.location_address_languages()}
-                      class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex items-center gap-2 rounded px-2 py-1 text-xs focus-visible:outline-2"
-                      onclick={() => (translations = !translations)}
-                    >
-                      <LanguagesIcon class="size-4" />{m.location_address_languages()}
-                    </button>
-                  </div>
-                {/if}
-                {@render nameEditor(true)}
-              {/if}
-              {#if !numberValid}
-                <p role="alert" class="text-destructive text-sm">
-                  {m.association_invalid_number()}
-                </p>
-              {/if}
-              {#if comparingRecords}
-                <div class="text-center">
-                  <button
-                    type="button"
-                    aria-expanded={showAllComponents}
-                    class="text-primary text-xs underline"
-                    onclick={() => {
-                      showAllComponents = !showAllComponents
-                      if (!showAllComponents) activeField = null
-                    }}
-                  >
-                    {showAllComponents
-                      ? m.association_hide_unused()
-                      : m.association_edit_details()}
-                  </button>
-                </div>
-              {/if}
-              {#if !sameRecord(origin, matched) && distance > 0}
-                <AssociationMarkerChoice
-                  {origin}
-                  location={matched}
-                  {distance}
-                  markerNumberFor={associationMarkerNumber}
-                  onHighlight={id => (hoveredCandidate = id)}
-                  bind:moveMarker
-                />
-              {/if}
+              </div>
             </div>
           {/if}
         {/if}
       </div>
     </div>
   </div>
-  {#if (!matched && ghost) ||
-    kind === 'address' ||
-    (matched && comparingRecords && !inferred)}
+  {#if (!matched && ghost) || kind === 'address' || (matched && comparingRecords)}
     <footer
       class="bg-panel shrink-0 space-y-3 px-4 pt-3 pb-6 sm:px-6"
       data-association-footer
     >
-      {#if !matched && ghost}
-        <section
-          class="border-primary/40 bg-primary/5 mx-auto grid w-full max-w-3xl min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-dashed p-3"
-          data-association-ghost
-          data-tooltip={m.association_ghost_help()}
+      {#key viewPhase}
+        <div
+          in:fade={{ duration: prefersReducedMotion.current ? 0 : 180 }}
+          class="space-y-3"
         >
-          <div class="min-w-0 space-y-1">
-            <p class="text-xs font-semibold break-words whitespace-normal">
-              {ghost.names[tag] || Object.values(ghost.names).find(Boolean)}
-            </p>
-            <p class="text-muted-foreground text-[10px] break-words whitespace-normal">
-              {getAddressDisplay(ghost.address, getLocaleKey())}
-            </p>
+          {#if !matched && ghost}
+            <section
+              class="border-primary/40 bg-primary/5 mx-auto grid w-full max-w-3xl min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-dashed p-3"
+              data-association-ghost
+              data-tooltip={m.association_ghost_help()}
+            >
+              <div class="min-w-0 space-y-1">
+                <p class="text-xs font-semibold break-words whitespace-normal">
+                  {ghost.names[tag] || Object.values(ghost.names).find(Boolean)}
+                </p>
+                <p
+                  class="text-muted-foreground text-[10px] break-words whitespace-normal"
+                >
+                  {getAddressDisplay(ghost.address, getLocaleKey())}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="bg-primary focus-visible:outline-primary col-span-2 justify-self-end rounded-md px-3 py-2 text-xs font-medium text-white focus-visible:outline-2 sm:col-span-1 sm:self-center"
+                onclick={() => {
+                  if (visibleProvisional) {
+                    custom = true
+                    void tick().then(() => accept())
+                  } else chooseCustom()
+                }}
+              >
+                {visibleProvisional
+                  ? m.association_use_location()
+                  : {
+                      premises: m.association_create_premises,
+                      building: m.association_create_building,
+                      establishment: m.association_create_establishment,
+                    }[kind === 'address' ? 'establishment' : kind]()}
+              </button>
+            </section>
+          {/if}
+          <div
+            class="mx-auto w-full max-w-[45rem] items-center gap-3 {matched &&
+            comparingRecords
+              ? 'grid grid-cols-2'
+              : 'flex justify-center'}"
+            data-association-actions
+          >
+            {#if matched && comparingRecords}
+              <button
+                type="button"
+                class="text-primary hover:bg-primary/10 focus-visible:outline-primary col-start-1 row-start-1 max-w-full justify-self-end rounded-md px-3 py-2 text-center text-sm font-medium break-words whitespace-normal focus-visible:outline-2 sm:px-4"
+                onclick={acceptInitialSelection}
+              >
+                {m.association_use_initial()}
+              </button>
+            {/if}
+            {#if kind === 'address' || (matched && comparingRecords)}
+              <button
+                type="button"
+                disabled={!canAccept}
+                class="bg-primary col-start-2 row-start-1 max-w-full justify-self-start rounded-md px-3 py-2 text-center text-sm font-medium break-words whitespace-normal text-white disabled:opacity-40 sm:px-4"
+                onclick={() => accept(kind === 'address')}
+              >
+                {matched && comparingRecords
+                  ? m.association_use_recommended()
+                  : m.association_use_location()}
+              </button>
+            {/if}
           </div>
-          <button
-            type="button"
-            class="bg-primary focus-visible:outline-primary col-span-2 justify-self-end rounded-md px-3 py-2 text-xs font-medium text-white focus-visible:outline-2 sm:col-span-1 sm:self-center"
-            onclick={() => {
-              if (visibleProvisional) {
-                custom = true
-                void tick().then(() => accept())
-              } else chooseCustom()
-            }}
-          >
-            {visibleProvisional
-              ? m.association_use_location()
-              : {
-                  premises: m.association_create_premises,
-                  building: m.association_create_building,
-                  establishment: m.association_create_establishment,
-                }[kind === 'address' ? 'establishment' : kind]()}
-          </button>
-        </section>
-      {/if}
-      <div class="flex flex-wrap justify-center gap-3" data-association-actions>
-        {#if kind === 'address' || (matched && comparingRecords && !inferred)}
-          <button
-            type="button"
-            disabled={!canAccept}
-            class="bg-primary rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-            onclick={() => accept(kind === 'address')}
-          >
-            {m.association_use_location()}
-          </button>
-        {/if}
-      </div>
+        </div>
+      {/key}
     </footer>
   {/if}
 </section>

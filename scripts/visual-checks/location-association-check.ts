@@ -332,7 +332,49 @@ for (const [name, engine] of [
           path: `output/playwright/association-${name}-comparison-${viewport.width}.png`,
         })
       }
-      await page.getByRole('button', { name: 'Change selection', exact: true }).click()
+      const profiler =
+        process.env.ASSOCIATION_PROFILE && name === 'chromium'
+          ? await page.context().newCDPSession(page)
+          : null
+      if (profiler) {
+        await profiler.send('Profiler.enable')
+        await profiler.send('Profiler.start')
+      }
+      const handoff = await page
+        .getByRole('button', { name: 'Change selection', exact: true })
+        .evaluate(async button => {
+          const started = performance.now()
+          button.click()
+          const clickMs = performance.now() - started
+          await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+          return {
+            elapsedMs: Math.round(performance.now() - started),
+            clickMs: Math.round(clickMs),
+            resultsInFirstFrame: Boolean(
+              document
+                .querySelector<HTMLElement>('[data-association-results]')
+                ?.checkVisibility(),
+            ),
+          }
+        })
+      if (profiler) {
+        const { profile } = await profiler.send('Profiler.stop')
+        const counts = new Map<number, number>()
+        for (const id of profile.samples ?? [])
+          counts.set(id, (counts.get(id) ?? 0) + 1)
+        console.log(
+          JSON.stringify(
+            profile.nodes
+              .map(node => ({ count: counts.get(node.id) ?? 0, ...node.callFrame }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 15),
+          ),
+        )
+        await profiler.detach()
+      }
+      if (!handoff.resultsInFirstFrame)
+        throw Error(`${name}: cached alternatives missed the first render frame`)
+      console.log(JSON.stringify({ browser: name, ...handoff }))
       const rows = page.locator('[data-association-result]')
       if (
         (await rows.first().getAttribute('data-association-result')) !==

@@ -18,6 +18,8 @@ export type LocationSearchMarker = {
   compact?: boolean
   previewOnly?: boolean
   highlighted?: boolean
+  /** Explicit review edit; receives draft coordinates without moving the source record. */
+  onReposition?: (coordinates: [number, number]) => void
 }
 
 /** Resolve the shared theme colour for search controls, result numbers and map markers.

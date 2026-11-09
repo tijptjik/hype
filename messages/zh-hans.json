@@ -2069,6 +2069,7 @@
   "association_address_evidence": "地址记录已提供",
   "association_missing": "尚未指定",
   "association_finding_specific": "正在尝试查找更具体的位置。",
+  "association_loading_alternatives": "正在加载其他位置…",
   "association_checking": "正在查找相符地点…",
   "association_incomplete": "部分来源无法使用或结果数量有限。你仍可选择下方结果或重试。",
   "association_retry": "重新匹配",

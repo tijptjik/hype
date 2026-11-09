@@ -2069,6 +2069,7 @@
   "association_address_evidence": "Present on the Address record",
   "association_missing": "Not specified yet",
   "association_finding_specific": "Attempting to find more specific locations.",
+  "association_loading_alternatives": "Loading alternatives…",
   "association_checking": "Checking for matching locations…",
   "association_incomplete": "Some sources are unavailable or results are limited. You can choose a result below or retry.",
   "association_retry": "Retry matching",
