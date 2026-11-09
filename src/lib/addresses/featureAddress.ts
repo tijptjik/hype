@@ -211,6 +211,9 @@ export function emptyFeatureAddress(
   }
 }
 
+// Reuse validators across repeated locale reads while comparing and rendering candidates.
+const addressLocaleRecordSchema = z.record(z.string(), z.unknown())
+
 /** Reads an exact source locale and overlays local corrections. @param address Canonical source envelope. @param locale HYPE locale. @returns Effective upstream-named scalar fields; no cross-locale fallback. */
 export function getAddressLocale(
   address: FeatureAddress,
@@ -219,17 +222,15 @@ export function getAddressLocale(
   const data = address.source.rawSource.data as
     | { attributes?: { i18n?: Record<string, unknown> } }
     | undefined
-  const parsed = z
-    .record(z.string(), z.unknown())
-    .safeParse(
-      (
-        address.association?.content ??
-        address.canonical?.content ??
-        address.source.canonical?.content ??
-        address.source.authored
-      )?.i18n[ADDRESS_LOCALES[locale]] ??
-        data?.attributes?.i18n?.[ADDRESS_LOCALES[locale]],
-    )
+  const parsed = addressLocaleRecordSchema.safeParse(
+    (
+      address.association?.content ??
+      address.canonical?.content ??
+      address.source.canonical?.content ??
+      address.source.authored
+    )?.i18n[ADDRESS_LOCALES[locale]] ??
+      data?.attributes?.i18n?.[ADDRESS_LOCALES[locale]],
+  )
   const result: Partial<Record<AddressField, string | boolean | null>> = {}
   if (parsed.success)
     for (const key of ADDRESS_FIELDS) {
@@ -573,6 +574,50 @@ export function invalidateAddressLocation(
   return { ...meta, address: { ...address, matchStatus: 'stale' } }
 }
 
+// Compile inventory validators once; every locale read still validates the current source evidence.
+const addressUnitCoverageSchema = z.object({
+  data: z.object({
+    attributes: z.object({
+      address3dCoverage: z.object({
+        kind: z.enum(['direct', 'ancestor']),
+        ownerAddress2dId: z.string(),
+        address3dId: z.string(),
+        membership: z.literal('established'),
+      }),
+    }),
+  }),
+  included: z.array(z.unknown()),
+})
+const addressUnitInventorySchema = z.object({
+  type: z.literal('address3d'),
+  id: z.string(),
+  attributes: z.object({
+    snapshotId: z.string(),
+    address2dId: z.string(),
+    units: z.array(
+      z.object({
+        ...UnitDetailsSchema.shape,
+        id: z.string(),
+        unitRef: z.string(),
+        floorRef: z.string(),
+      }),
+    ),
+    i18n: z.record(
+      z.string(),
+      z.object({
+        units: z.record(
+          z.string(),
+          z.object({
+            formattedAddressPart: z.string().optional(),
+            unitExpression: z.string(),
+            floorExpression: z.string(),
+          }),
+        ),
+      }),
+    ),
+  }),
+})
+
 /** Returns only publication-compatible units with established building membership.
  * @param address Canonical address with included Address3D inventory.
  * @param locale Requested locale; unit IDs remain the fallback when no label exists.
@@ -593,21 +638,7 @@ export function getAddressUnits(
   unitType?: import('./address3d.js').UnitType
   unitPortion?: string | null
 }> {
-  const parsed = z
-    .object({
-      data: z.object({
-        attributes: z.object({
-          address3dCoverage: z.object({
-            kind: z.enum(['direct', 'ancestor']),
-            ownerAddress2dId: z.string(),
-            address3dId: z.string(),
-            membership: z.literal('established'),
-          }),
-        }),
-      }),
-      included: z.array(z.unknown()),
-    })
-    .safeParse(address.source.rawSource)
+  const parsed = addressUnitCoverageSchema.safeParse(address.source.rawSource)
   if (!parsed.success) return []
   const coverage = parsed.data.data.attributes.address3dCoverage
   if (
@@ -616,37 +647,7 @@ export function getAddressUnits(
   )
     return []
   for (const record of parsed.data.included) {
-    const inventory = z
-      .object({
-        type: z.literal('address3d'),
-        id: z.string(),
-        attributes: z.object({
-          snapshotId: z.string(),
-          address2dId: z.string(),
-          units: z.array(
-            z.object({
-              ...UnitDetailsSchema.shape,
-              id: z.string(),
-              unitRef: z.string(),
-              floorRef: z.string(),
-            }),
-          ),
-          i18n: z.record(
-            z.string(),
-            z.object({
-              units: z.record(
-                z.string(),
-                z.object({
-                  formattedAddressPart: z.string().optional(),
-                  unitExpression: z.string(),
-                  floorExpression: z.string(),
-                }),
-              ),
-            }),
-          ),
-        }),
-      })
-      .safeParse(record)
+    const inventory = addressUnitInventorySchema.safeParse(record)
     if (
       !inventory.success ||
       inventory.data.id !== coverage.address3dId ||
