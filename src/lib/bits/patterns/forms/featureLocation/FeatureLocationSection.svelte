@@ -799,7 +799,7 @@ async function link(): Promise<void> {
           </div>
           {#if isEditing && association}
             <a
-              href={`/admin/locations/${encodeURIComponent(association.locationId)}${organisationId ? `?organisation=${encodeURIComponent(organisationId)}` : ''}`}
+              href={`/admin/locations/${encodeURIComponent(association.locationId)}?edit=true${organisationId ? `&organisation=${encodeURIComponent(organisationId)}` : ''}`}
               aria-label={m.forms__edit()}
               data-tooltip={m.feature_address_corrections_help()}
               class="text-muted-foreground hover:text-primary focus-visible:outline-primary inline-flex size-7 shrink-0 items-center justify-center rounded focus-visible:outline-2"

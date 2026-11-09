@@ -26,10 +26,21 @@ const request = $derived(
     scope,
   }),
 )
-// Route changes discard the old record's edit mode before configuring the next header.
+let pendingEdit = $state(false)
+// Route changes discard the old record's edit mode before applying explicit edit intent.
 $effect(() => {
   const id = page.params.id
+  pendingEdit = page.url.searchParams.get('edit') === 'true'
   if (id) untrack(() => header.setEditing(false))
+})
+// Apply edit intent once after loading and authorization, so Cancel stays in view mode.
+$effect(() => {
+  const place = request.current
+  if (!pendingEdit || !place || place.id !== page.params.id) return
+  pendingEdit = false
+  untrack(() => {
+    header.setEditing(Boolean(place.canEditAddress && place.state !== 'redirect'))
+  })
 })
 $effect(() => {
   const place = request.current
