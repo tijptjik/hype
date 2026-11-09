@@ -64,6 +64,7 @@ import {
 } from '#lib/api/location.remote.js'
 // COMPONENTS
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
+import LocationOffIcon from 'virtual:icons/lucide/map-pin-off'
 import { addressBuildingNames } from '#lib/locations/addressIdentity.js'
 import CreateLocalLocation from './CreateLocalLocation.svelte'
 // TYPES
@@ -836,19 +837,18 @@ async function link(): Promise<void> {
             />
           {/if}
         {:else}
-          <span class="text-primary relative shrink-0" aria-hidden="true"
-            ><SimpleTooltip>
-              {#snippet trigger()}
-                <LocationIcon kind={association?.kind} class="size-6" />
-              {/snippet}
-              {locationKindLabel(association?.kind ?? 'unknown')}
-            </SimpleTooltip>
-            {#if !association}
-              <span
-                class="absolute top-1/2 left-0 h-0.5 w-7 -rotate-45 bg-current"
-              ></span>
-            {/if}</span
-          >
+          <span class="text-primary shrink-0" aria-hidden="true">
+            {#if association}
+              <SimpleTooltip>
+                {#snippet trigger()}
+                  <LocationIcon kind={association.kind} class="size-6" />
+                {/snippet}
+                {locationKindLabel(association.kind ?? 'unknown')}
+              </SimpleTooltip>
+            {:else}
+              <LocationOffIcon class="size-6" />
+            {/if}
+          </span>
           <div class="min-w-0 flex-1">
             {#if association}
               <a
