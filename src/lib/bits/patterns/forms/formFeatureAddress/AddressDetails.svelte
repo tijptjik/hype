@@ -142,6 +142,7 @@ let {
   onAccessibilityDraftChange,
   hasLocation = true,
   hideDisplayAddress = false,
+  displayStale = false,
   splitColumns = false,
   independentScroll = false,
   translations = $bindable(false),
@@ -182,6 +183,7 @@ let {
   onAccessibilityDraftChange?: (value: AccessibilityDraft | undefined) => void
   hasLocation?: boolean
   hideDisplayAddress?: boolean
+  displayStale?: boolean
   splitColumns?: boolean
   independentScroll?: boolean
   translations?: boolean
@@ -1669,6 +1671,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                 >
                 {#if locale}
                   <AddressDisplayField
+                    stale={displayStale}
                     {locationKind}
                     {divisions}
                     {address}
@@ -2059,6 +2062,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                 >
                                   {#if field === 'formattedAddress'}
                                     <AddressDisplayField
+                                      stale={displayStale}
                                       {locationKind}
                                       {divisions}
                                       {address}

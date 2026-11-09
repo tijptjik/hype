@@ -303,7 +303,11 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
                 </button>
               {/if}
             </div>
-            <div class="min-w-0 space-y-2">
+            <div
+              class="min-w-0 space-y-2"
+              class:opacity-50={stale}
+              data-division-values-stale={stale}
+            >
               {#if isEditing && group.key === 'locality' && context}
                 <div inert={stale} aria-disabled={stale}>
                   <AddressLocalityEditor

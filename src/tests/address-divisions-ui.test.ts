@@ -7,6 +7,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 vi.mock('svelte/transition', () => ({ slide: () => ({ duration: 0 }) }))
 import Fixture from './fixtures/components/AddressDivisionsFixture.svelte'
 import AddressFormFixture from './fixtures/components/FeatureAddress3dFixture.svelte'
+// ADDRESS
+import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
 import { getAddressDivisionContext } from '#lib/api/division.remote.js'
 // TYPES
@@ -239,7 +241,7 @@ it('restores grouped divisions and class labels in the read-only Feature address
   const locality = view.container.querySelector('[data-division-group="locality"]')
   expect(locality?.textContent).toContain('Microhood')
   expect(
-    view.container.querySelector('[data-address-blocks]')?.textContent,
+    view.container.querySelector('[data-address-display-values]')?.textContent,
   ).not.toContain('Lan Kwai Fong')
 })
 
@@ -260,6 +262,7 @@ it('retains the same division nodes until the next marker context resolves', asy
   expect(view.getByText('Fixed district')).toBe(previousDistrict)
   expect(view.getByText('Fixed island')).toBe(previousIsland)
   expect(view.getByText('Central')).toBe(locality)
+  expect(locality.closest('[data-division-values-stale]')).toHaveClass('opacity-50')
   expect(
     view.container.querySelector('[data-address-divisions]')?.getAttribute('aria-busy'),
   ).toBe('true')
@@ -268,6 +271,7 @@ it('retains the same division nodes until the next marker context resolves', asy
   expect(view.queryByText('Lan Kwai Fong')).toBeNull()
   expect(view.getByText('Fixed district')).toBe(previousDistrict)
   expect(view.getByText('Central')).toBe(locality)
+  expect(locality.closest('[data-division-values-stale]')).not.toHaveClass('opacity-50')
 })
 
 it('keeps the last resolved geography visible when the new marker lookup fails', async () => {
@@ -365,7 +369,15 @@ it('keeps generated display text in sync with locality selection, removal and ma
   vi.mocked(getAddressDivisionContext).mockReturnValue(
     Promise.resolve({ available: true, memberships: [town], options: [town] }) as never,
   )
-  const view = render(AddressFormFixture, { displayAddressInToolbar: true })
+  const initialAddress = emptyFeatureAddress()
+  initialAddress.overrides.en = {
+    streetName: 'Sai Yeung Choi St South',
+    buildingNumberExpression: '70',
+  }
+  const view = render(AddressFormFixture, {
+    initialAddress,
+    displayAddressInToolbar: true,
+  })
   const composed = () =>
     view.container.querySelector(
       '[data-address-toolbar-display] .bits-scrollable-text__content',
@@ -415,7 +427,15 @@ it('latches the parent display address locality until replacement divisions reso
         resolveNext = resolve
       }) as never,
     )
-  const view = render(AddressFormFixture, { displayAddressInToolbar: true })
+  const initialAddress = emptyFeatureAddress()
+  initialAddress.overrides.en = {
+    streetName: 'Sai Yeung Choi St South',
+    buildingNumberExpression: '70',
+  }
+  const view = render(AddressFormFixture, {
+    initialAddress,
+    displayAddressInToolbar: true,
+  })
   await waitFor(() =>
     expect(
       view.container.querySelector('[data-address-toolbar-display]')?.textContent,
@@ -425,6 +445,9 @@ it('latches the parent display address locality until replacement divisions reso
     '[data-address-toolbar-display]',
   )?.textContent
   await view.rerender({ coordinates: [115, 23] })
+  expect(
+    view.container.querySelector('[data-address-toolbar-display] [data-address-stale]'),
+  ).toHaveClass('opacity-50', 'grayscale')
   expect(
     view.container.querySelector('[data-address-toolbar-display]')?.textContent,
   ).toBe(before)
@@ -437,4 +460,7 @@ it('latches the parent display address locality until replacement divisions reso
   expect(
     view.container.querySelector('[data-address-toolbar-display]')?.textContent,
   ).toContain('Central')
+  expect(
+    view.container.querySelector('[data-address-toolbar-display] [data-address-stale]'),
+  ).not.toHaveClass('opacity-50')
 })

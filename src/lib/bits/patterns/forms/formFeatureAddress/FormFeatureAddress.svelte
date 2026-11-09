@@ -314,6 +314,11 @@ let resolvedDivisions = $state<{
 } | null>(null)
 // Latch the last successful geography so pin movement cannot blank the display address.
 const divisions = $derived(resolvedDivisions?.divisions ?? [])
+const divisionsStale = $derived(
+  resolvedDivisions !== null &&
+    JSON.stringify(resolvedDivisions.coordinates.slice(0, 2)) !==
+      JSON.stringify(coordinates.slice(0, 2)),
+)
 const coordinateDigits = 5
 // Density is calculated from full-size offscreen groups, never from the collapsed widget.
 let coordinatesCompact = $state(false)
@@ -636,6 +641,7 @@ $effect(() => {
       data-address-toolbar-display
     >
       <AddressDisplayField
+        stale={divisionsStale}
         {locationKind}
         {divisions}
         {address}
@@ -862,6 +868,7 @@ $effect(() => {
     >
       {#if showAddressDetails}
         <AddressDetails
+          displayStale={divisionsStale}
           {onMatchLocation}
           emptyAddressActions={showEmptyAddressActions ? locationActions : undefined}
           localeState={addressLocaleState}

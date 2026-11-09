@@ -573,3 +573,26 @@ it('uses the published Chinese street when a catalogue override duplicates the E
   address = setAddressOverride(address, 'zhHant', 'streetName', '')
   expect(getAddressDisplay(address, 'zhHant')).toBe('')
 })
+
+it('never attaches marker localities to retained free-form display addresses', () => {
+  const display = {
+    en: '833, Shek O Village, Southern District, HK',
+    'zh-hant': '石澳村833號南區香港',
+    'zh-hans': '石澳村833号南区香港',
+  }
+  const address = emptyFeatureAddress(display)
+  const before = JSON.stringify(address)
+  for (const name of ['Tin Wan', 'Aberdeen']) {
+    const locality = {
+      id: name,
+      class: 'neighbourhood',
+      category: 'hood',
+      level: 5,
+      names: { en: { name }, 'zh-hant': { name: '田灣' }, 'zh-hans': { name: '田湾' } },
+    }
+    expect(getAddressDisplay(address, 'en', [locality])).toBe(display.en)
+    expect(getAddressDisplay(address, 'zhHant', [locality])).toBe(display['zh-hant'])
+    expect(getAddressDisplay(address, 'zhHans', [locality])).toBe(display['zh-hans'])
+  }
+  expect(JSON.stringify(address)).toBe(before)
+})

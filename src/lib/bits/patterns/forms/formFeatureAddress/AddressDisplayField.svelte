@@ -32,6 +32,7 @@ let {
   divisions = [],
   locale,
   isEditing,
+  stale = false,
   showLocale = false,
   localeLabelOutside = false,
   compact = false,
@@ -44,6 +45,7 @@ let {
   divisions?: AddressDivision[]
   locale: LocaleKey
   isEditing: boolean
+  stale?: boolean
   showLocale?: boolean
   localeLabelOutside?: boolean
   compact?: boolean
@@ -78,7 +80,12 @@ const custom = $derived(
 let input = $state<HTMLTextAreaElement>()
 </script>
 
-<div class="min-w-0 space-y-1 {alignEnd ? 'w-max max-w-full' : 'flex-1'}">
+<div
+  class="min-w-0 space-y-1 {alignEnd ? 'w-max max-w-full' : 'flex-1'}"
+  class:opacity-50={stale}
+  class:grayscale={stale}
+  data-address-stale={stale}
+>
   {#if showLocale}
     <label for={uid} class="sr-only">{locale}</label>
   {/if}

@@ -388,6 +388,9 @@ export function getAddressDisplay(
       getAddressLocale(address, 'zhHant').formattedAddress
     if (typeof traditional === 'string') display = simplifiedChinese(traditional)
   }
+  // Retained free-form labels have unknown boundaries; marker geography must not extend them.
+  const usesRetainedDisplay =
+    !hasStructuredBase && Boolean(display) && !value.streetName
   if (hasStructuredBase || !display || value.streetName) {
     const text = (key: AddressField): string =>
       typeof value[key] === 'string' ? (value[key] as string) : ''
@@ -524,6 +527,7 @@ export function getAddressDisplay(
       ? [displayUnit, display].filter(Boolean).join(', ')
       : display + displayUnit
     : display
+  if (usesRetainedDisplay) return composed
   // Prefer the most specific available locality, including urban neighbourhoods.
   const locality = divisions
     .filter(division => addressLocalityLevel(division) !== null)
