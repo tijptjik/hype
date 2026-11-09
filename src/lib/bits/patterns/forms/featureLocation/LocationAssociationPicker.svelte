@@ -30,6 +30,7 @@ import SearchIcon from 'virtual:icons/lucide/search'
 import ReselectIcon from 'virtual:icons/lucide/replace'
 import StreetIcon from 'virtual:icons/lucide/road'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
+import ComplexIcon from 'virtual:icons/lucide/blocks'
 import NumberIcon from 'virtual:icons/lucide/hash'
 import LayersIcon from 'virtual:icons/lucide/layers'
 import UnitIcon from 'virtual:icons/lucide/door-open'
@@ -1079,12 +1080,12 @@ onDestroy(() => {
   side: 'original' | 'location',
 )}
   {@const Icon = {
-    premises: BuildingIcon,
+    premises: ComplexIcon,
     building: BuildingIcon,
     street: StreetIcon,
     number: NumberIcon,
     block: BuildingIcon,
-    phase: LayersIcon,
+    phase: ComplexIcon,
     floor: LayersIcon,
     unit: UnitIcon,
     access: AccessIcon,
