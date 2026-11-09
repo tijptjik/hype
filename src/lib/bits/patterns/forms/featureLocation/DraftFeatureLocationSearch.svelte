@@ -76,6 +76,7 @@ const searchKinds = ['establishment', 'building', 'address'] as const
 let {
   active,
   searchRequest,
+  allowManualEntry = true,
   projectId,
   canReturnToResults = true,
   locationName,
@@ -104,6 +105,7 @@ let {
 }: {
   searchRequest?: { id: number; mode: 'search' | 'pin'; query: string } | null
   active: boolean
+  allowManualEntry?: boolean
   projectId?: string
   canReturnToResults?: boolean
   locationName?: string
@@ -1936,7 +1938,9 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       <div
         class="sm:divide-border/60 grid w-full max-w-4xl gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x"
       >
-        {#each ['search', 'pin', 'manual'] as choice}
+        {#each allowManualEntry
+          ? ['search', 'pin', 'manual']
+          : ['search', 'pin'] as choice}
           <div class="flex flex-col items-center gap-4 px-6 text-center">
             <p class="text-muted-foreground max-w-64 text-sm leading-relaxed">
               <strong
@@ -1955,7 +1959,9 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             </p>
             <button
               type="button"
-              disabled={choice !== 'search' && !onDropPin}
+              disabled={choice === 'manual'
+                ? !onManualEntry
+                : choice === 'pin' && !coordinates && !onDropPin}
               onclick={() =>
                 choice === 'manual'
                   ? onManualEntry?.()

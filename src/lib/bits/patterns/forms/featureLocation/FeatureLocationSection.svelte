@@ -7,7 +7,6 @@ import { flip } from 'svelte/animate'
 import ReplaceIcon from 'virtual:icons/lucide/replace'
 import BackIcon from 'virtual:icons/lucide/arrow-left'
 import PencilIcon from 'virtual:icons/lucide/pencil'
-import CreateLocationIcon from 'virtual:icons/lucide/plus'
 import SearchIcon from 'virtual:icons/proicons/search'
 // LOCATION
 import { hasStructuredAddressComponents } from '#lib/addresses/presentation.js'
@@ -56,7 +55,6 @@ import {
   searchFeatureNearbyLocations,
   searchFeatureNearbyLocalLocations,
   getFeatureLocationDiscoveryDetails,
-  getLocalLocationCreationAccess,
   getFeatureLocationCandidate,
   importFeatureLocationCandidate,
   linkFeatureLocation,
@@ -217,7 +215,6 @@ const localeTag = $derived(
       ? 'zh-hans'
       : 'en',
 )
-const creationAccess = $derived(getLocalLocationCreationAccess({ projectId }))
 type Result = {
   id: string
   facts: LocationFacts
@@ -419,8 +416,10 @@ $effect(() => {
 // Leaving edit mode discards discovery UI, never the accepted Feature address.
 $effect(() => {
   if (isEditing) return
+  onAssociationPending?.(false)
   sharedRequest = null
   sharedAccepted = false
+  searchFailed = failed = false
   associationOrigin = null
   requestVersion++
   busy = false
@@ -971,21 +970,6 @@ async function link(): Promise<void> {
         onClick={() =>
           startMatching('search', !hasStructuredAddressComponents(address))}
       />
-      {#await creationAccess then access}
-        {#if access.allowed}
-          <Button
-            text={m.feature_location_create()}
-            iconComponent={CreateLocationIcon}
-            hideLabelBelow={1000}
-            attrs={{ 'data-tooltip': m.feature_location_create() }}
-            size="sm"
-            style="outline"
-            class="border-border bg-panel text-foreground min-h-11 shrink-0 rounded-lg px-3 text-sm font-normal"
-            disabled={busy || !radiusValid}
-            onClick={startCreate}
-          />
-        {/if}
-      {/await}
     </div>
   {/if}
 {/snippet}
@@ -1174,24 +1158,6 @@ async function link(): Promise<void> {
               <p class="text-muted-foreground text-sm">
                 {m.feature_location_match_help()}
               </p>
-              {#if matchChecked && !busy}
-                {#await creationAccess then access}
-                  {#if access.allowed}
-                    <Button
-                      text={searchFailed || limited
-                        ? m.feature_location_create_unverified()
-                        : m.feature_location_create_unmatched()}
-                      style="outline"
-                      size="sm"
-                      labelClasses="max-w-none!"
-                      onClick={() => {
-                        creating = true
-                        selected = null
-                      }}
-                    />
-                  {/if}
-                {/await}
-              {/if}
             {/if}
             {#if busy}
               <div class="flex items-center gap-3">
@@ -1389,6 +1355,7 @@ async function link(): Promise<void> {
 <DraftFeatureLocationSearch
   active={isEditing && sharedRequest !== null}
   searchRequest={sharedRequest}
+  allowManualEntry={false}
   focusRequest={0}
   {projectId}
   currentAddress={address}

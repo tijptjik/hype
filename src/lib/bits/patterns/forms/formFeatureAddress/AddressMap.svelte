@@ -340,7 +340,7 @@ function measureToolbar(
       ? 'flex-wrap'
       : 'flex-nowrap'}"
   >
-    {#if locationActions && isEditing}
+    {#if locationActions && isEditing && !singleRowToolbar}
       <div class="min-w-0 flex-1 overflow-x-auto empty:hidden" data-address-map-actions>
         {@render locationActions()}
       </div>
@@ -442,4 +442,13 @@ function measureToolbar(
       </div>
     {/if}
   </div>
+  <!-- Keep discovery actions outside the measured identity/address row so they cannot collapse to zero width. -->
+  {#if locationActions && isEditing && singleRowToolbar}
+    <div
+      class="border-border/60 bg-panel flex flex-wrap gap-2 border-b px-6 py-3 empty:hidden"
+      data-address-map-actions
+    >
+      {@render locationActions()}
+    </div>
+  {/if}
 </div>

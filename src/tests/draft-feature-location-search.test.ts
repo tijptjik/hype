@@ -3000,3 +3000,21 @@ it('derives nearby buildings from reverse addresses and retains successful build
     await screen.findByRole('button', { name: /Por Mee Factory Building/ }),
   ).toBeTruthy()
 })
+
+it('matches an existing feature from an explicit search request without offering manual creation', async () => {
+  mocks.places.mockResolvedValue({ rows: [], partial: false })
+  mocks.addresses.mockResolvedValue([])
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    allowManualEntry: false,
+    searchRequest: { id: 1, mode: 'search', query: 'Clockwork Cat' },
+    onSelect: vi.fn(),
+  })
+  await waitFor(() =>
+    expect(mocks.places).toHaveBeenCalledWith(
+      expect.objectContaining({ q: 'Clockwork Cat', filters: {} }),
+    ),
+  )
+  expect(screen.queryByRole('button', { name: /Create Location/i })).toBeNull()
+})
