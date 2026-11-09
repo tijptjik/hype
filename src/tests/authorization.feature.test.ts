@@ -245,6 +245,20 @@ describe('feature authorization policy matrix', () => {
   })
 
   describe('updateFeature field-level restrictions', () => {
+    it('allows project owners, but not translators, to change layer membership', () => {
+      for (const [actor, allowed] of [
+        [ACTORS.projectOwner, true],
+        [ACTORS.projectTranslator, false],
+      ] as const) {
+        expect(
+          authorizeFeatureUpdateForSubmission({
+            ...actorBase(actor),
+            resource,
+            submittedData: { layerId: 'destination' },
+          }).allowed,
+        ).toBe(allowed)
+      }
+    })
     it('allows translator i18n-only updates', () => {
       const decision = authorizeFeatureUpdateForSubmission({
         ...actorBase(ACTORS.projectTranslator),
