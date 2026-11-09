@@ -228,7 +228,7 @@ it('checks core hub membership without selecting unrelated parent columns', asyn
   sqlite.exec(`INSERT INTO organisation (id,hubId,isHubExclusive) VALUES ('org',NULL,0);
     INSERT INTO project (id,organisationId) VALUES ('project','org');
     UPDATE layer SET projectId='project' WHERE id='layer';
-`)
+    ALTER TABLE organisation DROP COLUMN permitUserDetailsEdit;`)
   const core = { ...params, isAdminRequest: false, hub: { isCore: true } }
   expect(
     await readUserContributedFeatures(db, { ...core, ids: ['core'] }),
