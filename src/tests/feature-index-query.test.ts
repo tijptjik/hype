@@ -438,3 +438,20 @@ describe('authoritative feature index', () => {
     expect(statement.params).toHaveLength(1)
   })
 })
+
+it('counts authorized matches without selecting or hydrating a feature page', async () => {
+  const { db, add, statements } = setup()
+  add('visible')
+  add('archived', 1)
+  const result = await queryFeatureIndex(
+    db,
+    { ...input, countOnly: true },
+    scope,
+    hub,
+    'en',
+  )
+  expect(result).toMatchObject({ data: [], totalCount: 1, hasMore: false })
+  expect(
+    statements.some(entry => /order by|featureDivisionMembership/i.test(entry.sql)),
+  ).toBe(false)
+})

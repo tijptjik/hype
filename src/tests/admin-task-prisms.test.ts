@@ -60,6 +60,8 @@ it.each(['task', 'hub'] as const)(
     })
     const remote = resource === 'task' ? getTasks : getHubs
     vi.mocked(remote).mockReturnValueOnce(pending as never)
+    if (resource === 'hub')
+      vi.mocked(getHubs).mockResolvedValueOnce({ data: [], totalCount: null } as never)
     const write = vi.spyOn(view, 'setListQueryMeta')
     try {
       const read = resource === 'task' ? admin.tasksQueryFn() : admin.hubsQueryFn()
@@ -91,9 +93,12 @@ it.each(['task', 'hub'] as const)(
       resolve = resolvePromise
     })
     const remote = resource === 'task' ? getTasks : getHubs
-    vi.mocked(remote)
-      .mockReturnValueOnce(pending as never)
-      .mockResolvedValueOnce({ data: [], totalCount: 2 } as never)
+    vi.mocked(remote).mockReturnValueOnce(pending as never)
+    if (resource === 'hub')
+      vi.mocked(getHubs).mockResolvedValueOnce({ data: [], totalCount: null } as never)
+    vi.mocked(remote).mockResolvedValueOnce({ data: [], totalCount: 2 } as never)
+    if (resource === 'hub')
+      vi.mocked(getHubs).mockResolvedValueOnce({ data: [], totalCount: null } as never)
     try {
       const read =
         resource === 'task' ? () => admin.tasksQueryFn() : () => admin.hubsQueryFn()
@@ -128,6 +133,8 @@ it.each(['task', 'hub'] as const)(
     vi.mocked(resource === 'task' ? getTasks : getHubs).mockReturnValueOnce(
       pending as never,
     )
+    if (resource === 'hub')
+      vi.mocked(getHubs).mockResolvedValueOnce({ data: [], totalCount: null } as never)
     const write = vi.spyOn(view, 'setListQueryMeta')
     const read = resource === 'task' ? admin.tasksQueryFn() : admin.hubsQueryFn()
     view.dispose()
@@ -239,6 +246,36 @@ it('includes search, review action and outcome in task query identity and server
         }),
       }),
     )
+  } finally {
+    view.dispose()
+  }
+})
+
+it('returns hub rows before its exact count settles', async () => {
+  const view = new ResourceViewCtx(
+    new DivisionCtx(),
+    new AccountState(),
+    new ResponsiveCtx(),
+    undefined,
+    'admin',
+  )
+  vi.spyOn(view, 'isAdmin').mockReturnValue(true)
+  const admin = new AdminCtx(view)
+  let resolve!: (value: unknown) => void
+  const pending = new Promise(done => {
+    resolve = done
+  })
+  vi.mocked(getHubs)
+    .mockReturnValueOnce(pending as never)
+    .mockResolvedValueOnce({ data: [{ id: 'visible' }], totalCount: null } as never)
+  try {
+    expect(await admin.hubsQueryFn()).toEqual([{ id: 'visible' }])
+    expect(admin.hubCountLoading).toBe(true)
+    resolve({ data: [], totalCount: 34 })
+    await pending
+    for (let i = 0; i < 5; i++) await Promise.resolve()
+    expect(view.getListQueryMeta(admin.hubsQueryKey)?.totalCount).toBe(34)
+    expect(admin.hubCountLoading).toBe(false)
   } finally {
     view.dispose()
   }

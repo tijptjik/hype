@@ -4,7 +4,7 @@ import ts from 'typescript'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushSync, untrack } from 'svelte'
 import { compileModule } from 'svelte/compiler'
-import { refreshRemoteQuery } from '#lib/remote/index.js'
+import { refreshRemoteQuery, readFreshRemoteQuery } from '#lib/remote/index.js'
 // @ts-expect-error Svelte's compiler runtime is internal and has no public declarations.
 import * as client from 'svelte/internal/client'
 
@@ -59,15 +59,32 @@ const create = new Function(
   'client',
   'untrack',
   'refreshRemoteQuery',
+  'readFreshRemoteQuery',
   `${compiled.replace(/import \* as \$ from ['"]svelte\/internal\/client['"];?/, 'const $ = client;')}\nreturn create;`,
-)(client, untrack, refreshRemoteQuery)
+)(client, untrack, refreshRemoteQuery, readFreshRemoteQuery)
 const cleanups: Array<() => void> = []
 afterEach(() => {
   for (const stop of cleanups.splice(0)) stop()
 })
 
-function setup(request: ReturnType<typeof vi.fn>) {
-  const state = create(request)
+function setup(
+  request: (input: unknown) => Promise<unknown>,
+  counts?: (input: unknown) => Promise<unknown>,
+) {
+  let response: Promise<unknown> | undefined
+  const state = create((input: { countOnly?: boolean }) => {
+    if (input.countOnly) {
+      if (counts) return counts(input)
+      response = request({ ...input, countOnly: undefined, includeCount: false })
+      return response
+    }
+    if (response) {
+      const result = response
+      response = undefined
+      return result
+    }
+    return request(input)
+  })
   cleanups.push(state.stop)
   flushSync()
   return state
@@ -143,7 +160,7 @@ describe('Feature index search loading', () => {
     expect(state.state().ids).toEqual(['fresh'])
     await state.more()
     expect(state.state().ids).toEqual(['fresh', 'fresh-more'])
-    expect(first.refresh).toHaveBeenCalledOnce()
+    expect(first.refresh).toHaveBeenCalledTimes(2)
     expect(second.refresh).toHaveBeenCalledOnce()
   })
 
@@ -264,7 +281,7 @@ it('replaces the count for an empty search and rejects late counts from older fi
     countLoading: false,
     ids: ['current'],
   })
-  expect(request.mock.calls[1][0].includeCount).toBe(true)
+  expect(request.mock.calls[1][0].includeCount).toBe(false)
   old.resolve({ ...page(['obsolete']), totalCount: 999 })
   await settle()
   expect(state.state()).toMatchObject({ count: 489, ids: ['current'] })
@@ -280,4 +297,26 @@ it('retains the exact count while fetching continuation rows without recounting'
   await state.more()
   expect(request.mock.calls[1][0].includeCount).toBe(false)
   expect(state.state()).toMatchObject({ count: 489, ids: ['first', 'next'] })
+})
+
+it('shows the first rows while an independent count is still pending', async () => {
+  const count = deferred()
+  const state = setup(
+    vi.fn().mockResolvedValue(page(['visible'])),
+    vi.fn().mockReturnValue(count.promise),
+  )
+  await settle()
+  expect(state.state()).toMatchObject({
+    ids: ['visible'],
+    pending: false,
+    countLoading: true,
+    count: null,
+  })
+  count.resolve({ ...page([]), totalCount: 84 })
+  await settle()
+  expect(state.state()).toMatchObject({
+    ids: ['visible'],
+    countLoading: false,
+    count: 84,
+  })
 })

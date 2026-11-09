@@ -151,3 +151,18 @@ it('passes view filters to the authorized reader and binds them into cursor owne
     }),
   ).rejects.toMatchObject({ status: 400 })
 })
+
+it('passes count-only requests through the same authorized resource endpoint', async () => {
+  mocks.projects.mockResolvedValue({ data: [], totalCount: 37, hasMore: false })
+  const result = await getResourcePage({
+    type: 'project',
+    includeCount: true,
+    countOnly: true,
+    q: 'matching',
+    meta,
+  })
+  expect(mocks.projects).toHaveBeenLastCalledWith(
+    expect.objectContaining({ countOnly: true, includeCount: true, q: 'matching' }),
+  )
+  expect(result).toEqual({ data: [], totalCount: 37, nextCursor: null })
+})
