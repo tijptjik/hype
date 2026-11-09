@@ -7,7 +7,6 @@ import { prefersReducedMotion } from 'svelte/motion'
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import XIcon from 'virtual:icons/lucide/x'
-import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
 // DOMAIN
 import {
   addressDivisionName,
@@ -129,7 +128,8 @@ export function close(): void {
     >
       {#each path as division, index (division.id)}
         <li
-          class="min-w-0"
+          class="relative min-w-0"
+          style:margin-left={`${index * 16}px`}
           transition:slide={{ duration: prefersReducedMotion.current ? 0 : 180 }}
         >
           <div class="flex min-w-0 items-start gap-1">
@@ -165,16 +165,20 @@ export function close(): void {
               <XIcon class="size-3.5" aria-hidden="true" />
             </button>
           </div>
-          {#if index < path.length - 1}
-            <ChevronDownIcon
-              class="text-muted-foreground/60 ml-0.5 size-3.5"
+          {#if index < path.length - 1 || hasChildren(path)}
+            <span
+              class="border-muted-foreground/35 pointer-events-none absolute top-7 -bottom-4 left-[7px] w-2 rounded-bl border-b border-l"
               aria-hidden="true"
-            />
+            ></span>
           {/if}
         </li>
       {/each}
       {#if path.length && hasChildren(path)}
-        <li class="flex items-start gap-3" data-locality-child-slot>
+        <li
+          class="flex items-start gap-3"
+          style:margin-left={`${path.length * 16}px`}
+          data-locality-child-slot
+        >
           <button
             type="button"
             aria-label={`${m.address_neighbourhood_add()}: ${addressDivisionName(path[path.length - 1], getLocaleKey())}`}

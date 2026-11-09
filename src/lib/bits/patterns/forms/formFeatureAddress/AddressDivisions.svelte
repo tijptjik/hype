@@ -8,7 +8,6 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 import LockIcon from 'virtual:icons/lucide/lock-keyhole'
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
 import InfoIcon from 'virtual:icons/proicons/info'
-import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
 import PanelRightIcon from 'virtual:icons/lucide/panel-right'
 import { divisionClassLabel } from '#lib/divisions/classes.js'
 import { divisionIcons } from '#lib/divisions/icons.js'
@@ -323,19 +322,20 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
                     }}
                     aria-label={`${groupLabels[group.key]} ${pathIndex + 1}`}
                   >
-                    {#each [...path].reverse() as division, index (division.id)}
+                    {#each path as division, index (division.id)}
                       <li
-                        class="min-w-0"
+                        class="relative min-w-0"
+                        style:margin-left={`${index * 16}px`}
                         transition:slide={{
                           duration: prefersReducedMotion.current ? 0 : 180,
                         }}
                       >
                         {@render divisionNode(division)}
                         {#if index < path.length - 1}
-                          <ChevronDownIcon
-                            class="text-muted-foreground/60 ml-0.5 size-3.5"
+                          <span
+                            class="border-muted-foreground/35 pointer-events-none absolute top-7 -bottom-4 left-[7px] w-2 rounded-bl border-b border-l"
                             aria-hidden="true"
-                          />
+                          ></span>
                         {/if}
                       </li>
                     {/each}
