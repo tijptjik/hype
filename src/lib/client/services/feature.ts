@@ -272,6 +272,7 @@ export function toFeatureFormInput(
       organisationId: value.organisationId,
       projectId: value.projectId,
       layerId: value.layerId,
+      featureType: value.featureType,
       contributorId: value.contributorId,
       geometry: value.geometry as Point,
       addressMeta: value.addressMeta ?? {},
@@ -379,6 +380,7 @@ export function getProgrammaticFeatureInputEntries(
   if (featureData?.locationBrandEdit)
     appendEntry('data.locationBrandEdit', JSON.stringify(featureData.locationBrandEdit))
 
+  if (featureData?.featureType) appendEntry('data.featureType', featureData.featureType)
   appendEntry('data.isIntangible', Boolean(featureData?.isIntangible))
   appendEntry('data.isVisitable', Boolean(featureData?.isVisitable))
   appendEntry('data.isPendingReview', Boolean(featureData?.isPendingReview))

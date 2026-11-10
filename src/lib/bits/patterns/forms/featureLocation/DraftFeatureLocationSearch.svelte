@@ -76,6 +76,8 @@ const searchKinds = ['establishment', 'building', 'address'] as const
 
 let {
   active,
+  allowedLocationKinds,
+  initialMode = 'search',
   searchRequest,
   allowManualEntry = true,
   resolutionOrigin = 'new-feature',
@@ -107,6 +109,8 @@ let {
   children,
 }: {
   active: boolean
+  allowedLocationKinds?: readonly string[]
+  initialMode?: 'search' | 'pin'
   searchRequest?: {
     id: number
     mode: 'search' | 'pin'
@@ -148,7 +152,13 @@ let {
 let input: HTMLInputElement | undefined = $state()
 let searchOutline = $state<HTMLDivElement>()
 let query = $state('')
-let findMode = $state<'search' | 'pin'>('search')
+let findMode = $state<'search' | 'pin'>(untrack(() => initialMode))
+$effect(() => {
+  const mode = initialMode
+  untrack(() => {
+    if (!selected) findMode = mode
+  })
+})
 let nearbyButton: HTMLButtonElement | undefined = $state()
 $effect(() => onModeChange?.(findMode))
 /** Switch discovery controls and direct attention to the selected input.
@@ -1977,6 +1987,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
   {#if associationOpen && associationOrigin}
     {#key associationOrigin}
       <LocationAssociationPicker
+        {allowedLocationKinds}
         showHeading={false}
         {autoAcceptSpecific}
         {onMapCandidates}

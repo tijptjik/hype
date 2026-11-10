@@ -1,4 +1,5 @@
 <script lang="ts">
+import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
 // DEFERRED FACETS
 import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
@@ -1675,6 +1676,14 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'advanced' }}
     >
       <FormSurface>
+        {#if layer?.data?.id}
+          <FeatureIntentSettings
+            scopeType="layer"
+            scopeId={layer.data.id}
+            disabled={!isEditing || formCtx.submitting}
+          />
+        {/if}
+
         <section class="flex min-h-0 flex-col gap-6 pb-6">
           <SectionHeader title={m.project_advanced()} />
           <div

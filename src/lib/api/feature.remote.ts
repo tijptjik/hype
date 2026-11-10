@@ -1,3 +1,5 @@
+import { readFeatureIntentPolicy } from '#lib/db/services/featureIntentPolicy.js'
+import { requireFeatureType } from '#lib/features/intents.js'
 import { sharedLocationEditRights } from './services/locationOwnership'
 import { historicalSourceLayerId } from '#lib/db/services/historicalLayers.js'
 import type { RemoteQuery } from '$app/server'
@@ -625,10 +627,29 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
 
     if (await historicalSourceLayerId(db, data.layerId))
       invalid(issue('HISTORICAL_LAYER_MEMBERSHIP_AUTOMATIC'))
+    try {
+      const policy = await readFeatureIntentPolicy(db, {
+        type: 'layer',
+        id: data.layerId,
+      })
+      data.featureType = requireFeatureType(policy.types, data.featureType).id
+    } catch (cause) {
+      invalid(issue(cause instanceof Error ? cause.message : 'Invalid feature type'))
+    }
     const presentationPolicy = await readFeaturePresentationPolicy(db, data.layerId)
     if (!presentationPolicy.allowDescriptions) {
       for (const row of Object.values(data.i18n)) row.description = ''
     }
+    // Coordinate-only Features remain valid; Location-based naming is a separate preference.
+    const inheritsLocationName =
+      presentationPolicy.locationBasedNames || data.locationNameMode === 'inherit'
+    // Address-only Locations supply the title when no venue name was provided.
+    if (
+      inheritsLocationName &&
+      !Object.values(data.i18n).some(row => row.title?.trim())
+    )
+      for (const row of Object.values(data.i18n))
+        row.title = row.displayAddress?.trim() ?? ''
     const created = await createFeatureForm(db, {
       revisionActor: { actorId: user.id, mode: 'staff' },
       data: {
@@ -658,6 +679,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     await probeFeatureForUpdate(db, targetFeatureId as Id),
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
+  if (data.featureType !== undefined && data.featureType !== current.featureType)
+    invalid(issue('Changing the feature type requires an explicit reclassification.'))
+  data.featureType = current.featureType
   let destinationScope: FeatureDestinationScope | undefined
   const parentsChanged =
     data.layerId !== current.layerId ||

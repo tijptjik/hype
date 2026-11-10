@@ -83,6 +83,7 @@ import type {
 
 let {
   origin,
+  allowedLocationKinds,
   cached = [],
   projectId,
   search,
@@ -96,6 +97,7 @@ let {
   markerNumberFor = () => 0,
 }: {
   origin: Result
+  allowedLocationKinds?: readonly string[]
   showHeading?: boolean
   autoAcceptSpecific?: boolean
   cached?: Result[]
@@ -111,12 +113,23 @@ let {
   onPreview?: (result: Result, preserveZoom?: boolean) => void
   markerNumberFor?: (result: Result) => number
 } = $props()
-const displayKinds = [...ASSOCIATION_KINDS].reverse()
+const displayKinds = $derived(
+  [...ASSOCIATION_KINDS]
+    .reverse()
+    .filter(kind => !allowedLocationKinds || allowedLocationKinds.includes(kind)),
+)
 const initial = untrack(() => origin)
 const originalAddress = $derived(
   normalizeAssociationComponents($state.snapshot(origin.address)),
 )
-let kind = $state<AssociationKind>(initial.address.association?.kind ?? initial.kind)
+let kind = $state<AssociationKind>(
+  untrack(() => {
+    const candidate = initial.address.association?.kind ?? initial.kind
+    return !allowedLocationKinds || allowedLocationKinds.includes(candidate)
+      ? candidate
+      : (displayKinds[0] ?? candidate)
+  }),
+)
 let names = $state<Record<AssociationKind, Record<string, string>>>({
   address: {},
   premises: associationNames(initial.address, 'premises'),
@@ -329,7 +342,8 @@ const numberValid = $derived(
   ),
 )
 const canAccept = $derived(
-  !changingSelection &&
+  (!allowedLocationKinds || allowedLocationKinds.includes(kind)) &&
+    !changingSelection &&
     numberValid &&
     !Object.values(pendingInputs).some(Boolean) &&
     (!nameEdits || Object.values(reviewedNames).some(name => name.trim())) &&
@@ -786,6 +800,7 @@ async function changeSelection(): Promise<void> {
  * @returns Nothing; persistence remains with the owner.
  */
 function acceptInitialSelection(): void {
+  if (allowedLocationKinds && !allowedLocationKinds.includes(origin.kind)) return
   onAccept({
     ...$state.snapshot(origin),
     // Retaining catalogue evidence still needs a local identity when the Feature is saved.
@@ -856,6 +871,7 @@ function accept(manual = false): void {
   if (target && moveMarker && target.address.coordinates)
     address.coordinates = target.address.coordinates
   if (customPosition) address.coordinates = [...customPosition]
+  if (allowedLocationKinds && !allowedLocationKinds.includes(selectedKind)) return
   onAccept({
     id: customPosition
       ? `custom:${target?.id ?? origin.id}`

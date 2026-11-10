@@ -1,4 +1,7 @@
 <script lang="ts">
+import FeatureIntentChoice from '#lib/bits/patterns/forms/featureIntent/FeatureIntentChoice.svelte'
+import type { FeatureType } from '#lib/features/intents.js'
+
 // DEFERRED FACETS
 import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
@@ -543,7 +546,11 @@ const isImagesFacet = $derived(activeFacet === 'images')
 function goToFacet(facet: FacetType): void {
   if ((facet === 'images' || facet === 'updates') && isNewFeatureRef) return
   if (facet === 'fields' && (!hasSelectedLayer || !ensureDraftPin())) return
-  if (facet === 'location' && needsLayerSelection) return
+  if (
+    facet === 'location' &&
+    (needsLayerSelection || (isNewFeatureRef && !selectedFeatureType))
+  )
+    return
   if (facet === activeFacet) return
   // The current route ref also covers unsaved Features, which have no cache record.
   const href = `/admin/features/${encodeURIComponent(featureRef)}#${facet}`
@@ -564,7 +571,8 @@ const buildFacetNavAction = createFacetNavActionBuilder<FacetType>({
   isFacetDisabled: facet =>
     (facet === 'fields' &&
       (!hasSelectedLayer || (isNewFeatureRef && !draftLocationReady))) ||
-    (facet === 'location' && needsLayerSelection),
+    (facet === 'location' &&
+      (needsLayerSelection || (isNewFeatureRef && !selectedFeatureType))),
 })
 
 /********************
@@ -666,7 +674,8 @@ $effect(() => {
       ...facet,
       disabled:
         (facet.ref === 'fields' && !hasSelectedLayer) ||
-        (facet.ref === 'location' && needsLayerSelection) ||
+        (facet.ref === 'location' &&
+          (needsLayerSelection || (isNewFeatureRef && !selectedFeatureType))) ||
         Boolean(facet.disabled),
     }))
 
@@ -717,6 +726,18 @@ const DEFAULT_FEATURE_MAP_ZOOM = 19
 let draftHasPin = $state(false)
 let draftHasAddress = $state(false)
 let editorViewportHeight = $state(1040)
+let selectedFeatureType = $state<FeatureType | null>(null)
+/** Retain placement while changing editorial intent; incompatible associations need explicit reselection.
+ * @param type Effective server-provided definition, or null while loading. @returns Nothing.
+ */
+function chooseFeatureType(type: FeatureType | null): void {
+  selectedFeatureType = type
+  updateFeatureData(data => ({ ...data, featureType: type?.id ?? undefined }))
+  if (type) {
+    draftFindMode = type.start
+    if (!draftLocalKind && !draftPlaceSource) draftLocalNameMode = 'independent'
+  }
+}
 let draftFindMode = $state<'search' | 'pin'>('search')
 let pinHighlightRequest = $state(0)
 // Inactive facets are deferred until visited, then retained so switching tabs preserves drafts.
@@ -1268,8 +1289,8 @@ function dropDraftPin(): boolean {
   return true
 }
 
-/** Prevent a new Feature from saving only the editor's marker coordinates.
- * @returns Whether the user has supplied a position and a Location description.
+/** Require deliberate map placement while allowing coordinate-only Features.
+ * @returns Whether the user has supplied the required placement.
  */
 function ensureDraftPin(): boolean {
   if (!isNewFeatureRef || draftLocationReady) return true
@@ -1533,6 +1554,25 @@ let featureFormSource = $state<FeatureFormInput>(initialEmptyFeatureFormSeed)
 const configuredFeatureForm = configureForm(() => ({
   form: featureForm as never,
   onsubmit: (({ data }: { data: FeatureFormInput }) => {
+    if (isNewFeatureRef && !selectedFeatureType) {
+      toast.error('Choose a feature type before saving.')
+      goToFacet('core')
+      return false
+    }
+    if (
+      isNewFeatureRef &&
+      selectedFeatureType &&
+      (draftLocalKind || draftPlaceSource)
+    ) {
+      const kind = draftLocalKind ?? 'establishment'
+      if (!selectedFeatureType.locationKinds.some(allowed => allowed === kind)) {
+        toast.error(
+          'Choose a location permitted for this feature type, or remove the association.',
+        )
+        goToFacet('location')
+        return false
+      }
+    }
     if (
       draftResolutionPending ||
       mapAddressChangeBusy ||
@@ -2111,9 +2151,7 @@ const profileLocationNames = $derived.by(() => {
 })
 // A marker supplies geometry; a selected or authored description supplies Location identity.
 const draftLocationReady = $derived(
-  draftHasPin &&
-    draftLocationAccepted &&
-    Object.values(profileLocationNames).some(name => name.trim()),
+  draftHasPin && (!selectedFeatureType?.associationRequired || draftLocationAccepted),
 )
 
 const profileNameMode = $derived(
@@ -4194,6 +4232,21 @@ async function refreshLocationSource(): Promise<void> {
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-7! pb-12`}>
+        {#if !isNewFeatureRef && currentFeatureData.featureType}
+          <p class="mb-8 text-sm">
+            Feature type: <strong>{currentFeatureData.featureType}</strong>
+          </p>
+        {/if}
+        {#if isNewFeatureRef && layerIdValue}
+          {#key layerIdValue}
+            <FeatureIntentChoice
+              layerId={featureCreationSourceLayerId(layerIdValue, selectedLayer)}
+              value={selectedFeatureType?.id}
+              onChange={chooseFeatureType}
+            />
+          {/key}
+        {/if}
+
         {#if needsLayerSelection || !showNameFields}
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {/if}
@@ -4220,6 +4273,7 @@ async function refreshLocationSource(): Promise<void> {
               <div class="flex flex-wrap justify-center gap-4">
                 <Button
                   type="button"
+                  disabled={isNewFeatureRef && !selectedFeatureType}
                   text={m.feature_start_name()}
                   color="secondary"
                   style="outline"
@@ -4229,7 +4283,10 @@ async function refreshLocationSource(): Promise<void> {
                 />
                 <Button
                   type="button"
-                  text={m.feature_start_find_place()}
+                  disabled={isNewFeatureRef && !selectedFeatureType}
+                  text={selectedFeatureType?.start === 'pin'
+                    ? 'Place on the map'
+                    : m.feature_start_find_place()}
                   color="primary"
                   size="md"
                   class="text-white!"
@@ -4815,6 +4872,8 @@ async function refreshLocationSource(): Promise<void> {
             {:else if isNewFeatureRef}
               <DraftFeatureLocationSearch
                 projectId={projectIdValue}
+                allowedLocationKinds={selectedFeatureType?.locationKinds}
+                initialMode={selectedFeatureType?.start ?? 'search'}
                 bind:this={draftSearch}
                 onFilterPanelChange={panel => (draftSearchFilterPanel = panel)}
                 onResultsChange={hasResults => (draftSearchHasResults = hasResults)}
@@ -4830,7 +4889,9 @@ async function refreshLocationSource(): Promise<void> {
                   button.focus()
                   return document.activeElement === button
                 }}
-                active={isLocationFacet && !needsLayerSelection}
+                active={isLocationFacet &&
+                  !needsLayerSelection &&
+                  Boolean(selectedFeatureType)}
                 canReturnToResults={isNewFeatureRef && !draftSelectionSaved}
                 focusRequest={locationFocusRequest}
                 onSelect={selectDraftLocation}

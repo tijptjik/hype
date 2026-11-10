@@ -1,4 +1,5 @@
 <script lang="ts">
+import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
 // DEFERRED FACETS
 import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE INTENTS
@@ -1963,6 +1964,14 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'advanced' }}
     >
       <FormSurface>
+        {#if hub?.data?.id}
+          <FeatureIntentSettings
+            scopeType="hub"
+            scopeId={hub.data.id}
+            disabled={!isEditing || formCtx.submitting}
+          />
+        {/if}
+
         {#if hub?.data?.id}
           <div class="flex min-w-0 flex-col pb-6">
             <ImageIntentSettings
