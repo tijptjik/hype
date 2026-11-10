@@ -1,4 +1,4 @@
-import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
+import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
 import { z } from 'zod'
@@ -96,11 +96,10 @@ export const LayerFormMeta = z.object({
   isAdminRequest: FormBoolean.optional(),
 })
 
-export const LayerFormData = z
-  .object({
-    meta: LayerFormMeta.optional(),
-    data: LayerEntityFormData,
-  })
-  .superRefine((value, ctx) => validateModelTabs('layer', value, ctx))
+export const LayerFormData = modelFormSchema(
+  'layer',
+  LayerFormMeta,
+  LayerEntityFormData,
+)
 
 export const LayerPreflightFormData = LayerFormData

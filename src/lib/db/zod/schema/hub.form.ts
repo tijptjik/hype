@@ -1,4 +1,4 @@
-import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
+import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
 import { z } from 'zod'
@@ -100,6 +100,24 @@ export const HubSubscriptionPlacementFormData = z.object({
 // 2. RESOURCE FORM SCHEMAS
 // ═══════════════════════
 
+/** Validate the subscription dependency only when its controls are supplied.
+ * @param data Submitted subscription fields. @param ctx Validation issues.
+ * @returns Nothing; incomplete enabled subscriptions produce a field issue.
+ */
+function validateHubSubscription(
+  data: { isSubscriptionAvailable?: boolean; subscriptionService?: string | null },
+  ctx: z.RefinementCtx,
+  path: PropertyKey[] = [],
+): void {
+  if (data.isSubscriptionAvailable && data.subscriptionService === null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, 'subscriptionService'],
+      message: m.field_is_required({ field: m.field_subscription_service() }),
+    })
+  }
+}
+
 export const HubEntityFormData = z
   .object({
     code: z
@@ -151,15 +169,7 @@ export const HubEntityFormData = z
     imageIntentSettings: ImageIntentSettingsFormData,
     properties: z.array(ProjectPropertyFormData).optional(),
   })
-  .superRefine((data, ctx) => {
-    if (data.isSubscriptionAvailable && data.subscriptionService === null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['subscriptionService'],
-        message: m.field_is_required({ field: m.field_subscription_service() }),
-      })
-    }
-  })
+  .superRefine((data, ctx) => validateHubSubscription(data, ctx))
 
 export const HubFormMeta = z.object({
   submittedTabs: SubmittedTabsSchema,
@@ -169,19 +179,12 @@ export const HubFormMeta = z.object({
   isAdminRequest: FormBoolean.optional(),
 })
 
-export const HubFormData = z
-  .object({
-    meta: HubFormMeta.optional(),
-    data: HubEntityFormData,
-  })
-  .superRefine((value, ctx) => {
-    validateModelTabs('hub', value, ctx)
-    if (value.meta?.mode === 'create' && !value.data.userRoles?.length)
-      ctx.addIssue({
-        code: 'custom',
-        path: ['data', 'userRoles'],
-        message: 'Add a User',
-      })
-  })
+export const HubFormData = modelFormSchema(
+  'hub',
+  HubFormMeta,
+  HubEntityFormData,
+).superRefine((value, ctx) => {
+  if (value.meta?.submittedTabs) validateHubSubscription(value.data, ctx, ['data'])
+})
 
 export const HubPreflightFormData = HubFormData

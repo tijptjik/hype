@@ -1,3 +1,5 @@
+import { suppliedModelTab } from '#lib/forms/modelTabs.js'
+import type { OrganisationEntityFormData } from '#lib/db/zod/schema/organisation.form.js'
 // ORGANISATION SETTINGS
 import { applyOrganisationSettingsPatch } from '#lib/organisations/settings.js'
 import type { RemoteQuery } from '$app/server'
@@ -390,14 +392,15 @@ export const organisationForm = guardedForm(
     if (!isSupportedMode) {
       invalid(issue(toIssueDetailMessage('INVALID_MODE')))
     }
-    const normalizedCode = data.code.trim()
+    const normalizedCode = data.code?.trim()
     const activeHubId = event.locals.hub?.isCore
       ? null
       : ((event.locals.hub as { id?: string } | null | undefined)?.id ?? null)
 
     const isExplicitCreateMode = mode === 'create'
     const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
-    const hasSubmittedPropertiesField = Object.hasOwn(data, 'properties')
+    const hasSubmittedPropertiesField = suppliedModelTab(params, 'fields', 'properties')
+    const hasSubmittedRoles = suppliedModelTab(params, 'members', 'userRoles')
     const submittedProperties = Array.isArray(data.properties) ? data.properties : []
 
     const normalizedSubmittedProperties =
@@ -410,10 +413,13 @@ export const organisationForm = guardedForm(
     )
 
     // Validate payload invariants.
-    if (submittedRoles.length === 0) {
+    if ((mode === 'create' || hasSubmittedRoles) && submittedRoles.length === 0) {
       invalid(issue(toIssueDetailMessage('USER_ROLES_REQUIRED')))
     }
-    if (!submittedRoles.some(userRole => userRole.role === 'owner')) {
+    if (
+      (mode === 'create' || hasSubmittedRoles) &&
+      !submittedRoles.some(userRole => userRole.role === 'owner')
+    ) {
       invalid(issue(toIssueDetailMessage('OWNER_REQUIRED')))
     }
     if (duplicateSubmittedRoleUserIds.length > 0) {
@@ -436,12 +442,18 @@ export const organisationForm = guardedForm(
     const isCreateMode = isExplicitCreateMode
 
     if (isCreateMode) {
+      // Full creation values were validated before entering this branch.
+      const createData = data as ReturnType<typeof OrganisationEntityFormData.parse>
+      const normalizedCode = createData.code.trim()
       if (organisationId) {
         invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
       }
       // Permission grants are platform-controlled, including on organisation creation.
       if (
-        !canSubmitOrganisationUserDetailsPermission(user, data.permitUserDetailsEdit)
+        !canSubmitOrganisationUserDetailsPermission(
+          user,
+          createData.permitUserDetailsEdit,
+        )
       ) {
         invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
       }
@@ -450,7 +462,7 @@ export const organisationForm = guardedForm(
         user,
         userRoles,
         resourceHubId: activeHubId,
-        submittedData: data,
+        submittedData: createData,
       })
       if (!createDecision.allowed) {
         invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
@@ -473,21 +485,21 @@ export const organisationForm = guardedForm(
         {
           id: newOrganisationId,
           code: normalizedCode,
-          url: data.url.trim() === '' ? null : data.url.trim(),
+          url: createData.url.trim() === '' ? null : createData.url.trim(),
           hubId: activeHubId,
-          settings: applyOrganisationSettingsPatch(undefined, data.settings),
-          defaultLocationVisibility: data.defaultLocationVisibility,
-          ...(user.superAdmin === true && data.permitUserDetailsEdit !== undefined
-            ? { permitUserDetailsEdit: data.permitUserDetailsEdit }
+          settings: applyOrganisationSettingsPatch(undefined, createData.settings),
+          defaultLocationVisibility: createData.defaultLocationVisibility,
+          ...(user.superAdmin === true && createData.permitUserDetailsEdit !== undefined
+            ? { permitUserDetailsEdit: createData.permitUserDetailsEdit }
             : {}),
-          ...(data.capabilities !== undefined
-            ? { capabilities: capabilityDefinitionsToStorage(data.capabilities) }
+          ...(createData.capabilities !== undefined
+            ? { capabilities: capabilityDefinitionsToStorage(createData.capabilities) }
             : {}),
         },
         {
-          userPolicy: data.userPolicy,
-          i18n: data.i18n,
-          userRoles: toUserRoles(data.userRoles, newOrganisationId),
+          userPolicy: createData.userPolicy,
+          i18n: createData.i18n,
+          userRoles: toUserRoles(createData.userRoles, newOrganisationId),
           ...(normalizedSubmittedProperties.length
             ? { properties: normalizedSubmittedProperties }
             : {}),
@@ -534,8 +546,11 @@ export const organisationForm = guardedForm(
     }
 
     // Apply role-management authorization only when role membership changed.
-    const existingRoleRows = await listUserRoleAssignments(db, current.id)
+    const existingRoleRows = hasSubmittedRoles
+      ? await listUserRoleAssignments(db, current.id)
+      : []
     if (
+      hasSubmittedRoles &&
       hasRoleMembershipChanged(
         submittedRoles,
         existingRoleRows,
@@ -565,16 +580,18 @@ export const organisationForm = guardedForm(
     }
 
     // Enforce uniqueness of code.
-    await validateUniqueNonReservedCode({
-      code: normalizedCode,
-      current,
-      isReservedCode,
-      probeExisting: code => probeExistingOrganisation(db, code),
-      onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
-      onConflict: () =>
-        invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
-    })
-
+    if (normalizedCode !== undefined) {
+      await validateUniqueNonReservedCode({
+        code: normalizedCode,
+        current,
+        isReservedCode,
+        probeExisting: code => probeExistingOrganisation(db, code),
+        onReserved: () =>
+          invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
+        onConflict: () =>
+          invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
+      })
+    }
     // Persist main record atomically with optimistic concurrency.
     const persisted = requireValue(
       await updateOrganisationByIdWithConcurrency(db, {
@@ -583,7 +600,9 @@ export const organisationForm = guardedForm(
         updatedAt: updatedAt as string,
         userPolicy: data.userPolicy,
         i18n: data.i18n,
-        userRoles: toUserRoles(data.userRoles, current.id),
+        ...(hasSubmittedRoles
+          ? { userRoles: toUserRoles(submittedRoles, current.id) }
+          : {}),
         ...(hasSubmittedPropertiesField
           ? { properties: normalizedSubmittedProperties }
           : {}),
@@ -601,7 +620,7 @@ export const organisationForm = guardedForm(
           ...(user.superAdmin === true && data.permitUserDetailsEdit !== undefined
             ? { permitUserDetailsEdit: data.permitUserDetailsEdit }
             : {}),
-          url: data.url.trim() === '' ? null : data.url.trim(),
+          ...(data.url !== undefined ? { url: data.url.trim() || null } : {}),
           ...(data.capabilities !== undefined
             ? { capabilities: capabilityDefinitionsToStorage(data.capabilities) }
             : {}),

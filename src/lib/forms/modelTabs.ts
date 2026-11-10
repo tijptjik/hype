@@ -1,9 +1,60 @@
 // VALIDATION
 import { z } from 'zod'
 
-/** Independently replaceable resource-form sections; profile carries required identity dependencies. */
+/** Independently replaceable resource-form sections; identity and revision live in meta. */
 export const MODEL_FORM_TABS = {
+  organisation: {
+    profile: [
+      'code',
+      'url',
+      'i18n',
+      'settings',
+      'capabilities',
+      'defaultLocationVisibility',
+      'permitUserDetailsEdit',
+    ],
+    members: ['userRoles'],
+    fields: ['properties'],
+    users: ['userPolicy'],
+  },
+  feature: {
+    profile: [
+      'organisationId',
+      'projectId',
+      'layerId',
+      'contributorId',
+      'featureType',
+      'kind',
+      'targetContext',
+      'associationRelation',
+      'i18n',
+      'nameOverrides',
+      'isIntangible',
+      'isVisitable',
+      'isPendingReview',
+      'isDraft',
+    ],
+    location: [
+      'geometry',
+      'addressMeta',
+      'locationNameMode',
+      'locationReset',
+      'locationBrandEdit',
+    ],
+    fields: ['properties'],
+  },
   hub: {
+    profile: [
+      'code',
+      'domain',
+      'legalContactAddress',
+      'isSubscriptionAvailable',
+      'subscriptionService',
+      'subscriptionId',
+      'subscriptionSessionCookie',
+      'subscriptionPlacement',
+      'i18n',
+    ],
     fields: ['properties'],
     members: ['userRoles'],
     organisations: ['organisations'],
@@ -12,6 +63,19 @@ export const MODEL_FORM_TABS = {
     images: ['imageIntentSettings'],
   },
   project: {
+    profile: [
+      'organisationId',
+      'code',
+      'i18n',
+      'settings',
+      'cardStyleCode',
+      'markerStyleCode',
+      'mapStyleCode',
+      'useAllInOrgContext',
+      'license',
+      'flags',
+      'capabilities',
+    ],
     fields: ['properties'],
     members: ['userRoles'],
     layers: ['layers'],
@@ -19,6 +83,7 @@ export const MODEL_FORM_TABS = {
     images: ['imageIntentSettings'],
   },
   layer: {
+    profile: ['organisationId', 'projectId', 'i18n', 'isDefaultVisible', 'metadata'],
     fields: ['properties'],
     location: ['featureIntentSettings', 'relocationUpdatePolicy'],
   },
@@ -36,7 +101,6 @@ export const SubmittedTabsSchema = z
     },
     z
       .array(z.string())
-      .min(1)
       .refine(tabs => new Set(tabs).size === tabs.length, 'Duplicate submitted tab'),
   )
   .optional()
@@ -47,7 +111,7 @@ export const SubmittedTabsSchema = z
 export function isModelFormResource(value: unknown): value is ModelFormResource {
   return typeof value === 'string' && Object.hasOwn(MODEL_FORM_TABS, value)
 }
-/** Select changed replaceable sections, retaining required profile/ownership dependencies.
+/** Select changed sections, including Profile, without resubmitting unchanged values.
  * @param resource Model resource. @param initial Committed values. @param current Draft values.
  * @returns Explicit tabs to submit; an empty array/string remains an intentional edit.
  */
@@ -58,17 +122,14 @@ export function changedModelTabs(
 ): string[] {
   const before = (initial as { data?: Record<string, unknown> })?.data ?? {}
   const after = (current as { data?: Record<string, unknown> })?.data ?? {}
-  return [
-    'profile',
-    ...Object.entries(MODEL_FORM_TABS[resource])
-      .filter(([, fields]) =>
-        fields.some(
-          (field: string) =>
-            JSON.stringify(before[field]) !== JSON.stringify(after[field]),
-        ),
-      )
-      .map(([tab]) => tab),
-  ]
+  return Object.entries(MODEL_FORM_TABS[resource])
+    .filter(([, fields]) =>
+      fields.some(
+        (field: string) =>
+          JSON.stringify(before[field]) !== JSON.stringify(after[field]),
+      ),
+    )
+    .map(([tab]) => tab)
 }
 /** Trim native FormData before both remote preflight and transport serialization.
  * @param resource Model resource. @param packet Native submission. @param tabs Supplied sections.
@@ -119,6 +180,12 @@ export function validateModelTabs(
       message: 'Create the parent before configuring its Data Model.',
     })
   }
+  if (
+    resource === 'hub' &&
+    value.meta?.mode === 'create' &&
+    (!Array.isArray(value.data.userRoles) || value.data.userRoles.length === 0)
+  )
+    ctx.addIssue({ code: 'custom', path: ['data', 'userRoles'], message: 'Add a User' })
   const tabs = value.meta?.submittedTabs
   if (!tabs) return
   if (
@@ -129,14 +196,11 @@ export function validateModelTabs(
     ctx.addIssue({ code: 'custom', path: ['data', 'userRoles'], message: 'Add a User' })
   }
   const policy = MODEL_FORM_TABS[resource]
-  if (
-    !tabs.includes('profile') ||
-    tabs.some(tab => tab !== 'profile' && !Object.hasOwn(policy, tab))
-  ) {
+  if (tabs.some(tab => !Object.hasOwn(policy, tab))) {
     ctx.addIssue({
       code: 'custom',
       path: ['meta', 'submittedTabs'],
-      message: 'Invalid supplied tabs; profile identity is required.',
+      message: 'Invalid supplied tabs.',
     })
   }
   if (value.meta?.mode !== 'update') {
@@ -170,4 +234,71 @@ export function suppliedModelTab(
   return params.meta?.submittedTabs
     ? params.meta.submittedTabs.includes(tab)
     : Object.hasOwn(params.data, field)
+}
+
+/** Build a shared full-create/partial-update schema without validating or defaulting omitted tabs.
+ * @param resource Resource tab contract. @param meta Identity and revision schema.
+ * @param entity Complete resource data schema, including profile cross-field constraints.
+ * @returns Validated supplied data; omitted fields remain absent.
+ * @remarks Each submitted tab validates its complete field group. Creation and legacy packets
+ * use the complete schema. Explicit tab packets require the persisted identity and revision.
+ */
+export function modelFormSchema<M extends z.ZodObject, E extends z.ZodObject>(
+  resource: ModelFormResource,
+  meta: M,
+  entity: E,
+) {
+  return z
+    .object({
+      meta: meta.optional(),
+      data: z
+        .custom<Partial<z.input<E>>>(
+          value => typeof value === 'object' && value !== null && !Array.isArray(value),
+        )
+        .default({} as Partial<z.input<E>>),
+    })
+    .transform((value, ctx) => {
+      const metadata = value.meta as
+        | {
+            mode?: string
+            submittedTabs?: string[]
+            id?: string
+            updatedAt?: string
+          }
+        | undefined
+      const data = value.data as Record<string, unknown>
+      // Check the original packet before parsing can strip forbidden omitted-tab fields.
+      validateModelTabs(resource, { meta: metadata, data }, ctx)
+      if (metadata?.submittedTabs && (!metadata.id || !metadata.updatedAt)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['meta'],
+          message: 'Updates require an identity and revision token.',
+        })
+      }
+      // Build only the selected validation shape: omitted tabs never apply defaults.
+      const fields = metadata?.submittedTabs
+        ? new Set(
+            metadata.submittedTabs.flatMap(
+              tab =>
+                (MODEL_FORM_TABS[resource] as Record<string, readonly string[]>)[tab] ??
+                [],
+            ),
+          )
+        : undefined
+      const schema = fields
+        ? z.object(
+            Object.fromEntries(
+              Object.entries(entity.shape).filter(([field]) => fields.has(field)),
+            ),
+          )
+        : entity
+      const result = schema.safeParse(data)
+      if (!result.success) {
+        for (const issue of result.error.issues)
+          ctx.addIssue({ ...issue, path: ['data', ...issue.path] })
+        return z.NEVER
+      }
+      return { meta: value.meta, data: result.data as Partial<z.output<E>> }
+    })
 }

@@ -53,7 +53,12 @@ const {
   mockProbeExistingHub: vi.fn(async (): Promise<unknown> => null),
   mockProbeHubForUpdate: vi.fn(async (): Promise<unknown> => null),
   mockUpdateHubByIdWithConcurrency: vi.fn(
-    async (_db: unknown, _input: { data: unknown }): Promise<unknown> => null,
+    async (
+      _db: unknown,
+      _input: Parameters<
+        typeof import('#lib/db/services/hub.js').updateHubByIdWithConcurrency
+      >[1],
+    ): Promise<unknown> => null,
   ),
   mockAuthorizeHubCreateForSubmission: vi.fn(
     (): { allowed: boolean; code?: string } => ({ allowed: true }),
@@ -840,9 +845,9 @@ describe('hub.remote form image handling', () => {
           id: 'hub-1',
           mode: 'update',
           updatedAt: '2026-02-23T00:00:00.000Z',
-          submittedTabs: ['profile', 'location'],
+          submittedTabs: ['location'],
         },
-        data: { code: 'core', domain: '', i18n: {} },
+        data: {},
       },
       (message: string) => {
         throw new Error(String(message))
@@ -857,6 +862,9 @@ describe('hub.remote form image handling', () => {
     for (const field of ['properties', 'organisations', 'layerDefaults']) {
       expect(saved).not.toHaveProperty(field)
     }
+    expect(saved.data).toEqual({})
+    expect(saved.i18n).toBeUndefined()
+    expect(mockValidateUniqueNonReservedCode).not.toHaveBeenCalled()
     expect(saved.featureIntentSettings).toBeUndefined()
     expect(saved.imageIntentSettings).toBeUndefined()
   })

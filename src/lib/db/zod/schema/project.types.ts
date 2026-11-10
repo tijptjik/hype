@@ -104,7 +104,10 @@ export type ProjectListParamsByProfile<P extends ProjectProfile> = Omit<
   }
 }
 
-export type ProjectFormInput = z.input<typeof ProjectFormData>
+/** Complete editor state; transport schemas independently allow omitted tabs. */
+export type ProjectFormInput = Omit<z.input<typeof ProjectFormData>, 'data'> & {
+  data: z.input<typeof ProjectEntityFormData>
+}
 export type ProjectBooleanField = 'isPublished' | 'isArchived'
 export type ProjectSubmitBaselineRelations = {
   license?: ProjectFormInput['data']['license']

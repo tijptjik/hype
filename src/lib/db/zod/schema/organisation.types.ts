@@ -101,7 +101,11 @@ export type OrganisationListParamsByProfile<P extends OrganisationProfile> = Omi
   }
 }
 
-export type OrganisationFormInput = z.input<typeof OrganisationFormData>
+/** Complete editor state; submitted packets may omit unchanged tabs. */
+export type OrganisationFormInput = Omit<
+  z.input<typeof OrganisationFormData>,
+  'data'
+> & { data: z.input<typeof OrganisationEntityFormData> }
 export type OrganisationFormLocaleInput = FormLocaleInput<OrganisationFormInput>
 export type OrganisationFormLocaleSource = FormLocaleSource<OrganisationFormInput>
 export type OrganisationPropertySource =

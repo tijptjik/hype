@@ -61,7 +61,14 @@ const {
     async (_db: unknown, _organisationId: string, projectCapabilities: unknown) =>
       projectCapabilities ?? {},
   ),
-  mockUpdateProjectByIdWithConcurrency: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateProjectByIdWithConcurrency: vi.fn(
+    async (
+      _db: unknown,
+      _input: Parameters<
+        typeof import('#lib/db/services/project.js').updateProjectByIdWithConcurrency
+      >[1],
+    ): Promise<unknown> => null,
+  ),
   mockCascadeProjectOrganisationToDescendants: vi.fn(async () => undefined),
   mockUpdatePropertiesWithRelated: vi.fn(async (): Promise<unknown[]> => []),
   mockListResolvedProjectProperties: vi.fn(async (): Promise<unknown[]> => []),
@@ -971,7 +978,7 @@ describe('project.remote form organisation move authz', () => {
     expect(mockSyncProjectUserRoles).not.toHaveBeenCalled()
   })
 
-  it.each([undefined, ['profile']])(
+  it.each([undefined, ['profile'], ['location']])(
     'preserves omitted project tabs with manifest %j',
     async submittedTabs => {
       const payload = {
@@ -981,12 +988,14 @@ describe('project.remote form organisation move authz', () => {
           submittedTabs,
           updatedAt: '2026-02-24T00:00:00.000Z',
         },
-        data: {
-          organisationId: 'org-1',
-          code: 'project-code',
-          i18n: { en: {}, zhHans: {}, zhHant: {} },
-          capabilities: {},
-        },
+        data: submittedTabs?.includes('location')
+          ? {}
+          : {
+              organisationId: 'org-1',
+              code: 'project-code',
+              i18n: { en: {}, zhHans: {}, zhHant: {} },
+              capabilities: {},
+            },
       }
 
       const result = await remote.projectForm(payload, throwingInvalid)
@@ -1004,6 +1013,12 @@ describe('project.remote form organisation move authz', () => {
       expect(mockUpdatePropertiesWithRelated).not.toHaveBeenCalled()
       expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledTimes(1)
       const saved = mockUpdateProjectByIdWithConcurrency.mock.calls[0][1]
+      if (submittedTabs?.includes('location')) {
+        expect(saved.i18n).toBeUndefined()
+        expect(Object.values(saved.data).every(value => value === undefined)).toBe(true)
+        expect(saved.mapStyleCode).toBeUndefined()
+      }
+
       for (const field of [
         'userRoles',
         'properties',
@@ -1017,7 +1032,7 @@ describe('project.remote form organisation move authz', () => {
         'featureNameProperties',
         'imageIntentSettings',
         'locationUpdatePolicy',
-      ]) {
+      ] as const) {
         expect(saved[field]).toBeUndefined()
       }
       expect(result).toEqual({

@@ -922,6 +922,37 @@ describe('organisation.remote authz', () => {
     },
   )
 
+  it('preserves omitted organisation owners and profile when only Fields are submitted', async () => {
+    const services = await import('#lib/db/services/organisation.js')
+    vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+      id: 'org-1',
+      code: 'org-code',
+      hubId: 'hub-a',
+      modifiedAt: 'before',
+    })
+    vi.mocked(services.updateOrganisationByIdWithConcurrency).mockResolvedValue({
+      id: 'org-1',
+      modifiedAt: 'after',
+    })
+    await remote.organisationForm({
+      meta: {
+        id: 'org-1',
+        mode: 'update',
+        updatedAt: 'before',
+        submittedTabs: ['fields'],
+      },
+      data: { properties: [] },
+    })
+    const saved = vi.mocked(services.updateOrganisationByIdWithConcurrency).mock
+      .calls[0]?.[1]
+    expect(saved?.userRoles).toBeUndefined()
+    expect(saved?.i18n).toBeUndefined()
+    expect(saved?.properties).toEqual([])
+    expect(Object.values(saved?.data ?? {}).every(value => value === undefined)).toBe(
+      true,
+    )
+    expect(services.listUserRoleAssignments).not.toHaveBeenCalled()
+  })
   it('saves chat appearance through the organisation form revision with other settings', async () => {
     const services = await import('#lib/db/services/organisation.js')
     const { ContentLocaleSettingsSchema } = await import(

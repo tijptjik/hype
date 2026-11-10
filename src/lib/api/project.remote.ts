@@ -112,6 +112,7 @@ import {
   GetQueryParamsSchema,
   ListQueryParamsSchema,
   ProjectFormData,
+  type ProjectEntityFormData,
   PublishProjectSchema,
   RemoveProjectSchema,
 } from '#lib/db/zod/index.js'
@@ -562,7 +563,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (mode === 'create' && data.locationUpdatePolicy) {
     invalid(issue('LOCATION_POLICY_REQUIRES_EXISTING_PROJECT'))
   }
-  const normalizedCode = data.code.trim()
+  const normalizedCode = data.code?.trim()
   const hasSubmittedUserRoles = suppliedModelTab(params, 'members', 'userRoles')
   const submittedRoles =
     hasSubmittedUserRoles && Array.isArray(data.userRoles) ? data.userRoles : []
@@ -659,12 +660,14 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
    * @param organisationId - Persisted or authorized target organisation id.
    * @returns Normalized capability, role, and property relation inputs.
    */
-  const resolveSubmittedProjectRelations = async (organisationId: Id) => {
-    const submittedProjectCapabilities = await mergeOrganisationCapabilities(
-      db,
-      organisationId,
-      data.capabilities,
-    )
+  const resolveSubmittedProjectRelations = async (
+    organisationId: Id,
+    retainedCapabilities?: typeof data.capabilities,
+  ) => {
+    const submittedProjectCapabilities =
+      data.capabilities === undefined && retainedCapabilities !== undefined
+        ? retainedCapabilities
+        : await mergeOrganisationCapabilities(db, organisationId, data.capabilities)
     const submittedRolesWithCapabilities = sanitizeSubmittedRoleCapabilities(
       submittedRoles,
       submittedProjectCapabilities,
@@ -693,18 +696,20 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   /* -------- */
 
   if (isCreateMode) {
+    // Creation was validated against the complete entity schema.
+    const createData = data as ReturnType<typeof ProjectEntityFormData.parse>
     // Apply role-based authorization.
     const organisationScope = requireValue(
-      await probeOrganisationHubForProject(db, data.organisationId as Id),
+      await probeOrganisationHubForProject(db, createData.organisationId as Id),
       () => invalid(issue('ORGANISATION_NOT_FOUND')),
     )
 
     const createDecision = authorizeProjectCreateForSubmission({
       user,
       userRoles,
-      organisationId: data.organisationId,
+      organisationId: createData.organisationId,
       resourceHubId: organisationScope.hubId,
-      submittedData: data,
+      submittedData: createData,
     })
     if (!createDecision.allowed) {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
@@ -715,10 +720,10 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       submittedRolesWithCapabilities,
       submittedLocalProperties,
       submittedInheritedProperties,
-    } = await resolveSubmittedProjectRelations(data.organisationId as Id)
+    } = await resolveSubmittedProjectRelations(createData.organisationId as Id)
 
     await validateUniqueNonReservedCode({
-      code: normalizedCode,
+      code: createData.code.trim(),
       isReservedCode,
       probeExisting: code => probeExistingProject(db, code),
       onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
@@ -736,22 +741,22 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       db,
       {
         id: newProjectId,
-        organisationId: data.organisationId,
-        code: normalizedCode,
-        useAllInOrgContext: data.useAllInOrgContext,
-        settings: applyContentLocaleSettingsPatch(undefined, data.settings),
-        flags: data.flags,
-        cardStyleCode: data.cardStyleCode,
-        markerStyleCode: data.markerStyleCode,
-        license: data.license,
+        organisationId: createData.organisationId,
+        code: createData.code.trim(),
+        useAllInOrgContext: createData.useAllInOrgContext,
+        settings: applyContentLocaleSettingsPatch(undefined, createData.settings),
+        flags: createData.flags,
+        cardStyleCode: createData.cardStyleCode,
+        markerStyleCode: createData.markerStyleCode,
+        license: createData.license,
         capabilities: submittedProjectCapabilities,
         isPublished: false,
         isArchived: false,
       },
       {
-        i18n: data.i18n,
+        i18n: createData.i18n,
         userRoles: toUserRoles(submittedRolesWithCapabilities, newProjectId),
-        mapStyleCode: data.mapStyleCode ?? null,
+        mapStyleCode: createData.mapStyleCode ?? null,
         ...(submittedPropertiesWithProjectId.length
           ? { properties: submittedPropertiesWithProjectId }
           : {}),
@@ -796,26 +801,34 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   // Authorize persisted scalar changes before loading the relation-heavy admin shape.
   const submittedDataBeforeHydration: Partial<
     Record<ProjectAuthorizationField, unknown>
-  > = { i18n: data.i18n }
-  if (normalizedCode !== current.code)
+  > = data.i18n === undefined ? {} : { i18n: data.i18n }
+  if (normalizedCode !== undefined && normalizedCode !== current.code)
     submittedDataBeforeHydration.code = normalizedCode
-  if (data.organisationId !== current.organisationId) {
+  if (
+    data.organisationId !== undefined &&
+    data.organisationId !== current.organisationId
+  ) {
     submittedDataBeforeHydration.organisationId = data.organisationId
   }
   if (
+    data.capabilities !== undefined &&
     toProjectStableAuthzSignature(data.capabilities) !==
-    toProjectStableAuthzSignature(current.capabilities ?? {})
+      toProjectStableAuthzSignature(current.capabilities ?? {})
   ) {
     submittedDataBeforeHydration.capabilities = data.capabilities
   }
-  if (data.useAllInOrgContext !== current.useAllInOrgContext) {
+  if (
+    data.useAllInOrgContext !== undefined &&
+    data.useAllInOrgContext !== current.useAllInOrgContext
+  ) {
     submittedDataBeforeHydration.useAllInOrgContext = data.useAllInOrgContext
   }
   if (
+    data.flags !== undefined &&
     toProjectStableAuthzSignature(data.flags) !==
-    toProjectStableAuthzSignature(current.flags ?? {})
+      toProjectStableAuthzSignature(current.flags ?? {})
   ) {
-    submittedDataBeforeHydration.flags = data.flags
+    submittedDataBeforeHydration.flags = data.flags ?? current.flags
   }
   if (
     data.settings !== undefined &&
@@ -824,20 +837,27 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   ) {
     submittedDataBeforeHydration.settings = data.settings
   }
-  if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
+  if (
+    data.cardStyleCode !== undefined &&
+    data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)
+  ) {
     submittedDataBeforeHydration.cardStyleCode = data.cardStyleCode
   }
-  if (data.markerStyleCode !== (current.markerStyleCode ?? null)) {
+  if (
+    data.markerStyleCode !== undefined &&
+    data.markerStyleCode !== (current.markerStyleCode ?? null)
+  ) {
     submittedDataBeforeHydration.markerStyleCode = data.markerStyleCode
   }
-  if (meta?.licenseTouched === true) {
+  if (data.license !== undefined && meta?.licenseTouched === true) {
     submittedDataBeforeHydration.license = data.license
   }
 
   if (data.locationUpdatePolicy) {
     submittedDataBeforeHydration.locationUpdatePolicy = data.locationUpdatePolicy
   }
-  if (data.featureIntentSettings) submittedDataBeforeHydration.flags = data.flags
+  if (data.featureIntentSettings)
+    submittedDataBeforeHydration.flags = data.flags ?? current.flags
   if (data.imageIntentSettings)
     submittedDataBeforeHydration.imageIntentSettings = data.imageIntentSettings
   const preliminaryUpdateDecision = authorizeProjectUpdateForSubmission({
@@ -863,7 +883,10 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     submittedRolesWithCapabilities,
     submittedLocalProperties,
     submittedInheritedProperties,
-  } = await resolveSubmittedProjectRelations(data.organisationId as Id)
+  } = await resolveSubmittedProjectRelations(
+    (data.organisationId ?? current.organisationId) as Id,
+    current.capabilities ?? {},
+  )
 
   // Load the full persisted entity so field-level auth can compare against real DB state.
   const currentWithRelations = requireValue(
@@ -887,7 +910,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   currentEntity.properties = await listResolvedProjectProperties(db, current.id)
 
-  const licenseTouched = meta?.licenseTouched === true
+  const licenseTouched = data.license !== undefined && meta?.licenseTouched === true
 
   /* ----------------- */
   // UPDATE FLOW: DIFF DETECTION
@@ -923,22 +946,27 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Compare normalized i18n payloads so translator-only submissions resolve to i18n field auth.
   const i18nChanged =
+    data.i18n !== undefined &&
     toProjectStableAuthzSignature(data.i18n) !==
-    toProjectStableAuthzSignature(normalizeProjectI18nForFormInput(currentEntity.i18n))
+      toProjectStableAuthzSignature(
+        normalizeProjectI18nForFormInput(currentEntity.i18n),
+      )
   const licenseChanged =
     licenseTouched &&
     toProjectStableAuthzSignature(data.license) !==
       toProjectStableAuthzSignature(currentEntity.license)
   const persistedLicense =
-    licenseChanged && currentEntity.isPublished
+    licenseChanged && data.license && currentEntity.isPublished
       ? appendProjectLicenseHistory(data.license, new Date().toISOString())
       : licenseChanged
         ? normalizeProjectLicense(data.license)
         : undefined
-  const organisationChanged = data.organisationId !== current.organisationId
+  const organisationChanged =
+    data.organisationId !== undefined && data.organisationId !== current.organisationId
   const projectCapabilitiesChanged =
+    data.capabilities !== undefined &&
     toProjectStableAuthzSignature(submittedProjectCapabilities) !==
-    toProjectStableAuthzSignature(current.capabilities ?? {})
+      toProjectStableAuthzSignature(current.capabilities ?? {})
   const authResource = {
     id: current.id,
     organisationId: current.organisationId,
@@ -947,16 +975,21 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Build the submitted field set from actual diffs so authz checks changed fields only.
   const submittedDataForUpdate: Partial<Record<ProjectAuthorizationField, unknown>> = {}
-  if (normalizedCode !== current.code) submittedDataForUpdate.code = normalizedCode
+  if (normalizedCode !== undefined && normalizedCode !== current.code)
+    submittedDataForUpdate.code = normalizedCode
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
-  if (data.useAllInOrgContext !== current.useAllInOrgContext) {
+  if (
+    data.useAllInOrgContext !== undefined &&
+    data.useAllInOrgContext !== current.useAllInOrgContext
+  ) {
     submittedDataForUpdate.useAllInOrgContext = data.useAllInOrgContext
   }
   if (
+    data.flags !== undefined &&
     toProjectStableAuthzSignature(data.flags) !==
-    toProjectStableAuthzSignature(current.flags ?? {})
+      toProjectStableAuthzSignature(current.flags ?? {})
   ) {
-    submittedDataForUpdate.flags = data.flags
+    submittedDataForUpdate.flags = data.flags ?? current.flags
   }
   if (
     data.settings !== undefined &&
@@ -965,10 +998,16 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   ) {
     submittedDataForUpdate.settings = data.settings
   }
-  if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
+  if (
+    data.cardStyleCode !== undefined &&
+    data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)
+  ) {
     submittedDataForUpdate.cardStyleCode = data.cardStyleCode
   }
-  if (data.markerStyleCode !== (current.markerStyleCode ?? null)) {
+  if (
+    data.markerStyleCode !== undefined &&
+    data.markerStyleCode !== (current.markerStyleCode ?? null)
+  ) {
     submittedDataForUpdate.markerStyleCode = data.markerStyleCode
   }
   if (licenseChanged) submittedDataForUpdate.license = data.license
@@ -990,7 +1029,8 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     submittedDataForUpdate.locationUpdatePolicy = data.locationUpdatePolicy
   }
   // Apply role-based authorization for core update fields.
-  if (data.featureIntentSettings) submittedDataForUpdate.flags = data.flags
+  if (data.featureIntentSettings)
+    submittedDataForUpdate.flags = data.flags ?? current.flags
   if (data.imageIntentSettings)
     submittedDataForUpdate.imageIntentSettings = data.imageIntentSettings
   const updateDecision = authorizeProjectUpdateForSubmission({
@@ -1028,7 +1068,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   // Allow projects to be assigned to or moved between organisations.
-  if (organisationChanged) {
+  if (organisationChanged && data.organisationId !== undefined) {
     const targetOrganisationScope = requireValue(
       await probeOrganisationHubForProject(db, data.organisationId as Id),
       () => invalid(issue('ORGANISATION_NOT_FOUND')),
@@ -1085,15 +1125,17 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   // Enforce uniqueness of code.
-  await validateUniqueNonReservedCode({
-    code: normalizedCode,
-    current,
-    isReservedCode,
-    probeExisting: code => probeExistingProject(db, code),
-    onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
-    onConflict: () =>
-      invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
-  })
+  if (normalizedCode !== undefined) {
+    await validateUniqueNonReservedCode({
+      code: normalizedCode,
+      current,
+      isReservedCode,
+      probeExisting: code => probeExistingProject(db, code),
+      onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
+      onConflict: () =>
+        invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
+    })
+  }
 
   /* ----------------- */
   // UPDATE FLOW: PERSISTENCE
@@ -1160,7 +1202,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       (roleMembershipChanged || roleCapabilityAssignmentsChanged)
         ? { userRoles: toUserRoles(submittedRolesWithCapabilities, current.id) }
         : {}),
-      mapStyleCode: data.mapStyleCode ?? null,
+      ...(data.mapStyleCode !== undefined
+        ? { mapStyleCode: data.mapStyleCode || null }
+        : {}),
       ...propertyRelations,
       ...(hasSubmittedLayers ? { layers: normalizedSubmittedLayers } : {}),
       locationUpdatePolicy: data.locationUpdatePolicy,
@@ -1173,7 +1217,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         cardStyleCode: data.cardStyleCode,
         markerStyleCode: data.markerStyleCode,
         ...(persistedLicense ? { license: persistedLicense } : {}),
-        capabilities: submittedProjectCapabilities,
+        ...(data.capabilities !== undefined
+          ? { capabilities: submittedProjectCapabilities }
+          : {}),
       },
     }).catch(cause => {
       if (cause instanceof FeatureIntentPolicyError)

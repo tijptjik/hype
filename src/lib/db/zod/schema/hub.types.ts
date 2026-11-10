@@ -96,7 +96,10 @@ export type HubUserState = z.infer<typeof HubUserStateBase>
 export type HubLayer = z.infer<typeof HubLayerBase>
 export type HubLayerWithLayerRecord = z.infer<typeof HubLayerWithLayer>
 
-export type HubFormInput = z.input<typeof HubFormData>
+/** Complete editor state; transport schemas independently allow omitted tabs. */
+export type HubFormInput = Omit<z.input<typeof HubFormData>, 'data'> & {
+  data: z.input<typeof HubEntityFormData>
+}
 export type HubFormLocaleInput = FormLocaleInput<HubFormInput>
 export type HubFormLocaleSource = FormLocaleSource<HubFormInput>
 export type HubPreflightInput = z.input<typeof HubPreflightFormData>

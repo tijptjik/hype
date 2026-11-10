@@ -427,7 +427,12 @@ describe('feature.remote authz matrix', () => {
 
     mockGuardedContext.mockResolvedValue({
       db: {
-        get: vi.fn(async () => ({ n: 0 })),
+        get: vi.fn(async () => ({
+          n: 0,
+          definition: null,
+          namingRules: '{}',
+          version: 0,
+        })),
         query: { property: { findMany: vi.fn().mockResolvedValue([]) } },
       },
       user: { id: 'u-1', isAnonymous: false, superAdmin: false },
@@ -848,6 +853,45 @@ describe('feature.remote authz matrix', () => {
     )
   })
 
+  it('passes omitted Feature tabs through revision saving without clearing them or looking up a new parent', async () => {
+    mockSaveFeatureFormRevision.mockResolvedValueOnce({
+      status: 'applied',
+      revisionId: 'partial',
+    })
+    await remote.featureForm(
+      {
+        meta: {
+          id: 'feature-1',
+          updatedAt: '2026-03-18T00:00:00.000Z',
+          mode: 'update',
+          submittedTabs: ['fields'],
+        },
+        data: { properties: [] },
+      },
+      throwingInvalid,
+    )
+    expect(mockProbeLayerForUpdate).not.toHaveBeenCalled()
+    expect(mockSaveFeatureFormRevision).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        expectedScope: expect.objectContaining({
+          organisationId: 'org-1',
+          projectId: 'project-1',
+          layerId: 'layer-1',
+        }),
+        data: expect.objectContaining({ properties: [] }),
+      }),
+    )
+    const saved = mockSaveFeatureFormRevision.mock.calls[0]?.[1] as
+      | Parameters<
+          typeof import('#lib/db/services/featureFormRevision.js').saveFeatureFormRevision
+        >[1]
+      | undefined
+    expect(saved?.data.i18n).toBeUndefined()
+    expect(saved?.data.geometry).toBeUndefined()
+    expect(saved?.data.addressMeta).toBeUndefined()
+    expect(saved?.data.isVisitable).toBeUndefined()
+  })
   it('enrolled staff form saves return the accepted revision without rerunning legacy writers', async () => {
     mockSaveFeatureFormRevision.mockResolvedValueOnce({
       status: 'applied',
@@ -1324,6 +1368,7 @@ describe('feature.remote authz matrix', () => {
           mode: 'create',
         },
         data: {
+          featureType: 'object',
           layerId: 'layer-1',
           contributorId: null,
           i18n: { en: { name: 'Imported feature' } },

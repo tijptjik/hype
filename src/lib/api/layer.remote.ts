@@ -61,6 +61,7 @@ import { layer } from '#lib/db/schema/index.js'
 import {
   GetQueryParamsSchema,
   LayerFormData,
+  type LayerEntityFormData,
   ListQueryParamsSchema,
   PublishLayerSchema,
   RemoveLayerSchema,
@@ -312,15 +313,17 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   if (mode === 'create') {
+    // Creation was validated against the complete entity schema.
+    const createData = data as ReturnType<typeof LayerEntityFormData.parse>
     // A persisted Layer is required before editing its independently revisioned override.
-    if (data.relocationUpdatePolicy) {
+    if (createData.relocationUpdatePolicy) {
       invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
     }
     const created = await createLayerFromSubmission({
       db,
       user,
       userRoles,
-      submittedData: data,
+      submittedData: createData,
       submittedProperties,
       onInvalid: message => invalid(issue(toIssueDetailMessage(message))),
       onNotFound: message => invalid(issue(message)),
@@ -340,16 +343,15 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Layer updates do not support reparenting; reject a caller-controlled scope change.
   if (
-    data.projectId !== current.projectId ||
+    (data.projectId !== undefined && data.projectId !== current.projectId) ||
     (data.organisationId && data.organisationId !== current.organisationId)
   ) {
     invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
   }
 
-  const resolvedOrganisationId = current.organisationId
-
   // Authorize from the scalar probe before loading the relation-heavy admin shape.
-  const submittedDataForUpdate: Record<string, unknown> = { i18n: data.i18n }
+  const submittedDataForUpdate: Record<string, unknown> =
+    data.i18n === undefined ? {} : { i18n: data.i18n }
   if (data.featureIntentSettings) submittedDataForUpdate.metadata = data.metadata ?? {}
   if (data.relocationUpdatePolicy) {
     submittedDataForUpdate.relocationUpdatePolicy = data.relocationUpdatePolicy
@@ -357,11 +359,15 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   // Property snapshots require the persisted relation comparison below; unchanged
   // properties must not turn a translation edit into a restricted field update.
   if (
+    data.metadata !== undefined &&
     toStableSignature(data.metadata ?? {}) !== toStableSignature(current.metadata ?? {})
   ) {
     submittedDataForUpdate.metadata = data.metadata
   }
-  if (Boolean(data.isDefaultVisible) !== Boolean(current.isDefaultVisible)) {
+  if (
+    data.isDefaultVisible !== undefined &&
+    Boolean(data.isDefaultVisible) !== Boolean(current.isDefaultVisible)
+  ) {
     submittedDataForUpdate.isDefaultVisible = data.isDefaultVisible
   }
   const updateDecision = authorizeLayerUpdateForSubmission({
@@ -439,8 +445,6 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
       ...(propertiesChanged ? { properties: submittedProperties } : {}),
       relocationUpdatePolicy: data.relocationUpdatePolicy,
       data: {
-        organisationId: resolvedOrganisationId,
-        projectId: data.projectId,
         metadata: data.metadata,
         isDefaultVisible: data.isDefaultVisible,
       },
@@ -584,7 +588,7 @@ export const createLayer = guardedCommand(LayerFormData, async (params, ctx) => 
     db,
     user,
     userRoles,
-    submittedData: data,
+    submittedData: data as ReturnType<typeof LayerEntityFormData.parse>,
     submittedProperties,
     onInvalid: message => {
       throw error(400, toIssueDetailMessage(message))

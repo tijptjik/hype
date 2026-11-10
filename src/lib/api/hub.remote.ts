@@ -79,6 +79,7 @@ import {
   ListQueryParamsSchema,
   GetQueryParamsSchema,
   HubFormData,
+  type HubEntityFormData,
   DismissHubSubscriptionPromptSchema,
   JoinHubSubscriptionSchema,
   PublishHubSchema,
@@ -300,8 +301,8 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   if (!isSupportedMode) {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
-  const normalizedCode = data.code.trim()
-  const normalizedDomain = data.domain.trim()
+  const normalizedCode = data.code?.trim()
+  const normalizedDomain = data.domain?.trim()
   const normalizedLegalContactAddress = (data.legalContactAddress ?? '').trim()
   const normalizedSubscriptionId = normalizeSubstackSubscriptionId(
     data.subscriptionId ?? '',
@@ -366,18 +367,22 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   const isCreateMode = mode === 'create'
 
   if (isCreateMode) {
+    // Creation was validated against the complete entity schema.
+    const createData = data as ReturnType<typeof HubEntityFormData.parse>
+    const normalizedCode = createData.code.trim()
+    const normalizedDomain = createData.domain.trim()
     // Apply role-based authorization.
     const createDecision = authorizeHubCreateForSubmission({
       user,
       userRoles,
-      submittedData: data,
+      submittedData: createData,
     })
     if (!createDecision.allowed) {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
 
     await validateUniqueNonReservedCode({
-      code: normalizedCode,
+      code: createData.code.trim(),
       isReservedCode: code => isReservedCode(code) || isReservedHubCode(code),
       probeExisting: code => probeExistingHub(db, code),
       onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
@@ -402,24 +407,24 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
       db,
       {
         id: nanoid(12),
-        code: normalizedCode,
+        code: createData.code.trim(),
         domain: normalizedDomain === '' ? null : normalizedDomain,
         legalContactAddress:
           normalizedLegalContactAddress === '' ? null : normalizedLegalContactAddress,
-        isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
-        subscriptionService: data.subscriptionService,
+        isSubscriptionAvailable: Boolean(createData.isSubscriptionAvailable),
+        subscriptionService: createData.subscriptionService,
         subscriptionId:
           normalizedSubscriptionId === '' ? null : normalizedSubscriptionId,
         subscriptionSessionCookie:
           normalizedSubscriptionSessionCookie === ''
             ? null
             : normalizedSubscriptionSessionCookie,
-        subscriptionPlacement: data.subscriptionPlacement,
+        subscriptionPlacement: createData.subscriptionPlacement,
         isPublished: true,
         isArchived: false,
       },
       {
-        i18n: data.i18n,
+        i18n: createData.i18n,
         userRoles: submittedRoles,
         organisations: submittedOrganisations,
         layerDefaults: submittedLayerDefaults,
@@ -491,30 +496,32 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('STALE_WRITE')))
   }
 
-  await validateUniqueNonReservedCode({
-    code: normalizedCode,
-    current,
-    isReservedCode: code => isReservedCode(code) || isReservedHubCode(code),
-    probeExisting: code => probeExistingHub(db, code),
-    onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
-    onConflict: () =>
-      invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
-  })
+  if (normalizedCode !== undefined) {
+    await validateUniqueNonReservedCode({
+      code: normalizedCode,
+      current,
+      isReservedCode: code => isReservedCode(code) || isReservedHubCode(code),
+      probeExisting: code => probeExistingHub(db, code),
+      onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
+      onConflict: () =>
+        invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
+    })
 
-  // Ensure unchanged names too, allowing operators to repair missing registrations by saving.
-  try {
-    await ensureHubDomain(
-      ctx.event.locals.platform?.env ?? {},
-      normalizedCode,
-      current.code,
-    )
-  } catch (cause) {
-    console.error('Hub domain registration failed', cause)
-    invalid(
-      issue.data.code(
-        'Unable to register this hub subdomain. Check domain configuration or choose another code.',
-      ),
-    )
+    // Ensure unchanged names too, allowing operators to repair missing registrations by saving.
+    try {
+      await ensureHubDomain(
+        ctx.event.locals.platform?.env ?? {},
+        normalizedCode,
+        current.code,
+      )
+    } catch (cause) {
+      console.error('Hub domain registration failed', cause)
+      invalid(
+        issue.data.code(
+          'Unable to register this hub subdomain. Check domain configuration or choose another code.',
+        ),
+      )
+    }
   }
 
   // Persist main record atomically with optimistic concurrency.
@@ -533,20 +540,26 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     ...(hasSubmittedPropertiesField
       ? { properties: normalizedSubmittedProperties as Array<Record<string, unknown>> }
       : {}),
-    data: {
-      code: normalizedCode,
-      domain: normalizedDomain === '' ? null : normalizedDomain,
-      legalContactAddress:
-        normalizedLegalContactAddress === '' ? null : normalizedLegalContactAddress,
-      isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
-      subscriptionService: data.subscriptionService,
-      subscriptionId: normalizedSubscriptionId === '' ? null : normalizedSubscriptionId,
-      subscriptionSessionCookie:
-        normalizedSubscriptionSessionCookie === ''
-          ? null
-          : normalizedSubscriptionSessionCookie,
-      subscriptionPlacement: data.subscriptionPlacement,
-    },
+    data:
+      data.code === undefined
+        ? {}
+        : {
+            code: normalizedCode,
+            domain: normalizedDomain === '' ? null : normalizedDomain,
+            legalContactAddress:
+              normalizedLegalContactAddress === ''
+                ? null
+                : normalizedLegalContactAddress,
+            isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
+            subscriptionService: data.subscriptionService,
+            subscriptionId:
+              normalizedSubscriptionId === '' ? null : normalizedSubscriptionId,
+            subscriptionSessionCookie:
+              normalizedSubscriptionSessionCookie === ''
+                ? null
+                : normalizedSubscriptionSessionCookie,
+            subscriptionPlacement: data.subscriptionPlacement,
+          },
   }).catch(cause => {
     if (cause instanceof FeatureIntentPolicyError)
       invalid(issue.data.featureIntentSettings(cause.message))

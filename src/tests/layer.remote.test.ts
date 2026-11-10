@@ -87,8 +87,13 @@ const {
   mockCreateI18n: vi.fn(async () => undefined),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockUpdateProperties: vi.fn(async () => undefined),
-  mockUpdateLayerByIdWithConcurrency: vi.fn<() => Promise<unknown | null>>(
-    async () => null,
+  mockUpdateLayerByIdWithConcurrency: vi.fn(
+    async (
+      _db: unknown,
+      _input: Parameters<
+        typeof import('#lib/db/services/layer.js').updateLayerByIdWithConcurrency
+      >[1],
+    ): Promise<unknown> => null,
   ),
   mockUpdateLayerPublishedStateById: vi.fn<() => Promise<unknown | null>>(
     async () => null,
@@ -780,7 +785,7 @@ describe('layer.remote authz matrix', () => {
     expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
-  it.each([undefined, ['profile']])(
+  it.each([undefined, ['profile'], ['location']])(
     'preserves omitted layer tabs with manifest %j',
     async submittedTabs => {
       await remote.layerForm(
@@ -791,18 +796,25 @@ describe('layer.remote authz matrix', () => {
             updatedAt: '2026-03-18T00:00:00.000Z',
             submittedTabs,
           },
-          data: {
-            projectId: 'project-1',
-            metadata: { zoom: 10 },
-            isDefaultVisible: true,
-            i18n: { en: { name: 'Layer' } },
-          },
+          data: submittedTabs?.includes('location')
+            ? {}
+            : {
+                projectId: 'project-1',
+                metadata: { zoom: 10 },
+                isDefaultVisible: true,
+                i18n: { en: { name: 'Layer' } },
+              },
         },
         throwingInvalid,
       )
       expect(mockLoadLayer).not.toHaveBeenCalled()
       expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledTimes(1)
       const saved = mockUpdateLayerByIdWithConcurrency.mock.calls[0][1]
+      if (submittedTabs?.includes('location')) {
+        expect(saved.i18n).toBeUndefined()
+        expect(Object.values(saved.data).every(value => value === undefined)).toBe(true)
+      }
+
       expect(saved).not.toHaveProperty('properties')
       expect(saved.featureIntentSettings).toBeUndefined()
       expect(saved.relocationUpdatePolicy).toBeUndefined()

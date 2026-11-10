@@ -1,3 +1,5 @@
+import { suppliedModelTab } from '#lib/forms/modelTabs.js'
+import type { FeatureEntityFormData } from '#lib/db/zod/schema/feature.form.js'
 // CONTENT LOCALES
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 // DOMAIN
@@ -79,7 +81,10 @@ import {
   reconcileFeatureTransferProperties,
   type FeatureDestinationScope,
 } from '#lib/db/services/featureParentTransfer.js'
-import { saveFeatureFormRevision } from '#lib/db/services/featureFormRevision.js'
+import {
+  saveFeatureFormRevision,
+  type FeatureFormPatch,
+} from '#lib/db/services/featureFormRevision.js'
 import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
 import { getInternalPropertyAccess } from '#lib/properties/audience.server.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
@@ -546,10 +551,12 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const params = parsed.data
   const issue = ctx.issue
   const { meta } = params
-  const data = projectFeatureAddress({
-    ...params.data,
-    geometry: normalizeFeatureFormGeometry(params.data.geometry),
-  })
+  let data: FeatureFormPatch = { ...params.data }
+  if (params.meta?.mode === 'create' || data.geometry !== undefined)
+    data.geometry = normalizeFeatureFormGeometry(data.geometry)
+  if (data.geometry !== undefined && data.i18n !== undefined)
+    data = projectFeatureAddress({ ...data, geometry: data.geometry, i18n: data.i18n })
+  const hasSubmittedProperties = suppliedModelTab(params, 'fields', 'properties')
 
   if (
     data.addressMeta?.address?.divisionOverrides ||
@@ -594,8 +601,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   if (mode === 'create') {
+    // Creation uses the complete validated entity, while updates may omit tabs.
+    const createData = data as ReturnType<typeof FeatureEntityFormData.parse>
     const layerScope = requireValue(
-      await probeLayerForUpdate(db, data.layerId as Id),
+      await probeLayerForUpdate(db, createData.layerId as Id),
       () => invalid(issue('LAYER_NOT_FOUND')),
     )
     const resolvedOrganisationId = layerScope.organisationId
@@ -607,10 +616,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       resource: {
         organisationId: resolvedOrganisationId,
         projectId: resolvedProjectId,
-        layerId: data.layerId,
+        layerId: createData.layerId,
         resourceHubId: layerScope.hubId,
       },
-      submittedData: data,
+      submittedData: createData,
     })
     if (!createDecision.allowed) {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
@@ -621,7 +630,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
         db,
         submittedProperties,
         (await getInternalPropertyAccess(ctx)).allowed,
-        data.layerId,
+        createData.layerId,
       )
     } catch (error) {
       invalid(
@@ -629,7 +638,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       )
     }
 
-    if (await historicalSourceLayerId(db, data.layerId))
+    if (await historicalSourceLayerId(db, createData.layerId))
       invalid(issue('HISTORICAL_LAYER_MEMBERSHIP_AUTOMATIC'))
     let nameTemplate:
       | import('#lib/features/locationPolicy.js').FeatureNameTemplate
@@ -637,21 +646,22 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     try {
       const policy = await readFeatureIntentPolicy(db, {
         type: 'layer',
-        id: data.layerId,
+        id: createData.layerId,
       })
-      const selected = requireFeatureType(policy.types, data.featureType)
-      data.featureType = selected.id
-      data.kind = selected.kind ?? (selected.id === 'business' ? 'place' : 'object')
-      data.associationRelation =
-        selected.relation ?? (data.kind === 'place' ? 'represents' : 'locatedAt')
+      const selected = requireFeatureType(policy.types, createData.featureType)
+      createData.featureType = selected.id
+      createData.kind =
+        selected.kind ?? (selected.id === 'business' ? 'place' : 'object')
+      createData.associationRelation =
+        selected.relation ?? (createData.kind === 'place' ? 'represents' : 'locatedAt')
       const contexts =
         selected.targetContexts ??
         TARGET_CONTEXTS.filter(kind => selected.locationKinds.includes(kind))
-      data.targetContext =
-        data.targetContext ?? (contexts.length === 1 ? contexts[0] : null)
-      if (data.targetContext && !contexts.includes(data.targetContext))
+      createData.targetContext =
+        createData.targetContext ?? (contexts.length === 1 ? contexts[0] : null)
+      if (createData.targetContext && !contexts.includes(createData.targetContext))
         throw new Error('Choose a location context available for this layer.')
-      if (selected.nameRule || data.associationRelation === 'represents') {
+      if (selected.nameRule || createData.associationRelation === 'represents') {
         nameTemplate = {
           rule: selected.nameRule ?? { base: 'location', conditions: [] },
         }
@@ -660,42 +670,45 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       invalid(issue(cause instanceof Error ? cause.message : 'Invalid feature type'))
     }
     // Store localized authoring inputs beside the computed translation title.
-    for (const [locale, row] of Object.entries(data.i18n)) {
+    for (const [locale, row] of Object.entries(createData.i18n)) {
       Object.assign(row, {
         baseName: row.title,
         nameOverride: nameTemplate
-          ? (data.nameOverrides?.[canonicalContentTag(locale)] ?? null)
+          ? (createData.nameOverrides?.[canonicalContentTag(locale)] ?? null)
           : null,
       })
     }
-    const presentationPolicy = await readFeaturePresentationPolicy(db, data.layerId)
+    const presentationPolicy = await readFeaturePresentationPolicy(
+      db,
+      createData.layerId,
+    )
     if (!presentationPolicy.allowDescriptions) {
-      for (const row of Object.values(data.i18n)) row.description = ''
+      for (const row of Object.values(createData.i18n)) row.description = ''
     }
     // Coordinate-only Features remain valid; Location-based naming is a separate preference.
     const inheritsLocationName =
-      presentationPolicy.locationBasedNames || data.locationNameMode === 'inherit'
+      presentationPolicy.locationBasedNames || createData.locationNameMode === 'inherit'
     // Address-only Locations supply the title when no venue name was provided.
     if (
       inheritsLocationName &&
-      !Object.values(data.i18n).some(row => row.title?.trim())
+      !Object.values(createData.i18n).some(row => row.title?.trim())
     )
-      for (const row of Object.values(data.i18n))
+      for (const row of Object.values(createData.i18n))
         row.title = row.displayAddress?.trim() ?? ''
     const created = await createFeatureForm(db, {
       revisionActor: { actorId: user.id, mode: 'staff' },
       data: {
-        ...data,
+        ...createData,
         nameTemplate,
         id: featureId || nanoid(12),
         organisationId: resolvedOrganisationId,
         projectId: resolvedProjectId,
-        contributorId: data.contributorId ?? user.id ?? null,
-        addressMeta: data.addressMeta ?? {},
+        contributorId: createData.contributorId ?? user.id ?? null,
+        addressMeta: createData.addressMeta ?? {},
         isPublished: false,
         isArchived: false,
       },
-      i18n: data.i18n,
+      i18n: createData.i18n,
       properties: submittedProperties,
     })
 
@@ -720,6 +733,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       invalid(issue('Changing location intent requires explicit reclassification.'))
     Object.assign(data, { [key]: current[key] })
   }
+  // Omitted ancestry is resolved from the authorized persisted identity, never a default.
+  data.layerId ??= current.layerId
+  data.projectId ??= current.projectId
+  data.organisationId ??= current.organisationId
   let destinationScope: FeatureDestinationScope | undefined
   const parentsChanged =
     data.layerId !== current.layerId ||
@@ -727,32 +744,42 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     data.organisationId !== current.organisationId
 
   // Authorize scalar changes before loading the relation-heavy admin shape.
-  const submittedDataBeforeHydration: Record<string, unknown> = {
-    i18n: data.i18n,
-  }
+  const submittedDataBeforeHydration: Record<string, unknown> =
+    data.i18n === undefined ? {} : { i18n: data.i18n }
   if (parentsChanged) {
     submittedDataBeforeHydration.layerId = data.layerId
   }
   // Property snapshots need persisted relations for comparison; the final gate below
   // checks their actual changes so unchanged values do not block translators.
   if (
+    data.geometry !== undefined &&
     JSON.stringify(data.geometry ?? null) !== JSON.stringify(current.geometry ?? null)
   ) {
     submittedDataBeforeHydration.geometry = data.geometry
   }
   if (
+    data.addressMeta !== undefined &&
     JSON.stringify(data.addressMeta ?? null) !==
-    JSON.stringify(current.addressMeta ?? null)
+      JSON.stringify(current.addressMeta ?? null)
   ) {
     submittedDataBeforeHydration.addressMeta = data.addressMeta
   }
-  if (Boolean(data.isIntangible) !== Boolean(current.isIntangible)) {
+  if (
+    data.isIntangible !== undefined &&
+    Boolean(data.isIntangible) !== Boolean(current.isIntangible)
+  ) {
     submittedDataBeforeHydration.isIntangible = data.isIntangible
   }
-  if (Boolean(data.isVisitable) !== Boolean(current.isVisitable)) {
+  if (
+    data.isVisitable !== undefined &&
+    Boolean(data.isVisitable) !== Boolean(current.isVisitable)
+  ) {
     submittedDataBeforeHydration.isVisitable = data.isVisitable
   }
-  if (Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)) {
+  if (
+    data.isPendingReview !== undefined &&
+    Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)
+  ) {
     submittedDataBeforeHydration.isPendingReview = data.isPendingReview
   }
 
@@ -834,30 +861,85 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     (await toEntityResponseShape(currentWithRelations, 'admin')).data,
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
+  // A transfer reconciles retained values even when the Fields tab was not edited.
+  if (parentsChanged && !hasSubmittedProperties)
+    submittedProperties = (currentEntity.properties ?? []) as typeof submittedProperties
+  // Project a submitted location against accepted translations without requiring Profile controls.
+  if (data.geometry !== undefined || data.addressMeta !== undefined) {
+    const projected = projectFeatureAddress({
+      ...data,
+      geometry: data.geometry ?? current.geometry ?? {},
+      addressMeta:
+        data.addressMeta === undefined ? current.addressMeta : data.addressMeta,
+      i18n:
+        data.i18n ??
+        Object.fromEntries(
+          Object.entries(currentEntity.i18n ?? {}).map(([locale, row]) => [
+            locale,
+            {
+              ...row,
+              description: row.description ?? undefined,
+              displayAddress: row.displayAddress ?? undefined,
+            },
+          ]),
+        ),
+    })
+    data = {
+      ...data,
+      addressMeta: projected.addressMeta,
+      // Location-only edits project address text without reauthoring accepted names or descriptions.
+      i18n: data.i18n
+        ? projected.i18n
+        : Object.fromEntries(
+            Object.entries(projected.i18n).map(([locale, row]) => [
+              locale,
+              {
+                displayAddress: row.displayAddress,
+                displayAddressGen: row.displayAddressGen,
+                addressProperties: row.addressProperties,
+              },
+            ]),
+          ),
+    }
+  }
   // Disabled description authoring retains existing content instead of erasing it.
-  const presentationPolicy = await readFeaturePresentationPolicy(db, data.layerId)
+  const presentationPolicy = await readFeaturePresentationPolicy(
+    db,
+    data.layerId ?? current.layerId,
+  )
   if (!presentationPolicy.allowDescriptions) {
-    for (const [locale, row] of Object.entries(data.i18n)) {
+    for (const [locale, row] of Object.entries(data.i18n ?? {})) {
       const previous = currentEntity.i18n?.[locale as keyof typeof currentEntity.i18n]
       row.description = previous?.description ?? ''
       row.descriptionGen = previous?.descriptionGen ?? true
     }
   }
   const i18nChanged =
+    data.i18n !== undefined &&
     JSON.stringify(data.i18n) !== JSON.stringify(currentEntity.i18n ?? {})
   const propertiesChanged =
+    hasSubmittedProperties &&
     JSON.stringify(toComparableFeatureProperties(submittedProperties)) !==
-    JSON.stringify(
-      toComparableFeatureProperties((currentEntity.properties ?? []) as never[]),
-    )
+      JSON.stringify(
+        toComparableFeatureProperties((currentEntity.properties ?? []) as never[]),
+      )
   const geometryChanged =
+    data.geometry !== undefined &&
+    data.geometry !== undefined &&
     JSON.stringify(data.geometry ?? null) !== JSON.stringify(current.geometry ?? null)
   const addressChanged =
+    data.addressMeta !== undefined &&
+    data.addressMeta !== undefined &&
     JSON.stringify(data.addressMeta ?? null) !==
-    JSON.stringify(current.addressMeta ?? null)
-  const intangibleChanged = Boolean(data.isIntangible) !== Boolean(current.isIntangible)
-  const visitableChanged = Boolean(data.isVisitable) !== Boolean(current.isVisitable)
+      JSON.stringify(current.addressMeta ?? null)
+  const intangibleChanged =
+    data.isIntangible !== undefined &&
+    Boolean(data.isIntangible) !== Boolean(current.isIntangible)
+  const visitableChanged =
+    data.isVisitable !== undefined &&
+    Boolean(data.isVisitable) !== Boolean(current.isVisitable)
   const pendingReviewChanged =
+    data.isPendingReview !== undefined &&
     Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)
   const submittedDataForUpdate: Record<string, unknown> = {}
 
@@ -935,7 +1017,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
 
   if (
     data.layerId !== current.layerId &&
-    (await historicalSourceLayerId(db, data.layerId))
+    (await historicalSourceLayerId(db, data.layerId ?? current.layerId))
   )
     invalid(issue('HISTORICAL_LAYER_MEMBERSHIP_AUTOMATIC'))
 
@@ -955,12 +1037,13 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       layerId: data.layerId,
       contributorId: data.contributorId ?? current.contributorId ?? null,
       geometry: data.geometry,
-      addressMeta: data.addressMeta ?? {},
+      addressMeta:
+        data.addressMeta === undefined ? undefined : (data.addressMeta ?? {}),
       isIntangible: data.isIntangible,
       isVisitable: data.isVisitable,
       isPendingReview: data.isPendingReview,
     },
-    i18n: data.i18n,
+    i18n: data.i18n ?? {},
     properties: propertiesChanged || destinationScope ? submittedProperties : undefined,
     locationBrandEdit: data.locationBrandEdit,
     locationReset: data.locationReset,
@@ -976,7 +1059,11 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   try {
     const revision = await saveFeatureFormRevision(db, {
       ...saveInput,
-      data: { ...data, properties: submittedProperties },
+      data: {
+        ...data,
+        properties:
+          hasSubmittedProperties || destinationScope ? submittedProperties : undefined,
+      },
       authorizeSharedCorrection: () => sharedLocationEditRights(ctx, current.projectId),
       expectedScope: current,
       guard: buildFeatureCommandScopeGuard(db, current.id, current),

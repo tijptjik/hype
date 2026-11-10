@@ -1,4 +1,4 @@
-import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
+import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
 import { z } from 'zod'
@@ -248,11 +248,10 @@ export const ProjectFormMeta = z.object({
   licenseTouched: z.coerce.boolean<boolean>().optional(),
 })
 
-export const ProjectFormData = z
-  .object({
-    meta: ProjectFormMeta.optional(),
-    data: ProjectEntityFormData,
-  })
-  .superRefine((value, ctx) => validateModelTabs('project', value, ctx))
+export const ProjectFormData = modelFormSchema(
+  'project',
+  ProjectFormMeta,
+  ProjectEntityFormData,
+)
 
 export const ProjectPreflightFormData = ProjectFormData

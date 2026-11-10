@@ -120,7 +120,10 @@ export type FeatureQueryRowByProfile<P extends FeatureProfile> = P extends 'admi
     ? FeatureCardDBRaw
     : FeatureListDBRaw
 
-export type FeatureFormInput = z.input<typeof FeatureFormData>
+/** Complete editor state; submitted packets may omit unchanged tabs. */
+export type FeatureFormInput = Omit<z.input<typeof FeatureFormData>, 'data'> & {
+  data: z.input<typeof FeatureEntityFormData>
+}
 export type FeatureBooleanField = 'isPublished' | 'isArchived'
 export type FeatureSubmitMode = ResourceSubmitMode
 export type FeatureGetResponse = EntityResponse<FeatureAdminProfile>

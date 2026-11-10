@@ -3278,16 +3278,24 @@ revision-guarded transaction; main Discard restores the staged model. There are 
 independent model Save, Discard or Reset actions. The Location facet reserves 320px of
 trailing scroll space. Parent saves refresh the policy query after commit.
 
-The shared form factory emits `meta.submittedTabs` for existing model forms. Unchanged
-replaceable Fields, Members, Organisations, Layers, Images and Location sections are
-removed from native FormData before preflight and transport, as applicable to the
-resource. Their absent fields stay undefined through parsing and persistence. A supplied
-empty replacement is distinct from omission; unknown tab names and data sent under
-omitted tabs are rejected. The profile/ownership envelope remains a required dependency
-for current parent authorization and concurrency checks; creation remains a complete
-form submission. Naming conditions validate against Fields supplied in the same Project
-transaction, including retained rules when only Fields change. This contract is declared
-in `src/lib/forms/modelTabs.ts`.
+The shared form factory emits `meta.submittedTabs` for existing Hub, Organisation,
+Project, Layer and Feature forms. Unchanged Profile, Fields, Members, Organisations,
+Layers, Images and Location sections are removed from native FormData before preflight
+and transport, as applicable to the resource. Their absent fields stay undefined through
+parsing and persistence. A supplied empty replacement is distinct from omission; unknown
+tab names and data sent under omitted tabs are rejected. Updates always send the
+resource ID and revision token; authorization resolves unchanged ownership from
+persisted records. Omitted Profile fields remain absent, including defaults,
+translations, presentation settings and parent IDs. Submitted Profile values still
+receive complete validation, and ownership changes retain their destination
+authorization checks. Creation remains a complete submission. Naming conditions validate
+against Fields supplied in the same Project transaction, including retained rules when
+only Fields change. This contract is declared in `src/lib/forms/modelTabs.ts`.
+Organisation membership and Feature properties are replaced only when their tabs are
+supplied. Feature revision candidates preserve omitted accepted properties,
+translations, placement and profile flags; transfers still authorize both scopes and
+reconcile fields against the destination. The shared parser validates only selected tab
+fields, so omitted defaults cannot become writes.
 
 Type definitions carry an optional `enabled` flag (legacy definitions remain enabled).
 Application defaults enable Object and Place and disable Area and Route. Disabled

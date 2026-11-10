@@ -1,3 +1,4 @@
+import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 import {
   FeatureKindSchema,
   TargetContextSchema,
@@ -163,15 +164,17 @@ export const FeatureDraftEntityFormData = z.object({
 })
 
 export const FeatureFormMeta = z.object({
+  submittedTabs: SubmittedTabsSchema,
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
   isAdminRequest: FormBoolean.optional(),
 })
 
-export const FeatureFormData = z.object({
-  meta: FeatureFormMeta.optional(),
-  data: FeatureEntityFormData,
-})
+export const FeatureFormData = modelFormSchema(
+  'feature',
+  FeatureFormMeta,
+  FeatureEntityFormData,
+)
 
 export const FeaturePreflightFormData = FeatureFormData

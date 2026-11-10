@@ -1,3 +1,4 @@
+import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 // ZOD
 import { z } from 'zod'
 // FORM DEPENDENCIES
@@ -140,16 +141,18 @@ export const OrganisationEntityFormData = z.object({
 })
 
 export const OrganisationFormMeta = z.object({
+  submittedTabs: SubmittedTabsSchema,
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
   isAdminRequest: FormBoolean.optional(),
 })
 
-export const OrganisationFormData = z.object({
-  meta: OrganisationFormMeta.optional(),
-  data: OrganisationEntityFormData,
-})
+export const OrganisationFormData = modelFormSchema(
+  'organisation',
+  OrganisationFormMeta,
+  OrganisationEntityFormData,
+)
 
 export const OrganisationPreflightFormData = OrganisationFormData
 
@@ -163,14 +166,9 @@ export const OrganisationReplaceFormData = OrganisationFormData.refine(
   'Replace forms require an id',
 )
 
-export const OrganisationUpdateFormData = z.object({
-  meta: OrganisationFormMeta.extend({
-    id: z.string().min(1),
-    updatedAt: z.string().min(1),
-    mode: z.literal('update').optional(),
-  }),
-  data: OrganisationEntityFormData.partial().refine(
-    value => Object.keys(value).length > 0,
-    'Update forms require at least one field',
-  ),
-})
+/** Updates share the same tab contract as the central form. */
+export const OrganisationUpdateFormData = OrganisationFormData.refine(
+  value =>
+    value.meta?.mode === 'update' && Boolean(value.meta.id && value.meta.updatedAt),
+  'Update forms require an id and revision token',
+)

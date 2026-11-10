@@ -52,7 +52,7 @@ describe('model form tab submission', () => {
         { data: { properties: [{ id: 'one' }] } },
         { data: { properties: [] } },
       ),
-    ).toEqual(['profile', 'fields'])
+    ).toEqual(['fields'])
     expect(
       suppliedModelTab(
         { meta: { submittedTabs: ['profile', 'fields'] }, data: {} },
@@ -71,7 +71,7 @@ describe('model form tab submission', () => {
       true,
     )
   })
-  it('rejects hidden payloads and missing required dependency tabs', () => {
+  it('rejects hidden payloads while allowing Profile omission', () => {
     const schema = z
       .object({
         meta: z.object({ mode: z.string(), submittedTabs: z.array(z.string()) }),
@@ -89,7 +89,7 @@ describe('model form tab submission', () => {
         meta: { mode: 'update', submittedTabs: ['location'] },
         data: {},
       }).success,
-    ).toBe(false)
+    ).toBe(true)
     expect(
       schema.safeParse({
         meta: { mode: 'update', submittedTabs: ['profile', 'location'] },

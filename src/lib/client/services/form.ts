@@ -709,7 +709,7 @@ export function createResourceFormConfig<Input>({
   tabResource?: ModelFormResource
   formEl: HTMLFormElement | undefined
   key: string | number
-  schema: StandardSchemaV1<Input, unknown>
+  schema: StandardSchemaV1<unknown, unknown>
   data: Input
   submitUpdates: (ctx: {
     data: Input
@@ -730,7 +730,7 @@ export function createResourceFormConfig<Input>({
   tabResource?: ModelFormResource
   formEl: HTMLFormElement | undefined
   key: string | number
-  schema: StandardSchemaV1<Input, unknown>
+  schema: StandardSchemaV1<unknown, unknown>
   data: Input
   onsubmitupdates: (ctx: {
     data: Input

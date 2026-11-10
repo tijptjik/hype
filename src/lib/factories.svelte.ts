@@ -303,7 +303,8 @@ type FormId<Input> = Input extends { id: infer Id }
 
 export interface RemoteFormOptions<Input = RemoteFormInput> {
   form: RemoteForm<Input & RemoteFormInput, unknown>
-  schema?: StandardSchemaV1<Input, unknown>
+  // Validation accepts transport packets, which may omit unchanged editor sections.
+  schema?: StandardSchemaV1<unknown, unknown>
   key?: FormId<Input>
   data?: Input
   initialErrors?: boolean
@@ -373,11 +374,7 @@ export function configureForm<Input = RemoteFormInput>(
   let submitted = $state.raw(false)
   let dirty = $derived(!deepEqual(initial, $state.snapshot(form.fields.value())))
   const dirtyTabs = $derived(
-    tabResource
-      ? changedModelTabs(tabResource, initial, form.fields.value()).filter(
-          tab => tab !== 'profile',
-        )
-      : [],
+    tabResource ? changedModelTabs(tabResource, initial, form.fields.value()) : [],
   )
   // Native FormData is the shared boundary used by both validation and remote submit.
   $effect(() => {
