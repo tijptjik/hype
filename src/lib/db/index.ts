@@ -19,7 +19,7 @@ import {
 } from 'drizzle-orm'
 // I18N
 import { toLocaleKey, toLocaleKebab } from '#lib/i18n.js'
-import { contentStorageTag } from '#lib/i18n/contentRecords.js'
+import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
 // SCHEMA
 import * as schema from './schema'
@@ -740,6 +740,8 @@ export const isFieldChanged = async <T extends ResourceDB>(
  * @param foreignKeyValue Value of the foreign key to set
  * @param keyName Optional name of the key field to add (defaults to 'id')
  * @returns Array of objects with the original data plus foreign key and optional key
+ * @remarks Locale relations normalize map keys even when forms omit embedded locale
+ * values. Alias collisions and inconsistent embedded locales fail before any write.
  */
 export const toRelatedRecords = <
   T extends Record<string, unknown>,
@@ -752,21 +754,12 @@ export const toRelatedRecords = <
   foreignKeyValue: string,
   keyName: K = 'id' as K,
 ): Array<T & Record<K, KeyValue> & Record<F, string>> => {
-  return Object.entries(data).map(([key, rawValue]) => {
-    const isLocaleKey = keyName === 'locale'
-    const valueRecord = rawValue as Record<string, unknown>
-    const normalizedLocale =
-      isLocaleKey && typeof valueRecord.locale === 'string'
-        ? contentStorageTag(valueRecord.locale)
-        : undefined
-    const normalizedKey = normalizedLocale ?? key
-
+  // Normalize the complete locale collection first so aliases cannot overwrite rows.
+  const records = keyName === 'locale' ? contentMapToStorage(data) : data
+  return Object.entries(records).map(([key, rawValue]) => {
     return {
       ...(rawValue as T),
-      ...(normalizedLocale
-        ? ({ locale: normalizedLocale } as unknown as Partial<T>)
-        : {}),
-      [keyName]: normalizedKey,
+      [keyName]: key,
       [foreignKeyName]: foreignKeyValue,
     } as T & Record<K, KeyValue> & Record<F, string>
   })
