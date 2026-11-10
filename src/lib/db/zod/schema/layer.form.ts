@@ -1,3 +1,4 @@
+import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
 // ZOD
 import { z } from 'zod'
 // FORM DEPENDENCIES
@@ -86,15 +87,18 @@ export const LayerEntityFormData = z.object({
 })
 
 export const LayerFormMeta = z.object({
+  submittedTabs: SubmittedTabsSchema,
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
   isAdminRequest: FormBoolean.optional(),
 })
 
-export const LayerFormData = z.object({
-  meta: LayerFormMeta.optional(),
-  data: LayerEntityFormData,
-})
+export const LayerFormData = z
+  .object({
+    meta: LayerFormMeta.optional(),
+    data: LayerEntityFormData,
+  })
+  .superRefine((value, ctx) => validateModelTabs('layer', value, ctx))
 
 export const LayerPreflightFormData = LayerFormData

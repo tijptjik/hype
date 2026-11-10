@@ -1,3 +1,4 @@
+import { suppliedModelTab } from '#lib/forms/modelTabs.js'
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
 import { error, isHttpError } from '@sveltejs/kit'
@@ -268,17 +269,25 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     input && typeof input === 'object' && 'data' in input
       ? (input as { data?: unknown }).data
       : undefined
-  const hasSubmittedPropertiesField =
+  let hasSubmittedPropertiesField =
     rawData !== null &&
     typeof rawData === 'object' &&
     Object.hasOwn(rawData, 'properties')
-  const hasSubmittedLayerDefaultsField =
+  let hasSubmittedLayerDefaultsField =
     rawData !== null &&
     typeof rawData === 'object' &&
     Object.hasOwn(rawData, 'layerDefaults')
 
   // Parse and normalize submitted form input.
   const params = HubFormData.parse(input)
+  hasSubmittedPropertiesField = suppliedModelTab(params, 'fields', 'properties')
+  hasSubmittedLayerDefaultsField = suppliedModelTab(params, 'layers', 'layerDefaults')
+  const hasSubmittedRoles = suppliedModelTab(params, 'members', 'userRoles')
+  const hasSubmittedOrganisations = suppliedModelTab(
+    params,
+    'organisations',
+    'organisations',
+  )
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
   const { meta, data } = params
@@ -335,7 +344,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   // Validate payload invariants.
-  if (submittedRoles.length === 0) {
+  if ((mode === 'create' || hasSubmittedRoles) && submittedRoles.length === 0) {
     invalid(issue(toIssueDetailMessage('USER_ROLES_REQUIRED')))
   }
   if (duplicateSubmittedRoleUserIds.length > 0) {
@@ -439,10 +448,11 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
   }
 
-  const existingRoleRows = await listUserRoles(db, current.id)
+  const existingRoleRows = hasSubmittedRoles ? await listUserRoles(db, current.id) : []
 
   // Apply role-management authorization only when role membership changed.
   if (
+    hasSubmittedRoles &&
     hasRoleMembershipChanged(submittedRoles, existingRoleRows, toHubUserRoleSignature)
   ) {
     const roleDecision = authorizeHubManageRolesForSubmission({
@@ -457,14 +467,15 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Enforce organisation scope for submitted assignments.
   const hasInvalidOrganisationAssignment =
-    await hasInvalidHubOrganisationAssignmentsForSubmission({
+    hasSubmittedOrganisations &&
+    (await hasInvalidHubOrganisationAssignmentsForSubmission({
       db,
       user,
       userRoles,
       resource: { id: current.id },
       submittedOrganisations,
-    })
-  if (hasInvalidOrganisationAssignment) {
+    }))
+  if (hasSubmittedOrganisations && hasInvalidOrganisationAssignment) {
     invalid(issue.data.organisations(toIssueDetailMessage('HUB_SCOPE_FORBIDDEN')))
   }
 
@@ -511,8 +522,8 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     id: current.id,
     updatedAt: updatedAt as string,
     i18n: data.i18n,
-    userRoles: submittedRoles,
-    organisations: submittedOrganisations,
+    ...(hasSubmittedRoles ? { userRoles: submittedRoles } : {}),
+    ...(hasSubmittedOrganisations ? { organisations: submittedOrganisations } : {}),
     ...(hasSubmittedLayerDefaultsField
       ? { layerDefaults: submittedLayerDefaults }
       : {}),

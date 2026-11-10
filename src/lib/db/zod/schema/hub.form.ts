@@ -1,3 +1,4 @@
+import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
 // ZOD
 import { z } from 'zod'
 // FORM DEPENDENCIES
@@ -142,11 +143,11 @@ export const HubEntityFormData = z
       menu: true,
     }),
     i18n: HubI18nByLocaleFormData,
-    userRoles: HubUserRolesFormData,
-    organisations: z.array(HubOrganisationFormData).default([]),
-    layerDefaults: z.array(HubLayerFormData).default([]),
+    userRoles: HubUserRolesFormData.optional(),
+    organisations: z.array(HubOrganisationFormData).optional(),
+    layerDefaults: z.array(HubLayerFormData).optional(),
     imageIntentSettings: ImageIntentSettingsFormData,
-    properties: z.array(ProjectPropertyFormData).default([]),
+    properties: z.array(ProjectPropertyFormData).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.isSubscriptionAvailable && data.subscriptionService === null) {
@@ -159,15 +160,26 @@ export const HubEntityFormData = z
   })
 
 export const HubFormMeta = z.object({
+  submittedTabs: SubmittedTabsSchema,
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
   isAdminRequest: FormBoolean.optional(),
 })
 
-export const HubFormData = z.object({
-  meta: HubFormMeta.optional(),
-  data: HubEntityFormData,
-})
+export const HubFormData = z
+  .object({
+    meta: HubFormMeta.optional(),
+    data: HubEntityFormData,
+  })
+  .superRefine((value, ctx) => {
+    validateModelTabs('hub', value, ctx)
+    if (value.meta?.mode === 'create' && !value.data.userRoles?.length)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['data', 'userRoles'],
+        message: 'Add a User',
+      })
+  })
 
 export const HubPreflightFormData = HubFormData

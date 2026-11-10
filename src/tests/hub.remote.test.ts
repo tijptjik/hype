@@ -816,6 +816,51 @@ describe('hub.remote form image handling', () => {
     expect(mockUpdateHubByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
+  it('preserves hub admins when an update omits the members tab', async () => {
+    const { db } = buildDbForUpdate({
+      existingRoles: [{ userId: 'u-1', role: 'admin' }],
+    })
+    mockProbeHubForUpdate.mockResolvedValue({
+      id: 'hub-1',
+      code: 'core',
+      modifiedAt: '2026-02-23T00:00:00.000Z',
+    })
+    mockUpdateHubByIdWithConcurrency.mockResolvedValue({
+      id: 'hub-1',
+      modifiedAt: '2026-02-23T01:00:00.000Z',
+    })
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+    await remote.hubForm(
+      {
+        meta: {
+          id: 'hub-1',
+          mode: 'update',
+          updatedAt: '2026-02-23T00:00:00.000Z',
+          submittedTabs: ['profile', 'location'],
+        },
+        data: { code: 'core', domain: '', i18n: {} },
+      },
+      (message: string) => {
+        throw new Error(String(message))
+      },
+    )
+    expect(mockUpdateHubByIdWithConcurrency).toHaveBeenCalled()
+    expect(mockUpdateHubByIdWithConcurrency.mock.calls[0][1]).not.toHaveProperty(
+      'userRoles',
+    )
+    expect(mockSyncHubUserRoles).not.toHaveBeenCalled()
+    const saved = mockUpdateHubByIdWithConcurrency.mock.calls[0][1]
+    for (const field of ['properties', 'organisations', 'layerDefaults']) {
+      expect(saved).not.toHaveProperty(field)
+    }
+    expect(saved.featureIntentSettings).toBeUndefined()
+    expect(saved.imageIntentSettings).toBeUndefined()
+  })
+
   it('rejects empty userRoles', async () => {
     const db = buildDbForCreate()
     mockGuardedContext.mockResolvedValue({

@@ -1,3 +1,4 @@
+import { suppliedModelTab } from '#lib/forms/modelTabs.js'
 // CONTENT LOCALES
 import { applyContentLocaleSettingsPatch } from '#lib/content-locales/settings.js'
 // PRESENTATION
@@ -560,13 +561,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('LOCATION_POLICY_REQUIRES_EXISTING_PROJECT'))
   }
   const normalizedCode = data.code.trim()
-  const hasSubmittedUserRoles = Object.hasOwn(data, 'userRoles')
+  const hasSubmittedUserRoles = suppliedModelTab(params, 'members', 'userRoles')
   const submittedRoles =
     hasSubmittedUserRoles && Array.isArray(data.userRoles) ? data.userRoles : []
-  const hasSubmittedProperties = Object.hasOwn(data, 'properties')
+  const hasSubmittedProperties = suppliedModelTab(params, 'fields', 'properties')
   const submittedProperties =
     hasSubmittedProperties && Array.isArray(data.properties) ? data.properties : []
-  const hasSubmittedLayers = Object.hasOwn(data, 'layers')
+  const hasSubmittedLayers = suppliedModelTab(params, 'layers', 'layers')
   const submittedLayers =
     hasSubmittedLayers && Array.isArray(data.layers) ? data.layers : []
   const toSubmittedDefaultVisible = (input: unknown): boolean =>
@@ -1110,6 +1111,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       property => property.scope === 'project',
     )
     const shouldPreserveExistingLocalProperties =
+      !meta?.submittedTabs &&
       submittedPropertiesWithProjectId.length === 0 &&
       existingLocalProperties.length > 0
 

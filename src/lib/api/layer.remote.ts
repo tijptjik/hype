@@ -1,3 +1,4 @@
+import { suppliedModelTab } from '#lib/forms/modelTabs.js'
 import type { RemoteQuery } from '$app/server'
 import { error } from '@sveltejs/kit'
 
@@ -283,7 +284,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     isUserContributable?: boolean
   }>
 
-  const hasSubmittedProperties = submittedProperties.length > 0
+  const hasSubmittedProperties = suppliedModelTab(params, 'fields', 'properties')
   const duplicateSubmittedPropertyIds = getDuplicateValues(
     submittedProperties
       .map(property => property?.propertyId)
@@ -375,28 +376,30 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
   }
 
-  const currentWithRelations = requireValue(
-    await loadLayer(
-      db,
-      getLayerWithRelations('admin', Boolean(user.superAdmin)) as RelationShape,
-      [eq(layer.id, current.id)],
-      {
-        ...ctx.event.locals.hub,
-        isSuperAdmin: user.superAdmin || false,
-        isAdminRequest: ctx.isAdminRequest,
-      },
-    ),
-    () => invalid(issue('LAYER_NOT_FOUND')),
-  )
+  let propertiesChanged = false
+  if (hasSubmittedProperties) {
+    const currentWithRelations = requireValue(
+      await loadLayer(
+        db,
+        getLayerWithRelations('admin', Boolean(user.superAdmin)) as RelationShape,
+        [eq(layer.id, current.id)],
+        {
+          ...ctx.event.locals.hub,
+          isSuperAdmin: user.superAdmin || false,
+          isAdminRequest: ctx.isAdminRequest,
+        },
+      ),
+      () => invalid(issue('LAYER_NOT_FOUND')),
+    )
 
-  const currentEntity = requireValue(
-    (await toEntityResponseShape(currentWithRelations, 'admin')).data,
-    () => invalid(issue('LAYER_NOT_FOUND')),
-  )
-  const propertiesChanged =
-    hasSubmittedProperties &&
-    toStableSignature(toComparableLayerProperties(submittedProperties)) !==
+    const currentEntity = requireValue(
+      (await toEntityResponseShape(currentWithRelations, 'admin')).data,
+      () => invalid(issue('LAYER_NOT_FOUND')),
+    )
+    propertiesChanged =
+      toStableSignature(toComparableLayerProperties(submittedProperties)) !==
       toStableSignature(toComparableLayerProperties(currentEntity.properties ?? []))
+  }
 
   // Authorize changed relation fields before any part of the submission is written.
   if (propertiesChanged) {

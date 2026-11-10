@@ -780,6 +780,64 @@ describe('layer.remote authz matrix', () => {
     expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
+  it.each([undefined, ['profile']])(
+    'preserves omitted layer tabs with manifest %j',
+    async submittedTabs => {
+      await remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+            submittedTabs,
+          },
+          data: {
+            projectId: 'project-1',
+            metadata: { zoom: 10 },
+            isDefaultVisible: true,
+            i18n: { en: { name: 'Layer' } },
+          },
+        },
+        throwingInvalid,
+      )
+      expect(mockLoadLayer).not.toHaveBeenCalled()
+      expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledTimes(1)
+      const saved = mockUpdateLayerByIdWithConcurrency.mock.calls[0][1]
+      expect(saved).not.toHaveProperty('properties')
+      expect(saved.featureIntentSettings).toBeUndefined()
+      expect(saved.relocationUpdatePolicy).toBeUndefined()
+    },
+  )
+
+  it('clears layer properties when Fields is explicitly submitted without remaining controls', async () => {
+    mockLoadLayer.mockResolvedValue({
+      id: 'layer-1',
+      i18n: { en: { name: 'Layer' } },
+      properties: [{ propertyId: 'retained', isVisible: true }],
+    })
+    await remote.layerForm(
+      {
+        meta: {
+          id: 'layer-1',
+          mode: 'update',
+          updatedAt: '2026-03-18T00:00:00.000Z',
+          submittedTabs: ['profile', 'fields'],
+        },
+        data: {
+          projectId: 'project-1',
+          metadata: { zoom: 10 },
+          isDefaultVisible: true,
+          i18n: { en: { name: 'Layer' } },
+        },
+      },
+      throwingInvalid,
+    )
+    expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ properties: [] }),
+    )
+  })
+
   it('forwards a privileged relocation edit and its counter in the atomic core write', async () => {
     const relocationUpdatePolicy = { policy: 'fixed', expectedRevision: 3 }
     await remote.layerForm(

@@ -1,3 +1,4 @@
+import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
 // ZOD
 import { z } from 'zod'
 // IMAGE INTENT POLICY
@@ -231,12 +232,13 @@ export const ProjectEntityFormData = z.object({
   flags: ProjectFlagsBase,
   capabilities: ProjectCapabilitiesBase,
   userRoles: ProjectUserRolesFormData.optional(),
-  properties: ProjectPropertiesFormData,
+  properties: ProjectPropertiesFormData.optional(),
   // Saving selects the first layer when no default visibility was chosen.
   layers: z.array(ProjectLayerFormData).optional(),
 })
 
 export const ProjectFormMeta = z.object({
+  submittedTabs: SubmittedTabsSchema,
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
@@ -244,9 +246,11 @@ export const ProjectFormMeta = z.object({
   licenseTouched: z.coerce.boolean<boolean>().optional(),
 })
 
-export const ProjectFormData = z.object({
-  meta: ProjectFormMeta.optional(),
-  data: ProjectEntityFormData,
-})
+export const ProjectFormData = z
+  .object({
+    meta: ProjectFormMeta.optional(),
+    data: ProjectEntityFormData,
+  })
+  .superRefine((value, ctx) => validateModelTabs('project', value, ctx))
 
 export const ProjectPreflightFormData = ProjectFormData

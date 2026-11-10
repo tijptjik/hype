@@ -971,42 +971,63 @@ describe('project.remote form organisation move authz', () => {
     expect(mockSyncProjectUserRoles).not.toHaveBeenCalled()
   })
 
-  it('skips role/property submission and persistence when userRoles and properties are omitted', async () => {
-    const payload = {
-      meta: {
-        id: 'project-1',
-        mode: 'update' as const,
-        updatedAt: '2026-02-24T00:00:00.000Z',
-      },
-      data: {
-        organisationId: 'org-1',
-        code: 'project-code',
-        i18n: { en: {}, zhHans: {}, zhHant: {} },
-        capabilities: {},
-      },
-    }
+  it.each([undefined, ['profile']])(
+    'preserves omitted project tabs with manifest %j',
+    async submittedTabs => {
+      const payload = {
+        meta: {
+          id: 'project-1',
+          mode: 'update' as const,
+          submittedTabs,
+          updatedAt: '2026-02-24T00:00:00.000Z',
+        },
+        data: {
+          organisationId: 'org-1',
+          code: 'project-code',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          capabilities: {},
+        },
+      }
 
-    const result = await remote.projectForm(payload, throwingInvalid)
+      const result = await remote.projectForm(payload, throwingInvalid)
 
-    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
-      expect.objectContaining({
-        submittedData: expect.not.objectContaining({
-          userRoles: expect.anything(),
-          properties: expect.anything(),
+      expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          submittedData: expect.not.objectContaining({
+            userRoles: expect.anything(),
+            properties: expect.anything(),
+          }),
         }),
-      }),
-    )
-    expect(mockListProjectRoleAssignments).not.toHaveBeenCalled()
-    expect(mockSyncProjectUserRoles).not.toHaveBeenCalled()
-    expect(mockUpdatePropertiesWithRelated).not.toHaveBeenCalled()
-    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledTimes(1)
-    expect(result).toEqual({
-      data: {
-        id: 'project-1',
-        modifiedAt: '2026-02-24T01:00:00.000Z',
-      },
-    })
-  })
+      )
+      expect(mockListProjectRoleAssignments).not.toHaveBeenCalled()
+      expect(mockSyncProjectUserRoles).not.toHaveBeenCalled()
+      expect(mockUpdatePropertiesWithRelated).not.toHaveBeenCalled()
+      expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledTimes(1)
+      const saved = mockUpdateProjectByIdWithConcurrency.mock.calls[0][1]
+      for (const field of [
+        'userRoles',
+        'properties',
+        'inheritedProperties',
+        'layers',
+      ]) {
+        expect(saved).not.toHaveProperty(field)
+      }
+      for (const field of [
+        'featureIntentSettings',
+        'featureNameProperties',
+        'imageIntentSettings',
+        'locationUpdatePolicy',
+      ]) {
+        expect(saved[field]).toBeUndefined()
+      }
+      expect(result).toEqual({
+        data: {
+          id: 'project-1',
+          modifiedAt: '2026-02-24T01:00:00.000Z',
+        },
+      })
+    },
+  )
 
   it('defaults the first ranked layer when no default was selected', async () => {
     const payload = buildUpdatePayload('org-1')
