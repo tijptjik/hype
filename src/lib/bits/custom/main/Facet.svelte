@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte'
+import { untrack } from 'svelte'
 import { cx } from '#lib/bits/utils.js'
 import { FormFacetNav } from '#lib/bits/patterns/forms/formFacetNav/index.js'
 import type { MainFacetProps } from './main.types'
@@ -156,39 +156,50 @@ function logInnerChildrenHeights(): void {
   console.groupEnd()
 }
 
+/** Measure intrinsic content without retaining a scroll clamp from temporary sizing.
+ * @param body Facet content whose minimum height is temporarily released.
+ * @returns Natural content height including transformed direct children.
+ */
 function getBodyContentHeight(body: HTMLDivElement): number {
   const previousInlineMinHeight = body.style.minHeight
   const previousInlineHeight = body.style.height
+  const facet = facetElement
+  const previousScrollTop = facet?.scrollTop ?? 0
 
   body.style.minHeight = '0px'
   body.style.height = 'auto'
 
-  const scrollHeight = Math.ceil(body.scrollHeight)
+  try {
+    const scrollHeight = Math.ceil(body.scrollHeight)
+    if (body.children.length === 0) return scrollHeight
 
-  if (body.children.length === 0) {
+    const bodyTop = body.getBoundingClientRect().top
+    let contentHeight = scrollHeight
+
+    // Direct child bounds help when transformed content paints beyond the
+    // element's normal flow size, while scrollHeight captures regular overflow.
+    for (const child of Array.from(body.children)) {
+      if (!(child instanceof HTMLElement)) continue
+      const rect = child.getBoundingClientRect()
+      contentHeight = Math.max(contentHeight, rect.bottom - bodyTop)
+    }
+    return Math.ceil(contentHeight)
+  } finally {
     body.style.minHeight = previousInlineMinHeight
     body.style.height = previousInlineHeight
-    return scrollHeight
+    // Releasing the minimum can briefly remove trailing scroll travel and clamp scrollTop.
+    // Restore only that measurement-induced clamp; leave unchanged smooth scrolling alone.
+    if (facet && facet.scrollTop !== previousScrollTop)
+      facet.scrollTo({ top: previousScrollTop, behavior: 'instant' })
   }
-
-  const bodyTop = body.getBoundingClientRect().top
-  let contentHeight = scrollHeight
-
-  // Direct child bounds help when transformed content paints beyond the
-  // element's normal flow size, while scrollHeight captures regular overflow.
-  for (const child of Array.from(body.children)) {
-    if (!(child instanceof HTMLElement)) continue
-    const rect = child.getBoundingClientRect()
-    contentHeight = Math.max(contentHeight, rect.bottom - bodyTop)
-  }
-
-  body.style.minHeight = previousInlineMinHeight
-  body.style.height = previousInlineHeight
-
-  return Math.ceil(contentHeight)
 }
 
-function measureLayout(): void {
+/** Update footer geometry, optionally retaining content clearance during a resize.
+ * @param measureContent Whether to remeasure intrinsic content height.
+ * @returns Nothing.
+ */
+function measureLayout(measureContent = true): void {
+  if (!isVisible) return
   const facet = facetElement
   const body = bodyElement
 
@@ -244,6 +255,7 @@ function measureLayout(): void {
     tailSpacer = 0
     return
   }
+  if (!measureContent) return
   bodyHeight = null
   bodyBottomPadding = 0
   const bodyContentHeight = getBodyContentHeight(body)
@@ -291,6 +303,40 @@ function measureLayout(): void {
   logInnerChildrenHeights()
 }
 
+// Coalesce observer callbacks; keep footer geometry live while content reflow settles.
+let layoutFrame: number | null = null
+let contentTimer: ReturnType<typeof setTimeout> | null = null
+let contentMeasurementPending = false
+const CONTENT_RESIZE_SETTLE_MS = 80
+
+/** Queue one layout pass for the next frame.
+ * @param measureContent Whether this pass must refresh scroll clearance.
+ * @returns Nothing.
+ */
+function scheduleLayout(measureContent = true): void {
+  if (!isVisible) return
+  contentMeasurementPending ||= measureContent
+  if (layoutFrame !== null) return
+  layoutFrame = requestAnimationFrame(() => {
+    layoutFrame = null
+    const refreshContent = contentMeasurementPending
+    contentMeasurementPending = false
+    measureLayout(refreshContent)
+  })
+}
+
+/** Keep navigation aligned during resizing and measure content after it settles.
+ * @returns Nothing.
+ */
+function scheduleResizeLayout(): void {
+  scheduleLayout(false)
+  if (contentTimer !== null) clearTimeout(contentTimer)
+  contentTimer = setTimeout(() => {
+    contentTimer = null
+    scheduleLayout()
+  }, CONTENT_RESIZE_SETTLE_MS)
+}
+
 $effect(() => {
   hasFacetNav
   fillHeight
@@ -298,45 +344,22 @@ $effect(() => {
   contentClass
   bottomClearance
   extraScroll
-  queueMicrotask(measureLayout)
+  edgeToEdge
+  if (isVisible) untrack(() => scheduleLayout())
 })
 
 $effect(() => {
-  navElement
-  isVisible
-  hasFacetNav
-  queueMicrotask(measureLayout)
-})
-
-$effect(() => {
-  const nav = navElement
-  if (!nav) return
-
-  const observer = new ResizeObserver(() => {
-    measureLayout()
-  })
-
-  observer.observe(nav)
-
-  return () => {
-    observer.disconnect()
-  }
-})
-
-onMount(() => {
   const facet = facetElement
   const body = bodyElement
+  const nav = navElement
+  if (!isVisible || !facet || !body) return
 
-  if (!facet || !body) return
-
-  const observer = new ResizeObserver(() => {
-    measureLayout()
-  })
-
+  const observer = new ResizeObserver(scheduleResizeLayout)
   observer.observe(facet)
   observer.observe(body)
+  if (nav) observer.observe(nav)
   // Collapsing content can leave the measured minimum height unchanged, so resize alone misses it.
-  const contentObserver = new MutationObserver(() => queueMicrotask(measureLayout))
+  const contentObserver = new MutationObserver(() => scheduleLayout())
   contentObserver.observe(body, { childList: true, subtree: true })
   // Let the surrounding workspace close its frame once this facet scrolls.
   const updateScrollState = (): void => {
@@ -345,14 +368,19 @@ onMount(() => {
   facet.addEventListener('scroll', updateScrollState, { passive: true })
   updateScrollState()
   const handleLayoutSettled = (): void => {
-    queueMicrotask(measureLayout)
+    scheduleLayout()
   }
   window.addEventListener('bits:facet-layout-settled', handleLayoutSettled)
-  queueMicrotask(measureLayout)
+  untrack(() => scheduleLayout())
 
   return () => {
     observer.disconnect()
     contentObserver.disconnect()
+    if (layoutFrame !== null) cancelAnimationFrame(layoutFrame)
+    if (contentTimer !== null) clearTimeout(contentTimer)
+    layoutFrame = null
+    contentTimer = null
+    contentMeasurementPending = false
     facet.removeEventListener('scroll', updateScrollState)
     window.removeEventListener('bits:facet-layout-settled', handleLayoutSettled)
   }
