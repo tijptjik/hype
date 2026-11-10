@@ -119,8 +119,8 @@ function setup(
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
       cardStyleCode TEXT, useAllInOrgContext INTEGER);
-    CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT, isDraft INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
-    CREATE TABLE featureI18n(featureId TEXT,locale TEXT,title TEXT,displayAddress TEXT);
+    CREATE TABLE feature(id TEXT PRIMARY KEY, featureType TEXT, nameTemplate TEXT, kind TEXT, targetContext TEXT, associationRelation TEXT, layerId TEXT, projectId TEXT, isDraft INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
+    CREATE TABLE featureI18n(featureId TEXT,locale TEXT,baseName TEXT,nameOverride TEXT,title TEXT,displayAddress TEXT);
     CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
     CREATE TABLE property(id TEXT PRIMARY KEY,key TEXT,scope TEXT,hubId TEXT,audience TEXT NOT NULL DEFAULT 'public');
     CREATE TABLE featureProperty(featureId TEXT,propertyId TEXT,propertyValueId TEXT,value TEXT,valueJson TEXT);
@@ -176,6 +176,34 @@ function setup(
   sqlite.exec(readFileSync('migrations/0154_location_version_names.sql', 'utf8'))
   if (includeAddressKind)
     sqlite.exec(readFileSync('migrations/0157_location_rematching.sql', 'utf8'))
+  // Current service writes require the taxonomy schema; historical migration cases opt out.
+  if (includeLifecycle) {
+    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
+    for (const [file, name] of [
+      ['0142_location_facts_snapshots', 'location_revision_snapshot_insert'],
+      ['0144_location_address_contract', 'location_revision_unknown_details'],
+    ]) {
+      const trigger = readFileSync(`migrations/${file}.sql`, 'utf8').match(
+        new RegExp(`CREATE TRIGGER ${name}[\\s\\S]*?END;`),
+      )?.[0]
+      if (!trigger) throw new Error(`Missing fixture trigger ${name}`)
+      sqlite.exec(trigger)
+    }
+    sqlite.exec('CREATE INDEX feature_target_context ON feature(layerId,targetContext)')
+    for (const migration of [
+      '0213_building_parts',
+      '0215_location_physical_kinds',
+      '0216_location_taxonomy',
+      '0217_location_thoroughfare',
+      '0218_location_address_service_classes',
+      '0219_address_location_classification',
+    ])
+      sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
+    // Legacy snapshot conversion cases intentionally insert historical facts directly.
+    sqlite.exec(
+      'DROP TRIGGER location_revision_snapshot_insert; DROP TRIGGER location_revision_unknown_details;',
+    )
+  }
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_location_scope_insert;
@@ -1889,7 +1917,7 @@ describe('persisted Feature baseline and initial linking', () => {
     sqlite
       .prepare("UPDATE feature SET geometry=?, addressMeta=? WHERE id='f'")
       .run(JSON.stringify(facts.location.geometry), JSON.stringify({ address }))
-    sqlite.exec(`INSERT INTO featureI18n VALUES ('f','en','Bakery','Old address');
+    sqlite.exec(`INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES ('f','en','Bakery','Old address');
       INSERT INTO hub VALUES ('core','core');
       INSERT INTO property(id,key,scope,hubId) VALUES ('phone','phoneNumber','hub','core');
       INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','phone',NULL,'["9123 4567","2345 6789"]');`)
@@ -1915,7 +1943,7 @@ describe('persisted Feature baseline and initial linking', () => {
     sqlite
       .prepare("UPDATE feature SET geometry=? WHERE id='f'")
       .run(JSON.stringify(facts.location.geometry))
-    sqlite.exec(`INSERT INTO featureI18n VALUES ('f','en','Collection counter','Original address'), ('f','zh-hant','麵包店',NULL);
+    sqlite.exec(`INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES ('f','en','Collection counter','Original address'), ('f','zh-hant','麵包店',NULL);
       INSERT INTO hub VALUES ('core','core');
       INSERT INTO property(id,key,scope,hubId) VALUES ('phone','phoneNumber','hub','core'),('brand','brand','organisation',NULL);
       INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','phone',NULL,'2345 6789'),('f','brand','legacy-brand',NULL);
@@ -1972,7 +2000,9 @@ describe('persisted Feature baseline and initial linking', () => {
     sqlite
       .prepare("UPDATE feature SET geometry=? WHERE id='f'")
       .run(JSON.stringify(facts.location.geometry))
-    sqlite.exec("INSERT INTO featureI18n VALUES ('f','en','Bakery',NULL)")
+    sqlite.exec(
+      "INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES ('f','en','Bakery',NULL)",
+    )
     expect(await readFeatureLocationBaseline(db, 'f', 'other')).toEqual({
       status: 'ineligible',
       reason: 'not-found',
@@ -2955,7 +2985,9 @@ describe('atomic unresolved Feature split application', () => {
     sqlite
       .prepare('UPDATE feature SET geometry=? WHERE id=?')
       .run(JSON.stringify(facts.location.geometry), 'f')
-    sqlite.exec("INSERT INTO featureI18n VALUES ('f','en','Shop','Original address')")
+    sqlite.exec(
+      "INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES ('f','en','Shop','Original address')",
+    )
     const baseline = await readFeatureLocationBaseline(db, 'f', 'p')
     if (baseline.status !== 'ready') throw new Error('Expected baseline')
     const result = planUnresolvedFeatureSplit(baseline.baseline)
@@ -6083,7 +6115,6 @@ describe('Organisation-wide Location corrections', () => {
 
   it('queues and adopts distinct Hype shared revisions without changing the publisher snapshot', async () => {
     const { db, sqlite, local, link } = await fixture()
-    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
     await link('g', 'other')
     await saveProjectLocationSettings(
@@ -6671,9 +6702,10 @@ it('classifies an unknown local identity when building status is first establish
   })
   expect(updated).not.toBeNull()
   expect(
-    sqlite.prepare('SELECT kind FROM location WHERE id=?').get(created.locationId)
-      ?.kind,
-  ).toBe('building')
+    sqlite
+      .prepare('SELECT kind,class FROM location WHERE id=?')
+      .get(created.locationId),
+  ).toEqual({ kind: 'built', class: 'building' })
   const snapshot = JSON.parse(
     String(
       sqlite
@@ -7198,7 +7230,6 @@ describe('separate shared Location correction review', () => {
 describe('Hype shared correction storage', () => {
   it('searches shared corrections and scoped Organisation names before pagination', async () => {
     const { db, sqlite } = setup()
-    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
     const { prepareSharedLocationCorrection } = await import(
       '#lib/db/services/locationShared.js'
@@ -7259,7 +7290,6 @@ describe('Hype shared correction storage', () => {
 
   it('accepts a phone correction without implicitly accepting a pending shared name', async () => {
     const { db, sqlite } = setup()
-    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
     const { prepareSharedLocationCorrection, sharedLocationFacts } = await import(
       '#lib/db/services/locationShared.js'
@@ -7307,7 +7337,6 @@ describe('Hype shared correction storage', () => {
 
   it('preserves immutable evidence, fences concurrent edits and retires changed-source contacts', async () => {
     const { db, sqlite } = setup()
-    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
     const {
       prepareSharedLocationCorrection,
