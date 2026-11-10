@@ -3407,6 +3407,9 @@ materialize the first phone value without its `+852` prefix; stored phone values
 other country codes are unchanged. New conditions default to the separator `•` with a
 space on each side.
 
+Visible language defaults are added to the isolated rule draft immediately, so untouched
+language rows participate in preview and persist when accepted.
+
 Migration `0220_feature_name_materialization.sql` relocates legacy localized inputs and
 materializes titles. SQLite write triggers refresh titles atomically on authored input,
 pinned rule, boolean or toggle property, accepted association and ownership changes.

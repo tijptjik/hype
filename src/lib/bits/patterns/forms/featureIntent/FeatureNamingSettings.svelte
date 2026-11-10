@@ -290,6 +290,29 @@ function update(index: number, locale: string, key: string, value: string): void
 function emptyCase(): FeatureNameRule['conditions'][number]['locales'][string] {
   return { true: '', false: '', null: '', placement: 'suffix', separator: ' • ' }
 }
+// Materialize visible language defaults in the draft so preview and Accept use the displayed controls.
+$effect(() => {
+  if (disabled) return
+  const missing = rule.conditions.some(condition =>
+    editingLocales.some(
+      locale =>
+        !Object.keys(condition.locales).some(
+          tag => canonicalContentTag(tag) === locale,
+        ),
+    ),
+  )
+  if (!missing) return
+  const next = structuredClone($state.snapshot(rule))
+  for (const condition of next.conditions) {
+    for (const locale of editingLocales) {
+      if (
+        !Object.keys(condition.locales).some(tag => canonicalContentTag(tag) === locale)
+      )
+        condition.locales[locale] = emptyCase()
+    }
+  }
+  untrack(() => onChange(next))
+})
 /** Reorder a complete rule and every locale without changing its text.
  * @param from Current position. @param to New position. @returns Nothing.
  */

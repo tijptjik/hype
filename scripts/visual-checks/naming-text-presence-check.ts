@@ -98,6 +98,19 @@ for (const [engine, browserType] of [
         .filter({ hasText: '霓虹字樣' })
         .waitFor()
       await panel
+        .getByRole('button', {
+          name: 'Example: Sign caption: Has no value',
+          exact: true,
+        })
+        .click()
+      await panel
+        .locator('[data-title-example="zh-Hant"]')
+        .filter({ hasText: '霓虹字樣' })
+        .waitFor()
+      await panel
+        .getByRole('button', { name: 'Example: Sign caption: Has value', exact: true })
+        .click()
+      await panel
         .getByRole('group', { name: '繁中', exact: true })
         .getByRole('textbox', { name: 'Has no value', exact: true })
         .fill('沒有名稱')
