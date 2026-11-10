@@ -20,11 +20,13 @@ let {
   locales,
   multilingual,
   disabled = false,
+  onEnglishChange,
 }: {
   type: FeatureType
   locales: string[]
   multilingual: boolean
   disabled?: boolean
+  onEnglishChange?: (before: string, after: string) => void
 } = $props()
 let busy = $state<string | undefined>()
 let error = $state('')
@@ -51,6 +53,7 @@ function value(locale: string): string {
  * @param locale Content language. @param text Draft name. @returns Nothing.
  */
 function update(locale: string, text: string): void {
+  if (locale === 'en') onEnglishChange?.(value(locale), text)
   type.labels = { ...type.labels, [locale]: text }
   if (locale === 'en') type.label = text
 }

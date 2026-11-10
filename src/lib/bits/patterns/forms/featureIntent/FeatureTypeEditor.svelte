@@ -1,4 +1,6 @@
 <script lang="ts">
+// UTILITIES
+import { propertyKeyFromLabel } from '#lib/utils/nameIdentifier.js'
 // COMPONENTS
 import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 import Label from '#lib/bits/custom/form/src/label/Label.svelte'
@@ -24,6 +26,7 @@ let {
   locales,
   multilingual,
   disabled = false,
+  onIdChange,
 }: {
   type: FeatureType
   scopeType: FeatureIntentScope['type']
@@ -31,6 +34,7 @@ let {
   locales: string[]
   multilingual: boolean
   disabled?: boolean
+  onIdChange?: (before: string, after: string) => void
 } = $props()
 const examples: Record<string, string> = {
   building_part: 'floor, lobby, wing, flat',
@@ -54,6 +58,29 @@ const targets = $derived(
   type.targetContexts ??
     TARGET_CONTEXTS.filter(kind => type.locationKinds.includes(kind)),
 )
+let identifierEdited = $state(false)
+let automaticIdentifier = $state<string | null>(null)
+/** Follow English names until the identifier has been explicitly customized.
+ * @param before Previous English label. @param after New English label. @returns Nothing.
+ */
+function updateEnglishName(before: string, after: string): void {
+  const code = (label: string): string =>
+    propertyKeyFromLabel(label)
+      .replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)
+      .slice(0, 80)
+  if (
+    identifierEdited ||
+    (type.id !== automaticIdentifier &&
+      type.id !== code(before) &&
+      !(before === 'New feature type' && /^type-\d+$/.test(type.id)))
+  )
+    return
+  const next = code(after)
+  if (!next || next === type.id) return
+  onIdChange?.(type.id, next)
+  type.id = next
+  automaticIdentifier = next
+}
 </script>
 
 <div
@@ -64,6 +91,13 @@ const targets = $derived(
     class="lg:border-border/50 grid min-w-0 content-start gap-3 lg:border-r lg:pr-6"
     aria-label="Type settings"
   >
+    <FeatureTypeNames
+      bind:type
+      {locales}
+      {multilingual}
+      {disabled}
+      onEnglishChange={updateEnglishName}
+    />
     <TextInput
       label="Stable identifier"
       inputAttrs={{ 'aria-label': 'Stable identifier' }}
@@ -71,7 +105,11 @@ const targets = $derived(
       value={type.id}
       isEditing={!disabled}
       {...disabled ? typeReadOnlyInputAppearance : typeInputAppearance}
-      onValueChange={value => (type.id = value)}
+      onValueChange={value => {
+        identifierEdited = true
+        onIdChange?.(type.id, value)
+        type.id = value
+      }}
     />
     <SelectField
       label="Feature kind"
@@ -127,7 +165,6 @@ const targets = $derived(
     class="lg:border-border/50 grid min-w-0 content-start gap-4 lg:border-r lg:pr-6"
     aria-label="Type names"
   >
-    <FeatureTypeNames bind:type {locales} {multilingual} {disabled} />
     <div class="pt-4">
       <FeatureNamingSettings
         {scopeType}

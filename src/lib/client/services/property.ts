@@ -1,3 +1,5 @@
+// UTILITIES
+import { propertyKeyFromLabel } from '#lib/utils/nameIdentifier.js'
 import { customAlphabet } from 'nanoid'
 import { tick } from 'svelte'
 // I18N
@@ -440,28 +442,6 @@ const propertyKeyTailNanoId = customAlphabet(
 
 // Track only newly added fields for this form; saved API contracts stay unchanged.
 const automaticPropertyKeys = new WeakMap<object, Map<Id, string>>()
-
-/** Derive an ASCII camelCase API identifier from the English display label.
- * @param label English UI name.
- * @returns A legal identifier, or empty when the label contains no usable characters.
- */
-function propertyKeyFromLabel(label: string): string {
-  const words =
-    label
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-      .match(/[A-Za-z0-9]+/g) ?? []
-  return words
-    .map((word, index) => {
-      const lower = word.toLowerCase()
-      return index === 0 ? lower : lower[0].toUpperCase() + lower.slice(1)
-    })
-    .join('')
-    .replace(/^[0-9]+/, '')
-    .replace(/^[A-Z]/, letter => letter.toLowerCase())
-}
 
 function createPropertyKey(): string {
   return `${propertyKeyFirstCharNanoId()}${propertyKeyTailNanoId()}`
