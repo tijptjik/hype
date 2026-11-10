@@ -213,6 +213,9 @@ import {
   ImageContextResource,
   ProjectRoleType,
 } from '#lib/enums.js'
+// BITS COMPONENTS
+import ScopedFeatureIndexSkeleton from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndexSkeleton.svelte'
+import HistorySkeleton from '#lib/bits/patterns/revisionHistory/HistorySkeleton.svelte'
 // TYPES
 import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
 import type {
@@ -3574,6 +3577,9 @@ $effect(() => {
               '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
             )}
         >
+          {#snippet pending()}
+            <ScopedFeatureIndexSkeleton />
+          {/snippet}
           {#snippet children(module)}
             <module.default
               embedded
@@ -3599,6 +3605,9 @@ $effect(() => {
           load={() =>
             import('#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte')}
         >
+          {#snippet pending()}
+            <HistorySkeleton />
+          {/snippet}
           {#snippet children(module)}
             <module.default resource="project" resourceId={optimisticProjectData.id} />
           {/snippet}

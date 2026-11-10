@@ -20,6 +20,9 @@ import {
   ACCESSIBILITY_FIELDS,
   UNKNOWN_ACCESSIBILITY,
 } from '#lib/locations/accessibility.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { Accessibility, AccessibilityView } from '#lib/locations/accessibility.js'
 
@@ -148,7 +151,39 @@ async function remove(view: AccessibilityView): Promise<void> {
 </script>
 
 {#await request}
-  <p class="text-muted-foreground text-sm">{m.accessibility_loading()}</p>
+  <section
+    class="space-y-3 py-3"
+    aria-busy="true"
+    aria-label={m.accessibility_loading()}
+  >
+    {#if !hideHeading}
+      <h2 class="text-muted-foreground text-xs font-medium">
+        {m.accessibility_title()}
+      </h2>
+    {/if}
+    <div class="flex items-center justify-between gap-4">
+      <h3 class="text-sm font-semibold">{m.accessibility_mobility_heading()}</h3>
+      {#if !readOnly}
+        <ContentSkeleton
+          ><Button
+            type="button"
+            text={m.accessibility_edit()}
+            disabled
+          /></ContentSkeleton
+        >
+      {/if}
+    </div>
+    <dl class="grid gap-3 sm:grid-cols-2">
+      {#each ACCESSIBILITY_FIELDS as field}
+        <div>
+          <dt class="text-muted-foreground text-sm">{labels[field]}</dt>
+          <dd class="font-medium">
+            <LoadingSkeleton text={values[UNKNOWN_ACCESSIBILITY[field]]} />
+          </dd>
+        </div>
+      {/each}
+    </dl>
+  </section>
 {:then view}
   {#if view}
     <section class="space-y-3 py-3" aria-label={m.accessibility_title()}>

@@ -6,6 +6,14 @@ let { active, load }: { active: boolean; load: () => Promise<{ default: Componen
 </script>
 
 <DeferredPanel {active} {load}>
+  {#snippet pending()}
+    <div
+      role="status"
+      aria-label="Loading"
+      aria-busy="true"
+      class="bg-foreground/10 h-20 w-full"
+    ></div>
+  {/snippet}
   {#snippet children(Content)}
     <Content />
   {/snippet}

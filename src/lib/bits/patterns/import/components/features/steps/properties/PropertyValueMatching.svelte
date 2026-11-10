@@ -11,6 +11,8 @@ import {
 import { translateText } from '#lib/api/translation.remote.js'
 // I18N
 import { m, toLocaleKey } from '#lib/i18n.js'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type {
   FeatureCSVColumn,
@@ -502,10 +504,49 @@ async function handleAccept() {
 </script>
 
 {#if isLoading}
-  <div class="flex items-center justify-center p-8">
-    <span class="loading loading-spinner loading-lg"></span>
-    <span class="ml-3">{m.loading_property_data()}</span>
-  </div>
+  <ContentSkeleton label={m.loading_property_data()} class="w-full"
+    ><div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
+      <section
+        class="border-warning/25 bg-panel/[0.45] relative flex min-h-96 flex-col overflow-hidden rounded-3xl border p-5 lg:col-span-3"
+      >
+        <div class="mb-5">
+          <p class="font-mono text-[11px] font-semibold tracking-[0.22em] uppercase">
+            {m.match_property_values({ key: property.key })}
+          </p>
+          <h3 class="mt-2 text-2xl font-black tracking-tight">{property.key}</h3>
+        </div>
+        <div class="mb-4 grid gap-3 rounded-2xl border p-4 md:grid-cols-2">
+          <div>
+            <p class="text-[11px]">{m.property_id()}</p>
+            <p class="mt-1 text-sm">Property identifier</p>
+          </div>
+          <div>
+            <p class="text-[11px]">{m.existing_values()}</p>
+            <p class="mt-1 text-sm">0</p>
+          </div>
+        </div>
+        <div class="space-y-3">
+          {#each property.columns as column}
+            <div
+              class="grid gap-3 rounded-2xl border p-4 md:grid-cols-[5rem_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.1fr)]"
+            >
+              <p class="text-xs">{column.header}</p>
+              <p class="text-sm">CSV value</p>
+              <p class="text-sm">Existing value</p>
+              <button type="button" class="min-h-9">Match</button>
+            </div>
+          {/each}
+        </div>
+      </section>
+      <section class="min-h-96 rounded-3xl border p-5 lg:col-span-2">
+        <h3 class="text-lg">Existing values</h3>
+        <div class="mt-5 space-y-3">
+          <p class="text-sm">Property values</p>
+          <p class="text-sm">Matching options</p>
+        </div>
+      </section>
+    </div></ContentSkeleton
+  >
 {:else if !existingProperty}
   <div class="alert alert-error">
     <div>

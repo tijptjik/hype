@@ -178,7 +178,7 @@ $effect(() => {
       </div>
     {/if}
   {:else}
-    <ResourceLoadingState />
+    <ResourceLoadingState {isRowLayout} />
   {/if}
 </div>
 

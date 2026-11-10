@@ -16,6 +16,7 @@ import * as WhatsApp from './index.js'
 import CatalogSendBubble from '#lib/bits/patterns/messaging/CatalogSendBubble.svelte'
 import PendingSendBubble from '#lib/bits/patterns/messaging/PendingSendBubble.svelte'
 import MessagingContactStatus from '#lib/bits/patterns/messaging/MessagingContactStatus.svelte'
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { WhatsAppMessage } from '#lib/api/services/whatsover.types.js'
 import type { WhatsAppConsoleModel } from '../whatsapp.types.js'
@@ -535,9 +536,14 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
           <p class="text-muted-foreground text-sm">Beginning of available history</p>
         {:else}
           <p role="status" class="text-muted-foreground text-xs">
-            {model.historyLoading
-              ? 'Loading older messages…'
-              : 'Scroll up for older messages'}
+            {#if model.historyLoading}
+              <LoadingSkeleton
+                label={'Loading older messages…'}
+                text="Scroll up for older messages"
+              />
+            {:else}
+              {'Scroll up for older messages'}
+            {/if}
           </p>
         {/if}
         {#if model.historyError}

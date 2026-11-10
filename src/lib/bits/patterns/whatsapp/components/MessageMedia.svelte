@@ -234,12 +234,10 @@ $effect(() => {
             onClick={() => void load()}
           />
         {:else if automatic}
-          <span role="status" class="text-xs"
-            >{loading ? 'Loading…' : 'Waiting to load…'}</span
-          >
+          <MediaSkeleton label="Loading preview" compact />
         {:else}
           <Button
-            text={loading ? 'Loading…' : 'Load document'}
+            text="Load document"
             style="soft"
             disabled={loading}
             onClick={() => void load()}

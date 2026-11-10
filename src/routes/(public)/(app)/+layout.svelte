@@ -66,6 +66,8 @@ import {
 } from '#lib/bits/index.js'
 // ENUMS
 import { PageState } from '#lib/enums.js'
+// BITS COMPONENTS
+import PanelLoadingState from '#lib/bits/patterns/panels/PanelLoadingState.svelte'
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types'
 
@@ -643,6 +645,9 @@ $effect(() => {
         active={prismsModel.open}
         load={() => import('#lib/bits/patterns/resourcePanel/ResourcePanel.svelte')}
       >
+        {#snippet pending()}
+          <PanelLoadingState panel={prismsModel.panel} />
+        {/snippet}
         {#snippet children(ResourcePanel)}
           <ResourcePanel model={prismsModel} />
         {/snippet}
@@ -651,6 +656,9 @@ $effect(() => {
         active={starsShell.open}
         load={() => import('#lib/bits/patterns/starsPanel/StarsPanel.svelte')}
       >
+        {#snippet pending()}
+          <PanelLoadingState panel={starsShell.panel} />
+        {/snippet}
         {#snippet children(Stars)}
           <Stars shell={starsShell} model={starsModel} />
         {/snippet}
@@ -659,6 +667,9 @@ $effect(() => {
         active={hubShell.open}
         load={() => import('#lib/bits/patterns/hubPanel/HubPanel.svelte')}
       >
+        {#snippet pending()}
+          <PanelLoadingState panel={hubShell.panel} />
+        {/snippet}
         {#snippet children(Hub)}
           <Hub
             shell={hubShell}
@@ -675,6 +686,9 @@ $effect(() => {
         active={filtersShell.open}
         load={() => import('#lib/bits/patterns/filtersPanel/FiltersPanel.svelte')}
       >
+        {#snippet pending()}
+          <PanelLoadingState panel={filtersShell.panel} />
+        {/snippet}
         {#snippet children(Filters)}
           <Filters shell={filtersShell} model={filtersModel} />
         {/snippet}
@@ -683,6 +697,9 @@ $effect(() => {
         active={navigationShell.open}
         load={() => import('#lib/bits/patterns/navigationPanel/NavigationPanel.svelte')}
       >
+        {#snippet pending()}
+          <PanelLoadingState panel={navigationShell.panel} />
+        {/snippet}
         {#snippet children(NavigationPanel)}
           <NavigationPanel shell={navigationShell} model={navigationModel} />
         {/snippet}

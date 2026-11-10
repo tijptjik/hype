@@ -468,9 +468,12 @@ function sampleName(locale: string, source: 'feature' | 'location'): string {
       onChange={value => onChange({ ...rule, base: value as FeatureNameRule['base'] })}
     />
     {#if loading}
-      <p class="text-muted-foreground text-xs" role="status">
-        Loading available fields…
-      </p>
+      <span
+        role="status"
+        aria-label="Loading field values"
+        aria-busy="true"
+        class="sr-only"
+      ></span>
     {:else if failed}
       <p role="alert">Unable to load naming fields.</p>
       <Button text="Retry loading fields" style="ghost" onClick={() => reload++} />

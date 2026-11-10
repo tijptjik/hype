@@ -15,6 +15,8 @@ import {
   OMNIBAR_COLLECTION_LIST_CLASSES,
   OMNIBAR_COLLECTION_SCROLL_AREA_CLASSES,
 } from '../omnibar.styles'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { OmnibarCollectionProps } from './omnibarPrimitives.types'
 
@@ -123,7 +125,22 @@ $effect(() => {
   >
     {#if items.length === 0}
       <div class="text-base-content/60 p-4 text-center">
-        {loading ? m.resource_loading() : m.omni__no_results()}
+        {#if loading}
+          <div
+            role="status"
+            aria-label={m.resource_loading()}
+            aria-busy="true"
+            class={OMNIBAR_COLLECTION_LIST_CLASSES}
+          >
+            {#each Array(3) as _, index (index)}
+              <div class={OMNIBAR_COLLECTION_ITEM_CLASSES}>
+                <LoadingSkeleton class={OMNIBAR_COLLECTION_ITEM_TITLE_CLASSES} />
+              </div>
+            {/each}
+          </div>
+        {:else}
+          {m.omni__no_results()}
+        {/if}
       </div>
     {:else}
       <ul class={OMNIBAR_COLLECTION_LIST_CLASSES} bind:this={listContainer}>
@@ -165,7 +182,11 @@ $effect(() => {
       disabled={loading}
       onclick={onLoadMore}
     >
-      {loading ? m.resource_loading() : m.resource_load_more()}
+      {#if loading}
+        <LoadingSkeleton label={m.resource_loading()} text={m.resource_load_more()} />
+      {:else}
+        {m.resource_load_more()}
+      {/if}
     </button>
   {/if}
   {#if isNavigationMode}

@@ -67,6 +67,9 @@ import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 import LocationOffIcon from 'virtual:icons/lucide/map-pin-off'
 import { addressBuildingNames } from '#lib/locations/addressIdentity.js'
 import CreateLocalLocation from './CreateLocalLocation.svelte'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { LocationSearchCandidate } from '#lib/locations/sourceClient.js'
 import type { LocalLocationCandidate } from '#lib/db/services/locationCandidate.js'
@@ -863,9 +866,13 @@ async function link(): Promise<void> {
       >
     {:else}
       {#await accepted}
-        <span class="text-muted-foreground text-sm"
-          >{m.feature_location_loading()}</span
-        >
+        <span
+          aria-hidden="true"
+          class="bg-foreground/10 size-6 shrink-0 rounded"
+        ></span><LoadingSkeleton
+          label={m.feature_location_loading()}
+          class="min-w-0 flex-1 text-base font-medium"
+        />
       {:then association}
         {#if creating}
           <LocationIcon class="text-primary size-6 shrink-0" aria-hidden="true" />
@@ -1109,9 +1116,11 @@ async function link(): Promise<void> {
           </p>
         {/if}
         {#await accepted}
-          <p class="text-muted-foreground text-sm" role="status">
-            {m.feature_location_loading()}
-          </p>
+          <ContentSkeleton label={m.feature_location_loading()}
+            ><div class="max-w-72">
+              <LocationKindField value={intendedKind} disabled onChange={() => {}} />
+            </div></ContentSkeleton
+          >
         {:then association}
           {#if isEditing && (!association || replacementRevision)}
             <div class="max-w-72">
@@ -1213,9 +1222,11 @@ async function link(): Promise<void> {
             {/if}
             {#if busy}
               <div class="flex items-center gap-3">
-                <p role="status" class="text-muted-foreground text-sm">
-                  {m.feature_location_loading()}
-                </p>
+                <LoadingSkeleton
+                  label={m.feature_location_loading()}
+                  text={m.feature_location_change_cancel()}
+                  class="text-sm"
+                />
                 <Button
                   text={m.feature_location_change_cancel()}
                   size="sm"

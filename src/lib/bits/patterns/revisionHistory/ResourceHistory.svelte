@@ -23,6 +23,8 @@ import ProfileIcon from 'virtual:icons/proicons/person-multiple'
 import FieldsIcon from 'virtual:icons/proicons/text'
 import ChevronIcon from 'virtual:icons/proicons/chevron-down'
 import MetadataIcon from 'virtual:icons/proicons/database'
+// BITS COMPONENTS
+import HistorySkeleton from '#lib/bits/patterns/revisionHistory/HistorySkeleton.svelte'
 // TYPES
 import type { HistoryGroup } from './presentation'
 import type { OrganisationHistoryPage } from '#lib/db/services/resourceHistory.js'
@@ -588,9 +590,7 @@ $effect(() => {
     {/each}
   </ol>
   {#if loading}
-    <p role="status" class="text-muted-foreground px-6 py-4 text-sm">
-      Loading history…
-    </p>
+    <HistorySkeleton heading={false} count={entries.length ? 1 : 3} />
   {/if}
   {#if nextCursor !== null && !failed}
     <div class="px-6 py-3">

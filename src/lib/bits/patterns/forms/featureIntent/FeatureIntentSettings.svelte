@@ -40,6 +40,9 @@ import {
   type FeatureType,
   type FeatureNamingRules,
 } from '#lib/features/intents.js'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
+import FormFieldSkeleton from '#lib/bits/patterns/forms/formSkeleton/components/FormFieldSkeleton.svelte'
 // TYPES
 import type {
   FeatureIntentScope,
@@ -414,7 +417,14 @@ function removeType(): void {
       <button type="button" onclick={() => (reload += 1)}>Retry</button>
     </div>
   {:else if !policy}
-    <p role="status" class="p-6">Loading feature types…</p>
+    <ContentSkeleton label="Loading feature types…"
+      ><FeatureTypeSection title="Feature type" disabled expanded
+        ><div class="grid gap-6 p-6">
+          <FormFieldSkeleton label="Name" />
+          <FormFieldSkeleton label="Description" multiline />
+        </div></FeatureTypeSection
+      ></ContentSkeleton
+    >
   {:else if inherits}
     <div data-inherited-schema>
       {#each policy.inheritedTypes as type, index (type.id)}

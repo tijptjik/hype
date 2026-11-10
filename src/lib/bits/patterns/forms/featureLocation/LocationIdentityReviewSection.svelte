@@ -682,9 +682,12 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
             </div>
           {/if}
           {#if busy}
-            <p role="status" class="text-muted-foreground text-sm">
-              {m.feature_location_loading()}
-            </p>
+            <span
+              role="status"
+              aria-label="Loading field values"
+              aria-busy="true"
+              class="sr-only"
+            ></span>
           {/if}
           {#if failure}
             <p role="alert" class="text-error text-sm">{failure}</p>

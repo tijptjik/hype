@@ -123,6 +123,9 @@ import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 import LayerIcon from 'virtual:icons/proicons/layers'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
+// BITS COMPONENTS
+import ScopedFeatureIndexSkeleton from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndexSkeleton.svelte'
+import HistorySkeleton from '#lib/bits/patterns/revisionHistory/HistorySkeleton.svelte'
 // TYPES
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
@@ -1804,6 +1807,9 @@ $effect(() => {
               '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
             )}
         >
+          {#snippet pending()}
+            <ScopedFeatureIndexSkeleton />
+          {/snippet}
           {#snippet children(module)}
             <module.default
               embedded
@@ -1830,6 +1836,9 @@ $effect(() => {
           load={() =>
             import('#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte')}
         >
+          {#snippet pending()}
+            <HistorySkeleton />
+          {/snippet}
           {#snippet children(module)}
             <module.default resource="layer" resourceId={deferredResourceId} />
           {/snippet}

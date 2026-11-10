@@ -8,10 +8,12 @@ let {
   active,
   load,
   children,
+  pending: pendingContent,
 }: {
   active: boolean
   load: () => Promise<{ default: T }>
   children: Snippet<[T]>
+  pending: Snippet
 } = $props()
 
 let component = $state.raw<T | null>(null)
@@ -51,6 +53,8 @@ $effect(() => {
 
 {#if component !== null}
   {@render children(component)}
+{:else if active && !failed}
+  {@render pendingContent()}
 {:else if active}
   <div
     data-app-intro-item="overlay"
@@ -61,8 +65,6 @@ $effect(() => {
       <button type="button" class="rounded px-3 py-2 underline" onclick={request}>
         {m.bootstrap__retry()}
       </button>
-    {:else}
-      <span>{m.resource_loading()}</span>
     {/if}
   </div>
 {/if}

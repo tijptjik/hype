@@ -14,6 +14,8 @@ import { createUserContributionsModel } from '#lib/adapters/panels/userContribut
 import AdminUserProfileEditor from '#lib/bits/patterns/userDirectory/AdminUserProfileEditor.svelte'
 import * as Main from '#lib/bits/custom/main/index.js'
 // ICONS
+// BITS COMPONENTS
+import UserProfileSkeleton from '#lib/bits/patterns/userDirectory/UserProfileSkeleton.svelte'
 // TYPES
 import type { AdminUserProfile as ProfileData } from '#lib/db/zod/schema/user.types.js'
 
@@ -77,7 +79,7 @@ $effect(() => {
     adminCtx.view.layout.setMainDimensions(width, height)}
 >
   {#if loading}
-    <p role="status" class="text-muted-foreground p-6">Loading profile…</p>
+    <UserProfileSkeleton />
   {:else if failed}
     <div role="alert" class="border-border bg-panel rounded-xl border p-6">
       <p>Unable to load this profile.</p>

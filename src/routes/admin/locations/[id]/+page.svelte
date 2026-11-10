@@ -15,6 +15,7 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import MapPin from 'virtual:icons/proicons/location'
+// BITS COMPONENTS
 
 const header = getHeaderCtrl()
 const admin = getAdminCtx()
@@ -25,7 +26,9 @@ const request = $derived(
     organisationId: page.url.searchParams.get('organisation') ?? undefined,
     scope,
   }),
-)
+) // BITS COMPONENTS
+import AddressEditorSkeleton from '#lib/bits/patterns/forms/localLocationAddress/AddressEditorSkeleton.svelte'
+
 let pendingEdit = $state(false)
 // Route changes discard the old record's edit mode before applying explicit edit intent.
 $effect(() => {
@@ -82,7 +85,7 @@ $effect(() => {
   >
     <FormSurface class="flex h-full min-h-0 flex-col overflow-hidden">
       {#await request}
-        <p class="px-6 py-6">{m.location_directory_loading()}</p>
+        <AddressEditorSkeleton full />
       {:then place}
         {#if place}
           {#key place.id}

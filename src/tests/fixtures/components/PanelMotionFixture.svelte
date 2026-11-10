@@ -140,6 +140,14 @@ const model: ResourcePanelModel = {
           active={open}
           load={() => import('#lib/bits/patterns/resourcePanel/ResourcePanel.svelte')}
         >
+          {#snippet pending()}
+            <div
+              role="status"
+              aria-label="Loading"
+              aria-busy="true"
+              class="bg-foreground/10 h-20 w-full"
+            ></div>
+          {/snippet}
           {#snippet children(Content)}
             <Content {model} />
           {/snippet}

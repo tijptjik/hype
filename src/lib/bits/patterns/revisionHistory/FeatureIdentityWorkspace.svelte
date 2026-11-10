@@ -19,6 +19,8 @@ import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getI18n } from '#lib/i18n.js'
 import { getURLfromImage } from '#lib/client/services/image.js'
 import { identityTitle, identityPhoto } from './featureIdentity.types'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type {
   IdentitySource as Source,
@@ -450,9 +452,17 @@ $effect(() => {
       </div>
       {#if !sources.length}
         {#if busy}
-          <p role="status" class="text-muted-foreground text-sm">
-            Loading source Feature…
-          </p>
+          <ContentSkeleton label="Loading source Feature…"
+            ><div
+              class="border-border grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border p-3"
+            >
+              <div class="bg-foreground/10 h-14 w-14 rounded-lg"></div>
+              <div>
+                <p class="text-sm font-medium">Source Feature</p>
+                <p class="mt-1 text-xs">Photos · Current Feature</p>
+              </div>
+            </div></ContentSkeleton
+          >
         {:else}
           <button
             type="button"

@@ -27,6 +27,8 @@ import {
   groupAddressDivisions,
   localityPathOverrides,
 } from '#lib/addresses/divisions.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type {
@@ -249,9 +251,35 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
     </div>
   </div>
   {#if loading}
-    <p role="status" class={context ? 'sr-only' : 'text-muted-foreground text-sm'}>
-      {m.feature_address_divisions_loading()}
-    </p>
+    {#if context}
+      <span
+        role="status"
+        aria-label={m.feature_address_divisions_loading()}
+        class="sr-only"
+      ></span>
+    {:else}
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={m.feature_address_divisions_loading()}
+        class={sidebar
+          ? ''
+          : 'border-border/70 bg-background/40 rounded-xl border px-4'}
+      >
+        {#each Object.entries(groupLabels) as [key, label], index}
+          <section
+            class="grid gap-2 py-3 {sidebar && index === 0 ? 'pt-1' : ''} {stacked
+              ? ''
+              : 'grid-cols-[6rem_minmax(0,1fr)] gap-x-3'}"
+          >
+            <h3 class="text-muted-foreground pt-1.5 text-xs font-medium tracking-wide">
+              {label}
+            </h3>
+            <LoadingSkeleton class="text-sm" />
+          </section>
+        {/each}
+      </div>
+    {/if}
   {/if}
   {#if failed}
     <div role="alert" class="text-destructive text-sm">

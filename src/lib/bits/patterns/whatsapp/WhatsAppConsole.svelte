@@ -6,6 +6,8 @@ import { Button } from '#lib/bits/core/index.js'
 // COMPONENTS
 import * as WhatsApp from './components/index.js'
 import ConversationPane from './components/ConversationPane.svelte'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { WhatsAppConsoleModel } from './whatsapp.types.js'
 let { model }: { model: WhatsAppConsoleModel } = $props()
@@ -120,11 +122,17 @@ const qrImage = $derived(
               <p class="text-muted-foreground text-sm">
                 All available conversations loaded
               </p>
+            {:else if model.conversationsLoading}
+              <ContentSkeleton label="Loading conversations…"
+                ><Button
+                  text="Find more conversations"
+                  style="ghost"
+                  disabled
+                /></ContentSkeleton
+              >
             {:else}
               <Button
-                text={model.conversationsLoading
-                  ? 'Loading conversations…'
-                  : 'Find more conversations'}
+                text="Find more conversations"
                 style="ghost"
                 disabled={model.conversationsLoading || !model.status.connected}
                 onClick={() => void model.loadConversations?.()}

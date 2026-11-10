@@ -1,17 +1,57 @@
 <script lang="ts">
+// SVELTE
+import { onMount } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import { getRowRootClass, rowShellClass } from '#lib/bits/custom/rows/row.styles.js'
+// BITS COMPONENTS
+import IndexCardSkeleton from '#lib/bits/patterns/cards/indexCard/IndexCardSkeleton.svelte'
 
 let {
   isRowLayout = false,
   showGroupHeader = false,
 }: { isRowLayout?: boolean; showGroupHeader?: boolean } = $props()
+// Use the loaded index's column budget, including its outer 12px and inner 8px gutters.
+let width = $state(0)
+let viewport = $state<HTMLDivElement>()
+let grid = $state<HTMLDivElement>()
+let visibleHeight = $state(0)
+let rowHeight = $state(0)
+let rowGap = $state(0)
+
+// Measure the actual responsive row/card rather than assuming a fixed card height.
+onMount(() => {
+  if (!viewport || !grid) return
+  const measure = (): void => {
+    if (!viewport || !grid) return
+    visibleHeight = Math.max(
+      0,
+      viewport.getBoundingClientRect().bottom - grid.getBoundingClientRect().top,
+    )
+    rowHeight = grid.firstElementChild?.getBoundingClientRect().height ?? 0
+    rowGap = Number.parseFloat(getComputedStyle(grid).rowGap) || 0
+  }
+  const observer = new ResizeObserver(measure)
+  observer.observe(viewport)
+  observer.observe(grid)
+  if (grid.firstElementChild) observer.observe(grid.firstElementChild)
+  measure()
+  return () => observer.disconnect()
+})
+const columns = $derived(Math.max(1, Math.floor((width - 24 + 16) / (340 + 16))))
+const itemCount = $derived(
+  rowHeight > 0
+    ? Math.max(1, Math.ceil(visibleHeight / (rowHeight + rowGap)) + 1) *
+        (isRowLayout ? 1 : columns)
+    : 8,
+)
 </script>
 
 <div
+  bind:this={viewport}
+  bind:clientWidth={width}
   class="min-h-0 flex-1 overflow-hidden px-3 pt-3"
   role="status"
   aria-live="polite"
@@ -29,12 +69,16 @@ let {
     </div>
   {/if}
   <div
+    bind:this={grid}
     class={isRowLayout
-      ? 'flex flex-col gap-1.5'
-      : 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,340px),1fr))] gap-4'}
+      ? `flex flex-col gap-1.5 ${showGroupHeader ? '' : 'px-2'}`
+      : 'grid gap-4 px-2'}
+    style:grid-template-columns={isRowLayout
+      ? undefined
+      : `repeat(${columns}, minmax(0, 1fr))`}
     aria-hidden="true"
   >
-    {#each Array(8) as _, index (index)}
+    {#each Array(itemCount) as _, index (index)}
       {#if isRowLayout && showGroupHeader}
         <div class="px-2">
           <div class={rowShellClass}>
@@ -70,6 +114,7 @@ let {
         </div>
       {:else if isRowLayout}
         <div
+          data-resource-skeleton-item
           class="border-border bg-panel flex h-18 shrink-0 items-center gap-4 rounded-xl border px-4"
         >
           <Skeleton class="size-10 shrink-0 rounded-lg" />
@@ -77,17 +122,7 @@ let {
           <Skeleton class="ml-auto h-3 w-1/5" />
         </div>
       {:else}
-        <div
-          class="border-border bg-panel h-[396px] overflow-hidden rounded-2xl border"
-        >
-          <Skeleton class="h-56 w-full rounded-none" />
-          <div class="space-y-4 p-5">
-            <Skeleton class="h-5 w-2/3" />
-            <Skeleton class="h-3 w-1/3" />
-            <Skeleton class="h-3 w-5/6" />
-            <Skeleton class="h-3 w-1/2" />
-          </div>
-        </div>
+        <div data-resource-skeleton-item><IndexCardSkeleton /></div>
       {/if}
     {/each}
   </div>

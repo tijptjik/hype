@@ -155,6 +155,11 @@ import {
   classifierComponentTypes,
   specifierComponentTypes,
 } from '#lib/client/services/fieldComponents.js'
+// BITS COMPONENTS
+import HistorySkeleton from '#lib/bits/patterns/revisionHistory/HistorySkeleton.svelte'
+import ScopedFeatureIndexSkeleton from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndexSkeleton.svelte'
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
+import ImageWorkspaceSkeleton from '#lib/bits/patterns/images/ImageWorkspaceSkeleton.svelte'
 // TYPES
 import type { Id } from '#lib/types.js'
 
@@ -1813,6 +1818,9 @@ $effect(() => {
             load={() =>
               import('#lib/bits/patterns/revisionHistory/OrganisationHistory.svelte')}
           >
+            {#snippet pending()}
+              <HistorySkeleton />
+            {/snippet}
             {#snippet children(module)}
               <module.default organisationId={optimisticOrganisationData.id} />
             {/snippet}
@@ -1902,6 +1910,9 @@ $effect(() => {
               '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
             )}
         >
+          {#snippet pending()}
+            <ScopedFeatureIndexSkeleton />
+          {/snippet}
           {#snippet children(module)}
             <module.default
               embedded
@@ -1944,6 +1955,25 @@ $effect(() => {
           load={() =>
             import('#lib/bits/patterns/messaging/OrganisationMessaging.svelte')}
         >
+          {#snippet pending()}
+            <ContentSkeleton
+              ><div class="p-6">
+                <h2 class="text-lg">Messaging</h2>
+                <div class="mt-6 flex gap-4">
+                  <div class="w-full max-w-[360px] rounded-xl border p-4">
+                    <h3>WhatsApp</h3>
+                    <p class="my-3 text-sm">Account connection</p>
+                    <button type="button" class="px-4 py-2">Connect</button>
+                  </div>
+                  <div class="w-full max-w-[360px] rounded-xl border p-4">
+                    <h3>Telegram</h3>
+                    <p class="my-3 text-sm">Account connection</p>
+                    <button type="button" class="px-4 py-2">Connect</button>
+                  </div>
+                </div>
+              </div></ContentSkeleton
+            >
+          {/snippet}
           {#snippet children(module)}
             <module.default
               organisationId={optimisticOrganisationData.id}
@@ -1974,6 +2004,9 @@ $effect(() => {
             '#lib/bits/patterns/organisationEditor/OrganisationImageEditor.svelte'
           )}
       >
+        {#snippet pending()}
+          <ImageWorkspaceSkeleton />
+        {/snippet}
         {#snippet children(gallery)}
           <gallery.default
             {isFormReady}

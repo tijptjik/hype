@@ -126,7 +126,12 @@ $effect(() => {
     </p>
   {/if}
   {#if loading}
-    <p class="text-muted-foreground text-xs">{m.feature_location_loading()}</p>
+    <span
+      role="status"
+      aria-label="Loading field values"
+      aria-busy="true"
+      class="sr-only"
+    ></span>
   {/if}
   {#if failed}
     <p class="text-muted-foreground text-xs" role="status">

@@ -22,6 +22,7 @@ import FeatureProfileEditor from '../forms/featureLocation/FeatureProfileEditor.
 import { VIEWER_CONTROLS_BUTTON_CLASSES } from '../images/components/controls/ViewerControls.styles'
 // ICONS
 import TextIcon from 'virtual:icons/proicons/text'
+// BITS COMPONENTS
 // TYPES
 import type { FeatureRevisionContent } from '#lib/revisions/featureContent.js'
 import type { ProfileLocaleState } from '../forms/featureLocation/profileLocales'
@@ -409,8 +410,9 @@ $effect(() => {
         />
       </div>
       <div class="min-h-0 overflow-y-auto" aria-busy={loading || busy}>
-        {#if gallery && !loading}
+        {#if gallery || loading}
           <FeatureProfileEditor
+            {loading}
             showToolbar={false}
             localeState={effectiveLocaleState}
             onLocaleStateChange={updateCaptionLocales}
@@ -447,10 +449,6 @@ $effect(() => {
               />
             {/snippet}
           </FeatureProfileEditor>
-        {:else if loading}
-          <p role="status" class="text-muted-foreground px-6 pb-6 text-sm">
-            {m.image__metadata_loading()}
-          </p>
         {/if}
         {#if message}
           <p role="status" class="text-error px-6 pb-4 text-sm">{message}</p>

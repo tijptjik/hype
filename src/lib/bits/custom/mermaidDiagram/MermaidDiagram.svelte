@@ -93,9 +93,6 @@ $effect(() => {
 
 <figure class="min-w-0">
   <figcaption class="text-muted-foreground mb-3 text-sm">{label}</figcaption>
-  {#if loading}
-    <p role="status">Loading diagram…</p>
-  {/if}
   {#if error}
     <p role="alert">
       The diagram could not be rendered. Its Mermaid source is available below.
@@ -103,7 +100,7 @@ $effect(() => {
   {/if}
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (The overflow region needs keyboard scrolling.) -->
   <section
-    class="border-border bg-base-100 focus-visible:outline-primary touch-none overflow-hidden rounded-xl border p-4 select-none focus-visible:outline-2"
+    class="border-border bg-base-100 focus-visible:outline-primary relative touch-none overflow-hidden rounded-xl border p-4 select-none focus-visible:outline-2"
     class:cursor-grab={!dragging}
     class:cursor-grabbing={dragging}
     onpointerdown={startPan}
@@ -128,10 +125,19 @@ $effect(() => {
     tabindex="0"
     style="--pele-bg:var(--color-base-100);--pele-fg:var(--color-base-content);--pele-muted:var(--color-base-content);--pele-line:var(--color-base-content);--pele-surface:var(--color-base-200);--pele-surface-alt:var(--color-base-300);--pele-border:var(--color-base-content);--pele-accent:var(--color-primary);--pele-error:var(--color-error);--pele-font:var(--font-sans);"
   >
+    {#if loading}
+      <div
+        class="bg-foreground/10 absolute inset-4 rounded-xl motion-safe:animate-pulse"
+        role="status"
+        aria-label="Loading diagram"
+        aria-busy="true"
+      ></div>
+    {/if}
     <!-- Sources are repository-authored constants, never user-provided markup. -->
     <div
       bind:this={container}
       class="mx-auto [&_svg]:h-auto [&_svg]:w-full"
+      class:min-h-48={loading && !diagramWidth}
       style:width={naturalSize ? `${diagramWidth}px` : undefined}
       style:min-width={`${diagramWidth}px`}
       aria-hidden="true"

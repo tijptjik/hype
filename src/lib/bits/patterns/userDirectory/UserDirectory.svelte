@@ -9,6 +9,9 @@ import { getUserDirectoryMetrics } from '#lib/api/user.remote.js'
 import { runRemoteQuery, refreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
 import UserDirectoryRow from './UserDirectoryRow.svelte'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { DirectoryUser } from './userDirectory.types'
 import type { UserDirectoryMetrics } from '#lib/users/directoryMetrics.types.js'
@@ -153,7 +156,7 @@ onDestroy(() => {
       <p class="text-base-content/70 text-sm">User profiles</p>
       <p class="shrink-0 text-sm font-semibold" role="status">
         {#if loading && !hasLoaded}
-          Loading users…
+          <LoadingSkeleton label="Loading users…" text="0 users" />
         {:else}
           {totalCount.toLocaleString()}
           {totalCount === 1 ? 'user' : 'users'}
@@ -178,12 +181,31 @@ onDestroy(() => {
       </div>
     {/if}
     {#if loading && !hasLoaded}
-      <div
-        class="bg-panel text-base-content/60 rounded-lg p-8 text-center"
-        role="status"
-      >
-        Loading users…
-      </div>
+      <ContentSkeleton label="Loading users…">
+        <ul
+          class={layout === 'card'
+            ? 'grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'
+            : 'flex flex-col gap-1.5'}
+        >
+          {#each Array(6) as _, index (index)}
+            <li class="border-border bg-panel @container rounded-lg border shadow-sm">
+              <UserDirectoryRow
+                user={{
+                  id: `pending-${index}`,
+                  name: 'User name',
+                  username: 'username',
+                  displayUsername: 'username',
+                  email: null,
+                  attribution: null,
+                  image: null,
+                }}
+                {layout}
+                onRetry={() => {}}
+              />
+            </li>
+          {/each}
+        </ul>
+      </ContentSkeleton>
     {:else if hasLoaded}
       {#if users.length === 0}
         <div class="border-border bg-panel rounded-lg border p-8 text-center">
@@ -227,7 +249,11 @@ onDestroy(() => {
           onclick={onLoadMore}
           class="text-muted-foreground hover:text-foreground rounded-md px-4 py-2 text-sm disabled:opacity-50"
         >
-          {loading ? 'Loading more users…' : 'Load more users'}
+          {#if loading}
+            <LoadingSkeleton label={'Loading more users…'} text="Load more users" />
+          {:else}
+            {'Load more users'}
+          {/if}
         </button>
       </div>
     {/if}

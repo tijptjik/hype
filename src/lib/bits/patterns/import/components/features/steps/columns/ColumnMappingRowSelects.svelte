@@ -170,7 +170,10 @@ function handleFieldChange(event: Event): void {
       <select
         id={`column-${index}-property-key`}
         aria-label={m.feature_import__column_property_key_label()}
-        class="select select-bordered select-sm w-full"
+        class="select select-bordered select-sm w-full motion-reduce:animate-none"
+        aria-busy={importCtx.getIsFetchingProperties()}
+        class:animate-pulse={importCtx.getIsFetchingProperties()}
+        disabled={importCtx.getIsFetchingProperties()}
         value={column.propertyKey}
         onchange={handlePropertyKeySelect}
       >
@@ -178,9 +181,7 @@ function handleFieldChange(event: Event): void {
           {m.feature_import__column_property_new()}
           {column.extractedPropertyKey ? ` (${column.extractedPropertyKey})` : ''}
         </option>
-        {#if importCtx.getIsFetchingProperties()}
-          <option disabled>{m.feature_import__column_properties_loading()}</option>
-        {:else}
+        {#if !importCtx.getIsFetchingProperties()}
           {#each importCtx.getAvailablePropertyKeys() as key}
             <option value={key}>{key}</option>
           {/each}

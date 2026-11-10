@@ -23,6 +23,8 @@ import Switch from '#lib/bits/custom/switch/Switch.svelte'
 import ChoiceDialog from '#lib/bits/core/dialog/ChoiceDialog.svelte'
 // DOMAIN
 import { IMAGE_INTENT_ROLES } from '#lib/images/intents.js'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { ImageIntentDefinition } from '#lib/images/intents.js'
 
@@ -286,7 +288,25 @@ $effect(() => {
       </label>
     {/if}
     {#if loading && intents.length === 0}
-      <p class="text-muted-foreground text-sm">Loading image intents…</p>
+      <ContentSkeleton label="Loading image intents…"
+        ><ol class="flex min-w-0 flex-col">
+          {#each Array(3) as _, index (index)}
+            <li class="py-1.5">
+              <div
+                class="border-border bg-foreground/4 grid min-h-14 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg border pl-10 lg:grid-cols-[minmax(0,1fr)_7rem_5rem_auto]"
+              >
+                <p
+                  class="my-2 border border-transparent px-3 py-2 text-sm font-semibold"
+                >
+                  Image intent
+                </p>
+                <p class="text-xs">Required</p>
+                <button type="button" class="size-8">Edit</button>
+              </div>
+            </li>
+          {/each}
+        </ol></ContentSkeleton
+      >
     {/if}
     <ol class="flex min-w-0 flex-col [--bits-dnd-gap:0px]">
       {#each intents as intent (intent.id)}

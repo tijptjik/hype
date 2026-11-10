@@ -158,6 +158,8 @@ import {
   ImageContextResource,
   specifierComponentTypes,
 } from '#lib/enums.js'
+// BITS COMPONENTS
+import HistorySkeleton from '#lib/bits/patterns/revisionHistory/HistorySkeleton.svelte'
 // TYPES
 import type { Id, UserRoleDisco } from '#lib/types.js'
 import type { User } from '#lib/db/zod/schema/user.types.js'
@@ -2066,6 +2068,9 @@ $effect(() => {
           load={() =>
             import('#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte')}
         >
+          {#snippet pending()}
+            <HistorySkeleton />
+          {/snippet}
           {#snippet children(module)}
             <module.default resource="hub" resourceId={optimisticHubData.id} />
           {/snippet}

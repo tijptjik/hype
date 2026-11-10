@@ -17,6 +17,8 @@ import Square2Stack from 'virtual:icons/proicons/copy'
 import Document from 'virtual:icons/proicons/file-text'
 import AtSymbol from 'virtual:icons/proicons/mention'
 import Calendar from 'virtual:icons/proicons/calendar'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 
 let {
   publicId,
@@ -211,7 +213,20 @@ onDestroy(() => {
           {/each}
         </div>
       {:else if isMetadataLoading}
-        <div class="text-foreground-alt text-sm">{m.image__metadata_loading()}</div>
+        <div
+          role="status"
+          aria-label={m.image__metadata_loading()}
+          aria-busy="true"
+          class="flex flex-col gap-2"
+        >
+          {#each ['Camera', 'Capture date', 'Dimensions'] as label}
+            <div class="flex items-center gap-2 text-sm">
+              <span class="bg-foreground/10 size-4 shrink-0 rounded"></span
+              ><span class="font-medium">{label}:</span>
+              <LoadingSkeleton class="flex-1" />
+            </div>
+          {/each}
+        </div>
       {:else}
         <div class="text-foreground-alt text-sm">{m.image__metadata_empty_image()}</div>
       {/if}

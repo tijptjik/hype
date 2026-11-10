@@ -65,6 +65,20 @@ orchestration remain on `AppCtx`.
 
 ## Startup dependency boundaries
 
+Use skeletons for pending content, including deferred sections, forms, search results,
+and pagination. Trace the loaded component before choosing a skeleton: preserve its
+viewport, grid, row height, typography, padding and responsive breakpoints. Deferred
+sections must supply a content-owned `pending` snippet; the shared loader must not guess
+its layout. Prefer the real component's loading mode or render the same presentation
+inside `ContentSkeleton`. Use `LoadingSkeleton` only for individual text values; pass
+known eventual text to reserve its exact wrapping and font metrics. Do not insert a
+loading row beside content that remains mounted. Unknown first-response row counts and
+text lengths cannot have an exact natural-height reservation; retain existing content on
+refresh and preserve the owning viewport for initially unknown collections. Verify
+pending and ready bounding boxes at narrow and wide widths. Keep loading labels
+accessible through `aria-label` or screen-reader-only text, never as visible placeholder
+copy. Preserve retry controls, retained results, and reduced-motion behavior.
+
 Admin navigation renders after authenticated surface setup. Bootstrap wires query owners
 without fetching duplicate lists; each index owns its initial rows and retries. Exact
 index totals use separate count-only requests with the same authorization and filter

@@ -7,6 +7,8 @@ import OmnibarSection from './OmnibarSection.svelte'
 import { OMNIBAR_SEARCH_DISPLAY_ORDER } from '../searchBudget'
 // I18N
 import { m } from '#lib/i18n.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { OmnibarResultsProps } from './omnibarPrimitives.types'
 import type { OmnibarResultSection } from '../omnibar.types'
@@ -66,9 +68,23 @@ $effect(() => {
 >
   {#if visibleSections.length === 0}
     <div class="text-base-content/60 p-4 text-center">
-      {updating || sections.some(section => section.loading)
-        ? m.resource_loading()
-        : m.omni__no_results()}
+      {#if updating || sections.some(section => section.loading)}
+        <div
+          role="status"
+          aria-label={m.resource_loading()}
+          aria-busy="true"
+          class="flex flex-col py-2"
+        >
+          {#each Array(3) as _, index (index)}
+            <div class="flex min-h-12 items-center gap-3 px-4 py-2">
+              <span class="bg-foreground/10 size-8 shrink-0 rounded"></span>
+              <LoadingSkeleton class="flex-1 text-sm" />
+            </div>
+          {/each}
+        </div>
+      {:else}
+        {m.omni__no_results()}
+      {/if}
     </div>
   {:else}
     {#each visibleSections as section (section.collectionType)}

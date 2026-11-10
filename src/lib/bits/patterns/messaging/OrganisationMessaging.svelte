@@ -13,6 +13,8 @@ import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte
 import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
 import MessagingAccountCard from './MessagingAccountCard.svelte'
 import ChatBackgroundSettings from './ChatBackgroundSettings.svelte'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { MessagingPlatform } from '#lib/messaging/types.js'
 import type { ChatAppearance } from '#lib/messaging/appearance.js'
@@ -53,7 +55,16 @@ const platforms: MessagingPlatform[] = ['whatsapp', 'telegram']
       </p>
     {/if}
     {#if model.loading}
-      <p role="status">Loading messaging accounts…</p>
+      <div class="flex min-w-0 flex-wrap items-stretch gap-4">
+        {#each platforms as platform (platform)}
+          <ContentSkeleton
+            label={`Loading ${platform} account`}
+            class="w-full max-w-[var(--messaging-settings-card-width,360px)]"
+          >
+            <MessagingAccountCard {platform} busy onAction={async () => {}} />
+          </ContentSkeleton>
+        {/each}
+      </div>
     {:else}
       <div class="flex min-w-0 flex-wrap items-stretch gap-4">
         {#each platforms as platform (platform)}

@@ -72,7 +72,7 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
           class="border-foreground/10 text-foreground-alt inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-semibold tracking-[0.22em] uppercase backdrop-blur"
         >
           <span class="analytics-loading-dot bg-primary h-2 w-2 rounded-full"></span>
-          Loading
+          {@render skeletonBlock('h-3 w-16')}
         </div>
       </div>
 

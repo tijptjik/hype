@@ -13,6 +13,8 @@ import RouteIcon from 'virtual:icons/lucide/route'
 import IntentChoiceCard from './IntentChoiceCard.svelte'
 // API
 import { getFeatureIntentOptions } from '#lib/api/featureIntents.remote.js'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { FeatureType } from '#lib/features/intents.js'
 let {
@@ -84,7 +86,22 @@ $effect(() => {
       Retry
     </button>
   {:else if types === null}
-    <p role="status">Loading feature types…</p>
+    <ContentSkeleton label="Loading feature types…">
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
+        {#each Object.entries(illustrations) as [kind, illustration]}
+          <IntentChoiceCard
+            label={kind}
+            description={illustration.description}
+            selected={false}
+            onclick={() => {}}
+          >
+            {#snippet icon()}
+              <illustration.icon class="size-7" />
+            {/snippet}
+          </IntentChoiceCard>
+        {/each}
+      </div>
+    </ContentSkeleton>
   {:else if types.length === 0}
     <p role="alert">
       This layer has no available feature types. Update its feature type settings before

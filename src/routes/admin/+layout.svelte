@@ -42,6 +42,8 @@ import { setHeaderCtrl } from '#lib/context/header.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
 import MonitorIcon from 'virtual:icons/proicons/computer'
+// BITS COMPONENTS
+import ShareEmbedSkeleton from '#lib/bits/patterns/embed/ShareEmbedSkeleton.svelte'
 // TYPES
 import type { LayoutProps, LayoutData } from './$types'
 
@@ -434,6 +436,9 @@ afterNavigate(({ shallow }) => {
         <Deferred
           load={() => import('#lib/bits/patterns/embed/ShareEmbedPanel.svelte')}
         >
+          {#snippet pending()}
+            <ShareEmbedSkeleton />
+          {/snippet}
           {#snippet children(module)}
             <module.default
               initialTheme={themeModel.selected}

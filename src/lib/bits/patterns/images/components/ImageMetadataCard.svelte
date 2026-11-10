@@ -14,6 +14,8 @@ import Camera from 'virtual:icons/proicons/camera'
 import MapPinned from 'virtual:icons/proicons/location'
 import Square2Stack from 'virtual:icons/proicons/copy'
 import Document from 'virtual:icons/proicons/file-text'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type {
   Image,
@@ -329,7 +331,18 @@ $effect(() => {
     {/if}
 
     {#if resolvedLoading}
-      <div class="text-muted-foreground text-sm">{m.image__metadata_loading()}</div>
+      <div
+        role="status"
+        aria-label={m.image__metadata_loading()}
+        aria-busy="true"
+        class="space-y-2"
+      >
+        {#each ['Camera', 'Capture date', 'Dimensions'] as label}
+          <div class="grid grid-cols-[auto_minmax(0,1fr)] gap-3 text-sm">
+            <span class="text-muted-foreground">{label}</span><LoadingSkeleton />
+          </div>
+        {/each}
+      </div>
     {:else if metadataRows.length === 0}
       <div class="text-muted-foreground text-sm">{m.image__metadata_empty()}</div>
     {/if}

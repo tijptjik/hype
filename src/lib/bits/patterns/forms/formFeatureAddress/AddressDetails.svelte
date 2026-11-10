@@ -1526,7 +1526,12 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     </div>
   </div>
   {#if isEditing && buildingLoading}
-    <p role="status" class="text-muted-foreground text-sm">{m.resource_loading()}</p>
+    <span
+      role="status"
+      aria-label="Loading field values"
+      aria-busy="true"
+      class="sr-only"
+    ></span>
   {/if}
   {#if isEditing && buildingFailed}
     <p role="alert" class="text-muted-foreground text-sm">

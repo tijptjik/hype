@@ -7,6 +7,7 @@ import { m } from '#lib/i18n.js'
 // COMPONENTS
 import FilterBar from '#lib/bits/patterns/panels/components/common/FilterBar.svelte'
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 import type { useSavedFeatureListModel } from '#lib/adapters/panels/useSavedFeatureListModel.svelte.js'
@@ -80,7 +81,14 @@ let {
             disabled={model.guidanceLoading}
             onclick={model.loadMoreGuidance}
           >
-            {model.guidanceLoading ? 'Loading updates…' : 'More saved-place updates'}
+            {#if model.guidanceLoading}
+              <LoadingSkeleton
+                label={'Loading updates…'}
+                text="More saved-place updates"
+              />
+            {:else}
+              {'More saved-place updates'}
+            {/if}
           </button>
         {/if}
       </section>

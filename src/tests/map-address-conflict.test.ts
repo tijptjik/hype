@@ -36,7 +36,11 @@ it('prevents duplicate acceptance while resolving the address and exposes a fail
   expect(
     view.getByRole('button', { name: 'Review Change' }).hasAttribute('disabled'),
   ).toBe(true)
-  expect(view.getByRole('status').textContent).toBe('Lookup failed')
+  expect(view.getByText('Lookup failed')).toBeTruthy()
+  expect(view.getByRole('status', { name: 'Loading resources' })).toHaveAttribute(
+    'aria-busy',
+    'true',
+  )
 })
 it('preserves review-only behavior when the owner does not support automatic reassociation', () => {
   const view = render(MapAddressConflict, { conflicts: [], onReview: vi.fn() })

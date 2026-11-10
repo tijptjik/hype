@@ -15,6 +15,7 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 // ICONS
 import BuildingIcon from 'virtual:icons/lucide/building-2'
+// BITS COMPONENTS
 
 const header = getHeaderCtrl()
 const request = $derived(
@@ -62,11 +63,13 @@ $effect(() => {
     })
   })
 })
+// BITS COMPONENTS
+import AddressEditorSkeleton from '#lib/bits/patterns/forms/localLocationAddress/AddressEditorSkeleton.svelte'
 </script>
 
 <section class="min-w-0 space-y-6 p-6">
   {#await request}
-    <p role="status">{m.location_directory_loading()}</p>
+    <AddressEditorSkeleton />
   {:then result}
     {#if result.type === 'preview'}
       <div class="text-muted-foreground flex items-center gap-2 text-sm">

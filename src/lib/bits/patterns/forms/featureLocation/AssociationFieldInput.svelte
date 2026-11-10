@@ -6,6 +6,8 @@ import { m } from '#lib/i18n.js'
 // DOMAIN
 import { loadAddressNames, type AddressName } from '#lib/addresses/nameCatalogue.js'
 import { addressNameLabel, searchAddressNames } from '#lib/addresses/nameSearch.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { LocaleKey } from '#lib/types.js'
 
@@ -235,9 +237,13 @@ function keydown(event: KeyboardEvent): void {
       class="border-border bg-panel absolute top-full left-0 z-30 mt-1 max-h-56 w-full min-w-0 overflow-y-auto rounded-md border p-1 shadow-lg"
     >
       {#if loading}
-        <p role="status" class="text-muted-foreground p-2 text-xs">
-          {m.resource_loading()}
-        </p>
+        <div role="status" aria-label={m.resource_loading()} aria-busy="true">
+          {#each Array(3) as _, index (index)}
+            <div class="w-full rounded p-2 text-left text-xs">
+              <LoadingSkeleton rows={1} />
+            </div>
+          {/each}
+        </div>
       {/if}
       {#if failed}
         <button type="button" class="p-2 text-xs underline" onclick={() => void load()}>

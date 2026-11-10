@@ -79,6 +79,8 @@ import {
   locationSearchColor,
   type LocationSearchMarker,
 } from '#lib/locations/searchPresentation.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { DraftLocationSearchResult as Result } from './draftLocationSearch.types.js'
 import type {
@@ -1501,9 +1503,14 @@ onDestroy(() => {
             {:else}
               <ReselectIcon class="size-4" />
             {/if}
-            {changingSelection
-              ? m.association_loading_alternatives()
-              : m.association_change_action()}
+            {#if changingSelection}
+              <LoadingSkeleton
+                label={m.association_loading_alternatives()}
+                text={m.association_change_action()}
+              />
+            {:else}
+              {m.association_change_action()}
+            {/if}
           </button>
         {:else}
           {#if matched}

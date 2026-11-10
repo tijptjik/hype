@@ -29,6 +29,8 @@ import { quotedPreview } from '#lib/messaging/quoted-message.js'
 import { selectedTextQuote } from '#lib/messaging/selected-quote.js'
 import type { TextQuote } from '#lib/messaging/types.js'
 import { messageClockTime } from './message-time.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { WhatsAppMessage } from '#lib/api/services/whatsover.types.js'
 interface Props {
@@ -331,9 +333,14 @@ const operatorDetail = $derived(
                 'message'}</span
             >
             <span class="block [overflow-wrap:anywhere] break-words whitespace-pre-wrap"
-              >{previewLoading && !quoteOriginal && !message.content.quoted.text
-                ? 'Loading original…'
-                : previewText}</span
+              >{#if previewLoading && !quoteOriginal && !message.content.quoted.text}
+                <LoadingSkeleton
+                  label="Loading original…"
+                  text={previewText || 'Message'}
+                />
+              {:else}
+                {previewText}
+              {/if}</span
             >
           </button>
         {:else}
@@ -345,11 +352,14 @@ const operatorDetail = $derived(
                 message.content.quoted.sender ||
                 'message'}
             </p>
-            <MessageText
-              text={previewLoading && !quoteOriginal && !message.content.quoted.text
-                ? 'Loading original…'
-                : previewText}
-            />
+            {#if previewLoading && !quoteOriginal && !message.content.quoted.text}
+              <LoadingSkeleton
+                label="Loading original…"
+                text={previewText || 'Message'}
+              />
+            {:else}
+              <MessageText text={previewText} />
+            {/if}
           </div>
         {/if}
       </blockquote>

@@ -9,6 +9,8 @@ import { getLayerRelocationPolicy } from '#lib/api/layerLocationPolicy.remote.js
 import { RelocationPolicySchema } from '#lib/locations/model.js'
 // COMPONENTS
 import RelocationPolicySection from './RelocationPolicySection.svelte'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 
 let {
   layerId,
@@ -40,7 +42,15 @@ const draft = $derived.by(() => {
 </script>
 
 {#await settings}
-  <p class="text-muted-foreground p-6" role="status">{m.location_policy_loading()}</p>
+  <ContentSkeleton label={m.location_policy_loading()}>
+    <RelocationPolicySection
+      value={null}
+      allowInherit
+      {isEditing}
+      saving
+      onValueChange={() => {}}
+    />
+  </ContentSkeleton>
 {:then initial}
   <RelocationPolicySection
     value={draft ? draft.policy : initial.policy}

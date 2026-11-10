@@ -4,6 +4,8 @@ import { m } from '#lib/i18n.js'
 // ICONS
 import WarningIcon from 'virtual:icons/lucide/triangle-alert'
 import XIcon from 'virtual:icons/lucide/x'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { MapAddressDisagreement } from '#lib/addresses/mapAddressDisagreement.js'
 let {
@@ -75,10 +77,18 @@ let {
         <button
           type="button"
           disabled={busy}
+          aria-label={busy ? m.resource_loading() : m.address_map_accept_change()}
           class="bg-primary text-primary-content focus-visible:outline-primary rounded-md px-3 py-2 text-xs font-medium hover:brightness-110 focus-visible:outline-2 disabled:opacity-50"
           onclick={onAccept}
         >
-          {busy ? m.resource_loading() : m.address_map_accept_change()}
+          {#if busy}
+            <LoadingSkeleton
+              label={m.resource_loading()}
+              text={m.address_map_accept_change()}
+            />
+          {:else}
+            {m.address_map_accept_change()}
+          {/if}
         </button>
       {/if}
       <button

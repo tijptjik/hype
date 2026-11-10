@@ -7,6 +7,8 @@ import DOMPurify from 'dompurify'
 import { isLegacyHtml } from '#lib/services/markdown.js'
 // STYLES
 import { markdownEditorStyles } from './markdownEditor.styles.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { Crepe } from '@milkdown/crepe'
 
@@ -304,14 +306,25 @@ $effect(() => {
     <div
       bind:this={host}
       class="min-w-0"
+      class:invisible={!ready}
+      class:absolute={!ready}
+      class:w-full={!ready}
       onkeydown={editorKeydown}
       role="group"
       aria-label={label}
     ></div>
     {#if !ready}
-      <p role="status" class="text-muted-foreground px-3 py-2 text-sm">
-        Loading editor…
-      </p>
+      <div
+        class="min-h-48 px-5 py-4"
+        role="status"
+        aria-label="Loading editor"
+        aria-busy="true"
+      >
+        <LoadingSkeleton
+          text={value || ' '}
+          class="block break-words whitespace-pre-wrap"
+        />
+      </div>
     {/if}
   {/if}
 </div>

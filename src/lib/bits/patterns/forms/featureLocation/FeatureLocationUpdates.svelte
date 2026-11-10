@@ -16,6 +16,8 @@ import SyncIcon from 'virtual:icons/proicons/arrow-sync'
 // DOMAIN
 import { lifecycleStatus } from '#lib/locations/lifecycle.js'
 import { lifecycleLabel } from '#lib/locations/lifecycle.i18n.js'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { LocationBrandEdit } from '#lib/locations/brandEdit.js'
 import type { LocationReset } from '#lib/locations/reset.js'
@@ -87,9 +89,19 @@ async function act(action: 'review' | 'unlink'): Promise<void> {
     </div>
   </header>
   {#await accepted}
-    <p role="status" class="text-muted-foreground text-sm">
-      {m.feature_location_loading()}
-    </p>
+    <ContentSkeleton label={m.feature_location_loading()}
+      ><section class="border-border space-y-4 rounded-xl border p-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div class="min-w-0 space-y-2">
+            <h3 class="text-sm font-semibold">{m.feature_updates_connection()}</h3>
+            <p class="font-semibold">Location name</p>
+          </div>
+          <button type="button" class="rounded-lg border px-3 py-2 text-sm">
+            {m.feature_updates_manage_location()}
+          </button>
+        </div>
+      </section></ContentSkeleton
+    >
   {:then association}
     {#if association}
       {@const locationHref = `/admin/locations/${encodeURIComponent(association.locationId)}${organisationId ? `?organisation=${encodeURIComponent(organisationId)}` : ''}`}

@@ -20,6 +20,8 @@ import {
 } from '#lib/revisions/featureReviewDisplay.js'
 // ICONS
 import ChevronIcon from 'virtual:icons/proicons/chevron-down'
+// BITS COMPONENTS
+import HistorySkeleton from '#lib/bits/patterns/revisionHistory/HistorySkeleton.svelte'
 // TYPES
 import type { FeatureRevisionWorkspace } from '#lib/db/services/featureRevisionWorkspace.js'
 import type { RevisionDifference } from '#lib/revisions/diff.js'
@@ -252,9 +254,7 @@ function relative(value: string): string {
               aria-busy={!!loading[entry.generation]}
             >
               {#if loading[entry.generation]}
-                <p class="text-muted-foreground text-sm" role="status">
-                  Loading changes…
-                </p>
+                <HistorySkeleton heading={false} feature count={1} />
               {/if}
               {#if failed[entry.generation]}
                 <div role="alert" class="text-sm">

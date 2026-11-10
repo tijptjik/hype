@@ -3,6 +3,8 @@
 import * as Card from '#lib/bits/custom/analyticsCard/components/index.js'
 // DOMAIN
 import { USAGE_LABELS } from '#lib/analytics/productUsage.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { ProductAnalyticsResult } from '#lib/api/services/productAnalytics.js'
 
@@ -17,9 +19,7 @@ let { state }: { state: ProductAnalyticsResult | null } = $props()
       counts, not unique people.
     </p>
   </div>
-  {#if !state}
-    <p role="status">Loading product usage…</p>
-  {:else if state.status !== 'success'}
+  {#if state && state.status !== 'success'}
     <p role="status" class="text-foreground-alt text-sm">{state.message}</p>
   {:else}
     <dl class="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -27,9 +27,15 @@ let { state }: { state: ProductAnalyticsResult | null } = $props()
         <div class="border-foreground/10 rounded-lg border p-4">
           <dt class="text-foreground-alt text-sm">{label}</dt>
           <dd class="mt-2 text-2xl font-semibold tabular-nums">
-            {(
-              state.totals.find(row => row.event === event)?.count ?? 0
-            ).toLocaleString()}
+            {#if state}
+              <span
+                >{(
+                  state.totals.find(row => row.event === event)?.count ?? 0
+                ).toLocaleString()}</span
+              >
+            {:else}
+              <LoadingSkeleton text="0" label={`Loading ${label}`} />
+            {/if}
           </dd>
         </div>
       {/each}
@@ -39,7 +45,7 @@ let { state }: { state: ProductAnalyticsResult | null } = $props()
       successful feature-form saves. Drafts and reviews do not count as new
       contributions.
     </p>
-    {#if state.rankings.length}
+    {#if state?.status === 'success' && state.rankings.length}
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
           <caption class="pb-3 text-left font-semibold">
@@ -65,7 +71,7 @@ let { state }: { state: ProductAnalyticsResult | null } = $props()
           </tbody>
         </table>
       </div>
-    {:else}
+    {:else if state}
       <p class="text-foreground-alt text-sm">No product events in this window yet.</p>
     {/if}
   {/if}

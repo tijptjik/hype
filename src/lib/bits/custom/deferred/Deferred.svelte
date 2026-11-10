@@ -7,9 +7,11 @@ import { m } from '#lib/i18n.js'
 let {
   load,
   children,
+  pending: pendingContent,
 }: {
   load: () => Promise<Module>
   children: Snippet<[Module]>
+  pending: Snippet
 } = $props()
 let pending = $state<Promise<Module> | null>(null)
 
@@ -21,9 +23,7 @@ onMount(() => {
 
 {#if pending}
   {#await pending}
-    <div role="status" aria-busy="true" class="p-4 text-sm opacity-60">
-      {m.resource_loading()}
-    </div>
+    {@render pendingContent()}
   {:then module}
     {@render children(module)}
   {:catch}
@@ -38,7 +38,5 @@ onMount(() => {
     </button>
   {/await}
 {:else}
-  <div role="status" aria-busy="true" class="p-4 text-sm opacity-60">
-    {m.resource_loading()}
-  </div>
+  {@render pendingContent()}
 {/if}

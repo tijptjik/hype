@@ -11,6 +11,8 @@ import CameraIcon from 'virtual:icons/proicons/camera'
 import type { Snippet } from 'svelte'
 import FeatureCardLicenseConditions from './FeatureCardLicenseConditions.svelte'
 import FeatureCardLicense from './FeatureCardLicense.svelte'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { ProjectLicense } from '#lib/db/zod/schema/projectLicense.types.js'
 // DATE FORMATTING
@@ -217,7 +219,10 @@ const sharedLicense = $derived(
             <dd>
               {#snippet photoDate()}
                 {#if loading}
-                  {m.image_attribution_loading()}
+                  <LoadingSkeleton
+                    label={m.image_attribution_loading()}
+                    text="0000-00-00"
+                  />
                 {:else if !metadata?.capture && metadata?.capturedAt}
                   {@render timestamp(metadata.capturedAt)}
                 {:else if metadata?.capture &&

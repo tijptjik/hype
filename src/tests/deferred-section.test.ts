@@ -27,7 +27,11 @@ it('loads only after opening a section and keeps navigation available while pend
   expect(load).not.toHaveBeenCalled()
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle section' }))
   expect(load).toHaveBeenCalledOnce()
-  expect(screen.getByRole('status')).toHaveTextContent('Loading')
+  expect(screen.getByRole('status', { name: 'Loading' })).toHaveAttribute(
+    'aria-busy',
+    'true',
+  )
+  expect(screen.getByRole('status').textContent).toBe('')
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle section' }))
   resolve({ label: 'Obsolete section' })
   await Promise.resolve()

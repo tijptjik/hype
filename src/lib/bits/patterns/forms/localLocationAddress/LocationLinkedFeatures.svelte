@@ -8,6 +8,8 @@ import { getLocationLinkedFeatures } from '#lib/api/locationDirectory.remote.js'
 // ICONS
 import FeatureIcon from 'virtual:icons/proicons/location'
 import ArrowIcon from 'virtual:icons/lucide/arrow-up-right'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
 import type { LocationLinkedFeaturePage } from '#lib/db/services/locationFeatures.js'
 
@@ -138,9 +140,22 @@ async function more(): Promise<void> {
     <p class="text-muted-foreground text-sm">{m.location_linked_features_empty()}</p>
   {/if}
   {#if loading}
-    <p role="status" class="text-muted-foreground text-sm">
-      {m.location_directory_loading()}
-    </p>
+    <div
+      role="status"
+      aria-label={m.location_directory_loading()}
+      aria-busy="true"
+      class="space-y-2"
+    >
+      {#each Array(page ? 1 : 3) as _, index (index)}
+        <div class="border-border flex items-center gap-3 rounded-lg border p-3">
+          <div class="bg-foreground/10 size-12 shrink-0 rounded"></div>
+          <div class="min-w-0 flex-1">
+            <LoadingSkeleton class="text-sm font-semibold" />
+            <div class="mt-1"><LoadingSkeleton class="text-xs" /></div>
+          </div>
+        </div>
+      {/each}
+    </div>
   {/if}
   {#if failed}
     <p role="alert" class="text-destructive text-sm">

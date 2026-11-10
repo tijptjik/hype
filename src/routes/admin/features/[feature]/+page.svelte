@@ -253,6 +253,10 @@ import AddFeatureIcon from 'virtual:icons/proicons/add'
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
+import HistorySkeleton from '#lib/bits/patterns/revisionHistory/HistorySkeleton.svelte'
+import ImageWorkspaceSkeleton from '#lib/bits/patterns/images/ImageWorkspaceSkeleton.svelte'
 // TYPES
 import type { LocationSearchMarker } from '#lib/locations/searchPresentation.js'
 import type { Point } from 'geojson'
@@ -4260,9 +4264,34 @@ async function refreshLocationSource(): Promise<void> {
     class={FEATURE_EDITOR_FORM_CLASS}
   >
     {#snippet fallback()}
-      <p role="status" class="text-muted-foreground px-6 py-6">
-        {m.resource_loading()}
-      </p>
+      <div
+        class="flex h-full min-h-0 w-full flex-col overflow-hidden"
+        role="status"
+        aria-busy="true"
+        aria-label={m.resource_loading()}
+      >
+        <div
+          class="bg-foreground/10 shrink-0 motion-safe:animate-pulse"
+          style:height={`${visualSectionHeight}px`}
+        ></div>
+        <FeatureProfileEditor
+          loading
+          showToolbar
+          localeState={profileLocaleState}
+          onLocaleStateChange={() => {}}
+          values={{}}
+          contextKey={profileScope}
+          allowDescriptions={featurePresentationPolicy.allowDescriptions}
+          translate={async () => ({ status: 'translated', text: '' })}
+          onTranslated={() => {}}
+        >
+          {#snippet children(field)}
+            <div
+              class={field === 'description' ? 'min-h-32 w-full' : 'min-h-10 w-full'}
+            ></div>
+          {/snippet}
+        </FeatureProfileEditor>
+      </div>
     {/snippet}
     <HiddenInputs inputs={programmaticFeatureInputEntries} />
 
@@ -5222,6 +5251,9 @@ async function refreshLocationSource(): Promise<void> {
             load={() =>
               import('#lib/bits/patterns/revisionHistory/FeatureHistory.svelte')}
           >
+            {#snippet pending()}
+              <HistorySkeleton />
+            {/snippet}
             {#snippet children(module)}
               <module.default
                 featureId={currentFeatureId}
@@ -5247,6 +5279,9 @@ async function refreshLocationSource(): Promise<void> {
           <Deferred
             load={() => import('#lib/bits/patterns/images/FeatureImageEditor.svelte')}
           >
+            {#snippet pending()}
+              <ImageWorkspaceSkeleton />
+            {/snippet}
             {#snippet children(gallery)}
               <gallery.default featureId={currentFeatureId ?? undefined}>
                 {#snippet textControls(imageId, hasText)}
@@ -5258,6 +5293,9 @@ async function refreshLocationSource(): Promise<void> {
                             '#lib/bits/patterns/revisionHistory/FeatureGalleryImageTextEditor.svelte'
                           )}
                       >
+                        {#snippet pending()}
+                          <LoadingSkeleton text="Image text" class="text-sm" />
+                        {/snippet}
                         {#snippet children(module)}
                           <module.default
                             featureId={currentFeatureId}

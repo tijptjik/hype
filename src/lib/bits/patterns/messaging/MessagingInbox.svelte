@@ -27,6 +27,8 @@ const configurationHref = $derived(
     ? `/admin/organisations/${encodeURIComponent(model.organisation.code)}#messaging`
     : '',
 )
+// BITS COMPONENTS
+import MessagingInboxSkeleton from '#lib/bits/patterns/messaging/MessagingInboxSkeleton.svelte'
 </script>
 
 <div
@@ -147,7 +149,7 @@ const configurationHref = $derived(
     </p>
   {/if}
   {#if model.loading}
-    <p role="status" class="text-muted-foreground p-5 text-sm">Loading messaging…</p>
+    <MessagingInboxSkeleton />
   {:else if !model.selectedOrganisation}
     <p class="text-muted-foreground p-5 text-sm">
       Select an organisation in the sidebar to open its inbox.

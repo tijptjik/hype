@@ -26,6 +26,8 @@ import EmbedCodeField from './EmbedCodeField.svelte'
 import EmbedPreview from './EmbedPreview.svelte'
 import Checkbox from '#lib/bits/custom/checkbox/Checkbox.svelte'
 import Switch from '#lib/bits/custom/switch/Switch.svelte'
+// BITS COMPONENTS
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { EmbedLayer } from '#lib/embed/embed.types.js'
 import type { EmbedConfig } from '#lib/embed/config.js'
@@ -201,7 +203,18 @@ onMount(() => {
         class="border-border bg-canvas mb-3 w-full rounded border p-2"
       >
       {#if loading}
-        <p role="status">Loading resources…</p>
+        <ContentSkeleton label="Loading resources…"
+          >{#each ['Hub', 'Organisation', 'Project', 'Layer'] as kind, index}
+            <div class="mb-3" style:margin-left={`${Math.max(0, index - 1) * 12}px`}>
+              <EmbedResourceRow
+                name="Resource name"
+                {kind}
+                checked={false}
+                onToggle={() => {}}
+              />
+            </div>
+          {/each}</ContentSkeleton
+        >
       {:else if failure}
         <p role="alert">{failure}</p>
         <button type="button" onclick={load}>Retry</button>

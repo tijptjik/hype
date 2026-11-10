@@ -25,6 +25,9 @@ import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { featurePoint, featureDistance } from '#lib/features/nearby.js'
 import FeatureMergeReview from './FeatureMergeReview.svelte'
 import { identityTitle } from './featureIdentity.types'
+// BITS COMPONENTS
+import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
+import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { IdentitySource } from './featureIdentity.types'
@@ -437,12 +440,37 @@ async function apply(): Promise<void> {
           </label>
           {#if !search.trim() && origin}
             <p class="text-muted-foreground text-sm">
-              {nearbyLoading
-                ? 'Loading nearby features…'
-                : nearby.length
+              {#if nearbyLoading}
+                <LoadingSkeleton
+                  label="Loading nearby features…"
+                  text="Nearby features"
+                />
+              {:else}
+                {nearby.length
                   ? 'Nearby features'
                   : 'No nearby features available. Search by name instead.'}
+              {/if}
             </p>
+          {/if}
+          {#if nearbyLoading && !search.trim()}
+            <ContentSkeleton label="Loading nearby features"
+              ><div class="grid min-w-0 gap-2">
+                {#each Array(3) as _, index (index)}
+                  <Row
+                    {index}
+                    entityId={`pending-${index}`}
+                    onclick={() => {}}
+                    onkeydown={() => {}}
+                    class="grid-cols-[auto_minmax(0,1fr)] gap-4 pr-3"
+                    ><div class="bg-foreground/10 size-16 rounded-md"></div>
+                    <div class="grid min-w-0 gap-1 py-1 text-left">
+                      <p class="font-semibold">Feature name</p>
+                      <p class="text-sm">Feature address</p>
+                    </div></Row
+                  >
+                {/each}
+              </div></ContentSkeleton
+            >
           {/if}
           {#if search.trim() || nearby.length}
             <section
