@@ -185,7 +185,14 @@ export function requireFeatureType(
 }
 
 /** Staged policy payload carried by the centralized resource form. */
+export const FeatureNamingRulesSchema = z.record(
+  FeatureTypeIdSchema,
+  FeatureNameRuleSchema,
+)
+export type FeatureNamingRules = z.infer<typeof FeatureNamingRulesSchema>
+
 export const FeatureIntentSettingsPatchSchema = z.object({
+  namingRules: FeatureNamingRulesSchema.optional(),
   definition: FeatureTypesSchema.nullable(),
   version: z.number().int().nonnegative(),
   fingerprint: z.string().min(1),

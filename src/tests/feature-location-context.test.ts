@@ -120,6 +120,7 @@ describe('new feature location intent', () => {
         '0211_feature_intent',
         '0212_feature_intent_publication_guard',
         '0214_feature_location_context',
+        '0221_feature_naming_policy',
       ])
         f.sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
       expect(f.sqlite.prepare('SELECT kind,targetContext FROM feature').get()).toEqual({

@@ -19,7 +19,10 @@ import {
   type FeatureIntentScope,
 } from '#lib/db/services/featureIntentPolicy.js'
 // DOMAIN
-import { isFeatureNameBooleanField } from '#lib/features/locationPolicy.js'
+import {
+  isFeatureNameBooleanField,
+  isFeatureNameTextField,
+} from '#lib/features/locationPolicy.js'
 // TYPES
 import type { GuardedBaseContext } from './guarded.types'
 
@@ -116,7 +119,7 @@ export const getFeatureIntentOptions = guardedQuery(
   },
 )
 
-/** List boolean and toggle properties usable in localized generated names.
+/** List boolean, toggle and short-text properties usable in localized generated names.
  * @param scope Authorized policy owner. @returns Selectable property identities and labels.
  * @remarks Authorized rule authors choose the text exposed by both public and internal fields.
  */
@@ -139,7 +142,38 @@ export const getFeatureNameProperties = guardedQuery(
       '#lib/db/services/property.js'
     )
     return (await listResolvedProjectProperties(ctx.db, projectId))
-      .filter(isFeatureNameBooleanField)
-      .map(field => ({ id: field.id, label: field.key }))
+      .filter(
+        field => isFeatureNameBooleanField(field) || isFeatureNameTextField(field),
+      )
+      .map(field => ({
+        id: field.id,
+        label: field.key,
+        examples: Object.fromEntries(
+          Object.entries(field.i18n ?? {}).flatMap(([locale, row]) => {
+            const example = row.placeholder?.trim()
+            return example && example !== 'Type here' ? [[locale, example]] : []
+          }),
+        ),
+        test: isFeatureNameBooleanField(field)
+          ? ('boolean' as const)
+          : ('hasValue' as const),
+      }))
+  },
+)
+
+/** Resolve the owning project for the naming editor's Fields link.
+ * @param scope Authorized naming-policy owner.
+ * @returns Project identity, or null for a hub without project fields.
+ */
+export const getFeatureNameFieldsProject = guardedQuery(
+  scopeSchema,
+  async (scope, ctx): Promise<string | null> => {
+    await authorizeSettings(ctx, scope)
+    if (scope.type === 'project') return scope.id
+    if (scope.type === 'hub') return null
+    const row = await ctx.db.get<{ projectId: string }>(
+      sql`SELECT projectId FROM layer WHERE id=${scope.id}`,
+    )
+    return row?.projectId ?? null
   },
 )

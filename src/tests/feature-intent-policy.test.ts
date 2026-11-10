@@ -1,3 +1,4 @@
+import { required } from './fixtures/required'
 import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
 // @vitest-environment node
 // NODE
@@ -54,6 +55,7 @@ function fixture() {
     'CREATE TABLE featureCountRevision(id INTEGER PRIMARY KEY, revision INTEGER); INSERT INTO featureCountRevision VALUES(1,0)',
   )
   f.sqlite.exec(readFileSync('migrations/0214_feature_location_context.sql', 'utf8'))
+  f.sqlite.exec(readFileSync('migrations/0221_feature_naming_policy.sql', 'utf8'))
   return { ...f, db: f.db as unknown as Database }
 }
 const ghost = {
@@ -174,7 +176,7 @@ describe('Feature intent', () => {
       await prepareFeatureNameDependencyChecks(f.db, 'project', [
         { id: 'paid', dataType: 'boolean', audience: 'public' },
       ]),
-    ).toHaveLength(2)
+    ).toHaveLength(3)
   })
   it('commits model policy with its parent and rolls back both on a stale ancestor', async () => {
     const f = fixture()
@@ -435,4 +437,235 @@ describe('Feature intent', () => {
     f.sqlite.exec('UPDATE feature SET isPublished=1')
     await expect(assertFeatureIntentPublication(f.db, 'f')).resolves.toBeUndefined()
   })
+})
+
+it('inherits and resets per-type naming without copying the project catalogue', async () => {
+  const f = fixture()
+  const project = { type: 'project' as const, id: 'project' }
+  const layer = { type: 'layer' as const, id: 'layer' }
+  const locationRule = { base: 'location' as const, conditions: [] }
+  const ownRule = { base: 'feature' as const, conditions: [] }
+  async function save(
+    scope: typeof project | typeof layer,
+    namingRules: Record<string, typeof locationRule | typeof ownRule>,
+  ) {
+    const current = await readFeatureIntentPolicy(f.db, scope)
+    const writes = await prepareFeatureIntentPolicySave(f.db, {
+      scope,
+      actorId: 'editor',
+      version: current.version,
+      fingerprint: current.fingerprint,
+      definition: null,
+      namingRules,
+    })
+    expect(writes).not.toBeNull()
+    await executeRevisionBatch(f.db, sql`1`, required(writes))
+  }
+  await save(project, { place: locationRule })
+  expect(
+    (await readFeatureIntentPolicy(f.db, layer)).types.find(type => type.id === 'place')
+      ?.nameRule,
+  ).toEqual(locationRule)
+  await save(layer, { place: ownRule })
+  const overridden = await readFeatureIntentPolicy(f.db, layer)
+  expect(overridden.definition).toBeNull()
+  expect(overridden.types.find(type => type.id === 'place')?.nameRule).toEqual(ownRule)
+  // Catalogue changes continue to flow through the naming-only layer override.
+  const currentProject = await readFeatureIntentPolicy(f.db, project)
+  await saveFeatureIntentPolicy(f.db, {
+    scope: project,
+    definition: [...DEFAULT_FEATURE_TYPES, ghost],
+    version: currentProject.version,
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  expect(
+    (await readFeatureIntentPolicy(f.db, layer)).types.some(
+      type => type.id === ghost.id,
+    ),
+  ).toBe(true)
+  await save(layer, {})
+  const reset = await readFeatureIntentPolicy(f.db, layer)
+  expect(reset.namingRules).toEqual({})
+  expect(reset.definition).toBeNull()
+  expect(reset.types.find(type => type.id === 'place')?.nameRule).toEqual(locationRule)
+})
+
+it('fences stale naming-only saves and validates their boolean dependencies', async () => {
+  const f = fixture()
+  const scope = { type: 'layer' as const, id: 'layer' }
+  const current = await readFeatureIntentPolicy(f.db, scope)
+  const namingRules = {
+    place: {
+      base: 'location' as const,
+      conditions: [
+        {
+          propertyId: 'paid',
+          locales: {
+            en: {
+              true: 'Paid',
+              false: '',
+              null: '',
+              placement: 'suffix' as const,
+              separator: ' ',
+            },
+          },
+        },
+      ],
+    },
+  }
+  const input = {
+    scope,
+    actorId: 'editor',
+    version: current.version,
+    fingerprint: current.fingerprint,
+    definition: null,
+    namingRules,
+  }
+  await expect(
+    prepareFeatureIntentPolicySave(f.db, { ...input, nameProperties: [] }),
+  ).rejects.toThrow('boolean or toggle')
+  const writes = await prepareFeatureIntentPolicySave(f.db, {
+    ...input,
+    nameProperties: [{ id: 'paid', dataType: 'boolean', audience: 'public' }],
+  })
+  await executeRevisionBatch(f.db, sql`1`, required(writes))
+  expect(
+    await prepareFeatureIntentPolicySave(f.db, { ...input, namingRules: {} }),
+  ).toBeNull()
+  const row = f.sqlite
+    .prepare(
+      "SELECT definition,namingRules FROM featureIntentPolicy WHERE scopeType='layer'",
+    )
+    .get()
+  expect(row?.definition).toBeNull()
+  expect(JSON.parse(required(row).namingRules as string)).toEqual(namingRules)
+})
+
+it('migrates embedded rules without rewriting policy evidence or turning inherited types into custom types', () => {
+  const f = publicationSqlite({})
+  connections.push(f)
+  f.sqlite.exec(
+    "CREATE TABLE user(id TEXT PRIMARY KEY); INSERT INTO user VALUES('editor'); CREATE TABLE feature(id TEXT,layerId TEXT,isPublished INTEGER);",
+  )
+  f.sqlite.exec(readFileSync('migrations/0211_feature_intent.sql', 'utf8'))
+  const definition = JSON.stringify([
+    { ...ghost, nameRule: { base: 'feature', conditions: [] } },
+  ])
+  f.sqlite
+    .prepare(
+      'INSERT INTO featureIntentPolicy(scopeType,scopeId,definition,version,actorId) VALUES (?,?,?,?,?)',
+    )
+    .run('project', 'p', definition, 1, 'editor')
+  f.sqlite
+    .prepare(
+      'INSERT INTO featureIntentPolicyRevision(id,scopeType,scopeId,definition,version,actorId,createdAt) VALUES (?,?,?,?,?,?,?)',
+    )
+    .run('r', 'project', 'p', definition, 1, 'editor', 'now')
+  f.sqlite.exec(readFileSync('migrations/0221_feature_naming_policy.sql', 'utf8'))
+  const row = f.sqlite
+    .prepare('SELECT definition,namingRules FROM featureIntentPolicy')
+    .get()
+  expect(JSON.parse(required(row).definition as string)).toEqual([ghost])
+  expect(JSON.parse(required(row).namingRules as string)).toEqual({
+    [ghost.id]: { base: 'feature', conditions: [] },
+  })
+  expect(
+    f.sqlite.prepare('SELECT definition FROM featureIntentPolicyRevision').get()
+      ?.definition,
+  ).toBe(definition)
+})
+
+it('protects fields referenced only by an independent layer naming rule', async () => {
+  const f = fixture()
+  await saveFeatureIntentPolicy(f.db, {
+    scope: { type: 'layer', id: 'layer' },
+    actorId: 'editor',
+    version: 0,
+    guard: sql`1`,
+    definition: null,
+    namingRules: {
+      place: {
+        base: 'location',
+        conditions: [
+          {
+            propertyId: 'paid',
+            locales: {
+              en: {
+                true: 'Paid',
+                false: '',
+                null: '',
+                placement: 'suffix',
+                separator: ' ',
+              },
+            },
+          },
+        ],
+      },
+    },
+  })
+  await expect(prepareFeatureNameDependencyChecks(f.db, 'project', [])).rejects.toThrow(
+    'boolean or toggle',
+  )
+  const writes = await prepareFeatureNameDependencyChecks(f.db, 'project', [
+    { id: 'paid', dataType: 'boolean', audience: 'public' },
+  ])
+  expect(writes.length).toBeGreaterThan(0)
+  const project = await readFeatureIntentPolicy(f.db, {
+    type: 'project',
+    id: 'project',
+  })
+  await expect(
+    prepareFeatureIntentPolicySave(f.db, {
+      scope: { type: 'project', id: 'project' },
+      actorId: 'editor',
+      version: project.version,
+      fingerprint: project.fingerprint,
+      definition: null,
+      namingRules: {},
+      nameProperties: [],
+    }),
+  ).rejects.toThrow('boolean or toggle')
+})
+
+it('accepts short-text presence rules and rejects incompatible field changes', async () => {
+  const f = fixture()
+  const policy = await readFeatureIntentPolicy(f.db, { type: 'project', id: 'project' })
+  const input = {
+    fingerprint: policy.fingerprint,
+    scope: { type: 'project' as const, id: 'project' },
+    actorId: 'editor',
+    version: 0,
+    definition: null,
+    namingRules: {
+      place: {
+        base: 'feature' as const,
+        conditions: [
+          {
+            propertyId: 'caption',
+            test: 'hasValue' as const,
+            locales: {
+              en: {
+                true: 'Named',
+                false: 'Unnamed',
+                null: '',
+                placement: 'suffix' as const,
+                separator: ' ',
+              },
+            },
+          },
+        ],
+      },
+    },
+    nameProperties: [{ id: 'caption', dataType: 'text', component: 'InputField' }],
+  }
+  expect((await prepareFeatureIntentPolicySave(f.db, input))?.length).toBeGreaterThan(0)
+  for (const field of [
+    { id: 'caption', dataType: 'boolean', component: 'ToggleField' },
+    { id: 'caption', dataType: 'text', component: 'TextareaField' },
+    { id: 'caption', dataType: 'number', component: 'InputField' },
+  ])
+    await expect(
+      prepareFeatureIntentPolicySave(f.db, { ...input, nameProperties: [field] }),
+    ).rejects.toThrow('short-text')
 })

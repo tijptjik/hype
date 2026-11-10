@@ -1,6 +1,7 @@
 import {
   targetLocationKinds,
   isFeatureNameBooleanField,
+  isFeatureNameTextField,
   type TargetContext,
 } from '#lib/features/locationPolicy.js'
 // DRIZZLE
@@ -18,6 +19,8 @@ import {
   requireFeatureType,
   resolveFeatureTypes,
   type FeatureType,
+  FeatureNamingRulesSchema,
+  type FeatureNamingRules,
 } from '#lib/features/intents.js'
 // SERVICES
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
@@ -38,6 +41,7 @@ export type FeatureIntentScope = { type: 'hub' | 'project' | 'layer'; id: string
 export type FeatureIntentPolicy = {
   types: FeatureType[]
   inheritedTypes: FeatureType[]
+  namingRules?: FeatureNamingRules
   definition: FeatureType[] | string[] | null
   version: number
   fingerprint: string
@@ -51,11 +55,11 @@ export type FeatureIntentPolicy = {
 async function readOverride(
   db: Database,
   scope: FeatureIntentScope,
-): Promise<{ definition: string | null; version: number }> {
+): Promise<{ definition: string | null; namingRules: string; version: number }> {
   return (
-    (await db.get<{ definition: string | null; version: number }>(
-      sql`SELECT definition,version FROM featureIntentPolicy WHERE scopeType=${scope.type} AND scopeId=${scope.id}`,
-    )) ?? { definition: null, version: 0 }
+    (await db.get<{ definition: string | null; namingRules: string; version: number }>(
+      sql`SELECT definition,namingRules,version FROM featureIntentPolicy WHERE scopeType=${scope.type} AND scopeId=${scope.id}`,
+    )) ?? { definition: null, namingRules: '{}', version: 0 }
   )
 }
 
@@ -95,7 +99,7 @@ export async function readFeatureIntentPolicy(
     own.definition === null
       ? null
       : (JSON.parse(own.definition) as FeatureType[] | string[])
-  const types =
+  const catalogue =
     scope.type === 'layer'
       ? definition === null
         ? inheritedTypes
@@ -105,13 +109,56 @@ export async function readFeatureIntentPolicy(
       : definition === null
         ? inheritedTypes
         : FeatureTypesSchema.parse(definition)
+  // Naming follows its own per-type inheritance, even when the catalogue is customized.
+  const namingRules = FeatureNamingRulesSchema.parse({
+    ...Object.fromEntries(
+      (definition ?? []).flatMap(type =>
+        typeof type !== 'string' && type.nameRule ? [[type.id, type.nameRule]] : [],
+      ),
+    ),
+    ...JSON.parse(own.namingRules ?? '{}'),
+  })
+  const types = catalogue.map(type => {
+    const { nameRule: _stored, ...rest } = type
+    const rule =
+      (Object.hasOwn(namingRules, type.id) ? namingRules[type.id] : undefined) ??
+      inheritedTypes.find(parent => parent.id === type.id)?.nameRule
+    return { ...rest, ...(rule ? { nameRule: rule } : {}) }
+  })
   return {
     types,
     inheritedTypes,
+    namingRules,
     definition,
     version: own.version,
     fingerprint: JSON.stringify([scope, own.version, parentFingerprint]),
     lineage: [...lineage, { scope, version: own.version }],
+  }
+}
+
+/** Separate legacy embedded naming rules from catalogue edits.
+ * @param definition Authored catalogue or inheritance marker. @param rules Explicit per-type overrides.
+ * @param retained Existing independent overrides when an older caller omits the field.
+ * @returns Independent storage values; explicit empty rules reset all naming overrides.
+ */
+function separateNaming(
+  definition: FeatureType[] | string[] | null,
+  rules: FeatureNamingRules | undefined,
+  retained: FeatureNamingRules,
+): { definition: FeatureType[] | string[] | null; namingRules: FeatureNamingRules } {
+  const embedded = Object.fromEntries(
+    (definition ?? []).flatMap(type =>
+      typeof type !== 'string' && type.nameRule ? [[type.id, type.nameRule]] : [],
+    ),
+  )
+  return {
+    definition:
+      (definition?.map(type => {
+        if (typeof type === 'string') return type
+        const { nameRule: _rule, ...rest } = type
+        return rest
+      }) as FeatureType[] | string[] | null) ?? null,
+    namingRules: FeatureNamingRulesSchema.parse(rules ?? { ...retained, ...embedded }),
   }
 }
 
@@ -124,17 +171,26 @@ export async function saveFeatureIntentPolicy(
   input: {
     scope: FeatureIntentScope
     definition: FeatureType[] | string[] | null
+    namingRules?: FeatureNamingRules
     version: number
     actorId: string
     guard: SQL
   },
 ): Promise<boolean> {
-  const definition = input.definition === null ? null : JSON.stringify(input.definition)
+  const current = await readFeatureIntentPolicy(db, input.scope)
+  const prepared = separateNaming(
+    input.definition,
+    input.namingRules,
+    current.namingRules ?? {},
+  )
+  const definition =
+    prepared.definition === null ? null : JSON.stringify(prepared.definition)
   const guard = sql`${input.guard} AND coalesce((SELECT version FROM featureIntentPolicy WHERE scopeType=${input.scope.type} AND scopeId=${input.scope.id}),0)=${input.version}`
   const values = {
     scopeType: input.scope.type,
     scopeId: input.scope.id,
     definition,
+    namingRules: JSON.stringify(prepared.namingRules),
     version: input.version + 1,
     actorId: input.actorId,
   }
@@ -231,8 +287,34 @@ export async function prepareFeatureIntentPolicySave(
   const current = await readFeatureIntentPolicy(db, input.scope)
   if (current.version !== patch.version || current.fingerprint !== patch.fingerprint)
     return null
-  // Validate naming dependencies before composing any writes.
-  if (patch.definition?.some(type => type.nameRule?.conditions.length)) {
+  const prepared = separateNaming(
+    patch.definition,
+    patch.namingRules,
+    current.namingRules ?? {},
+  )
+  const catalogue = prepared.definition ?? current.inheritedTypes
+  const effectiveTypes = (catalogue as FeatureType[]).map(type => ({
+    ...type,
+    nameRule:
+      (Object.hasOwn(prepared.namingRules, type.id)
+        ? prepared.namingRules[type.id]
+        : undefined) ??
+      current.inheritedTypes.find(parent => parent.id === type.id)?.nameRule,
+  }))
+  if (
+    Object.keys(prepared.namingRules).some(
+      id => !effectiveTypes.some(type => type.id === id),
+    )
+  )
+    throw new FeatureIntentPolicyError(
+      'Naming overrides must belong to an available feature type.',
+    )
+  // Validate all effective naming dependencies before composing any writes.
+  let dependencyChecks: BatchItem<'sqlite'>[] = []
+  if (
+    effectiveTypes.some(type => type.nameRule?.conditions.length) ||
+    (input.scope.type === 'project' && input.nameProperties)
+  ) {
     const projectId =
       input.scope.type === 'project'
         ? input.scope.id
@@ -247,17 +329,27 @@ export async function prepareFeatureIntentPolicySave(
     const properties =
       input.nameProperties ??
       (projectId ? await listResolvedProjectProperties(db, projectId) : [])
-    assertNameDependencies(patch.definition ?? [], properties)
+    assertNameDependencies(effectiveTypes, properties)
+    if (input.scope.type === 'project')
+      dependencyChecks = await prepareFeatureNameDependencyChecks(
+        db,
+        input.scope.id,
+        properties,
+        effectiveTypes,
+      )
   }
   const values = {
     scopeType: input.scope.type,
     scopeId: input.scope.id,
-    definition: patch.definition === null ? null : JSON.stringify(patch.definition),
+    definition:
+      prepared.definition === null ? null : JSON.stringify(prepared.definition),
+    namingRules: JSON.stringify(prepared.namingRules),
     version: patch.version + 1,
     actorId: input.actorId,
   }
   // Recheck every inherited revision within the same batch as the parent update.
   return [
+    ...dependencyChecks,
     ...current.lineage.map(({ scope, version }) =>
       prepareRevisionCheck(
         db,
@@ -297,17 +389,21 @@ function assertNameDependencies(
       if (
         !properties.some(
           property =>
-            property.id === condition.propertyId && isFeatureNameBooleanField(property),
+            property.id === condition.propertyId &&
+            (condition.test === 'hasValue'
+              ? isFeatureNameTextField(property)
+              : isFeatureNameBooleanField(property)),
         )
       )
         throw new FeatureIntentPolicyError(
-          'Name conditions require an available boolean or toggle property.',
+          'Name conditions require an available boolean or toggle property, or a short-text property for a presence condition.',
         )
     }
 }
 
 /** Fence dependencies when the Fields tab changes without rewriting the model.
  * @param db Request database. @param projectId Authorized project. @param properties Submitted catalogue.
+ * @param projectTypes Proposed effective project types when Fields and Model change together.
  * @returns Policy ancestry checks for the parent's existing transaction.
  */
 export async function prepareFeatureNameDependencyChecks(
@@ -319,10 +415,41 @@ export async function prepareFeatureNameDependencyChecks(
     component?: string | null
     audience?: string | null
   }[],
+  projectTypes?: FeatureType[],
 ): Promise<BatchItem<'sqlite'>[]> {
   const current = await readFeatureIntentPolicy(db, { type: 'project', id: projectId })
-  assertNameDependencies(current.types, properties)
-  return current.lineage.map(({ scope, version }) =>
+  const proposed = projectTypes ?? current.types
+  assertNameDependencies(proposed, properties)
+  const lineage = [...current.lineage]
+  // A project field may also be referenced by a layer's independent naming override.
+  const layers = await db.all<{ id: string }>(
+    sql`SELECT id FROM layer WHERE projectId=${projectId}`,
+  )
+  for (const layer of layers) {
+    const policy = await readFeatureIntentPolicy(db, { type: 'layer', id: layer.id })
+    const definition = policy.definition
+    const catalogue =
+      definition === null
+        ? proposed
+        : definition.every(type => typeof type === 'string')
+          ? resolveFeatureTypes(proposed, null, definition as string[])
+          : (definition as FeatureType[])
+    const rules = policy.namingRules ?? {}
+    assertNameDependencies(
+      catalogue.map(type => ({
+        ...type,
+        nameRule:
+          (Object.hasOwn(rules, type.id) ? rules[type.id] : undefined) ??
+          proposed.find(parent => parent.id === type.id)?.nameRule,
+      })),
+      properties,
+    )
+    lineage.push(...policy.lineage)
+  }
+  const unique = new Map(
+    lineage.map(entry => [`${entry.scope.type}:${entry.scope.id}`, entry]),
+  )
+  return [...unique.values()].map(({ scope, version }) =>
     prepareRevisionCheck(
       db,
       sql`coalesce((SELECT version FROM featureIntentPolicy WHERE scopeType=${scope.type} AND scopeId=${scope.id}),0)=${version}`,

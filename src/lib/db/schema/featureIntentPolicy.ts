@@ -10,6 +10,7 @@ export const featureIntentPolicy = sqliteTable(
     scopeType: text('scopeType').notNull(),
     scopeId: text('scopeId').notNull(),
     definition: text('definition'),
+    namingRules: text('namingRules').notNull().default('{}'),
     version: integer('version').notNull(),
     actorId: text('actorId')
       .notNull()
@@ -24,6 +25,7 @@ export const featureIntentPolicyRevision = sqliteTable('featureIntentPolicyRevis
   scopeType: text('scopeType').notNull(),
   scopeId: text('scopeId').notNull(),
   definition: text('definition'),
+  namingRules: text('namingRules').notNull().default('{}'),
   version: integer('version').notNull(),
   actorId: text('actorId')
     .notNull()
