@@ -21,12 +21,10 @@ import type { FeatureRevisionWorkspace } from '#lib/db/services/featureRevisionW
 let {
   featureId,
   taskId,
-  isDirty = false,
   refreshVersion = 0,
 }: {
   featureId: string
   taskId?: string
-  isDirty?: boolean
   refreshVersion?: number
 } = $props()
 type Workspace = FeatureRevisionWorkspace & {
@@ -37,7 +35,6 @@ let workspace = $state<Workspace | null>(null)
 let busy = $state(false)
 let message = $state('')
 let loadedFor = ''
-const disabled = $derived(busy || isDirty)
 let loadSequence = 0
 
 /** Refresh only this Feature's bounded, authorized workspace. */
@@ -57,7 +54,7 @@ async function load(): Promise<void> {
 
 /** Keep failures in this panel and prevent duplicate commands while one is pending. */
 async function run(action: () => Promise<void>): Promise<void> {
-  if (disabled) return
+  if (busy) return
   busy = true
   message = ''
   try {
@@ -69,7 +66,7 @@ async function run(action: () => Promise<void>): Promise<void> {
   }
 }
 
-// Read-only hydration must still run while a successful form save is settling its dirty state.
+// Refresh read-only history when the selected Feature or its saved revision changes.
 $effect(() => {
   const requestedId = featureId
   refreshVersion
@@ -106,7 +103,7 @@ $effect(() => {
         <button
           type="button"
           class="border-border rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
-          {disabled}
+          disabled={busy}
           onclick={() => run(load)}
         >
           Refresh
@@ -116,11 +113,6 @@ $effect(() => {
   </FormSurface>
   {#if message}
     <p role="status" class="text-sm break-words whitespace-normal">{message}</p>
-  {/if}
-  {#if isDirty}
-    <p class="text-muted-foreground text-sm">
-      Save or discard the open form changes before using revision actions.
-    </p>
   {/if}
   {#if workspace && !workspace.enabled}
     <p class="text-muted-foreground text-sm">

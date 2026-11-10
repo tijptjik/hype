@@ -5225,7 +5225,6 @@ async function refreshLocationSource(): Promise<void> {
             {#snippet children(module)}
               <module.default
                 featureId={currentFeatureId}
-                {isDirty}
                 refreshVersion={revisionWorkspaceVersion}
               />
             {/snippet}
