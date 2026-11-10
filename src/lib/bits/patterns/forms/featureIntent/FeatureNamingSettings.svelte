@@ -1,7 +1,6 @@
 <script lang="ts">
 // COMPONENTS
 import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
-import Label from '#lib/bits/custom/form/src/label/Label.svelte'
 import { Button } from '#lib/bits/core/index.js'
 import { typeInputAppearance, typeSelectAppearance } from './featureTypeEditor.styles'
 
@@ -67,8 +66,12 @@ function emptyCase(): FeatureNameRule['conditions'][number]['locales'][string] {
   return { true: '', false: '', null: '', placement: 'suffix', separator: ' ' }
 }
 </script>
-<section class="grid min-w-0 gap-3" aria-label="Feature name">
-  <Label text="Feature name" />
+<section class="grid min-w-0 gap-3" aria-label="Naming rules">
+  <h3
+    class="text-primary border-border/40 mb-2 w-full border-b pb-2 text-xs font-bold tracking-wider uppercase"
+  >
+    Naming rules
+  </h3>
   <SelectField
     label="Base name"
     triggerAttrs={{ 'aria-label': 'Base name' }}

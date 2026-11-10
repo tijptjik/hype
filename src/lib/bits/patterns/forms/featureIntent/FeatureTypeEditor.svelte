@@ -132,7 +132,7 @@ function updateLabel(locale: string, value: string): void {
         />
       {/each}
     </div>
-    <div class="border-border/40 border-t pt-4">
+    <div class="pt-4">
       <FeatureNamingSettings
         {scopeType}
         {scopeId}
