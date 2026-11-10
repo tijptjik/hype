@@ -20,13 +20,13 @@ export async function readFeatureNameExamples(
       FROM featureProperty fp JOIN feature f ON f.id=fp.featureId
       JOIN property p ON p.id=fp.propertyId
       WHERE f.projectId=${projectId} AND (${layerId ?? null} IS NULL OR f.layerId=${layerId ?? null})
-        AND f.isArchived=0 AND p.dataType='text' AND p.component IN ('InputField','TextField')
+        AND f.isArchived=0 AND p.dataType='text' AND p.component IN ('InputField','TextField','PhoneField')
       UNION ALL
       SELECT fp.propertyId, f.id featureId, fp.locale, fp.value
       FROM featurePropertyI18n fp JOIN feature f ON f.id=fp.featureId
       JOIN property p ON p.id=fp.propertyId
       WHERE f.projectId=${projectId} AND (${layerId ?? null} IS NULL OR f.layerId=${layerId ?? null})
-        AND f.isArchived=0 AND p.dataType='text' AND p.component IN ('InputField','TextField')
+        AND f.isArchived=0 AND p.dataType='text' AND p.component IN ('InputField','TextField','PhoneField')
     ), ranked AS (
       SELECT propertyId, locale, value,
         row_number() OVER (PARTITION BY propertyId, lower(locale) ORDER BY featureId) position

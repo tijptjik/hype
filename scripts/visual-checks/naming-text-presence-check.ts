@@ -19,7 +19,7 @@ export async function getFeatureIntentSettings(scope){
 }
 export async function getFeatureNameProperties(){
  if(globalThis.fieldMode==='error')throw new Error('fixture failure');
- return globalThis.fieldMode==='empty'?[]:[{id:'paid',label:'Paid access'},{id:'caption',label:'Sign caption',test:'hasValue',examples:{'*':'Scalar caption',en:'Neon lettering','zh-Hant':'霓虹字樣'}}];
+ return globalThis.fieldMode==='empty'?[]:[{id:'paid',label:'Paid access'},{id:'caption',label:'Sign caption',test:'hasValue',examples:{'*':'Scalar caption',en:'Neon lettering','zh-Hant':'霓虹字樣'}},{id:'phone',label:'Phone number',component:'PhoneField',test:'hasValue',examples:{'*':'["+852 2345 6789","+852 9876 5432"]'}}];
 }
 export async function getFeatureNameFieldsProject(){return 'project'}
 export async function getFeatureIntentOptions(){return defaults}
@@ -53,7 +53,15 @@ for (const [engine, browserType] of [
         route.fulfill({ contentType: 'application/javascript', body: mock }),
       )
       await page.goto(`${base}/__text-presence.html`)
-      await page.getByRole('switch', { name: 'Custom', exact: true }).check()
+      await page
+        .getByRole('switch', { name: 'Custom', exact: true })
+        .check()
+        .catch(async error => {
+          const overlay = await page
+            .locator('vite-error-overlay')
+            .evaluateAll(nodes => nodes.map(node => node.shadowRoot?.textContent))
+          throw new Error(JSON.stringify({ errors, overlay }), { cause: error })
+        })
       await page
         .getByRole('button', { name: 'Define custom rules', exact: true })
         .click()
@@ -72,18 +80,18 @@ for (const [engine, browserType] of [
       if (await panel.getByRole('textbox', { name: 'Unset', exact: true }).count())
         throw Error('Text condition still exposes Unset')
       const preview = panel.locator('[data-title-example="en"]')
-      await preview.filter({ hasText: 'Hotspot Unnamed' }).waitFor()
+      await preview.filter({ hasText: 'Hotspot • Unnamed' }).waitFor()
       await panel
         .getByRole('button', {
           name: 'Example: Sign caption: Has no value',
           exact: true,
         })
         .click()
-      await preview.filter({ hasText: 'Hotspot Neon lettering' }).waitFor()
+      await preview.filter({ hasText: 'Hotspot • Neon lettering' }).waitFor()
       await panel
         .getByRole('button', { name: 'Example: Sign caption: Has value', exact: true })
         .click()
-      await preview.filter({ hasText: 'Hotspot Unnamed' }).waitFor()
+      await preview.filter({ hasText: 'Hotspot • Unnamed' }).waitFor()
       await page.getByRole('button', { name: 'Multilingual', exact: true }).click()
       await panel
         .locator('[data-property-example="zh-Hant"]')
@@ -111,6 +119,13 @@ for (const [engine, browserType] of [
         .locator('[data-property-example="en"]')
         .filter({ hasText: 'Neon lettering' })
         .waitFor()
+      await choose(page, 'Rule property', 'Phone number')
+      for (const locale of ['en', 'zh-Hant']) {
+        await panel
+          .locator(`[data-property-example="${locale}"]`)
+          .filter({ hasText: /^e\.g\.\s*2345 6789\s*$/ })
+          .waitFor()
+      }
       await choose(page, 'Rule property', 'Paid access')
       await panel.getByRole('textbox', { name: 'Unset', exact: true }).first().waitFor()
       if (await panel.getByRole('textbox', { name: 'Has value', exact: true }).count())

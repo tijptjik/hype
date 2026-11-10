@@ -63,6 +63,7 @@ let properties = $state<
   {
     id: string
     label: string
+    component?: string | null
     test?: 'boolean' | 'hasValue'
     examples?: Record<string, string>
   }[]
@@ -287,7 +288,7 @@ function update(index: number, locale: string, key: string, value: string): void
  * @returns An empty conditional fragment with the standard suffix spacing.
  */
 function emptyCase(): FeatureNameRule['conditions'][number]['locales'][string] {
-  return { true: '', false: '', null: '', placement: 'suffix', separator: ' ' }
+  return { true: '', false: '', null: '', placement: 'suffix', separator: ' • ' }
 }
 /** Reorder a complete rule and every locale without changing its text.
  * @param from Current position. @param to New position. @returns Nothing.
@@ -378,7 +379,9 @@ function propertyExample(propertyId: string, locale: string): string {
   } catch {
     // Ordinary text is already suitable for display.
   }
-  return example
+  return property?.component === 'PhoneField'
+    ? example.replace(/^\s*\+852\s*/, '')
+    : example
 }
 /** Describe cases using the selected property's condition semantics.
  * @param condition Naming condition. @param state Persisted case key. @returns Visible and accessible input label.
@@ -450,7 +453,7 @@ function sampleName(locale: string, source: 'feature' | 'location'): string {
       <Button text="Retry loading fields" style="ghost" onClick={() => reload++} />
     {:else if !properties.length}
       <div class="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-        <span>No boolean, toggle or short-text fields</span>
+        <span>No boolean, toggle, phone or short-text fields</span>
         <FeatureIntentHelp topic="fields" label="About naming fields" {scopeType} />
         {#if fieldsProjectId}
           <a

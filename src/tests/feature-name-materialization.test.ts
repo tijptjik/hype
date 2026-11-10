@@ -63,6 +63,8 @@ function fixture() {
   db.exec(readFileSync('migrations/0224_feature_naming_toggle_fields.sql', 'utf8'))
   db.exec(readFileSync('migrations/0225_feature_naming_text_presence.sql', 'utf8'))
   db.exec(readFileSync('migrations/0226_feature_naming_text_values.sql', 'utf8'))
+  db.exec(readFileSync('migrations/0228_feature_naming_phone_values.sql', 'utf8'))
+  db.exec(readFileSync('migrations/0230_feature_naming_local_phone.sql', 'utf8'))
   return db
 }
 
@@ -371,6 +373,49 @@ it('materializes short-text presence with preview parity and localized refreshes
     expect(row(db)!.title).toBe('Bakery - Caption')
     db.exec("UPDATE property SET component='ToggleField' WHERE id='caption'")
     expect(row(db)!.title).toBe('Bakery - Unnamed')
+  } finally {
+    db.close()
+  }
+})
+
+it('materializes phone values and the missing-phone fallback', () => {
+  const db = fixture()
+  try {
+    db.exec("INSERT INTO property VALUES ('phone','text','internal','PhoneField')")
+    const phoneRule = {
+      base: 'feature',
+      conditions: [
+        {
+          propertyId: 'phone',
+          test: 'hasValue',
+          locales: {
+            en: {
+              true: '',
+              false: 'No phone',
+              null: '',
+              placement: 'suffix',
+              separator: ' - ',
+            },
+          },
+        },
+      ],
+    }
+    db.prepare('UPDATE feature SET nameTemplate=?').run(
+      JSON.stringify({ rule: phoneRule }),
+    )
+    expect(row(db)!.title).toBe('Bakery - No phone')
+    db.exec("INSERT INTO featureProperty VALUES ('f','phone','+852 2345 6789')")
+    expect(row(db)!.title).toBe('Bakery - 2345 6789')
+    db.prepare("UPDATE featureProperty SET value=? WHERE propertyId='phone'").run(
+      JSON.stringify(['+85222505339', '+85299999999']),
+    )
+    expect(row(db)?.title).toBe('Bakery - 22505339')
+    db.prepare("UPDATE featureProperty SET value=? WHERE propertyId='phone'").run(
+      '+44 12345678',
+    )
+    expect(row(db)?.title).toBe('Bakery - +44 12345678')
+    db.exec("UPDATE featureProperty SET value='' WHERE propertyId='phone'")
+    expect(row(db)!.title).toBe('Bakery - No phone')
   } finally {
     db.close()
   }

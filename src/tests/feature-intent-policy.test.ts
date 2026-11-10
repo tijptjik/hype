@@ -660,6 +660,14 @@ it('accepts short-text presence rules and rejects incompatible field changes', a
     nameProperties: [{ id: 'caption', dataType: 'text', component: 'InputField' }],
   }
   expect((await prepareFeatureIntentPolicySave(f.db, input))?.length).toBeGreaterThan(0)
+  expect(
+    (
+      await prepareFeatureIntentPolicySave(f.db, {
+        ...input,
+        nameProperties: [{ id: 'caption', dataType: 'text', component: 'PhoneField' }],
+      })
+    )?.length,
+  ).toBeGreaterThan(0)
   for (const field of [
     { id: 'caption', dataType: 'boolean', component: 'ToggleField' },
     { id: 'caption', dataType: 'text', component: 'TextareaField' },

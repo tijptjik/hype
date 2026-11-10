@@ -120,7 +120,7 @@ export const getFeatureIntentOptions = guardedQuery(
   },
 )
 
-/** List boolean, toggle and short-text properties usable in localized generated names.
+/** List boolean, toggle, phone and short-text properties usable in localized generated names.
  * @param scope Authorized policy owner. @returns Selectable property identities and labels.
  * @remarks Examples are saved values restricted to the authorized project or layer.
  */
@@ -154,6 +154,7 @@ export const getFeatureNameProperties = guardedQuery(
       .map(field => ({
         id: field.id,
         label: field.key,
+        component: field.component,
         examples: examples[field.id] ?? {},
         test: isFeatureNameBooleanField(field)
           ? ('boolean' as const)

@@ -396,7 +396,7 @@ function assertNameDependencies(
         )
       )
         throw new FeatureIntentPolicyError(
-          'Name conditions require an available boolean or toggle property, or a short-text property for a presence condition.',
+          'Name conditions require an available boolean or toggle property, or a short-text or phone property for a presence condition.',
         )
     }
 }

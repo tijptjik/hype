@@ -3401,6 +3401,12 @@ referenced short-text field with an incompatible field type. Verification includ
 SQLite/preview parity, localized refreshes and browser selection, two-case previews,
 save/reopen and switching back to boolean fields.
 
+PhoneField supports the same presence conditions. Migrations
+`0228_feature_naming_phone_values.sql` and `0230_feature_naming_local_phone.sql`
+materialize the first phone value without its `+852` prefix; stored phone values and
+other country codes are unchanged. New conditions default to the separator `•` with a
+space on each side.
+
 Migration `0220_feature_name_materialization.sql` relocates legacy localized inputs and
 materializes titles. SQLite write triggers refresh titles atomically on authored input,
 pinned rule, boolean or toggle property, accepted association and ownership changes.

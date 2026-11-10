@@ -164,8 +164,8 @@ export function isFeatureNameBooleanField(field: {
   return field.dataType === 'boolean' || field.component === 'ToggleField'
 }
 
-/** Identify single-line text fields usable for presence conditions.
- * @param field Stored or resolved field definition. @returns Whether this is short text, excluding toggles and rich text.
+/** Identify single-line text and phone fields usable for presence conditions.
+ * @param field Stored or resolved field definition. @returns Whether this is short text or a phone field, excluding toggles and rich text.
  */
 export function isFeatureNameTextField(field: {
   dataType?: string | null
@@ -173,6 +173,6 @@ export function isFeatureNameTextField(field: {
 }): boolean {
   return (
     field.dataType === 'text' &&
-    ['InputField', 'TextField'].includes(field.component ?? '')
+    ['InputField', 'TextField', 'PhoneField'].includes(field.component ?? '')
   )
 }
