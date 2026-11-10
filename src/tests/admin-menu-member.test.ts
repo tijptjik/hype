@@ -128,9 +128,7 @@ describe('member admin navigation', () => {
         role === 'owner',
       )
       expect(screen.queryByRole('link', { name: 'Hubs' })).toBeNull()
-      const links = screen.getAllByRole('link')
-      expect(links.at(-1)?.getAttribute('href')).toBe('/admin/docs')
-      expect(links.at(-1)?.textContent).toContain('Docs')
+      expect(screen.queryByRole('link', { name: 'Docs' })).toBeNull()
     },
   )
 })
@@ -194,4 +192,17 @@ it('refreshes the badge after queue rows change without duplicating the initial 
   expect(refresh).not.toHaveBeenCalled()
   taskRows.set('task', [{ id: 'reviewed-task' }])
   await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1))
+})
+
+it('shows Docs last for superAdmins', () => {
+  state.user = {
+    id: 'super-admin',
+    isAnonymous: false,
+    superAdmin: true,
+    roles: [],
+  } as unknown as SessionUser
+  state.getTasks.mockReturnValue({ current: { totalCount: 0 } })
+  render(AdminMenu, { isNarrow: false })
+  const links = screen.getAllByRole('link')
+  expect(links.at(-1)?.getAttribute('href')).toBe('/admin/docs')
 })

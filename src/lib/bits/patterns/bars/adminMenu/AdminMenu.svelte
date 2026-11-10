@@ -169,7 +169,8 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   }
 
   items.push({ href: `${ADMIN_PATH}/messaging`, label: 'Messaging', icon: ChatIcon })
-  items.push({ href: `${ADMIN_PATH}/docs`, label: 'Docs', icon: BookOpenIcon })
+  if (adminCtx.view.isSuperAdmin())
+    items.push({ href: `${ADMIN_PATH}/docs`, label: 'Docs', icon: BookOpenIcon })
 
   return items
 })
