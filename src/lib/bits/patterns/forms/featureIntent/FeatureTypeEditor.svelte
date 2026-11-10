@@ -2,19 +2,19 @@
 // UTILITIES
 import { propertyKeyFromLabel } from '#lib/utils/nameIdentifier.js'
 // COMPONENTS
-import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
+import FeaturePolicyChoice from './FeaturePolicyChoice.svelte'
+import { TextInput } from '#lib/bits/custom/form/index.js'
 import Label from '#lib/bits/custom/form/src/label/Label.svelte'
 import Switch from '#lib/bits/custom/switch/Switch.svelte'
 import FeatureNamingSettings from './FeatureNamingSettings.svelte'
 // DOMAIN
-import { FEATURE_KINDS, TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
+import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { LOCATION_ENTITY_KINDS, locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
 import FeatureTypeNames from './FeatureTypeNames.svelte'
 import {
   typeInputAppearance,
   typeReadOnlyInputAppearance,
-  typeSelectAppearance,
 } from './featureTypeEditor.styles'
 // TYPES
 import type { FeatureType } from '#lib/features/intents.js'
@@ -111,60 +111,103 @@ function updateEnglishName(before: string, after: string): void {
         type.id = value
       }}
     />
-    <SelectField
+    <FeaturePolicyChoice
       label="Feature kind"
-      triggerAttrs={{ 'aria-label': 'Feature kind' }}
+      help="Objects are individual items, such as signs or drinking fountains. Places are destinations, such as shops or community venues. Area and Route support is forthcoming."
       value={type.kind ?? 'object'}
-      isEditing={!disabled}
-      {...typeSelectAppearance}
-      items={FEATURE_KINDS.map(value => ({
-        value,
-        label: value.charAt(0).toUpperCase() + value.slice(1),
-      }))}
-      onValueChange={value => (type.kind = value as FeatureType['kind'])}
-    />
-    <SelectField
-      label="Association relation"
-      triggerAttrs={{ 'aria-label': 'Association relation' }}
-      value={type.relation ?? 'locatedAt'}
-      isEditing={!disabled}
-      {...typeSelectAppearance}
-      items={[
-        { value: 'locatedAt', label: 'Located at' },
-        { value: 'represents', label: 'Represents' },
+      {disabled}
+      options={[
+        { value: 'object', title: 'Object', description: 'An individual item' },
+        { value: 'place', title: 'Place', description: 'A destination' },
+        {
+          value: 'area',
+          title: 'Area',
+          description: 'A wider space',
+          forthcoming: true,
+        },
+        {
+          value: 'route',
+          title: 'Route',
+          description: 'A path to follow',
+          forthcoming: true,
+        },
       ]}
-      onValueChange={value => (type.relation = value as FeatureType['relation'])}
+      onChange={value => (type.kind = value as FeatureType['kind'])}
     />
-    <SelectField
-      label="Suggested starting point"
-      triggerAttrs={{ 'aria-label': 'Suggested starting point' }}
-      value={type.start}
-      isEditing={!disabled}
-      {...typeSelectAppearance}
-      items={[
-        { value: 'search', label: 'Find a location' },
-        { value: 'pin', label: 'Place on the map' },
-      ]}
-      onValueChange={value => (type.start = value as FeatureType['start'])}
-    />
-    <SelectField
-      label="When no location is selected"
-      triggerAttrs={{ 'aria-label': 'When no location is selected' }}
-      value={type.unresolvedMode ?? 'prompt'}
-      isEditing={!disabled}
-      {...typeSelectAppearance}
-      items={[
-        { value: 'prompt', label: 'Offer local creation' },
-        { value: 'silent', label: 'Continue silently' },
-      ]}
-      onValueChange={value =>
-        (type.unresolvedMode = value as FeatureType['unresolvedMode'])}
-    />
+    <div>
+      <FeatureNamingPolicySettings
+        {scopeType}
+        expanded={namingEditorOpen}
+        editorId={namingEditorId}
+        triggerId={namingTriggerId}
+        onConfigure={openNamingEditor}
+        disabled={namingDisabled}
+        override={namingOverride}
+        onChange={rule => onNamingChange?.(rule)}
+      />
+    </div>
   </section>
   <section
     class="lg:border-border/50 grid min-w-0 content-start gap-4 lg:border-r lg:pr-6"
-    aria-label="Type names"
+    aria-label="Location behavior"
   >
+    <FeaturePolicyChoice
+      label="Association relation"
+      help="Located at keeps the feature distinct from its host: a sign located at a building. Represents means the feature is the location itself: a bookstore representing that establishment. Choose Located at for objects; Represents for places."
+      value={type.relation ?? 'locatedAt'}
+      {disabled}
+      options={[
+        {
+          value: 'locatedAt',
+          title: 'Located at',
+          description: 'An item at a location',
+        },
+        {
+          value: 'represents',
+          title: 'Represents',
+          description: 'The location itself',
+        },
+      ]}
+      onChange={value => (type.relation = value as FeatureType['relation'])}
+    />
+    <FeaturePolicyChoice
+      label="Suggested starting point"
+      help="Find a location starts with a search for an existing place or address. Place on the map starts with a pin, with an optional location link afterward. Use search for known places and a pin for objects or places without an address."
+      value={type.start}
+      {disabled}
+      options={[
+        {
+          value: 'search',
+          title: 'Find a location',
+          description: 'Search places and addresses',
+        },
+        {
+          value: 'pin',
+          title: 'Place on the map',
+          description: 'Start with a precise pin',
+        },
+      ]}
+      onChange={value => (type.start = value as FeatureType['start'])}
+    />
+    <FeaturePolicyChoice
+      label="When no location is selected"
+      help="Offer local creation asks the author whether to create a location when none is selected. Continue silently lets them proceed without that prompt. Offer creation for missing places; continue silently when a map position is enough."
+      value={type.unresolvedMode ?? 'prompt'}
+      {disabled}
+      options={[
+        {
+          value: 'prompt',
+          title: 'Offer local creation',
+          description: 'Ask to add a missing place',
+        },
+        {
+          value: 'silent',
+          title: 'Continue silently',
+          description: 'Proceed without a prompt',
+        },
+      ]}
+      onChange={value => (type.unresolvedMode = value as FeatureType['unresolvedMode'])}
+    />
     <div class="pt-4">
       <FeatureNamingSettings
         {scopeType}
