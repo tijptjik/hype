@@ -22,7 +22,9 @@ export type LocationResource = {
   organisationRevision?: string | null
   id: string
   ssId: string | null
+  /** Compatibility matching discriminator; taxonomy carries the canonical kind/class pair. */
   kind: LocationKind
+  taxonomy?: import('./taxonomy').LocationTaxonomy
   sourceReference: LocationSourceReference | null
   state: 'linked' | 'manual' | 'unresolved' | 'redirect'
   sourceAvailability: 'current' | 'missing' | 'review'

@@ -2202,5 +2202,10 @@
   "image_text_alt": "Alt text",
   "image_text_unavailable": "Text editing is unavailable for this photo.",
   "image_text_load_failed": "Could not load image text. Close and try again.",
-  "image_text_save_failed": "Could not save image text."
+  "image_text_save_failed": "Could not save image text.",
+  "location_type_building_part": "Building part",
+  "location_part_building": "Owning building",
+  "location_part_parent": "Parent building part (optional)",
+  "association_example_building_part": "Wing, floor, zone, shop space, flat or room",
+  "association_create_building_part": "Create building part"
 }

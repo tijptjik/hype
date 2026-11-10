@@ -23,6 +23,7 @@ export type FeatureViewFilters = {
   isAllImagePublished: FilterTriState
 
   // Authorship related
+  hasLocation: FilterTriState
   hasTitle: FilterTriState
   hasDescription: FilterTriState
   hasDisplayAddress: FilterTriState

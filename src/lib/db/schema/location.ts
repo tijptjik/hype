@@ -37,7 +37,34 @@ export const location = sqliteTable(
   {
     id: text('id').primaryKey(),
     ssId: text('ssId').unique(),
-    kind: text('kind', { enum: LOCATION_KINDS }).notNull().default('unknown'),
+    // Historical matching/facts code consumes this read-only discriminator.
+    kind: text('matchingType', { enum: LOCATION_KINDS })
+      .generatedAlwaysAs(
+        sql`CASE WHEN class='thoroughfare' THEN 'street' ELSE COALESCE(class, CASE kind WHEN 'geographic' THEN 'natural' ELSE kind END) END`,
+      )
+      .notNull(),
+    entityKind: text('kind', {
+      enum: ['unknown', 'built', 'geographic', 'operational', 'address'],
+    })
+      .notNull()
+      .default('unknown'),
+    class: text('class', {
+      enum: [
+        'premises',
+        'building',
+        'building_part',
+        'structure',
+        'thoroughfare',
+        'landform',
+        'coastal_feature',
+        'water_feature',
+        'establishment',
+        'service_point',
+        'premises_address',
+        'cadastral_address',
+        'linear_reference',
+      ],
+    }),
     // Ownership grants baseline authority. Only manual Locations are private; unmatched are shared.
     ownerOrganisationId: text('ownerOrganisationId').references(() => organisation.id, {
       onDelete: 'restrict',
@@ -59,7 +86,11 @@ export const location = sqliteTable(
   table => [
     check(
       'location_kind_check',
-      sql`${table.kind} IN ('unknown','premises','establishment','building','address','natural')`,
+      sql`${table.entityKind} IN ('unknown','built','geographic','operational','address')`,
+    ),
+    check(
+      'location_class_check',
+      sql`(${table.entityKind}='operational' AND ${table.class} IS NOT NULL AND ${table.class} IN ('establishment','service_point')) OR (${table.entityKind}!='operational' AND ${table.class} IS NULL) OR (${table.entityKind}='built' AND ${table.class} IN ('premises','building','building_part','structure','thoroughfare')) OR (${table.entityKind}='address' AND ${table.class} IN ('premises_address','cadastral_address','linear_reference')) OR (${table.entityKind}='geographic' AND ${table.class} IN ('landform','coastal_feature','water_feature'))`,
     ),
     check(
       'location_state_check',

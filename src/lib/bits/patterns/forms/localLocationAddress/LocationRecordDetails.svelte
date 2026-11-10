@@ -2,7 +2,8 @@
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // COMPONENTS
-import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
+import { locationTaxonomy } from '#lib/locations/taxonomy.js'
+import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
 // ICONS
 import PhoneIcon from 'virtual:icons/lucide/phone'
 import BrandIcon from 'virtual:icons/lucide/tag'
@@ -26,6 +27,7 @@ function dateLabel(value: string): string {
         { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Hong_Kong' },
       ).format(date)
 }
+const taxonomy = $derived(place.taxonomy ?? locationTaxonomy(place.kind))
 const tag = $derived(
   getLocaleKey() === 'zhHant'
     ? 'zh-hant'
@@ -120,8 +122,22 @@ const brandNames = $derived(
   <dl class="border-border space-y-4 border-t pt-4">
     {#if !isEditing}
       <div>
-        <dt class="text-muted-foreground mb-1 text-xs">{m.location_record_type()}</dt>
-        <dd class="text-sm">{locationKindLabel(place.kind)}</dd>
+        <dt class="text-muted-foreground mb-1 text-xs">
+          {locationTaxonomyLabel('kind')}
+        </dt>
+        <dd class="text-sm">{locationTaxonomyLabel(taxonomy.kind)}</dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground mb-1 text-xs">
+          {locationTaxonomyLabel('class')}
+        </dt>
+        <dd class="text-sm">
+          {taxonomy.class
+            ? locationTaxonomyLabel(taxonomy.class)
+            : taxonomy.kind === 'address'
+              ? '—'
+              : locationTaxonomyLabel('unknown')}
+        </dd>
       </div>
     {/if}
     <div>

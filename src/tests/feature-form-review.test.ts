@@ -30,6 +30,26 @@ describe('Feature publication field authority', () => {
     after.translations.en.title.value = 'Reviewed title'
     expect(validateFeatureFormResult(before, after, policy)).toEqual([])
   })
+  it('allows per-feature name overrides but rejects replacement of the pinned rule', () => {
+    const { before, after, policy } = setup()
+    before.profile.nameTemplate = {
+      rule: { base: 'location', conditions: [] },
+      baseNames: { en: 'Base' },
+      overrides: {},
+    }
+    after.profile.nameTemplate = {
+      ...before.profile.nameTemplate,
+      overrides: { en: 'My name' },
+    }
+    expect(validateFeatureFormResult(before, after, policy)).toEqual([])
+    after.profile.nameTemplate = {
+      ...after.profile.nameTemplate,
+      rule: { base: 'feature', conditions: [] },
+    }
+    expect(validateFeatureFormResult(before, after, policy)).toEqual([
+      'Naming rule changes require separate configuration review',
+    ])
+  })
   it.each(['before', 'after', 'current'] as const)(
     'enforces the %s sensitivity classification',
     where => {

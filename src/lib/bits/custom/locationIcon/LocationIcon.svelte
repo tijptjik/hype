@@ -1,5 +1,7 @@
 <script lang="ts">
 // ICONS
+import InfrastructureIcon from 'virtual:icons/lucide/brick-wall'
+import PartIcon from 'virtual:icons/lucide/panels-top-left'
 import StoreIcon from 'virtual:icons/lucide/store'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
 import NatureIcon from 'virtual:icons/lucide/mountain'
@@ -19,11 +21,22 @@ let {
 
 // Street and address previews can have icons without claiming a stored Location identity.
 const icons = {
+  built: BuildingIcon,
+  structure: InfrastructureIcon,
+  landform: NatureIcon,
+  coastal_feature: NatureIcon,
+  water_feature: NatureIcon,
   establishment: StoreIcon,
+  service_point: PinIcon,
+  premises_address: AddressIcon,
+  cadastral_address: AddressIcon,
+  linear_reference: StreetIcon,
   building: BuildingIcon,
+  building_part: PartIcon,
   premises: BuildingIcon,
   natural: NatureIcon,
   street: StreetIcon,
+  infrastructure: InfrastructureIcon,
   address: AddressIcon,
   unknown: PinIcon,
 }

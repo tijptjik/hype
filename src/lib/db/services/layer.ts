@@ -1,5 +1,6 @@
 // INDEX QUERY
 import {
+  resourceAncestorNameSearchCondition,
   resourceIndexFilterConditions,
   resourceIndexSearchCondition,
 } from './resourceIndexFilters.js'
@@ -336,7 +337,9 @@ export const listLayers = async (
   if (query?.q && !query.indexFilters) {
     const search = query.q.toLowerCase()
     const searchColumns = query.searchColumns || ['name', 'description']
-    const searchConditions: SQL<unknown>[] = []
+    const searchConditions: SQL<unknown>[] = [
+      resourceAncestorNameSearchCondition('layer', query.q),
+    ]
 
     const i18nColumns = searchColumns.filter(column =>
       ['name', 'description'].includes(column),

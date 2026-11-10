@@ -2202,5 +2202,10 @@
   "image_text_alt": "替代文字",
   "image_text_unavailable": "這張相片無法編輯文字。",
   "image_text_load_failed": "無法載入圖片文字。請關閉後再試。",
-  "image_text_save_failed": "無法儲存圖片文字。"
+  "image_text_save_failed": "無法儲存圖片文字。",
+  "location_type_building_part": "建築部分",
+  "location_part_building": "所屬建築",
+  "location_part_parent": "上級建築部分（可選）",
+  "association_example_building_part": "翼樓、樓層、區域、舖位、單位或房間",
+  "association_create_building_part": "建立建築部分"
 }

@@ -194,7 +194,8 @@ export async function acceptLocationIdentity(
       .set({
         state: 'linked',
         ownerOrganisationId: null,
-        kind: 'establishment',
+        entityKind: 'operational',
+        class: 'establishment',
         ssId: projection.ssId,
         sourceAvailability: 'current',
       })

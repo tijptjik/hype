@@ -8,6 +8,7 @@ import {
   locationRevision,
 } from '../schema/location'
 // DOMAIN
+import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 import { equalLocationValue } from '#lib/locations/baseline.js'
 import { planUnresolvedFeatureSplit } from '#lib/locations/migrationPlan.js'
@@ -136,7 +137,7 @@ export async function applyUnresolvedFeatureSplit(
   const results = await db.batch([
     db
       .insert(locationTable)
-      .select(sql`SELECT ${plan.locationId},NULL,${classifyLocationFactsKind('unknown', plan.facts)},${ownerOrganisationId},'unresolved','current',
+      .select(sql`SELECT ${plan.locationId},NULL,${locationTaxonomy(classifyLocationFactsKind('unknown', plan.facts)).kind},${locationTaxonomy(classifyLocationFactsKind('unknown', plan.facts)).class},${ownerOrganisationId},'unresolved','current',
       NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
     db
       .insert(locationRevision)

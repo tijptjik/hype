@@ -566,6 +566,14 @@ export class ResourceFilters {
     feature: Feature,
     filters: ViewFilters['feature'],
   ): boolean => {
+    if (
+      filters.hasLocation != null &&
+      'authoring' in feature &&
+      feature.authoring?.hasLocation != null &&
+      Boolean(feature.authoring.hasLocation) !== filters.hasLocation
+    )
+      return false
+
     if (!feature.i18n) {
       if (
         filters.hasTitle === true ||
@@ -1955,6 +1963,7 @@ function createDefaultViewFilters(): ViewFilters {
       isAllImagePublished: null,
 
       // Authorship related
+      hasLocation: null,
       hasTitle: null,
       hasDescription: null,
       hasDisplayAddress: null,

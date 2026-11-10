@@ -1,3 +1,4 @@
+import type { FeatureNameTemplate } from '#lib/features/locationPolicy.js'
 import {
   check,
   foreignKey,
@@ -64,6 +65,32 @@ export const feature = sqliteTable(
     }>(),
     // Editorial subject; null preserves pre-intent Features without reclassification.
     featureType: text('featureType'),
+    nameTemplate: text('nameTemplate', { mode: 'json' }).$type<FeatureNameTemplate>(),
+    kind: text('kind', { enum: ['object', 'place', 'area', 'route'] }),
+    targetContext: text('targetContext', {
+      enum: [
+        'building_part',
+        'building',
+        'premises',
+        'infrastructure',
+        'built',
+        'structure',
+        'landform',
+        'coastal_feature',
+        'water_feature',
+        'service_point',
+        'premises_address',
+        'cadastral_address',
+        'linear_reference',
+        'street',
+        'address',
+        'establishment',
+        'natural',
+      ],
+    }),
+    associationRelation: text('associationRelation', {
+      enum: ['locatedAt', 'represents'],
+    }),
     id: text('id')
       .primaryKey()
       .$defaultFn(() => nanoid(12)),

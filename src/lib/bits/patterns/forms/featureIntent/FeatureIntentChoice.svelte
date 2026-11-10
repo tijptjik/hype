@@ -1,5 +1,16 @@
 <script lang="ts">
+// SVELTE
 import { untrack } from 'svelte'
+// I18N
+import { getLocaleKey } from '#lib/i18n.js'
+import { featureTypeLabel } from '#lib/features/intents.js'
+// ICONS
+import ObjectIcon from 'virtual:icons/lucide/box'
+import PlaceIcon from 'virtual:icons/lucide/map-pin-house'
+import AreaIcon from 'virtual:icons/lucide/scan'
+import RouteIcon from 'virtual:icons/lucide/route'
+// COMPONENTS
+import IntentChoiceCard from './IntentChoiceCard.svelte'
 // API
 import { getFeatureIntentOptions } from '#lib/api/featureIntents.remote.js'
 // TYPES
@@ -13,6 +24,25 @@ let {
   value?: string | null
   onChange: (type: FeatureType | null) => void
 } = $props()
+const illustrations = {
+  object: {
+    icon: ObjectIcon,
+    description: 'An individual item, such as a sign, sculpture or drinking fountain.',
+  },
+  place: {
+    icon: PlaceIcon,
+    description: 'A destination, such as a bookstore, café or community venue.',
+  },
+  area: {
+    icon: AreaIcon,
+    description: 'A wider space, such as a neighbourhood, garden or gathering area.',
+  },
+  route: {
+    icon: RouteIcon,
+    description:
+      'A path to follow, such as a walking trail, cycle route or heritage walk.',
+  },
+}
 let types = $state<FeatureType[] | null>(null)
 let failed = $state(false)
 let retry = $state(0)
@@ -60,19 +90,21 @@ $effect(() => {
       This layer has no available feature types. Update its feature type settings before
       adding a feature.
     </p>
-  {:else if types.length === 1}
-    <p>Adding: <strong>{types[0].label}</strong></p>
   {:else}
     <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
       {#each types as type (type.id)}
-        <button
-          type="button"
-          aria-pressed={value === type.id}
-          class="aria-pressed:border-primary aria-pressed:bg-primary/10 min-w-0 rounded border p-3 text-left break-words whitespace-normal focus-visible:outline-2"
+        {@const illustration = illustrations[type.kind ?? 'object']}
+        {@const Icon = illustration.icon}
+        <IntentChoiceCard
+          label={featureTypeLabel(type, getLocaleKey())}
+          description={illustration.description}
+          selected={value === type.id}
           onclick={() => onChange(type)}
         >
-          {type.label}
-        </button>
+          {#snippet icon()}
+            <Icon class="size-7" />
+          {/snippet}
+        </IntentChoiceCard>
       {/each}
     </div>
   {/if}

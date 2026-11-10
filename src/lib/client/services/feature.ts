@@ -273,6 +273,11 @@ export function toFeatureFormInput(
       projectId: value.projectId,
       layerId: value.layerId,
       featureType: value.featureType,
+      nameOverrides: value.nameTemplate?.overrides,
+      kind: value.kind,
+      targetContext: value.targetContext,
+      associationRelation: value.associationRelation,
+
       contributorId: value.contributorId,
       geometry: value.geometry as Point,
       addressMeta: value.addressMeta ?? {},
@@ -288,7 +293,11 @@ export function toFeatureFormInput(
         }).map(([locale, row]) => [
           locale,
           {
-            title: row.title ?? '',
+            // Edit the authored base so generated suffixes never become permanent text.
+            title:
+              adaptContentMap(value.nameTemplate?.baseNames ?? {})?.[locale] ??
+              row.title ??
+              '',
             titleGen: row.titleGen ?? false,
             description: row.description ?? '',
             descriptionGen: row.descriptionGen ?? false,
@@ -381,6 +390,14 @@ export function getProgrammaticFeatureInputEntries(
     appendEntry('data.locationBrandEdit', JSON.stringify(featureData.locationBrandEdit))
 
   if (featureData?.featureType) appendEntry('data.featureType', featureData.featureType)
+  if (featureData?.nameOverrides)
+    appendEntry('data.nameOverrides', JSON.stringify(featureData.nameOverrides))
+  if (featureData?.kind) appendEntry('data.kind', featureData.kind)
+  if (featureData?.targetContext)
+    appendEntry('data.targetContext', featureData.targetContext)
+  if (featureData?.associationRelation)
+    appendEntry('data.associationRelation', featureData.associationRelation)
+
   appendEntry('data.isIntangible', Boolean(featureData?.isIntangible))
   appendEntry('data.isVisitable', Boolean(featureData?.isVisitable))
   appendEntry('data.isPendingReview', Boolean(featureData?.isPendingReview))

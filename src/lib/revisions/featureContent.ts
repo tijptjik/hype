@@ -1,3 +1,9 @@
+import {
+  FeatureNameTemplateSchema,
+  FeatureKindSchema,
+  TargetContextSchema,
+  AssociationRelationSchema,
+} from '#lib/features/locationPolicy.js'
 // IMAGE INTENTS
 import { ImageIntentIdSchema } from '#lib/images/intents.js'
 // VALIDATION
@@ -242,6 +248,11 @@ export const FeatureRevisionContentSchema = z
     profile: z.strictObject({
       // Optional preserves existing immutable content hashes.
       featureType: z.string().nullable().optional(),
+      nameTemplate: FeatureNameTemplateSchema.nullish(),
+      kind: FeatureKindSchema.nullish(),
+      targetContext: TargetContextSchema.nullish(),
+      associationRelation: AssociationRelationSchema.nullish(),
+
       isIntangible: z.boolean(),
       visitability: z.strictObject({
         isVisitable: z.boolean(),

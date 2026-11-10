@@ -43,7 +43,7 @@ export async function assessMergeDependencies(
   const keys = JSON.parse(token) as string[]
   const blockers: string[] = []
   const kinds = await db.all<{ id: string; kind: string }>(
-    sql`SELECT id,kind FROM location WHERE id IN(${source},${target})`,
+    sql`SELECT id,matchingType AS kind FROM location WHERE id IN(${source},${target})`,
   )
   if (
     kinds.length !== 2 ||

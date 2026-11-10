@@ -762,7 +762,17 @@ describe('existing editor adapters after lifecycle cutover', () => {
 it('gives split children independent names and bindings while ending source Location subscriptions', async () => {
   const f = lifecycleFixture(true)
   connections.push(f)
+  f.sqlite.exec(`UPDATE featureImage SET localIsPublished=NULL;
+    CREATE TRIGGER legacy_gallery_visibility AFTER UPDATE OF isPublished,isArchived ON feature BEGIN
+      UPDATE featureImage SET isPublished=NEW.isPublished AND NOT NEW.isArchived
+        AND COALESCE(localIsPublished,1) WHERE featureId=NEW.id;
+    END`)
   const initial = await f.initialize()
+  // Production retains grouping triggers that can derive bindings absent from the accepted snapshot.
+  f.sqlite.exec(`CREATE TRIGGER legacy_grouping_insert AFTER INSERT ON featureLocation BEGIN
+    INSERT INTO featureLocationMembership(featureId,containerLocationId,role,bindingVersion)
+    VALUES(NEW.featureId,'legacy-derived-container','building',NEW.version);
+  END`)
   const result = (await splitLifecycleFeature(f.db, {
     ...command,
     expectedRevisionId: initial.revisionId,
@@ -789,6 +799,9 @@ it('gives split children independent names and bindings while ending source Loca
     children[1]?.content.placement.location?.associationVersion,
   )
   for (const child of children) {
+    expect(child?.content.placement.location?.memberships.length).toBe(
+      initial.content.placement.location?.memberships.length,
+    )
     expect(child?.content.placement.location?.locationId).toBe(
       initial.content.placement.location?.locationId,
     )

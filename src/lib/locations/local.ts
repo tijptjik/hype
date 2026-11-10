@@ -1,3 +1,8 @@
+import {
+  LocationTaxonomySchema,
+  locationTaxonomy,
+  locationMatchingType,
+} from './taxonomy'
 // VALIDATION
 import { z } from 'zod'
 import { classifyLocationFactsKind } from './factsKind'
@@ -12,7 +17,36 @@ export const LocalLocationInputSchema = z
   .strictObject({
     state: z.enum(['manual', 'unresolved']),
     // Authored type is independent of manual/unmatched state and source adapter availability.
-    kind: LocationKindSchema.default('establishment'),
+    kind: LocationKindSchema.or(z.literal('geographic'))
+      .or(z.literal('operational'))
+      .default('establishment')
+      .transform(kind =>
+        kind === 'geographic'
+          ? ('natural' as const)
+          : kind === 'operational'
+            ? ('establishment' as const)
+            : kind,
+      ),
+    class: z
+      .enum([
+        'premises',
+        'building',
+        'building_part',
+        'structure',
+        'thoroughfare',
+        'service_point',
+        'premises_address',
+        'cadastral_address',
+        'linear_reference',
+        'landform',
+        'coastal_feature',
+        'water_feature',
+        'establishment',
+      ])
+      .nullable()
+      .optional(),
+    buildingId: z.string().trim().min(1).max(200).optional(),
+    parentPartId: z.string().trim().min(1).max(200).optional(),
     // Consent is independent of source matching state and Organisation visibility.
     sharingPreference: z.enum(['private', 'allow-sharing']).default('private'),
     parseSource: z.record(z.string().max(35), z.string().max(10000)).optional(),
@@ -85,6 +119,36 @@ export const LocalLocationInputSchema = z
     })),
   })
   .superRefine((input, context) => {
+    if (input.class !== undefined) {
+      const previous = locationTaxonomy(input.kind)
+      const pair = LocationTaxonomySchema.safeParse({
+        kind: previous.kind,
+        class: input.class,
+      })
+      if (
+        !pair.success ||
+        (previous.class !== null && previous.class !== input.class)
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['class'],
+          message: 'Location class must belong to its kind',
+        })
+        return
+      }
+      input.kind = LocationKindSchema.parse(locationMatchingType(pair.data))
+    }
+    if (
+      input.kind === 'building_part'
+        ? !input.buildingId
+        : Boolean(input.buildingId || input.parentPartId)
+    )
+      context.addIssue({
+        code: 'custom',
+        path: ['buildingId'],
+        message:
+          'Building parts require an owning building; other kinds cannot claim part membership',
+      })
     try {
       input.kind = classifyLocationFactsKind(input.kind, input.facts)
       validateLocationStatusKind(input.kind, input.facts)

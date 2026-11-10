@@ -15,6 +15,24 @@ import type { DraftLocationSearchResult as Result } from '#lib/bits/patterns/for
 vi.mock('#lib/api/division.remote.js', () => ({
   getAddressDivisionLabel: () => ({ current: null }),
 }))
+vi.mock('#lib/addresses/nameSuggestions.js', () => ({
+  fetchNameSuggestions: async (family: string) =>
+    family === 'streets'
+      ? [
+          {
+            id: 'street-correct',
+            names: { en: 'Correct Road', 'zh-Hant': '正確道', 'zh-Hans': '正确道' },
+            divisionCodes: [],
+          },
+        ]
+      : [
+          {
+            id: 'building-known',
+            names: { en: 'Known Tower', 'zh-Hant': '已知大廈' },
+            divisionCodes: [],
+          },
+        ],
+}))
 vi.mock('#lib/addresses/nameCatalogue.js', async importOriginal => ({
   ...(await importOriginal<typeof import('#lib/addresses/nameCatalogue.js')>()),
   loadAddressNames: vi.fn(async family =>
@@ -1355,4 +1373,35 @@ it('keeps review when the input names a more-specific building than the selected
     await screen.findByRole('button', { name: /^Use(?: Location)?$/ }),
   ).toBeTruthy()
   expect(onAccept).not.toHaveBeenCalled()
+})
+
+it('deliberately selects an existing building part without converting address floor text into an identity', async () => {
+  const selected = { ...candidate('building_part'), names: { en: 'East Wing' } }
+  const onAccept = vi.fn()
+  render(Picker, {
+    origin: origin(),
+    search: vi.fn(async input => ({
+      candidates: input.kind === 'building_part' ? [selected] : [],
+      incomplete: false,
+    })),
+    onAccept,
+    onCancel: vi.fn(),
+  })
+  expect(
+    screen
+      .getByRole('radio', { name: 'Address', hidden: true })
+      .getAttribute('aria-checked'),
+  ).toBe('true')
+  await fireEvent.click(
+    await screen.findByRole('radio', { name: 'Inside or part of the building' }),
+  )
+  await fireEvent.click(
+    await screen.findByRole('button', { name: /East Wing.*Hollywood Road/ }),
+  )
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
+  )
+  expect(onAccept).toHaveBeenCalledWith(
+    expect.objectContaining({ kind: 'building_part', identity: selected.identity }),
+  )
 })

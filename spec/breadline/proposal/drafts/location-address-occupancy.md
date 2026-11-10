@@ -1,5 +1,13 @@
 # Location identity, addresses and relocation: table walkthrough
 
+The 10 November feature-creation implementation separates Feature kind, target context
+and association relation. Project Location settings and Layer overrides use the shared
+matching policy described in
+[the implementation contract](../01-places-features.md#feature-intent-and-location-contexts-10-november-2026-refs-241-parent-186).
+It extends local Location kinds to street and infrastructure; missing associations are
+allowed and surfaced through the Feature index. This supersedes the earlier
+association-required publication setting, without converting existing identities.
+
 Draft for review, 22 October 2026. Refs
 [#194](https://github.com/tijptjik/hype/issues/194), parent
 [#180](https://github.com/tijptjik/hype/issues/180). Extends
@@ -34,6 +42,40 @@ current checkout relative to this target model.
 Eight tables are new, including the two transition tables in 3a–3b. The other nine
 numbered tables already exist and retain their unrelated fields. The existing Feature
 property tables remain the authority for sign condition.
+
+## Implemented building-part boundary (10 November 2026)
+
+[#241](https://github.com/tijptjik/hype/issues/241), parent #186, implements a bounded
+extension of the relationship model described here. The remaining scenario catalogue is
+still a proposal unless separately evidenced. See the
+[building-part implementation contract](../01-places-features.md#building-parts--local-implementation-10-november-2026).
+
+A `building_part` is a physical wing, floor, zone, shop space, flat, room or other
+identifiable building portion, independent of occupancy. A named wing or floor-only
+identity is sufficient; complete structured 3D addresses are not required. Every part
+created through local authoring has a current direct `locationMembership` to its
+identified building. Optional part-to-part membership adds nesting in that same
+building; it does not require intervening floors or wings. The owning edge remains
+stable and cannot be suppressed or repointed. SQL guards reject self-parenting, cycles
+and contradictory building membership.
+
+Floor/unit address components are descriptive data, not automatic physical entities.
+Existing address-only Locations remain unchanged; creating a part is deliberate, with no
+invented upstream IDs or establishment placeholders. Occupants use the existing
+`locationOccupancy` episodes, with `building_part` now a valid container alongside
+buildings and premises. Turnover preserves part identity and its direct Feature links.
+
+Current building-related Feature listings traverse current scoped part memberships and
+current occupancy, deduplicate Features, and apply normal read authority before
+pagination. Former and unconfirmed occupants remain outside the current related listing.
+Retained accepted placement/history views retain their separate meanings; ancestor
+projections use actual building/premises kinds and keep intermediate part revision pins.
+
+The proposed physical labels are **IN BUILDING PART** and **ON BUILDING PART**. Current
+association kind/sync intent remains separate from that future relation taxonomy; no
+combined enum values or unrelated infrastructure kinds are introduced. Migration 0213
+and local service/component evidence are documented in the linked contract. Neither
+these checks nor this amendment establishes deployed or production acceptance.
 
 ## Scenario catalogue
 
@@ -1185,10 +1227,16 @@ development collection; closed-layer creation remains gated by `showHistoricalLa
 
 ### Historical bookstore layer migration
 
-Application is currently blocked by cohort drift: the 2026-11-10 pre-commit rehearsal
-found 43 features, including new feature `XVcVi4bs_Lg4`. Review that record, refresh the
-fixture and regenerate/rehearse the migration before applying it. The guard correctly
-rejects the changed cohort.
+The 2026-11-10 rehearsal identified cohort drift: 43 features, including `XVcVi4bs_Lg4`,
+and edited Clockwork Cat placement. The reviewed reconciliation passed disposable-copy
+rollback, replay, preservation and contract checks, then applied successfully to local
+D1 together with migrations `0209` and `0210`.
+
+The reviewed cohort explicitly excludes Wah Koon Building (`XVcVi4bs_Lg4`), which is not
+a former bookstore. Clockwork Cat accepts either its original fixture or its exact
+reviewed editor state. The latter retains its address metadata, translations and map pin
+while receiving the historical occupancy association; original fixture evidence remains
+unchanged. All other source drift fails closed.
 
 Migration `0207_former_bookstore_occupancy.sql` covers **all 42 reviewed features** in
 the Independent Bookstores Permanently Closed layer (`history:RfWMLs_jW6QJ`). The
@@ -1255,3 +1303,54 @@ its row, keyed movement follows the selected language order, and intrinsic colum
 the widest content across rows. Section resets include additional content languages.
 Mobility and entrance controls use consistent reset icons; mobility field information
 sits at the right edge of the label.
+
+## Location matching taxonomy — kind and class (Refs #241)
+
+Migration `0216_location_taxonomy.sql` separates the current Location identity into a
+broad `kind` and an optional `class`:
+
+Migration `0217_location_thoroughfare.sql` renames the built `street` class to
+`thoroughfare` for roads, lanes, alleys, footpaths and pedestrian passages. The
+generated matching discriminator remains `street`, preserving existing policies and
+immutable facts. Address-component `streetId` and `streetName` retain their established
+meaning.
+
+| Kind          | Supported classes                                                                       |
+| ------------- | --------------------------------------------------------------------------------------- |
+| `built`       | `premises`, `building`, `building_part`, `structure`, `thoroughfare`; null when unknown |
+| `geographic`  | `landform`, `coastal_feature`, `water_feature`; null when unknown                       |
+| `operational` | `establishment`, `service_point`                                                        |
+| `address`     | `premises_address`, `cadastral_address`, `linear_reference`; null when unknown          |
+| `unknown`     | null                                                                                    |
+
+Existing establishments become operational establishments. Buildings, building parts,
+premises and streets retain their specific classification under built. Historical
+`natural` becomes geographic with an unknown class; historical `infrastructure` becomes
+built with an unknown class. Neither broad historical value proves a particular new
+subclass. Migration `0218_location_address_service_classes.sql` adds service points and
+the three address classes without reclassifying existing records. Form choices group
+classes by kind and show the address labels Premises, Cadastral and Linear reference.
+Selected legacy broad permissions remain visible as “any class”; new choices use
+explicit classes. Service points identify a continuing service presence independently of
+any physical bin, kiosk or building.
+
+The generated `matchingType` column is a read-only compatibility discriminator for
+existing matching policies, association transports and version-1 facts. The Drizzle
+`kind` property continues to expose that discriminator; `entityKind` maps to the actual
+SQL `kind`, and `class` maps directly to SQL `class`. New writes derive both stored
+fields together from the validated taxonomy. This adapter does not create a second
+independently editable classification. Directory resources also expose `taxonomy`.
+
+Retained revision JSON, revision hashes and identity IDs are not rewritten. Existing
+immutable Feature associations retain their captured discriminator. Creation, source
+adoption and identity correction write the new pair atomically; the shared kind/class
+selector converts to the existing matching transport at its boundary. Building-part
+ownership, occupancy, matching permissions and guarded relationship changes continue to
+use their established semantics. Broad legacy matching permissions expand only within
+their supported entity family.
+
+The migration is prepared for normal release application; adding it does not mean it has
+been applied to a live database. Tests in `src/tests/location-taxonomy.test.ts` exercise
+backfill, invalid pairs, new-class creation, canonical operational input and
+building-part ownership. `scripts/visual-checks/location-taxonomy-check.ts` checks the
+shared selector in Chromium and Firefox, including its narrow layout.

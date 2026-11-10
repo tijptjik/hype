@@ -153,6 +153,11 @@ function editorialGuard(featureId: string, content: FeatureRevisionContent): SQL
   const rows = editorialRows(content)
   return sql`EXISTS (SELECT 1 FROM ${feature} WHERE ${feature.id}=${featureId}
     AND ${feature.featureType} IS ${content.profile.featureType ?? null}
+    AND (${jsonEqual(sql`${feature.nameTemplate}`, sql`${content.profile.nameTemplate ? JSON.stringify(content.profile.nameTemplate) : null}`)})
+    AND ${feature.kind} IS ${content.profile.kind ?? null}
+    AND ${feature.targetContext} IS ${content.profile.targetContext ?? null}
+    AND ${feature.associationRelation} IS ${content.profile.associationRelation ?? null}
+
     AND ${feature.isIntangible}=${Number(content.profile.isIntangible)}
     AND ${feature.isVisitable}=${Number(content.profile.visitability.isVisitable)}
     AND ${feature.visitableAsOf} IS ${content.profile.visitability.asOf}
@@ -240,6 +245,11 @@ export function prepareFeatureEditorialProjection(
   // Ordinary revision edits cannot bypass subject validation through a profile patch.
   if ((previous.profile.featureType ?? null) !== (content.profile.featureType ?? null))
     throw new Error('Feature type changes require explicit reclassification')
+  for (const key of ['kind', 'targetContext', 'associationRelation'] as const)
+    if ((previous.profile[key] ?? null) !== (content.profile[key] ?? null))
+      throw new Error(
+        'Feature location intent changes require explicit reclassification',
+      )
   const source = parseFeatureRevisionSource(input.source.snapshot)
   if (source.record.id !== input.featureId)
     throw new Error('Projection source belongs to another Feature')
@@ -412,6 +422,13 @@ export function prepareFeatureEditorialProjection(
       actorId: input.identity.actorId,
       sourceAssociationRevision: previous.placement.location?.associationVersion,
     }
+  if (
+    !equalRevisionValue(
+      previous.profile.nameTemplate ?? null,
+      content.profile.nameTemplate ?? null,
+    )
+  )
+    recordChanges.nameTemplate = content.profile.nameTemplate ?? null
   // Avoid firing lifecycle/location triggers for fields this editorial change did not edit.
   if (previous.profile.isIntangible !== content.profile.isIntangible)
     recordChanges.isIntangible = content.profile.isIntangible

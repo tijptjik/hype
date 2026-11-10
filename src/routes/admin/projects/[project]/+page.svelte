@@ -3275,13 +3275,13 @@ $effect(() => {
     </Main.Facet>
 
     <Main.Facet
-      isVisible={activeFacet === 'advanced'}
+      isVisible={activeFacet === 'location'}
       transition="fade"
       fillHeight={true}
-      previousAction={buildFacetNavAction('advanced', 'previous')}
-      nextAction={buildFacetNavAction('advanced', 'next')}
+      previousAction={buildFacetNavAction('location', 'previous')}
+      nextAction={buildFacetNavAction('location', 'next')}
       class="right-0! left-0!"
-      attrs={{ 'data-facet-id': 'advanced' }}
+      attrs={{ 'data-facet-id': 'location' }}
     >
       <FormSurface>
         {#if project?.data?.id}
@@ -3291,7 +3291,18 @@ $effect(() => {
             disabled={!isEditing || formCtx.submitting}
           />
         {/if}
-
+      </FormSurface>
+    </Main.Facet>
+    <Main.Facet
+      isVisible={activeFacet === 'advanced'}
+      transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('advanced', 'previous')}
+      nextAction={buildFacetNavAction('advanced', 'next')}
+      class="right-0! left-0!"
+      attrs={{ 'data-facet-id': 'advanced' }}
+    >
+      <FormSurface>
         <section class="flex min-h-0 flex-col gap-6 pb-6">
           <SectionHeader
             title="Data Model"

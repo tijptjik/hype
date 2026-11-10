@@ -474,7 +474,8 @@ export async function applyLocationMergeReview(
         ssId: row.sourceBaseline.expectedSsId,
         state: 'linked',
         ownerOrganisationId: null,
-        kind: 'establishment',
+        entityKind: 'operational',
+        class: 'establishment',
         sourceAvailability: 'current',
       })
       .where(and(eq(locationTable.id, input.locationId), receipt)),

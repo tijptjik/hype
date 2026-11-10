@@ -44,7 +44,9 @@ const targets = $derived(
     : null,
 )
 const canOccupy = $derived(kind === 'establishment')
-const canContain = $derived(kind === 'building' || kind === 'premises')
+const canContain = $derived(
+  kind === 'building' || kind === 'building_part' || kind === 'premises',
+)
 
 /** Append a new episode or a complete correction without modifying a prior assertion. */
 async function save(previous?: Record<string, unknown>, suppress = false) {
@@ -195,7 +197,11 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
             {#each matches.data.filter(
               item =>
                 item.id !== locationId &&
-                (item.kind === 'premises' || (canOccupy && item.kind === 'building')),
+                (kind === 'building_part'
+                  ? item.kind === 'building_part'
+                  : item.kind === 'premises' ||
+                    (canOccupy &&
+                      (item.kind === 'building' || item.kind === 'building_part'))),
             ) as item}
               <option value={item.id}>{item.facts?.names.en ?? item.id}</option>
             {/each}

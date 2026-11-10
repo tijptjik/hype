@@ -932,7 +932,8 @@ export function useAdminHeaderModel(
     icon: (headerIcon ?? undefined) as Component | undefined,
     iconHoverColor: headerIconHoverColor,
     href: headerHref,
-    crumbs: customCrumbs.length > 0 ? customCrumbs : syncCrumbs,
+    crumbs:
+      headerCtrl.draftCrumbs ?? (customCrumbs.length > 0 ? customCrumbs : syncCrumbs),
     menuAction: titleMenuAction,
   }))
 

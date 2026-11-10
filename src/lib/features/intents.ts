@@ -1,13 +1,38 @@
 // VALIDATION
 import { z } from 'zod'
+// CONTENT LOCALES
+import {
+  adaptContentMap,
+  canonicalContentTag,
+  contentLocaleMap,
+} from '#lib/i18n/contentRecords.js'
+import {
+  FeatureKindSchema,
+  TargetContextSchema,
+  AssociationRelationSchema,
+  FeatureNameRuleSchema,
+  TARGET_CONTEXTS,
+} from './locationPolicy'
 
 export const FEATURE_LOCATION_KINDS = [
   'establishment',
   'building',
+  'building_part',
   'premises',
   'address',
   'natural',
   'unknown',
+  'infrastructure',
+  'built',
+  'structure',
+  'landform',
+  'coastal_feature',
+  'water_feature',
+  'service_point',
+  'premises_address',
+  'cadastral_address',
+  'linear_reference',
+  'street',
 ] as const
 export const FeatureTypeIdSchema = z
   .string()
@@ -17,10 +42,26 @@ export const FeatureTypeIdSchema = z
 export const FeatureTypeSchema = z
   .strictObject({
     id: FeatureTypeIdSchema,
+    kind: FeatureKindSchema.optional(),
+    targetContexts: z
+      .array(TargetContextSchema)
+      .min(1)
+      .max(TARGET_CONTEXTS.length)
+      .refine(
+        values => new Set(values).size === values.length,
+        'Target contexts must be unique',
+      )
+      .optional(),
+    relation: AssociationRelationSchema.optional(),
+    unresolvedMode: z.enum(['prompt', 'silent']).optional(),
+    nameRule: FeatureNameRuleSchema.optional(),
     label: z.string().trim().min(1).max(80),
+    labels: contentLocaleMap(z.string().trim().max(80))
+      .transform(values => adaptContentMap(values, canonicalContentTag))
+      .optional(),
     locationKinds: z
       .array(z.enum(FEATURE_LOCATION_KINDS))
-      .max(6)
+      .max(FEATURE_LOCATION_KINDS.length)
       .refine(
         kinds => new Set(kinds).size === kinds.length,
         'Location kinds must be unique',
@@ -41,26 +82,87 @@ export const FeatureTypesSchema = z
     'Feature type identifiers must be unique',
   )
 export type FeatureType = z.infer<typeof FeatureTypeSchema>
+
+/** Resolve the authored display name without changing the stable type identifier.
+ * @param type Configured type, including legacy single-name definitions.
+ * @param locale Requested content or interface language.
+ * @returns Translated label, falling back to the existing base label for missing or empty translations.
+ */
+export function featureTypeLabel(type: FeatureType, locale: string): string {
+  return type.labels?.[canonicalContentTag(locale)]?.trim() || type.label
+}
 export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
   {
     id: 'object',
     label: 'Object',
-    locationKinds: [...FEATURE_LOCATION_KINDS],
+    kind: 'object',
+    targetContexts: [
+      'building_part',
+      'building',
+      'premises',
+      'structure',
+      'landform',
+      'coastal_feature',
+      'water_feature',
+      'street',
+      'premises_address',
+      'cadastral_address',
+      'linear_reference',
+    ],
+    relation: 'locatedAt',
+    unresolvedMode: 'prompt',
+    locationKinds: FEATURE_LOCATION_KINDS.filter(kind => kind !== 'infrastructure'),
     start: 'search',
     associationRequired: false,
   },
   {
-    id: 'natural',
-    label: 'Natural feature',
-    locationKinds: [...FEATURE_LOCATION_KINDS],
+    id: 'place',
+    label: 'Place',
+    kind: 'place',
+    targetContexts: TARGET_CONTEXTS.filter(
+      kind => !['infrastructure', 'built', 'address', 'natural'].includes(kind),
+    ),
+    relation: 'represents',
+    unresolvedMode: 'prompt',
+    locationKinds: FEATURE_LOCATION_KINDS.filter(kind => kind !== 'infrastructure'),
+    start: 'search',
+    associationRequired: false,
+  },
+  {
+    id: 'area',
+    label: 'Area',
+    kind: 'area',
+    targetContexts: [
+      'premises',
+      'street',
+      'landform',
+      'coastal_feature',
+      'water_feature',
+      'premises_address',
+      'cadastral_address',
+      'linear_reference',
+    ],
+    relation: 'locatedAt',
+    unresolvedMode: 'silent',
+    locationKinds: FEATURE_LOCATION_KINDS.filter(kind => kind !== 'infrastructure'),
     start: 'pin',
     associationRequired: false,
   },
   {
-    id: 'business',
-    label: 'Business or venue',
-    locationKinds: [...FEATURE_LOCATION_KINDS],
-    start: 'search',
+    id: 'route',
+    label: 'Route',
+    kind: 'route',
+    targetContexts: [
+      'street',
+      'premises',
+      'premises_address',
+      'cadastral_address',
+      'linear_reference',
+    ],
+    relation: 'locatedAt',
+    unresolvedMode: 'silent',
+    locationKinds: FEATURE_LOCATION_KINDS.filter(kind => kind !== 'infrastructure'),
+    start: 'pin',
     associationRequired: false,
   },
 ]

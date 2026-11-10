@@ -78,6 +78,53 @@ function setup() {
 }
 
 describe('resource index SQL membership and totals', () => {
+  it.each(['project', 'layer'] as const)(
+    '%s matches ancestor names in picker and index queries within the authorized scope',
+    async type => {
+      const { sqlite, db, opts } = setup()
+      sqlite.exec(`
+        INSERT INTO organisationI18n(organisationId,locale,name,nameShort)
+          VALUES('org','zh-Hant','組織名稱','Org Alias');
+        INSERT INTO projectI18n(projectId,locale,name,nameShort)
+          VALUES('parent','en','Project Name','Project Alias');
+        INSERT INTO ${type}(id,organisationId${type === 'layer' ? ',projectId' : ''})
+          VALUES('allowed','org'${type === 'layer' ? ",'parent'" : ''}),
+                ('denied','org'${type === 'layer' ? ",'parent'" : ''}),
+                ('other','elsewhere'${type === 'layer' ? ",'elsewhere'" : ''});
+      `)
+      const read = type === 'layer' ? listLayers : listProjects
+      const names = [
+        '組織名稱',
+        'ORG ALIAS',
+        ...(type === 'layer' ? ['Project Name', 'Project Alias'] : []),
+      ]
+      for (const q of names) {
+        for (const indexFilters of [undefined, {}]) {
+          const result = await read(
+            db,
+            {},
+            [sql`${sql.identifier(type)}.id != 'denied'`],
+            opts,
+            { limit: 25 },
+            { sortBy: 'id', sortOrder: 'asc' },
+            { q, indexFilters, includeCount: true },
+          )
+          expect(result.data.map(row => row.id)).toEqual(['allowed'])
+          expect(result.totalCount).toBe(1)
+        }
+      }
+      expect(
+        matchesResourceIndexSearch(
+          {
+            id: 'allowed',
+            organisation: { i18n: { en: { nameShort: 'Org Alias' } } },
+          },
+          'ORG ALIAS',
+        ),
+      ).toBe(true)
+    },
+  )
+
   it.each(['organisation', 'project', 'layer', 'hub'] as const)(
     '%s filters before paging, excludes cursor from totals, and omits continuation counts',
     async type => {
@@ -198,10 +245,12 @@ describe('resource index SQL membership and totals', () => {
     const { sqlite, db, statements } = setup()
     for (let i = 0; i < 32; i++)
       sqlite
-        .prepare(`insert into location(id,state,kind) values(?,'linked','building')`)
+        .prepare(
+          `insert into location(id,state,kind,class,matchingType) values(?,'linked','built','building','building')`,
+        )
         .run(String(i).padStart(2, '0'))
     sqlite.exec(
-      `insert into location(id,state,kind,ownerOrganisationId) values('private','manual','building','other')`,
+      `insert into location(id,state,kind,class,matchingType,ownerOrganisationId) values('private','manual','built','building','building','other')`,
     )
     const first = await listLocationResources(db, {
       includeCount: true,

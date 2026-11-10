@@ -1,3 +1,4 @@
+import { featureNameValuesSQL } from '#lib/db/services/featureNameProjection.js'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 // DRIZZLE
@@ -128,6 +129,7 @@ export async function readUserContributedFeatures(
     extras: {
       locationBrands: featureLocationBrandsSQL().as('locationBrands'),
       locationNames: featureLocationNamesSQL().as('locationNames'),
+      nameValues: featureNameValuesSQL().as('nameValues'),
       authoring: featureAuthoringSQL().as('authoring'),
       locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
     },

@@ -45,10 +45,10 @@ export async function accessibilitySubject(
   locationId: string,
 ): Promise<Subject | null> {
   return (
-    (await db.get<Subject>(sql`SELECT l.id,l.kind,v.id revisionId,v.facts FROM location l
+    (await db.get<Subject>(sql`SELECT l.id,l.matchingType AS kind,v.id revisionId,v.facts FROM location l
     JOIN locationRevision v ON v.locationId=l.id
     WHERE l.id=${locationId} AND l.state IN ('linked','unresolved')
-    AND l.kind IN ('establishment','building','premises') AND (l.state!='linked' OR v.origin='saanseoi')
+    AND l.matchingType IN ('establishment','building','premises') AND (l.state!='linked' OR v.origin='saanseoi')
     ORDER BY v.version DESC LIMIT 1`)) ?? null
   )
 }
@@ -127,7 +127,7 @@ export async function readLocationAccessibility(
       WHERE latest.locationId=l.id AND (l.state!='linked' OR latest.origin='saanseoi') ORDER BY latest.version DESC LIMIT 1)
     WHERE ${canonicalLocationSQL(sql`r.containerLocationId`)}=${locationId}
     AND r.scopeOrganisationId IS NULL AND r.assertionState='asserted' AND r.occupancyState='current'
-    AND l.state IN ('linked','unresolved') AND l.kind='establishment' ORDER BY l.id LIMIT 51`)
+    AND l.state IN ('linked','unresolved') AND l.matchingType='establishment' ORDER BY l.id LIMIT 51`)
   // Fetch venue snapshots and occupancy tokens in one bounded query rather than one request per tenant.
   for (const child of children.slice(0, 50)) {
     const facts = readLocationFacts(child.facts)
@@ -201,7 +201,7 @@ export async function saveLocationAccessibility(
     WHERE (SELECT id FROM locationAccessibilityHead WHERE locationId=${input.locationId}) IS ${input.expectedId}
     AND (SELECT v.id FROM locationRevision v JOIN location l ON l.id=v.locationId
       WHERE l.id=${input.locationId} AND l.state IN ('linked','unresolved')
-      AND l.kind IN ('establishment','building','premises')
+      AND l.matchingType IN ('establishment','building','premises')
       AND (l.state!='linked' OR v.origin='saanseoi') ORDER BY v.version DESC LIMIT 1)=${subject.revisionId}
     AND (SELECT json_group_array(id) FROM (SELECT id FROM locationOccupancyHead
       WHERE establishmentLocationId=${subject.id} AND scopeOrganisationId IS NULL

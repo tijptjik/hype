@@ -20,7 +20,7 @@ export function setupLifecycleDatabase(
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
       cardStyleCode TEXT, useAllInOrgContext INTEGER);
-    CREATE TABLE feature(id TEXT PRIMARY KEY, featureType TEXT, projectId TEXT, isDraft INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
+    CREATE TABLE feature(id TEXT PRIMARY KEY, featureType TEXT, nameTemplate TEXT, kind TEXT, targetContext TEXT, associationRelation TEXT, projectId TEXT, isDraft INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
     CREATE TABLE featureI18n(featureId TEXT,locale TEXT,title TEXT,displayAddress TEXT);
     CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
     CREATE TABLE property(id TEXT PRIMARY KEY,key TEXT,scope TEXT,hubId TEXT,audience TEXT NOT NULL DEFAULT 'public');

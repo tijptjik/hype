@@ -1,5 +1,7 @@
 // VALIDATION
 import { z } from 'zod'
+// DOMAIN
+import { locationTaxonomy } from './taxonomy'
 import { LocationFactsSchema } from './validation'
 import { classifyLocationFactsKind } from './factsKind'
 import { LocationEntitySchema } from './factsDetails'
@@ -37,6 +39,18 @@ export const LocationFactsSnapshotSchema = z.discriminatedUnion('kind', [
   LocationEntitySchema.options[3].extend(envelope),
   LocationEntitySchema.options[4].extend(envelope),
   LocationEntitySchema.options[5].extend(envelope),
+  LocationEntitySchema.options[6].extend(envelope),
+  LocationEntitySchema.options[7].extend(envelope),
+  LocationEntitySchema.options[8].extend(envelope),
+  LocationEntitySchema.options[9].extend(envelope),
+  LocationEntitySchema.options[10].extend(envelope),
+  LocationEntitySchema.options[11].extend(envelope),
+  LocationEntitySchema.options[12].extend(envelope),
+  LocationEntitySchema.options[13].extend(envelope),
+  LocationEntitySchema.options[14].extend(envelope),
+  LocationEntitySchema.options[15].extend(envelope),
+  LocationEntitySchema.options[16].extend(envelope),
+  LocationEntitySchema.options[17].extend(envelope),
 ])
 export type LocationFactsSnapshot = z.infer<typeof LocationFactsSnapshotSchema>
 
@@ -51,7 +65,12 @@ export function createLocationFactsSnapshot(
   kind: LocationFactsKind,
 ): LocationFactsSnapshot {
   kind = classifyLocationFactsKind(kind, facts)
-  if (facts.entity && facts.entity.kind !== 'unknown' && facts.entity.kind !== kind)
+  if (
+    facts.entity &&
+    facts.entity.kind !== 'unknown' &&
+    JSON.stringify(locationTaxonomy(facts.entity.kind)) !==
+      JSON.stringify(locationTaxonomy(kind))
+  )
     throw new Error('Location details do not match the captured kind')
   const entity = facts.entity
   const details: Record<string, unknown> = { ...entity?.details }
@@ -138,7 +157,19 @@ export function readLocationFacts(value: unknown): LocationFacts {
     // Existing projections retain their stable shape; additional typed building/natural facts round-trip intact.
     ...(entity.kind === 'building' ||
     entity.kind === 'natural' ||
-    entity.kind === 'premises'
+    entity.kind === 'premises' ||
+    entity.kind === 'building_part' ||
+    entity.kind === 'infrastructure' ||
+    entity.kind === 'street' ||
+    entity.kind === 'built' ||
+    entity.kind === 'structure' ||
+    entity.kind === 'landform' ||
+    entity.kind === 'coastal_feature' ||
+    entity.kind === 'water_feature' ||
+    entity.kind === 'service_point' ||
+    entity.kind === 'premises_address' ||
+    entity.kind === 'cadastral_address' ||
+    entity.kind === 'linear_reference'
       ? { entity }
       : {}),
   })

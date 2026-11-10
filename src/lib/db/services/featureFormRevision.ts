@@ -89,6 +89,28 @@ export function buildFeatureFormCandidate(
   source.record.geometry = data.geometry as unknown as RevisionValue
   source.record.addressMeta = (data.addressMeta ?? {}) as RevisionValue
   if (data.featureType !== undefined) source.record.featureType = data.featureType
+  if (data.kind !== undefined) source.record.kind = data.kind
+  if (data.targetContext !== undefined) source.record.targetContext = data.targetContext
+  if (data.associationRelation !== undefined)
+    source.record.associationRelation = data.associationRelation
+
+  if (previous.profile.nameTemplate)
+    source.record.nameTemplate = {
+      ...previous.profile.nameTemplate,
+      baseNames:
+        previous.profile.nameTemplate.rule.base === 'feature'
+          ? {
+              ...previous.profile.nameTemplate.baseNames,
+              ...Object.fromEntries(
+                Object.entries(contentMapToStorage(data.i18n)).map(([locale, row]) => [
+                  locale,
+                  row.title ?? '',
+                ]),
+              ),
+            }
+          : previous.profile.nameTemplate.baseNames,
+      overrides: data.nameOverrides ?? previous.profile.nameTemplate.overrides,
+    } as RevisionValue
   source.record.isIntangible = Boolean(data.isIntangible)
   source.record.isVisitable = Boolean(data.isVisitable)
   const locales = new Map(source.translations.map(row => [String(row.locale), row]))
@@ -98,7 +120,10 @@ export function buildFeatureFormCandidate(
       ...prior,
       featureId: source.record.id,
       locale,
-      title: value.title ?? prior?.title ?? '',
+      title:
+        previous.profile.nameTemplate?.rule.base === 'location'
+          ? (prior?.title ?? value.title ?? '')
+          : (value.title ?? prior?.title ?? ''),
       titleGen: value.titleGen ?? prior?.titleGen ?? true,
       description:
         value.description === undefined

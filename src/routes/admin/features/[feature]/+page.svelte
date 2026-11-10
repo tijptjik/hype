@@ -1,4 +1,13 @@
 <script lang="ts">
+import FeatureNamePreview from '#lib/bits/patterns/forms/featureIntent/FeatureNamePreview.svelte'
+import TargetContextChoice from '#lib/bits/patterns/forms/featureIntent/TargetContextChoice.svelte'
+import {
+  TARGET_CONTEXTS,
+  targetLocationKinds,
+  targetSuggestionKinds,
+  type TargetContext,
+} from '#lib/features/locationPolicy.js'
+
 import FeatureIntentChoice from '#lib/bits/patterns/forms/featureIntent/FeatureIntentChoice.svelte'
 import type { FeatureType } from '#lib/features/intents.js'
 
@@ -59,6 +68,7 @@ import { publicationPreviewUrl } from '#lib/publication/preview.js'
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // I18N
 import {
+  getI18n,
   getLocaleKey,
   getLocaleOrder,
   m,
@@ -727,15 +737,49 @@ let draftHasPin = $state(false)
 let draftHasAddress = $state(false)
 let editorViewportHeight = $state(1040)
 let selectedFeatureType = $state<FeatureType | null>(null)
+let selectedTargetContext = $state<TargetContext | null>(null)
+let missingLocationAcknowledged = $state(false)
+let showMissingLocationPrompt = $state(false)
+const availableTargetContexts = $derived(
+  selectedFeatureType?.targetContexts ??
+    TARGET_CONTEXTS.filter(kind => selectedFeatureType?.locationKinds.includes(kind)),
+)
+const eligibleTargetKinds = $derived(
+  selectedTargetContext
+    ? targetLocationKinds(selectedTargetContext)
+    : selectedFeatureType?.locationKinds,
+)
+/** Select physical intent independently of any broader matched record. @param context Intended target. @returns Nothing. */
+function chooseTargetContext(context: TargetContext): void {
+  selectedTargetContext = context
+  updateFeatureData(data => ({ ...data, targetContext: context }))
+}
+
 /** Retain placement while changing editorial intent; incompatible associations need explicit reselection.
  * @param type Effective server-provided definition, or null while loading. @returns Nothing.
  */
 function chooseFeatureType(type: FeatureType | null): void {
   selectedFeatureType = type
-  updateFeatureData(data => ({ ...data, featureType: type?.id ?? undefined }))
+  if (
+    !type ||
+    !(type.targetContexts ?? TARGET_CONTEXTS).includes(selectedTargetContext!)
+  )
+    selectedTargetContext = null
+  updateFeatureData(data => ({
+    ...data,
+    featureType: type?.id ?? undefined,
+    kind: type?.kind,
+    targetContext: selectedTargetContext,
+    associationRelation: type?.relation ?? 'locatedAt',
+  }))
   if (type) {
     draftFindMode = type.start
-    if (!draftLocalKind && !draftPlaceSource) draftLocalNameMode = 'independent'
+    if (!draftLocalKind && !draftPlaceSource)
+      draftLocalNameMode =
+        (type.nameRule?.base ??
+          (type.relation === 'represents' ? 'location' : 'feature')) === 'location'
+          ? 'inherit'
+          : 'independent'
   }
 }
 let draftFindMode = $state<'search' | 'pin'>('search')
@@ -816,6 +860,11 @@ $effect(() => {
  * @returns Nothing.
  */
 function startLocationSearch(): void {
+  if (isNewFeatureRef && !selectedTargetContext) {
+    toast.info('Choose where this feature is located first.')
+    goToFacet('core')
+    return
+  }
   goToFacet('location')
   locationFocusRequest++
 }
@@ -833,7 +882,7 @@ function startManualLocation(): void {
   pinHighlightRequest += 1
   draftSearch?.addManualLocation()
   draftHasAddress = true
-  draftLocationAccepted = true
+  draftLocationAccepted = !selectedTargetContext
 }
 
 let draftReplacementLocationId = $state<string | undefined>()
@@ -842,7 +891,24 @@ let draftLocationAccepted = $state(false)
 let draftSelectionSaved = $state(false)
 let draftAddressIdentity = $state<MapAddressChange['identity']>()
 let draftLocalKind = $state<
-  'address' | 'premises' | 'building' | 'establishment' | undefined
+  | 'address'
+  | 'premises'
+  | 'building'
+  | 'building_part'
+  | 'infrastructure'
+  | 'built'
+  | 'structure'
+  | 'landform'
+  | 'coastal_feature'
+  | 'water_feature'
+  | 'service_point'
+  | 'premises_address'
+  | 'cadastral_address'
+  | 'linear_reference'
+  | 'street'
+  | 'natural'
+  | 'establishment'
+  | undefined
 >()
 let draftCatalogueBuilding = $state(false)
 let draftBuildingSource = $state<BuildingSource | undefined>()
@@ -1111,8 +1177,42 @@ function restoreLocationSearchMap(): void {
 function selectDraftLocation(result: {
   address: FeatureAddress
   names: Record<string, string>
-  kind?: 'establishment' | 'premises' | 'building' | 'address'
-  localKind?: 'address' | 'premises' | 'building' | 'establishment'
+  kind?:
+    | 'establishment'
+    | 'premises'
+    | 'building'
+    | 'building_part'
+    | 'infrastructure'
+    | 'built'
+    | 'structure'
+    | 'landform'
+    | 'coastal_feature'
+    | 'water_feature'
+    | 'service_point'
+    | 'premises_address'
+    | 'cadastral_address'
+    | 'linear_reference'
+    | 'street'
+    | 'natural'
+    | 'address'
+  localKind?:
+    | 'address'
+    | 'premises'
+    | 'building'
+    | 'building_part'
+    | 'infrastructure'
+    | 'built'
+    | 'structure'
+    | 'landform'
+    | 'coastal_feature'
+    | 'water_feature'
+    | 'service_point'
+    | 'premises_address'
+    | 'cadastral_address'
+    | 'linear_reference'
+    | 'street'
+    | 'natural'
+    | 'establishment'
   nameMode?: 'independent' | 'inherit'
   source?: {
     ssId: string
@@ -1148,9 +1248,14 @@ function selectDraftLocation(result: {
     draftLocationNames =
       draftLocalKind === 'building' ? addressBuildingNames(result.address) : {}
   }
-  draftLocalNameMode =
-    featurePresentationPolicy.locationBasedNames ||
-    currentFeatureData.locationNameMode === 'inherit'
+  draftLocalNameMode = isNewFeatureRef
+    ? (selectedFeatureType?.nameRule?.base ??
+        (selectedFeatureType?.relation === 'represents' ? 'location' : 'feature')) ===
+      'location'
+      ? 'inherit'
+      : 'independent'
+    : featurePresentationPolicy.locationBasedNames ||
+        currentFeatureData.locationNameMode === 'inherit'
       ? 'inherit'
       : (result.nameMode ?? 'independent')
   draftPlaceSource =
@@ -1565,13 +1670,23 @@ const configuredFeatureForm = configureForm(() => ({
       (draftLocalKind || draftPlaceSource)
     ) {
       const kind = draftLocalKind ?? 'establishment'
-      if (!selectedFeatureType.locationKinds.some(allowed => allowed === kind)) {
+      if (!eligibleTargetKinds?.some(allowed => allowed === kind)) {
         toast.error(
           'Choose a location permitted for this feature type, or remove the association.',
         )
         goToFacet('location')
         return false
       }
+    }
+    if (
+      isNewFeatureRef &&
+      selectedFeatureType?.unresolvedMode !== 'silent' &&
+      !draftLocationAccepted &&
+      !missingLocationAcknowledged
+    ) {
+      showMissingLocationPrompt = true
+      goToFacet('core')
+      return false
     }
     if (
       draftResolutionPending ||
@@ -1598,19 +1713,6 @@ const configuredFeatureForm = configureForm(() => ({
       defaultMode: isNewFeatureRef ? 'create' : 'update',
       resolveUpdateId: () => feature?.data?.id ?? committedFeature?.data?.id ?? '',
     })
-    // Historical collection membership is routed from status after creation in the source layer.
-    if (isNewFeatureRef) {
-      return {
-        ...submittedPayload,
-        data: {
-          ...submittedPayload.data,
-          layerId: featureCreationSourceLayerId(
-            submittedPayload.data.layerId,
-            selectedLayer,
-          ),
-        },
-      } as typeof data
-    }
     return submittedPayload as typeof data
   }) as never,
   ...createResourceFormConfig({
@@ -2092,6 +2194,62 @@ const selectedLayer = $derived.by(() => {
   return selectedLayerById[layerIdValue] ?? null
 })
 
+// Project the unsaved parent selection without changing the shared resource cache.
+$effect(() => {
+  if (!isCurrentRefSettled) return
+  if (
+    !isNewFeatureRef &&
+    organisationIdValue === feature?.data?.organisationId &&
+    projectIdValue === feature?.data?.projectId &&
+    layerIdValue === feature?.data?.layerId
+  )
+    return
+  const view = adminCtx.view
+  const preferences = view.getUserPreferences()
+  const organisation = selectedOrganisation
+  const project = selectedProject
+  const layer = selectedLayer
+  const hubId = view.cache.organisation.get(organisationIdValue)?.hubId
+  const hub = hubId ? view.getResourceByIdSync(FirstClassResource.hub, hubId) : null
+  const crumbs = []
+  if (hub) {
+    crumbs.push({
+      name: getI18n(hub, 'nameShort', preferences) || getI18n(hub, 'name', preferences),
+      href: `/admin/hubs/${hub.code}`,
+    })
+  }
+  if (organisation) {
+    crumbs.push({
+      name:
+        view.getContextualOrganisationName(organisation as never, false, false) ||
+        organisation.code,
+      href: `/admin/organisations/${organisation.code || organisation.id}`,
+    })
+  }
+  if (project) {
+    crumbs.push({
+      name:
+        view.getContextualProjectName(
+          project as never,
+          false,
+          false,
+          Boolean(organisation),
+        ) || project.code,
+      href: `/admin/projects/${project.code || project.id}`,
+    })
+  }
+  if (layer) {
+    crumbs.push({
+      name: view.getContextualLayerName(layer as never, false, false) || layer.code,
+      href: `/admin/layers/${layer.id}`,
+    })
+  }
+  headerCtrl.draftCrumbs = crumbs
+  return () => {
+    headerCtrl.draftCrumbs = null
+  }
+})
+
 // Fall back to the new-feature coordinates until the form geometry becomes valid.
 const featureCoordinates = $derived(
   getCoordinates(
@@ -2150,15 +2308,13 @@ const profileLocationNames = $derived.by(() => {
   return addressLocationNames(editorAddress)
 })
 // A marker supplies geometry; a selected or authored description supplies Location identity.
-const draftLocationReady = $derived(
-  draftHasPin && (!selectedFeatureType?.associationRequired || draftLocationAccepted),
-)
+const draftLocationReady = $derived(draftHasPin)
 
 const profileNameMode = $derived(
-  featurePresentationPolicy.locationBasedNames
-    ? 'inherit'
-    : isNewFeatureRef
-      ? draftLocalNameMode
+  isNewFeatureRef
+    ? draftLocalNameMode
+    : featurePresentationPolicy.locationBasedNames
+      ? 'inherit'
       : (currentFeatureData.locationNameMode ??
         feature?.data?.authoring?.nameMode ??
         acceptedNameSource?.current?.nameMode ??
@@ -2505,7 +2661,13 @@ const hiddenProjectInputAttrs = $derived.by(() => {
 const hiddenLayerInputAttrs = $derived.by(() => {
   if (!layerIdValue) return null
 
-  return formCtx.form.fields.data.layerId.as('hidden', layerIdValue)
+  // SvelteKit captures hidden controls before onsubmit; returned payloads do not alter transport.
+  // Historical collection membership is routed from status after creation or a changed selection.
+  const submissionLayerId =
+    isNewFeatureRef || layerIdValue !== feature?.data?.layerId
+      ? featureCreationSourceLayerId(layerIdValue, selectedLayer)
+      : layerIdValue
+  return formCtx.form.fields.data.layerId.as('hidden', submissionLayerId)
 })
 
 /********************
@@ -2728,7 +2890,12 @@ $effect(() => {
 
 const editorAddress = $derived.by((): FeatureAddress => {
   if (currentFeatureData.addressMeta?.address)
-    return currentFeatureData.addressMeta.address
+    return {
+      ...currentFeatureData.addressMeta.address,
+      markerCoordinates: featureCoordinates
+        ? [featureCoordinates[0], featureCoordinates[1]]
+        : null,
+    }
   // Unsaved and not-yet-migrated records retain their original labels as evidence.
   const fallback = Object.fromEntries(
     Object.entries(ADDRESS_LOCALES).map(([locale, tag]) => [
@@ -2738,6 +2905,9 @@ const editorAddress = $derived.by((): FeatureAddress => {
     ]),
   )
   const address = emptyFeatureAddress(fallback)
+  address.markerCoordinates = featureCoordinates
+    ? [featureCoordinates[0], featureCoordinates[1]]
+    : null
   address.legacy = {
     addressMeta: currentFeatureData.addressMeta ?? {},
     i18n: currentFeatureData.i18n ?? {},
@@ -2760,6 +2930,14 @@ $effect(() => {
  * @returns Nothing; persistence uses the existing authorized Save/Cancel workflow.
  */
 function updateAddressDraft(address: FeatureAddress): void {
+  address = {
+    ...address,
+    locationDisplayMode:
+      address.locationDisplayMode ?? editorAddress.locationDisplayMode,
+    markerCoordinates: featureCoordinates
+      ? [featureCoordinates[0], featureCoordinates[1]]
+      : null,
+  }
   // Reviewed Location identity survives Feature-owned address corrections; unreviewed map matches remain exact.
   if (
     draftAddressIdentity &&
@@ -3771,7 +3949,7 @@ function applyFeatureParentSelection(params: {
       organisationId: params.organisationId ?? '',
       projectId: params.projectId ?? '',
       layerId: nextLayerId,
-      ...(isNewFeatureRef && params.isIntangible !== undefined
+      ...(params.isIntangible !== undefined
         ? { isIntangible: params.isIntangible }
         : {}),
     }),
@@ -3888,18 +4066,16 @@ const featureParentSectionCtrl = createFeatureParentSectionController({
     ).data ?? [],
   searchParentLayers: async ({ query, organisationIds = [], projectIds = [] }) =>
     (
-      (
-        await getLayers({
-          q: query,
-          prisms: createFeatureParentSearchPrisms({
-            organisationIds,
-            projectIds,
-          }),
-          conditions: { isArchived: false, isPublished: null },
-          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
-        })
-      ).data ?? []
-    ).filter(candidate => isNewFeatureRef || !candidate.historicalSourceLayerId),
+      await getLayers({
+        q: query,
+        prisms: createFeatureParentSearchPrisms({
+          organisationIds,
+          projectIds,
+        }),
+        conditions: { isArchived: false, isPublished: null },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
+      })
+    ).data ?? [],
   syncSelectedOrganisation,
   syncSelectedProject,
   syncSelectedLayer,
@@ -4244,7 +4420,77 @@ async function refreshLocationSource(): Promise<void> {
               value={selectedFeatureType?.id}
               onChange={chooseFeatureType}
             />
+            {#if selectedFeatureType}
+              <TargetContextChoice
+                contexts={availableTargetContexts}
+                value={selectedTargetContext}
+                onChange={chooseTargetContext}
+              />
+              {#if selectedFeatureType.nameRule ||
+                selectedFeatureType.relation === 'represents'}
+                <FeatureNamePreview
+                  rule={selectedFeatureType.nameRule ?? {
+                    base: 'location',
+                    conditions: [],
+                  }}
+                  names={profileLocationNames}
+                  titles={currentFeatureData.i18n}
+                  properties={currentFeatureData.properties ?? []}
+                  overrides={(currentFeatureData.nameOverrides ?? {}) as Record<
+                    string,
+                    string
+                  >}
+                  onChange={nameOverrides =>
+                    updateFeatureData(data => ({ ...data, nameOverrides }))}
+                />
+              {/if}
+              {#if showMissingLocationPrompt}
+                <section role="status" class="mb-8 grid gap-3 rounded-lg border p-4">
+                  <p>
+                    No location is associated yet. Create a local location now, or
+                    continue and improve it later.
+                  </p>
+                  <div class="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      class="rounded border px-3 py-2"
+                      onclick={() => {
+                        showMissingLocationPrompt = false
+                        startLocationSearch()
+                      }}
+                    >
+                      Find or create a location
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded border px-3 py-2"
+                      onclick={() => {
+                        missingLocationAcknowledged = true
+                        showMissingLocationPrompt = false
+                      }}
+                    >
+                      Continue without a location
+                    </button>
+                  </div>
+                </section>
+              {/if}
+            {/if}
           {/key}
+        {/if}
+
+        {#if !isNewFeatureRef && feature?.data?.nameTemplate && isEditing}
+          <FeatureNamePreview
+            rule={feature.data.nameTemplate.rule}
+            names={profileLocationNames}
+            titles={currentFeatureData.i18n}
+            properties={currentFeatureData.properties ?? []}
+            overrides={(currentFeatureData.nameOverrides ?? {}) as Record<
+              string,
+              string
+            >}
+            onChange={nameOverrides =>
+              updateFeatureData(data => ({ ...data, nameOverrides }))}
+          />
         {/if}
 
         {#if needsLayerSelection || !showNameFields}
@@ -4264,7 +4510,7 @@ async function refreshLocationSource(): Promise<void> {
                 {m.feature_start_select_layer_description()}
               </p>
             </div>
-          {:else if !showNameFields}
+          {:else if !showNameFields && (!isNewFeatureRef || selectedFeatureType)}
             <div
               class="col-start-1 row-start-1 flex min-h-44 flex-col items-center justify-center gap-4 py-8"
               inert={needsLayerSelection || showNameFields}
@@ -4298,7 +4544,7 @@ async function refreshLocationSource(): Promise<void> {
                 {m.feature_start_description()}
               </p>
             </div>
-          {:else}
+          {:else if showNameFields}
             <div
               class="col-start-1 row-start-1 min-w-0"
               in:slide={{ duration: prefersReducedMotion.current ? 0 : 280 }}
@@ -4872,7 +5118,11 @@ async function refreshLocationSource(): Promise<void> {
             {:else if isNewFeatureRef}
               <DraftFeatureLocationSearch
                 projectId={projectIdValue}
-                allowedLocationKinds={selectedFeatureType?.locationKinds}
+                allowedLocationKinds={eligibleTargetKinds}
+                suggestionKinds={selectedTargetContext
+                  ? targetSuggestionKinds(selectedTargetContext)
+                  : undefined}
+                preferredKind={selectedTargetContext ?? undefined}
                 initialMode={selectedFeatureType?.start ?? 'search'}
                 bind:this={draftSearch}
                 onFilterPanelChange={panel => (draftSearchFilterPanel = panel)}
@@ -4891,7 +5141,7 @@ async function refreshLocationSource(): Promise<void> {
                 }}
                 active={isLocationFacet &&
                   !needsLayerSelection &&
-                  Boolean(selectedFeatureType)}
+                  Boolean(selectedFeatureType && selectedTargetContext)}
                 canReturnToResults={isNewFeatureRef && !draftSelectionSaved}
                 focusRequest={locationFocusRequest}
                 onSelect={selectDraftLocation}

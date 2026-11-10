@@ -78,6 +78,19 @@ export const LocationEntitySchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('address'), details: z.strictObject({}) }),
   z.strictObject({ kind: z.literal('unknown'), details: UnknownDetailsSchema }),
   z.strictObject({ kind: z.literal('premises'), details: PremisesDetailsSchema }),
+  // Physical identity is explicit; address components and occupants remain independent.
+  z.strictObject({ kind: z.literal('building_part'), details: z.strictObject({}) }),
+  z.strictObject({ kind: z.literal('infrastructure'), details: z.strictObject({}) }),
+  z.strictObject({ kind: z.literal('street'), details: z.strictObject({}) }),
+  z.strictObject({ kind: z.literal('built'), details: z.strictObject({}) }),
+  z.strictObject({ kind: z.literal('structure'), details: z.strictObject({}) }),
+  z.strictObject({ kind: z.literal('landform'), details: NaturalDetailsSchema }),
+  z.strictObject({ kind: z.literal('coastal_feature'), details: NaturalDetailsSchema }),
+  z.strictObject({ kind: z.literal('water_feature'), details: NaturalDetailsSchema }),
+  z.strictObject({ kind: z.literal('service_point'), details: z.strictObject({}) }),
+  z.strictObject({ kind: z.literal('premises_address'), details: z.strictObject({}) }),
+  z.strictObject({ kind: z.literal('cadastral_address'), details: z.strictObject({}) }),
+  z.strictObject({ kind: z.literal('linear_reference'), details: z.strictObject({}) }),
 ])
 export type LocationEntity = z.infer<typeof LocationEntitySchema>
 export type BuildingDetails = z.infer<typeof BuildingDetailsSchema>

@@ -13,7 +13,15 @@ export const LocationTaskSchema = z.object({
   kind: z.enum(['facts', 'position', 'identity', 'merge']),
   locationId: z.string(),
   locationKind: z
-    .enum(['unknown', 'establishment', 'building', 'premises', 'address', 'natural'])
+    .enum([
+      'unknown',
+      'establishment',
+      'building',
+      'building_part',
+      'premises',
+      'address',
+      'natural',
+    ])
     .optional(),
   names: z.record(z.string(), z.string()).optional(),
   correctionProposalId: z.string().optional(),

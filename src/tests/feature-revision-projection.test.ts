@@ -1116,6 +1116,30 @@ describe('existing form revision routing', () => {
         })),
     } as unknown as Parameters<typeof buildFeatureFormCandidate>[2]
   }
+  it('updates authored name bases while retaining the pinned naming rule and overrides', async () => {
+    const f = fixture()
+    const initial = await f.initialize()
+    const source = await f.capture()
+    const template = {
+      rule: { base: 'feature' as const, conditions: [] },
+      baseNames: { en: 'Original' },
+      overrides: { 'zh-Hant': '自訂名稱' },
+    }
+    const previous = {
+      ...initial.content,
+      profile: { ...initial.content.profile, nameTemplate: template },
+    }
+    const result = buildFeatureFormCandidate(
+      previous,
+      source.snapshot,
+      form(previous),
+      true,
+    )
+    expect(result.profile.nameTemplate).toEqual({
+      ...template,
+      baseNames: { en: 'Saved form title' },
+    })
+  })
   it.each([null, '', '[]', undefined])(
     'preserves a stored empty phone when the form submits %s',
     async value => {

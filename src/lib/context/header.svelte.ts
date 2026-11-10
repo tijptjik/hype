@@ -78,6 +78,9 @@ export class HeaderCtrl {
   /** Transient focus of the header search field, shared with its current page. */
   isSearchFocused = $state(false)
 
+  /** Route-owned draft breadcrumbs; null uses the saved resource hierarchy. */
+  draftCrumbs = $state<HeaderCrumb[] | null>(null)
+
   /** Reactive header state consumed by the header adapter/components. */
   state: HeaderCtrlState = $state({
     search: null,

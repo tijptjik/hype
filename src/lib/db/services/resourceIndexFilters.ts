@@ -15,10 +15,35 @@ import type {
 // 1. Literal resource search
 // 2. Status, content, image, translation and licence predicates
 
+/** Match localized ancestor names without requiring hydrated relations.
+ * @param type Resource family being searched.
+ * @param query Literal search text.
+ * @returns A predicate matching project and organisation names where applicable.
+ */
+export function resourceAncestorNameSearchCondition(
+  type: ResourceIndexType,
+  query: string,
+): SQL {
+  const table = sql.identifier(type)
+  const needle = query.trim()
+  if (type !== 'project' && type !== 'layer') return sql`0`
+
+  // Correlated predicates preserve the caller's authorized resource scope.
+  const organisation = sql`EXISTS(SELECT 1 FROM organisationI18n ancestor
+    WHERE ancestor.organisationId=${table}.organisationId
+      AND (instr(lower(ancestor.name),lower(${needle}))>0
+        OR instr(lower(ancestor.nameShort),lower(${needle}))>0))`
+  if (type === 'project') return organisation
+  return sql`(${organisation} OR EXISTS(SELECT 1 FROM projectI18n ancestor
+    WHERE ancestor.projectId=${table}.projectId
+      AND (instr(lower(ancestor.name),lower(${needle}))>0
+        OR instr(lower(ancestor.nameShort),lower(${needle}))>0)))`
+}
+
 /** Compile literal resource search independently of response hydration.
  * @param type Validated resource family.
  * @param query Literal search text.
- * @returns A predicate over base identity and localized fields.
+ * @returns A predicate over base identity, localized fields and ancestor names.
  */
 export function resourceIndexSearchCondition(
   type: ResourceIndexType,
@@ -31,6 +56,7 @@ export function resourceIndexSearchCondition(
   return sql`(instr(lower(${table}.id),lower(${needle}))>0
     ${type !== 'layer' ? sql`OR instr(lower(${table}.code),lower(${needle}))>0` : sql``}
     ${type === 'hub' ? sql`OR instr(lower(${table}.domain),lower(${needle}))>0` : sql``}
+    OR ${resourceAncestorNameSearchCondition(type, query)}
     OR EXISTS(SELECT 1 FROM ${translations} ri WHERE ri.${foreignKey}=${table}.id
       AND (instr(lower(ri.name),lower(${needle}))>0
         OR instr(lower(ri.nameShort),lower(${needle}))>0

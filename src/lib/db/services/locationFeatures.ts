@@ -1,5 +1,7 @@
 // DRIZZLE
 import { and, eq, gt, sql } from 'drizzle-orm'
+// RELATIONSHIPS
+import { canonicalLocationSQL } from './locationRedirect'
 // SCHEMA
 import { feature } from '#lib/db/schema/feature.js'
 import { project } from '#lib/db/schema/project.js'
@@ -29,7 +31,7 @@ export type LocationLinkedFeaturePage = {
  * @param input Location ID, locale, cursor, and the caller's normal Feature read decision.
  * @returns Up to 25 readable Feature summaries and an accessible-row cursor.
  * @remarks Past placements use exact retained relationship references and current Feature authority. Permissions are evaluated before output pagination. Bounded internal scans include
- * drafts and archived rows when authorized; historical or unlinked associations are excluded.
+ * drafts and archived rows when authorized; historical or unlinked associations are excluded. Associated building/part listings include current scoped physical descendants and current occupants, deduplicated before pagination. Former and unconfirmed occupants are excluded; placed/past views retain exact accepted placement semantics.
  */
 export async function listLocationLinkedFeatures(
   db: Database,
@@ -74,7 +76,30 @@ export async function listLocationLinkedFeatures(
                 AND (h.locationId=${input.locationId}
                   OR EXISTS(SELECT 1 FROM locationOccupancy o WHERE o.id=h.occupancyRevisionId AND o.containerLocationId=${input.locationId})
                   OR EXISTS(SELECT 1 FROM locationMembership m JOIN json_each(h.membershipRevisionIds) j ON j.value=m.id WHERE m.parentLocationId=${input.locationId} OR m.childLocationId=${input.locationId})))`
-              : sql`EXISTS(SELECT 1 FROM featureLocation linked WHERE linked.featureId=${feature.id} AND linked.locationId=${input.locationId})`,
+              : sql`EXISTS(
+                WITH RECURSIVE physical(id) AS (
+                  SELECT ${input.locationId}
+                  UNION
+                  SELECT ${canonicalLocationSQL(sql`m.childLocationId`)} FROM physical p
+                  JOIN location parent ON parent.id=p.id AND parent.matchingType IN ('building','building_part')
+                  JOIN locationMembershipHead m ON ${canonicalLocationSQL(sql`m.parentLocationId`)}=p.id
+                  JOIN location child ON child.id=${canonicalLocationSQL(sql`m.childLocationId`)} AND child.matchingType='building_part'
+                  WHERE m.assertionState='asserted' AND m.membershipState='current'
+                    AND (child.state!='manual' OR child.ownerOrganisationId=${project.organisationId})
+                    AND (m.scopeOrganisationId=${project.organisationId} OR (m.scopeOrganisationId IS NULL AND NOT EXISTS(
+                      SELECT 1 FROM locationMembershipHead override WHERE override.relationshipId=m.relationshipId AND override.scopeOrganisationId=${project.organisationId})))
+                ), related(id) AS (
+                  SELECT id FROM physical
+                  UNION
+                  SELECT ${canonicalLocationSQL(sql`o.establishmentLocationId`)} FROM locationOccupancyHead o
+                  JOIN physical p ON p.id=${canonicalLocationSQL(sql`o.containerLocationId`)}
+                  JOIN location container ON container.id=p.id AND container.matchingType IN ('building','building_part')
+                  JOIN location tenant ON tenant.id=${canonicalLocationSQL(sql`o.establishmentLocationId`)}
+                  WHERE o.assertionState='asserted' AND o.occupancyState='current'
+                    AND (tenant.state!='manual' OR tenant.ownerOrganisationId=${project.organisationId})
+                    AND (o.scopeOrganisationId=${project.organisationId} OR (o.scopeOrganisationId IS NULL AND NOT EXISTS(
+                      SELECT 1 FROM locationOccupancyHead override WHERE override.relationshipId=o.relationshipId AND override.scopeOrganisationId=${project.organisationId})))
+                ) SELECT 1 FROM featureLocation linked JOIN related r ON r.id=linked.locationId WHERE linked.featureId=${feature.id})`,
           after ? gt(feature.id, after) : undefined,
         ),
       )

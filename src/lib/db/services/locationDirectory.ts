@@ -6,6 +6,7 @@ import { and, eq, gt, or, sql } from 'drizzle-orm'
 // SCHEMA
 import { location as locationTable, locationRevision } from '../schema/location'
 // LOCATION
+import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationSourceReference, type LocationKind } from '#lib/locations/kinds.js'
 // VALIDATION
 import type { LifecycleStatus } from '#lib/locations/lifecycle.js'
@@ -31,6 +32,7 @@ export async function listLocationResources(
     /** Narrow index results without changing detail-read authorization scope. */
     restrictToOrganisation?: boolean
     kind?: LocationKind
+    buildingId?: string
     q?: string
     after?: string
     id?: string
@@ -52,6 +54,12 @@ export async function listLocationResources(
     sql`${locationRevision.version} = (SELECT max(r.version) FROM locationRevision r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
   )
   const match = and(
+    // A parent-part picker only offers explicit members of the selected building.
+    input.buildingId
+      ? sql`EXISTS(SELECT 1 FROM locationMembershipHead m WHERE m.childLocationId=${locationTable.id}
+      AND m.parentLocationId=${input.buildingId} AND m.assertionState='asserted' AND m.membershipState='current'
+      AND (m.scopeOrganisationId IS NULL OR m.scopeOrganisationId=${input.organisationId ?? null}))`
+      : undefined,
     input.organisationId
       ? or(
           sql`${locationTable.state} != 'manual'`,
@@ -185,6 +193,7 @@ export async function listLocationResources(
           }
           return {
             ...row,
+            taxonomy: locationTaxonomy(row.kind),
             ownerOrganisationNames: JSON.parse(ownerOrganisationNames),
             editingOrganisationNames: JSON.parse(editingOrganisationNames),
             metadata: {

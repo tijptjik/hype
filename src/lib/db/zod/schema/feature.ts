@@ -1,3 +1,4 @@
+import { FeatureNameTemplateSchema } from '#lib/features/locationPolicy.js'
 // SHARED TRANSLATIONS
 import { FeatureI18nBase } from './featureI18n'
 // PLACE CONTRACTS
@@ -88,6 +89,7 @@ import type { GeometryObject } from 'geojson'
 export const FeatureBase = createSelectSchema(feature)
   .omit({ spatialIndex: true, formWriteToken: true })
   .extend({
+    nameTemplate: FeatureNameTemplateSchema.nullish(),
     mtrStation: z.string().nullish(),
     mtrExit: z.string().nullish(),
     mtrDistance: z.number().int().nonnegative().nullish(),
@@ -276,6 +278,7 @@ const ReadFeatureAuthoring = z.preprocess(
   z
     .object({
       nameMode: z.enum(['inherit', 'independent']),
+      hasLocation: z.union([z.boolean(), z.number()]).optional(),
     })
     .optional(),
 )
@@ -289,6 +292,7 @@ const ReadLocationBrands = z.preprocess(
 )
 
 export const FeatureListRow = FeatureBase.extend({
+  nameValues: z.string().optional(),
   locationBrands: ReadLocationBrands,
   locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
@@ -318,6 +322,7 @@ export const FeatureCardRow = FeatureListRow.extend({
 })
 
 export const FeatureAdminRow = FeatureBase.extend({
+  nameValues: z.string().optional(),
   locationBrands: ReadLocationBrands,
   locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
@@ -423,6 +428,10 @@ export const FeaturePropertyAPI = FeaturePropertyBase.extend({
 })
 
 const FeatureListFields = FeatureBase.pick({
+  featureType: true,
+  kind: true,
+  targetContext: true,
+  associationRelation: true,
   mtrStation: true,
   mtrExit: true,
   mtrDistance: true,

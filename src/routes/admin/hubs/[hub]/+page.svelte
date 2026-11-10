@@ -1956,12 +1956,13 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
     <Main.Facet
-      isVisible={activeFacet === 'advanced'}
+      isVisible={activeFacet === 'location'}
       class="right-0! left-0!"
       transition="fade"
-      previousAction={buildFacetNavAction('advanced', 'previous')}
-      nextAction={buildFacetNavAction('advanced', 'next')}
-      attrs={{ 'data-facet-id': 'advanced' }}
+      fillHeight={true}
+      previousAction={buildFacetNavAction('location', 'previous')}
+      nextAction={buildFacetNavAction('location', 'next')}
+      attrs={{ 'data-facet-id': 'location' }}
     >
       <FormSurface>
         {#if hub?.data?.id}
@@ -1971,7 +1972,17 @@ $effect(() => {
             disabled={!isEditing || formCtx.submitting}
           />
         {/if}
-
+      </FormSurface>
+    </Main.Facet>
+    <Main.Facet
+      isVisible={activeFacet === 'advanced'}
+      class="right-0! left-0!"
+      transition="fade"
+      previousAction={buildFacetNavAction('advanced', 'previous')}
+      nextAction={buildFacetNavAction('advanced', 'next')}
+      attrs={{ 'data-facet-id': 'advanced' }}
+    >
+      <FormSurface>
         {#if hub?.data?.id}
           <div class="flex min-w-0 flex-col pb-6">
             <ImageIntentSettings

@@ -9,6 +9,7 @@ import { sql } from 'drizzle-orm'
 import {
   DEFAULT_FEATURE_TYPES,
   FeatureTypesSchema,
+  featureTypeLabel,
   requireFeatureType,
   resolveFeatureTypes,
 } from '#lib/features/intents.js'
@@ -41,11 +42,15 @@ function fixture() {
     CREATE TABLE layer(id TEXT PRIMARY KEY,projectId TEXT); INSERT INTO layer VALUES('layer','project');
     CREATE TABLE feature(id TEXT PRIMARY KEY,layerId TEXT,isPublished INTEGER DEFAULT 0); INSERT INTO feature(id,layerId) VALUES('f','layer');
     CREATE TABLE featureLocation(featureId TEXT,locationId TEXT);
-    CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT); INSERT INTO location VALUES('bunker','building'),('shop','establishment');`)
+    CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT,class TEXT,matchingType TEXT GENERATED ALWAYS AS (COALESCE(class,kind)) VIRTUAL); INSERT INTO location(id,kind,class) VALUES('bunker','built','building'),('shop','operational','establishment');`)
   f.sqlite.exec(readFileSync('migrations/0211_feature_intent.sql', 'utf8'))
   f.sqlite.exec(
     readFileSync('migrations/0212_feature_intent_publication_guard.sql', 'utf8'),
   )
+  f.sqlite.exec(
+    'CREATE TABLE featureCountRevision(id INTEGER PRIMARY KEY, revision INTEGER); INSERT INTO featureCountRevision VALUES(1,0)',
+  )
+  f.sqlite.exec(readFileSync('migrations/0214_feature_location_context.sql', 'utf8'))
   return { ...f, db: f.db as unknown as Database }
 }
 const ghost = {
@@ -61,6 +66,41 @@ const ghost = {
 }
 
 describe('Feature intent', () => {
+  it('preserves translated display names through hub inheritance and rejects locale collisions', async () => {
+    const f = fixture()
+    const types = FeatureTypesSchema.parse([
+      {
+        ...ghost,
+        labels: { zhHant: '舊招牌', 'zh-hans': '旧招牌', ja: '昔の看板', fr: '' },
+      },
+    ])
+    expect(types[0].labels).toEqual({
+      'zh-Hant': '舊招牌',
+      'zh-Hans': '旧招牌',
+      ja: '昔の看板',
+      fr: '',
+    })
+    await saveFeatureIntentPolicy(f.db, {
+      scope: { type: 'hub', id: 'hub' },
+      definition: types,
+      version: 0,
+      guard: sql`1`,
+      actorId: 'editor',
+    })
+    const inherited = (
+      await readFeatureIntentPolicy(f.db, { type: 'layer', id: 'layer' })
+    ).types[0]
+    expect(inherited.labels).toEqual(types[0].labels)
+    expect(featureTypeLabel(inherited, 'zhHant')).toBe('舊招牌')
+    expect(featureTypeLabel(inherited, 'ja')).toBe('昔の看板')
+    expect(featureTypeLabel(inherited, 'fr')).toBe('Ghost sign')
+    expect(featureTypeLabel(ghost, 'zh-Hans')).toBe('Ghost sign')
+    expect(
+      FeatureTypesSchema.safeParse([
+        { ...ghost, labels: { zhHant: 'A', 'zh-Hant': 'B' } },
+      ]).success,
+    ).toBe(false)
+  })
   it('captures intent in immutable content and leaves legacy snapshots unclassified', async () => {
     const f = lifecycleFixture()
     try {
@@ -124,12 +164,12 @@ describe('Feature intent', () => {
       (await readFeatureIntentPolicy(f.db, { type: 'layer', id: 'layer' })).types,
     ).toEqual([ghost])
     await save('project', 'project', DEFAULT_FEATURE_TYPES)
-    await save('layer', 'layer', ['natural'])
+    await save('layer', 'layer', ['area'])
     expect(
       (await readFeatureIntentPolicy(f.db, { type: 'layer', id: 'layer' })).types.map(
         type => type.id,
       ),
-    ).toEqual(['natural'])
+    ).toEqual(['area'])
     await save('layer', 'layer', null)
     await save('project', 'project', null)
     expect(
@@ -141,6 +181,33 @@ describe('Feature intent', () => {
     expect(
       f.sqlite.prepare('SELECT count(*) n FROM featureIntentPolicyRevision').get()?.n,
     ).toBe(5)
+  })
+  it('saves and reads service and address class permissions', async () => {
+    const f = fixture()
+    const scope = { type: 'hub' as const, id: 'hub' }
+    const current = await readFeatureIntentPolicy(f.db, scope)
+    const definition = [
+      {
+        ...DEFAULT_FEATURE_TYPES[0],
+        targetContexts: [
+          'service_point',
+          'premises_address',
+          'cadastral_address',
+          'linear_reference',
+        ] as const,
+      },
+    ]
+    const parsed = FeatureTypesSchema.parse(definition)
+    await saveFeatureIntentPolicy(f.db, {
+      scope,
+      definition: parsed,
+      version: current.version,
+      guard: sql`1`,
+      actorId: 'editor',
+    })
+    expect(
+      (await readFeatureIntentPolicy(f.db, scope)).types[0].targetContexts,
+    ).toEqual(definition[0].targetContexts)
   })
   it('rejects stale settings atomically', async () => {
     const f = fixture()
@@ -157,7 +224,7 @@ describe('Feature intent', () => {
       f.sqlite.prepare('SELECT count(*) n FROM featureIntentPolicyRevision').get()?.n,
     ).toBe(1)
   })
-  it('permits addressless buildings, rejects incompatible links and gates required publication', async () => {
+  it('permits addressless buildings, rejects incompatible links and allows missing associations', async () => {
     const f = fixture()
     await saveFeatureIntentPolicy(f.db, {
       scope: { type: 'hub', id: 'hub' },
@@ -173,15 +240,9 @@ describe('Feature intent', () => {
     await expect(assertFeatureIntentLocation(f.db, 'f', 'shop')).rejects.toThrow(
       'not permitted',
     )
-    await expect(assertFeatureIntentLocation(f.db, 'f', null)).rejects.toThrow(
-      'requires',
-    )
-    await expect(assertFeatureIntentPublication(f.db, 'f')).rejects.toThrow(
-      'before publishing',
-    )
-    expect(() => f.sqlite.exec('UPDATE feature SET isPublished=1')).toThrow(
-      'Link a Location',
-    )
+    await expect(assertFeatureIntentLocation(f.db, 'f', null)).resolves.toBeUndefined()
+    await expect(assertFeatureIntentPublication(f.db, 'f')).resolves.toBeUndefined()
+    expect(() => f.sqlite.exec('UPDATE feature SET isPublished=1')).not.toThrow()
     f.sqlite.exec("INSERT INTO featureLocation VALUES('f','bunker')")
     f.sqlite.exec('UPDATE feature SET isPublished=1')
     await expect(assertFeatureIntentPublication(f.db, 'f')).resolves.toBeUndefined()

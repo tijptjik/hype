@@ -115,7 +115,10 @@ export const updateFeatureIntentSettings = guardedCommand(
     if (current.fingerprint !== input.fingerprint)
       error(409, 'Inherited settings changed. Reload before saving.')
     if (input.definition !== null) {
-      if (input.scope.type === 'layer') {
+      if (
+        input.scope.type === 'layer' &&
+        !FeatureTypesSchema.safeParse(input.definition).success
+      ) {
         if (
           !input.definition.every(
             id =>
@@ -126,6 +129,19 @@ export const updateFeatureIntentSettings = guardedCommand(
           error(422, 'Choose feature types from the project catalogue.')
       } else if (!FeatureTypesSchema.safeParse(input.definition).success)
         error(422, 'Invalid feature type catalogue.')
+    }
+    if (input.definition && FeatureTypesSchema.safeParse(input.definition).success) {
+      const types = FeatureTypesSchema.parse(input.definition)
+      if (types.some(type => type.nameRule?.conditions.length)) {
+        const properties = await getFeatureNameProperties(input.scope)
+        for (const type of types)
+          for (const condition of type.nameRule?.conditions ?? [])
+            if (!properties.some(field => field.id === condition.propertyId))
+              error(
+                422,
+                'Name conditions require an available public boolean property.',
+              )
+      }
     }
     // Fence inherited versions inside the same transaction as the policy/history write.
     const inheritedGuard =
@@ -172,5 +188,33 @@ export const getFeatureIntentOptions = guardedQuery(
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
     return (await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: layerId })).types
+  },
+)
+
+/** List public boolean properties usable in localized generated names.
+ * @param scope Authorized policy owner. @returns Selectable property identities and labels.
+ * @remarks Internal fields cannot be interpolated into public feature names.
+ */
+export const getFeatureNameProperties = guardedQuery(
+  scopeSchema,
+  async (scope, ctx) => {
+    await authorizeSettings(ctx, scope)
+    const projectId =
+      scope.type === 'project'
+        ? scope.id
+        : scope.type === 'layer'
+          ? (
+              await ctx.db.get<{ projectId: string }>(
+                sql`SELECT projectId FROM layer WHERE id=${scope.id}`,
+              )
+            )?.projectId
+          : null
+    if (!projectId) return []
+    const { listResolvedProjectProperties } = await import(
+      '#lib/db/services/property.js'
+    )
+    return (await listResolvedProjectProperties(ctx.db, projectId))
+      .filter(field => field.dataType === 'boolean' && field.audience !== 'internal')
+      .map(field => ({ id: field.id, label: field.key }))
   },
 )

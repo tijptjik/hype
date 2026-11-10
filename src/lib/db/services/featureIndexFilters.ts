@@ -48,6 +48,7 @@ export function featureIndexFilterConditions(filters: FeatureIndexFilters = {}):
       and length(fi.${sql.identifier(field)}) > 1
       ${generated ? sql`and coalesce(fi.${sql.identifier(generated)}, 0) = 0` : sql``})`)
   }
+  require(filters.hasLocation, sql`exists(select 1 from featureLocation fl where fl.featureId=${feature.id})`)
   const images = sql`exists(select 1 from featureImage fi where fi.featureId = ${feature.id})`
   const published = sql`exists(select 1 from featureImage fi where fi.featureId = ${feature.id} and fi.isPublished = 1)`
   const unpublished = sql`exists(select 1 from featureImage fi where fi.featureId = ${feature.id} and fi.isPublished = 0)`

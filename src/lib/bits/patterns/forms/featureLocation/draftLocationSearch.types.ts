@@ -4,14 +4,48 @@ import type { PlaceSearchFilters } from '#lib/locations/placeSearchFilters.js'
 
 export type DraftLocationSearchResult = {
   id: string
-  kind: 'establishment' | 'premises' | 'building' | 'address'
+  kind:
+    | 'establishment'
+    | 'premises'
+    | 'building'
+    | 'building_part'
+    | 'infrastructure'
+    | 'built'
+    | 'structure'
+    | 'landform'
+    | 'coastal_feature'
+    | 'water_feature'
+    | 'service_point'
+    | 'premises_address'
+    | 'cadastral_address'
+    | 'linear_reference'
+    | 'street'
+    | 'natural'
+    | 'address'
   names: Record<string, string>
   /** Record provenance for search presentation, independent of Feature association intent. */
   recordMode?: 'manual' | 'unlinked' | 'linked'
   taxonomyLabel?: string
   source?: { ssId: string; resourceReleaseId: string }
   buildingSource?: { id: string; release: string; addressId?: string }
-  localKind?: 'address' | 'premises' | 'building' | 'establishment'
+  localKind?:
+    | 'address'
+    | 'premises'
+    | 'building'
+    | 'building_part'
+    | 'infrastructure'
+    | 'built'
+    | 'structure'
+    | 'landform'
+    | 'coastal_feature'
+    | 'water_feature'
+    | 'service_point'
+    | 'premises_address'
+    | 'cadastral_address'
+    | 'linear_reference'
+    | 'street'
+    | 'natural'
+    | 'establishment'
   identity?: { locationId: string; revisionId: string; ssId?: string }
   associationConfirmed?: boolean
   nameMode?: 'independent' | 'inherit'

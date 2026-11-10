@@ -30,6 +30,14 @@ export function validateFeatureFormResult(
     return ['Gallery changes require gallery review']
   if (!equalRevisionValue(previous.placement.location, result.placement.location))
     return ['Location changes require separate Location review']
+  // Ordinary edits may override names, but cannot replace the reviewed project naming rule.
+  if (
+    !equalRevisionValue(
+      previous.profile.nameTemplate?.rule ?? null,
+      result.profile.nameTemplate?.rule ?? null,
+    )
+  )
+    return ['Naming rule changes require separate configuration review']
   const source = parseFeatureRevisionSource(policy.snapshot)
   const definitions = new Map(source.fieldDefinitions.map(row => [String(row.id), row]))
   for (const id of new Set([

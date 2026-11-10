@@ -39,6 +39,7 @@ export const ADMIN_FACETS = {
 export type HubFacet =
   | 'share'
   | 'core'
+  | 'location'
   | 'layers'
   | 'fields'
   | 'images'
@@ -56,6 +57,7 @@ export type OrganisationFacet =
   | 'fields'
   | 'images'
 export type ProjectFacet =
+  | 'location'
   | 'share'
   | 'features'
   | 'advanced'
@@ -64,7 +66,13 @@ export type ProjectFacet =
   | 'layers'
   | 'fields'
   | 'images'
-export type LayerFacet = 'share' | 'features' | 'core' | 'fields' | 'advanced'
+export type LayerFacet =
+  | 'location'
+  | 'share'
+  | 'features'
+  | 'core'
+  | 'fields'
+  | 'advanced'
 
 export const ADMIN_FACET_DEFINITIONS = {
   [ADMIN_FACETS.share]: { label: () => 'Share', icon: ShareIcon },
@@ -153,6 +161,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
 > = {
   hub: [
     ADMIN_FACETS.core,
+    ADMIN_FACETS.location,
     ADMIN_FACETS.layers,
     ADMIN_FACETS.fields,
     ADMIN_FACETS.policies,
@@ -175,6 +184,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   project: [
     ADMIN_FACETS.core,
+    ADMIN_FACETS.location,
     ADMIN_FACETS.features,
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.layers,
@@ -186,6 +196,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   layer: [
     ADMIN_FACETS.core,
+    ADMIN_FACETS.location,
     ADMIN_FACETS.features,
     ADMIN_FACETS.fields,
     ADMIN_FACETS.advanced,

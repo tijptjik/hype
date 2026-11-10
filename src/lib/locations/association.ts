@@ -8,6 +8,19 @@ export const ASSOCIATION_KINDS = [
   'address',
   'premises',
   'building',
+  'building_part',
+  'infrastructure',
+  'built',
+  'structure',
+  'landform',
+  'coastal_feature',
+  'water_feature',
+  'service_point',
+  'premises_address',
+  'cadastral_address',
+  'linear_reference',
+  'street',
+  'natural',
   'establishment',
 ] as const
 export const AssociationKindSchema = z.enum(ASSOCIATION_KINDS)
@@ -32,6 +45,8 @@ export const AddressAssociationSchema = z.strictObject({
   checkedAt: z.string().optional(),
   names: z.record(z.string(), z.string().max(1000)).default({}),
   targetId: z.string().optional(),
+  buildingId: z.string().min(1).max(200).optional(),
+  parentPartId: z.string().min(1).max(200).optional(),
   // Both immutable publications survive component choices; no mixed source identity is invented.
   originalSource: LocationFactsSchema.shape.location.shape.address.optional(),
   matchedSource: LocationFactsSchema.shape.location.shape.address.optional(),

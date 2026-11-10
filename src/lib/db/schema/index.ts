@@ -8,7 +8,6 @@ export * from './cardStyle'
 export * from './layer'
 export * from './property'
 export * from './feature'
-export * from './featureIntentPolicy'
 export * from './featureQuery'
 export * from './featureCount'
 export * from './featureDivision'
@@ -58,3 +57,5 @@ export * from './imageIntentPolicy'
 export * from './revisionEditWindow'
 
 export * from './imageUpload'
+
+export * from './featureIntentPolicy'

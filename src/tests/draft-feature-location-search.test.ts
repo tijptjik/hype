@@ -26,6 +26,13 @@ const mocks = vi.hoisted(() => ({
   nearby: vi.fn(),
   buildings: vi.fn().mockResolvedValue([]),
   buildingPages: vi.fn(),
+  targetLocations: vi.fn().mockResolvedValue({ data: [] }),
+}))
+vi.mock('#lib/api/locationAssociation.remote.js', () => ({
+  searchTargetLocations: mocks.targetLocations,
+  searchDraftAssociationLocations: vi
+    .fn()
+    .mockResolvedValue({ rows: [], limited: false }),
 }))
 vi.mock('#lib/locations/buildingSearch.js', () => ({
   searchBuildingNames: mocks.buildings,
@@ -530,6 +537,75 @@ it('keeps unchanged cached matches from republishing markers and cancels filteri
   expect(input.value).toBe('')
   expect(document.querySelectorAll('[data-result-id]')).toHaveLength(0)
   expect(onMapCandidates.mock.lastCall?.[0]).toEqual([])
+})
+
+it('offers the local physical target separately from establishment evidence and clears local matches', async () => {
+  vi.useRealTimers()
+  const facts = {
+    names: { en: 'East Wing' },
+    location: {
+      geometry: { type: 'Point', coordinates: [114.15, 22.28] },
+      address: {
+        status: 'unresolved',
+        address2dId: null,
+        address3dId: null,
+        address3dUnitId: null,
+        snapshotId: null,
+        rawSource: {},
+        fallbackDisplay: {},
+      },
+    },
+  }
+  mocks.targetLocations.mockResolvedValueOnce({
+    data: [
+      {
+        id: 'part',
+        kind: 'building_part',
+        revisionId: 'revision',
+        state: 'manual',
+        facts,
+      },
+    ],
+  })
+  mocks.places.mockResolvedValue({
+    rows: [{ id: 'shop', facts: { ...facts, names: { en: 'Wing Bakery' } } }],
+    partial: false,
+  })
+  mocks.addresses.mockResolvedValue([])
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    projectId: 'project',
+    onSelect: vi.fn(),
+    preferredKind: 'building_part',
+    allowedLocationKinds: ['building_part', 'building', 'premises', 'address'],
+    suggestionKinds: [
+      'building_part',
+      'building',
+      'premises',
+      'address',
+      'establishment',
+    ],
+  })
+  const input = screen.getByRole('textbox')
+  await fireEvent.input(input, { target: { value: 'Wing' } })
+  await screen.findByRole('button', { name: /East Wing/ })
+  await screen.findByRole('button', { name: /Wing Bakery/ })
+  expect(mocks.targetLocations).toHaveBeenCalledWith({
+    projectId: 'project',
+    kind: 'building_part',
+    q: 'Wing',
+  })
+  expect(
+    screen.getByText('Find a physical space through an establishment'),
+  ).toBeTruthy()
+  expect(
+    document.querySelector('[data-result-kind]')?.getAttribute('data-result-kind'),
+  ).toBe('building_part')
+  await fireEvent.keyDown(input, { key: 'Escape' })
+  await waitFor(() =>
+    expect(document.querySelectorAll('[data-result-id]')).toHaveLength(0),
+  )
 })
 
 it('keeps singleton results and map numbers visible without a back button or refetch', async () => {

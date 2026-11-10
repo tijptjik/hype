@@ -3249,43 +3249,171 @@ separate destination. Proposal review supports per-field selection and retains t
 accepted subset in an immutable `locationCorrectionMerge` receipt; remaining proposed
 fields are not applied when that review completes.
 
-### Feature intent and inherited authoring rules (10 November 2026, Refs #194, parent #180)
+### Feature intent and location contexts (10 November 2026, Refs #241, parent #186)
 
-Feature intent is editorial subject identity, independent of Location kind and map
-geometry. The admin creation flow resolves choices after Layer selection. One available
-type is inferred; several types require an explicit choice. Objects, natural features
-and businesses are broad application defaults, with all supported Location kinds
-allowed. Hub administrators can define a catalogue; Project configuration may replace
-it; Layers may narrow their Project catalogue to a subset. Null overrides retain live
-inheritance. Resetting settings never rewrites existing Feature types, associations or
-geometry.
+New Features carry independent `kind` (`object`, `place`, `area`, `route`),
+`targetContext`, and `associationRelation` (`locatedAt`, `represents`) fields.
+`featureType` remains the configurable classification identifier. A layer with one
+classification infers it; otherwise the contributor chooses. Target-context cards then
+show icons and examples. `building_part` is labelled **Inside or part of the building**;
+`premises` is labelled **Complex**. Existing Features and historical content are not
+reclassified.
 
-Each type has a stable identifier, display label, allowed Location kinds, suggested
-search/map starting point and optional association requirement before publication.
-Coordinates-only Features may be saved without invented Location descriptions. Required
-associations are completed through the existing retryable post-save linking flow and
-checked before publication. Address/building discovery can remain evidence for finding
-an establishment; accepted association choices obey the selected subject's allowed
-kinds. An addressless building remains valid. Existing unclassified Features retain
-their legacy behavior; editing a saved Feature does not silently reclassify it.
+Hub, Project and Layer **Location** tabs configure classifications, enabled target
+contexts, relation, localized naming rules and whether missing associations prompt for
+local creation or continue silently. Hub defaults remain available. Layers may override
+the complete definition; older layer ID subsets remain readable. Null resets
+inheritance. Versioned policy writes retain actor history and check the complete
+ancestry version.
 
-`featureIntentPolicy` stores versioned overrides and `featureIntentPolicyRevision`
-stores attributed history. Settings commands use existing Hub/Project/Layer
-configuration permissions, with persisted ancestry and inherited-version guards. These
-independently saved settings are in each resource's Advanced facet.
-`feature.featureType` is included in new immutable Feature content snapshots; absence
-preserves older content hashes. Migrations `0211_feature_intent.sql` and
-`0212_feature_intent_publication_guard.sql` are additive and were rehearsed and applied
-locally, preserving 1,604 existing Features as unclassified. Production rollout remains
-separate.
+The Data Model editor uses the Fields toolbar and card layout: New, Multilingual,
+Collapse/Expand, Remove Type, and the Custom switch. Type bars have a six-dot drag
+handle, kind icon and collapsible title. Reordering supports pointer dragging and
+Alt+Up/Down; saving persists catalogue order. Remove Type enables removal mode, with
+confirmation before removing a draft type and protection for the last type. Escape exits
+removal mode. Existing features retain their accepted type identities. The body groups
+settings, localized naming and location-target switches in the same shared field styles.
+The multilingual toolbar reveals display-name translations and conditional naming text
+for the selected languages, including additional catalogue languages. Hiding languages
+does not remove their content. Optional canonical-locale `labels` persist inside the
+versioned type definition and inherit with it; the existing `label` remains the fallback
+for legacy definitions and missing translations. New-feature type choices and
+configuration headings resolve the label in the current interface language.
 
-The database publication guard also prevents parent bulk publication from bypassing a
-required association. It does not rewrite already-published Features.
+Matching rules are shared application behavior. Building parts can use establishment
+search results as physical-space evidence, but establishments cannot be selected as
+physical targets. Search also reads accessible local records of the intended kind.
+Physical targets can be created locally; a building-part draft can create its missing
+parent building. Ordered fallbacks are building part → building → complex → address,
+building → complex → address, and complex/infrastructure/street → address. Establishment
+and natural-entity representations have no substitute-identity fallback. An addressless
+building remains a building. Source availability never changes identity.
 
-Verification: 154 focused policy, creation and revision-projection tests pass; Chromium
-and Firefox component checks pass at 1440px and 390px, covering explicit choice,
-single-type inference, policy save and inheritance reset without overflow. Browser
-policy transport was mocked in the isolated fixture; a full authenticated admin
-create/link/publish round trip is not covered by that evidence. Svelte checking reports
-existing test-file diagnostics, with none in the implementation. No push or production
-deployment occurred.
+Missing associations never block creation or publication. Contributors can dismiss the
+manual-creation prompt and save unresolved; the Feature index exposes a missing/linked
+Location filter. Migration `0214_feature_location_context.sql` removes the earlier
+publication trigger from migration 0212 and invalidates association-filter counts on
+link/unlink. Migration 0215 adds locally authorable street and infrastructure identities
+without reclassifying existing Locations. Apply the migrations before running the new
+query code. Production rollout is separate.
+
+Localized naming supports a feature or Location base plus ordered conditional fragments
+from public boolean properties, with separate true, false and unset cases. Each locale
+controls its text, placement and separator. New Features pin the reviewed rule in
+`nameTemplate`; changing project defaults does not rewrite existing Features. Public
+read projections use accepted Location names and current public boolean values, with
+explicit per-locale Feature overrides taking precedence. No arbitrary expressions or
+internal properties enter generated names. Base text, rule and overrides remain in
+immutable Feature history. Generated names are a read projection; existing text-search
+indexes and sorting continue to use stored title text, a limitation for conditional
+suffix searches until generated-name indexing is added.
+
+Implementation contracts are in `features/locationPolicy.ts`, `features/intents.ts`,
+`featureIntents.remote.ts` and the `featureIntent` form components. Focused migration,
+policy, name projection and lifecycle coverage is in `feature-location-context.test.ts`,
+`feature-intent-policy.test.ts`, `building-parts.test.ts` and
+`feature-lifecycle.test.ts`. The browser fixture
+`scripts/visual-checks/target-context-check.ts` exercises the actual components with
+mocked policy transport; it does not establish an authenticated create/link round trip
+against a migrated application database.
+
+Local verification: 314 tests pass across nine focused files, including local-target
+discovery, generated-name editing, pinned-rule protection and revision projection.
+Chromium and Firefox pass at 1440px and 390px with no horizontal overflow or page
+errors. Scoped Biome checking has no errors; Svelte checking retains 11 existing test
+errors and one existing fixture warning. Migrations 0214 and 0215 were rehearsed on a
+private copy and applied to local D1. Readback preserved all 1,420 Location identities,
+2,028 immutable revisions, memberships and occupancy records, with foreign-key and
+integrity checks passing. Remote rollout and authenticated admin acceptance remain
+unverified.
+
+## Building parts — local implementation (10 November 2026)
+
+Tracking: [#241](https://github.com/tijptjik/hype/issues/241), parent
+[#186](https://github.com/tijptjik/hype/issues/186), under #178. This scoped
+implementation does not complete the older migration-importer (#194) or routing (#213)
+issues.
+
+`building_part` is an explicitly authored physical Location: a wing, floor, zone, shop
+space, flat, room or another identifiable portion of a building. It need not be
+enclosed, numbered, occupied or described by a complete 3D address. “3/F, Example
+Building” and “East Wing, Example Building” are valid identities. An establishment is
+its occupant; tenant turnover does not replace the part or its directly associated
+Features.
+
+Creation requires an existing visible `buildingId`, plus an optional `parentPartId`. The
+same D1 batch writes the identity, immutable baseline and `locationMembership`
+assertions. Every authored part has a direct current owning-building edge, including
+parts nested beneath other parts. The owning building is resolved from that explicit
+edge, never inferred from address text. An additional current edge can point to a part
+with the same owning building. Building → Room and Building → Wing → Floor → Room
+therefore both work without manufacturing intermediate entities. Shared parts use shared
+assertions; private parts use their owning Organisation scope. Database guards reject
+self-parenting, cycles, cross-building nesting and reassignment/suppression of the
+owning edge. Owning-building changes and conversion of an existing Location to/from a
+part require a separate identity/reconfiguration workflow; the address editor does not
+offer that conversion.
+
+Existing structured floor/unit content, locally authored addresses and verified
+canonical address references remain independent address evidence. Floor/unit text does
+not create a part or prove entity equivalence. Local creation does not invent upstream
+address or inventory IDs. Existing `address` Locations are retained without bulk
+reclassification. `locationOccupancy` accepts establishments at either a building or a
+part; no placeholder establishment is required. Current, former and unconfirmed episodes
+retain their existing immutable lifecycle and relocation-review rules.
+
+A building's **Associated Features** listing includes direct Features, Features on all
+current nested parts, and Features associated with current establishments occupying the
+building or its parts. Relationships resolve in each Feature's persisted Organisation
+scope, with scoped suppression replacing shared assertions. Former/unconfirmed occupancy
+does not count as current. The query uses distinct identity reachability and one row per
+Feature; normal Feature authorization runs before the existing 25-item pagination.
+Draft/archive access is unchanged. **Features placed here** and **Past accepted
+placements** continue to use retained accepted placement evidence rather than current
+tenancy. Accepted building/premises grouping now uses the actual ancestor kind;
+intermediate part membership revisions remain exact pins rather than being mislabeled as
+premises.
+
+The association contract selects a Location identity and sync intent. The new-feature
+context policy above replaces the earlier conceptual IN/ON distinction with one
+`building_part` target, displayed as **Inside or part of the building**. The independent
+relation is `locatedAt` or `represents`. Enabled target contexts determine which choices
+are offered; legacy Feature-type Location allowlists remain readable for compatibility.
+
+Migration `0213_building_parts.sql` widens the inline kind CHECK and facts
+discriminator, updates membership/occupancy guards and accepted ancestry projections,
+and recreates dependent triggers/views. It does not convert existing data. Apply it
+before using the new kind; it has been rehearsed on a private local database copy, not
+applied to the working database or any remote environment. The rehearsal preserved all
+1,420 Location identities and 2,028 immutable revisions, retained existing schema
+objects, and passed foreign-key and integrity checks.
+
+Local evidence: 116 tests pass across nine files, including
+`src/tests/building-parts.test.ts` and the existing relationship, address, listing,
+association, accepted-placement and Feature-type policy suites. Svelte checking retains
+11 existing errors in unrelated test code and one existing fixture warning; targeted
+Biome checks report warnings but no errors. Headless Chromium and Firefox checked
+creation controls at 1280px and 390px with mocked APIs: owning-building gating, optional
+parent transport, no page errors and no horizontal overflow. Artifacts are under
+`output/playwright/building-parts/`; the repeatable script is
+`scripts/visual-checks/building-part-check.ts`. These are component checks, not
+authenticated admin end-to-end or production verification. Release migration and
+deployed acceptance remain open on #241.
+
+### Feature location display preference
+
+The Feature-owned address envelope stores `locationDisplayMode`: `automatic`, `address`,
+or `plus_code`. Automatic prefers a usable address label and falls back to a full Plus
+Code when only marker geography is available. Explicit address mode keeps address
+presentation; explicit Plus Code mode uses the Feature marker regardless of its
+associated Location's address. Available marker-locality context follows the code.
+
+`markerCoordinates` is a Feature display projection, separate from the matched address's
+source coordinates. The editor and write boundary derive it from Feature geometry;
+changing display mode never changes Location identity or source address evidence. The
+preference participates in the existing Feature address metadata/revision path.
+
+What3Words is a separately tracked provider integration:
+[#242](https://github.com/tijptjik/hype/issues/242). Its option remains unavailable
+until credentials, language-aware coordinate caching, stale-response handling and
+provider failure behaviour are implemented.

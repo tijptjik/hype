@@ -50,7 +50,24 @@ export function addressLocationNames(address: FeatureAddress): Record<string, st
  * in the Feature's accepted placement; local creation does not verify upstream publication.
  */
 export function localIdentityFromAddress(
-  kind: 'address' | 'premises' | 'building' | 'establishment',
+  kind:
+    | 'address'
+    | 'premises'
+    | 'building'
+    | 'building_part'
+    | 'infrastructure'
+    | 'built'
+    | 'structure'
+    | 'landform'
+    | 'coastal_feature'
+    | 'water_feature'
+    | 'service_point'
+    | 'premises_address'
+    | 'cadastral_address'
+    | 'linear_reference'
+    | 'street'
+    | 'natural'
+    | 'establishment',
   names: Record<string, string>,
   address: FeatureAddress,
   visibility: 'shared' | 'exclusive' = 'shared',
@@ -59,6 +76,12 @@ export function localIdentityFromAddress(
   const content = localAddressContent(address)
   return LocalLocationInputSchema.parse({
     kind,
+    ...(kind === 'building_part'
+      ? {
+          buildingId: address.association?.buildingId,
+          parentPartId: address.association?.parentPartId,
+        }
+      : {}),
     state: visibility === 'exclusive' ? 'manual' : 'unresolved',
     sharingPreference: 'private',
     facts: {

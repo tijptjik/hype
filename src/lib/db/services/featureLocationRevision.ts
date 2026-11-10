@@ -25,16 +25,17 @@ export async function readFeatureLocationRevisionMemberships(
   >,
 ): Promise<AcceptedLocation['memberships']> {
   const direct = await db.all<AcceptedLocation['memberships'][number]>(sql`
-    SELECT l.id AS containerLocationId,l.kind AS role,${input.associationVersion} AS bindingVersion,
+    SELECT l.id AS containerLocationId,l.matchingType AS role,${input.associationVersion} AS bindingVersion,
       ${input.occupancyRevisionId} AS occupancyRevisionId,NULL AS membershipRevisionId
     FROM location l WHERE l.id=CASE WHEN ${input.occupancyRevisionId} IS NULL THEN ${input.locationId}
       ELSE (SELECT (SELECT locationId FROM locationCanonical WHERE aliasId=containerLocationId)
-        FROM locationOccupancy WHERE id=${input.occupancyRevisionId}) END AND l.kind IN ('building','premises')`)
+        FROM locationOccupancy WHERE id=${input.occupancyRevisionId}) END AND l.matchingType IN ('building','premises')`)
   const inherited = await db.all<AcceptedLocation['memberships'][number]>(sql`
-    SELECT (SELECT locationId FROM locationCanonical WHERE aliasId=m.parentLocationId) AS containerLocationId,
-      'premises' AS role,${input.associationVersion} AS bindingVersion,NULL AS occupancyRevisionId,min(m.id) AS membershipRevisionId
+    SELECT parent.id AS containerLocationId,
+      parent.matchingType AS role,${input.associationVersion} AS bindingVersion,NULL AS occupancyRevisionId,min(m.id) AS membershipRevisionId
     FROM locationMembership m JOIN json_each(${JSON.stringify(input.membershipRevisionIds)}) j ON j.value=m.id
-    GROUP BY (SELECT locationId FROM locationCanonical WHERE aliasId=m.parentLocationId)`)
+    JOIN location parent ON parent.id=(SELECT locationId FROM locationCanonical WHERE aliasId=m.parentLocationId)
+    WHERE parent.matchingType IN ('building','premises') GROUP BY parent.id,parent.matchingType`)
   const selected = new Map(
     direct.map(row => [JSON.stringify([row.containerLocationId, row.role]), row]),
   )

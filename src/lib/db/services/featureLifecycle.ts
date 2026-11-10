@@ -8,8 +8,9 @@ import {
   reviewedImageChanges,
 } from './featureImageReview'
 // DRIZZLE
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 // SCHEMA
+import { featureImage } from '../schema/image'
 import {
   lifecycleFeature,
   acceptedFeatureRevision,
@@ -273,6 +274,20 @@ export async function prepareFeatureEdit(
     db.insert(lifecycleWriteScope).values({ featureId: input.featureId, token }),
     ...projection.statements,
     prepareRevisionCheck(db, projection.verify),
+    // Preserve legacy gallery choices before publication/archive triggers recompute effective visibility.
+    ...(input.state
+      ? [
+          db
+            .update(featureImage)
+            .set({ localIsPublished: sql`${featureImage.isPublished}` })
+            .where(
+              and(
+                eq(featureImage.featureId, input.featureId),
+                isNull(featureImage.localIsPublished),
+              ),
+            ),
+        ]
+      : []),
     db
       .update(lifecycleFeature)
       .set({

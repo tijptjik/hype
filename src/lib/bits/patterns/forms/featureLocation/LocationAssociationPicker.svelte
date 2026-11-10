@@ -3,10 +3,15 @@
 import { onMount, onDestroy, untrack, tick } from 'svelte'
 import { fade, slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
+// COMPONENTS
+import LocationKindField from '../localLocationAddress/LocationKindField.svelte'
+// TAXONOMY
+import { expandLocationMatchingTypes } from '#lib/locations/taxonomy.js'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 // COMPONENTS
+import BuildingPartParents from '../localLocationAddress/BuildingPartParents.svelte'
 import AssociationUnitInput from './AssociationUnitInput.svelte'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
@@ -83,7 +88,7 @@ import type {
 
 let {
   origin,
-  allowedLocationKinds,
+  allowedLocationKinds: configuredLocationKinds,
   cached = [],
   projectId,
   search,
@@ -113,18 +118,34 @@ let {
   onPreview?: (result: Result, preserveZoom?: boolean) => void
   markerNumberFor?: (result: Result) => number
 } = $props()
+const allowedLocationKinds = $derived(
+  configuredLocationKinds
+    ? expandLocationMatchingTypes(configuredLocationKinds)
+    : undefined,
+)
+
 const displayKinds = $derived(
-  [...ASSOCIATION_KINDS]
-    .reverse()
-    .filter(kind => !allowedLocationKinds || allowedLocationKinds.includes(kind)),
+  (allowedLocationKinds
+    ? ASSOCIATION_KINDS.filter(kind => allowedLocationKinds.includes(kind)).sort(
+        (a, b) => allowedLocationKinds.indexOf(a) - allowedLocationKinds.indexOf(b),
+      )
+    : [...ASSOCIATION_KINDS].reverse()
+  ).filter(
+    kind =>
+      kind !== 'infrastructure' &&
+      (!allowedLocationKinds || allowedLocationKinds.includes(kind)),
+  ),
 )
 const initial = untrack(() => origin)
+let buildingId = $state(initial.address.association?.buildingId ?? '')
+let parentPartId = $state(initial.address.association?.parentPartId ?? '')
 const originalAddress = $derived(
   normalizeAssociationComponents($state.snapshot(origin.address)),
 )
 let kind = $state<AssociationKind>(
   untrack(() => {
-    const candidate = initial.address.association?.kind ?? initial.kind
+    const retained = initial.address.association?.kind ?? initial.kind
+    const candidate = retained === 'infrastructure' ? 'built' : retained
     return !allowedLocationKinds || allowedLocationKinds.includes(candidate)
       ? candidate
       : (displayKinds[0] ?? candidate)
@@ -134,6 +155,19 @@ let names = $state<Record<AssociationKind, Record<string, string>>>({
   address: {},
   premises: associationNames(initial.address, 'premises'),
   building: associationNames(initial.address, 'building'),
+  building_part: {},
+  infrastructure: {},
+  street: {},
+  natural: {},
+  built: {},
+  structure: {},
+  landform: {},
+  coastal_feature: {},
+  water_feature: {},
+  service_point: {},
+  premises_address: {},
+  cadastral_address: {},
+  linear_reference: {},
   establishment: {},
   [initial.address.association?.kind ?? initial.kind]:
     initial.address.association?.names ?? initial.names,
@@ -142,12 +176,38 @@ let candidates = $state<Record<AssociationKind, Result[]>>({
   address: [],
   premises: [],
   building: [],
+  building_part: [],
+  infrastructure: [],
+  street: [],
+  natural: [],
+  built: [],
+  structure: [],
+  landform: [],
+  coastal_feature: [],
+  water_feature: [],
+  service_point: [],
+  premises_address: [],
+  cadastral_address: [],
+  linear_reference: [],
   establishment: [],
 })
 let lookups = $state<Record<AssociationKind, AssociationLookup>>({
   address: 'matched',
   premises: 'not-checked',
   building: 'not-checked',
+  building_part: 'not-checked',
+  infrastructure: 'not-checked',
+  street: 'not-checked',
+  natural: 'not-checked',
+  built: 'not-checked',
+  structure: 'not-checked',
+  landform: 'not-checked',
+  coastal_feature: 'not-checked',
+  water_feature: 'not-checked',
+  service_point: 'not-checked',
+  premises_address: 'not-checked',
+  cadastral_address: 'not-checked',
+  linear_reference: 'not-checked',
   establishment: 'not-checked',
 })
 let hoveredCandidate = $state<string | null>(null)
@@ -228,6 +288,19 @@ let completedEmpty = $state<Record<AssociationKind, boolean>>({
   address: false,
   premises: false,
   building: false,
+  building_part: false,
+  infrastructure: false,
+  street: false,
+  natural: false,
+  built: false,
+  structure: false,
+  landform: false,
+  coastal_feature: false,
+  water_feature: false,
+  service_point: false,
+  premises_address: false,
+  cadastral_address: false,
+  linear_reference: false,
   establishment: false,
 })
 let edits = $state<AddressReviewEdits>({})
@@ -291,6 +364,19 @@ const candidatePools: Record<AssociationKind, Result[]> = {
   address: [],
   premises: [],
   building: [],
+  building_part: [],
+  infrastructure: [],
+  street: [],
+  natural: [],
+  built: [],
+  structure: [],
+  landform: [],
+  coastal_feature: [],
+  water_feature: [],
+  service_point: [],
+  premises_address: [],
+  cadastral_address: [],
+  linear_reference: [],
   establishment: [],
 }
 let alive = true
@@ -298,6 +384,19 @@ const requests: Record<AssociationKind, number> = {
   address: 0,
   premises: 0,
   building: 0,
+  building_part: 0,
+  infrastructure: 0,
+  street: 0,
+  natural: 0,
+  built: 0,
+  structure: 0,
+  landform: 0,
+  coastal_feature: 0,
+  water_feature: 0,
+  service_point: 0,
+  premises_address: 0,
+  cadastral_address: 0,
+  linear_reference: 0,
   establishment: 0,
 }
 const tag = $derived(ADDRESS_LOCALES[getLocaleKey()])
@@ -343,6 +442,7 @@ const numberValid = $derived(
 )
 const canAccept = $derived(
   (!allowedLocationKinds || allowedLocationKinds.includes(kind)) &&
+    (kind !== 'building_part' || Boolean(matched?.identity) || Boolean(buildingId)) &&
     !changingSelection &&
     numberValid &&
     !Object.values(pendingInputs).some(Boolean) &&
@@ -812,7 +912,8 @@ function acceptInitialSelection(): void {
  * @param manual Explicit address-only intent. @returns Nothing.
  */
 function accept(manual = false): void {
-  if (!canAccept) return
+  if (!canAccept || (kind === 'building_part' && !matched?.identity && !buildingId))
+    return
   const selectedKind = manual ? 'address' : kind
   const target = manual ? null : custom ? (provisional[kind] ?? null) : matched
   let address: Result['address'] =
@@ -853,6 +954,9 @@ function accept(manual = false): void {
   address.association = {
     ...address.association,
     originKind: origin.address.association?.originKind ?? origin.kind,
+    ...(selectedKind === 'building_part'
+      ? { buildingId: buildingId || undefined, parentPartId: parentPartId || undefined }
+      : {}),
     kind: selectedKind,
     mode,
     names: selectedNames,
@@ -1484,6 +1588,16 @@ onDestroy(() => {
   inert={initialSearchPending}
   data-location-association-picker
 >
+  <div class="grid gap-4 p-4 sm:grid-cols-2">
+    <LocationKindField
+      value={kind}
+      allowPartCreation={true}
+      allowedKinds={displayKinds}
+      onChange={next => {
+        if (next !== 'unknown') selectKind(next)
+      }}
+    />
+  </div>
   <div
     use:measureSpace
     class="min-h-0 flex-1 overflow-y-auto overscroll-contain"
@@ -1498,7 +1612,7 @@ onDestroy(() => {
         data-association-selector
       >
         <div
-          class="mx-auto grid w-full max-w-3xl min-w-0 grid-cols-4"
+          class="mx-auto grid w-full max-w-3xl min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),1fr))]"
           role="radiogroup"
           aria-label={m.association_title()}
         >
@@ -1528,8 +1642,10 @@ onDestroy(() => {
                   event.key === 'Home'
                     ? 0
                     : event.key === 'End'
-                      ? 3
-                      : (index + (event.key === 'ArrowRight' ? 1 : 3)) % 4
+                      ? displayKinds.length - 1
+                      : (index +
+                          (event.key === 'ArrowRight' ? 1 : displayKinds.length - 1)) %
+                        displayKinds.length
                 selectKind(displayKinds[next])
                 event.currentTarget.parentElement
                   ?.querySelectorAll<HTMLButtonElement>('button')
@@ -1561,6 +1677,20 @@ onDestroy(() => {
                 >{{
                   establishment: m.association_example_establishment,
                   building: m.association_example_building,
+                  building_part: m.association_example_building_part,
+                  infrastructure: () => 'Tunnel, retaining wall or footbridge',
+                  street: () => 'Road, lane or pedestrian street',
+                  natural: () => 'Hill, river or beach',
+                  built: () => 'Built place with unknown form',
+                  structure: () => 'Bridge, tunnel or pier',
+                  landform: () => 'Peak, island or valley',
+                  coastal_feature: () => 'Beach, bay or headland',
+                  water_feature: () => 'River, stream, lake or reservoir',
+                  service_point: () => 'Recycling, collection or drinking-water point',
+                  premises_address: () =>
+                    'Street and number, village house or named premises',
+                  cadastral_address: () => 'Lot, section or subsection reference',
+                  linear_reference: () => 'A measured position along a named route',
                   premises: m.association_example_premises,
                   address: m.association_example_address,
                 }[value]()}</span
@@ -1569,7 +1699,7 @@ onDestroy(() => {
                 class="relative flex w-full items-center justify-center"
                 data-association-track
               >
-                {#if index < 3}
+                {#if index < displayKinds.length - 1}
                   <span
                     aria-hidden="true"
                     class="absolute left-1/2 top-1/2 w-full -translate-y-1/2 border-t-[6px] {index >=
@@ -2121,10 +2251,31 @@ onDestroy(() => {
                   : {
                       premises: m.association_create_premises,
                       building: m.association_create_building,
+                      building_part: m.association_create_building_part,
+                      infrastructure: () => 'Create infrastructure',
+                      street: () => 'Create street',
+                      natural: () => 'Create geographic feature',
+                      built: () => 'Create built',
+                      structure: () => 'Create structure',
+                      landform: () => 'Create landform',
+                      coastal_feature: () => 'Create coastal feature',
+                      water_feature: () => 'Create water feature',
+                      service_point: () => 'Create service point',
+                      premises_address: () => 'Create premises address',
+                      cadastral_address: () => 'Create cadastral address',
+                      linear_reference: () => 'Create linear reference',
                       establishment: m.association_create_establishment,
                     }[kind === 'address' ? 'establishment' : kind]()}
               </button>
             </section>
+          {/if}
+          {#if kind === 'building_part' && !matched?.identity && projectId}
+            <BuildingPartParents
+              {projectId}
+              address={originalAddress}
+              bind:buildingId
+              bind:parentPartId
+            />
           {/if}
           <div
             class="mx-auto w-full max-w-[45rem] items-center gap-3 {matched &&

@@ -1,5 +1,6 @@
 import { sharedLocationFacts } from './locationShared'
 // SNAPSHOT CONTRACT
+import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { classifyLocationFactsKind } from '#lib/locations/factsKind.js'
 import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 // ═══════════════════════
@@ -15,6 +16,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
 import { location as locationTable, locationRevision } from '../schema/location'
+import { locationMembership } from '../schema/locationRelationships'
 // SHARED PARSER
 import { parseAddressContent } from '@saanseoi/address'
 // VALIDATION
@@ -52,6 +54,8 @@ import type { Database } from '#lib/types.js'
  * @returns Stable local Location identity and initial revision identity.
  * @remarks The caller must authorize organisation management. No Feature is linked or
  * rewritten; canonical identities and addresses require separate verified workflows.
+ * Building parts require a visible owning building; optional parent parts must share it.
+ * Identity, baseline and membership assertions commit atomically without an occupant.
  * Sharing preference records upstream contribution consent, independently of shared
  * unresolved visibility or private manual visibility. Organisation ownership is retained.
  */
@@ -99,6 +103,19 @@ export async function createLocalLocation(
   })
   const locationId = verified?.locationId ?? nanoid(12)
   const revisionId = nanoid(12)
+  // The owning building is an explicit identity; address text never resolves membership.
+  if (parsed.kind === 'building_part') {
+    for (const [id, kind] of [
+      [parsed.buildingId, 'building'],
+      [parsed.parentPartId, 'building_part'],
+    ] as const) {
+      if (!id) continue
+      const parent =
+        await db.get(sql`SELECT id FROM location WHERE id=${id} AND matchingType=${kind}
+        AND state!='redirect' AND (state!='manual' OR (${parsed.state}='manual' AND ownerOrganisationId=${organisationId}))`)
+      if (!parent) throw new Error('Building or parent part unavailable')
+    }
+  }
   const rawSource = {
     kind: verified ? 'building-export-baseline' : 'local-baseline',
     ...(verified ? { buildingSource: verified.buildingSource } : {}),
@@ -127,11 +144,33 @@ export async function createLocalLocation(
         AND successor.state!='redirect' AND (successor.state!='manual' OR successor.ownerOrganisationId=${organisationId})
         AND (${Number(parsed.state === 'manual')} OR successor.state!='manual'))`
     : sql`1`
+  // Create the owning edge before optional nesting, inside the identity/baseline transaction.
+  const memberships =
+    parsed.kind === 'building_part' && parsed.buildingId
+      ? [parsed.buildingId, ...(parsed.parentPartId ? [parsed.parentPartId] : [])].map(
+          parentId => {
+            const id = nanoid(12)
+            return db.insert(locationMembership).values({
+              id,
+              relationshipId: id,
+              previousRevisionId: null,
+              scopeOrganisationId: parsed.state === 'manual' ? organisationId : null,
+              assertionState: 'asserted',
+              evidence: [],
+              provenance: { process: 'building-part-authoring' },
+              actorId,
+              childLocationId: locationId,
+              parentLocationId: parentId,
+              membershipState: 'current',
+            })
+          },
+        )
+      : []
   // These SELECTs follow the schema column order, including generated timestamps.
   const result = await db.batch([
     db
       .insert(locationTable)
-      .select(sql`SELECT ${locationId},NULL,${parsed.kind},${organisationId},${parsed.state},'current',
+      .select(sql`SELECT ${locationId},NULL,${locationTaxonomy(parsed.kind).kind},${locationTaxonomy(parsed.kind).class},${organisationId},${parsed.state},'current',
       NULL,NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${successorGuard}`)
       .returning({ id: locationTable.id }),
     db
@@ -139,6 +178,7 @@ export async function createLocalLocation(
       .select(sql`SELECT ${revisionId},${locationId},1,'local',NULL,NULL,NULL,NULL,
       ${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(parsed.facts, parsed.kind)},
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE EXISTS(SELECT 1 FROM location WHERE id=${locationId})`),
+    ...memberships,
   ])
   if (!result[0].length) throw new Error('Successor Location unavailable')
   return { locationId, revisionId }
@@ -243,6 +283,12 @@ export async function updateLocalLocationAddress(
       baseline.location.ownerOrganisationId !== input.organisationId)
   )
     return null
+  // Creating or removing a physical part requires its dedicated membership flow.
+  if (
+    kind !== baseline.location.kind &&
+    (kind === 'building_part' || baseline.location.kind === 'building_part')
+  )
+    throw new Error('Building part kind cannot be changed through address editing')
   if (address && kind === 'building') address = { ...address, unit: null, unitI18n: {} }
   validateLocationStatusKind(kind, status)
   // Save name and location groups together while retaining untouched canonical address evidence.
@@ -304,7 +350,7 @@ export async function updateLocalLocationAddress(
     expectedOrganisationRevision: current?.revision ?? null,
     guard: sql`EXISTS(SELECT 1 FROM location p JOIN locationRevision r ON r.locationId=p.id
       WHERE p.id=${input.locationId} AND p.state=${baseline.location.state} AND p.ssId IS ${baseline.location.ssId}
-      AND p.ownerOrganisationId IS ${baseline.location.ownerOrganisationId} AND p.kind IN (${baseline.location.kind},${kind}) AND r.id=${input.expectedRevisionId}
+      AND p.ownerOrganisationId IS ${baseline.location.ownerOrganisationId} AND p.matchingType IN (${baseline.location.kind},${kind}) AND r.id=${input.expectedRevisionId}
       AND (${Number(baseline.location.ssId === null && baseline.location.ownerOrganisationId === input.organisationId)} OR r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id AND (p.state!='linked' OR origin='saanseoi'))))
 `,
   })
@@ -313,7 +359,10 @@ export async function updateLocalLocationAddress(
     correction.queries.push(
       db
         .update(locationTable)
-        .set({ kind })
+        .set({
+          entityKind: locationTaxonomy(kind).kind,
+          class: locationTaxonomy(kind).class,
+        })
         .where(
           and(
             eq(locationTable.id, input.locationId),

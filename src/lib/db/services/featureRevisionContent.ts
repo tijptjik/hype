@@ -219,6 +219,17 @@ export function buildFeatureRevisionBaselineContent(
     format: 'feature-content/v1',
     profile: {
       ...(source.record.featureType ? { featureType: source.record.featureType } : {}),
+      ...(source.record.nameTemplate
+        ? { nameTemplate: source.record.nameTemplate }
+        : {}),
+      ...(source.record.kind ? { kind: source.record.kind } : {}),
+      ...(source.record.targetContext
+        ? { targetContext: source.record.targetContext }
+        : {}),
+      ...(source.record.associationRelation
+        ? { associationRelation: source.record.associationRelation }
+        : {}),
+
       isIntangible: source.record.isIntangible,
       visitability: {
         isVisitable: source.record.isVisitable,

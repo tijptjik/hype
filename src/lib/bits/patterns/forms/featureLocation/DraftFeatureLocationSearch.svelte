@@ -36,6 +36,7 @@ import ClearIcon from 'virtual:icons/lucide/x'
 import WarningIcon from 'virtual:icons/lucide/triangle-alert'
 import FilterIcon from 'virtual:icons/lucide/list-filter'
 // API
+import { searchTargetLocations } from '#lib/api/locationAssociation.remote.js'
 import { getSharedLocationIdBySource } from '#lib/api/locationDirectory.remote.js'
 import {
   searchDraftLocations,
@@ -56,6 +57,8 @@ import {
   getAddressDisplay,
   getAddressLocale,
 } from '#lib/addresses/featureAddress.js'
+// TAXONOMY
+import { expandLocationMatchingTypes } from '#lib/locations/taxonomy.js'
 // I18N
 import { getLocale, getLocaleKey, m } from '#lib/i18n.js'
 // TYPES
@@ -76,7 +79,9 @@ const searchKinds = ['establishment', 'building', 'address'] as const
 
 let {
   active,
-  allowedLocationKinds,
+  allowedLocationKinds: configuredLocationKinds,
+  suggestionKinds,
+  preferredKind,
   initialMode = 'search',
   searchRequest,
   allowManualEntry = true,
@@ -110,6 +115,8 @@ let {
 }: {
   active: boolean
   allowedLocationKinds?: readonly string[]
+  suggestionKinds?: readonly string[]
+  preferredKind?: string
   initialMode?: 'search' | 'pin'
   searchRequest?: {
     id: number
@@ -149,6 +156,12 @@ let {
   coordinates?: [number, number]
   children?: Snippet<[Snippet<[Snippet?]>, Snippet, Snippet, Snippet<[boolean?]>]>
 } = $props()
+const allowedLocationKinds = $derived(
+  configuredLocationKinds
+    ? expandLocationMatchingTypes(configuredLocationKinds)
+    : undefined,
+)
+
 let input: HTMLInputElement | undefined = $state()
 let searchOutline = $state<HTMLDivElement>()
 let query = $state('')
@@ -232,6 +245,9 @@ function applyFilters(value: PlaceSearchFilters): void {
  */
 function clearSearch(): void {
   query = ''
+  if (localRows.length) localRows = []
+  localSearchFailed = false
+  localSearchLimited = false
   schedule(false, false)
   previousRows = []
   previousQuery = ''
@@ -247,6 +263,15 @@ let resultsElement: HTMLElement | undefined = $state()
 let includeShops = $state(true)
 let includeAddresses = $state(true)
 let includeBuildings = $state(true)
+$effect(() => {
+  const kinds = suggestionKinds
+  if (kinds)
+    untrack(() => {
+      includeShops = kinds.includes('establishment')
+      includeBuildings = kinds.includes('building')
+      includeAddresses = kinds.includes('address') || Boolean(preferredKind)
+    })
+})
 const searchBuildings = $derived(includeBuildings)
 const hasPlaceCategory = $derived(hasPlaceSearchCategory(filters))
 const searchAddresses = $derived(includeAddresses && !hasPlaceCategory)
@@ -321,16 +346,36 @@ let previousRows: Result[] = []
 let previousQuery = ''
 let previousScrollTop = 0
 let receivedRows = $state.raw<Result[]>([])
+let localRows = $state.raw<Result[]>([])
+let localSearchFailed = $state(false)
+let localSearchLimited = $state(false)
 const providerRevisions: Record<Result['kind'], number> = {
   establishment: 0,
+  service_point: 0,
+  premises_address: 0,
+  cadastral_address: 0,
+  linear_reference: 0,
   premises: 0,
   building: 0,
+  building_part: 0,
+  infrastructure: 0,
+  street: 0,
+  natural: 0,
+  built: 0,
+  structure: 0,
+  landform: 0,
+  coastal_feature: 0,
+  water_feature: 0,
   address: 0,
 }
 let cachedKinds = new Set<Result['kind']>()
 // Keep provider ranking within each kind while late responses reorder both list and map.
 const rows = $derived(
-  receivedRows
+  [
+    ...localRows,
+    ...receivedRows.filter(row => !localRows.some(local => local.id === row.id)),
+  ]
+    .filter(row => !suggestionKinds || suggestionKinds.includes(row.kind))
     .filter(row =>
       row.kind === 'establishment'
         ? includeShops
@@ -340,8 +385,13 @@ const rows = $derived(
     )
     .toSorted(
       (a, b) =>
-        searchKinds.indexOf(a.kind === 'premises' ? 'building' : a.kind) -
-        searchKinds.indexOf(b.kind === 'premises' ? 'building' : b.kind),
+        (a.kind === preferredKind ? -1 : 0) - (b.kind === preferredKind ? -1 : 0) ||
+        searchKinds.indexOf(
+          a.kind === 'establishment' || a.kind === 'address' ? a.kind : 'building',
+        ) -
+          searchKinds.indexOf(
+            b.kind === 'establishment' || b.kind === 'address' ? b.kind : 'building',
+          ),
     ),
 )
 const groups = $derived(
@@ -537,6 +587,11 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
   const request = onlyKind ? version : ++version
   if (!onlyKind) cachedKinds = new Set()
   const q = query.trim()
+  if (!onlyKind) {
+    if (localRows.length) localRows = []
+    localSearchFailed = false
+    localSearchLimited = false
+  }
   if ((!nearby && !canSearch) || (nearby && !coordinates) || !hasSearchTypes) {
     if (!onlyKind) {
       addressController?.abort()
@@ -661,6 +716,42 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
     return { rows: [...unique.values()], total: unique.size, nextCursor: null }
   }
   await Promise.allSettled([
+    preferredKind && projectId && q && !onlyKind
+      ? searchTargetLocations({ projectId, kind: preferredKind as Result['kind'], q })
+          .then(found => {
+            if (request !== version) return
+            localSearchLimited = Boolean(found.nextCursor)
+            localRows = found.data.flatMap(row =>
+              row.facts &&
+              row.revisionId &&
+              row.state !== 'redirect' &&
+              row.kind !== 'unknown'
+                ? [
+                    {
+                      id: `location:${row.id}`,
+                      kind: row.kind,
+                      names: row.facts.names,
+                      identity: {
+                        locationId: row.id,
+                        revisionId: row.revisionId,
+                        ...(row.ssId ? { ssId: row.ssId } : {}),
+                      },
+                      address: {
+                        version: 1 as const,
+                        source: row.facts.location.address,
+                        coordinates: row.facts.location.geometry.coordinates,
+                        matchStatus: row.facts.location.address.status,
+                        overrides: {},
+                      },
+                    },
+                  ]
+                : [],
+            )
+          })
+          .catch(() => {
+            if (request === version) localSearchFailed = true
+          })
+      : Promise.resolve(),
     requestedKinds.has('building')
       ? (nearby
           ? nearbyBuildings()
@@ -1221,6 +1312,10 @@ function choose(result: Result): void {
  * @returns Nothing.
  */
 async function acceptResult(result: Result): Promise<void> {
+  if (allowedLocationKinds && !allowedLocationKinds.includes(result.kind)) {
+    openAssociation(result, false)
+    return
+  }
   if (selected?.id !== result.id) choose(result)
   const request = ++version
   if (
@@ -1450,6 +1545,20 @@ export function backToResults(): void {
  * @returns Nothing.
  */
 export function addManualLocation(): void {
+  if (preferredKind && currentAddress?.coordinates) {
+    const kind = preferredKind as Result['kind']
+    const address = { ...currentAddress, association: undefined }
+    const result: Result = {
+      id: `manual:${crypto.randomUUID()}`,
+      kind,
+      localKind: kind,
+      names: {},
+      address,
+    }
+    choose(result)
+    openAssociation(result, false)
+    return
+  }
   associationOpen = false
   associationOrigin = null
   invalidateAssociationLookup()
@@ -1981,6 +2090,18 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
   {/if}
 {/snippet}
 {#snippet searchResults()}
+  {#if localSearchFailed}
+    <p role="status" class="text-muted-foreground px-6 py-2 text-sm">
+      Local location search is unavailable. You can retry or create a local record;
+      source evidence is shown separately.
+    </p>
+  {/if}
+  {#if localSearchLimited}
+    <p role="status" class="text-muted-foreground px-6 py-2 text-sm">
+      More local locations are available. Refine your search to find the specific
+      record.
+    </p>
+  {/if}
   {#if fallbackStatus && !accepted && !associationOpen}
     <p role="status" class="text-muted-foreground text-sm">{fallbackStatus}</p>
   {/if}
@@ -2090,6 +2211,21 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             class="border-border/50 data-[highlighted=true]:bg-primary/10 relative flex flex-wrap items-center gap-3 rounded-md border-b transition-colors last:border-0"
             animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180 }}
           >
+            {#if preferredKind &&
+              (index === 0 ||
+                (visibleRows[index - 1].kind === preferredKind) !==
+                  (result.kind === preferredKind) ||
+                (visibleRows[index - 1].kind === 'establishment') !==
+                  (result.kind === 'establishment'))}
+              <p class="text-muted-foreground w-full pt-4 pb-2 text-sm font-medium">
+                {result.kind === preferredKind
+                  ? 'Matching locations'
+                  : result.kind === 'establishment' && preferredKind === 'building_part'
+                    ? 'Find a physical space through an establishment'
+                    : 'Broader locations and address evidence'}
+              </p>
+            {/if}
+
             <button
               type="button"
               class="group flex min-h-20 min-w-0 flex-1 basis-64 items-center gap-3 rounded-md px-3 py-6 text-left outline-none"
@@ -2151,7 +2287,10 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                     ? labels.title
                     : undefined}
                   taxonomyLabel={result.taxonomyLabel}
-                  primaryName={result.kind === 'building' ? labels.title : undefined}
+                  primaryName={result.kind !== 'address' &&
+                  result.kind !== 'establishment'
+                    ? labels.title
+                    : undefined}
                   collapsed={!currentGroup &&
                     result.kind === 'address' &&
                     Boolean(
@@ -2195,6 +2334,9 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   type="button"
                   class="border-secondary bg-secondary text-secondary-content focus-visible:outline-secondary rounded-md border px-3 py-2 text-sm font-medium hover:bg-[color-mix(in_oklab,var(--color-secondary)_92%,black)] focus-visible:outline-2 dark:text-white"
                   onkeydown={event => handleResultTab(event, index)}
+                  disabled={Boolean(
+                    allowedLocationKinds && !allowedLocationKinds.includes('address'),
+                  )}
                   onclick={() =>
                     acceptResult({
                       ...result,
@@ -2221,7 +2363,9 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             {/if}
             {#if visibleRows[index + 1]?.kind !== result.kind}
               {@render pagination(
-                result.kind === 'premises' ? 'building' : result.kind,
+                result.kind === 'establishment' || result.kind === 'address'
+                  ? result.kind
+                  : 'building',
               )}
             {/if}
           </div>

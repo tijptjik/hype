@@ -1,3 +1,6 @@
+import { readFeatureIntentPolicy } from '#lib/db/services/featureIntentPolicy.js'
+import { requireFeatureType } from '#lib/features/intents.js'
+import { generateFeatureName, nameBooleanValue } from '#lib/features/locationPolicy.js'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 import {
@@ -44,6 +47,7 @@ import { probeLayerForUpdate } from '#lib/db/services/layer.js'
 import { supportedLocaleKeys } from '#lib/i18n.js'
 import {
   adaptContentMap,
+  canonicalContentTag,
   contentFormKey,
   contentRowsToForm,
 } from '#lib/i18n/contentRecords.js'
@@ -304,6 +308,8 @@ type FeatureImageRelation = {
 }
 
 type FeatureResponseRow = FeatureAdminDBRaw & {
+  nameValues?: string
+  locationNames?: string | Record<string, string> | null
   imageCount?: number
   imagePublishedCount?: number
   layer?: Layer | null
@@ -432,10 +438,37 @@ const toProfileResponseShape = async (
   row: FeatureResponseRow,
   profile: FeatureProfile,
 ): Promise<FeatureEntityByProfile<FeatureProfile>> => {
+  // Names are a read projection; accepted base text and per-locale overrides remain intact.
+  const translations = contentRowsToForm(row.i18n ?? [])
+  if (row.nameTemplate) {
+    const template = row.nameTemplate
+    const names =
+      adaptContentMap<string>(
+        typeof row.locationNames === 'string'
+          ? JSON.parse(row.locationNames)
+          : (row.locationNames ?? {}),
+      ) ?? {}
+    const properties = Object.fromEntries(
+      Object.entries(row.nameValues ? JSON.parse(row.nameValues) : {}).map(
+        ([id, value]) => [id, nameBooleanValue(value)],
+      ),
+    )
+    for (const [locale, translation] of Object.entries(translations)) {
+      translation.title = generateFeatureName({
+        rule: template.rule,
+        locale: canonicalContentTag(locale),
+        featureName:
+          adaptContentMap(template.baseNames)?.[locale] ?? translation.title ?? '',
+        locationName: names[locale],
+        properties,
+        override: adaptContentMap(template.overrides)?.[locale],
+      })
+    }
+  }
   if (profile === 'compact')
     return FeatureCompactProfileAPI.parse({
       ...row,
-      i18n: contentRowsToForm(row.i18n ?? []),
+      i18n: translations,
     })
   const imageProfile =
     profile === 'admin'
@@ -458,7 +491,7 @@ const toProfileResponseShape = async (
     ...row,
     geometry:
       profile === 'default' && row.geometry?.type !== 'Point' ? null : row.geometry,
-    i18n: contentRowsToForm(row.i18n ?? []),
+    i18n: translations,
     properties: toPropertyShape(row.properties),
     image:
       profile === 'list' ||
@@ -1041,6 +1074,25 @@ const prepareUserContributedFeatureDraft = async (
     new Set(),
     validatedFeature.layerId,
   )
+  if (validatedFeature.featureType) {
+    const type = requireFeatureType(
+      (
+        await readFeatureIntentPolicy(db, {
+          type: 'layer',
+          id: validatedFeature.layerId,
+        })
+      ).types,
+      validatedFeature.featureType,
+    )
+    validatedFeature.kind = type.kind ?? 'object'
+    validatedFeature.associationRelation = type.relation ?? 'locatedAt'
+    if (
+      validatedFeature.targetContext &&
+      type.targetContexts &&
+      !type.targetContexts.includes(validatedFeature.targetContext)
+    )
+      throw new Error('Location context is not available for this layer')
+  }
   return {
     validatedFeature,
     layerScope,
@@ -1131,9 +1183,34 @@ const prepareUserContributedFeatureCreation = async (
     stage,
   )
 
+  const type = validatedFeature.featureType
+    ? requireFeatureType(
+        (
+          await readFeatureIntentPolicy(db, {
+            type: 'layer',
+            id: validatedFeature.layerId,
+          })
+        ).types,
+        validatedFeature.featureType,
+      )
+    : null
+  const nameTemplate =
+    type && (type.nameRule || type.relation === 'represents')
+      ? {
+          rule: type.nameRule ?? { base: 'location' as const, conditions: [] },
+          baseNames: Object.fromEntries(
+            Object.entries(validatedFeature.i18n).map(([locale, row]) => [
+              locale,
+              row.title ?? '',
+            ]),
+          ),
+          overrides: validatedFeature.nameOverrides ?? {},
+        }
+      : null
   return {
     data: {
       ...validatedFeature,
+      nameTemplate,
       organisationId: layerScope.organisationId,
       projectId: layerScope.projectId,
       addressMeta: validatedFeature.addressMeta ?? {},

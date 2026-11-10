@@ -10,6 +10,7 @@ import {
   locationRevision,
 } from '../schema/location'
 // DOMAIN
+import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 import { validateLocationStatusKind } from '#lib/locations/lifecycle.js'
 import {
@@ -304,7 +305,10 @@ export async function prepareLocationCorrection(
       queries.push(
         db
           .update(locationTable)
-          .set({ kind: capturedKind })
+          .set({
+            entityKind: locationTaxonomy(capturedKind).kind,
+            class: locationTaxonomy(capturedKind).class,
+          })
           .where(
             and(
               eq(locationTable.id, input.locationId),

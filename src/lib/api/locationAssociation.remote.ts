@@ -34,3 +34,32 @@ export const searchDraftAssociationLocations = guardedQuery(
     return nearbyAssociationLocations(ctx.db, input)
   },
 )
+
+/** Discover local and imported records of the intended kind before falling back to source evidence.
+ * @param input Authorized project, intended kind and literal search text.
+ * @returns Bounded readable records and explicit coverage information.
+ */
+export const searchTargetLocations = guardedQuery(
+  z.strictObject({
+    projectId: z.string().min(1),
+    kind: AssociationKindSchema,
+    q: z.string().trim().min(1).max(200),
+  }),
+  async (input, ctx) => {
+    const project = await probeProjectQuery(ctx.db, {
+      ref: input.projectId,
+      refKey: 'id',
+    })
+    if (!project) error(404, 'PROJECT_NOT_FOUND')
+    await requireLocationOrganisationManager(ctx, project.organisationId)
+    const { listLocationResources } = await import(
+      '#lib/db/services/locationDirectory.js'
+    )
+    return listLocationResources(ctx.db, {
+      kind: input.kind,
+      q: input.q,
+      organisationId: project.organisationId,
+      includeCount: false,
+    })
+  },
+)

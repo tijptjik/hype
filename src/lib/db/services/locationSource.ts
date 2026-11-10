@@ -170,7 +170,7 @@ export async function persistSaanSeoiPlace(
   await db.batch([
     db
       .insert(locationTable)
-      .select(sql`SELECT ${locationId},${projection.ssId},'establishment',NULL,'linked','current',
+      .select(sql`SELECT ${locationId},${projection.ssId},'operational','establishment',NULL,'linked','current',
         NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${creationGuard}`)
       .onConflictDoNothing({ target: locationTable.id }),
     db

@@ -1,3 +1,4 @@
+import { featureNameValuesSQL } from '#lib/db/services/featureNameProjection.js'
 // DRIZZLE
 import { and, sql, type SQL } from 'drizzle-orm'
 // API
@@ -208,6 +209,7 @@ export async function queryFeatureIndex(
       extras: {
         locationBrands: featureLocationBrandsSQL().as('locationBrands'),
         locationNames: featureLocationNamesSQL().as('locationNames'),
+        nameValues: featureNameValuesSQL().as('nameValues'),
         authoring: featureAuthoringSQL().as('authoring'),
         locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
       },

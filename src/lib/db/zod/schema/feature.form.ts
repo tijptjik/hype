@@ -1,3 +1,8 @@
+import {
+  FeatureKindSchema,
+  TargetContextSchema,
+  AssociationRelationSchema,
+} from '#lib/features/locationPolicy.js'
 // ZOD
 import { z } from 'zod'
 import { FeatureTypeIdSchema } from '#lib/features/intents.js'
@@ -93,6 +98,13 @@ export const FeatureDraftI18nByLocaleFormData = contentLocaleMap(
 
 export const FeatureEntityFormData = z.object({
   featureType: FeatureTypeIdSchema.nullish(),
+  nameOverrides: z
+    .preprocess(decodeLocationFormValue, z.record(z.string(), z.string().max(1000)))
+    .optional(),
+  kind: FeatureKindSchema.nullish(),
+  targetContext: TargetContextSchema.nullish(),
+  associationRelation: AssociationRelationSchema.nullish(),
+
   locationNameMode: z.enum(['inherit', 'independent']).optional(),
   locationReset: z.preprocess(decodeLocationFormValue, LocationResetSchema).optional(),
   locationBrandEdit: z
@@ -120,6 +132,13 @@ export const FeatureEntityFormData = z.object({
 
 export const FeatureDraftEntityFormData = z.object({
   featureType: FeatureTypeIdSchema.nullish(),
+  nameOverrides: z
+    .preprocess(decodeLocationFormValue, z.record(z.string(), z.string().max(1000)))
+    .optional(),
+  kind: FeatureKindSchema.nullish(),
+  targetContext: TargetContextSchema.nullish(),
+  associationRelation: AssociationRelationSchema.nullish(),
+
   locationNameMode: z.enum(['inherit', 'independent']).optional(),
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })

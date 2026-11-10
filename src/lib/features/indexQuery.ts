@@ -16,6 +16,7 @@ export const FeatureIndexFiltersSchema = z
     isPendingReview: tri,
     isIntangible: tri,
     isVisitable: tri,
+    hasLocation: tri,
     hasTitle: tri,
     hasDescription: tri,
     hasDisplayAddress: tri,

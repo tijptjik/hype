@@ -1,3 +1,7 @@
+import {
+  targetLocationKinds,
+  type TargetContext,
+} from '#lib/features/locationPolicy.js'
 // DRIZZLE
 import { sql, type SQL } from 'drizzle-orm'
 // SCHEMA
@@ -6,6 +10,7 @@ import {
   featureIntentPolicyRevision,
 } from '../schema/featureIntentPolicy'
 // DOMAIN
+import { expandLocationMatchingTypes } from '#lib/locations/taxonomy.js'
 import {
   DEFAULT_FEATURE_TYPES,
   FeatureTypesSchema,
@@ -86,11 +91,14 @@ export async function readFeatureIntentPolicy(
       : (JSON.parse(own.definition) as FeatureType[] | string[])
   const types =
     scope.type === 'layer'
-      ? resolveFeatureTypes(inheritedTypes, null, definition as string[] | null)
+      ? definition === null
+        ? inheritedTypes
+        : definition.every(value => typeof value === 'string')
+          ? resolveFeatureTypes(inheritedTypes, null, definition as string[])
+          : FeatureTypesSchema.parse(definition)
       : definition === null
         ? inheritedTypes
         : FeatureTypesSchema.parse(definition)
-
   return {
     types,
     inheritedTypes,
@@ -150,9 +158,12 @@ export async function assertFeatureIntentLocation(
   featureId: string,
   locationId: string | null,
 ): Promise<void> {
-  const identity = await db.get<{ featureType: string | null }>(
-    sql`SELECT featureType FROM feature WHERE id=${featureId}`,
-  )
+  // Unlinking remains possible even when a former feature type has been retired.
+  if (locationId === null) return
+  const identity = await db.get<{
+    featureType: string | null
+    targetContext: TargetContext | null
+  }>(sql`SELECT featureType,targetContext FROM feature WHERE id=${featureId}`)
   if (!identity?.featureType) return
   const row = await db.get<{ layerId: string }>(
     sql`SELECT layerId FROM feature WHERE id=${featureId}`,
@@ -160,39 +171,31 @@ export async function assertFeatureIntentLocation(
   if (!row) throw new Error('Feature no longer exists')
   const policy = await readFeatureIntentPolicy(db, { type: 'layer', id: row.layerId })
   const type = requireFeatureType(policy.types, identity.featureType)
-  if (locationId === null) {
-    if (type.associationRequired)
-      throw new Error('This feature type requires a Location association.')
-    return
-  }
   const location = await db.get<{ kind: string }>(
-    sql`SELECT kind FROM location WHERE id=${locationId}`,
+    sql`SELECT matchingType AS kind FROM location WHERE id=${locationId}`,
   )
-  if (!location || !type.locationKinds.some(kind => kind === location.kind))
+  if (
+    !location ||
+    !expandLocationMatchingTypes(
+      identity.targetContext
+        ? targetLocationKinds(identity.targetContext)
+        : type.locationKinds,
+    ).some(kind => kind === location.kind)
+  )
     throw new Error(
       'This Location kind is not permitted for the selected feature type.',
     )
 }
 
-/** Prevent publishing an incomplete required association while preserving legacy Features.
+/** Preserve the publication hook while allowing unresolved Location associations.
  * @param db Request database. @param featureId Authorized publication target.
- * @returns Nothing when complete; a retryable validation error otherwise.
+ * @returns Nothing; association completeness is surfaced by index filters.
  */
 export async function assertFeatureIntentPublication(
   db: Database,
   featureId: string,
 ): Promise<void> {
-  const row = await db.get<{
-    featureType: string | null
-    layerId: string
-    linked: number
-  }>(
-    sql`SELECT featureType,layerId,EXISTS(SELECT 1 FROM featureLocation WHERE featureId=f.id) linked FROM feature f WHERE id=${featureId}`,
-  )
-  if (!row?.featureType || row.linked) return
-  const type = (
-    await readFeatureIntentPolicy(db, { type: 'layer', id: row.layerId })
-  ).types.find(type => type.id === row.featureType)
-  if (type?.associationRequired)
-    throw new Error('Link a Location before publishing this feature type.')
+  // Missing associations are data-quality work, never a publication gate.
+  void db
+  void featureId
 }

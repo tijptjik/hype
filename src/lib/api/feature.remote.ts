@@ -1,10 +1,12 @@
-import { readFeatureIntentPolicy } from '#lib/db/services/featureIntentPolicy.js'
-import { requireFeatureType } from '#lib/features/intents.js'
+// DOMAIN
+import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { sharedLocationEditRights } from './services/locationOwnership'
 import { historicalSourceLayerId } from '#lib/db/services/historicalLayers.js'
 import type { RemoteQuery } from '$app/server'
 import { error } from '@sveltejs/kit'
 
+import { readFeatureIntentPolicy } from '#lib/db/services/featureIntentPolicy.js'
+import { requireFeatureType } from '#lib/features/intents.js'
 // Register panel query families for bounded single-flight mutation refreshes.
 import './resources.remote'
 // REMOTE
@@ -627,12 +629,35 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
 
     if (await historicalSourceLayerId(db, data.layerId))
       invalid(issue('HISTORICAL_LAYER_MEMBERSHIP_AUTOMATIC'))
+    let nameTemplate:
+      | import('#lib/features/locationPolicy.js').FeatureNameTemplate
+      | null = null
     try {
       const policy = await readFeatureIntentPolicy(db, {
         type: 'layer',
         id: data.layerId,
       })
-      data.featureType = requireFeatureType(policy.types, data.featureType).id
+      const selected = requireFeatureType(policy.types, data.featureType)
+      data.featureType = selected.id
+      data.kind = selected.kind ?? (selected.id === 'business' ? 'place' : 'object')
+      data.associationRelation =
+        selected.relation ?? (data.kind === 'place' ? 'represents' : 'locatedAt')
+      const contexts =
+        selected.targetContexts ??
+        TARGET_CONTEXTS.filter(kind => selected.locationKinds.includes(kind))
+      data.targetContext =
+        data.targetContext ?? (contexts.length === 1 ? contexts[0] : null)
+      if (data.targetContext && !contexts.includes(data.targetContext))
+        throw new Error('Choose a location context available for this layer.')
+      if (selected.nameRule || data.associationRelation === 'represents') {
+        nameTemplate = {
+          rule: selected.nameRule ?? { base: 'location', conditions: [] },
+          baseNames: Object.fromEntries(
+            Object.entries(data.i18n).map(([locale, row]) => [locale, row.title ?? '']),
+          ),
+          overrides: data.nameOverrides ?? {},
+        }
+      }
     } catch (cause) {
       invalid(issue(cause instanceof Error ? cause.message : 'Invalid feature type'))
     }
@@ -654,6 +679,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       revisionActor: { actorId: user.id, mode: 'staff' },
       data: {
         ...data,
+        nameTemplate,
         id: featureId || nanoid(12),
         organisationId: resolvedOrganisationId,
         projectId: resolvedProjectId,
@@ -682,6 +708,11 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   if (data.featureType !== undefined && data.featureType !== current.featureType)
     invalid(issue('Changing the feature type requires an explicit reclassification.'))
   data.featureType = current.featureType
+  for (const key of ['kind', 'targetContext', 'associationRelation'] as const) {
+    if (data[key] !== undefined && data[key] !== current[key])
+      invalid(issue('Changing location intent requires explicit reclassification.'))
+    Object.assign(data, { [key]: current[key] })
+  }
   let destinationScope: FeatureDestinationScope | undefined
   const parentsChanged =
     data.layerId !== current.layerId ||

@@ -18,10 +18,12 @@ import {
   type FeatureAddress,
 } from '#lib/addresses/featureAddress.js'
 // DOMAIN
+import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import LocalLocationAddressFields from '#lib/bits/patterns/forms/localLocationAddress/LocalLocationAddressFields.svelte'
 import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
 import { LocationNamesEditSchema } from '#lib/locations/validation.js'
+import BuildingPartParents from '../localLocationAddress/BuildingPartParents.svelte'
 import LocationKindField from '../localLocationAddress/LocationKindField.svelte'
 import LocationNameFields from '../localLocationAddress/LocationNameFields.svelte'
 import type { LocationKind } from '#lib/locations/kinds.js'
@@ -94,6 +96,8 @@ let names = $state<Record<string, string>>(
 // The caller supplies the intended entity type; matching state stays a separate choice.
 // svelte-ignore state_referenced_locally
 let kind = $state<LocationKind>(initialKind)
+let buildingId = $state('')
+let parentPartId = $state('')
 const namesValid = $derived(LocationNamesEditSchema.safeParse(names).success)
 let address = $state(createLocalLocationAddress())
 let parseSource = $state<Record<string, string> | undefined>()
@@ -167,8 +171,11 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
   try {
     const input = LocalLocationInputSchema.parse({
       state: locationState,
-      kind,
+      ...locationTaxonomy(kind),
       sharingPreference,
+      ...(kind === 'building_part'
+        ? { buildingId, parentPartId: parentPartId || undefined }
+        : {}),
       parseSource,
       facts: {
         names: LocationNamesEditSchema.parse(names),
@@ -267,10 +274,20 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
         }}
       />
       <LocationKindField
+        allowPartCreation
         value={kind}
         disabled={busy || disabled || preparing}
         onChange={next => (kind = next)}
       />
+      {#if kind === 'building_part'}
+        <BuildingPartParents
+          {projectId}
+          address={selectedAddress ?? initialAddress}
+          bind:buildingId
+          bind:parentPartId
+          disabled={busy || disabled}
+        />
+      {/if}
       <LocationNameFields
         {names}
         disabled={busy || disabled || preparing}
@@ -294,14 +311,22 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
           type="button"
           text={m.feature_location_create_share()}
           onClick={() => create('allow-sharing')}
-          disabled={busy || disabled || preparing || !namesValid}
+          disabled={busy ||
+            disabled ||
+            preparing ||
+            !namesValid ||
+            (kind === 'building_part' && !buildingId)}
         />
         <Button
           type="button"
           style="outline"
           text={m.feature_location_create_private()}
           onClick={() => create('private')}
-          disabled={busy || disabled || preparing || !namesValid}
+          disabled={busy ||
+            disabled ||
+            preparing ||
+            !namesValid ||
+            (kind === 'building_part' && !buildingId)}
         />
       </div>
       {#if failed}

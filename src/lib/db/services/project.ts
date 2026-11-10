@@ -3,6 +3,7 @@ import { prepareImageIntentPolicySave } from './imageIntentPolicy'
 import type { ImageIntentSettingsPatch } from '#lib/images/intents.js'
 // INDEX QUERY
 import {
+  resourceAncestorNameSearchCondition,
   resourceIndexFilterConditions,
   resourceIndexSearchCondition,
 } from './resourceIndexFilters.js'
@@ -520,7 +521,9 @@ export async function listProjects<
   if (query?.q && !query.indexFilters) {
     const search = query.q.toLowerCase()
     const searchColumns = query.searchColumns || ['code', 'name', 'description']
-    const searchConditions: SQL<unknown>[] = []
+    const searchConditions: SQL<unknown>[] = [
+      resourceAncestorNameSearchCondition('project', query.q),
+    ]
 
     const baseColumns = searchColumns.filter(column => column === 'code')
     for (const column of baseColumns) {

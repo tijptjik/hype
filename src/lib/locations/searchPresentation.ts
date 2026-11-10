@@ -29,7 +29,7 @@ export type LocationSearchMarker = {
 export function locationSearchColor(kind: LocationSearchMarker['kind']): string {
   return kind === 'address'
     ? 'var(--color-tertiary)'
-    : kind === 'building'
+    : kind === 'building' || kind === 'building_part'
       ? 'var(--color-secondary)'
       : 'var(--color-primary)'
 }

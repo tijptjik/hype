@@ -17,6 +17,10 @@ function setup() {
   sqlite.exec(`CREATE TABLE organisation(id TEXT PRIMARY KEY, hubId TEXT);
     CREATE TABLE project(id TEXT PRIMARY KEY, organisationId TEXT);
     CREATE TABLE feature(id TEXT PRIMARY KEY,projectId TEXT,layerId TEXT,isPublished INTEGER,isArchived INTEGER,isDraft INTEGER);
+    CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT,matchingType TEXT GENERATED ALWAYS AS (kind) VIRTUAL,state TEXT,ownerOrganisationId TEXT,redirectTargetId TEXT);
+    CREATE VIEW locationCanonical AS SELECT id aliasId,id locationId FROM location;
+    CREATE TABLE locationMembershipHead(id TEXT,relationshipId TEXT,childLocationId TEXT,parentLocationId TEXT,scopeOrganisationId TEXT,assertionState TEXT,membershipState TEXT);
+    CREATE TABLE locationOccupancyHead(id TEXT,relationshipId TEXT,establishmentLocationId TEXT,containerLocationId TEXT,scopeOrganisationId TEXT,assertionState TEXT,occupancyState TEXT);
     CREATE TABLE featureLocation(featureId TEXT PRIMARY KEY,locationId TEXT);
     CREATE TABLE featureI18n(featureId TEXT,locale TEXT,title TEXT);
     CREATE TABLE projectI18n(projectId TEXT,locale TEXT,name TEXT,nameShort TEXT);

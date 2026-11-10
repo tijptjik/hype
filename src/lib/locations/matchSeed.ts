@@ -10,7 +10,7 @@ import type { LocaleKey } from '#lib/types.js'
 
 export type LocationMatchSeed = {
   query: string
-  kind: 'establishment' | 'building' | 'premises' | 'address'
+  kind: 'establishment' | 'building' | 'building_part' | 'premises' | 'address'
 }
 
 /** Read retained legacy components without accepting them as canonical address facts.

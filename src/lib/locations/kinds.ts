@@ -1,14 +1,29 @@
 // VALIDATION
 import { z } from 'zod'
 
-/** Entity kind is independent of whether its identity is manual, unresolved or sourced. */
+/** Compatibility discriminators used by matching, v1 facts and retained policies.
+ * New identity storage uses LocationTaxonomy (kind/class); these tokens are derived,
+ * never a second independently authored classification. Infrastructure is legacy-only.
+ */
 export const LOCATION_KINDS = [
   'unknown',
-  'premises',
-  'establishment',
+  'built',
+  'building_part',
+  'structure',
   'building',
-  'address',
+  'premises',
+  'street',
   'natural',
+  'landform',
+  'coastal_feature',
+  'water_feature',
+  'establishment',
+  'service_point',
+  'address',
+  'premises_address',
+  'cadastral_address',
+  'linear_reference',
+  'infrastructure',
 ] as const
 export const LocationKindSchema = z.enum(LOCATION_KINDS)
 export type LocationKind = z.infer<typeof LocationKindSchema>
@@ -33,9 +48,21 @@ export const DEFAULT_DISCOVERY_TYPES: AvailableDiscoveryType[] = [
  * @remarks A building/address result supplies address evidence for an establishment, never its identity.
  */
 export function locationDiscoveryTypes(kind: LocationKind): LocationDiscoveryType[] {
-  if (kind === 'address') return ['address']
-  if (kind === 'building') return ['building', 'address']
-  if (kind === 'natural') return ['natural']
+  if (
+    ['address', 'premises_address', 'cadastral_address', 'linear_reference'].includes(
+      kind,
+    )
+  )
+    return ['address']
+  if (kind === 'building_part') return ['address']
+  if (
+    ['building', 'built', 'premises', 'structure', 'street', 'infrastructure'].includes(
+      kind,
+    )
+  )
+    return ['building', 'address']
+  if (['natural', 'landform', 'coastal_feature', 'water_feature'].includes(kind))
+    return ['natural']
   return ['establishment', 'building', 'address']
 }
 

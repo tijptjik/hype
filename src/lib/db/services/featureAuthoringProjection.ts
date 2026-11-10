@@ -8,6 +8,7 @@ import { sql, type SQL } from 'drizzle-orm'
  */
 export function featureAuthoringSQL(): SQL<string> {
   return sql<string>`json_object(
+    'hasLocation', EXISTS(SELECT 1 FROM featureLocation WHERE featureId="feature"."id"),
     'nameMode', COALESCE((SELECT CASE json_extract(fp.acceptancePolicy,'$.nameMode')
       WHEN 'independent' THEN 'independent' ELSE 'inherit' END
       FROM featureLocation fp WHERE fp.featureId="feature"."id"), 'independent'))`

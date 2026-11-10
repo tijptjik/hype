@@ -2202,5 +2202,10 @@
   "image_text_alt": "替代文字",
   "image_text_unavailable": "这张照片无法编辑文字。",
   "image_text_load_failed": "无法加载图片文字。请关闭后重试。",
-  "image_text_save_failed": "无法保存图片文字。"
+  "image_text_save_failed": "无法保存图片文字。",
+  "location_type_building_part": "建筑部分",
+  "location_part_building": "所属建筑",
+  "location_part_parent": "上级建筑部分（可选）",
+  "association_example_building_part": "翼楼、楼层、区域、铺位、单位或房间",
+  "association_create_building_part": "创建建筑部分"
 }

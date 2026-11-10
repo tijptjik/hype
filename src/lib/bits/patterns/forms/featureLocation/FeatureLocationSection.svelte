@@ -289,7 +289,24 @@ function selectRow(id: string): void {
   }
   if (
     onAssociationSelected &&
-    ['premises', 'building', 'establishment'].includes(row.kind)
+    [
+      'premises',
+      'building',
+      'building_part',
+      'infrastructure',
+      'built',
+      'structure',
+      'landform',
+      'coastal_feature',
+      'water_feature',
+      'service_point',
+      'premises_address',
+      'cadastral_address',
+      'linear_reference',
+      'street',
+      'natural',
+      'establishment',
+    ].includes(row.kind)
   ) {
     selected = null
     chosenAddress = undefined
@@ -304,7 +321,28 @@ function selectRow(id: string): void {
  * @returns Nothing; the parent retains the reviewed association intent.
  */
 function associateDiscovery(row: Result, manual = false): void {
-  if (!['address', 'premises', 'building', 'establishment'].includes(row.kind)) return
+  if (
+    ![
+      'address',
+      'premises',
+      'building',
+      'building_part',
+      'infrastructure',
+      'built',
+      'structure',
+      'landform',
+      'coastal_feature',
+      'water_feature',
+      'service_point',
+      'premises_address',
+      'cadastral_address',
+      'linear_reference',
+      'street',
+      'natural',
+      'establishment',
+    ].includes(row.kind)
+  )
+    return
   const origin: DraftLocationSearchResult = {
     id: row.id,
     kind: row.kind as DraftLocationSearchResult['kind'],
@@ -892,6 +930,10 @@ async function link(): Promise<void> {
                     const kind =
                       association.kind === 'premises' ||
                       association.kind === 'building' ||
+                      association.kind === 'building_part' ||
+                      association.kind === 'infrastructure' ||
+                      association.kind === 'street' ||
+                      association.kind === 'natural' ||
                       association.kind === 'establishment'
                         ? association.kind
                         : 'address'
@@ -1217,15 +1259,7 @@ async function link(): Promise<void> {
                             {/snippet}
                             {locationKindLabel(row.kind)}
                           </SimpleTooltip>
-                          {row.kind === 'address'
-                            ? m.location_type_address()
-                            : row.kind === 'establishment'
-                              ? m.location_type_establishment()
-                              : row.kind === 'building'
-                                ? m.location_type_buildings()
-                                : row.kind === 'natural'
-                                  ? m.location_type_natural()
-                                  : m.location_type_unknown()}
+                          {locationKindLabel(row.kind)}
                         </span><span class="block font-medium"
                           >{row.address
                             ? getAddressDisplay(row.address, getLocaleKey())
@@ -1256,7 +1290,24 @@ async function link(): Promise<void> {
                     </button>
                     {#if onAssociationSelected &&
                       selectedRow === row.id &&
-                      ['premises', 'building', 'establishment'].includes(row.kind)}
+                      [
+                        'premises',
+                        'building',
+                        'building_part',
+                        'infrastructure',
+                        'built',
+                        'structure',
+                        'landform',
+                        'coastal_feature',
+                        'water_feature',
+                        'service_point',
+                        'premises_address',
+                        'cadastral_address',
+                        'linear_reference',
+                        'street',
+                        'natural',
+                        'establishment',
+                      ].includes(row.kind)}
                       <div class="flex flex-wrap gap-2 px-4 pt-2 pb-3">
                         <Button
                           text={m.association_locate()}

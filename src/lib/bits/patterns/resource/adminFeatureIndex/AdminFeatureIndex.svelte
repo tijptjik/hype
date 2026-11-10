@@ -132,6 +132,12 @@ const filters = {
       title: m.filters__content(),
       icon: BookOpenIcon,
       filters: [
+        createToggleFilter('hasLocation', {
+          label: 'Location association',
+          falseLabel: 'Missing',
+          trueLabel: 'Linked',
+          transformOffset: 8,
+        }),
         createToggleFilter('hasTitle', {
           label: m.feature__title(),
           falseLabel: m.filters__no(),
