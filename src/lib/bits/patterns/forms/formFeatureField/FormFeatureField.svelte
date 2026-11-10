@@ -154,7 +154,7 @@ const fieldClass = $derived(
     </div>
 
     <div class={String.raw`min-w-0 [&_.bits-form\_\_label]:hidden!`}>
-      {#if !isEditing && !hasValue}
+      {#if !isEditing && !hasValue && !isToggleField}
         <TextInput
           id={`feature-field-${property.id}`}
           value=""
@@ -221,8 +221,12 @@ const fieldClass = $derived(
       {:else if property.component === 'CheckboxField' ||
         property.component === 'Toggle' ||
         property.component === 'ToggleField'}
-        <div class="bits-feature-field__control bits-feature-field__control--toggle">
+        <div
+          class="flex min-h-12 items-center [&_.bits-switch]:origin-center!"
+          class:justify-center={isEditing}
+        >
           <FeatureFieldToggle
+            id={`feature-field-${property.id}`}
             {checked}
             {isEditing}
             onChange={nextValue => onChange(nextValue)}
