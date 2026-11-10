@@ -1,3 +1,4 @@
+import { isModelFormResource, type ModelFormResource } from '#lib/forms/modelTabs.js'
 import type { RemoteQuery, RemoteQueryOverride, RemoteFormIssue } from '$app/server'
 import { toast } from 'svelte-sonner'
 import { onMount, untrack } from 'svelte'
@@ -705,6 +706,7 @@ export function createResourceFormConfig<Input>({
   getEntity,
   refreshResource,
 }: {
+  tabResource?: ModelFormResource
   formEl: HTMLFormElement | undefined
   key: string | number
   schema: StandardSchemaV1<Input, unknown>
@@ -725,6 +727,7 @@ export function createResourceFormConfig<Input>({
     result?: unknown
   }) => Promise<void>
 }): {
+  tabResource?: ModelFormResource
   formEl: HTMLFormElement | undefined
   key: string | number
   schema: StandardSchemaV1<Input, unknown>
@@ -748,6 +751,7 @@ export function createResourceFormConfig<Input>({
   }
 } {
   return {
+    tabResource: isModelFormResource(resourceType) ? resourceType : undefined,
     formEl,
     key,
     schema,

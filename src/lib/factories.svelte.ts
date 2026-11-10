@@ -1,3 +1,8 @@
+import {
+  changedModelTabs,
+  gateModelFormData,
+  type ModelFormResource,
+} from '#lib/forms/modelTabs.js'
 import type {
   RemoteForm,
   RemoteFormFields,
@@ -322,6 +327,7 @@ export interface RemoteFormOptions<Input = RemoteFormInput> {
   }) => Awaitable<void>
   resourceResult?: ConfigureFormResourceResultOptions<Input>
   formEl?: HTMLFormElement
+  tabResource?: ModelFormResource
 }
 
 export function configureForm<Input = RemoteFormInput>(
@@ -340,6 +346,7 @@ export function configureForm<Input = RemoteFormInput>(
     onissues,
     resourceResult,
     formEl,
+    tabResource,
   } = $derived(getProps())
 
   type FormData = Input extends undefined ? Record<string, never> : Input
@@ -365,6 +372,31 @@ export function configureForm<Input = RemoteFormInput>(
   let submitting = $state.raw(false)
   let submitted = $state.raw(false)
   let dirty = $derived(!deepEqual(initial, $state.snapshot(form.fields.value())))
+  const dirtyTabs = $derived(
+    tabResource
+      ? changedModelTabs(tabResource, initial, form.fields.value()).filter(
+          tab => tab !== 'profile',
+        )
+      : [],
+  )
+  // Native FormData is the shared boundary used by both validation and remote submit.
+  $effect(() => {
+    const element = formEl
+    const resource = tabResource
+    if (!element || !resource) return
+    const gate = (event: FormDataEvent): void =>
+      untrack(() => {
+        const current = form.fields.value() as { meta?: { mode?: string } }
+        if (current.meta?.mode !== 'update') return
+        gateModelFormData(
+          resource,
+          event.formData,
+          changedModelTabs(resource, initial, current),
+        )
+      })
+    element.addEventListener('formdata', gate)
+    return () => element.removeEventListener('formdata', gate)
+  })
   let wasSubmitAttempted = $state.raw(false)
   let isSubmitRequested = $state.raw(false)
 
@@ -704,6 +736,7 @@ export function configureForm<Input = RemoteFormInput>(
     attributes,
     initial,
     touched,
+    dirtyTabs,
     dirty,
     submitting,
     submitted,
