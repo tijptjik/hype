@@ -1,4 +1,7 @@
 <script lang="ts">
+// SVELTE
+import { tick } from 'svelte'
+import { prefersReducedMotion } from 'svelte/motion'
 // UTILITIES
 import { propertyKeyFromLabel } from '#lib/utils/nameIdentifier.js'
 // COMPONENTS
@@ -6,7 +9,9 @@ import FeaturePolicyChoice from './FeaturePolicyChoice.svelte'
 import { TextInput } from '#lib/bits/custom/form/index.js'
 import Label from '#lib/bits/custom/form/src/label/Label.svelte'
 import Switch from '#lib/bits/custom/switch/Switch.svelte'
-import FeatureNamingSettings from './FeatureNamingSettings.svelte'
+import FeatureNamingPolicySettings from './FeatureNamingPolicySettings.svelte'
+import FeatureNamingRuleEditor from './FeatureNamingRuleEditor.svelte'
+import type { FeatureNameRule } from '#lib/features/locationPolicy.js'
 // DOMAIN
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { LOCATION_ENTITY_KINDS, locationTaxonomy } from '#lib/locations/taxonomy.js'
@@ -26,6 +31,11 @@ let {
   locales,
   multilingual,
   disabled = false,
+  namingDisabled = disabled,
+  namingLocales = locales,
+  inheritedNameRule,
+  namingOverride,
+  onNamingChange,
   onIdChange,
 }: {
   type: FeatureType
@@ -34,6 +44,11 @@ let {
   locales: string[]
   multilingual: boolean
   disabled?: boolean
+  namingDisabled?: boolean
+  namingLocales?: string[]
+  inheritedNameRule?: FeatureNameRule
+  namingOverride?: FeatureNameRule
+  onNamingChange?: (rule: FeatureNameRule | undefined) => void
   onIdChange?: (before: string, after: string) => void
 } = $props()
 const examples: Record<string, string> = {
@@ -54,6 +69,60 @@ const orderedTargets = [
   ),
 ] as (typeof TARGET_CONTEXTS)[number][]
 const id = $props.id()
+let namingEditorOpen = $state(false)
+const namingEditorId = `${id}-naming-editor`
+const namingTriggerId = `${id}-naming-trigger`
+const inheritedNaming = $derived(
+  inheritedNameRule ?? {
+    base: type.relation === 'represents' ? ('location' as const) : ('feature' as const),
+    conditions: [],
+  },
+)
+/** Reveal the full-width editor beneath the current three columns.
+ * @returns Completion after the editor is rendered and focused.
+ */
+async function openNamingEditor(): Promise<void> {
+  const opening = !namingEditorOpen
+  namingEditorOpen = true
+  await tick()
+  if (opening) {
+    // Let the facet measure the newly mounted editor and publish its scroll clearance.
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+    await tick()
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+  }
+  const editor = document.getElementById(namingEditorId)
+  const heading = document.getElementById(`${namingEditorId}-title`)
+  if (!editor || !heading) return
+  // Scroll only the owning viewport; scrollIntoView also moves clipping ancestors.
+  let viewport = editor.parentElement
+  while (viewport && !/^(auto|scroll)$/.test(getComputedStyle(viewport).overflowY))
+    viewport = viewport.parentElement
+  const clearance = Number.parseFloat(getComputedStyle(editor).scrollMarginTop) || 0
+  const behavior = prefersReducedMotion.current ? 'instant' : 'smooth'
+  const top = editor.getBoundingClientRect().top - clearance
+  if (viewport) {
+    viewport.scrollTo({
+      top:
+        viewport.scrollTop +
+        top -
+        viewport.getBoundingClientRect().top -
+        viewport.clientTop,
+      behavior,
+    })
+  } else {
+    window.scrollTo({ top: window.scrollY + top, behavior })
+  }
+  heading.focus({ preventScroll: true })
+}
+/** Close an accepted or cancelled editor and restore focus to its summary.
+ * @returns Completion after the summary trigger receives focus.
+ */
+async function closeNamingEditor(): Promise<void> {
+  namingEditorOpen = false
+  await tick()
+  document.getElementById(namingTriggerId)?.focus({ preventScroll: true })
+}
 const targets = $derived(
   type.targetContexts ??
     TARGET_CONTEXTS.filter(kind => type.locationKinds.includes(kind)),
@@ -113,7 +182,7 @@ function updateEnglishName(before: string, after: string): void {
     />
     <FeaturePolicyChoice
       label="Feature kind"
-      help="Objects are individual items, such as signs or drinking fountains. Places are destinations, such as shops or community venues. Area and Route support is forthcoming."
+      help="kind"
       value={type.kind ?? 'object'}
       {disabled}
       options={[
@@ -153,7 +222,7 @@ function updateEnglishName(before: string, after: string): void {
   >
     <FeaturePolicyChoice
       label="Association relation"
-      help="Located at keeps the feature distinct from its host: a sign located at a building. Represents means the feature is the location itself: a bookstore representing that establishment. Choose Located at for objects; Represents for places."
+      help="relation"
       value={type.relation ?? 'locatedAt'}
       {disabled}
       options={[
@@ -172,14 +241,14 @@ function updateEnglishName(before: string, after: string): void {
     />
     <FeaturePolicyChoice
       label="Suggested starting point"
-      help="Find a location starts with a search for an existing place or address. Place on the map starts with a pin, with an optional location link afterward. Use search for known places and a pin for objects or places without an address."
+      help="start"
       value={type.start}
       {disabled}
       options={[
         {
           value: 'search',
           title: 'Find a location',
-          description: 'Search places and addresses',
+          description: 'Match by search',
         },
         {
           value: 'pin',
@@ -190,37 +259,24 @@ function updateEnglishName(before: string, after: string): void {
       onChange={value => (type.start = value as FeatureType['start'])}
     />
     <FeaturePolicyChoice
-      label="When no location is selected"
-      help="Offer local creation asks the author whether to create a location when none is selected. Continue silently lets them proceed without that prompt. Offer creation for missing places; continue silently when a map position is enough."
+      label="When no location is found"
+      help="missing"
       value={type.unresolvedMode ?? 'prompt'}
       {disabled}
       options={[
         {
           value: 'prompt',
           title: 'Offer local creation',
-          description: 'Ask to add a missing place',
+          description: 'List new place',
         },
         {
           value: 'silent',
           title: 'Continue silently',
-          description: 'Proceed without a prompt',
+          description: 'Keep it unlisted',
         },
       ]}
       onChange={value => (type.unresolvedMode = value as FeatureType['unresolvedMode'])}
     />
-    <div class="pt-4">
-      <FeatureNamingSettings
-        {scopeType}
-        {scopeId}
-        {locales}
-        {disabled}
-        rule={type.nameRule ?? {
-          base: type.relation === 'represents' ? 'location' : 'feature',
-          conditions: [],
-        }}
-        onChange={rule => (type.nameRule = rule)}
-      />
-    </div>
   </section>
   <section class="grid min-w-0 content-start gap-4" aria-label="Location targets">
     <Label text="Where can features be located?" />
@@ -269,4 +325,20 @@ function updateEnglishName(before: string, after: string): void {
       </fieldset>
     {/each}
   </section>
+  {#if namingEditorOpen && !namingDisabled}
+    <FeatureNamingRuleEditor
+      id={namingEditorId}
+      {scopeType}
+      {scopeId}
+      locales={namingLocales}
+      inheritedRule={inheritedNaming}
+      override={namingOverride}
+      disabled={namingDisabled}
+      onAccept={rule => {
+        onNamingChange?.(rule)
+        void closeNamingEditor()
+      }}
+      onCancel={() => void closeNamingEditor()}
+    />
+  {/if}
 </div>

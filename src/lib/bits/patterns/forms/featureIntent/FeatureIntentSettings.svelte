@@ -38,6 +38,7 @@ import {
   FEATURE_LOCATION_KINDS,
   featureTypeLabel,
   type FeatureType,
+  type FeatureNamingRules,
 } from '#lib/features/intents.js'
 // TYPES
 import type {
@@ -62,7 +63,11 @@ let {
 } = $props()
 let policy = $state<FeatureIntentPolicy | null>(null)
 let catalogue = $state<FeatureType[]>([])
+let namingRules = $state<FeatureNamingRules>({})
+let baselineNamingRules: FeatureNamingRules = {}
 const customSwitchId = $props.id()
+// Keep editor scroll targets clear of the responsive sticky toolbar.
+let toolbarHeight = $state(0)
 let inherits = $state(true)
 const busy = false
 let baseline = ''
@@ -82,8 +87,8 @@ const contentLocales = $derived(
   normalizeContentLocales(
     catalogue.flatMap(type => [
       ...Object.keys(type.labels ?? {}),
-      ...(type.nameRule?.conditions ?? []).flatMap(condition =>
-        Object.keys(condition.locales),
+      ...((namingRules[type.id] ?? type.nameRule)?.conditions ?? []).flatMap(
+        condition => Object.keys(condition.locales),
       ),
     ]),
   ),
@@ -99,8 +104,10 @@ $effect(() => {
     .then(value => {
       if (cancelled) return
       policy = value
+      namingRules = structuredClone(value.namingRules ?? {})
       catalogue = structuredClone(value.types).map(type => ({
         ...type,
+        nameRule: undefined,
         kind: type.kind ?? 'object',
         targetContexts: [
           ...new Set(
@@ -129,13 +136,18 @@ $effect(() => {
       inherits = value.definition === null
       baselineInherits = inherits
       baselineCatalogue = structuredClone($state.snapshot(catalogue))
-      baseline = JSON.stringify(inherits ? null : catalogue)
+      baselineNamingRules = structuredClone($state.snapshot(namingRules))
+      baseline = JSON.stringify({
+        definition: inherits ? null : catalogue,
+        namingRules,
+      })
       lastEmitted = undefined
       const retained = untrack(() => draft)
       if (retained) {
         const parsed = JSON.parse(retained)
         inherits = parsed.definition === null
         if (parsed.definition) catalogue = parsed.definition
+        namingRules = parsed.namingRules ?? baselineNamingRules
         lastEmitted = retained
       }
     })
@@ -156,22 +168,26 @@ $effect(() => {
     if (incoming === undefined) {
       catalogue = structuredClone(baselineCatalogue)
       inherits = baselineInherits
+      namingRules = structuredClone(baselineNamingRules)
     } else {
       const parsed = JSON.parse(incoming)
       inherits = parsed.definition === null
       if (parsed.definition) catalogue = parsed.definition
+      namingRules = parsed.namingRules ?? baselineNamingRules
     }
   })
 })
 $effect(() => {
   if (!policy) return
   const definition = $state.snapshot(inherits ? null : catalogue)
-  const serialized = JSON.stringify(definition)
+  const rules = $state.snapshot(namingRules)
+  const serialized = JSON.stringify({ definition, namingRules: rules })
   const next =
     serialized === baseline
       ? undefined
       : JSON.stringify({
           definition,
+          namingRules: rules,
           version: policy.version,
           fingerprint: policy.fingerprint,
         })
@@ -179,6 +195,26 @@ $effect(() => {
   lastEmitted = next
   untrack(() => onDraftChange?.(next))
 })
+
+/** Stage a naming-only override without materializing the inherited catalogue.
+ * @param id Feature type key. @param rule Local rule, or undefined to resume inheritance.
+ * @returns Nothing; the parent Save/Discard owns persistence.
+ */
+function changeNaming(id: string, rule: FeatureNamingRules[string] | undefined): void {
+  const next = { ...namingRules }
+  if (rule) next[id] = rule
+  else delete next[id]
+  namingRules = next
+}
+/** Carry a local naming override with an explicitly renamed feature type.
+ * @param before Previous key. @param after New key. @returns Nothing.
+ */
+function renameNaming(before: string, after: string): void {
+  if (before === after || !Object.hasOwn(namingRules, before)) return
+  const next = { ...namingRules, [after]: namingRules[before] }
+  delete next[before]
+  namingRules = next
+}
 
 let removeMode = $state(false)
 // Undefined opens the first section initially; null allows every section to be closed.
@@ -260,8 +296,11 @@ function dropType(state: DragDropState, target: string): void {
  * @returns Nothing. The last remaining type cannot be removed.
  */
 function removeType(): void {
-  if (editable && catalogue.length > 1)
+  if (editable && catalogue.length > 1) {
+    const removed = catalogue.find(type => typeKey(type) === removeKey)
+    if (removed) changeNaming(removed.id, undefined)
     catalogue = catalogue.filter(type => typeKey(type) !== removeKey)
+  }
   removeKey = null
   confirmRemove = false
 }
@@ -272,9 +311,15 @@ function removeType(): void {
     if (event.key === 'Escape') removeMode = false
   }}
 />
-<section class="flex min-w-0 flex-col" data-feature-type-settings>
+<section
+  class="flex min-w-0 flex-col"
+  data-feature-type-settings
+  style:--feature-type-toolbar-height={`${toolbarHeight}px`}
+>
   <div
-    class={`${responsiveSectionHeaderClasses} [&[data-fit="4"][data-fit]_[data-header-title-text]]:min-w-0! [&[data-fit="4"][data-fit]_[data-locale-toolbar]]:min-w-8! [&[data-fit="4"][data-fit]>header>div:first-child]:min-w-0! [&[data-fit="4"][data-fit]>header>div:first-child]:flex-1! [&[data-fit="4"][data-fit]>header>div:first-child>div]:w-full! [&[data-fit="4"][data-fit]>header>div:last-child]:w-60! [&[data-fit="4"][data-fit]>header>div:last-child]:flex-none!`}
+    class={`${responsiveSectionHeaderClasses} [&[data-fit="4"][data-fit]_[data-header-title-text]]:min-w-0! [&[data-fit="4"][data-fit]_[data-locale-toolbar]]:min-w-8! [&[data-fit="4"][data-fit]>header]:flex-wrap! [&[data-fit="4"][data-fit]>header>div:first-child]:min-w-0! [&[data-fit="4"][data-fit]>header>div:first-child]:flex-1! [&[data-fit="4"][data-fit]>header>div:first-child]:basis-full! [&[data-fit="4"][data-fit]>header>div:first-child>div]:w-full! [&[data-fit="4"][data-fit]>header>div:last-child]:w-full! [&[data-fit="4"][data-fit]>header>div:last-child]:flex-none!`}
+    bind:offsetHeight={toolbarHeight}
+    data-feature-type-toolbar
     use:fitSectionHeader
   >
     <SectionHeader
@@ -334,18 +379,31 @@ function removeType(): void {
           >
             <Trash class="size-4" /><span data-control-label>Remove Type</span>
           </button>
-          <label for={customSwitchId} class="text-sm font-medium" data-control-label
-            >Custom</label
-          >
+          <span class="text-sm font-medium whitespace-nowrap">
+            {scopeType === 'layer'
+              ? 'Project Defaults'
+              : scopeType === 'project'
+                ? 'Hub Defaults'
+                : 'Application Defaults'}
+          </span>
           <Switch
             id={customSwitchId}
             checked={!inherits}
             disabled={disabled || busy || !policy}
             onCheckedChange={checked => {
               inherits = checked !== true
+              if (inherits)
+                namingRules = Object.fromEntries(
+                  Object.entries(namingRules).filter(([id]) =>
+                    policy?.inheritedTypes.some(type => type.id === id),
+                  ),
+                )
               removeMode = false
             }}
           />
+          <label for={customSwitchId} class="text-sm font-medium whitespace-nowrap"
+            >Custom</label
+          >
         </div>
       {/snippet}
     </SectionHeader>
@@ -376,6 +434,16 @@ function removeType(): void {
             {scopeId}
             locales={shownLocales}
             {multilingual}
+            namingDisabled={disabled || !policy || inherits}
+            namingLocales={shownLocales}
+            inheritedNameRule={policy.inheritedTypes.find(
+              parent => parent.id === type.id,
+            )?.nameRule}
+            namingOverride={Object.hasOwn(namingRules, type.id)
+              ? namingRules[type.id]
+              : undefined}
+            onNamingChange={rule => changeNaming(type.id, rule)}
+            onIdChange={renameNaming}
             disabled
           />
         </FeatureTypeSection>
@@ -428,6 +496,16 @@ function removeType(): void {
               {scopeId}
               locales={shownLocales}
               {multilingual}
+              namingDisabled={disabled || !policy || inherits}
+              namingLocales={shownLocales}
+              inheritedNameRule={policy.inheritedTypes.find(
+                parent => parent.id === type.id,
+              )?.nameRule}
+              namingOverride={Object.hasOwn(namingRules, type.id)
+                ? namingRules[type.id]
+                : undefined}
+              onNamingChange={rule => changeNaming(type.id, rule)}
+              onIdChange={renameNaming}
               disabled={!editable}
             />
           </FeatureTypeSection>

@@ -26,6 +26,8 @@ export interface TextInputProps {
   locale?: LocaleExtended
   isTranslated?: boolean
   isGenAI?: boolean
+  /** Preserve authored whitespace when false; defaults to trimming on blur. */
+  trimOnBlur?: boolean
   inputType?: InputType
   inputAttrs?: Record<string, unknown>
   class?: string

@@ -27,6 +27,7 @@ let {
   isTranslated = false,
   isGenAI = false,
   inputType = 'text',
+  trimOnBlur = true,
   inputAttrs = {},
   class: className = '',
   controlClass = '',
@@ -99,6 +100,7 @@ function handleValueChange(nextValue: string): void {
     {name}
     class={`${inputClass} ${trailing ? 'min-w-0 flex-1' : ''} ${fitValue ? 'col-start-1 row-start-1 w-full! min-w-0!' : ''}`}
     type={inputType}
+    {trimOnBlur}
     bind:value
     placeholder={resolvedPlaceholder}
     {locale}

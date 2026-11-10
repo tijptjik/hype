@@ -8,6 +8,7 @@ const mock = `const types=${JSON.stringify(DEFAULT_FEATURE_TYPES)};
 export async function getFeatureIntentOptions(){return types}
 let version=0,definition=null;
 export async function getFeatureIntentSettings(){return {types:definition??types,inheritedTypes:types,definition,version,fingerprint:String(version),lineage:[]}}
+export async function getFeatureNameFieldsProject(){return 'project'}
 export async function getFeatureNameProperties(){return [{id:'paid',label:'Paid area'}]}
 export async function updateFeatureIntentSettings(input){definition=input.definition;globalThis.__savedFeatureTypes=definition;version++;return {saved:true}}
 `

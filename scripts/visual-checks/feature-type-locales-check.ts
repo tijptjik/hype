@@ -11,7 +11,8 @@ await mkdir(output, { recursive: true })
 const mock = `const defaults=${JSON.stringify(DEFAULT_FEATURE_TYPES)};
 let definition=null,version=0;
 export async function getFeatureIntentOptions(){return defaults}
-export async function getFeatureIntentSettings(){return {types:globalThis.savedPolicy?.definition??defaults,inheritedTypes:defaults,definition:globalThis.savedPolicy?.definition??null,version,fingerprint:String(version),lineage:[]}}
+export async function getFeatureIntentSettings(){const own=globalThis.savedPolicy??{};return {types:(own.definition??defaults).map(t=>({...t,...(own.namingRules?.[t.id]?{nameRule:own.namingRules[t.id]}:{})})),inheritedTypes:defaults,definition:own.definition??null,namingRules:own.namingRules??{},version,fingerprint:String(version),lineage:[]}}
+export async function getFeatureNameFieldsProject(){return 'project'}
 export async function getFeatureNameProperties(){return [{id:'paid',label:'Paid area'}]}
 
 `
@@ -198,15 +199,23 @@ for (const [engine, browserType] of [
         .getByRole('textbox', { name: 'Display name ja', exact: true })
         .first()
         .fill('昔の看板')
+      await cards
+        .first()
+        .getByRole('button', { name: /^(Configure naming rule|Define custom rules)$/ })
+        .click()
       await page
-        .getByRole('button', { name: 'Add boolean condition', exact: true })
+        .getByRole('button', { name: 'Add condition', exact: true })
         .first()
         .click()
       const firstType = page.locator('[data-feature-type-section]').first()
-      const japaneseCase = firstType.getByText('ja', { exact: true }).locator('..')
-      await japaneseCase
-        .getByRole('textbox', { name: 'true', exact: true })
+      await firstType
+        .locator('[data-naming-rule]')
+        .getByRole('group', { name: '日', exact: true })
+        .getByRole('textbox', { name: 'True', exact: true })
         .fill('有料')
+      await firstType
+        .getByRole('button', { name: 'Accept naming rule', exact: true })
+        .click()
       await languages.click()
       if (
         await page
@@ -232,21 +241,11 @@ for (const [engine, browserType] of [
         packet['meta.submittedTabs/fixture'] !== '["profile","location"]'
       )
         throw Error('Unchanged field tab was submitted')
-      const saved = await page.evaluate(
-        () =>
-          (
-            globalThis as unknown as {
-              savedPolicy: {
-                definition: {
-                  labels: Record<string, string>
-                  nameRule: {
-                    conditions: { locales: Record<string, { true: string }> }[]
-                  }
-                }[]
-              }
-            }
-          ).savedPolicy.definition[0],
-      )
+      const saved = await page.evaluate(() => {
+        const policy = Reflect.get(globalThis, 'savedPolicy')
+        const type = policy.definition[0]
+        return { ...type, nameRule: policy.namingRules[type.id] }
+      })
       if (
         saved.labels['zh-Hant'] !== '舊招牌' ||
         saved.labels.ja !== '昔の看板' ||

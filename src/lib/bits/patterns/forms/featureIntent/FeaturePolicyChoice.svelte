@@ -1,7 +1,6 @@
 <script lang="ts">
 // COMPONENTS
-import { SimpleTooltip } from '#lib/bits/core/index.js'
-import InfoIcon from 'virtual:icons/lucide/info'
+import FeatureIntentHelp from './FeatureIntentHelp.svelte'
 import FeaturePolicyIllustration from './FeaturePolicyIllustration.svelte'
 let {
   label,
@@ -9,16 +8,19 @@ let {
   value,
   options,
   disabled = false,
+  layout = 'card',
   onChange,
 }: {
   label: string
-  help: string
+  help?: 'kind' | 'relation' | 'start' | 'missing'
+  layout?: 'card' | 'horizontal'
   value: string
   options: readonly {
     value: string
     title: string
     description: string
     forthcoming?: boolean
+    scene?: string
   }[]
   disabled?: boolean
   onChange: (value: string) => void
@@ -30,27 +32,20 @@ const id = $props.id()
   <legend class="mb-2 w-full">
     <span class="flex items-center justify-between gap-2">
       <span class="text-muted-foreground text-xs font-medium">{label}</span>
-      <SimpleTooltip triggerClass="inline-flex">
-        {#snippet trigger()}
-          <button
-            type="button"
-            aria-label={`About ${label.toLowerCase()}`}
-            class="text-muted-foreground hover:text-foreground focus-visible:outline-primary inline-flex size-6 items-center justify-center rounded focus-visible:outline-2"
-          >
-            <InfoIcon class="size-3.5" aria-hidden="true" />
-          </button>
-        {/snippet}
-        <span class="block max-w-xs text-sm leading-5">{help}</span>
-      </SimpleTooltip>
+      {#if help}
+        <FeatureIntentHelp topic={help} label={`About ${label.toLowerCase()}`} />
+      {/if}
     </span>
   </legend>
   <div
-    class={options.length === 2
-      ? 'grid min-w-0 grid-cols-[minmax(0,1fr)_1.75rem_minmax(0,1fr)] items-stretch'
-      : 'grid min-w-0 grid-cols-2 items-stretch gap-3'}
+    class={layout === 'horizontal'
+      ? 'grid min-w-0 grid-cols-1 items-stretch gap-3 sm:grid-cols-2'
+      : options.length === 2
+        ? 'grid min-w-0 grid-cols-[minmax(0,1fr)_1.75rem_minmax(0,1fr)] items-stretch'
+        : 'grid min-w-0 grid-cols-2 items-stretch gap-3'}
   >
     {#each options as option, index}
-      {#if options.length === 2 && index > 0}
+      {#if layout !== 'horizontal' && options.length === 2 && index > 0}
         <span
           class="text-muted-foreground flex items-center justify-center text-xs"
           aria-hidden="true"
@@ -58,7 +53,10 @@ const id = $props.id()
         >
       {/if}
       <label
-        class="border-border/40 has-checked:border-primary/60 has-checked:bg-primary/5 has-focus-visible:outline-primary relative flex min-w-0 flex-col items-center gap-1 rounded-lg border px-2 pt-2 pb-3 text-center transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 motion-reduce:transition-none {option.forthcoming
+        class="border-border/40 has-checked:border-primary/60 has-checked:bg-primary/5 has-focus-visible:outline-primary relative min-w-0 items-center rounded-lg border transition-colors {layout ===
+        'horizontal'
+          ? 'grid grid-cols-[4.5rem_minmax(0,1fr)_0.75rem] gap-3 px-3 py-3 text-left'
+          : 'flex flex-col gap-1 px-2 pt-2 pb-3 text-center'} has-focus-visible:outline-2 has-focus-visible:outline-offset-2 motion-reduce:transition-none {option.forthcoming
           ? 'opacity-55'
           : ''} {disabled || option.forthcoming
           ? 'cursor-default'
@@ -76,8 +74,8 @@ const id = $props.id()
           }}
           aria-label={option.title}
         >
-        <div class="w-full">
-          <FeaturePolicyIllustration scene={option.value} />
+        <div class={layout === 'horizontal' ? 'w-full [&_svg]:h-12' : 'w-full'}>
+          <FeaturePolicyIllustration scene={option.scene ?? option.value} />
         </div>
         <span class="grid min-w-0 gap-1">
           <span class="text-sm font-medium break-words whitespace-normal"

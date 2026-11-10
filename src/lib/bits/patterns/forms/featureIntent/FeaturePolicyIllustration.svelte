@@ -17,13 +17,40 @@ let { scene }: { scene: string } = $props()
     stroke-linejoin="round"
   >
     {#if scene === 'object'}
+      <!-- Hong Kong's bat-and-coin pawn sign, based on the Tai Fat sign in HKU's sign collection. -->
+      <!-- Reference: https://learning.hku.hk/ccch9051/group-23/files/thumbnails/5f95fba4cb3e508d672ef4f414cd4ddf.jpg -->
+      <path d="M24 13V53M24 22H34M24 46H40" opacity="0.35" />
       <path
-        d="M31 26L56 14L81 26V50L56 62L31 50Z"
+        d="M34 11C40 22 47 18 51 12C55 5 63 5 67 12C71 18 78 22 84 11C88 29 79 36 70 38H48C39 36 30 29 34 11Z"
         fill="currentColor"
-        fill-opacity="0.05"
+        fill-opacity="0.06"
       />
-      <path d="M31 26L56 38L81 26M56 38V62M43 20L68 32V42" />
-      <path d="M38 44L47 48M38 49L43 51" opacity="0.45" />
+      <path
+        d="M38 20C44 25 50 21 54 16C57 11 61 11 64 16C68 21 74 25 80 20"
+        opacity="0.4"
+      />
+      <path d="M59 7V4" />
+      <circle cx="59" cy="44" r="18" fill="var(--color-panel, white)" />
+      <circle
+        cx="59"
+        cy="44"
+        r="15"
+        fill="currentColor"
+        fill-opacity="0.06"
+        opacity="0.55"
+      />
+      <text
+        x="59"
+        y="52"
+        fill="currentColor"
+        stroke="none"
+        text-anchor="middle"
+        font-family="serif"
+        font-size="24"
+        font-weight="600"
+      >
+        押
+      </text>
     {:else if scene === 'place'}
       <path
         d="M25 29L49 19L76 30V54L51 63L25 52Z"

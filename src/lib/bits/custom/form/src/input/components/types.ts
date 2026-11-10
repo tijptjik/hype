@@ -16,6 +16,8 @@ export interface FormControlPrimitiveProps {
 
 export interface FormInputPrimitiveProps extends FormControlPrimitiveProps {
   type?: InputType
+  /** Preserve authored whitespace when false; ordinary text inputs trim on blur. */
+  trimOnBlur?: boolean
 }
 
 export interface FormTextAreaPrimitiveProps extends FormControlPrimitiveProps {

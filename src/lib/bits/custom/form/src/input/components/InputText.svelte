@@ -7,6 +7,7 @@ let {
   id,
   name,
   type = 'text',
+  trimOnBlur = true,
   value = $bindable(''),
   placeholder,
   locale = 'core',
@@ -62,6 +63,9 @@ function handleBlur(event: FocusEvent): void {
   if (typeof forwardedHandler === 'function') {
     forwardedHandler(event)
   }
+
+  // Formatting-sensitive inputs retain their exact authored whitespace.
+  if (!trimOnBlur) return
 
   handleTrimmedTextControlBlur({
     event,
