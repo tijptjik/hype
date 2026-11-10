@@ -62,6 +62,9 @@ for (const [engine, browserType] of [
         throw Error('Remove controls visible outside removal mode')
       const collapse = settings.getByRole('button', { name: 'Collapse', exact: true })
       await collapse.click()
+      // Wait for every animated body to finish closing before checking the group.
+      for (const body of await cards.locator('[data-type-body]').all())
+        await body.waitFor({ state: 'hidden' })
       if (await cards.locator('[data-type-body]:visible').count())
         throw Error('Collapse all failed')
       const originalFirst = await cards.first().locator('h3').textContent()
@@ -109,6 +112,8 @@ for (const [engine, browserType] of [
       if (await cards.getByRole('button', { name: /^Remove / }).count())
         throw Error('Escape did not leave removal mode')
       await settings.getByRole('button', { name: 'Expand', exact: true }).click()
+      for (const body of await cards.locator('[data-type-body]').all())
+        await body.waitFor({ state: 'visible' })
       if ((await cards.locator('[data-type-body]:visible').count()) !== count)
         throw Error('Expand all failed')
       await languages.click()
