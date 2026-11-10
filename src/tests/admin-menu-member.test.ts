@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/svelte/pure'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SvelteMap } from 'svelte/reactivity'
 import { tick } from 'svelte'
 import type { SessionUser } from '#lib/types.js'
@@ -62,8 +62,17 @@ vi.mock('#lib/context/responsive.svelte.js', () => ({
 vi.mock('#lib/navigation/index.js', () => ({ navigateOnAdmin: state.navigateOnAdmin }))
 import AdminMenu from '#lib/bits/patterns/bars/adminMenu/AdminMenu.svelte'
 
+beforeEach(() => {
+  // jsdom has no scrolling API; the Docs entry makes the owner menu span pages.
+  Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
+    configurable: true,
+    value: vi.fn(),
+  })
+})
+
 afterEach(() => {
   cleanup()
+  Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
   state.getTasks.mockReset()
   state.navigateOnAdmin.mockReset()
   state.togglePrism.mockReset()
@@ -119,6 +128,9 @@ describe('member admin navigation', () => {
         role === 'owner',
       )
       expect(screen.queryByRole('link', { name: 'Hubs' })).toBeNull()
+      const links = screen.getAllByRole('link')
+      expect(links.at(-1)?.getAttribute('href')).toBe('/admin/docs')
+      expect(links.at(-1)?.textContent).toContain('Docs')
     },
   )
 })

@@ -28,6 +28,7 @@ import InboxArrowDown from 'virtual:icons/proicons/mail-open'
 import MapPin from 'virtual:icons/proicons/location'
 import StoreIcon from 'virtual:icons/lucide/store'
 import ChatIcon from 'virtual:icons/lucide/message-circle'
+import BookOpenIcon from 'virtual:icons/lucide/book-open'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
@@ -168,6 +169,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   }
 
   items.push({ href: `${ADMIN_PATH}/messaging`, label: 'Messaging', icon: ChatIcon })
+  items.push({ href: `${ADMIN_PATH}/docs`, label: 'Docs', icon: BookOpenIcon })
 
   return items
 })
