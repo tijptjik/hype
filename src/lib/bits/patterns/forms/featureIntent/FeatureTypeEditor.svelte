@@ -8,7 +8,7 @@ import FeatureNamingSettings from './FeatureNamingSettings.svelte'
 import { FEATURE_KINDS, TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { LOCATION_ENTITY_KINDS, locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
-import { shortLocaleLabel } from '#lib/bits/custom/localeControls/localeControls.js'
+import FeatureTypeNames from './FeatureTypeNames.svelte'
 import { typeInputAppearance, typeSelectAppearance } from './featureTypeEditor.styles'
 // TYPES
 import type { FeatureType } from '#lib/features/intents.js'
@@ -33,13 +33,6 @@ const targets = $derived(
   type.targetContexts ??
     TARGET_CONTEXTS.filter(kind => type.locationKinds.includes(kind)),
 )
-/** Edit a translated name while retaining the legacy base-label fallback.
- * @param locale Canonical language. @param value Authored label. @returns Nothing.
- */
-function updateLabel(locale: string, value: string): void {
-  type.labels = { ...type.labels, [locale]: value }
-  if (locale === 'en') type.label = value
-}
 </script>
 
 <div
@@ -113,25 +106,7 @@ function updateLabel(locale: string, value: string): void {
     class="lg:border-border/50 grid min-w-0 content-start gap-4 lg:border-r lg:pr-6"
     aria-label="Type names"
   >
-    <div class="grid min-w-0 gap-3">
-      {#each locales as locale}
-        <TextInput
-          label={multilingual
-            ? `Display name ${shortLocaleLabel(locale)}`
-            : 'Display name'}
-          value={type.labels?.[locale] ?? (locale === 'en' ? type.label : '')}
-          isEditing={!disabled}
-          {...typeInputAppearance}
-          inputAttrs={{
-            'aria-label': multilingual ? `Display name ${locale}` : 'Display name',
-            lang: locale,
-            dir: 'auto',
-            maxlength: 80,
-          }}
-          onValueChange={value => updateLabel(locale, value)}
-        />
-      {/each}
-    </div>
+    <FeatureTypeNames bind:type {locales} {multilingual} {disabled} />
     <div class="pt-4">
       <FeatureNamingSettings
         {scopeType}
