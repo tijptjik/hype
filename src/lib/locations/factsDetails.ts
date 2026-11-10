@@ -88,6 +88,7 @@ export const LocationEntitySchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('coastal_feature'), details: NaturalDetailsSchema }),
   z.strictObject({ kind: z.literal('water_feature'), details: NaturalDetailsSchema }),
   z.strictObject({ kind: z.literal('service_point'), details: z.strictObject({}) }),
+  // Retained immutable snapshots only; these are no longer authorable Location classes.
   z.strictObject({ kind: z.literal('premises_address'), details: z.strictObject({}) }),
   z.strictObject({ kind: z.literal('cadastral_address'), details: z.strictObject({}) }),
   z.strictObject({ kind: z.literal('linear_reference'), details: z.strictObject({}) }),

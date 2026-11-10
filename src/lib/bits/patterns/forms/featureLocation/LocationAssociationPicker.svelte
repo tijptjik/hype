@@ -167,9 +167,6 @@ let names = $state<Record<AssociationKind, Record<string, string>>>({
   coastal_feature: {},
   water_feature: {},
   service_point: {},
-  premises_address: {},
-  cadastral_address: {},
-  linear_reference: {},
   establishment: {},
   [initial.address.association?.kind ?? initial.kind]:
     initial.address.association?.names ?? initial.names,
@@ -188,9 +185,6 @@ let candidates = $state<Record<AssociationKind, Result[]>>({
   coastal_feature: [],
   water_feature: [],
   service_point: [],
-  premises_address: [],
-  cadastral_address: [],
-  linear_reference: [],
   establishment: [],
 })
 let lookups = $state<Record<AssociationKind, AssociationLookup>>({
@@ -207,9 +201,6 @@ let lookups = $state<Record<AssociationKind, AssociationLookup>>({
   coastal_feature: 'not-checked',
   water_feature: 'not-checked',
   service_point: 'not-checked',
-  premises_address: 'not-checked',
-  cadastral_address: 'not-checked',
-  linear_reference: 'not-checked',
   establishment: 'not-checked',
 })
 let hoveredCandidate = $state<string | null>(null)
@@ -300,9 +291,6 @@ let completedEmpty = $state<Record<AssociationKind, boolean>>({
   coastal_feature: false,
   water_feature: false,
   service_point: false,
-  premises_address: false,
-  cadastral_address: false,
-  linear_reference: false,
   establishment: false,
 })
 let edits = $state<AddressReviewEdits>({})
@@ -376,9 +364,6 @@ const candidatePools: Record<AssociationKind, Result[]> = {
   coastal_feature: [],
   water_feature: [],
   service_point: [],
-  premises_address: [],
-  cadastral_address: [],
-  linear_reference: [],
   establishment: [],
 }
 let alive = true
@@ -396,9 +381,6 @@ const requests: Record<AssociationKind, number> = {
   coastal_feature: 0,
   water_feature: 0,
   service_point: 0,
-  premises_address: 0,
-  cadastral_address: 0,
-  linear_reference: 0,
   establishment: 0,
 }
 const tag = $derived(ADDRESS_LOCALES[getLocaleKey()])
@@ -1694,10 +1676,6 @@ onDestroy(() => {
                   coastal_feature: () => 'Beach, bay or headland',
                   water_feature: () => 'River, stream, lake or reservoir',
                   service_point: () => 'Recycling, collection or drinking-water point',
-                  premises_address: () =>
-                    'Street and number, village house or named premises',
-                  cadastral_address: () => 'Lot, section or subsection reference',
-                  linear_reference: () => 'A measured position along a named route',
                   premises: m.association_example_premises,
                   address: m.association_example_address,
                 }[value]()}</span
@@ -2268,9 +2246,6 @@ onDestroy(() => {
                       coastal_feature: () => 'Create coastal feature',
                       water_feature: () => 'Create water feature',
                       service_point: () => 'Create service point',
-                      premises_address: () => 'Create premises address',
-                      cadastral_address: () => 'Create cadastral address',
-                      linear_reference: () => 'Create linear reference',
                       establishment: m.association_create_establishment,
                     }[kind === 'address' ? 'establishment' : kind]()}
               </button>

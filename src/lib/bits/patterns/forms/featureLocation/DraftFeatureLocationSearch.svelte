@@ -352,9 +352,6 @@ let localSearchLimited = $state(false)
 const providerRevisions: Record<Result['kind'], number> = {
   establishment: 0,
   service_point: 0,
-  premises_address: 0,
-  cadastral_address: 0,
-  linear_reference: 0,
   premises: 0,
   building: 0,
   building_part: 0,

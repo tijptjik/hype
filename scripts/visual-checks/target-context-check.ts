@@ -140,11 +140,10 @@ for (const [name, engine] of [
         'Building part',
         'Other structure',
         'Building',
-        'Premises',
+        'Premises / site',
         'Thoroughfare',
         'Service point',
-        'Cadastral',
-        'Linear reference',
+        'Address',
       ])
         if (!(await targets.getByRole('switch', { name: label, exact: true }).count()))
           throw Error(`Missing target class: ${label}`)

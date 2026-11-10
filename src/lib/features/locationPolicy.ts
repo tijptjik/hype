@@ -17,16 +17,22 @@ export const TARGET_CONTEXTS = [
   'water_feature',
   'establishment',
   'service_point',
-  'premises_address',
-  'cadastral_address',
-  'linear_reference',
   // Retained broad and legacy contexts remain valid in existing policies.
   'infrastructure',
   'built',
   'address',
   'natural',
 ] as const
-export const TargetContextSchema = z.enum(TARGET_CONTEXTS)
+// Decode retained policy/history tokens without exposing them as current choices.
+export const TargetContextSchema = z.preprocess(
+  value =>
+    ['premises_address', 'cadastral_address', 'linear_reference'].includes(
+      String(value),
+    )
+      ? 'address'
+      : value,
+  z.enum(TARGET_CONTEXTS),
+)
 export type TargetContext = z.infer<typeof TargetContextSchema>
 export const AssociationRelationSchema = z.enum(['locatedAt', 'represents'])
 
@@ -45,9 +51,6 @@ export const TARGET_FALLBACKS: Record<TargetContext, readonly TargetContext[]> =
   address: [],
   establishment: [],
   service_point: [],
-  premises_address: [],
-  cadastral_address: [],
-  linear_reference: [],
   natural: [],
 }
 

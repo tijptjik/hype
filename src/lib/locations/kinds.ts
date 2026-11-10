@@ -20,9 +20,6 @@ export const LOCATION_KINDS = [
   'establishment',
   'service_point',
   'address',
-  'premises_address',
-  'cadastral_address',
-  'linear_reference',
   'infrastructure',
 ] as const
 export const LocationKindSchema = z.enum(LOCATION_KINDS)
@@ -48,12 +45,7 @@ export const DEFAULT_DISCOVERY_TYPES: AvailableDiscoveryType[] = [
  * @remarks A building/address result supplies address evidence for an establishment, never its identity.
  */
 export function locationDiscoveryTypes(kind: LocationKind): LocationDiscoveryType[] {
-  if (
-    ['address', 'premises_address', 'cadastral_address', 'linear_reference'].includes(
-      kind,
-    )
-  )
-    return ['address']
+  if (kind === 'address') return ['address']
   if (kind === 'building_part') return ['address']
   if (
     ['building', 'built', 'premises', 'structure', 'street', 'infrastructure'].includes(

@@ -372,7 +372,7 @@ describe('Feature intent', () => {
       f.sqlite.prepare('SELECT count(*) n FROM featureIntentPolicyRevision').get()?.n,
     ).toBe(5)
   })
-  it('saves and reads service and address class permissions', async () => {
+  it('normalizes retained address class permissions on save and read', async () => {
     const f = fixture()
     const scope = { type: 'hub' as const, id: 'hub' }
     const current = await readFeatureIntentPolicy(f.db, scope)
@@ -397,7 +397,7 @@ describe('Feature intent', () => {
     })
     expect(
       (await readFeatureIntentPolicy(f.db, scope)).types[0].targetContexts,
-    ).toEqual(definition[0].targetContexts)
+    ).toEqual(['service_point', 'address'])
   })
   it('rejects stale settings atomically', async () => {
     const f = fixture()

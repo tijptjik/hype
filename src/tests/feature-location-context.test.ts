@@ -68,9 +68,6 @@ describe('new feature location intent', () => {
       'building',
       'premises',
       'address',
-      'premises_address',
-      'cadastral_address',
-      'linear_reference',
     ])
     expect(targetLocationKinds('establishment')).toEqual(['establishment'])
     expect(
@@ -239,15 +236,7 @@ it('returns persisted titles without evaluating naming rules on reads', async ()
   expect(response.data?.i18n?.en.title).toBe('Stored final title')
 })
 
-it('keeps explicit address classes separate while retaining broad legacy address permissions', () => {
-  expect(targetLocationKinds('premises_address')).toEqual(['premises_address'])
-  expect(targetLocationKinds('cadastral_address')).toEqual(['cadastral_address'])
-  expect(targetLocationKinds('linear_reference')).toEqual(['linear_reference'])
+it('keeps address and service point permissions independent', () => {
   expect(targetLocationKinds('service_point')).toEqual(['service_point'])
-  expect(targetLocationKinds('address')).toEqual([
-    'address',
-    'premises_address',
-    'cadastral_address',
-    'linear_reference',
-  ])
+  expect(targetLocationKinds('address')).toEqual(['address'])
 })

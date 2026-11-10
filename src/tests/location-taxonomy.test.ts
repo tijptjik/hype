@@ -27,7 +27,7 @@ afterEach(() => {
  * @param renameThoroughfare Whether to apply the class rename after the historical migration.
  * @returns Isolated D1-compatible database with the current taxonomy.
  */
-function setup(renameThoroughfare = true) {
+function setup(renameThoroughfare = true, correctAddressClasses = true) {
   const store = setupLifecycleDatabase()
   stores.push(store)
   store.sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
@@ -51,6 +51,10 @@ function setup(renameThoroughfare = true) {
   if (renameThoroughfare)
     store.sqlite.exec(
       readFileSync('migrations/0218_location_address_service_classes.sql', 'utf8'),
+    )
+  if (renameThoroughfare && correctAddressClasses)
+    store.sqlite.exec(
+      readFileSync('migrations/0219_address_location_classification.sql', 'utf8'),
     )
   return store
 }
@@ -83,9 +87,6 @@ it.each([
   'building_part',
   'street',
   'service_point',
-  'premises_address',
-  'cadastral_address',
-  'linear_reference',
 ] as const)('creates %s with canonical taxonomy and readable facts', async kind => {
   const { sqlite, db } = setup()
   const receipt = await createLocalLocation(
@@ -338,4 +339,48 @@ it('renames only the current street class while retaining matching and revision 
   expect(locationMatchingType({ kind: 'built', class: 'thoroughfare' })).toBe('street')
   expect(expandLocationMatchingTypes(['built'])).toContain('street')
   expect(expandLocationMatchingTypes(['thoroughfare'])).toEqual(['street'])
+})
+
+it('rejects address classes while decoding retained address discriminators', () => {
+  for (const variant of ['premises_address', 'cadastral_address', 'linear_reference']) {
+    expect(
+      LocationTaxonomySchema.safeParse({ kind: 'address', class: variant }).success,
+    ).toBe(false)
+    expect(locationTaxonomy(variant)).toEqual({ kind: 'address', class: null })
+    const { sqlite } = setup()
+    expect(() =>
+      sqlite
+        .prepare(
+          "INSERT INTO location(id,kind,class,state,ownerOrganisationId) VALUES(?, 'address', ?, 'unresolved','p')",
+        )
+        .run(variant, variant),
+    ).toThrow()
+  }
+})
+
+it('normalizes existing address identities without changing their IDs', () => {
+  const { sqlite } = setup(true, false)
+  for (const variant of ['premises_address', 'cadastral_address', 'linear_reference'])
+    sqlite
+      .prepare(
+        "INSERT INTO location(id,kind,class,state,ownerOrganisationId) VALUES(?, 'address', ?, 'unresolved','p')",
+      )
+      .run(variant, variant)
+  sqlite.exec(
+    readFileSync('migrations/0219_address_location_classification.sql', 'utf8'),
+  )
+  expect(
+    sqlite
+      .prepare(
+        "SELECT id,kind,class,matchingType FROM location WHERE kind='address' ORDER BY id",
+      )
+      .all(),
+  ).toEqual(
+    ['cadastral_address', 'linear_reference', 'premises_address'].map(id => ({
+      id,
+      kind: 'address',
+      class: null,
+      matchingType: 'address',
+    })),
+  )
 })

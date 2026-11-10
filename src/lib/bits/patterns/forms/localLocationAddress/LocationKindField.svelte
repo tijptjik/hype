@@ -68,8 +68,7 @@ const classes = $derived(
 />
 {#if taxonomy.kind === 'built' ||
   taxonomy.kind === 'geographic' ||
-  taxonomy.kind === 'operational' ||
-  taxonomy.kind === 'address'}
+  taxonomy.kind === 'operational'}
   <SelectField
     id={`${uid}-class`}
     label={locationTaxonomyLabel('class')}

@@ -62,9 +62,6 @@ export function localIdentityFromAddress(
     | 'coastal_feature'
     | 'water_feature'
     | 'service_point'
-    | 'premises_address'
-    | 'cadastral_address'
-    | 'linear_reference'
     | 'street'
     | 'natural'
     | 'establishment',

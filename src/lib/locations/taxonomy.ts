@@ -22,11 +22,6 @@ export const GEOGRAPHIC_LOCATION_CLASSES = [
   'water_feature',
 ] as const
 export const OPERATIONAL_LOCATION_CLASSES = ['establishment', 'service_point'] as const
-export const ADDRESS_LOCATION_CLASSES = [
-  'premises_address',
-  'cadastral_address',
-  'linear_reference',
-] as const
 export const LocationTaxonomySchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('unknown'), class: z.null() }),
   z.strictObject({
@@ -43,7 +38,7 @@ export const LocationTaxonomySchema = z.discriminatedUnion('kind', [
   }),
   z.strictObject({
     kind: z.literal('address'),
-    class: z.enum(ADDRESS_LOCATION_CLASSES).nullable(),
+    class: z.null(),
   }),
 ])
 export type LocationTaxonomy = z.infer<typeof LocationTaxonomySchema>
@@ -57,8 +52,9 @@ export function locationTaxonomy(type: string): LocationTaxonomy {
   if (type === 'street') return { kind: 'built', class: 'thoroughfare' }
   if ((OPERATIONAL_LOCATION_CLASSES as readonly string[]).includes(type))
     return LocationTaxonomySchema.parse({ kind: 'operational', class: type })
-  if ((ADDRESS_LOCATION_CLASSES as readonly string[]).includes(type))
-    return LocationTaxonomySchema.parse({ kind: 'address', class: type })
+  // Retained revision discriminators decode to the current address identity.
+  if (['premises_address', 'cadastral_address', 'linear_reference'].includes(type))
+    return { kind: 'address', class: null }
   if (type === 'natural' || type === 'geographic')
     return { kind: 'geographic', class: null }
   if (type === 'infrastructure' || type === 'built')
@@ -90,20 +86,18 @@ export function expandLocationMatchingTypes(types: readonly string[]): string[] 
   return [
     ...new Set(
       types.flatMap(type =>
-        type === 'address'
-          ? [type, ...ADDRESS_LOCATION_CLASSES]
-          : type === 'natural'
-            ? [type, ...GEOGRAPHIC_LOCATION_CLASSES]
-            : type === 'built'
-              ? [
-                  type,
-                  ...BUILT_LOCATION_CLASSES.map(className =>
-                    locationMatchingType({ kind: 'built', class: className }),
-                  ),
-                ]
-              : type === 'infrastructure'
-                ? [type, 'built', 'structure']
-                : [type === 'thoroughfare' ? 'street' : type],
+        type === 'natural'
+          ? [type, ...GEOGRAPHIC_LOCATION_CLASSES]
+          : type === 'built'
+            ? [
+                type,
+                ...BUILT_LOCATION_CLASSES.map(className =>
+                  locationMatchingType({ kind: 'built', class: className }),
+                ),
+              ]
+            : type === 'infrastructure'
+              ? [type, 'built', 'structure']
+              : [type === 'thoroughfare' ? 'street' : type],
       ),
     ),
   ]

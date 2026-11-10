@@ -60,9 +60,6 @@ export const location = sqliteTable(
         'water_feature',
         'establishment',
         'service_point',
-        'premises_address',
-        'cadastral_address',
-        'linear_reference',
       ],
     }),
     // Ownership grants baseline authority. Only manual Locations are private; unmatched are shared.
@@ -90,7 +87,7 @@ export const location = sqliteTable(
     ),
     check(
       'location_class_check',
-      sql`(${table.entityKind}='operational' AND ${table.class} IS NOT NULL AND ${table.class} IN ('establishment','service_point')) OR (${table.entityKind}!='operational' AND ${table.class} IS NULL) OR (${table.entityKind}='built' AND ${table.class} IN ('premises','building','building_part','structure','thoroughfare')) OR (${table.entityKind}='address' AND ${table.class} IN ('premises_address','cadastral_address','linear_reference')) OR (${table.entityKind}='geographic' AND ${table.class} IN ('landform','coastal_feature','water_feature'))`,
+      sql`(${table.entityKind}='operational' AND ${table.class} IS NOT NULL AND ${table.class} IN ('establishment','service_point')) OR (${table.entityKind}!='operational' AND ${table.class} IS NULL) OR (${table.entityKind}='built' AND ${table.class} IN ('premises','building','building_part','structure','thoroughfare')) OR (${table.entityKind}='geographic' AND ${table.class} IN ('landform','coastal_feature','water_feature'))`,
     ),
     check(
       'location_state_check',

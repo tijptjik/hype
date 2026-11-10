@@ -29,9 +29,6 @@ export const FEATURE_LOCATION_KINDS = [
   'coastal_feature',
   'water_feature',
   'service_point',
-  'premises_address',
-  'cadastral_address',
-  'linear_reference',
   'street',
 ] as const
 export const FeatureTypeIdSchema = z
@@ -39,18 +36,41 @@ export const FeatureTypeIdSchema = z
   .min(1)
   .max(80)
   .regex(/^[a-z][a-z0-9_-]*$/)
+/**
+ * Merge only address choices originating from the retired Location classes.
+ * @param value Retained or newly authored permission list.
+ * @returns Normalized legacy list, or unchanged input for strict validation.
+ */
+function normalizeRetainedAddressChoices(value: unknown): unknown {
+  const retired = ['premises_address', 'cadastral_address', 'linear_reference']
+  if (!Array.isArray(value) || !value.some(item => retired.includes(item))) return value
+  let addressSeen = false
+  return value
+    .map(item => (retired.includes(item) ? 'address' : item))
+    .filter(item => {
+      if (item !== 'address') return true
+      if (addressSeen) return false
+      addressSeen = true
+      return true
+    })
+}
+
 export const FeatureTypeSchema = z
   .strictObject({
     id: FeatureTypeIdSchema,
     enabled: z.boolean().optional(),
     kind: FeatureKindSchema.optional(),
     targetContexts: z
-      .array(TargetContextSchema)
-      .min(1)
-      .max(TARGET_CONTEXTS.length)
-      .refine(
-        values => new Set(values).size === values.length,
-        'Target contexts must be unique',
+      .preprocess(
+        normalizeRetainedAddressChoices,
+        z
+          .array(TargetContextSchema)
+          .min(1)
+          .max(TARGET_CONTEXTS.length)
+          .refine(
+            values => new Set(values).size === values.length,
+            'Target contexts must be unique',
+          ),
       )
       .optional(),
     relation: AssociationRelationSchema.optional(),
@@ -60,13 +80,16 @@ export const FeatureTypeSchema = z
     labels: contentLocaleMap(z.string().trim().max(80))
       .transform(values => adaptContentMap(values, canonicalContentTag))
       .optional(),
-    locationKinds: z
-      .array(z.enum(FEATURE_LOCATION_KINDS))
-      .max(FEATURE_LOCATION_KINDS.length)
-      .refine(
-        kinds => new Set(kinds).size === kinds.length,
-        'Location kinds must be unique',
-      ),
+    locationKinds: z.preprocess(
+      normalizeRetainedAddressChoices,
+      z
+        .array(z.enum(FEATURE_LOCATION_KINDS))
+        .max(FEATURE_LOCATION_KINDS.length)
+        .refine(
+          kinds => new Set(kinds).size === kinds.length,
+          'Location kinds must be unique',
+        ),
+    ),
     start: z.enum(['search', 'pin']),
     associationRequired: z.boolean(),
   })

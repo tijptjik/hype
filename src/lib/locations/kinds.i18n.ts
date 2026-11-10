@@ -10,15 +10,7 @@ import type { LocationKind } from './kinds'
  * @param kind Stored or draft entity type. @returns Concise localized type label.
  */
 export function locationKindLabel(kind: LocationKind): string {
-  if (
-    [
-      'service_point',
-      'premises_address',
-      'cadastral_address',
-      'linear_reference',
-    ].includes(kind)
-  )
-    return locationTaxonomyLabel(kind)
+  if (['service_point'].includes(kind)) return locationTaxonomyLabel(kind)
   if (kind === 'street') return locationTaxonomyLabel('thoroughfare')
   if (
     ['built', 'structure', 'landform', 'coastal_feature', 'water_feature'].includes(

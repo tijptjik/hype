@@ -2,6 +2,7 @@
 import { z } from 'zod'
 // DOMAIN
 import { locationTaxonomy } from './taxonomy'
+import { LocationKindSchema } from './kinds'
 import { LocationFactsSchema } from './validation'
 import { classifyLocationFactsKind } from './factsKind'
 import { LocationEntitySchema } from './factsDetails'
@@ -64,7 +65,14 @@ export function createLocationFactsSnapshot(
   facts: LocationFacts,
   kind: LocationFactsKind,
 ): LocationFactsSnapshot {
-  kind = classifyLocationFactsKind(kind, facts)
+  kind = classifyLocationFactsKind(
+    LocationKindSchema.parse(
+      ['premises_address', 'cadastral_address', 'linear_reference'].includes(kind)
+        ? 'address'
+        : kind,
+    ),
+    facts,
+  )
   if (
     facts.entity &&
     facts.entity.kind !== 'unknown' &&
@@ -166,10 +174,7 @@ export function readLocationFacts(value: unknown): LocationFacts {
     entity.kind === 'landform' ||
     entity.kind === 'coastal_feature' ||
     entity.kind === 'water_feature' ||
-    entity.kind === 'service_point' ||
-    entity.kind === 'premises_address' ||
-    entity.kind === 'cadastral_address' ||
-    entity.kind === 'linear_reference'
+    entity.kind === 'service_point'
       ? { entity }
       : {}),
   })

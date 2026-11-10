@@ -40,9 +40,6 @@ for (const [name, engine] of [
       ['Geographic feature', 'Water feature', 'geographic', 'water_feature'],
       ['Operational', 'Establishment', 'operational', 'establishment'],
       ['Operational', 'Service point', 'operational', 'service_point'],
-      ['Address', 'Premises', 'address', 'premises_address'],
-      ['Address', 'Cadastral', 'address', 'cadastral_address'],
-      ['Address', 'Linear reference', 'address', 'linear_reference'],
     ]) {
       await page.getByRole('combobox').first().click()
       await page.getByRole('option', { name: family, exact: true }).click()
@@ -58,8 +55,8 @@ for (const [name, engine] of [
       throw new Error('Mobile overflow')
     await page.getByRole('combobox').first().click()
     await page.getByRole('option', { name: 'Address', exact: true }).click()
-    if ((await page.getByRole('combobox').count()) !== 2)
-      throw new Error('Address class selector is missing')
+    if ((await page.getByRole('combobox').count()) !== 1)
+      throw new Error('Address must not expose Location classes')
     if (errors.length) throw new Error(errors.join('\n'))
     console.log(
       JSON.stringify({

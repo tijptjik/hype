@@ -5,9 +5,6 @@ import type { TargetContext } from './locationPolicy'
 
 const labels = {
   service_point: ['Service point', '服務點', '服务点'],
-  premises_address: ['Premises', '處所地址', '处所地址'],
-  cadastral_address: ['Cadastral', '地籍地址', '地籍地址'],
-  linear_reference: ['Linear reference', '線性參照', '线性参照'],
   built: ['Built place', '建成場所', '建成场所'],
   structure: ['Other structure', '其他構築物', '其他构筑物'],
   landform: ['Landform', '地形', '地形'],
@@ -31,21 +28,6 @@ const examples = {
     'Recycling, collection or drinking-water point',
     '回收點、收集點或飲水點',
     '回收点、收集点或饮水点',
-  ],
-  premises_address: [
-    'Street and number, village house or named premises',
-    '街道門牌、村屋或具名處所',
-    '街道门牌、村屋或具名处所',
-  ],
-  cadastral_address: [
-    'Lot, section or subsection reference',
-    '地段、分段或小分段編號',
-    '地段、分段或小分段编号',
-  ],
-  linear_reference: [
-    'A measured position along a road, railway or path',
-    '沿道路、鐵路或路徑量度的位置',
-    '沿道路、铁路或路径量度的位置',
   ],
   built: ['Built place', '建成場所', '建成场所'],
   structure: ['Other structure', '其他構築物', '其他构筑物'],
