@@ -21,6 +21,7 @@ import type {
  */
 export function materializeEffectiveLocation(input: {
   fieldGroup?: 'facts' | 'location'
+  inheritPlacement?: boolean
   facts: LocationFacts
   locationFacts: LocationFacts
   overrides: FeatureLocationOverrides
@@ -44,13 +45,23 @@ export function materializeEffectiveLocation(input: {
     input.data.addressMeta?.address,
   )
   const independentPlacement =
-    retainedAddress.success && Boolean(retainedAddress.data.association)
+    retainedAddress.success &&
+    Boolean(retainedAddress.data.association) &&
+    (!input.inheritPlacement || retainedAddress.data.association?.mode === 'manual')
   const address =
     independentPlacement && retainedAddress.success
       ? retainedAddress.data
       : FeatureAddressSchema.parse({
+          ...(input.inheritPlacement && retainedAddress.success
+            ? retainedAddress.data
+            : {}),
           version: 1,
-          locationDisplayMode: input.data.addressMeta?.address?.locationDisplayMode,
+          ...(input.data.addressMeta?.address?.locationDisplayMode === undefined
+            ? {}
+            : {
+                locationDisplayMode:
+                  input.data.addressMeta?.address?.locationDisplayMode,
+              }),
           markerCoordinates: effective.location.geometry.coordinates,
           source: effective.location.address,
           coordinates: effective.location.geometry.coordinates,

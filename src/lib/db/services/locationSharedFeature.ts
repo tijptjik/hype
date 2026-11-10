@@ -1,3 +1,4 @@
+import { FeatureAddressSchema } from '#lib/addresses/featureAddress.js'
 import { SharedFieldPinsSchema } from '#lib/locations/sharedCorrection.js'
 import { readLocationFacts } from '#lib/locations/factsSnapshot.js'
 import { FeatureLocationOverridesSchema } from '#lib/locations/validation.js'
@@ -27,7 +28,7 @@ import type { LocationFacts } from '#lib/locations/model.js'
 /** Pin and materialize an explicitly accepted shared correction in one Feature revision.
  * @param db Database. @param input Authorized Feature and immutable shared evidence.
  * @returns Atomic Feature projection/history statements, or null for a changed association.
- * @remarks Independent Feature titles and placements remain independent. Visibility is preserved.
+ * @remarks Independent names, manual pins and accepted occupancy/address bindings remain independent. Visibility is preserved.
  */
 export async function prepareSharedFeatureAdoption(
   db: Database,
@@ -56,6 +57,16 @@ export async function prepareSharedFeatureAdoption(
   if (!current || current.content.placement.location?.locationId !== input.locationId)
     return null
   const accepted = current.content.placement.location
+  const address = FeatureAddressSchema.safeParse(
+    current.content.placement.addressMeta?.address,
+  )
+  // A copied discovery address is not an independent pin once the Feature links to its Location.
+  const includeLocation = Boolean(
+    input.includeLocation &&
+      !accepted.occupancyRevisionId &&
+      !accepted.addressRevisionId &&
+      (!address.success || address.data.association?.mode !== 'manual'),
+  )
   const source = await db.get<{ facts: string }>(
     sql`SELECT facts FROM locationRevision WHERE id=${accepted.factsRevisionId} AND locationId=${input.locationId}`,
   )
@@ -115,7 +126,13 @@ export async function prepareSharedFeatureAdoption(
     validate: () => [],
     derive: (before, captured) => {
       const next = structuredClone(before)
-      const association = next.placement.location!
+      const association = next.placement.location
+      if (!association) throw new Error('Feature Location changed')
+      association.associationVersion = crypto.randomUUID()
+      association.memberships = association.memberships.map(row => ({
+        ...row,
+        bindingVersion: association.associationVersion,
+      }))
       const changedFields = (
         input.fields ?? ['phoneNumber', 'websites', 'socials', 'accessibility']
       ).filter(field => field !== 'location')
@@ -129,11 +146,9 @@ export async function prepareSharedFeatureAdoption(
           ...priorPins.filter(pin => !changedFields.includes(pin.field)),
           ...changedFields.map(field => ({ field, revision: input.sharedRevisionId })),
         ],
-        ...(input.includeLocation
-          ? { locationSharedRevision: input.sharedRevisionId }
-          : {}),
+        ...(includeLocation ? { locationSharedRevision: input.sharedRevisionId } : {}),
       }
-      if (input.includeLocation) association.locationRevisionId = input.sourceRevisionId
+      if (includeLocation) association.locationRevisionId = input.sourceRevisionId
       if (input.organisation) {
         association.acceptedOverrides = input.organisation
           .overrides as typeof association.acceptedOverrides
@@ -185,9 +200,11 @@ export async function prepareSharedFeatureAdoption(
             next.translations[key].title = { value: name ?? '', generated: false }
         }
       }
-      // The address materializer retains explicit Feature-owned placement evidence.
-      if (input.includeLocation) {
+      // Staff corrections update linked placement; explicit manual and occupancy placements retain their evidence.
+      if (includeLocation) {
         const projected = materializeEffectiveLocation({
+          fieldGroup: 'location',
+          inheritPlacement: true,
           facts,
           locationFacts: facts,
           overrides: association.acceptedOverrides,
@@ -203,6 +220,17 @@ export async function prepareSharedFeatureAdoption(
           .geometry as typeof next.placement.geometry
         next.placement.addressMeta = projected.data
           .addressMeta as typeof next.placement.addressMeta
+        association.acceptedGeometry = next.placement
+          .geometry as typeof association.acceptedGeometry
+        delete association.acceptancePolicy.locationMode
+        for (const [locale, row] of Object.entries(projected.i18n)) {
+          if (next.translations[locale])
+            next.translations[locale].address = {
+              value: row.displayAddress ?? '',
+              generated: Boolean(row.displayAddressGen),
+              properties: row.addressProperties ?? {},
+            }
+        }
       }
       return next
     },

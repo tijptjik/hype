@@ -1,5 +1,14 @@
 # Locations, Feature inheritance and SaanSeoi Addresses
 
+Staff Location propagation (11 November 2026, Refs #194, parent #180): authorized shared
+corrections from the Location or Feature editor update linked Features and accepted
+history in the same transaction as Save. Copied discovery-address metadata does not
+freeze a linked marker; explicit manual placement and accepted occupancy/address
+bindings remain separate. Source/system refreshes retain Project review policy and task
+queue behavior. Pending staff corrections can replay only against their exact shared
+head and source revision. Regression coverage:
+`src/tests/location-staff-propagation.test.ts`.
+
 Breadline field reset seed (Refs #194, parent #180): migration
 `0223_breadline_mtr_paid_area.sql` preserves the project-owned `mtrPaidArea` internal
 toggle, its existing English label and project ordering. The field is active on Donors

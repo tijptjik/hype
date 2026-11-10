@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   superAdmin: false,
   prepare: vi.fn(),
   batch: vi.fn(),
+  propagate: vi.fn(),
 }))
 vi.mock('#lib/api/server/guarded.js', () => {
   const remote = (
@@ -26,6 +27,9 @@ vi.mock('#lib/db/services/locationShared.js', () => ({
   prepareSharedLocationCorrection: mocks.prepare,
   readSharedLocationCorrection: vi.fn(),
 }))
+vi.mock('#lib/db/services/locationStaffPropagation.js', () => ({
+  prepareStaffLocationPropagation: mocks.propagate,
+}))
 vi.mock('#lib/db/services/revisionBatch.js', () => ({
   executeRevisionBatch: mocks.batch,
   prepareRevisionCheck: vi.fn(),
@@ -42,6 +46,11 @@ beforeEach(() => {
   mocks.superAdmin = false
   mocks.prepare.mockResolvedValue({ id: 'shared', guard: {}, queries: [] })
   mocks.batch.mockResolvedValue([])
+  mocks.propagate.mockResolvedValue({
+    guard: {},
+    statements: [],
+    featureIds: ['feature'],
+  })
 })
 it('rejects non-SuperAdmin before any shared directory write', async () => {
   await expect(saveSharedLocationDirectoryCorrection(input)).rejects.toMatchObject({
@@ -60,6 +69,21 @@ it('attributes SuperAdmin edits and preserves displayed revision fences', async 
       ...input,
       actorId: 'actor',
       rights: { canEdit: true, superAdmin: true },
+    }),
+  )
+})
+
+it('propagates only the explicitly authorized fields before completing Save', async () => {
+  mocks.superAdmin = true
+  await saveSharedLocationDirectoryCorrection(input)
+  expect(mocks.propagate).toHaveBeenCalledWith(
+    {},
+    expect.objectContaining({
+      locationId: 'location',
+      sourceRevisionId: 'source',
+      sharedRevisionId: 'shared',
+      actorId: 'actor',
+      fields: ['names'],
     }),
   )
 })

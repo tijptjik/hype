@@ -18,11 +18,8 @@ import {
   prepareSharedLocationCorrection,
   readSharedLocationCorrection,
 } from '#lib/db/services/locationShared.js'
-import { prepareSharedFeatureAdoption } from '#lib/db/services/locationSharedFeature.js'
-import {
-  executeRevisionBatch,
-  prepareRevisionCheck,
-} from '#lib/db/services/revisionBatch.js'
+import { prepareStaffLocationPropagation } from '#lib/db/services/locationStaffPropagation.js'
+import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
 // TYPES
 import type { GuardedBaseContext } from './guarded.types'
 
@@ -121,24 +118,19 @@ export const saveSharedLocationCorrection = guardedCommand(
       rights: { canEdit: command.canEdit, superAdmin: Boolean(ctx.user.superAdmin) },
       provenance: { kind: 'staff-correction', featureId: input.featureId },
     })
-    const feature = await prepareSharedFeatureAdoption(ctx.db, {
-      featureId: input.featureId,
-      projectId: command.feature.projectId,
-      actorId: ctx.user.id,
+    const propagation = await prepareStaffLocationPropagation(ctx.db, {
       locationId: command.locationId,
-      sharedRevisionId: shared.id,
       sourceRevisionId: input.sourceRevisionId,
+      sharedRevisionId: shared.id,
+      actorId: ctx.user.id,
       facts: shared.facts,
       fields: Object.keys(input.patch),
-      guard: command.guard,
-      includeLocation: Boolean(input.patch.location),
     })
-    if (!feature) error(409, 'FEATURE_CHANGED')
-    const saved = await executeRevisionBatch(ctx.db, shared.guard, [
-      ...shared.queries,
-      prepareRevisionCheck(ctx.db, feature.guard),
-      ...feature.statements,
-    ])
+    const saved = await executeRevisionBatch(
+      ctx.db,
+      sql`(${shared.guard}) AND (${propagation.guard})`,
+      [...shared.queries, ...propagation.statements],
+    )
     if (!saved) error(409, 'SHARED_LOCATION_CHANGED')
     return { revisionId: shared.id }
   },
@@ -146,7 +138,7 @@ export const saveSharedLocationCorrection = guardedCommand(
 
 /** Save SuperAdmin corrections from the standalone Location editor without changing publisher snapshots.
  * @param input Location identity and displayed source/shared pins with explicit field choices.
- * @returns New shared revision; linked Features adopt it through their own policies.
+ * @returns New shared revision, atomically propagated to linked Features with attributed history.
  */
 export const saveSharedLocationDirectoryCorrection = guardedCommand(
   z.strictObject({
@@ -165,7 +157,21 @@ export const saveSharedLocationDirectoryCorrection = guardedCommand(
       guard: sql`EXISTS(SELECT 1 FROM location WHERE id=${input.locationId} AND state!='redirect')`,
       provenance: { kind: 'location-editor' },
     })
-    if (!(await executeRevisionBatch(ctx.db, shared.guard, shared.queries)))
+    const propagation = await prepareStaffLocationPropagation(ctx.db, {
+      locationId: input.locationId,
+      sourceRevisionId: input.sourceRevisionId,
+      sharedRevisionId: shared.id,
+      actorId: ctx.user.id,
+      facts: shared.facts,
+      fields: Object.keys(input.patch),
+    })
+    if (
+      !(await executeRevisionBatch(
+        ctx.db,
+        sql`(${shared.guard}) AND (${propagation.guard})`,
+        [...shared.queries, ...propagation.statements],
+      ))
+    )
       error(409, 'SHARED_LOCATION_CHANGED')
     return { revisionId: shared.id }
   },
