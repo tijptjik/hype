@@ -18,6 +18,8 @@ import {
   readFeatureIntentPolicy,
   type FeatureIntentScope,
 } from '#lib/db/services/featureIntentPolicy.js'
+// DOMAIN
+import { isFeatureNameBooleanField } from '#lib/features/locationPolicy.js'
 // TYPES
 import type { GuardedBaseContext } from './guarded.types'
 
@@ -114,9 +116,9 @@ export const getFeatureIntentOptions = guardedQuery(
   },
 )
 
-/** List public boolean properties usable in localized generated names.
+/** List boolean and toggle properties usable in localized generated names.
  * @param scope Authorized policy owner. @returns Selectable property identities and labels.
- * @remarks Internal fields cannot be interpolated into public feature names.
+ * @remarks Authorized rule authors choose the text exposed by both public and internal fields.
  */
 export const getFeatureNameProperties = guardedQuery(
   scopeSchema,
@@ -137,7 +139,7 @@ export const getFeatureNameProperties = guardedQuery(
       '#lib/db/services/property.js'
     )
     return (await listResolvedProjectProperties(ctx.db, projectId))
-      .filter(field => field.dataType === 'boolean' && field.audience !== 'internal')
+      .filter(isFeatureNameBooleanField)
       .map(field => ({ id: field.id, label: field.key }))
   },
 )

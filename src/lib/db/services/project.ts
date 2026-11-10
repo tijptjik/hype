@@ -992,6 +992,7 @@ export const updateProjectByIdWithConcurrency = async (
     featureNameProperties?: readonly {
       id?: string
       dataType?: string | null
+      component?: string | null
       audience?: string | null
     }[]
     imageIntentSettings?: ImageIntentSettingsPatch

@@ -138,3 +138,15 @@ export function nameBooleanValue(value: unknown): boolean | null {
   if (value === false || value === 'false' || value === 0 || value === '0') return false
   return null
 }
+
+/** Identify fields that provide true, false, or unset values to a naming condition.
+ * @param field Field definition, including legacy toggle controls with text storage.
+ * @returns Whether the field can drive a naming condition, independent of audience.
+ * @remarks Configuring a rule deliberately exposes its chosen text, not the field itself.
+ */
+export function isFeatureNameBooleanField(field: {
+  dataType?: string | null
+  component?: string | null
+}): boolean {
+  return field.dataType === 'boolean' || field.component === 'ToggleField'
+}

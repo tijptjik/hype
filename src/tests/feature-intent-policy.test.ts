@@ -111,14 +111,30 @@ describe('Feature intent', () => {
         ],
       }),
     ).not.toBeNull()
+    for (const field of [
+      { id: 'new-boolean', dataType: 'boolean', audience: 'internal' },
+      {
+        id: 'new-boolean',
+        dataType: 'text',
+        component: 'ToggleField',
+        audience: 'internal',
+      },
+    ]) {
+      expect(
+        await prepareFeatureIntentPolicySave(f.db, {
+          ...input,
+          nameProperties: [field],
+        }),
+      ).not.toBeNull()
+    }
     await expect(
       prepareFeatureIntentPolicySave(f.db, {
         ...input,
         nameProperties: [
-          { id: 'new-boolean', dataType: 'boolean', audience: 'internal' },
+          { id: 'new-boolean', dataType: 'text', component: 'InputField' },
         ],
       }),
-    ).rejects.toThrow('public boolean')
+    ).rejects.toThrow('boolean or toggle')
   })
 
   it('checks retained model dependencies when only Fields are supplied', async () => {
@@ -153,7 +169,7 @@ describe('Feature intent', () => {
     })
     await expect(
       prepareFeatureNameDependencyChecks(f.db, 'project', []),
-    ).rejects.toThrow('public boolean')
+    ).rejects.toThrow('boolean or toggle')
     expect(
       await prepareFeatureNameDependencyChecks(f.db, 'project', [
         { id: 'paid', dataType: 'boolean', audience: 'public' },

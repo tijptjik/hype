@@ -1,5 +1,6 @@
 import {
   targetLocationKinds,
+  isFeatureNameBooleanField,
   type TargetContext,
 } from '#lib/features/locationPolicy.js'
 // DRIZZLE
@@ -221,6 +222,7 @@ export async function prepareFeatureIntentPolicySave(
     nameProperties?: readonly {
       id?: string
       dataType?: string | null
+      component?: string | null
       audience?: string | null
     }[]
   },
@@ -286,6 +288,7 @@ function assertNameDependencies(
   properties: readonly {
     id?: string
     dataType?: string | null
+    component?: string | null
     audience?: string | null
   }[],
 ): void {
@@ -294,13 +297,11 @@ function assertNameDependencies(
       if (
         !properties.some(
           property =>
-            property.id === condition.propertyId &&
-            property.dataType === 'boolean' &&
-            property.audience !== 'internal',
+            property.id === condition.propertyId && isFeatureNameBooleanField(property),
         )
       )
         throw new FeatureIntentPolicyError(
-          'Name conditions require an available public boolean property.',
+          'Name conditions require an available boolean or toggle property.',
         )
     }
 }
@@ -315,6 +316,7 @@ export async function prepareFeatureNameDependencyChecks(
   properties: readonly {
     id?: string
     dataType?: string | null
+    component?: string | null
     audience?: string | null
   }[],
 ): Promise<BatchItem<'sqlite'>[]> {

@@ -1147,6 +1147,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         ? normalizedSubmittedProperties.map(property => ({
             id: property.id,
             dataType: property.dataType,
+            component: property.component,
             audience: property.audience,
           }))
         : undefined,
