@@ -1012,7 +1012,8 @@ export class AdminCtx {
   )
 }
 
-export const ADMINCTX_KEY = Symbol('adminCtx')
+// Keep newly loaded pages connected to the mounted admin layout across HMR.
+export const ADMINCTX_KEY = Symbol.for('hype.context.admin')
 
 export const setAdminCtx = (view: ResourceViewCtx) => {
   const context = new AdminCtx(view)
