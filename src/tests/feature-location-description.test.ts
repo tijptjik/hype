@@ -7,13 +7,14 @@ import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 const route = readFileSync('src/routes/admin/features/[feature]/+page.svelte', 'utf8')
 const remote = readFileSync('src/lib/api/feature.remote.ts', 'utf8')
 const readiness = route.match(
-  /const draftLocationReady = \$derived\(([\s\S]*?)\n\)/,
+  /^const draftLocationReady = \$derived\(([^\n]+)\)$/m,
 )?.[1]
+if (!readiness) throw new Error('Missing draft Location readiness expression')
 const ready = new Function(
   'draftHasPin',
   'draftLocationAccepted',
   'profileLocationNames',
-  `return (${readiness?.trim().replace(/,$/, '')});`,
+  `return (${readiness.trim().replace(/,$/, '')});`,
 )
 const validation = remote.slice(
   remote.indexOf('    const inheritsLocationName ='),
@@ -29,12 +30,12 @@ const validate = new Function(
   }).outputText,
 )
 
-describe('Feature Location description requirement', () => {
-  it('requires an accepted description in addition to a marker', () => {
-    expect(ready(true, false, {})).toBe(false)
-    expect(ready(true, true, { en: '   ' })).toBe(false)
+describe('Feature Location description and coordinate-only creation', () => {
+  it('requires a marker but allows an absent or unaccepted description', () => {
+    expect(ready(true, false, {})).toBe(true)
+    expect(ready(true, true, { en: '   ' })).toBe(true)
     expect(ready(false, true, { en: 'Pier entrance' })).toBe(false)
-    expect(ready(true, false, { en: 'Pier entrance' })).toBe(false)
+    expect(ready(true, false, { en: 'Pier entrance' })).toBe(true)
     expect(ready(true, true, { 'zh-hant': '碼頭入口' })).toBe(true)
   })
 
@@ -44,21 +45,18 @@ describe('Feature Location description requirement', () => {
     expect(addressLocationNames(address).en).toBe('Entrance beside the pier')
   })
 
-  it('rejects direct marker-only creation even with an independent Feature title', () => {
+  it('allows marker-only creation without changing an independent Feature title', () => {
     const invalid = (message: string): never => {
       throw new Error(message)
     }
+    const data = {
+      i18n: { en: { title: 'Feature', displayAddress: ' ' } },
+      locationNameMode: 'independent',
+    }
     expect(() =>
-      validate(
-        {
-          i18n: { en: { title: 'Feature', displayAddress: ' ' } },
-          locationNameMode: 'independent',
-        },
-        { locationBasedNames: false },
-        invalid,
-        (value: string) => value,
-      ),
-    ).toThrow('Location name or address description')
+      validate(data, { locationBasedNames: false }, invalid, (value: string) => value),
+    ).not.toThrow()
+    expect(data.i18n.en).toEqual({ title: 'Feature', displayAddress: ' ' })
   })
 
   it('fills inherited titles from the description and preserves named Locations', () => {

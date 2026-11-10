@@ -2307,7 +2307,7 @@ const profileLocationNames = $derived.by(() => {
   // A described position can supply the linked title even without a named venue.
   return addressLocationNames(editorAddress)
 })
-// A marker supplies geometry; a selected or authored description supplies Location identity.
+// A marker is sufficient to continue; a Location association or description remains optional.
 const draftLocationReady = $derived(draftHasPin)
 
 const profileNameMode = $derived(

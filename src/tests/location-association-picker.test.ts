@@ -12,6 +12,17 @@ import { associationGroupDiffers } from '#lib/locations/associationMatch.js'
 import { localAddressContent } from '#lib/addresses/locationDraft.js'
 import { emptyFeatureAddress, getAddressLocale } from '#lib/addresses/featureAddress.js'
 import type { DraftLocationSearchResult as Result } from '#lib/bits/patterns/forms/featureLocation/draftLocationSearch.types.js'
+/** Find the physical premises choice rather than the separately supported premises address.
+ * @param hidden Whether the selector is currently collapsed. @returns The premises radio.
+ */
+function premisesRadio(hidden = false): HTMLElement {
+  const radio = screen
+    .getAllByRole('radio', { name: 'Premises', hidden })
+    .find(element => element.getAttribute('data-association-kind') === 'premises')
+  if (!radio) throw new Error('Missing physical premises radio')
+  return radio
+}
+
 vi.mock('#lib/api/division.remote.js', () => ({
   getAddressDivisionLabel: () => ({ current: null }),
 }))
@@ -101,7 +112,7 @@ it('shows three evidence states, settles a resolving ring, and never changes the
   )
   const picker = document.querySelector('[data-location-association-picker]')!
   expect(picker.classList.contains('hidden')).toBe(true)
-  const premises = screen.getByRole('radio', { name: 'Complex', hidden: true })
+  const premises = premisesRadio(true)
   expect(premises.getAttribute('data-evidence')).toBe('address')
   expect(
     screen
@@ -182,7 +193,7 @@ it('allows a named custom premises after failed lookup and retains its retry sta
   const search = vi.fn().mockRejectedValue(new Error('offline'))
   const onAccept = vi.fn()
   render(Picker, { origin: origin(), search, onAccept, onCancel: vi.fn() })
-  await fireEvent.click(screen.getByRole('radio', { name: 'Complex' }))
+  await fireEvent.click(premisesRadio())
   await screen.findByText(/Some sources are unavailable/)
   expect(
     screen.queryByRole('button', { name: /^Use (?:Recommended Location|Location)$/ }),
@@ -208,13 +219,11 @@ it('discards late matches after the name changes and supports keyboard notch sel
   await fireEvent.keyDown(screen.getByRole('radio', { name: 'Address' }), {
     key: 'ArrowLeft',
   })
-  const input = screen.getByRole('textbox', { name: 'Complex · Name' })
+  const input = screen.getByRole('textbox', { name: 'Premises · Name' })
   await fireEvent.input(input, { target: { value: 'Other premises' } })
   complete({ candidates: [candidate('premises')], incomplete: false })
   expect(screen.queryByRole('button', { name: /Hollywood Terrace/ })).toBeNull()
-  expect(
-    screen.getByRole('radio', { name: 'Complex' }).getAttribute('aria-checked'),
-  ).toBe('true')
+  expect(premisesRadio().getAttribute('aria-checked')).toBe('true')
 })
 
 it('allows a correction when both sources are wrong without losing the selected identity', async () => {
@@ -546,7 +555,7 @@ it('rings a published Address record, hides metadata and keeps explicit creation
     screen.getByRole('radio', { name: 'Address' }).getAttribute('data-evidence'),
   ).toBe('location')
   expect(view.container.querySelector('[data-association-status]')).toBeNull()
-  await fireEvent.click(screen.getByRole('radio', { name: 'Complex' }))
+  await fireEvent.click(premisesRadio())
   await screen.findByRole('button', { name: /Hollywood Terrace.*Hollywood Road/ })
   expect(
     view.container.querySelector('[data-association-ghost]')?.textContent,
@@ -1249,7 +1258,7 @@ it('does not promote a weak manually selected candidate to strong evidence and o
       (marker: { highlighted: boolean }) => marker.highlighted,
     ),
   ).toBe(false)
-  await fireEvent.click(screen.getByRole('radio', { name: 'Complex' }))
+  await fireEvent.click(premisesRadio())
   expect(
     screen.getByRole('radio', { name: 'Building' }).getAttribute('data-evidence'),
   ).toBe('none')
@@ -1392,9 +1401,7 @@ it('deliberately selects an existing building part without converting address fl
       .getByRole('radio', { name: 'Address', hidden: true })
       .getAttribute('aria-checked'),
   ).toBe('true')
-  await fireEvent.click(
-    await screen.findByRole('radio', { name: 'Inside or part of the building' }),
-  )
+  await fireEvent.click(await screen.findByRole('radio', { name: 'Building part' }))
   await fireEvent.click(
     await screen.findByRole('button', { name: /East Wing.*Hollywood Road/ }),
   )
