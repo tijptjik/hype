@@ -181,8 +181,8 @@ $effect(() => {
 })
 
 let removeMode = $state(false)
-let collapsedAll = $state(false)
-let collapseVersion = $state(0)
+// Undefined opens the first section initially; null allows every section to be closed.
+let openTypeKey = $state<string | null | undefined>(undefined)
 let removeKey = $state<string | null>(null)
 let confirmRemove = $state(false)
 const editable = $derived(!disabled && !busy && !inherits && Boolean(policy))
@@ -200,7 +200,7 @@ function typeKey(type: FeatureType): string {
   }
   return key
 }
-/** Add a unique draft type; new cards begin expanded even after Collapse all.
+/** Add a unique draft type and open it in place of the previous section.
  * @returns Nothing; the centralized parent Save persists the catalogue.
  */
 function addType(): void {
@@ -221,6 +221,7 @@ function addType(): void {
       associationRequired: false,
     },
   ]
+  openTypeKey = typeKey(catalogue[catalogue.length - 1])
 }
 /** Reorder the draft array, the persisted source of display order.
  * @param from Current row. @param to Destination row. @returns Nothing.
@@ -281,11 +282,6 @@ function removeType(): void {
       icon={DataModelIcon}
       showControlLabels
       description="Feature types and location rules"
-      onCollapsableToggle={collapsed => {
-        collapsedAll = collapsed
-        collapseVersion++
-      }}
-      isCollapsableCollapsed={collapsedAll}
     >
       {#snippet left()}
         <div class="flex min-w-0 items-center gap-4">
@@ -363,14 +359,16 @@ function removeType(): void {
     <p role="status" class="p-6">Loading feature types…</p>
   {:else if inherits}
     <div data-inherited-schema>
-      {#each policy.inheritedTypes as type (type.id)}
+      {#each policy.inheritedTypes as type, index (type.id)}
         <FeatureTypeSection
           title={featureTypeLabel(type, getLocaleKey())}
           kind={type.kind}
           enabled={type.enabled !== false}
           disabled
-          {collapsedAll}
-          {collapseVersion}
+          expanded={openTypeKey === undefined
+            ? index === 0
+            : openTypeKey === typeKey(type)}
+          onExpandedChange={expanded => (openTypeKey = expanded ? typeKey(type) : null)}
         >
           <FeatureTypeEditor
             {type}
@@ -416,8 +414,8 @@ function removeType(): void {
             canRemove={catalogue.length > 1}
             canMoveUp={index > 0}
             canMoveDown={index < catalogue.length - 1}
-            {collapsedAll}
-            {collapseVersion}
+            expanded={openTypeKey === undefined ? index === 0 : openTypeKey === key}
+            onExpandedChange={expanded => (openTypeKey = expanded ? key : null)}
             onMove={direction => moveType(index, index + direction)}
             onRemove={() => {
               removeKey = key

@@ -1,6 +1,4 @@
 <script lang="ts">
-// SVELTE
-import { untrack } from 'svelte'
 // COMPONENTS
 import Switch from '#lib/bits/custom/switch/Switch.svelte'
 // ICONS
@@ -26,8 +24,8 @@ let {
   canRemove = true,
   canMoveUp = false,
   canMoveDown = false,
-  collapsedAll = false,
-  collapseVersion = 0,
+  expanded = false,
+  onExpandedChange,
   onMove,
   onRemove,
 }: {
@@ -41,13 +39,12 @@ let {
   canRemove?: boolean
   canMoveUp?: boolean
   canMoveDown?: boolean
-  collapsedAll?: boolean
-  collapseVersion?: number
+  expanded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
   onMove?: (direction: -1 | 1) => void
   onRemove?: () => void
 } = $props()
-let collapsed = $state(false)
-let appliedVersion = $state(untrack(() => collapseVersion))
+const collapsed = $derived(!expanded)
 const bodyId = $props.id()
 let leftWidth = $state(0),
   rightWidth = $state(0)
@@ -57,11 +54,6 @@ const Icon = $derived(
     kind ?? 'object'
   ],
 )
-$effect(() => {
-  if (appliedVersion === collapseVersion) return
-  appliedVersion = collapseVersion
-  collapsed = collapsedAll
-})
 /** Move via the same ordered draft used by pointer dragging.
  * @param event Key from the six-dot handle. @returns Nothing.
  */
@@ -108,7 +100,7 @@ function reorderKey(event: KeyboardEvent): void {
         aria-expanded={!collapsed}
         aria-controls={bodyId}
         class="bits-project-field-card__title-pill relative max-w-full min-w-0 px-2!"
-        onclick={() => (collapsed = !collapsed)}
+        onclick={() => onExpandedChange?.(!expanded)}
       >
         <h3
           class="bits-project-field-card__title min-w-0 leading-snug! break-words whitespace-normal"

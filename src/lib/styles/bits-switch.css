@@ -82,9 +82,10 @@
     --switch-size: var(--switch-size-base);
     --switch-height: calc(var(--switch-size));
     --switch-width: calc(var(--switch-height) * 1.782);
-    --switch-border-width-base: 3px;
+    --switch-border-width-base: 2px;
     --switch-border-width: calc(var(--switch-border-width-base) * var(--switch-scale));
-    --switch-padding-ratio: 0.11;
+    /* Keep the larger sizes balanced: a light frame around a fuller thumb. */
+    --switch-padding-ratio: 0.0625;
     --switch-padding: calc(var(--switch-height) * var(--switch-padding-ratio));
     --switch-inner-height: calc(
       var(--switch-height) -
@@ -241,11 +242,11 @@
   }
 
   .bits-theme .bits-switch--size-md {
-    --switch-scale: 1;
-    --switch-size: var(--switch-size-base);
+    --switch-scale: 0.875;
+    --switch-size: calc(var(--switch-size-base) * 0.875);
   }
   .bits-theme .bits-switch-field--size-md {
-    --switch-size: var(--switch-size-base);
+    --switch-size: calc(var(--switch-size-base) * 0.875);
   }
 
   .bits-theme .bits-switch--size-lg {
