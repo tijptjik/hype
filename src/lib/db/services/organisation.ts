@@ -817,8 +817,8 @@ export const updateOrganisationByIdWithConcurrency = async (
     i18n?: Record<LocaleKey, OrganisationI18nPartial>
     userRoles?: OrganisationRoleNew[]
     data: {
-      code: string
-      url: string | null
+      code?: string
+      url?: string | null
       settings?: OrganisationDB['settings']
       defaultLocationVisibility?: OrganisationDB['defaultLocationVisibility']
       permitUserDetailsEdit?: boolean
@@ -832,7 +832,7 @@ export const updateOrganisationByIdWithConcurrency = async (
   )
   const updateCore = db
     .update(organisation)
-    .set(params.data)
+    .set({ ...params.data, modifiedAt: new Date().toISOString() })
     .where(revisionGuard)
     .returning({
       id: organisation.id,

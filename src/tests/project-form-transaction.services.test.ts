@@ -29,7 +29,7 @@ import { createOrganisationUserTables } from './fixtures/organisationUserTables.
 import type { Database } from '#lib/types.js'
 
 type Patch = Parameters<typeof updateProjectByIdWithConcurrency>[1]
-const patch: Patch = {
+const patch = {
   id: 'p',
   updatedAt: 'before',
   data: {
@@ -51,7 +51,7 @@ const patch: Patch = {
     userId: `u-${index}`,
     role: 'owner',
   })),
-}
+} satisfies Patch
 const tables = [
   project,
   projectI18n,
@@ -383,4 +383,29 @@ describe('project relation form transactions', () => {
       }
     },
   )
+})
+
+it('preserves project profile and ownership when only relations are submitted', async () => {
+  const { db, sqlite } = fixture()
+  try {
+    const before = sqlite.prepare("SELECT * FROM project WHERE id='p'").get()!
+    const result = await updateProjectByIdWithConcurrency(db, {
+      id: 'p',
+      updatedAt: 'before',
+      data: {},
+    })
+    expect(result?.id).toBe('p')
+    const after = sqlite.prepare("SELECT * FROM project WHERE id='p'").get()!
+    expect(after.modifiedAt).not.toBe(before.modifiedAt)
+    expect({ ...after, modifiedAt: before.modifiedAt }).toEqual(before)
+    expect(
+      await updateProjectByIdWithConcurrency(db, {
+        id: 'p',
+        updatedAt: 'before',
+        data: {},
+      }),
+    ).toBeNull()
+  } finally {
+    sqlite.close()
+  }
 })

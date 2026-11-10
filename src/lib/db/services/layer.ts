@@ -736,8 +736,8 @@ export const updateLayerByIdWithConcurrency = async (
       expectedRevision: number
     }
     data: {
-      organisationId: string
-      projectId: string
+      organisationId?: string
+      projectId?: string
       metadata?: LayerMetadata
       isDefaultVisible?: boolean
     }
@@ -766,17 +766,20 @@ export const updateLayerByIdWithConcurrency = async (
   const relocationPolicy = settings
     ? RelocationPolicySchema.nullable().parse(settings.policy)
     : undefined
-  // Preserve the ownership check when metadata is omitted during a project move.
-  const metadata =
-    params.data.metadata ??
-    (
-      await db
-        .select({ metadata: layer.metadata })
-        .from(layer)
-        .where(eq(layer.id, params.id))
-        .limit(1)
-    )[0]?.metadata
-  await assertMapStyleProjectScope(db, params.data.projectId, metadata?.mapStyleCode)
+  // Validate presentation scope only when its values or ancestry are supplied.
+  if (params.data.metadata !== undefined || params.data.projectId !== undefined) {
+    const current = await db
+      .select({ metadata: layer.metadata, projectId: layer.projectId })
+      .from(layer)
+      .where(eq(layer.id, params.id))
+      .get()
+    if (!current) return null
+    await assertMapStyleProjectScope(
+      db,
+      params.data.projectId ?? current.projectId,
+      (params.data.metadata ?? current.metadata)?.mapStyleCode,
+    )
+  }
   const revisionGuard = and(
     eq(layer.id, params.id),
     eq(layer.modifiedAt, params.updatedAt),
@@ -788,6 +791,7 @@ export const updateLayerByIdWithConcurrency = async (
     .update(layer)
     .set({
       ...params.data,
+      modifiedAt: new Date().toISOString(),
       ...(settings
         ? {
             relocationPolicy,

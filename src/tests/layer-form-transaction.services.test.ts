@@ -11,7 +11,7 @@ import { publicationSqlite } from './fixtures/publicationSqlite.js'
 import type { Database } from '#lib/types.js'
 
 type Update = Parameters<typeof updateLayerByIdWithConcurrency>[1]
-const patch: Update = {
+const patch = {
   id: 'l',
   updatedAt: 'before',
   data: {
@@ -29,7 +29,7 @@ const patch: Update = {
     propertyId: `p-${i}`,
     isVisible: i !== 0,
   })),
-}
+} satisfies Update
 
 /** Builds real schema-shaped relation tables and seeds both target and unrelated rows. */
 function fixture() {
@@ -204,4 +204,31 @@ describe('atomic layer form updates', () => {
       sqlite.close()
     }
   })
+})
+
+it('preserves layer profile and ownership when only relations are submitted', async () => {
+  const { db, sqlite } = fixture()
+  try {
+    const before = sqlite.prepare("SELECT * FROM layer WHERE id='l'").get()!
+    const result = await updateLayerByIdWithConcurrency(db, {
+      id: 'l',
+      updatedAt: 'before',
+      data: {},
+      properties: [],
+    })
+    expect(result?.id).toBe('l')
+    const after = sqlite.prepare("SELECT * FROM layer WHERE id='l'").get()!
+    expect(after.modifiedAt).not.toBe(before.modifiedAt)
+    expect({ ...after, modifiedAt: before.modifiedAt }).toEqual(before)
+    expect(
+      await updateLayerByIdWithConcurrency(db, {
+        id: 'l',
+        updatedAt: 'before',
+        data: {},
+        properties: [],
+      }),
+    ).toBeNull()
+  } finally {
+    sqlite.close()
+  }
 })

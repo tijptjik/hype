@@ -21,7 +21,7 @@ import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
 import type { Database } from '#lib/types.js'
 
 type Patch = Parameters<typeof updateOrganisationByIdWithConcurrency>[1]
-const patch: Patch = {
+const patch = {
   id: 'o',
   updatedAt: 'before',
   data: { code: 'new', url: null, capabilities: {} },
@@ -31,7 +31,7 @@ const patch: Patch = {
     organisationId: 'wrong',
     role: 'owner',
   })),
-}
+} satisfies Patch
 
 /** Creates schema-shaped relations and descendants to exercise the complete guarded batch. */
 function fixture() {
@@ -351,4 +351,36 @@ describe('organisation form revision transaction', () => {
       sqlite.close()
     }
   })
+})
+
+it('preserves Organisation profile and owners on a sparse revision-guarded save', async () => {
+  const { db, sqlite } = fixture()
+  try {
+    const before = sqlite.prepare("SELECT * FROM organisation WHERE id='o'").get()!
+    const owners = sqlite
+      .prepare('SELECT * FROM organisationRole ORDER BY organisationId')
+      .all()
+    expect(
+      await updateOrganisationByIdWithConcurrency(db, {
+        id: 'o',
+        updatedAt: 'before',
+        data: {},
+      }),
+    ).toMatchObject({ id: 'o' })
+    const after = sqlite.prepare("SELECT * FROM organisation WHERE id='o'").get()!
+    expect({ ...after, modifiedAt: before.modifiedAt }).toEqual(before)
+    expect(after.modifiedAt).not.toBe(before.modifiedAt)
+    expect(
+      sqlite.prepare('SELECT * FROM organisationRole ORDER BY organisationId').all(),
+    ).toEqual(owners)
+    expect(
+      await updateOrganisationByIdWithConcurrency(db, {
+        id: 'o',
+        updatedAt: 'before',
+        data: {},
+      }),
+    ).toBeNull()
+  } finally {
+    sqlite.close()
+  }
 })

@@ -1001,7 +1001,7 @@ export const updateProjectByIdWithConcurrency = async (
       policy: ProjectLocationPolicy
       expectedRevision: number
     }
-    data: {
+    data: Partial<{
       organisationId: ProjectDB['organisationId']
       code: string
       license?: ProjectDB['license']
@@ -1011,7 +1011,7 @@ export const updateProjectByIdWithConcurrency = async (
       flags: ProjectDB['flags']
       cardStyleCode: ProjectDB['cardStyleCode']
       useAllInOrgContext: boolean
-    }
+    }>
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
   if (params.featureIntentSettings && !params.actorId)
@@ -1055,11 +1055,12 @@ export const updateProjectByIdWithConcurrency = async (
   )
   // Observe whether ancestry changes, then recheck this revision inside every write.
   const current = await db
-    .select({ organisationId: project.organisationId })
+    .select({ organisationId: project.organisationId, code: project.code })
     .from(project)
     .where(revisionGuard)
     .get()
   if (!current) return null
+  const nextOrganisationId = params.data.organisationId ?? current.organisationId
   const guardedProject = and(
     revisionGuard,
     eq(project.organisationId, current.organisationId),
@@ -1068,6 +1069,7 @@ export const updateProjectByIdWithConcurrency = async (
     .update(project)
     .set({
       ...params.data,
+      modifiedAt: new Date().toISOString(),
       ...(settings && policy
         ? {
             locationPolicy: policy,
@@ -1096,7 +1098,7 @@ export const updateProjectByIdWithConcurrency = async (
   const writes = prepareProjectRelations(
     db,
     params.id,
-    params.data.organisationId,
+    nextOrganisationId,
     params,
     moveGuard,
   )
@@ -1106,27 +1108,27 @@ export const updateProjectByIdWithConcurrency = async (
         db,
         {
           projectId: params.id,
-          projectCode: params.data.code,
-          organisationId: params.data.organisationId,
+          projectCode: params.data.code ?? current.code,
+          organisationId: nextOrganisationId,
           mapStyleCode: params.mapStyleCode,
         },
         moveGuard,
       ),
     )
-  if (current.organisationId !== params.data.organisationId) {
+  if (current.organisationId !== nextOrganisationId) {
     // Keep the parent revision unchanged until every descendant passes its existing scope guards.
     writes.push(
       db
         .update(layer)
-        .set({ organisationId: params.data.organisationId })
+        .set({ organisationId: nextOrganisationId })
         .where(and(eq(layer.projectId, params.id), moveGuard)),
       db
         .update(feature)
-        .set({ organisationId: params.data.organisationId })
+        .set({ organisationId: nextOrganisationId })
         .where(and(eq(feature.projectId, params.id), moveGuard)),
       db
         .update(task)
-        .set({ organisationId: params.data.organisationId })
+        .set({ organisationId: nextOrganisationId })
         .where(and(eq(task.projectId, params.id), moveGuard)),
     )
   }

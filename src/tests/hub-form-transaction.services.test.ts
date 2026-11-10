@@ -13,7 +13,7 @@ import { publicationSqlite } from './fixtures/publicationSqlite.js'
 import type { Database } from '#lib/types.js'
 
 type Patch = Parameters<typeof updateHubByIdWithConcurrency>[1]
-const patch: Patch = {
+const patch = {
   id: 'h',
   updatedAt: 'before',
   data: {
@@ -34,7 +34,7 @@ const patch: Patch = {
     { organisationId: 'next', isCoreInclusive: false, isHubExclusive: true },
   ],
   layerDefaults: [{ layerId: 'new-layer', isDefaultVisible: false }],
-}
+} satisfies Patch
 const tables = [hub, hubI18n, hubRole, hubLayer, organisation]
 
 /** Creates real schema-shaped rows for parent, owned relations, and reassigned organisations. */
@@ -321,4 +321,31 @@ describe('image intents in the Hub form transaction', () => {
         }
       },
     )
+})
+
+it('preserves hub profile and ownership when only relations are submitted', async () => {
+  const { db, sqlite } = fixture()
+  try {
+    const before = sqlite.prepare("SELECT * FROM hub WHERE id='h'").get()!
+    const result = await updateHubByIdWithConcurrency(db, {
+      id: 'h',
+      updatedAt: 'before',
+      data: {},
+      layerDefaults: [],
+    })
+    expect(result?.id).toBe('h')
+    const after = sqlite.prepare("SELECT * FROM hub WHERE id='h'").get()!
+    expect(after.modifiedAt).not.toBe(before.modifiedAt)
+    expect({ ...after, modifiedAt: before.modifiedAt }).toEqual(before)
+    expect(
+      await updateHubByIdWithConcurrency(db, {
+        id: 'h',
+        updatedAt: 'before',
+        data: {},
+        layerDefaults: [],
+      }),
+    ).toBeNull()
+  } finally {
+    sqlite.close()
+  }
 })

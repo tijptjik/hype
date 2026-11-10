@@ -894,16 +894,18 @@ export const updateHubByIdWithConcurrency = async (
     imageIntentSettings?: ImageIntentSettingsPatch
     updatedAt: string
     data: Partial<
-      Pick<HubDB, 'code' | 'domain' | 'legalContactAddress' | 'isSubscriptionAvailable'>
-    > & {
-      code: string
-      domain: string | null
-      legalContactAddress: string | null
-      subscriptionService: HubDB['subscriptionService']
-      subscriptionId: string | null
-      subscriptionSessionCookie: string | null
-      subscriptionPlacement: HubDB['subscriptionPlacement']
-    }
+      Pick<
+        HubDB,
+        | 'code'
+        | 'domain'
+        | 'legalContactAddress'
+        | 'isSubscriptionAvailable'
+        | 'subscriptionService'
+        | 'subscriptionId'
+        | 'subscriptionSessionCookie'
+        | 'subscriptionPlacement'
+      >
+    >
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
   if (params.featureIntentSettings && !params.actorId)
@@ -918,10 +920,14 @@ export const updateHubByIdWithConcurrency = async (
       : []
   if (featureSettings === null) return null
   const revisionGuard = and(eq(hub.id, params.id), eq(hub.modifiedAt, params.updatedAt))
-  const updateCore = db.update(hub).set(params.data).where(revisionGuard).returning({
-    id: hub.id,
-    modifiedAt: hub.modifiedAt,
-  })
+  const updateCore = db
+    .update(hub)
+    .set({ ...params.data, modifiedAt: new Date().toISOString() })
+    .where(revisionGuard)
+    .returning({
+      id: hub.id,
+      modifiedAt: hub.modifiedAt,
+    })
 
   const guard = exists(db.select({ id: hub.id }).from(hub).where(revisionGuard))
   const writes = prepareHubRelations(db, params.id, params, guard)
