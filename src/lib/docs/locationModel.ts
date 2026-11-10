@@ -7,9 +7,6 @@ export const locationTaxonomy = `flowchart LR
   O --> E["class: establishment"]
   O --> SP["class: service_point"]
   L --> A["kind: address"]
-  A --> PA["class: premises_address"]
-  A --> LA["class: cadastral_address"]
-  A --> LR["class: linear_reference"]
   B --> BPT["class: building_part"]
   B --> BS["class: structure"]
   B --> BB["class: building"]
@@ -24,7 +21,7 @@ export const locationRelationships = `flowchart LR
   E["Establishment"]
   BP["Building part"]
   B["Building"]
-  P["Premises / Complex"]
+  P["Premises / farm estate"]
   A["Address revision"]
   BP -->|"part of · membership"| B
   BP -->|"part of · nested membership"| BP
@@ -47,10 +44,15 @@ export const divisionTaxonomy = `flowchart TD
 
 /** Address content is compositional; components are not automatic Location identities. */
 export const addressComposition = `flowchart LR
+  L["Location · building, farm premises or address"] -->|"one or more locationAddress links"| R
   A["Address identity"] -->|"retains versions"| R["Address revision"]
   R -->|"retains"| C["Address content"]
   R --> E["Publication evidence<br/>source version, references, raw source, hash"]
   D["Locally authored draft"] -->|"same content contract"| C
+  C --> V["Address content variant · proposed contract"]
+  V --> VP["Premises"]
+  V --> VC["Cadastral · jurisdiction, system, parcel reference"]
+  V --> VL["Linear reference · route, measure, unit, offset"]
   C --> SC["Scope<br/>what the address identifies"]
   C --> G["Optional point geometry"]
   C --> I["Localized components · i18n"]

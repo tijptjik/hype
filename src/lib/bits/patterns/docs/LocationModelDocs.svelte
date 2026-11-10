@@ -85,10 +85,7 @@ let viewportHeight = $state(0)
             </tr>
             <tr>
               <td class="p-3"><code>address</code></td>
-              <td class="p-3 break-words whitespace-normal">
-                <code>premises_address</code>, <code>cadastral_address</code>,
-                <code>linear_reference</code>
-              </td>
+              <td class="p-3 break-words whitespace-normal">No Location classes</td>
             </tr>
           </tbody>
         </table>
@@ -228,64 +225,14 @@ let viewportHeight = $state(0)
       </p>
       <h3 class="mt-6 text-lg font-semibold">Address · <code>address</code></h3>
       <p class="my-4 max-w-3xl">
-        An address is a reference used to identify premises, land or a position along a
-        route. It is distinct from the physical place it refers to. The classes below
-        describe the addressing method; the examples illustrate possible forms rather
-        than verified real-world records.
+        An address Location identifies an address independently of a known building,
+        premises or establishment. It has kind <code>address</code> and no class.
+        Structured address components belong to Address revisions, linked through
+        <code>locationAddress</code>.
       </p>
-      <p class="my-4 max-w-3xl">
-        Distinct class identifiers make the kind inferable through an explicit mapping:
-        <code>premises</code>
-        belongs to built, while <code>premises_address</code>,
-        <code>cadastral_address</code>
-        and <code>linear_reference</code> belong to address. Kind remains explicit and
-        the pair must be valid; an unclassified Location can have a known kind without a
-        class.
-      </p>
-      <dl class="my-4 grid gap-4 md:grid-cols-3">
-        <div>
-          <dt class="font-semibold">Premises</dt>
-          <dd class="mt-2">
-            Identifies premises through a street and number, village and house number,
-            or building name. Floors, units and rooms refine its scope; no street name
-            is required.
-            <p class="text-muted-foreground mt-2 text-sm">
-              Examples: 12 Example Road; House 8, Example Village; Example Tower; Flat
-              A, 3/F, Example Tower; Shop 2, G/F, 12 Example Road.
-            </p>
-          </dd>
-        </div>
-        <div>
-          <dt class="font-semibold">Cadastral</dt>
-          <dd class="mt-2">
-            Identifies land through a cadastral reference, such as Inland Lot No. 1234
-            or DD 123 Lot 456, including sections or subsections where applicable. The
-            reference is distinct from the land parcel itself.
-            <p class="text-muted-foreground mt-2 text-sm">
-              Examples: Inland Lot No. 1234; DD 123 Lot 456; Section A of DD 123 Lot
-              456.
-            </p>
-          </dd>
-        </div>
-        <div>
-          <dt class="font-semibold">Linear reference</dt>
-          <dd class="mt-2">
-            Identifies a position along a named road, railway or other route using a
-            measured offset. Interpretation requires the route, measurement origin,
-            units and direction, with a side or lateral offset where needed.
-            <p class="text-muted-foreground mt-2 text-sm">
-              Examples: a road chainage reference, a railway kilometre reference, a
-              trail distance reference. Each needs its route and measurement origin to
-              identify a position.
-            </p>
-          </dd>
-        </div>
-      </dl>
-      <p class="my-4 max-w-3xl">
-        A Location can have multiple address references, such as both a premises address
-        and a lot address. Coordinates, grid references and encoded location codes such
-        as Plus Codes are positioning methods, not address classes. Positioning remains
-        separate from addressing and can accompany any address class.
+      <p class="text-muted-foreground mb-4 max-w-3xl text-sm">
+        Examples: 12 Example Road; House 8, Example Village; Example Tower; DD 123 Lot
+        456; a measured position on a named route.
       </p>
     </section>
 
@@ -385,6 +332,66 @@ let viewportHeight = $state(0)
         source={addressComposition}
         label="Address identity, revisions and content composition"
       />
+      <p class="my-4 max-w-3xl">
+        Premises, cadastral and linear reference are Address content variants, not
+        Location classes. The variant belongs to the versioned Address content in
+        <code>addressRevision</code>, not to <code>locationAddress</code>. The current
+        content contract supports premises components; cadastral and linear reference
+        contracts remain to be implemented.
+      </p>
+      <p class="my-4 max-w-3xl">
+        One farm estate is a built Location of class <code>premises</code>. It can link
+        to premises, cadastral and linear addresses through separate
+        <code>locationAddress</code>
+        records. Each link carries priority, status, dates and evidence. A building and
+        an address Location can share the same Address identity without duplicating its
+        components. The farm business may separately be an operational establishment.
+      </p>
+      <dl class="my-4 grid gap-4 md:grid-cols-3">
+        <div>
+          <dt class="font-semibold">Premises</dt>
+          <dd class="mt-2">
+            Identifies premises through a street and number, village and house number,
+            or building name. Floors, units and rooms refine its scope; no street name
+            is required.
+            <p class="text-muted-foreground mt-2 text-sm">
+              Examples: 12 Example Road; House 8, Example Village; Example Tower; Flat
+              A, 3/F, Example Tower; Shop 2, G/F, 12 Example Road.
+            </p>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-semibold">Cadastral</dt>
+          <dd class="mt-2">
+            Identifies land through a cadastral reference, such as Inland Lot No. 1234
+            or DD 123 Lot 456, including sections or subsections where applicable. The
+            reference is distinct from the land parcel itself.
+            <p class="text-muted-foreground mt-2 text-sm">
+              Examples: Inland Lot No. 1234; DD 123 Lot 456; Section A of DD 123 Lot
+              456.
+            </p>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-semibold">Linear reference</dt>
+          <dd class="mt-2">
+            Identifies a position along a named road, railway or other route using a
+            measured offset. Interpretation requires the route, measurement origin,
+            units and direction, with a side or lateral offset where needed.
+            <p class="text-muted-foreground mt-2 text-sm">
+              Examples: a road chainage reference, a railway kilometre reference, a
+              trail distance reference. Each needs its route and measurement origin to
+              identify a position.
+            </p>
+          </dd>
+        </div>
+      </dl>
+      <p class="my-4 max-w-3xl">
+        A Location can have multiple address references, such as both a premises address
+        and a lot address. Coordinates, grid references and encoded location codes such
+        as Plus Codes are positioning methods, not Address content variants. Positioning
+        remains separate from addressing and can accompany any Address content variant.
+      </p>
       <dl class="mt-6 grid gap-6 md:grid-cols-3">
         <div>
           <dt class="font-semibold">Scope is independent</dt>

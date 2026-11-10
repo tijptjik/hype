@@ -1320,19 +1320,25 @@ meaning.
 | `built`       | `premises`, `building`, `building_part`, `structure`, `thoroughfare`; null when unknown |
 | `geographic`  | `landform`, `coastal_feature`, `water_feature`; null when unknown                       |
 | `operational` | `establishment`, `service_point`                                                        |
-| `address`     | `premises_address`, `cadastral_address`, `linear_reference`; null when unknown          |
+| `address`     | null; variants belong to Address content                                                |
 | `unknown`     | null                                                                                    |
 
 Existing establishments become operational establishments. Buildings, building parts,
 premises and streets retain their specific classification under built. Historical
 `natural` becomes geographic with an unknown class; historical `infrastructure` becomes
 built with an unknown class. Neither broad historical value proves a particular new
-subclass. Migration `0218_location_address_service_classes.sql` adds service points and
-the three address classes without reclassifying existing records. Form choices group
-classes by kind and show the address labels Premises, Cadastral and Linear reference.
-Selected legacy broad permissions remain visible as “any class”; new choices use
-explicit classes. Service points identify a continuing service presence independently of
-any physical bin, kiosk or building.
+subclass. Migration `0218_location_address_service_classes.sql` introduced service
+points and address subclasses; `0219_address_location_classification.sql` corrects the
+latter to address with no class, preserving immutable history and identity IDs. Retained
+policy tokens decode to the single address permission.
+
+Premises, cadastral and linear reference are proposed variants of versioned Address
+content, stored in `addressRevision.components`, not on the `locationAddress`
+relationship. The existing content contract supports premises components; specialised
+cadastral and linear contracts remain unimplemented. Each Location can have multiple
+address links, with priority, status, dates and evidence. A farm estate is built /
+premises; its business can independently be operational / establishment. Buildings and
+address Locations link directly to Address revisions and can share Address identity.
 
 The generated `matchingType` column is a read-only compatibility discriminator for
 existing matching policies, association transports and version-1 facts. The Drizzle
