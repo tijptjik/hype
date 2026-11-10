@@ -1,7 +1,9 @@
 <script lang="ts">
 // SVELTEKIT
 import { page } from '$app/state'
+import { onNavigate } from '$app/navigation'
 // CUSTOM
+import RouteViewport from '#lib/bits/custom/transition/RouteViewport.svelte'
 import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
 import { m } from '#lib/i18n.js'
 // LAYOUT
@@ -30,6 +32,11 @@ let {
   settings,
   children,
 }: AdminShellProps = $props()
+
+let routeViewport: ReturnType<typeof RouteViewport> | undefined
+onNavigate(({ from, to }) => {
+  if (from?.url.pathname !== to?.url.pathname) routeViewport?.prepareNavigation()
+})
 
 let mainElement = $state<HTMLElement | null>(null)
 let contentStart = $state<number | undefined>(undefined)
@@ -78,7 +85,9 @@ const footerConfig = $derived(headerProps.footer ?? null)
           <main bind:this={mainElement} class="bits-admin-shell__main">
             {#if isContentReady}
               <HeaderControlBar controlBar={headerProps.controlBar} />
-              {@render children()}
+              <RouteViewport bind:this={routeViewport} routeKey={page.url.pathname}>
+                {@render children()}
+              </RouteViewport>
             {:else if pending}
               {@render pending()}
             {:else}

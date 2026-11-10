@@ -295,6 +295,7 @@ function getGroupId(group: Record<string, unknown>): string {
 
 <div
   bind:this={listContainer}
+  data-resource-index
   bind:clientWidth={gridWidth}
   class="flex h-full min-h-0 flex-col overflow-hidden"
 >

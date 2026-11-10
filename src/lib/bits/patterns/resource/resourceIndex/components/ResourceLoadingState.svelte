@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
+// ROUTE READINESS
+import { holdRouteWhileLoading } from '#lib/bits/custom/transition/routeReadiness.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
@@ -13,6 +15,8 @@ let {
   isRowLayout = false,
   showGroupHeader = false,
 }: { isRowLayout?: boolean; showGroupHeader?: boolean } = $props()
+holdRouteWhileLoading()
+
 // Use the loaded index's column budget, including its outer 12px and inner 8px gutters.
 let width = $state(0)
 let viewport = $state<HTMLDivElement>()

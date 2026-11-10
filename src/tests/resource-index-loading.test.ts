@@ -12,13 +12,19 @@ vi.mock('#lib/context/admin.svelte.js', () => ({
     },
   }),
 }))
-vi.mock('#lib/i18n.js', () => ({
-  m: {
-    resource_loading: () => 'Loading',
-    omni__no_results: () => 'No results',
-    resource_index__empty_subtitle: () => 'Try another search',
-  },
-}))
+vi.mock('#lib/i18n.js', async importOriginal => {
+  // Keep messages used by the real card skeleton's nested image components.
+  const actual = await importOriginal<typeof import('#lib/i18n.js')>()
+  return {
+    ...actual,
+    m: {
+      ...actual.m,
+      resource_loading: () => 'Loading',
+      omni__no_results: () => 'No results',
+      resource_index__empty_subtitle: () => 'Try another search',
+    },
+  }
+})
 beforeEach(() => {
   vi.useRealTimers()
   HTMLElement.prototype.getAnimations = vi.fn(() => [])

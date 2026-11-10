@@ -251,6 +251,7 @@ $effect(() => {
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
+  data-resource-index
   class="@container/grid flex min-h-0 flex-1 flex-col overflow-hidden overscroll-auto caret-transparent"
 >
   {#if isInitialised}
