@@ -3565,3 +3565,13 @@ explicit migration. Validation preserves stored values and checks them again ins
 catalog transaction to reject concurrent edits. Naming-policy radios are excluded from
 native form submission because the registered policy draft field owns their persisted
 value (Refs #241).
+
+### Using an existing Location preserves identity
+
+Refs #194 (parent #180). “Use this location” retains the selected upstream ID and
+resource release for import/link, or the existing local Location/revision for linking. A
+stale local-creation flag must not override an upstream selection. Adjusting the Feature
+pin during association review preserves that identity; it does not authorize creating a
+replacement Location. Explicit “Create” actions retain the local-authoring path.
+Regression coverage lives in `draft-feature-location-search.test.ts` and
+`location-association-picker.test.ts`.

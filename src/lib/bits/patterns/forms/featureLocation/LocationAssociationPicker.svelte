@@ -888,7 +888,7 @@ function acceptInitialSelection(): void {
   onAccept({
     ...$state.snapshot(origin),
     // Retaining catalogue evidence still needs a local identity when the Feature is saved.
-    localKind: origin.localKind ?? (origin.source ? undefined : origin.kind),
+    localKind: origin.source ? undefined : (origin.localKind ?? origin.kind),
     associationConfirmed: true,
   })
 }
@@ -908,7 +908,7 @@ function accept(manual = false): void {
   const mode =
     selectedKind === 'address'
       ? 'manual'
-      : customPosition
+      : custom
         ? 'unlinked'
         : locationSyncMode(undefined, target ?? {})
   const selectedNames =
@@ -944,9 +944,8 @@ function accept(manual = false): void {
     kind: selectedKind,
     mode,
     names: selectedNames,
-    lookup: customPosition
-      ? 'not-checked'
-      : mode === 'manual'
+    lookup:
+      mode === 'manual'
         ? 'not-checked'
         : target && !custom
           ? 'matched'
@@ -954,27 +953,23 @@ function accept(manual = false): void {
             ? 'deferred'
             : lookups[selectedKind],
     checkedAt: new Date().toISOString(),
-    targetId: custom || customPosition ? undefined : target?.id,
+    targetId: custom ? undefined : target?.id,
   }
   if (target && moveMarker && target.address.coordinates)
     address.coordinates = target.address.coordinates
   if (customPosition) address.coordinates = [...customPosition]
   if (allowedLocationKinds && !allowedLocationKinds.includes(selectedKind)) return
   onAccept({
-    id: customPosition
-      ? `custom:${target?.id ?? origin.id}`
-      : (target?.id ?? origin.id),
+    id: target?.id ?? origin.id,
     kind: selectedKind,
     names: selectedNames,
     address,
-    source: customPosition ? undefined : target?.source,
-    identity: customPosition ? undefined : target?.identity,
-    buildingSource: customPosition ? undefined : target?.buildingSource,
-    localKind: !customPosition && target?.source ? undefined : selectedKind,
-    nameMode:
-      !customPosition && target && sameRecord(origin, target)
-        ? origin.nameMode
-        : 'independent',
+    source: target?.source,
+    identity: target?.identity,
+    buildingSource: target?.buildingSource,
+    // Using a record retains its identity even when the Feature pin is adjusted.
+    localKind: target?.source ? undefined : selectedKind,
+    nameMode: target && sameRecord(origin, target) ? origin.nameMode : 'independent',
     associationConfirmed: true,
   })
 }

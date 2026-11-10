@@ -3185,3 +3185,39 @@ it.each([false, true])(
     }
   },
 )
+
+it('uses an upstream location even when restored draft state contains a local creation flag', async () => {
+  vi.useRealTimers()
+  const onSelect = vi.fn()
+  const view = render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    preferredKind: 'establishment',
+    allowedLocationKinds: ['establishment'],
+    onSelect,
+  })
+  const row = {
+    id: 'place:garden',
+    kind: 'establishment' as const,
+    localKind: 'establishment' as const,
+    names: { en: 'Garden' },
+    source: { ssId: 'garden', resourceReleaseId: 'release-1' },
+    address: emptyFeatureAddress(),
+  }
+  view.component.restoreProgress({
+    ...view.component.getProgress(),
+    query: 'Garden',
+    receivedRows: [row],
+    searched: true,
+  })
+  await fireEvent.click(await screen.findByRole('button', { name: /Garden/ }))
+  await fireEvent.click(
+    screen.getByRole('button', { name: /^(Use this location|Locate feature here)$/ }),
+  )
+  // The committed flow reviews the record; the inline flow accepts it directly.
+  const use = screen.queryByRole('button', { name: 'Use', exact: true })
+  if (use) await fireEvent.click(use)
+  await waitFor(() => expect(onSelect).toHaveBeenCalled())
+  expect(onSelect.mock.lastCall?.[0]).toMatchObject({ source: row.source })
+  expect(onSelect.mock.lastCall?.[0].localKind).toBeUndefined()
+})

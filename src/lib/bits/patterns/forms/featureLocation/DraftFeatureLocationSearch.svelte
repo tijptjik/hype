@@ -1350,7 +1350,11 @@ async function acceptResult(result: Result): Promise<void> {
     }
     selected = result
   }
-  onSelect({ ...result, nameMode: 'independent' })
+  onSelect({
+    ...result,
+    localKind: result.source ? undefined : result.localKind,
+    nameMode: 'independent',
+  })
   accepted = true
   linked = true
 }

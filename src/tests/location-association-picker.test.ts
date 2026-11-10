@@ -341,11 +341,20 @@ it('recentres the preview on each pin switch and direct position selection witho
   expect(onAccept).not.toHaveBeenCalled()
 })
 
-it.each(['original', 'location'] as const)(
-  'edits the %s pin as a custom location without mutating source evidence',
-  async side => {
+it.each([
+  ['original', 'local'],
+  ['location', 'local'],
+  ['original', 'upstream'],
+  ['location', 'upstream'],
+] as const)(
+  'uses the selected identity after editing the %s pin for a %s record',
+  async (side, record) => {
     const initial = origin()
     const source = candidate()
+    if (record === 'upstream') {
+      source.identity = undefined
+      source.source = { ssId: 'garden', resourceReleaseId: 'release-1' }
+    }
     const onAccept = vi.fn()
     const onPreview = vi.fn()
     const onMapCandidates = vi.fn()
@@ -395,11 +404,11 @@ it.each(['original', 'location'] as const)(
     )
     const result = onAccept.mock.lastCall?.[0] as Result
     expect(result.address.coordinates).toEqual([114.16, 22.31])
-    expect(result.address.association?.mode).toBe('unlinked')
-    expect(result.address.association?.targetId).toBeUndefined()
-    expect(result.identity).toBeUndefined()
-    expect(result.source).toBeUndefined()
-    expect(result.buildingSource).toBeUndefined()
+    expect(result.address.association?.targetId).toBe(source.id)
+    expect(result.identity).toEqual(source.identity)
+    expect(result.source).toEqual(source.source)
+    if (record === 'upstream') expect(result.localKind).toBeUndefined()
+    expect(result.buildingSource).toEqual(source.buildingSource)
     expect(initial.address.coordinates).toEqual(origin().address.coordinates)
     expect(source.address.coordinates).toEqual(candidate().address.coordinates)
   },

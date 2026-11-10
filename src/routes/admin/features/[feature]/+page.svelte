@@ -5068,11 +5068,10 @@ async function refreshLocationSource(): Promise<void> {
                   featureVisualSection?.restoreAfterFit(320)
                   draftReplacementLocationId = previousLocationId
                   // Catalogue selections may carry identity evidence without an explicit local kind.
-                  draftLocalKind =
-                    result.localKind ??
-                    (!result.source && result.kind !== 'establishment'
-                      ? result.kind
-                      : undefined)
+                  draftLocalKind = result.source
+                    ? undefined
+                    : (result.localKind ??
+                      (result.kind !== 'establishment' ? result.kind : undefined))
                   draftLocationNames = { ...result.names }
                   draftAddressIdentity = result.identity
                   draftBuildingSource = result.buildingSource
