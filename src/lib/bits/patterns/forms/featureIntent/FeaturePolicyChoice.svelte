@@ -62,8 +62,10 @@ const id = $props.id()
           ? 'cursor-default'
           : 'cursor-pointer hover:border-primary/40 hover:bg-muted/30'}"
       >
+        <!-- Keep native radio grouping; the registered draft field owns submission. -->
         <input
           type="radio"
+          form=""
           name={id}
           value={option.value}
           checked={value === option.value}

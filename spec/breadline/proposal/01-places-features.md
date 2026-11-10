@@ -3546,3 +3546,22 @@ What3Words is a separately tracked provider integration:
 [#242](https://github.com/tijptjik/hype/issues/242). Its option remains unavailable
 until credentials, language-aware coordinate caching, stale-response handling and
 provider failure behaviour are implemented.
+
+### Compatible property edits and WhatsApp rollout
+
+Migration `0227_core_whatsapp_phone_field.sql` changes the existing core
+`whatsappNumber` property (`gPropWaNum01`) to `PhoneField` with translations disabled.
+It preserves property identity, assignments and stored scalar phone values; the phone
+reader accepts these legacy values. It captures before/after catalog revisions, checks
+the existing head against the live catalog, and advances the head within the migration.
+The migration is prepared for rollout, not applied to production.
+
+Populated fields may switch between text editors or change scalar parsing to text,
+number, date or boolean when every stored value validates under the target contract.
+Text editors may also switch to `PhoneField` when every stored number parses. Options,
+structured values and translations that the target cannot preserve block the change.
+Phone collections, classifier and structured-storage transitions still require an
+explicit migration. Validation preserves stored values and checks them again inside the
+catalog transaction to reject concurrent edits. Naming-policy radios are excluded from
+native form submission because the registered policy draft field owns their persisted
+value (Refs #241).

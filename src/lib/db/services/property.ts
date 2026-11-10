@@ -8,6 +8,7 @@ import { chunkedInArray, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // DB
 // PROPERTY CONTRACT
 import { rangeDomain } from '#lib/properties/range.js'
+import { preparePropertyContractTransition } from './propertyContractTransition.js'
 import { toRelatedRecords } from '#lib/db/index.js'
 import { inferPropertyDiscriminatorFromComponent } from '#lib/api/services/index.js'
 import { toPropertyResponseFromRaw } from '#lib/api/services/property.js'
@@ -1025,7 +1026,8 @@ export const preparePropertyCatalog = async (
   })
   const existingById = new Map(existingProperties.map(row => [row.id, row]))
 
-  // Populated contracts cannot be reinterpreted by a metadata edit; migrate values explicitly.
+  // Allow validated scalar transitions without rewriting stored feature values.
+  const transitionChecks: BatchItem<'sqlite'>[] = []
   for (const input of properties) {
     const existing = existingById.get(input.id ?? '')
     if (
@@ -1042,7 +1044,15 @@ export const preparePropertyCatalog = async (
       const populated = await db.query.featureProperty.findFirst({
         where: eq(featureProperty.propertyId, existing.id),
       })
-      if (populated) throw error(400, 'PROPERTY_CONTRACT_HAS_VALUES')
+      if (populated) {
+        const transition = await preparePropertyContractTransition(
+          db,
+          existing.id,
+          existing,
+          { ...existing, ...input },
+        )
+        transitionChecks.push(transition.check)
+      }
     }
   }
   // Validate every create/update before mutating existing records, avoiding destructive
@@ -1117,7 +1127,7 @@ export const preparePropertyCatalog = async (
     })
     .from(property)
     .where(and(scopeFilter, chunkedInArray(property.id, retainedIds)))
-  const writes: BatchItem<'sqlite'>[] = []
+  const writes: BatchItem<'sqlite'>[] = [...transitionChecks]
   for (const row of prepared) {
     // Create or update the base record without replacing its identity or dependent links.
     if (row.existing) {

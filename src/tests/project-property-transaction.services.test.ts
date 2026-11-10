@@ -66,6 +66,7 @@ beforeEach(() => {
     schema.layerProperty,
     schema.property,
     schema.featureProperty,
+    schema.featurePropertyI18n,
     schema.propertyI18n,
     schema.propertyValue,
     schema.propertyValueI18n,
@@ -298,6 +299,38 @@ describe.each(['hub', 'organisation'] as const)(
         expect(batches).toHaveLength(1)
       },
     )
+
+    it('retains existing phone strings when switching an input to PhoneField', async () => {
+      sqlite
+        .prepare(
+          "UPDATE property SET component='InputField',dataType='text',isTranslatable=0 WHERE id=?",
+        )
+        .run(retainedId)
+      sqlite
+        .prepare(
+          "INSERT INTO featureProperty(featureId,propertyId,value) VALUES ('feature',?, '+852 9123 4567')",
+        )
+        .run(retainedId)
+      await save([
+        {
+          id: retainedId,
+          key: retainedId,
+          component: 'PhoneField',
+          dataType: 'text',
+          isTranslatable: false,
+          i18n: {},
+          values: [],
+        },
+      ])
+      expect(
+        sqlite.prepare('SELECT component FROM property WHERE id=?').get(retainedId),
+      ).toEqual({ component: 'PhoneField' })
+      expect(
+        sqlite
+          .prepare('SELECT value FROM featureProperty WHERE propertyId=?')
+          .get(retainedId),
+      ).toEqual({ value: '+852 9123 4567' })
+    })
 
     it('rejects changing a populated Range field to Dropdown before writing translations or options', async () => {
       sqlite
