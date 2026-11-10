@@ -54,6 +54,7 @@ let {
   onAddUser,
   onRemoveUser,
   onRoleChange,
+  memberDetails,
   class: className = '',
 }: FormUserRolesSectionProps<Role> = $props()
 
@@ -84,26 +85,18 @@ function toUserRoleCardViewModel(userRole: FormUserRole): UserRoleCardViewModel 
   return {
     userId: userRole.userId,
     role: userRole.role as Role,
-    name: userRole.user?.name ?? null,
+    name:
+      (userRole.user?.name !== userRole.userId ? userRole.user?.name : null) ||
+      (userRole.user?.displayUsername !== userRole.userId
+        ? userRole.user?.displayUsername
+        : null) ||
+      (userRole.user?.username !== userRole.userId ? userRole.user?.username : null) ||
+      'Unnamed user',
     username: userRole.user?.username ?? null,
     displayUsername: userRole.user?.displayUsername ?? null,
     attribution: userRole.user?.attribution ?? null,
     image: toImageSrc(userRole.user?.image),
   }
-}
-
-function isDisplayReadyUserRole(userRole: FormUserRole): boolean {
-  const name = userRole.user?.name
-  if (typeof name !== 'string') return false
-
-  const trimmedName = name.trim()
-  if (trimmedName.length === 0) return false
-  if (trimmedName === userRole.userId) return false
-  if (typeof userRole.user?.id === 'string') {
-    if (trimmedName === userRole.user.id) return false
-  }
-
-  return true
 }
 
 const rootClass = $derived(
@@ -118,9 +111,6 @@ const rootClass = $derived(
 const showModeUi = $derived(isEditing && !isSubmitting)
 const renderedRoles = $derived(isSubmitting ? stableRoles : sortedRoles)
 const renderedRoleCards = $derived(renderedRoles.map(toUserRoleCardViewModel))
-const areRenderedRolesDisplayReady = $derived(
-  renderedRoles.every(isDisplayReadyUserRole),
-)
 const resolvedTransitionKey = $derived(
   transitionEntityKey ?? `static:${typeof title === 'string' ? title : 'default'}`,
 )
@@ -183,9 +173,8 @@ $effect(() => {
   if (isSubmitting) return
   stableRoles = sortedRoles
 })
-
+// Update every row independently of display metadata availability.
 $effect(() => {
-  if (!areRenderedRolesDisplayReady) return
   displayRoleCards = renderedRoleCards
 })
 </script>
@@ -239,7 +228,8 @@ $effect(() => {
       class="border-border text-muted-foreground mx-6 mt-4 flex justify-between border-b px-3 py-2 text-xs font-medium"
     >
       <!-- Reserve the trash column, then match the role selector's padding, gap and chevron. -->
-      <span>Name</span><span class="mr-10 w-36 pr-9 text-right">Role</span>
+      <span>Name</span
+      ><span class="mr-10 w-24 pr-9 text-right @min-[40rem]:w-36">Role</span>
     </div>
   {/if}
 
@@ -256,38 +246,51 @@ $effect(() => {
         class={layout === 'list' ? '[grid-template-columns:1fr]! gap-0' : ''}
       >
         {#each userRoles as userRole (userRole.userId)}
-          <UserCard.Root
-            class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}
+          <div
+            class={layout === 'list'
+              ? 'border-border min-w-0 border-b last:border-b-0'
+              : 'min-w-0'}
           >
-            <UserCard.Avatar name={userRole.name} image={userRole.image} />
-            <UserCard.Body
-              name={userRole.name}
-              username={userRole.username}
-              displayUsername={userRole.displayUsername}
-              attribution={userRole.attribution}
-            />
-            <UserCard.Actions
-              selectedRole={userRole.role}
-              roleOptions={availableRoles}
-              roleFieldName={roleFieldNameByUserId[userRole.userId]}
-              isEditing={isEditing && !isSubmitting}
-              onRoleChange={role => onRoleChange(userRole.userId, role as Role)}
-              onRemove={() => requestRemoveUser(userRole.userId)}
-            />
-            <div class="flex size-10 shrink-0 items-center justify-center">
-              <button
-                type="button"
-                aria-label={`${m.watery_trite_shrimp_clip()} ${userRole.name ?? ''}`}
-                inert={!showModeUi}
-                aria-hidden={!showModeUi}
-                style:opacity={showModeUi ? 1 : 0}
-                class="text-muted-foreground hover:bg-error/10 hover:text-error focus-visible:outline-primary flex size-9 items-center justify-center rounded-md transition-[color,background-color,opacity] duration-180 ease-in-out focus-visible:outline motion-reduce:transition-none"
-                onclick={() => requestRemoveUser(userRole.userId)}
+            <UserCard.Root
+              class={`bits-form__user-card-root--full ${layout === 'list' ? 'border-b-0! py-2' : ''}`}
+            >
+              <UserCard.Avatar name={userRole.name} image={userRole.image} />
+              <div
+                class="flex min-w-0 flex-1 flex-col gap-1 @min-[40rem]:flex-row @min-[40rem]:items-center @min-[40rem]:gap-6"
               >
-                <TrashIcon class="size-4" aria-hidden="true" />
-              </button>
-            </div>
-          </UserCard.Root>
+                <UserCard.Body
+                  wrapTitle={layout === 'list'}
+                  name={userRole.name}
+                  username={userRole.username}
+                  displayUsername={userRole.displayUsername}
+                  attribution={userRole.attribution}
+                />
+                {@render memberDetails?.(userRole.userId, userRole.role)}
+              </div>
+              <UserCard.Actions
+                class={memberDetails ? 'w-24! @min-[40rem]:w-36!' : ''}
+                selectedRole={userRole.role}
+                roleOptions={availableRoles}
+                roleFieldName={roleFieldNameByUserId[userRole.userId]}
+                isEditing={isEditing && !isSubmitting}
+                onRoleChange={role => onRoleChange(userRole.userId, role as Role)}
+                onRemove={() => requestRemoveUser(userRole.userId)}
+              />
+              <div class="flex size-10 shrink-0 items-center justify-center">
+                <button
+                  type="button"
+                  aria-label={`${m.watery_trite_shrimp_clip()} ${userRole.name ?? ''}`}
+                  inert={!showModeUi}
+                  aria-hidden={!showModeUi}
+                  style:opacity={showModeUi ? 1 : 0}
+                  class="text-muted-foreground hover:bg-error/10 hover:text-error focus-visible:outline-primary flex size-9 items-center justify-center rounded-md transition-[color,background-color,opacity] duration-180 ease-in-out focus-visible:outline motion-reduce:transition-none"
+                  onclick={() => requestRemoveUser(userRole.userId)}
+                >
+                  <TrashIcon class="size-4" aria-hidden="true" />
+                </button>
+              </div>
+            </UserCard.Root>
+          </div>
         {/each}
       </FormGrid>
     {/snippet}
@@ -298,23 +301,31 @@ $effect(() => {
         class={layout === 'list' ? '[grid-template-columns:1fr]! gap-0' : ''}
       >
         {#each userRoles as userRole (userRole.userId)}
-          <UserCard.Root
-            class={`bits-form__user-card-root--full ${layout === 'list' ? 'py-2' : ''}`}
+          <div
+            class={layout === 'list'
+              ? 'border-border min-w-0 border-b last:border-b-0'
+              : 'min-w-0'}
           >
-            <UserCard.Avatar name={userRole.name} image={userRole.image} />
-            <UserCard.Body
-              name={userRole.name}
-              username={userRole.username}
-              displayUsername={userRole.displayUsername}
-              attribution={userRole.attribution}
-            />
-            <UserCard.Actions
-              selectedRole={userRole.role}
-              roleOptions={availableRoles}
-              isEditing={false}
-            />
-            <div class="size-10 shrink-0" aria-hidden="true"></div>
-          </UserCard.Root>
+            <UserCard.Root
+              class={`bits-form__user-card-root--full ${layout === 'list' ? 'border-b-0! py-2' : ''}`}
+            >
+              <UserCard.Avatar name={userRole.name} image={userRole.image} />
+              <UserCard.Body
+                wrapTitle={layout === 'list'}
+                name={userRole.name}
+                username={userRole.username}
+                displayUsername={userRole.displayUsername}
+                attribution={userRole.attribution}
+              />
+              <UserCard.Actions
+                class={memberDetails ? 'w-24! @min-[40rem]:w-36!' : ''}
+                selectedRole={userRole.role}
+                roleOptions={availableRoles}
+                isEditing={false}
+              />
+              <div class="size-10 shrink-0" aria-hidden="true"></div>
+            </UserCard.Root>
+          </div>
         {/each}
       </FormGrid>
     {/snippet}

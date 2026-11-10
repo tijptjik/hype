@@ -14,6 +14,7 @@ export interface UserCardAvatarProps {
 }
 
 export interface UserCardBodyProps {
+  wrapTitle?: boolean
   username?: string | null
   displayUsername?: string | null
   name?: string | null

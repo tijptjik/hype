@@ -119,7 +119,7 @@ import {
   FormProfileSkeleton,
 } from '#lib/bits/patterns/forms/formSkeleton/index.js'
 import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
-import AnalyticsMemberAccess from '#lib/bits/patterns/analytics/AnalyticsMemberAccess.svelte'
+import AnalyticsGrant from '#lib/bits/patterns/analytics/AnalyticsGrant.svelte'
 import OrganisationCapabilities from '#lib/bits/patterns/capabilities/organisationCapabilities/OrganisationCapabilities.svelte'
 import FormSpecifiersFields from '#lib/bits/patterns/forms/formI18nSection/components/FormSpecifiersFields.svelte'
 import FormUserRolesSection from '#lib/bits/patterns/forms/formUserRolesSection/FormUserRolesSection.svelte'
@@ -1698,20 +1698,18 @@ $effect(() => {
             {onAddUser}
             {onRemoveUser}
             {onRoleChange}
-          />
-          <AnalyticsMemberAccess
-            rows={userRoles
-              .filter(row => row.role === 'member')
-              .map(row => ({
-                userId: row.userId,
-                name: row.user?.name ?? row.userId,
-                enabled:
-                  formUserRoleValues.find(value => value.userId === row.userId)
-                    ?.viewAnalytics === true,
-              }))}
-            isEditing={isEditing && !formCtx.submitting}
-            onChange={onAnalyticsCapabilityChange}
-          />
+          >
+            {#snippet memberDetails(userId, role)}
+              <AnalyticsGrant
+                {userId}
+                isOwner={role === 'owner'}
+                enabled={formUserRoleValues.find(row => row.userId === userId)
+                  ?.viewAnalytics === true}
+                isEditing={isEditing && !formCtx.submitting}
+                onChange={value => onAnalyticsCapabilityChange({ userId, value })}
+              />
+            {/snippet}
+          </FormUserRolesSection>
           {#each formUserRoleValues as row, index (row.userId)}
             <input
               {...formCtx.form.fields.data.userRoles[index].viewAnalytics.as(

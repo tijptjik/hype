@@ -6,6 +6,7 @@ import type { UserCardBodyProps } from '../userCard.types'
 
 let {
   name = null,
+  wrapTitle = false,
   username = null,
   displayUsername = null,
   attribution = null,
@@ -15,6 +16,7 @@ let {
 
 <Card.Body
   code={attribution}
+  {wrapTitle}
   title={name || '-'}
   class={`bits-form__user-card-body ${className} pr-0`}
 >

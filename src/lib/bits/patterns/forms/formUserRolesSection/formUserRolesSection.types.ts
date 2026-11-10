@@ -1,4 +1,4 @@
-import type { Component } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 import type { OrganisationRoleType } from '#lib/enums.js'
 import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types.js'
 import type { User, UserSearchQueryOptions } from '#lib/db/zod/schema/user.types.js'
@@ -10,6 +10,7 @@ export interface FormUserRolesSectionProps<Role extends string = OrganisationRol
   title?: string
   subtitle?: string
   layout?: 'grid' | 'list'
+  memberDetails?: Snippet<[userId: string, role: Role]>
   minCardWidth?: number
   transitionEntityKey?: string | number | null
   currentUserId: string | null | undefined

@@ -1980,6 +1980,7 @@ export function guardUserRolesDesync({
       return [
         {
           ...baseRole,
+          user: usersById?.[formUserRole.userId] ?? baseRole.user,
           role: formUserRole.role as OrganisationRoleUser['role'],
         },
       ]
@@ -2101,6 +2102,8 @@ export function addUserRoleSelection<
           user: {
             id: user.id,
             name: user.name,
+            username: user.username,
+            displayUsername: user.displayUsername,
             image: user.image,
             attribution: user.attribution,
           },

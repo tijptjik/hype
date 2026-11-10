@@ -7,6 +7,7 @@ import {
   waitFor,
 } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types.js'
 import Fixture from './fixtures/components/FormUserRolesSectionFixture.svelte'
 
 vi.mock('svelte/transition', () => ({
@@ -114,4 +115,23 @@ it.each([true, false])('links member usernames in editing=%s mode', async isEdit
   expect(screen.getAllByRole('link')).toHaveLength(1)
   const names = screen.getAllByText('Robin Other')
   expect(names.filter(name => !name.closest('[aria-hidden="true"]'))).toHaveLength(1)
+})
+
+it('keeps staff rows interactive when an added member has no display name', async () => {
+  const onRemoveUser = vi.fn()
+  render(Fixture, {
+    onRemoveUser,
+    userRoles: [
+      { userId: 'self', role: 'owner', user: { id: 'self', name: 'Alex Self' } },
+      {
+        userId: 'pending',
+        role: 'member',
+        user: { id: 'pending', name: '', username: 'new-member' },
+      },
+    ] as OrganisationRoleUser[],
+  })
+  expect(await screen.findByRole('button', { name: 'Remove Alex Self' })).toBeTruthy()
+  const remove = await screen.findByRole('button', { name: 'Remove new-member' })
+  await fireEvent.click(remove)
+  expect(onRemoveUser).toHaveBeenCalledExactlyOnceWith('pending')
 })
