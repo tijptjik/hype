@@ -131,7 +131,17 @@ function reorderKey(event: KeyboardEvent): void {
       {/if}
     </div>
   </header>
-  <div id={bodyId} hidden={collapsed} data-type-body>
-    {@render children()}
+  <!-- Keep editor state mounted while the body slides closed and leaves keyboard navigation. -->
+  <div
+    id={bodyId}
+    class="grid transition-[grid-template-rows] duration-200 ease-in-out motion-reduce:transition-none"
+    style:grid-template-rows={collapsed ? '0fr' : '1fr'}
+    inert={collapsed}
+    aria-hidden={collapsed}
+    data-type-body
+  >
+    <div class="min-h-0 overflow-hidden">
+      {@render children()}
+    </div>
   </div>
 </article>
