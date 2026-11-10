@@ -3199,6 +3199,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
+      navMode={projectFieldsInSection.length === 0 ? 'footer' : 'centered'}
       bottomClearance={320}
       transition="fade"
       class="bits-theme right-0! left-0! min-h-0"
@@ -3207,7 +3208,7 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
-        <!-- Keep fields at natural height; the facet owns trailing scroll clearance. -->
+        <!-- Empty fields fill the facet; populated fields retain trailing scroll clearance. -->
         <FormFieldsSection
           class="shrink-0"
           icon={Type}

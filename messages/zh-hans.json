@@ -2207,5 +2207,7 @@
   "location_part_building": "所属建筑",
   "location_part_parent": "上级建筑部分（可选）",
   "association_example_building_part": "翼楼、楼层、区域、铺位、单位或房间",
-  "association_create_building_part": "创建建筑部分"
+  "association_create_building_part": "创建建筑部分",
+  "admin__forms_hub_layers_empty_title": "暂无图层",
+  "admin__forms_hub_layers_empty_description": "图层让你整理此站点地图上显示的地点。"
 }

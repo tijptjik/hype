@@ -1783,6 +1783,7 @@ $effect(() => {
 
     <Main.Facet
       isVisible={isLayersFacet}
+      navMode={hubLayerItems.length === 0 ? 'footer' : 'centered'}
       bottomClearance={320}
       transition="fade"
       previousAction={buildFacetNavAction('layers', 'previous')}
@@ -1802,12 +1803,15 @@ $effect(() => {
           {isEditing}
           isSubmitting={formCtx.submitting}
           onToggleDefault={onToggleLayerDefault}
+          onAdd={() =>
+            navigateOnAdmin(adminCtx, FirstClassResource.layer, NEW_REF, 'core')}
         />
       </FormSurface>
     </Main.Facet>
 
     <Main.Facet
       isVisible={isFieldsFacet}
+      navMode={hubFieldsInSection.length === 0 ? 'footer' : 'centered'}
       bottomClearance={320}
       transition="fade"
       class="bits-theme right-0! left-0! flex min-h-0 flex-col gap-4"
@@ -1816,7 +1820,7 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
-        <!-- Keep fields at natural height; the facet owns trailing scroll clearance. -->
+        <!-- Empty fields fill the facet; populated fields retain trailing scroll clearance. -->
         <FormFieldsSection
           bind:multilingual={multilingualExpanded}
           bind:localeSelection={contentLocaleSelection}

@@ -4,6 +4,8 @@ import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
 import { SectionHeader, Switch } from '#lib/bits/custom/index.js'
 import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import { Button } from '#lib/bits/core/index.js'
+import EmptyState from '#lib/bits/custom/emptyState/EmptyState.svelte'
 import Avatar from '#lib/bits/core/avatar/Avatar.svelte'
 import FormDisclosureGroup from '../formDisclosureGroup/FormDisclosureGroup.svelte'
 // ICONS
@@ -20,6 +22,7 @@ let {
   isEditing = true,
   isSubmitting = false,
   onToggleDefault,
+  onAdd,
   class: className = '',
 }: FormHubLayersSectionProps = $props()
 
@@ -101,7 +104,9 @@ $effect(() => {
 })
 </script>
 
-<section class={`bits-form__section @container flex min-h-0 flex-col ${className}`}>
+<section
+  class={`bits-form__section @container flex min-h-0 flex-1 flex-col ${className}`}
+>
   <SectionHeader
     icon={LayersIcon}
     {title}
@@ -117,7 +122,7 @@ $effect(() => {
     {/if}
   </SectionHeader>
 
-  <div class="flex min-h-0 flex-col">
+  <div class="flex min-h-0 flex-1 flex-col">
     {#each groupedItems as group (group.id)}
       <FormDisclosureGroup
         title={group.name}
@@ -165,9 +170,20 @@ $effect(() => {
         </ul>
       </FormDisclosureGroup>
     {:else}
-      <p class="text-muted-foreground px-6 py-10 text-sm">
-        {m.resource_no_results()}
-      </p>
+      <EmptyState
+        title={m.admin__forms_hub_layers_empty_title()}
+        description={m.admin__forms_hub_layers_empty_description()}
+        actions={onAdd ? emptyActions : undefined}
+      />
+      {#snippet emptyActions()}
+        <Button
+          text={m.map__select_layer()}
+          color="primary"
+          iconComponent={LayersIcon}
+          onClick={() => onAdd?.()}
+          disabled={isSubmitting}
+        />
+      {/snippet}
     {/each}
   </div>
 

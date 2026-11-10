@@ -2207,5 +2207,7 @@
   "location_part_building": "Owning building",
   "location_part_parent": "Parent building part (optional)",
   "association_example_building_part": "Wing, floor, zone, shop space, flat or room",
-  "association_create_building_part": "Create building part"
+  "association_create_building_part": "Create building part",
+  "admin__forms_hub_layers_empty_title": "No Layers",
+  "admin__forms_hub_layers_empty_description": "Layers let you organise the places shown on this hub’s map."
 }

@@ -18,6 +18,7 @@ export interface FormHubLayersSectionProps {
   hiddenLayerDefaultInputAttrs?: Array<Record<string, unknown>>
   isEditing?: boolean
   isSubmitting?: boolean
+  onAdd?: () => void
   onToggleDefault: (layerId: string, checked: boolean) => void
   class?: string
 }
