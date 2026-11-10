@@ -66,6 +66,25 @@ const ghost = {
 }
 
 describe('Feature intent', () => {
+  it('keeps future types configured but excludes them from new feature selection', () => {
+    expect(
+      DEFAULT_FEATURE_TYPES.filter(type => type.enabled !== false).map(type => type.id),
+    ).toEqual(['object', 'place'])
+    expect(() => requireFeatureType(DEFAULT_FEATURE_TYPES, 'area')).toThrow()
+    expect(requireFeatureType(DEFAULT_FEATURE_TYPES, 'area', true).id).toBe('area')
+    expect(
+      requireFeatureType([{ ...DEFAULT_FEATURE_TYPES[0], enabled: undefined }]).id,
+    ).toBe('object')
+    expect(FeatureTypesSchema.parse(DEFAULT_FEATURE_TYPES)[2].enabled).toBe(false)
+    expect(DEFAULT_FEATURE_TYPES[0].targetContexts).toEqual([
+      'building_part',
+      'building',
+      'premises',
+      'address',
+    ])
+    expect(DEFAULT_FEATURE_TYPES[2].targetContexts).toEqual(['premises', 'address'])
+  })
+
   it('preserves translated display names through hub inheritance and rejects locale collisions', async () => {
     const f = fixture()
     const types = FeatureTypesSchema.parse([

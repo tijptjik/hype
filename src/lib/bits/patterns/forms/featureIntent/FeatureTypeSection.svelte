@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+// COMPONENTS
+import Switch from '#lib/bits/custom/switch/Switch.svelte'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
@@ -15,6 +17,8 @@ import type { FeatureType } from '#lib/features/intents.js'
 
 let {
   title,
+  enabled = true,
+  onEnabledChange,
   kind = 'object',
   children,
   disabled = false,
@@ -27,6 +31,8 @@ let {
   onMove,
   onRemove,
 }: {
+  enabled?: boolean
+  onEnabledChange?: (enabled: boolean) => void
   title: string
   kind?: FeatureType['kind']
   children: Snippet
@@ -75,7 +81,7 @@ function reorderKey(event: KeyboardEvent): void {
 <article class="bits-project-field-card" data-feature-type-section>
   <header
     style:grid-template-columns={`${sideWidth}px minmax(0, 1fr) ${sideWidth}px`}
-    class="bits-project-field-card__header bits-form__i18n-card border-glass-100 grid! items-center gap-2 px-3! py-2!"
+    class="bits-project-field-card__header bits-form__i18n-card border-border/40! bg-primary/3! grid! items-center gap-2 rounded-none! border-0! border-b! px-3! py-2!"
   >
     <div
       bind:clientWidth={leftWidth}
@@ -118,6 +124,14 @@ function reorderKey(event: KeyboardEvent): void {
       bind:clientWidth={rightWidth}
       class="bits-project-field-card__header-right-rail static! w-max transform-none! gap-2 justify-self-end"
     >
+      <label for={`${bodyId}-enabled`} class="sr-only">Enable {title}</label>
+      <Switch
+        id={`${bodyId}-enabled`}
+        size="sm"
+        checked={enabled}
+        disabled={disabled || removeMode}
+        onCheckedChange={checked => onEnabledChange?.(checked === true)}
+      />
       {#if removeMode && !disabled}
         <button
           type="button"

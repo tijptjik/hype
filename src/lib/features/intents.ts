@@ -42,6 +42,7 @@ export const FeatureTypeIdSchema = z
 export const FeatureTypeSchema = z
   .strictObject({
     id: FeatureTypeIdSchema,
+    enabled: z.boolean().optional(),
     kind: FeatureKindSchema.optional(),
     targetContexts: z
       .array(TargetContextSchema)
@@ -94,21 +95,10 @@ export function featureTypeLabel(type: FeatureType, locale: string): string {
 export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
   {
     id: 'object',
+    enabled: true,
     label: 'Object',
     kind: 'object',
-    targetContexts: [
-      'building_part',
-      'building',
-      'premises',
-      'structure',
-      'landform',
-      'coastal_feature',
-      'water_feature',
-      'street',
-      'premises_address',
-      'cadastral_address',
-      'linear_reference',
-    ],
+    targetContexts: ['building_part', 'building', 'premises', 'address'],
     relation: 'locatedAt',
     unresolvedMode: 'prompt',
     locationKinds: FEATURE_LOCATION_KINDS.filter(kind => kind !== 'infrastructure'),
@@ -117,11 +107,17 @@ export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
   },
   {
     id: 'place',
+    enabled: true,
     label: 'Place',
     kind: 'place',
-    targetContexts: TARGET_CONTEXTS.filter(
-      kind => !['infrastructure', 'built', 'address', 'natural'].includes(kind),
-    ),
+    targetContexts: [
+      'building_part',
+      'building',
+      'structure',
+      'establishment',
+      'service_point',
+      'address',
+    ],
     relation: 'represents',
     unresolvedMode: 'prompt',
     locationKinds: FEATURE_LOCATION_KINDS.filter(kind => kind !== 'infrastructure'),
@@ -130,18 +126,10 @@ export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
   },
   {
     id: 'area',
+    enabled: false,
     label: 'Area',
     kind: 'area',
-    targetContexts: [
-      'premises',
-      'street',
-      'landform',
-      'coastal_feature',
-      'water_feature',
-      'premises_address',
-      'cadastral_address',
-      'linear_reference',
-    ],
+    targetContexts: ['premises', 'address'],
     relation: 'locatedAt',
     unresolvedMode: 'silent',
     locationKinds: FEATURE_LOCATION_KINDS.filter(kind => kind !== 'infrastructure'),
@@ -150,15 +138,10 @@ export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
   },
   {
     id: 'route',
+    enabled: false,
     label: 'Route',
     kind: 'route',
-    targetContexts: [
-      'street',
-      'premises',
-      'premises_address',
-      'cadastral_address',
-      'linear_reference',
-    ],
+    targetContexts: ['street', 'premises', 'address'],
     relation: 'locatedAt',
     unresolvedMode: 'silent',
     locationKinds: FEATURE_LOCATION_KINDS.filter(kind => kind !== 'infrastructure'),
@@ -185,15 +168,19 @@ export function resolveFeatureTypes(
 /** Validate a new subject choice; single-type layers infer the only valid answer.
  * @param types Effective allowed types.
  * @param id Explicit subject identity.
+ * @param includeDisabled Retain access when editing an existing feature.
  * @returns Authoritative definition, never a client-provided mapping.
  */
 export function requireFeatureType(
   types: FeatureType[],
   id?: string | null,
+  includeDisabled = false,
 ): FeatureType {
-  const selected = types.find(
-    type => type.id === (id || (types.length === 1 ? types[0].id : '')),
+  const available = types.filter(type => includeDisabled || type.enabled !== false)
+  const selected = available.find(
+    type => type.id === (id || (available.length === 1 ? available[0].id : '')),
   )
   if (!selected) throw new Error('Choose an available feature type for this layer.')
   return selected
 }
+

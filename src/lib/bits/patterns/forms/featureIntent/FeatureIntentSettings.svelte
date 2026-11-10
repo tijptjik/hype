@@ -348,20 +348,12 @@ function removeType(): void {
   {:else if !policy}
     <p role="status" class="p-6">Loading feature types…</p>
   {:else if inherits}
-    <p class="text-muted-foreground px-6 py-3 text-sm">
-      Following
-      {scopeType === 'hub'
-        ? 'application'
-        : scopeType === 'project'
-          ? 'hub'
-          : 'project'}
-      defaults.
-    </p>
     <div data-inherited-schema>
       {#each policy.inheritedTypes as type (type.id)}
         <FeatureTypeSection
           title={featureTypeLabel(type, getLocaleKey())}
           kind={type.kind}
+          enabled={type.enabled !== false}
           disabled
           {collapsedAll}
           {collapseVersion}
@@ -403,6 +395,8 @@ function removeType(): void {
           <FeatureTypeSection
             title={featureTypeLabel(type, getLocaleKey())}
             kind={type.kind}
+            enabled={type.enabled !== false}
+            onEnabledChange={enabled => (type.enabled = enabled)}
             disabled={!editable}
             {removeMode}
             canRemove={catalogue.length > 1}

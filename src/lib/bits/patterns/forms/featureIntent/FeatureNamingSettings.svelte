@@ -2,7 +2,11 @@
 // COMPONENTS
 import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 import { Button } from '#lib/bits/core/index.js'
-import { typeInputAppearance, typeSelectAppearance } from './featureTypeEditor.styles'
+import {
+  typeInputAppearance,
+  typeReadOnlyInputAppearance,
+  typeSelectAppearance,
+} from './featureTypeEditor.styles'
 
 // I18N
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
@@ -123,7 +127,7 @@ function emptyCase(): FeatureNameRule['conditions'][number]['locales'][string] {
             label={state === 'null' ? 'Unset' : state}
             value={text[state as 'true']}
             isEditing={!disabled}
-            {...typeInputAppearance}
+            {...disabled ? typeReadOnlyInputAppearance : typeInputAppearance}
             inputAttrs={{
               'aria-label': state === 'null' ? 'Unset' : state,
               lang: locale,
@@ -150,7 +154,7 @@ function emptyCase(): FeatureNameRule['conditions'][number]['locales'][string] {
             inputAttrs={{ 'aria-label': 'Separator' }}
             value={text.separator}
             isEditing={!disabled}
-            {...typeInputAppearance}
+            {...disabled ? typeReadOnlyInputAppearance : typeInputAppearance}
             onValueChange={value => update(index, locale, 'separator', value)}
           />
         </div>

@@ -187,7 +187,7 @@ export const getFeatureIntentOptions = guardedQuery(
       submittedData: {},
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
-    return (await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: layerId })).types
+    return (await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: layerId })).types.filter(type => type.enabled !== false)
   },
 )
 

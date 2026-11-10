@@ -170,7 +170,7 @@ export async function assertFeatureIntentLocation(
   )
   if (!row) throw new Error('Feature no longer exists')
   const policy = await readFeatureIntentPolicy(db, { type: 'layer', id: row.layerId })
-  const type = requireFeatureType(policy.types, identity.featureType)
+  const type = requireFeatureType(policy.types, identity.featureType, true)
   const location = await db.get<{ kind: string }>(
     sql`SELECT matchingType AS kind FROM location WHERE id=${locationId}`,
   )

@@ -9,7 +9,11 @@ import { FEATURE_KINDS, TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { LOCATION_ENTITY_KINDS, locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
 import FeatureTypeNames from './FeatureTypeNames.svelte'
-import { typeInputAppearance, typeSelectAppearance } from './featureTypeEditor.styles'
+import {
+  typeInputAppearance,
+  typeReadOnlyInputAppearance,
+  typeSelectAppearance,
+} from './featureTypeEditor.styles'
 // TYPES
 import type { FeatureType } from '#lib/features/intents.js'
 import type { FeatureIntentScope } from '#lib/db/services/featureIntentPolicy.js'
@@ -28,6 +32,23 @@ let {
   multilingual: boolean
   disabled?: boolean
 } = $props()
+const examples: Record<string, string> = {
+  building_part: 'floor, lobby, wing, flat',
+  premises: 'complex, campus, park, site',
+  structure: 'tunnel, bridge, retaining wall',
+  street: 'street',
+}
+const orderedTargets = [
+  'building_part',
+  'building',
+  'premises',
+  'structure',
+  'street',
+  ...TARGET_CONTEXTS.filter(
+    kind =>
+      !['building_part', 'building', 'premises', 'structure', 'street'].includes(kind),
+  ),
+] as (typeof TARGET_CONTEXTS)[number][]
 const id = $props.id()
 const targets = $derived(
   type.targetContexts ??
@@ -49,7 +70,7 @@ const targets = $derived(
       required
       value={type.id}
       isEditing={!disabled}
-      {...typeInputAppearance}
+      {...disabled ? typeReadOnlyInputAppearance : typeInputAppearance}
       onValueChange={value => (type.id = value)}
     />
     <SelectField
@@ -125,22 +146,34 @@ const targets = $derived(
     <Label text="Where can features be located?" />
     {#each LOCATION_ENTITY_KINDS.filter(family => family !== 'unknown') as family}
       <fieldset class="grid min-w-0 gap-1">
-        <legend class="text-muted-foreground mb-2 text-xs font-semibold">
+        <legend
+          class="text-primary border-border/40 mb-2 w-full border-b pb-2 text-xs font-bold tracking-wider uppercase"
+        >
           {locationTaxonomyLabel(family)}
         </legend>
-        {#each TARGET_CONTEXTS.filter(
+        {#each orderedTargets.filter(
           kind =>
             locationTaxonomy(kind).kind === family &&
             kind !== 'infrastructure' &&
-            (locationTaxonomy(kind).class !== null || targets.includes(kind)),
+            (kind === 'address' ||
+              locationTaxonomy(kind).class !== null ||
+              targets.includes(kind)),
         ) as kind}
           <div class="flex min-h-9 min-w-0 items-center justify-between gap-3">
-            <Label
-              for={`${id}-${kind}`}
-              text={locationTaxonomy(kind).class === null
-                ? `${locationTaxonomyLabel(family)} (any class)`
-                : locationTaxonomyLabel(locationTaxonomy(kind).class ?? 'unknown')}
-            />
+            <label class="min-w-0 text-sm font-normal" for={`${id}-${kind}`}>
+              <span
+                >{kind === 'structure'
+                  ? 'Structure'
+                  : kind === 'premises'
+                    ? 'Premises'
+                    : locationTaxonomyLabel(
+                        locationTaxonomy(kind).class ?? locationTaxonomy(kind).kind,
+                      )}</span
+              >
+              {#if examples[kind]}
+                <span class="text-muted-foreground text-xs"> ({examples[kind]})</span>
+              {/if}
+            </label>
             <Switch
               id={`${id}-${kind}`}
               size="sm"
