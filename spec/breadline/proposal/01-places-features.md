@@ -3248,3 +3248,44 @@ name/address/status controls and brand editor. Organisation scope remains an exp
 separate destination. Proposal review supports per-field selection and retains the
 accepted subset in an immutable `locationCorrectionMerge` receipt; remaining proposed
 fields are not applied when that review completes.
+
+### Feature intent and inherited authoring rules (10 November 2026, Refs #194, parent #180)
+
+Feature intent is editorial subject identity, independent of Location kind and map
+geometry. The admin creation flow resolves choices after Layer selection. One available
+type is inferred; several types require an explicit choice. Objects, natural features
+and businesses are broad application defaults, with all supported Location kinds
+allowed. Hub administrators can define a catalogue; Project configuration may replace
+it; Layers may narrow their Project catalogue to a subset. Null overrides retain live
+inheritance. Resetting settings never rewrites existing Feature types, associations or
+geometry.
+
+Each type has a stable identifier, display label, allowed Location kinds, suggested
+search/map starting point and optional association requirement before publication.
+Coordinates-only Features may be saved without invented Location descriptions. Required
+associations are completed through the existing retryable post-save linking flow and
+checked before publication. Address/building discovery can remain evidence for finding
+an establishment; accepted association choices obey the selected subject's allowed
+kinds. An addressless building remains valid. Existing unclassified Features retain
+their legacy behavior; editing a saved Feature does not silently reclassify it.
+
+`featureIntentPolicy` stores versioned overrides and `featureIntentPolicyRevision`
+stores attributed history. Settings commands use existing Hub/Project/Layer
+configuration permissions, with persisted ancestry and inherited-version guards. These
+independently saved settings are in each resource's Advanced facet.
+`feature.featureType` is included in new immutable Feature content snapshots; absence
+preserves older content hashes. Migrations `0211_feature_intent.sql` and
+`0212_feature_intent_publication_guard.sql` are additive and were rehearsed and applied
+locally, preserving 1,604 existing Features as unclassified. Production rollout remains
+separate.
+
+The database publication guard also prevents parent bulk publication from bypassing a
+required association. It does not rewrite already-published Features.
+
+Verification: 154 focused policy, creation and revision-projection tests pass; Chromium
+and Firefox component checks pass at 1440px and 390px, covering explicit choice,
+single-type inference, policy save and inheritance reset without overflow. Browser
+policy transport was mocked in the isolated fixture; a full authenticated admin
+create/link/publish round trip is not covered by that evidence. Svelte checking reports
+existing test-file diagnostics, with none in the implementation. No push or production
+deployment occurred.
