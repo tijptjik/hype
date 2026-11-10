@@ -1,3 +1,5 @@
+// FEATURE INTENT
+import { assertFeatureIntentPublication } from './featureIntentPolicy'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // DOMAIN
@@ -133,6 +135,7 @@ export async function publishFeatureStaffDraft(
     ) => Promise<void>
   },
 ): Promise<PersistedFeatureAcceptance> {
+  await assertFeatureIntentPublication(db, input.featureId)
   const initialStorage =
     input.expectedGeneration === 0 &&
     (await db.get<{ n: number }>(

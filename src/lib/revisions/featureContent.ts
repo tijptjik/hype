@@ -240,6 +240,8 @@ export const FeatureRevisionContentSchema = z
   .strictObject({
     format: z.literal('feature-content/v1'),
     profile: z.strictObject({
+      // Optional preserves existing immutable content hashes.
+      featureType: z.string().nullable().optional(),
       isIntangible: z.boolean(),
       visitability: z.strictObject({
         isVisitable: z.boolean(),

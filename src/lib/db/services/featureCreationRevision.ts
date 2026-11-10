@@ -176,6 +176,7 @@ export async function prepareFeatureCreationContent(
       id: input.id,
       geometry: input.data.geometry as unknown as RevisionValue,
       addressMeta: (input.data.addressMeta ?? {}) as RevisionValue,
+      featureType: input.data.featureType ?? null,
       isIntangible: input.data.isIntangible ?? false,
       isVisitable: input.data.isVisitable ?? true,
       visitableAsOf: input.data.visitableAsOf ?? null,

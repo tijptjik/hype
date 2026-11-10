@@ -1,3 +1,5 @@
+// FEATURE INTENT
+import { assertFeatureIntentPublication } from './featureIntentPolicy'
 // NANOID
 import { nanoid } from 'nanoid'
 // DRIZZLE
@@ -606,6 +608,7 @@ export const probeFeatureForUpdate = async (db: Database, featureId: Id) => {
           organisationId: feature.organisationId,
           projectId: feature.projectId,
           layerId: feature.layerId,
+          featureType: feature.featureType,
           contributorId: feature.contributorId,
           geometry: feature.geometry,
           addressMeta: feature.addressMeta,
@@ -789,6 +792,7 @@ export const updateFeaturePublishedStateById = async (
     publisherId?: Id | null
   },
 ): Promise<FeatureDB | undefined> => {
+  if (params.state) await assertFeatureIntentPublication(db, params.id)
   const revision = await routeFeatureRevisionPublication(db, {
     featureId: params.id,
     actorId: params.publisherId ?? 'system:feature-publication',

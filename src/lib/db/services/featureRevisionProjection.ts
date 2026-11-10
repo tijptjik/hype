@@ -152,6 +152,7 @@ function editorialRows(content: FeatureRevisionContent): EditorialRows {
 function editorialGuard(featureId: string, content: FeatureRevisionContent): SQL {
   const rows = editorialRows(content)
   return sql`EXISTS (SELECT 1 FROM ${feature} WHERE ${feature.id}=${featureId}
+    AND ${feature.featureType} IS ${content.profile.featureType ?? null}
     AND ${feature.isIntangible}=${Number(content.profile.isIntangible)}
     AND ${feature.isVisitable}=${Number(content.profile.visitability.isVisitable)}
     AND ${feature.visitableAsOf} IS ${content.profile.visitability.asOf}
@@ -236,6 +237,9 @@ export function prepareFeatureEditorialProjection(
 ): RevisionProjection {
   const previous = FeatureRevisionContentSchema.parse(input.previous)
   const content = FeatureRevisionContentSchema.parse(input.content)
+  // Ordinary revision edits cannot bypass subject validation through a profile patch.
+  if ((previous.profile.featureType ?? null) !== (content.profile.featureType ?? null))
+    throw new Error('Feature type changes require explicit reclassification')
   const source = parseFeatureRevisionSource(input.source.snapshot)
   if (source.record.id !== input.featureId)
     throw new Error('Projection source belongs to another Feature')

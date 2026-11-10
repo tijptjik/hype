@@ -218,6 +218,7 @@ export function buildFeatureRevisionBaselineContent(
   return FeatureRevisionContentSchema.parse({
     format: 'feature-content/v1',
     profile: {
+      ...(source.record.featureType ? { featureType: source.record.featureType } : {}),
       isIntangible: source.record.isIntangible,
       visitability: {
         isVisitable: source.record.isVisitable,

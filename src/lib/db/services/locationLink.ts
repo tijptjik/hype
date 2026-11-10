@@ -1,3 +1,5 @@
+// FEATURE INTENT
+import { assertFeatureIntentLocation } from './featureIntentPolicy'
 import { sharedLocationFacts } from './locationShared'
 // DRIZZLE
 import { and, eq, isNull, ne, or, sql } from 'drizzle-orm'
@@ -55,6 +57,7 @@ export async function linkInitialFeatureLocation(
     authorizeLocationCorrection?: () => Promise<void>
   },
 ): Promise<InitialLocationLinkResult> {
+  await assertFeatureIntentLocation(db, input.featureId, input.locationId)
   // Historical presentation does not prevent an explicitly reviewed Location association.
   const baseline = await readFeatureLocationBaseline(
     db,

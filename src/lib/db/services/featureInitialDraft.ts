@@ -169,6 +169,7 @@ export async function prepareInitialFeatureDraftSave(
   const content = buildFeatureFormCandidate(previous, source.snapshot, {
     geometry: previous.placement.geometry,
     addressMeta: previous.placement.addressMeta,
+    featureType: previous.profile.featureType ?? null,
     isIntangible: previous.profile.isIntangible,
     isVisitable: previous.profile.visitability.isVisitable,
     ...input.data,

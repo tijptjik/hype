@@ -1,3 +1,5 @@
+// FEATURE INTENT
+import { assertFeatureIntentLocation } from './featureIntentPolicy'
 import { sharedLocationFacts } from './locationShared'
 // DRIZZLE
 import { and, eq, isNull, ne, or, sql } from 'drizzle-orm'
@@ -55,6 +57,7 @@ export async function relinkFeatureLocation(
     authorizeLocationCorrection?: () => Promise<void>
   },
 ): Promise<InitialLocationLinkResult> {
+  await assertFeatureIntentLocation(db, input.featureId, input.locationId)
   const current = await getAcceptedFeatureLocation(db, input.featureId, input.projectId)
   if (!current || current.version !== input.expectedRevision)
     return { status: 'conflict' }

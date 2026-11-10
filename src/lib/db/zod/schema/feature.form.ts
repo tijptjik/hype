@@ -1,5 +1,6 @@
 // ZOD
 import { z } from 'zod'
+import { FeatureTypeIdSchema } from '#lib/features/intents.js'
 // FORM DEPENDENCIES
 import { m } from '#lib/i18n.js'
 import { contentLocaleMap } from '#lib/i18n/contentRecords.js'
@@ -91,6 +92,7 @@ export const FeatureDraftI18nByLocaleFormData = contentLocaleMap(
 // ═══════════════════════
 
 export const FeatureEntityFormData = z.object({
+  featureType: FeatureTypeIdSchema.nullish(),
   locationNameMode: z.enum(['inherit', 'independent']).optional(),
   locationReset: z.preprocess(decodeLocationFormValue, LocationResetSchema).optional(),
   locationBrandEdit: z
@@ -117,6 +119,7 @@ export const FeatureEntityFormData = z.object({
 })
 
 export const FeatureDraftEntityFormData = z.object({
+  featureType: FeatureTypeIdSchema.nullish(),
   locationNameMode: z.enum(['inherit', 'independent']).optional(),
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })

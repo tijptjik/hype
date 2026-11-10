@@ -88,6 +88,7 @@ export function buildFeatureFormCandidate(
   // Apply only authored fields; identity, authorship, visibility and workflow stay server-owned.
   source.record.geometry = data.geometry as unknown as RevisionValue
   source.record.addressMeta = (data.addressMeta ?? {}) as RevisionValue
+  if (data.featureType !== undefined) source.record.featureType = data.featureType
   source.record.isIntangible = Boolean(data.isIntangible)
   source.record.isVisitable = Boolean(data.isVisitable)
   const locales = new Map(source.translations.map(row => [String(row.locale), row]))

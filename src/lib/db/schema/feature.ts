@@ -62,6 +62,8 @@ export const feature = sqliteTable(
       sourceAssociationRevision?: string
       actorId: string
     }>(),
+    // Editorial subject; null preserves pre-intent Features without reclassification.
+    featureType: text('featureType'),
     id: text('id')
       .primaryKey()
       .$defaultFn(() => nanoid(12)),

@@ -325,6 +325,7 @@ export async function createFeatureIdentityProposal(
           addressMeta: baseline.placement
             .addressMeta as typeof feature.$inferInsert.addressMeta,
           spatialIndex: createFeatureSpatialIndex(baseline.placement.geometry),
+          featureType: baseline.profile.featureType ?? null,
           isIntangible: baseline.profile.isIntangible,
           isVisitable: baseline.profile.visitability.isVisitable,
           visitableAsOf: baseline.profile.visitability.asOf,

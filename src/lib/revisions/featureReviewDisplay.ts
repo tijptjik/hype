@@ -24,6 +24,7 @@ const labels: Record<string, string> = {
   description: 'Description',
   generated: 'Generated',
   profile: 'Profile',
+  featureType: 'Feature type',
   isIntangible: 'Intangible',
   visitability: 'Visitability',
   isVisitable: 'Visitable',

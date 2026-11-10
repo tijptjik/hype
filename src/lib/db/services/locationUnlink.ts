@@ -1,3 +1,5 @@
+// FEATURE INTENT
+import { assertFeatureIntentLocation } from './featureIntentPolicy'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // SCHEMA
@@ -29,6 +31,7 @@ export async function unlinkFeatureLocation(
     actorId: string
   },
 ): Promise<{ status: 'unlinked'; revision: string } | { status: 'conflict' }> {
+  await assertFeatureIntentLocation(db, input.featureId, null)
   if (Object.values(input).some(value => !value))
     throw new Error('Incomplete Location unlink')
   const current = await getAcceptedFeatureLocation(db, input.featureId, input.projectId)

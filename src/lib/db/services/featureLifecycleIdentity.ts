@@ -84,6 +84,7 @@ export function prepareNewLifecycleFeature(
     localLocationBrands: null,
     geometry: content.placement.geometry,
     addressMeta: content.placement.addressMeta,
+    featureType: content.profile.featureType ?? null,
     isIntangible: content.profile.isIntangible,
     isVisitable: content.profile.visitability.isVisitable,
     visitableAsOf: content.profile.visitability.asOf,
