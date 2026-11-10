@@ -60,6 +60,8 @@ export function materializeLocationAdoption(input: {
       throw new Error('Canonical address dependencies are unresolved')
     const address = FeatureAddressSchema.parse({
       version: 1,
+      locationDisplayMode: data.addressMeta?.address?.locationDisplayMode,
+      markerCoordinates: location.geometry.coordinates,
       source: reference,
       coordinates: location.geometry.coordinates,
       matchStatus: reference.status,

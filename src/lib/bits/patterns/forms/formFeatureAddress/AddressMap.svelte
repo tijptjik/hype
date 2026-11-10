@@ -357,10 +357,10 @@ function measureToolbar(
     <div
       class="flex shrink-0 items-center gap-1 empty:hidden {centerLocationControl
         ? 'absolute top-1/2 right-6 -translate-y-1/2'
-        : ''} {singleRowToolbar ? '' : 'ml-auto'} {singleRowToolbar &&
-      toolbarWidth > 0 &&
-      toolbarWidth < 640
-        ? 'col-start-2 row-start-2'
+        : ''} {singleRowToolbar
+        ? 'min-w-0 flex-1 basis-0 justify-end'
+        : 'ml-auto'} {singleRowToolbar && toolbarWidth > 0 && toolbarWidth < 640
+        ? 'col-start-2 row-start-1'
         : ''}"
       data-address-toolbar-settings
     >

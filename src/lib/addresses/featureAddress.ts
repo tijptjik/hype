@@ -1,3 +1,4 @@
+import { featurePlusCode } from './plusCode.js'
 import { simplifiedChinese, traditionalChinese } from './chinese.js'
 import { formatStreetNumber, streetNumberIssue } from './streetNumber.js'
 import {
@@ -15,6 +16,7 @@ import {
 } from './address3d.js'
 import {
   addressDivisionName,
+  orderAddressDivisions,
   addressLocalityLevel,
   AddressDivisionOverridesSchema,
 } from './divisions.js'
@@ -76,6 +78,12 @@ const fields = z.partialRecord(
 )
 const featureAddressBase = z.strictObject({
   version: z.literal(1),
+  locationDisplayMode: z.enum(['automatic', 'address', 'plus_code']).optional(),
+  // Feature-owned marker, distinct from the matched address's source coordinates.
+  markerCoordinates: z
+    .tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
+    .nullable()
+    .optional(),
   association: AddressAssociationSchema.optional(),
   canonical: z
     .strictObject({
@@ -333,8 +341,44 @@ export function getAddressPresentationLocale(
   return result
 }
 
-/** Resolves display text without rewriting canonical evidence. @param address Address and corrections. @param locale HYPE locale. @param divisions Resolved effective marker geography, when available. @param locationKind Entity displayed above this supporting address; buildings omit their building component. @returns Effective display label, including explicit clearing. @remarks Structured corrections compose a local label; an explicit formattedAddress override is the complete user-authored label, including any unit text. */
+/** Resolve the Feature's chosen location label without changing address evidence.
+ * @param address Feature-owned address envelope and marker.
+ * @param locale Display language.
+ * @param divisions Geography resolved from the Feature marker.
+ * @param locationKind Associated entity kind.
+ * @returns Address or full Plus Code with available locality context.
+ */
 export function getAddressDisplay(
+  address: FeatureAddress,
+  locale: LocaleKey,
+  divisions: AddressDivision[] = [],
+  locationKind?: string,
+): string {
+  const mode = address.locationDisplayMode ?? 'automatic'
+  const structured = getStructuredAddressDisplay(address, locale, [], locationKind)
+  if (mode === 'address' || (mode === 'automatic' && structured.trim()))
+    return getStructuredAddressDisplay(address, locale, divisions, locationKind)
+  const code = featurePlusCode(address.markerCoordinates)
+  if (!code)
+    return mode === 'plus_code'
+      ? ''
+      : getStructuredAddressDisplay(address, locale, divisions, locationKind)
+  const locality = divisions
+    .filter(division => addressLocalityLevel(division) !== null)
+    .sort(
+      (a, b) =>
+        (addressLocalityLevel(b) ?? 0) - (addressLocalityLevel(a) ?? 0) ||
+        a.id.localeCompare(b.id),
+    )[0]
+  const context = locality ? [locality] : orderAddressDivisions(divisions)
+  return [
+    code,
+    ...new Set(context.map(division => addressDivisionName(division, locale))),
+  ].join(' · ')
+}
+
+/** Resolves display text without rewriting canonical evidence. @param address Address and corrections. @param locale HYPE locale. @param divisions Resolved effective marker geography, when available. @param locationKind Entity displayed above this supporting address; buildings omit their building component. @returns Effective display label, including explicit clearing. @remarks Structured corrections compose a local label; an explicit formattedAddress override is the complete user-authored label, including any unit text. */
+function getStructuredAddressDisplay(
   address: FeatureAddress,
   locale: LocaleKey,
   divisions: AddressDivision[] = [],
@@ -721,11 +765,18 @@ export function projectFeatureAddress<
     geometry.type === 'Point' && geometry.coordinates
       ? invalidateAddressLocation(data.addressMeta, geometry.coordinates)
       : data.addressMeta
-  let address = metadata.address!
+  let address: FeatureAddress = {
+    ...metadata.address!,
+    markerCoordinates:
+      geometry.type === 'Point' && geometry.coordinates
+        ? ([geometry.coordinates[0], geometry.coordinates[1]] as [number, number])
+        : null,
+  }
   // Preserve explicit manual display values from the public contribution and import flows.
   for (const locale of Object.keys(ADDRESS_LOCALES) as LocaleKey[]) {
     const translation = data.i18n[locale]
     if (
+      !address.locationDisplayMode &&
       translation &&
       (translation.displayAddressGen === false ||
         translation.displayAddressGen === 'false') &&

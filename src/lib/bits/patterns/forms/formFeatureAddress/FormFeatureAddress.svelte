@@ -1,4 +1,5 @@
 <script lang="ts">
+// COMPONENTS
 // SVELTE
 import { onDestroy, tick, type Snippet } from 'svelte'
 // CONTEXT
@@ -551,38 +552,40 @@ $effect(() => {
   </div>
 {/snippet}
 {#snippet coordinatesControl()}
-  {#if displayAddressInToolbar || toolbarControls || coordinatesCompact}
-    <SimpleTooltip
-      bind:open={coordinatesOpen}
-      triggerClass="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary"
-      triggerProps={{
-        role: 'button',
-        'aria-label': m.location_review_coordinates(),
-        onkeydown: enterCoordinates,
-      }}
-      contentProps={{
-        id: coordinateDialogId,
-        role: 'dialog',
-        'aria-label': m.location_review_coordinates(),
-        side: 'bottom',
-        align: 'end',
-      }}
-      contentClass="w-max max-w-[calc(100vw-2rem)] bg-base-100 p-2"
-    >
-      {#snippet trigger()}
-        <span
-          bind:this={coordinatesTrigger}
-          class="text-muted-foreground hover:bg-primary/10 hover:text-primary flex size-10 items-center justify-center rounded-lg transition"
-          data-compact-coordinates
-        >
-          <SatelliteIcon class="size-5" aria-hidden="true" />
-        </span>
-      {/snippet}
+  <div class="flex shrink-0 items-center gap-2">
+    {#if displayAddressInToolbar || toolbarControls || coordinatesCompact}
+      <SimpleTooltip
+        bind:open={coordinatesOpen}
+        triggerClass="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        triggerProps={{
+          role: 'button',
+          'aria-label': m.location_review_coordinates(),
+          onkeydown: enterCoordinates,
+        }}
+        contentProps={{
+          id: coordinateDialogId,
+          role: 'dialog',
+          'aria-label': m.location_review_coordinates(),
+          side: 'bottom',
+          align: 'end',
+        }}
+        contentClass="w-max max-w-[calc(100vw-2rem)] bg-base-100 p-2"
+      >
+        {#snippet trigger()}
+          <span
+            bind:this={coordinatesTrigger}
+            class="text-muted-foreground hover:bg-primary/10 hover:text-primary flex size-10 items-center justify-center rounded-lg transition"
+            data-compact-coordinates
+          >
+            <SatelliteIcon class="size-5" aria-hidden="true" />
+          </span>
+        {/snippet}
+        {@render expandedCoordinatesControl()}
+      </SimpleTooltip>
+    {:else}
       {@render expandedCoordinatesControl()}
-    </SimpleTooltip>
-  {:else}
-    {@render expandedCoordinatesControl()}
-  {/if}
+    {/if}
+  </div>
   <span class="sr-only" role="status"
     >{coordinateCopyFailed
       ? m.feature_address_coordinates_copy_failed()
@@ -626,8 +629,8 @@ $effect(() => {
 {#snippet addressToolbar(coordinateControl?: Snippet)}
   <div class="contents">
     <div
-      class="w-max min-w-0 max-w-full shrink {toolbarWidth > 0 && toolbarWidth < 640
-        ? 'col-span-2 row-start-1'
+      class="min-w-0 flex-1 basis-0 {toolbarWidth > 0 && toolbarWidth < 640
+        ? 'col-start-1 row-start-1'
         : ''}"
       data-address-toolbar-location
     >
@@ -636,11 +639,14 @@ $effect(() => {
     <div
       class="w-max min-w-0 max-w-full flex-initial space-y-2 {toolbarWidth > 0 &&
       toolbarWidth < 640
-        ? 'col-start-1 row-start-2'
+        ? 'col-span-2 row-start-2 justify-self-center'
         : ''}"
       data-address-toolbar-display
     >
       <AddressDisplayField
+        centered={true}
+        availableWidth={toolbarWidth}
+        showDisplayChoice={isEditing}
         stale={divisionsStale}
         {locationKind}
         {divisions}

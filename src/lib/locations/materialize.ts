@@ -50,6 +50,8 @@ export function materializeEffectiveLocation(input: {
       ? retainedAddress.data
       : FeatureAddressSchema.parse({
           version: 1,
+          locationDisplayMode: input.data.addressMeta?.address?.locationDisplayMode,
+          markerCoordinates: effective.location.geometry.coordinates,
           source: effective.location.address,
           coordinates: effective.location.geometry.coordinates,
           matchStatus: effective.location.address.status,

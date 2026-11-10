@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import LocationDisplayChoice from './LocationDisplayChoice.svelte'
 // ADDRESS LOCALES
 import { addressLocaleLabel } from './addressLocaleLabel.js'
 // SVELTE
@@ -38,6 +40,9 @@ let {
   compact = false,
   alignEnd = false,
   scrollWhenConstrained = false,
+  showDisplayChoice = false,
+  centered = false,
+  availableWidth,
   onChange,
 }: {
   address: FeatureAddress
@@ -51,6 +56,9 @@ let {
   compact?: boolean
   alignEnd?: boolean
   scrollWhenConstrained?: boolean
+  showDisplayChoice?: boolean
+  centered?: boolean
+  availableWidth?: number
   onChange: (address: FeatureAddress) => void
 } = $props()
 let active = true
@@ -77,6 +85,16 @@ const custom = $derived(
         locationKind,
       ),
 )
+let groupWidth = $state(0)
+let leftWidth = $state(0)
+let rightWidth = $state(0)
+const railWidth = $derived(Math.max(leftWidth, rightWidth))
+// Choose the responsive layout from the owning toolbar, never our intrinsic width:
+// stacking changes that width and would otherwise trap a wide toolbar in its narrow layout.
+const layoutWidth = $derived(availableWidth ?? groupWidth)
+const stacked = $derived(
+  centered && layoutWidth > 0 && layoutWidth < railWidth * 2 + 176,
+)
 let input = $state<HTMLTextAreaElement>()
 </script>
 
@@ -84,6 +102,7 @@ let input = $state<HTMLTextAreaElement>()
   class="min-w-0 space-y-1 {alignEnd ? 'w-max max-w-full' : 'flex-1'}"
   class:opacity-50={stale}
   class:grayscale={stale}
+  style:max-width={centered && availableWidth ? `${availableWidth}px` : undefined}
   data-address-stale={stale}
 >
   {#if showLocale}
@@ -97,21 +116,51 @@ let input = $state<HTMLTextAreaElement>()
         >{addressLocaleLabel(locale)}</span
       >
     {/if}
-    <div class="flex min-w-0 flex-1 items-center gap-2" data-address-display-group>
-      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
-        {#snippet trigger()}
-          <button
-            type="button"
-            aria-label={m.feature_address_formattedAddress()}
-            class="text-muted-foreground inline-flex shrink-0 rounded"
-          >
-            <MarkerIcon class={compact ? 'size-5' : 'size-7'} aria-hidden="true" />
-          </button>
-        {/snippet}
-        <span class="block">{m.feature_address_formattedAddress()}</span>
-        <span class="block">{m.feature_address_composed_help()}</span>
-      </SimpleTooltip>
+    <div
+      class={centered
+        ? 'grid min-w-0 flex-1 items-center gap-2'
+        : 'flex min-w-0 flex-1 items-center gap-2'}
+      bind:clientWidth={groupWidth}
+      style:grid-template-columns={centered
+        ? stacked
+          ? `minmax(0,1fr) ${railWidth}px ${rightWidth}px minmax(0,1fr)`
+          : `${railWidth}px minmax(0,1fr) ${railWidth}px`
+        : undefined}
+      data-address-display-group
+    >
       <div
+        bind:clientWidth={leftWidth}
+        class="flex w-max shrink-0 items-center gap-2 justify-self-end {stacked
+          ? 'col-start-2 row-start-2'
+          : ''}"
+      >
+        {#if isEditing && showDisplayChoice}
+          <LocationDisplayChoice
+            value={address.locationDisplayMode}
+            onChange={locationDisplayMode =>
+              onChange({ ...address, locationDisplayMode })}
+          />
+        {/if}
+        <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+          {#snippet trigger()}
+            <button
+              type="button"
+              aria-label={m.feature_address_formattedAddress()}
+              class="text-muted-foreground inline-flex shrink-0 rounded"
+            >
+              <MarkerIcon class={compact ? 'size-5' : 'size-7'} aria-hidden="true" />
+            </button>
+          {/snippet}
+          <span class="block">{m.feature_address_formattedAddress()}</span>
+          <span class="block">{m.feature_address_composed_help()}</span>
+        </SimpleTooltip>
+      </div>
+      <div
+        style:grid-column={stacked ? '1 / -1' : undefined}
+        style:grid-row={stacked ? '1' : undefined}
+        style:justify-self={stacked ? 'center' : undefined}
+        style:max-width={stacked ? '100%' : undefined}
+        data-address-display-text
         class={scrollWhenConstrained
           ? 'grid min-w-0 shrink grid-cols-[minmax(0,1fr)] overflow-hidden'
           : 'flex min-w-0 flex-1'}
@@ -166,42 +215,49 @@ let input = $state<HTMLTextAreaElement>()
           ></textarea>
         {/if}
       </div>
-      {#if isEditing}
-        <button
-          use:reverseTabStop={custom}
-          type="button"
-          aria-label={custom
-            ? m.feature_address_reset()
-            : unlocked
-              ? m.address_display_lock()
-              : m.address_display_unlock()}
-          aria-pressed={unlocked}
-          class="text-muted-foreground hover:text-primary focus-visible:outline-primary -ml-1 flex size-6 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-2"
-          onclick={async () => {
-            const opening = !unlocked
-            onChange(
-              setAddressOverride(
-                address,
-                locale,
-                'formattedAddress',
-                unlocked ? undefined : value,
-              ),
-            )
-            if (opening) {
-              await tick()
-              input?.focus()
-            }
-          }}
-        >
-          {#if custom}
-            <ResetIcon class="size-4" />
-          {:else if unlocked}
-            <UnlockIcon class="size-4" />
-          {:else}
-            <LockIcon class="size-4" />
-          {/if}
-        </button>
-      {/if}
+      <div
+        bind:clientWidth={rightWidth}
+        class="flex w-max shrink-0 items-center justify-self-start {stacked
+          ? 'col-start-3 row-start-2'
+          : ''}"
+      >
+        {#if isEditing}
+          <button
+            use:reverseTabStop={custom}
+            type="button"
+            aria-label={custom
+              ? m.feature_address_reset()
+              : unlocked
+                ? m.address_display_lock()
+                : m.address_display_unlock()}
+            aria-pressed={unlocked}
+            class="text-muted-foreground hover:text-primary focus-visible:outline-primary -ml-1 flex size-6 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-2"
+            onclick={async () => {
+              const opening = !unlocked
+              onChange(
+                setAddressOverride(
+                  address,
+                  locale,
+                  'formattedAddress',
+                  unlocked ? undefined : value,
+                ),
+              )
+              if (opening) {
+                await tick()
+                input?.focus()
+              }
+            }}
+          >
+            {#if custom}
+              <ResetIcon class="size-4" />
+            {:else if unlocked}
+              <UnlockIcon class="size-4" />
+            {:else}
+              <LockIcon class="size-4" />
+            {/if}
+          </button>
+        {/if}
+      </div>
     </div>
   </div>
 

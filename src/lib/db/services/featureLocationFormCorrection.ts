@@ -144,10 +144,17 @@ export async function prepareFeatureLocationFormCorrection(
   for (const [locale, row] of Object.entries(input.content.translations))
     if (comparison.translations[locale])
       comparison.translations[locale].address = structuredClone(row.address)
-  const addressChanged = !equalRevisionValue(
-    input.previous.placement.addressMeta,
-    input.content.placement.addressMeta,
-  )
+  // Display preference and marker projection belong to the Feature, not Organisation address evidence.
+  const previousAddress = structuredClone(input.previous.placement.addressMeta)
+  const nextAddress = structuredClone(input.content.placement.addressMeta)
+  for (const metadata of [previousAddress, nextAddress]) {
+    const address = metadata?.address
+    if (address && typeof address === 'object' && !Array.isArray(address)) {
+      delete address.locationDisplayMode
+      delete address.markerCoordinates
+    }
+  }
+  const addressChanged = !equalRevisionValue(previousAddress, nextAddress)
   if (addressChanged) {
     if (!input.authorizeOrganisation)
       throw new Error('ORGANISATION_LOCATION_EDIT_FORBIDDEN')
@@ -229,6 +236,12 @@ export async function prepareFeatureLocationFormCorrection(
       } as typeof input.content.placement.addressMeta
       comparison.placement = structuredClone(input.content.placement)
     }
+  }
+  // Changed association evidence requires a fresh token and matching membership versions.
+  if (!equalRevisionValue(original, association)) {
+    association.associationVersion = crypto.randomUUID()
+    for (const membership of association.memberships)
+      membership.bindingVersion = association.associationVersion
   }
   comparison.placement.location = structuredClone(association)
   return {
