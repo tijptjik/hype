@@ -56,7 +56,10 @@ function form(content: FeatureRevisionContent) {
         valueJson: row.selection.valueJson,
         propertyValueId: row.selection.propertyValueId,
       })),
-  } as unknown as Parameters<typeof saveFeatureFormRevision>[1]['data']
+  } as unknown as Required<
+    Pick<Parameters<typeof saveFeatureFormRevision>[1]['data'], 'i18n' | 'properties'>
+  > &
+    Parameters<typeof saveFeatureFormRevision>[1]['data']
 }
 async function setup(linked = false, correction = false, independentNames = false) {
   const f = lifecycleFixture(linked)

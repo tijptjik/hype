@@ -1114,8 +1114,40 @@ describe('existing form revision routing', () => {
           valueJson: row.selection.valueJson,
           propertyValueId: row.selection.propertyValueId,
         })),
-    } as unknown as Parameters<typeof buildFeatureFormCandidate>[2]
+    } as unknown as Required<
+      Pick<Parameters<typeof buildFeatureFormCandidate>[2], 'i18n' | 'properties'>
+    > &
+      Parameters<typeof buildFeatureFormCandidate>[2]
   }
+
+  it('retains omitted Feature fields and placement while applying a profile translation', async () => {
+    const f = fixture()
+    const initial = await f.initialize()
+    const source = await f.capture()
+    const result = buildFeatureFormCandidate(initial.content, source.snapshot, {
+      i18n: {
+        en: {
+          title: 'Only title',
+          titleGen: false,
+          descriptionGen: false,
+          displayAddressGen: false,
+        },
+      },
+    })
+    expect(result.properties).toEqual(initial.content.properties)
+    expect(result.placement).toEqual(initial.content.placement)
+    expect(result.profile.isIntangible).toBe(initial.content.profile.isIntangible)
+    expect(result.profile.visitability).toEqual(initial.content.profile.visitability)
+    expect(result.translations.en.title.value).toBe('Only title')
+    const cleared = buildFeatureFormCandidate(initial.content, source.snapshot, {
+      properties: [],
+    })
+    expect(
+      Object.keys(cleared.properties).filter(
+        id => cleared.properties[id].selection.definition.audience !== 'internal',
+      ),
+    ).toEqual([])
+  })
   it('updates authored name bases while retaining the pinned naming rule and overrides', async () => {
     const f = fixture()
     const initial = await f.initialize()

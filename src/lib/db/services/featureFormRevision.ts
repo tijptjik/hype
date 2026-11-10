@@ -43,7 +43,13 @@ import type { FeatureRevisionContent } from '#lib/revisions/featureContent.js'
 import type { RevisionValue } from '#lib/revisions/merge.js'
 import type { z } from 'zod'
 import type { FeatureEntityFormData } from '#lib/db/zod/schema/feature.js'
-type FeatureFormValues = z.output<typeof FeatureEntityFormData>
+/** Authorized form patch; derived address translations need not resubmit authored names. */
+export type FeatureFormPatch = Omit<
+  Partial<z.output<typeof FeatureEntityFormData>>,
+  'i18n'
+> & {
+  i18n?: Record<string, Partial<z.output<typeof FeatureEntityFormData>['i18n'][string]>>
+}
 
 // TABLE OF CONTENTS
 // 1. Lossless form candidate construction
@@ -77,7 +83,7 @@ function emptyPhoneProperty(
 export function buildFeatureFormCandidate(
   previous: FeatureRevisionContent,
   snapshot: RevisionValue,
-  data: FeatureFormValues,
+  data: FeatureFormPatch,
   retainOmittedInternal = true,
 ): FeatureRevisionContent {
   const source = parseFeatureRevisionSource(snapshot)
@@ -90,8 +96,10 @@ export function buildFeatureFormCandidate(
   )
     throw new Error('Edit Location name inheritance in the Location editor')
   // Apply only authored fields; identity, authorship, visibility and workflow stay server-owned.
-  source.record.geometry = data.geometry as unknown as RevisionValue
-  source.record.addressMeta = (data.addressMeta ?? {}) as RevisionValue
+  if (data.geometry !== undefined)
+    source.record.geometry = data.geometry as unknown as RevisionValue
+  if (data.addressMeta !== undefined)
+    source.record.addressMeta = (data.addressMeta ?? {}) as RevisionValue
   if (data.featureType !== undefined) source.record.featureType = data.featureType
   if (data.kind !== undefined) source.record.kind = data.kind
   if (data.targetContext !== undefined) source.record.targetContext = data.targetContext
@@ -101,8 +109,8 @@ export function buildFeatureFormCandidate(
   source.record.nameTemplate = previous.profile.nameTemplate
     ? ({ rule: previous.profile.nameTemplate.rule } as RevisionValue)
     : null
-  source.record.isIntangible = Boolean(data.isIntangible)
-  source.record.isVisitable = Boolean(data.isVisitable)
+  if (data.isIntangible !== undefined) source.record.isIntangible = data.isIntangible
+  if (data.isVisitable !== undefined) source.record.isVisitable = data.isVisitable
   // Normalize retained authored inputs, including old snapshots, before applying this edit.
   const locales = new Map<string, (typeof source.translations)[number]>(
     source.translations.map(row => {
@@ -117,7 +125,7 @@ export function buildFeatureFormCandidate(
       ] as const
     }),
   )
-  for (const [locale, value] of Object.entries(contentMapToStorage(data.i18n))) {
+  for (const [locale, value] of Object.entries(contentMapToStorage(data.i18n ?? {}))) {
     const prior = locales.get(locale)
     const next = {
       ...prior,
@@ -154,66 +162,70 @@ export function buildFeatureFormCandidate(
     locales.set(locale, next as (typeof source.translations)[number])
   }
   source.translations = [...locales.values()]
-  const properties = data.properties ?? []
-  const submitted = new Set(properties.map(row => row.propertyId))
-  if (submitted.size !== properties.length)
-    throw new Error('Duplicate property identities')
-  const internal = new Set(
-    source.fieldDefinitions
-      .filter(row => row.audience === 'internal')
-      .map(row => row.id),
-  )
-  source.properties = source.properties.filter(
-    row =>
-      retainOmittedInternal &&
-      internal.has(row.propertyId) &&
-      !submitted.has(String(row.propertyId)),
-  )
-  const retained = new Set([
-    ...submitted,
-    ...source.properties.map(row => String(row.propertyId)),
-  ])
-  source.propertyTranslations = source.propertyTranslations.filter(row =>
-    retained.has(String(row.propertyId)),
-  )
-  for (const property of properties) {
-    let propertyValueId = property.propertyValueId || null
-    let value = property.value ?? null
-    if (propertyValueId === 'true' || propertyValueId === 'false') {
-      value ??= propertyValueId
-      propertyValueId = null
-    }
-    source.properties.push({
-      featureId: source.record.id,
-      propertyId: property.propertyId,
-      propertyValueId,
-      value,
-      valueJson: property.valueJson || null,
-    })
-    const translations = new Map(
-      source.propertyTranslations
-        .filter(row => row.propertyId === property.propertyId)
-        .map(row => [String(row.locale), row]),
+  if (data.properties !== undefined) {
+    const properties = data.properties ?? []
+    const submitted = new Set(properties.map(row => row.propertyId))
+    if (submitted.size !== properties.length)
+      throw new Error('Duplicate property identities')
+    const internal = new Set(
+      source.fieldDefinitions
+        .filter(row => row.audience === 'internal')
+        .map(row => row.id),
     )
-    for (const [locale, translation] of Object.entries(
-      contentMapToStorage(property.i18n ?? {}),
-    )) {
-      const prior = translations.get(locale)
-      translations.set(locale, {
+    source.properties = source.properties.filter(
+      row =>
+        retainOmittedInternal &&
+        internal.has(row.propertyId) &&
+        !submitted.has(String(row.propertyId)),
+    )
+    const retained = new Set([
+      ...submitted,
+      ...source.properties.map(row => String(row.propertyId)),
+    ])
+    source.propertyTranslations = source.propertyTranslations.filter(row =>
+      retained.has(String(row.propertyId)),
+    )
+    for (const property of properties) {
+      let propertyValueId = property.propertyValueId || null
+      let value = property.value ?? null
+      if (propertyValueId === 'true' || propertyValueId === 'false') {
+        value ??= propertyValueId
+        propertyValueId = null
+      }
+      source.properties.push({
         featureId: source.record.id,
         propertyId: property.propertyId,
-        locale,
-        value:
-          translation.value === undefined ? (prior?.value ?? null) : translation.value,
-        valueGen: translation.valueGen ?? prior?.valueGen ?? false,
+        propertyValueId,
+        value,
+        valueJson: property.valueJson || null,
       })
+      const translations = new Map(
+        source.propertyTranslations
+          .filter(row => row.propertyId === property.propertyId)
+          .map(row => [String(row.locale), row]),
+      )
+      for (const [locale, translation] of Object.entries(
+        contentMapToStorage(property.i18n ?? {}),
+      )) {
+        const prior = translations.get(locale)
+        translations.set(locale, {
+          featureId: source.record.id,
+          propertyId: property.propertyId,
+          locale,
+          value:
+            translation.value === undefined
+              ? (prior?.value ?? null)
+              : translation.value,
+          valueGen: translation.valueGen ?? prior?.valueGen ?? false,
+        })
+      }
+      source.propertyTranslations = [
+        ...source.propertyTranslations.filter(
+          row => row.propertyId !== property.propertyId,
+        ),
+        ...translations.values(),
+      ]
     }
-    source.propertyTranslations = [
-      ...source.propertyTranslations.filter(
-        row => row.propertyId !== property.propertyId,
-      ),
-      ...translations.values(),
-    ]
   }
   const result = buildFeatureRevisionBaselineContent(source, {
     revisions: Object.fromEntries(
@@ -320,7 +332,7 @@ export async function saveFeatureFormRevision(
     featureId: string
     expectedScope: Omit<FeatureCommandProbe, 'id'>
     updatedAt: string
-    data: FeatureFormValues
+    data: FeatureFormPatch
     destinationScope?: FeatureDestinationScope
     authorizeDestinationLocation?: () => Promise<unknown>
     authorizeLocationCorrection?: () => Promise<void>
@@ -357,7 +369,7 @@ export async function saveFeatureFormRevision(
         db,
         input.featureId,
         destination,
-        input.data.properties,
+        input.data.properties ?? [],
         input.allowedInternalIds,
       )
     : undefined
@@ -470,14 +482,15 @@ export async function saveFeatureFormRevision(
   const transferredContent = locationTransfer ? structuredClone(content) : content
   if (locationTransfer)
     transferredContent.placement.location = locationTransfer.accepted
-  const layerChanged = input.data.layerId !== input.expectedScope.layerId
+  const targetLayerId = input.data.layerId ?? input.expectedScope.layerId
+  const layerChanged = targetLayerId !== input.expectedScope.layerId
   const resultingScope =
     destination ??
     (layerChanged
       ? {
           organisationId: input.expectedScope.organisationId,
           projectId: input.expectedScope.projectId,
-          layerId: input.data.layerId,
+          layerId: targetLayerId,
         }
       : undefined)
   // Capture rechecks its own source; the complete form guard runs first in the atomic batch.
@@ -508,7 +521,7 @@ export async function saveFeatureFormRevision(
             : []),
           prepareRevisionCheck(
             db,
-            sql`EXISTS (SELECT 1 FROM layer WHERE id=${input.data.layerId}
+            sql`EXISTS (SELECT 1 FROM layer WHERE id=${targetLayerId}
       AND projectId=${destination?.projectId ?? input.expectedScope.projectId} AND organisationId=${destination?.organisationId ?? input.expectedScope.organisationId}
       AND historicalSourceLayerId IS NULL)`,
           ),
@@ -522,8 +535,8 @@ export async function saveFeatureFormRevision(
                   }
                 : {}),
               layerId: featureLayerAfterStatus(
-                input.data.layerId,
-                input.data.isIntangible,
+                targetLayerId,
+                input.data.isIntangible ?? previous.profile.isIntangible,
               ),
             })
             .where(eq(feature.id, input.featureId)),
