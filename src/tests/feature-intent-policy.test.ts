@@ -1,3 +1,4 @@
+import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
 // @vitest-environment node
 // NODE
 import { readFileSync } from 'node:fs'
@@ -16,6 +17,8 @@ import {
 // SERVICES
 import {
   readFeatureIntentPolicy,
+  prepareFeatureIntentPolicySave,
+  prepareFeatureNameDependencyChecks,
   saveFeatureIntentPolicy,
   assertFeatureIntentLocation,
   assertFeatureIntentPublication,
@@ -66,6 +69,156 @@ const ghost = {
 }
 
 describe('Feature intent', () => {
+  it('validates naming dependencies against fields supplied in the same parent save', async () => {
+    const f = fixture()
+    const policy = await readFeatureIntentPolicy(f.db, {
+      type: 'project',
+      id: 'project',
+    })
+    const input = {
+      scope: { type: 'project' as const, id: 'project' },
+      actorId: 'editor',
+      version: policy.version,
+      fingerprint: policy.fingerprint,
+      definition: [
+        {
+          ...DEFAULT_FEATURE_TYPES[0],
+          nameRule: {
+            base: 'location' as const,
+            conditions: [
+              {
+                propertyId: 'new-boolean',
+                locales: {
+                  en: {
+                    true: 'Paid',
+                    false: '',
+                    null: '',
+                    placement: 'suffix' as const,
+                    separator: ' ',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+    expect(
+      await prepareFeatureIntentPolicySave(f.db, {
+        ...input,
+        nameProperties: [
+          { id: 'new-boolean', dataType: 'boolean', audience: 'public' },
+        ],
+      }),
+    ).not.toBeNull()
+    await expect(
+      prepareFeatureIntentPolicySave(f.db, {
+        ...input,
+        nameProperties: [
+          { id: 'new-boolean', dataType: 'boolean', audience: 'internal' },
+        ],
+      }),
+    ).rejects.toThrow('public boolean')
+  })
+
+  it('checks retained model dependencies when only Fields are supplied', async () => {
+    const f = fixture()
+    await saveFeatureIntentPolicy(f.db, {
+      scope: { type: 'project', id: 'project' },
+      actorId: 'editor',
+      version: 0,
+      guard: sql`1`,
+      definition: [
+        {
+          ...DEFAULT_FEATURE_TYPES[0],
+          nameRule: {
+            base: 'location',
+            conditions: [
+              {
+                propertyId: 'paid',
+                locales: {
+                  en: {
+                    true: 'Paid',
+                    false: '',
+                    null: '',
+                    placement: 'suffix',
+                    separator: ' ',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    })
+    await expect(
+      prepareFeatureNameDependencyChecks(f.db, 'project', []),
+    ).rejects.toThrow('public boolean')
+    expect(
+      await prepareFeatureNameDependencyChecks(f.db, 'project', [
+        { id: 'paid', dataType: 'boolean', audience: 'public' },
+      ]),
+    ).toHaveLength(2)
+  })
+  it('commits model policy with its parent and rolls back both on a stale ancestor', async () => {
+    const f = fixture()
+    const current = await readFeatureIntentPolicy(f.db, {
+      type: 'project',
+      id: 'project',
+    })
+    const statements = await prepareFeatureIntentPolicySave(f.db, {
+      scope: { type: 'project', id: 'project' },
+      definition: DEFAULT_FEATURE_TYPES,
+      version: current.version,
+      fingerprint: current.fingerprint,
+      actorId: 'editor',
+    })
+    expect(statements).not.toBeNull()
+    if (!statements) throw new Error('Missing prepared statements')
+    await saveFeatureIntentPolicy(f.db, {
+      scope: { type: 'hub', id: 'hub' },
+      definition: [ghost],
+      version: 0,
+      actorId: 'editor',
+      guard: sql`1`,
+    })
+    expect(
+      await executeRevisionBatch(f.db, sql`1`, [
+        f.db.run(sql`UPDATE project SET organisationId='changed' WHERE id='project'`),
+        ...statements,
+      ]),
+    ).toBeNull()
+    expect(f.sqlite.prepare('SELECT organisationId FROM project').get()).toEqual({
+      organisationId: 'org',
+    })
+    expect(
+      (await readFeatureIntentPolicy(f.db, { type: 'project', id: 'project' })).version,
+    ).toBe(0)
+    const fresh = await readFeatureIntentPolicy(f.db, {
+      type: 'project',
+      id: 'project',
+    })
+    const next = await prepareFeatureIntentPolicySave(f.db, {
+      scope: { type: 'project', id: 'project' },
+      definition: DEFAULT_FEATURE_TYPES,
+      version: fresh.version,
+      fingerprint: fresh.fingerprint,
+      actorId: 'editor',
+    })
+    if (!next) throw new Error('Missing fresh statements')
+    expect(
+      await executeRevisionBatch(f.db, sql`1`, [
+        ...next,
+        f.db.run(sql`UPDATE project SET organisationId='changed' WHERE id='project'`),
+      ]),
+    ).not.toBeNull()
+    expect(
+      f.sqlite
+        .prepare("SELECT version FROM featureIntentPolicy WHERE scopeType='project'")
+        .get(),
+    ).toEqual({ version: 1 })
+  })
+
   it('keeps future types configured but excludes them from new feature selection', () => {
     expect(
       DEFAULT_FEATURE_TYPES.filter(type => type.enabled !== false).map(type => type.id),

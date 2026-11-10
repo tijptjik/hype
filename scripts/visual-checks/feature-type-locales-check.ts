@@ -11,9 +11,9 @@ await mkdir(output, { recursive: true })
 const mock = `const defaults=${JSON.stringify(DEFAULT_FEATURE_TYPES)};
 let definition=null,version=0;
 export async function getFeatureIntentOptions(){return defaults}
-export async function getFeatureIntentSettings(){return {types:definition??defaults,inheritedTypes:defaults,definition,version,fingerprint:String(version),lineage:[]}}
+export async function getFeatureIntentSettings(){return {types:globalThis.savedPolicy?.definition??defaults,inheritedTypes:defaults,definition:globalThis.savedPolicy?.definition??null,version,fingerprint:String(version),lineage:[]}}
 export async function getFeatureNameProperties(){return [{id:'paid',label:'Paid area'}]}
-export async function updateFeatureIntentSettings(input){definition=input.definition;version++;globalThis.savedPolicy=input;return {saved:true}}
+
 `
 const reports = []
 for (const [engine, browserType] of [
@@ -35,9 +35,29 @@ for (const [engine, browserType] of [
       await page.route('**/src/lib/api/featureIntents.remote.*', route =>
         route.fulfill({ contentType: 'application/javascript', body: mock }),
       )
+      await page.route('**/src/lib/api/translation.remote.*', route =>
+        route.fulfill({
+          contentType: 'application/javascript',
+          body: "export async function translateContentField({source,target,text}) { return {status:'translated', source,target,text:target+' '+text} }",
+        }),
+      )
       await page.goto(`${base}/__feature-type-locales.html`)
       const custom = page.getByRole('switch', { name: 'Custom', exact: true })
       const languages = page.getByRole('button', { name: 'Multilingual', exact: true })
+      const inheritedIdentifier = page
+        .getByRole('textbox', { name: 'Stable identifier', exact: true })
+        .first()
+      const readonlyBorder = await inheritedIdentifier.evaluate(el => {
+        const control = el.closest('.bits-form__control-wrap')
+        if (!control) throw Error('Missing input wrapper')
+        return getComputedStyle(control).borderTopColor
+      })
+      if (readonlyBorder !== 'rgba(0, 0, 0, 0)')
+        throw Error(`Readonly outline: ${readonlyBorder}`)
+      if (
+        await page.getByText('Following application defaults.', { exact: true }).count()
+      )
+        throw Error('Inheritance notice remains')
       await custom.click()
       await page.screenshot({ path: `${output}/${engine}-${width}-initial.png` })
       const left = await languages.boundingBox(),
@@ -55,7 +75,27 @@ for (const [engine, browserType] of [
       }
       const settings = page.locator('[data-feature-type-settings]')
       const cards = settings.locator('[data-type-list] [data-feature-type-section]')
+      await page.locator('[data-form-dirty]').filter({ hasText: 'true' }).waitFor()
+      await page.getByRole('button', { name: 'Discard form', exact: true }).click()
+      await page.locator('[data-form-dirty]').filter({ hasText: 'false' }).waitFor()
+      if (await custom.isChecked())
+        throw Error('Parent discard did not restore inheritance')
+      await custom.click()
       const count = await cards.count()
+      const areaEnabled = cards.getByRole('switch', {
+        name: 'Enable Area',
+        exact: true,
+      })
+      if (await areaEnabled.isChecked()) throw Error('Area should default to disabled')
+      if (
+        !(await cards
+          .getByRole('switch', { name: 'Enable Object', exact: true })
+          .isChecked())
+      )
+        throw Error('Object should default to enabled')
+      await areaEnabled.click()
+      if (!(await areaEnabled.isChecked())) throw Error('Type enable switch failed')
+      await areaEnabled.click()
       if (await settings.getByRole('checkbox').count())
         throw Error('Checkbox controls remain')
       if (await cards.getByRole('button', { name: /^Remove / }).count())
@@ -67,12 +107,12 @@ for (const [engine, browserType] of [
         await body.waitFor({ state: 'hidden' })
       if (await cards.locator('[data-type-body]:visible').count())
         throw Error('Collapse all failed')
-      const originalFirst = await cards.first().locator('h3').textContent()
+      const originalFirst = await cards.first().locator('header h3').textContent()
       await cards
         .first()
         .locator('[data-type-drag-handle]')
         .dragTo(cards.last().locator('header'))
-      if ((await cards.first().locator('h3').textContent()) === originalFirst)
+      if ((await cards.first().locator('header h3').textContent()) === originalFirst)
         throw Error('Pointer reorder failed')
       await settings.getByRole('button', { name: 'New', exact: true }).click()
       if (
@@ -80,6 +120,10 @@ for (const [engine, browserType] of [
         !(await cards.last().locator('[data-type-body]').isVisible())
       )
         throw Error('New type was not expanded')
+      await cards
+        .last()
+        .getByRole('button', { name: 'Display name', exact: true })
+        .click()
       await cards
         .last()
         .getByRole('textbox', { name: 'Display name', exact: true })
@@ -117,10 +161,23 @@ for (const [engine, browserType] of [
       if ((await cards.locator('[data-type-body]:visible').count()) !== count)
         throw Error('Expand all failed')
       await languages.click()
+      await cards.first().locator('[data-i18n-source-bar] button').first().click()
+      await cards
+        .first()
+        .getByText(/^zh-Hant /)
+        .waitFor()
+      await page
+        .getByRole('button', { name: 'Display name zh-Hant', exact: true })
+        .first()
+        .click()
       await page
         .getByRole('textbox', { name: 'Display name zh-Hant', exact: true })
         .first()
         .fill('舊招牌')
+      await page
+        .getByRole('button', { name: 'Display name zh-Hans', exact: true })
+        .first()
+        .click()
       await page
         .getByRole('textbox', { name: 'Display name zh-Hans', exact: true })
         .first()
@@ -128,6 +185,10 @@ for (const [engine, browserType] of [
       await page.getByRole('button', { name: 'Add', exact: true }).click()
       await page.getByRole('combobox', { name: 'Search languages' }).fill('Japanese')
       await page.getByRole('option', { name: /Japanese/ }).click()
+      await page
+        .getByRole('button', { name: 'Display name ja', exact: true })
+        .first()
+        .click()
       await page
         .getByRole('textbox', { name: 'Display name ja', exact: true })
         .first()
@@ -148,10 +209,24 @@ for (const [engine, browserType] of [
           .count()
       )
         throw Error('Collapsed multilingual fields remain visible')
-      await page
-        .getByRole('button', { name: 'Save feature type settings', exact: true })
-        .click()
-      await page.getByText('Feature type settings saved.', { exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Save form', exact: true }).click()
+      await page.getByText('Form saved.', { exact: true }).waitFor()
+      if (
+        await settings
+          .getByText('These settings save separately.', { exact: true })
+          .count()
+      )
+        throw Error('Independent save controls remain')
+      const packet = await page.evaluate(
+        () =>
+          (globalThis as unknown as { submittedModelPacket: Record<string, string> })
+            .submittedModelPacket,
+      )
+      if (
+        'data.properties[0].key/fixture' in packet ||
+        packet['meta.submittedTabs/fixture'] !== '["profile","location"]'
+      )
+        throw Error('Unchanged field tab was submitted')
       const saved = await page.evaluate(
         () =>
           (
@@ -174,6 +249,10 @@ for (const [engine, browserType] of [
       )
         throw Error('Hidden translations were not saved')
       await languages.click()
+      await page
+        .getByRole('button', { name: 'Display name ja', exact: true })
+        .first()
+        .click()
       if (
         (await page
           .getByRole('textbox', { name: 'Display name ja', exact: true })
@@ -181,7 +260,7 @@ for (const [engine, browserType] of [
           .inputValue()) !== '昔の看板'
       )
         throw Error('Translations did not survive reload')
-      await languages.scrollIntoViewIfNeeded()
+      await cards.first().locator('[data-type-names]').scrollIntoViewIfNeeded()
       await page.screenshot({ path: `${output}/${engine}-${width}.png` })
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,

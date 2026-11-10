@@ -19,7 +19,12 @@ import {
   type FeatureType,
 } from '#lib/features/intents.js'
 // SERVICES
-import { executeRevisionBatch } from './revisionBatch'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
+import type { BatchItem } from 'drizzle-orm/batch'
+import {
+  FeatureIntentSettingsPatchSchema,
+  type FeatureIntentSettingsPatch,
+} from '#lib/features/intents.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -198,4 +203,127 @@ export async function assertFeatureIntentPublication(
   // Missing associations are data-quality work, never a publication gate.
   void db
   void featureId
+}
+
+/** A model-tab validation failure presented by the centralized resource form. */
+export class FeatureIntentPolicyError extends Error {}
+
+/** Prepare the model tab for the parent's atomic form transaction.
+ * @param db Request database. @param input Authenticated parent scope and staged policy.
+ * @returns Guarded writes, or null when the policy ancestry has changed.
+ * @remarks The parent owns authorization, its revision guard and transaction execution.
+ */
+export async function prepareFeatureIntentPolicySave(
+  db: Database,
+  input: FeatureIntentSettingsPatch & {
+    scope: FeatureIntentScope
+    actorId: string
+    nameProperties?: readonly {
+      id?: string
+      dataType?: string | null
+      audience?: string | null
+    }[]
+  },
+): Promise<BatchItem<'sqlite'>[] | null> {
+  const patch = FeatureIntentSettingsPatchSchema.parse(input)
+  const current = await readFeatureIntentPolicy(db, input.scope)
+  if (current.version !== patch.version || current.fingerprint !== patch.fingerprint)
+    return null
+  // Validate naming dependencies before composing any writes.
+  if (patch.definition?.some(type => type.nameRule?.conditions.length)) {
+    const projectId =
+      input.scope.type === 'project'
+        ? input.scope.id
+        : input.scope.type === 'layer'
+          ? (
+              await db.get<{ id: string }>(
+                sql`SELECT projectId id FROM layer WHERE id=${input.scope.id}`,
+              )
+            )?.id
+          : null
+    const { listResolvedProjectProperties } = await import('./property.js')
+    const properties =
+      input.nameProperties ??
+      (projectId ? await listResolvedProjectProperties(db, projectId) : [])
+    assertNameDependencies(patch.definition ?? [], properties)
+  }
+  const values = {
+    scopeType: input.scope.type,
+    scopeId: input.scope.id,
+    definition: patch.definition === null ? null : JSON.stringify(patch.definition),
+    version: patch.version + 1,
+    actorId: input.actorId,
+  }
+  // Recheck every inherited revision within the same batch as the parent update.
+  return [
+    ...current.lineage.map(({ scope, version }) =>
+      prepareRevisionCheck(
+        db,
+        sql`coalesce((SELECT version FROM featureIntentPolicy WHERE scopeType=${scope.type} AND scopeId=${scope.id}),0)=${version}`,
+      ),
+    ),
+    db
+      .insert(featureIntentPolicy)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [featureIntentPolicy.scopeType, featureIntentPolicy.scopeId],
+        set: values,
+      }),
+    db.insert(featureIntentPolicyRevision).values({
+      ...values,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    }),
+  ]
+}
+
+/** Validate naming references without changing unrelated policy definitions.
+ * @param types Effective model. @param properties Submitted field catalogue.
+ * @returns Nothing; invalid dependencies are attached to the model tab by the parent form.
+ */
+function assertNameDependencies(
+  types: readonly FeatureType[],
+  properties: readonly {
+    id?: string
+    dataType?: string | null
+    audience?: string | null
+  }[],
+): void {
+  for (const type of types)
+    for (const condition of type.nameRule?.conditions ?? []) {
+      if (
+        !properties.some(
+          property =>
+            property.id === condition.propertyId &&
+            property.dataType === 'boolean' &&
+            property.audience !== 'internal',
+        )
+      )
+        throw new FeatureIntentPolicyError(
+          'Name conditions require an available public boolean property.',
+        )
+    }
+}
+
+/** Fence dependencies when the Fields tab changes without rewriting the model.
+ * @param db Request database. @param projectId Authorized project. @param properties Submitted catalogue.
+ * @returns Policy ancestry checks for the parent's existing transaction.
+ */
+export async function prepareFeatureNameDependencyChecks(
+  db: Database,
+  projectId: string,
+  properties: readonly {
+    id?: string
+    dataType?: string | null
+    audience?: string | null
+  }[],
+): Promise<BatchItem<'sqlite'>[]> {
+  const current = await readFeatureIntentPolicy(db, { type: 'project', id: projectId })
+  assertNameDependencies(current.types, properties)
+  return current.lineage.map(({ scope, version }) =>
+    prepareRevisionCheck(
+      db,
+      sql`coalesce((SELECT version FROM featureIntentPolicy WHERE scopeType=${scope.type} AND scopeId=${scope.id}),0)=${version}`,
+    ),
+  )
 }

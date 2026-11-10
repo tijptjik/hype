@@ -1,3 +1,5 @@
+import { prepareFeatureIntentPolicySave } from './featureIntentPolicy.js'
+import type { FeatureIntentSettingsPatch } from '#lib/features/intents.js'
 // INDEX QUERY
 import {
   resourceAncestorNameSearchCondition,
@@ -725,6 +727,7 @@ export const updateLayerByIdWithConcurrency = async (
   params: {
     id: Id
     actorId?: string
+    featureIntentSettings?: FeatureIntentSettingsPatch
     updatedAt: string
     i18n?: Record<LocaleKey, LayerI18nPartial>
     properties?: LayerPropertyNew[]
@@ -740,6 +743,17 @@ export const updateLayerByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
+  if (params.featureIntentSettings && !params.actorId)
+    throw new Error('Feature type settings require an attributed actor')
+  const featureSettings =
+    params.featureIntentSettings && params.actorId
+      ? await prepareFeatureIntentPolicySave(db, {
+          ...params.featureIntentSettings,
+          scope: { type: 'layer', id: params.id },
+          actorId: params.actorId,
+        })
+      : []
+  if (featureSettings === null) return null
   const settings = params.relocationUpdatePolicy
   if (
     settings &&
@@ -825,13 +839,16 @@ export const updateLayerByIdWithConcurrency = async (
     ]
     const results = await executeRevisionBatch(db, guard, [
       ...capture.before,
+      ...featureSettings,
       ...relations,
       updateCore,
       ...(capture.before.length ? [prepareRevisionCheck(db, sql`changes() = 1`)] : []),
       ...capture.after,
     ])
     if (!results) return null
-    const rows = results[capture.before.length + relations.length] as {
+    const rows = results[
+      capture.before.length + featureSettings.length + relations.length
+    ] as {
       id: string
       modifiedAt: string
     }[]
@@ -840,12 +857,16 @@ export const updateLayerByIdWithConcurrency = async (
   const guard = exists(db.select({ id: layer.id }).from(layer).where(revisionGuard))
   const results = await executeRevisionBatch(db, guard, [
     ...capture.before,
+    ...featureSettings,
     updateCore,
     ...(capture.before.length ? [prepareRevisionCheck(db, sql`changes() = 1`)] : []),
     ...capture.after,
   ])
   if (!results) return null
-  const rows = results[capture.before.length] as { id: string; modifiedAt: string }[]
+  const rows = results[capture.before.length + featureSettings.length] as {
+    id: string
+    modifiedAt: string
+  }[]
   return rows[0] ?? null
 }
 

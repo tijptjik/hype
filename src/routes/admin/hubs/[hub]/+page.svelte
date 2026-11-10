@@ -1956,6 +1956,7 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
     <Main.Facet
+      extraScroll={320}
       isVisible={activeFacet === 'location'}
       class="right-0! left-0!"
       transition="fade"
@@ -1966,7 +1967,21 @@ $effect(() => {
     >
       <FormSurface>
         {#if hub?.data?.id}
+          {#if formCtx.form.fields.value().data?.featureIntentSettings !== undefined}
+            <input
+              {...formCtx.form.fields.data.featureIntentSettings.as(
+                'hidden',
+                String(formCtx.form.fields.value().data?.featureIntentSettings),
+              )}
+            >
+          {/if}
           <FeatureIntentSettings
+            draft={formCtx.form.fields.value().data?.featureIntentSettings as
+              | string
+              | undefined}
+            revision={hub?.data?.modifiedAt}
+            onDraftChange={draft =>
+              formCtx.form.fields.data.featureIntentSettings.set(draft)}
             scopeType="hub"
             scopeId={hub.data.id}
             disabled={!isEditing || formCtx.submitting}

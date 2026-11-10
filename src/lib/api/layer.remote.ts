@@ -1,3 +1,5 @@
+import { FeatureIntentPolicyError } from '#lib/db/services/featureIntentPolicy.js'
+import { getFeatureIntentSettings } from './featureIntents.remote.js'
 import { suppliedModelTab } from '#lib/forms/modelTabs.js'
 import type { RemoteQuery } from '$app/server'
 import { error } from '@sveltejs/kit'
@@ -348,6 +350,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Authorize from the scalar probe before loading the relation-heavy admin shape.
   const submittedDataForUpdate: Record<string, unknown> = { i18n: data.i18n }
+  if (data.featureIntentSettings) submittedDataForUpdate.metadata = data.metadata ?? {}
   if (data.relocationUpdatePolicy) {
     submittedDataForUpdate.relocationUpdatePolicy = data.relocationUpdatePolicy
   }
@@ -428,6 +431,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
 
   const persisted = requireValue(
     await updateLayerByIdWithConcurrency(db, {
+      featureIntentSettings: data.featureIntentSettings,
       actorId: user.id,
       id: current.id as Id,
       updatedAt,
@@ -440,10 +444,16 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
         metadata: data.metadata,
         isDefaultVisible: data.isDefaultVisible,
       },
+    }).catch(cause => {
+      if (cause instanceof FeatureIntentPolicyError)
+        invalid(issue.data.featureIntentSettings(cause.message))
+      throw cause
     }),
     () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
   )
 
+  if (data.featureIntentSettings)
+    await getFeatureIntentSettings({ type: 'layer', id: current.id }).refresh()
   return toCreatedResponseShape(persisted)
 })
 

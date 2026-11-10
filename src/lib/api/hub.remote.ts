@@ -1,3 +1,5 @@
+import { FeatureIntentPolicyError } from '#lib/db/services/featureIntentPolicy.js'
+import { getFeatureIntentSettings } from './featureIntents.remote.js'
 import { suppliedModelTab } from '#lib/forms/modelTabs.js'
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
@@ -517,6 +519,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Persist main record atomically with optimistic concurrency.
   const result = await updateHubByIdWithConcurrency(db, {
+    featureIntentSettings: data.featureIntentSettings,
     imageIntentSettings: data.imageIntentSettings,
     actorId: user.id,
     id: current.id,
@@ -545,6 +548,8 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
       subscriptionPlacement: data.subscriptionPlacement,
     },
   }).catch(cause => {
+    if (cause instanceof FeatureIntentPolicyError)
+      invalid(issue.data.featureIntentSettings(cause.message))
     // Expected contract protections must surface as form issues, not generic failures.
     if (
       isHttpError(cause, 400) &&
@@ -566,6 +571,8 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   // Translations, roles, organisation assignments and submitted layer defaults committed above.
 
   // Return persisted identity and write token.
+  if (data.featureIntentSettings)
+    await getFeatureIntentSettings({ type: 'hub', id: current.id }).refresh()
   return toCreatedResponseShape(persisted)
 })
 

@@ -1,3 +1,8 @@
+import {
+  prepareFeatureIntentPolicySave,
+  prepareFeatureNameDependencyChecks,
+} from './featureIntentPolicy.js'
+import type { FeatureIntentSettingsPatch } from '#lib/features/intents.js'
 // IMAGE INTENT POLICY
 import { prepareImageIntentPolicySave } from './imageIntentPolicy'
 import type { ImageIntentSettingsPatch } from '#lib/images/intents.js'
@@ -983,6 +988,12 @@ export const updateProjectByIdWithConcurrency = async (
   params: ProjectRelations & {
     id: Id
     actorId?: string
+    featureIntentSettings?: FeatureIntentSettingsPatch
+    featureNameProperties?: readonly {
+      id?: string
+      dataType?: string | null
+      audience?: string | null
+    }[]
     imageIntentSettings?: ImageIntentSettingsPatch
     updatedAt: string
     locationUpdatePolicy?: {
@@ -1002,6 +1013,24 @@ export const updateProjectByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
+  if (params.featureIntentSettings && !params.actorId)
+    throw new Error('Feature type settings require an attributed actor')
+  const featureSettings =
+    params.featureIntentSettings && params.actorId
+      ? await prepareFeatureIntentPolicySave(db, {
+          ...params.featureIntentSettings,
+          scope: { type: 'project', id: params.id },
+          actorId: params.actorId,
+          nameProperties: params.featureNameProperties,
+        })
+      : params.featureNameProperties
+        ? await prepareFeatureNameDependencyChecks(
+            db,
+            params.id,
+            params.featureNameProperties,
+          )
+        : []
+  if (featureSettings === null) return null
   const settings = params.locationUpdatePolicy
   if (
     settings &&
@@ -1132,6 +1161,7 @@ export const updateProjectByIdWithConcurrency = async (
           )
         : null
     const beforeCore = [
+      ...featureSettings,
       ...imageSettings,
       ...capture.before,
       ...layerCapture.before,
@@ -1170,6 +1200,7 @@ export const updateProjectByIdWithConcurrency = async (
     return rows[0] ?? null
   }
   const before = [
+    ...featureSettings,
     ...imageSettings,
     ...capture.before,
     ...layerCapture.before,

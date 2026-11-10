@@ -1,4 +1,5 @@
 import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
+import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
 import { z } from 'zod'
 // FORM DEPENDENCIES
@@ -146,6 +147,7 @@ export const HubEntityFormData = z
     userRoles: HubUserRolesFormData.optional(),
     organisations: z.array(HubOrganisationFormData).optional(),
     layerDefaults: z.array(HubLayerFormData).optional(),
+    featureIntentSettings: FeatureIntentSettingsFormData,
     imageIntentSettings: ImageIntentSettingsFormData,
     properties: z.array(ProjectPropertyFormData).optional(),
   })

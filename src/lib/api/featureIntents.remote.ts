@@ -3,9 +3,9 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // DRIZZLE
-import { and, sql, type SQL } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 // REMOTE
-import { guardedCommand, guardedQuery } from './server/guarded'
+import { guardedQuery } from './server/guarded'
 // AUTHORIZATION
 import {
   authorizeHubUpdateForSubmission,
@@ -13,12 +13,9 @@ import {
   authorizeFeatureCreateForSubmission,
 } from './services/authz'
 import { authorizeLayerUpdateForSubmission } from './services/authz/layerPolicy'
-// DOMAIN
-import { FeatureTypesSchema, FeatureTypeIdSchema } from '#lib/features/intents.js'
 // SERVICES
 import {
   readFeatureIntentPolicy,
-  saveFeatureIntentPolicy,
   type FeatureIntentScope,
 } from '#lib/db/services/featureIntentPolicy.js'
 // TYPES
@@ -26,7 +23,7 @@ import type { GuardedBaseContext } from './guarded.types'
 
 // TABLE OF CONTENTS
 // 1. Policy scope and inherited configuration
-// 2. Authorized policy writes
+// 2. Editable policy reads
 // 3. Feature authoring and association validation
 
 const scopeSchema = z.strictObject({
@@ -89,82 +86,6 @@ export const getFeatureIntentSettings = guardedQuery(
   },
 )
 
-/** Save explicit overrides; null resets inheritance. @param input Reviewed policy version. @returns Success after atomic history capture. */
-export const updateFeatureIntentSettings = guardedCommand(
-  z.strictObject({
-    scope: scopeSchema,
-    version: z.number().int().min(0),
-    fingerprint: z.string(),
-    definition: z
-      .union([
-        FeatureTypesSchema,
-        z
-          .array(FeatureTypeIdSchema)
-          .min(1)
-          .max(50)
-          .refine(
-            ids => new Set(ids).size === ids.length,
-            'Feature types must be unique',
-          ),
-      ])
-      .nullable(),
-  }),
-  async (input, ctx) => {
-    const guard = await authorizeSettings(ctx, input.scope)
-    const current = await readFeatureIntentPolicy(ctx.db, input.scope)
-    if (current.fingerprint !== input.fingerprint)
-      error(409, 'Inherited settings changed. Reload before saving.')
-    if (input.definition !== null) {
-      if (
-        input.scope.type === 'layer' &&
-        !FeatureTypesSchema.safeParse(input.definition).success
-      ) {
-        if (
-          !input.definition.every(
-            id =>
-              typeof id === 'string' &&
-              current.inheritedTypes.some(type => type.id === id),
-          )
-        )
-          error(422, 'Choose feature types from the project catalogue.')
-      } else if (!FeatureTypesSchema.safeParse(input.definition).success)
-        error(422, 'Invalid feature type catalogue.')
-    }
-    if (input.definition && FeatureTypesSchema.safeParse(input.definition).success) {
-      const types = FeatureTypesSchema.parse(input.definition)
-      if (types.some(type => type.nameRule?.conditions.length)) {
-        const properties = await getFeatureNameProperties(input.scope)
-        for (const type of types)
-          for (const condition of type.nameRule?.conditions ?? [])
-            if (!properties.some(field => field.id === condition.propertyId))
-              error(
-                422,
-                'Name conditions require an available public boolean property.',
-              )
-      }
-    }
-    // Fence inherited versions inside the same transaction as the policy/history write.
-    const inheritedGuard =
-      and(
-        guard,
-        ...current.lineage.map(
-          ({ scope, version }) =>
-            sql`coalesce((SELECT version FROM featureIntentPolicy WHERE scopeType=${scope.type} AND scopeId=${scope.id}),0)=${version}`,
-        ),
-      ) ?? guard
-    if (
-      !(await saveFeatureIntentPolicy(ctx.db, {
-        ...input,
-        actorId: ctx.user.id,
-        guard: inheritedGuard,
-      }))
-    )
-      error(409, 'Settings changed. Reload before saving.')
-    await getFeatureIntentSettings(input.scope).refresh()
-    return { saved: true }
-  },
-)
-
 /** Read authoring choices only for a layer the caller may contribute to.
  * @param input Selected layer. @returns Effective types, including a single inferred choice.
  */
@@ -187,7 +108,9 @@ export const getFeatureIntentOptions = guardedQuery(
       submittedData: {},
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
-    return (await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: layerId })).types.filter(type => type.enabled !== false)
+    return (
+      await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: layerId })
+    ).types.filter(type => type.enabled !== false)
   },
 )
 

@@ -1,4 +1,5 @@
 import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
+import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
 import { z } from 'zod'
 // IMAGE INTENT POLICY
@@ -201,6 +202,7 @@ export const ProjectLocationPolicyFormData = z.preprocess(
 
 export const ProjectEntityFormData = z.object({
   settings: ContentLocaleSettingsFormSchema,
+  featureIntentSettings: FeatureIntentSettingsFormData,
   imageIntentSettings: ImageIntentSettingsFormData,
   locationUpdatePolicy: ProjectLocationPolicyFormData,
   cardStyleCode: z.enum(CARD_STYLE_CODES).default(DEFAULT_CARD_STYLE),

@@ -14,7 +14,7 @@ let displayAddress = $state({
 })
 import FeatureIntentChoice from '#lib/bits/patterns/forms/featureIntent/FeatureIntentChoice.svelte'
 import TargetContextChoice from '#lib/bits/patterns/forms/featureIntent/TargetContextChoice.svelte'
-import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
+import ModelSettingsFixture from './ModelSettingsFixture.svelte'
 import FeatureNamePreview from '#lib/bits/patterns/forms/featureIntent/FeatureNamePreview.svelte'
 import { TARGET_CONTEXTS, type TargetContext } from '#lib/features/locationPolicy.js'
 let featureType = $state<string | null>(null)
@@ -97,5 +97,5 @@ const rule = {
     {overrides}
     onChange={value => (overrides = value)}
   />
-  <FeatureIntentSettings scopeType="project" scopeId="project" />
+  <ModelSettingsFixture />
 </main>

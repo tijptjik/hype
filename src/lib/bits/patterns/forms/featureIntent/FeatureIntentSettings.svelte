@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
 // DRAG AND DROP
 import { draggable, droppable, type DragDropState } from '@thisux/sveltednd'
 import { getDropIndex } from '#lib/client/services/dragDrop.js'
@@ -27,17 +29,13 @@ import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
 // ICONS
 import DataModelIcon from 'virtual:icons/lucide/network'
 // API
-import {
-  getFeatureIntentSettings,
-  updateFeatureIntentSettings,
-} from '#lib/api/featureIntents.remote.js'
+import { getFeatureIntentSettings } from '#lib/api/featureIntents.remote.js'
 import FeatureTypeSection from './FeatureTypeSection.svelte'
 import FeatureTypeEditor from './FeatureTypeEditor.svelte'
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 // DOMAIN
 import {
   FEATURE_LOCATION_KINDS,
-  FeatureTypesSchema,
   featureTypeLabel,
   type FeatureType,
 } from '#lib/features/intents.js'
@@ -50,18 +48,27 @@ import type {
 let {
   scopeType,
   scopeId,
+  draft,
+  revision,
+  onDraftChange,
   disabled = false,
 }: {
   scopeType: FeatureIntentScope['type']
   scopeId: string
+  draft?: string
+  revision?: string
+  onDraftChange?: (draft: string | undefined) => void
   disabled?: boolean
 } = $props()
 let policy = $state<FeatureIntentPolicy | null>(null)
 let catalogue = $state<FeatureType[]>([])
 const customSwitchId = $props.id()
 let inherits = $state(true)
-let busy = $state(false)
-let message = $state('')
+const busy = false
+let baseline = ''
+let baselineCatalogue: FeatureType[] = []
+let baselineInherits = true
+let lastEmitted: string | undefined
 let loadError = $state(false)
 let reload = $state(0)
 let multilingual = $state(false)
@@ -84,6 +91,7 @@ const contentLocales = $derived(
 $effect(() => {
   const scope = { type: scopeType, id: scopeId }
   reload
+  revision
   let cancelled = false
   policy = null
   loadError = false
@@ -119,6 +127,17 @@ $effect(() => {
       selectedLocales = [...selectedLocales, ...extra]
       visibleLocales = [...visibleLocales, ...extra]
       inherits = value.definition === null
+      baselineInherits = inherits
+      baselineCatalogue = structuredClone($state.snapshot(catalogue))
+      baseline = JSON.stringify(inherits ? null : catalogue)
+      lastEmitted = undefined
+      const retained = untrack(() => draft)
+      if (retained) {
+        const parsed = JSON.parse(retained)
+        inherits = parsed.definition === null
+        if (parsed.definition) catalogue = parsed.definition
+        lastEmitted = retained
+      }
     })
     .catch(() => {
       if (!cancelled) loadError = true
@@ -128,36 +147,38 @@ $effect(() => {
   }
 })
 
-/** Save this independently versioned policy without submitting the enclosing profile form.
- * @returns Completion; stale edits remain available for inspection.
- */
-async function save(): Promise<void> {
-  if (!policy || busy) return
-  message = ''
-  const definition = $state.snapshot(inherits ? null : catalogue)
-  if (definition !== null) {
-    const parsed = FeatureTypesSchema.safeParse(definition)
-    if (!parsed.success) {
-      message = parsed.error.issues[0].message
-      return
+// Parent reset/discard restores the local editor; the parent remains the only save owner.
+$effect(() => {
+  const incoming = draft
+  if (!policy || incoming === lastEmitted) return
+  untrack(() => {
+    lastEmitted = incoming
+    if (incoming === undefined) {
+      catalogue = structuredClone(baselineCatalogue)
+      inherits = baselineInherits
+    } else {
+      const parsed = JSON.parse(incoming)
+      inherits = parsed.definition === null
+      if (parsed.definition) catalogue = parsed.definition
     }
-  }
-  busy = true
-  try {
-    await updateFeatureIntentSettings({
-      scope: { type: scopeType, id: scopeId },
-      definition,
-      version: policy.version,
-      fingerprint: policy.fingerprint,
-    })
-    message = 'Feature type settings saved.'
-    reload += 1
-  } catch (cause) {
-    message = cause instanceof Error ? cause.message : 'Unable to save settings.'
-  } finally {
-    busy = false
-  }
-}
+  })
+})
+$effect(() => {
+  if (!policy) return
+  const definition = $state.snapshot(inherits ? null : catalogue)
+  const serialized = JSON.stringify(definition)
+  const next =
+    serialized === baseline
+      ? undefined
+      : JSON.stringify({
+          definition,
+          version: policy.version,
+          fingerprint: policy.fingerprint,
+        })
+  if (next === lastEmitted) return
+  lastEmitted = next
+  untrack(() => onDraftChange?.(next))
+})
 
 let removeMode = $state(false)
 let collapsedAll = $state(false)
@@ -180,7 +201,7 @@ function typeKey(type: FeatureType): string {
   return key
 }
 /** Add a unique draft type; new cards begin expanded even after Collapse all.
- * @returns Nothing; the independent policy Save persists the catalogue.
+ * @returns Nothing; the centralized parent Save persists the catalogue.
  */
 function addType(): void {
   if (!editable || removeMode || catalogue.length >= 50) return
@@ -192,14 +213,7 @@ function addType(): void {
       id: `type-${index}`,
       label: 'New feature type',
       kind: 'object',
-      targetContexts: [
-        'building_part',
-        'building',
-        'premises',
-        'premises_address',
-        'cadastral_address',
-        'linear_reference',
-      ],
+      targetContexts: ['building_part', 'building', 'premises', 'address'],
       relation: 'locatedAt',
       unresolvedMode: 'prompt',
       locationKinds: [...FEATURE_LOCATION_KINDS],
@@ -422,42 +436,6 @@ function removeType(): void {
         </div>
       {/each}
     </div>
-  {/if}
-  {#if policy}
-    <div
-      class="border-border/40 flex min-w-0 flex-wrap items-center gap-3 border-t px-6 py-4"
-    >
-      <Button
-        text={busy ? 'Saving…' : 'Save feature type settings'}
-        disabled={disabled || busy}
-        onClick={save}
-      />
-      <Button
-        text="Discard changes"
-        style="ghost"
-        disabled={disabled || busy}
-        onClick={() => {
-          message = ''
-          removeMode = false
-          reload += 1
-        }}
-      />
-      {#if !inherits}
-        <Button
-          text={`Reset to ${scopeType === 'project' ? 'hub' : scopeType === 'layer' ? 'project' : 'application'} defaults`}
-          style="ghost"
-          disabled={disabled || busy}
-          onClick={() => {
-            inherits = true
-            removeMode = false
-          }}
-        />
-      {/if}
-      <span class="text-muted-foreground text-xs">These settings save separately.</span>
-    </div>
-  {/if}
-  {#if message}
-    <p role="status" class="px-6 pb-4 text-sm">{message}</p>
   {/if}
 </section>
 <DestructiveDialog bind:open={confirmRemove} onConfirm={removeType}>

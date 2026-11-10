@@ -3266,6 +3266,36 @@ the complete definition; older layer ID subsets remain readable. Null resets
 inheritance. Versioned policy writes retain actor history and check the complete
 ancestry version.
 
+Data Model is a staged `data.featureIntentSettings` field in the centralized Hub,
+Project or Layer form. Main Save commits the parent, policy and policy history in one
+revision-guarded transaction; main Discard restores the staged model. There are no
+independent model Save, Discard or Reset actions. The Location facet reserves 320px of
+trailing scroll space. Parent saves refresh the policy query after commit.
+
+The shared form factory emits `meta.submittedTabs` for existing model forms. Unchanged
+replaceable Fields, Members, Organisations, Layers, Images and Location sections are
+removed from native FormData before preflight and transport, as applicable to the
+resource. Their absent fields stay undefined through parsing and persistence. A supplied
+empty replacement is distinct from omission; unknown tab names and data sent under
+omitted tabs are rejected. The profile/ownership envelope remains a required dependency
+for current parent authorization and concurrency checks; creation remains a complete
+form submission. Naming conditions validate against Fields supplied in the same Project
+transaction, including retained rules when only Fields change. This contract is declared
+in `src/lib/forms/modelTabs.ts`.
+
+Type definitions carry an optional `enabled` flag (legacy definitions remain enabled).
+Application defaults enable Object and Place and disable Area and Route. Disabled
+definitions remain visible in configuration and inheritance, but new-feature options and
+server-side selection exclude them. Existing feature association updates retain access
+to their disabled definition. Custom definitions are not rewritten when defaults change.
+Each type bar exposes its enable switch.
+
+Object defaults allow building parts, buildings, premises and addresses. Place excludes
+premises, thoroughfares and geographic features. Area defaults allow premises and
+addresses. Geographic target classes are off in these defaults until datasets support
+them. Location groups use distinct headings; classes list physical examples in the order
+building part, building, premises, structure, thoroughfare.
+
 The Data Model editor uses the Fields toolbar and card layout: New, Multilingual,
 Collapse/Expand, Remove Type, and the Custom switch. Type bars have a six-dot drag
 handle, kind icon and collapsible title. Reordering supports pointer dragging and

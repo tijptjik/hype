@@ -1667,6 +1667,7 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
     <Main.Facet
+      extraScroll={320}
       isVisible={activeFacet === 'location'}
       transition="fade"
       fillHeight={true}
@@ -1677,7 +1678,21 @@ $effect(() => {
     >
       <FormSurface>
         {#if layer?.data?.id}
+          {#if formCtx.form.fields.value().data?.featureIntentSettings !== undefined}
+            <input
+              {...formCtx.form.fields.data.featureIntentSettings.as(
+                'hidden',
+                String(formCtx.form.fields.value().data?.featureIntentSettings),
+              )}
+            >
+          {/if}
           <FeatureIntentSettings
+            draft={formCtx.form.fields.value().data?.featureIntentSettings as
+              | string
+              | undefined}
+            revision={layer?.data?.modifiedAt}
+            onDraftChange={draft =>
+              formCtx.form.fields.data.featureIntentSettings.set(draft)}
             scopeType="layer"
             scopeId={layer.data.id}
             disabled={!isEditing || formCtx.submitting}

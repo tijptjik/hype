@@ -1,4 +1,5 @@
 import { SubmittedTabsSchema, validateModelTabs } from '#lib/forms/modelTabs.js'
+import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
 import { z } from 'zod'
 // FORM DEPENDENCIES
@@ -75,6 +76,7 @@ export const LayerRelocationPolicyFormData = z.preprocess(
 // ═══════════════════════
 
 export const LayerEntityFormData = z.object({
+  featureIntentSettings: FeatureIntentSettingsFormData,
   relocationUpdatePolicy: LayerRelocationPolicyFormData,
   organisationId: z.string().optional(),
   projectId: z

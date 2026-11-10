@@ -184,3 +184,24 @@ export function requireFeatureType(
   return selected
 }
 
+/** Staged policy payload carried by the centralized resource form. */
+export const FeatureIntentSettingsPatchSchema = z.object({
+  definition: FeatureTypesSchema.nullable(),
+  version: z.number().int().nonnegative(),
+  fingerprint: z.string().min(1),
+})
+export type FeatureIntentSettingsPatch = z.infer<
+  typeof FeatureIntentSettingsPatchSchema
+>
+export const FeatureIntentSettingsFormData = z
+  .string()
+  .transform((value, ctx) => {
+    try {
+      return JSON.parse(value)
+    } catch {
+      ctx.addIssue({ code: 'custom', message: 'Invalid feature type settings JSON' })
+      return z.NEVER
+    }
+  })
+  .pipe(FeatureIntentSettingsPatchSchema)
+  .optional()

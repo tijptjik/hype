@@ -1,3 +1,5 @@
+import { prepareFeatureIntentPolicySave } from './featureIntentPolicy.js'
+import type { FeatureIntentSettingsPatch } from '#lib/features/intents.js'
 // IMAGE INTENT POLICY
 import { prepareImageIntentPolicySave } from './imageIntentPolicy'
 import type { ImageIntentSettingsPatch } from '#lib/images/intents.js'
@@ -888,6 +890,7 @@ export const updateHubByIdWithConcurrency = async (
   params: HubRelations & {
     id: Id
     actorId?: string
+    featureIntentSettings?: FeatureIntentSettingsPatch
     imageIntentSettings?: ImageIntentSettingsPatch
     updatedAt: string
     data: Partial<
@@ -903,6 +906,17 @@ export const updateHubByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
+  if (params.featureIntentSettings && !params.actorId)
+    throw new Error('Feature type settings require an attributed actor')
+  const featureSettings =
+    params.featureIntentSettings && params.actorId
+      ? await prepareFeatureIntentPolicySave(db, {
+          ...params.featureIntentSettings,
+          scope: { type: 'hub', id: params.id },
+          actorId: params.actorId,
+        })
+      : []
+  if (featureSettings === null) return null
   const revisionGuard = and(eq(hub.id, params.id), eq(hub.modifiedAt, params.updatedAt))
   const updateCore = db.update(hub).set(params.data).where(revisionGuard).returning({
     id: hub.id,
@@ -954,6 +968,7 @@ export const updateHubByIdWithConcurrency = async (
   // Check the old revision before catalogue writes; advance the parent token after all relations.
   // Preserve the hub and each changed organisation assignment in the same guarded transaction.
   const before = [
+    ...featureSettings,
     ...imageSettings,
     ...ownCapture.before,
     ...capture.before,

@@ -1,3 +1,5 @@
+import { FeatureIntentPolicyError } from '#lib/db/services/featureIntentPolicy.js'
+import { getFeatureIntentSettings } from './featureIntents.remote.js'
 import { suppliedModelTab } from '#lib/forms/modelTabs.js'
 // CONTENT LOCALES
 import { applyContentLocaleSettingsPatch } from '#lib/content-locales/settings.js'
@@ -835,6 +837,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (data.locationUpdatePolicy) {
     submittedDataBeforeHydration.locationUpdatePolicy = data.locationUpdatePolicy
   }
+  if (data.featureIntentSettings) submittedDataBeforeHydration.flags = data.flags
   if (data.imageIntentSettings)
     submittedDataBeforeHydration.imageIntentSettings = data.imageIntentSettings
   const preliminaryUpdateDecision = authorizeProjectUpdateForSubmission({
@@ -987,6 +990,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     submittedDataForUpdate.locationUpdatePolicy = data.locationUpdatePolicy
   }
   // Apply role-based authorization for core update fields.
+  if (data.featureIntentSettings) submittedDataForUpdate.flags = data.flags
   if (data.imageIntentSettings)
     submittedDataForUpdate.imageIntentSettings = data.imageIntentSettings
   const updateDecision = authorizeProjectUpdateForSubmission({
@@ -1138,6 +1142,14 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   // Persist main record atomically with optimistic concurrency.
   const persisted = requireValue(
     await updateProjectByIdWithConcurrency(db, {
+      featureIntentSettings: data.featureIntentSettings,
+      featureNameProperties: hasSubmittedProperties
+        ? normalizedSubmittedProperties.map(property => ({
+            id: property.id,
+            dataType: property.dataType,
+            audience: property.audience,
+          }))
+        : undefined,
       imageIntentSettings: data.imageIntentSettings,
       actorId: user.id,
       id: current.id as Id,
@@ -1163,6 +1175,8 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         capabilities: submittedProjectCapabilities,
       },
     }).catch(cause => {
+      if (cause instanceof FeatureIntentPolicyError)
+        invalid(issue.data.featureIntentSettings(cause.message))
       if (isProjectMapStyleUnavailable(cause)) invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
       throw cause
     }),
@@ -1173,6 +1187,8 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   // UPDATE FLOW: COMMITTED RESPONSE
   /* -------- */
 
+  if (data.featureIntentSettings)
+    await getFeatureIntentSettings({ type: 'project', id: current.id }).refresh()
   return toCreatedResponseShape(persisted)
 })
 
