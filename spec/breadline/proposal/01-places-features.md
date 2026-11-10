@@ -3334,15 +3334,90 @@ without reclassifying existing Locations. Apply the migrations before running th
 query code. Production rollout is separate.
 
 Localized naming supports a feature or Location base plus ordered conditional fragments
-from public boolean properties, with separate true, false and unset cases. Each locale
-controls its text, placement and separator. New Features pin the reviewed rule in
-`nameTemplate`; changing project defaults does not rewrite existing Features. Public
-read projections use accepted Location names and current public boolean values, with
-explicit per-locale Feature overrides taking precedence. No arbitrary expressions or
-internal properties enter generated names. Base text, rule and overrides remain in
-immutable Feature history. Generated names are a read projection; existing text-search
-indexes and sorting continue to use stored title text, a limitation for conditional
-suffix searches until generated-name indexing is added.
+from boolean properties or ToggleField controls, regardless of field audience, with
+separate true, false and unset cases. Each locale controls its text, placement and
+separator. New Features pin the reviewed rule in `nameTemplate`; changing project
+defaults does not rewrite existing Features. The Feature stores only `{ rule }`. Each
+`featureI18n` record owns `baseName` (authored Feature input), nullable `nameOverride`,
+and the persisted final `title`. Without a template, `title = baseName`; overrides apply
+only to templated names. A Location-based rule reads the accepted Location name for that
+locale, without copying it over the Feature's authored base. Missing Location
+translations remain unresolved (empty title) unless explicitly overridden; conditional
+fragments cannot supply a missing base.
+
+Project and layer naming rules inherit independently of the type catalogue. Migration
+`0221_feature_naming_policy.sql` moves current embedded rules into the policy’s
+`namingRules` map, keyed by feature type, while retaining historical policy definitions.
+An absent key inherits the parent rule; a layer can override or reset one type’s naming
+without copying its project’s types. The parent form owns Save and Discard, with the
+same ancestry/version guards as catalogue edits. Changing project fields validates rules
+referenced by independent layer overrides as well as the project defaults.
+
+The Model editor keeps naming rules styled as a field beneath Feature kind in the first
+column. An inherited data model shows its naming status without action buttons. After
+enabling the custom data model, inherited naming rules show **Define custom rules**,
+which opens an editable draft in a full-width section underneath all three columns.
+Accepted overrides show **Custom rules**, a condition count, **Reset** to the parent
+default and **Configure naming rule** to reopen the editor. There is no inheritance
+switch. The editor includes a complete title preview. **Accept naming rule** applies the
+isolated draft to the parent form and returns to the summary; **Cancel** discards that
+editing session. The parent form still owns Save and Discard. Naming actions are
+available only while the data model is editable. The editor uses the parent multilingual
+bar, with no separate locale selector. Visible languages appear as rows; each row owns
+its text, placement and separator. Rule headers support drag ordering, keyboard
+reordering and removal, with a plus button to add rules.
+
+The editor explains missing boolean and toggle fields, supports loading retries and
+condition ordering, and preserves text in languages not currently visible. Existing
+Features retain their pinned rules when these defaults change.
+
+The naming-policy browser check (`scripts/visual-checks/naming-policy-check.ts`)
+verifies naming-only Save, inheritance, isolated Accept/Cancel drafts, compact
+summaries, full-width expansion, ordered and localized previews, empty-field
+explanations and load retry in headless Chromium and Firefox at 1440px and 390px, with
+no horizontal overflow or page errors. It uses real components with mocked policy
+transport; SQL tests separately cover persistence, dependency validation and migration.
+
+Short-text fields (`InputField`, including retained `TextField` definitions) also
+support presence conditions. These pin `test: "hasValue"` and expose **Has value** /
+**Has no value** instead of boolean cases. Missing, empty and whitespace-only text use
+the latter; nonempty text, including literal "false" or "0", uses the former. Migration
+`0226_feature_naming_text_values.sql` makes **Has value** insert the actual property
+text; only **Has no value** is authored fallback text. The editor shows read-only
+examples from the field’s localized placeholder, or a neutral sample when absent.
+Translated fields check the title's locale with a scalar-value fallback. Migration
+`0225_feature_naming_text_presence.sql` updates materialization and refreshes titles on
+translated-value insert, update and delete. Policy validation prevents replacing a
+referenced short-text field with an incompatible field type. Verification includes
+SQLite/preview parity, localized refreshes and browser selection, two-case previews,
+save/reopen and switching back to boolean fields.
+
+Migration `0220_feature_name_materialization.sql` relocates legacy localized inputs and
+materializes titles. SQLite write triggers refresh titles atomically on authored input,
+pinned rule, boolean or toggle property, accepted association and ownership changes.
+Shared corrections and Organisation choices follow the existing accepted revision pins;
+an unaccepted upstream revision does not rename a Feature. Ordinary readers, sorting and
+search consume stored titles; existing FTS triggers index their updates. No arbitrary
+expressions enter generated names. Authorized naming rules may use internal fields;
+boolean rules expose their configured text; short-text rules intentionally insert the
+selected field value into the generated title. The source field retains its audience
+setting.
+
+Immutable revision payloads and hashes are retained. New revision translations keep
+`title.value` as the authored base text (the established history contract), with a
+localized `nameOverride`; projection guards compare these authored inputs rather than
+the derived display title. Compatibility readers resolve older `baseNames`/`overrides`
+inside historical templates without rewriting history. The existing form transport's
+`title` input edits `baseName`, never the computed title returned by read APIs.
+
+This naming-model follow-up is tracked under #241. Local verification: 198 tests pass
+across eight focused files, including migrated revision saves and form input separation.
+Migration 0220 was rehearsed and applied to the local D1 database: all 4,736
+translations have bases, revision and association hashes remain unchanged, and
+FK/integrity checks pass. A private-copy check confirms generated suffix tokens enter
+and leave the actual contentless FTS index. Broader query/location fixtures remain
+blocked by missing shared correction and taxonomy schema; Svelte checking reports
+unrelated test-file errors. Release and deployed acceptance remain separate.
 
 Implementation contracts are in `features/locationPolicy.ts`, `features/intents.ts`,
 `featureIntents.remote.ts` and the `featureIntent` form components. Focused migration,
