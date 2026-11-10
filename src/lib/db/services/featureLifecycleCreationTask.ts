@@ -5,6 +5,10 @@ import { z } from 'zod'
 // SCHEMA
 import { lifecycleTask } from '../schema/featureLifecycle.target'
 // DOMAIN
+import {
+  featureRevisionBaseName,
+  featureRevisionNameOverride,
+} from '#lib/revisions/featureNaming.js'
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 import { FeatureEntityFormData } from '../zod/schema/feature'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
@@ -200,7 +204,9 @@ export function featureCreationTaskFormData(
     geometry: content.placement.geometry,
     addressMeta: content.placement.addressMeta,
     featureType: content.profile.featureType ?? null,
-    nameTemplate: content.profile.nameTemplate ?? null,
+    nameTemplate: content.profile.nameTemplate
+      ? { rule: content.profile.nameTemplate.rule }
+      : null,
     kind: content.profile.kind ?? null,
     targetContext: content.profile.targetContext ?? null,
     associationRelation: content.profile.associationRelation ?? null,
@@ -213,7 +219,8 @@ export function featureCreationTaskFormData(
       Object.entries(content.translations).map(([locale, value]) => [
         contentFormKey(locale),
         {
-          title: value.title.value,
+          nameOverride: featureRevisionNameOverride(content, locale),
+          title: featureRevisionBaseName(content, locale),
           titleGen: value.title.generated,
           description: value.description.value ?? '',
           descriptionGen: value.description.generated,

@@ -270,7 +270,8 @@ export function buildFeatureRevisionBaselineContent(
       Object.entries(indexRows(source.translations, 'locale')).map(([locale, row]) => [
         locale,
         {
-          title: { value: row.title, generated: row.titleGen },
+          title: { value: row.baseName ?? row.title, generated: row.titleGen },
+          ...(row.nameOverride !== undefined ? { nameOverride: row.nameOverride } : {}),
           description: { value: row.description, generated: row.descriptionGen },
           address: {
             value: row.displayAddress,

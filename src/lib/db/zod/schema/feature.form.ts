@@ -32,6 +32,7 @@ import type { GeometryObject } from 'geojson'
 // ---
 
 export const FeatureI18nFormData = z.object({
+  nameOverride: z.string().max(1000).nullish(),
   title: z.string().max(128, { message: m.admin__validation_lte_128_chars() }),
   titleGen: FormBoolean.default(false),
   description: z
@@ -48,6 +49,7 @@ export const FeatureI18nFormData = z.object({
 })
 
 export const FeatureDraftI18nFormData = z.object({
+  nameOverride: z.string().max(1000).nullish(),
   title: z.string().max(128, { message: m.admin__validation_lte_128_chars() }),
   titleGen: FormBoolean.default(false),
   description: z

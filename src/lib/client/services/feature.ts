@@ -1,5 +1,5 @@
 // CONTENT LOCALE ADAPTERS
-import { adaptContentMap } from '#lib/i18n/contentRecords.js'
+import { adaptContentMap, canonicalContentTag } from '#lib/i18n/contentRecords.js'
 import { browser } from '$app/env'
 import { goto } from '$app/navigation'
 // PROPERTY CONTRACT
@@ -273,7 +273,13 @@ export function toFeatureFormInput(
       projectId: value.projectId,
       layerId: value.layerId,
       featureType: value.featureType,
-      nameOverrides: value.nameTemplate?.overrides,
+      nameOverrides: Object.fromEntries(
+        Object.entries(value.i18n ?? {}).flatMap(([locale, row]) =>
+          row.nameOverride == null
+            ? []
+            : [[canonicalContentTag(locale), row.nameOverride]],
+        ),
+      ),
       kind: value.kind,
       targetContext: value.targetContext,
       associationRelation: value.associationRelation,
@@ -294,10 +300,7 @@ export function toFeatureFormInput(
           locale,
           {
             // Edit the authored base so generated suffixes never become permanent text.
-            title:
-              adaptContentMap(value.nameTemplate?.baseNames ?? {})?.[locale] ??
-              row.title ??
-              '',
+            title: row.baseName ?? row.title ?? '',
             titleGen: row.titleGen ?? false,
             description: row.description ?? '',
             descriptionGen: row.descriptionGen ?? false,

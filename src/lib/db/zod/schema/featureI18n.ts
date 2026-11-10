@@ -9,6 +9,8 @@ import type { AddressProperties } from '#lib/utils/address.types.js'
 export const FeatureI18nBase = z.object({
   featureId: z.string(),
   locale: ContentTagInput,
+  baseName: z.string().nullish(),
+  nameOverride: z.string().nullish(),
   title: z.string(),
   titleGen: z.boolean(),
   description: z.string().nullable(),

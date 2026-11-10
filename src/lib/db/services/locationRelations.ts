@@ -77,7 +77,8 @@ export function prepareFeatureFormRelations(
   const locales = contentMapToStorage(translations)
   // Source projection must not overwrite independently authored Feature names.
   const keepNames = preserveIndependentNames
-    ? sql`EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${featureId} AND json_extract(acceptancePolicy,'$.nameMode')='independent')`
+    ? sql`EXISTS(SELECT 1 FROM feature WHERE id=${featureId} AND nameTemplate IS NOT NULL)
+      OR EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${featureId} AND json_extract(acceptancePolicy,'$.nameMode')='independent')`
     : sql`0`
   // Omitted locales belong to older/partial clients and are retained, never deleted.
   const queries: BatchItem<'sqlite'>[] = []
@@ -85,6 +86,8 @@ export function prepareFeatureFormRelations(
   for (const [locale, value] of Object.entries(locales)) {
     if (!value) continue
     const updateValues = {
+      baseName: sql`CASE WHEN ${keepNames} THEN COALESCE(${featureI18n.baseName},${featureI18n.title}) ELSE ${value.baseName ?? value.title ?? sql`COALESCE(${featureI18n.baseName},${featureI18n.title})`} END`,
+      ...(value.nameOverride !== undefined ? { nameOverride: value.nameOverride } : {}),
       title: sql`CASE WHEN ${keepNames} THEN ${featureI18n.title} ELSE ${value.title === undefined ? featureI18n.title : value.title} END`,
       titleGen: sql`CASE WHEN ${keepNames} THEN ${featureI18n.titleGen} ELSE ${value.titleGen === undefined ? featureI18n.titleGen : Number(value.titleGen)} END`,
       description: value.description,
@@ -105,7 +108,7 @@ export function prepareFeatureFormRelations(
           ),
         ),
       db.insert(featureI18n).select(sql`SELECT
-      ${featureId}, ${locale}, CASE WHEN ${keepNames} THEN '' ELSE ${value.title ?? ''} END, ${Number(value.titleGen ?? true)},
+      ${featureId}, ${locale}, ${value.baseName ?? value.title ?? ''}, ${value.nameOverride ?? null}, CASE WHEN ${keepNames} THEN '' ELSE ${value.title ?? ''} END, ${Number(value.titleGen ?? true)},
       ${value.description ?? null}, ${Number(value.descriptionGen ?? true)},
       ${value.displayAddress ?? null}, ${Number(value.displayAddressGen ?? true)},
       ${value.addressProperties == null ? null : JSON.stringify(value.addressProperties)}

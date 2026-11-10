@@ -1135,10 +1135,8 @@ describe('existing form revision routing', () => {
       form(previous),
       true,
     )
-    expect(result.profile.nameTemplate).toEqual({
-      ...template,
-      baseNames: { en: 'Saved form title' },
-    })
+    expect(result.profile.nameTemplate).toEqual({ rule: template.rule })
+    expect(result.translations.en.title.value).toBe('Saved form title')
   })
   it.each([null, '', '[]', undefined])(
     'preserves a stored empty phone when the form submits %s',

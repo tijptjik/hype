@@ -292,7 +292,6 @@ const ReadLocationBrands = z.preprocess(
 )
 
 export const FeatureListRow = FeatureBase.extend({
-  nameValues: z.string().optional(),
   locationBrands: ReadLocationBrands,
   locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
@@ -322,7 +321,6 @@ export const FeatureCardRow = FeatureListRow.extend({
 })
 
 export const FeatureAdminRow = FeatureBase.extend({
-  nameValues: z.string().optional(),
   locationBrands: ReadLocationBrands,
   locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,

@@ -1,4 +1,3 @@
-import { featureNameValuesSQL } from '#lib/db/services/featureNameProjection.js'
 import { featureAuthoringSQL } from './featureAuthoringProjection'
 import { historicalFeatureVisibility } from '#lib/db/services/historicalLayers.js'
 // DRIZZLE
@@ -522,7 +521,6 @@ export async function queryFeaturePage(
           extras: {
             locationBrands: featureLocationBrandsSQL().as('locationBrands'),
             locationNames: featureLocationNamesSQL().as('locationNames'),
-            nameValues: featureNameValuesSQL().as('nameValues'),
             authoring: featureAuthoringSQL().as('authoring'),
             locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
           },

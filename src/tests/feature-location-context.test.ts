@@ -101,9 +101,7 @@ describe('new feature location intent', () => {
     expect(generateFeatureName({ ...input, override: '' })).toBe('')
     expect(nameBooleanValue('false')).toBe(false)
     expect(nameBooleanValue(null)).toBeNull()
-    expect(
-      FeatureNameTemplateSchema.parse({ rule, baseNames: {}, overrides: {} }).rule,
-    ).toEqual(rule)
+    expect(FeatureNameTemplateSchema.parse({ rule }).rule).toEqual(rule)
   })
   it('persists layer overrides, keeps legacy rows untouched and rejects establishment targets for parts', async () => {
     const f = publicationSqlite({})
@@ -219,40 +217,25 @@ describe('new feature location intent', () => {
   })
 })
 
-it('projects generated names at the API boundary from live public boolean values and preserves locale overrides', async () => {
+it('returns persisted titles without evaluating naming rules on reads', async () => {
   const { toEntityResponseShape } = await import('#lib/api/services/feature.js')
-  const row = {
-    id: 'f',
-    organisationId: 'o',
-    projectId: 'p',
-    layerId: 'l',
-    isPublished: false,
-    isArchived: false,
-    modifiedAt: '2026-11-10',
-    nameTemplate: {
-      rule,
-      baseNames: { en: 'Base', 'zh-hant': '原名' },
-      overrides: { 'zh-Hant': '自訂名稱' },
-    },
-    nameValues: '{"paid":"true"}',
-    locationNames: '{"en":"Bakery","zh-hant":"麵包店"}',
-    i18n: [
-      { locale: 'en', title: 'Base' },
-      { locale: 'zh-hant', title: '原名' },
-    ],
-  }
-  const response = await toEntityResponseShape(row as never, 'compact')
-  expect(response.data?.i18n?.en.title).toBe('Bakery Paid')
-  expect(response.data?.i18n?.zhHant.title).toBe('自訂名稱')
-  const moved = await toEntityResponseShape(
+  const response = await toEntityResponseShape(
     {
-      ...row,
-      locationNames: '{"en":"New Bakery"}',
+      id: 'f',
+      organisationId: 'o',
+      projectId: 'p',
+      layerId: 'l',
+      isPublished: false,
+      isArchived: false,
+      modifiedAt: '2026-11-10',
+      nameTemplate: { rule },
       nameValues: '{"paid":"false"}',
+      locationNames: '{"en":"Different venue"}',
+      i18n: [{ locale: 'en', baseName: 'Authored', title: 'Stored final title' }],
     } as never,
     'compact',
   )
-  expect(moved.data?.i18n?.en.title).toBe('New Bakery')
+  expect(response.data?.i18n?.en.title).toBe('Stored final title')
 })
 
 it('keeps explicit address classes separate while retaining broad legacy address permissions', () => {

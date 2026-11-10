@@ -42,6 +42,8 @@ const textValue = z.strictObject({
   generated: z.boolean().nullable(),
 })
 const translation = z.strictObject({
+  // Optional preserves immutable pre-migration hashes; title.value remains authored base text.
+  nameOverride: z.string().nullable().optional(),
   title: z.strictObject({ value: z.string(), generated: z.boolean() }),
   description: z.strictObject({ value: z.string().nullable(), generated: z.boolean() }),
   address: z.strictObject({
@@ -248,7 +250,11 @@ export const FeatureRevisionContentSchema = z
     profile: z.strictObject({
       // Optional preserves existing immutable content hashes.
       featureType: z.string().nullable().optional(),
-      nameTemplate: FeatureNameTemplateSchema.nullish(),
+      nameTemplate: FeatureNameTemplateSchema.extend({
+        // Retained historical inputs only; new writes store these on translations.
+        baseNames: z.record(z.string(), z.string()).optional(),
+        overrides: z.record(z.string(), z.string()).optional(),
+      }).nullish(),
       kind: FeatureKindSchema.nullish(),
       targetContext: TargetContextSchema.nullish(),
       associationRelation: AssociationRelationSchema.nullish(),

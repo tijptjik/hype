@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 import { expandLocationMatchingTypes } from '#lib/locations/taxonomy.js'
 // VALIDATION
 import { z } from 'zod'
@@ -79,6 +81,7 @@ export const FeatureNameRuleSchema = z.strictObject({
     .array(
       z.strictObject({
         propertyId: z.string().min(1),
+        test: z.enum(['boolean', 'hasValue']).optional(),
         locales: z.record(z.string().min(2).max(30), localizedCase),
       }),
     )
@@ -87,7 +90,7 @@ export const FeatureNameRuleSchema = z.strictObject({
 export type FeatureNameRule = z.infer<typeof FeatureNameRuleSchema>
 
 /** Compose a localized title without evaluating arbitrary expressions.
- * @param input Names, boolean field values and optional explicit per-locale override.
+ * @param input Names, boolean or short-text field values and optional explicit per-locale override.
  * @returns Generated name, or the explicit override when present.
  * @remarks False and missing values remain distinct; empty cases never introduce separators.
  */
@@ -96,22 +99,34 @@ export function generateFeatureName(input: {
   locale: string
   locationName?: string
   featureName?: string
-  properties: Record<string, boolean | null | undefined>
+  properties: Record<string, boolean | string | null | undefined>
   override?: string | null
 }): string {
   if (input.override != null) return input.override
   let name =
-    (input.rule.base === 'location' ? input.locationName : input.featureName) ||
-    input.featureName ||
-    ''
+    (input.rule.base === 'location' ? input.locationName : input.featureName) ?? ''
+  // A missing source is unresolved; conditional fragments cannot invent a base name.
+  if (!name) return ''
   for (const condition of input.rule.conditions) {
     const text = Object.entries(condition.locales).find(
-      ([locale]) => locale.toLowerCase() === input.locale.toLowerCase(),
+      ([locale]) => canonicalContentTag(locale) === canonicalContentTag(input.locale),
     )?.[1]
     if (!text) continue
     const value = input.properties[condition.propertyId]
+    const state =
+      condition.test === 'hasValue'
+        ? typeof value === 'string' && value.trim()
+          ? 'true'
+          : 'false'
+        : value === true
+          ? 'true'
+          : value === false
+            ? 'false'
+            : 'null'
     const part =
-      text[value === true ? 'true' : value === false ? 'false' : 'null'].trim()
+      condition.test === 'hasValue' && typeof value === 'string' && value.trim()
+        ? value
+        : text[state].trim()
     if (part)
       name = !name
         ? part
@@ -125,8 +140,6 @@ export function generateFeatureName(input: {
 /** New features pin the reviewed naming rule; changing project defaults does not rewrite existing content. */
 export const FeatureNameTemplateSchema = z.strictObject({
   rule: FeatureNameRuleSchema,
-  baseNames: z.record(z.string(), z.string()),
-  overrides: z.record(z.string(), z.string().max(1000)),
 })
 export type FeatureNameTemplate = z.infer<typeof FeatureNameTemplateSchema>
 
@@ -149,4 +162,17 @@ export function isFeatureNameBooleanField(field: {
   component?: string | null
 }): boolean {
   return field.dataType === 'boolean' || field.component === 'ToggleField'
+}
+
+/** Identify single-line text fields usable for presence conditions.
+ * @param field Stored or resolved field definition. @returns Whether this is short text, excluding toggles and rich text.
+ */
+export function isFeatureNameTextField(field: {
+  dataType?: string | null
+  component?: string | null
+}): boolean {
+  return (
+    field.dataType === 'text' &&
+    ['InputField', 'TextField'].includes(field.component ?? '')
+  )
 }

@@ -326,7 +326,9 @@ export async function createFeatureIdentityProposal(
             .addressMeta as typeof feature.$inferInsert.addressMeta,
           spatialIndex: createFeatureSpatialIndex(baseline.placement.geometry),
           featureType: baseline.profile.featureType ?? null,
-          nameTemplate: baseline.profile.nameTemplate ?? null,
+          nameTemplate: baseline.profile.nameTemplate
+            ? { rule: baseline.profile.nameTemplate.rule }
+            : null,
           kind: baseline.profile.kind ?? null,
           targetContext: baseline.profile.targetContext ?? null,
           associationRelation: baseline.profile.associationRelation ?? null,

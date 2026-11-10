@@ -85,7 +85,9 @@ export function prepareNewLifecycleFeature(
     geometry: content.placement.geometry,
     addressMeta: content.placement.addressMeta,
     featureType: content.profile.featureType ?? null,
-    nameTemplate: content.profile.nameTemplate ?? null,
+    nameTemplate: content.profile.nameTemplate
+      ? { rule: content.profile.nameTemplate.rule }
+      : null,
     kind: content.profile.kind ?? null,
     targetContext: content.profile.targetContext ?? null,
     associationRelation: content.profile.associationRelation ?? null,

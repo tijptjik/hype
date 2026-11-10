@@ -1,4 +1,3 @@
-import { featureNameValuesSQL } from '#lib/db/services/featureNameProjection.js'
 // FEATURE INTENT
 import { assertFeatureIntentPublication } from './featureIntentPolicy'
 // NANOID
@@ -462,7 +461,6 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
         : {
             locationBrands: featureLocationBrandsSQL().as('locationBrands'),
             locationNames: featureLocationNamesSQL().as('locationNames'),
-            nameValues: featureNameValuesSQL().as('nameValues'),
             authoring: featureAuthoringSQL().as('authoring'),
             locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
           },
@@ -536,7 +534,6 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
         presentationPolicy: featurePresentationPolicySQL().as('presentationPolicy'),
         locationBrands: featureLocationBrandsSQL().as('locationBrands'),
         locationNames: featureLocationNamesSQL().as('locationNames'),
-        nameValues: featureNameValuesSQL().as('nameValues'),
         authoring: featureAuthoringSQL().as('authoring'),
         locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
       },

@@ -12,6 +12,10 @@ import { featureLocation } from '../schema/location'
 import { featureLocationMembership } from '../schema/locationRelationships'
 // DOMAIN
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
+import {
+  featureRevisionBaseName,
+  featureRevisionNameOverride,
+} from '#lib/revisions/featureNaming.js'
 import { equalRevisionValue } from '#lib/revisions/merge.js'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // SERVICES
@@ -36,6 +40,8 @@ type EditorialRows = {
   i18n: {
     locale: string
     title: string
+    baseName: string
+    nameOverride: string | null
     titleGen: boolean
     description: string | null
     descriptionGen: boolean
@@ -96,6 +102,9 @@ function exactRows(
     .filter(([key]) => key !== 'featureId' && !ignoredColumns.includes(key))
     .map(([key, column]) => {
       const value = sql`json_extract(expected.value,${sql.raw(`'$.${key}'`)})`
+      // title is a derived projection; retained title-only rows still have authored bases.
+      if (table === featureI18n && key === 'baseName')
+        return sql`COALESCE(${featureI18n.baseName},${featureI18n.title}) IS ${value}`
       return column.dataType === 'json'
         ? jsonEqual(sql`${column}`, value)
         : sql`${column} IS ${value}`
@@ -118,7 +127,9 @@ function editorialRows(content: FeatureRevisionContent): EditorialRows {
   return {
     i18n: Object.entries(content.translations).map(([locale, row]) => ({
       locale,
-      title: row.title.value,
+      title: featureRevisionBaseName(content, locale),
+      baseName: featureRevisionBaseName(content, locale),
+      nameOverride: featureRevisionNameOverride(content, locale),
       titleGen: row.title.generated,
       description: row.description.value,
       descriptionGen: row.description.generated,
@@ -153,7 +164,7 @@ function editorialGuard(featureId: string, content: FeatureRevisionContent): SQL
   const rows = editorialRows(content)
   return sql`EXISTS (SELECT 1 FROM ${feature} WHERE ${feature.id}=${featureId}
     AND ${feature.featureType} IS ${content.profile.featureType ?? null}
-    AND (${jsonEqual(sql`${feature.nameTemplate}`, sql`${content.profile.nameTemplate ? JSON.stringify(content.profile.nameTemplate) : null}`)})
+    AND (${jsonEqual(sql`${feature.nameTemplate}`, sql`${content.profile.nameTemplate ? JSON.stringify({ rule: content.profile.nameTemplate.rule }) : null}`)})
     AND ${feature.kind} IS ${content.profile.kind ?? null}
     AND ${feature.targetContext} IS ${content.profile.targetContext ?? null}
     AND ${feature.associationRelation} IS ${content.profile.associationRelation ?? null}
@@ -163,7 +174,7 @@ function editorialGuard(featureId: string, content: FeatureRevisionContent): SQL
     AND ${feature.visitableAsOf} IS ${content.profile.visitability.asOf}
     AND (${jsonEqual(sql`${feature.geometry}`, sql`${JSON.stringify(content.placement.geometry)}`)})
     AND (${jsonEqual(sql`${feature.addressMeta}`, sql`${content.placement.addressMeta === null ? null : JSON.stringify(content.placement.addressMeta)}`)}))
-    AND (${exactRows(featureI18n, featureId, rows.i18n)})
+    AND (${exactRows(featureI18n, featureId, rows.i18n, ['title'])})
     AND (${exactRows(featureProperty, featureId, rows.properties)})
     AND (${exactRows(featurePropertyI18n, featureId, rows.propertyI18n)})`
 }
@@ -428,7 +439,9 @@ export function prepareFeatureEditorialProjection(
       content.profile.nameTemplate ?? null,
     )
   )
-    recordChanges.nameTemplate = content.profile.nameTemplate ?? null
+    recordChanges.nameTemplate = content.profile.nameTemplate
+      ? { rule: content.profile.nameTemplate.rule }
+      : null
   // Avoid firing lifecycle/location triggers for fields this editorial change did not edit.
   if (previous.profile.isIntangible !== content.profile.isIntangible)
     recordChanges.isIntangible = content.profile.isIntangible

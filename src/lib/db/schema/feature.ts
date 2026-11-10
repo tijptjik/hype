@@ -270,6 +270,9 @@ export const featureI18n = sqliteTable(
       .notNull()
       .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     locale: text('locale').notNull(),
+    // Authored input and explicit override; title is maintained by naming projection triggers.
+    baseName: text('baseName'),
+    nameOverride: text('nameOverride'),
     // Full Name in {locale}
     title: text('title').notNull(),
     titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(true),

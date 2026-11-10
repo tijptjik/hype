@@ -12,8 +12,12 @@ import {
 } from './featureParentTransfer'
 // DOMAIN
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
+import {
+  featureRevisionBaseName,
+  featureRevisionNameOverride,
+} from '#lib/revisions/featureNaming.js'
 import { equalRevisionValue } from '#lib/revisions/merge.js'
-import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
+import { contentMapToStorage, canonicalContentTag } from '#lib/i18n/contentRecords.js'
 import { validateFeatureTranslationResult } from '#lib/revisions/featureTranslationReview.js'
 // SERVICES
 import { prepareFeatureLocationTransfer } from './featureLocationTransfer'
@@ -94,36 +98,43 @@ export function buildFeatureFormCandidate(
   if (data.associationRelation !== undefined)
     source.record.associationRelation = data.associationRelation
 
-  if (previous.profile.nameTemplate)
-    source.record.nameTemplate = {
-      ...previous.profile.nameTemplate,
-      baseNames:
-        previous.profile.nameTemplate.rule.base === 'feature'
-          ? {
-              ...previous.profile.nameTemplate.baseNames,
-              ...Object.fromEntries(
-                Object.entries(contentMapToStorage(data.i18n)).map(([locale, row]) => [
-                  locale,
-                  row.title ?? '',
-                ]),
-              ),
-            }
-          : previous.profile.nameTemplate.baseNames,
-      overrides: data.nameOverrides ?? previous.profile.nameTemplate.overrides,
-    } as RevisionValue
+  source.record.nameTemplate = previous.profile.nameTemplate
+    ? ({ rule: previous.profile.nameTemplate.rule } as RevisionValue)
+    : null
   source.record.isIntangible = Boolean(data.isIntangible)
   source.record.isVisitable = Boolean(data.isVisitable)
-  const locales = new Map(source.translations.map(row => [String(row.locale), row]))
+  // Normalize retained authored inputs, including old snapshots, before applying this edit.
+  const locales = new Map<string, (typeof source.translations)[number]>(
+    source.translations.map(row => {
+      const locale = String(row.locale)
+      return [
+        locale,
+        {
+          ...row,
+          baseName: featureRevisionBaseName(previous, locale),
+          nameOverride: featureRevisionNameOverride(previous, locale),
+        },
+      ] as const
+    }),
+  )
   for (const [locale, value] of Object.entries(contentMapToStorage(data.i18n))) {
     const prior = locales.get(locale)
     const next = {
       ...prior,
       featureId: source.record.id,
       locale,
-      title:
-        previous.profile.nameTemplate?.rule.base === 'location'
-          ? (prior?.title ?? value.title ?? '')
-          : (value.title ?? prior?.title ?? ''),
+      baseName: value.title ?? prior?.baseName ?? prior?.title ?? '',
+      title: value.title ?? prior?.baseName ?? prior?.title ?? '',
+      nameOverride: previous.profile.nameTemplate
+        ? data.nameOverrides === undefined
+          ? (value.nameOverride ??
+            prior?.nameOverride ??
+            previous.translations[locale]?.nameOverride ??
+            null)
+          : (Object.entries(data.nameOverrides).find(
+              ([tag]) => canonicalContentTag(tag) === canonicalContentTag(locale),
+            )?.[1] ?? null)
+        : null,
       titleGen: value.titleGen ?? prior?.titleGen ?? true,
       description:
         value.description === undefined

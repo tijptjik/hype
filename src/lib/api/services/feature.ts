@@ -1,6 +1,5 @@
 import { readFeatureIntentPolicy } from '#lib/db/services/featureIntentPolicy.js'
 import { requireFeatureType } from '#lib/features/intents.js'
-import { generateFeatureName, nameBooleanValue } from '#lib/features/locationPolicy.js'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 import {
@@ -308,7 +307,6 @@ type FeatureImageRelation = {
 }
 
 type FeatureResponseRow = FeatureAdminDBRaw & {
-  nameValues?: string
   locationNames?: string | Record<string, string> | null
   imageCount?: number
   imagePublishedCount?: number
@@ -438,33 +436,8 @@ const toProfileResponseShape = async (
   row: FeatureResponseRow,
   profile: FeatureProfile,
 ): Promise<FeatureEntityByProfile<FeatureProfile>> => {
-  // Names are a read projection; accepted base text and per-locale overrides remain intact.
+  // Titles are materialized on writes; readers never recompute naming rules.
   const translations = contentRowsToForm(row.i18n ?? [])
-  if (row.nameTemplate) {
-    const template = row.nameTemplate
-    const names =
-      adaptContentMap<string>(
-        typeof row.locationNames === 'string'
-          ? JSON.parse(row.locationNames)
-          : (row.locationNames ?? {}),
-      ) ?? {}
-    const properties = Object.fromEntries(
-      Object.entries(row.nameValues ? JSON.parse(row.nameValues) : {}).map(
-        ([id, value]) => [id, nameBooleanValue(value)],
-      ),
-    )
-    for (const [locale, translation] of Object.entries(translations)) {
-      translation.title = generateFeatureName({
-        rule: template.rule,
-        locale: canonicalContentTag(locale),
-        featureName:
-          adaptContentMap(template.baseNames)?.[locale] ?? translation.title ?? '',
-        locationName: names[locale],
-        properties,
-        override: adaptContentMap(template.overrides)?.[locale],
-      })
-    }
-  }
   if (profile === 'compact')
     return FeatureCompactProfileAPI.parse({
       ...row,
@@ -1198,15 +1171,17 @@ const prepareUserContributedFeatureCreation = async (
     type && (type.nameRule || type.relation === 'represents')
       ? {
           rule: type.nameRule ?? { base: 'location' as const, conditions: [] },
-          baseNames: Object.fromEntries(
-            Object.entries(validatedFeature.i18n).map(([locale, row]) => [
-              locale,
-              row.title ?? '',
-            ]),
-          ),
-          overrides: validatedFeature.nameOverrides ?? {},
         }
       : null
+  // Store localized authoring inputs beside the computed translation title.
+  for (const [locale, row] of Object.entries(validatedFeature.i18n)) {
+    Object.assign(row, {
+      baseName: row.title,
+      nameOverride: nameTemplate
+        ? (validatedFeature.nameOverrides?.[canonicalContentTag(locale)] ?? null)
+        : null,
+    })
+  }
   return {
     data: {
       ...validatedFeature,

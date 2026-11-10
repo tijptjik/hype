@@ -170,7 +170,9 @@ export async function prepareInitialFeatureDraftSave(
     geometry: previous.placement.geometry,
     addressMeta: previous.placement.addressMeta,
     featureType: previous.profile.featureType ?? null,
-    nameTemplate: previous.profile.nameTemplate ?? null,
+    nameTemplate: previous.profile.nameTemplate
+      ? { rule: previous.profile.nameTemplate.rule }
+      : null,
     kind: previous.profile.kind ?? null,
     targetContext: previous.profile.targetContext ?? null,
     associationRelation: previous.profile.associationRelation ?? null,

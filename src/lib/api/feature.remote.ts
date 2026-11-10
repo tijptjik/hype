@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 // DOMAIN
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { sharedLocationEditRights } from './services/locationOwnership'
@@ -652,14 +654,19 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       if (selected.nameRule || data.associationRelation === 'represents') {
         nameTemplate = {
           rule: selected.nameRule ?? { base: 'location', conditions: [] },
-          baseNames: Object.fromEntries(
-            Object.entries(data.i18n).map(([locale, row]) => [locale, row.title ?? '']),
-          ),
-          overrides: data.nameOverrides ?? {},
         }
       }
     } catch (cause) {
       invalid(issue(cause instanceof Error ? cause.message : 'Invalid feature type'))
+    }
+    // Store localized authoring inputs beside the computed translation title.
+    for (const [locale, row] of Object.entries(data.i18n)) {
+      Object.assign(row, {
+        baseName: row.title,
+        nameOverride: nameTemplate
+          ? (data.nameOverrides?.[canonicalContentTag(locale)] ?? null)
+          : null,
+      })
     }
     const presentationPolicy = await readFeaturePresentationPolicy(db, data.layerId)
     if (!presentationPolicy.allowDescriptions) {
