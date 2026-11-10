@@ -354,17 +354,31 @@ function removeRule(index: number): void {
   ruleKeys = ruleKeys.filter((_, i) => i !== index)
   onChange({ ...rule, conditions: rule.conditions.filter((_, i) => i !== index) })
 }
-/** Read a field's configured example without sampling private feature records.
- * @param propertyId Selected field. @param locale Content locale. @returns Placeholder example or neutral sample text.
+/** Read a saved field value from the authorized project's examples.
+ * @param propertyId Selected field. @param locale Content locale. @returns Saved example or an empty string when no populated value exists.
  */
 function propertyExample(propertyId: string, locale: string): string {
-  const examples =
-    properties.find(property => property.id === propertyId)?.examples ?? {}
+  const property = properties.find(property => property.id === propertyId)
+  const examples = property?.examples ?? {}
   const tag = canonicalContentTag(locale)
-  return (
-    Object.entries(examples).find(([key]) => canonicalContentTag(key) === tag)?.[1] ??
-    (tag === 'zh-Hant' ? '範例文字' : tag === 'zh-Hans' ? '示例文字' : 'Example value')
-  )
+  let example =
+    Object.entries(examples).find(
+      ([key]) => key !== '*' && canonicalContentTag(key) === tag,
+    )?.[1] ??
+    examples['*'] ??
+    ''
+  // Multi-value fields store JSON arrays; show just the first saved item.
+  try {
+    const value: unknown = JSON.parse(example)
+    if (Array.isArray(value)) {
+      const first: unknown = value[0]
+      example =
+        typeof first === 'string' || typeof first === 'number' ? String(first) : ''
+    }
+  } catch {
+    // Ordinary text is already suitable for display.
+  }
+  return example
 }
 /** Describe cases using the selected property's condition semantics.
  * @param condition Naming condition. @param state Persisted case key. @returns Visible and accessible input label.
@@ -590,8 +604,14 @@ function sampleName(locale: string, source: 'feature' | 'location'): string {
                             class="min-w-0 py-2 text-sm break-words whitespace-pre-wrap"
                             data-property-example={locale}
                           >
-                            <span class="text-muted-foreground">For example:</span>
-                            {propertyExample(condition.propertyId, locale)}
+                            {#if propertyExample(condition.propertyId, locale)}
+                              <span class="text-muted-foreground">e.g.</span>
+                              {propertyExample(condition.propertyId, locale)}
+                            {:else}
+                              <span class="text-muted-foreground"
+                                >No filled-in values yet</span
+                              >
+                            {/if}
                           </p>
                         </div>
                       {:else}

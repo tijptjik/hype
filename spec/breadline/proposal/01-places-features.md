@@ -3392,8 +3392,9 @@ support presence conditions. These pin `test: "hasValue"` and expose **Has value
 the latter; nonempty text, including literal "false" or "0", uses the former. Migration
 `0226_feature_naming_text_values.sql` makes **Has value** insert the actual property
 text; only **Has no value** is authored fallback text. The editor shows read-only
-examples from the field’s localized placeholder, or a neutral sample when absent.
-Translated fields check the title's locale with a scalar-value fallback. Migration
+examples labelled “e.g.” from populated values in the authorized project or layer. Array
+examples show the first item; missing examples show an explicit empty state. Translated
+fields check the title's locale with a scalar-value fallback. Migration
 `0225_feature_naming_text_presence.sql` updates materialization and refreshes titles on
 translated-value insert, update and delete. Policy validation prevents replacing a
 referenced short-text field with an incompatible field type. Verification includes

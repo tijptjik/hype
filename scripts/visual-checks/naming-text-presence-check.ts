@@ -19,7 +19,7 @@ export async function getFeatureIntentSettings(scope){
 }
 export async function getFeatureNameProperties(){
  if(globalThis.fieldMode==='error')throw new Error('fixture failure');
- return globalThis.fieldMode==='empty'?[]:[{id:'paid',label:'Paid access'},{id:'caption',label:'Sign caption',test:'hasValue',examples:{en:'Neon lettering','zh-Hant':'霓虹字樣'}}];
+ return globalThis.fieldMode==='empty'?[]:[{id:'paid',label:'Paid access'},{id:'caption',label:'Sign caption',test:'hasValue',examples:{'*':'Scalar caption',en:'Neon lettering','zh-Hant':'霓虹字樣'}}];
 }
 export async function getFeatureNameFieldsProject(){return 'project'}
 export async function getFeatureIntentOptions(){return defaults}
@@ -62,7 +62,7 @@ for (const [engine, browserType] of [
       await choose(page, 'Rule property', 'Sign caption')
       await panel
         .locator('[data-property-example="en"]')
-        .filter({ hasText: 'For example: Neon lettering' })
+        .filter({ hasText: 'e.g. Neon lettering' })
         .waitFor()
       if (await panel.getByRole('textbox', { name: 'Has value', exact: true }).count())
         throw Error('Property value must not be editable here')

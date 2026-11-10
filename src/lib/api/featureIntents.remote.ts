@@ -18,6 +18,7 @@ import {
   readFeatureIntentPolicy,
   type FeatureIntentScope,
 } from '#lib/db/services/featureIntentPolicy.js'
+import { readFeatureNameExamples } from '#lib/db/services/featureNameExamples.js'
 // DOMAIN
 import {
   isFeatureNameBooleanField,
@@ -121,7 +122,7 @@ export const getFeatureIntentOptions = guardedQuery(
 
 /** List boolean, toggle and short-text properties usable in localized generated names.
  * @param scope Authorized policy owner. @returns Selectable property identities and labels.
- * @remarks Authorized rule authors choose the text exposed by both public and internal fields.
+ * @remarks Examples are saved values restricted to the authorized project or layer.
  */
 export const getFeatureNameProperties = guardedQuery(
   scopeSchema,
@@ -141,6 +142,11 @@ export const getFeatureNameProperties = guardedQuery(
     const { listResolvedProjectProperties } = await import(
       '#lib/db/services/property.js'
     )
+    const examples = await readFeatureNameExamples(
+      ctx.db,
+      projectId,
+      scope.type === 'layer' ? scope.id : undefined,
+    )
     return (await listResolvedProjectProperties(ctx.db, projectId))
       .filter(
         field => isFeatureNameBooleanField(field) || isFeatureNameTextField(field),
@@ -148,12 +154,7 @@ export const getFeatureNameProperties = guardedQuery(
       .map(field => ({
         id: field.id,
         label: field.key,
-        examples: Object.fromEntries(
-          Object.entries(field.i18n ?? {}).flatMap(([locale, row]) => {
-            const example = row.placeholder?.trim()
-            return example && example !== 'Type here' ? [[locale, example]] : []
-          }),
-        ),
+        examples: examples[field.id] ?? {},
         test: isFeatureNameBooleanField(field)
           ? ('boolean' as const)
           : ('hasValue' as const),
