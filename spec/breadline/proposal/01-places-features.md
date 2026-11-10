@@ -1,5 +1,11 @@
 # Locations, Feature inheritance and SaanSeoi Addresses
 
+Breadline field reset seed (Refs #194, parent #180): migration
+`0223_breadline_mtr_paid_area.sql` preserves the project-owned `mtrPaidArea` internal
+toggle, its existing English label and project ordering. The field is active on Donors
+and ignored on Dropoff Points; neither layer permits user contributions to this field.
+This seeds configuration only, without assigning values to Features.
+
 Feature transfers (Refs #194, parent #180) preserve accepted Location customisations.
 Cross-organisation moves copy accepted organisation corrections and scoped placement
 evidence with provenance; source-owned local Locations receive independent destination
