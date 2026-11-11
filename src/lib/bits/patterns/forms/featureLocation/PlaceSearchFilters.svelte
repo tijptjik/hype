@@ -40,6 +40,7 @@ let search = $state('')
 let previewQuery = $state<string | undefined>()
 const showSearchResults = $derived(Boolean(search.trim()) && search !== previewQuery)
 let panel: HTMLElement
+let searchInput: HTMLInputElement
 let columnsElement: HTMLElement | undefined = $state()
 const columns = $derived([
   placeTaxonomy,
@@ -55,7 +56,7 @@ const matches = $derived.by(() => {
     ])
   return visit(placeTaxonomy)
 })
-onMount(() => panel.focus())
+onMount(() => searchInput.focus({ preventScroll: true }))
 $effect(() => {
   // Open the sole match's category preview without interrupting further typing.
   const match = matches.length === 1 ? matches[0] : undefined
@@ -114,7 +115,7 @@ function choose(node: PlaceTaxonomyNode): void {
     y: prefersReducedMotion.current ? 0 : 36,
     duration: prefersReducedMotion.current ? 0 : 180,
   }}
-  class="border-border bg-panel text-foreground flex h-full min-h-0 w-full flex-col overflow-hidden rounded-t-xl border shadow-xl outline-none"
+  class="border-border bg-panel text-foreground flex h-full min-h-0 w-full flex-col overflow-hidden border shadow-xl outline-none"
 >
   <div
     class="border-border flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3"
@@ -175,6 +176,7 @@ function choose(node: PlaceTaxonomyNode): void {
   {/if}
   <div class="shrink-0 space-y-2 px-4 py-3">
     <input
+      bind:this={searchInput}
       bind:value={search}
       aria-label={m.feature_search_category()}
       placeholder={m.feature_search_category_search()}
