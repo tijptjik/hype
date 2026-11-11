@@ -1359,7 +1359,10 @@ it('guides name and map discovery without offering manual entry before results',
   expect(screen.queryByRole('button', { name: 'Drop Pin' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Search by location' }))
   expect(onDropPin).toHaveBeenCalledTimes(1)
-  expect(screen.queryByRole('textbox')).toBeNull()
+  expect(
+    (screen.getByRole('textbox', { name: 'Filter nearby results' }) as HTMLInputElement)
+      .disabled,
+  ).toBe(true)
   expect(screen.getByRole('button', { name: 'Search Nearby' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Shops' })).toBeTruthy()
   await fireEvent.click(screen.getByRole('button', { name: 'Search by name' }))
@@ -3270,3 +3273,51 @@ it.each(['establishment', undefined] as const)(
     expect(document.querySelector('[data-location-association-picker]')).toBeNull()
   },
 )
+
+it('filters retained nearby results locally and clears without another provider search', async () => {
+  vi.useRealTimers()
+  mocks.nearby.mockResolvedValue({
+    rows: ['Sesame Bakery', 'Coffee Shop'].map((name, index) => ({
+      id: `nearby-${index}`,
+      facts: {
+        names: { en: name },
+        location: {
+          geometry: { type: 'Point', coordinates: [114.15 + index / 10000, 22.28] },
+          address: {
+            status: 'unresolved',
+            rawSource: {},
+            fallbackDisplay: { en: `${index + 1} Tak Man Street` },
+          },
+        },
+      },
+    })),
+    partial: false,
+  })
+  mocks.addresses.mockResolvedValue([])
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    initialMode: 'pin',
+    hasPin: true,
+    coordinates: [114.15, 22.28],
+    onSelect: vi.fn(),
+    onDropPin: vi.fn(),
+  })
+  const filter = screen.getByRole('textbox', {
+    name: 'Filter nearby results',
+  }) as HTMLInputElement
+  expect(filter.disabled).toBe(true)
+  await fireEvent.click(screen.getByRole('button', { name: 'Search Nearby' }))
+  await screen.findByRole('button', { name: /Coffee Shop/ })
+  expect(filter.disabled).toBe(false)
+  const requests = mocks.nearby.mock.calls.length
+  await fireEvent.input(filter, { target: { value: 'Sesame' } })
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: /Coffee Shop/ })).toBeNull(),
+  )
+  expect(screen.getByRole('button', { name: /Sesame Bakery/ })).toBeTruthy()
+  await fireEvent.keyDown(filter, { key: 'Enter' })
+  await fireEvent.click(screen.getByRole('button', { name: 'Clear nearby filter' }))
+  await screen.findByRole('button', { name: /Coffee Shop/ })
+  expect(mocks.nearby.mock.calls.length).toBe(requests)
+})

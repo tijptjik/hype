@@ -165,6 +165,7 @@ const allowedLocationKinds = $derived(
 let input: HTMLInputElement | undefined = $state()
 let searchOutline = $state<HTMLDivElement>()
 let query = $state('')
+let nearbyFilter = $state('')
 let findMode = $state<'search' | 'pin'>(untrack(() => initialMode))
 $effect(() => {
   const mode = initialMode
@@ -245,6 +246,7 @@ function applyFilters(value: PlaceSearchFilters): void {
  */
 function clearSearch(): void {
   query = ''
+  nearbyFilter = ''
   if (localRows.length) localRows = []
   localSearchFailed = false
   localSearchLimited = false
@@ -391,8 +393,28 @@ const rows = $derived(
           ),
     ),
 )
+// Filter a retained snapshot; local typing must never replace provider results or start a search.
+const filterNearbyRows = createDraftSearchFilter<Result>()
+let nearbyMatches = $state.raw<Result[] | null>(null)
+$effect(() => {
+  const snapshot = rows
+  const text = nearbyFilter.trim()
+  const mode = findMode
+  let current = true
+  if (mode !== 'pin' || !text) nearbyMatches = null
+  else {
+    void filterNearbyRows(snapshot, text, () => current).then(matches => {
+      if (current && matches) nearbyMatches = matches
+    })
+  }
+  return () => {
+    current = false
+  }
+})
 const groups = $derived(
-  groupDraftSearchResults(rows).map(group => ({
+  groupDraftSearchResults(
+    findMode === 'pin' && nearbyFilter.trim() ? (nearbyMatches ?? rows) : rows,
+  ).map(group => ({
     ...group,
     representative:
       group.members.find(row => row.id === focusedResult) ?? group.representative,
@@ -1099,6 +1121,7 @@ export function getProgress(): DraftLocationSearchProgress {
     associationOrigin,
     associationOpen,
     query,
+    nearbyFilter,
     findMode,
     filters,
     radius,
@@ -1171,6 +1194,7 @@ export function restoreProgress(progress: DraftLocationSearchProgress | null): v
   associationOrigin = progress?.associationOrigin ?? null
   associationOpen = progress?.associationOpen ?? false
   query = progress?.query ?? ''
+  nearbyFilter = progress?.nearbyFilter ?? ''
   findMode = progress?.findMode ?? 'search'
   filters = progress?.filters ?? { operatingStatus: 'open' }
   radius = progress?.radius ?? 300
@@ -1957,18 +1981,51 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         {:else if hasPin && coordinates}
           <button
             type="button"
-            class="bg-primary min-h-14 shrink-0 rounded-lg px-7 py-4 text-base font-semibold text-white disabled:opacity-40"
+            class="bg-primary min-h-11 shrink-0 rounded-lg px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
             bind:this={nearbyButton}
             disabled={loading || !hasSearchTypes}
             onclick={() => void search(true)}
           >
             {m.feature_search_nearby()}
           </button>
-          {#if !loading && (rows.length || searched)}
-            <span role="status" class="text-muted-foreground shrink-0 text-xs"
-              >{m.feature_search_result_count({ count: visibleRows.length })}</span
+          <div
+            class="border-border bg-panel focus-within:ring-primary flex min-w-0 flex-1 items-center rounded-lg border focus-within:ring-2"
+          >
+            <input
+              bind:value={nearbyFilter}
+              disabled={!nearbyMode}
+              aria-label="Filter nearby results"
+              placeholder="Filter nearby results"
+              maxlength="200"
+              class="text-foreground min-h-11 w-full min-w-0 flex-1 rounded-lg bg-transparent px-3 py-3 text-sm outline-none disabled:opacity-40"
+              oninput={() => {
+                expandedGroup = null
+              }}
+              onkeydown={event => {
+                if (event.key === 'Enter') event.preventDefault()
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  nearbyFilter = ''
+                }
+              }}
             >
-          {/if}
+            {#if nearbyMode && !loading}
+              <span role="status" class="text-muted-foreground shrink-0 px-2 text-xs"
+                >{m.feature_search_result_count({ count: visibleRows.length })}</span
+              >
+            {/if}
+            {#if nearbyFilter}
+              <button
+                type="button"
+                aria-label="Clear nearby filter"
+                class="text-muted-foreground hover:bg-muted mr-1 flex size-9 shrink-0 items-center justify-center rounded-md"
+                onclick={() => (nearbyFilter = '')}
+              >
+                <ClearIcon class="size-4" />
+              </button>
+            {/if}
+          </div>
         {/if}
         <button
           bind:this={filterButton}
@@ -2213,6 +2270,14 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         ]}
         aria-label={m.feature_start_search()}
       >
+        {#if findMode === 'pin' &&
+          nearbyFilter.trim() &&
+          !visibleRows.length &&
+          !loading}
+          <p role="status" class="text-muted-foreground px-6 py-10 text-center text-sm">
+            No nearby results match this filter.
+          </p>
+        {/if}
         {#each visibleRows as result, index (result.id)}
           {@const labels = resultLabels(result)}
           <div

@@ -48,6 +48,7 @@ export type DraftLocationSearchResult = {
 /** Serializable discovery state, excluding callbacks, DOM and in-flight requests. */
 export type DraftLocationSearchProgress = {
   query: string
+  nearbyFilter?: string
   findMode: 'search' | 'pin'
   filters: PlaceSearchFilters
   radius: number
