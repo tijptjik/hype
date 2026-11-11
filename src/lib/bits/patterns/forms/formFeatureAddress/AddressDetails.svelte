@@ -1595,7 +1595,6 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     {/if}
   {/snippet}
   {#if !isEditing}
-    {@render emptyAddressHelp()}
     <AddressReadOnly
       {address}
       locales={shownLocales.map(tag => ({ tag, key: addressLocaleKey(tag) }))}
@@ -1606,6 +1605,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {displayStale}
       {labels}
     />
+    {@render emptyAddressHelp()}
     {#if showAccessHints}
       {#each shownLocales as tag (tag)}
         {@const hint = accessHintValue(tag)}
