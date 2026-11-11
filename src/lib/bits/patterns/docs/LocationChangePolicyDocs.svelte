@@ -148,6 +148,27 @@ import {
     brand uses the curated catalogue values, subject to the same acceptance policy as
     other identity changes.
   </p>
+  <h3 class="mt-6 text-lg font-semibold">Localized identity storage</h3>
+  <p class="my-4 max-w-3xl">
+    Catalogue names use <code>i18n[locale].name</code>. New Branch and Format community
+    correction values use <code>i18n[locale].value</code>, with content tags
+    <code>en</code>, <code>zh-Hant</code> and <code>zh-Hans</code>. Historical
+    corrections and upstream evidence remain intact; read adapters also accept their
+    earlier locale maps. Resolved Location values expose locale maps for existing
+    display consumers. Brand and group links retain the accepted catalogue version, so
+    editing a catalogue name cannot bypass an Organisation’s review policy.
+  </p>
+  <p class="my-4 max-w-3xl">
+    The global Branch property follows the existing translatable text-property schema:
+    labels live in <code>propertyI18n</code>, and authored Feature values live in
+    <code>featurePropertyI18n</code>
+    with <code>locale</code>, <code>value</code> and
+    <code>valueGen</code>. The untranslated base value is null. This is the relational
+    equivalent of the content i18n namespace, not a separate translation mechanism.
+    Automatic inheritance from the accepted Location Branch is still pending.
+    <code>branchId</code>
+    is non-translatable text and is internal-only.
+  </p>
   <h3 class="mt-6 text-lg font-semibold">Display templates</h3>
   <p class="my-4 max-w-3xl">
     Named, versioned, locale-specific templates reference properties and accepted
@@ -168,15 +189,17 @@ import {
     synchronize every consumer in the Organisation. Automatic community acceptance by
     any Project also synchronizes its Organisation. Accept releases affected
     customizations; Keep-current stores the retained values explicitly. Sparse local
-    layers and publication, the brand/group catalogue, skip controls, and
-    community/Organisation template defaults remain to be integrated. The central
-    registry and locale-specific DSL editor are available in
+    layers and publication, skip controls, and community template policies remain to be
+    integrated. Organisation template defaults are implemented. The central registry and
+    locale-specific DSL editor are available in
     <a href="/admin/templates" class="underline">Display templates</a>. Explicit Feature
     assignments regenerate on accepted edits and preserve manual names. Hub, Project and
     Layer defaults inherit central references, and new Features generate their names
-    during creation. Bulk version adoption remains pending. Ordinary Feature Location
-    name/address saves still need default community contribution routing; dedicated
-    community commands are available. These target behaviors should not yet be relied on
-    in production.
+    during creation. Explicit bounded regeneration adopts published template versions.
+    Feature Location edits default to Community for community Locations and Internal for
+    internal Locations; saved field-level choices take precedence. The catalogue and
+    source-brand linking are implemented and verified locally with the authenticated
+    admin persona in Chromium and Firefox. These target behaviors should not yet be
+    relied on in production.
   </p>
 </section>

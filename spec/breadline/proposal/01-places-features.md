@@ -3762,3 +3762,27 @@ names remain authoritative. `display-template-consumers.test.ts` covers page bou
 private ownership and retired identities, and `feature-display-template.test.ts`
 verifies stale regeneration cannot overwrite a newer edit. Automatic community-template
 policy adoption remains pending.
+
+### Community identity catalogue storage
+
+Implementation: `src/lib/db/services/identityCatalogue.ts`,
+`src/lib/db/services/identityCatalogueImport.ts`, migration
+`0237_identity_catalogue.sql`. Tracking:
+[#178](https://github.com/tijptjik/hype/issues/178).
+
+Brands and corporate groups share a versioned catalogue. Each record stores
+`i18n[locale].name` and an optional logo. Source identifiers map imported brands to
+stable catalogue identities; repeat imports retain curated translations. Missing
+translations initially copy an available source name. No group, format or branch is
+inferred by parsing an establishment name.
+
+Community corrections own `brandId` and `groupId`, including immutable catalogue version
+evidence. Raw Location source facts are retained. Publishing a catalogue revision
+creates community evidence in bounded pages; consumer acceptance policies still govern
+adoption. Locked Locations remain unchanged and are reported for retry.
+
+New Branch and Format community correction values serialize as `i18n[locale].value`.
+Historical locale maps remain readable without rewriting immutable revisions. Resolved
+Location adapters expose locale maps. The global translatable Branch property uses the
+existing `propertyI18n` and `featurePropertyI18n` tables; automatic binding to the
+accepted Location Branch is a separate integration.
