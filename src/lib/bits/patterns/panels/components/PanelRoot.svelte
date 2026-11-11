@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
+import { untrack } from 'svelte'
 import { fly, slide } from 'svelte/transition'
+import type { TransitionConfig } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
 import { prefersReducedMotion } from 'svelte/motion'
 // CONSTANTS
@@ -34,6 +36,31 @@ let {
 let shouldShowInline = $derived(inline && (isOpen || isNarrow))
 let shouldShowOverlay = $derived(!inline && isOpen)
 const expandedWidth = `${PANEL_WIDTH}px`
+let initialInlineEntrance = untrack(() => shouldShowInline)
+
+/**
+ * Reserves an initially open sidebar's final width while its contents enter.
+ * @param node Inline panel element.
+ * @param _params Unused transition parameters.
+ * @param options Svelte transition direction.
+ * @returns Entrance translation or the normal width-changing toggle transition.
+ */
+function inlineTransition(
+  node: Element,
+  _params: undefined,
+  options: { direction: 'in' | 'out' | 'both' },
+): TransitionConfig {
+  const initialEntrance = initialInlineEntrance && options.direction !== 'out'
+  initialInlineEntrance = false
+  const duration = prefersReducedMotion.current ? 0 : 500
+  return initialEntrance
+    ? fly(node, {
+        duration,
+        easing: cubicInOut,
+        x: position === 'left' ? -PANEL_WIDTH : PANEL_WIDTH,
+      })
+    : slide(node, { duration, easing: cubicInOut, axis: 'x' })
+}
 </script>
 
 <!-- Global transitions also run when a deferred parent first mounts an already-open panel. -->
@@ -47,11 +74,7 @@ const expandedWidth = `${PANEL_WIDTH}px`
     class:border-l={position === 'right'}
     class:left-0={position === 'left'}
     style:width={isNarrow ? `${PANEL_NARROW_WIDTH}px` : expandedWidth}
-    transition:slide|global={{
-      duration: prefersReducedMotion.current ? 0 : 500,
-      easing: cubicInOut,
-      axis: 'x',
-    }}
+    transition:inlineTransition|global
   >
     <div
       class="h-full min-h-0"
