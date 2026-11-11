@@ -229,6 +229,40 @@ function organisationImage(item: ParentSectionLayerItem): string | null {
     return null
   }
 }
+
+/** Animate the card's natural content height, including immediately resolved results.
+ * @param node Setup card containing the measured body.
+ * @param enabled Whether the centered setup card is visible.
+ * @returns Action lifecycle hooks that release the observer and inline sizing.
+ * @remarks CSS disables the transition when reduced motion is requested.
+ */
+function resizeCard(
+  node: HTMLDivElement,
+  enabled: boolean,
+): { update: (enabled: boolean) => void; destroy: () => void } | undefined {
+  const body = node.firstElementChild
+  if (!(body instanceof HTMLElement)) return
+  let active = enabled
+  // Measure the unconstrained body so animating the card cannot retrigger itself.
+  const measure = (): void => {
+    node.style.height = active
+      ? `${body.getBoundingClientRect().height + node.offsetHeight - node.clientHeight}px`
+      : ''
+  }
+  const observer = new ResizeObserver(measure)
+  observer.observe(body)
+  measure()
+  return {
+    update(enabled: boolean): void {
+      active = enabled
+      measure()
+    },
+    destroy(): void {
+      observer.disconnect()
+      node.style.height = ''
+    },
+  }
+}
 </script>
 {#snippet destinationIcon(item: ParentSectionLayerItem)}
   {@const src = organisationImage(item)}
@@ -277,274 +311,283 @@ function organisationImage(item: ParentSectionLayerItem): string | null {
   aria-label={m.setup_accessible_label()}
 >
   <div
-    class="mx-auto flex w-full min-w-0 shrink-0 flex-col {step < 3
+    use:resizeCard={step < 3}
+    class="mx-auto flex w-full min-w-0 shrink-0 flex-col motion-safe:transition-[height] motion-safe:duration-200 motion-safe:ease-out {step <
+    3
       ? 'bg-panel border-border my-auto max-w-3xl overflow-hidden rounded-2xl border shadow-sm'
       : ''}"
     data-setup-content
   >
-    <ol
-      class="grid w-full grid-cols-4 gap-1 border-b border-border p-2 sm:p-3 {step < 3
-        ? 'bg-base-200/40 text-base-content'
-        : 'bg-slate-900 text-white'}"
-      aria-label={m.setup_progress()}
-    >
-      {#each labels as label, index}
-        <li class="flex min-w-0 items-stretch">
-          <button
-            type="button"
-            disabled={(index === 1 && !layerAnswered) ||
-              (index === 2 && !typeAnswered) ||
-              (index === 3 && !contextAnswered)}
-            aria-label={label}
-            aria-current={step === index ? 'step' : undefined}
-            class="focus-visible:outline-primary flex h-full w-full min-w-0 flex-col items-center gap-2 rounded-lg px-1 py-2 text-center transition-colors sm:flex-row sm:px-3 sm:text-left disabled:opacity-50 {step ===
-              index && step < 3
-              ? 'bg-primary/10'
-              : ''}"
-            onclick={() => navigateToStep(index)}
-          >
-            <span
-              class="border-primary flex size-6 shrink-0 items-center justify-center rounded-full border text-xs"
-              class:bg-primary={step === index}
-              class:text-white={step === index}
+    <div class="w-full min-w-0">
+      <ol
+        class="grid w-full grid-cols-4 gap-1 border-b border-border p-2 sm:p-3 {step < 3
+          ? 'bg-base-200/40 text-base-content'
+          : 'bg-slate-900 text-white'}"
+        aria-label={m.setup_progress()}
+      >
+        {#each labels as label, index}
+          <li class="flex min-w-0 items-stretch">
+            <button
+              type="button"
+              disabled={(index === 1 && !layerAnswered) ||
+                (index === 2 && !typeAnswered) ||
+                (index === 3 && !contextAnswered)}
+              aria-label={label}
+              aria-current={step === index ? 'step' : undefined}
+              class="focus-visible:outline-primary flex h-full w-full min-w-0 flex-col items-center gap-2 rounded-lg px-1 py-2 text-center transition-colors sm:flex-row sm:px-3 sm:text-left disabled:opacity-50 {step ===
+                index && step < 3
+                ? 'bg-primary/10'
+                : ''}"
+              onclick={() => navigateToStep(index)}
             >
-              {#if index < step}
-                <CheckIcon class="size-3" />
-              {:else}
-                {index + 1}
-              {/if}
-            </span>
-            <span class="grid min-w-0 gap-0.5">
-              {#if step >= 3 && index < 3}
-                <span class="text-xs text-slate-300"
-                  >{[m.setup_layer(), m.setup_feature_kind(), m.setup_location_kind()][
-                    index
-                  ]}</span
-                >
-              {/if}
-              <span class="text-xs font-medium break-words whitespace-normal sm:text-sm"
-                >{step < 3
-                  ? [
+              <span
+                class="border-primary flex size-6 shrink-0 items-center justify-center rounded-full border text-xs"
+                class:bg-primary={step === index}
+                class:text-white={step === index}
+              >
+                {#if index < step}
+                  <CheckIcon class="size-3" />
+                {:else}
+                  {index + 1}
+                {/if}
+              </span>
+              <span class="grid min-w-0 gap-0.5">
+                {#if step >= 3 && index < 3}
+                  <span class="text-xs text-slate-300"
+                    >{[
                       m.setup_layer(),
                       m.setup_feature_kind(),
                       m.setup_location_kind(),
-                      m.setup_find_location(),
-                    ][index]
-                  : label}</span
-              >
-            </span>
-          </button>
-        </li>
-      {/each}
-    </ol>
-    <div
-      hidden={step !== 0}
-      class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8"
-    >
-      <h2 class="mb-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-        {m.setup_map_question()}
-      </h2>
-      <label class="text-muted-foreground grid gap-5 text-sm"
-        >{searchSubtitle}
-        <input
-          type="search"
-          onkeydown={event => {
-            if (event.key === 'Enter') event.preventDefault()
-          }}
-          bind:value={query}
-          class="bg-panel text-base-content border-border focus-visible:outline-primary w-full min-w-0 rounded-lg border p-3"
-          placeholder={m.setup_search_name()}
-        >
-      </label>
-
-      {#if !loading &&
-        !query &&
-        !scope.organisationId &&
-        !scope.projectId &&
-        recent.length}
-        <p class="text-muted-foreground mt-6 text-xs font-medium tracking-wide">
-          {m.setup_recent()}
-        </p>
-        <section
-          class="my-3 flex gap-3 overflow-x-auto pb-2"
-          aria-label={m.setup_recent_layers()}
-        >
-          {#each recent as item (item.id)}
-            <button
-              type="button"
-              class="bg-panel border-border hover:border-primary focus-visible:ring-primary/50 hover:bg-base-200 flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-              aria-pressed={item.id === confirmedLayerId}
-              class:ring-inset={item.id === confirmedLayerId}
-              class:ring-1={item.id === confirmedLayerId}
-              class:ring-primary={item.id === confirmedLayerId}
-              onclick={() => selectLayer(item)}
-            >
-              {@render destinationIcon(item)}
-              <span
-                class="text-muted-foreground min-h-8 text-xs break-words whitespace-normal"
-                >{@render hierarchy(item)}</span
-              >
-              <span class="mt-auto font-semibold break-words whitespace-normal"
-                >{setupResourceLabel(item)}</span
-              >
+                    ][index]}</span
+                  >
+                {/if}
+                <span
+                  class="text-xs font-medium break-words whitespace-normal sm:text-sm"
+                  >{step < 3
+                    ? [
+                        m.setup_layer(),
+                        m.setup_feature_kind(),
+                        m.setup_location_kind(),
+                        m.setup_find_location(),
+                      ][index]
+                    : label}</span
+                >
+              </span>
             </button>
-          {/each}
-        </section>
-      {/if}
-      {#if loading}
-        <div role="status" aria-busy="true" aria-label={m.setup_loading_layers()}>
+          </li>
+        {/each}
+      </ol>
+      <div
+        hidden={step !== 0}
+        class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8"
+      >
+        <h2 class="mb-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+          {m.setup_map_question()}
+        </h2>
+        <label class="text-muted-foreground grid gap-5 text-sm"
+          >{searchSubtitle}
+          <input
+            type="search"
+            onkeydown={event => {
+              if (event.key === 'Enter') event.preventDefault()
+            }}
+            bind:value={query}
+            class="bg-panel text-base-content border-border focus-visible:outline-primary w-full min-w-0 rounded-lg border p-3"
+            placeholder={m.setup_search_name()}
+          >
+        </label>
+
+        {#if !loading &&
+          !query &&
+          !scope.organisationId &&
+          !scope.projectId &&
+          recent.length}
           <p class="text-muted-foreground mt-6 text-xs font-medium tracking-wide">
             {m.setup_recent()}
           </p>
-          <div class="my-3 flex gap-3 overflow-hidden pb-2" aria-hidden="true">
-            {#each [0, 1, 2, 3] as placeholder (placeholder)}
-              <div
-                class="border-border flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4"
+          <section
+            class="my-3 flex gap-3 overflow-x-auto pb-2"
+            aria-label={m.setup_recent_layers()}
+          >
+            {#each recent as item (item.id)}
+              <button
+                type="button"
+                class="bg-panel border-border hover:border-primary focus-visible:ring-primary/50 hover:bg-base-200 flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                aria-pressed={item.id === confirmedLayerId}
+                class:ring-inset={item.id === confirmedLayerId}
+                class:ring-1={item.id === confirmedLayerId}
+                class:ring-primary={item.id === confirmedLayerId}
+                onclick={() => selectLayer(item)}
               >
+                {@render destinationIcon(item)}
+                <span
+                  class="text-muted-foreground min-h-8 text-xs break-words whitespace-normal"
+                  >{@render hierarchy(item)}</span
+                >
+                <span class="mt-auto font-semibold break-words whitespace-normal"
+                  >{setupResourceLabel(item)}</span
+                >
+              </button>
+            {/each}
+          </section>
+        {/if}
+        {#if loading}
+          <div role="status" aria-busy="true" aria-label={m.setup_loading_layers()}>
+            <p class="text-muted-foreground mt-6 text-xs font-medium tracking-wide">
+              {m.setup_recent()}
+            </p>
+            <div class="my-3 flex gap-3 overflow-hidden pb-2" aria-hidden="true">
+              {#each [0, 1, 2, 3] as placeholder (placeholder)}
                 <div
-                  class="bg-muted size-10 rounded-lg motion-safe:animate-pulse"
-                ></div>
-                <div class="min-h-8 w-full">
-                  <div
-                    class="bg-muted h-3 w-full rounded motion-safe:animate-pulse"
-                  ></div>
-                  <div
-                    class="bg-muted mt-1 h-3 w-3/4 rounded motion-safe:animate-pulse"
-                  ></div>
-                </div>
-                <div class="mt-auto flex h-6 w-3/4 items-center">
-                  <div
-                    class="bg-muted h-4 w-full rounded motion-safe:animate-pulse"
-                  ></div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        </div>
-      {:else if failed}
-        <p role="alert" class="my-4">{m.setup_load_failed()}</p>
-        <button type="button" class="underline" onclick={() => retry++}>
-          {m.setup_retry()}
-        </button>
-      {:else}
-        {#if query && !scope.organisationId && !scope.projectId}
-          <div class="my-4 grid gap-2 sm:grid-cols-2">
-            {#each results.organisations.filter(item =>
-              setupResourceMatches(item, query),
-            ) as item (item.id)}
-              <button
-                type="button"
-                class="bg-panel border-border flex items-center gap-3 rounded-lg border p-3 text-left"
-                onclick={() => {
-                  scope = { organisationId: item.id }
-                  query = ''
-                }}
-              >
-                <OrganisationIcon class="size-5 shrink-0" />
-                <span
-                  >{setupResourceLabel(item)}
-                  <small class="text-muted-foreground"
-                    >{m.setup_organisation()}</small
-                  ></span
+                  class="border-border flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4"
                 >
-              </button>
-            {/each}
-            {#each results.projects.filter(item =>
-              setupResourceMatches(item, query),
-            ) as item (item.id)}
-              <button
-                type="button"
-                class="bg-panel border-border flex items-center gap-3 rounded-lg border p-3 text-left"
-                onclick={() => {
-                  scope = { projectId: item.id }
-                  query = ''
-                }}
-              >
-                <ProjectIcon class="size-5 shrink-0" />
-                <span
-                  >{setupResourceLabel(item)}
-                  <small class="text-muted-foreground">{m.setup_project()}</small></span
-                >
-              </button>
-            {/each}
+                  <div
+                    class="bg-muted size-10 rounded-lg motion-safe:animate-pulse"
+                  ></div>
+                  <div class="min-h-8 w-full">
+                    <div
+                      class="bg-muted h-3 w-full rounded motion-safe:animate-pulse"
+                    ></div>
+                    <div
+                      class="bg-muted mt-1 h-3 w-3/4 rounded motion-safe:animate-pulse"
+                    ></div>
+                  </div>
+                  <div class="mt-auto flex h-6 w-3/4 items-center">
+                    <div
+                      class="bg-muted h-4 w-full rounded motion-safe:animate-pulse"
+                    ></div>
+                  </div>
+                </div>
+              {/each}
+            </div>
           </div>
-        {/if}
-        {#if query || scope.organisationId || scope.projectId}
-          {#each results.projects.filter(
-            item => !scope.projectId || item.id === scope.projectId,
-          ) as project (project.id)}
-            {@const layers = results.layers.filter(
-              item => item.projectId === project.id,
-            )}
-            {#if layers.length}
-              <h3 class="mt-5 mb-2 font-semibold">{setupResourceLabel(project)}</h3>
-              <div class="grid gap-2 sm:grid-cols-2">
-                {#each layers as item (item.id)}
-                  <button
-                    type="button"
-                    class="bg-panel border-border hover:border-primary group hover:bg-primary/5 focus-visible:ring-primary/50 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-                    aria-pressed={item.id === confirmedLayerId}
-                    class:ring-inset={item.id === confirmedLayerId}
-                    class:ring-1={item.id === confirmedLayerId}
-                    class:ring-primary={item.id === confirmedLayerId}
-                    onclick={() => selectLayer(item)}
+        {:else if failed}
+          <p role="alert" class="my-4">{m.setup_load_failed()}</p>
+          <button type="button" class="underline" onclick={() => retry++}>
+            {m.setup_retry()}
+          </button>
+        {:else}
+          {#if query && !scope.organisationId && !scope.projectId}
+            <div class="my-4 grid gap-2 sm:grid-cols-2">
+              {#each results.organisations.filter(item =>
+                setupResourceMatches(item, query),
+              ) as item (item.id)}
+                <button
+                  type="button"
+                  class="bg-panel border-border flex items-center gap-3 rounded-lg border p-3 text-left"
+                  onclick={() => {
+                    scope = { organisationId: item.id }
+                    query = ''
+                  }}
+                >
+                  <OrganisationIcon class="size-5 shrink-0" />
+                  <span
+                    >{setupResourceLabel(item)}
+                    <small class="text-muted-foreground"
+                      >{m.setup_organisation()}</small
+                    ></span
                   >
-                    {@render destinationIcon(item)}
-                    <span class="min-w-0 break-words whitespace-normal"
-                      ><span class="text-muted-foreground block text-xs"
-                        >{@render hierarchy(item)}</span
-                      ><span class="block font-semibold"
-                        >{setupResourceLabel(item)}</span
-                      ></span
+                </button>
+              {/each}
+              {#each results.projects.filter(item =>
+                setupResourceMatches(item, query),
+              ) as item (item.id)}
+                <button
+                  type="button"
+                  class="bg-panel border-border flex items-center gap-3 rounded-lg border p-3 text-left"
+                  onclick={() => {
+                    scope = { projectId: item.id }
+                    query = ''
+                  }}
+                >
+                  <ProjectIcon class="size-5 shrink-0" />
+                  <span
+                    >{setupResourceLabel(item)}
+                    <small class="text-muted-foreground"
+                      >{m.setup_project()}</small
+                    ></span
+                  >
+                </button>
+              {/each}
+            </div>
+          {/if}
+          {#if query || scope.organisationId || scope.projectId}
+            {#each results.projects.filter(
+              item => !scope.projectId || item.id === scope.projectId,
+            ) as project (project.id)}
+              {@const layers = results.layers.filter(
+                item => item.projectId === project.id,
+              )}
+              {#if layers.length}
+                <h3 class="mt-5 mb-2 font-semibold">{setupResourceLabel(project)}</h3>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  {#each layers as item (item.id)}
+                    <button
+                      type="button"
+                      class="bg-panel border-border hover:border-primary group hover:bg-primary/5 focus-visible:ring-primary/50 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                      aria-pressed={item.id === confirmedLayerId}
+                      class:ring-inset={item.id === confirmedLayerId}
+                      class:ring-1={item.id === confirmedLayerId}
+                      class:ring-primary={item.id === confirmedLayerId}
+                      onclick={() => selectLayer(item)}
                     >
-                    <ArrowRightIcon
-                      class="text-muted-foreground size-4 transition-transform group-hover:translate-x-0.5"
-                    />
-                  </button>
-                {/each}
-              </div>
-            {/if}
-          {/each}
+                      {@render destinationIcon(item)}
+                      <span class="min-w-0 break-words whitespace-normal"
+                        ><span class="text-muted-foreground block text-xs"
+                          >{@render hierarchy(item)}</span
+                        ><span class="block font-semibold"
+                          >{setupResourceLabel(item)}</span
+                        ></span
+                      >
+                      <ArrowRightIcon
+                        class="text-muted-foreground size-4 transition-transform group-hover:translate-x-0.5"
+                      />
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            {/each}
+          {/if}
+          {#if !results.layers.length}
+            <p class="text-muted-foreground my-4 text-sm">
+              {m.setup_empty()}
+            </p>
+          {/if}
         {/if}
-        {#if !results.layers.length}
-          <p class="text-muted-foreground my-4 text-sm">
-            {m.setup_empty()}
-          </p>
-        {/if}
+      </div>
+      {#if layerAnswered && layer && sourceLayerId}
+        <div
+          hidden={step !== 1}
+          class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_h3]:text-center"
+        >
+          <FeatureIntentChoice
+            layerId={sourceLayerId}
+            value={typeAnswered ? type?.id : null}
+            requireSelection={true}
+            onChange={next => {
+              if (next?.id !== confirmedTypeId) confirmedContext = null
+              confirmedTypeId = next?.id ?? null
+              onType(next)
+              typeAdvancePending = Boolean(next)
+            }}
+          />
+        </div>
       {/if}
-    </div>
-    {#if layerAnswered && layer && sourceLayerId}
       <div
-        hidden={step !== 1}
-        class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_h3]:text-center"
+        hidden={step !== 2}
+        class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_legend]:w-full [&_legend]:text-center"
       >
-        <FeatureIntentChoice
-          layerId={sourceLayerId}
-          value={typeAnswered ? type?.id : null}
-          requireSelection={true}
+        <TargetContextChoice
+          {contexts}
+          value={contextAnswered ? context : null}
           onChange={next => {
-            if (next?.id !== confirmedTypeId) confirmedContext = null
-            confirmedTypeId = next?.id ?? null
-            onType(next)
-            typeAdvancePending = Boolean(next)
+            confirmedContext = next
+            onContext(next)
+            step = 3
+            onSearch()
           }}
         />
       </div>
-    {/if}
-    <div
-      hidden={step !== 2}
-      class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_legend]:w-full [&_legend]:text-center"
-    >
-      <TargetContextChoice
-        {contexts}
-        value={contextAnswered ? context : null}
-        onChange={next => {
-          confirmedContext = next
-          onContext(next)
-          step = 3
-          onSearch()
-        }}
-      />
     </div>
   </div>
 </section>

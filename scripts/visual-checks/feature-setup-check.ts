@@ -27,13 +27,14 @@ for (const [name, engine] of [
       )
       await page.goto(`${base}/__feature-setup.html`)
       await page.getByRole('status', { name: 'Loading available layers' }).waitFor()
+      await page.waitForTimeout(220)
       const pendingCard = await page
         .getByRole('status', { name: 'Loading available layers' })
         .locator('[aria-hidden] > div')
         .first()
         .boundingBox()
       const pendingPanel = await page
-        .locator('[data-setup-content] > div')
+        .locator('[data-setup-content] > div > div')
         .first()
         .boundingBox()
       if (await page.getByText('Loading available layers…').count())
@@ -48,7 +49,7 @@ for (const [name, engine] of [
         .first()
         .boundingBox()
       const readyPanel = await page
-        .locator('[data-setup-content] > div')
+        .locator('[data-setup-content] > div > div')
         .first()
         .boundingBox()
       for (const [before, after] of [
@@ -102,7 +103,7 @@ for (const [name, engine] of [
       if ((await progress.getByRole('button').count()) !== 4)
         throw Error('Missing fourth location step')
       const search = page.getByRole('searchbox')
-      const panel = page.locator('[data-setup-content] > div').first()
+      const panel = page.locator('[data-setup-content] > div > div').first()
       const surface = await panel.evaluate(el => getComputedStyle(el).backgroundColor)
       if (surface === 'rgba(0, 0, 0, 0)' || surface === 'transparent')
         throw Error('Setup surface is transparent')
