@@ -22,21 +22,22 @@ import Button from '#lib/bits/core/button/Button.svelte'
 import Switch from '#lib/bits/custom/switch/Switch.svelte'
 import ChoiceDialog from '#lib/bits/core/dialog/ChoiceDialog.svelte'
 // DOMAIN
-import { IMAGE_INTENT_ROLES } from '#lib/images/intents.js'
-// BITS COMPONENTS
-import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
+import { DEFAULT_IMAGE_INTENTS, IMAGE_INTENT_ROLES } from '#lib/images/intents.js'
 // TYPES
 import type { ImageIntentDefinition } from '#lib/images/intents.js'
 
 let {
   scopeType,
   scopeId,
+  loadingOnly = false,
   disabled = false,
   resetVersion = 0,
   onChange,
 }: {
   scopeType: 'hub' | 'project'
   scopeId: string
+  /** Render the pending owner layout without requesting settings. */
+  loadingOnly?: boolean
   disabled?: boolean
   resetVersion?: number
   onChange?: (value: string | undefined) => void
@@ -101,6 +102,7 @@ async function load(): Promise<void> {
 }
 
 $effect(() => {
+  if (loadingOnly) return
   scopeId
   scopeType
   resetVersion
@@ -160,7 +162,12 @@ $effect(() => {
 })
 </script>
 
-<section class="flex w-full min-w-0 flex-col" aria-label="Image intents">
+<section
+  class="flex w-full min-w-0 flex-col"
+  aria-label="Image intents"
+  aria-busy={loading}
+  inert={loadingOnly}
+>
   <SectionHeader
     showControlLabels
     title="Image Intent"
@@ -287,29 +294,17 @@ $effect(() => {
         />
       </label>
     {/if}
-    {#if loading && intents.length === 0}
-      <ContentSkeleton label="Loading image intents…"
-        ><ol class="flex min-w-0 flex-col">
-          {#each Array(3) as _, index (index)}
-            <li class="py-1.5">
-              <div
-                class="border-border bg-foreground/4 grid min-h-14 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg border pl-10 lg:grid-cols-[minmax(0,1fr)_7rem_5rem_auto]"
-              >
-                <p
-                  class="my-2 border border-transparent px-3 py-2 text-sm font-semibold"
-                >
-                  Image intent
-                </p>
-                <p class="text-xs">Required</p>
-                <button type="button" class="size-8">Edit</button>
-              </div>
-            </li>
-          {/each}
-        </ol></ContentSkeleton
-      >
-    {/if}
-    <ol class="flex min-w-0 flex-col [--bits-dnd-gap:0px]">
-      {#each intents as intent (intent.id)}
+    <!-- The pending catalogue shares the loaded row grid, including mobile action rows. -->
+    <ol
+      class="flex min-w-0 flex-col [--bits-dnd-gap:0px] {loading
+        ? '[&_input]:text-transparent! [&_input]:bg-foreground/10! [&_input]:motion-safe:animate-pulse'
+        : ''}"
+      aria-hidden={loading}
+      inert={loading}
+    >
+      {#each loading && intents.length === 0
+        ? DEFAULT_IMAGE_INTENTS
+        : intents as intent (intent.id)}
         <!-- Each row owns its spacing so drop edges remain hittable, as in Layers. -->
         <li
           data-dnd-item

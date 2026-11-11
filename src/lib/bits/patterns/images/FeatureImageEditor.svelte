@@ -42,6 +42,7 @@ const hasActiveText = $derived(
 </script>
 
 <ImageEditor
+  pendingItemCount={3}
   isLoading={imageCtx.state.isFetchingImages || !imageCtx.state.context}
   sortScope={featureId ?? undefined}
   sortMode={ordering.mode}

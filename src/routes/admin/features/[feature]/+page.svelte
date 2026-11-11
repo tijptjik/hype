@@ -5458,7 +5458,7 @@ async function refreshLocationSource(): Promise<void> {
               load={() => import('#lib/bits/patterns/images/FeatureImageEditor.svelte')}
             >
               {#snippet pending()}
-                <ImageWorkspaceSkeleton />
+                <ImageWorkspaceSkeleton gallery />
               {/snippet}
               {#snippet children(gallery)}
                 <gallery.default featureId={currentFeatureId ?? undefined}>
