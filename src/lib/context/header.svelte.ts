@@ -16,6 +16,7 @@ import type {
 } from '#lib/bits/patterns/layout/header/header.types.js'
 
 const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
+  content: null,
   dirty: false,
   reset: () => {},
   submit: () => {},

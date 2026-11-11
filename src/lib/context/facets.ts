@@ -6,6 +6,7 @@
 
 const Facets = [
   'core',
+  'relationships',
   'capabilities',
   'messaging',
   'users',

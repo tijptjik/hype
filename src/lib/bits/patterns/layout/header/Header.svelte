@@ -203,6 +203,7 @@ const rootClass = $derived(
                 aria-hidden={!showFormActions}
               >
                 <HeaderPrimitive.FormActions
+                  content={formActions.content}
                   primaryAction={formActions.primaryAction}
                   saveAction={formActions.saveAction}
                   deleteAction={formActions.deleteAction}

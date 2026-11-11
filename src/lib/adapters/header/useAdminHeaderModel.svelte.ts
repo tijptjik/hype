@@ -405,6 +405,7 @@ export function useAdminHeaderModel(
       !isReadOnlyView &&
       [
         'core',
+        'relationships',
         'capabilities',
         'location',
         'fields',
@@ -875,7 +876,8 @@ export function useAdminHeaderModel(
       resourceRef === NEW_REF ||
       (resourceType !== FirstClassResource.organisation &&
         resourceType !== FirstClassResource.project &&
-        resourceType !== FirstClassResource.layer)
+        resourceType !== FirstClassResource.layer &&
+        resourceType !== FirstClassResource.location)
     )
       return null
 
@@ -884,7 +886,10 @@ export function useAdminHeaderModel(
       icon: FeatureIcon,
       disabled: isEditing || isInFlight,
       style: adminCtx.activeFacet === 'features' ? 'soft' : 'outline',
-      onClick: () => navigateOnAdmin(adminCtx, resourceType, resourceRef, 'features'),
+      onClick: () =>
+        resourceType === FirstClassResource.location
+          ? handleFacetChange('features')
+          : navigateOnAdmin(adminCtx, resourceType, resourceRef, 'features'),
     }
   })
   // Reuse the permitted Users facet so its action keeps the same visibility and navigation.
@@ -1141,7 +1146,11 @@ export function useAdminHeaderModel(
           : controlsAction
             ? customViewActions
             : customViewActions.slice(1),
-      content: isHistoryView || isIndexFacet ? null : inlineViewActionContent,
+      content:
+        isHistoryView ||
+        (isIndexFacet && headerResourceType !== FirstClassResource.location)
+          ? null
+          : inlineViewActionContent,
     },
     taskActions: {
       isVisible:
@@ -1152,6 +1161,7 @@ export function useAdminHeaderModel(
     formActions: {
       isVisible: resolvedVisibility.showFormActions,
       primaryAction,
+      content: formActions?.content ?? null,
       featuresAction,
       usersAction,
       historyAction,

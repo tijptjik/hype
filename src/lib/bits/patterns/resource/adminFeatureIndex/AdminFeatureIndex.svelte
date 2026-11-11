@@ -68,7 +68,14 @@ import type { ResourceBulkEditOption } from '#lib/client/services/bulkEdit.types
 let {
   showTotalCount = false,
   onCreate,
-}: { showTotalCount?: boolean; onCreate?: () => void } = $props()
+  locationScope,
+  readOnly = false,
+}: {
+  showTotalCount?: boolean
+  onCreate?: () => void
+  locationScope?: FeatureIndexQuery['location']
+  readOnly?: boolean
+} = $props()
 
 type FeatureBulkStateField =
   | 'isPublished'
@@ -316,6 +323,7 @@ const textQuery = $derived(adminCtx.view.filters.values.feature.text ?? '')
 const normalizedTextQuery = $derived(textQuery.trim())
 const ownerSignature = $derived(
   JSON.stringify([
+    locationScope,
     adminCtx.view.resources.scopeKey,
     adminCtx.view.cacheCtx.generation,
     adminCtx.view.scope.prisms,
@@ -329,6 +337,7 @@ const searchSignature = $derived(
   JSON.stringify([
     sortSignature,
     adminCtx.view.featuresQueryKey(),
+    locationScope,
     adminCtx.view.resources.scopeKey,
     adminCtx.view.cacheCtx.generation,
     getLocaleKey(),
@@ -530,6 +539,7 @@ async function loadMoreFeatureResults(): Promise<void> {
   try {
     const result = await refreshRemoteQuery(
       getFeatureIndexPage({
+        location: locationScope,
         conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
@@ -703,6 +713,7 @@ async function selectAllFeatureMatches(): Promise<void> {
       async offset =>
         await refreshRemoteQuery(
           getFeatureIndexPage({
+            location: locationScope,
             conditions,
             prisms,
             sorting,
@@ -1017,6 +1028,7 @@ $effect(() => {
     adminCtx.rememberFeatureIndexCount(null)
     matchingCountLoading = true
     const input: FeatureIndexQuery = {
+      location: locationScope,
       conditions: adminCtx.view.isSuperAdmin()
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
@@ -1096,7 +1108,7 @@ $effect(() => {
   // A changed account or prism cannot preview rows retained by the previous owner.
   const retained =
     remoteOwnerSignature === ownerSignature
-      ? (remoteMatchedEntities ?? optimisticEntities)
+      ? (remoteMatchedEntities ?? (locationScope ? [] : optimisticEntities))
       : []
   entities = adminCtx.view.filters.applyFeatureViewFilters(
     normalizedTextQuery
@@ -1156,7 +1168,7 @@ $effect(() => {
       filters,
       sortables,
       bulkEdit:
-        featureLayoutMode === 'card'
+        readOnly || featureLayoutMode === 'card'
           ? undefined
           : {
               isActive: isBulkEditActive,

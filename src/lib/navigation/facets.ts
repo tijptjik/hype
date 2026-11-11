@@ -1,6 +1,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
+import RelationshipsIcon from 'virtual:icons/lucide/network'
 import ShareIcon from 'virtual:icons/proicons/share'
 import FormInputIcon from 'virtual:icons/proicons/button'
 import UsersIcon from 'virtual:icons/lucide/users'
@@ -23,6 +24,7 @@ import type { FacetType } from '#lib/context/facets.js'
 export const ADMIN_FACETS = {
   share: 'share',
   core: 'core',
+  relationships: 'relationships',
   capabilities: 'capabilities',
   messaging: 'messaging',
   users: 'users',
@@ -75,6 +77,10 @@ export type LayerFacet =
   | 'advanced'
 
 export const ADMIN_FACET_DEFINITIONS = {
+  relationships: {
+    label: () => m.location_record_relationships(),
+    icon: RelationshipsIcon,
+  },
   [ADMIN_FACETS.share]: { label: () => 'Share', icon: ShareIcon },
   [ADMIN_FACETS.users]: { label: () => 'Users', icon: UsersIcon },
   [ADMIN_FACETS.messaging]: { label: () => 'Messaging', icon: ChatIcon },
@@ -112,6 +118,7 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  relationships: () => m.location_record_relationships(),
   [ADMIN_FACETS.share]: () => 'Share',
   [ADMIN_FACETS.users]: () => 'Users',
   [ADMIN_FACETS.messaging]: () => 'Messaging',
@@ -210,6 +217,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.images,
     ADMIN_FACETS.updates,
   ],
+  location: [ADMIN_FACETS.core, ADMIN_FACETS.relationships, ADMIN_FACETS.features],
   task: [ADMIN_FACETS.core],
 }
 

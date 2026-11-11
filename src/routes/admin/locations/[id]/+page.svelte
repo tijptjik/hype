@@ -6,6 +6,11 @@ import { untrack } from 'svelte'
 import * as Main from '#lib/bits/custom/main/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import LocalLocationAddressEditor from '#lib/bits/patterns/forms/localLocationAddress/LocalLocationAddressEditor.svelte'
+// NAVIGATION
+import { bindAdminFacetHistorySync } from '#lib/client/services/form.js'
+import { getAdminFacetTabsForResource } from '#lib/navigation/index.js'
+import { FirstClassResource } from '#lib/enums.js'
+import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 // API
 import { getLocation } from '#lib/api/locationDirectory.remote.js'
 // CONTEXT
@@ -17,8 +22,27 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 import MapPin from 'virtual:icons/proicons/location'
 // BITS COMPONENTS
 
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. Record and header navigation
+// 2. Edit intent and header synchronization
+// 3. Profile, Relationships and read-only Features
+// ---
+
 const header = getHeaderCtrl()
 const admin = getAdminCtx()
+const activeFacet = $derived(admin.activeFacet || 'core')
+bindAdminFacetHistorySync({
+  getFacetOrder: () => ['core', 'relationships', 'features'],
+  getActiveFacet: () => admin.activeFacet,
+  adminCtx: admin,
+  resourceType: FirstClassResource.location,
+  getResourceRef: () => page.params.id ?? '',
+})
+const facetTabs = getAdminFacetTabsForResource(FirstClassResource.location)
 const scope = $derived(admin.view.getRoleScopeQueryKey())
 const request = $derived(
   getLocation({
@@ -33,7 +57,7 @@ let pendingEdit = $state(false)
 // Route changes discard the old record's edit mode before applying explicit edit intent.
 $effect(() => {
   const id = page.params.id
-  pendingEdit = page.url.searchParams.get('edit') === 'true'
+  pendingEdit = untrack(() => page.url.searchParams.get('edit') === 'true')
   if (id) untrack(() => header.setEditing(false))
 })
 // Apply edit intent once after loading and authorization, so Cancel stays in view mode.
@@ -59,7 +83,7 @@ $effect(() => {
     Object.values(place?.facts?.names ?? {}).find(Boolean) ||
     m.location_policy_tab()
   untrack(() => {
-    header.setHeaderForEntity(title, MapPin, new Map())
+    header.setHeaderForEntity(title, MapPin, facetTabs)
     header.setCrumbs([{ name: m.location_policy_tab(), href: '/admin/locations' }])
     header.setFormActions({
       canEdit: Boolean(place?.canEditAddress && place.state !== 'redirect'),
@@ -89,16 +113,25 @@ $effect(() => {
       {:then place}
         {#if place}
           {#key place.id}
-            <LocalLocationAddressEditor
-              {place}
-              queryScope={scope}
-              isEditing={header.state.isEditing}
-              onEditingChange={value => header.setEditing(value)}
-              onControlsChange={controls => header.setFormActions(controls)}
-              onSaved={async () => {
-                await request.refresh()
-              }}
-            />
+            {#if activeFacet === 'features'}
+              <ScopedFeatureIndex
+                resourceType="location"
+                resourceId={place.id}
+                embedded
+              />
+            {:else}
+              <LocalLocationAddressEditor
+                recordView={activeFacet}
+                {place}
+                queryScope={scope}
+                isEditing={header.state.isEditing}
+                onEditingChange={value => header.setEditing(value)}
+                onControlsChange={controls => header.setFormActions(controls)}
+                onSaved={async () => {
+                  await request.refresh()
+                }}
+              />
+            {/if}
           {/key}
         {:else}
           <p class="px-6 py-6">{m.location_directory_empty()}</p>

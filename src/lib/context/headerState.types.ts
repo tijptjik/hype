@@ -1,7 +1,7 @@
 // TYPES
 import type { NavigableResource } from '#lib/types.js'
 import type { ResourceIndexUi } from '#lib/context/resourceIndexUi.svelte.js'
-import type { Component } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 import type {
   HeaderCrumb,
   HeaderTitleMenuItemConfig,
@@ -51,6 +51,8 @@ type HeaderMetaState = {
 }
 
 export type HeaderFormActionsState = {
+  /** Resource-specific controls adjacent to Edit, subject to the owning route permissions. */
+  content?: Snippet | null
   dirty: boolean
   isSubmitting: boolean
   hasIssues: boolean

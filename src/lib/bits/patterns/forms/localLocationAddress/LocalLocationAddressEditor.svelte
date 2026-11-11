@@ -10,7 +10,6 @@ import LocationAccessibility from '../featureLocation/LocationAccessibility.svel
 import { onDestroy, untrack } from 'svelte'
 // COMPONENTS
 import FormFeatureAddress from '../formFeatureAddress/FormFeatureAddress.svelte'
-import LocationLinkedFeatures from './LocationLinkedFeatures.svelte'
 import LocationRelationships from '../locationRelationships/LocationRelationships.svelte'
 import AddressDetails from '../formFeatureAddress/AddressDetails.svelte'
 import AddressDivisions from '../formFeatureAddress/AddressDivisions.svelte'
@@ -66,12 +65,15 @@ let {
   place,
   queryScope,
   isEditing = false,
+  // Header facets retain the parent-owned draft across Profile and Relationships.
+  recordView = 'core',
   onEditingChange,
   onControlsChange,
   onSaved,
 }: {
   place: LocationResource
   queryScope: string
+  recordView?: string
   isEditing?: boolean
   onEditingChange: (editing: boolean) => void
   onControlsChange: (controls: Partial<HeaderFormActionsState>) => void
@@ -154,6 +156,7 @@ const namesInvalid = $derived(
 )
 onDestroy(() => {
   lookupVersion++
+  onControlsChange({ content: null })
 })
 const retainedAddress = $derived<FeatureAddress>({
   ...emptyFeatureAddress(),
@@ -569,6 +572,7 @@ $effect(() => {
     isSubmitting: busy || lookingUp,
     hasIssues: coordinateInvalid || namesInvalid || lifecycleInvalid,
     canEdit: Boolean(place.canEditAddress && place.state !== 'redirect' && place.facts),
+    content: place.canManageCommunityLocks ? lockControls : null,
     canPublish: false,
     showPublishAction: false,
     showDeleteAction: false,
@@ -579,6 +583,345 @@ $effect(() => {
   })
 })
 </script>
+
+{#snippet lockControls()}
+  <CommunityCurationLocks
+    disabled={busy}
+    openFields={place.communityLocks?.openFields ?? {}}
+    load={async () => {
+      const controls = getCommunityCurationLocks({ locationId: place.id })
+      await controls.refresh()
+      return await controls
+    }}
+    save={async (expectedRevision, openFields) => {
+      await setCommunityCurationLocks({
+        locationId: place.id,
+        expectedRevision,
+        openFields,
+      })
+      await onSaved()
+    }}
+  />
+{/snippet}
+
+{#snippet recordContent()}
+  {#if recordView === 'relationships'}
+    <div class="space-y-6 px-6 py-6">
+      <LocationRelationships
+        locationId={place.id}
+        kind={place.kind}
+        organisationId={place.editingOrganisationId ?? null}
+        {queryScope}
+        canEdit={editing && Boolean(place.canEditAddress)}
+      />
+    </div>
+  {:else if place.facts}
+    <div class="grid gap-6 px-6 py-6 @min-[900px]:grid-cols-[15rem_minmax(0,1fr)]">
+      <LocationRecordDetails {place} isEditing={editing} />
+      <div
+        class="@min-[900px]:border-border min-w-0 space-y-6 @min-[900px]:border-l @min-[900px]:pl-6"
+      >
+        {#if editing}
+          <section
+            class="border-border space-y-5 border-b pb-6"
+            aria-label={m.location_record_identity()}
+          >
+            <h2 class="text-lg font-semibold">{m.location_record_identity()}</h2>
+            {#if place.canEditShared}
+              <label class="grid gap-1 text-sm"
+                >Edit destination
+                <select
+                  class="border-border bg-background rounded border p-2"
+                  value={correctionScope}
+                  disabled={busy}
+                  onchange={event => {
+                    correctionScope =
+                      event.currentTarget.value === 'shared' ? 'shared' : 'organisation'
+                    edit()
+                  }}
+                >
+                  <option value="shared">Community</option>
+                  {#if place.editingOrganisationId}
+                    <option value="organisation">Internal</option>
+                  {/if}
+                </select>
+              </label>
+              {#if correctionScope === 'shared'}
+                <p class="text-muted-foreground text-sm">
+                  Contribute these edits to the community curations for this Location.
+                  Acceptance follows each Organisation’s location policies. Upstream
+                  evidence remains intact.
+                </p>
+              {:else}
+                <p class="text-muted-foreground text-sm">
+                  Save these edits as Organisation customizations without contributing
+                  them to community curations.
+                </p>
+              {/if}
+            {/if}
+            {#if correctionScope === 'shared' &&
+              Object.values(place.communityLocks?.openFields ?? {}).some(
+                value => value === false,
+              )}
+              <p class="text-muted-foreground text-sm">
+                Some community fields are locked. A save that changes a locked field is
+                rejected as a whole. Use Internal for Organisation customizations.
+              </p>
+            {/if}
+            <div class="max-w-72">
+              <LocationKindField
+                value={kind}
+                disabled={busy ||
+                  correctionScope === 'shared' ||
+                  place.ssId !== null ||
+                  place.ownerOrganisationId !== place.editingOrganisationId}
+                onChange={next => {
+                  kind = next
+                  lifecycle = {
+                    operatingStatus:
+                      next === 'establishment' ? lifecycle.operatingStatus : null,
+                    buildingStatus:
+                      next === 'building' ? lifecycle.buildingStatus : null,
+                  }
+                  lookupVersion++
+                  lookingUp = false
+                  lookupCandidates = []
+                  lookupUnavailable = []
+                  lookupPartial = false
+                  establishmentAddressSelected = false
+                  if (next === 'building' && draft) {
+                    const selections = draft.divisionOverrides
+                    draft = localAddressDraft({
+                      ...localAddressContent($state.snapshot(draft)),
+                      unit: null,
+                      unitI18n: {},
+                    })
+                    draft.divisionOverrides = selections
+                  }
+                }}
+              />
+            </div>
+            <DraftLocationNameFields
+              {names}
+              kind={activeKind}
+              localeState={editorLocaleState}
+              translations={localeState.expanded}
+              isEditing={!busy && !communityClosed('names')}
+              recordKey={`${place.id}:${correctionScope}`}
+              onChange={next =>
+                (names = Object.fromEntries(
+                  Object.entries(next).map(([tag, value]) => [
+                    tag.toLowerCase(),
+                    value,
+                  ]),
+                ))}
+            />
+            {#if activeKind === 'establishment'}
+              <div class="grid gap-4">
+                {#each ['en', 'zh-Hant', 'zh-Hans'] as locale}
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="flex flex-col gap-2 text-sm"
+                      ><span>Branch · {locale}</span>
+                      <input
+                        class="border-border bg-background rounded-lg border px-3 py-2"
+                        maxlength="1000"
+                        value={branch[locale] ?? ''}
+                        disabled={busy || communityClosed('branch')}
+                        oninput={event =>
+                          (branch = {
+                            ...branch,
+                            [locale]: event.currentTarget.value,
+                          })}
+                      ></label
+                    >
+                    <label class="flex flex-col gap-2 text-sm"
+                      ><span>Format · {locale}</span>
+                      <input
+                        class="border-border bg-background rounded-lg border px-3 py-2"
+                        maxlength="1000"
+                        value={format[locale] ?? ''}
+                        disabled={busy || communityClosed('format')}
+                        oninput={event =>
+                          (format = {
+                            ...format,
+                            [locale]: event.currentTarget.value,
+                          })}
+                      ></label
+                    >
+                  </div>
+                {/each}
+                <label class="flex flex-col gap-2 text-sm"
+                  ><span>Branch ID · Internal</span>
+                  <input
+                    class="border-border bg-background rounded-lg border px-3 py-2"
+                    maxlength="200"
+                    bind:value={branchId}
+                    disabled={busy || correctionScope === 'shared'}
+                  ></label
+                >
+              </div>
+            {/if}
+            {#if place.canEditShared && correctionScope === 'shared'}
+              <LocationBrandEditor
+                association={{
+                  version: place.sharedRevision ?? expectedRevisionId,
+                  brandMode: 'inherit',
+                  effective: { brands: editableFacts?.brands ?? [] },
+                }}
+                edit={sharedBrandEdit}
+                isEditing={!busy && !communityClosed('brands')}
+                onChange={value => (sharedBrandEdit = value)}
+              />
+            {/if}
+            {#if establishmentAddressSelected}
+              <p role="status" class="text-muted-foreground text-sm">
+                {m.location_establishment_address_help()}
+              </p>
+            {/if}
+          </section>
+        {/if}
+        <LocationLifecycleFields
+          value={editing ? lifecycle : (place.facts ?? undefined)}
+          successorLocationId={editing
+            ? successorLocationId
+            : place.facts?.successorLocationId}
+          onSuccessorChange={next => (successorLocationId = next)}
+          kind={activeKind}
+          isEditing={editing}
+          disabled={busy}
+          onChange={next => (lifecycle = next)}
+        />
+        {#if lifecycleInvalid}
+          <p role="alert" class="text-destructive text-sm">
+            {m.location_lifecycle_invalid()}
+          </p>
+        {/if}
+        {#if place.facts}
+          {#if coordinateInvalid}
+            <p role="alert" class="text-destructive text-sm">
+              {m.feature_address_coordinates_invalid()}
+            </p>
+          {/if}
+          {#if editing}
+            {#if lookupPartial && !lookupUnavailable.length}
+              <p role="status" class="text-muted-foreground text-sm">
+                {m.feature_location_search_partial()}
+              </p>
+            {/if}
+            {#if lookupUnavailable.length}
+              <p role="status" class="text-muted-foreground text-sm">
+                {m.location_search_incomplete()}:
+                {lookupUnavailable.map(type => locationKindLabel(type)).join(', ')}.
+              </p>
+            {/if}
+            {#if lookupFailed}
+              <p role="alert" class="text-destructive text-sm">
+                {m.feature_address_failed()}
+              </p>
+            {/if}
+            {#each lookupCandidates as candidate (candidate.id)}
+              <button
+                type="button"
+                class="border-border hover:text-primary block w-full border-b py-3 text-left text-sm"
+                onclick={() => selectLookup(candidate)}
+              >
+                <span class="text-muted-foreground mb-1 flex items-center gap-2 text-xs"
+                  ><LocationIcon kind={candidate.kind} class="size-4" />
+                  {locationKindLabel(candidate.kind)}</span
+                >
+                {#if candidate.names}
+                  <span class="block font-medium"
+                    >{candidate.names[
+                      getLocaleKey() === 'en'
+                        ? 'en'
+                        : getLocaleKey() === 'zhHant'
+                          ? 'zh-hant'
+                          : 'zh-hans'
+                    ] ||
+                      candidate.names.en ||
+                      Object.values(candidate.names)[0]}</span
+                  >
+                {/if}
+                {getAddressDisplay(candidate.address, getLocaleKey())}
+                <span class="text-muted-foreground mt-1 block text-xs"
+                  >{candidate.kind === 'address'
+                    ? m.location_use_address()
+                    : m.location_use_preview_details()}</span
+                >
+              </button>
+            {/each}
+          {/if}
+          <fieldset
+            disabled={busy || communityClosed('location.address')}
+            class="@container grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-start gap-8"
+          >
+            <AddressDetails
+              localeState={editorLocaleState}
+              translations={localeState.expanded}
+              showLocaleToolbar={false}
+              onLocaleStateChange={next => (localeState = next)}
+              suggestionKey={JSON.stringify([place.id, point])}
+              onSuggestStreetNumber={async () =>
+                (await numberMapController?.getStreetNumberAt?.([
+                  point[0],
+                  point[1],
+                ])) ?? null}
+              locationKind={activeKind}
+              accessibilityLocationId={place.id}
+              {address}
+              isEditing={editing}
+              showAccessHints={false}
+              show3dAddressOptions={activeKind !== 'building'}
+              onChange={next => (draft = next)}
+            />
+            <AddressDivisions
+              class="@min-[50rem]:border-t-0 @min-[50rem]:pt-0"
+              {address}
+              coordinates={point}
+              isEditing={editing}
+              onChange={next => (draft = next)}
+            />
+            {#if editing && draft}
+              {@const content = localAddressContent($state.snapshot(draft))}
+              <details class="border-border border-t pt-4">
+                <summary class="text-muted-foreground cursor-pointer text-sm">
+                  {m.location_address_parse()}
+                </summary>
+                <div class="pt-3">
+                  <LocalAddressParseReview
+                    value={content}
+                    disabled={busy}
+                    onParsed={source => (parseSource = source)}
+                    onValueChange={next => {
+                      const selections = draft?.divisionOverrides
+                      draft = localAddressDraft(next)
+                      draft.divisionOverrides = selections
+                    }}
+                  />
+                </div>
+              </details>
+            {/if}
+          </fieldset>
+        {/if}
+        {#if saved}
+          <p role="status" class="text-muted-foreground text-sm">
+            {m.location_address_saved()}
+          </p>
+        {/if}
+        {#if failed}
+          <p role="alert" class="text-destructive text-sm">
+            {m.location_address_failed()}
+          </p>
+        {/if}
+      </div>
+    </div>
+  {:else}
+    <div class="space-y-6 px-6 py-6">
+      <LocationRecordDetails {place} />
+      <LocationAccessibility locationId={place.id} />
+    </div>
+  {/if}
+{/snippet}
 
 {#if place.facts}
   <FormFeatureAddress
@@ -640,359 +983,12 @@ $effect(() => {
         <span class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"
           >{kindLabel}</span
         >
-        {#if place.canManageCommunityLocks}
-          <CommunityCurationLocks
-            disabled={busy}
-            openFields={place.communityLocks?.openFields ?? {}}
-            load={async () => {
-              const controls = getCommunityCurationLocks({ locationId: place.id })
-              await controls.refresh()
-              return await controls
-            }}
-            save={async (expectedRevision, openFields) => {
-              await setCommunityCurationLocks({
-                locationId: place.id,
-                expectedRevision,
-                openFields,
-              })
-              await onSaved()
-            }}
-          />
-        {/if}
       </div>
     {/snippet}
     {#snippet locationContent()}
-      <div class="grid gap-6 px-6 py-6 @min-[900px]:grid-cols-[15rem_minmax(0,1fr)]">
-        <LocationRecordDetails {place} isEditing={editing} />
-        <div
-          class="@min-[900px]:border-border min-w-0 space-y-6 @min-[900px]:border-l @min-[900px]:pl-6"
-        >
-          {#if editing}
-            <section
-              class="border-border space-y-5 border-b pb-6"
-              aria-label={m.location_record_identity()}
-            >
-              <h2 class="text-lg font-semibold">{m.location_record_identity()}</h2>
-              {#if place.canEditShared}
-                <label class="grid gap-1 text-sm"
-                  >Edit destination
-                  <select
-                    class="border-border bg-background rounded border p-2"
-                    value={correctionScope}
-                    disabled={busy}
-                    onchange={event => {
-                      correctionScope =
-                        event.currentTarget.value === 'shared'
-                          ? 'shared'
-                          : 'organisation'
-                      edit()
-                    }}
-                  >
-                    <option value="shared">Community</option>
-                    {#if place.editingOrganisationId}
-                      <option value="organisation">Internal</option>
-                    {/if}
-                  </select>
-                </label>
-                {#if correctionScope === 'shared'}
-                  <p class="text-muted-foreground text-sm">
-                    Contribute these edits to the community curations for this Location.
-                    Acceptance follows each Organisation’s location policies. Upstream
-                    evidence remains intact.
-                  </p>
-                {:else}
-                  <p class="text-muted-foreground text-sm">
-                    Save these edits as Organisation customizations without contributing
-                    them to community curations.
-                  </p>
-                {/if}
-              {/if}
-              {#if correctionScope === 'shared' &&
-                Object.values(place.communityLocks?.openFields ?? {}).some(
-                  value => value === false,
-                )}
-                <p class="text-muted-foreground text-sm">
-                  Some community fields are locked. A save that changes a locked field
-                  is rejected as a whole. Use Internal for Organisation customizations.
-                </p>
-              {/if}
-              <div class="max-w-72">
-                <LocationKindField
-                  value={kind}
-                  disabled={busy ||
-                    correctionScope === 'shared' ||
-                    place.ssId !== null ||
-                    place.ownerOrganisationId !== place.editingOrganisationId}
-                  onChange={next => {
-                    kind = next
-                    lifecycle = {
-                      operatingStatus:
-                        next === 'establishment' ? lifecycle.operatingStatus : null,
-                      buildingStatus:
-                        next === 'building' ? lifecycle.buildingStatus : null,
-                    }
-                    lookupVersion++
-                    lookingUp = false
-                    lookupCandidates = []
-                    lookupUnavailable = []
-                    lookupPartial = false
-                    establishmentAddressSelected = false
-                    if (next === 'building' && draft) {
-                      const selections = draft.divisionOverrides
-                      draft = localAddressDraft({
-                        ...localAddressContent($state.snapshot(draft)),
-                        unit: null,
-                        unitI18n: {},
-                      })
-                      draft.divisionOverrides = selections
-                    }
-                  }}
-                />
-              </div>
-              <DraftLocationNameFields
-                {names}
-                kind={activeKind}
-                localeState={editorLocaleState}
-                translations={localeState.expanded}
-                isEditing={!busy && !communityClosed('names')}
-                recordKey={`${place.id}:${correctionScope}`}
-                onChange={next =>
-                  (names = Object.fromEntries(
-                    Object.entries(next).map(([tag, value]) => [
-                      tag.toLowerCase(),
-                      value,
-                    ]),
-                  ))}
-              />
-              {#if activeKind === 'establishment'}
-                <div class="grid gap-4">
-                  {#each ['en', 'zh-Hant', 'zh-Hans'] as locale}
-                    <div class="grid gap-4 sm:grid-cols-2">
-                      <label class="flex flex-col gap-2 text-sm"
-                        ><span>Branch · {locale}</span>
-                        <input
-                          class="border-border bg-background rounded-lg border px-3 py-2"
-                          maxlength="1000"
-                          value={branch[locale] ?? ''}
-                          disabled={busy || communityClosed('branch')}
-                          oninput={event =>
-                            (branch = {
-                              ...branch,
-                              [locale]: event.currentTarget.value,
-                            })}
-                        ></label
-                      >
-                      <label class="flex flex-col gap-2 text-sm"
-                        ><span>Format · {locale}</span>
-                        <input
-                          class="border-border bg-background rounded-lg border px-3 py-2"
-                          maxlength="1000"
-                          value={format[locale] ?? ''}
-                          disabled={busy || communityClosed('format')}
-                          oninput={event =>
-                            (format = {
-                              ...format,
-                              [locale]: event.currentTarget.value,
-                            })}
-                        ></label
-                      >
-                    </div>
-                  {/each}
-                  <label class="flex flex-col gap-2 text-sm"
-                    ><span>Branch ID · Internal</span>
-                    <input
-                      class="border-border bg-background rounded-lg border px-3 py-2"
-                      maxlength="200"
-                      bind:value={branchId}
-                      disabled={busy || correctionScope === 'shared'}
-                    ></label
-                  >
-                </div>
-              {/if}
-              {#if place.canEditShared && correctionScope === 'shared'}
-                <LocationBrandEditor
-                  association={{
-                    version: place.sharedRevision ?? expectedRevisionId,
-                    brandMode: 'inherit',
-                    effective: { brands: editableFacts?.brands ?? [] },
-                  }}
-                  edit={sharedBrandEdit}
-                  isEditing={!busy && !communityClosed('brands')}
-                  onChange={value => (sharedBrandEdit = value)}
-                />
-              {/if}
-              {#if establishmentAddressSelected}
-                <p role="status" class="text-muted-foreground text-sm">
-                  {m.location_establishment_address_help()}
-                </p>
-              {/if}
-            </section>
-          {/if}
-          <LocationLifecycleFields
-            value={editing ? lifecycle : (place.facts ?? undefined)}
-            successorLocationId={editing
-              ? successorLocationId
-              : place.facts?.successorLocationId}
-            onSuccessorChange={next => (successorLocationId = next)}
-            kind={activeKind}
-            isEditing={editing}
-            disabled={busy}
-            onChange={next => (lifecycle = next)}
-          />
-          {#if lifecycleInvalid}
-            <p role="alert" class="text-destructive text-sm">
-              {m.location_lifecycle_invalid()}
-            </p>
-          {/if}
-          {#if place.facts}
-            {#if coordinateInvalid}
-              <p role="alert" class="text-destructive text-sm">
-                {m.feature_address_coordinates_invalid()}
-              </p>
-            {/if}
-            {#if editing}
-              {#if lookupPartial && !lookupUnavailable.length}
-                <p role="status" class="text-muted-foreground text-sm">
-                  {m.feature_location_search_partial()}
-                </p>
-              {/if}
-              {#if lookupUnavailable.length}
-                <p role="status" class="text-muted-foreground text-sm">
-                  {m.location_search_incomplete()}:
-                  {lookupUnavailable.map(type => locationKindLabel(type)).join(', ')}.
-                </p>
-              {/if}
-              {#if lookupFailed}
-                <p role="alert" class="text-destructive text-sm">
-                  {m.feature_address_failed()}
-                </p>
-              {/if}
-              {#each lookupCandidates as candidate (candidate.id)}
-                <button
-                  type="button"
-                  class="border-border hover:text-primary block w-full border-b py-3 text-left text-sm"
-                  onclick={() => selectLookup(candidate)}
-                >
-                  <span
-                    class="text-muted-foreground mb-1 flex items-center gap-2 text-xs"
-                    ><LocationIcon kind={candidate.kind} class="size-4" />
-                    {locationKindLabel(candidate.kind)}</span
-                  >
-                  {#if candidate.names}
-                    <span class="block font-medium"
-                      >{candidate.names[
-                        getLocaleKey() === 'en'
-                          ? 'en'
-                          : getLocaleKey() === 'zhHant'
-                            ? 'zh-hant'
-                            : 'zh-hans'
-                      ] ||
-                        candidate.names.en ||
-                        Object.values(candidate.names)[0]}</span
-                    >
-                  {/if}
-                  {getAddressDisplay(candidate.address, getLocaleKey())}
-                  <span class="text-muted-foreground mt-1 block text-xs"
-                    >{candidate.kind === 'address'
-                      ? m.location_use_address()
-                      : m.location_use_preview_details()}</span
-                  >
-                </button>
-              {/each}
-            {/if}
-            <fieldset
-              disabled={busy || communityClosed('location.address')}
-              class="@container grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-start gap-8"
-            >
-              <AddressDetails
-                localeState={editorLocaleState}
-                translations={localeState.expanded}
-                showLocaleToolbar={false}
-                onLocaleStateChange={next => (localeState = next)}
-                suggestionKey={JSON.stringify([place.id, point])}
-                onSuggestStreetNumber={async () =>
-                  (await numberMapController?.getStreetNumberAt?.([
-                    point[0],
-                    point[1],
-                  ])) ?? null}
-                locationKind={activeKind}
-                accessibilityLocationId={place.id}
-                {address}
-                isEditing={editing}
-                showAccessHints={false}
-                show3dAddressOptions={activeKind !== 'building'}
-                onChange={next => (draft = next)}
-              />
-              <AddressDivisions
-                class="@min-[50rem]:border-t-0 @min-[50rem]:pt-0"
-                {address}
-                coordinates={point}
-                isEditing={editing}
-                onChange={next => (draft = next)}
-              />
-              {#if editing && draft}
-                {@const content = localAddressContent($state.snapshot(draft))}
-                <details class="border-border border-t pt-4">
-                  <summary class="text-muted-foreground cursor-pointer text-sm">
-                    {m.location_address_parse()}
-                  </summary>
-                  <div class="pt-3">
-                    <LocalAddressParseReview
-                      value={content}
-                      disabled={busy}
-                      onParsed={source => (parseSource = source)}
-                      onValueChange={next => {
-                        const selections = draft?.divisionOverrides
-                        draft = localAddressDraft(next)
-                        draft.divisionOverrides = selections
-                      }}
-                    />
-                  </div>
-                </details>
-              {/if}
-            </fieldset>
-          {/if}
-          {#if saved}
-            <p role="status" class="text-muted-foreground text-sm">
-              {m.location_address_saved()}
-            </p>
-          {/if}
-          {#if failed}
-            <p role="alert" class="text-destructive text-sm">
-              {m.location_address_failed()}
-            </p>
-          {/if}
-          <LocationRelationships
-            locationId={place.id}
-            kind={place.kind}
-            organisationId={place.editingOrganisationId ?? null}
-            {queryScope}
-            canEdit={editing && Boolean(place.canEditAddress)}
-          />
-          <LocationLinkedFeatures
-            locationId={place.id}
-            organisationId={place.editingOrganisationId ?? undefined}
-            {queryScope}
-          />
-        </div>
-      </div>
+      {@render recordContent()}
     {/snippet}
   </FormFeatureAddress>
 {:else}
-  <div class="space-y-6 px-6 py-6">
-    <LocationRecordDetails {place} />
-    <LocationAccessibility locationId={place.id} />
-    <LocationRelationships
-      locationId={place.id}
-      kind={place.kind}
-      organisationId={place.editingOrganisationId ?? null}
-      {queryScope}
-      canEdit={editing && Boolean(place.canEditAddress)}
-    />
-    <LocationLinkedFeatures
-      locationId={place.id}
-      organisationId={place.editingOrganisationId ?? undefined}
-      {queryScope}
-    />
-  </div>
+  {@render recordContent()}
 {/if}

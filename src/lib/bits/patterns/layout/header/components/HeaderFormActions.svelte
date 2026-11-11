@@ -22,6 +22,7 @@ import {
 
 let {
   primaryAction = null,
+  content = null,
   featuresAction = null,
   usersAction = null,
   historyAction = null,
@@ -123,6 +124,8 @@ function resolveIconClasses(icon?: unknown): string {
       onClick={() => shareAction?.onClick?.()}
     />
   {/if}
+
+  {@render content?.()}
 
   {#if deleteAction}
     <Button

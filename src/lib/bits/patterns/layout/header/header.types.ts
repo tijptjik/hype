@@ -1,4 +1,4 @@
-import type { Component } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 import type { HTMLAttributes } from 'svelte/elements'
 import type { ButtonColor, ButtonStyle } from '#lib/bits/core/index.js'
 
@@ -115,6 +115,7 @@ export interface HeaderTaskActionsConfig {
 }
 
 export interface HeaderFormActionsConfig {
+  content?: Snippet | null
   isVisible?: boolean
   primaryAction?: HeaderButtonActionConfig | null
   featuresAction?: HeaderButtonActionConfig | null

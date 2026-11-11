@@ -370,6 +370,27 @@ Establishment addresses retain building and unit guidance. Complete address evid
 explicit custom display text remain intact; omission is component-based and never a
 substring deletion from a name or freeform address.
 
+### Location resource navigation (Refs #194)
+
+The Location record follows resource header navigation (Refs #194): **Profile** contains
+record details, Address and Divisions; **Relationships** contains physical membership,
+operating locations, address choices and lineage. The header's **Features** marker opens
+a read-only standard Feature index. Its icon-only relationship selector defaults to
+**Associated features**, with **Features placed here** and **Past accepted placements**
+as alternatives; tooltips explain the three sets. These icons sit in the top-right
+resource header immediately left of the filter toggle, without a separate relationship
+bar. The community curation lock control sits beside Edit in the resource header and
+remains SuperAdmin-only. Standard Feature search, filters, sorting and rows operate
+within the selected relationship set on the server, including counts and pagination.
+Private Location access and ordinary Feature authorization both apply. Relationship
+counts bypass Feature-only revision caches so relationship changes cannot leave stale
+totals. Profile and Relationships share the record editor and map; the Features view
+owns its independent list controls.
+
+Validation: `src/tests/feature-index-query.test.ts`,
+`src/tests/feature-index.remote.test.ts` and
+`scripts/visual-checks/location-resource-navigation-check.ts`.
+
 ### Shared address presentation and editing (Refs #194)
 
 The Feature association review presents the original Address on the left and the

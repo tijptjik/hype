@@ -20,7 +20,9 @@ import { m } from '#lib/i18n.js'
 import Header from '#lib/bits/patterns/layout/header/Header.svelte'
 import AdminFeatureIndex from './AdminFeatureIndex.svelte'
 import ScopedFeatureControls from './ScopedFeatureControls.svelte'
+import LocationFeatureViewFilter from './LocationFeatureViewFilter.svelte'
 // TYPES
+import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
 import type { FeaturePrismResource } from '#lib/client/services/scopedFeatureView.js'
 
 let {
@@ -33,6 +35,10 @@ let {
   embedded?: boolean
 } = $props()
 
+let locationView = $state<'associated' | 'placed' | 'past'>('associated')
+const locationScope = $derived<FeatureIndexQuery['location']>(
+  resourceType === 'location' ? { id: resourceId, view: locationView } : undefined,
+)
 const parent = getAdminCtx()
 const parentHeader = getHeaderCtrl()
 // The owning route keys this component by entity ID and mounts it only on #features.
@@ -65,6 +71,7 @@ $effect(() => {
  * @returns Completion after resolving the parent IDs and starting navigation.
  */
 async function createFeature(): Promise<void> {
+  if (resourceType === 'location') return
   try {
     const selection: Record<string, string> = {}
     if (resourceType === 'organisation') {
@@ -110,12 +117,23 @@ $effect(() => {
       view.filters.values.feature.text = value
     },
   })
+  // Relationship selection belongs beside the header's filter toggle, independently of the filter bar.
+  if (locationScope) {
+    parentHeader.setViewActionContent(LocationFeatureViewFilter, {
+      value: locationScope.view,
+      onChange: (value: 'associated' | 'placed' | 'past') => {
+        locationView = value
+      },
+    })
+  }
   const region = headerCtrl.state.layout.controlBar
   if (region?.component) {
     parentHeader.setControlBar(
       ScopedFeatureControls,
       { adminCtx, region },
-      { isVisible: adminCtx.listUi.state.isControlBarVisible.feature },
+      {
+        isVisible: adminCtx.listUi.state.isControlBarVisible.feature,
+      },
     )
   }
 })
@@ -129,6 +147,7 @@ onDestroy(() => {
     // A replacement index may already own the shared header when this one unmounts.
     if (parentHeader.state.search?.listUi === adminCtx.listUi) {
       parentHeader.setSearch(null)
+      if (resourceType === 'location') parentHeader.setViewActionContent(null, {})
     }
     if (parentHeader.state.layout.controlBar?.props?.adminCtx === adminCtx) {
       parentHeader.clearControlBar()
@@ -155,6 +174,11 @@ onDestroy(() => {
     />
   {/if}
   <div class="relative flex min-h-0 flex-1 flex-col">
-    <AdminFeatureIndex showTotalCount onCreate={createFeature} />
+    <AdminFeatureIndex
+      showTotalCount
+      {locationScope}
+      readOnly={resourceType === 'location'}
+      onCreate={resourceType === 'location' ? undefined : createFeature}
+    />
   </div>
 </div>
