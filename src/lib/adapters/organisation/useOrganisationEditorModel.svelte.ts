@@ -1,3 +1,4 @@
+import type { ProjectLocationPolicy } from '#lib/locations/model.js'
 // TABLE OF CONTENTS
 // 1. Editor contract
 // 2. Remote form and committed baseline
@@ -64,6 +65,7 @@ interface OrganisationEditorModel {
   readonly settings: OrganisationSettingsPatch
   readonly messagingAppearance: ChatAppearance
   readonly userPolicy: OrganisationUserPolicy
+  setLocationPolicy: (policy: ProjectLocationPolicy | null) => void
   setMessagingAppearance: (appearance: ChatAppearance) => void
   setContentLocales: (locales: string[] | undefined) => void
   setMultilingualDefaults: (
@@ -141,6 +143,24 @@ export function useOrganisationEditorModel(
   const messagingAppearance = $derived(
     organisationSettingsPatch.messagingAppearance ?? readChatAppearance(undefined),
   )
+
+  /** Stage Organisation Location defaults through the authorized resource form.
+   * @param policy Explicit defaults, or null to restore Hype defaults.
+   * @returns Nothing; Save and Cancel use the resource revision guard.
+   */
+  function setLocationPolicy(policy: ProjectLocationPolicy | null): void {
+    if (!options.isEditing() || formCtx.submitting || !options.canSubmit()) return
+    updateFormData(
+      formCtx.form as unknown as FormDataUpdaterForm<
+        OrganisationEditorFormInput['data']
+      >,
+      data => {
+        data.settings = { ...organisationSettingsPatch, locationPolicy: policy }
+        return data
+      },
+    )
+    options.onChange()
+  }
 
   /** Stage the background in the organisation form without issuing a separate write.
    * @param appearance Background being previewed in the Messaging facet.
@@ -261,6 +281,7 @@ export function useOrganisationEditorModel(
     get userPolicy() {
       return userPolicy
     },
+    setLocationPolicy,
     setMessagingAppearance,
     setContentLocales,
     setMultilingualDefaults,

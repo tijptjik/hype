@@ -1,4 +1,5 @@
 <script lang="ts">
+import { curationText } from '#lib/locations/curationIdentity.js'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // COMPONENTS
@@ -80,6 +81,18 @@ const brandNames = $derived(
       >
     </div>
   </div>
+  {#each [
+    { label: 'Branch', value: curationText(place.facts?.branch, tag) },
+    { label: 'Format', value: curationText(place.facts?.format, tag) },
+    { label: 'Branch ID', value: place.facts?.branchId },
+  ] as field}
+    {#if field.value}
+      <div class="space-y-1">
+        <h3 class="text-muted-foreground text-sm">{field.label}</h3>
+        <p class="break-words">{field.value}</p>
+      </div>
+    {/if}
+  {/each}
   {#if place.facts}
     {#if !isEditing}
       <div class="space-y-2">

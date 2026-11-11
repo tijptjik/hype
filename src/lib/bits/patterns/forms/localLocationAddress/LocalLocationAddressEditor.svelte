@@ -74,6 +74,9 @@ let {
 let correctionScope = $state<'organisation' | 'shared'>(
   untrack(() => (place.canEditShared ? 'shared' : 'organisation')),
 )
+let branch = $state<Record<string, string>>({})
+let format = $state<Record<string, string>>({})
+let branchId = $state('')
 let sharedBrandEdit = $state<LocationBrandEdit | undefined>()
 const editableFacts = $derived(
   correctionScope === 'shared' ? (place.sharedFacts ?? place.facts) : place.facts,
@@ -175,6 +178,9 @@ function edit(): void {
     !place.revisionId
   )
     return
+  branch = structuredClone(editableFacts?.branch ?? {})
+  format = structuredClone(editableFacts?.format ?? {})
+  branchId = editableFacts?.branchId ?? ''
   sharedBrandEdit = undefined
   const retained = {
     ...$state.snapshot(retainedAddress),
@@ -405,10 +411,17 @@ async function save(): Promise<void> {
           patch[field] = { mode: 'override', value: lifecycle[field] ?? null }
       if (successorLocationId !== (editableFacts.successorLocationId ?? null))
         patch.successorLocationId = { mode: 'override', value: successorLocationId }
+      if (JSON.stringify(branch) !== JSON.stringify(editableFacts?.branch ?? {}))
+        patch.branch = { mode: 'override', value: branch }
+      if (JSON.stringify(format) !== JSON.stringify(editableFacts?.format ?? {}))
+        patch.format = { mode: 'override', value: $state.snapshot(format) }
+      if (branchId !== (editableFacts?.branchId ?? ''))
+        patch.branchId = { mode: 'override', value: branchId }
       if (sharedBrandEdit) patch.brands = sharedBrandEdit.choice
       if (Object.keys(patch).length)
         await saveSharedLocationDirectoryCorrection({
           locationId: place.id,
+          organisationId: place.editingOrganisationId ?? undefined,
           sourceRevisionId: expectedRevisionId,
           expectedRevision: place.sharedRevision ?? null,
           patch,
@@ -428,6 +441,15 @@ async function save(): Promise<void> {
           successorLocationId !== (place.facts?.successorLocationId ?? null)
             ? successorLocationId
             : undefined,
+        branch:
+          JSON.stringify(branch) !== JSON.stringify(editableFacts?.branch ?? {})
+            ? $state.snapshot(branch)
+            : undefined,
+        format:
+          JSON.stringify(format) !== JSON.stringify(editableFacts?.format ?? {})
+            ? $state.snapshot(format)
+            : undefined,
+        branchId: branchId !== (editableFacts?.branchId ?? '') ? branchId : undefined,
         names:
           JSON.stringify(names) !== initialNamesSignature
             ? $state.snapshot(names)
@@ -520,6 +542,9 @@ $effect(() => {
     dirty:
       editing &&
       (Boolean(sharedBrandEdit) ||
+        JSON.stringify(branch) !== JSON.stringify(editableFacts?.branch ?? {}) ||
+        JSON.stringify(format) !== JSON.stringify(editableFacts?.format ?? {}) ||
+        branchId !== (editableFacts?.branchId ?? '') ||
         JSON.stringify([
           draft,
           coordinates,
@@ -618,7 +643,7 @@ $effect(() => {
               <h2 class="text-lg font-semibold">{m.location_record_identity()}</h2>
               {#if place.canEditShared}
                 <label class="grid gap-1 text-sm"
-                  >Correction scope
+                  >Edit destination
                   <select
                     class="border-border bg-background rounded border p-2"
                     value={correctionScope}
@@ -631,16 +656,22 @@ $effect(() => {
                       edit()
                     }}
                   >
-                    <option value="shared">Hype shared correction</option>
+                    <option value="shared">Community</option>
                     {#if place.editingOrganisationId}
-                      <option value="organisation">Organisation override</option>
+                      <option value="organisation">Internal</option>
                     {/if}
                   </select>
                 </label>
                 {#if correctionScope === 'shared'}
                   <p class="text-muted-foreground text-sm">
-                    These corrections are shared across Hype. Upstream evidence remains
-                    in Location history.
+                    Contribute these edits to the community curations for this Location.
+                    Acceptance follows each Organisation’s location policies. Upstream
+                    evidence remains intact.
+                  </p>
+                {:else}
+                  <p class="text-muted-foreground text-sm">
+                    Save these edits as Organisation customizations without contributing
+                    them to community curations.
                   </p>
                 {/if}
               {/if}
@@ -692,6 +723,51 @@ $effect(() => {
                     ]),
                   ))}
               />
+              {#if activeKind === 'establishment'}
+                <div class="grid gap-4">
+                  {#each ['en', 'zh-Hant', 'zh-Hans'] as locale}
+                    <div class="grid gap-4 sm:grid-cols-2">
+                      <label class="flex flex-col gap-2 text-sm"
+                        ><span>Branch · {locale}</span>
+                        <input
+                          class="border-border bg-background rounded-lg border px-3 py-2"
+                          maxlength="1000"
+                          value={branch[locale] ?? ''}
+                          disabled={busy}
+                          oninput={event =>
+                            (branch = {
+                              ...branch,
+                              [locale]: event.currentTarget.value,
+                            })}
+                        ></label
+                      >
+                      <label class="flex flex-col gap-2 text-sm"
+                        ><span>Format · {locale}</span>
+                        <input
+                          class="border-border bg-background rounded-lg border px-3 py-2"
+                          maxlength="1000"
+                          value={format[locale] ?? ''}
+                          disabled={busy}
+                          oninput={event =>
+                            (format = {
+                              ...format,
+                              [locale]: event.currentTarget.value,
+                            })}
+                        ></label
+                      >
+                    </div>
+                  {/each}
+                  <label class="flex flex-col gap-2 text-sm"
+                    ><span>Branch ID</span>
+                    <input
+                      class="border-border bg-background rounded-lg border px-3 py-2"
+                      maxlength="200"
+                      bind:value={branchId}
+                      disabled={busy}
+                    ></label
+                  >
+                </div>
+              {/if}
               {#if place.canEditShared && correctionScope === 'shared'}
                 <LocationBrandEditor
                   association={{
@@ -783,7 +859,10 @@ $effect(() => {
                 </button>
               {/each}
             {/if}
-            <fieldset disabled={busy} class="min-w-0 space-y-6">
+            <fieldset
+              disabled={busy}
+              class="@container grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-start gap-8"
+            >
               <AddressDetails
                 localeState={editorLocaleState}
                 translations={localeState.expanded}
@@ -804,6 +883,7 @@ $effect(() => {
                 onChange={next => (draft = next)}
               />
               <AddressDivisions
+                class="@min-[50rem]:border-t-0 @min-[50rem]:pt-0"
                 {address}
                 coordinates={point}
                 isEditing={editing}

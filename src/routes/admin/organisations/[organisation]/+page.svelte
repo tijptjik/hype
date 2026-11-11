@@ -1,4 +1,6 @@
 <script lang="ts">
+import LocationUpdatePolicyForm from '#lib/bits/patterns/forms/locationUpdatePolicy/LocationUpdatePolicyForm.svelte'
+import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
 // DEFERRED FACETS
 import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
@@ -1612,6 +1614,17 @@ $effect(() => {
       class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'advanced' }}
     >
+      <LocationUpdatePolicyForm
+        initial={{
+          policy:
+            organisationSettingsPatch.locationPolicy ?? DEFAULT_PROJECT_LOCATION_POLICY,
+          revision: 0,
+        }}
+        {isEditing}
+        saving={formCtx.submitting}
+        onChange={value =>
+          editorModel.setLocationPolicy(value ? JSON.parse(value).policy : null)}
+      />
       <OrganisationAdvancedSettings
         name={formCtx.form.fields.value().data?.i18n?.[getLocaleKey()]?.nameShort ||
           getNameForToast(organisation, 'nameShort')}

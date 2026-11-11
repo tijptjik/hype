@@ -319,6 +319,11 @@ function rows(
           value: value.phoneNumber?.join(' · ') || '—',
         },
         { label: m.location_brand_title(), value: brands(value.brands) },
+        { label: 'Branch', value: names(value.branch ?? {}) },
+        { label: 'Format', value: names(value.format ?? {}) },
+        { label: 'Branch ID', value: value.branchId || '—' },
+        { label: 'Brand ID', value: value.brandId || '—' },
+        { label: 'Group ID', value: value.groupId || '—' },
       ]
     : [
         {
