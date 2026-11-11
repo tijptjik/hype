@@ -193,6 +193,10 @@ export async function persistSaanSeoiPlace(
     .get()
   if (retained && retained.ssId !== projection.ssId)
     throw new Error('Source identity changed during ingestion; review required')
+  if (retained) {
+    const { linkImportedLocationBrands } = await import('./identityCatalogueImport')
+    await linkImportedLocationBrands(db, locationId, 'system:brand-import')
+  }
   return { locationId, revisionId }
 }
 

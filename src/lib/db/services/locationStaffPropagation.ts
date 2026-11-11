@@ -137,8 +137,12 @@ export async function prepareStaffLocationPropagation(
       input.authorOrganisation?.id === row.organisationId
         ? input.fields
         : input.fields.filter(field => {
-            const previous = before[field as keyof typeof before]
-            const next = input.facts[field as keyof LocationFacts]
+            const previous =
+              field === 'groupId' ? before.group : before[field as keyof typeof before]
+            const next =
+              field === 'groupId'
+                ? input.facts.group
+                : input.facts[field as keyof LocationFacts]
             if (equalLocationValue(previous, next)) return true
             // Missing-value consent never defeats a deliberate suppression or a relocation.
             const missing = fillsMissingLocationValue(previous, next)

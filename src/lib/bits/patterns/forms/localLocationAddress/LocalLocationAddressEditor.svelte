@@ -1,4 +1,5 @@
 <script lang="ts">
+import IdentityCataloguePicker from '../identityCatalogue/IdentityCataloguePicker.svelte'
 import { saveSharedLocationDirectoryCorrection } from '#lib/api/locationShared.remote.js'
 import type { SharedCorrectionPatch } from '#lib/locations/sharedCorrection.js'
 import type { LocationBrandEdit } from '#lib/locations/brandEdit.js'
@@ -102,6 +103,9 @@ function communityClosed(field: CurationLockField): boolean {
 let branch = $state<Record<string, string>>({})
 let format = $state<Record<string, string>>({})
 let branchId = $state('')
+let brandLink = $state<string | null>(null),
+  groupLink = $state<string | null>(null)
+let changedLinks = $state<{ brandId?: boolean; groupId?: boolean }>({})
 let sharedBrandEdit = $state<LocationBrandEdit | undefined>()
 const editableFacts = $derived(
   communityRecord ? (place.sharedFacts ?? place.facts) : place.facts,
@@ -207,6 +211,9 @@ function edit(): void {
   branch = structuredClone(editableFacts?.branch ?? {})
   format = structuredClone(editableFacts?.format ?? {})
   branchId = editableFacts?.branchId ?? ''
+  brandLink = editableFacts?.brandId ?? null
+  groupLink = editableFacts?.groupId ?? null
+  changedLinks = {}
   sharedBrandEdit = undefined
   const retained = {
     ...$state.snapshot(retainedAddress),
@@ -444,6 +451,14 @@ async function save(): Promise<void> {
       if (JSON.stringify(format) !== JSON.stringify(editableFacts?.format ?? {}))
         patch.format = { mode: 'override', value: $state.snapshot(format) }
       if (sharedBrandEdit) patch.brands = sharedBrandEdit.choice
+      if (changedLinks.brandId)
+        patch.brandId = brandLink
+          ? { mode: 'override', value: brandLink }
+          : { mode: 'inherit' }
+      if (changedLinks.groupId)
+        patch.groupId = groupLink
+          ? { mode: 'override', value: groupLink }
+          : { mode: 'inherit' }
       if (Object.keys(patch).length)
         await saveSharedLocationDirectoryCorrection({
           locationId: place.id,
@@ -568,6 +583,7 @@ $effect(() => {
     dirty:
       editing &&
       (Boolean(sharedBrandEdit) ||
+        Object.keys(changedLinks).length > 0 ||
         JSON.stringify(branch) !== JSON.stringify(editableFacts?.branch ?? {}) ||
         JSON.stringify(format) !== JSON.stringify(editableFacts?.format ?? {}) ||
         branchId !== (editableFacts?.branchId ?? '') ||
@@ -693,6 +709,30 @@ $effect(() => {
               <div
                 class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-start gap-8"
               >
+                {#if communityRecord}
+                  <IdentityCataloguePicker
+                    kind="brand"
+                    value={brandLink}
+                    organisationId={place.editingOrganisationId}
+                    disabled={busy ||
+                      communityClosed('brandId') ||
+                      communityClosed('brands')}
+                    onChange={id => {
+                      brandLink = id
+                      changedLinks = { ...changedLinks, brandId: true }
+                    }}
+                  />
+                  <IdentityCataloguePicker
+                    kind="group"
+                    value={groupLink}
+                    organisationId={place.editingOrganisationId}
+                    disabled={busy || communityClosed('groupId')}
+                    onChange={id => {
+                      groupLink = id
+                      changedLinks = { ...changedLinks, groupId: true }
+                    }}
+                  />
+                {/if}
                 <LocationLocaleField
                   label={m.location_field_branch()}
                   value={branch}

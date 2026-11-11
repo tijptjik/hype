@@ -99,6 +99,8 @@ export async function prepareSharedFeatureAdoption(
   ])
     Object.assign(facts, { [field]: input.facts[field as keyof LocationFacts] })
 
+  if (input.fields?.includes('groupId')) facts.group = input.facts.group
+
   const changesPhone = !input.fields || input.fields.includes('phoneNumber')
   const phoneDefinitions = changesPhone
     ? await db

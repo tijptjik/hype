@@ -61,3 +61,5 @@ export * from './imageUpload'
 export * from './featureIntentPolicy'
 
 export * from './displayTemplate'
+
+export * from './identityCatalogue'

@@ -44,6 +44,7 @@ export function featureTemplateTitles(
         'source.name': localized(location?.names, locale) ?? base,
         'location.name': localized(location?.names, locale),
         'feature.name': base,
+        'group.name': location?.group?.i18n[canonicalContentTag(locale)]?.name,
         'brand.name': localized(location?.brands?.[0]?.names, locale),
         'format.name': localized(location?.format, locale),
         branch: localized(location?.branch, locale),

@@ -43,6 +43,9 @@ export type LocationPosition = {
 
 /** Normalized Feature display projection; persisted revisions use LocationFactsSnapshot. */
 export type LocationFacts = {
+  /** Curated corporate affiliation resolved from an accepted catalogue version. */
+  group?: import('./identityCatalogue').IdentityCatalogueRecord
+
   /** Optional area geometry; the Location point remains the map anchor. */
   footprint?: LocationFootprint | null
   /** Additional typed facts survive editing without becoming generic Feature properties. */

@@ -1,3 +1,8 @@
+import { readIdentityCatalogue } from './identityCatalogue'
+import {
+  catalogueNames,
+  type IdentityCatalogueRecord,
+} from '#lib/locations/identityCatalogue.js'
 // DRIZZLE
 import { sql, type SQL } from 'drizzle-orm'
 import { locationSharedRevision } from '../schema/locationShared'
@@ -90,6 +95,7 @@ export async function sharedLocationFacts(
       const field = pin.field as keyof LocationFacts
       const pinned = await sharedLocationFacts(db, locationId, facts, pin.revision)
       Object.assign(resolved, { [field]: pinned.facts[field] })
+      if (field === 'groupId') resolved.group = pinned.facts.group
     }
   }
   return { facts: resolved, revision: row?.id ?? null }
@@ -115,11 +121,37 @@ export async function prepareSharedLocationCorrection(
 ) {
   const patch = SharedCorrectionPatchSchema.parse(input.patch)
   authorizeSharedCorrection(patch, input.rights)
+  const cataloguePins: Partial<Record<'brandId' | 'groupId', IdentityCatalogueRecord>> =
+    {}
+  for (const field of ['brandId', 'groupId'] as const) {
+    const choice = patch[field]
+    if (choice?.mode !== 'override') continue
+    const record = await readIdentityCatalogue(db, String(choice.value))
+    if (!record || record.kind !== (field === 'brandId' ? 'brand' : 'group'))
+      throw new Error('CATALOGUE_IDENTITY_UNAVAILABLE')
+    cataloguePins[field] = record
+    if (field === 'brandId')
+      patch.brands = {
+        mode: 'override',
+        value: [
+          {
+            identifiers: {
+              catalogueId: record.id,
+              catalogueVersion: String(record.version),
+            },
+            names: catalogueNames(record),
+          },
+        ],
+      }
+  }
+  if (patch.brandId && patch.brandId.mode !== 'override')
+    patch.brands = { mode: patch.brandId.mode }
+
   const source = await db.get<{
     facts: string
     kind: string
     rawSource: string
-  }>(sql`SELECT r.facts,r.rawSource,l.kind FROM locationRevision r JOIN location l ON l.id=r.locationId
+  }>(sql`SELECT r.facts,r.rawSource,l.matchingType kind FROM locationRevision r JOIN location l ON l.id=r.locationId
     WHERE r.id=${input.sourceRevisionId} AND l.id=${input.locationId} AND l.state!='redirect'
     AND r.id=(SELECT id FROM locationRevision WHERE locationId=l.id ORDER BY version DESC LIMIT 1) AND (${input.guard})`)
   const previous = await readSharedLocationCorrection(db, input.locationId)
@@ -134,6 +166,14 @@ export async function prepareSharedLocationCorrection(
     source.kind !== 'establishment'
   )
     throw new Error('BRANCH_REQUIRES_ESTABLISHMENT')
+  // A free-form community brand edit detaches its old catalogue link explicitly.
+  if (
+    patch.brands &&
+    !patch.brandId &&
+    previous &&
+    JSON.parse(previous.corrections).brandId?.choice.mode === 'override'
+  )
+    patch.brandId = { mode: 'inherit' }
   const facts = readLocationFacts(source.facts)
   const locks = await readLocationCurationLocks(db, input.locationId)
   assertCurationFieldsOpen(
@@ -158,6 +198,10 @@ export async function prepareSharedLocationCorrection(
       omittedFields: omittedSourceContacts(source.rawSource),
     },
   )
+  for (const field of ['brandId', 'groupId'] as const) {
+    if (cataloguePins[field] && corrections[field])
+      corrections[field].catalogue = cataloguePins[field]
+  }
   const guard = sql`(${input.guard}) AND (${locationCurationLockFence(input.locationId, locks)}) AND (SELECT id FROM locationSharedHead WHERE locationId=${input.locationId}) IS ${input.expectedRevision}
     AND (SELECT id FROM locationRevision WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1)=${input.sourceRevisionId}`
   const queries = [
@@ -176,6 +220,7 @@ export async function prepareSharedLocationCorrection(
   return {
     id,
     queries,
+    fields: Object.keys(patch),
     facts: resolveSharedCorrections(
       facts,
       corrections,

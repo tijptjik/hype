@@ -1,3 +1,5 @@
+import { curationTextStorage } from './curationIdentity'
+import type { IdentityCatalogueRecord } from './identityCatalogue'
 import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
 // VALIDATION
 import { z } from 'zod'
@@ -24,18 +26,23 @@ export const SHARED_CONTACT_FIELDS = [
   'socials',
   'accessibility',
 ] as const
-export const SharedCorrectionValuesSchema = LocationFactsSchema.partial().extend({
-  phoneNumber: z
-    .array(
-      z
-        .string()
-        .refine(value => Boolean(normalizePhoneNumber(value)), 'Invalid phone number'),
-    )
-    .optional(),
-  websites: WebsitesSchema.optional(),
-  socials: SocialsSchema.optional(),
-  accessibility: AccessibilitySchema.optional(),
-})
+export const SharedCorrectionValuesSchema = LocationFactsSchema.omit({ group: true })
+  .partial()
+  .extend({
+    phoneNumber: z
+      .array(
+        z
+          .string()
+          .refine(
+            value => Boolean(normalizePhoneNumber(value)),
+            'Invalid phone number',
+          ),
+      )
+      .optional(),
+    websites: WebsitesSchema.optional(),
+    socials: SocialsSchema.optional(),
+    accessibility: AccessibilitySchema.optional(),
+  })
 export const SharedCorrectionFieldSchema = SharedCorrectionValuesSchema.keyof()
 export const SharedFieldPinsSchema = z
   .array(
@@ -80,6 +87,9 @@ export const SharedCorrectionPatchSchema = z
   })
 export type SharedCorrectionPatch = z.infer<typeof SharedCorrectionPatchSchema>
 export type SharedCorrectionEntry = {
+  /** Immutable catalogue evidence accepted with this community reference. */
+  catalogue?: IdentityCatalogueRecord
+
   original: { present: boolean; value?: unknown }
   choice: z.infer<typeof choice>
   sourceRevisionId: string
@@ -134,7 +144,10 @@ export function amendSharedCorrections(
       actorId: metadata.actorId,
       editedAt: metadata.editedAt,
       sourceRevisionId: metadata.sourceRevisionId,
-      choice: change,
+      choice:
+        change.mode === 'override' && (key === 'branch' || key === 'format')
+          ? { mode: 'override', value: curationTextStorage(change.value) }
+          : change,
       original:
         !metadata.omittedFields?.includes(key) && Object.hasOwn(source, key)
           ? { present: true, value: source[key] }
@@ -207,6 +220,14 @@ export function resolveSharedCorrections(
       [key]: entry.choice.mode === 'clear' ? empty : entry.choice.value,
     })
   }
+  const group = corrections.groupId
+  if (
+    group?.catalogue?.kind === 'group' &&
+    group.choice.mode === 'override' &&
+    group.choice.value === facts.groupId
+  )
+    facts.group = group.catalogue
+  else delete facts.group
   return { facts: LocationFactsSchema.parse(facts), status }
 }
 

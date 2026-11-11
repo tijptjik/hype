@@ -22,6 +22,8 @@ export function resolveLocationField<T>(
 }
 
 export type EffectiveLocationFacts = {
+  group?: LocationFacts['group']
+
   branch?: Record<string, string> | null
   format?: Record<string, string> | null
   branchId?: string | null
@@ -74,6 +76,13 @@ export function resolveFeatureLocation(
     )
   }
   return {
+    ...(facts.group &&
+    (!overrides.groupId ||
+      overrides.groupId.mode === 'inherit' ||
+      (overrides.groupId.mode === 'override' &&
+        overrides.groupId.value === facts.group.id))
+      ? { group: facts.group }
+      : {}),
     ...(facts.format !== undefined || overrides.format
       ? { format: resolveLocationField(facts.format ?? {}, overrides.format) }
       : {}),

@@ -143,7 +143,7 @@ export const saveSharedLocationCorrection = guardedCommand(
     const overrides = retainCommunityEditOverrides(
       current?.overrides ?? {},
       shared.facts,
-      Object.keys(input.patch),
+      shared.fields,
     )
     const organisation = await prepareOrganisationLocationWrite(ctx.db, {
       organisationId: command.feature.organisationId,
@@ -155,7 +155,7 @@ export const saveSharedLocationCorrection = guardedCommand(
         kind: 'community-contribution',
         featureId: input.featureId,
         sharedRevisionId: shared.id,
-        fields: Object.keys(input.patch),
+        fields: shared.fields,
       },
     })
     const propagation = await prepareStaffLocationPropagation(ctx.db, {
@@ -164,7 +164,7 @@ export const saveSharedLocationCorrection = guardedCommand(
       sharedRevisionId: shared.id,
       actorId: ctx.user.id,
       facts: shared.facts,
-      fields: Object.keys(input.patch),
+      fields: shared.fields,
       authorOrganisation: {
         id: command.feature.organisationId,
         revision: organisation.revision,
@@ -217,7 +217,7 @@ export const saveSharedLocationDirectoryCorrection = guardedCommand(
       sharedRevisionId: shared.id,
       actorId: ctx.user.id,
       facts: shared.facts,
-      fields: Object.keys(input.patch),
+      fields: shared.fields,
     })
     if (
       !(await executeRevisionBatch(

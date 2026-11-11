@@ -1,3 +1,4 @@
+import { IdentityCatalogueContentSchema } from './identityCatalogue'
 import { LocalizedCurationTextSchema } from './curationIdentity'
 import { AccessibilitySchema } from './accessibility'
 // AUTHORED CONTENT LOCALES
@@ -95,6 +96,11 @@ function override<T>(valueSchema: z.ZodType<T>): z.ZodType<LocationOverride<T>> 
 
 /** Validated display projection; factsSnapshot owns the discriminated storage envelope. */
 export const LocationFactsSchema = z.strictObject({
+  group: IdentityCatalogueContentSchema.extend({
+    id: z.string(),
+    kind: z.literal('group'),
+    version: z.number().int().positive(),
+  }).optional(),
   footprint: LocationFootprintSchema.nullable().optional(),
   entity: LocationEntitySchema.optional(),
   operatingStatus: OperatingStatusSchema.nullable().optional(),

@@ -294,6 +294,10 @@ export function planLocationAdoption(input: {
       !equalLocationValue(oldFacts.entity ?? null, next.entity ?? null) ||
       !equalLocationValue(effectiveBefore.names, effectiveCandidate.names) ||
       !equalLocationValue(effectiveBefore.brands, effectiveCandidate.brands) ||
+      !equalLocationValue(
+        effectiveBefore.group?.i18n ?? null,
+        effectiveCandidate.group?.i18n ?? null,
+      ) ||
       CURATION_IDENTITY_FIELDS.some(
         field => !equalLocationValue(effectiveBefore[field], effectiveCandidate[field]),
       ) ||

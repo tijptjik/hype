@@ -10,10 +10,25 @@ export const CURATION_IDENTITY_FIELDS = [
   'branch',
   'branchId',
 ] as const
+const curationLocaleMap = z.record(z.string().min(2).max(32), z.string().max(1000))
 export const LocalizedCurationTextSchema = z.preprocess(
   value => (typeof value === 'string' ? { en: value } : value),
   z
-    .record(z.string().min(2).max(32), z.string().max(1000))
+    .union([
+      curationLocaleMap,
+      z
+        .strictObject({
+          i18n: z.record(
+            z.string().min(2).max(32),
+            z.strictObject({ value: z.string().max(1000) }),
+          ),
+        })
+        .transform(value =>
+          Object.fromEntries(
+            Object.entries(value.i18n).map(([locale, row]) => [locale, row.value]),
+          ),
+        ),
+    ])
     .transform(value =>
       Object.fromEntries(
         Object.entries(value).map(([locale, text]) => [
@@ -23,6 +38,23 @@ export const LocalizedCurationTextSchema = z.preprocess(
       ),
     ),
 )
+
+/** Store new localized curation values in the same locale-first i18n/value shape as text properties.
+ * @param value Authored locale map or compatible retained evidence. @returns Namespaced translated values.
+ * @remarks Reading still supports immutable historical locale maps; resolved display adapters return plain locale maps.
+ */
+export function curationTextStorage(value: unknown): {
+  i18n: Record<string, { value: string }>
+} {
+  return {
+    i18n: Object.fromEntries(
+      Object.entries(LocalizedCurationTextSchema.parse(value)).map(([locale, text]) => [
+        locale,
+        { value: text },
+      ]),
+    ),
+  }
+}
 export type LocalizedCurationText = z.output<typeof LocalizedCurationTextSchema>
 
 /** Seed all supported catalogue languages without claiming translations were supplied upstream.

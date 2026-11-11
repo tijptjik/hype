@@ -53,7 +53,7 @@ function setup() {
   const f = publicationSqlite({})
   stores.push(f)
   f.sqlite.exec(`PRAGMA foreign_keys=ON;
-    CREATE TABLE location(id TEXT PRIMARY KEY,state TEXT,kind TEXT);
+    CREATE TABLE location(id TEXT PRIMARY KEY,state TEXT,kind TEXT,matchingType TEXT GENERATED ALWAYS AS(kind));
     INSERT INTO location VALUES('place','linked','establishment'),('other','linked','establishment'),('internal','manual','establishment');
     CREATE TABLE locationRevision(id TEXT PRIMARY KEY,locationId TEXT,version INTEGER,facts TEXT,rawSource TEXT);
     CREATE TABLE locationSharedRevision(id TEXT PRIMARY KEY,locationId TEXT,previousRevisionId TEXT,sourceRevisionId TEXT,corrections TEXT,actorId TEXT,provenance TEXT,createdAt TEXT);

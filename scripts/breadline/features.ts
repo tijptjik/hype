@@ -1,3 +1,4 @@
+import { breadlineBrandCatalogueSql } from './lib/brand-catalogue'
 import { createLocationFactsSnapshot } from '../../src/lib/locations/factsSnapshot'
 // SHARED ADDRESS PARSER
 import { parseAddressContent } from '@saanseoi/address'
@@ -538,6 +539,15 @@ function buildBreadlineFeaturePlan(
             ),
           }),
         )
+        if (brands[0])
+          statements.push(
+            breadlineBrandCatalogueSql({
+              brand: brands[0],
+              locationId,
+              sourceRevisionId: revisionId,
+              actorId: authors[0].id,
+            }),
+          )
         statements.push(
           insert('featureLocation', {
             featureId: id,

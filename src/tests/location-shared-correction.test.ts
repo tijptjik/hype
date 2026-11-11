@@ -210,3 +210,27 @@ it.each([false, true])(
       ).toThrow('BRANCH_ID_INTERNAL_ONLY')
   },
 )
+
+it('stores new Branch and Format curations under i18n while reading legacy maps', () => {
+  const corrections = amendSharedCorrections(
+    {},
+    {
+      branch: { mode: 'override', value: { en: 'Central', 'zh-Hant': '中環' } },
+      format: { mode: 'override', value: { en: 'AROME Bakery' } },
+    },
+    source,
+    { actorId: 'editor', editedAt: 'now', sourceRevisionId: 'source' },
+  )
+  expect(corrections.branch?.choice).toEqual({
+    mode: 'override',
+    value: { i18n: { en: { value: 'Central' }, 'zh-Hant': { value: '中環' } } },
+  })
+  expect(resolveSharedCorrections(source, corrections).facts.branch).toEqual({
+    en: 'Central',
+    'zh-Hant': '中環',
+  })
+  const old = structuredClone(corrections)
+  if (old.branch)
+    old.branch.choice = { mode: 'override', value: { en: 'Retained legacy' } }
+  expect(resolveSharedCorrections(source, old).facts.branch?.en).toBe('Retained legacy')
+})
