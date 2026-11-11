@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import * as m from '#lib/paraglide/messages.js'
 import { canOperateIn } from '#lib/features/locationPolicy.js'
 // API
 import {
@@ -155,11 +157,9 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
   class="border-border space-y-4 border-t pt-6"
   aria-label="Location relationships"
 >
-  <h3 class="text-base font-semibold">Physical membership and operating locations</h3>
+  <h3 class="text-base font-semibold">{m.location_relationships_title()}</h3>
   <p class="text-muted-foreground text-sm">
-    Verified operating-location changes are checked against each Feature’s relocation
-    policy. Features either stay here, wait for review, or follow when their address and
-    directions need no review.
+    {m.location_operating_help()}
   </p>
   {#key locationId + ':' + organisationId + ':' + refreshVersion}
     {#each ['locationMembership', 'locationOccupancy', 'locationAddress'] as table}
@@ -177,10 +177,10 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
   {#if canEdit && (canOccupy || canContain)}
     <details class="space-y-3">
       <summary class="cursor-pointer text-sm font-medium">
-        {canOccupy ? 'Record an operating period' : 'Add to complex'}
+        {canOccupy ? m.location_operating_period() : 'Add to complex'}
       </summary>
       <label class="block text-sm"
-        >{canOccupy ? 'Operates in' : 'Containing complex'}
+        >{canOccupy ? m.location_operates_in() : 'Containing complex'}
         <input
           class="border-border bg-background mt-1 w-full rounded border p-2"
           bind:value={search}

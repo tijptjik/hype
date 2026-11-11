@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import * as m from '#lib/paraglide/messages.js'
 // SVELTE
 import { untrack } from 'svelte'
 // COMPONENTS
@@ -84,20 +86,16 @@ const searchSubtitle = $derived.by((): string => {
   if (scope.projectId) {
     const project = catalogue.projects.find(item => item.id === scope.projectId)
     const name = project?.i18n?.en?.name
-    return name
-      ? `Search layers belonging to ${name}`
-      : 'Search layers belonging to this project'
+    return name ? m.setup_search_named_project({ name }) : m.setup_search_project()
   }
   if (scope.organisationId) {
     const organisation = catalogue.organisations.find(
       item => item.id === scope.organisationId,
     )
     const name = organisation?.i18n?.en?.name
-    return name
-      ? `Search projects and layers belonging to ${name}`
-      : 'Search projects and layers belonging to this organisation'
+    return name ? m.setup_search_named_org({ name }) : m.setup_search_org()
   }
-  return 'Search organisations, projects and layers'
+  return m.setup_search_all()
 })
 const recent = $derived(catalogue.layers)
 // Search the complete authorized catalogue without discarding or re-fetching results.
@@ -127,12 +125,14 @@ let loading = $state(false)
 let failed = $state(false)
 let retry = $state(0)
 const labels = $derived([
-  layerAnswered && layer ? setupResourceLabel(layer) : 'What map are you adding to?',
+  layerAnswered && layer ? setupResourceLabel(layer) : m.setup_map_question(),
   typeAnswered && type
     ? featureTypeLabel(type, getLocaleKey())
-    : 'What are you adding?',
-  contextAnswered && context ? targetContextLabel(context) : 'Where is it located?',
-  'Find the location',
+    : m.setup_type_question(),
+  contextAnswered && context
+    ? targetContextLabel(context)
+    : m.setup_location_question(),
+  m.setup_find_location(),
 ])
 $effect(() => {
   retry
@@ -234,7 +234,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
   3
     ? 'min-h-0 flex-1 overflow-y-auto p-6'
     : 'shrink-0'}"
-  aria-label="New feature setup"
+  aria-label={m.setup_accessible_label()}
 >
   <div
     class="mx-auto flex w-full min-w-0 shrink-0 flex-col {step < 3
@@ -247,7 +247,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
       3
         ? 'order-last mx-auto mt-5 rounded-xl'
         : ''}"
-      aria-label="Setup progress"
+      aria-label={m.setup_progress()}
     >
       {#each labels as label, index}
         <li class="flex min-w-0 items-stretch">
@@ -274,7 +274,9 @@ function selectLayer(next: ParentSectionLayerItem): void {
             <span class="grid gap-0.5 text-left">
               {#if step >= 3 && index < 3}
                 <span class="text-xs text-slate-300"
-                  >{['Layer', 'Feature kind', 'Location kind'][index]}</span
+                  >{[m.setup_layer(), m.setup_feature_kind(), m.setup_location_kind()][
+                    index
+                  ]}</span
                 >
               {/if}
               <span class="text-sm whitespace-nowrap">{label}</span>
@@ -288,7 +290,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
       class="bg-panel text-base-content border-border mx-auto w-full max-w-4xl rounded-2xl border p-5 shadow-sm sm:p-10"
     >
       <h2 class="mb-3 text-center text-2xl font-semibold tracking-tight">
-        What map are you adding to?
+        {m.setup_map_question()}
       </h2>
       <label class="mx-auto grid max-w-xl gap-3 text-center text-sm"
         >{searchSubtitle}
@@ -299,7 +301,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
           }}
           bind:value={query}
           class="bg-panel border-border w-full min-w-0 rounded-lg border p-3"
-          placeholder="Search by name…"
+          placeholder={m.setup_search_name()}
         >
       </label>
       {#if !loading &&
@@ -310,11 +312,11 @@ function selectLayer(next: ParentSectionLayerItem): void {
         <p
           class="text-muted-foreground mt-7 text-center text-xs font-medium tracking-wide"
         >
-          Recently contributed to
+          {m.setup_recent()}
         </p>
         <section
           class="my-3 flex gap-3 overflow-x-auto pb-2"
-          aria-label="Recent layers"
+          aria-label={m.setup_recent_layers()}
         >
           {#each recent as item (item.id)}
             <button
@@ -338,11 +340,11 @@ function selectLayer(next: ParentSectionLayerItem): void {
         </section>
       {/if}
       {#if loading}
-        <div role="status" aria-busy="true" aria-label="Loading available layers">
+        <div role="status" aria-busy="true" aria-label={m.setup_loading_layers()}>
           <p
             class="text-muted-foreground mt-7 text-center text-xs font-medium tracking-wide"
           >
-            Recently contributed to
+            {m.setup_recent()}
           </p>
           <div class="my-3 flex gap-3 overflow-hidden pb-2" aria-hidden="true">
             {#each [0, 1, 2, 3] as placeholder (placeholder)}
@@ -370,8 +372,10 @@ function selectLayer(next: ParentSectionLayerItem): void {
           </div>
         </div>
       {:else if failed}
-        <p role="alert" class="my-4">Unable to load available layers.</p>
-        <button type="button" class="underline" onclick={() => retry++}>Retry</button>
+        <p role="alert" class="my-4">{m.setup_load_failed()}</p>
+        <button type="button" class="underline" onclick={() => retry++}>
+          {m.setup_retry()}
+        </button>
       {:else}
         {#if query && !scope.organisationId && !scope.projectId}
           <div class="my-4 grid gap-2 sm:grid-cols-2">
@@ -389,7 +393,9 @@ function selectLayer(next: ParentSectionLayerItem): void {
                 <OrganisationIcon class="size-5 shrink-0" />
                 <span
                   >{setupResourceLabel(item)}
-                  <small class="text-muted-foreground">Organisation</small></span
+                  <small class="text-muted-foreground"
+                    >{m.setup_organisation()}</small
+                  ></span
                 >
               </button>
             {/each}
@@ -407,7 +413,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
                 <ProjectIcon class="size-5 shrink-0" />
                 <span
                   >{setupResourceLabel(item)}
-                  <small class="text-muted-foreground">Project</small></span
+                  <small class="text-muted-foreground">{m.setup_project()}</small></span
                 >
               </button>
             {/each}
@@ -446,8 +452,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
         {/if}
         {#if !results.layers.length}
           <p class="text-muted-foreground my-4 text-sm">
-            No matching layers. Choose an organisation or project, or try another
-            search.
+            {m.setup_empty()}
           </p>
         {/if}
       {/if}

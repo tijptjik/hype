@@ -2267,15 +2267,15 @@ onDestroy(() => {
                       premises: m.association_create_premises,
                       building: m.association_create_building,
                       building_part: m.association_create_building_part,
-                      infrastructure: () => 'Create infrastructure',
-                      street: () => 'Create street',
-                      natural: () => 'Create geographic feature',
-                      built: () => 'Create built',
-                      structure: () => 'Create structure',
-                      landform: () => 'Create landform',
-                      coastal_feature: () => 'Create coastal feature',
-                      water_feature: () => 'Create water feature',
-                      service_point: () => 'Create service point',
+                      infrastructure: () => m.location_create_infrastructure(),
+                      street: () => m.location_create_street(),
+                      natural: () => m.location_create_geographic(),
+                      built: () => m.location_create_built(),
+                      structure: () => m.location_create_structure(),
+                      landform: () => m.location_create_landform(),
+                      coastal_feature: () => m.location_create_coastal(),
+                      water_feature: () => m.location_create_water(),
+                      service_point: () => m.location_create_service(),
                       establishment: m.association_create_establishment,
                     }[kind === 'address' ? 'establishment' : kind]()}
               </button>
@@ -2284,10 +2284,12 @@ onDestroy(() => {
           {#if !matched && origin.identity && canOperateIn(kind, origin.kind)}
             <label class="mx-auto flex max-w-3xl items-center gap-2 text-sm">
               <input type="checkbox" bind:checked={operatesIn}>
-              Operates in
-              {origin.names[tag] ||
-                Object.values(origin.names).find(Boolean) ||
-                'this location'}
+              {m.location_operates_in_named({
+                name:
+                  origin.names[tag] ||
+                  Object.values(origin.names).find(Boolean) ||
+                  m.location_host_fallback(),
+              })}
             </label>
           {/if}
           {#if kind === 'building_part' && !matched?.identity && projectId}

@@ -103,7 +103,7 @@ async function saveOrder(clear = false): Promise<void> {
       {table === 'locationMembership'
         ? 'Complex groupings'
         : table === 'locationOccupancy'
-          ? 'Current, former and unconfirmed operating relationships'
+          ? m.location_operating_history()
           : 'Address choices'}
     </h4>
     <Button

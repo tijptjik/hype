@@ -2190,14 +2190,12 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
 {#snippet searchResults()}
   {#if localSearchFailed}
     <p role="status" class="text-muted-foreground px-6 py-2 text-sm">
-      Local location search is unavailable. You can retry or create a local record;
-      source evidence is shown separately.
+      {m.location_local_unavailable()}
     </p>
   {/if}
   {#if localSearchLimited}
     <p role="status" class="text-muted-foreground px-6 py-2 text-sm">
-      More local locations are available. Refine your search to find the specific
-      record.
+      {m.location_local_more()}
     </p>
   {/if}
   {#if fallbackStatus && !accepted && !associationOpen}
@@ -2326,10 +2324,10 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   (result.kind === 'establishment'))}
               <p class="text-muted-foreground w-full pt-4 pb-2 text-sm font-medium">
                 {result.kind === preferredKind
-                  ? 'Matching locations'
+                  ? m.location_matching()
                   : result.kind === 'establishment' && preferredKind === 'building_part'
-                    ? 'Find a physical space through an establishment'
-                    : 'Broader locations and address evidence'}
+                    ? m.location_space_via_establishment()
+                    : m.location_starting_evidence()}
               </p>
             {/if}
 
@@ -2436,8 +2434,8 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   onclick={() => openAssociation(result, true)}
                 >
                   {allowedLocationKinds && !allowedLocationKinds.includes(result.kind)
-                    ? 'Create here'
-                    : 'Use this location'}
+                    ? m.location_create_here()
+                    : m.location_use_existing()}
                 </button>
                 {#if !allowedLocationKinds || allowedLocationKinds.includes('address')}
                   <button

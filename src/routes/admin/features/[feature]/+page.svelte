@@ -2297,7 +2297,7 @@ const featureCoordinates = $derived(
 
 const title = $derived(
   setupPending
-    ? 'New Feature'
+    ? m.setup_new_feature()
     : currentFeatureData.i18n?.[localeKey]?.title ||
         feature?.data?.i18n?.[localeKey]?.title ||
         (isNewFeatureRef

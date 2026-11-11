@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import * as m from '#lib/paraglide/messages.js'
 // SVELTE
 import { untrack } from 'svelte'
 // I18N
@@ -28,25 +30,24 @@ let {
   value?: string | null
   onChange: (type: FeatureType | null) => void
 } = $props()
-const illustrations = {
+const illustrations = $derived({
   object: {
     icon: ObjectIcon,
     description: 'An individual item, such as a sign, sculpture or drinking fountain.',
   },
   place: {
     icon: PlaceIcon,
-    description: 'A destination, such as a bookstore, café or community venue.',
+    description: m.setup_place_example(),
   },
   area: {
     icon: AreaIcon,
-    description: 'A wider space, such as a neighbourhood, garden or gathering area.',
+    description: m.setup_area_example(),
   },
   route: {
     icon: RouteIcon,
-    description:
-      'A path to follow, such as a walking trail, cycle route or heritage walk.',
+    description: m.setup_route_example(),
   },
-}
+})
 let types = $state<FeatureType[] | null>(null)
 let failed = $state(false)
 let retry = $state(0)
@@ -77,15 +78,15 @@ $effect(() => {
 })
 </script>
 <section class="mb-8 grid min-w-0 gap-3 rounded-lg border p-5">
-  <h3 class="font-semibold">What are you adding?</h3>
+  <h3 class="font-semibold">{m.setup_type_question()}</h3>
   {#if failed}
-    <p role="alert">Unable to load feature types.</p>
+    <p role="alert">{m.setup_types_failed()}</p>
     <button
       type="button"
       class="justify-self-start rounded border px-3 py-2"
       onclick={() => (retry += 1)}
     >
-      Retry
+      {m.setup_retry()}
     </button>
   {:else if types === null}
     <ContentSkeleton label="Loading feature types…">
@@ -130,8 +131,8 @@ $effect(() => {
   {#if value && types?.some(type => type.id === value)}
     <p class="text-muted-foreground text-sm">
       {types.find(type => type.id === value)?.start === 'pin'
-        ? 'Start with a map position; add a relevant location if needed.'
-        : 'Find a relevant location, then confirm the feature’s precise position.'}
+        ? m.setup_pin_help()
+        : m.setup_find_help()}
     </p>
   {/if}
 </section>
