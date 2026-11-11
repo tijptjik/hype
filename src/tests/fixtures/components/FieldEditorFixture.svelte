@@ -62,6 +62,7 @@ let {
     origin?: PropertyTranslationOrigin,
   ) => Promise<boolean | void>
 } = $props()
+let loading = $state(false)
 let data = $state<PropertyFormData>({
   properties: [
     {
@@ -184,11 +185,13 @@ let editing = $state(true)
 >
   <div class="border-border flex gap-4 border-b p-4">
     <h1 class="text-lg font-semibold">Fields</h1>
+    <button type="button" onclick={() => (loading = !loading)}>Toggle loading</button>
     <button type="button" onclick={() => (editing = !editing)}>Toggle editing</button>
   </div>
   <form data-field-form class={panelPadding ? 'flex min-h-0 flex-1 flex-col' : ''}>
     {#snippet fieldsSection()}
       <FormFieldsSection
+        isLoading={loading}
         bind:localeSelection
         bind:multilingual
         class={panelPadding ? 'shrink-0' : ''}

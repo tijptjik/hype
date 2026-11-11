@@ -156,7 +156,12 @@ async function onFieldDrop(state: DragDropState, targetId: string): Promise<void
       in:fade={{ duration: 140 }}
       out:fade={{ duration: 120 }}
     >
-      <Loading items={loadingItems} />
+      <Loading
+        items={loadingItems}
+        locales={card?.locales}
+        multilingual={card?.multilingual}
+        visibleLocales={card?.visibleLocales}
+      />
     </section>
   {:else if items.length === 0}
     <div

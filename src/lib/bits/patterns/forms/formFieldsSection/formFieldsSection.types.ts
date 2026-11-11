@@ -16,6 +16,8 @@ export interface FormFieldsSectionActionHandlers {
 }
 
 export interface FormFieldsSectionLoadingItem {
+  /** Retain known field shape during refreshes. */
+  property?: Property
   id: Id
   presentation: 'full' | 'header'
   isCollapsed: boolean

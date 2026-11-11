@@ -79,7 +79,7 @@ let previousItemIds: string[] = []
 const hasItems = $derived(items.length > 0)
 const hasOptimisticItems = $derived(hasItems || loadingItems.length > 0)
 const showEmptyState = $derived(!hasOptimisticItems && !isLoading)
-const showHeaderActions = $derived(hasOptimisticItems && !isLoading)
+const showHeaderActions = $derived(hasOptimisticItems || isLoading)
 const flipDisabled = $derived(layoutFlipLocked || isIntroActive || forceFlipDisabled)
 const availableLocales = $derived(
   normalizeContentLocales([
@@ -212,6 +212,7 @@ $effect(() => {
     )
     return {
       id: item.id,
+      property: item,
       presentation: card?.resolveCardPresentation?.(item) ?? 'full',
       isCollapsed: existing?.isCollapsed ?? false,
     }
@@ -258,7 +259,7 @@ $effect(() => {
     {onAdd}
   />
 {:else}
-  <section class={`${rootClass} flex min-h-0 flex-1 flex-col`}>
+  <section class={`${rootClass} flex min-h-0 flex-1 flex-col`} inert={isLoading}>
     <!-- Keep section controls available within the owning facet scrollport. -->
     <div class={responsiveSectionHeaderClasses} use:fitSectionHeader>
       <SectionHeader
@@ -266,7 +267,9 @@ $effect(() => {
         {title}
         showControlLabels={true}
         description={description ?? ''}
-        onCollapsableToggle={hasOptimisticItems ? onCollapsableToggle : undefined}
+        onCollapsableToggle={hasOptimisticItems || isLoading
+          ? onCollapsableToggle
+          : undefined}
         isCollapsableCollapsed={isCollapsedAll}
         {onVisibilityToggle}
         {isVisibilityOn}
@@ -303,8 +306,9 @@ $effect(() => {
         {/if}
         {#snippet right()}
           {#if showHeaderActions}
-            {#if card}
+            {#if card || isLoading}
               <LocaleToolbar
+                disabled={isLoading}
                 horizontal
                 options={localeOptions}
                 allowAdd={isEditing && canEdit}
