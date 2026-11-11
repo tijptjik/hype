@@ -55,7 +55,7 @@ try {
       throw Error('Missing entrance')
     if (reducedMotion === 'reduce' && Math.min(...headers) < -0.1)
       throw Error('Reduced motion animated')
-    if (Math.abs(headers.at(-1)) > 0.1) throw Error('Header did not settle')
+    if (Math.abs(headers.at(-1) ?? Infinity) > 0.1) throw Error('Header did not settle')
     if (samples.some((s: Sample) => s.header < -0.1 && s.opacity > 0.001))
       throw Error('Content visible while header entering')
     if (
