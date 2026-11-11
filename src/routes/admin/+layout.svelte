@@ -268,9 +268,11 @@ const headerProps = $derived({
     ...baseHeaderProps.facets,
     items: baseHeaderProps.facets?.items?.filter(item => item.ref !== 'share'),
   },
-  // Sharing has its own controls; keep resource form actions on their editing tabs.
+  // Sharing has its own controls; leave the reserved header slot empty.
   ...(isShareFacet
     ? {
+        filter: { ...baseHeaderProps.filter, isFilterable: false },
+        viewActions: { ...baseHeaderProps.viewActions, isVisible: false },
         formActions: {
           ...baseHeaderProps.formActions,
           isVisible: false,

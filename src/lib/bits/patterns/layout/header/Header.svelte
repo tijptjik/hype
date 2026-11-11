@@ -53,6 +53,7 @@ const showTaskActions = $derived(
 )
 const showFormActions = $derived(formActions.isVisible ?? false)
 // Labelled controls reserve crossfade space; compact forms use only their actual action width.
+// Share-capable resources retain the search/control slot across their destinations.
 const reserveFormActionWidth = $derived(
   showFacets &&
     Boolean(
@@ -179,10 +180,11 @@ const rootClass = $derived(
             </div>
           {/if}
           <div
-            class="grid items-center {showFilter ||
-            (reserveFormActionWidth && showButtonText)
-              ? 'min-w-[408px] shrink-0'
-              : 'shrink-0'}"
+            class="grid shrink-0 items-center {shareAction
+              ? 'w-[408px]'
+              : showFilter || (reserveFormActionWidth && showButtonText)
+                ? 'min-w-[408px]'
+                : ''}"
           >
             {#if showFormActions || (reserveFormActionWidth && showButtonText)}
               <div
