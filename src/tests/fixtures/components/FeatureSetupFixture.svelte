@@ -1,10 +1,10 @@
 <script lang="ts">
+import { untrack } from 'svelte'
 import FeatureSetup from '#lib/bits/patterns/forms/featureSetup/FeatureSetup.svelte'
 import type {
   FeatureSetupResults,
   FeatureSetupScope,
 } from '#lib/bits/patterns/forms/featureSetup/featureSetup.types.js'
-import { DEFAULT_FEATURE_TYPES } from '#lib/features/intents.js'
 import type { FeatureType } from '#lib/features/intents.js'
 import type { TargetContext } from '#lib/features/locationPolicy.js'
 import type { ParentSectionLayerItem } from '#lib/bits/patterns/forms/formParentSection/formParentSection.types.js'
@@ -41,10 +41,24 @@ const catalogue: FeatureSetupResults = {
     },
   ],
 }
-let layer = $state<ParentSectionLayerItem | null>(catalogue.layers[0])
-let type = $state<FeatureType | null>(DEFAULT_FEATURE_TYPES[0])
-let context = $state<TargetContext | null>('building_part')
+if (location.search.includes('logo')) {
+  catalogue.organisations[0].image = {
+    ctxType: 'organisation',
+    ctxId: 'org',
+    image: { id: 'logo', preview: '/__setup-logo.svg' },
+  } as unknown as FeatureSetupResults['organisations'][number]['image']
+}
+let layer = $state<ParentSectionLayerItem | null>(null)
+let type = $state<FeatureType | null>(null)
+let context = $state<TargetContext | null>(null)
 let step = $state(0)
+let visitedSteps = $state<number[]>([])
+$effect(() => {
+  const current = step
+  untrack(() => {
+    visitedSteps = [...visitedSteps, current]
+  })
+})
 let searching = $state(false)
 let loadCount = $state(0)
 let searchCount = $state(0)
@@ -68,6 +82,7 @@ async function load(
 }
 </script>
 <main
+  data-visited-steps={visitedSteps.join(',')}
   data-load-count={loadCount}
   data-search-count={searchCount}
   class="flex h-dvh min-h-0 min-w-0 flex-col"

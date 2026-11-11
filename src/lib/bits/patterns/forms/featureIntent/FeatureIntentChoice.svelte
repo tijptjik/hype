@@ -24,8 +24,11 @@ let {
   value,
   onChange,
   requireSelection = false,
+  options,
 }: {
   layerId: string
+  /** Options resolved by setup before mounting a stage that needs user input. */
+  options?: FeatureType[]
   requireSelection?: boolean
   value?: string | null
   onChange: (type: FeatureType | null) => void
@@ -52,6 +55,11 @@ let types = $state<FeatureType[] | null>(null)
 let failed = $state(false)
 let retry = $state(0)
 $effect(() => {
+  if (options !== undefined) {
+    types = options
+    failed = false
+    return
+  }
   const id = layerId
   retry
   const previous = untrack(() => value)

@@ -1,8 +1,8 @@
 <script lang="ts">
+// SVELTE
+import { onDestroy, untrack } from 'svelte'
 // I18N
 import * as m from '#lib/paraglide/messages.js'
-// SVELTE
-import { untrack } from 'svelte'
 // COMPONENTS
 import FeatureIntentChoice from '../featureIntent/FeatureIntentChoice.svelte'
 import TargetContextChoice from '../featureIntent/TargetContextChoice.svelte'
@@ -12,9 +12,13 @@ import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 import OrganisationIcon from 'virtual:icons/lucide/users'
 import CheckIcon from 'virtual:icons/lucide/check'
 import ArrowRightIcon from 'virtual:icons/lucide/arrow-right'
+// API
+import { getFeatureIntentOptions } from '#lib/api/featureIntents.remote.js'
 // SERVICES
 import { getURLfromImage } from '#lib/client/services/image.js'
 // DOMAIN
+import { featureCreationSourceLayerId } from '../formFeatureParentSection/formFeatureParentSection.controller'
+import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { setupResourceLabel, setupResourceMatches } from './featureSetup.types'
 import { featureTypeLabel } from '#lib/features/intents.js'
 import { getProjectDisplayName } from '#lib/projectNames.js'
@@ -64,7 +68,15 @@ $effect(() => {
 let confirmedLayerId = $state<string | null>(untrack(() => initialLayerId ?? null))
 let initialLayerApplied = $state(false)
 let confirmedTypeId = $state<string | null>(null)
-let typeAdvancePending = $state(false)
+let resolvedTypes = $state<FeatureType[] | undefined>(undefined)
+let pendingLayer = $state<ParentSectionLayerItem | null>(null)
+let failedLayer = $state<ParentSectionLayerItem | null>(null)
+let selectionVersion = 0
+let automaticLayerAttempted = false
+let failedImages = $state<string[]>([])
+onDestroy(() => {
+  selectionVersion++
+})
 let confirmedContext = $state<TargetContext | null>(null)
 const layerAnswered = $derived(Boolean(layer && layer.id === confirmedLayerId))
 const typeAnswered = $derived(
@@ -156,61 +168,22 @@ $effect(() => {
     cancelled = true
   }
 })
-// Skip determined stages only after their upstream selection and data are ready.
+// Resolve linked and sole destinations without mounting their determined stages.
 $effect(() => {
-  if (step === 0 && !loading && !failed) {
-    // Apply a linked layer once, so returning to step one still permits changing it.
-    if (initialLayerId && !initialLayerApplied) {
-      const initialLayer = catalogue.layers.find(item => item.id === initialLayerId)
-      if (initialLayer) {
-        initialLayerApplied = true
-        untrack(() => selectLayer(initialLayer))
-      }
-    } else if (!initialLayerId && catalogue.layers.length === 1) {
-      untrack(() => selectLayer(catalogue.layers[0]))
-    }
-  }
-  // A sole type can resolve while the linked layer is still being applied.
-  if (step === 1 && typeAnswered && typeAdvancePending) {
-    typeAdvancePending = false
-    step = 2
-  }
-  if (step === 2 && typeAnswered) {
-    const options = contextOptions
-    if (options.length === 1) {
-      untrack(() => {
-        confirmedContext = options[0]
-        onContext(options[0])
-        step = 3
-        onSearch()
-      })
-    }
+  if (step !== 0 || loading || failed || pendingLayer || automaticLayerAttempted) return
+  const initialLayer = initialLayerId
+    ? catalogue.layers.find(item => item.id === initialLayerId)
+    : catalogue.layers.length === 1
+      ? catalogue.layers[0]
+      : null
+  if (initialLayer && !initialLayerApplied) {
+    automaticLayerAttempted = true
+    initialLayerApplied = true
+    untrack(() => {
+      void selectLayer(initialLayer)
+    })
   }
 })
-/** Resolve determined stages before navigation so the active search stays mounted.
- * @param next Requested setup stage. @returns Nothing.
- */
-function navigateToStep(next: number): void {
-  if (next === 2 && contextAnswered && contextOptions.length === 1) next = 3
-  if (next === step) return
-  step = next
-  if (next === 3) onSearch()
-}
-/** Move to type selection only after committing one coherent parent hierarchy.
- * @param next Accessible layer selected by the contributor. @returns Nothing.
- */
-function selectLayer(next: ParentSectionLayerItem): void {
-  if (next.id !== confirmedLayerId) {
-    confirmedTypeId = null
-    confirmedContext = null
-    onType(null)
-  }
-  confirmedLayerId = next.id
-  onLayer(next)
-  step = 1
-}
-
-let failedImages = $state<string[]>([])
 /** Resolve a layer's organization image using the shared image pipeline.
  * @param item Layer whose owning organization supplies its visual identity.
  * @returns A thumbnail URL, or null when an image is missing or invalid.
@@ -229,7 +202,35 @@ function organisationImage(item: ParentSectionLayerItem): string | null {
     return null
   }
 }
-
+/** Commit a type and navigate directly to the next stage that needs input.
+ * @param next Resolved or explicitly selected feature type.
+ * @returns Nothing.
+ */
+function selectType(next: FeatureType | null): void {
+  if (next?.id !== confirmedTypeId) confirmedContext = null
+  confirmedTypeId = next?.id ?? null
+  onType(next)
+  if (!next) {
+    step = 1
+    return
+  }
+  const options = [
+    ...new Set(
+      (
+        next.targetContexts ??
+        TARGET_CONTEXTS.filter(kind => next.locationKinds.includes(kind))
+      ).map(value => (value === 'infrastructure' ? ('built' as const) : value)),
+    ),
+  ]
+  if (options.length === 1) {
+    confirmedContext = options[0]
+    onContext(options[0])
+    step = 3
+    onSearch()
+  } else {
+    step = 2
+  }
+}
 /** Animate the card's natural content height, including immediately resolved results.
  * @param node Setup card containing the measured body.
  * @param enabled Whether the centered setup card is visible.
@@ -261,6 +262,52 @@ function resizeCard(
       observer.disconnect()
       node.style.height = ''
     },
+  }
+}
+/** Resolve determined stages before navigation so the active search stays mounted.
+ * @param next Requested setup stage. @returns Nothing.
+ */
+function navigateToStep(next: number): void {
+  if (next === 1 && resolvedTypes?.length === 1 && typeAnswered) next = 2
+  if (next === 2 && contextAnswered && contextOptions.length === 1) next = 3
+  if (next === step) return
+  selectionVersion++
+  pendingLayer = null
+  failedLayer = null
+  step = next
+  if (next === 3) onSearch()
+}
+/** Resolve automatic choices before leaving the current stage.
+ * @param next Accessible layer selected by the contributor.
+ * @returns Completion of policy resolution and navigation.
+ * @remarks Only the latest request may commit; failures retain the current page for retry.
+ */
+async function selectLayer(next: ParentSectionLayerItem): Promise<void> {
+  const version = ++selectionVersion
+  pendingLayer = next
+  failedLayer = null
+  try {
+    const options = await getFeatureIntentOptions({
+      layerId: featureCreationSourceLayerId(next.id, next),
+    })
+    if (version !== selectionVersion) return
+    const retained =
+      next.id === confirmedLayerId
+        ? options.find(option => option.id === confirmedTypeId)
+        : undefined
+    if (next.id !== confirmedLayerId) {
+      confirmedTypeId = null
+      confirmedContext = null
+    }
+    resolvedTypes = options
+    confirmedLayerId = next.id
+    onLayer(next)
+    // Commit the hierarchy and determined answers together, then reveal only the destination.
+    selectType(retained ?? (options.length === 1 ? options[0] : null))
+  } catch {
+    if (version === selectionVersion) failedLayer = next
+  } finally {
+    if (version === selectionVersion) pendingLayer = null
   }
 }
 </script>
@@ -396,7 +443,20 @@ function resizeCard(
             placeholder={m.setup_search_name()}
           >
         </label>
-
+        {#if failedLayer}
+          <div role="alert" class="mt-4 text-sm">
+            <p>{m.setup_types_failed()}</p>
+            <button
+              type="button"
+              class="mt-2 underline"
+              onclick={() => {
+                if (failedLayer) void selectLayer(failedLayer)
+              }}
+            >
+              {m.setup_retry()}
+            </button>
+          </div>
+        {/if}
         {#if !loading &&
           !query &&
           !scope.organisationId &&
@@ -412,8 +472,10 @@ function resizeCard(
             {#each recent as item (item.id)}
               <button
                 type="button"
-                class="bg-panel border-border hover:border-primary focus-visible:ring-primary/50 hover:bg-base-200 flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                class="bg-panel border-border hover:border-primary focus-visible:ring-primary/50 hover:bg-base-200 flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset aria-busy:opacity-60"
                 aria-pressed={item.id === confirmedLayerId}
+                aria-busy={pendingLayer?.id === item.id}
+                disabled={pendingLayer?.id === item.id}
                 class:ring-inset={item.id === confirmedLayerId}
                 class:ring-1={item.id === confirmedLayerId}
                 class:ring-primary={item.id === confirmedLayerId}
@@ -524,8 +586,10 @@ function resizeCard(
                   {#each layers as item (item.id)}
                     <button
                       type="button"
-                      class="bg-panel border-border hover:border-primary group hover:bg-primary/5 focus-visible:ring-primary/50 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                      class="bg-panel border-border hover:border-primary group hover:bg-primary/5 focus-visible:ring-primary/50 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset aria-busy:opacity-60"
                       aria-pressed={item.id === confirmedLayerId}
+                      aria-busy={pendingLayer?.id === item.id}
+                      disabled={pendingLayer?.id === item.id}
                       class:ring-inset={item.id === confirmedLayerId}
                       class:ring-1={item.id === confirmedLayerId}
                       class:ring-primary={item.id === confirmedLayerId}
@@ -555,7 +619,7 @@ function resizeCard(
           {/if}
         {/if}
       </div>
-      {#if layerAnswered && layer && sourceLayerId}
+      {#if step === 1 && layerAnswered && layer && sourceLayerId}
         <div
           hidden={step !== 1}
           class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_h3]:text-center"
@@ -564,30 +628,28 @@ function resizeCard(
             layerId={sourceLayerId}
             value={typeAnswered ? type?.id : null}
             requireSelection={true}
+            options={resolvedTypes}
+            onChange={selectType}
+          />
+        </div>
+      {/if}
+      {#if step === 2}
+        <div
+          hidden={step !== 2}
+          class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_legend]:w-full [&_legend]:text-center"
+        >
+          <TargetContextChoice
+            {contexts}
+            value={contextAnswered ? context : null}
             onChange={next => {
-              if (next?.id !== confirmedTypeId) confirmedContext = null
-              confirmedTypeId = next?.id ?? null
-              onType(next)
-              typeAdvancePending = Boolean(next)
+              confirmedContext = next
+              onContext(next)
+              step = 3
+              onSearch()
             }}
           />
         </div>
       {/if}
-      <div
-        hidden={step !== 2}
-        class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_legend]:w-full [&_legend]:text-center"
-      >
-        <TargetContextChoice
-          {contexts}
-          value={contextAnswered ? context : null}
-          onChange={next => {
-            confirmedContext = next
-            onContext(next)
-            step = 3
-            onSearch()
-          }}
-        />
-      </div>
     </div>
   </div>
 </section>

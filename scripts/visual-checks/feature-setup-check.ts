@@ -22,7 +22,12 @@ for (const [name, engine] of [
       await page.route('**/src/lib/api/featureIntents.remote.*', route =>
         route.fulfill({
           contentType: 'application/javascript',
-          body: `export async function getFeatureIntentOptions(){return ${JSON.stringify(page.url().includes('single-all') ? [{ ...DEFAULT_FEATURE_TYPES[0], targetContexts: ['building_part'] }] : page.url().includes('single') ? DEFAULT_FEATURE_TYPES.slice(0, 1) : DEFAULT_FEATURE_TYPES)}}`,
+          body: `let attempts = 0; export async function getFeatureIntentOptions(input){
+            const attempt = ++attempts;
+            document.querySelector('main').setAttribute('data-policy-calls', String(attempt));
+            await new Promise(resolve => setTimeout(resolve, location.search.includes('race') && input.layerId === 'layer' ? 600 : 150));
+            if (location.search.includes('fail-policy') && attempt === 1) throw new Error('Unavailable');
+            return ${JSON.stringify(page.url().includes('single-all') ? [{ ...DEFAULT_FEATURE_TYPES[0], targetContexts: ['building_part'] }] : page.url().includes('single') ? DEFAULT_FEATURE_TYPES.slice(0, 1) : DEFAULT_FEATURE_TYPES)}}`,
         }),
       )
       await page.goto(`${base}/__feature-setup.html`)
@@ -80,10 +85,11 @@ for (const [name, engine] of [
           .getByRole('button', { name: /What are you adding/ })
           .isDisabled())
       )
-        throw Error('Preloaded draft answered the map question')
+        throw Error('New draft unexpectedly answered the map question')
       const centered = await page.locator('[data-setup-content]').evaluate(el => {
         const content = el.getBoundingClientRect()
         const surface = el.parentElement?.getBoundingClientRect()
+        if (!surface) return false
         return (
           Math.abs(
             (content.top + content.bottom) / 2 - (surface.top + surface.bottom) / 2,
@@ -107,6 +113,33 @@ for (const [name, engine] of [
       const surface = await panel.evaluate(el => getComputedStyle(el).backgroundColor)
       if (surface === 'rgba(0, 0, 0, 0)' || surface === 'transparent')
         throw Error('Setup surface is transparent')
+      const focusCard = page
+        .getByRole('region', { name: 'Recent layers' })
+        .getByRole('button')
+        .first()
+      await search.focus()
+      // Firefox also makes the horizontal scroll container a keyboard stop.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await page.keyboard.press('Tab')
+        if (await focusCard.evaluate(node => node === document.activeElement)) break
+      }
+      const focusStyle = await focusCard.evaluate(node => {
+        const style = getComputedStyle(node)
+        return {
+          visible: node.matches(':focus-visible'),
+          shadow: style.boxShadow,
+          outline: style.outlineStyle,
+        }
+      })
+      if (
+        !focusStyle.visible ||
+        !focusStyle.shadow.includes('inset') ||
+        focusStyle.outline !== 'none'
+      )
+        throw Error(`Card keyboard focus is not inset: ${JSON.stringify(focusStyle)}`)
+      await page.screenshot({
+        path: `output/playwright/feature-setup/${name}-${width}-focus.png`,
+      })
       await page.screenshot({
         path: `output/playwright/feature-setup/${name}-${width}-layers.png`,
       })
@@ -176,10 +209,14 @@ for (const [name, engine] of [
         .first()
         .click()
       await page.getByRole('button', { name: /Building part Shop space/ }).waitFor()
+      if ((await page.locator('main').getAttribute('data-visited-steps')) !== '0,2')
+        throw Error('Determined type stage was briefly entered')
       if ((await progress.getByRole('button', { name: /Object/ }).count()) !== 1)
         throw Error('Single type was not automatically selected')
       await page.goto(`${base}/__feature-setup.html?single-all`)
       await page.getByText('Searching for building_part', { exact: true }).waitFor()
+      if ((await page.locator('main').getAttribute('data-visited-steps')) !== '0,3')
+        throw Error('Determined setup stages were briefly entered')
       if (await progress.getByRole('button', { name: /Open bookstores/ }).isDisabled())
         throw Error('Single map was not automatically selected')
       console.log(`${name} ${width}: single-option stages automatically advance`)
@@ -199,6 +236,8 @@ for (const [name, engine] of [
       await page.getByRole('button', { name: /Building part Shop space/ }).waitFor()
       await page.goto(`${base}/__feature-setup.html?linked-single-all`)
       await page.getByText('Searching for building_part', { exact: true }).waitFor()
+      if ((await page.locator('main').getAttribute('data-visited-steps')) !== '0,3')
+        throw Error('Linked setup briefly entered an automatic stage')
       if ((await page.locator('main').getAttribute('data-search-count')) !== '1')
         throw Error('Linked single-option flow started location search more than once')
       console.log(
@@ -210,12 +249,110 @@ for (const [name, engine] of [
       ]) {
         await page.goto(`${base}/__feature-setup.html?${scope}`)
         await page.getByText(subtitle, { exact: true }).waitFor()
+        await page.screenshot({
+          path: `output/playwright/feature-setup/${name}-${width}-${scope}.png`,
+        })
+        // A cached search still animates the outer card instead of snapping its height.
+        await page.waitForTimeout(250)
+        await search.fill('no-matching-layer')
+        await page.waitForFunction(() =>
+          document
+            .querySelector('[data-setup-content]')
+            ?.getAnimations()
+            .some(
+              animation =>
+                animation instanceof CSSTransition &&
+                animation.transitionProperty === 'height',
+            ),
+        )
+        await page.waitForTimeout(250)
+        await page.emulateMedia({ reducedMotion: 'reduce' })
+        await search.fill('')
+        await page.waitForTimeout(50)
+        if (
+          await page
+            .locator('[data-setup-content]')
+            .evaluate(node => node.getAnimations().length)
+        )
+          throw Error('Card transition ignored reduced motion')
+        await page.emulateMedia({ reducedMotion: 'no-preference' })
         if (
           await page
             .getByRole('button', { name: 'All organisations and projects' })
             .count()
         )
           throw Error('Removed scope-reset link returned')
+      }
+      if (width === 1440) {
+        await page.goto(`${base}/__feature-setup.html?fail-policy`)
+        const firstLayer = page
+          .getByRole('region', { name: 'Recent layers' })
+          .getByRole('button')
+          .first()
+        await firstLayer.click()
+        if (
+          !(await page
+            .getByRole('heading', { name: 'What map are you adding to?' })
+            .isVisible())
+        )
+          throw Error('Left the map picker before policy resolution')
+        await page.getByRole('alert').waitFor()
+        if ((await page.locator('main').getAttribute('data-visited-steps')) !== '0')
+          throw Error('Failed policy request advanced setup')
+        await page.getByRole('button', { name: /retry|try again/i }).click()
+        await page.getByRole('button', { name: /Object An individual item/ }).waitFor()
+        if ((await page.locator('main').getAttribute('data-policy-calls')) !== '2')
+          throw Error('Mounted chooser reloaded resolved options')
+
+        await page.goto(`${base}/__feature-setup.html?race`)
+        const choices = page
+          .getByRole('region', { name: 'Recent layers' })
+          .getByRole('button')
+        await choices.nth(0).click()
+        await choices.nth(1).click()
+        await page.getByRole('button', { name: /Object An individual item/ }).waitFor()
+        await page.waitForTimeout(650)
+        if (
+          (await progress.getByRole('button').first().getAttribute('aria-label')) !==
+          'Permanently Closed'
+        )
+          throw Error('Stale policy response replaced the latest layer')
+        if ((await page.locator('main').getAttribute('data-policy-calls')) !== '2')
+          throw Error('Type chooser fetched already resolved options')
+
+        await page.route('**/__setup-logo.svg', route =>
+          route.fulfill({
+            contentType: 'image/svg+xml',
+            body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#155e75"/><circle cx="20" cy="20" r="10" fill="white"/></svg>',
+          }),
+        )
+        await page.goto(`${base}/__feature-setup.html?logo-organisation`)
+        await page.waitForFunction(
+          () =>
+            Array.from(document.querySelectorAll('button img')).filter(
+              img => img instanceof HTMLImageElement && img.naturalWidth > 0,
+            ).length === 2,
+        )
+        await page.screenshot({
+          path: `output/playwright/feature-setup/${name}-organisation-icons.png`,
+        })
+        await page.unroute('**/__setup-logo.svg')
+        await page.route('**/__setup-logo.svg', route => route.abort())
+        await page.goto(`${base}/__feature-setup.html?logo`)
+        await page.getByRole('region', { name: 'Recent layers' }).waitFor()
+        await page.waitForFunction(
+          () => document.querySelectorAll('button img').length === 0,
+        )
+        if (
+          (await page
+            .getByRole('region', { name: 'Recent layers' })
+            .locator('button > svg')
+            .count()) !== 2
+        )
+          throw Error('Broken organization images lost their layer fallback')
+        console.log(
+          `${name}: policy retry, stale responses, one fetch per choice, organization images and fallback passed`,
+        )
       }
       await page.close()
     }

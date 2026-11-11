@@ -9,6 +9,15 @@ point rather than assigning the new marker to it.
 
 # Locations, Feature inheritance and SaanSeoi Addresses
 
+Feature setup presentation and navigation (Refs #194, parent #180): the map picker uses
+one card with a compact progress header, organisation thumbnails with layer-icon
+fallbacks, and inset keyboard focus. Card height changes animate for 200 ms unless
+reduced motion is requested. Resolve feature-type options before leaving the picker;
+mount only stages that need input, and pass resolved options to the type chooser. Failed
+policy requests retain the picker for retry, and only the latest selection may commit.
+The setup browser check covers direct stage skips, delayed requests, retries, stale
+responses, image fallback and reduced motion in Chromium and Firefox.
+
 Feature creation setup (Refs #194, parent #180): new Features select their Layer,
 Feature type and Location kind before entering Location search. Single-option stages
 advance automatically; accepting a Location opens the Profile. Organisation, Project and
