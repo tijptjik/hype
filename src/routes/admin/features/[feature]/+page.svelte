@@ -1,6 +1,8 @@
 <script lang="ts">
+import FeatureTitleSource from '#lib/bits/patterns/forms/featureIntent/FeatureTitleSource.svelte'
 import FeatureRuleTitleField from '#lib/bits/patterns/forms/featureIntent/FeatureRuleTitleField.svelte'
 import {
+  featureNameTextValue,
   generateFeatureName,
   nameBooleanValue,
   TARGET_CONTEXTS,
@@ -2386,7 +2388,7 @@ const profileValues = $derived.by(
           condition =>
             condition.propertyId === row.propertyId && condition.test === 'hasValue',
         )
-          ? row.value
+          ? featureNameTextValue(row.value, row.property?.component)
           : nameBooleanValue(row.value),
       ]),
     )
@@ -3434,6 +3436,60 @@ const {
   handleCanonicalImageLoad,
   handleFeatureStepperNavigation,
 } = featureVisualSectionCtrl
+
+// Fit draft and saved Profiles on arrival, including adoption of a newly created ID.
+$effect(() => {
+  const ready = !setupPending && isCurrentRefSettled && isCoreFacet
+  const ref = featureRef
+  const visual = featureVisualSection
+  const host = contentsElement
+  if (!ready || !visual || !host) return
+  isVisualSectionCollapsed = false
+  let disposed = false
+  let frame = 0
+  let observer: ResizeObserver | undefined
+  /** Reserve the natural Profile and footer before giving spare space to the visual.
+   * @returns Nothing; direct dragging remains available after the automatic fit.
+   */
+  const fit = (): void => {
+    if (disposed || ref !== featureRef) return
+    const surface = host.querySelector<HTMLElement>(
+      '[data-facet-id="core"] [data-form-surface]',
+    )
+    const section = host.querySelector<HTMLElement>('.bits-feature-editor__visual')
+    if (!surface || !section) return
+    const surfaceRect = surface.getBoundingClientRect()
+    const sectionRect = section.getBoundingClientRect()
+    const gap = surfaceRect.top - sectionRect.bottom
+    const margin = Number.parseFloat(getComputedStyle(surface).marginBottom) || 0
+    // The footer reserves a 48px control row and a 32px gutter, matching Main.Facet.
+    const available =
+      window.innerHeight - sectionRect.top - gap - surfaceRect.height - margin - 80
+    visual.restoreAfterFit(Math.max(64, available))
+  }
+  const schedule = (): void => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(fit)
+  }
+  void tick().then(() => {
+    if (disposed) return
+    const surface = host.querySelector<HTMLElement>(
+      '[data-facet-id="core"] [data-form-surface]',
+    )
+    if (surface) {
+      observer = new ResizeObserver(schedule)
+      observer.observe(surface)
+    }
+    window.addEventListener('resize', schedule)
+    schedule()
+  })
+  return () => {
+    disposed = true
+    cancelAnimationFrame(frame)
+    observer?.disconnect()
+    window.removeEventListener('resize', schedule)
+  }
+})
 
 // Keep visual-section routing and presentation URLs derived from the currently committed feature image.
 const canonicalImageHref = $derived(
@@ -4722,6 +4778,39 @@ async function refreshLocationSource(): Promise<void> {
                     else applyProfileTranslation(field, locale, text)
                   }}
                 >
+                  {#snippet titleSource(locale)}
+                    <FeatureTitleSource
+                      rule={profileNameRule}
+                      scopeId={layerIdValue}
+                      {locale}
+                      fromLocation={profileNameRule?.base === 'location' ||
+                        (!profileNameRule &&
+                          Object.values(profileLocationNames).some(name =>
+                            name.trim(),
+                          ))}
+                      custom={profileNameRule
+                        ? profileNameOverrides[canonicalContentTag(locale)] !==
+                          undefined
+                        : !profileNamesLocked}
+                      editable={isEditing}
+                      required={featurePresentationPolicy.locationBasedNames &&
+                        !profileNameRule}
+                      onCustomize={() => {
+                        if (profileNameRule)
+                          changeRuleTitle(
+                            locale,
+                            profileValues[contentFormKey(locale)]?.title ?? '',
+                            false,
+                          )
+                        else useIndependentFeatureName()
+                      }}
+                      onRestore={() => {
+                        if (profileNameRule) changeRuleTitle(locale, undefined, false)
+                        else useLocationName()
+                      }}
+                      onLocation={() => goToFacet('location')}
+                    />
+                  {/snippet}
                   {#snippet toolbarMessage()}
                     <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
                   {/snippet}
@@ -4741,7 +4830,9 @@ async function refreshLocationSource(): Promise<void> {
                         fields={formCtx.form.fields.data.i18n[key]}
                         label={`${config.label} · ${language.name}`}
                         {prefix}
-                        editable={isEditing && !profileTitlesLocked}
+                        editable={isEditing &&
+                          profileNameOverrides[canonicalContentTag(locale)] !==
+                            undefined}
                         required={isRequiredInPreflight(['data', 'i18n', key, 'title'])}
                         onChange={(title, generated) =>
                           changeRuleTitle(locale, title, generated)}

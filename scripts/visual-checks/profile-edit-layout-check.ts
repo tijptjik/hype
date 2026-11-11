@@ -54,10 +54,10 @@ for await (const { name, browser } of browserCases()) {
     if (growth.scroll > growth.client + 1 || growth.height <= after.height)
       throw new Error(`Description did not grow: ${JSON.stringify(growth)}`)
     await page.getByRole('button', { name: 'Checkpoint draft' }).click()
-    await page.getByRole('button', { name: 'Use Location name', exact: true }).click()
+    await page.getByRole('button', { name: 'Use location name', exact: true }).click()
     if (await page.getByText('Linked · read-only').count())
       throw new Error('Duplicate link indicator')
-    await page.getByRole('button', { name: 'Edit Location', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Go to location', exact: true }).waitFor()
     const linked = page.locator('[data-profile-derived]')
     await linked.hover()
     const geometry = await linked.evaluate(element => {
@@ -81,10 +81,10 @@ for await (const { name, browser } of browserCases()) {
         `Linked controls do not fit beside Title: ${JSON.stringify(geometry)}`,
       )
 
-    await page.getByRole('button', { name: 'Unlink', exact: true }).waitFor()
-    await page.getByRole('button', { name: 'Unlink', exact: true }).click()
+    await page.getByRole('button', { name: 'Customize title', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Customize title', exact: true }).click()
     await page.getByRole('button', { name: 'title en', exact: true }).waitFor()
-    await page.getByRole('button', { name: 'Use Location name', exact: true }).click()
+    await page.getByRole('button', { name: 'Use location name', exact: true }).click()
     await page.getByRole('button', { name: 'Multilingual', exact: true }).click()
     const add = await page
       .getByRole('button', { name: '+ Add', exact: true })
@@ -97,7 +97,7 @@ for await (const { name, browser } of browserCases()) {
     })
     await page.getByRole('button', { name: 'Toggle editing' }).click()
     await page
-      .getByRole('button', { name: 'Edit Location', exact: true })
+      .getByRole('button', { name: 'Go to location', exact: true })
       .waitFor({ state: 'hidden' })
     console.log(
       `${name} ${width}: stable textarea, Add-first toolbar, single link indicator passed`,

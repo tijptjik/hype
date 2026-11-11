@@ -88,9 +88,9 @@ it('locks inherited titles including empty rows and keeps the linked-location ac
   expect(view.container.querySelector('[data-profile-name-offer]')).toHaveTextContent(
     'Fu Yee Court',
   )
-  await fireEvent.click(screen.getByRole('button', { name: 'Use name' }))
-  expect(screen.getByText('READ ONLY')).toBeTruthy()
-  expect(screen.getByText('Managed by location')).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'Use location name' }))
+  expect(screen.queryByText('READ ONLY')).toBeNull()
+  expect(screen.getByText('From location')).toBeTruthy()
   expect(screen.queryByRole('textbox', { name: 'title en' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'title en' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
@@ -99,14 +99,14 @@ it('locks inherited titles including empty rows and keeps the linked-location ac
   expect(
     view.container.querySelector('[data-profile-field="title"] [data-profile-sources]'),
   ).toBeNull()
-  await fireEvent.click(screen.getByRole('button', { name: /^Edit$/ }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Go to location' }))
   expect(state(view.container).editedLocation).toBe(true)
   // Both explicit linked-name actions remain discoverable in edit mode.
-  expect(screen.getByRole('button', { name: 'Unlink' })).toBeTruthy()
-  expect(screen.getByText('READ ONLY')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Customize title' })).toBeTruthy()
+  expect(screen.queryByText('READ ONLY')).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
-  expect(screen.queryByRole('button', { name: /^Edit$/ })).toBeNull()
-  expect(screen.getAllByText('READ ONLY')).toHaveLength(1)
+  expect(screen.queryByRole('button', { name: 'Go to location' })).toBeNull()
+  expect(screen.queryByText('READ ONLY')).toBeNull()
 })
 it('fills all empty selected values from the header including a hidden target, preserving populated values and other fields', async () => {
   const view = render(Fixture)
@@ -202,7 +202,7 @@ it('registers an added locale in both fields, keeps its empty inherited title lo
     within(koreanDescription).getByRole('button', { name: 'Human Validated' }),
   )
   expect(state(view.container).values.ko.descriptionGen).toBe(true)
-  await fireEvent.click(screen.getByRole('button', { name: 'Use name' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Use location name' }))
   expect(screen.queryByRole('button', { name: 'title ko' })).toBeNull()
   const data = new FormData(required(view.container.querySelector('form')))
   expect(data.get('data.i18n.ko.title')).toBe('')

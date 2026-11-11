@@ -1,5 +1,6 @@
 import { chromium, firefox } from 'playwright'
 import { mkdir } from 'node:fs/promises'
+const origin = process.argv[2] ?? 'http://127.0.0.1:4173'
 await mkdir('output/playwright/feature-rule-title', { recursive: true })
 for (const [name, engine] of [
   ['chromium', chromium],
@@ -17,13 +18,18 @@ for (const [name, engine] of [
           body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body class="bits-theme"><div id="app"></div><script type="module" src="/src/tests/fixtures/featureRuleTitleCheck.ts"></script></body></html>',
         }),
       )
-      await page.goto('http://127.0.0.1:5175/__rule-title.html')
+      await page.goto(`${origin}/__rule-title.html`)
+      await page
+        .getByText('Garden — donor', { exact: true })
+        .waitFor()
+        .catch(error => {
+          throw new Error(`${error}: ${errors.join('\n')}`)
+        })
       await page.getByText('Garden — donor', { exact: true }).waitFor()
       await page.screenshot({
         path: `output/playwright/feature-rule-title/${name}-${width}.png`,
       })
-      await page.getByRole('button', { name: 'Unlink', exact: true }).click()
-      await page.getByRole('button', { name: 'Title · English', exact: true }).click()
+      await page.getByRole('button', { name: 'Customize title', exact: true }).click()
       const input = page.getByRole('textbox', { name: 'Title · English', exact: true })
       await input.fill('Independent Garden')
       await input.press('Escape')
@@ -34,8 +40,13 @@ for (const [name, engine] of [
       await page.getByText('Independent Garden', { exact: true }).waitFor()
       if ((await page.locator('[name="baseName"]').inputValue()) !== 'Garden')
         throw Error('Base name changed')
-      await page.getByRole('button', { name: 'Use name', exact: true }).click()
-      await page.getByText('Managed by location', { exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Use template', exact: true }).click()
+      await page.getByText('Template · From location', { exact: true }).waitFor()
+      await page.getByRole('button', { name: 'View template', exact: true }).click()
+      await page.getByRole('dialog', { name: 'Template', exact: true }).waitFor()
+      await page.screenshot({
+        path: `output/playwright/feature-rule-title/${name}-${width}-template.png`,
+      })
       if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
         throw Error('Horizontal overflow')
       if (errors.length) throw Error(errors.join('\n'))

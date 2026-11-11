@@ -172,6 +172,32 @@ export const FeatureNameTemplateSchema = z.strictObject({
 })
 export type FeatureNameTemplate = z.infer<typeof FeatureNameTemplateSchema>
 
+/** Decode a text condition's display value before testing its presence.
+ * @param value Stored scalar or serialized phone collection.
+ * @param component Property editor identifying phone storage semantics.
+ * @returns Text suitable for naming, with empty phone collections treated as absent.
+ * @remarks Matches the materialized naming view: use the first phone and omit +852.
+ * Ordinary text fields retain literal JSON-looking text.
+ */
+export function featureNameTextValue(
+  value: string | null | undefined,
+  component?: string | null,
+): string {
+  let text = value ?? ''
+  if (component !== 'PhoneField') return text
+  // Phone fields store collections; their JSON representation is never a title fragment.
+  try {
+    const decoded: unknown = JSON.parse(text)
+    if (Array.isArray(decoded)) {
+      const first: unknown = decoded[0]
+      text = typeof first === 'string' || typeof first === 'number' ? String(first) : ''
+    }
+  } catch {
+    // Legacy scalar phone values already contain the display text.
+  }
+  return text.replace(/^\s*\+852\s*/, '')
+}
+
 /** Decode persisted boolean property values without conflating false and missing.
  * @param value Stored property value. @returns A boolean or null for unset/unrecognized values.
  */

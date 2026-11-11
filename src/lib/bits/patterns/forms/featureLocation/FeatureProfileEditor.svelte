@@ -59,6 +59,7 @@ let {
   children,
   afterField,
   toolbarMessage,
+  titleSource,
 }: {
   localeState: ProfileLocaleState
   onLocaleStateChange: (state: ProfileLocaleState) => void
@@ -70,6 +71,8 @@ let {
   fieldConfigs?: ReadonlyArray<{ key: Field; label: string }>
   stackNames?: boolean
   toolbarMessage?: Snippet
+  /** Show title provenance and actions for each visible language. */
+  titleSource?: Snippet<[string]>
   showToolbar?: boolean
   stickyFieldHeaders?: boolean | ReadonlyArray<Field>
   showPrimaryLocaleHeader?: boolean
@@ -363,15 +366,17 @@ function autonym(locale: string): string {
           data-profile-field-header
         >
           <div
-            class="flex min-h-7 w-full flex-wrap items-center justify-between gap-x-4 gap-y-2"
+            class="flex min-h-7 w-full flex-wrap {field === 'title' && titleSource
+              ? 'items-start'
+              : 'items-center'} justify-between gap-x-4 gap-y-2"
           >
-            <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <div class="flex min-h-7 min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
               <h3 class={fieldLabelStyles}>
                 {label}
               </h3>
-              {#if derived}
+              {#if derived && !titleSource}
                 <span class="text-muted-foreground text-xs whitespace-nowrap"
-                  >{m.feature_name_read_only()}</span
+                  >{m.feature_name_derived_help()}</span
                 >
               {/if}
               <FormI18nTranslationStatus
@@ -405,14 +410,13 @@ function autonym(locale: string): string {
                 <ArrowUpIcon class="size-4" aria-hidden="true" />
               </button>
             {/if}
-            {#if derived}
+            {#if field === 'title' && titleSource && !showSkeleton}
+              {@render titleSource(shown[0] ?? 'en')}
+            {:else if derived}
               <div
                 class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs"
                 data-profile-derived
               >
-                <span class="text-muted-foreground"
-                  >{m.feature_name_derived_help()}</span
-                >
                 {#if isEditing}
                   <div class="flex items-center gap-3" data-profile-edit-action>
                     {#if !policyRequired}
@@ -429,7 +433,7 @@ function autonym(locale: string): string {
                       class="text-primary decoration-primary/40 focus-visible:outline-primary rounded py-1 underline underline-offset-4 hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2"
                       onclick={onEditLocation}
                     >
-                      {m.forms__edit()}
+                      {m.feature_title_go_location()}
                     </button>
                   </div>
                 {/if}
@@ -518,6 +522,13 @@ function autonym(locale: string): string {
                     </div>
                   </div>
                 {/if}
+                {#if field === 'title' &&
+                  titleSource &&
+                  locale !== shown[0] &&
+                  shown.includes(locale) &&
+                  !showSkeleton}
+                  <div class="mb-2 flex min-w-0">{@render titleSource(locale)}</div>
+                {/if}
                 <!-- Preserve actual field geometry, including wrapped content, beneath the skeleton. -->
                 <div
                   class="min-w-0 {showSkeleton ? 'invisible [&_*]:invisible!' : ''}"
@@ -536,7 +547,8 @@ function autonym(locale: string): string {
             </div>
           {/each}
         </div>
-        {#if !derived &&
+        {#if !titleSource &&
+          !derived &&
           !showSkeleton &&
           field === 'title' &&
           offerName &&

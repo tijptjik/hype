@@ -3464,12 +3464,23 @@ inside historical templates without rewriting history. The existing form transpo
 `title` input edits `baseName`, never the computed title returned by read APIs.
 
 The Feature form displays resolved names in the existing multilingual Title field,
-without a separate name-preview panel. Unlink captures the resolved titles as per-locale
-overrides; inline edits and translations update those overrides while the submitted base
-names remain separate. Use name clears the overrides and restores Location naming. The
-field retains its existing typography, verification control and inline Escape
-cancellation. Component checks cover cancellation and base-name preservation; headless
-Chromium and Firefox checks cover desktop and 390px layouts. Authenticated admin
+without a separate name-preview panel. Each language identifies its source as **From
+location**, **Template** (with **From location** when applicable), or **Custom title**.
+**Customize title** retains the resolved title as an override and opens its inline
+editor. **Use template** or **Use location name** restores automatic naming; the
+Location association and authored base names remain intact. **Go to location** opens the
+Location facet. **View template** explains the pinned rule in a read-only dialog. Inline
+edits and translations update per-locale overrides; untouched languages keep their own
+source. The field retains its verification control and inline Escape cancellation.
+Component checks cover cancellation, restoration, mixed-language overrides and base-name
+preservation; headless Chromium and Firefox checks cover desktop and 390px layouts.
+
+Profile previews decode PhoneField collections before evaluating presence, matching the
+materialized naming view. An empty collection (`[]`) contributes no value; with an empty
+fallback, neither its icon separator nor JSON brackets appear. Nonempty collections use
+the first phone with the local `+852` prefix omitted. Ordinary text fields retain
+literal JSON-looking text. SQLite/preview parity tests cover empty collections,
+first-phone selection and missing-value fallbacks (Refs #241). Authenticated admin
 save/reopen verification remains separate from this component evidence.
 
 This naming-model follow-up is tracked under #241. Local verification: 198 tests pass

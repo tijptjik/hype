@@ -5,7 +5,10 @@ import { readFileSync } from 'node:fs'
 // TESTS
 import { describe, expect, it } from 'vitest'
 // DOMAIN
-import { generateFeatureName } from '#lib/features/locationPolicy.js'
+import {
+  featureNameTextValue,
+  generateFeatureName,
+} from '#lib/features/locationPolicy.js'
 
 const rule = {
   base: 'feature' as 'feature' | 'location',
@@ -382,7 +385,7 @@ it('materializes phone values and the missing-phone fallback', () => {
   const db = fixture()
   try {
     db.exec("INSERT INTO property VALUES ('phone','text','internal','PhoneField')")
-    const phoneRule = {
+    const phoneRule: FeatureNameRule = {
       base: 'feature',
       conditions: [
         {
@@ -414,8 +417,45 @@ it('materializes phone values and the missing-phone fallback', () => {
       '+44 12345678',
     )
     expect(row(db)?.title).toBe('Bakery - +44 12345678')
-    db.exec("UPDATE featureProperty SET value='' WHERE propertyId='phone'")
-    expect(row(db)!.title).toBe('Bakery - No phone')
+    // The editor preview must decode the same first phone as the persisted SQL view.
+    for (const value of [
+      '[]',
+      '[""]',
+      '[null]',
+      '  ',
+      '["+85222505339","+85299999999"]',
+      '+44 12345678',
+    ]) {
+      db.prepare("UPDATE featureProperty SET value=? WHERE propertyId='phone'").run(
+        value,
+      )
+      const preview = generateFeatureName({
+        rule: phoneRule,
+        locale: 'en',
+        featureName: 'Bakery',
+        properties: { phone: featureNameTextValue(value, 'PhoneField') },
+      })
+      expect(preview).toBe(row(db)!.title)
+      if (!featureNameTextValue(value, 'PhoneField').trim())
+        expect(preview).toBe('Bakery - No phone')
+    }
+    // An empty fallback must suppress the phone separator/icon as well as the empty value.
+    phoneRule.conditions[0].locales.en.false = ''
+    phoneRule.conditions[0].locales.en.separator = ' 📱'
+    db.prepare('UPDATE feature SET nameTemplate=?').run(
+      JSON.stringify({ rule: phoneRule }),
+    )
+    db.exec("UPDATE featureProperty SET value='[]' WHERE propertyId='phone'")
+    expect(row(db)!.title).toBe('Bakery')
+    expect(
+      generateFeatureName({
+        rule: phoneRule,
+        locale: 'en',
+        featureName: 'Bakery',
+        properties: { phone: featureNameTextValue('[]', 'PhoneField') },
+      }),
+    ).toBe('Bakery')
+    expect(featureNameTextValue('[]', 'InputField')).toBe('[]')
   } finally {
     db.close()
   }

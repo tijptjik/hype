@@ -18,11 +18,11 @@ for await (const { name, browser } of browserCases()) {
       }),
     )
     await page.goto('http://127.0.0.1:4173/__profile-skeleton.html')
-    await page.getByRole('button', { name: 'Use Location name', exact: true }).click()
+    await page.getByRole('button', { name: 'Use location name', exact: true }).click()
     await page.getByRole('button', { name: 'Toggle editing' }).click()
     const row = page.locator('[data-profile-derived]')
-    if (await page.getByRole('button', { name: 'Edit Location', exact: true }).count())
-      throw new Error('Display mode should not offer Edit Location')
+    if (await page.getByRole('button', { name: 'Go to location', exact: true }).count())
+      throw new Error('Display mode should not offer Go to location')
     await page.screenshot({ path: `${directory}/${name}-${width}-row.png` })
     for (const expanded of [false, true]) {
       if (expanded)
