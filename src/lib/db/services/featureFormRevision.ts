@@ -87,14 +87,6 @@ export function buildFeatureFormCandidate(
   retainOmittedInternal = true,
 ): FeatureRevisionContent {
   const source = parseFeatureRevisionSource(snapshot)
-  // Shared changes are authorized and routed separately by the staff save adapter.
-  if (
-    previous.placement.location &&
-    data.locationNameMode &&
-    data.locationNameMode !==
-      (previous.placement.location.acceptancePolicy?.nameMode ?? 'inherit')
-  )
-    throw new Error('Edit Location name inheritance in the Location editor')
   // Apply only authored fields; identity, authorship, visibility and workflow stay server-owned.
   if (data.geometry !== undefined)
     source.record.geometry = data.geometry as unknown as RevisionValue
@@ -246,7 +238,7 @@ export function buildFeatureFormCandidate(
     order: previous.gallery.order,
   })
   result.gallery = structuredClone(previous.gallery)
-  // Empty phone controls may submit null or omit a stored [] row; neither edits shared contact data.
+  // Empty phone controls may submit null or omit a stored [] row; neither creates a contact override.
   for (const id of new Set([
     ...Object.keys(previous.properties),
     ...Object.keys(result.properties),
@@ -344,8 +336,11 @@ export async function saveFeatureFormRevision(
     data: FeatureFormPatch
     destinationScope?: FeatureDestinationScope
     authorizeDestinationLocation?: () => Promise<unknown>
+    authorizeCommunityCorrection?: () => Promise<{
+      canEdit: boolean
+      superAdmin: boolean
+    }>
     authorizeLocationCorrection?: () => Promise<void>
-    authorizeSharedCorrection?: () => Promise<{ canEdit: boolean; superAdmin: boolean }>
     canPublish: boolean
     allowDescriptions: boolean
     allowedInternalIds: ReadonlySet<string>
@@ -399,6 +394,7 @@ export async function saveFeatureFormRevision(
   const content = buildFeatureFormCandidate(previous, source.snapshot, data, !transfer)
   if (destination) preserveTransferredLocationText(previous, content)
   // Automatic drops and null initialization are transfer operations, not edits to protected fields.
+  // Organisation overrides and name inheritance are authorized and routed by the staff save adapter.
   const corrections =
     !transfer && previous.placement.location
       ? await prepareFeatureLocationFormCorrection(db, {
@@ -409,9 +405,12 @@ export async function saveFeatureFormRevision(
           previous,
           content,
           reset: data.locationReset,
+          fieldModes: data.locationFieldModes,
+          names: data.locationNames,
+          authorizeCommunity: input.authorizeCommunityCorrection,
+          nameMode: data.locationNameMode,
           brandEdit: data.locationBrandEdit,
           authorizeOrganisation: input.authorizeLocationCorrection,
-          authorizeShared: input.authorizeSharedCorrection,
         })
       : { queries: [], comparison: previous, authorized: false }
   const validationPrevious = transfer

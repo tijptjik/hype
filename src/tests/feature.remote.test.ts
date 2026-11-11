@@ -898,6 +898,8 @@ describe('feature.remote authz matrix', () => {
           typeof import('#lib/db/services/featureFormRevision.js').saveFeatureFormRevision
         >[1]
       | undefined
+    expect(saved).not.toHaveProperty('authorizeSharedCorrection')
+    expect(saved?.authorizeLocationCorrection).toBeTypeOf('function')
     expect(saved?.data.i18n).toBeUndefined()
     expect(saved?.data.geometry).toBeUndefined()
     expect(saved?.data.addressMeta).toBeUndefined()

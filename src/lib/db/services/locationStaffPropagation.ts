@@ -54,6 +54,12 @@ export async function prepareStaffLocationPropagation(
     actorId: string
     facts: LocationFacts
     fields: string[]
+    /** Preserve the authoring Organisation override until a later community revision. */
+    authorOrganisation?: {
+      id: string
+      revision: string | null
+      overrides: import('#lib/locations/model.js').FeatureLocationOverrides
+    }
   },
 ): Promise<{ guard: SQL; statements: BatchItem<'sqlite'>[]; featureIds: string[] }> {
   const subjects = sql`SELECT f.id,f.projectId,p.organisationId,b.version,b.acceptancePolicy,p.locationPolicy AS projectPolicy,o.settings AS organisationSettings FROM feature f JOIN featureLocation b ON b.featureId=f.id JOIN project p ON p.id=f.projectId JOIN organisation o ON o.id=p.organisationId
@@ -127,71 +133,74 @@ export async function prepareStaffLocationPropagation(
         LocationFactsSchema.shape.location.shape.geometry.parse(
           binding.acceptedGeometry,
         )
-    const fields = input.fields.filter(field => {
-      const previous = before[field as keyof typeof before]
-      const next = input.facts[field as keyof LocationFacts]
-      if (equalLocationValue(previous, next)) return true
-      // Missing-value consent never defeats a deliberate suppression or a relocation.
-      const missing = fillsMissingLocationValue(previous, next)
-      if (
-        rules.acceptMissing &&
-        missing &&
-        field !== 'location' &&
-        !overrides[field as keyof typeof overrides]
-      )
-        return true
-      if (['phoneNumber', 'websites', 'socials'].includes(field))
-        return rules.communications !== 'review'
-      if (
-        [
-          'names',
-          'brands',
-          'branch',
-          'format',
-          'branchId',
-          'brandId',
-          'groupId',
-          'entity',
-        ].includes(field)
-      )
-        return rules.establishment === 'follow'
-      if (field === 'location' && before.location) {
-        return (
-          evaluateLocationAdoption(
-            {
-              origin: 'community',
-              before: before.location,
-              after: input.facts.location,
-              addressChanged: !equalLocationValue(
-                addressContent(before.location.address),
-                addressContent(input.facts.location.address),
-              ),
-              unitChanged: !equalLocationValue(
-                unitContent(before.location.address),
-                unitContent(input.facts.location.address),
-              ),
-              establishmentChanged: false,
-              missing: {
-                address:
-                  !overrides.location &&
-                  fillsMissingLocationValue(
-                    addressContent(before.location.address),
-                    addressContent(input.facts.location.address),
-                  ),
-                unit:
-                  !overrides.location &&
-                  fillsMissingLocationValue(
-                    unitContent(before.location.address),
-                    unitContent(input.facts.location.address),
-                  ),
-              },
-            },
-            settings.policy,
-          ).location === 'adopt'
-        )
-      }
-      return false
-    })
+    const fields =
+      input.authorOrganisation?.id === row.organisationId
+        ? input.fields
+        : input.fields.filter(field => {
+            const previous = before[field as keyof typeof before]
+            const next = input.facts[field as keyof LocationFacts]
+            if (equalLocationValue(previous, next)) return true
+            // Missing-value consent never defeats a deliberate suppression or a relocation.
+            const missing = fillsMissingLocationValue(previous, next)
+            if (
+              rules.acceptMissing &&
+              missing &&
+              field !== 'location' &&
+              !overrides[field as keyof typeof overrides]
+            )
+              return true
+            if (['phoneNumber', 'websites', 'socials'].includes(field))
+              return rules.communications !== 'review'
+            if (
+              [
+                'names',
+                'brands',
+                'branch',
+                'format',
+                'branchId',
+                'brandId',
+                'groupId',
+                'entity',
+              ].includes(field)
+            )
+              return rules.establishment === 'follow'
+            if (field === 'location' && before.location) {
+              return (
+                evaluateLocationAdoption(
+                  {
+                    origin: 'community',
+                    before: before.location,
+                    after: input.facts.location,
+                    addressChanged: !equalLocationValue(
+                      addressContent(before.location.address),
+                      addressContent(input.facts.location.address),
+                    ),
+                    unitChanged: !equalLocationValue(
+                      unitContent(before.location.address),
+                      unitContent(input.facts.location.address),
+                    ),
+                    establishmentChanged: false,
+                    missing: {
+                      address:
+                        !overrides.location &&
+                        fillsMissingLocationValue(
+                          addressContent(before.location.address),
+                          addressContent(input.facts.location.address),
+                        ),
+                      unit:
+                        !overrides.location &&
+                        fillsMissingLocationValue(
+                          unitContent(before.location.address),
+                          unitContent(input.facts.location.address),
+                        ),
+                    },
+                  },
+                  settings.policy,
+                ).location === 'adopt'
+              )
+            }
+            return false
+          })
     const acceptedFields =
       organisationFields.get(row.organisationId) ?? new Set<string>()
     for (const field of fields) acceptedFields.add(field)
@@ -202,28 +211,54 @@ export async function prepareStaffLocationPropagation(
     const fields = [...acceptedFields]
     needsReview ||= fields.length !== input.fields.length
     if (!fields.length) continue
-    const current = await readOrganisationLocation(db, organisationId, input.locationId)
-    const overrides = structuredClone(current?.overrides ?? {})
-    for (const field of fields) {
-      delete (overrides as Record<string, unknown>)[field]
-      if (overrides.freshness) delete overrides.freshness[field]
+    const author =
+      input.authorOrganisation?.id === organisationId
+        ? input.authorOrganisation
+        : undefined
+    let organisation: {
+      revision: string | null
+      overrides: import('#lib/locations/model.js').FeatureLocationOverrides
     }
-    const headFence = current
-      ? sql`(SELECT revision FROM organisationLocationHead WHERE organisationId=${organisationId} AND locationId=${input.locationId})=${current.revision}`
-      : sql`NOT EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${organisationId} AND locationId=${input.locationId})`
-    const organisation = await prepareOrganisationLocationWrite(db, {
-      organisationId,
-      locationId: input.locationId,
-      actorId: input.actorId,
-      overrides,
-      guard: headFence,
-      provenance: {
-        kind: 'community-acceptance',
-        sharedRevisionId: input.sharedRevisionId,
-        fields,
-      },
-    })
-    statements.push(prepareRevisionCheck(db, headFence), ...organisation.queries)
+    if (author) {
+      // The author write may be earlier in this batch; assert its head before projecting consumers.
+      statements.push(
+        prepareRevisionCheck(
+          db,
+          author.revision
+            ? sql`(SELECT revision FROM organisationLocationHead WHERE organisationId=${organisationId} AND locationId=${input.locationId})=${author.revision}`
+            : sql`NOT EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${organisationId} AND locationId=${input.locationId})`,
+        ),
+      )
+      organisation = { revision: author.revision, overrides: author.overrides }
+    } else {
+      const current = await readOrganisationLocation(
+        db,
+        organisationId,
+        input.locationId,
+      )
+      const overrides = structuredClone(current?.overrides ?? {})
+      for (const field of fields) {
+        delete (overrides as Record<string, unknown>)[field]
+        if (overrides.freshness) delete overrides.freshness[field]
+      }
+      const headFence = current
+        ? sql`(SELECT revision FROM organisationLocationHead WHERE organisationId=${organisationId} AND locationId=${input.locationId})=${current.revision}`
+        : sql`NOT EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${organisationId} AND locationId=${input.locationId})`
+      const write = await prepareOrganisationLocationWrite(db, {
+        organisationId,
+        locationId: input.locationId,
+        actorId: input.actorId,
+        overrides,
+        guard: headFence,
+        provenance: {
+          kind: 'community-acceptance',
+          sharedRevisionId: input.sharedRevisionId,
+          fields,
+        },
+      })
+      statements.push(prepareRevisionCheck(db, headFence), ...write.queries)
+      organisation = { revision: write.revision, overrides }
+    }
     for (const row of rows.filter(row => row.organisationId === organisationId)) {
       const prepared = await prepareSharedFeatureAdoption(db, {
         ...input,
@@ -231,7 +266,7 @@ export async function prepareStaffLocationPropagation(
         featureId: row.id,
         projectId: row.projectId,
         fields,
-        organisation: { revision: organisation.revision, overrides },
+        organisation,
         includeLocation: fields.includes('location'),
         guard: sql`EXISTS(SELECT 1 FROM feature f JOIN featureLocation b ON b.featureId=f.id
         WHERE f.id=${row.id} AND f.projectId=${row.projectId} AND f.isDraft=0
@@ -274,7 +309,17 @@ export async function replayStaffLocationCorrection(
   const shared = await readSharedLocationCorrection(db, locationId)
   if (!shared || shared.id !== revisionId) return null
   const provenance = JSON.parse(shared.provenance)
-  if (!['staff-correction', 'location-editor'].includes(provenance.kind)) return null
+  if (
+    !['staff-correction', 'location-editor', 'feature-community-edit'].includes(
+      provenance.kind,
+    )
+  )
+    return null
+  // Replay other consumers while retaining the author's current Organisation choices.
+  const author =
+    typeof provenance.authorOrganisationId === 'string'
+      ? await readOrganisationLocation(db, provenance.authorOrganisationId, locationId)
+      : null
   const source = await db.get<{ id: string; facts: string }>(sql`
     SELECT id,facts FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1`)
   if (!source || source.id !== shared.sourceRevisionId) return null
@@ -299,6 +344,15 @@ export async function replayStaffLocationCorrection(
     actorId: shared.actorId,
     facts: effective.facts,
     fields,
+    ...(author
+      ? {
+          authorOrganisation: {
+            id: provenance.authorOrganisationId,
+            revision: author.revision,
+            overrides: author.overrides,
+          },
+        }
+      : {}),
   })
   const guard = sql`(${prepared.guard}) AND
     (SELECT id FROM locationSharedHead WHERE locationId=${locationId})=${revisionId} AND

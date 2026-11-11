@@ -272,23 +272,27 @@ not grant contact-directory/user-search access.
 
 ## Community Location curations
 
-Location authority is field-specific and separate from Feature editing authority.
-Permission to update a Feature's properties also authorizes its universal phone edit to
-update the linked Location phone atomically. The latest successful explicit phone edit
-wins at the shared layer; older Feature pins do not block it. This does not grant
-editing rights to other Location fields. WhatsApp and custom phone fields remain
-Feature-owned. Project or Organisation editors may also correct shared phone numbers,
-websites, social profiles and accessibility through the standalone Location correction
-path. Translation-only rights do not grant this authority. Permissioned Project editors
-may also contribute names, addresses, brands and other Location identity fields through
-the Feature-scoped community command. Standalone directory writes require Organisation
-management authority or SuperAdmin. Adoption remains subject to consumer policies.
-Organisation-authorized editors may instead maintain those values as Organisation
-customizations using the Internal edit destination; those edits do not contribute to
-community curations. Location visibility is independent of the edit destination.
-Third-party submissions remain proposals until an authorized staff reviewer accepts
-them. Acceptance requires authority for each destination field, not merely access to the
-task. Staff edits with the required authority save directly.
+Location authority is field-specific and separate from Feature editing authority. An
+edit of a linked Feature's universal `phoneNumber` requires Feature property-update
+permission and the same Organisation correction authority as other inherited Location
+fields. Each linked field has an explicit Community or Internal edit mode, independent
+of Location visibility. Community edits atomically author both a community revision and
+an Organisation override; Internal edits author only the override. Existing fields
+default to Internal until explicitly changed. Reset removes that override and resolves
+the phone from the accepted Location evidence and policy. Unlinked phone values,
+WhatsApp and custom phone fields remain Feature-owned.
+
+Community corrections, including phone numbers, websites and social profiles, use the
+explicit community correction path. Standalone shared Location pages always target
+community facts and require Organisation management authority or SuperAdmin; they do not
+offer an Internal edit destination. Feature-scoped community commands retain their
+separate field-specific authority. Translation-only rights do not grant broader
+correction authority. Adoption remains subject to consumer policies. Organisation
+overrides are authored through linked Feature fields; Location visibility remains
+independent of those overrides. Third-party submissions remain proposals until an
+authorized staff reviewer accepts them. Acceptance requires authority for each
+destination field, not merely access to the task. Staff edits with the required
+authority save directly.
 
 ## Community curation locks
 

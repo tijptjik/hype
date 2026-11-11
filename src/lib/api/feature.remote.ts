@@ -604,7 +604,13 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
 
-  if (mode === 'create' && (data.locationBrandEdit || data.locationReset))
+  if (
+    mode === 'create' &&
+    (data.locationBrandEdit ||
+      data.locationReset ||
+      data.locationFieldModes ||
+      data.locationNames)
+  )
     invalid(issue('Inheritance requires an existing linked Feature'))
 
   let submittedProperties = Array.isArray(data.properties) ? data.properties : []
@@ -815,7 +821,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     submittedDataBeforeHydration.isPendingReview = data.isPendingReview
   }
 
-  // Authorize reset intent by its affected field groups before reading accepted source values.
+  // Authorize reset and linked-name intent by their affected field groups before reading accepted source values.
+  if (data.locationNames) submittedDataBeforeHydration.i18n = data.i18n
   if (data.locationBrandEdit || data.locationReset?.phoneNumber)
     submittedDataBeforeHydration.properties = []
   if (data.locationReset?.location) {
@@ -980,7 +987,12 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
 
   if (parentsChanged) submittedDataForUpdate.layerId = data.layerId
 
-  if (i18nChanged || data.locationReset?.names.length || data.locationNameMode)
+  if (
+    i18nChanged ||
+    data.locationReset?.names.length ||
+    data.locationNameMode ||
+    data.locationNames
+  )
     submittedDataForUpdate.i18n = data.i18n
   if (propertiesChanged || data.locationBrandEdit || data.locationReset?.phoneNumber)
     submittedDataForUpdate.properties = submittedProperties
@@ -1099,7 +1111,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
         properties:
           hasSubmittedProperties || destinationScope ? submittedProperties : undefined,
       },
-      authorizeSharedCorrection: () => sharedLocationEditRights(ctx, current.projectId),
+      // Linked phone edits use the same Organisation override authority as other inherited fields.
+      authorizeCommunityCorrection: () =>
+        sharedLocationEditRights(ctx, current.projectId),
       expectedScope: current,
       guard: buildFeatureCommandScopeGuard(db, current.id, current),
       destinationScope,
@@ -1130,6 +1144,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       ),
     )
   }
+  if (data.locationFieldModes || data.locationNames)
+    invalid(issue('Location field edits require the Feature revision migration'))
   const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')
     invalid(issue(toIssueDetailMessage('STALE_WRITE')))

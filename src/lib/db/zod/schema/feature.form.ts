@@ -116,6 +116,21 @@ export const FeatureEntityFormData = z.object({
   targetContext: TargetContextSchema.nullish(),
   associationRelation: AssociationRelationSchema.nullish(),
 
+  locationNames: z
+    .preprocess(
+      decodeLocationFormValue,
+      z.record(z.string().min(1).max(35), z.string().max(1000)),
+    )
+    .optional(),
+  locationFieldModes: z
+    .preprocess(
+      decodeLocationFormValue,
+      z.partialRecord(
+        z.enum(['names', 'phoneNumber', 'brands', 'location']),
+        z.enum(['community', 'internal']),
+      ),
+    )
+    .optional(),
   locationNameMode: z.enum(['inherit', 'independent']).optional(),
   locationReset: z.preprocess(decodeLocationFormValue, LocationResetSchema).optional(),
   locationBrandEdit: z
@@ -150,6 +165,21 @@ export const FeatureDraftEntityFormData = z.object({
   targetContext: TargetContextSchema.nullish(),
   associationRelation: AssociationRelationSchema.nullish(),
 
+  locationNames: z
+    .preprocess(
+      decodeLocationFormValue,
+      z.record(z.string().min(1).max(35), z.string().max(1000)),
+    )
+    .optional(),
+  locationFieldModes: z
+    .preprocess(
+      decodeLocationFormValue,
+      z.partialRecord(
+        z.enum(['names', 'phoneNumber', 'brands', 'location']),
+        z.enum(['community', 'internal']),
+      ),
+    )
+    .optional(),
   locationNameMode: z.enum(['inherit', 'independent']).optional(),
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })

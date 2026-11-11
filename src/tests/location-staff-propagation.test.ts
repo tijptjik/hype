@@ -679,3 +679,61 @@ it('Keep current suppresses newly supplied fields and locales that were previous
   expect(retained.branch).toEqual({ mode: 'clear' })
   expect(retained.names['zh-Hant']).toEqual({ mode: 'clear' })
 })
+
+it('retains the author override until a later revision accepts that field only', async () => {
+  const f = await setup()
+  f.sqlite.exec(
+    "INSERT INTO hub VALUES('core','core'); CREATE TABLE locationSharedRevision(id TEXT PRIMARY KEY,locationId TEXT,previousRevisionId TEXT,sourceRevisionId TEXT,corrections TEXT,actorId TEXT,createdAt TEXT,provenance TEXT); INSERT INTO locationSharedRevision VALUES('staff','place',NULL,'facts-v1','{}','staff','now','{}');",
+  )
+  f.seed(property, [
+    {
+      ...f.source.fieldDefinitions[0],
+      id: 'phone',
+      key: 'phoneNumber',
+      component: 'PhoneField',
+      hubId: 'core',
+      scope: 'hub',
+    },
+  ])
+  const overrides = {
+    phoneNumber: { mode: 'override' as const, value: ['+85221234567'] },
+    brands: { mode: 'clear' as const },
+  }
+  f.sqlite
+    .prepare('INSERT INTO organisationLocation VALUES(?,?,?,?,?,?,?,?)')
+    .run(
+      'author-choice',
+      'org',
+      'place',
+      null,
+      JSON.stringify(overrides),
+      '{}',
+      'staff',
+      'now',
+    )
+  const authored = await prepareStaffLocationPropagation(f.db, {
+    ...f.input,
+    facts: { ...facts, phoneNumber: ['+85221234567'] },
+    fields: ['phoneNumber'],
+    authorOrganisation: { id: 'org', revision: 'author-choice', overrides },
+  })
+  expect(
+    await executeRevisionBatch(f.db, authored.guard, authored.statements),
+  ).not.toBeNull()
+  const first = await readCurrentFeatureRevision(f.db, {
+    featureId: 'f',
+    guard: sql`1`,
+  })
+  expect(first?.content.placement.location?.acceptedOverrides).toEqual(overrides)
+  const later = await prepareStaffLocationPropagation(f.db, {
+    ...f.input,
+    sharedRevisionId: 'later',
+    facts: { ...facts, phoneNumber: ['+85229999999'] },
+    fields: ['phoneNumber'],
+  })
+  expect(await executeRevisionBatch(f.db, later.guard, later.statements)).not.toBeNull()
+  const next = await readCurrentFeatureRevision(f.db, { featureId: 'f', guard: sql`1` })
+  expect(next?.content.placement.location?.acceptedOverrides).toEqual({
+    brands: { mode: 'clear' },
+  })
+})

@@ -722,20 +722,27 @@ Location values resolve in order: upstream evidence, accepted community curation
 Organisation customizations (including explicit suppression). This supersedes any older
 rule that routes all Location corrections to the Organisation layer.
 
-An explicit edit of the universal `phoneNumber` property through a Feature requires
-permission to update that Feature's properties and writes the shared Location phone in
-the same atomic save. It does not require Project configuration authority. The latest
-successful explicit edit replaces the shared phone value using the current shared head,
-even when the Feature pins an older revision; transaction-time concurrency guards and
-immutable actor-attributed history still apply. WhatsApp and custom phone properties
-remain Feature-owned. Explicit Organisation overrides retain their separate precedence.
+An explicit edit of the universal `phoneNumber` property through a linked Feature
+requires Feature property-update permission and Organisation correction authority. It
+writes an Organisation override in the same atomic Feature save. An explicit per-field
+Community mode also contributes a community revision under community authority and
+curation locks, pinning only authored fields; Internal mode writes only the override.
+The author retains its override through that revision. Later community revisions use
+adoption policy: accepting releases only affected overrides; review or rejection retains
+them without changing the whole Location to an internal record. Clearing the value
+records an explicit empty override; resetting records inheritance and materializes the
+phone from the Feature's accepted Location evidence. New community revisions still
+follow adoption policy. Immutable actor-attributed history and concurrency checks remain
+in force. Unlinked phones, WhatsApp and custom phone properties remain Feature-owned.
 
 Community corrections, including names, addresses, brands and communications, require
 Project editing authority through the Feature-scoped command or Organisation management
 authority through the standalone directory command. SuperAdmin may also contribute.
-Internal customizations require Organisation authority. Client-submitted owner IDs or
-field labels never establish permission. Apply the same checks to direct saves, reset
-operations and staff acceptance of third-party task proposals.
+Feature-scoped community contributions also require Organisation authority because they
+retain an Organisation override. Internal customizations require Organisation authority.
+Client-submitted owner IDs or field labels never establish permission. Apply the same
+checks to direct saves, reset operations and staff acceptance of third-party task
+proposals.
 
 Every shared correction retains the original source evidence, source revision,
 replacement or suppression, actor and time. Correction revisions are immutable.

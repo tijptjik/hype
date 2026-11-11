@@ -141,6 +141,28 @@ describe('Feature publication field authority', () => {
       'Removing a language',
     )
   })
+  it.each(['whatsappNumber', 'contactPhone', 'phoneNumber'])(
+    'routes %s by field ownership even after a text-to-phone migration',
+    key => {
+      const { before, after, policy } = setup()
+      before.placement.location = featureRevisionLocationFixture()
+      after.placement.location = structuredClone(before.placement.location)
+      const definition = required(
+        policy.snapshot.fieldDefinitions.find(row => row.id === 'structured'),
+      )
+      definition.key = key
+      definition.component = 'PhoneField'
+      before.properties.structured.selection.definition.key = key
+      after.properties.structured.selection.definition.key = key
+      after.properties.structured.selection.definition.component = 'PhoneField'
+      after.properties.structured.selection.value = '["+85221234567"]'
+      expect(validateFeatureFormResult(before, after, policy)).toEqual(
+        key === 'phoneNumber'
+          ? ['Linked phone changes require separate Location override review']
+          : [],
+      )
+    },
+  )
   it('requires separate review for shared Location and inherited title changes', () => {
     const { before, after, policy } = setup()
     before.placement.location = featureRevisionLocationFixture()

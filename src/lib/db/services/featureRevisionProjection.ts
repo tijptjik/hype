@@ -307,7 +307,7 @@ export function prepareFeatureEditorialProjection(
   )
     throw new Error('Linked Location edits require separate accepted evidence')
   if (!input.identity && previous.placement.location) {
-    // Feature-owned properties may change; shared phone corrections retain their own review.
+    // Feature-owned properties may change; linked phone overrides require accepted Location evidence.
     for (const id of new Set([
       ...Object.keys(previous.properties),
       ...Object.keys(content.properties),
@@ -315,11 +315,11 @@ export function prepareFeatureEditorialProjection(
       const before = previous.properties[id],
         after = content.properties[id]
       if (
-        (before?.selection.definition.component === 'PhoneField' ||
-          after?.selection.definition.component === 'PhoneField') &&
+        (before?.selection.definition.key === 'phoneNumber' ||
+          after?.selection.definition.key === 'phoneNumber') &&
         !equalRevisionValue(before ?? null, after ?? null)
       )
-        throw new Error('Shared phone edits require separate Location review')
+        throw new Error('Linked phone edits require separate Location override review')
     }
     const inherited =
       previous.placement.location.acceptancePolicy?.nameMode !== 'independent'

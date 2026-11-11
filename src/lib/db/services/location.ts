@@ -156,6 +156,9 @@ export async function saveProjectLocationSettings(
 }
 
 export type AcceptedFeatureLocation = {
+  fieldEditModes?: Partial<
+    Record<'names' | 'phoneNumber' | 'brands' | 'location', 'community' | 'internal'>
+  >
   nameMode?: 'inherit' | 'independent'
   version: string
   locationId: string
@@ -316,6 +319,8 @@ export async function getAcceptedFeatureLocation(
   return {
     ...identity,
     ...(buildingSource.success ? { buildingSource: buildingSource.data } : {}),
+    fieldEditModes:
+      acceptancePolicy?.fieldEditModes as AcceptedFeatureLocation['fieldEditModes'],
     nameMode: acceptancePolicy?.nameMode === 'independent' ? 'independent' : 'inherit',
     sourceReference: locationSourceReference(row.ssId),
     state: row.state,

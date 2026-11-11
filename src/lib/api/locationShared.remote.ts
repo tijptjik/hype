@@ -21,8 +21,16 @@ import {
   prepareSharedLocationCorrection,
   readSharedLocationCorrection,
 } from '#lib/db/services/locationShared.js'
+import { retainCommunityEditOverrides } from '#lib/locations/communityEdit.js'
+import {
+  readOrganisationLocation,
+  prepareOrganisationLocationWrite,
+} from '#lib/db/services/organisationLocation.js'
 import { prepareStaffLocationPropagation } from '#lib/db/services/locationStaffPropagation.js'
-import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
+import {
+  executeRevisionBatch,
+  prepareRevisionCheck,
+} from '#lib/db/services/revisionBatch.js'
 // TYPES
 import type { GuardedBaseContext } from './guarded.types'
 
@@ -119,7 +127,36 @@ export const saveSharedLocationCorrection = guardedCommand(
       actorId: ctx.user.id,
       guard: command.guard,
       rights: { canEdit: command.canEdit, superAdmin: Boolean(ctx.user.superAdmin) },
-      provenance: { kind: 'staff-correction', featureId: input.featureId },
+      provenance: {
+        kind: 'staff-correction',
+        featureId: input.featureId,
+        authorOrganisationId: command.feature.organisationId,
+      },
+    })
+    // A community contribution also retains an Organisation field override in the same transaction.
+    await requireLocationOrganisationManager(ctx, command.feature.organisationId)
+    const current = await readOrganisationLocation(
+      ctx.db,
+      command.feature.organisationId,
+      command.locationId,
+    )
+    const overrides = retainCommunityEditOverrides(
+      current?.overrides ?? {},
+      shared.facts,
+      Object.keys(input.patch),
+    )
+    const organisation = await prepareOrganisationLocationWrite(ctx.db, {
+      organisationId: command.feature.organisationId,
+      locationId: command.locationId,
+      actorId: ctx.user.id,
+      overrides,
+      guard: command.guard,
+      provenance: {
+        kind: 'community-contribution',
+        featureId: input.featureId,
+        sharedRevisionId: shared.id,
+        fields: Object.keys(input.patch),
+      },
     })
     const propagation = await prepareStaffLocationPropagation(ctx.db, {
       locationId: command.locationId,
@@ -128,11 +165,21 @@ export const saveSharedLocationCorrection = guardedCommand(
       actorId: ctx.user.id,
       facts: shared.facts,
       fields: Object.keys(input.patch),
+      authorOrganisation: {
+        id: command.feature.organisationId,
+        revision: organisation.revision,
+        overrides,
+      },
     })
     const saved = await executeRevisionBatch(
       ctx.db,
       sql`(${shared.guard}) AND (${propagation.guard})`,
-      [...shared.queries, ...propagation.statements],
+      [
+        ...shared.queries,
+        ...organisation.queries,
+        prepareRevisionCheck(ctx.db, organisation.guard),
+        ...propagation.statements,
+      ],
     )
     if (!saved) error(409, 'SHARED_LOCATION_CHANGED')
     return { revisionId: shared.id }

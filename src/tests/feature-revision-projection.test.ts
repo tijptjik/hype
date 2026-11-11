@@ -1124,6 +1124,201 @@ describe('existing form revision routing', () => {
       Parameters<typeof buildFeatureFormCandidate>[2]
   }
 
+  it.each([
+    { reject: false, community: false },
+    { reject: true, community: false },
+    { reject: false, community: true },
+    { reject: true, community: true },
+  ])(
+    'saves linked phone overrides atomically (reject=$reject, community=$community)',
+    async ({ reject, community }) => {
+      const f = fixture(true)
+      f.sqlite.exec(`CREATE TABLE organisationLocation(id TEXT PRIMARY KEY,organisationId TEXT,locationId TEXT,previousRevisionId TEXT,overrides TEXT,provenance TEXT,actorId TEXT,createdAt TEXT);
+      CREATE VIEW organisationLocationHead AS SELECT o.*,o.id AS revision FROM organisationLocation o WHERE NOT EXISTS(SELECT 1 FROM organisationLocation next WHERE next.previousRevisionId=o.id);
+      INSERT INTO organisationLocation VALUES('correction-v1','org','place',NULL,'{}',NULL,'original','now');
+      INSERT INTO organisationLocation VALUES('other-org','other','place',NULL,'{"phoneNumber":{"mode":"override","value":["+85223456789"]}}',NULL,'other','now');
+      UPDATE property SET key='phoneNumber',audience='public',isTranslatable=0 WHERE id='private';
+      UPDATE featureProperty SET value=NULL,valueJson=NULL,propertyValueId=NULL WHERE propertyId='private';
+      DELETE FROM featurePropertyI18n WHERE propertyId='private';`)
+      if (community) {
+        f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT,state TEXT);
+          INSERT INTO location VALUES('place','establishment','linked');
+          CREATE TABLE locationRevision(id TEXT PRIMARY KEY,locationId TEXT,facts TEXT,rawSource TEXT,version INTEGER);
+          CREATE TABLE locationSharedRevision(id TEXT PRIMARY KEY,locationId TEXT,previousRevisionId TEXT,sourceRevisionId TEXT,corrections TEXT,actorId TEXT,provenance TEXT,createdAt TEXT);
+          CREATE VIEW locationSharedHead AS SELECT r.* FROM locationSharedRevision r WHERE NOT EXISTS(SELECT 1 FROM locationSharedRevision n WHERE n.previousRevisionId=r.id);`)
+        f.sqlite.prepare('INSERT INTO locationRevision VALUES(?,?,?,?,?)').run(
+          'source',
+          'place',
+          JSON.stringify({
+            names: { en: 'Place' },
+            brands: [],
+            phoneNumber: [],
+            location: {
+              geometry: { type: 'Point', coordinates: [114, 22] },
+              address: {
+                status: 'unresolved',
+                address2dId: null,
+                address3dId: null,
+                address3dUnitId: null,
+                snapshotId: null,
+                rawSource: {},
+                fallbackDisplay: {},
+              },
+            },
+          }),
+          '{}',
+          1,
+        )
+      }
+      const initial = await f.initialize()
+      f.sqlite.exec("UPDATE property SET component='PhoneField' WHERE id='private'")
+      const data = form(initial.content)
+      data.i18n = {}
+      if (community) data.locationFieldModes = { phoneNumber: 'community' }
+      required(data.properties).push({
+        propertyId: 'private',
+        value: '["+85221234567"]',
+      } as never)
+      const beforeHistory = f.sqlite
+        .prepare('SELECT count(*) AS n FROM featureRevision')
+        .get()?.n
+      if (reject)
+        f.sqlite.exec(
+          `CREATE TRIGGER reject_phone BEFORE INSERT ON featureProperty WHEN NEW.propertyId='private' BEGIN SELECT RAISE(ABORT,'reject phone projection'); END;`,
+        )
+      const save = saveFeatureFormRevision(f.db, {
+        ...common,
+        expectedScope,
+        updatedAt: 'token',
+        data,
+        canPublish: true,
+        allowDescriptions: true,
+        allowedInternalIds: new Set(),
+        authorizeLocationCorrection: async () => {},
+        authorizeCommunityCorrection: async () => ({
+          canEdit: true,
+          superAdmin: false,
+        }),
+      })
+      if (reject) {
+        if (community)
+          expect(
+            f.sqlite.prepare('SELECT count(*) AS n FROM locationSharedRevision').get()
+              ?.n,
+          ).toBe(0)
+        await expect(save).rejects.toThrow()
+        expect(
+          f.sqlite.prepare('SELECT count(*) AS n FROM organisationLocation').get()?.n,
+        ).toBe(2)
+        expect(
+          f.sqlite.prepare('SELECT count(*) AS n FROM featureRevision').get()?.n,
+        ).toBe(beforeHistory)
+        expect(
+          f.sqlite
+            .prepare("SELECT value FROM featureProperty WHERE propertyId='private'")
+            .get()?.value,
+        ).toBeNull()
+        return
+      }
+      await save
+      const head = required(
+        f.sqlite
+          .prepare("SELECT * FROM organisationLocationHead WHERE organisationId='org'")
+          .get(),
+      )
+      expect(JSON.parse(String(head.overrides)).phoneNumber).toEqual({
+        mode: 'override',
+        value: ['+85221234567'],
+      })
+      expect(head.previousRevisionId).toBe('correction-v1')
+      expect(head.actorId).toBe('author')
+      expect(
+        f.sqlite
+          .prepare("SELECT value FROM featureProperty WHERE propertyId='private'")
+          .get()?.value,
+      ).toBe('["+85221234567"]')
+      const association = required(
+        f.sqlite.prepare("SELECT * FROM featureLocation WHERE featureId='f'").get(),
+      )
+      expect(association.factsOrganisationRevision).toBe(head.id)
+      expect(JSON.parse(String(association.acceptancePolicy))).toEqual(
+        community
+          ? expect.objectContaining({
+              fieldEditModes: { phoneNumber: 'community' },
+              factsSharedFields: [
+                { field: 'phoneNumber', revision: expect.any(String) },
+              ],
+            })
+          : initial.content.placement.location?.acceptancePolicy,
+      )
+      expect(
+        f.sqlite
+          .prepare(
+            "SELECT id FROM organisationLocationHead WHERE organisationId='other'",
+          )
+          .get()?.id,
+      ).toBe('other-org')
+      if (community)
+        expect(
+          f.sqlite.prepare('SELECT count(*) AS n FROM locationSharedRevision').get()?.n,
+        ).toBe(1)
+      // Internal cases have no shared storage; community cases commit both histories.
+      expect(
+        f.sqlite.prepare('SELECT count(*) AS n FROM featureRevision').get()?.n,
+      ).toBeGreaterThan(Number(beforeHistory))
+    },
+  )
+
+  it.each(['whatsappNumber', 'contactPhone'])(
+    'persists migrated %s edits on linked Features without shared correction authority',
+    async key => {
+      const f = fixture(true)
+      f.sqlite
+        .prepare(
+          "UPDATE property SET key=?, audience='public', isTranslatable=0 WHERE id='private'",
+        )
+        .run(key)
+      f.sqlite.exec(
+        "UPDATE featureProperty SET value=NULL, valueJson=NULL, propertyValueId=NULL WHERE propertyId='private'",
+      )
+      f.sqlite.exec("DELETE FROM featurePropertyI18n WHERE propertyId='private'")
+      const initial = await f.initialize()
+      const association = f.sqlite.prepare('SELECT * FROM featureLocation').all()
+      f.sqlite.exec("UPDATE property SET component='PhoneField' WHERE id='private'")
+      const data = form(initial.content)
+      data.i18n = {}
+      required(data.properties).push({
+        propertyId: 'private',
+        value: '["+85221234567"]',
+      } as never)
+      await saveFeatureFormRevision(f.db, {
+        ...common,
+        expectedScope,
+        updatedAt: 'token',
+        data,
+        canPublish: true,
+        allowDescriptions: true,
+        allowedInternalIds: new Set(),
+      })
+      expect(
+        f.sqlite
+          .prepare("SELECT value FROM featureProperty WHERE propertyId='private'")
+          .get()?.value,
+      ).toBe('["+85221234567"]')
+      expect(f.sqlite.prepare('SELECT * FROM featureLocation').all()).toEqual(
+        association,
+      )
+      const saved = f.sqlite
+        .prepare(
+          "SELECT r.content FROM featureRevision r JOIN featureRevisionHead h ON h.publishedRevisionId=r.id WHERE h.featureId='f'",
+        )
+        .get()
+      expect(
+        JSON.parse(String(saved?.content)).properties.private.selection.value,
+      ).toBe('["+85221234567"]')
+    },
+  )
+
   it('retains omitted Feature fields and placement while applying a profile translation', async () => {
     const f = fixture()
     const initial = await f.initialize()
@@ -3067,7 +3262,9 @@ describe('reviewed Feature merge and split integration', () => {
     const incoming = structuredClone(primary)
     incoming.translations.en.title.value = 'Incoming shared name'
     primary.properties.private.selection.definition.component = 'PhoneField'
+    primary.properties.private.selection.definition.key = 'phoneNumber'
     incoming.properties.private.selection.definition.component = 'PhoneField'
+    incoming.properties.private.selection.definition.key = 'phoneNumber'
     incoming.properties.private.selection.value = 'Incoming phone'
     const input = {
       kind: 'merge' as const,

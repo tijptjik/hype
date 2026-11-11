@@ -188,7 +188,16 @@ export async function applyOrganisationLocationAdoption(
     AND EXISTS(SELECT 1 FROM location WHERE id=${proposal.locationId} AND sourceAvailability='current' AND state!='redirect' AND (state!='manual' OR ownerOrganisationId=${organisationId}))
     AND EXISTS(SELECT 1 FROM locationAdoptionProposal WHERE id=${proposal.id} AND ${input.fieldGroup === 'facts' ? sql`factsDecision` : sql`locationDecision`} IS NULL)
     AND (SELECT id FROM locationRevision WHERE locationId=${proposal.locationId} ORDER BY version DESC LIMIT 1)=${proposal.candidateRevisionId}`
-  const fields = input.fieldGroup === 'facts' ? [...factFields] : ['location']
+  // Review only changed fields; rejecting a phone must not freeze unrelated names or brands.
+  const fields = (input.fieldGroup === 'facts' ? [...factFields] : ['location']).filter(
+    field => {
+      const before =
+        field === 'location'
+          ? preview.plan.source.beforeLocation
+          : preview.plan.source.beforeFacts[field as keyof typeof candidate]
+      return !equalLocationValue(before, candidate[field as keyof typeof candidate])
+    },
+  )
   const overrides: FeatureLocationOverrides = structuredClone(current?.overrides ?? {})
   for (const field of fields) {
     const before =

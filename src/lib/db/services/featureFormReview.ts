@@ -68,10 +68,10 @@ export function validateFeatureFormResult(
       return ['A proposed property is no longer available in this Feature scope']
     if (
       previous.placement.location &&
-      (definition?.component === 'PhoneField' ||
-        before?.selection.definition.component === 'PhoneField')
+      (definition?.key === 'phoneNumber' ||
+        before?.selection.definition.key === 'phoneNumber')
     )
-      return ['Shared phone changes require separate Location review']
+      return ['Linked phone changes require separate Location override review']
     if (after && definition) {
       for (const key of [
         'key',

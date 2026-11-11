@@ -338,9 +338,12 @@ edited locale. Address-only selections show their pending association control an
 building/establishment creation actions instead of a separate entity-name input,
 including addresses carrying building-name evidence. The canonical address reference is
 retained, but does not establish a Building or Establishment identity. Type menus close
-on outside click, Escape, or choosing an option. Saved linked Locations open the
-Organisation-scoped Location editor for name corrections; these corrections do not
-rename the shared source record. Private visibility and Feature association are
+on outside click, Escape, or choosing an option. The standalone shared Location page
+edits community facts only, with no edit-destination selector or fallback to an
+Organisation override. Organisation overrides of linked Location fields belong in the
+Feature's Location editor; unlinked Feature fields remain directly authored Feature
+content. Opening a Location with Organisation context does not make its displayed facts
+or edits Organisation overrides. Private visibility and Feature association are
 independent: a private manual Location can still have linked Features.
 
 The Feature facet and generated navigation links use `location` (`#location`); legacy
@@ -3446,6 +3449,21 @@ Short-text fields (`InputField`, including retained `TextField` definitions) als
 support presence conditions. These pin `test: "hasValue"` and expose **Has value** /
 **Has no value** instead of boolean cases. Missing, empty and whitespace-only text use
 the latter; nonempty text, including literal "false" or "0", uses the former. Migration
+Feature phone ownership follows the `phoneNumber` property key, not the `PhoneField`
+editor. WhatsApp and custom phone properties remain Feature-owned through ordinary
+saves, revision projection and identity review. Universal phone edits on linked Features
+now use the same Organisation override mechanism as other inherited Location fields
+(Refs #241). Feature field permission and Organisation correction authority are both
+required. Per-field Community mode atomically writes a community revision and retains
+the authoring Organisation override; Internal mode writes only the override. Modes are
+persisted on the Feature association, separately from visibility and inheritance. Names,
+phone, brands and address can choose independently. Later acceptance releases only
+changed fields; rejection retains those fields without freezing unrelated values or
+converting the whole Location to an internal record. Explicit empty values remain
+overrides; reset restores inheritance from accepted evidence. Community phone changes
+continue through the Location correction path and consumer adoption policies. Unlinked
+phone edits remain directly authored Feature content.
+
 `0226_feature_naming_text_values.sql` makes **Has value** insert the actual property
 text; only **Has no value** is authored fallback text. The editor shows read-only
 examples labelled “e.g.” from populated values in the authorized project or layer. Array

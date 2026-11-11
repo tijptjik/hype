@@ -687,10 +687,10 @@ export async function buildSelectedFeatureIdentityContent(
           },
         )
     for (const [id, property] of Object.entries(content.properties))
-      if (property.selection.definition.component === 'PhoneField')
+      if (property.selection.definition.key === 'phoneNumber')
         delete content.properties[id]
     for (const [id, property] of Object.entries(placementSource.content.properties))
-      if (property.selection.definition.component === 'PhoneField')
+      if (property.selection.definition.key === 'phoneNumber')
         content.properties[id] = structuredClone(property)
   }
   for (const [locale, description] of Object.entries(output.descriptions ?? {})) {
@@ -748,7 +748,7 @@ export async function buildSelectedFeatureIdentityContent(
         throw new Error('Invalid or duplicate property selection')
       if (
         content.placement.location &&
-        value.selection.definition.component === 'PhoneField' &&
+        value.selection.definition.key === 'phoneNumber' &&
         field.sourceFeatureId !== placementSourceId
       )
         throw new Error('Shared phone values must follow their accepted Location')
@@ -756,10 +756,7 @@ export async function buildSelectedFeatureIdentityContent(
     }
     if (content.placement.location)
       for (const [id, value] of Object.entries(placementSource.content.properties))
-        if (
-          value.selection.definition.component === 'PhoneField' &&
-          !content.properties[id]
-        )
+        if (value.selection.definition.key === 'phoneNumber' && !content.properties[id])
           throw new Error('Shared phone values must follow their accepted Location')
   }
   if (output.profileEdits) {
@@ -840,8 +837,7 @@ export async function buildSelectedFeatureIdentityContent(
       if (
         !field?.selection.definition.isTranslatable ||
         field.selection.propertyValueId ||
-        (content.placement.location &&
-          field.selection.definition.component === 'PhoneField')
+        (content.placement.location && field.selection.definition.key === 'phoneNumber')
       )
         throw new Error('Edit this field through its regular editor')
       for (const [locale, value] of Object.entries(translations)) {
@@ -866,7 +862,7 @@ export async function buildSelectedFeatureIdentityContent(
         !field ||
         field.propertyValueId ||
         !['text', 'number', 'link', 'date'].includes(field.definition.dataType) ||
-        (content.placement.location && field.definition.component === 'PhoneField')
+        (content.placement.location && field.definition.key === 'phoneNumber')
       )
         throw new Error('Edit this field through its regular editor')
       field.value = value
