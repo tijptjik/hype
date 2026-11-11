@@ -2356,6 +2356,16 @@ let savedLocationNameDraft = $state<{
   featureId: string
   names: Record<string, string>
 } | null>(null)
+const locationFieldModes = $derived(
+  currentFeatureData.locationFieldModes as
+    | Partial<
+        Record<
+          'names' | 'phoneNumber' | 'brands' | 'location',
+          'community' | 'internal'
+        >
+      >
+    | undefined,
+)
 const profileLocationNames = $derived.by(() => {
   const names: Record<string, string> =
     isNewFeatureRef || draftLocalKind || draftPlaceSource
@@ -2369,6 +2379,8 @@ const profileLocationNames = $derived.by(() => {
                 {},
             ).map(([locale, name]) => [locale, name ?? '']),
           )
+  const edits = currentFeatureData.locationNames as Record<string, string> | undefined
+  if (edits && !isNewFeatureRef) return { ...names, ...edits }
   if (Object.values(names).some(name => name.trim())) return names
   // A described position can supply the linked title even without a named venue.
   return addressLocationNames(editorAddress)
@@ -5168,21 +5180,75 @@ async function refreshLocationSource(): Promise<void> {
                   {/if}
                 {/snippet}
                 {#snippet savedIdentityFields(translations: boolean)}
+                  {#if !isNewFeatureRef && acceptedNameSource?.current && isEditing}
+                    <div
+                      class="col-span-6 mb-4 grid w-full min-w-0 grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3"
+                    >
+                      {#each [
+                        ['names', m.location_review_names()],
+                        ['phoneNumber', 'Phone'],
+                        ['brands', m.location_brand_title()],
+                        ['location', m.feature_address_title()],
+                      ] as const as [field, label]}
+                        <label class="flex items-center justify-between gap-2 text-xs">
+                          <span>{label}</span>
+                          <select
+                            class="bg-background text-foreground border-input rounded-md border px-2 py-1 text-xs"
+                            aria-label={`${label} edits`}
+                            value={locationFieldModes?.[field] ??
+                              acceptedNameSource.current.fieldEditModes?.[field] ??
+                              'internal'}
+                            onchange={event => {
+                              const mode = event.currentTarget.value as
+                                | 'community'
+                                | 'internal'
+                              updateFeatureData(data => ({
+                                ...data,
+                                locationFieldModes: {
+                                  ...acceptedNameSource?.current?.fieldEditModes,
+                                  ...locationFieldModes,
+                                  [field]: mode,
+                                },
+                              }))
+                              hasProgrammaticDirtyChanges = true
+                            }}
+                          >
+                            <option value="internal">
+                              {m.location_visibility_exclusive()}
+                            </option>
+                            <option
+                              value="community"
+                              disabled={acceptedNameSource.current.state === 'manual'}
+                            >
+                              {m.location_visibility_shared()}
+                            </option>
+                          </select>
+                        </label>
+                      {/each}
+                    </div>
+                  {/if}
+                  <!-- Linked names use per-field community contributions and Organisation overrides. -->
                   <DraftLocationNameFields
                     localeState={profileLocaleState}
                     names={profileLocationNames}
-                    kind={acceptedNameSource?.current?.kind === 'premises'
-                      ? 'premises'
-                      : acceptedNameSource?.current?.kind === 'building'
-                        ? 'building'
-                        : 'establishment'}
+                    kind={acceptedNameSource?.current?.kind ?? 'unknown'}
                     {translations}
                     {isEditing}
                     recordKey={currentFeatureId}
                     onChange={names => {
-                      if (currentFeatureId)
-                        savedLocationNameDraft = { featureId: currentFeatureId, names }
-                      inheritLocationNames(names)
+                      const changed = Object.fromEntries(
+                        Object.entries(names).filter(
+                          ([locale, value]) => value !== profileLocationNames[locale],
+                        ),
+                      )
+                      updateFeatureData(data => ({
+                        ...data,
+                        locationNames: {
+                          ...(data.locationNames as Record<string, string> | undefined),
+                          ...changed,
+                        },
+                      }))
+                      hasProgrammaticDirtyChanges = true
                     }}
                   />
                 {/snippet}

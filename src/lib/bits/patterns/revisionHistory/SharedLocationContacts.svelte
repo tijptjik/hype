@@ -104,7 +104,8 @@ async function save(reset?: 'phoneNumber' | 'websites' | 'socials'): Promise<voi
 >
   <h3 class="font-semibold">Hype shared contacts</h3>
   <p class="text-muted-foreground text-sm">
-    Changes apply to this shared Location. Organisation overrides take precedence.
+    Changes contribute to the community Location and retain an Organisation override.
+    Later community updates follow your adoption policy.
   </p>
   {#if workspace}
     {#each ['phoneNumber', 'websites', 'socials'] as field}

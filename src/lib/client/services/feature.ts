@@ -389,6 +389,14 @@ export function getProgrammaticFeatureInputEntries(
     }
   }
 
+  if (featureData?.locationFieldModes)
+    appendEntry(
+      'data.locationFieldModes',
+      JSON.stringify(featureData.locationFieldModes),
+    )
+  if (featureData?.locationNames)
+    appendEntry('data.locationNames', JSON.stringify(featureData.locationNames))
+
   if (featureData?.locationReset)
     appendEntry('data.locationReset', JSON.stringify(featureData.locationReset))
 

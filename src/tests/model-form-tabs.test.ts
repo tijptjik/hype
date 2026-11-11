@@ -16,6 +16,22 @@ import { ProjectEntityFormData } from '#lib/db/zod/schema/project.form.js'
 import { LayerEntityFormData } from '#lib/db/zod/schema/layer.form.js'
 
 describe('model form tab submission', () => {
+  it('submits per-field contribution modes and linked names with the Location tab', () => {
+    const data = {
+      locationFieldModes: { phoneNumber: 'community' },
+      locationNames: { en: 'New name' },
+    }
+    const tabs = changedModelTabs('feature', { data: {} }, { data })
+    expect(tabs).toEqual(['location'])
+    const packet = new FormData()
+    for (const [key, value] of Object.entries(data))
+      packet.set(`data.${key}`, JSON.stringify(value))
+    gateModelFormData('feature', packet, tabs)
+    expect(packet.get('data.locationFieldModes')).toBe(
+      JSON.stringify(data.locationFieldModes),
+    )
+    expect(packet.get('data.locationNames')).toBe(JSON.stringify(data.locationNames))
+  })
   it('omits unchanged model/field tabs without mutating the draft', () => {
     const initial = {
       data: {

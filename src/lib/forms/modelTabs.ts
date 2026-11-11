@@ -38,6 +38,8 @@ export const MODEL_FORM_TABS = {
       'geometry',
       'addressMeta',
       'locationNameMode',
+      'locationFieldModes',
+      'locationNames',
       'locationReset',
       'locationBrandEdit',
     ],
