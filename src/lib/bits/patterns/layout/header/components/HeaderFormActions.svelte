@@ -24,6 +24,8 @@ let {
   primaryAction = null,
   featuresAction = null,
   usersAction = null,
+  historyAction = null,
+  changelogAction = null,
   shareAction = null,
   saveAction = null,
   deleteAction = null,
@@ -71,6 +73,38 @@ function resolveIconClasses(icon?: unknown): string {
       hideLabelInstantly
       disabled={usersAction?.disabled ?? !usersAction}
       onClick={() => usersAction?.onClick?.()}
+    />
+  {/if}
+
+  {#if historyAction}
+    <Button
+      size="sm"
+      attrs={historyAction?.attrs}
+      text={historyAction?.text ?? ''}
+      color={historyAction?.color ?? 'neutral'}
+      style={historyAction?.style ?? 'outline'}
+      iconComponent={historyAction?.icon}
+      class={resolveActionClass(historyAction?.class)}
+      hideLabel
+      hideLabelInstantly
+      disabled={historyAction?.disabled ?? !historyAction}
+      onClick={() => historyAction?.onClick?.()}
+    />
+  {/if}
+
+  {#if changelogAction}
+    <Button
+      size="sm"
+      attrs={changelogAction?.attrs}
+      text={changelogAction?.text ?? ''}
+      color={changelogAction?.color ?? 'neutral'}
+      style={changelogAction?.style ?? 'outline'}
+      iconComponent={changelogAction?.icon}
+      class={resolveActionClass(changelogAction?.class)}
+      hideLabel
+      hideLabelInstantly
+      disabled={changelogAction?.disabled ?? !changelogAction}
+      onClick={() => changelogAction?.onClick?.()}
     />
   {/if}
 

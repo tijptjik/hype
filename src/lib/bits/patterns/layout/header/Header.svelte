@@ -37,7 +37,9 @@ const facetItems = $derived(
     item =>
       (item.ref !== 'share' || !shareAction) &&
       (item.ref !== 'features' || !formActions.featuresAction) &&
-      (item.ref !== 'users' || !formActions.usersAction),
+      (item.ref !== 'users' || !formActions.usersAction) &&
+      (item.ref !== 'updates' || !formActions.historyAction) &&
+      item.ref !== 'changelog',
   ),
 )
 const showFilter = $derived(filter.isFilterable ?? false)
@@ -169,11 +171,17 @@ const rootClass = $derived(
         {/if}
 
         <div class="ml-auto flex shrink-0 items-center">
-          {#if formActions.featuresAction || formActions.usersAction || shareAction}
+          {#if formActions.featuresAction ||
+            formActions.usersAction ||
+            formActions.historyAction ||
+            formActions.changelogAction ||
+            shareAction}
             <div class="mr-2 shrink-0">
               <HeaderPrimitive.FormActions
                 featuresAction={formActions.featuresAction}
                 usersAction={formActions.usersAction}
+                historyAction={formActions.historyAction}
+                changelogAction={formActions.changelogAction}
                 {shareAction}
                 hideLabel={!showButtonText}
               />
@@ -183,7 +191,7 @@ const rootClass = $derived(
             class="grid shrink-0 items-center {shareAction
               ? 'w-[408px]'
               : showFilter || (reserveFormActionWidth && showButtonText)
-                ? 'min-w-[408px]'
+                ? 'w-[min(408px,calc(100vw-48px))] min-w-0'
                 : ''}"
           >
             {#if showFormActions || (reserveFormActionWidth && showButtonText)}
@@ -207,7 +215,7 @@ const rootClass = $derived(
             {/if}
             {#if showFilter || showViewActions}
               <div
-                class="col-start-1 row-start-1 flex w-full min-w-0 items-center justify-end gap-0 [&>label]:max-w-80 [&>label]:min-w-0 [&>label]:flex-1 [&>label>input]:min-w-0"
+                class="col-start-1 row-start-1 flex w-full min-w-0 items-center justify-end gap-0 [&>label]:min-w-0 [&>label]:flex-1 [&>label>input]:min-w-0"
                 transition:fade={{ duration: prefersReducedMotion.current ? 0 : 180 }}
               >
                 <HeaderPrimitive.Search
@@ -222,6 +230,7 @@ const rootClass = $derived(
                   <HeaderPrimitive.ViewActions
                     controlsAction={viewActions.controlsAction}
                     layoutAction={viewActions.layoutAction}
+                    trailingContent={viewActions.trailingContent}
                     extraActions={viewActions.extraActions}
                     content={viewActions.content}
                     hideLabel={!showButtonText}

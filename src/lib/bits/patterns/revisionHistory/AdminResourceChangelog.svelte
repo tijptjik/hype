@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, onMount } from 'svelte'
+import { onDestroy, onMount, untrack } from 'svelte'
 // COMPONENTS
 import * as Main from '#lib/bits/custom/main/index.js'
 import ResourceChangelog from './ResourceChangelog.svelte'
@@ -39,6 +39,17 @@ let { resource, resourceRef }: { resource: ChangelogResource; resourceRef: strin
   $props()
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
+// Retain the resolved navigation when changing only this resource's history scope.
+const retainedIdentity = untrack(
+  () => `${resource}:${resourceRef}:${adminCtx.view.account.revision}`,
+)
+const retainedFacets = untrack(() =>
+  adminCtx.activeResourceType === resource &&
+  adminCtx.activeResourceRef === resourceRef &&
+  headerCtrl.state.meta.facets.length > 0
+    ? headerCtrl.state.meta.facets
+    : null,
+)
 let ownerName = $state('')
 let filters = $state<ChangelogFilters>({})
 let lastCheckedAt = $state<string | null>(null)
@@ -146,10 +157,18 @@ $effect(() => {
   const facets = new Map<
     string,
     { label: string; icon?: import('svelte').Component | null }
-  >(getAdminFacetTabsForResource(FirstClassResource[resource]))
+  >(
+    retainedFacets && retainedIdentity === visitIdentity
+      ? retainedFacets.map(facet => [facet.ref, facet] as const)
+      : getAdminFacetTabsForResource(FirstClassResource[resource]),
+  )
   facets.set('changelog', { label: 'Changelog', icon: HistoryIcon })
   headerCtrl.setHeaderForEntity(ownerName || resourceRef, icons[resource], facets, {
     showFilter: true,
+    showViewActions: true,
+    showFormActions: false,
+    showControlBarToggle: false,
+    showLayoutToggle: false,
   })
   headerCtrl.setFacets(facets, { active: 'changelog', onFacetChange: selectFacet })
   headerCtrl.setTitleMenuItems([])
@@ -172,6 +191,7 @@ $effect(() => {
   })
 })
 onDestroy(() => {
+  headerCtrl.setViewActions([])
   headerCtrl.setSearch(null)
   visitGeneration++
   headerCtrl.clearFormActions()
@@ -202,6 +222,7 @@ onMount(() => {
         bind:filters
         {lastCheckedAt}
         onLoaded={handleLoaded}
+        onActions={actions => headerCtrl.setViewActions(actions)}
       />
       {#if trackingFailed}
         <div

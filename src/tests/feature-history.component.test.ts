@@ -136,3 +136,49 @@ it('renders multilingual photo metadata as two fields with locale comparison row
   expect(screen.getAllByRole('rowheader', { name: 'zh-Hant' })).toHaveLength(2)
   expect(screen.getByText('caption zh-Hant')).toBeTruthy()
 })
+
+it('searches unopened comparison values and restores collapsed cards when cleared', async () => {
+  const { HeaderCtrl, HEADER_CTRL_KEY } = await import('#lib/context/header.svelte.js')
+  const { tick } = await import('svelte')
+  const header = new HeaderCtrl()
+  const loadReview = vi.fn().mockResolvedValue(review)
+  render(FeaturePublicationHistory, {
+    props: { entries: [entry], canReview: true, loadReview },
+    context: new Map([[HEADER_CTRL_KEY, header]]),
+  })
+  header.historyQuery = 'old NAME'
+  expect(await screen.findByText('Old name')).toBeTruthy()
+  expect(loadReview).toHaveBeenCalledTimes(1)
+  expect(
+    screen
+      .getByRole('button', { name: '1 changed field' })
+      .getAttribute('aria-expanded'),
+  ).toBe('true')
+  header.historyQuery = 'missing value'
+  expect(await screen.findByText('No matches in loaded history.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: '1 changed field' })).toBeNull()
+  header.historyQuery = ''
+  await tick()
+  expect(
+    screen
+      .getByRole('button', { name: '1 changed field' })
+      .getAttribute('aria-expanded'),
+  ).toBe('false')
+  expect(loadReview).toHaveBeenCalledTimes(1)
+})
+
+it('loads authorized comparisons for action filtering without requiring text search', async () => {
+  const { HeaderCtrl, HEADER_CTRL_KEY } = await import('#lib/context/header.svelte.js')
+  const header = new HeaderCtrl()
+  header.historyFilters = { action: 'added' }
+  const loadReview = vi.fn().mockResolvedValue(review)
+  render(FeaturePublicationHistory, {
+    props: { entries: [entry], canReview: true, loadReview },
+    context: new Map([[HEADER_CTRL_KEY, header]]),
+  })
+  expect(await screen.findByText('No matches in loaded history.')).toBeTruthy()
+  expect(loadReview).toHaveBeenCalledTimes(1)
+  header.historyFilters = { action: 'updated' }
+  expect(await screen.findByRole('button', { name: '1 changed field' })).toBeTruthy()
+  expect(screen.getByText('New name')).toBeTruthy()
+})

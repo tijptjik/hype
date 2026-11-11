@@ -1,6 +1,12 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
+import { getContext, onDestroy, untrack } from 'svelte'
+// CONTEXT
+import { HEADER_CTRL_KEY, type HeaderCtrl } from '#lib/context/header.svelte.js'
+// ICONS
+import RefreshIcon from 'virtual:icons/proicons/arrow-sync'
+import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
+import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 // API
 import {
   getFeatureRevisionWorkspace,
@@ -10,11 +16,8 @@ import {
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
 import FeaturePublicationHistory from './FeaturePublicationHistory.svelte'
-import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
-import Header from '#lib/bits/custom/header/Header.svelte'
-import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
-// ICONS
-import HistoryIcon from 'virtual:icons/proicons/history'
+import HistoryFilters from './HistoryFilters.svelte'
+import { featureHistoryFilterEntry } from '#lib/revisions/historyFilters.js'
 // TYPES
 import type { FeatureRevisionWorkspace } from '#lib/db/services/featureRevisionWorkspace.js'
 
@@ -31,11 +34,41 @@ type Workspace = FeatureRevisionWorkspace & {
   canPublish: boolean
   fields: ('title' | 'description')[]
 }
+const headerCtrl = getContext<HeaderCtrl | undefined>(HEADER_CTRL_KEY)
+let expandAll = $state(true)
 let workspace = $state<Workspace | null>(null)
 let busy = $state(false)
 let message = $state('')
 let loadedFor = ''
 let loadSequence = 0
+
+// Both publication groups follow the same toolbar disclosure command.
+$effect(() => {
+  headerCtrl?.setViewActions([
+    {
+      text: 'Refresh',
+      id: 'history-refresh',
+      icon: RefreshIcon,
+      alwaysHideLabel: true,
+      disabled: busy,
+      onClick: () => {
+        void run(load)
+      },
+    },
+    {
+      id: 'history-expand',
+      text: expandAll ? 'Collapse all' : 'Expand all',
+      icon: expandAll ? CollapseIcon : ExpandIcon,
+      alwaysHideLabel: true,
+      disabled: !workspace,
+      attrs: { 'aria-expanded': !!expandAll },
+      onClick: () => {
+        expandAll = !expandAll
+      },
+    },
+  ])
+})
+onDestroy(() => headerCtrl?.setViewActions([]))
 
 /** Refresh only this Feature's bounded, authorized workspace. */
 async function load(): Promise<void> {
@@ -92,29 +125,19 @@ $effect(() => {
   aria-label="Feature revisions"
   data-history-surface
 >
-  <FormSurface class="mb-0!">
-    <SectionHeader>
-      {#snippet left()}
-        <Header
-          text="History"
-          description="Changes to this feature · newest first"
-          icon={HistoryIcon}
-          size="sm"
-          class="bits-form__section-header-heading w-auto! min-w-0"
-        />
-      {/snippet}
-      {#snippet right()}
-        <button
-          type="button"
-          class="border-border rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
-          disabled={busy}
-          onclick={() => run(load)}
-        >
-          Refresh
-        </button>
-      {/snippet}
-    </SectionHeader>
-  </FormSurface>
+  <HistoryFilters
+    entries={[
+      ...(workspace?.history ?? []).map(entry => featureHistoryFilterEntry(entry)),
+      ...(workspace?.privateHistory ?? []).map((entry, index) =>
+        featureHistoryFilterEntry(
+          { ...entry, generation: -index - 1 },
+          undefined,
+          true,
+        ),
+      ),
+    ]}
+    loading={!workspace}
+  />
   {#if message}
     <p role="status" class="text-sm break-words whitespace-normal">{message}</p>
   {/if}
@@ -146,6 +169,7 @@ $effect(() => {
     {#key workspace}
       {#if workspace.privateHistory?.length}
         <FeaturePublicationHistory
+          {expandAll}
           label="Changes recorded while unpublished"
           privateHistory
           entries={workspace.privateHistory.map((entry, index) => ({
@@ -162,6 +186,7 @@ $effect(() => {
         />
       {/if}
       <FeaturePublicationHistory
+        {expandAll}
         entries={workspace.history}
         canReview={workspace.canPublish}
         loadReview={entry =>

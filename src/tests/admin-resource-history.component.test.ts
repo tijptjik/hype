@@ -40,7 +40,12 @@ it.each(['project', 'layer', 'hub'] as const)(
       ),
     ).toBeTruthy()
     expect(Boolean(screen.queryByText('Field definitions'))).toBe(resource !== 'layer')
-    expect(screen.getByText(`Changes to this ${resource} · newest first`)).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'History' })).toBeNull()
+    expect(
+      screen.getByRole('region', {
+        name: `${resource[0].toUpperCase()}${resource.slice(1)} history`,
+      }),
+    ).toBeTruthy()
   },
 )
 

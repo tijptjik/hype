@@ -10,6 +10,8 @@ export interface HeaderCrumb {
 }
 
 export interface HeaderButtonActionConfig {
+  /** Stable identity when a control's label changes with its state. */
+  id?: string
   text: string
   onClick?: () => void
   icon?: Component | null
@@ -101,6 +103,7 @@ export interface HeaderViewActionsConfig {
   isVisible?: boolean
   controlsAction?: HeaderButtonActionConfig
   layoutAction?: HeaderButtonActionConfig
+  trailingContent?: HeaderLayoutRegionConfig | null
   extraActions?: HeaderButtonActionConfig[]
   content?: HeaderLayoutRegionConfig | null
 }
@@ -115,6 +118,8 @@ export interface HeaderFormActionsConfig {
   isVisible?: boolean
   primaryAction?: HeaderButtonActionConfig | null
   featuresAction?: HeaderButtonActionConfig | null
+  changelogAction?: HeaderButtonActionConfig | null
+  historyAction?: HeaderButtonActionConfig | null
   usersAction?: HeaderButtonActionConfig | null
   shareAction?: HeaderButtonActionConfig | null
   saveAction?: HeaderButtonActionConfig | null

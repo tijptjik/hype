@@ -1,6 +1,15 @@
 <script lang="ts">
 // SVELTE
-import { onMount, untrack } from 'svelte'
+import { getContext, onMount, onDestroy, untrack } from 'svelte'
+// CONTEXT
+import { HEADER_CTRL_KEY, type HeaderCtrl } from '#lib/context/header.svelte.js'
+// FILTERS
+import HistoryFilters from './HistoryFilters.svelte'
+import { resourceHistoryFilterEntry } from '#lib/revisions/historyFilters.js'
+import { matchesChangelogFilters } from '#lib/revisions/changelogFilters.js'
+import type { ChangelogEntry } from '#lib/revisions/changelog.js'
+// SEARCH
+import { matchesHistorySearch } from '#lib/revisions/historySearch.js'
 // THIRD-PARTY
 import { formatDistanceStrict } from 'date-fns'
 // PRESENTATION
@@ -14,13 +23,11 @@ import HistoryValue from './components/HistoryValue.svelte'
 import HistoryActorIdentity from './components/HistoryActorIdentity.svelte'
 import HistoryTimestamp from './components/HistoryTimestamp.svelte'
 import { Button } from '#lib/bits/core/index.js'
-import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
-import Header from '#lib/bits/custom/header/Header.svelte'
-import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import HistoryCategories from './HistoryCategories.svelte'
 // ICONS
-import HistoryIcon from 'virtual:icons/proicons/history'
-import ProfileIcon from 'virtual:icons/proicons/person-multiple'
-import FieldsIcon from 'virtual:icons/proicons/text'
+import RefreshIcon from 'virtual:icons/proicons/arrow-sync'
+import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
+import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 import ChevronIcon from 'virtual:icons/proicons/chevron-down'
 import MetadataIcon from 'virtual:icons/proicons/database'
 // BITS COMPONENTS
@@ -36,7 +43,9 @@ let {
   showFields = false,
 }: {
   resourceId: string
-  resourceLabel: string
+  resourceLabel:
+    | ChangelogEntry['resourceType']
+    | Capitalize<ChangelogEntry['resourceType']>
   loadPage: (
     before?: number,
     kind?: 'profile' | 'fields',
@@ -54,7 +63,67 @@ let retryCursor = $state<number | undefined>()
 let generation = 0
 let expanded = $state<Record<string, boolean>>({})
 let logoMetadataExpanded = $state<Record<string, boolean>>({})
+const headerCtrl = getContext<HeaderCtrl | undefined>(HEADER_CTRL_KEY)
+const searchQuery = $derived(headerCtrl?.historyQuery.trim() ?? '')
+const filterEntries = $derived(
+  entries.map(entry =>
+    resourceHistoryFilterEntry(
+      entry,
+      resourceLabel.toLowerCase() as ChangelogEntry['resourceType'],
+      historyKind,
+    ),
+  ),
+)
+const visibleEntries = $derived(
+  new Set(
+    entries
+      .filter(
+        (entry, index) =>
+          matchesHistorySearch(searchQuery, entry) &&
+          matchesChangelogFilters(
+            filterEntries[index],
+            headerCtrl?.historyFilters ?? {},
+          ),
+      )
+      .map(entry => entry.id),
+  ),
+)
+const hasFilters = $derived(
+  !!searchQuery ||
+    Object.values(headerCtrl?.historyFilters ?? {}).some(value => value !== undefined),
+)
 let now = $state(new Date())
+const allExpanded = $derived(
+  entries.filter(entry => !entry.initial).every(entry => expanded[entry.id]),
+)
+
+// Route-owned actions share the changelog toolbar while retaining local query ownership.
+$effect(() => {
+  headerCtrl?.setViewActions([
+    {
+      id: 'history-refresh',
+      text: 'Refresh',
+      icon: RefreshIcon,
+      alwaysHideLabel: true,
+      disabled: loading,
+      onClick: () => {
+        void load()
+      },
+    },
+    {
+      id: 'history-expand',
+      text: allExpanded ? 'Collapse all' : 'Expand all',
+      icon: allExpanded ? CollapseIcon : ExpandIcon,
+      alwaysHideLabel: true,
+      disabled: !entries.some(entry => !entry.initial),
+      attrs: { 'aria-expanded': allExpanded },
+      onClick: () => {
+        expanded = Object.fromEntries(entries.map(entry => [entry.id, !allExpanded]))
+      },
+    },
+  ])
+})
+onDestroy(() => headerCtrl?.setViewActions([]))
 
 onMount(() => {
   now = new Date()
@@ -108,7 +177,9 @@ async function load(before?: number): Promise<void> {
     const result = await loadPage(before, historyKind)
     if (request !== generation) return
     entries = before ? [...entries, ...result.entries] : result.entries
-    if (!before && result.entries[0]) expanded = { [result.entries[0].id]: true }
+    // Fresh history opens expanded, including when returning from the changelog.
+    if (!before)
+      expanded = Object.fromEntries(result.entries.map(entry => [entry.id, true]))
     available = result.available
     recordingEnabled = result.recordingEnabled
     nextCursor = result.nextCursor
@@ -184,55 +255,36 @@ $effect(() => {
   aria-busy={loading}
   data-history-surface
 >
-  <!-- Use the same surface-owned heading treatment as Descriptions and Fields. -->
-  <FormSurface class="mb-0!">
-    <SectionHeader>
-      {#snippet left()}
-        <Header
-          text="History"
-          description={`Changes to this ${resourceLabel} · newest first`}
-          icon={HistoryIcon}
-          size="sm"
-          class="bits-form__section-header-heading w-auto! min-w-0"
-        />
-      {/snippet}
-    </SectionHeader>
-  </FormSurface>
-  <SectionHeader
-    class="border-border/50 bg-primary/3 h-auto! min-h-12! gap-y-1 border-y px-5 max-sm:grid-cols-1! [&_.bits-form\_\_section-header-left]:overflow-visible! [&_.bits-form\_\_section-header-right]:[container-type:normal]! max-sm:[&_.bits-form\_\_section-header-right]:justify-end"
-  >
-    {#snippet left()}
-      <fieldset
-        class="grid w-full min-w-0 grid-cols-2 items-stretch gap-x-4 sm:flex sm:w-auto"
-        aria-label="History category"
-      >
-        <button
-          type="button"
-          class={styles.tab}
-          aria-pressed={historyKind === 'profile'}
-          onclick={() => {
-            historyKind = 'profile'
-          }}
-        >
-          <ProfileIcon class="size-4 shrink-0" aria-hidden="true" />
-          <span class="min-w-0 whitespace-normal">Profile and settings</span>
-        </button>
-        {#if showFields}
-          <button
-            type="button"
-            class={styles.tab}
-            aria-pressed={historyKind === 'fields'}
-            onclick={() => {
-              historyKind = 'fields'
-            }}
-          >
-            <FieldsIcon class="size-4 shrink-0" aria-hidden="true" />
-            <span class="min-w-0 whitespace-normal">Field definitions</span>
-          </button>
-        {/if}
-      </fieldset>
-    {/snippet}
-  </SectionHeader>
+  <HistoryFilters
+    entries={filterEntries}
+    count={nextCursor === null ? visibleEntries.size : null}
+    {loading}
+    onChange={filters => {
+      if (
+        filters.category === 'profile' ||
+        (showFields && filters.category === 'fields')
+      )
+        historyKind = filters.category
+    }}
+  />
+  <HistoryCategories
+    {showFields}
+    {historyKind}
+    {allExpanded}
+    onSelect={kind => {
+      historyKind = kind
+      if (headerCtrl)
+        headerCtrl.historyFilters = {
+          ...headerCtrl.historyFilters,
+          category: undefined,
+        }
+    }}
+    onToggle={entries.some(entry => !entry.initial)
+      ? collapsed => {
+          expanded = Object.fromEntries(entries.map(entry => [entry.id, !collapsed]))
+        }
+      : undefined}
+  />
   {#if !failed && available && recordingEnabled === false}
     <p class={styles.notice}>
       Showing stored history. New edits are not being recorded yet.
@@ -255,6 +307,9 @@ $effect(() => {
     <p class={styles.notice}>
       No recorded changes yet. Earlier edits are not available.
     </p>
+  {/if}
+  {#if hasFilters && !visibleEntries.size}
+    <p role="status" class={styles.notice}>No matches in loaded history.</p>
   {/if}
   <ol class="px-3 py-5 @[36rem]:px-5">
     {#each entries as entry, index (entry.id)}
@@ -285,7 +340,10 @@ $effect(() => {
         fields.length > 2
           ? `${fields.slice(0, 2).join(', ')} +${fields.length - 2} more`
           : fields.join(', ') || '—'}
-      <li class="relative min-w-0 pb-5 pl-5 last:pb-0 @[36rem]:pl-7">
+      <li
+        hidden={!visibleEntries.has(entry.id)}
+        class="relative min-w-0 pb-5 pl-5 last:pb-0 @[36rem]:pl-7"
+      >
         <!-- Connect revision markers through comparisons and elapsed-time rows. -->
         {#if index < entries.length - 1 || nextCursor !== null}
           <span
@@ -390,7 +448,7 @@ $effect(() => {
               <button
                 type="button"
                 class="{styles.disclosure} col-span-full @[64rem]:col-span-1"
-                aria-expanded={!!expanded[entry.id]}
+                aria-expanded={!!searchQuery || !!expanded[entry.id]}
                 aria-controls={`changes-${entry.id}`}
                 onclick={() => {
                   expanded[entry.id] = !expanded[entry.id]
@@ -403,7 +461,7 @@ $effect(() => {
                 </span>
                 <ChevronIcon
                   aria-hidden="true"
-                  class={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${expanded[entry.id] ? '' : '-rotate-90'}`}
+                  class={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${searchQuery || expanded[entry.id] ? '' : '-rotate-90'}`}
                 />
               </button>
             {/if}
@@ -544,7 +602,10 @@ $effect(() => {
               {@render logoComparison()}
             </div>
           {:else}
-            <div id={`changes-${entry.id}`} hidden={!expanded[entry.id]}>
+            <div
+              id={`changes-${entry.id}`}
+              hidden={!searchQuery && !expanded[entry.id]}
+            >
               <div class="border-border/50 bg-muted/10 grid min-w-0 gap-5 border-t p-4">
                 {@render logoComparison()}
                 {#each groups as group (group.key)}

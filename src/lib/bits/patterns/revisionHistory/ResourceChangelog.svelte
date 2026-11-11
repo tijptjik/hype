@@ -11,11 +11,9 @@ import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import ChangelogFiltersBar from './components/ChangelogFilters.svelte'
 import ChangelogActor from './components/ChangelogActor.svelte'
 import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
-import Header from '#lib/bits/custom/header/Header.svelte'
 import { VirtualList } from '#lib/bits/custom/index/src/index.js'
 // ICONS
 import MetadataIcon from 'virtual:icons/proicons/database'
-import HistoryIcon from 'virtual:icons/proicons/history'
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 import FilterIcon from 'virtual:icons/proicons/filter'
 import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
@@ -35,6 +33,7 @@ import {
   changelogCheckBoundary,
 } from '#lib/revisions/changelogTimeline.js'
 // TYPES
+import type { HeaderButtonActionConfig } from '#lib/bits/patterns/layout/header/header.types.js'
 import type {
   ChangelogCursor,
   ChangelogEntry,
@@ -49,6 +48,7 @@ let {
   locale,
   loadPage,
   onLoaded,
+  onActions,
   lastCheckedAt = null,
   filters = $bindable<ChangelogFilters>({}),
 }: {
@@ -60,6 +60,7 @@ let {
     filters?: ChangelogFilters,
     includeFilterOptions?: boolean,
   ) => Promise<ChangelogPage>
+  onActions?: (actions: HeaderButtonActionConfig[]) => void
   onLoaded?: (page: ChangelogPage) => void
   lastCheckedAt?: string | null
   filters?: ChangelogFilters
@@ -314,6 +315,59 @@ $effect(() => {
       void load()
     })
 })
+// The owning route places these controls beside its top-header search field.
+const toolbarActions = $derived<HeaderButtonActionConfig[]>([
+  {
+    id: 'history-filters',
+    text: filterCount ? `Filters (${filterCount})` : 'Filters',
+    icon: FilterIcon,
+    alwaysHideLabel: true,
+    hideLabelInstantly: true,
+    style: 'ghost',
+    color: 'neutral',
+    attrs: {
+      'aria-expanded': showFilters,
+      'aria-pressed': showFilters,
+      'aria-label': filterCount ? `Filters, ${filterCount} active` : 'Filters',
+    },
+    class: `size-11! shrink-0 p-0! ${filterCount || showFilters ? 'bg-primary/10 text-primary' : ''}`,
+    onClick: () => {
+      showFilters = !showFilters
+    },
+  },
+  {
+    id: 'history-refresh',
+    text: 'Refresh',
+    icon: RefreshIcon,
+    class: 'size-11! shrink-0 p-0!',
+    alwaysHideLabel: true,
+    hideLabelInstantly: true,
+    style: 'ghost',
+    color: 'neutral',
+    disabled: loading,
+    onClick: () => {
+      void load(true, true)
+    },
+  },
+  {
+    id: 'history-expand',
+    text: allCollapsed ? 'Expand all' : 'Collapse all',
+    icon: allCollapsed ? ExpandIcon : CollapseIcon,
+    class: 'size-11! shrink-0 p-0!',
+    alwaysHideLabel: true,
+    hideLabelInstantly: true,
+    style: 'ghost',
+    color: 'neutral',
+    attrs: { 'aria-expanded': !allCollapsed },
+    onClick: () => {
+      expandByDefault = allCollapsed
+      expanded = Object.fromEntries(entries.map(entry => [entry.key, expandByDefault]))
+    },
+  },
+])
+$effect(() => {
+  onActions?.(toolbarActions)
+})
 </script>
 
 {#snippet loadingRows(count: number, label: string)}
@@ -376,72 +430,20 @@ $effect(() => {
 <section
   class="@container flex h-full min-h-0 w-full min-w-0 flex-col"
   aria-label="Changelog"
+  aria-describedby={`${metadataPrefix}-description`}
   aria-busy={loading || pendingFilters}
 >
-  <SectionHeader
-    class="[&>div:last-child]:[container-type:normal] [&>div:last-child]:items-center"
-    actions={[
-      {
-        text: filterCount ? `Filters (${filterCount})` : 'Filters',
-        iconComponent: FilterIcon,
-        iconClasses: 'size-5! [&_svg]:size-5!',
-        hideLabel: true,
-        hideLabelInstantly: true,
-        style: 'ghost',
-        color: 'neutral',
-        attrs: {
-          'aria-expanded': showFilters,
-          'aria-pressed': showFilters,
-          'aria-label': filterCount ? `Filters, ${filterCount} active` : 'Filters',
-        },
-        class: `size-11! shrink-0 p-0! ${filterCount || showFilters ? 'bg-primary/10 text-primary' : ''}`,
-        onClick: () => {
-          showFilters = !showFilters
-        },
-      },
-      {
-        text: 'Refresh',
-        iconComponent: RefreshIcon,
-        class: 'size-11! shrink-0 p-0!',
-        iconClasses: 'size-5! [&_svg]:size-5!',
-        hideLabel: true,
-        hideLabelInstantly: true,
-        style: 'ghost',
-        color: 'neutral',
-        disabled: loading,
-        onClick: () => {
-          void load(true, true)
-        },
-      },
-      {
-        text: allCollapsed ? 'Expand all' : 'Collapse all',
-        iconComponent: allCollapsed ? ExpandIcon : CollapseIcon,
-        iconClasses: 'size-5! [&_svg]:size-5!',
-        class: 'size-11! shrink-0 p-0!',
-        hideLabel: true,
-        hideLabelInstantly: true,
-        style: 'ghost',
-        color: 'neutral',
-        attrs: { 'aria-expanded': !allCollapsed },
-        onClick: () => {
-          expandByDefault = allCollapsed
-          expanded = Object.fromEntries(
-            entries.map(entry => [entry.key, expandByDefault]),
-          )
-        },
-      },
-    ]}
-  >
-    {#snippet left()}
-      <Header
-        text="Changelog"
-        {description}
-        icon={HistoryIcon}
-        size="sm"
-        class="bits-form__section-header-heading w-auto! min-w-0"
-      />
-    {/snippet}
-  </SectionHeader>
+  <p id={`${metadataPrefix}-description`} class="sr-only">{description}</p>
+  {#if !onActions}
+    <SectionHeader
+      class="border-border/50 border-b bg-transparent!"
+      actions={toolbarActions.map(({ icon, alwaysHideLabel, ...action }) => ({
+        ...action,
+        iconComponent: icon,
+        hideLabel: alwaysHideLabel,
+      }))}
+    />
+  {/if}
   {#if showFilters}
     <ChangelogFiltersBar
       {filters}
@@ -462,7 +464,7 @@ $effect(() => {
   {/if}
   <div
     data-changelog-columns
-    class="{columnClasses} border-primary/25 bg-[color-mix(in_oklab,var(--color-primary)_18%,var(--color-panel))] text-foreground shrink-0 items-center border-b py-2 text-xs font-semibold"
+    class="{columnClasses} border-border/50 bg-transparent text-foreground shrink-0 items-center border-b py-2 text-xs font-semibold"
   >
     <span aria-hidden="true"></span>
     <span data-changelog-column="resource">

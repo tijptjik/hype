@@ -21,12 +21,14 @@ import type {
 } from '#lib/revisions/changelog.js'
 
 let {
+  label = 'Changelog filters',
   filters,
   options,
   onChange,
   count = null,
   countLoading = false,
 }: {
+  label?: string
   count?: number | null
   countLoading?: boolean
   filters: ChangelogFilters
@@ -116,7 +118,7 @@ function changeDates(values: number[]): void {
 }
 </script>
 
-<fieldset class="min-w-0 shrink-0 border-0 p-0" aria-label="Changelog filters">
+<fieldset class="min-w-0 shrink-0 border-0 p-0" aria-label={label}>
   <div class="w-full overflow-x-auto">
     <Control.Root
       class="min-w-[64rem]"

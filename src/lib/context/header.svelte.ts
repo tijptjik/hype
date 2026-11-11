@@ -1,3 +1,4 @@
+import type { ChangelogFilters } from '#lib/revisions/changelog.js'
 import { getContext, setContext, untrack } from 'svelte'
 import type { Component } from 'svelte'
 import type {
@@ -75,6 +76,13 @@ export const getEntityVisibility = (
  * Private methods are internal composition helpers.
  */
 export class HeaderCtrl {
+  /** Search within the currently selected resource history. */
+  historyQuery = $state('')
+
+  /** Read-only History filter selections and disclosure, separate from list filters. */
+  historyFilters = $state<ChangelogFilters>({})
+  historyFiltersVisible = $state(false)
+
   /** Transient focus of the header search field, shared with its current page. */
   isSearchFocused = $state(false)
 

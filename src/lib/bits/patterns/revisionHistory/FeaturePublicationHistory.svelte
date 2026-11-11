@@ -1,6 +1,13 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { getContext, untrack, onMount } from 'svelte'
+// CONTEXT
+import { HEADER_CTRL_KEY, type HeaderCtrl } from '#lib/context/header.svelte.js'
+// FILTERS
+import { featureHistoryFilterEntry } from '#lib/revisions/historyFilters.js'
+import { matchesChangelogFilters } from '#lib/revisions/changelogFilters.js'
+// SEARCH
+import { matchesHistorySearch } from '#lib/revisions/historySearch.js'
 // THIRD-PARTY
 import { formatDistanceStrict } from 'date-fns'
 // COMPONENTS
@@ -39,17 +46,55 @@ let {
   loadReview,
   label = 'Publication history',
   privateHistory = false,
+  expandAll,
 }: {
   entries: Entry[]
   canReview: boolean
   loadReview: (entry: Entry) => Promise<Review>
   label?: string
+  expandAll?: boolean
   privateHistory?: boolean
 } = $props()
 let expanded = $state<Record<number, boolean>>({})
 let reviews = $state<Record<number, Review>>({})
 let loading = $state<Record<number, boolean>>({})
 let failed = $state<Record<number, boolean>>({})
+const headerCtrl = getContext<HeaderCtrl | undefined>(HEADER_CTRL_KEY)
+const searchQuery = $derived(headerCtrl?.historyQuery.trim() ?? '')
+const filters = $derived(headerCtrl?.historyFilters ?? {})
+const needsComparison = $derived(!!searchQuery || !!filters.action)
+const hasFilters = $derived(
+  !!searchQuery || Object.values(filters).some(value => value !== undefined),
+)
+
+// Apply toolbar commands without retriggering when individual rows change.
+$effect(() => {
+  const open = expandAll
+  if (open === undefined) return
+  untrack(() => {
+    if (!canReview) return
+    for (const entry of entries) {
+      expanded[entry.generation] = open
+      if (open && !reviews[entry.generation]) void inspect(entry)
+    }
+  })
+})
+
+/** Match loaded authorized metadata; keep unresolved comparisons visible until inspection completes.
+ * @param entry Publication or private capture to match.
+ * @returns Whether the entry remains visible under the current filters.
+ */
+function matches(entry: Entry): boolean {
+  const review = reviews[entry.generation]
+  const pending = needsComparison && canReview && !review
+  return (
+    matchesChangelogFilters(featureHistoryFilterEntry(entry, review, privateHistory), {
+      ...filters,
+      action: pending ? undefined : filters.action,
+    }) &&
+    (pending || matchesHistorySearch(searchQuery, [entry, review]))
+  )
+}
 let now = $state(new Date())
 onMount(() => {
   const timer = setInterval(() => {
@@ -74,6 +119,24 @@ async function inspect(entry: Entry): Promise<void> {
     loading[entry.generation] = false
   }
 }
+
+// Search includes authorized comparison values even before their cards are opened.
+$effect(() => {
+  if (!needsComparison || !canReview) return
+  const candidates = entries
+  let cancelled = false
+  untrack(() => {
+    void (async () => {
+      for (const entry of candidates) {
+        if (cancelled) break
+        if (!reviews[entry.generation]) await inspect(entry)
+      }
+    })()
+  })
+  return () => {
+    cancelled = true
+  }
+})
 
 /** Opens or closes a comparison without changing published content.
  * @param entry Revision selected by the disclosure control.
@@ -116,7 +179,7 @@ function relative(value: string): string {
 
 <section class="@container w-full min-w-0" aria-label={label}>
   <SectionHeader
-    class="border-border/50 bg-primary/3 h-auto! min-h-12! border-y px-5"
+    class="border-border/50 h-auto! min-h-12! border-y bg-transparent! px-5"
     isCollapsableCollapsed={!entries.length ||
       !entries.every(entry => expanded[entry.generation])}
     onCollapsableToggle={canReview && entries.length
@@ -137,10 +200,16 @@ function relative(value: string): string {
       No recorded changes yet. Earlier edits are not available.
     </p>
   {/if}
+  {#if hasFilters && entries.length && !entries.some(matches)}
+    <p role="status" class={styles.notice}>No matches in loaded history.</p>
+  {/if}
   <ol class="px-3 py-5 @[36rem]:px-5">
     {#each entries as entry, index (entry.generation)}
       {@const review = reviews[entry.generation]}
-      <li class="relative min-w-0 pb-5 pl-5 last:pb-0 @[36rem]:pl-7">
+      <li
+        hidden={!matches(entry)}
+        class="relative min-w-0 pb-5 pl-5 last:pb-0 @[36rem]:pl-7"
+      >
         {#if index < entries.length - 1}
           <span
             aria-hidden="true"
@@ -231,7 +300,7 @@ function relative(value: string): string {
               <button
                 type="button"
                 class="{styles.disclosure} col-span-full @[56rem]:col-span-1"
-                aria-expanded={!!expanded[entry.generation]}
+                aria-expanded={needsComparison || !!expanded[entry.generation]}
                 aria-controls={`feature-changes-${entry.generation}`}
                 onclick={() => toggle(entry)}
               >
@@ -242,12 +311,12 @@ function relative(value: string): string {
                 >
                 <ChevronIcon
                   aria-hidden="true"
-                  class={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${expanded[entry.generation] ? '' : '-rotate-90'}`}
+                  class={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${needsComparison || expanded[entry.generation] ? '' : '-rotate-90'}`}
                 />
               </button>
             {/if}
           </header>
-          {#if canReview && expanded[entry.generation]}
+          {#if canReview && (needsComparison || expanded[entry.generation])}
             <div
               id={`feature-changes-${entry.generation}`}
               class="border-border/50 bg-muted/10 grid min-w-0 gap-5 border-t p-4"

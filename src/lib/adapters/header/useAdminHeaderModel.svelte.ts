@@ -1,6 +1,8 @@
 // SVELTEKIT
 import { goto } from '$app/navigation'
 import { navigating, page } from '$app/state'
+// COMPONENTS
+import HistoryScopeToggle from '#lib/bits/patterns/revisionHistory/HistoryScopeToggle.svelte'
 // CONSTANTS
 import { NEW_REF } from '#lib/constants.js'
 // CONTEXT
@@ -25,7 +27,10 @@ import Save from 'virtual:icons/proicons/save'
 import Upload from 'virtual:icons/proicons/arrow-upload'
 import Table2 from 'virtual:icons/proicons/table'
 import Trash2 from 'virtual:icons/proicons/delete'
-import HistoryIcon from 'virtual:icons/proicons/history'
+import ClockIcon from 'virtual:icons/lucide/clock'
+import RefreshIcon from 'virtual:icons/proicons/arrow-sync'
+import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
+import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 import Undo2 from 'virtual:icons/proicons/arrow-undo'
 import X from 'virtual:icons/proicons/cancel'
 // ENUMS
@@ -44,7 +49,10 @@ import type {
 
 import type { Component } from 'svelte'
 import type { FilterState } from '#lib/client/services/filters.types.js'
-import type { HeaderTitleMenuItemConfig } from '#lib/bits/patterns/layout/header/header.types.js'
+import type {
+  HeaderTitleMenuItemConfig,
+  HeaderLayoutRegionConfig,
+} from '#lib/bits/patterns/layout/header/header.types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -380,17 +388,50 @@ export function useAdminHeaderModel(
   // DERIVED :: RESOURCE / ROUTE
   const headerResourceType = $derived(adminCtx.activeResourceType)
   const isIndex = $derived(adminCtx.activeResourceRef === false)
-  // Destination tabs define their controls before the lazy index registers its search.
+  // Route intent survives child teardown and lazy mounting between read-only views.
+  const destinationUrl = $derived(navigating.to?.url ?? page.url)
   const destinationFacet = $derived(
     navigating.to
       ? navigating.to.url.hash.slice(1)
       : (headerCtrl.state.meta.activeFacet ?? adminCtx.activeFacet),
   )
+  const isReadOnlyView = $derived(
+    /^\/admin\/[^/]+\/[^/]+(?:\/changelog)?\/?$/.test(destinationUrl.pathname) &&
+      (destinationUrl.pathname.replace(/\/$/, '').endsWith('/changelog') ||
+        ['features', 'users', 'updates'].includes(destinationFacet || '')),
+  )
+  // Mounted or outgoing directories may retain search state; the selected form wins.
+  const isFormView = $derived(
+    !isIndex &&
+      !isReadOnlyView &&
+      [
+        'core',
+        'capabilities',
+        'location',
+        'fields',
+        'images',
+        'policies',
+        'advanced',
+      ].includes(destinationFacet || ''),
+  )
+  const isChangelog = $derived(destinationUrl.pathname.endsWith('/changelog'))
+  const isHistory = $derived(!isIndex && destinationFacet === 'updates')
+  const isHistoryView = $derived(isHistory || isChangelog)
+
+  // Resource changes clear history search without changing directory filters.
+  $effect(() => {
+    adminCtx.activeResourceRef
+    adminCtx.activeResourceType
+    headerCtrl.historyQuery = ''
+    headerCtrl.historyFilters = {}
+    headerCtrl.historyFiltersVisible = false
+  })
+  // Destination tabs define their controls before the lazy index registers its search.
   const isIndexFacet = $derived(
     !isIndex && (destinationFacet === 'features' || destinationFacet === 'users'),
   )
   const isEmbeddedIndex = $derived(
-    isIndexFacet || headerCtrl.state.search?.indexView === true,
+    isIndexFacet || (!isFormView && headerCtrl.state.search?.indexView === true),
   )
   const presentationResourceType = $derived(
     isIndexFacet
@@ -524,26 +565,6 @@ export function useAdminHeaderModel(
   )
   const titleMenuItems = $derived.by((): HeaderTitleMenuItemConfig[] => {
     const items = [...titleMenuMetaItems]
-
-    // Hierarchy changelogs open as a record view from the same menu as Delete.
-    if (
-      !isIndex &&
-      canEdit &&
-      adminCtx.activeResourceRef &&
-      adminCtx.activeResourceRef !== NEW_REF &&
-      ['organisation', 'project', 'layer'].includes(
-        String(adminCtx.activeResourceType),
-      ) &&
-      !page.url.pathname.endsWith('/changelog')
-    ) {
-      items.push({
-        label: 'Changelog',
-        icon: HistoryIcon,
-        onSelect: () => {
-          void goto(`${page.url.pathname.replace(/\/$/, '')}/changelog`)
-        },
-      })
-    }
 
     if (!showDeleteMenuAction) return items
 
@@ -752,14 +773,23 @@ export function useAdminHeaderModel(
   const resolvedVisibility = $derived.by(() => ({
     showNew: visibility.showNew ?? defaultVisibility.showNew,
     showFilter:
-      isEmbeddedIndex || (visibility.showFilter ?? defaultVisibility.showFilter),
+      !isFormView &&
+      (isReadOnlyView ||
+        isHistory ||
+        isEmbeddedIndex ||
+        (visibility.showFilter ?? defaultVisibility.showFilter)),
     showFacets: visibility.showFacets ?? defaultVisibility.showFacets,
     showViewActions:
-      isEmbeddedIndex ||
-      (visibility.showViewActions ?? defaultVisibility.showViewActions),
+      !isFormView &&
+      (isHistoryView ||
+        isEmbeddedIndex ||
+        (visibility.showViewActions ?? defaultVisibility.showViewActions)),
     showFormActions:
-      !isEmbeddedIndex &&
-      (visibility.showFormActions ?? defaultVisibility.showFormActions),
+      isFormView ||
+      (!isReadOnlyView &&
+        !isHistory &&
+        !isEmbeddedIndex &&
+        (visibility.showFormActions ?? defaultVisibility.showFormActions)),
     showAvatar: visibility.showAvatar ?? defaultVisibility.showAvatar,
     showLayoutToggle:
       isEmbeddedIndex ||
@@ -785,6 +815,27 @@ export function useAdminHeaderModel(
     return layoutModes[(currentIndex + 1) % layoutModes.length]
   })
   const nextLayoutActionMeta = $derived.by(() => toLayoutActionMeta(nextLayoutMode))
+  const historyFilterCount = $derived(
+    Object.values(headerCtrl.historyFilters).filter(
+      value => value !== undefined && value !== '',
+    ).length,
+  )
+  const historyControlsAction = $derived<HeaderButtonActionConfig>({
+    text: historyFilterCount ? `Filters (${historyFilterCount})` : 'Filters',
+    class:
+      historyFilterCount || headerCtrl.historyFiltersVisible ? 'bg-base-content/6' : '',
+    icon: headerCtrl.historyFiltersVisible ? FunnelX : Funnel,
+    style: 'ghost',
+    color: 'neutral',
+    alwaysHideLabel: true,
+    attrs: {
+      'aria-expanded': headerCtrl.historyFiltersVisible,
+      'aria-pressed': headerCtrl.historyFiltersVisible,
+    },
+    onClick: () => {
+      headerCtrl.historyFiltersVisible = !headerCtrl.historyFiltersVisible
+    },
+  })
   const controlsAction = $derived.by((): HeaderButtonActionConfig | undefined => {
     if (!resolvedVisibility.showControlBarToggle) return undefined
 
@@ -849,6 +900,84 @@ export function useAdminHeaderModel(
       style:
         (customActiveFacet ?? adminCtx.activeFacet) === 'users' ? 'soft' : 'outline',
       onClick: () => (customFacetChangeHandler ?? handleFacetChange)('users'),
+    }
+  })
+  // History uses the permitted facet destination outside the editing tabs.
+  const historyAction = $derived.by((): HeaderButtonActionConfig | null => {
+    const facet = facetItems.find(item => item.ref === 'updates')
+    if (!facet && !isHistoryView) return null
+    return {
+      text: facet?.label ?? 'History',
+      icon: ClockIcon,
+      disabled: isEditing || isInFlight || facet?.disabled,
+      style: isHistory || isChangelog ? 'soft' : 'outline',
+      attrs: { 'aria-current': isHistory || isChangelog ? 'page' : undefined },
+      onClick: () => (customFacetChangeHandler ?? handleFacetChange)('updates'),
+    }
+  })
+  // Shared history controls retain their slots while route-owned handlers are replaced.
+  const historyToolbarActions = $derived.by((): HeaderButtonActionConfig[] =>
+    [
+      { id: 'history-refresh', text: 'Refresh', icon: RefreshIcon },
+      {
+        id: 'history-expand',
+        text: isChangelog ? 'Expand all' : 'Collapse all',
+        icon: isChangelog ? ExpandIcon : CollapseIcon,
+        attrs: { 'aria-expanded': !isChangelog },
+      },
+    ].map(slot => {
+      // Outgoing route controls must not override the destination's loading state.
+      const action = navigating.to
+        ? undefined
+        : customViewActions.find(item => item.id === slot.id)
+      return {
+        ...slot,
+        ...action,
+        class: 'size-11! shrink-0 p-0!',
+        alwaysHideLabel: true,
+        hideLabelInstantly: true,
+        disabled: !action || Boolean(navigating.to) || action.disabled,
+        onClick: navigating.to ? undefined : action?.onClick,
+      }
+    }),
+  )
+  const historyFilterAction = $derived<HeaderButtonActionConfig>(
+    isChangelog
+      ? (customViewActions.find(action => action.id === 'history-filters') ?? {
+          text: 'Filters',
+          icon: Funnel,
+          disabled: true,
+          alwaysHideLabel: true,
+        })
+      : historyControlsAction,
+  )
+  // History scope switches between the resource and its authorized hierarchy.
+  const historyScopeContent = $derived.by((): HeaderLayoutRegionConfig | undefined => {
+    const resourceType = adminCtx.activeResourceType
+    const resourceRef = adminCtx.activeResourceRef
+    if (
+      (!isHistory && !isChangelog) ||
+      !resourceType ||
+      !resourceRef ||
+      resourceRef === NEW_REF ||
+      !['organisation', 'project', 'layer'].includes(resourceType)
+    )
+      return undefined
+    return {
+      component: HistoryScopeToggle,
+      props: {
+        includeDescendants: isChangelog,
+        onSelect: (includeDescendants: boolean) => {
+          if (includeDescendants === isChangelog) return
+          if (includeDescendants) {
+            void goto(
+              `/admin/${ResourcePath[resourceType]}/${encodeURIComponent(resourceRef)}/changelog`,
+            )
+          } else {
+            navigateOnAdmin(adminCtx, resourceType, resourceRef, 'updates')
+          }
+        },
+      },
     }
   })
   const primaryAction = $derived.by((): HeaderButtonActionConfig | null => {
@@ -930,14 +1059,14 @@ export function useAdminHeaderModel(
 
   // Preview uses the current resource's role-derived handler and saved state; keep its slot while editing.
   const previewAction = $derived.by((): HeaderButtonActionConfig | null => {
-    if (isDeleted || !formActions?.preview) return null
+    if (isDeleted || (!formActions?.preview && !hasCachedPreview)) return null
     return {
       text: m.publication_preview__button(),
       color: 'neutral',
       style: 'outline',
       icon: Eye,
-      disabled: isEditing || isInFlight,
-      onClick: formActions.preview,
+      disabled: isEditing || isInFlight || !formActions?.preview,
+      onClick: formActions?.preview ?? undefined,
     }
   })
 
@@ -971,7 +1100,9 @@ export function useAdminHeaderModel(
 
   // Materialize the final prop object expected by the stateless header pattern.
   const headerProps = $derived<HeaderProps>({
-    query: headerCtrl.state.search?.query ?? query,
+    query: isHistory
+      ? headerCtrl.historyQuery
+      : (headerCtrl.state.search?.query ?? query),
     title: titleConfig,
     newAction: {
       isCreatable: resolvedVisibility.showNew,
@@ -979,9 +1110,15 @@ export function useAdminHeaderModel(
     },
     filter: {
       isFilterable: resolvedVisibility.showFilter,
-      placeholder: headerCtrl.state.search?.placeholder ?? 'Filter resources',
+      placeholder: isHistory
+        ? 'Search history'
+        : (headerCtrl.state.search?.placeholder ?? 'Filter resources'),
       debounceMs: 150,
-      onFilter: headerCtrl.state.search?.onFilter ?? handleFilterChange,
+      onFilter: isHistory
+        ? (value: string) => {
+            headerCtrl.historyQuery = value
+          }
+        : (headerCtrl.state.search?.onFilter ?? handleFilterChange),
       onFocusChange: handleFilterFocusChange,
       onAdvanceFromSearch: handleAdvanceFromSearch,
     },
@@ -992,14 +1129,19 @@ export function useAdminHeaderModel(
     },
     viewActions: {
       isVisible: resolvedVisibility.showViewActions,
-      controlsAction: controlsAction ?? customViewActions[0],
-      layoutAction,
-      extraActions: isIndexFacet
-        ? []
-        : controlsAction
-          ? customViewActions
-          : customViewActions.slice(1),
-      content: isIndexFacet ? null : inlineViewActionContent,
+      controlsAction: isHistoryView
+        ? { ...historyFilterAction, class: 'size-11! shrink-0 p-0!' }
+        : (controlsAction ?? customViewActions[0]),
+      layoutAction: isHistory || isChangelog ? undefined : layoutAction,
+      trailingContent: historyScopeContent,
+      extraActions: isHistoryView
+        ? historyToolbarActions
+        : isIndexFacet
+          ? []
+          : controlsAction
+            ? customViewActions
+            : customViewActions.slice(1),
+      content: isHistoryView || isIndexFacet ? null : inlineViewActionContent,
     },
     taskActions: {
       isVisible:
@@ -1012,6 +1154,8 @@ export function useAdminHeaderModel(
       primaryAction,
       featuresAction,
       usersAction,
+      historyAction,
+      changelogAction: null,
       saveAction,
       deleteAction,
       publishAction,
@@ -1026,7 +1170,7 @@ export function useAdminHeaderModel(
       transitionDirection: 'right',
       onClick: () => appCtx.panels.togglePanel(Panel.settings),
     },
-    controlBar: renderedControlBar,
+    controlBar: isHistory ? null : renderedControlBar,
     footer: headerCtrl.state.layout.footer,
   })
 

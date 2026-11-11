@@ -164,3 +164,32 @@ it('shows translated resource names together in a locale table', async () => {
   expect(screen.getByRole('rowheader', { name: 'zh-Hant' })).toBeTruthy()
   expect(screen.getByText('新名稱')).toBeTruthy()
 })
+
+it('shares the changelog filter bar and filters loaded history independently of search', async () => {
+  const { HeaderCtrl, HEADER_CTRL_KEY } = await import('#lib/context/header.svelte.js')
+  const { ResponsiveCtx } = await import('#lib/context/responsive.svelte.js')
+  const header = new HeaderCtrl()
+  header.historyFiltersVisible = true
+  query.mockResolvedValue({ available: true, entries: [entry], nextCursor: null })
+  render(OrganisationHistory, {
+    props: { organisationId: 'o' },
+    context: new Map<symbol, unknown>([
+      [HEADER_CTRL_KEY, header],
+      [Symbol.for('hype.context.responsive'), new ResponsiveCtx()],
+    ]),
+  })
+  expect(await screen.findByRole('group', { name: 'History filters' })).toBeTruthy()
+  await screen.findByText('Translation corrected')
+  header.historyFilters = { origin: 'migration' }
+  expect(await screen.findByText('No matches in loaded history.')).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Translation corrected' })).toBeNull()
+  header.historyFilters = { origin: 'user' }
+  await waitFor(() =>
+    expect(screen.queryByText('No matches in loaded history.')).toBeNull(),
+  )
+  header.historyFiltersVisible = false
+  await waitFor(() =>
+    expect(screen.queryByRole('group', { name: 'History filters' })).toBeNull(),
+  )
+  expect(header.historyFilters).toEqual({ origin: 'user' })
+})

@@ -15,8 +15,10 @@ let {
   layoutAction = undefined,
   extraActions = [],
   content = null,
+  trailingContent = null,
   hideLabel = true,
 }: HeaderViewActionsProps = $props()
+
 // Preserve the previous footprint while the next control set is measured.
 let contentWidth = $state<number | undefined>(undefined)
 </script>
@@ -34,7 +36,7 @@ let contentWidth = $state<number | undefined>(undefined)
       </div>
     {/if}
 
-    {#each extraActions as action (action.text)}
+    {#each extraActions as action (action.id ?? action.text)}
       <Button
         text={action.text}
         attrs={action.attrs}
@@ -92,6 +94,10 @@ let contentWidth = $state<number | undefined>(undefined)
         disabled={layoutAction?.disabled}
         onClick={() => layoutAction?.onClick?.()}
       />
+    {/if}
+    {#if trailingContent?.component}
+      {@const TrailingContent = trailingContent.component}
+      <TrailingContent {...trailingContent.props ?? {}} />
     {/if}
   </div>
 </div>
