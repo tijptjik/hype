@@ -93,6 +93,20 @@ describe('canonical feature addresses', () => {
     address = setAddressOverride(address, 'zhHant', 'unitExpression', 'B室')
     expect(getAddressDisplay(address, 'zhHant')).toBe('舊街18號3樓B室')
   })
+  it.each(['G/f', 'g/f', '3/f', 'Lg'])(
+    'capitalizes stored floor abbreviation %s without changing its source',
+    floorExpression => {
+      const address = emptyFeatureAddress({ en: 'The courtyard' })
+      address.overrides.en = { floorExpression }
+      expect(getAddressLocale(address, 'en').floorExpression).toBe(
+        floorExpression.toUpperCase(),
+      )
+      expect(getAddressDisplay(address, 'en')).toBe(
+        `${floorExpression.toUpperCase()}, The courtyard`,
+      )
+      expect(address.overrides.en.floorExpression).toBe(floorExpression)
+    },
+  )
   it('retains a free-text building address when only 3D details change', () => {
     const address = setAddressOverride(
       emptyFeatureAddress({ en: 'The courtyard' }),

@@ -281,7 +281,14 @@ export function getAddressLocale(
   result.unitPortion =
     address.unitDetails?.unitPortion ?? localUnit?.unitPortion ?? unit?.unitPortion
   result.accessHint = address.accessHints?.[ADDRESS_LOCALES[locale]]
-  return { ...result, ...address.overrides[ADDRESS_LOCALES[locale]] }
+  const values = { ...result, ...address.overrides[ADDRESS_LOCALES[locale]] }
+  // Keep floor abbreviations uppercase even when stored expressions use title case.
+  if (locale === 'en' && typeof values.floorExpression === 'string')
+    values.floorExpression = values.floorExpression.replace(
+      /\b(?:[a-z]*\d*[a-z]?\/f|ug|lg|g|b\d*|m|c|p|r)\b/gi,
+      abbreviation => abbreviation.toUpperCase(),
+    )
+  return values
 }
 
 /** Derive Chinese script fallbacks for presentation without changing source evidence.
