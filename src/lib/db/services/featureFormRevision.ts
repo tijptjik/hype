@@ -395,6 +395,12 @@ export async function saveFeatureFormRevision(
   if (destination) preserveTransferredLocationText(previous, content)
   // Automatic drops and null initialization are transfer operations, not edits to protected fields.
   // Organisation overrides and name inheritance are authorized and routed by the staff save adapter.
+  const locationState =
+    !transfer && previous.placement.location
+      ? await db.get<{ state: string }>(
+          sql`SELECT state FROM location WHERE id=${previous.placement.location.locationId}`,
+        )
+      : undefined
   const corrections =
     !transfer && previous.placement.location
       ? await prepareFeatureLocationFormCorrection(db, {
@@ -406,6 +412,8 @@ export async function saveFeatureFormRevision(
           content,
           reset: data.locationReset,
           fieldModes: data.locationFieldModes,
+          defaultFieldMode:
+            locationState?.state === 'manual' ? 'internal' : 'community',
           names: data.locationNames,
           authorizeCommunity: input.authorizeCommunityCorrection,
           nameMode: data.locationNameMode,

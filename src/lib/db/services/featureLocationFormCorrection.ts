@@ -51,6 +51,8 @@ export async function prepareFeatureLocationFormCorrection(
       Record<'names' | 'phoneNumber' | 'brands' | 'location', 'community' | 'internal'>
     >
     authorizeCommunity?: () => Promise<{ canEdit: boolean; superAdmin: boolean }>
+    /** Server-resolved default; internal identities never contribute to community curations. */
+    defaultFieldMode?: 'community' | 'internal'
     nameMode?: 'inherit' | 'independent'
     brandEdit?: LocationBrandEdit
     authorizeOrganisation?: () => Promise<void>
@@ -270,7 +272,7 @@ export async function prepareFeatureLocationFormCorrection(
   for (const field of ['names', 'phoneNumber', 'brands', 'location'] as const) {
     const choice = overrides[field]
     if (equalLocationValue(beforeOverrides[field] ?? null, choice ?? null)) continue
-    const mode = modes[field] ?? 'internal'
+    const mode = modes[field] ?? input.defaultFieldMode ?? 'internal'
     if (mode !== 'community' || !choice) continue
     if (field === 'names') {
       const names = Object.fromEntries(

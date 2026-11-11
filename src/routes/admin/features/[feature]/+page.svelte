@@ -5197,7 +5197,9 @@ async function refreshLocationSource(): Promise<void> {
                             aria-label={`${label} edits`}
                             value={locationFieldModes?.[field] ??
                               acceptedNameSource.current.fieldEditModes?.[field] ??
-                              'internal'}
+                              (acceptedNameSource.current.state === 'manual'
+                                ? 'internal'
+                                : 'community')}
                             onchange={event => {
                               const mode = event.currentTarget.value as
                                 | 'community'

@@ -198,7 +198,7 @@ describe('Feature form Location correction revisions', () => {
       previous.placement.location?.acceptancePolicy,
     )
   })
-  it('writes a community phone revision and retains its Organisation override atomically', async () => {
+  it('defaults shared-record phone edits to community and retains its Organisation override atomically', async () => {
     const { previous, content } = setup()
     for (const value of [previous, content]) {
       value.properties.structured.selection.definition.key = 'phoneNumber'
@@ -215,7 +215,7 @@ describe('Feature form Location correction revisions', () => {
         guard: sql`1`,
         previous,
         content,
-        fieldModes: { phoneNumber: 'community' },
+        defaultFieldMode: 'community',
         authorizeCommunity: rights,
         authorizeOrganisation: async () => {},
       },

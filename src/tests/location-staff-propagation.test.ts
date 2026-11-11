@@ -766,9 +766,8 @@ it('commits an Organisation correction and its Feature adoption after advancing 
     featureId: 'f',
     guard: sql`1`,
   })
-  expect(after?.content.placement.location?.acceptedOverrides.names?.en).toEqual({
-    mode: 'override',
-    value: 'Corrected name',
+  expect(after?.content.placement.location?.acceptedOverrides).toMatchObject({
+    names: { en: { mode: 'override', value: 'Corrected name' } },
   })
   expect(
     (await readLocationCorrectionContext(f.db, scope))?.expectedOrganisationRevision,
