@@ -26,9 +26,9 @@ import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
 import BuildingLibrary from 'virtual:icons/proicons/bank'
 import InboxArrowDown from 'virtual:icons/proicons/mail-open'
 import MapPin from 'virtual:icons/proicons/location'
-import StoreIcon from 'virtual:icons/lucide/store'
-import ChatIcon from 'virtual:icons/lucide/message-circle'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
+import StoreIcon from '#lib/bits/custom/icon/StoreIcon.svelte'
+import ChatIcon from 'virtual:icons/proicons/chat'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
