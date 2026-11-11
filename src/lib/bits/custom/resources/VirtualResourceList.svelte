@@ -113,7 +113,7 @@ function animateRow(
   class="bg-panel relative min-h-0 flex-1 scrollbar-thin overflow-x-hidden overflow-y-auto overscroll-contain"
   aria-busy={loading}
 >
-  <div class="py-1" bind:clientHeight={contentHeight}>
+  <div data-resource-list-content class="py-1" bind:clientHeight={contentHeight}>
     {#if flow}
       {#each items as row (row.id)}
         <div animate:animateRow>{@render item(row)}</div>

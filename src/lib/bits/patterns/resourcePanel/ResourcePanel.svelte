@@ -15,6 +15,10 @@ import type { ResourcePanelProps } from './resourcePanel.types'
 let isInfoOpen = $state(false)
 let sidebarToggleButton = $state<HTMLButtonElement>()
 let { model, footer }: ResourcePanelProps = $props()
+// Resolve the first shared allocation together; early results must not borrow a later group's space.
+const initialLayoutReady = $derived(
+  model.sections.every(section => !section.loading || section.error),
+)
 
 let hoverLabel = $state<{ name: string; left: number; top: number } | null>(null)
 let hideTimer: ReturnType<typeof setTimeout> | undefined
@@ -144,6 +148,7 @@ onDestroy(cancelLabelHide)
       {#each model.sections as section, index (section.id)}
         <ResourcePanelPrimitive.Section
           {section}
+          {initialLayoutReady}
           narrow={model.panel.isNarrow}
           admin={model.panel.isAdmin}
           headerAction={model.panel.isAdmin && !model.panel.isNarrow && index === 0

@@ -2,7 +2,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // SVELTE
-import { onDestroy, tick, untrack } from 'svelte'
+import { flushSync, onDestroy, untrack } from 'svelte'
 import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
@@ -19,13 +19,17 @@ import ResourceRow from './ResourceRow.svelte'
 import type { ResourceSectionProps } from './resourcePanelPrimitives.types'
 let {
   section,
+  initialLayoutReady = true,
   narrow = false,
   admin = false,
   headerAction,
   onLabelShow,
   onLabelHide,
 }: ResourceSectionProps = $props()
-let open = $state(untrack(() => section.defaultOpen))
+let waitingForInitialRows = $state(
+  untrack(() => !initialLayoutReady || (section.loading && !section.error)),
+)
+let open = $state(untrack(() => section.defaultOpen && !waitingForInitialRows))
 let touched = $state(false)
 let element: HTMLElement | undefined = $state()
 let animations: Animation[] = []
@@ -42,14 +46,28 @@ const maxHeight = $derived(
     : undefined,
 )
 $effect(() => {
-  if (!touched) open = section.defaultOpen
+  const ready = initialLayoutReady && (!section.loading || section.error)
+  const defaultOpen = section.defaultOpen
+  untrack(() => {
+    if (waitingForInitialRows && !ready) return
+    if (waitingForInitialRows) {
+      waitingForInitialRows = false
+      if (!touched && defaultOpen) void setOpen(true)
+    } else if (!touched && open !== defaultOpen) {
+      void setOpen(defaultOpen)
+    }
+  })
 })
 /**
  * Animates the measured flex allocation of this group and its neighbours.
+ * @param nextOpen Whether the section should expand.
  * @returns Resolves after the new layout has been measured and animation started.
  * @remarks Explicit heights avoid scaling text and keep virtual lists constrained.
  */
-async function toggleOpen(): Promise<void> {
+async function setOpen(nextOpen: boolean): Promise<void> {
+  // Leave the reactive effect before flushing; finish measurement before the next paint.
+  await Promise.resolve()
+  if (!element?.isConnected) return
   const siblings = Array.from(element?.parentElement?.children ?? []).filter(
     (node): node is HTMLElement =>
       node instanceof HTMLElement && node.hasAttribute('data-resource-section'),
@@ -61,9 +79,19 @@ async function toggleOpen(): Promise<void> {
       if (animation.id === 'resource-section-collapse') animation.cancel()
     }
   }
-  touched = true
-  open = !open
-  await tick()
+  flushSync(() => {
+    open = nextOpen
+  })
+  // Measure loaded rows before choosing the animation target, not on a later observer frame.
+  const listContent = element?.querySelector<HTMLElement>(
+    '[data-resource-list-content]',
+  )
+  if (open && listContent) {
+    const measuredHeight = listContent.clientHeight
+    flushSync(() => {
+      contentHeight = measuredHeight
+    })
+  }
   if (prefersReducedMotion.current) return
   const targets = siblings.map(node => node.getBoundingClientRect().height)
   animations = siblings.flatMap((node, index) => {
@@ -83,6 +111,12 @@ async function toggleOpen(): Promise<void> {
       ),
     ]
   })
+}
+/** Toggles the user's preferred expansion after the initial rows settle. @returns Nothing. */
+function toggleOpen(): void {
+  if (waitingForInitialRows) return
+  touched = true
+  void setOpen(!open)
 }
 onDestroy(() => {
   for (const animation of animations) animation.cancel()
@@ -126,6 +160,7 @@ const reorder = $derived(
 <section
   bind:this={element}
   data-resource-section
+  aria-busy={waitingForInitialRows}
   class="flex min-h-0 min-w-0 flex-col overflow-hidden bg-panel {open
     ? 'flex-1'
     : 'shrink-0'}"
@@ -252,7 +287,7 @@ const reorder = $derived(
           />
         {/snippet}
       </VirtualResourceList>
-    {:else if items.length && narrow}
+    {:else if !waitingForInitialRows && items.length && narrow}
       <div class="max-h-32 shrink-0 overflow-y-auto">
         {#each items as row (row.id)}
           <ResourceRow
@@ -265,7 +300,7 @@ const reorder = $derived(
           />
         {/each}
       </div>
-    {:else if items.length}
+    {:else if !waitingForInitialRows && items.length}
       <div class="flex max-h-32 shrink-0 flex-wrap gap-2 overflow-y-auto px-6 py-4">
         {#each items as row (row.id)}
           <SelectionChip

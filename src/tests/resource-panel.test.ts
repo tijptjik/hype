@@ -271,3 +271,47 @@ it('opens a place without offering a resource-filter mutation', async () => {
   expect(row.onPrimary).toHaveBeenCalledOnce()
   expect(row.onToggle).not.toHaveBeenCalled()
 })
+
+it('keeps initial loading sections compact until rows arrive, then preserves expansion during refresh', async () => {
+  const model = { ...section(0), loading: true }
+  const view = render(ResourceSection, { section: model })
+  expect(
+    screen.getByRole('button', { name: 'Expand Layers' }).getAttribute('aria-expanded'),
+  ).toBe('false')
+  expect(
+    document.querySelector('[data-resource-section]')?.getAttribute('aria-busy'),
+  ).toBe('true')
+  const loaded = section(6)
+  await view.rerender({ section: loaded })
+  expect(
+    screen
+      .getByRole('button', { name: 'Collapse Layers' })
+      .getAttribute('aria-expanded'),
+  ).toBe('true')
+  expect(screen.getByText('Layer 5')).toBeTruthy()
+  await view.rerender({ section: { ...loaded, loading: true } })
+  expect(screen.getByRole('button', { name: 'Collapse Layers' })).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'Collapse Layers' }))
+  await view.rerender({ section: loaded })
+  expect(screen.getByRole('button', { name: 'Expand Layers' })).toBeTruthy()
+})
+
+it('reveals the initial error so a compact loading section can be retried', async () => {
+  const model = { ...section(0), loading: true }
+  const view = render(ResourceSection, { section: model })
+  await view.rerender({ section: { ...model, loading: false, error: true } })
+  expect(screen.getByRole('button', { name: 'Collapse Layers' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy()
+})
+
+it('waits for sibling results before expanding an already loaded section', async () => {
+  const model = section(6)
+  const view = render(ResourceSection, { section: model, initialLayoutReady: false })
+  expect(screen.getByRole('button', { name: 'Expand Layers' })).toBeTruthy()
+  expect(screen.queryByText('Layer 5')).toBeNull()
+  await view.rerender({ section: model, initialLayoutReady: true })
+  expect(screen.getByRole('button', { name: 'Collapse Layers' })).toBeTruthy()
+  expect(screen.getByText('Layer 5')).toBeTruthy()
+  await view.rerender({ section: model, initialLayoutReady: false })
+  expect(screen.getByRole('button', { name: 'Collapse Layers' })).toBeTruthy()
+})

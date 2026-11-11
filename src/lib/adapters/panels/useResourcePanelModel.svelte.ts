@@ -325,7 +325,10 @@ export function useResourcePanelModel(
         : undefined,
     get loading() {
       return (
-        lists[index].list.loading || (messaging && messagingOrganisationIds === null)
+        !app.isInitialised ||
+        (mode === 'admin' && !admin?.isInitialised) ||
+        lists[index].searchPending ||
+        (messaging && messagingOrganisationIds === null)
       )
     },
     get error() {

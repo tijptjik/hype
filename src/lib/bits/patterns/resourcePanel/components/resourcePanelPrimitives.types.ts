@@ -16,6 +16,8 @@ export type ResourceRowProps = ResourceLabelHandlers & {
 }
 export type ResourceSectionProps = ResourceLabelHandlers & {
   section: ResourcePanelSection
+  /** Wait for sibling results so the first expansion uses the final shared allocation. */
+  initialLayoutReady?: boolean
   narrow?: boolean
   admin?: boolean
   headerAction?: Snippet
