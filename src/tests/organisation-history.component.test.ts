@@ -127,8 +127,8 @@ it('starts collapsed, exposes elapsed time and toggles individual changes', asyn
   expect(screen.getByText(/ago|in .*hours/).getAttribute('datetime')).toBe(
     entry.createdAt,
   )
-  expect(screen.queryByRole('button', { name: 'Expand', exact: true })).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Collapse', exact: true })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Expand' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Collapse' })).toBeNull()
   await fireEvent.click(disclosure)
   expect(disclosure.getAttribute('aria-expanded')).toBe('false')
   await fireEvent.click(disclosure)

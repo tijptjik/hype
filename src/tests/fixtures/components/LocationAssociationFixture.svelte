@@ -236,6 +236,7 @@ onMount(() =>
   >
     {#snippet children(control, results, mapControls)}
       {#snippet emptyControl()}
+        <!-- This fixture intentionally supplies no search control. -->
       {/snippet}
       <AddressMap
         showMap={false}

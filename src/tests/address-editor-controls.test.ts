@@ -693,7 +693,7 @@ it('swaps the block inputs and composed address with the order button', async ()
   )
   const view = render(FormFixture, { initialAddress })
   const swap = view.getByRole('button', { name: 'Type before number' })
-  const reference = view.getByRole('textbox', { name: 'Block', exact: true })
+  const reference = view.getByRole('textbox', { name: 'Block' })
   const type = () => view.getByRole('combobox', { name: 'Block type' })
   expect(swap).toHaveAttribute('aria-pressed', 'true')
   expect(
@@ -704,9 +704,7 @@ it('swaps the block inputs and composed address with the order button', async ()
   expect(
     reference.compareDocumentPosition(type()) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy()
-  expect(
-    view.getByRole('textbox', { name: 'Display address', exact: true }),
-  ).toHaveValue('A Blk')
+  expect(view.getByRole('textbox', { name: 'Display address' })).toHaveValue('A Blk')
   await fireEvent.click(swap)
   expect(swap).toHaveAttribute('aria-pressed', 'true')
   expect(
@@ -788,13 +786,9 @@ it('fills missing street locales when a provider address opens without requiring
       displayAddressInToolbar: true,
     })
     await waitFor(() =>
-      expect(
-        view.getByRole('button', { name: 'Replace: 摆花街', exact: true }),
-      ).toBeInTheDocument(),
+      expect(view.getByRole('button', { name: 'Replace: 摆花街' })).toBeInTheDocument(),
     )
-    expect(
-      view.getByRole('button', { name: 'Replace: 擺花街', exact: true }),
-    ).toBeInTheDocument()
+    expect(view.getByRole('button', { name: 'Replace: 擺花街' })).toBeInTheDocument()
   } finally {
     load.mockRestore()
   }
@@ -877,7 +871,9 @@ it('shows retained display addresses beneath the viewer heading when no structur
     view.container.querySelector('[data-address-display-values]')!
   expect(fallback()).toHaveTextContent('500 Castle Peak Road')
   expect(fallback()).not.toHaveTextContent('青山道500號')
-  expect(view.container.querySelector('[data-address-onboarding]')).toBeNull()
+  expect(
+    view.container.querySelector<HTMLElement>('[data-address-onboarding]'),
+  ).toBeNull()
   await fireEvent.click(view.getByRole('button', { name: /^Multilingual$/ }))
   expect(fallback()).toHaveTextContent('繁中')
   expect(fallback()).toHaveTextContent('青山道500號')
@@ -953,7 +949,7 @@ it('offers address matching from the empty viewer even when a display address ex
     displayAddressInToolbar: true,
     onMatchLocation,
   })
-  const help = view.container.querySelector('[data-address-onboarding]')!
+  const help = view.container.querySelector<HTMLElement>('[data-address-onboarding]')!
   expect(help).toBeTruthy()
   await fireEvent.click(
     within(help).getByRole('button', { name: 'Match address to location' }),

@@ -2,10 +2,10 @@
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import { describe, expect, it, vi } from 'vitest'
-// @ts-expect-error Exercise the installed SvelteKit form transport implementation.
 import {
   create_field_proxy,
   convert_formdata,
+  // @ts-expect-error Exercise the installed, untyped SvelteKit internal transport.
 } from '../../node_modules/@sveltejs/kit/src/runtime/form-utils.js'
 import { featureCreationSourceLayerId } from '#lib/bits/patterns/forms/formFeatureParentSection/formFeatureParentSection.controller.js'
 

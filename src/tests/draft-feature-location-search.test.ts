@@ -3125,16 +3125,14 @@ it('keeps existing-record resolution free of starter prompts and supports coordi
   await fireEvent.click(await screen.findByRole('button', { name: 'Clear search' }))
   expect(screen.queryByText('Know the name or address?')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Add Manual Entry' })).toBeNull()
-  await fireEvent.click(screen.getByRole('button', { name: 'Map pin', exact: true }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Map pin' }))
   await waitFor(() =>
     expect(mocks.nearby).toHaveBeenCalledWith(
       expect.objectContaining({ coordinates: [114.152, 22.34] }),
     ),
   )
   expect(screen.queryByText('Know where it is?')).toBeNull()
-  await fireEvent.click(
-    screen.getByRole('button', { name: 'Back to location', exact: true }),
-  )
+  await fireEvent.click(screen.getByRole('button', { name: 'Back to location' }))
   expect(onExitResolution).toHaveBeenCalledTimes(1)
 })
 
@@ -3224,7 +3222,7 @@ it('uses an upstream location even when restored draft state contains a local cr
     screen.getByRole('button', { name: /^(Use this location|Locate feature here)$/ }),
   )
   // The committed flow reviews the record; the inline flow accepts it directly.
-  const use = screen.queryByRole('button', { name: 'Use', exact: true })
+  const use = screen.queryByRole('button', { name: 'Use' })
   if (use) await fireEvent.click(use)
   await waitFor(() => expect(onSelect).toHaveBeenCalled())
   expect(onSelect.mock.lastCall?.[0]).toMatchObject({ source: row.source })

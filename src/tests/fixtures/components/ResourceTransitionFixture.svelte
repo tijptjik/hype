@@ -22,7 +22,7 @@ const resources = [
   FirstClassResource.layer,
   FirstClassResource.project,
   FirstClassResource.organisation,
-]
+] as const
 let current = $state(0)
 let ready = $state(false)
 let empty = $state(false)
@@ -80,6 +80,8 @@ function navigate(): void {
         {#snippet row(entity, index)}
           <ResourceRow
             {index}
+            imageSrc=""
+            imageAlt=""
             title={resources[current] + entity.id}
             description="Resource description"
           />

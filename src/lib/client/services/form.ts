@@ -177,6 +177,8 @@ type AddUserRoleSelectionParams<
     id: string
     name?: string | null
     image?: unknown
+    username?: string | null
+    displayUsername?: string | null
     attribution?: string | null
   }
   defaultRole: string

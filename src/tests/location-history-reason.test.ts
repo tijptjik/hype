@@ -48,19 +48,21 @@ describe.each(['organisationLocation', 'locationSharedRevision'])(
           revisionId: 'revision',
           reason: 'Shared Location correction accepted',
         }
-        expect(await locationHistoryReason(f.db as Database, input)).toBe(expected)
+        expect(await locationHistoryReason(f.db as unknown as Database, input)).toBe(
+          expected,
+        )
         // A retained old pin must not attribute a subsequent change to its earlier author.
         f.sqlite
           .prepare('INSERT INTO featureRevision VALUES(?,?,?,?,?)')
           .run('next', 'feature', 'revision', 'change', content)
         expect(
-          await locationHistoryReason(f.db as Database, {
+          await locationHistoryReason(f.db as unknown as Database, {
             ...input,
             revisionId: 'next',
           }),
         ).toBe('Location updated')
         expect(
-          await locationHistoryReason(f.db as Database, {
+          await locationHistoryReason(f.db as unknown as Database, {
             ...input,
             reason: 'Custom reason',
           }),

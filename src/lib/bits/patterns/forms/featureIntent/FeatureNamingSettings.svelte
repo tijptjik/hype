@@ -76,7 +76,9 @@ let fieldsProjectId = $state<string | null>(null)
 const editingLocales = $derived([...new Set(locales.map(canonicalContentTag))])
 const uid = $props.id()
 const dragGroup = `naming-${uid}`
-let ruleKeys = $state(untrack(() => rule.conditions.map(() => crypto.randomUUID())))
+let ruleKeys = $state<string[]>(
+  untrack(() => rule.conditions.map(() => crypto.randomUUID())),
+)
 // Inheritance resets can replace the rule; keep UI-only keys aligned without persisting them.
 $effect(() => {
   if (ruleKeys.length !== rule.conditions.length)

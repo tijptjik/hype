@@ -33,7 +33,7 @@ let {
   children,
 }: AdminShellProps = $props()
 
-let routeViewport: ReturnType<typeof RouteViewport> | undefined
+let routeViewport = $state<ReturnType<typeof RouteViewport> | undefined>()
 onNavigate(({ from, to }) => {
   if (from?.url.pathname !== to?.url.pathname) routeViewport?.prepareNavigation()
 })

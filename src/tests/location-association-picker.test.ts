@@ -372,7 +372,7 @@ it.each([
     )
     if (side === 'original')
       await fireEvent.click(screen.getByRole('button', { name: /Address Position$/ }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(onPreview.mock.lastCall?.[1]).toBe(true)
     const markers = onMapCandidates.mock
       .lastCall?.[0] as import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
@@ -388,12 +388,12 @@ it.each([
     )
     expect(screen.queryByRole('button', { name: /Custom position$/ })).toBeNull()
     expect(onAccept).not.toHaveBeenCalled()
-    await fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     const restoredMarkers = onMapCandidates.mock
       .lastCall?.[0] as import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
     restoredMarkers.find(row => row.onReposition)?.onReposition?.([114.16, 22.31])
     await screen.findByRole('button', { name: /Custom position$/ })
-    await fireEvent.click(screen.getByRole('button', { name: 'Done', exact: true }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     expect(
       onMapCandidates.mock.lastCall?.[0].some(
         (row: { onReposition?: unknown }) => row.onReposition,
@@ -439,7 +439,7 @@ it.each(['address', 'building'] as const)(
         name: kind === 'building' ? /Building Position$/ : /Address Position$/,
       }),
     )
-    await fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     const markers = onMapCandidates.mock
       .lastCall?.[0] as import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
     markers.find(row => row.onReposition)?.onReposition?.([114.16, 22.31])
