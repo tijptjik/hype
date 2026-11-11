@@ -8,6 +8,7 @@ import {
   enrollResourceLogo,
   prepareResourceLogoRevision,
   readResourceLogoHead,
+  reconcileLogoPresentation,
 } from '#lib/db/services/resourceLogoRevision.js'
 import { prepareOrganisationRevisionCapture } from '#lib/db/services/organisationRevision.js'
 import {
@@ -85,6 +86,52 @@ async function enroll() {
     }),
   ).toBe(true)
 }
+
+it('repairs a stale display mode without adding or changing logo history', async () => {
+  fixture.sqlite.exec("UPDATE image SET presentationMode='cover' WHERE id='logo'")
+  await enroll()
+  const before = fixture.sqlite.prepare('SELECT * FROM imageRevision').all()
+  const ownersBefore = fixture.sqlite.prepare('SELECT * FROM projectRevision').all()
+  const imageBefore = fixture.sqlite
+    .prepare("SELECT version,modifiedAt FROM image WHERE id='logo'")
+    .get()
+  expect(
+    await reconcileLogoPresentation(db, {
+      imageId: 'logo',
+      imageRevisionId: 'original',
+      actorId: 'editor',
+      guard: sql`1`,
+    }),
+  ).toBe(true)
+  expect(
+    fixture.sqlite.prepare("SELECT presentationMode FROM image WHERE id='logo'").get(),
+  ).toEqual({ presentationMode: 'contain' })
+  expect(fixture.sqlite.prepare('SELECT * FROM imageRevision').all()).toEqual(before)
+  expect(fixture.sqlite.prepare('SELECT * FROM projectRevision').all()).toEqual(
+    ownersBefore,
+  )
+  expect(
+    fixture.sqlite
+      .prepare("SELECT version,modifiedAt FROM image WHERE id='logo'")
+      .get(),
+  ).toEqual(imageBefore)
+})
+
+it.each(['stale', 'unauthorized'])('rejects %s display repairs', async kind => {
+  fixture.sqlite.exec("UPDATE image SET presentationMode='cover' WHERE id='logo'")
+  await enroll()
+  expect(
+    await reconcileLogoPresentation(db, {
+      imageId: 'logo',
+      imageRevisionId: kind === 'stale' ? 'old' : 'original',
+      actorId: 'editor',
+      guard: kind === 'unauthorized' ? sql`0` : sql`1`,
+    }),
+  ).toBe(false)
+  expect(
+    fixture.sqlite.prepare("SELECT presentationMode FROM image WHERE id='logo'").get(),
+  ).toEqual({ presentationMode: 'cover' })
+})
 async function edit(version: number, fail = false, replacement = false) {
   const head = (await readResourceLogoHead(db, 'logo'))!
   const asset = replacement

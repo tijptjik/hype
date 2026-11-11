@@ -21,7 +21,10 @@ import { getStorageApiCredentials } from '#lib/images/storageCredentials.js'
 import { readResourceLogoPreview } from './services/resourceLogoPreview'
 // LOGO REVISIONS
 import { equalRevisionValue } from '#lib/revisions/merge.js'
-import { readResourceLogoHead } from '#lib/db/services/resourceLogoRevision.js'
+import {
+  readResourceLogoHead,
+  reconcileLogoPresentation,
+} from '#lib/db/services/resourceLogoRevision.js'
 import type {
   LogoRevisionEvidence,
   ResourceLogoHead,
@@ -2607,8 +2610,20 @@ export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx)
         ...previous,
         ...patch,
       } as LogoRevisionEvidence['metadata'])
-    )
+    ) {
+      // A matching immutable mode can still have a stale legacy display projection.
+      if (
+        patch.presentationMode &&
+        !(await reconcileLogoPresentation(db, {
+          imageId: params.id,
+          imageRevisionId: head.imageRevisionId,
+          actorId: userId,
+          guard: sql`(${guard}) AND (${createImageMutationGuards(db, params.ctxType, params.ctxId, snapshot).before})`,
+        }))
+      )
+        throw error(409, 'STALE_IMAGE_UPDATE')
       return { data: null, unchanged: true }
+    }
     const version = Math.max(Date.now(), Number(previous.version ?? 0) + 1)
     const metadata = {
       ...previous,

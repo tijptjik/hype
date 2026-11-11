@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 // SCHEMA
 import { imageAssetVersion, imageRevision } from '../schema/imageRevision'
 import { resourceLogoImageHead } from '../schema/resourceLogoRevision'
+import { image } from '../schema/image'
 // SERVICES
 import { IMAGE_PRESENTATION_MODES } from '#lib/images/presentation.js'
 import { prepareRevisionChangeSet } from './revisionChangeSet'
@@ -38,6 +39,49 @@ export type LogoRevisionEvidence = { metadata: RevisionValue; asset: LogoAssetEv
 export type ResourceLogoHead = LogoRevisionEvidence & {
   imageRevisionId: string
   assetVersionId: string
+}
+
+/** Restores the display projection when an already-selected logo mode is saved again.
+ * @param db Request database.
+ * @param input Authorized image identity, selected revision and owner/context fence.
+ * @returns Whether the selected revision and authorization still match.
+ * @remarks Repairs only the projection; immutable history and timestamps remain unchanged.
+ */
+export async function reconcileLogoPresentation(
+  db: Database,
+  input: { imageId: string; imageRevisionId: string; guard: SQL; actorId: string },
+): Promise<boolean> {
+  // Read the mode from the fenced revision inside the transaction, never from client input.
+  const selected = sql`SELECT json_extract(r.metadata,'$.presentationMode') FROM resourceLogoImageHead h
+    JOIN imageRevision r ON r.id=h.imageRevisionId AND r.imageId=h.imageId
+    WHERE h.imageId=${input.imageId} AND h.imageRevisionId=${input.imageRevisionId}`
+  const capture = await captureLogoOwners(
+    db,
+    input.imageId,
+    {
+      actorId: input.actorId,
+      reason: 'Logo display projection reconciled',
+    },
+    false,
+  )
+  const result = await executeRevisionBatch(
+    db,
+    sql`(${input.guard}) AND (${selected}) IN ('cover','contain','cast-edges')`,
+    [
+      ...capture.before,
+      db
+        .update(image)
+        .set({
+          presentationMode: sql`(${selected})`,
+          modifiedAt: sql`${image.modifiedAt}`,
+        })
+        .where(
+          sql`${image.id}=${input.imageId} AND ${image.presentationMode} IS NOT (${selected})`,
+        ),
+      ...capture.after,
+    ],
+  )
+  return result !== null
 }
 
 /** Reads the current exact logo version without changing any resource.
