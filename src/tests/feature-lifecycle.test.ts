@@ -1351,8 +1351,10 @@ it('accepts staff uploads directly and replays the same acceptance without makin
 
 import { applyCurrentFeatureIdentitySelection } from '#lib/db/services/featureLifecycleIdentityAdapter.js'
 it('applies the existing dialog selectors without persisted preparation or reserved child records', async () => {
-  const f = await fixture(),
-    allowedInternalIds = new Set(Object.keys(f.initial.content.properties))
+  const connection = lifecycleFixture(false, false, 100)
+  connections.push(connection)
+  const f = { ...connection, initial: await connection.initialize(true) }
+  const allowedInternalIds = new Set(Object.keys(f.initial.content.properties))
   const split = await applyCurrentFeatureIdentitySelection(f.db, {
     ...command,
     allowedInternalIds,

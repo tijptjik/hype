@@ -37,9 +37,18 @@ const media = {
   order: ['photo', 'research'],
 }
 const common = { featureId: 'f', actorId: 'author', guard: sql`1` }
-/** Build the target schema in an isolated SQLite database with real content/image constraints. */
-export function lifecycleFixture(linked = false, catalogueCascades = false) {
-  const connection = publicationSqlite({})
+/** Build the target schema in an isolated SQLite database with real content/image constraints.
+ * @param linked Whether to seed an accepted Location association.
+ * @param catalogueCascades Whether to enforce catalogue foreign-key cascades.
+ * @param maxBindings Per-statement parameter ceiling for D1 regression checks.
+ * @returns Isolated database, connection and lifecycle initialization helpers.
+ */
+export function lifecycleFixture(
+  linked = false,
+  catalogueCascades = false,
+  maxBindings = Infinity,
+) {
+  const connection = publicationSqlite({}, maxBindings)
   const { sqlite } = connection
   sqlite.exec(
     'CREATE TABLE user(id TEXT PRIMARY KEY,name TEXT,username TEXT,displayUsername TEXT,attribution TEXT)',

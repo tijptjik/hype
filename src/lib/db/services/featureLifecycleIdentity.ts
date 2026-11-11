@@ -333,6 +333,8 @@ export async function mergeLifecycleFeatures(
   const change = prepareRevisionChangeSet(db, input),
     operationId = crypto.randomUUID()
   const statements: BatchItem<'sqlite'>[] = [
+    // Check both sources before any writes without combining their D1 parameter budgets.
+    prepareRevisionCheck(db, secondary.guard),
     ...primary.statements,
     ...secondary.statements,
     change.statement,
@@ -362,11 +364,7 @@ export async function mergeLifecycleFeatures(
     }),
     ...(input.completion?.(primary.revisionId) ?? []),
   ]
-  return (await executeRevisionBatch(
-    db,
-    sql`(${primary.guard}) AND (${secondary.guard})`,
-    statements,
-  ))
+  return (await executeRevisionBatch(db, primary.guard, statements))
     ? operationId
     : null
 }

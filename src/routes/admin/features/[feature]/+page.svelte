@@ -4304,6 +4304,7 @@ async function refreshLocationSource(): Promise<void> {
     kind={identityKind}
     featureId={currentFeatureId}
     layerId={feature.data.layerId}
+    sourceGeometry={feature.data.geometry}
     onApplied={async ids => {
       // Identity commands mutate accepted content outside this form's ordinary save flow.
       await getFeature({
