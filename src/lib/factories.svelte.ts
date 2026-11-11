@@ -753,7 +753,8 @@ export function configureForm<Input = RemoteFormInput>(
 
         form.fields.set({
           ...current,
-          meta: { ...options.meta, ...(current.meta ?? {}) },
+          // The current save action owns mode and identity; stale draft metadata must not win.
+          meta: { ...(current.meta ?? {}), ...options.meta },
         } as Parameters<typeof form.fields.set>[0])
       }
       syncMetaHiddenInputs(
