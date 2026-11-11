@@ -743,7 +743,8 @@ function isSameTitleMenuItems(
   })
 }
 
-export const HEADER_CTRL_KEY = Symbol('headerCtrl')
+// Keep newly loaded pages connected to the mounted header provider across HMR.
+export const HEADER_CTRL_KEY = Symbol.for('hype.context.header')
 
 /**
  * Create and register a header controller in Svelte context.
