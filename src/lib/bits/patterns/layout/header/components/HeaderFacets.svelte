@@ -85,7 +85,10 @@ $effect(() => {
           <div class="min-w-0 overflow-hidden">
             <Button
               text={facet.label}
-              attrs={{ 'aria-current': isActive ? 'page' : undefined }}
+              attrs={{
+                'aria-current': isActive ? 'page' : undefined,
+                'data-tooltip': hideLabel ? facet.label : undefined,
+              }}
               {color}
               style="ghost"
               class={`${facetButtonClass} w-max whitespace-nowrap`}
