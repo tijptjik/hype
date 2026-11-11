@@ -2152,6 +2152,8 @@
   "association_flat_unit": "室／單位",
   "association_ghost_help": "你可以立即使用此名稱。資料覆蓋改善後，此記錄可與資料來源配對。",
   "association_ghost_use": "使用此{kind}",
+  "feature_policy_descriptions_heading": "描述",
+  "feature_policy_descriptions_subtitle": "選擇是否允許地點項目新增描述及使用地點名稱，或繼承專案的設定。",
   "feature_policy_descriptions": "允許地點項目描述",
   "feature_policy_location_names": "以位置名稱命名地點項目",
   "feature_policy_inherit": "沿用專案設定",

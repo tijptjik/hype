@@ -8,7 +8,7 @@ let {
   heading = true,
   feature = false,
   showFields = true,
-  expanded = false,
+  expanded = true,
   count = 3,
 }: {
   heading?: boolean
@@ -64,7 +64,7 @@ let {
               <Skeleton class="h-3 w-24" /><Skeleton class="size-3" />
             </div>
           </header>
-          <!-- Reserve comparison space only when the caller requests expanded loading rows. -->
+          <!-- The latest revision opens by default; reserve a comparison, not only its summary. -->
           {#if index === 0 && !feature && expanded}
             <div class="border-border/50 bg-muted/10 grid min-w-0 gap-5 border-t p-4">
               <section class={styles.group}>

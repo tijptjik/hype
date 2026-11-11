@@ -2152,6 +2152,8 @@
   "association_flat_unit": "室／单位",
   "association_ghost_help": "你可以立即使用此名称。数据覆盖改善后，此记录可与数据来源匹配。",
   "association_ghost_use": "使用此{kind}",
+  "feature_policy_descriptions_heading": "描述",
+  "feature_policy_descriptions_subtitle": "选择是否允许地点项目添加描述及使用地点名称，或继承项目的设置。",
   "feature_policy_descriptions": "允许地点项目描述",
   "feature_policy_location_names": "以位置名称命名地点项目",
   "feature_policy_inherit": "沿用项目设置",

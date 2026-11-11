@@ -99,7 +99,6 @@ it('links the actor profile separately from the changes disclosure', async () =>
   expect(screen.getByText('HE')).toBeTruthy()
   const disclosure = screen.getByRole('button', { name: '1 changed field' })
   await fireEvent.click(disclosure)
-  await fireEvent.click(disclosure)
   expect(disclosure.getAttribute('aria-expanded')).toBe('false')
   expect(screen.getByRole('link', { name: '@History.Editor' })).toBe(link)
 })
@@ -140,7 +139,6 @@ it('toggles the history surface without intercepting tree controls, profile link
   render(AdminResourceHistory, { resource: 'hub', resourceId: 'id' })
   await screen.findByText('New value')
   const disclosure = screen.getByRole('button', { name: '1 changed field' })
-  await fireEvent.click(disclosure)
   await fireEvent.click(screen.getByText('Options updated'))
   expect(disclosure.getAttribute('aria-expanded')).toBe('false')
   await fireEvent.click(

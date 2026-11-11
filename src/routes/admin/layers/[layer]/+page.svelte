@@ -11,6 +11,7 @@ import { Select } from '#lib/bits/core/index.js'
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
+import { resolveFeaturePresentationPolicy } from '#lib/features/presentationPolicy.js'
 import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 import type { RemoteForm, RemoteFormFields } from '$app/server'
 
@@ -121,6 +122,7 @@ import {
 import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
 import LayerIcon from 'virtual:icons/proicons/layers'
+import DescriptionsIcon from 'virtual:icons/lucide/file-text'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // BITS COMPONENTS
@@ -750,6 +752,12 @@ const selectedParentProject = $derived.by((): ParentSectionProjectItem | null =>
 })
 
 const selectedParentProjectId = $derived(selectedParentProject?.id ?? '')
+const projectFeaturePolicy = $derived(
+  resolveFeaturePresentationPolicy(
+    selectedParentProject?.flags ??
+      adminCtx.view.cache.project.get(selectedParentProjectId)?.flags,
+  ),
+)
 const inheritedCardStyle = $derived(
   isCardStyleCode(selectedParentProject?.cardStyleCode)
     ? selectedParentProject.cardStyleCode
@@ -1714,7 +1722,11 @@ $effect(() => {
     >
       <FormSurface>
         <section class="flex min-h-0 flex-col gap-6 pb-6">
-          <SectionHeader title={m.project_advanced()} />
+          <SectionHeader
+            title={m.feature_policy_descriptions_heading()}
+            icon={DescriptionsIcon}
+            description={m.feature_policy_descriptions_subtitle()}
+          />
           <div
             class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-8"
           >
@@ -1722,10 +1734,12 @@ $effect(() => {
               {
                 key: 'allowFeatureDescriptions',
                 label: m.feature_policy_descriptions(),
+                projectDefault: projectFeaturePolicy.allowDescriptions,
               },
               {
                 key: 'locationBasedFeatureNames',
                 label: m.feature_policy_location_names(),
+                projectDefault: projectFeaturePolicy.locationBasedNames,
               },
             ] as setting (setting.key)}
               {@const policyValue =
@@ -1736,29 +1750,53 @@ $effect(() => {
                 <h3 class="min-w-0 text-sm font-semibold break-words whitespace-normal">
                   {setting.label}
                 </h3>
-                <Select
-                  class="w-auto! min-w-0! justify-self-end"
-                  reserveTriggerSpace
-                  displayClass="px-3! [&>div]:p-0!"
-                  triggerClass="relative shrink-0 cursor-pointer gap-2 bg-background/50! border-[var(--form-control-border)]!"
-                  placeholder={setting.label}
-                  value={policyValue == null ? 'inherit' : String(policyValue)}
-                  items={[
-                    { value: 'inherit', label: m.location_policy_inherit() },
-                    { value: 'true', label: m.feature_policy_enabled() },
-                    { value: 'false', label: m.feature_policy_disabled() },
-                  ]}
-                  isEditing={isEditing && canEditLayerFields}
-                  disabled={formCtx.submitting}
-                  triggerAttrs={{ 'aria-label': setting.label }}
-                  onValueChange={value =>
-                    setFeaturePolicyOverride(
-                      setting.key as
-                        | 'allowFeatureDescriptions'
-                        | 'locationBasedFeatureNames',
-                      value === 'inherit' ? '' : value,
-                    )}
-                />
+                <div
+                  class="flex min-w-0 flex-wrap items-center justify-end gap-x-4 gap-y-2"
+                >
+                  {#if selectedParentProject}
+                    <p class="text-muted-foreground text-sm">
+                      {m.location_policy_project_default({ policy: '' })}
+                      <span class="text-foreground font-medium">
+                        {setting.projectDefault
+                          ? m.feature_policy_enabled()
+                          : m.feature_policy_disabled()}
+                      </span>
+                    </p>
+                  {/if}
+                  {#if isEditing && canEditLayerFields}
+                    <Select
+                      class="w-auto! min-w-0! justify-self-end"
+                      reserveTriggerSpace
+                      displayClass="px-3! [&>div]:p-0!"
+                      triggerClass="relative shrink-0 cursor-pointer gap-2 bg-background/50! border-[var(--form-control-border)]!"
+                      placeholder={setting.label}
+                      value={policyValue == null ? 'inherit' : String(policyValue)}
+                      items={[
+                        { value: 'inherit', label: m.location_policy_inherit() },
+                        { value: 'true', label: m.feature_policy_enabled() },
+                        { value: 'false', label: m.feature_policy_disabled() },
+                      ]}
+                      isEditing={isEditing && canEditLayerFields}
+                      disabled={formCtx.submitting}
+                      triggerAttrs={{ 'aria-label': setting.label }}
+                      onValueChange={value =>
+                        setFeaturePolicyOverride(
+                          setting.key as
+                            | 'allowFeatureDescriptions'
+                            | 'locationBasedFeatureNames',
+                          value === 'inherit' ? '' : value,
+                        )}
+                    />
+                  {:else}
+                    <p class="flex min-h-12 items-center text-sm font-medium">
+                      {policyValue == null
+                        ? m.location_policy_inherit()
+                        : policyValue
+                          ? m.feature_policy_enabled()
+                          : m.feature_policy_disabled()}
+                    </p>
+                  {/if}
+                </div>
               </div>
             {/each}
           </div>

@@ -94,8 +94,7 @@ const hasFilters = $derived(
 )
 let now = $state(new Date())
 const allExpanded = $derived(
-  entries.some(entry => !entry.initial) &&
-    entries.filter(entry => !entry.initial).every(entry => expanded[entry.id]),
+  entries.filter(entry => !entry.initial).every(entry => expanded[entry.id]),
 )
 
 // Route-owned actions share the changelog toolbar while retaining local query ownership.
@@ -180,8 +179,9 @@ async function load(before?: number): Promise<void> {
     const result = await loadPage(before, historyKind)
     if (request !== generation) return
     entries = before ? [...entries, ...result.entries] : result.entries
-    // Fresh history starts collapsed, including when returning from the changelog.
-    if (!before) expanded = {}
+    // Fresh history opens expanded, including when returning from the changelog.
+    if (!before)
+      expanded = Object.fromEntries(result.entries.map(entry => [entry.id, true]))
     available = result.available
     recordingEnabled = result.recordingEnabled
     nextCursor = result.nextCursor
@@ -645,7 +645,11 @@ $effect(() => {
     {/each}
   </ol>
   {#if loading}
-    <HistorySkeleton heading={false} expanded={false} count={entries.length ? 1 : 3} />
+    <HistorySkeleton
+      heading={false}
+      expanded={entries.length === 0}
+      count={entries.length ? 1 : 3}
+    />
   {/if}
   {#if nextCursor !== null && !failed}
     <div class="px-6 py-3">

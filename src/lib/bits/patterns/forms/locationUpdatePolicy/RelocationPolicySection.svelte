@@ -65,28 +65,35 @@ const items = $derived([
           </p>
         </div>
       </div>
-      <Select
-        triggerClass="relative shrink-0 cursor-pointer bg-background/50! border-[var(--form-control-border)]!"
-        placeholder={m.location_policy_relocation()}
-        value={value ?? 'inherit'}
-        {items}
-        {isEditing}
-        disabled={saving}
-        triggerAttrs={{ 'aria-label': m.location_policy_relocation() }}
-        onValueChange={selected => {
-          if (selected === 'inherit' && allowInherit) onValueChange(null)
-          else if (
-            selected === 'fixed' ||
-            selected === 'review' ||
-            selected === 'follow'
-          ) {
-            onValueChange(selected)
-          }
-        }}
-      />
+      {#if isEditing}
+        <Select
+          triggerClass="relative shrink-0 cursor-pointer bg-background/50! border-[var(--form-control-border)]!"
+          placeholder={m.location_policy_relocation()}
+          value={value ?? 'inherit'}
+          {items}
+          {isEditing}
+          disabled={saving}
+          triggerAttrs={{ 'aria-label': m.location_policy_relocation() }}
+          onValueChange={selected => {
+            if (selected === 'inherit' && allowInherit) onValueChange(null)
+            else if (
+              selected === 'fixed' ||
+              selected === 'review' ||
+              selected === 'follow'
+            ) {
+              onValueChange(selected)
+            }
+          }}
+        />
+      {:else}
+        <p class="flex min-h-12 items-center text-sm font-medium">
+          {value == null ? m.location_policy_inherit() : labels[value]}
+        </p>
+      {/if}
       {#if allowInherit && inherited}
         <p class="text-muted-foreground text-sm">
-          {m.location_policy_project_default({ policy: labels[inherited] })}
+          {m.location_policy_project_default({ policy: '' })}
+          <span class="text-foreground font-medium">{labels[inherited]}</span>
         </p>
       {/if}
     </div>

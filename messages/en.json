@@ -2152,6 +2152,8 @@
   "association_flat_unit": "Flat / Unit",
   "association_ghost_help": "Use this name now. This record can be matched to a data source as coverage improves.",
   "association_ghost_use": "Use this {kind}",
+  "feature_policy_descriptions_heading": "Descriptions",
+  "feature_policy_descriptions_subtitle": "Choose whether Features can have descriptions and use Location names, or inherit these settings from the Project.",
   "feature_policy_descriptions": "Allow Feature descriptions",
   "feature_policy_location_names": "Use Location names for Features",
   "feature_policy_inherit": "Follow Project setting",
