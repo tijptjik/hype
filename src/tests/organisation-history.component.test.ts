@@ -96,7 +96,7 @@ it('ignores an old request after switching organisation', async () => {
   expect(screen.queryByText('Translation corrected')).toBeNull()
 })
 
-it('opens the latest comparison, exposes elapsed time and toggles all changes', async () => {
+it('opens the latest comparison, exposes elapsed time and toggles individual changes', async () => {
   query.mockResolvedValueOnce({ available: true, entries: [entry], nextCursor: null })
   render(OrganisationHistory, { organisationId: 'o' })
   await screen.findByText('2 hours since previous version')
@@ -106,9 +106,11 @@ it('opens the latest comparison, exposes elapsed time and toggles all changes', 
   expect(screen.getByText(/ago|in .*hours/).getAttribute('datetime')).toBe(
     entry.createdAt,
   )
-  await fireEvent.click(screen.getByRole('button', { name: 'Collapse' }))
+  expect(screen.queryByRole('button', { name: 'Expand', exact: true })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Collapse', exact: true })).toBeNull()
+  await fireEvent.click(disclosure)
   expect(disclosure.getAttribute('aria-expanded')).toBe('false')
-  await fireEvent.click(screen.getByRole('button', { name: 'Expand' }))
+  await fireEvent.click(disclosure)
   expect(disclosure.getAttribute('aria-expanded')).toBe('true')
 })
 

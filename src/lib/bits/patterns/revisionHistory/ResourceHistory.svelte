@@ -55,9 +55,6 @@ let generation = 0
 let expanded = $state<Record<string, boolean>>({})
 let logoMetadataExpanded = $state<Record<string, boolean>>({})
 let now = $state(new Date())
-const allExpanded = $derived(
-  entries.filter(entry => !entry.initial).every(entry => expanded[entry.id]),
-)
 
 onMount(() => {
   now = new Date()
@@ -203,12 +200,6 @@ $effect(() => {
   </FormSurface>
   <SectionHeader
     class="border-border/50 bg-primary/3 h-auto! min-h-12! gap-y-1 border-y px-5 max-sm:grid-cols-1! [&_.bits-form\_\_section-header-left]:overflow-visible! [&_.bits-form\_\_section-header-right]:[container-type:normal]! max-sm:[&_.bits-form\_\_section-header-right]:justify-end"
-    isCollapsableCollapsed={!allExpanded}
-    onCollapsableToggle={entries.some(entry => !entry.initial)
-      ? collapsed => {
-          expanded = Object.fromEntries(entries.map(entry => [entry.id, !collapsed]))
-        }
-      : undefined}
   >
     {#snippet left()}
       <fieldset
