@@ -3582,6 +3582,42 @@ What3Words is a separately tracked provider integration:
 until credentials, language-aware coordinate caching, stale-response handling and
 provider failure behaviour are implemented.
 
+### New Feature setup
+
+New Features begin in a four-step setup surface: select an authorised layer, select its
+configured Feature type, select a permitted Location target, then find and accept its
+actual location. The map and search open for the fourth step; the normal editor opens
+only after the location is accepted. Clickable progress markers retain the selections
+and allow returning to any available step. Saving is blocked while setup is incomplete.
+
+Layer discovery uses the existing Feature-creation project permission filter and
+excludes historical layers when their project disables them. The initial strip follows
+the layer service's Feature contribution ordering (recorded user/import/restore
+revisions and Feature creation, excluding drafts and system/migration revisions). Search
+matches organisations, projects and layers; organisation and project selections narrow
+the layer results, grouped by project. Full names and short names are both searchable.
+Changing the Location target invalidates a previously accepted draft match; completing
+the first three steps opens search with separate identity-link and starting-record
+policies rather than unrestricted results.
+
+### Location discovery actions and operating relationships
+
+Location intent constrains identity linking to the selected matching kind/class. A
+broader search result can offer **Create here**, supplying editable address components
+and an initial position without supplying its identity, name, or synchronization mode.
+The discovery policy is separate from link permission. Copying components adds no
+source-tracking requirement and does not assert physical membership or an operating
+relationship. Map-only creation is a separate discovery path, not an action on a result.
+
+An establishment or service point may explicitly **operate in** a physical host; a
+service point may also operate in an establishment. The author must select this
+relationship independently. Existing `locationOccupancy` revisions implement operating
+periods, retaining their historical storage names, effective dates, scope, and revision
+references. Migration `0222_location_operating_relationships.sql` extends endpoint
+guards without rewriting history. Newly authored relationships are unverified; existing
+placement review and relocation policies still govern adoption by Features. Physical
+membership remains a separate relationship.
+
 ### Compatible property edits and WhatsApp rollout
 
 Migration `0227_core_whatsapp_phone_field.sql` changes the existing core
