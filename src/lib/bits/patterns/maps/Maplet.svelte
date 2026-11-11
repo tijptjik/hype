@@ -577,6 +577,12 @@ $effect(() => {
       return
     }
     lastCoordinateKey = coordinateKey
+    // Editable markers and the camera are independent; only explicit navigation moves both.
+    if (mapProps.draggable ?? true) {
+      pendingViewport = null
+      feature.setLngLat(coordinateTuple)
+      return
+    }
     pendingViewport = {
       center: coordinateTuple,
       zoom: untrack(() => pendingViewport?.zoom) ?? map.getZoom(),

@@ -757,7 +757,6 @@ const setupPending = $derived(isNewFeatureRef && setupStep < 4)
 let namingChosen = $state(false)
 let locationFocusRequest = $state(0)
 const DRAFT_MAP_CENTER: [number, number] = [114.17, 22.3]
-const BUILDING_ZOOM = 20
 const DEFAULT_FEATURE_MAP_ZOOM = 19
 let draftHasPin = $state(false)
 let draftHasAddress = $state(false)
@@ -2841,7 +2840,6 @@ let mapMoveBefore = $state.raw<{
   geometry: typeof currentFeatureData.geometry
   addressMeta: typeof currentFeatureData.addressMeta
   hasPin: boolean
-  camera: ReturnType<import('#lib/map/controller.js').MapController['getCamera']>
 } | null>(null)
 $effect(() => {
   featureRef
@@ -3295,37 +3293,25 @@ function confirmMapAddressChange(): void {
  *  MAP MUTATION
  ************/
 
-/** Move the pin and progressively zoom toward the building detail used by saved Features.
+/** Move the pin without changing the user-controlled map camera.
  * @param nextCoordinates Dropped marker longitude/latitude.
- * @returns Nothing; the camera moves after reactive marker updates finish.
+ * @returns Nothing; address suggestions follow the reactive marker update.
  */
 function handlePinDrop(nextCoordinates: number[]): void {
-  const controller = draftMapController
-  const camera = controller?.getCamera()
   // Snapshot Location-owned fields only; cancelling must not undo Profile or other form edits.
   mapMoveBefore = {
     ref: featureRef,
     geometry: structuredClone($state.snapshot(currentFeatureData.geometry)),
     addressMeta: structuredClone($state.snapshot(currentFeatureData.addressMeta)),
     hasPin: draftHasPin,
-    camera: camera ?? null,
   }
   handleCoordinateChange(nextCoordinates, true)
   draftSearch?.syncSelectedAddress({
     ...editorAddress,
     coordinates: [nextCoordinates[0], nextCoordinates[1]],
   })
-  if (!controller || !camera) return
-  // Let Maplet synchronize the marker before starting the drop's camera animation.
-  void tick().then(() => {
-    if (draftMapController !== controller) return
-    controller.easeTo({
-      center: [nextCoordinates[0], nextCoordinates[1]],
-      zoom: Math.max(camera.zoom, Math.min(camera.zoom + 2, BUILDING_ZOOM)),
-      duration: prefersReducedMotion.current ? 0 : 520,
-    })
-    void suggestMapParts(nextCoordinates)
-  })
+  // Let the marker update before looking up address suggestions; retain the viewport.
+  void tick().then(() => suggestMapParts(nextCoordinates))
 }
 
 /** Cancel the current pin move, invalidating lookups before restoring its address and marker.
@@ -3343,16 +3329,7 @@ function cancelMapAddressMove(): void {
   addressLookupMessage = ''
   addressCandidates = []
   streetCandidates = []
-  if (!before) {
-    if (featureCoordinates)
-      previewDraftLocation({
-        address: {
-          ...editorAddress,
-          coordinates: [featureCoordinates[0], featureCoordinates[1]],
-        },
-      })
-    return
-  }
+  if (!before) return
   if (before.ref !== featureRef) return
   updateFeatureData(
     data => ({ ...data, geometry: before.geometry, addressMeta: before.addressMeta }),
@@ -3361,13 +3338,6 @@ function cancelMapAddressMove(): void {
   draftHasPin = before.hasPin
   if (before.addressMeta?.address)
     draftSearch?.syncSelectedAddress(before.addressMeta.address)
-  void tick().then(() => {
-    if (before.ref === featureRef && before.camera)
-      draftMapController?.flyTo({
-        ...before.camera,
-        duration: prefersReducedMotion.current ? 0 : 350,
-      })
-  })
 }
 
 /** Moves the draft marker and invalidates any address tied to the previous point.
@@ -3399,30 +3369,15 @@ function handleCoordinateChange(nextCoordinates: number[], preserveMove = false)
   )
 }
 
-/** Apply a manually edited coordinate pair and recenter the current map.
+/** Apply a manually edited coordinate pair without moving the map camera.
  * @param nextCoordinates Validated longitude/latitude from the coordinate editor.
- * @returns Nothing; camera movement follows the reactive marker update.
+ * @returns Nothing; the marker and selected address receive the new coordinates.
  */
 function handleManualCoordinateChange(nextCoordinates: number[]): void {
-  const controller = draftMapController
-  const ref = featureRef
   handleCoordinateChange(nextCoordinates)
   draftSearch?.syncSelectedAddress({
     ...editorAddress,
     coordinates: [nextCoordinates[0], nextCoordinates[1]],
-  })
-  // Preserve zoom and orientation, and never move a different Feature's map after navigation.
-  void tick().then(() => {
-    if (ref !== featureRef || controller !== draftMapController) return
-    if (
-      featureCoordinates?.[0] !== nextCoordinates[0] ||
-      featureCoordinates?.[1] !== nextCoordinates[1]
-    )
-      return
-    controller?.easeTo({
-      center: [nextCoordinates[0], nextCoordinates[1]],
-      duration: prefersReducedMotion.current ? 0 : 420,
-    })
   })
 }
 
