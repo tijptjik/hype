@@ -221,7 +221,15 @@ it('presents evidenced replacement lineage without redirecting either identity',
       'local',
       'fixture',
       '{}',
-      JSON.stringify({ common: { names: { en: 'Harbour House' } } }),
+      JSON.stringify({
+        schemaVersion: 1,
+        kind: 'building',
+        details: {},
+        common: {
+          names: { en: 'Harbour House' },
+          location: { geometry: { type: 'Point', coordinates: [114.16, 22.3] } },
+        },
+      }),
     )
   const result = await readLocationLineage(s.db, {
     locationId: 'building',
