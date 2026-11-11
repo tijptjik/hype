@@ -267,10 +267,15 @@ not grant contact-directory/user-search access.
 ## Hype shared Location corrections
 
 Location authority is field-specific and separate from Feature editing authority.
-Project or Organisation editors may correct shared phone numbers, websites, social
-profiles and accessibility. Translation-only rights do not grant this authority. Only
-SuperAdmin may correct shared names, addresses, brands or other sensitive Location
-facts. Organisation-authorized editors may instead maintain those values as Organisation
+Permission to update a Feature's properties also authorizes its universal phone edit to
+update the linked Location phone atomically. The latest successful explicit phone edit
+wins at the shared layer; older Feature pins do not block it. This does not grant
+editing rights to other Location fields. WhatsApp and custom phone fields remain
+Feature-owned. Project or Organisation editors may also correct shared phone numbers,
+websites, social profiles and accessibility through the standalone Location correction
+path. Translation-only rights do not grant this authority. Only SuperAdmin may correct
+shared names, addresses, brands or other sensitive Location facts.
+Organisation-authorized editors may instead maintain those values as Organisation
 overrides; those edits must not rewrite the shared baseline. Third-party submissions
 remain proposals until an authorized staff reviewer accepts them. Acceptance requires
 authority for each destination field, not merely access to the task. Staff edits with

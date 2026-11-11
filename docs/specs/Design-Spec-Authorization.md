@@ -722,8 +722,16 @@ Location values resolve in order: upstream evidence, Hype shared corrections, th
 Organisation overrides (including explicit suppression). This supersedes any older rule
 that routes all Location corrections to the Organisation layer.
 
-Shared phone numbers, websites, socials and accessibility require Project or
-Organisation editing authority from persisted resource ancestry. Shared names,
+An explicit edit of the universal `phoneNumber` property through a Feature requires
+permission to update that Feature's properties and writes the shared Location phone in
+the same atomic save. It does not require Project configuration authority. The latest
+successful explicit edit replaces the shared phone value using the current shared head,
+even when the Feature pins an older revision; transaction-time concurrency guards and
+immutable actor-attributed history still apply. WhatsApp and custom phone properties
+remain Feature-owned. Explicit Organisation overrides retain their separate precedence.
+
+Standalone shared phone corrections, websites, socials and accessibility require Project
+or Organisation editing authority from persisted resource ancestry. Shared names,
 addresses, brands and other sensitive fields require SuperAdmin. Organisation
 corrections require Organisation authority. Client-submitted owner IDs or field labels
 never establish permission. Apply the same checks to direct saves, reset operations and
