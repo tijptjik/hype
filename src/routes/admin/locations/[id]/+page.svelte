@@ -3,6 +3,7 @@
 import { page } from '$app/state'
 import { untrack } from 'svelte'
 // COMPONENTS
+import Tabs from '#lib/bits/core/tabs/Tabs.svelte'
 import * as Main from '#lib/bits/custom/main/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import LocalLocationAddressEditor from '#lib/bits/patterns/forms/localLocationAddress/LocalLocationAddressEditor.svelte'
@@ -115,25 +116,43 @@ $effect(() => {
       {:then place}
         {#if place}
           {#key place.id}
-            {#if activeFacet === 'features'}
-              <ScopedFeatureIndex
-                resourceType="location"
-                resourceId={place.id}
-                embedded
-              />
-            {:else}
-              <LocalLocationAddressEditor
-                recordView={activeFacet}
-                {place}
-                queryScope={scope}
-                isEditing={header.state.isEditing}
-                onEditingChange={value => header.setEditing(value)}
-                onControlsChange={controls => header.setFormActions(controls)}
-                onSaved={async () => {
-                  await request.refresh()
-                }}
-              />
-            {/if}
+            <Tabs
+              value={activeFacet === 'features' ? 'features' : 'record'}
+              showList={false}
+              label={m.location_record_views()}
+              items={[
+                { value: 'record', label: m.location_record_views() },
+                { value: 'features', label: m.location_features_associated() },
+              ]}
+              class="h-full min-h-0"
+              contentClass="h-full"
+              panelClass="h-full"
+            >
+              {#snippet children(view)}
+                {#if view === 'features'}
+                  <ScopedFeatureIndex
+                    resourceType="location"
+                    active={activeFacet === 'features'}
+                    resourceId={place.id}
+                    embedded
+                  />
+                {:else}
+                  <LocalLocationAddressEditor
+                    recordView={activeFacet === 'relationships'
+                      ? 'relationships'
+                      : 'core'}
+                    {place}
+                    queryScope={scope}
+                    isEditing={header.state.isEditing}
+                    onEditingChange={value => header.setEditing(value)}
+                    onControlsChange={controls => header.setFormActions(controls)}
+                    onSaved={async () => {
+                      await request.refresh()
+                    }}
+                  />
+                {/if}
+              {/snippet}
+            </Tabs>
           {/key}
         {:else}
           <p class="px-6 py-6">{m.location_directory_empty()}</p>

@@ -29,10 +29,12 @@ let {
   resourceType,
   resourceId,
   embedded = false,
+  active = true,
 }: {
   resourceType: FeaturePrismResource
   resourceId: string
   embedded?: boolean
+  active?: boolean
 } = $props()
 
 let locationView = $state<'associated' | 'placed' | 'past'>('associated')
@@ -41,7 +43,7 @@ const locationScope = $derived<FeatureIndexQuery['location']>(
 )
 const parent = getAdminCtx()
 const parentHeader = getHeaderCtrl()
-// The owning route keys this component by entity ID and mounts it only on #features.
+// The owning route keys by entity ID; retained panels publish header controls only while active.
 const view = setSurfaceCtx(
   untrack(() => createScopedFeatureView(parent.view, resourceType, resourceId)),
 )
@@ -108,6 +110,10 @@ $effect(() => {
 // Publish the scoped controls into the entity header without replacing its tabs.
 $effect(() => {
   if (!embedded) return
+  if (!active) {
+    releaseHeaderControls()
+    return
+  }
   parentHeader.setSearch({
     indexView: true,
     resourceType: FirstClassResource.feature,
@@ -139,10 +145,13 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (embedded) headerCtrl.isSearchFocused = parentHeader.isSearchFocused
+  if (embedded && active) headerCtrl.isSearchFocused = parentHeader.isSearchFocused
 })
 
-onDestroy(() => {
+/** Release only the shared header controls owned by this scoped view.
+ * @returns Nothing; another mounted index keeps its own controls.
+ */
+function releaseHeaderControls(): void {
   if (embedded) {
     // A replacement index may already own the shared header when this one unmounts.
     if (parentHeader.state.search?.listUi === adminCtx.listUi) {
@@ -153,6 +162,10 @@ onDestroy(() => {
       parentHeader.clearControlBar()
     }
   }
+}
+
+onDestroy(() => {
+  releaseHeaderControls()
   view.dispose()
 })
 </script>

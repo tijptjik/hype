@@ -5,6 +5,7 @@ import type { SharedCorrectionPatch } from '#lib/locations/sharedCorrection.js'
 import type { LocationBrandEdit } from '#lib/locations/brandEdit.js'
 import LocationBrandEditor from '../featureLocation/LocationBrandEditor.svelte'
 // COMPONENTS
+import Tabs from '#lib/bits/core/tabs/Tabs.svelte'
 import CommunityCurationLocks from './CommunityCurationLocks.svelte'
 import LocationAccessibility from '../featureLocation/LocationAccessibility.svelte'
 // SVELTE
@@ -631,315 +632,328 @@ $effect(() => {
 {/snippet}
 
 {#snippet recordContent()}
-  {#if recordView === 'core'}
-    <div class="grid gap-6 px-6 py-6 @min-[900px]:grid-cols-[15rem_minmax(0,1fr)]">
-      <LocationRecordDetails {place} isEditing={editing} />
-      <div
-        class="@min-[900px]:border-border min-w-0 space-y-6 @min-[900px]:border-l @min-[900px]:pl-6"
-      >
-        {#if !place.facts}
-          <LocationAccessibility locationId={place.id} />
-        {/if}
-        {#if editing}
-          <section
-            class="border-border space-y-5 border-b pb-6"
-            aria-label={m.location_record_identity()}
+  <Tabs
+    value={recordView}
+    showList={false}
+    label={m.location_record_views()}
+    items={[
+      { value: 'core', label: m.location_record_identity() },
+      { value: 'relationships', label: m.location_record_relationships() },
+    ]}
+  >
+    {#snippet children(view)}
+      {#if view === 'core'}
+        <div class="grid gap-6 px-6 py-6 @min-[900px]:grid-cols-[15rem_minmax(0,1fr)]">
+          <LocationRecordDetails {place} isEditing={editing} />
+          <div
+            class="@min-[900px]:border-border min-w-0 space-y-6 @min-[900px]:border-l @min-[900px]:pl-6"
           >
-            <h2 class="text-lg font-semibold">{m.location_record_identity()}</h2>
-            {#if communityRecord &&
-              Object.values(place.communityLocks?.openFields ?? {}).some(
-                value => value === false,
-              )}
-              <p class="text-muted-foreground text-sm">
-                Some community fields are locked. A save that changes a locked field is
-                rejected as a whole.
-              </p>
+            {#if !place.facts}
+              <LocationAccessibility locationId={place.id} />
             {/if}
-            <div
-              class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-8"
-            >
-              <LocationKindField
-                value={kind}
-                disabled={busy ||
-                  communityRecord ||
-                  place.ssId !== null ||
-                  place.ownerOrganisationId !== place.editingOrganisationId}
-                onChange={next => {
-                  kind = next
-                  lifecycle = {
-                    operatingStatus:
-                      next === 'establishment' ? lifecycle.operatingStatus : null,
-                    buildingStatus:
-                      next === 'building' ? lifecycle.buildingStatus : null,
-                  }
-                  lookupVersion++
-                  lookingUp = false
-                  lookupCandidates = []
-                  lookupUnavailable = []
-                  lookupPartial = false
-                  establishmentAddressSelected = false
-                  if (next === 'building' && draft) {
-                    const selections = draft.divisionOverrides
-                    draft = localAddressDraft({
-                      ...localAddressContent($state.snapshot(draft)),
-                      unit: null,
-                      unitI18n: {},
-                    })
-                    draft.divisionOverrides = selections
-                  }
-                }}
-              />
-            </div>
-            <DraftLocationNameFields
-              {names}
-              kind={activeKind}
-              localeState={editorLocaleState}
-              translations={localeState.expanded}
-              isEditing={!busy && !communityClosed('names')}
-              recordKey={place.id}
-              onChange={next =>
-                (names = Object.fromEntries(
-                  Object.entries(next).map(([tag, value]) => [
-                    tag.toLowerCase(),
-                    value,
-                  ]),
-                ))}
-            />
-            {#if activeKind === 'establishment'}
-              <div
-                class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-start gap-8"
+            {#if editing}
+              <section
+                class="border-border space-y-5 border-b pb-6"
+                aria-label={m.location_record_identity()}
               >
-                {#if communityRecord}
-                  <IdentityCataloguePicker
-                    kind="brand"
-                    value={brandLink}
-                    organisationId={place.editingOrganisationId}
+                <h2 class="text-lg font-semibold">{m.location_record_identity()}</h2>
+                {#if communityRecord &&
+                  Object.values(place.communityLocks?.openFields ?? {}).some(
+                    value => value === false,
+                  )}
+                  <p class="text-muted-foreground text-sm">
+                    Some community fields are locked. A save that changes a locked field
+                    is rejected as a whole.
+                  </p>
+                {/if}
+                <div
+                  class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-8"
+                >
+                  <LocationKindField
+                    value={kind}
                     disabled={busy ||
-                      communityClosed('brandId') ||
-                      communityClosed('brands')}
-                    onChange={id => {
-                      brandLink = id
-                      changedLinks = { ...changedLinks, brandId: true }
-                    }}
-                  />
-                  <IdentityCataloguePicker
-                    kind="group"
-                    value={groupLink}
-                    organisationId={place.editingOrganisationId}
-                    disabled={busy || communityClosed('groupId')}
-                    onChange={id => {
-                      groupLink = id
-                      changedLinks = { ...changedLinks, groupId: true }
-                    }}
-                  />
-                {/if}
-                <LocationLocaleField
-                  label={m.location_field_branch()}
-                  value={branch}
-                  localeState={editorLocaleState}
-                  translations={localeState.expanded}
-                  disabled={busy || communityClosed('branch')}
-                  onChange={next => (branch = next)}
-                />
-                <LocationLocaleField
-                  label={m.location_field_format()}
-                  value={format}
-                  localeState={editorLocaleState}
-                  translations={localeState.expanded}
-                  disabled={busy || communityClosed('format')}
-                  onChange={next => (format = next)}
-                />
-                {#if !communityRecord}
-                  <TextInput
-                    name=""
-                    label={m.location_field_branch_id()}
-                    value={branchId}
-                    isEditing={!busy && !communityRecord}
-                    inputAttrs={{ maxlength: 200 }}
-                    controlClass="bg-transparent!"
-                    onValueChange={next => (branchId = next)}
-                  />
-                {/if}
-              </div>
-            {/if}
-            {#if place.canEditShared && communityRecord}
-              <LocationBrandEditor
-                localeState={editorLocaleState}
-                translations={localeState.expanded}
-                association={{
-                  version: place.sharedRevision ?? expectedRevisionId,
-                  brandMode: 'inherit',
-                  effective: { brands: editableFacts?.brands ?? [] },
-                }}
-                edit={sharedBrandEdit}
-                isEditing={!busy && !communityClosed('brands')}
-                onChange={value => (sharedBrandEdit = value)}
-              />
-            {/if}
-            {#if establishmentAddressSelected}
-              <p role="status" class="text-muted-foreground text-sm">
-                {m.location_establishment_address_help()}
-              </p>
-            {/if}
-          </section>
-        {/if}
-        {#if editing}
-          <LocationLifecycleFields
-            value={editing ? lifecycle : (place.facts ?? undefined)}
-            successorLocationId={editing
-              ? successorLocationId
-              : place.facts?.successorLocationId}
-            onSuccessorChange={next => (successorLocationId = next)}
-            kind={activeKind}
-            isEditing={editing}
-            disabled={busy}
-            onChange={next => (lifecycle = next)}
-          />
-        {/if}
-        {#if lifecycleInvalid}
-          <p role="alert" class="text-destructive text-sm">
-            {m.location_lifecycle_invalid()}
-          </p>
-        {/if}
-        {#if place.facts}
-          {#if coordinateInvalid}
-            <p role="alert" class="text-destructive text-sm">
-              {m.feature_address_coordinates_invalid()}
-            </p>
-          {/if}
-          {#if editing}
-            {#if lookupPartial && !lookupUnavailable.length}
-              <p role="status" class="text-muted-foreground text-sm">
-                {m.feature_location_search_partial()}
-              </p>
-            {/if}
-            {#if lookupUnavailable.length}
-              <p role="status" class="text-muted-foreground text-sm">
-                {m.location_search_incomplete()}:
-                {lookupUnavailable.map(type => locationKindLabel(type)).join(', ')}.
-              </p>
-            {/if}
-            {#if lookupFailed}
-              <p role="alert" class="text-destructive text-sm">
-                {m.feature_address_failed()}
-              </p>
-            {/if}
-            {#each lookupCandidates as candidate (candidate.id)}
-              <button
-                type="button"
-                class="border-border hover:text-primary block w-full border-b py-3 text-left text-sm"
-                onclick={() => selectLookup(candidate)}
-              >
-                <span class="text-muted-foreground mb-1 flex items-center gap-2 text-xs"
-                  ><LocationIcon kind={candidate.kind} class="size-4" />
-                  {locationKindLabel(candidate.kind)}</span
-                >
-                {#if candidate.names}
-                  <span class="block font-medium"
-                    >{candidate.names[
-                      getLocaleKey() === 'en'
-                        ? 'en'
-                        : getLocaleKey() === 'zhHant'
-                          ? 'zh-hant'
-                          : 'zh-hans'
-                    ] ||
-                      candidate.names.en ||
-                      Object.values(candidate.names)[0]}</span
-                  >
-                {/if}
-                {getAddressDisplay(candidate.address, getLocaleKey())}
-                <span class="text-muted-foreground mt-1 block text-xs"
-                  >{candidate.kind === 'address'
-                    ? m.location_use_address()
-                    : m.location_use_preview_details()}</span
-                >
-              </button>
-            {/each}
-          {/if}
-          <fieldset
-            disabled={busy || communityClosed('location.address')}
-            class="@container grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-start gap-8"
-          >
-            <AddressDetails
-              localeState={editorLocaleState}
-              translations={localeState.expanded}
-              showLocaleToolbar={false}
-              onLocaleStateChange={next => (localeState = next)}
-              suggestionKey={JSON.stringify([place.id, point])}
-              onSuggestStreetNumber={async () =>
-                (await numberMapController?.getStreetNumberAt?.([
-                  point[0],
-                  point[1],
-                ])) ?? null}
-              locationKind={activeKind}
-              accessibilityLocationId={place.id}
-              {address}
-              isEditing={editing}
-              showAccessHints={false}
-              show3dAddressOptions={activeKind !== 'building'}
-              onChange={next => (draft = next)}
-            />
-            <AddressDivisions
-              class="@min-[50rem]:border-t-0 @min-[50rem]:pt-0"
-              {address}
-              coordinates={point}
-              isEditing={editing}
-              onChange={next => (draft = next)}
-            />
-            {#if editing && draft}
-              {@const content = localAddressContent($state.snapshot(draft))}
-              <details class="border-border col-span-full border-t pt-4">
-                <summary class="text-muted-foreground cursor-pointer text-sm">
-                  {m.location_address_parse()}
-                </summary>
-                <div class="pt-3">
-                  <LocalAddressParseReview
-                    value={content}
-                    disabled={busy}
-                    onParsed={source => (parseSource = source)}
-                    onValueChange={next => {
-                      const selections = draft?.divisionOverrides
-                      draft = localAddressDraft(next)
-                      draft.divisionOverrides = selections
+                      communityRecord ||
+                      place.ssId !== null ||
+                      place.ownerOrganisationId !== place.editingOrganisationId}
+                    onChange={next => {
+                      kind = next
+                      lifecycle = {
+                        operatingStatus:
+                          next === 'establishment' ? lifecycle.operatingStatus : null,
+                        buildingStatus:
+                          next === 'building' ? lifecycle.buildingStatus : null,
+                      }
+                      lookupVersion++
+                      lookingUp = false
+                      lookupCandidates = []
+                      lookupUnavailable = []
+                      lookupPartial = false
+                      establishmentAddressSelected = false
+                      if (next === 'building' && draft) {
+                        const selections = draft.divisionOverrides
+                        draft = localAddressDraft({
+                          ...localAddressContent($state.snapshot(draft)),
+                          unit: null,
+                          unitI18n: {},
+                        })
+                        draft.divisionOverrides = selections
+                      }
                     }}
                   />
                 </div>
-              </details>
+                <DraftLocationNameFields
+                  {names}
+                  kind={activeKind}
+                  localeState={editorLocaleState}
+                  translations={localeState.expanded}
+                  isEditing={!busy && !communityClosed('names')}
+                  recordKey={place.id}
+                  onChange={next =>
+                    (names = Object.fromEntries(
+                      Object.entries(next).map(([tag, value]) => [
+                        tag.toLowerCase(),
+                        value,
+                      ]),
+                    ))}
+                />
+                {#if activeKind === 'establishment'}
+                  <div
+                    class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-start gap-8"
+                  >
+                    {#if communityRecord}
+                      <IdentityCataloguePicker
+                        kind="brand"
+                        value={brandLink}
+                        organisationId={place.editingOrganisationId}
+                        disabled={busy ||
+                          communityClosed('brandId') ||
+                          communityClosed('brands')}
+                        onChange={id => {
+                          brandLink = id
+                          changedLinks = { ...changedLinks, brandId: true }
+                        }}
+                      />
+                      <IdentityCataloguePicker
+                        kind="group"
+                        value={groupLink}
+                        organisationId={place.editingOrganisationId}
+                        disabled={busy || communityClosed('groupId')}
+                        onChange={id => {
+                          groupLink = id
+                          changedLinks = { ...changedLinks, groupId: true }
+                        }}
+                      />
+                    {/if}
+                    <LocationLocaleField
+                      label={m.location_field_branch()}
+                      value={branch}
+                      localeState={editorLocaleState}
+                      translations={localeState.expanded}
+                      disabled={busy || communityClosed('branch')}
+                      onChange={next => (branch = next)}
+                    />
+                    <LocationLocaleField
+                      label={m.location_field_format()}
+                      value={format}
+                      localeState={editorLocaleState}
+                      translations={localeState.expanded}
+                      disabled={busy || communityClosed('format')}
+                      onChange={next => (format = next)}
+                    />
+                    {#if !communityRecord}
+                      <TextInput
+                        name=""
+                        label={m.location_field_branch_id()}
+                        value={branchId}
+                        isEditing={!busy && !communityRecord}
+                        inputAttrs={{ maxlength: 200 }}
+                        controlClass="bg-transparent!"
+                        onValueChange={next => (branchId = next)}
+                      />
+                    {/if}
+                  </div>
+                {/if}
+                {#if place.canEditShared && communityRecord}
+                  <LocationBrandEditor
+                    localeState={editorLocaleState}
+                    translations={localeState.expanded}
+                    association={{
+                      version: place.sharedRevision ?? expectedRevisionId,
+                      brandMode: 'inherit',
+                      effective: { brands: editableFacts?.brands ?? [] },
+                    }}
+                    edit={sharedBrandEdit}
+                    isEditing={!busy && !communityClosed('brands')}
+                    onChange={value => (sharedBrandEdit = value)}
+                  />
+                {/if}
+                {#if establishmentAddressSelected}
+                  <p role="status" class="text-muted-foreground text-sm">
+                    {m.location_establishment_address_help()}
+                  </p>
+                {/if}
+              </section>
             {/if}
-          </fieldset>
-        {/if}
-        {#if saved}
-          <p role="status" class="text-muted-foreground text-sm">
-            {m.location_address_saved()}
-          </p>
-        {/if}
-        {#if failed}
-          <p role="alert" class="text-destructive text-sm">
-            {m.location_address_failed()}
-          </p>
-        {/if}
-      </div>
-    </div>
-  {:else if recordView === 'relationships'}
-    <div class="space-y-6 px-6 py-6">
-      <LocationRelationships
-        locationId={place.id}
-        kind={place.kind}
-        organisationId={place.editingOrganisationId ?? null}
-        {queryScope}
-        canEdit={editing && Boolean(place.canEditAddress)}
-      />
+            {#if editing}
+              <LocationLifecycleFields
+                value={editing ? lifecycle : (place.facts ?? undefined)}
+                successorLocationId={editing
+                  ? successorLocationId
+                  : place.facts?.successorLocationId}
+                onSuccessorChange={next => (successorLocationId = next)}
+                kind={activeKind}
+                isEditing={editing}
+                disabled={busy}
+                onChange={next => (lifecycle = next)}
+              />
+            {/if}
+            {#if lifecycleInvalid}
+              <p role="alert" class="text-destructive text-sm">
+                {m.location_lifecycle_invalid()}
+              </p>
+            {/if}
+            {#if place.facts}
+              {#if coordinateInvalid}
+                <p role="alert" class="text-destructive text-sm">
+                  {m.feature_address_coordinates_invalid()}
+                </p>
+              {/if}
+              {#if editing}
+                {#if lookupPartial && !lookupUnavailable.length}
+                  <p role="status" class="text-muted-foreground text-sm">
+                    {m.feature_location_search_partial()}
+                  </p>
+                {/if}
+                {#if lookupUnavailable.length}
+                  <p role="status" class="text-muted-foreground text-sm">
+                    {m.location_search_incomplete()}:
+                    {lookupUnavailable.map(type => locationKindLabel(type)).join(', ')}.
+                  </p>
+                {/if}
+                {#if lookupFailed}
+                  <p role="alert" class="text-destructive text-sm">
+                    {m.feature_address_failed()}
+                  </p>
+                {/if}
+                {#each lookupCandidates as candidate (candidate.id)}
+                  <button
+                    type="button"
+                    class="border-border hover:text-primary block w-full border-b py-3 text-left text-sm"
+                    onclick={() => selectLookup(candidate)}
+                  >
+                    <span
+                      class="text-muted-foreground mb-1 flex items-center gap-2 text-xs"
+                      ><LocationIcon kind={candidate.kind} class="size-4" />
+                      {locationKindLabel(candidate.kind)}</span
+                    >
+                    {#if candidate.names}
+                      <span class="block font-medium"
+                        >{candidate.names[
+                          getLocaleKey() === 'en'
+                            ? 'en'
+                            : getLocaleKey() === 'zhHant'
+                              ? 'zh-hant'
+                              : 'zh-hans'
+                        ] ||
+                          candidate.names.en ||
+                          Object.values(candidate.names)[0]}</span
+                      >
+                    {/if}
+                    {getAddressDisplay(candidate.address, getLocaleKey())}
+                    <span class="text-muted-foreground mt-1 block text-xs"
+                      >{candidate.kind === 'address'
+                        ? m.location_use_address()
+                        : m.location_use_preview_details()}</span
+                    >
+                  </button>
+                {/each}
+              {/if}
+              <fieldset
+                disabled={busy || communityClosed('location.address')}
+                class="@container grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-start gap-8"
+              >
+                <AddressDetails
+                  localeState={editorLocaleState}
+                  translations={localeState.expanded}
+                  showLocaleToolbar={false}
+                  onLocaleStateChange={next => (localeState = next)}
+                  suggestionKey={JSON.stringify([place.id, point])}
+                  onSuggestStreetNumber={async () =>
+                    (await numberMapController?.getStreetNumberAt?.([
+                      point[0],
+                      point[1],
+                    ])) ?? null}
+                  locationKind={activeKind}
+                  accessibilityLocationId={place.id}
+                  {address}
+                  isEditing={editing}
+                  showAccessHints={false}
+                  show3dAddressOptions={activeKind !== 'building'}
+                  onChange={next => (draft = next)}
+                />
+                <AddressDivisions
+                  class="@min-[50rem]:border-t-0 @min-[50rem]:pt-0"
+                  {address}
+                  coordinates={point}
+                  isEditing={editing}
+                  onChange={next => (draft = next)}
+                />
+                {#if editing && draft}
+                  {@const content = localAddressContent($state.snapshot(draft))}
+                  <details class="border-border col-span-full border-t pt-4">
+                    <summary class="text-muted-foreground cursor-pointer text-sm">
+                      {m.location_address_parse()}
+                    </summary>
+                    <div class="pt-3">
+                      <LocalAddressParseReview
+                        value={content}
+                        disabled={busy}
+                        onParsed={source => (parseSource = source)}
+                        onValueChange={next => {
+                          const selections = draft?.divisionOverrides
+                          draft = localAddressDraft(next)
+                          draft.divisionOverrides = selections
+                        }}
+                      />
+                    </div>
+                  </details>
+                {/if}
+              </fieldset>
+            {/if}
+            {#if saved}
+              <p role="status" class="text-muted-foreground text-sm">
+                {m.location_address_saved()}
+              </p>
+            {/if}
+            {#if failed}
+              <p role="alert" class="text-destructive text-sm">
+                {m.location_address_failed()}
+              </p>
+            {/if}
+          </div>
+        </div>
+      {:else if view === 'relationships'}
+        <div class="space-y-6 px-6 py-6">
+          <LocationRelationships
+            locationId={place.id}
+            kind={place.kind}
+            organisationId={place.editingOrganisationId ?? null}
+            {queryScope}
+            canEdit={editing && Boolean(place.canEditAddress)}
+          />
 
-      {#if place.facts?.successorLocationId}
-        <a
-          class="text-primary text-sm underline"
-          href={`/admin/locations/${encodeURIComponent(place.facts.successorLocationId)}`}
-        >
-          {m.location_successor_id()}: {place.facts.successorLocationId}
-        </a>
+          {#if place.facts?.successorLocationId}
+            <a
+              class="text-primary text-sm underline"
+              href={`/admin/locations/${encodeURIComponent(place.facts.successorLocationId)}`}
+            >
+              {m.location_successor_id()}: {place.facts.successorLocationId}
+            </a>
+          {/if}
+        </div>
       {/if}
-    </div>
-  {/if}
+    {/snippet}
+  </Tabs>
 {/snippet}
 
 {#if place.facts}
