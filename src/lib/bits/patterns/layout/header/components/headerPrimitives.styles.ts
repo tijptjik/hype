@@ -115,6 +115,8 @@ function resolveHeaderActionVariantClasses(className?: string): string {
 
 export function getHeaderActionClasses(className?: string, hideLabel = false): string {
   return cx(
+    // Form actions keep their geometry while pointer-down changes Edit into Cancel/Save.
+    'active:scale-100',
     resolveHeaderActionVariantClasses(className),
     hideLabel && HEADER_HIDE_LABEL_ACTION_CLASSES,
   )
@@ -165,12 +167,12 @@ export const HEADER_ALIGNED_NAVIGATION_CLASSES = `min-[1200px]:[&>[data-adaptive
 export const HEADER_EDIT_ACTION_CLASSES = cx(
   'bg-foreground/10! border-foreground/20! text-foreground!',
   'enabled:hover:bg-foreground/18! enabled:hover:border-foreground/35!',
-  'enabled:active:bg-foreground/25! enabled:active:translate-y-px',
+  'enabled:active:bg-foreground/25!',
   'enabled:focus-visible:bg-foreground/18! enabled:focus-visible:border-primary/60!',
 )
 export const HEADER_PRIMARY_ACTION_CLASSES = cx(
   'bg-primary! border-primary! text-white!',
   'enabled:hover:bg-[color-mix(in_oklab,var(--color-primary)_85%,black)]! enabled:hover:border-[color-mix(in_oklab,var(--color-primary)_85%,black)]!',
-  'enabled:active:bg-[color-mix(in_oklab,var(--color-primary)_70%,black)]! enabled:active:translate-y-px',
+  'enabled:active:bg-[color-mix(in_oklab,var(--color-primary)_70%,black)]!',
   'enabled:focus-visible:bg-[color-mix(in_oklab,var(--color-primary)_85%,black)]!',
 )
