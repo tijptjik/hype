@@ -1675,6 +1675,8 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          onReveal={() =>
+            navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, 'core')}
           bind:expanded={multilingualExpanded}
           bind:localeSelection={contentLocaleSelection}
           allowAddLocales
@@ -1831,6 +1833,8 @@ $effect(() => {
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <!-- Empty fields fill the facet; populated fields retain trailing scroll clearance. -->
         <FormFieldsSection
+          onReveal={() =>
+            navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, 'fields')}
           bind:multilingual={multilingualExpanded}
           bind:localeSelection={contentLocaleSelection}
           class="shrink-0"
@@ -1896,6 +1900,8 @@ $effect(() => {
     >
       <FormSurface>
         <FormI18nDescriptorProfile
+          onReveal={() =>
+            navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, 'policies')}
           bind:expanded={multilingualExpanded}
           bind:localeSelection={contentLocaleSelection}
           allowAddLocales

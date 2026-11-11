@@ -1522,6 +1522,8 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          onReveal={() =>
+            navigateOnAdmin(adminCtx, FirstClassResource.layer, layerRef, 'core')}
           form={formCtx.form}
           fields={formCtx.form.fields.data.i18n}
           defaultLocales={locales}

@@ -74,11 +74,11 @@ $effect(() => {
         name,
         nameShort: name,
         description: '<p>Working together for a <strong>better tomorrow</strong>.</p>',
-        descriptionGen: true,
+        descriptionGen: false,
         subscriptionBenefits: '<p>Community news and opportunities.</p>',
         privacyPolicy:
           '# Privacy Policy\n\nWe protect **your data**.\n\n| Party | Role |\n| --- | --- |\n| HYPE | Provider |',
-        privacyPolicyGen: true,
+        privacyPolicyGen: false,
         termsOfService: '# Terms of Service\n\nPlease respect the community.',
       },
       zhHant: {

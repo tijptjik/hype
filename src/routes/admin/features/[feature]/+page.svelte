@@ -56,6 +56,8 @@ import { isRangeProperty } from '#lib/properties/range.js'
 import { show3dAddressOptions } from '#lib/projects/flags.js'
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 
+// TRANSLATION PROVENANCE
+import type { AutomaticTranslation } from '#lib/i18n/automatic.js'
 // SVELTE
 import { goto, pushState, replaceState, snapshot } from '$app/navigation'
 
@@ -1965,6 +1967,7 @@ function applyProfileTranslation(
   field: ProfileField,
   locale: string,
   text: string,
+  automatic?: AutomaticTranslation,
 ): void {
   const key = contentFormKey(locale)
   updateFeatureData(
@@ -1972,7 +1975,24 @@ function applyProfileTranslation(
       ...data,
       i18n: {
         ...data.i18n,
-        [key]: { ...data.i18n[key], [field]: text, [`${field}Gen`]: true },
+        [key]: {
+          ...data.i18n[key],
+          [field]: text,
+          [`${field}Gen`]: false,
+          ...(automatic
+            ? {
+                translationProvenance: {
+                  ...data.i18n[key]?.translationProvenance,
+                  [field]: JSON.stringify({
+                    ...automatic,
+                    acceptedValue: text,
+                    acceptedBy: 'pending',
+                    acceptedAt: new Date().toISOString(),
+                  }),
+                },
+              }
+            : {}),
+        },
       },
     }),
     { revalidate: true },
@@ -3720,7 +3740,7 @@ function updatePropertyI18nValue(
               zhHans: property.i18n?.zhHans ?? { value: '', valueGen: false },
               zhHant: property.i18n?.zhHant ?? { value: '', valueGen: false },
               ...(property.i18n ?? {}),
-              [locale]: { value: nextValue, valueGen },
+              [locale]: { ...property.i18n?.[locale], value: nextValue, valueGen },
             },
           }
         : property,
@@ -4799,10 +4819,27 @@ async function refreshLocationSource(): Promise<void> {
                   onEditLocation={() => goToFacet('location')}
                   translate={(source, target, text) =>
                     translateContentField({ source, target, text })}
-                  onTranslated={(field, locale, text) => {
+                  onReveal={() => goToFacet('core')}
+                  onAutomatic={(field, locale, automatic) => {
+                    const key = contentFormKey(locale)
+                    updateFeatureData(data => ({
+                      ...data,
+                      i18n: {
+                        ...data.i18n,
+                        [key]: {
+                          ...data.i18n[key],
+                          autoTranslated: {
+                            ...data.i18n[key]?.autoTranslated,
+                            [field]: JSON.stringify(automatic),
+                          },
+                        },
+                      },
+                    }))
+                  }}
+                  onTranslated={(field, locale, text, automatic) => {
                     if (field === 'title' && profileNameRule)
-                      changeRuleTitle(locale, text, true)
-                    else applyProfileTranslation(field, locale, text)
+                      changeRuleTitle(locale, text, false)
+                    else applyProfileTranslation(field, locale, text, automatic)
                   }}
                 >
                   {#snippet titleSource(locale)}
@@ -5009,7 +5046,46 @@ async function refreshLocationSource(): Promise<void> {
             {#key currentFeatureId}
               <FormFeatureFields
                 {localeKey}
-                {locales}
+                locales={profileLocaleState.selectedLocales}
+                onReveal={() => goToFacet('fields')}
+                onTranslation={(propertyId, locale, automatic, acceptedValue) => {
+                  updateFeatureData(data => ({
+                    ...data,
+                    properties: (data.properties ?? []).map(property =>
+                      property.propertyId !== propertyId
+                        ? property
+                        : {
+                            ...property,
+                            i18n: {
+                              ...property.i18n,
+                              [locale]: {
+                                ...property.i18n?.[locale],
+                                autoTranslated: {
+                                  ...property.i18n?.[locale]?.autoTranslated,
+                                  value: automatic,
+                                },
+                                ...(acceptedValue === undefined
+                                  ? {}
+                                  : {
+                                      value: acceptedValue,
+                                      valueGen: false,
+                                      translationProvenance: {
+                                        ...property.i18n?.[locale]
+                                          ?.translationProvenance,
+                                        value: {
+                                          ...automatic,
+                                          acceptedValue,
+                                          acceptedBy: 'pending',
+                                          acceptedAt: new Date().toISOString(),
+                                        },
+                                      },
+                                    }),
+                              },
+                            },
+                          },
+                    ),
+                  }))
+                }}
                 {nonTranslatableItems}
                 {translatableSpecifierItems}
                 {isEditing}

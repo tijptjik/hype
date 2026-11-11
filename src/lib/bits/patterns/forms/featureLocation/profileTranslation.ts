@@ -1,3 +1,4 @@
+import type { AutomaticTranslation } from '#lib/i18n/automatic.js'
 // SHARED FORM TEXT
 import { hasMeaningfulText as hasProfileText } from '../formI18nSection/text'
 export { hasMeaningfulText as hasProfileText } from '../formI18nSection/text'
@@ -7,14 +8,18 @@ import { contentFormKey } from '#lib/i18n/contentRecords.js'
 export type ProfileField = 'title' | 'description'
 export type ProfileValues<Field extends string = ProfileField> = Record<
   string,
-  Partial<Record<Field, string | null>> | undefined
+  | (Partial<Record<Field, string | null>> & {
+      isAutomaticOnly?: boolean
+      autoTranslated?: Record<string, AutomaticTranslation | string> | null
+    } & Partial<Record<`${Field}Gen`, boolean | string>>)
+  | undefined
 >
 export type ProfileTranslationResult = {
   locale: string
   status: 'translated' | 'unsupported' | 'error' | 'stale'
 }
 export type ProfileProviderResult =
-  | { status: 'translated'; text: string }
+  | { status: 'translated'; text: string; automatic?: AutomaticTranslation }
   | { status: 'unsupported' | 'error'; message: string }
 
 export interface ProfileTranslationController<Field extends string = ProfileField> {
@@ -42,7 +47,12 @@ export function createProfileTranslator<Field extends string = ProfileField>(opt
     target: string,
     text: string,
   ) => Promise<ProfileProviderResult>
-  apply: (field: Field, locale: string, text: string) => void
+  apply: (
+    field: Field,
+    locale: string,
+    text: string,
+    automatic?: AutomaticTranslation,
+  ) => void
 }): ProfileTranslationController<Field> {
   let epoch = 0
   const revisions = new Map<string, number>()
@@ -64,7 +74,7 @@ export function createProfileTranslator<Field extends string = ProfileField>(opt
       selected: readonly string[],
     ): Promise<ProfileTranslationResult[]> {
       if (running.has(field) || options.locked(field)) return []
-      const text = read(source, field)
+      const text = publishedProfileText(options.values(), source, field)
       if (!hasProfileText(text)) return []
       const context = options.context()
       const token = epoch
@@ -106,7 +116,7 @@ export function createProfileTranslator<Field extends string = ProfileField>(opt
                   continue
                 }
                 if (result.status === 'translated' && hasProfileText(result.text)) {
-                  options.apply(field, target.locale, result.text)
+                  options.apply(field, target.locale, result.text, result.automatic)
                   results.push({ locale: target.locale, status: 'translated' })
                 } else
                   results.push({
@@ -125,4 +135,20 @@ export function createProfileTranslator<Field extends string = ProfileField>(opt
       }
     },
   }
+}
+
+/** Read authored/accepted text only; generated suggestions cannot become translation sources.
+ * @param values Locale rows. @param locale Content language. @param field Field identity.
+ * @returns Published field text or an empty string.
+ */
+export function publishedProfileText<Field extends string>(
+  values: ProfileValues<Field>,
+  locale: string,
+  field: Field,
+): string {
+  const row = values[contentFormKey(locale)]
+  const generated = row?.[`${field}Gen`]
+  return row?.isAutomaticOnly || generated === true || generated === 'true'
+    ? ''
+    : (row?.[field] ?? '')
 }

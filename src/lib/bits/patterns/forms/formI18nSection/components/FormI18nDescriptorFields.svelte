@@ -59,7 +59,12 @@ let {
   renderValue?: Snippet<[GenAiField, string]>
 } = $props()
 // Dynamic remote-form maps expose an opaque proxy; field configs supply its known keys.
-const controls = $derived(fields as DescriptorFormFields)
+const controls = $derived(
+  fields as DescriptorFormFields & {
+    autoTranslated: Record<string, FormFieldControl>
+    translationProvenance: Record<string, FormFieldControl>
+  },
+)
 // Capture only this field and its provenance; Escape must preserve other concurrent edits.
 let beforeEdit:
   | {
@@ -135,6 +140,16 @@ function cancelEdit(): void {
 
 {#each fieldConfigs as config (config.key)}
   {@const field = controls[config.key]}
+  {@const automatic =
+    form.fields.value().data?.i18n?.[locale]?.autoTranslated?.[config.key]}
+  {@const provenance =
+    form.fields.value().data?.i18n?.[locale]?.translationProvenance?.[config.key]}
+  {#if automatic}
+    <input {...controls.autoTranslated[config.key].as('hidden', automatic)}>
+  {/if}
+  {#if provenance}
+    <input {...controls.translationProvenance[config.key].as('hidden', provenance)}>
+  {/if}
   {#if field}
     {@const genField = controls[`${config.key}Gen`]}
     {@const attrs = {

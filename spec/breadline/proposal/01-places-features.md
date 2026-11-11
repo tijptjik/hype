@@ -3721,3 +3721,18 @@ accepted versions. Migration 0236 preserves current policies and immutable revis
 is applied locally only. The authenticated Organisation-default browser check covers
 save, reload and reset in Chromium and Firefox. Community template adoption and bulk
 regeneration remain separate work; this does not add Layer-level Location policies.
+
+## Authored languages and automatic translations
+
+Content language resolution and explicit translation acceptance follow
+[User language fallbacks](../../../docs/User-Language-Fallbacks.md). Existing i18n rows
+retain automatic candidates separately from authored fields, with source identity,
+provider provenance and independent editor acceptance. Cache-only rows and cache writes
+do not enter editorial revision snapshots. Accepted provenance follows the existing
+Feature and catalog authorization and revision transactions.
+
+The active multilingual languages define missing translations. Saving reviews the
+existing Profile, Policies and Fields tabs in sequence; generation displays editable
+proposals in the existing controls, and only explicit acceptance fills authored values.
+Readers default to published-language fallback. Opted-in readers can use a current
+requested-language automatic value, with a robot control revealing its original.

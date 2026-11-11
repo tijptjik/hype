@@ -7,7 +7,10 @@ export type DescriptorData = {
     Record<
       string,
       Partial<Record<GenAiField, string | null>> &
-        Partial<Record<`${GenAiField}Gen`, FormBooleanValue>>
+        Partial<Record<`${GenAiField}Gen`, FormBooleanValue>> & {
+          autoTranslated?: Record<string, string>
+          translationProvenance?: Record<string, string>
+        }
     >
   >
 }

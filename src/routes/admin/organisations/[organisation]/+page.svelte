@@ -1673,6 +1673,13 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          onReveal={() =>
+            navigateOnAdmin(
+              adminCtx,
+              FirstClassResource.organisation,
+              organisationRef,
+              'core',
+            )}
           bind:expanded={multilingualExpanded}
           form={formCtx.form}
           fields={formCtx.form.fields.data.i18n}
@@ -1852,6 +1859,13 @@ $effect(() => {
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <!-- Empty fields fill the facet; populated fields retain trailing scroll clearance. -->
         <FormFieldsSection
+          onReveal={() =>
+            navigateOnAdmin(
+              adminCtx,
+              FirstClassResource.organisation,
+              organisationRef,
+              'fields',
+            )}
           bind:multilingual={multilingualExpanded}
           class="shrink-0"
           icon={Type}

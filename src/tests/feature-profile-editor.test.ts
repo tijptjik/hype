@@ -66,7 +66,7 @@ it('opens inline fields, cancels with Escape, commits on blur, and retains rich 
   })
   await fireEvent.keyDown(input, { key: 'Escape' })
   expect(state(view.container).values.en.description).toBe(original)
-  expect(state(view.container).values.en.descriptionGen).toBe(true)
+  expect(state(view.container).values.en.descriptionGen).toBe(false)
   await fireEvent.click(display)
   await fireEvent.input(input, {
     target: { value: '<p>Edited <strong>rich</strong></p>' },
@@ -108,7 +108,7 @@ it('locks inherited titles including empty rows and keeps the linked-location ac
   expect(screen.queryByRole('button', { name: 'Go to location' })).toBeNull()
   expect(screen.queryByText('READ ONLY')).toBeNull()
 })
-it('fills all empty selected values from the header including a hidden target, preserving populated values and other fields', async () => {
+it('proposes empty selected values without publishing, then accepts individual fields', async () => {
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Japanese' }))
@@ -121,9 +121,25 @@ it('fills all empty selected values from the header including a hidden target, p
     }),
   )
   await waitFor(() =>
-    expect(state(view.container).values.ja?.descriptionGen).toBe(true),
+    expect(description.querySelectorAll('button').length).toBeGreaterThan(0),
   )
+  await waitFor(() =>
+    expect(
+      within(description).getAllByRole('button', {
+        name: 'Accept translation',
+        hidden: true,
+      }),
+    ).toHaveLength(2),
+  )
+  expect(state(view.container).values.zhHant.description).toBe('')
+  expect(state(view.container).values.ja?.description ?? '').toBe('')
+  for (const button of within(description).getAllByRole('button', {
+    name: 'Accept translation',
+    hidden: true,
+  }))
+    await fireEvent.click(button)
   expect(state(view.container).values.zhHant.description).toContain('zh-Hant:')
+  expect(state(view.container).values.ja.descriptionGen).toBe(false)
   expect(state(view.container).values.zhHans.description).toBe('保留內容')
   expect(state(view.container).values.en.title).toBe('')
   expect(screen.queryByRole('button', { name: 'description ja' })).toBeNull()
@@ -182,8 +198,11 @@ it('protects a user starting an empty target edit during translation', async () 
   await fireEvent.click(screen.getByRole('button', { name: 'description ja' }))
   for (const complete of requests) complete({ status: 'translated', text: 'Machine' })
   await waitFor(() =>
-    expect(state(view.container).values.zhHant.description).toBe('Machine'),
+    expect(screen.getByRole('button', { name: 'Accept translation' })).toBeTruthy(),
   )
+  expect(state(view.container).values.zhHant.description).toBe('')
+  await fireEvent.click(screen.getByRole('button', { name: 'Accept translation' }))
+  expect(state(view.container).values.zhHant.description).toBe('Machine')
   expect(state(view.container).values.ja?.description ?? '').toBe('')
 })
 

@@ -1,10 +1,21 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
+import { untrack, setContext, tick } from 'svelte'
+// TRANSLATION REVIEW
+import {
+  registerTranslationReview,
+  completeTranslationReview,
+  type TranslationReviewSection,
+} from '#lib/forms/translationReview.js'
+import {
+  translationReviewGroupKey,
+  type TranslationReviewGroup,
+  type TranslationReviewGroupMember,
+} from '#lib/forms/translationReviewGroup.js'
 // ICONS
 import Plus from 'virtual:icons/proicons/add'
 // I18N
-import { getLocaleKey } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 // COMPONENTS
 import EditModeReveal from '#lib/bits/custom/form/EditModeReveal.svelte'
@@ -32,6 +43,7 @@ import type {
 } from '#lib/bits/custom/localeControls/localeControls.types.js'
 
 let {
+  onReveal,
   items,
   icon,
   keepHeader = false,
@@ -60,6 +72,63 @@ let {
   class: className = '',
 }: FormFieldsSectionProps = $props()
 
+let reviewAnchor: HTMLSpanElement
+let reviewOpen = $state(false)
+let reviewBusy = $state(false)
+let reviewMembers = $state<TranslationReviewGroupMember[]>([])
+setContext<TranslationReviewGroup>(translationReviewGroupKey, {
+  open: () => reviewSection.open(),
+  register(member) {
+    reviewMembers = [...reviewMembers, member]
+    return () => {
+      reviewMembers = reviewMembers.filter(entry => entry !== member)
+    }
+  },
+})
+const reviewSection: TranslationReviewSection = {
+  fingerprint: () => JSON.stringify(reviewMembers.map(member => member.fingerprint())),
+  missing: () => isEditing && reviewMembers.some(member => member.missing()),
+  open: () => {
+    reviewOpen = true
+    multilingual = true
+    isCollapsedAll = false
+    collapseAllVersion += 1
+    onReveal?.()
+    reviewMembers.forEach(member => {
+      member.open()
+    })
+    void tick().then(() => reviewAnchor?.scrollIntoView?.({ block: 'nearest' }))
+  },
+}
+$effect(() => {
+  const form = reviewAnchor?.closest('form')
+  if (form && isEditing) return registerTranslationReview(form, reviewSection)
+})
+
+/** Generate suggestions for the entire Fields tab without filling authored controls.
+ * @returns Completion of sequential property requests.
+ */
+async function generateReview(): Promise<void> {
+  reviewBusy = true
+  try {
+    for (const member of reviewMembers) if (member.missing()) await member.generate()
+  } finally {
+    reviewBusy = false
+  }
+}
+
+/** Resolve all property suggestions in this tab and move to the next missing tab.
+ * @param accept Explicit accept-all decision. @returns Nothing.
+ */
+async function finishReview(accept: boolean): Promise<void> {
+  await Promise.all(reviewMembers.map(member => member.finish(accept)))
+  await tick()
+  if (accept && reviewMembers.some(member => member.missing())) return
+  reviewOpen = false
+  const form = reviewAnchor?.closest('form')
+  if (form) completeTranslationReview(form, reviewSection)
+}
+
 const rootClass = $derived(
   ['w-full flex flex-col', className].filter(Boolean).join(' '),
 )
@@ -85,7 +154,9 @@ const availableLocales = $derived(
   normalizeContentLocales([
     ...(card?.locales ?? []),
     ...items.flatMap(property => [
-      ...Object.keys(property.i18n ?? {}),
+      ...Object.entries(property.i18n ?? {})
+        .filter(([, row]) => !row.isAutomaticOnly)
+        .map(([locale]) => locale),
       ...(property.values ?? []).flatMap(value => Object.keys(value.i18n ?? {})),
     ]),
   ]),
@@ -237,6 +308,31 @@ $effect(() => {
   }
 })
 </script>
+<span bind:this={reviewAnchor} aria-hidden="true"></span>
+{#if reviewOpen}
+  <div class="mx-6 mb-4 flex flex-wrap items-center gap-3 text-sm" role="status">
+    <span
+      >{m.translation_review_missing({
+        count: reviewMembers.filter(member => member.missing()).length,
+      })}</span
+    >
+    <button type="button" disabled={reviewBusy} onclick={() => void generateReview()}>
+      {m.translation_review_generate()}
+    </button>
+    <button
+      type="button"
+      disabled={reviewBusy ||
+        (reviewMembers.some(member => member.missing()) &&
+          !reviewMembers.some(member => member.pending()))}
+      onclick={() => finishReview(true)}
+    >
+      {m.translation_review_accept_all()}
+    </button>
+    <button type="button" disabled={reviewBusy} onclick={() => finishReview(false)}>
+      {m.translation_review_keep_empty()}
+    </button>
+  </div>
+{/if}
 
 {#if showEmptyState && !keepHeader}
   <FormFieldsSectionPrimitive.Wrapper

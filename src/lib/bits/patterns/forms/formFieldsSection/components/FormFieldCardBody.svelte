@@ -1,6 +1,19 @@
 <script lang="ts">
 // SVELTE
-import { tick } from 'svelte'
+import { tick, getContext, untrack } from 'svelte'
+import {
+  translationReviewGroupKey,
+  type TranslationReviewGroup,
+} from '#lib/forms/translationReviewGroup.js'
+// TRANSLATION REVIEW
+import { translateContentField } from '#lib/api/translation.remote.js'
+import {
+  registerTranslationReview,
+  completeTranslationReview,
+  type TranslationReviewSection,
+} from '#lib/forms/translationReview.js'
+import { automaticTranslationFromRow } from '#lib/i18n/automaticSchema.js'
+import type { AutomaticTranslation } from '#lib/i18n/automatic.js'
 // ANIMATION
 import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
@@ -183,15 +196,22 @@ type FormFieldAccessor = {
 const locales = $derived(
   normalizeContentLocales([
     ...defaultLocales,
-    ...Object.keys(property.i18n ?? {}),
-    ...(property.values ?? []).flatMap(value => Object.keys(value.i18n ?? {})),
+    ...Object.entries(property.i18n ?? {})
+      .filter(([, row]) => !row.isAutomaticOnly)
+      .map(([locale]) => locale),
+    ...(property.values ?? []).flatMap(value =>
+      Object.entries(value.i18n ?? {})
+        .filter(([, row]) => !row.isAutomaticOnly)
+        .map(([locale]) => locale),
+    ),
   ]),
 )
+let reviewOpen = $state(false)
 const shownLocales = $derived(
   displayedLocales(
     {
       selectedLocales: locales,
-      visibleLocales: visibleLocales ?? locales,
+      visibleLocales: reviewOpen ? locales : (visibleLocales ?? locales),
     },
     multilingual,
   ),
@@ -233,7 +253,19 @@ function getTranslationSources(
   compact = false,
 ): Array<{ locale: string; label: string; accessibleLabel: string }> {
   return locales
-    .filter(locale => translationText(origin, locale).trim())
+    .filter(locale => {
+      const row =
+        origin.type === 'value'
+          ? getLocaleEntry(
+              property.values?.find(value => value.id === origin.valueId)?.i18n,
+              locale,
+            )
+          : getLocaleEntry(property.i18n, locale)
+      return (
+        translationText(origin, locale).trim() &&
+        !(row as Record<string, unknown> | undefined)?.[`${origin.type}Gen`]
+      )
+    })
     .map(locale => {
       const record = getContentLocaleRecord(locale, getLocaleKey())
       return {
@@ -263,10 +295,31 @@ async function translateMissing(
   translating = translationKey(origin)
   translatingSource = source
   translationMessage = ''
+  reviewOpen = true
+  reviewGroup?.open()
   try {
+    const text = translationText(origin, source)
     for (const target of locales) {
-      if (source !== target)
-        await onTranslateLocale(property.id, source, target, origin)
+      if (
+        source === target ||
+        translationText(origin, target).trim() ||
+        proposals[`${translationKey(origin)}:${target}`]
+      )
+        continue
+      const result = await translateContentField({ source, target, text })
+      if (
+        result.status !== 'translated' ||
+        translationText(origin, source) !== text ||
+        translationText(origin, target).trim()
+      )
+        continue
+      proposals[`${translationKey(origin)}:${target}`] = {
+        origin,
+        target,
+        automatic: result.automatic,
+        value: result.text,
+        accepted: false,
+      }
     }
   } catch {
     translationMessage = m.address_translate_error()
@@ -274,6 +327,152 @@ async function translateMissing(
     translating = null
     translatingSource = undefined
   }
+}
+
+type Proposal = {
+  origin: PropertyTranslationOrigin
+  target: string
+  automatic: AutomaticTranslation
+  value: string
+  accepted: boolean
+}
+let proposals = $state<Record<string, Proposal>>({})
+let editorRoot: HTMLDivElement
+const origins = $derived<PropertyTranslationOrigin[]>([
+  { type: 'label' },
+  { type: 'placeholder' },
+  ...(property.isTranslatable ? (property.values ?? []) : []).map(value => ({
+    type: 'value' as const,
+    valueId: value.id,
+  })),
+])
+const missingOrigins = $derived(
+  origins.filter(
+    origin => getTranslationSources(origin).length && hasTranslationTargets(origin),
+  ),
+)
+const pendingProposals = $derived(
+  Object.values(proposals).filter(proposal => !proposal.accepted),
+)
+const reviewGroup = getContext<TranslationReviewGroup | undefined>(
+  translationReviewGroupKey,
+)
+const reviewSection: TranslationReviewSection = {
+  fingerprint: () =>
+    JSON.stringify([
+      locales,
+      origins.map(origin => locales.map(locale => translationText(origin, locale))),
+    ]),
+  missing: () => isEditing && missingOrigins.length > 0,
+  open: () => {
+    reviewOpen = true
+    editorRoot?.scrollIntoView?.({ block: 'nearest' })
+  },
+}
+$effect(() => {
+  const form = editorRoot?.closest('form')
+  if (!form || !isEditing) return
+  if (reviewGroup)
+    return untrack(() =>
+      reviewGroup.register({
+        ...reviewSection,
+        generate: generateMissing,
+        finish: finishReview,
+        pending: () => pendingProposals.length > 0,
+      }),
+    )
+  return registerTranslationReview(form, reviewSection)
+})
+
+$effect(() => {
+  if (!reviewOpen) return
+  for (const origin of origins)
+    for (const target of locales) {
+      const row =
+        origin.type === 'value'
+          ? getLocaleEntry(
+              property.values?.find(value => value.id === origin.valueId)?.i18n,
+              target,
+            )
+          : getLocaleEntry(property.i18n, target)
+      const automatic = automaticTranslationFromRow(row, origin.type)
+      const key = `${translationKey(origin)}:${target}`
+      if (
+        automatic &&
+        !proposals[key] &&
+        !translationText(origin, target).trim() &&
+        translationText(origin, automatic.sourceLocale) === automatic.sourceText
+      )
+        proposals[key] = {
+          origin,
+          target,
+          automatic,
+          value: automatic.value,
+          accepted: false,
+        }
+    }
+})
+
+/** Accept only a still-current suggestion into the existing authored controls.
+ * @param proposal Selected suggestion and immutable source snapshot. @returns Nothing.
+ */
+function acceptProposal(proposal: Proposal): void {
+  if (
+    translationText(proposal.origin, proposal.automatic.sourceLocale) !==
+      proposal.automatic.sourceText ||
+    translationText(proposal.origin, proposal.target).trim()
+  )
+    return
+  if (proposal.origin.type === 'value')
+    onUpdateValueI18n(
+      property.id,
+      proposal.origin.valueId,
+      proposal.target,
+      'value',
+      proposal.value,
+    )
+  else {
+    onUpdateI18n(property.id, proposal.target, proposal.origin.type, proposal.value)
+    onUpdateI18n(property.id, proposal.target, `${proposal.origin.type}Gen`, false)
+  }
+  proposal.accepted = true
+}
+
+/** Generate the missing cells in this property using each field's first authored source.
+ * @returns Completion of bounded sequential provider requests.
+ */
+async function generateMissing(): Promise<void> {
+  for (const origin of missingOrigins) {
+    const source = getTranslationSources(origin)[0]?.locale
+    if (source) await translateMissing(source, origin)
+  }
+}
+
+/** Finish this mounted portion of the Fields tab and resume its owning save sequence.
+ * @param accept Whether to accept every current suggestion. @returns Nothing.
+ */
+async function finishReview(accept: boolean): Promise<void> {
+  if (accept) pendingProposals.forEach(acceptProposal)
+  await tick()
+  if (accept && missingOrigins.length) return
+  reviewOpen = false
+  const form = editorRoot?.closest('form')
+  if (form && !reviewGroup) completeTranslationReview(form, reviewSection)
+}
+
+/** Locate metadata controls for either a definition or one of its options.
+ * @param proposal Selected suggestion. @returns Path relative to the property form row.
+ */
+function proposalPath(proposal: Proposal): Array<string | number> {
+  const origin = proposal.origin
+  return origin.type === 'value'
+    ? [
+        'values',
+        property.values?.findIndex(value => value.id === origin.valueId) ?? -1,
+        'i18n',
+        contentFormKey(proposal.target),
+      ]
+    : ['i18n', contentFormKey(proposal.target)]
 }
 
 const propertyPathPrefix = $derived<Array<string | number>>([
@@ -820,7 +1019,63 @@ $effect(() => {
   <PropertySettingPreview {value} />
 {/snippet}
 
-<div class="bits-theme min-w-0 px-6 pt-4 pb-6" data-property-editor>
+<div
+  bind:this={editorRoot}
+  class="bits-theme min-w-0 px-6 pt-4 pb-6"
+  data-property-editor
+>
+  {#each Object.values(
+    proposals,
+  ) as proposal (`${translationKey(proposal.origin)}:${proposal.target}`)}
+    <input
+      {...getFieldAttrsWithValue(
+        [...proposalPath(proposal), 'autoTranslated', proposal.origin.type],
+        'hidden',
+        JSON.stringify(proposal.automatic),
+      )}
+    >
+    {#if proposal.accepted}
+      <input
+        {...getFieldAttrsWithValue(
+          [...proposalPath(proposal), 'translationProvenance', proposal.origin.type],
+          'hidden',
+          JSON.stringify({
+            ...proposal.automatic,
+            acceptedValue: proposal.value,
+            acceptedBy: 'pending',
+            acceptedAt: new Date().toISOString(),
+          }),
+        )}
+      >
+    {/if}
+  {/each}
+  {#if reviewOpen && !reviewGroup}
+    <div class="mb-4 flex flex-wrap items-center gap-3 text-sm" role="status">
+      <span>{m.translation_review_missing({ count: missingOrigins.length })}</span>
+      <button
+        type="button"
+        disabled={translating !== null}
+        onclick={() => void generateMissing()}
+      >
+        {m.translation_review_generate()}
+      </button>
+      <button
+        type="button"
+        disabled={translating !== null ||
+          (missingOrigins.length > 0 && !pendingProposals.length)}
+        onclick={() => finishReview(true)}
+      >
+        {m.translation_review_accept_all()}
+      </button>
+      <button
+        type="button"
+        disabled={translating !== null}
+        onclick={() => finishReview(false)}
+      >
+        {m.translation_review_keep_empty()}
+      </button>
+    </div>
+  {/if}
   <!-- Settings stay together; translated text and its options share the adjacent workspace. -->
   <div class="grid min-w-0 items-start gap-6 lg:grid-cols-3" data-property-columns>
     <section
@@ -1130,6 +1385,7 @@ $effect(() => {
             {@const key = contentFormKey(locale)}
             {@const genKey = field === 'label' ? 'labelGen' : 'placeholderGen'}
             {@const gen = getPropertyGenState(locale, genKey)}
+            {@const proposal = proposals[`${field}:${locale}`]}
             {@const value =
               (getPropertyLocaleFieldAttrs(key, field) as { value?: string }).value ??
               getLocaleEntry(property.i18n, locale)?.[field] ??
@@ -1148,6 +1404,15 @@ $effect(() => {
                     {...getFieldAttrsWithValue(['i18n', key, genKey], 'hidden', gen)}
                   >
                   <FormFieldLocaleText
+                    proposal={proposal && !proposal.accepted
+                      ? proposal.value
+                      : undefined}
+                    onProposal={text => {
+                      if (proposal) proposal.value = text
+                    }}
+                    onAccept={() => {
+                      if (proposal) acceptProposal(proposal)
+                    }}
                     {value}
                     {gen}
                     {locale}
@@ -1324,6 +1589,10 @@ $effect(() => {
                           {/if}
                         </div>
                         {#each optionLocales as locale (locale)}
+                          {@const proposal =
+                            proposals[
+                              `${translationKey({ type: 'value', valueId: value.id })}:${locale}`
+                            ]}
                           {@const showCoreFields = isPrimary(locale)}
                           {@const showLocale = valuesAreTranslatable
                             ? shownLocales.includes(locale)
@@ -1393,50 +1662,72 @@ $effect(() => {
                                   >
                                 {/if}
 
-                                <div class="group/option-value relative min-w-0">
-                                  <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
-                                  <div
-                                    class={`bits-project-field-card__value-editable focus-override pr-9! text-[15px]! leading-[22px]! font-normal! empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
-                                    role="textbox"
-                                    aria-label={`Option ${valueIndex + 1} ${locale}`}
-                                    data-placeholder="Option label"
-                                    aria-readonly={!isEditing}
-                                    contenteditable={isEditing
-                                      ? 'plaintext-only'
-                                      : false}
-                                    tabindex={isEditing ? 0 : -1}
-                                    use:bindValueEditable={{
-                                      valueId: value.id,
-                                      locale,
-                                      text: valueDisplayText,
-                                    }}
-                                    onbeforeinput={preventDropBeforeInput}
-                                    onkeydown={event => {
-                                      onValueTab(event, value.id, locale)
-                                      void onValueEnter(event, locale)
-                                    }}
-                                    oninput={event =>
-                                      onValueInput(event, value.id, locale)}
-                                    ondragover={preventNativeDropOver}
-                                    ondrop={preventNativeDropInsert}
-                                    onfocus={onValueFocus}
-                                    ondblclick={onValueDoubleClick}
-                                    onblur={event =>
-                                      onValueBlur(event, value.id, locale)}
-                                  ></div>
-                                  {#if isEditing && valueDisplayText.length}
-                                    <button
-                                      type="button"
-                                      aria-label={`${m.filters__clear()} Option ${valueIndex + 1} ${locale}`}
-                                      class="text-muted-foreground hover:text-primary focus-visible:outline-primary absolute top-0 right-0 flex size-8 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/option-value:opacity-100 group-hover/option-value:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 [@media(hover:none)]:opacity-100"
-                                      onpointerdown={event => event.preventDefault()}
-                                      onclick={() =>
-                                        void clearOptionValue(value.id, locale)}
-                                    >
-                                      <XIcon class="size-3.5" aria-hidden="true" />
-                                    </button>
-                                  {/if}
-                                </div>
+                                {#if proposal && !proposal.accepted}
+                                  <div class="min-w-0">
+                                    <FormFieldLocaleText
+                                      value={valueDisplayText}
+                                      gen={false}
+                                      {locale}
+                                      label={`Option ${valueIndex + 1} ${locale}`}
+                                      prefix=""
+                                      attrs={{}}
+                                      required={false}
+                                      {isEditing}
+                                      proposal={proposal.value}
+                                      onProposal={text => {
+                                        proposal.value = text
+                                      }}
+                                      onAccept={() => acceptProposal(proposal)}
+                                      onValue={() => {}}
+                                      onGen={() => {}}
+                                    />
+                                  </div>
+                                {:else}
+                                  <div class="group/option-value relative min-w-0">
+                                    <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
+                                    <div
+                                      class={`bits-project-field-card__value-editable focus-override pr-9! text-[15px]! leading-[22px]! font-normal! empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                                      role="textbox"
+                                      aria-label={`Option ${valueIndex + 1} ${locale}`}
+                                      data-placeholder="Option label"
+                                      aria-readonly={!isEditing}
+                                      contenteditable={isEditing
+                                        ? 'plaintext-only'
+                                        : false}
+                                      tabindex={isEditing ? 0 : -1}
+                                      use:bindValueEditable={{
+                                        valueId: value.id,
+                                        locale,
+                                        text: valueDisplayText,
+                                      }}
+                                      onbeforeinput={preventDropBeforeInput}
+                                      onkeydown={event => {
+                                        onValueTab(event, value.id, locale)
+                                        void onValueEnter(event, locale)
+                                      }}
+                                      oninput={event =>
+                                        onValueInput(event, value.id, locale)}
+                                      ondragover={preventNativeDropOver}
+                                      ondrop={preventNativeDropInsert}
+                                      onfocus={onValueFocus}
+                                      ondblclick={onValueDoubleClick}
+                                      onblur={event =>
+                                        onValueBlur(event, value.id, locale)}
+                                    ></div>
+                                    {#if isEditing && valueDisplayText.length}
+                                      <button
+                                        type="button"
+                                        aria-label={`${m.filters__clear()} Option ${valueIndex + 1} ${locale}`}
+                                        class="text-muted-foreground hover:text-primary focus-visible:outline-primary absolute top-0 right-0 flex size-8 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/option-value:opacity-100 group-hover/option-value:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 [@media(hover:none)]:opacity-100"
+                                        onpointerdown={event => event.preventDefault()}
+                                        onclick={() =>
+                                          void clearOptionValue(value.id, locale)}
+                                      >
+                                        <XIcon class="size-3.5" aria-hidden="true" />
+                                      </button>
+                                    {/if}
+                                  </div>
+                                {/if}
                                 {#if getValueIssues(value.id, locale)?.length}
                                   <div class="bits-form__error">
                                     {getValueIssues(value.id, locale)

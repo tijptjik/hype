@@ -17,10 +17,34 @@ import Fixture from './fixtures/components/FieldEditorFixture.svelte'
 // CONTENT LOCALES
 import { contentFormKey, contentMapToStorage } from '#lib/i18n/contentRecords.js'
 
+const { translateField } = vi.hoisted(() => ({
+  translateField: vi.fn(
+    async (input: { source: string; target: string; text: string }) => ({
+      status: 'translated' as const,
+      source: input.source,
+      target: input.target,
+      text: 'Suggested option',
+      automatic: {
+        value: 'Suggested option',
+        sourceLocale: input.source,
+        sourceText: input.text,
+        sourceHash: 'a'.repeat(64),
+        provider: 'test',
+        model: null,
+        generatedAt: '2026-11-12T00:00:00Z',
+      },
+    }),
+  ),
+}))
+vi.mock('#lib/api/translation.remote.js', () => ({
+  translateContentField: translateField,
+}))
+
 const originalAnimate = Element.prototype.animate
 const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts')
 beforeEach(() => {
   vi.useRealTimers()
+  translateField.mockClear()
   // JSDOM has no font loading API for the section header's layout observer.
   Object.defineProperty(document, 'fonts', {
     configurable: true,
@@ -286,22 +310,30 @@ it('uses one header language strip to add, hide and reorder languages across eve
   expect(submitted(view.container).i18n.zhHans.label).toBe('宗教')
 })
 
-it('places translation controls in the option header and scopes requests to that option', async () => {
-  const translate = vi.fn(async () => true)
-  const view = render(Fixture, { translate })
+it('proposes only the selected missing option and requires explicit acceptance', async () => {
+  const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Clear Option 1 zh-Hant' }))
   const option = view.container.querySelector('[data-dnd-item]') as HTMLElement
   const header = option.querySelector('[data-option-header]') as HTMLElement
   await fireEvent.click(
     within(header).getByRole('button', { name: 'Translate empty values from English' }),
   )
-  await waitFor(() => expect(translate).toHaveBeenCalledTimes(2))
-  expect(translate.mock.calls).toEqual([
-    ['religion', 'en', 'zh-Hant', { type: 'value', valueId: 'option-0' }],
-    ['religion', 'en', 'zh-Hans', { type: 'value', valueId: 'option-0' }],
+  await waitFor(() => expect(translateField).toHaveBeenCalledTimes(2))
+  expect(translateField.mock.calls.map(([input]) => input)).toEqual([
+    { source: 'en', target: 'zh-Hant', text: 'Christian' },
+    { source: 'en', target: 'zh-Hans', text: 'Christian' },
   ])
-  expect(screen.getAllByRole('heading', { name: 'Options' })).toHaveLength(1)
+  expect(submitted(view.container).values[0].i18n.zhHant.value).toBe('')
   expect(submitted(view.container).values[1].i18n.zhHans.value).toBe('')
+  await fireEvent.click(
+    within(option).getAllByRole('button', { name: 'Accept translation' })[0],
+  )
+  expect(submitted(view.container).values[0].i18n.zhHant.value).toBe('Suggested option')
+  expect(submitted(view.container).values[0].i18n.zhHant.valueGen).toBe(false)
+  expect(
+    submitted(view.container).values[0].i18n.zhHant.translationProvenance.value,
+  ).toContain('pending')
 })
 
 it('clears one generated option locale without removing the option or changing sibling values', async () => {

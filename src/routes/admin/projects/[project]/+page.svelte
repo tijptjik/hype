@@ -2978,6 +2978,8 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          onReveal={() =>
+            navigateOnAdmin(adminCtx, FirstClassResource.project, projectRef, 'core')}
           form={formCtx.form}
           fields={formCtx.form.fields.data.i18n}
           defaultLocales={locales}
@@ -3223,6 +3225,8 @@ $effect(() => {
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <!-- Empty fields fill the facet; populated fields retain trailing scroll clearance. -->
         <FormFieldsSection
+          onReveal={() =>
+            navigateOnAdmin(adminCtx, FirstClassResource.project, projectRef, 'fields')}
           class="shrink-0"
           icon={Type}
           keepHeader

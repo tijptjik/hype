@@ -14,6 +14,7 @@ import FeatureProfileEditor from '../featureLocation/FeatureProfileEditor.svelte
 import FormI18nDescriptorFields from './components/FormI18nDescriptorFields.svelte'
 import { restoreProfileLocales } from '../featureLocation/profileLocales.js'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import type { AutomaticTranslation } from '#lib/i18n/automatic.js'
 // TYPES
 import type {
   FormDataUpdaterForm,
@@ -40,6 +41,7 @@ let {
   isRequiredInPreflight,
   translate,
   onChange,
+  onReveal,
   stickyToolbar = false,
   horizontalToolbar = false,
   stickyFieldHeaders = false,
@@ -69,6 +71,7 @@ let {
     text: string,
   ) => Promise<ProfileProviderResult>
   onChange: () => void
+  onReveal?: () => void
   stickyToolbar?: boolean
   /** Keep languages in one scrollable row inside a responsive section header. */
   horizontalToolbar?: boolean
@@ -163,7 +166,12 @@ $effect(() => {
  * @param text Translated text supplied by the provider.
  * @returns Nothing; stages the value in the existing remote form and revalidates it.
  */
-function applyTranslation(field: DescriptorField, locale: string, text: string): void {
+function applyTranslation(
+  field: DescriptorField,
+  locale: string,
+  text: string,
+  automatic?: AutomaticTranslation,
+): void {
   const current = form.fields.value()
   if (!current.data) return
   const key = contentFormKey(locale)
@@ -176,7 +184,50 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
         [key]: {
           ...current.data.i18n?.[key],
           [field]: text,
-          [`${field}Gen`]: true,
+          [`${field}Gen`]: false,
+          ...(automatic
+            ? {
+                translationProvenance: {
+                  ...current.data.i18n?.[key]?.translationProvenance,
+                  [field]: JSON.stringify({
+                    ...automatic,
+                    acceptedValue: text,
+                    acceptedBy: 'pending',
+                    acceptedAt: new Date().toISOString(),
+                  }),
+                },
+              }
+            : {}),
+        },
+      },
+    },
+  })
+  onChange()
+}
+/** Stage automatic metadata without filling the published field.
+ * @param field Target field. @param locale Target language. @param automatic Signed provider result.
+ * @returns Nothing; uses the existing form transport.
+ */
+function stageAutomatic(
+  field: DescriptorField,
+  locale: string,
+  automatic: AutomaticTranslation,
+): void {
+  const current = form.fields.value()
+  if (!current.data) return
+  const key = contentFormKey(locale)
+  form.fields.set({
+    ...current,
+    data: {
+      ...current.data,
+      i18n: {
+        ...current.data.i18n,
+        [key]: {
+          ...current.data.i18n?.[key],
+          autoTranslated: {
+            ...current.data.i18n?.[key]?.autoTranslated,
+            [field]: JSON.stringify(automatic),
+          },
         },
       },
     },
@@ -283,6 +334,8 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
     fieldConfigs={configs}
     {translate}
     onTranslated={applyTranslation}
+    onAutomatic={stageAutomatic}
+    {onReveal}
     {afterField}
   >
     {#snippet children(field, locale, onEditStart, prefix, toolbarActions)}

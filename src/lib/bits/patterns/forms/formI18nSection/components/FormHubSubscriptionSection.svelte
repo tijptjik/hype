@@ -1,4 +1,6 @@
 <script lang="ts" generics="T extends DescriptorData">
+import type { AutomaticTranslation } from '#lib/i18n/automatic.js'
+
 // ICONS
 import SubscriptionIcon from 'virtual:icons/proicons/mail'
 // I18N
@@ -109,6 +111,7 @@ function applyTranslation(
   _field: 'subscriptionBenefits',
   locale: string,
   text: string,
+  automatic?: AutomaticTranslation,
 ): void {
   const current = form.fields.value()
   if (!current.data) return
@@ -122,7 +125,20 @@ function applyTranslation(
         [key]: {
           ...current.data.i18n?.[key],
           subscriptionBenefits: text,
-          subscriptionBenefitsGen: true,
+          subscriptionBenefitsGen: false,
+          ...(automatic
+            ? {
+                translationProvenance: {
+                  ...current.data.i18n?.[key]?.translationProvenance,
+                  subscriptionBenefits: JSON.stringify({
+                    ...automatic,
+                    acceptedValue: text,
+                    acceptedBy: 'pending',
+                    acceptedAt: new Date().toISOString(),
+                  }),
+                },
+              }
+            : {}),
         },
       },
     },
@@ -233,6 +249,28 @@ function applyTranslation(
         fieldConfigs={[{ key: 'subscriptionBenefits', label: 'Subscription Benefits' }]}
         {translate}
         onTranslated={applyTranslation}
+        onAutomatic={(_field, locale, automatic) => {
+          const current = form.fields.value()
+          if (!current.data) return
+          const key = contentFormKey(locale)
+          form.fields.set({
+            ...current,
+            data: {
+              ...current.data,
+              i18n: {
+                ...current.data.i18n,
+                [key]: {
+                  ...current.data.i18n?.[key],
+                  autoTranslated: {
+                    ...current.data.i18n?.[key]?.autoTranslated,
+                    subscriptionBenefits: JSON.stringify(automatic),
+                  },
+                },
+              },
+            },
+          })
+          onChange()
+        }}
       >
         {#snippet children(field, locale, onEditStart, prefix)}
           {@const key = contentFormKey(locale)}

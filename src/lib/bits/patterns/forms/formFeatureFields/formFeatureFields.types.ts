@@ -12,7 +12,14 @@ export type FormFeatureFieldsTranslatableItem = NonNullable<
 export type FormFeatureFieldsProps = {
   // Non-translatable field labels follow the compiled interface language.
   localeKey: LocaleKey
-  locales: LocaleKey[]
+  locales: string[]
+  onReveal?: () => void
+  onTranslation?: (
+    propertyId: string,
+    locale: string,
+    automatic: import('#lib/i18n/automatic.js').AutomaticTranslation,
+    acceptedValue?: string,
+  ) => void
   nonTranslatableItems: FeatureFieldSectionItem[]
   translatableSpecifierItems: FormFeatureFieldsTranslatableItem[]
   isEditing?: boolean

@@ -50,7 +50,7 @@ let values = $state<
     title: '',
     description: '<p>A quiet place to meet <strong>neighbours</strong>.</p>',
     titleGen: true,
-    descriptionGen: true,
+    descriptionGen: false,
   },
   zhHant: { title: '', description: '', titleGen: true, descriptionGen: false },
   zhHans: { title: '', description: '保留內容', titleGen: true, descriptionGen: false },
@@ -126,7 +126,7 @@ function fields(locale: string) {
         translate={provider}
         onTranslated={(field, target, text) => {
           const key = contentFormKey(target)
-          values[key] = { ...values[key], [field]: text, [`${field}Gen`]: true }
+          values[key] = { ...values[key], [field]: text, [`${field}Gen`]: false }
         }}
       >
         {#snippet toolbarMessage()}

@@ -1,6 +1,6 @@
 <script lang="ts" generics="Field extends string = ProfileField">
 // SVELTE
-import { onDestroy, type Snippet } from 'svelte'
+import { onDestroy, tick, type Snippet } from 'svelte'
 import type { Attachment } from 'svelte/attachments'
 // ICONS
 import ArrowUpIcon from 'virtual:icons/proicons/arrow-up'
@@ -18,11 +18,21 @@ import {
 import {
   createProfileTranslator,
   hasProfileText,
+  publishedProfileText,
   type ProfileField,
   type ProfileValues,
   type ProfileProviderResult,
   type ProfileTranslationResult,
 } from './profileTranslation'
+// TRANSLATION REVIEW
+import {
+  registerTranslationReview,
+  completeTranslationReview,
+  type TranslationReviewSection,
+} from '#lib/forms/translationReview.js'
+import { AutomaticTranslationSchema } from '#lib/i18n/automaticSchema.js'
+import type { AutomaticTranslation } from '#lib/i18n/automatic.js'
+import FormI18nInlineRow from '../formI18nSection/components/FormI18nInlineRow.svelte'
 // TRANSLATION COMPONENTS
 import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.svelte'
 import FormI18nTranslationStatus from '../formI18nSection/components/FormI18nTranslationStatus.svelte'
@@ -56,6 +66,8 @@ let {
   onEditLocation,
   translate,
   onTranslated,
+  onAutomatic,
+  onReveal,
   children,
   afterField,
   toolbarMessage,
@@ -68,7 +80,7 @@ let {
   loading?: boolean
   retainContent?: boolean
   recordKey?: string
-  fieldConfigs?: ReadonlyArray<{ key: Field; label: string }>
+  fieldConfigs?: ReadonlyArray<{ key: Field; label: string; readonly?: boolean }>
   stackNames?: boolean
   toolbarMessage?: Snippet
   /** Show title provenance and actions for each visible language. */
@@ -91,7 +103,14 @@ let {
     target: string,
     text: string,
   ) => Promise<ProfileProviderResult>
-  onTranslated: (field: Field, locale: string, text: string) => void
+  onTranslated: (
+    field: Field,
+    locale: string,
+    text: string,
+    automatic?: AutomaticTranslation,
+  ) => void
+  onAutomatic?: (field: Field, locale: string, automatic: AutomaticTranslation) => void
+  onReveal?: () => void
   children: Snippet<[Field, string, () => void, string, Snippet]>
   /** Render field-level controls after all of its language rows. */
   afterField?: Snippet<[Field]>
@@ -123,6 +142,7 @@ const fields = $derived(
       : [{ key: 'title', label: m.feature__title() }]) as unknown as Array<{
       key: Field
       label: string
+      readonly?: boolean
     }>),
 )
 // Divide the full workspace into thirds; each field owns its inset padding.
@@ -217,10 +237,121 @@ const translator = createProfileTranslator<Field>({
   context: () => contextKey,
   locked: field =>
     !isEditing ||
+    fields.find(config => config.key === field)?.readonly === true ||
     (field === 'title' && inherited) ||
     (field === 'description' && !allowDescriptions),
   translate: (source, target, text) => translate(source, target, text),
-  apply: (field, locale, text) => onTranslated(field, locale, text),
+  apply: (field, locale, text, automatic) => {
+    proposals = { ...proposals, [`${locale}:${field}`]: { text, automatic } }
+    if (automatic) onAutomatic?.(field, locale, automatic)
+  },
+})
+let proposals = $state<
+  Record<string, { text: string; automatic?: AutomaticTranslation }>
+>({})
+let reviewOpen = $state(false)
+let beforeProposalEdit: { key: string; text: string } | undefined
+let reviewElement = $state<HTMLElement>()
+const missing = $derived(
+  fields
+    .filter(({ key }) => !translatorLocked(key))
+    .flatMap(({ key }) => {
+      const sources = localeState.selectedLocales.filter(locale =>
+        hasProfileText(publishedProfileText(values, locale, key)),
+      )
+      return sources.length
+        ? localeState.selectedLocales
+            .filter(
+              locale => !hasProfileText(publishedProfileText(values, locale, key)),
+            )
+            .map(locale => ({ field: key, locale, source: sources[0] }))
+        : []
+    }),
+)
+/** Respect inherited names and disabled content when detecting missing translations. */
+function translatorLocked(field: Field): boolean {
+  return (
+    !isEditing ||
+    fields.find(config => config.key === field)?.readonly === true ||
+    (field === 'title' && inherited) ||
+    (field === 'description' && !allowDescriptions)
+  )
+}
+const reviewSection: TranslationReviewSection = {
+  fingerprint: () => JSON.stringify([contextKey, localeState.selectedLocales, values]),
+  missing: () => missing.length > 0,
+  open: () => {
+    reviewOpen = true
+    onReveal?.()
+    onLocaleStateChange({
+      ...localeState,
+      expanded: true,
+      visibleLocales: [...localeState.selectedLocales],
+    })
+    void tick().then(() => reviewElement?.scrollIntoView({ block: 'nearest' }))
+  },
+}
+$effect(() => {
+  const form = reviewElement?.closest('form')
+  if (form && isEditing) return registerTranslationReview(form, reviewSection)
+})
+/** Generate the missing fields in this tab without promoting any suggestion. */
+async function proposeMissing(): Promise<void> {
+  for (const { key } of fields) {
+    const target = missing.find(item => item.field === key)
+    if (target) await fill(target.source, key)
+  }
+}
+/** Accept one proposal into the ordinary form; the server records acceptance on save. */
+function acceptProposal(field: Field, locale: string): void {
+  const key = `${locale}:${field}`
+  const proposal = proposals[key]
+  if (!proposal || !hasProfileText(proposal.text) || translatorLocked(field)) return
+  if (
+    proposal.automatic &&
+    values[contentFormKey(proposal.automatic.sourceLocale)]?.[field] !==
+      proposal.automatic.sourceText
+  )
+    return
+  if (hasProfileText(publishedProfileText(values, locale, field))) return
+  onTranslated(field, locale, proposal.text, proposal.automatic)
+  const next = { ...proposals }
+  delete next[key]
+  proposals = next
+}
+/** Finish this tab after an explicit acceptance or decision to leave values undefined. */
+async function finishReview(accept: boolean): Promise<void> {
+  if (accept) for (const item of missing) acceptProposal(item.field, item.locale)
+  await tick()
+  // Failed/unsupported targets remain visible; Accept all never silently skips them.
+  if (accept && missing.length) return
+  reviewOpen = false
+  const form = reviewElement?.closest('form')
+  if (form) completeTranslationReview(form, reviewSection)
+}
+$effect(() => {
+  if (!reviewOpen) return
+  for (const item of missing) {
+    const raw = values[contentFormKey(item.locale)]?.autoTranslated?.[item.field]
+    let decoded: unknown = raw
+    if (typeof raw === 'string') {
+      try {
+        decoded = JSON.parse(raw)
+      } catch {
+        decoded = null
+      }
+    }
+    const parsed = AutomaticTranslationSchema.safeParse(decoded)
+    const automatic = parsed.success ? parsed.data : undefined
+    const key = `${item.locale}:${item.field}`
+    if (
+      automatic &&
+      !proposals[key] &&
+      publishedProfileText(values, automatic.sourceLocale, item.field) ===
+        automatic.sourceText
+    )
+      proposals = { ...proposals, [key]: { text: automatic.value, automatic } }
+  }
 })
 let previous: Record<string, string> = {}
 // Observe external/programmatic edits as well as the explicit row-edit invalidations.
@@ -239,6 +370,8 @@ $effect(() => {
   contextKey
   translator.cancel()
   results = {}
+  proposals = {}
+  reviewOpen = false
 })
 onDestroy(() => translator.cancel())
 async function fill(source: string, field: Field): Promise<void> {
@@ -264,6 +397,7 @@ function autonym(locale: string): string {
 </script>
 
 <section
+  bind:this={reviewElement}
   class="[&_.bits-form\_\_control-wrap]:bg-panel! px-6 pb-6 {policyColumns
     ? '@container/profile-editor'
     : ''}"
@@ -296,6 +430,41 @@ function autonym(locale: string): string {
       </div>
     </div>
   {/if}
+  {#if reviewOpen}
+    <div
+      class="border-border mb-4 flex flex-wrap items-center gap-3 rounded-md border p-3"
+      role="status"
+    >
+      <span class="text-sm"
+        >{m.translation_review_missing({ count: missing.length })}</span
+      >
+      <button
+        type="button"
+        class="text-primary rounded px-3 py-2 text-sm"
+        disabled={Object.values(busy).some(Boolean)}
+        onclick={() => void proposeMissing()}
+      >
+        {m.translation_review_generate()}
+      </button>
+      <button
+        type="button"
+        class="text-primary rounded px-3 py-2 text-sm"
+        disabled={(missing.length > 0 && !Object.keys(proposals).length) ||
+          Object.values(busy).some(Boolean)}
+        onclick={() => void finishReview(true)}
+      >
+        {m.translation_review_accept_all()}
+      </button>
+      <button
+        type="button"
+        class="text-muted-foreground rounded px-3 py-2 text-sm"
+        disabled={Object.values(busy).some(Boolean)}
+        onclick={() => void finishReview(false)}
+      >
+        {m.translation_review_keep_empty()}
+      </button>
+    </div>
+  {/if}
   <div
     class="grid min-w-0 gap-x-6 gap-y-4 {titleDescriptionColumns
       ? 'md:-mx-6 md:gap-x-0 md:[&>section]:px-6'
@@ -312,10 +481,10 @@ function autonym(locale: string): string {
       {@const policyField = field === 'privacyPolicy' || field === 'termsOfService'}
       {@const derived = field === 'title' && inherited}
       {@const sources = localeState.selectedLocales.filter(locale =>
-        hasProfileText(values[contentFormKey(locale)]?.[field]),
+        hasProfileText(publishedProfileText(values, locale, field)),
       )}
       {@const hasTargets = localeState.selectedLocales.some(
-        locale => !hasProfileText(values[contentFormKey(locale)]?.[field]),
+        locale => !hasProfileText(publishedProfileText(values, locale, field)),
       )}
       {#snippet translationActions(compact = true)}
         <FormI18nSourceBar
@@ -446,6 +615,7 @@ function autonym(locale: string): string {
         </div>
         <div>
           {#each localeState.selectedLocales as locale (locale)}
+            {@const proposal = proposals[`${locale}:${field}`]}
             {@const showLocaleHeader =
               stickyHeader && (showPrimaryLocaleHeader || locale !== shown[0])}
             {@const gutter = showLocaleHeader && localeHeaderPlacement === 'gutter'}
@@ -535,13 +705,80 @@ function autonym(locale: string): string {
                   aria-hidden={showSkeleton}
                   inert={loading}
                 >
-                  {@render children(
-                    field,
-                    locale,
-                    () => translator.touch(locale, field),
-                    stickyHeader || locale === shown[0] ? '' : shortLocaleLabel(locale),
-                    editorTranslationActions,
-                  )}
+                  {#if proposal &&
+                    !hasProfileText(publishedProfileText(values, locale, field))}
+                    <FormI18nInlineRow
+                      value={proposal.text}
+                      label={`${label} · ${name(locale)} · AI suggestion`}
+                      prefix={stickyHeader || locale === shown[0]
+                        ? ''
+                        : shortLocaleLabel(locale)}
+                      multiline={field === 'description' ||
+                        field === 'privacyPolicy' ||
+                        field === 'termsOfService'}
+                      editable={isEditing}
+                      showVerification={false}
+                      renderHtml={false}
+                      attrs={{
+                        oninput: (event: Event) => {
+                          proposals = {
+                            ...proposals,
+                            [`${locale}:${field}`]: {
+                              ...proposal,
+                              text: (event.currentTarget as HTMLInputElement).value,
+                            },
+                          }
+                        },
+                      }}
+                      issues={undefined}
+                      required={false}
+                      onStart={() => {
+                        beforeProposalEdit = {
+                          key: `${locale}:${field}`,
+                          text: proposal.text,
+                        }
+                        translator.touch(locale, field)
+                      }}
+                      onCancel={() => {
+                        if (beforeProposalEdit?.key === `${locale}:${field}`)
+                          proposals = {
+                            ...proposals,
+                            [`${locale}:${field}`]: {
+                              ...proposal,
+                              text: beforeProposalEdit.text,
+                            },
+                          }
+                      }}
+                      onClear={() => {
+                        const next = { ...proposals }
+                        delete next[`${locale}:${field}`]
+                        proposals = next
+                      }}
+                    />
+                    <button
+                      type="button"
+                      class="text-primary my-1 rounded px-3 py-1 text-xs"
+                      onclick={() => acceptProposal(field, locale)}
+                    >
+                      {m.translation_review_accept()}
+                    </button>
+                  {/if}
+                  <div
+                    hidden={Boolean(
+                      proposal &&
+                        !hasProfileText(publishedProfileText(values, locale, field)),
+                    )}
+                  >
+                    {@render children(
+                      field,
+                      locale,
+                      () => translator.touch(locale, field),
+                      stickyHeader || locale === shown[0]
+                        ? ''
+                        : shortLocaleLabel(locale),
+                      editorTranslationActions,
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -245,20 +245,15 @@ const cardClass = $derived(
       </div>
     {/snippet}
 
-    {#if !collapsed}
-      <div
-        class="bits-project-field-card__body"
-        transition:slide={{ duration: 200, easing: cubicInOut }}
-      >
-        {@render cardBodyContent()}
-      </div>
-    {:else}
-      <div
-        class="bits-project-field-card__body bits-project-field-card__body--hidden"
-        aria-hidden
-      >
-        {@render cardBodyContent()}
-      </div>
-    {/if}
+    <!-- Keep proposal state and registered controls mounted while the card is collapsed. -->
+    <div
+      class="bits-project-field-card__body {collapsed
+        ? 'bits-project-field-card__body--hidden'
+        : ''}"
+      aria-hidden={collapsed}
+      inert={collapsed}
+    >
+      {@render cardBodyContent()}
+    </div>
   {/if}
 </article>

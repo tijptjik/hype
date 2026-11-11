@@ -70,7 +70,7 @@ it('edits and cancels one descriptor without losing rich content or unrelated fl
   expect(snapshot(view.container).data.i18n.en.description).toContain(
     '<strong>better tomorrow</strong>',
   )
-  expect(snapshot(view.container).data.i18n.en.descriptionGen).toBe(true)
+  expect(snapshot(view.container).data.i18n.en.descriptionGen).toBe(false)
 })
 
 it('translates only empty values in the chosen descriptor, including hidden languages', async () => {
@@ -91,8 +91,20 @@ it('translates only empty values in the chosen descriptor, including hidden lang
     }),
   )
   await waitFor(() =>
-    expect(snapshot(view.container).data.i18n.ja.descriptionGen).toBe(true),
+    expect(
+      within(description).getAllByRole('button', {
+        name: 'Accept translation',
+        hidden: true,
+      }).length,
+    ).toBeGreaterThan(0),
   )
+  expect(snapshot(view.container).data.i18n.ja.description ?? '').toBe('')
+  for (const button of within(description).getAllByRole('button', {
+    name: 'Accept translation',
+    hidden: true,
+  }))
+    await fireEvent.click(button)
+  expect(snapshot(view.container).data.i18n.ja.descriptionGen).toBe(false)
   expect(provider).toHaveBeenCalledTimes(3)
   expect(snapshot(view.container).data.i18n.zhHant.nameGen).toBe(true)
   expect(snapshot(view.container).data.i18n.en.name).toBe('HKFoodWorks')
@@ -140,8 +152,20 @@ it('shares one locale toolbar with subscription benefits and translates hidden e
     }),
   )
   await waitFor(() =>
-    expect(snapshot(view.container).data.i18n.ja.subscriptionBenefitsGen).toBe(true),
+    expect(
+      within(benefits).getAllByRole('button', {
+        name: 'Accept translation',
+        hidden: true,
+      }).length,
+    ).toBeGreaterThan(0),
   )
+  expect(snapshot(view.container).data.i18n.ja.subscriptionBenefits ?? '').toBe('')
+  for (const button of within(benefits).getAllByRole('button', {
+    name: 'Accept translation',
+    hidden: true,
+  }))
+    await fireEvent.click(button)
+  expect(snapshot(view.container).data.i18n.ja.subscriptionBenefitsGen).toBe(false)
   expect(snapshot(view.container).data.i18n.en.name).toBe('Breadline')
   expect(snapshot(view.container).data.i18n.zhHant.nameGen).toBe(true)
 })
@@ -232,7 +256,7 @@ it('edits policy markdown inline, cancels safely and translates only the chosen 
   expect(snapshot(view.container).data.i18n.en.privacyPolicyGen).toBe(false)
   await fireEvent.keyDown(input, { key: 'Escape' })
   expect(snapshot(view.container).data.i18n.en.privacyPolicy).toBe(original)
-  expect(snapshot(view.container).data.i18n.en.privacyPolicyGen).toBe(true)
+  expect(snapshot(view.container).data.i18n.en.privacyPolicyGen).toBe(false)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
   const privacy = view.container.querySelector(
     '[data-profile-field="privacyPolicy"]',
@@ -243,8 +267,20 @@ it('edits policy markdown inline, cancels safely and translates only the chosen 
     }),
   )
   await waitFor(() =>
-    expect(snapshot(view.container).data.i18n.zhHant.privacyPolicyGen).toBe(true),
+    expect(
+      within(privacy).getAllByRole('button', {
+        name: 'Accept translation',
+        hidden: true,
+      }).length,
+    ).toBeGreaterThan(0),
   )
+  expect(snapshot(view.container).data.i18n.zhHant.privacyPolicy ?? '').toBe('')
+  for (const button of within(privacy).getAllByRole('button', {
+    name: 'Accept translation',
+    hidden: true,
+  }))
+    await fireEvent.click(button)
+  expect(snapshot(view.container).data.i18n.zhHant.privacyPolicyGen).toBe(false)
   expect(snapshot(view.container).data.i18n.en.privacyPolicy).toBe(original)
   expect(snapshot(view.container).data.i18n.zhHant.termsOfService).toBeUndefined()
   expect(snapshot(view.container).data.i18n.zhHant.description).toBe('')
