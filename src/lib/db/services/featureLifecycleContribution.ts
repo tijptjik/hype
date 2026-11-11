@@ -295,7 +295,7 @@ export async function acceptFeatureCreationProposal(
     statements = edit.statements
     acceptanceGuard = sql`(${imageReview.guard}) AND (${edit.guard})`
   } else {
-    const prepared = prepareNewLifecycleFeature(db, {
+    const prepared = await prepareNewLifecycleFeature(db, {
       ...input,
       contributorId: proposal.contributorId,
       featureId: crypto.randomUUID(),

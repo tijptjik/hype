@@ -97,6 +97,7 @@ export const getFeatureDisplayTemplate = guardedQuery(
     if (!current) error(409, 'FEATURE_HISTORY_UNAVAILABLE')
     return {
       organisationId: row.organisationId,
+      projectId: current.state.projectId,
       revisionId: current.revisionId,
       version: current.version,
       reference: current.content.profile.nameTemplate?.rule.registry ?? null,

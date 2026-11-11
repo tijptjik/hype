@@ -13,6 +13,7 @@ import {
   getDisplayTemplates,
   publishDisplayTemplate,
 } from '#lib/api/displayTemplates.remote.js'
+import { getFeatureNameProperties } from '#lib/api/featureIntents.remote.js'
 // COMPONENTS
 import DisplayTemplateEditor from '#lib/bits/patterns/forms/displayTemplate/DisplayTemplateEditor.svelte'
 import { Button } from '#lib/bits/core/index.js'
@@ -46,7 +47,8 @@ let selected = $state<DisplayTemplateRecord | null>(null)
 let draft = $state<DisplayTemplateDefinition | null>(null)
 let locale = $state('en')
 let refresh = $state(0)
-const properties = [
+let fieldProperties = $state<{ path: string; label: string }[]>([])
+const locationProperties = [
   'source.name',
   'location.name',
   'brand.name',
@@ -57,6 +59,10 @@ const properties = [
   'phoneNumber',
   'website',
 ].map(path => ({ path, label: path }))
+const properties = $derived([
+  ...locationProperties,
+  ...(draft?.target === 'feature' ? fieldProperties : []),
+])
 const valid = $derived(
   draft !== null && DisplayTemplateDefinitionSchema.safeParse(draft).success,
 )
@@ -88,6 +94,15 @@ $effect(() => {
         if (!cancelled) {
           featureState = state
           records = state.templates
+          const fields = await getFeatureNameProperties({
+            type: 'project',
+            id: state.projectId,
+          })
+          if (!cancelled)
+            fieldProperties = fields.map(field => ({
+              path: `properties.${field.id}`,
+              label: field.label,
+            }))
         }
       } else {
         const rows = await getDisplayTemplates({ organisationId: owner })

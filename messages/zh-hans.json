@@ -2330,5 +2330,8 @@
   "display_templates_sample": "示例值",
   "display_templates_version": "版本 {version}",
   "display_templates_loading": "正在加载模板",
-  "display_templates_apply": "使用此版本并重新生成"
+  "display_templates_apply": "使用此版本并重新生成",
+  "display_templates_legacy": "原有命名规则",
+  "display_templates_pinned": "已采用模板 · v{version}",
+  "display_templates_new_features": "新地图项目使用此版本；现有项目保留已采用的版本。"
 }

@@ -179,3 +179,24 @@ export const getFeatureNameFieldsProject = guardedQuery(
     return row?.projectId ?? null
   },
 )
+
+/** List central versions available for the authorized naming-policy scope.
+ * @param scope Persisted Hub, Project or Layer owner. @returns Community and owner-local versions.
+ * @remarks Scope administration already controls public naming; private Organisation catalogues never cross ownership.
+ */
+export const getFeatureNamingTemplates = guardedQuery(
+  scopeSchema,
+  async (scope, ctx) => {
+    await authorizeSettings(ctx, scope)
+    const owner =
+      scope.type === 'hub'
+        ? null
+        : await ctx.db.get<{ organisationId: string }>(
+            scope.type === 'project'
+              ? sql`SELECT organisationId FROM project WHERE id=${scope.id}`
+              : sql`SELECT p.organisationId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${scope.id}`,
+          )
+    const { listDisplayTemplates } = await import('#lib/db/services/displayTemplate.js')
+    return listDisplayTemplates(ctx.db, owner?.organisationId ?? null)
+  },
+)

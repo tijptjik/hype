@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { FeatureNameRule } from '#lib/features/locationPolicy.js'
 let {
@@ -33,7 +35,9 @@ const parent = $derived(
   {#if override}
     <div class="flex flex-wrap items-center justify-between gap-2">
       <p class="text-sm">
-        {#if override.conditions.length}
+        {#if override.registry}
+          {m.display_templates_pinned({ version: String(override.registry.version) })}
+        {:else if override.conditions.length}
           Custom rules
           <span class="text-muted-foreground"
             >· {override.conditions.length}

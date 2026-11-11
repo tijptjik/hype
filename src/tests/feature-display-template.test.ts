@@ -176,3 +176,40 @@ describe('accepted Feature template materialization', () => {
     ).toBe('(AROME)')
   })
 })
+
+it('materializes the inherited central template inside new Feature creation', async () => {
+  const f = await fixture()
+  const { prepareNewLifecycleFeature } = await import(
+    '../lib/db/services/featureLifecycleIdentity'
+  )
+  const { executeRevisionBatch } = await import('../lib/db/services/revisionBatch')
+  const current = await readCurrentFeatureRevision(f.db, {
+    featureId: 'f',
+    guard: sql`1`,
+  })
+  if (!current) throw new Error('Missing accepted source')
+  const content = structuredClone(current.content)
+  content.profile.nameTemplate = {
+    rule: { base: 'feature', conditions: [], registry: { id: 'central', version: 1 } },
+  }
+  content.translations.en.title.value = 'New bakery'
+  const created = await prepareNewLifecycleFeature(f.db, {
+    featureId: 'new-template-feature',
+    actorId: 'author',
+    guard: sql`1`,
+    scope: current.state,
+    content,
+  })
+  expect(
+    f.sqlite.prepare("SELECT id FROM feature WHERE id='new-template-feature'").get(),
+  ).toBeUndefined()
+  await executeRevisionBatch(f.db, sql`1`, created.statements)
+  expect(
+    f.sqlite
+      .prepare(
+        "SELECT title,baseName FROM featureI18n WHERE featureId='new-template-feature' AND locale='en'",
+      )
+      .get(),
+  ).toEqual({ title: '[New bakery]', baseName: 'New bakery' })
+  expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+})

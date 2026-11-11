@@ -342,6 +342,10 @@ export async function createFeatureIdentityProposal(
         featureId,
         content: baseline,
         published: false,
+        creationScope: {
+          organisationId: String(first.record.organisationId),
+          projectId: String(first.record.projectId),
+        },
       })
       statements.push(...initial.statements)
       previousRevisionId = initial.revisionId

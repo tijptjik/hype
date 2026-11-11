@@ -3705,3 +3705,11 @@ prepared accepted facts as its transaction. See
 [the implementation boundary](../../../docs/specs/Design-Spec-Location-Change-Policies.md#central-template-implementation)
 for supported paths, validation and pending inherited assignments. Migrations 0234 and
 0235 are prepared only; rollout and deployed verification are deferred by request.
+
+Template follow-up: Hub → Project → Layer naming rules can reference immutable central
+versions, and staff creation, accepted creation contributions and split identities
+materialize generated names atomically. See `feature-display-template.test.ts` and
+`feature-intent-policy.test.ts`. The local registry was activated with only migrations
+0234/0235 after backup/rehearsal, and `scripts/visual-checks/template-registry-check.ts`
+verifies authenticated load/save/reload in Chromium and Firefox. Remote rollout remains
+deferred; Organisation/community defaults and bulk adoption remain pending.

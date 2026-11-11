@@ -1,3 +1,5 @@
+// DISPLAY TEMPLATES
+import { prepareFeatureDisplayTemplate } from './featureDisplayTemplate'
 // DRIZZLE
 import { eq, sql } from 'drizzle-orm'
 // SCHEMA
@@ -40,7 +42,7 @@ import type { FeatureLifecycleState, FeatureEditCommand } from './featureLifecyc
  * @returns New identity/revision and statements for a single acceptance transaction.
  * @remarks Callers must fence source records and authorize all copied references in the enclosing batch.
  */
-export function prepareNewLifecycleFeature(
+export async function prepareNewLifecycleFeature(
   db: Database,
   input: RevisionCommand & {
     featureId: string
@@ -48,7 +50,11 @@ export function prepareNewLifecycleFeature(
     content: FeatureRevisionContent
     scope: Pick<FeatureLifecycleState, 'organisationId' | 'projectId' | 'layerId'>
   },
-): { featureId: string; revisionId: string; statements: BatchItem<'sqlite'>[] } {
+): Promise<{
+  featureId: string
+  revisionId: string
+  statements: BatchItem<'sqlite'>[]
+}> {
   const content = FeatureRevisionContentSchema.parse(input.content)
   // Associations and membership bindings belong to the new identity, not its predecessor.
   if (content.placement.location) {
@@ -120,6 +126,12 @@ export function prepareNewLifecycleFeature(
     gallery: { actorId: input.actorId, attachmentGuard: input.guard },
     identity: { actorId: input.actorId },
   })
+  const displayTemplate = await prepareFeatureDisplayTemplate(db, {
+    featureId: input.featureId,
+    previous: empty,
+    content,
+    creationScope: scope,
+  })
   const change = prepareRevisionChangeSet(db, input)
   const state = {
     ...scope,
@@ -134,6 +146,7 @@ export function prepareNewLifecycleFeature(
       db.insert(feature).values(record as typeof feature.$inferInsert),
       db.insert(lifecycleWriteScope).values({ featureId: input.featureId, token }),
       ...projection.statements,
+      ...displayTemplate,
       prepareRevisionCheck(db, projection.verify),
       change.statement,
       db.insert(acceptedFeatureRevision).values({
@@ -240,7 +253,7 @@ export async function splitLifecycleFeature(
   })
   if (!retired) return null
   const ids: [string, string] = [crypto.randomUUID(), crypto.randomUUID()]
-  const children = [] as ReturnType<typeof prepareNewLifecycleFeature>[]
+  const children = [] as Awaited<ReturnType<typeof prepareNewLifecycleFeature>>[]
   for (const [index, featureId] of ids.entries()) {
     const content = structuredClone(current.content)
     content.translations[input.locale].title = {
@@ -255,7 +268,7 @@ export async function splitLifecycleFeature(
     const errors = await input.validate(current.content, content)
     if (errors.length) throw new Error(errors.join('; '))
     children.push(
-      prepareNewLifecycleFeature(db, {
+      await prepareNewLifecycleFeature(db, {
         ...input,
         featureId,
         content,

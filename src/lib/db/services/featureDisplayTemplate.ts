@@ -31,6 +31,7 @@ export async function prepareFeatureDisplayTemplate(
     previous: FeatureRevisionContent
     content: FeatureRevisionContent
     acceptedLocation?: EffectiveLocationFacts
+    creationScope?: { organisationId: string; projectId: string }
   },
 ): Promise<BatchItem<'sqlite'>[]> {
   const reference = input.content.profile.nameTemplate?.rule.registry
@@ -41,11 +42,18 @@ export async function prepareFeatureDisplayTemplate(
     definition: string
     projectId: string
     organisationId: string
-  }>(sql`
-    SELECT r.definition,f.projectId,f.organisationId FROM feature f
-    JOIN displayTemplate t ON t.id=${reference.id}
-    JOIN displayTemplateRevision r ON r.templateId=t.id AND r.version=${reference.version}
-    WHERE f.id=${input.featureId} AND (t.organisationId IS NULL OR t.organisationId=f.organisationId)`)
+  }>(
+    input.creationScope
+      ? sql`SELECT r.definition,p.id projectId,p.organisationId FROM project p
+      JOIN displayTemplate t ON t.id=${reference.id}
+      JOIN displayTemplateRevision r ON r.templateId=t.id AND r.version=${reference.version}
+      WHERE p.id=${input.creationScope.projectId} AND p.organisationId=${input.creationScope.organisationId}
+        AND (t.organisationId IS NULL OR t.organisationId=p.organisationId)`
+      : sql`SELECT r.definition,f.projectId,f.organisationId FROM feature f
+      JOIN displayTemplate t ON t.id=${reference.id}
+      JOIN displayTemplateRevision r ON r.templateId=t.id AND r.version=${reference.version}
+      WHERE f.id=${input.featureId} AND (t.organisationId IS NULL OR t.organisationId=f.organisationId)`,
+  )
   if (!row) throw new Error('TEMPLATE_UNAVAILABLE_FOR_FEATURE')
   const definition = DisplayTemplateDefinitionSchema.parse(JSON.parse(row.definition))
   const association = input.content.placement.location

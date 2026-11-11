@@ -168,14 +168,15 @@ import {
     synchronize every consumer in the Organisation. Automatic community acceptance by
     any Project also synchronizes its Organisation. Accept releases affected
     customizations; Keep-current stores the retained values explicitly. Sparse local
-    layers and publication, the brand/group catalogue, skip controls, and the central
-    inherited template assignments remain to be integrated. The central registry and
-    locale-specific DSL editor are available in
+    layers and publication, the brand/group catalogue, skip controls, and
+    community/Organisation template defaults remain to be integrated. The central
+    registry and locale-specific DSL editor are available in
     <a href="/admin/templates" class="underline">Display templates</a>. Explicit Feature
-    assignments regenerate on accepted edits and preserve manual names. New-Feature
-    creation and bulk template adoption are not yet integrated. Ordinary Feature
-    Location name/address saves still need default community contribution routing;
-    dedicated community commands are available. These target behaviors should not yet be
-    relied on in production.
+    assignments regenerate on accepted edits and preserve manual names. Hub, Project and
+    Layer defaults inherit central references, and new Features generate their names
+    during creation. Bulk version adoption remains pending. Ordinary Feature Location
+    name/address saves still need default community contribution routing; dedicated
+    community commands are available. These target behaviors should not yet be relied on
+    in production.
   </p>
 </section>

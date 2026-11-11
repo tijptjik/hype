@@ -87,6 +87,10 @@ export async function prepareFeatureCreationRevision(
     guard: sql`(${input.guard}) AND (${featureContentProjectionMatches(input.id, content)})`,
     content,
     published: false,
+    creationScope: {
+      organisationId: input.data.organisationId,
+      projectId: input.data.projectId,
+    },
   })
   // Staff-created records begin as accepted private content, with no review proposal.
   if (input.mode === 'staff')

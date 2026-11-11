@@ -338,6 +338,26 @@ export async function prepareFeatureIntentPolicySave(
         effectiveTypes,
       )
   }
+  // Immutable central versions must belong to the consumer's Organisation or the community.
+  const templateChecks: BatchItem<'sqlite'>[] = []
+  for (const type of effectiveTypes) {
+    const reference = type.nameRule?.registry
+    if (!reference) continue
+    const owner =
+      input.scope.type === 'hub'
+        ? sql`NULL`
+        : input.scope.type === 'project'
+          ? sql`(SELECT organisationId FROM project WHERE id=${input.scope.id})`
+          : sql`(SELECT p.organisationId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${input.scope.id})`
+    const guard = sql`EXISTS(SELECT 1 FROM displayTemplate t JOIN displayTemplateRevision r ON r.templateId=t.id
+      WHERE t.id=${reference.id} AND r.version=${reference.version} AND (t.organisationId IS NULL OR t.organisationId IS ${owner}))`
+    const available = await db.get<{ ok: number }>(sql`SELECT ${guard} ok`)
+    if (!available?.ok)
+      throw new FeatureIntentPolicyError(
+        'The selected template version is unavailable in this scope.',
+      )
+    templateChecks.push(prepareRevisionCheck(db, guard))
+  }
   const values = {
     scopeType: input.scope.type,
     scopeId: input.scope.id,
@@ -350,6 +370,7 @@ export async function prepareFeatureIntentPolicySave(
   // Recheck every inherited revision within the same batch as the parent update.
   return [
     ...dependencyChecks,
+    ...templateChecks,
     ...current.lineage.map(({ scope, version }) =>
       prepareRevisionCheck(
         db,
@@ -385,7 +406,9 @@ function assertNameDependencies(
   }[],
 ): void {
   for (const type of types)
-    for (const condition of type.nameRule?.conditions ?? []) {
+    for (const condition of type.nameRule?.registry
+      ? []
+      : (type.nameRule?.conditions ?? [])) {
       if (
         !properties.some(
           property =>

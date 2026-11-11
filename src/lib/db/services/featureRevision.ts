@@ -120,6 +120,7 @@ export async function prepareFeatureRevisionInitialization(
   input: RevisionCommand & {
     featureId: string
     content: RevisionValue
+    creationScope?: { organisationId: string; projectId: string }
     published: boolean
   },
 ): Promise<{ revisionId: string; guard: SQL; statements: BatchItem<'sqlite'>[] }> {

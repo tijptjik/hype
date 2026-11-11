@@ -122,12 +122,12 @@ transaction. Legacy storage without accepted Feature history retains its compati
 application path.
 
 Remaining integration: sparse identity/local layer migration and internal publication;
-catalogue/import/editor; skip policies and template policy; inherited template
-assignments, creation-path template materialization and bulk version adoption; global
-Branch property inheritance; default community contribution routing for ordinary Feature
-Location name/address saves (the dedicated community commands already exist). Current
-reviews still use Feature facts and position groups. The diagram is a design contract,
-not evidence that these pending paths work.
+catalogue/import/editor; skip policies and template policy; community and Organisation
+template assignments and bulk version adoption; global Branch property inheritance;
+default community contribution routing for ordinary Feature Location name/address saves
+(the dedicated community commands already exist). Current reviews still use Feature
+facts and position groups. The diagram is a design contract, not evidence that these
+pending paths work.
 
 ## Central template implementation
 
@@ -150,15 +150,19 @@ Feature edits and accepted automation capture regenerate `featureDisplayTemplate
 in the same transaction, using accepted Location pins and captured property definitions.
 Community adoption supplies its transaction's prepared accepted facts directly. The
 existing naming view projects this output to `featureI18n.title`; manual overrides win.
-Legacy rules retain their previous SQL behavior. The migrations are prepared, not
-applied.
+Legacy rules retain their previous SQL behavior. Migrations 0234/0235 have been verified
+and applied locally; remote rollout remains deferred.
 
 Validation covers the parser, registry history/ownership fences, accepted Feature
 materialization, manual clears, explicit version adoption and legacy naming regressions.
 The helper editor has headless Chromium and Firefox checks at desktop and mobile widths.
-Inherited system/community/Organisation/Project/Layer assignment, new-Feature creation,
-bulk adoption, brand/group catalogue resolution and fine-grained template policies
-remain pending. The explicit assignment path does not imply these paths are complete.
+Hub, Project and Layer naming settings can select and inherit central references. New
+staff Features, accepted creation contributions and split identities materialize these
+names in their creation transaction. Private template references are checked against the
+consumer Organisation before saving defaults or creating Features. Community and
+Organisation defaults, bulk adoption, brand/group catalogue resolution and fine-grained
+template policies remain pending. The explicit assignment path does not imply these
+paths are complete.
 
 ## Community curation field locks
 
@@ -195,3 +199,12 @@ ID is internal-only: it is excluded from these switches and counts, and communit
 commands reject direct or nested branch ID edits, including those submitted by
 SuperAdmin. Existing evidence is retained; author branch IDs through the Internal
 destination.
+
+### Local registry activation
+
+The initial local template page failed because its database stopped at migration 0233.
+Only 0234 and 0235 were applied after a backup and rehearsal on an isolated copy;
+integrity and foreign-key checks passed. Authenticated Chromium and Firefox checks
+verified loading, saving all three locale expressions, and persistence after reload. The
+local catalogue contains the Establishment name template. Remote migrations and deployed
+verification remain deferred.

@@ -170,7 +170,7 @@ export async function initializeCurrentFeatureRevision(
   db: Database,
   input: RevisionCommand & { featureId: string; content: FeatureRevisionContent },
 ): Promise<string | null> {
-  const prepared = prepareCurrentFeatureInitialization(db, input)
+  const prepared = await prepareCurrentFeatureInitialization(db, input)
   return (await executeRevisionBatch(db, prepared.guard, prepared.statements))
     ? prepared.revisionId
     : null
@@ -180,19 +180,30 @@ export async function initializeCurrentFeatureRevision(
  * @param db Request database. @param input Exact complete creation content and source guard.
  * @returns Guard and unexecuted statements for the enclosing creation transaction.
  */
-export function prepareCurrentFeatureInitialization(
+export async function prepareCurrentFeatureInitialization(
   db: Database,
-  input: RevisionCommand & { featureId: string; content: FeatureRevisionContent },
-): { revisionId: string; guard: SQL; statements: BatchItem<'sqlite'>[] } {
+  input: RevisionCommand & {
+    featureId: string
+    content: FeatureRevisionContent
+    creationScope?: { organisationId: string; projectId: string }
+  },
+): Promise<{ revisionId: string; guard: SQL; statements: BatchItem<'sqlite'>[] }> {
   const content = FeatureRevisionContentSchema.parse(input.content),
     revisionId = crypto.randomUUID(),
     change = prepareRevisionChangeSet(db, input)
+  const displayTemplate = await prepareFeatureDisplayTemplate(db, {
+    featureId: input.featureId,
+    previous: input.content,
+    content,
+    creationScope: input.creationScope,
+  })
   const guard = sql`(${input.guard}) AND EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND currentRevisionId IS NULL AND revisionVersion=0)
     AND (${featureContentProjectionMatches(input.featureId, content)})`
   return {
     revisionId,
     guard,
     statements: [
+      ...displayTemplate,
       change.statement,
       db.insert(acceptedFeatureRevision).values({
         id: revisionId,

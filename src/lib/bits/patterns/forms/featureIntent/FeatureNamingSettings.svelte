@@ -36,6 +36,7 @@ import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 // API
 import { translateContentField } from '#lib/api/translation.remote.js'
 import {
+  getFeatureNamingTemplates,
   getFeatureNameProperties,
   getFeatureNameFieldsProject,
 } from '#lib/api/featureIntents.remote.js'
@@ -68,6 +69,7 @@ let properties = $state<
     examples?: Record<string, string>
   }[]
 >([])
+let templates = $state<import('#lib/templates/registry.js').DisplayTemplateRecord[]>([])
 let failed = $state(false)
 let loading = $state(true)
 let reload = $state(0)
@@ -125,6 +127,13 @@ $effect(() => {
         if (!cancelled) fieldsProjectId = null
       })
   }
+  getFeatureNamingTemplates({ type: scopeType, id: scopeId })
+    .then(rows => {
+      if (!cancelled) templates = rows
+    })
+    .catch(() => {
+      if (!cancelled) templates = []
+    })
   getFeatureNameProperties({ type: scopeType, id: scopeId })
     .then(rows => {
       if (!cancelled) {
@@ -443,355 +452,405 @@ function sampleName(locale: string, source: 'feature' | 'location'): string {
 }
 </script>
 
-<section
-  class="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]"
-  aria-label="Naming rules"
->
-  <div class="grid min-w-0 gap-4">
-    <FeaturePolicyChoice
-      label="Start with the name from"
-      layout="horizontal"
-      value={rule.base}
+<div class="mb-4 grid gap-2">
+  <label class="grid gap-2 text-sm">
+    {m.display_templates_title()}
+    <select
+      class="border-input bg-background min-w-0 rounded-md border p-2"
       {disabled}
-      options={[
-        {
-          value: 'feature',
-          scene: 'object',
-          title: 'Feature base name',
-          description: 'Use the feature’s own name',
-        },
-        {
-          value: 'location',
-          scene: 'place',
-          title: 'Linked location name',
-          description: 'Use the linked place’s name',
-        },
-      ]}
-      onChange={value => onChange({ ...rule, base: value as FeatureNameRule['base'] })}
-    />
-    {#if loading}
-      <span
-        role="status"
-        aria-label="Loading field values"
-        aria-busy="true"
-        class="sr-only"
-      ></span>
-    {:else if failed}
-      <p role="alert">Unable to load naming fields.</p>
-      <Button text="Retry loading fields" style="ghost" onClick={() => reload++} />
-    {:else if !properties.length}
-      <div class="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-        <span>No boolean, toggle, phone or short-text fields</span>
-        <FeatureIntentHelp topic="fields" label="About naming fields" {scopeType} />
-        {#if fieldsProjectId}
-          <a
-            class="text-primary underline underline-offset-2"
-            href={`/admin/projects/${encodeURIComponent(fieldsProjectId)}#fields`}
-            >Edit fields</a
+      value={rule.registry ? `${rule.registry.id}:${rule.registry.version}` : ''}
+      onchange={event => {
+        const chosen = templates.find(
+          item => `${item.id}:${item.version}` === event.currentTarget.value,
+        )
+        const { registry: _registry, ...legacy } = rule
+        onChange(
+          chosen
+            ? { ...legacy, registry: { id: chosen.id, version: chosen.version } }
+            : legacy,
+        )
+      }}
+    >
+      <option value="">{m.display_templates_legacy()}</option>
+      {#if rule.registry &&
+        !templates.some(
+          item =>
+            item.id === rule.registry?.id && item.version === rule.registry?.version,
+        )}
+        <option value={`${rule.registry.id}:${rule.registry.version}`}>
+          {m.display_templates_pinned({ version: String(rule.registry.version) })}
+        </option>
+      {/if}
+      {#each templates as item (item.id)}
+        <option value={`${item.id}:${item.version}`}>
+          {item.name}
+          · v{item.version}
+        </option>
+      {/each}
+    </select>
+  </label>
+</div>
+{#if rule.registry}
+  <p class="text-muted-foreground text-sm">
+    {m.display_templates_new_features()}
+  </p>
+{:else}
+  <section
+    class="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]"
+    aria-label="Naming rules"
+  >
+    <div class="grid min-w-0 gap-4">
+      <FeaturePolicyChoice
+        label="Start with the name from"
+        layout="horizontal"
+        value={rule.base}
+        {disabled}
+        options={[
+          {
+            value: 'feature',
+            scene: 'object',
+            title: 'Feature base name',
+            description: 'Use the feature’s own name',
+          },
+          {
+            value: 'location',
+            scene: 'place',
+            title: 'Linked location name',
+            description: 'Use the linked place’s name',
+          },
+        ]}
+        onChange={value =>
+          onChange({ ...rule, base: value as FeatureNameRule['base'] })}
+      />
+      {#if loading}
+        <span
+          role="status"
+          aria-label="Loading field values"
+          aria-busy="true"
+          class="sr-only"
+        ></span>
+      {:else if failed}
+        <p role="alert">Unable to load naming fields.</p>
+        <Button text="Retry loading fields" style="ghost" onClick={() => reload++} />
+      {:else if !properties.length}
+        <div class="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+          <span>No boolean, toggle, phone or short-text fields</span>
+          <FeatureIntentHelp topic="fields" label="About naming fields" {scopeType} />
+          {#if fieldsProjectId}
+            <a
+              class="text-primary underline underline-offset-2"
+              href={`/admin/projects/${encodeURIComponent(fieldsProjectId)}#fields`}
+              >Edit fields</a
+            >
+          {/if}
+        </div>
+      {/if}
+      <div class="flex min-w-0 items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <h4 class="text-sm font-medium">Conditions</h4>
+          <span class="text-muted-foreground text-xs">{rule.conditions.length}/10</span>
+        </div>
+        {#if !disabled}
+          <button
+            type="button"
+            aria-label="Add condition"
+            class="text-primary hover:bg-primary/5 focus-visible:outline-primary inline-flex shrink-0 items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium focus-visible:outline-2 disabled:opacity-40"
+            disabled={loading ||
+              failed ||
+              !properties.length ||
+              rule.conditions.length >= 10}
+            onclick={addRule}
           >
+            <PlusIcon class="size-4" aria-hidden="true" />
+            Add condition
+          </button>
         {/if}
       </div>
-    {/if}
-    <div class="flex min-w-0 items-center justify-between gap-3">
-      <div class="flex items-center gap-2">
-        <h4 class="text-sm font-medium">Conditions</h4>
-        <span class="text-muted-foreground text-xs">{rule.conditions.length}/10</span>
-      </div>
-      {#if !disabled}
-        <button
-          type="button"
-          aria-label="Add condition"
-          class="text-primary hover:bg-primary/5 focus-visible:outline-primary inline-flex shrink-0 items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium focus-visible:outline-2 disabled:opacity-40"
-          disabled={loading ||
-            failed ||
-            !properties.length ||
-            rule.conditions.length >= 10}
-          onclick={addRule}
-        >
-          <PlusIcon class="size-4" aria-hidden="true" />
-          Add condition
-        </button>
+      {#if !rule.conditions.length}
+        <p class="text-muted-foreground text-xs">No conditions. Use the name as-is.</p>
       {/if}
-    </div>
-    {#if !rule.conditions.length}
-      <p class="text-muted-foreground text-xs">No conditions. Use the name as-is.</p>
-    {/if}
-    <div class="grid min-w-0 gap-3" data-naming-rule-list>
-      {#each rule.conditions as condition, index (ruleKeys[index] ?? index)}
-        {@const key = ruleKeys[index] ?? String(index)}
-        {@const fieldName =
-          properties.find(property => property.id === condition.propertyId)?.label ??
-          'Unavailable field'}
-        <section
-          class="bits-project-field-card min-w-0 before:hidden! after:hidden!"
-          aria-label={`Rule ${index + 1}: ${fieldName}`}
-          data-naming-rule
-          use:draggable={{
-            container: `${dragGroup}-${key}`,
-            containerGroup: dragGroup,
-            dragData: { id: key },
-            handle: '[data-rule-drag-handle]',
-            disabled: disabled || rule.conditions.length < 2,
-            attributes: { draggingClass: 'opacity-50' },
-          }}
-          use:droppable={{
-            container: `${dragGroup}-${key}`,
-            containerGroup: dragGroup,
-            disabled,
-            callbacks: { onDrop: state => dropRule(state, key) },
-            attributes: { dragOverClass: 'ring-2 ring-primary/40' },
-          }}
-        >
-          <header
-            class="bits-project-field-card__header bits-form__i18n-card border-border/40! grid! grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-2 rounded-none! border-0! border-b! px-3! py-2!"
+      <div class="grid min-w-0 gap-3" data-naming-rule-list>
+        {#each rule.conditions as condition, index (ruleKeys[index] ?? index)}
+          {@const key = ruleKeys[index] ?? String(index)}
+          {@const fieldName =
+            properties.find(property => property.id === condition.propertyId)?.label ??
+            'Unavailable field'}
+          <section
+            class="bits-project-field-card min-w-0 before:hidden! after:hidden!"
+            aria-label={`Rule ${index + 1}: ${fieldName}`}
+            data-naming-rule
+            use:draggable={{
+              container: `${dragGroup}-${key}`,
+              containerGroup: dragGroup,
+              dragData: { id: key },
+              handle: '[data-rule-drag-handle]',
+              disabled: disabled || rule.conditions.length < 2,
+              attributes: { draggingClass: 'opacity-50' },
+            }}
+            use:droppable={{
+              container: `${dragGroup}-${key}`,
+              containerGroup: dragGroup,
+              disabled,
+              callbacks: { onDrop: state => dropRule(state, key) },
+              attributes: { dragOverClass: 'ring-2 ring-primary/40' },
+            }}
           >
-            <button
-              type="button"
-              data-rule-drag-handle
-              aria-label={`Reorder ${fieldName}`}
-              data-tooltip="Drag to reorder. Use Alt + Up or Down with the keyboard."
-              disabled={disabled || rule.conditions.length < 2}
-              onkeydown={event => reorderKey(event, index)}
-              class="text-muted-foreground hover:bg-muted/40 focus-visible:outline-primary flex size-8 touch-none items-center justify-center rounded focus-visible:outline-2 active:cursor-grabbing enabled:cursor-grab disabled:opacity-30"
+            <header
+              class="bits-project-field-card__header bits-form__i18n-card border-border/40! grid! grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-2 rounded-none! border-0! border-b! px-3! py-2!"
             >
-              <GripIcon class="size-4" />
-            </button>
-            <SelectField
-              label="Property"
-              value={condition.propertyId}
-              isEditing={!disabled}
-              class={String.raw`min-w-0 [&_.bits-form\_\_label]:hidden`}
-              {...typeSelectAppearance}
-              contentClass={String.raw`${typeSelectAppearance.contentClass} [&_.bits-form\_\_select-viewport]:bg-transparent!`}
-              triggerAttrs={{ 'aria-label': 'Rule property' }}
-              items={properties.map(property => ({
-                value: property.id,
-                label: property.label,
-              }))}
-              onValueChange={value =>
-                onChange({
-                  ...rule,
-                  conditions: rule.conditions.map((item, i) =>
-                    i === index
-                      ? {
-                          ...item,
-                          propertyId: value,
-                          test:
-                            properties.find(property => property.id === value)?.test ??
-                            'boolean',
-                        }
-                      : item,
-                  ),
-                })}
-            />
-            <button
-              type="button"
-              aria-label={`Remove ${fieldName} rule`}
-              data-tooltip="Remove rule"
-              {disabled}
-              onclick={() => removeRule(index)}
-              class="text-muted-foreground hover:text-destructive hover:bg-destructive/5 focus-visible:outline-primary flex size-8 items-center justify-center rounded focus-visible:outline-2 disabled:opacity-30"
-            >
-              <TrashIcon class="size-4" />
-            </button>
-          </header>
-          <div class="grid min-w-0 gap-3 p-3">
-            {#if !loading &&
-              !failed &&
-              !properties.some(property => property.id === condition.propertyId)}
-              <p role="alert" class="text-sm">
-                This field is unavailable. Choose another field or remove the rule.
-              </p>
-            {/if}
-            {#each editingLocales as locale, localeIndex}
-              {@const text =
-                Object.entries(condition.locales).find(
-                  ([tag]) => canonicalContentTag(tag) === locale,
-                )?.[1] ?? emptyCase()}
-              <fieldset
-                class={`grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-2 ${localeIndex > 0 ? String.raw`[&_.bits-form\_\_label]:hidden` : ''}`}
-                aria-label={shortLocaleLabel(locale)}
+              <button
+                type="button"
+                data-rule-drag-handle
+                aria-label={`Reorder ${fieldName}`}
+                data-tooltip="Drag to reorder. Use Alt + Up or Down with the keyboard."
+                disabled={disabled || rule.conditions.length < 2}
+                onkeydown={event => reorderKey(event, index)}
+                class="text-muted-foreground hover:bg-muted/40 focus-visible:outline-primary flex size-8 touch-none items-center justify-center rounded focus-visible:outline-2 active:cursor-grabbing enabled:cursor-grab disabled:opacity-30"
               >
-                <div
-                  class="col-start-2 grid min-w-0 gap-2 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+                <GripIcon class="size-4" />
+              </button>
+              <SelectField
+                label="Property"
+                value={condition.propertyId}
+                isEditing={!disabled}
+                class={String.raw`min-w-0 [&_.bits-form\_\_label]:hidden`}
+                {...typeSelectAppearance}
+                contentClass={String.raw`${typeSelectAppearance.contentClass} [&_.bits-form\_\_select-viewport]:bg-transparent!`}
+                triggerAttrs={{ 'aria-label': 'Rule property' }}
+                items={properties.map(property => ({
+                  value: property.id,
+                  label: property.label,
+                }))}
+                onValueChange={value =>
+                  onChange({
+                    ...rule,
+                    conditions: rule.conditions.map((item, i) =>
+                      i === index
+                        ? {
+                            ...item,
+                            propertyId: value,
+                            test:
+                              properties.find(property => property.id === value)
+                                ?.test ?? 'boolean',
+                          }
+                        : item,
+                    ),
+                  })}
+              />
+              <button
+                type="button"
+                aria-label={`Remove ${fieldName} rule`}
+                data-tooltip="Remove rule"
+                {disabled}
+                onclick={() => removeRule(index)}
+                class="text-muted-foreground hover:text-destructive hover:bg-destructive/5 focus-visible:outline-primary flex size-8 items-center justify-center rounded focus-visible:outline-2 disabled:opacity-30"
+              >
+                <TrashIcon class="size-4" />
+              </button>
+            </header>
+            <div class="grid min-w-0 gap-3 p-3">
+              {#if !loading &&
+                !failed &&
+                !properties.some(property => property.id === condition.propertyId)}
+                <p role="alert" class="text-sm">
+                  This field is unavailable. Choose another field or remove the rule.
+                </p>
+              {/if}
+              {#each editingLocales as locale, localeIndex}
+                {@const text =
+                  Object.entries(condition.locales).find(
+                    ([tag]) => canonicalContentTag(tag) === locale,
+                  )?.[1] ?? emptyCase()}
+                <fieldset
+                  class={`grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-2 ${localeIndex > 0 ? String.raw`[&_.bits-form\_\_label]:hidden` : ''}`}
+                  aria-label={shortLocaleLabel(locale)}
                 >
                   <div
-                    class={`relative grid min-w-0 gap-2 ${condition.test === 'hasValue' ? 'grid-cols-2' : 'grid-cols-3'}`}
+                    class="col-start-2 grid min-w-0 gap-2 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
                   >
-                    <span
-                      class="text-muted-foreground absolute right-full bottom-0 mr-2 flex h-[42px] w-8 items-center justify-center font-mono text-xs"
-                      aria-hidden="true"
-                      data-rule-locale-label={locale}
-                      >{shortLocaleLabel(locale)}</span
+                    <div
+                      class={`relative grid min-w-0 gap-2 ${condition.test === 'hasValue' ? 'grid-cols-2' : 'grid-cols-3'}`}
                     >
+                      <span
+                        class="text-muted-foreground absolute right-full bottom-0 mr-2 flex h-[42px] w-8 items-center justify-center font-mono text-xs"
+                        aria-hidden="true"
+                        data-rule-locale-label={locale}
+                        >{shortLocaleLabel(locale)}</span
+                      >
 
-                    {#each condition.test === 'hasValue'
-                      ? ['true', 'false']
-                      : ['true', 'false', 'null'] as state}
-                      {#if condition.test === 'hasValue' && state === 'true'}
-                        <div class="grid min-w-0 content-start gap-2">
-                          <Label text="Has value" />
-                          <p
-                            class="min-w-0 py-2 text-sm break-words whitespace-pre-wrap"
-                            data-property-example={locale}
-                          >
-                            {#if propertyExample(condition.propertyId, locale)}
-                              <span class="text-muted-foreground">e.g.</span>
-                              {propertyExample(condition.propertyId, locale)}
-                            {:else}
-                              <span class="text-muted-foreground"
-                                >No filled-in values yet</span
-                              >
-                            {/if}
-                          </p>
-                        </div>
-                      {:else}
-                        <TextInput
-                          label={caseLabel(condition, state)}
-                          value={text[state as 'true']}
-                          isEditing={!disabled}
-                          {...disabled
-                            ? typeReadOnlyInputAppearance
-                            : typeInputAppearance}
-                          inputAttrs={{
-                            'aria-label': caseLabel(condition, state),
-                            placeholder: '—',
-                            lang: locale,
-                            dir: 'auto',
-                          }}
-                          onValueChange={value => update(index, locale, state, value)}
-                        />
-                      {/if}
-                    {/each}
+                      {#each condition.test === 'hasValue'
+                        ? ['true', 'false']
+                        : ['true', 'false', 'null'] as state}
+                        {#if condition.test === 'hasValue' && state === 'true'}
+                          <div class="grid min-w-0 content-start gap-2">
+                            <Label text="Has value" />
+                            <p
+                              class="min-w-0 py-2 text-sm break-words whitespace-pre-wrap"
+                              data-property-example={locale}
+                            >
+                              {#if propertyExample(condition.propertyId, locale)}
+                                <span class="text-muted-foreground">e.g.</span>
+                                {propertyExample(condition.propertyId, locale)}
+                              {:else}
+                                <span class="text-muted-foreground"
+                                  >No filled-in values yet</span
+                                >
+                              {/if}
+                            </p>
+                          </div>
+                        {:else}
+                          <TextInput
+                            label={caseLabel(condition, state)}
+                            value={text[state as 'true']}
+                            isEditing={!disabled}
+                            {...disabled
+                              ? typeReadOnlyInputAppearance
+                              : typeInputAppearance}
+                            inputAttrs={{
+                              'aria-label': caseLabel(condition, state),
+                              placeholder: '—',
+                              lang: locale,
+                              dir: 'auto',
+                            }}
+                            onValueChange={value => update(index, locale, state, value)}
+                          />
+                        {/if}
+                      {/each}
+                    </div>
+                    <div
+                      class="grid min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-2"
+                    >
+                      <SelectField
+                        label="Placement"
+                        triggerAttrs={{ 'aria-label': 'Placement' }}
+                        value={text.placement}
+                        isEditing={!disabled}
+                        {...typeSelectAppearance}
+                        contentClass={String.raw`${typeSelectAppearance.contentClass} [&_.bits-form\_\_select-viewport]:bg-transparent!`}
+                        items={[
+                          { value: 'suffix', label: 'After name' },
+                          { value: 'prefix', label: 'Before name' },
+                        ]}
+                        onValueChange={value =>
+                          update(index, locale, 'placement', value)}
+                      />
+                      <TextInput
+                        label="Separator"
+                        trimOnBlur={false}
+                        inputAttrs={{ 'aria-label': 'Separator' }}
+                        value={text.separator}
+                        isEditing={!disabled}
+                        {...disabled
+                          ? typeReadOnlyInputAppearance
+                          : typeInputAppearance}
+                        onValueChange={value =>
+                          update(index, locale, 'separator', value)}
+                      />
+                    </div>
                   </div>
-                  <div
-                    class="grid min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-2"
-                  >
-                    <SelectField
-                      label="Placement"
-                      triggerAttrs={{ 'aria-label': 'Placement' }}
-                      value={text.placement}
-                      isEditing={!disabled}
-                      {...typeSelectAppearance}
-                      contentClass={String.raw`${typeSelectAppearance.contentClass} [&_.bits-form\_\_select-viewport]:bg-transparent!`}
-                      items={[
-                        { value: 'suffix', label: 'After name' },
-                        { value: 'prefix', label: 'Before name' },
-                      ]}
-                      onValueChange={value => update(index, locale, 'placement', value)}
-                    />
-                    <TextInput
-                      label="Separator"
-                      trimOnBlur={false}
-                      inputAttrs={{ 'aria-label': 'Separator' }}
-                      value={text.separator}
-                      isEditing={!disabled}
-                      {...disabled ? typeReadOnlyInputAppearance : typeInputAppearance}
-                      onValueChange={value => update(index, locale, 'separator', value)}
-                    />
-                  </div>
-                </div>
-              </fieldset>
-            {/each}
-          </div>
-        </section>
-      {/each}
-    </div>
-    <div data-rule-translation-bar>
-      <FormI18nSourceBar
-        visible={!disabled && editingLocales.length > 1 && rule.conditions.length > 0}
-        sources={translationSources}
-        label={m.profile_translate_from()}
-        busy={Boolean(translating)}
-        busySource={translating}
-        disabled={disabled || Boolean(translating)}
-        hasTargets={hasTranslationTargets}
-        onTranslate={source => void translateEmptyCases(source)}
-      />
-      {#if translationError}
-        <p role="alert" class="text-destructive mt-2 text-xs">{translationError}</p>
+                </fieldset>
+              {/each}
+            </div>
+          </section>
+        {/each}
+      </div>
+      <div data-rule-translation-bar>
+        <FormI18nSourceBar
+          visible={!disabled && editingLocales.length > 1 && rule.conditions.length > 0}
+          sources={translationSources}
+          label={m.profile_translate_from()}
+          busy={Boolean(translating)}
+          busySource={translating}
+          disabled={disabled || Boolean(translating)}
+          hasTargets={hasTranslationTargets}
+          onTranslate={source => void translateEmptyCases(source)}
+        />
+        {#if translationError}
+          <p role="alert" class="text-destructive mt-2 text-xs">{translationError}</p>
+        {/if}
+      </div>
+      {#if rule.conditions.length >= 10}
+        <p class="text-muted-foreground text-xs">Maximum 10 rules.</p>
       {/if}
     </div>
-    {#if rule.conditions.length >= 10}
-      <p class="text-muted-foreground text-xs">Maximum 10 rules.</p>
-    {/if}
-  </div>
-  <fieldset
-    class="border-border/40 bg-muted/20 grid min-w-0 gap-3 rounded-lg border p-4 lg:sticky lg:top-6"
-    aria-label="Complete title example"
-  >
-    <legend class="text-sm font-medium">Preview</legend>
-    <div class="flex min-w-0 flex-wrap gap-2 overflow-x-auto" data-preview-fields>
-      {#each conditionProperties as propertyId}
-        {@const label =
-          properties.find(property => property.id === propertyId)?.label ?? propertyId}
-        {@const presence = rule.conditions.some(
-          condition =>
-            condition.propertyId === propertyId && condition.test === 'hasValue',
-        )}
-        {@const value = exampleValues[propertyId] ?? (presence ? 'false' : 'unset')}
-        {@const stateLabel = presence
-          ? value === 'true'
-            ? 'Has value'
-            : 'Has no value'
-          : value === 'true'
-            ? 'True'
-            : value === 'false'
-              ? 'False'
-              : 'Unset'}
-        <button
-          type="button"
-          class="border-border/60 hover:bg-foreground/5 focus-visible:outline-ring flex min-h-11 min-w-max grow basis-[calc((100%_-_1rem)/3)] items-center gap-2 rounded-md border px-2 py-2 text-left text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-          aria-label={`Example: ${label}: ${stateLabel}`}
-          data-preview-state={value}
-          onclick={() =>
-            (exampleValues[propertyId] = presence
-              ? value === 'true'
-                ? 'false'
-                : 'true'
-              : value === 'unset'
-                ? 'true'
-                : value === 'true'
+    <fieldset
+      class="border-border/40 bg-muted/20 grid min-w-0 gap-3 rounded-lg border p-4 lg:sticky lg:top-6"
+      aria-label="Complete title example"
+    >
+      <legend class="text-sm font-medium">Preview</legend>
+      <div class="flex min-w-0 flex-wrap gap-2 overflow-x-auto" data-preview-fields>
+        {#each conditionProperties as propertyId}
+          {@const label =
+            properties.find(property => property.id === propertyId)?.label ??
+            propertyId}
+          {@const presence = rule.conditions.some(
+            condition =>
+              condition.propertyId === propertyId && condition.test === 'hasValue',
+          )}
+          {@const value = exampleValues[propertyId] ?? (presence ? 'false' : 'unset')}
+          {@const stateLabel = presence
+            ? value === 'true'
+              ? 'Has value'
+              : 'Has no value'
+            : value === 'true'
+              ? 'True'
+              : value === 'false'
+                ? 'False'
+                : 'Unset'}
+          <button
+            type="button"
+            class="border-border/60 hover:bg-foreground/5 focus-visible:outline-ring flex min-h-11 min-w-max grow basis-[calc((100%_-_1rem)/3)] items-center gap-2 rounded-md border px-2 py-2 text-left text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+            aria-label={`Example: ${label}: ${stateLabel}`}
+            data-preview-state={value}
+            onclick={() =>
+              (exampleValues[propertyId] = presence
+                ? value === 'true'
                   ? 'false'
-                  : 'unset')}
-        >
-          {#if value === 'true'}
-            <CheckIcon class="text-success size-4 shrink-0" aria-hidden="true" />
-          {:else if value === 'false'}
-            <XIcon class="text-error size-4 shrink-0" aria-hidden="true" />
-          {:else}
-            <MinusIcon
-              class="text-muted-foreground size-4 shrink-0"
-              aria-hidden="true"
-            />
-          {/if}
-          <span class="whitespace-nowrap">{label}</span>
-        </button>
-      {/each}
-    </div>
-    <!-- Keep row spacing inside the slide so the preview changes height continuously. -->
-    <div class="min-w-0">
-      {#each editingLocales as locale, index (locale)}
-        <p
-          class="min-w-0 text-sm break-words whitespace-pre-wrap"
-          class:pt-3={index > 0}
-          transition:slide={{
-            duration: prefersReducedMotion.current ? 0 : 200,
-            easing: cubicInOut,
-          }}
-          data-title-example={locale}
-          aria-live="polite"
-        >
-          <span class="text-muted-foreground">{shortLocaleLabel(locale)}:</span>
-          {generateFeatureName({
-            rule,
-            locale,
-            locationName: sampleName(locale, 'location'),
-            featureName: sampleName(locale, 'feature'),
-            properties: previewValues(locale),
-          }) || 'Name not yet available'}
-        </p>
-      {/each}
-    </div>
-  </fieldset>
-</section>
+                  : 'true'
+                : value === 'unset'
+                  ? 'true'
+                  : value === 'true'
+                    ? 'false'
+                    : 'unset')}
+          >
+            {#if value === 'true'}
+              <CheckIcon class="text-success size-4 shrink-0" aria-hidden="true" />
+            {:else if value === 'false'}
+              <XIcon class="text-error size-4 shrink-0" aria-hidden="true" />
+            {:else}
+              <MinusIcon
+                class="text-muted-foreground size-4 shrink-0"
+                aria-hidden="true"
+              />
+            {/if}
+            <span class="whitespace-nowrap">{label}</span>
+          </button>
+        {/each}
+      </div>
+      <!-- Keep row spacing inside the slide so the preview changes height continuously. -->
+      <div class="min-w-0">
+        {#each editingLocales as locale, index (locale)}
+          <p
+            class="min-w-0 text-sm break-words whitespace-pre-wrap"
+            class:pt-3={index > 0}
+            transition:slide={{
+              duration: prefersReducedMotion.current ? 0 : 200,
+              easing: cubicInOut,
+            }}
+            data-title-example={locale}
+            aria-live="polite"
+          >
+            <span class="text-muted-foreground">{shortLocaleLabel(locale)}:</span>
+            {generateFeatureName({
+              rule,
+              locale,
+              locationName: sampleName(locale, 'location'),
+              featureName: sampleName(locale, 'feature'),
+              properties: previewValues(locale),
+            }) || 'Name not yet available'}
+          </p>
+        {/each}
+      </div>
+    </fieldset>
+  </section>
+{/if}

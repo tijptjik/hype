@@ -2330,5 +2330,8 @@
   "display_templates_sample": "Sample values",
   "display_templates_version": "Version {version}",
   "display_templates_loading": "Loading templates",
-  "display_templates_apply": "Use this version and regenerate"
+  "display_templates_apply": "Use this version and regenerate",
+  "display_templates_legacy": "Legacy naming rule",
+  "display_templates_pinned": "Accepted template · v{version}",
+  "display_templates_new_features": "New Features use this version. Existing Features keep their accepted version."
 }

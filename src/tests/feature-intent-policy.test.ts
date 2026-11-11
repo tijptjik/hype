@@ -677,3 +677,70 @@ it('accepts short-text presence rules and rejects incompatible field changes', a
       prepareFeatureIntentPolicySave(f.db, { ...input, nameProperties: [field] }),
     ).rejects.toThrow('short-text')
 })
+
+it('inherits central template references through Project and Layer and rejects foreign catalogues', async () => {
+  const f = fixture()
+  f.sqlite.exec(readFileSync('migrations/0234_display_template_registry.sql', 'utf8'))
+  const { saveDisplayTemplate } = await import('../lib/db/services/displayTemplate')
+  const definition = {
+    name: 'Place',
+    code: 'place',
+    target: 'feature' as const,
+    locales: { en: '{{ source.name }}' },
+  }
+  await saveDisplayTemplate(f.db, {
+    id: 'community',
+    organisationId: null,
+    actorId: 'editor',
+    expectedVersion: 0,
+    guard: sql`1`,
+    definition,
+  })
+  const current = await readFeatureIntentPolicy(f.db, { type: 'hub', id: 'hub' })
+  const writes = await prepareFeatureIntentPolicySave(f.db, {
+    scope: { type: 'hub', id: 'hub' },
+    actorId: 'editor',
+    version: current.version,
+    fingerprint: current.fingerprint,
+    definition: null,
+    namingRules: {
+      place: {
+        base: 'location',
+        conditions: [],
+        registry: { id: 'community', version: 1 },
+      },
+    },
+  })
+  if (!writes) throw new Error('Missing template policy writes')
+  await executeRevisionBatch(f.db, sql`1`, writes)
+  const layer = await readFeatureIntentPolicy(f.db, { type: 'layer', id: 'layer' })
+  expect(layer.types.find(type => type.id === 'place')?.nameRule?.registry).toEqual({
+    id: 'community',
+    version: 1,
+  })
+  f.sqlite.exec("INSERT INTO organisation(id) VALUES('other')")
+  await saveDisplayTemplate(f.db, {
+    id: 'private',
+    organisationId: 'other',
+    actorId: 'editor',
+    expectedVersion: 0,
+    guard: sql`1`,
+    definition,
+  })
+  await expect(
+    prepareFeatureIntentPolicySave(f.db, {
+      scope: { type: 'layer', id: 'layer' },
+      actorId: 'editor',
+      version: layer.version,
+      fingerprint: layer.fingerprint,
+      definition: null,
+      namingRules: {
+        place: {
+          base: 'location',
+          conditions: [],
+          registry: { id: 'private', version: 1 },
+        },
+      },
+    }),
+  ).rejects.toThrow('unavailable')
+})
