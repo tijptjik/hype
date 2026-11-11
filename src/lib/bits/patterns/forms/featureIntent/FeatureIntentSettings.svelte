@@ -35,6 +35,7 @@ import FeatureTypeEditor from './FeatureTypeEditor.svelte'
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 // DOMAIN
 import {
+  DEFAULT_FEATURE_TYPES,
   FEATURE_LOCATION_KINDS,
   featureTypeLabel,
   type FeatureType,
@@ -42,7 +43,6 @@ import {
 } from '#lib/features/intents.js'
 // BITS COMPONENTS
 import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
-import FormFieldSkeleton from '#lib/bits/patterns/forms/formSkeleton/components/FormFieldSkeleton.svelte'
 // TYPES
 import type {
   FeatureIntentScope,
@@ -56,6 +56,7 @@ let {
   revision,
   onDraftChange,
   disabled = false,
+  loadingOnly = false,
 }: {
   scopeType: FeatureIntentScope['type']
   scopeId: string
@@ -63,6 +64,8 @@ let {
   revision?: string
   onDraftChange?: (draft: string | undefined) => void
   disabled?: boolean
+  /** Render the same pending surface before the resource form is available, without querying. */
+  loadingOnly?: boolean
 } = $props()
 let policy = $state<FeatureIntentPolicy | null>(null)
 let catalogue = $state<FeatureType[]>([])
@@ -97,6 +100,7 @@ const contentLocales = $derived(
   ),
 )
 $effect(() => {
+  if (loadingOnly) return
   const scope = { type: scopeType, id: scopeId }
   reload
   revision
@@ -317,6 +321,8 @@ function removeType(): void {
 <section
   class="flex min-w-0 flex-col"
   data-feature-type-settings
+  aria-busy={!policy && !loadError}
+  inert={loadingOnly}
   style:--feature-type-toolbar-height={`${toolbarHeight}px`}
 >
   <div
@@ -417,14 +423,30 @@ function removeType(): void {
       <button type="button" onclick={() => (reload += 1)}>Retry</button>
     </div>
   {:else if !policy}
-    <ContentSkeleton label="Loading feature types…"
-      ><FeatureTypeSection title="Feature type" disabled expanded
-        ><div class="grid gap-6 p-6">
-          <FormFieldSkeleton label="Name" />
-          <FormFieldSkeleton label="Description" multiline />
-        </div></FeatureTypeSection
-      ></ContentSkeleton
+    <!-- Both resource loading and policy loading reserve the actual initial editor geometry. -->
+    <ContentSkeleton
+      label="Loading feature types…"
+      class="[&_label]:text-muted-foreground! [&_label_*]:text-muted-foreground! [&_[data-type-editor]_span]:text-muted-foreground! [&_button]:bg-transparent! [&_input]:placeholder:text-transparent! [&_svg]:bg-transparent! [&_svg_*]:fill-transparent!"
     >
+      {#each DEFAULT_FEATURE_TYPES as type, index (type.id)}
+        <FeatureTypeSection
+          title={featureTypeLabel(type, getLocaleKey())}
+          kind={type.kind}
+          enabled={type.enabled !== false}
+          disabled
+          expanded={index === 0}
+        >
+          <FeatureTypeEditor
+            {type}
+            {scopeType}
+            {scopeId}
+            locales={shownLocales}
+            {multilingual}
+            disabled
+          />
+        </FeatureTypeSection>
+      {/each}
+    </ContentSkeleton>
   {:else if inherits}
     <div data-inherited-schema>
       {#each policy.inheritedTypes as type, index (type.id)}
