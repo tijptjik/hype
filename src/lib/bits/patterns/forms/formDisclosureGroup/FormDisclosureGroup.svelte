@@ -2,12 +2,14 @@
 // ICONS
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 // BITS
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { Snippet } from 'svelte'
 
 let {
   title,
+  loading = false,
   count,
   collapsed = false,
   onCollapsedChange,
@@ -15,6 +17,7 @@ let {
   class: className = '',
 }: {
   title: string
+  loading?: boolean
   count?: string
   collapsed?: boolean
   onCollapsedChange: (collapsed: boolean) => void
@@ -41,9 +44,24 @@ const contentId = $props.id()
         )}
         aria-hidden="true"
       />
-      <span class="min-w-0 flex-1 text-sm font-semibold break-words">{title}</span>
+      <span class="relative min-w-0 flex-1 text-sm font-semibold break-words"
+        >{#if loading}
+          <span class="invisible">{title}</span>
+          <Skeleton
+            class="absolute top-1/2 left-0 h-4 w-48 max-w-full -translate-y-1/2"
+          />
+        {:else}
+          {title}
+        {/if}</span
+      >
       {#if count}
-        <span class="text-muted-foreground shrink-0 text-xs font-normal">{count}</span>
+        <span class="text-muted-foreground shrink-0 text-xs font-normal"
+          >{#if loading}
+            <Skeleton class="h-4 w-12" />
+          {:else}
+            {count}
+          {/if}</span
+        >
       {/if}
     </button>
   </h3>

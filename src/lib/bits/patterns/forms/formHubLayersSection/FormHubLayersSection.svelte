@@ -6,6 +6,7 @@ import { SectionHeader, Switch } from '#lib/bits/custom/index.js'
 import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import { Button } from '#lib/bits/core/index.js'
 import EmptyState from '#lib/bits/custom/emptyState/EmptyState.svelte'
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import Avatar from '#lib/bits/core/avatar/Avatar.svelte'
 import FormDisclosureGroup from '../formDisclosureGroup/FormDisclosureGroup.svelte'
 // ICONS
@@ -17,6 +18,7 @@ let {
   title,
   subtitle,
   items,
+  loading = false,
   issues = [],
   hiddenLayerDefaultInputAttrs = [],
   isEditing = true,
@@ -26,7 +28,7 @@ let {
   class: className = '',
 }: FormHubLayersSectionProps = $props()
 
-const isDisabled = $derived(!isEditing || isSubmitting)
+const isDisabled = $derived(loading || !isEditing || isSubmitting)
 const hasIssues = $derived(issues.length > 0)
 
 let collapsedGroupIds = $state<Record<string, boolean>>({})
@@ -41,7 +43,21 @@ type HubLayerGroup = {
 const groupedItems = $derived.by(() => {
   const groupsById = new Map<string, HubLayerGroup>()
 
-  for (const item of items) {
+  // Unknown counts use representative groups; known rows retain their exact geometry.
+  const displayedItems =
+    loading && items.length === 0
+      ? [2, 4, 4].flatMap((count, group) =>
+          Array.from({ length: count }, (_, row) => ({
+            id: `pending-${group}-${row}`,
+            organisationId: `pending-${group}`,
+            organisationName: `Organisation ${group + 1}`,
+            projectNameShort: 'Project',
+            layerName: 'Layer',
+            isDefaultVisible: false,
+          })),
+        )
+      : items
+  for (const item of displayedItems) {
     const existingGroup = groupsById.get(item.organisationId)
     if (existingGroup) {
       existingGroup.items.push(item)
@@ -105,6 +121,9 @@ $effect(() => {
 </script>
 
 <section
+  aria-busy={loading}
+  inert={loading}
+  data-hub-layers
   class={`bits-form__section @container flex min-h-0 flex-1 flex-col ${className}`}
 >
   <SectionHeader
@@ -126,6 +145,7 @@ $effect(() => {
     {#each groupedItems as group (group.id)}
       <FormDisclosureGroup
         title={group.name}
+        {loading}
         count={`${group.items.length} ${m.maps__layers()}`}
         collapsed={collapsedGroupIds[group.id] ?? false}
         onCollapsedChange={collapsed => setGroupCollapsed(group.id, collapsed)}
@@ -135,19 +155,35 @@ $effect(() => {
             <li
               class="border-border/40 grid min-h-16 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 border-b py-3 last:border-b-0"
             >
-              <Avatar
-                src={`/api/mapRenders/layers/${encodeURIComponent(item.id)}/asset`}
-                name={item.layerName}
-                alt={item.layerName}
-                shape="square"
-                class="size-10 rounded-lg"
-              />
+              {#if loading}
+                <Skeleton class="size-10 rounded-lg" />
+              {:else}
+                <Avatar
+                  src={`/api/mapRenders/layers/${encodeURIComponent(item.id)}/asset`}
+                  name={item.layerName}
+                  alt={item.layerName}
+                  shape="square"
+                  class="size-10 rounded-lg"
+                />
+              {/if}
               <div class="min-w-0 flex-1">
-                <p class="text-foreground text-sm font-medium break-words">
-                  {item.layerName}
+                <p class="text-foreground min-h-5 text-sm font-medium break-words">
+                  {#if loading}
+                    <span class="flex h-5 items-center"
+                      ><Skeleton class="h-3 w-36 max-w-full" /></span
+                    >
+                  {:else}
+                    {item.layerName}
+                  {/if}
                 </p>
-                <p class="text-muted-foreground text-xs break-words">
-                  {item.projectNameShort}
+                <p class="text-muted-foreground min-h-4 text-xs break-words">
+                  {#if loading}
+                    <span class="flex h-4 items-center"
+                      ><Skeleton class="h-2.5 w-24 max-w-full" /></span
+                    >
+                  {:else}
+                    {item.projectNameShort}
+                  {/if}
                 </p>
               </div>
               <div

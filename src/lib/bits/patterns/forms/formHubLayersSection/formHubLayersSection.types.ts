@@ -14,6 +14,8 @@ export interface FormHubLayersSectionProps {
   subtitle?: string
   localeKey: LocaleKey
   items: HubLayerSectionItem[]
+  /** Reserve grouped row geometry while the resource is loading. */
+  loading?: boolean
   issues?: string[]
   hiddenLayerDefaultInputAttrs?: Array<Record<string, unknown>>
   isEditing?: boolean
