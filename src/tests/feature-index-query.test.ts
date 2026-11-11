@@ -113,6 +113,102 @@ const input = {
 } as const
 
 describe('authoritative feature index', () => {
+  it('filters Location rows and counts before pagination, without stale Feature-only count caches', async () => {
+    const { sqlite, db, add, statements } = setup()
+    sqlite.exec(`
+      CREATE TABLE featureLocationMembership(featureId TEXT, containerLocationId TEXT);
+      CREATE TABLE featureLocationHistory(featureId TEXT, version INTEGER, locationId TEXT, occupancyRevisionId TEXT, membershipRevisionIds TEXT);
+      CREATE TABLE featureLocation(featureId TEXT, version INTEGER, locationId TEXT);
+      CREATE TABLE locationOccupancy(id TEXT, containerLocationId TEXT);
+      CREATE TABLE locationMembership(id TEXT, parentLocationId TEXT, childLocationId TEXT);
+    `)
+    add('a')
+    add('b')
+    add('c')
+    add('archived', 1)
+    sqlite.exec(`INSERT INTO featureLocationMembership VALUES ('a','place'),('b','place'),('archived','place'),('c','elsewhere');
+      INSERT INTO featureLocationHistory VALUES ('c',1,'place',NULL,'[]'),('a',1,'place',NULL,'[]');
+      INSERT INTO featureLocation VALUES ('a',1,'place');`)
+    const placed = {
+      ...input,
+      location: { id: 'place', view: 'placed' as const },
+      pagination: { limit: 1, offset: 0 },
+    }
+    const first = await queryFeatureIndex(db, placed, scope, hub, 'en')
+    expect(first).toMatchObject({
+      data: [{ id: 'a' }],
+      totalCount: 2,
+      hasMore: true,
+      nextOffset: 1,
+    })
+    const next = await queryFeatureIndex(
+      db,
+      { ...placed, pagination: { limit: 1, offset: 1 } },
+      scope,
+      hub,
+      'en',
+    )
+    expect(next.data).toEqual([{ id: 'b' }])
+    const past = await queryFeatureIndex(
+      db,
+      { ...input, location: { id: 'place', view: 'past' } },
+      scope,
+      hub,
+      'en',
+    )
+    expect(past).toMatchObject({ data: [{ id: 'c' }], totalCount: 1 })
+    sqlite.exec("DELETE FROM featureLocationMembership WHERE featureId='b'")
+    const count = await queryFeatureIndex(
+      db,
+      { ...placed, countOnly: true },
+      scope,
+      hub,
+      'en',
+    )
+    expect(count.totalCount).toBe(1)
+    expect(
+      statements.some(
+        row =>
+          row.sql.includes('featureCountCache') ||
+          row.sql.includes('featureCountRollup'),
+      ),
+    ).toBe(false)
+  })
+
+  it('resolves associated occupants with their persisted Project scope in the standard index', async () => {
+    const { sqlite, db, add } = setup()
+    sqlite.exec(`
+      CREATE TABLE location(id TEXT, matchingType TEXT, state TEXT, ownerOrganisationId TEXT);
+      CREATE VIEW locationCanonical AS SELECT id aliasId, id locationId FROM location;
+      CREATE TABLE locationMembershipHead(id TEXT, relationshipId TEXT, childLocationId TEXT, parentLocationId TEXT, scopeOrganisationId TEXT, assertionState TEXT, membershipState TEXT);
+      CREATE TABLE locationOccupancyHead(id TEXT, relationshipId TEXT, establishmentLocationId TEXT, containerLocationId TEXT, scopeOrganisationId TEXT, assertionState TEXT, occupancyState TEXT);
+      CREATE TABLE featureLocation(featureId TEXT, locationId TEXT);
+      INSERT INTO project(id,organisationId) VALUES('project','org');
+      INSERT INTO location VALUES('building','building','linked',NULL),('shop','establishment','manual','org');
+      INSERT INTO locationOccupancyHead VALUES('occupancy','relationship','shop','building','org','asserted','current');
+      INSERT INTO featureLocation VALUES('a','shop'),('b','elsewhere');
+    `)
+    add('a')
+    add('b')
+    const result = await queryFeatureIndex(
+      db,
+      { ...input, location: { id: 'building', view: 'associated' } },
+      scope,
+      hub,
+      'en',
+    )
+    expect(result).toMatchObject({ data: [{ id: 'a' }], totalCount: 1 })
+    sqlite.exec("UPDATE locationOccupancyHead SET occupancyState='former'")
+    const former = await queryFeatureIndex(
+      db,
+      { ...input, location: { id: 'building', view: 'associated' } },
+      scope,
+      hub,
+      'en',
+    )
+    expect(former).toMatchObject({ data: [], totalCount: 0 })
+  })
+
   it('uses maintained totals, returns a bounded page, and omits all count work on continuation', async () => {
     const { db, add, statements } = setup()
     for (let i = 0; i < 53; i++) add(String(i).padStart(3, '0'), i < 2 ? 1 : 0)

@@ -5,6 +5,8 @@ import {
   getFeatureWithRelations,
   toListResponseShape,
 } from '#lib/api/services/feature.js'
+// LOCATION RELATIONSHIPS
+import { locationFeatureCondition } from './locationFeatures.js'
 // DB
 import { feature, featureI18n } from '#lib/db/schema/index.js'
 import { toOrderByWithLocalizedFields } from '#lib/db/index.js'
@@ -87,6 +89,8 @@ export async function queryFeatureIndex(
     [...authorizedConditions, ...filters],
     hub,
   )
+  if (input.location)
+    conditions.push(locationFeatureCondition(input.location.id, input.location.view))
   if (input.q) conditions.push(featureIndexSearchCondition(input.q, locale))
   // Nearby ranking scans only authorized IDs and geometry; hydrate the bounded page below.
   if (input.nearby) {
@@ -125,23 +129,36 @@ export async function queryFeatureIndex(
     return { ...result, hasMore: false, nextOffset: null }
   }
   const source = sql`${feature}`
+  // Relationship revisions have their own lifecycle; count them directly rather than using Feature-only revision caches.
+  /** Count the current authorized relationship set. @returns Exact total without a stale relationship cache. */
+  const locationCount = async (): Promise<{ totalCount: number }> => {
+    const rows = await retryBusyRead(() =>
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(source)
+        .where(and(...conditions)),
+    )
+    return { totalCount: Number(rows[0]?.count ?? 0) }
+  }
   // Count requests use the identical authorized predicate without reading any row relations.
   if (input.countOnly) {
-    const counts = await getFeatureQueryCounts(
-      db,
-      queryInput,
-      conditions,
-      source,
-      input.q
-        ? null
-        : buildFeatureRollupConditions(
-            db,
-            queryInput,
-            [...authorizedConditions, ...filters],
-            hub,
-          ),
-      false,
-    )
+    const counts = input.location
+      ? await locationCount()
+      : await getFeatureQueryCounts(
+          db,
+          queryInput,
+          conditions,
+          source,
+          input.q
+            ? null
+            : buildFeatureRollupConditions(
+                db,
+                queryInput,
+                [...authorizedConditions, ...filters],
+                hub,
+              ),
+          false,
+        )
     return { data: [], totalCount: counts.totalCount, hasMore: false, nextOffset: null }
   }
   const limit = input.pagination?.limit ?? 50
@@ -177,21 +194,23 @@ export async function queryFeatureIndex(
     ),
     input.includeCount === false
       ? Promise.resolve(null)
-      : getFeatureQueryCounts(
-          db,
-          queryInput,
-          conditions,
-          source,
-          input.q
-            ? null
-            : buildFeatureRollupConditions(
-                db,
-                queryInput,
-                [...authorizedConditions, ...filters],
-                hub,
-              ),
-          false,
-        ),
+      : input.location
+        ? locationCount()
+        : getFeatureQueryCounts(
+            db,
+            queryInput,
+            conditions,
+            source,
+            input.q
+              ? null
+              : buildFeatureRollupConditions(
+                  db,
+                  queryInput,
+                  [...authorizedConditions, ...filters],
+                  hub,
+                ),
+            false,
+          ),
   ])
   const pageIds = candidates.slice(0, limit).map(row => row.id)
   const metadata = {

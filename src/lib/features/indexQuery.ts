@@ -44,6 +44,13 @@ export const FeatureIndexFiltersSchema = z
 
 export const FeatureIndexQuerySchema = ListQueryParamsSchema.extend({
   filters: FeatureIndexFiltersSchema.optional(),
+  location: z
+    .object({
+      id: z.string().min(1).max(200),
+      view: z.enum(['associated', 'placed', 'past']),
+    })
+    .strict()
+    .optional(),
   nearby: z
     .object({
       coordinates: z.tuple([

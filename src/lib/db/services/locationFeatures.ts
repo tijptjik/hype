@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, gt, sql } from 'drizzle-orm'
+import { and, eq, gt, sql, type SQL } from 'drizzle-orm'
 // RELATIONSHIPS
 import { canonicalLocationSQL } from './locationRedirect'
 // SCHEMA
@@ -9,6 +9,17 @@ import { organisation } from '#lib/db/schema/organisation.js'
 // TYPES
 import type { Database, LocaleKey } from '#lib/types.js'
 import type { FeatureAuthTarget } from '#lib/api/services/authz/feature.js'
+
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. Authorized reverse lookup
+// - listLocationLinkedFeatures
+// 2. Shared relationship predicate
+// - locationFeatureCondition
+// ---
 
 export type LocationLinkedFeature = {
   id: string
@@ -68,38 +79,7 @@ export async function listLocationLinkedFeatures(
       .innerJoin(organisation, eq(organisation.id, project.organisationId))
       .where(
         and(
-          input.view === 'placed'
-            ? sql`EXISTS(SELECT 1 FROM featureLocationMembership m WHERE m.featureId=${feature.id} AND m.containerLocationId=${input.locationId})`
-            : input.view === 'past'
-              ? sql`EXISTS(SELECT 1 FROM featureLocationHistory h WHERE h.featureId=${feature.id}
-                AND NOT EXISTS(SELECT 1 FROM featureLocation live WHERE live.featureId=h.featureId AND live.version=h.version)
-                AND (h.locationId=${input.locationId}
-                  OR EXISTS(SELECT 1 FROM locationOccupancy o WHERE o.id=h.occupancyRevisionId AND o.containerLocationId=${input.locationId})
-                  OR EXISTS(SELECT 1 FROM locationMembership m JOIN json_each(h.membershipRevisionIds) j ON j.value=m.id WHERE m.parentLocationId=${input.locationId} OR m.childLocationId=${input.locationId})))`
-              : sql`EXISTS(
-                WITH RECURSIVE physical(id) AS (
-                  SELECT ${input.locationId}
-                  UNION
-                  SELECT ${canonicalLocationSQL(sql`m.childLocationId`)} FROM physical p
-                  JOIN location parent ON parent.id=p.id AND parent.matchingType IN ('building','building_part')
-                  JOIN locationMembershipHead m ON ${canonicalLocationSQL(sql`m.parentLocationId`)}=p.id
-                  JOIN location child ON child.id=${canonicalLocationSQL(sql`m.childLocationId`)} AND child.matchingType='building_part'
-                  WHERE m.assertionState='asserted' AND m.membershipState='current'
-                    AND (child.state!='manual' OR child.ownerOrganisationId=${project.organisationId})
-                    AND (m.scopeOrganisationId=${project.organisationId} OR (m.scopeOrganisationId IS NULL AND NOT EXISTS(
-                      SELECT 1 FROM locationMembershipHead override WHERE override.relationshipId=m.relationshipId AND override.scopeOrganisationId=${project.organisationId})))
-                ), related(id) AS (
-                  SELECT id FROM physical
-                  UNION
-                  SELECT ${canonicalLocationSQL(sql`o.establishmentLocationId`)} FROM locationOccupancyHead o
-                  JOIN physical p ON p.id=${canonicalLocationSQL(sql`o.containerLocationId`)}
-                  JOIN location container ON container.id=p.id AND container.matchingType IN ('building','building_part')
-                  JOIN location tenant ON tenant.id=${canonicalLocationSQL(sql`o.establishmentLocationId`)}
-                  WHERE o.assertionState='asserted' AND o.occupancyState='current'
-                    AND (tenant.state!='manual' OR tenant.ownerOrganisationId=${project.organisationId})
-                    AND (o.scopeOrganisationId=${project.organisationId} OR (o.scopeOrganisationId IS NULL AND NOT EXISTS(
-                      SELECT 1 FROM locationOccupancyHead override WHERE override.relationshipId=o.relationshipId AND override.scopeOrganisationId=${project.organisationId})))
-                ) SELECT 1 FROM featureLocation linked JOIN related r ON r.id=linked.locationId WHERE linked.featureId=${feature.id})`,
+          locationFeatureCondition(input.locationId, input.view),
           after ? gt(feature.id, after) : undefined,
         ),
       )
@@ -119,4 +99,47 @@ export async function listLocationLinkedFeatures(
     after = rows.length === 80 ? rows.at(-1)?.id : undefined
   } while (after)
   return { data: visible, nextCursor: null }
+}
+
+/** Resolve the exact Location relationship predicate shared by both feature lists.
+ * @param locationId Persisted subject Location.
+ * @param view Association, current accepted placement or retained past placement.
+ * @returns A narrowing predicate; callers must independently enforce Location and Feature access.
+ */
+export function locationFeatureCondition(
+  locationId: string,
+  view: 'associated' | 'placed' | 'past' = 'associated',
+): SQL {
+  return view === 'placed'
+    ? sql`EXISTS(SELECT 1 FROM featureLocationMembership m WHERE m.featureId=${feature.id} AND m.containerLocationId=${locationId})`
+    : view === 'past'
+      ? sql`EXISTS(SELECT 1 FROM featureLocationHistory h WHERE h.featureId=${feature.id}
+                AND NOT EXISTS(SELECT 1 FROM featureLocation live WHERE live.featureId=h.featureId AND live.version=h.version)
+                AND (h.locationId=${locationId}
+                  OR EXISTS(SELECT 1 FROM locationOccupancy o WHERE o.id=h.occupancyRevisionId AND o.containerLocationId=${locationId})
+                  OR EXISTS(SELECT 1 FROM locationMembership m JOIN json_each(h.membershipRevisionIds) j ON j.value=m.id WHERE m.parentLocationId=${locationId} OR m.childLocationId=${locationId})))`
+      : sql`EXISTS(
+                WITH RECURSIVE physical(id) AS (
+                  SELECT ${locationId}
+                  UNION
+                  SELECT ${canonicalLocationSQL(sql`m.childLocationId`)} FROM physical p
+                  JOIN location parent ON parent.id=p.id AND parent.matchingType IN ('building','building_part')
+                  JOIN locationMembershipHead m ON ${canonicalLocationSQL(sql`m.parentLocationId`)}=p.id
+                  JOIN location child ON child.id=${canonicalLocationSQL(sql`m.childLocationId`)} AND child.matchingType='building_part'
+                  WHERE m.assertionState='asserted' AND m.membershipState='current'
+                    AND (child.state!='manual' OR child.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=${feature.projectId}))
+                    AND (m.scopeOrganisationId=(SELECT organisationId FROM project WHERE id=${feature.projectId}) OR (m.scopeOrganisationId IS NULL AND NOT EXISTS(
+                      SELECT 1 FROM locationMembershipHead override WHERE override.relationshipId=m.relationshipId AND override.scopeOrganisationId=(SELECT organisationId FROM project WHERE id=${feature.projectId}))))
+                ), related(id) AS (
+                  SELECT id FROM physical
+                  UNION
+                  SELECT ${canonicalLocationSQL(sql`o.establishmentLocationId`)} FROM locationOccupancyHead o
+                  JOIN physical p ON p.id=${canonicalLocationSQL(sql`o.containerLocationId`)}
+                  JOIN location container ON container.id=p.id AND container.matchingType IN ('building','building_part')
+                  JOIN location tenant ON tenant.id=${canonicalLocationSQL(sql`o.establishmentLocationId`)}
+                  WHERE o.assertionState='asserted' AND o.occupancyState='current'
+                    AND (tenant.state!='manual' OR tenant.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=${feature.projectId}))
+                    AND (o.scopeOrganisationId=(SELECT organisationId FROM project WHERE id=${feature.projectId}) OR (o.scopeOrganisationId IS NULL AND NOT EXISTS(
+                      SELECT 1 FROM locationOccupancyHead override WHERE override.relationshipId=o.relationshipId AND override.scopeOrganisationId=(SELECT organisationId FROM project WHERE id=${feature.projectId}))))
+                ) SELECT 1 FROM featureLocation linked JOIN related r ON r.id=linked.locationId WHERE linked.featureId=${feature.id})`
 }

@@ -1,23 +1,27 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
-const { ctx, authorize, query, conditions } = vi.hoisted(() => ({
-  ctx: {
-    db: {},
-    user: { id: 'user', isAnonymous: false },
-    userRoles: [],
-    isAdminRequest: true,
-    event: { locals: { hub: { id: 'hub' } } },
-  },
-  authorize: vi.fn(() => ({ allowed: true, code: undefined as string | undefined })),
-  query: vi.fn(async () => ({
-    data: [],
-    totalCount: 12,
-    hasMore: false,
-    nextOffset: null,
-  })),
-  conditions: vi.fn(() => ({ conditions: ['trusted-scope'] })),
-}))
+const { ctx, authorize, query, conditions, identity, locationAccess } = vi.hoisted(
+  () => ({
+    identity: vi.fn(),
+    locationAccess: vi.fn(),
+    ctx: {
+      db: {},
+      user: { id: 'user', isAnonymous: false },
+      userRoles: [],
+      isAdminRequest: true,
+      event: { locals: { hub: { id: 'hub' } } },
+    },
+    authorize: vi.fn(() => ({ allowed: true, code: undefined as string | undefined })),
+    query: vi.fn(async () => ({
+      data: [],
+      totalCount: 12,
+      hasMore: false,
+      nextOffset: null,
+    })),
+    conditions: vi.fn(() => ({ conditions: ['trusted-scope'] })),
+  }),
+)
 vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (
     schema: { parse: (input: unknown) => unknown },
@@ -39,6 +43,12 @@ vi.mock('#lib/api/services/feature.js', () => ({
   toRequestedListState: (value: unknown) => value,
 }))
 vi.mock('#lib/db/services/featureIndex.js', () => ({ queryFeatureIndex: query }))
+vi.mock('#lib/db/services/locationIdentityReview.js', () => ({
+  probeLocationIdentityScope: identity,
+}))
+vi.mock('#lib/api/services/locationOwnership.js', () => ({
+  requireLocationOrganisationManager: locationAccess,
+}))
 import { getFeatureIndexPage } from '#lib/api/featureIndex.remote.js'
 beforeEach(() => {
   vi.clearAllMocks()
@@ -48,6 +58,28 @@ beforeEach(() => {
 })
 
 describe('filtered feature query authorization', () => {
+  it('requires private Location authority before reading related Features', async () => {
+    identity.mockResolvedValue({ state: 'manual', ownerOrganisationId: 'private-org' })
+    locationAccess.mockRejectedValueOnce({ status: 403 })
+    await expect(
+      getFeatureIndexPage({ location: { id: 'private-place', view: 'associated' } }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(locationAccess).toHaveBeenCalledWith(ctx, 'private-org')
+    expect(query).not.toHaveBeenCalled()
+  })
+  it('keeps relationship selection in the authorized index query', async () => {
+    identity.mockResolvedValue({ state: 'linked' })
+    const location = { id: 'shared-place', view: 'past' as const }
+    await getFeatureIndexPage({ location })
+    expect(query).toHaveBeenCalledWith(
+      ctx.db,
+      expect.objectContaining({ location }),
+      ['trusted-scope'],
+      ctx.event.locals.hub,
+      expect.any(String),
+    )
+  })
+
   it('passes the complete filter contract alongside trusted scope and hub predicates', async () => {
     const input = {
       filters: { isArchived: false, hasImage: true },

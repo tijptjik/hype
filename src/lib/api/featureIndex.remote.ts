@@ -5,6 +5,9 @@ import { guardedQuery } from './server/guarded.js'
 import { authorizeFeatureListForContext } from './services/authz/feature.js'
 import { toAuthMessage } from './services/authz/index.js'
 import { toQueryConditions, toRequestedListState } from './services/feature.js'
+// LOCATION ACCESS
+import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
+import { requireLocationOrganisationManager } from './services/locationOwnership.js'
 // DB
 import { feature } from '#lib/db/schema/index.js'
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
@@ -26,6 +29,15 @@ export const getFeatureIndexPage = guardedQuery(
   async (input, ctx) => {
     const { db, user, userRoles, isAdminRequest, event } = ctx
     if (user.isAnonymous || !isAdminRequest) throw error(403, 'ACCOUNT_REQUIRED')
+    // A Feature list must not reveal private Location relationships through a guessed ID.
+    if (input.location) {
+      const identity = await probeLocationIdentityScope(db, input.location.id)
+      if (!identity) throw error(404, 'LOCATION_NOT_FOUND')
+      if (identity.state === 'manual') {
+        if (!identity.ownerOrganisationId) throw error(403, 'INSUFFICIENT_ROLE')
+        await requireLocationOrganisationManager(ctx, identity.ownerOrganisationId)
+      }
+    }
     const requested = validateQueryParams<FeatureDB>(
       feature,
       input.conditions as Partial<FeatureDB> | undefined,
