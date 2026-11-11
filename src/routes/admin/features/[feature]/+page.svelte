@@ -1550,6 +1550,7 @@ $effect(() => {
     headerCtrl,
     status: {
       ...status,
+      disableSave: setupPending,
       ...inertActionOverrides,
     },
     lastSignature: lastFormActionsSignature,

@@ -1015,7 +1015,8 @@ export function useAdminHeaderModel(
       icon: isSubmitting ? LoaderCircle : Save,
       class: 'bits-pattern-header__form-action-publish',
       // Let submit revalidate the current draft and focus errors, including after a save.
-      disabled: disableEdit || !isTainted || isInFlight,
+      disabled:
+        disableEdit || Boolean(formActions?.disableSave) || !isTainted || isInFlight,
       onClick: handleSave,
     }
   })

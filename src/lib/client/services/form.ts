@@ -77,6 +77,7 @@ type HeaderFormActionStatus = Pick<
   | 'isDeleted'
   | 'canEdit'
   | 'disableEdit'
+  | 'disableSave'
   | 'canPublish'
   | 'showDeleteAction'
   | 'showPublishAction'
@@ -1231,7 +1232,7 @@ function wireHeaderFormActionHandlers({
  * @returns A stable signature suitable for change detection.
  */
 function toHeaderFormActionStatusSignature(status: HeaderFormActionStatus): string {
-  return `${status.dirty}|${status.isSubmitting}|${status.hasIssues}|${status.isPublished}|${status.isDeleted}|${status.canEdit}|${status.disableEdit}|${status.canPublish}|${status.showDeleteAction}|${status.showPublishAction}`
+  return `${status.dirty}|${status.isSubmitting}|${status.hasIssues}|${status.isPublished}|${status.isDeleted}|${status.canEdit}|${status.disableEdit}|${Boolean(status.disableSave)}|${status.canPublish}|${status.showDeleteAction}|${status.showPublishAction}`
 }
 
 /**
@@ -1248,7 +1249,7 @@ export function syncHeaderFormActionStatus({
 }: SyncHeaderFormActionStatusParams): string {
   const signature = toHeaderFormActionStatusSignature(status)
   if (signature === lastSignature) return lastSignature
-  headerCtrl.setFormActions(status)
+  headerCtrl.setFormActions({ ...status, disableSave: Boolean(status.disableSave) })
   return signature
 }
 

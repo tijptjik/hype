@@ -33,20 +33,28 @@ const javascript = ts.transpileModule(`const action = ${callback}`, {
 
 it('allows a dirty draft to retry validation after saving, while retaining busy and permission guards', () => {
   const submit = vi.fn()
-  const create = (dirty: boolean, busy = false, canEdit = true, disableEdit = false) =>
+  const create = (
+    dirty: boolean,
+    busy = false,
+    canEdit = true,
+    disableEdit = false,
+    disableSave = false,
+  ) =>
     new Function(
       'isTainted',
       'isInFlight',
       'canEdit',
       'disableEdit',
       'handleSave',
+      'formActions',
       `
       const isEditing = true, isSubmitting = false, hasIssues = true;
       const m = { forms__save: () => 'Save' }, Save = null, LoaderCircle = null;
       ${javascript}
       return action();
     `,
-    )(dirty, busy, canEdit, disableEdit, submit)
+    )(dirty, busy, canEdit, disableEdit, submit, { disableSave })
+  expect(create(true, false, true, false, true).disabled).toBe(true)
   expect(create(false).disabled).toBe(true)
   const retry = create(true)
   expect(retry.disabled).toBe(false)

@@ -60,6 +60,8 @@ export type HeaderFormActionsState = {
   isPublished: boolean
   canEdit: boolean
   disableEdit: boolean
+  /** Block saving while required setup is incomplete. */
+  disableSave?: boolean
   canPublish: boolean
   publishPrompt?: HeaderPublishPromptConfig | null
   preview?: (() => void) | null
