@@ -153,7 +153,15 @@ const fieldClass = $derived(
       {/if}
     </div>
 
-    <div class={String.raw`min-w-0 [&_.bits-form\_\_label]:hidden!`}>
+    <!-- Align displayed values with dropdown text (border + 4.5 spacing units); keep the grade slider full-width. -->
+    <div
+      class={[
+        String.raw`min-w-0 [&_.bits-form\_\_label]:hidden!`,
+        !isEditing && !isRangeField
+          ? String.raw`pl-[calc(1px+var(--spacing)*4.5)] [&_.bits-form\_\_control-wrap]:border-l-0! [&_.bits-form\_\_control-wrap]:pl-0! [&_.bits-form\_\_control]:pl-0! [&_.bits-form\_\_select-display]:pl-0!`
+          : '',
+      ]}
+    >
       {#if !isEditing && !hasValue && !isToggleField}
         <TextInput
           id={`feature-field-${property.id}`}

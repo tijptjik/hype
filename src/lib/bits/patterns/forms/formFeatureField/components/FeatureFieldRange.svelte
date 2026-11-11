@@ -46,7 +46,16 @@ function handleUnset(): void {
 }
 </script>
 
-<div class={[rangeClass, !isEditing && 'pt-0! pl-0!'].filter(Boolean).join(' ')}>
+<!-- Reserve the same height for both modes; override library pip margins so flex layout cannot collapse the track. -->
+<div
+  class={[
+    rangeClass,
+    'h-12 [&_.rangeSlider]:shrink-0 [&_.rangeSlider]:mt-[0.45rem]! [&_.rangeSlider]:mb-[1.15rem]!',
+    isEditing ? 'pt-2!' : 'pt-0! pl-0!',
+  ]
+    .filter(Boolean)
+    .join(' ')}
+>
   {#if !isEditing}
     <!-- biome-ignore lint/a11y/useSemanticElements: Native meter hides the custom fill-end label; expose equivalent meter semantics here. -->
     <div
@@ -71,7 +80,7 @@ function handleUnset(): void {
   {#if isEditing}
     <button
       type="button"
-      class="bits-feature-field__range-unset"
+      class="bits-feature-field__range-unset top-[1.125rem]!"
       disabled={!hasValue}
       aria-disabled={!hasValue}
       aria-label="Reset range value"
