@@ -132,6 +132,15 @@ export async function prepareSharedFeatureAdoption(
     reason: locationActionReasons[input.action],
     identity: { actorId: input.actorId },
     validate: () => [],
+    // Community evidence may be inserted later in this atomic batch; render from the same accepted facts.
+    templateLocation: content =>
+      resolveFeatureLocation(
+        facts,
+        facts.location,
+        FeatureLocationOverridesSchema.parse(
+          content.placement.location?.acceptedOverrides ?? {},
+        ),
+      ),
     derive: (before, captured) => {
       const next = structuredClone(before)
       const association = next.placement.location

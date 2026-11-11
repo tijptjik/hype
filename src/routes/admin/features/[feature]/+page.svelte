@@ -2382,6 +2382,20 @@ const profileValues = $derived.by(
   (): Record<string, { title?: string; description?: string }> => {
     const rule = profileNameRule
     if (!rule) return currentFeatureData.i18n
+    // Central expressions are resolved from accepted server evidence; keep unsaved edits out of that preview.
+    if (rule.registry)
+      return Object.fromEntries(
+        Object.entries(currentFeatureData.i18n).map(([locale, row]) => [
+          locale,
+          {
+            ...row,
+            title:
+              profileNameOverrides[canonicalContentTag(locale)] ??
+              feature?.data?.i18n?.[locale]?.title ??
+              row.title,
+          },
+        ]),
+      )
     const properties = Object.fromEntries(
       (currentFeatureData.properties ?? []).map(row => [
         row.propertyId,
@@ -2389,7 +2403,12 @@ const profileValues = $derived.by(
           condition =>
             condition.propertyId === row.propertyId && condition.test === 'hasValue',
         )
-          ? featureNameTextValue(row.value, row.property?.component)
+          ? featureNameTextValue(
+              typeof row.value === 'string' ? row.value : null,
+              typeof row.property?.component === 'string'
+                ? row.property.component
+                : null,
+            )
           : nameBooleanValue(row.value),
       ]),
     )
@@ -4753,6 +4772,13 @@ async function refreshLocationSource(): Promise<void> {
                 class="col-start-1 row-start-1 min-w-0"
                 in:slide={{ duration: prefersReducedMotion.current ? 0 : 280 }}
               >
+                {#if !isNewFeatureRef && currentFeatureId && !isEditing}
+                  <Button
+                    text={m.display_templates_title()}
+                    style="link"
+                    href={`/admin/templates?feature=${encodeURIComponent(currentFeatureId)}`}
+                  />
+                {/if}
                 <FeatureProfileEditor
                   localeState={profileLocaleState}
                   onLocaleStateChange={setProfileLocaleState}

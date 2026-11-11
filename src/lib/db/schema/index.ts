@@ -59,3 +59,5 @@ export * from './revisionEditWindow'
 export * from './imageUpload'
 
 export * from './featureIntentPolicy'
+
+export * from './displayTemplate'

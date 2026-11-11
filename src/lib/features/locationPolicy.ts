@@ -105,6 +105,10 @@ const localizedCase = z.strictObject({
   separator: z.string().max(10),
 })
 export const FeatureNameRuleSchema = z.strictObject({
+  // Central immutable version; legacy rule fields remain a compatible fallback.
+  registry: z
+    .strictObject({ id: z.string().min(1), version: z.number().int().positive() })
+    .optional(),
   base: z.enum(['feature', 'location']),
   conditions: z
     .array(

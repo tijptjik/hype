@@ -1,3 +1,5 @@
+// DISPLAY TEMPLATES
+import { prepareFeatureDisplayTemplate } from './featureDisplayTemplate'
 // IMAGE INTENT POLICY
 import {
   readFeatureImageIntentPolicy,
@@ -67,6 +69,10 @@ export type CurrentFeatureRevision = {
   retired: boolean
 }
 export type FeatureEditCommand = RevisionCommand & {
+  /** Trusted adoption adapter supplies evidence prepared in the same transaction. */
+  templateLocation?: (
+    content: FeatureRevisionContent,
+  ) => import('#lib/locations/resolve.js').EffectiveLocationFacts
   featureId: string
   expectedRevisionId: string
   expectedVersion: number
@@ -236,6 +242,12 @@ export async function prepareFeatureEdit(
   const state = { ...current.state, ...input.state }
   if (input.state?.isPublished !== undefined)
     state.localIsPublished = input.state.isPublished
+  const displayTemplate = await prepareFeatureDisplayTemplate(db, {
+    featureId: input.featureId,
+    previous: current.content,
+    content,
+    acceptedLocation: input.templateLocation?.(content),
+  })
   const idle = await prepareFeatureIdleRevision(db, {
     ...input,
     previousRevisionId: current.revisionId,
@@ -273,6 +285,7 @@ export async function prepareFeatureEdit(
   const statements: BatchItem<'sqlite'>[] = [
     db.insert(lifecycleWriteScope).values({ featureId: input.featureId, token }),
     ...projection.statements,
+    ...displayTemplate,
     prepareRevisionCheck(db, projection.verify),
     // Preserve legacy gallery choices before publication/archive triggers recompute effective visibility.
     ...(input.state
@@ -595,6 +608,11 @@ export async function prepareLifecycleCapture(
   const content = FeatureRevisionContentSchema.parse(
     await input.derive(structuredClone(current.content), source),
   )
+  const displayTemplate = await prepareFeatureDisplayTemplate(db, {
+    featureId: input.featureId,
+    previous: current.content,
+    content,
+  })
   const idle = await prepareFeatureIdleRevision(db, {
     ...input,
     previousRevisionId: current.revisionId,
@@ -619,6 +637,7 @@ export async function prepareLifecycleCapture(
       db.insert(lifecycleWriteScope).values({ featureId: input.featureId, token }),
     ],
     after: [
+      ...displayTemplate,
       ...(input.unpublish
         ? [
             db

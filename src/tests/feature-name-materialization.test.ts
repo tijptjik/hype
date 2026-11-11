@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 // DOMAIN
 import {
+  type FeatureNameRule,
   featureNameTextValue,
   generateFeatureName,
 } from '#lib/features/locationPolicy.js'
@@ -68,6 +69,11 @@ function fixture() {
   db.exec(readFileSync('migrations/0226_feature_naming_text_values.sql', 'utf8'))
   db.exec(readFileSync('migrations/0228_feature_naming_phone_values.sql', 'utf8'))
   db.exec(readFileSync('migrations/0230_feature_naming_local_phone.sql', 'utf8'))
+  db.exec(
+    "ALTER TABLE feature ADD COLUMN organisationId TEXT; UPDATE feature SET organisationId='org'; CREATE TABLE organisation(id TEXT PRIMARY KEY); CREATE TABLE user(id TEXT PRIMARY KEY)",
+  )
+  db.exec(readFileSync('migrations/0234_display_template_registry.sql', 'utf8'))
+  db.exec(readFileSync('migrations/0235_feature_display_templates.sql', 'utf8'))
   return db
 }
 
@@ -209,7 +215,7 @@ describe('persisted feature naming', () => {
         )
       }
       db.exec(
-        "INSERT INTO feature VALUES ('plain',NULL,0,'p'); INSERT INTO featureI18n(featureId,locale,title) VALUES ('plain','en','Plain')",
+        "INSERT INTO feature(id,nameTemplate,isDraft,projectId) VALUES ('plain',NULL,0,'p'); INSERT INTO featureI18n(featureId,locale,title) VALUES ('plain','en','Plain')",
       )
       expect(
         db
@@ -456,6 +462,43 @@ it('materializes phone values and the missing-phone fallback', () => {
       }),
     ).toBe('Bakery')
     expect(featureNameTextValue('[]', 'InputField')).toBe('[]')
+  } finally {
+    db.close()
+  }
+})
+
+it('materializes central output through the real naming triggers and drops a foreign owner', () => {
+  const db = fixture()
+  try {
+    db.exec(
+      `BEGIN;
+       INSERT INTO organisation(id) VALUES('org'); INSERT INTO user(id) VALUES('editor');
+       INSERT INTO displayTemplate(id,organisationId,code,version) VALUES('central','org','central',1);
+       INSERT INTO displayTemplateRevision VALUES('central',1,'{}','editor','2026-11-12'); COMMIT;`,
+    )
+    db.prepare('UPDATE feature SET nameTemplate=? WHERE id=?').run(
+      JSON.stringify({
+        rule: {
+          base: 'feature',
+          conditions: [],
+          registry: { id: 'central', version: 1 },
+        },
+      }),
+      'f',
+    )
+    db.exec(
+      "INSERT INTO featureDisplayTemplateOutput VALUES('f','en','central',1,'AROME - Central')",
+    )
+    expect(row(db)?.title).toBe('AROME - Central')
+    expect(row(db)?.baseName).toBe('Bakery')
+    db.exec(
+      "UPDATE featureI18n SET nameOverride='' WHERE featureId='f' AND locale='en'",
+    )
+    expect(row(db)?.title).toBe('')
+    db.exec(
+      "UPDATE featureI18n SET nameOverride=NULL WHERE featureId='f' AND locale='en'; UPDATE feature SET organisationId='other' WHERE id='f'",
+    )
+    expect(row(db)?.title).toBe('Bakery')
   } finally {
     db.close()
   }

@@ -1,0 +1,153 @@
+// SVELTE
+import { error } from '@sveltejs/kit'
+// VALIDATION
+import { z } from 'zod'
+// DRIZZLE
+import { sql, type SQL } from 'drizzle-orm'
+// REMOTE
+import { guardedCommand, guardedQuery } from './server/guarded'
+// AUTHORIZATION
+import { requireLocationOrganisationManager } from './services/locationOwnership'
+// DOMAIN
+import { DisplayTemplateDefinitionSchema } from '#lib/templates/registry.js'
+// SERVICES
+import {
+  listDisplayTemplates,
+  saveDisplayTemplate,
+} from '#lib/db/services/displayTemplate.js'
+// TYPES
+import type { GuardedBaseContext } from './guarded.types'
+
+// TABLE OF CONTENTS
+// 1. Catalogue scope authorization
+// 2. Registry queries and versioned writes
+
+const scope = z.strictObject({ organisationId: z.string().min(1).nullable() })
+
+/** Resolve editing scope from persisted Organisation authority.
+ * @param ctx Authenticated context. @param organisationId Private owner or community scope.
+ * @returns Ownership guard for the write transaction.
+ * @remarks Community registry administration requires SuperAdmin; selecting a template is a separate permission.
+ */
+async function authorizeTemplateScope(
+  ctx: GuardedBaseContext,
+  organisationId: string | null,
+): Promise<SQL> {
+  if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+  if (organisationId !== null) {
+    await requireLocationOrganisationManager(ctx, organisationId)
+    const row = await ctx.db.get<{ hubId: string | null }>(
+      sql`SELECT hubId FROM organisation WHERE id=${organisationId}`,
+    )
+    if (!row) error(404, 'ORGANISATION_NOT_FOUND')
+    return sql`EXISTS(SELECT 1 FROM organisation WHERE id=${organisationId} AND hubId IS ${row.hubId})`
+  }
+  if (!ctx.user.superAdmin) error(403, 'INSUFFICIENT_ROLE')
+  return sql`1`
+}
+
+/** Read templates available for authorized registry administration.
+ * @param input Organisation or community scope. @returns Current immutable versions.
+ */
+export const getDisplayTemplates = guardedQuery(scope, async (input, ctx) => {
+  await authorizeTemplateScope(ctx, input.organisationId)
+  return listDisplayTemplates(ctx.db, input.organisationId)
+})
+
+/** Publish a new central version without changing consumers' accepted versions.
+ * @param input Owner, definition and previous version. @returns Saved identity/version.
+ */
+export const publishDisplayTemplate = guardedCommand(
+  scope.extend({
+    id: z.string().min(1).max(100),
+    expectedVersion: z.number().int().min(0),
+    definition: DisplayTemplateDefinitionSchema,
+  }),
+  async (input, ctx) => {
+    const guard = await authorizeTemplateScope(ctx, input.organisationId)
+    const saved = await saveDisplayTemplate(ctx.db, {
+      ...input,
+      actorId: ctx.user.id,
+      guard,
+    })
+    if (!saved) error(409, 'TEMPLATE_VERSION_CHANGED')
+    return saved
+  },
+)
+
+/** Read the explicit Feature assignment and central versions available to its Organisation.
+ * @param input Existing Feature identity. @returns Accepted version fence and selectable definitions.
+ * @remarks Organisation management is required; this does not grant upward rights to Project editors.
+ */
+export const getFeatureDisplayTemplate = guardedQuery(
+  z.strictObject({ featureId: z.string().min(1) }),
+  async (input, ctx) => {
+    const row = await ctx.db.get<{ organisationId: string }>(
+      sql`SELECT organisationId FROM feature WHERE id=${input.featureId}`,
+    )
+    if (!row) error(404, 'FEATURE_NOT_FOUND')
+    await authorizeTemplateScope(ctx, row.organisationId)
+    const { readCurrentFeatureRevision } = await import(
+      '#lib/db/services/featureLifecycle.js'
+    )
+    const current = await readCurrentFeatureRevision(ctx.db, {
+      featureId: input.featureId,
+      guard: sql`organisationId=${row.organisationId}`,
+    })
+    if (!current) error(409, 'FEATURE_HISTORY_UNAVAILABLE')
+    return {
+      organisationId: row.organisationId,
+      revisionId: current.revisionId,
+      version: current.version,
+      reference: current.content.profile.nameTemplate?.rule.registry ?? null,
+      templates: await listDisplayTemplates(ctx.db, row.organisationId),
+    }
+  },
+)
+
+/** Assign or regenerate one accepted Feature from an immutable central version.
+ * @param input Feature, inspected revision and explicit template reference or removal.
+ * @returns Accepted revision after atomic name regeneration.
+ * @remarks Manual names remain intact. Regeneration reads accepted Location pins, never newer community facts.
+ */
+export const setFeatureDisplayTemplate = guardedCommand(
+  z.strictObject({
+    featureId: z.string().min(1),
+    expectedRevisionId: z.string().min(1),
+    expectedVersion: z.number().int().min(0),
+    reference: z
+      .strictObject({ id: z.string().min(1), version: z.number().int().positive() })
+      .nullable(),
+  }),
+  async (input, ctx) => {
+    const row = await ctx.db.get<{ organisationId: string }>(
+      sql`SELECT organisationId FROM feature WHERE id=${input.featureId}`,
+    )
+    if (!row) error(404, 'FEATURE_NOT_FOUND')
+    const ownership = await authorizeTemplateScope(ctx, row.organisationId)
+    const { saveFeatureEdit } = await import('#lib/db/services/featureLifecycle.js')
+    const revisionId = await saveFeatureEdit(ctx.db, {
+      ...input,
+      actorId: ctx.user.id,
+      reason: 'Change central display template',
+      revisionBoundary: true,
+      guard: sql`(${ownership}) AND EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND organisationId=${row.organisationId})`,
+      derive: content => {
+        if (input.reference) {
+          content.profile.nameTemplate ??= {
+            rule: {
+              base: content.placement.location ? 'location' : 'feature',
+              conditions: [],
+            },
+          }
+          content.profile.nameTemplate.rule.registry = input.reference
+        } else if (content.profile.nameTemplate)
+          delete content.profile.nameTemplate.rule.registry
+        return content
+      },
+      validate: () => [],
+    })
+    if (!revisionId) error(409, 'FEATURE_VERSION_CHANGED')
+    return { revisionId }
+  },
+)
