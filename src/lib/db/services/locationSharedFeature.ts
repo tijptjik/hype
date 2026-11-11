@@ -47,6 +47,9 @@ export async function prepareSharedFeatureAdoption(
     facts: LocationFacts
     guard: SQL
     includeLocation?: boolean
+    /** True only when accepting the complete facts group from this source revision. */
+    acceptSourceFacts?: boolean
+    origin?: 'user' | 'system'
     fields?: string[]
     organisation?: {
       revision: string | null
@@ -125,7 +128,7 @@ export async function prepareSharedFeatureAdoption(
     guard: input.guard,
     expectedRevisionId: current.revisionId,
     expectedVersion: current.version,
-    origin: 'user',
+    origin: input.origin ?? 'user',
     reason: locationActionReasons[input.action],
     identity: { actorId: input.actorId },
     validate: () => [],
@@ -152,6 +155,11 @@ export async function prepareSharedFeatureAdoption(
           ...changedFields.map(field => ({ field, revision: input.sharedRevisionId })),
         ],
         ...(includeLocation ? { locationSharedRevision: input.sharedRevisionId } : {}),
+      }
+      if (input.acceptSourceFacts) {
+        association.factsRevisionId = input.sourceRevisionId
+        association.acceptancePolicy.factsSharedRevision = input.sharedRevisionId
+        association.acceptancePolicy.factsSharedFields = []
       }
       if (includeLocation) association.locationRevisionId = input.sourceRevisionId
       if (input.organisation) {

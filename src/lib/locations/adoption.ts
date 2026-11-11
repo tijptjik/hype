@@ -2,6 +2,8 @@
 import { z } from 'zod'
 import { FeatureLocationOverridesSchema, LocationFactsSchema } from './validation'
 // DOMAIN
+import { CURATION_IDENTITY_FIELDS } from './curationIdentity'
+import { fillsMissingLocationValue } from './missingValue'
 import { equalLocationValue } from './baseline'
 import { evaluateLocationAdoption } from './policy'
 import { resolveFeatureLocation } from './resolve'
@@ -88,7 +90,7 @@ const establishmentSchema = z.object({
  * excluded; formatted addresses, membership and inventory content remain address evidence.
  * Selected unit content is compared independently by the unit policy.
  */
-function addressContent(address: LocationFacts['location']['address']): unknown {
+export function addressContent(address: LocationFacts['location']['address']): unknown {
   /** Strip publication-only attributes. @param value JSON:API resource. @returns Comparable content. */
   const resource = (value: unknown): unknown => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value
@@ -125,7 +127,7 @@ function addressContent(address: LocationFacts['location']['address']): unknown 
  * @param address Pinned address projection.
  * @returns Unit identity and retained structured content.
  */
-function unitContent(address: LocationFacts['location']['address']): unknown {
+export function unitContent(address: LocationFacts['location']['address']): unknown {
   const inventories = Array.isArray(address.rawSource.included)
     ? address.rawSource.included
     : []
@@ -159,6 +161,7 @@ function unitContent(address: LocationFacts['location']['address']): unknown {
  * revisions when applying this plan; this function never reopens a rejected proposal.
  */
 export function planLocationAdoption(input: {
+  origin?: 'saanseoi' | 'community'
   facts: AdoptionSourceRevision
   location: AdoptionSourceRevision
   candidate: AdoptionSourceRevision
@@ -227,6 +230,52 @@ export function planLocationAdoption(input: {
   )
     blockers.push('source-phone-omissions')
   const comparison: LocationChangeEvidence = {
+    origin: input.origin ?? (candidate.origin === 'local' ? 'community' : 'saanseoi'),
+    missing: {
+      establishment:
+        (['names', 'brands', ...CURATION_IDENTITY_FIELDS] as const).every(field => {
+          return (
+            equalLocationValue(effectiveBefore[field], effectiveCandidate[field]) ||
+            (!overrides[field] &&
+              fillsMissingLocationValue(
+                effectiveBefore[field],
+                effectiveCandidate[field],
+              ))
+          )
+        }) &&
+        equalLocationValue(oldFacts.entity, next.entity) &&
+        equalLocationValue(effectiveBefore.footprint, effectiveCandidate.footprint),
+      communications: ['phoneNumber', 'websites', 'socials'].every(key => {
+        const field = key as 'phoneNumber' | 'websites' | 'socials'
+        return (
+          equalLocationValue(effectiveBefore[field], effectiveCandidate[field]) ||
+          (!overrides[field] &&
+            fillsMissingLocationValue(
+              effectiveBefore[field],
+              effectiveCandidate[field],
+            ))
+        )
+      }),
+      unit:
+        !overrides.location &&
+        fillsMissingLocationValue(
+          unitContent(comparedBefore.address),
+          unitContent(comparedAfter.address),
+        ),
+      address:
+        !overrides.location &&
+        fillsMissingLocationValue(
+          addressContent(comparedBefore.address),
+          addressContent(comparedAfter.address),
+        ),
+    },
+    communicationsChanged: ['phoneNumber', 'websites', 'socials'].some(
+      field =>
+        !equalLocationValue(
+          effectiveBefore[field as keyof EffectiveLocationFacts],
+          effectiveCandidate[field as keyof EffectiveLocationFacts],
+        ),
+    ),
     before: comparedBefore,
     after: comparedAfter,
     addressChanged: !equalLocationValue(
@@ -245,6 +294,9 @@ export function planLocationAdoption(input: {
       !equalLocationValue(oldFacts.entity ?? null, next.entity ?? null) ||
       !equalLocationValue(effectiveBefore.names, effectiveCandidate.names) ||
       !equalLocationValue(effectiveBefore.brands, effectiveCandidate.brands) ||
+      CURATION_IDENTITY_FIELDS.some(
+        field => !equalLocationValue(effectiveBefore[field], effectiveCandidate[field]),
+      ) ||
       (!localChain &&
         (!beforeEstablishment.success ||
           !afterEstablishment.success ||
@@ -282,6 +334,7 @@ export function planLocationAdoption(input: {
       'socials',
       'accessibility',
       'brands',
+      ...CURATION_IDENTITY_FIELDS,
       'operatingStatus',
       'buildingStatus',
       'successorLocationId',

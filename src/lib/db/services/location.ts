@@ -16,6 +16,7 @@ import {
 } from '../schema/location'
 import { feature } from '../schema/feature'
 import { project } from '../schema/project'
+import { organisation } from '../schema/organisation'
 // DOMAIN
 import {
   locationSourceReference,
@@ -67,15 +68,19 @@ export async function getProjectLocationSettings(
 ): Promise<ProjectLocationSettings> {
   const row = await db
     .select({
+      inheritedSettings: organisation.settings,
       policy: project.locationPolicy,
       revision: project.locationPolicyRevision,
     })
     .from(project)
+    .leftJoin(organisation, eq(organisation.id, project.organisationId))
     .where(eq(project.id, projectId))
     .get()
   return {
     policy: ProjectLocationPolicySchema.parse(
-      row?.policy ?? DEFAULT_PROJECT_LOCATION_POLICY,
+      row?.policy ??
+        row?.inheritedSettings?.locationPolicy ??
+        DEFAULT_PROJECT_LOCATION_POLICY,
     ),
     revision: row?.revision ?? 0,
   }

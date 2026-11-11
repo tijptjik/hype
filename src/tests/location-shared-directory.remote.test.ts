@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   prepare: vi.fn(),
   batch: vi.fn(),
   propagate: vi.fn(),
+  authorize: vi.fn(),
 }))
 vi.mock('#lib/api/server/guarded.js', () => {
   const remote = (
@@ -23,6 +24,9 @@ vi.mock('#lib/api/server/guarded.js', () => {
     )
   return { guardedCommand: remote, guardedQuery: remote }
 })
+vi.mock('#lib/api/services/locationOwnership', () => ({
+  requireLocationOrganisationManager: mocks.authorize,
+}))
 vi.mock('#lib/db/services/locationShared.js', () => ({
   prepareSharedLocationCorrection: mocks.prepare,
   readSharedLocationCorrection: vi.fn(),
@@ -86,4 +90,20 @@ it('propagates only the explicitly authorized fields before completing Save', as
       fields: ['names'],
     }),
   )
+})
+
+it('allows an Organisation manager to contribute a name and checks persisted authority', async () => {
+  await saveSharedLocationDirectoryCorrection({ ...input, organisationId: 'org' })
+  expect(mocks.authorize).toHaveBeenCalledWith(expect.anything(), 'org')
+  expect(mocks.prepare).toHaveBeenCalledWith(
+    {},
+    expect.objectContaining({ rights: { canEdit: true, superAdmin: false } }),
+  )
+})
+it('rejects an unauthorized Organisation before preparing community writes', async () => {
+  mocks.authorize.mockRejectedValue(new Error('INSUFFICIENT_ROLE'))
+  await expect(
+    saveSharedLocationDirectoryCorrection({ ...input, organisationId: 'other' }),
+  ).rejects.toThrow('INSUFFICIENT_ROLE')
+  expect(mocks.prepare).not.toHaveBeenCalled()
 })

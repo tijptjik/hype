@@ -1,9 +1,12 @@
-import { sharedLocationEditRights } from './services/locationOwnership'
 // FRAMEWORK
 import { error } from '@sveltejs/kit'
 import { z } from 'zod'
 import { sql } from 'drizzle-orm'
 // API / AUTHORIZATION
+import {
+  requireLocationOrganisationManager,
+  sharedLocationEditRights,
+} from './services/locationOwnership'
 import { guardedCommand, guardedQuery } from './server/guarded'
 import { probeFeatureForUpdate } from '#lib/db/services/feature.js'
 import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
@@ -98,7 +101,7 @@ export const getSharedLocationCorrection = guardedQuery(
 
 /** Save authorized shared corrections and the originating Feature's adoption atomically.
  * @param input Exact displayed source/head pins and field choices. @returns Accepted shared revision.
- * @remarks Shared names, brands, addresses and all non-contact fields require explicit SuperAdmin authority.
+ * @remarks Authorised community editors may curate identity and address fields; consumer policies govern adoption.
  */
 export const saveSharedLocationCorrection = guardedCommand(
   identity.extend({
@@ -136,25 +139,29 @@ export const saveSharedLocationCorrection = guardedCommand(
   },
 )
 
-/** Save SuperAdmin corrections from the standalone Location editor without changing publisher snapshots.
+/** Save authorized community curations from the standalone Location editor without changing publisher snapshots.
  * @param input Location identity and displayed source/shared pins with explicit field choices.
  * @returns New shared revision, atomically propagated to linked Features with attributed history.
  */
 export const saveSharedLocationDirectoryCorrection = guardedCommand(
   z.strictObject({
     locationId: z.string().min(1),
+    organisationId: z.string().min(1).optional(),
     sourceRevisionId: z.string().min(1),
     expectedRevision: z.string().nullable(),
     patch: SharedCorrectionPatchSchema,
   }),
   async (input, ctx) => {
-    if (ctx.user.isAnonymous || !ctx.user.superAdmin)
-      error(403, 'SHARED_LOCATION_FIELD_REQUIRES_SUPERADMIN')
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    if (!ctx.user.superAdmin) {
+      if (!input.organisationId) error(403, 'ORGANISATION_CONTEXT_REQUIRED')
+      await requireLocationOrganisationManager(ctx, input.organisationId)
+    }
     const shared = await prepareSharedLocationCorrection(ctx.db, {
       ...input,
       actorId: ctx.user.id,
-      rights: { canEdit: true, superAdmin: true },
-      guard: sql`EXISTS(SELECT 1 FROM location WHERE id=${input.locationId} AND state!='redirect')`,
+      rights: { canEdit: true, superAdmin: Boolean(ctx.user.superAdmin) },
+      guard: sql`EXISTS(SELECT 1 FROM location WHERE id=${input.locationId} AND state IN ('linked','unresolved'))`,
       provenance: { kind: 'location-editor' },
     })
     const propagation = await prepareStaffLocationPropagation(ctx.db, {

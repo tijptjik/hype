@@ -1,3 +1,4 @@
+import { ProjectLocationPolicySchema } from '#lib/locations/model.js'
 // VALIDATION
 import { z } from 'zod'
 // CONTENT LOCALES
@@ -13,6 +14,7 @@ import { ChatAppearanceSchema } from '#lib/messaging/appearance.js'
 /** Organisation-only settings use the normal form's authorization and revision guard. */
 export const OrganisationSettingsPatchSchema = ContentLocaleSettingsPatchSchema.extend({
   messagingAppearance: ChatAppearanceSchema.optional(),
+  locationPolicy: ProjectLocationPolicySchema.nullable().optional(),
 })
 export type OrganisationSettingsPatch = z.output<typeof OrganisationSettingsPatchSchema>
 
@@ -57,6 +59,8 @@ export function toOrganisationSettingsForm(
   const patch: OrganisationSettingsPatch = toContentLocaleSettingsForm(settings)
   const appearance = ChatAppearanceSchema.safeParse(settings?.messagingAppearance)
   if (appearance.success) patch.messagingAppearance = appearance.data
+  const policy = ProjectLocationPolicySchema.safeParse(settings?.locationPolicy)
+  if (policy.success) patch.locationPolicy = policy.data
   return patch
 }
 
@@ -69,10 +73,12 @@ export function applyOrganisationSettingsPatch(
   current: ContentLocaleSettings | null | undefined,
   patch?: OrganisationSettingsPatch,
 ): ContentLocaleSettings {
-  const { messagingAppearance, ...locales } = OrganisationSettingsPatchSchema.parse(
-    patch ?? {},
-  )
+  const { messagingAppearance, locationPolicy, ...locales } =
+    OrganisationSettingsPatchSchema.parse(patch ?? {})
   const next = applyContentLocaleSettingsPatch(current, locales)
   if (messagingAppearance !== undefined) next.messagingAppearance = messagingAppearance
+  if (locationPolicy === null) delete next.locationPolicy
+  else if (locationPolicy !== undefined)
+    next.locationPolicy = JSON.parse(JSON.stringify(locationPolicy))
   return next
 }

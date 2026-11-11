@@ -16,6 +16,8 @@ import { materializeEffectiveLocation } from '#lib/locations/materialize.js'
 import { equalLocationValue } from '#lib/locations/baseline.js'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // SERVICES
+import { hasFeatureLifecycleStorage } from './featureLifecycle'
+import { applyOrganisationLocationAdoption } from './locationOrganisationAdoption'
 import { readLocationAdoptionReview } from './locationAdoptionReview'
 import { previewFeatureLocationAdoption } from './locationAdoption'
 import { readLocationResetSources, prepareLocationPhoneReset } from './locationReset'
@@ -81,6 +83,8 @@ export async function applyLocationAdoptionGroup(
     !['automatic', 'reviewed'].includes(input.mode)
   )
     throw new Error('Invalid Location adoption decision')
+  if (await hasFeatureLifecycleStorage(db))
+    return applyOrganisationLocationAdoption(db, input)
   const review = await readLocationAdoptionReview(db, input)
   if (!review || review.decisions.some(row => row.fieldGroup === input.fieldGroup))
     return { status: 'conflict' }
@@ -140,6 +144,8 @@ export async function applyLocationAdoptionGroup(
   if (
     input.mode === 'automatic' &&
     (preview.settings.revision !== proposal.policyRevision ||
+      JSON.stringify(preview.settings.policy) !==
+        JSON.stringify(proposal.evidence.policy) ||
       proposal.evidence.plan.decision[input.fieldGroup] !== 'adopt' ||
       preview.plan.decision[input.fieldGroup] !== 'adopt')
   )
@@ -195,6 +201,11 @@ export async function applyLocationAdoptionGroup(
       'socials',
       'accessibility',
       'brands',
+      'branch',
+      'format',
+      'branchId',
+      'brandId',
+      'groupId',
       'operatingStatus',
       'buildingStatus',
       'successorLocationId',

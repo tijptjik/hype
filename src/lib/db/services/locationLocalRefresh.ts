@@ -9,7 +9,6 @@ import { locationRefreshItem } from '../schema/locationRefresh'
 import { featureLocation, locationRevision } from '../schema/location'
 import { feature } from '../schema/feature'
 // SERVICES
-import { replayStaffLocationCorrection } from './locationStaffPropagation'
 import { proposeFeatureLocationAdoption } from './locationAdoptionReview'
 import { applyLocationAdoptionGroup } from './locationAdoptionApply'
 import { readOrganisationLocation } from './organisationLocation'
@@ -37,15 +36,7 @@ export async function processLocalLocationChanges(
     .orderBy(sql`rowid`)
     .get()
   if (!item) return 'idle'
-  // Staff-authored shared corrections already have approval; source/system work still follows policy.
-  if (item.runId.startsWith('shared:')) {
-    const replay = await replayStaffLocationCorrection(
-      db,
-      item.locationId,
-      item.runId.slice(7),
-    )
-    if (replay) return replay
-  }
+  // Shared corrections use consumer policy; staff authorship is not consumer consent.
   const row = await db
     .select({
       id: feature.id,

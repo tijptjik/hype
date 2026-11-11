@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 // ORGANISATION SETTINGS
 import {
   applyOrganisationSettingsPatch,
+  toOrganisationSettingsForm,
   OrganisationSettingsFormSchema,
   readOrganisationSettingsForm,
 } from '#lib/organisations/settings.js'
@@ -103,4 +104,21 @@ describe('organisation settings form', () => {
       ).toBe(false)
     },
   )
+})
+
+it('retains independent Location defaults and supports resetting them', () => {
+  const locationPolicy = {
+    version: 1 as const,
+    coordinates: { mode: 'review' as const },
+    address: 'review' as const,
+    unit: 'review' as const,
+    establishment: 'review' as const,
+    relocation: 'review' as const,
+    sameSources: false,
+  }
+  const settings = applyOrganisationSettingsPatch({}, { locationPolicy })
+  expect(toOrganisationSettingsForm(settings).locationPolicy).toEqual(locationPolicy)
+  expect(
+    applyOrganisationSettingsPatch(settings, { locationPolicy: null }),
+  ).not.toHaveProperty('locationPolicy')
 })

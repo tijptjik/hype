@@ -93,14 +93,14 @@ it('applies Organisation suppression above a shared correction', () => {
   ).toBeNull()
 })
 it.each(['names', 'location', 'brands', 'footprint', 'entity', 'operatingStatus'])(
-  'rejects non-SuperAdmin shared %s edits even with Organisation edit rights',
+  'allows permissioned community %s edits without SuperAdmin',
   field => {
     expect(() =>
       authorizeSharedCorrection(
         { [field]: { mode: 'inherit' } },
         { canEdit: true, superAdmin: false },
       ),
-    ).toThrow('SUPERADMIN')
+    ).not.toThrow()
     expect(() =>
       authorizeSharedCorrection(
         { [field]: { mode: 'inherit' } },
@@ -167,4 +167,28 @@ it('rejects clearing required identity structures before preparing a write', () 
     expect(
       SharedCorrectionPatchSchema.safeParse({ [field]: { mode: 'clear' } }).success,
     ).toBe(false)
+})
+
+it('retains localized community identity, textual branch IDs and explicit clears', () => {
+  const patch = SharedCorrectionPatchSchema.parse({
+    branch: { mode: 'override', value: { en: 'Central', 'zh-Hant': '中環' } },
+    format: { mode: 'override', value: { en: 'AROME Bakery' } },
+    branchId: { mode: 'override', value: '0012' },
+  })
+  const metadata = { actorId: 'editor', editedAt: 'now', sourceRevisionId: 'r1' }
+  const curated = amendSharedCorrections({}, patch, source, metadata)
+  const facts = resolveSharedCorrections(source, curated).facts
+  expect(facts.branch).toEqual({ en: 'Central', 'zh-Hant': '中環' })
+  expect(facts.branchId).toBe('0012')
+  expect(source).not.toHaveProperty('branch')
+  const cleared = amendSharedCorrections(
+    curated,
+    { branch: { mode: 'clear' }, branchId: { mode: 'clear' } },
+    source,
+    metadata,
+  )
+  expect(resolveSharedCorrections(source, cleared).facts).toMatchObject({
+    branch: {},
+    branchId: '',
+  })
 })

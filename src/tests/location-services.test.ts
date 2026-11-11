@@ -113,9 +113,9 @@ function setup(
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
   sqlite.exec(`PRAGMA foreign_keys=ON;
-    CREATE TABLE organisation(id TEXT PRIMARY KEY);
+    CREATE TABLE organisation(id TEXT PRIMARY KEY,settings TEXT NOT NULL DEFAULT '{}');
     CREATE TABLE organisationI18n(organisationId TEXT,locale TEXT,name TEXT,nameShort TEXT);
-    INSERT INTO organisation VALUES ('p'),('other');
+    INSERT INTO organisation(id) VALUES ('p'),('other');
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
       cardStyleCode TEXT, useAllInOrgContext INTEGER);
@@ -4496,7 +4496,7 @@ describe('atomic source group application', () => {
     ).toEqual({ status: 'conflict' })
   })
 
-  it('advances an overridden location revision without changing geometry/address or routing', async () => {
+  it('accepting a changed location releases its customization and updates geometry and routing', async () => {
     const { db, sqlite, input, first, next } = await fixture()
     const corrected = prepareFeatureLocationAssociationWrite(db, {
       featureId: 'f',
@@ -4531,11 +4531,11 @@ describe('atomic source group application', () => {
         fieldGroup: 'location',
         mode: 'reviewed',
       }),
-    ).toMatchObject({ status: 'applied', geometryChanged: false })
-    expect(sqlite.prepare('SELECT geometry,addressMeta FROM feature').get()).toEqual(
-      before,
-    )
-    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toHaveLength(0)
+    ).toMatchObject({ status: 'applied', geometryChanged: true })
+    expect(
+      sqlite.prepare('SELECT geometry,addressMeta FROM feature').get(),
+    ).not.toEqual(before)
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toHaveLength(1)
     expect((await getAcceptedFeatureLocation(db, 'f', 'p'))?.locationRevisionId).toBe(
       next.revisionId,
     )
@@ -5211,6 +5211,9 @@ describe('local Location address revisions', () => {
       expectedOrganisationRevision: null,
       actorId: 'org-editor',
       names: { en: 'Organisation name' },
+      branch: { en: 'Central', 'zh-Hant': '中環' },
+      format: { en: 'AROME Bakery' },
+      branchId: '0012',
     })
     expect(saved).not.toBeNull()
     expect(
@@ -5223,6 +5226,14 @@ describe('local Location address revisions', () => {
       (await listLocationResources(db, { id: created.locationId, organisationId: 'p' }))
         .data[0].facts?.names,
     ).toEqual({ en: 'Organisation name' })
+    expect(
+      (await listLocationResources(db, { id: created.locationId, organisationId: 'p' }))
+        .data[0].facts,
+    ).toMatchObject({
+      branch: { en: 'Central', 'zh-Hant': '中環' },
+      format: { en: 'AROME Bakery' },
+      branchId: '0012',
+    })
   })
 
   it('preserves the old revision and fences stale edits and other owners', async () => {
@@ -6122,6 +6133,7 @@ describe('Organisation-wide Location corrections', () => {
       'other',
       {
         ...DEFAULT_PROJECT_LOCATION_POLICY,
+        sameSources: true,
         coordinates: { mode: 'follow' },
         address: 'follow',
         unit: 'follow',
@@ -6175,6 +6187,7 @@ describe('Organisation-wide Location corrections', () => {
       'other',
       {
         ...DEFAULT_PROJECT_LOCATION_POLICY,
+        sameSources: true,
         coordinates: { mode: 'follow' },
         address: 'follow',
         unit: 'follow',
@@ -6236,6 +6249,7 @@ describe('Organisation-wide Location corrections', () => {
       'other',
       {
         ...DEFAULT_PROJECT_LOCATION_POLICY,
+        sameSources: true,
         coordinates: { mode: 'follow' },
         address: 'follow',
         unit: 'follow',

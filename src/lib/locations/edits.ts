@@ -1,4 +1,5 @@
 // DOMAIN
+import { CURATION_IDENTITY_FIELDS } from './curationIdentity'
 import { equalLocationValue } from './baseline'
 // TYPES
 import type { FeatureLocationOverrides, LocationOverride } from './model'
@@ -54,6 +55,12 @@ export function applyFeatureLocationEdits(
     result.brands = editedValue(after.brands)
   if (!equalLocationValue(before.location, after.location))
     result.location = editedValue(after.location)
+  // Omitted curation fields are unrelated saves; explicit clears remain authored choices.
+  for (const field of CURATION_IDENTITY_FIELDS) {
+    const value = after[field]
+    if (value !== undefined && !equalLocationValue(before[field], value))
+      Object.assign(result, { [field]: editedValue(value) })
+  }
   // Ordinary Feature forms omit status/history relations; unrelated saves must preserve them.
   if (
     after.operatingStatus !== undefined &&

@@ -92,7 +92,7 @@ export async function sharedLocationFacts(
 /** Prepare an attributed shared edit under source/head/scope concurrency fences.
  * @param db Database. @param input Server-authorized scope, explicit patch and displayed source/head pins.
  * @returns Statements to batch with the originating Feature's accepted revision.
- * @remarks Sensitive fields require SuperAdmin even if the caller has Organisation management rights.
+ * @remarks Permissioned community editors may curate identity fields; consumer policies govern adoption.
  */
 export async function prepareSharedLocationCorrection(
   db: Database,
@@ -111,13 +111,23 @@ export async function prepareSharedLocationCorrection(
   authorizeSharedCorrection(patch, input.rights)
   const source = await db.get<{
     facts: string
+    kind: string
     rawSource: string
-  }>(sql`SELECT r.facts,r.rawSource FROM locationRevision r JOIN location l ON l.id=r.locationId
+  }>(sql`SELECT r.facts,r.rawSource,l.kind FROM locationRevision r JOIN location l ON l.id=r.locationId
     WHERE r.id=${input.sourceRevisionId} AND l.id=${input.locationId} AND l.state!='redirect'
     AND r.id=(SELECT id FROM locationRevision WHERE locationId=l.id ORDER BY version DESC LIMIT 1) AND (${input.guard})`)
   const previous = await readSharedLocationCorrection(db, input.locationId)
   if (!source || (previous?.id ?? null) !== input.expectedRevision)
     throw new Error('SHARED_LOCATION_CHANGED')
+  if (
+    (patch.branch ||
+      patch.format ||
+      patch.branchId ||
+      patch.brandId ||
+      patch.groupId) &&
+    source.kind !== 'establishment'
+  )
+    throw new Error('BRANCH_REQUIRES_ESTABLISHMENT')
   const facts = readLocationFacts(source.facts)
   const id = crypto.randomUUID(),
     editedAt = new Date().toISOString()

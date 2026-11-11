@@ -1,5 +1,9 @@
 // VALIDATION
-import { DEFAULT_PROJECT_LOCATION_POLICY, ProjectLocationPolicySchema } from './model'
+import {
+  DEFAULT_PROJECT_LOCATION_POLICY,
+  ProjectLocationPolicySchema,
+  locationRulesForOrigin,
+} from './model'
 // TYPES
 import type { LocationPosition } from './model'
 
@@ -9,13 +13,20 @@ export type LocationChangeEvidence = {
   addressChanged: boolean
   unitChanged: boolean
   establishmentChanged: boolean
+  communicationsChanged?: boolean
+  origin?: 'saanseoi' | 'community'
+  missing?: Partial<
+    Record<'establishment' | 'communications' | 'address' | 'unit', boolean>
+  >
 }
 
 export type LocationAdoptionDecision = {
   facts: 'adopt' | 'review'
   location: 'adopt' | 'review'
   distanceMetres: number
-  reasons: Array<'coordinates' | 'address' | 'unit' | 'establishment'>
+  reasons: Array<
+    'coordinates' | 'address' | 'unit' | 'establishment' | 'communications'
+  >
 }
 
 /**
@@ -60,7 +71,20 @@ export function evaluateLocationAdoption(
   evidence: LocationChangeEvidence,
   input: unknown = DEFAULT_PROJECT_LOCATION_POLICY,
 ): LocationAdoptionDecision {
-  const policy = ProjectLocationPolicySchema.parse(input)
+  const policy = locationRulesForOrigin(
+    ProjectLocationPolicySchema.parse(input),
+    evidence.origin ?? 'saanseoi',
+  )
+  const exempt = (
+    field: 'address' | 'unit' | 'establishment' | 'communications',
+  ): boolean =>
+    Boolean(policy.acceptMissing && evidence.missing?.[field]) ||
+    Boolean(
+      policy.acceptUnresolved &&
+        (field === 'address' || field === 'unit') &&
+        evidence.before.address.status === 'unresolved' &&
+        evidence.after.address.status === 'resolved',
+    )
   const distanceMetres = displacement(evidence.before, evidence.after)
   const reasons: LocationAdoptionDecision['reasons'] = []
   // Independent controls combine conservatively: any review holds the location group.
@@ -72,13 +96,28 @@ export function evaluateLocationAdoption(
   ) {
     reasons.push('coordinates')
   }
-  if (evidence.addressChanged && policy.address === 'review') reasons.push('address')
-  if (evidence.unitChanged && policy.unit === 'review') reasons.push('unit')
-  if (evidence.establishmentChanged && policy.establishment === 'review')
+  if (evidence.addressChanged && policy.address === 'review' && !exempt('address'))
+    reasons.push('address')
+  if (evidence.unitChanged && policy.unit === 'review' && !exempt('unit'))
+    reasons.push('unit')
+  if (
+    evidence.establishmentChanged &&
+    policy.establishment === 'review' &&
+    !exempt('establishment')
+  )
     reasons.push('establishment')
+  if (
+    evidence.communicationsChanged &&
+    policy.communications === 'review' &&
+    !exempt('communications')
+  )
+    reasons.push('communications')
   return {
-    facts: reasons.includes('establishment') ? 'review' : 'adopt',
-    location: reasons.length ? 'review' : 'adopt',
+    facts:
+      reasons.includes('establishment') || reasons.includes('communications')
+        ? 'review'
+        : 'adopt',
+    location: reasons.some(reason => reason !== 'communications') ? 'review' : 'adopt',
     distanceMetres,
     reasons,
   }

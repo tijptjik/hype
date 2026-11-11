@@ -21,6 +21,7 @@ import { locationOccupancy, locationMembership } from '../schema/locationRelatio
 // SHARED PARSER
 import { parseAddressContent } from '@saanseoi/address'
 // VALIDATION
+import { LocalizedCurationTextSchema } from '#lib/locations/curationIdentity.js'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import {
   authoredDivisionOverrides,
@@ -234,6 +235,9 @@ export async function updateLocalLocationAddress(
     buildingStatus?: BuildingStatus | null
     successorLocationId?: string | null
     names?: Record<string, string>
+    branch?: Record<string, string>
+    format?: Record<string, string>
+    branchId?: string
     kind?: LocationKind
     expectedKind?: LocationKind
     address?: unknown
@@ -328,6 +332,13 @@ export async function updateLocalLocationAddress(
     ...(footprint !== undefined ? { footprint } : {}),
     ...status,
     ...(names ? { names } : {}),
+    ...(input.branch !== undefined
+      ? { branch: LocalizedCurationTextSchema.parse(input.branch) }
+      : {}),
+    ...(input.format !== undefined
+      ? { format: LocalizedCurationTextSchema.parse(input.format) }
+      : {}),
+    ...(input.branchId !== undefined ? { branchId: input.branchId } : {}),
     location: {
       ...before.location,
       ...(input.coordinates

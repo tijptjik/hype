@@ -23,11 +23,12 @@ export function publicationSqlite<T extends Record<string, unknown>>(
       return prepare(query, params)
     },
     all: async () => ({ results: sqlite.prepare(query).all(...(bindings as never[])) }),
-    raw: async () =>
-      sqlite
-        .prepare(query)
-        .all(...(bindings as never[]))
-        .map(row => Object.values(row)),
+    // Preserve duplicate column names from joined projections, as D1 raw() does.
+    raw: async () => {
+      const statement = sqlite.prepare(query)
+      statement.setReturnArrays(true)
+      return statement.all(...(bindings as never[]))
+    },
     run: async () => ({
       results: [],
       meta: sqlite.prepare(query).run(...(bindings as never[])),

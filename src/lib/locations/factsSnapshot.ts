@@ -84,6 +84,8 @@ export function createLocationFactsSnapshot(
   const details: Record<string, unknown> = { ...entity?.details }
   if (kind === 'establishment') {
     details.brands = facts.brands
+    for (const field of ['branch', 'format', 'branchId', 'groupId', 'brandId'] as const)
+      if (facts[field] !== undefined) details[field] = facts[field]
     if (facts.operatingStatus !== undefined)
       details.operatingStatus = facts.operatingStatus
   } else if (facts.brands.length || facts.operatingStatus != null)
@@ -151,6 +153,11 @@ export function readLocationFacts(value: unknown): LocationFacts {
       ? { footprint: snapshot.common.footprint }
       : {}),
     phoneNumber: snapshot.common.phoneNumber ?? [],
+    ...Object.fromEntries(
+      ['branch', 'format', 'branchId', 'groupId', 'brandId']
+        .filter(field => field in details)
+        .map(field => [field, (details as Record<string, unknown>)[field]]),
+    ),
     brands: 'brands' in details ? (details.brands ?? []) : [],
     location: { ...snapshot.common.location, address },
     ...(snapshot.common.successorLocationId !== undefined

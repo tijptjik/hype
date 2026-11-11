@@ -23,7 +23,9 @@ afterEach(() => {
 function setup() {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
-  sqlite.exec(`PRAGMA foreign_keys=ON;
+  sqlite.exec(`CREATE TABLE organisation(id TEXT PRIMARY KEY, settings TEXT NOT NULL DEFAULT '{}');
+    INSERT INTO organisation(id) VALUES('org');
+PRAGMA foreign_keys=ON;
     CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT,locationPolicy TEXT,locationPolicyRevision INTEGER NOT NULL DEFAULT 0,modifiedAt TEXT);
     CREATE TABLE layer(id TEXT PRIMARY KEY,projectId TEXT REFERENCES project(id),organisationId TEXT,metadata TEXT,isDefaultVisible INTEGER NOT NULL DEFAULT 0,modifiedAt TEXT NOT NULL);
     CREATE TABLE retainedEvidence(id TEXT PRIMARY KEY,payload TEXT);

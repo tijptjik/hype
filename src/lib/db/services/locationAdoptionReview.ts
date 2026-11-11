@@ -301,6 +301,20 @@ export async function rejectLocationAdoptionGroup(
     !['facts', 'location'].includes(input.fieldGroup)
   )
     throw new Error('Invalid Location rejection')
+  const { hasFeatureLifecycleStorage } = await import('./featureLifecycle')
+  if (await hasFeatureLifecycleStorage(db)) {
+    const { applyOrganisationLocationAdoption } = await import(
+      './locationOrganisationAdoption'
+    )
+    const result = await applyOrganisationLocationAdoption(
+      db,
+      { ...input, mode: 'reviewed' },
+      true,
+    )
+    if (result.status !== 'applied') return null
+    const reviewed = await readLocationAdoptionReview(db, input)
+    return reviewed?.decisions.find(row => row.fieldGroup === input.fieldGroup) ?? null
+  }
   const column =
     input.fieldGroup === 'facts'
       ? locationAdoptionProposal.factsDecision

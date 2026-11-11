@@ -1,3 +1,4 @@
+import { LocalizedCurationTextSchema } from './curationIdentity'
 import { AccessibilitySchema } from './accessibility'
 // AUTHORED CONTENT LOCALES
 import {
@@ -99,6 +100,11 @@ export const LocationFactsSchema = z.strictObject({
   operatingStatus: OperatingStatusSchema.nullable().optional(),
   buildingStatus: BuildingStatusSchema.nullable().optional(),
   successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
+  branch: LocalizedCurationTextSchema.optional(),
+  format: LocalizedCurationTextSchema.optional(),
+  branchId: z.string().max(200).optional(),
+  groupId: z.string().min(1).nullable().optional(),
+  brandId: z.string().min(1).nullable().optional(),
   names,
   phoneNumber: z.array(z.string()),
   websites: z
@@ -135,6 +141,11 @@ export const LocationFactsSchema = z.strictObject({
 }) satisfies z.ZodType<LocationFacts>
 
 export const FeatureLocationOverridesSchema = z.strictObject({
+  branch: override(LocalizedCurationTextSchema).optional(),
+  format: override(LocalizedCurationTextSchema).optional(),
+  branchId: override(z.string().max(200)).optional(),
+  groupId: override(z.string().min(1)).optional(),
+  brandId: override(z.string().min(1)).optional(),
   freshness: z
     .record(
       z.string(),

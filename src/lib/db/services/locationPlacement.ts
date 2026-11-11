@@ -1,3 +1,4 @@
+import { locationRulesForOrigin } from '#lib/locations/model.js'
 import { canonicalLocationSQL } from './locationRedirect'
 import { RelationshipEvidenceSchema } from '#lib/locations/relationships.js'
 // DRIZZLE
@@ -166,6 +167,7 @@ export async function assessLocationPlacement(db: Database, input: Target) {
   const heads: Head[] = [],
     membershipRevisionIds: string[] = [],
     blockers: string[] = []
+  let changeOrigin: 'saanseoi' | 'community' = 'saanseoi'
   let occupancyRevisionId = binding.occupancyRevisionId,
     targetAddress = input.addressRevisionId,
     container = binding.locationId
@@ -175,6 +177,8 @@ export async function assessLocationPlacement(db: Database, input: Target) {
       ? 'relocation'
       : 'address'
   if (kind === 'relocation') {
+    // Occupancy assertions are authored in Hype; linking publisher evidence does not change authorship.
+    changeOrigin = 'community'
     const occupancy = await resolvedHead(
       db,
       'locationOccupancy',
@@ -252,6 +256,10 @@ export async function assessLocationPlacement(db: Database, input: Target) {
         .where(eq(addressRevision.id, targetAddress))
         .get()
     : undefined
+  if (kind === 'address')
+    changeOrigin = canonical?.sourceReferences.some(ref => ref.provider === 'saanseoi')
+      ? 'saanseoi'
+      : 'community'
   const content = canonical
     ? LocalLocationAddressSchema.safeParse(canonical.components)
     : null
@@ -376,7 +384,9 @@ export async function assessLocationPlacement(db: Database, input: Target) {
     organisationRevision: correction?.revision ?? null,
     geometry: geometry as PlacementEvidence['geometry'],
     policy:
-      kind === 'relocation' ? layerSettings.effectivePolicy : settings.policy.address,
+      kind === 'relocation'
+        ? locationRulesForOrigin(settings.policy, changeOrigin).relocation
+        : locationRulesForOrigin(settings.policy, changeOrigin).address,
     blockers,
     beforeAddressRevisionId: binding.addressRevisionId,
     beforeAccessHints,

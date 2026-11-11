@@ -52,6 +52,12 @@ export type LocationFacts = {
   buildingStatus?: BuildingStatus | null
   /** Explicit successor or relocated branch; prior names/addresses remain in immutable revisions. */
   successorLocationId?: string | null
+  /** Hype-authored establishment branch designation; absent upstream. */
+  branch?: Record<string, string>
+  format?: Record<string, string>
+  branchId?: string
+  groupId?: string | null
+  brandId?: string | null
   names: Record<string, string>
   phoneNumber: string[]
   websites?: string[]
@@ -64,6 +70,11 @@ export type LocationFacts = {
 export type FeatureLocationOverrides = {
   /** Explicit consent to supersede an Organisation correction when underlying evidence changes. */
   freshness?: Record<string, { mode: 'retain' | 'follow'; original: unknown }>
+  branch?: LocationOverride<Record<string, string>>
+  format?: LocationOverride<Record<string, string>>
+  branchId?: LocationOverride<string>
+  groupId?: LocationOverride<string>
+  brandId?: LocationOverride<string>
   websites?: LocationOverride<string[]>
   socials?: LocationOverride<Record<string, string>>
   accessibility?: LocationOverride<import('./accessibility').Accessibility>
@@ -86,10 +97,8 @@ export type FeatureLocationOverrides = {
 export const RelocationPolicySchema = z.enum(['fixed', 'review', 'follow'])
 export type RelocationPolicy = z.infer<typeof RelocationPolicySchema>
 
-/** Pre-release v1 uses explicit follow consent and a separate relocation rule. */
-export const ProjectLocationPolicySchema = z.strictObject({
-  version: z.literal(1),
-  discoveryRadiusMetres: z.number().int().min(50).max(1000).optional(),
+/** Source-specific rules retain independent location controls. */
+export const LocationChangeRulesSchema = z.strictObject({
   coordinates: z.discriminatedUnion('mode', [
     z.strictObject({ mode: z.literal('follow') }),
     z.strictObject({ mode: z.literal('review') }),
@@ -101,7 +110,19 @@ export const ProjectLocationPolicySchema = z.strictObject({
   address: z.enum(['follow', 'review']),
   unit: z.enum(['follow', 'review']),
   establishment: z.enum(['follow', 'review']),
+  communications: z.enum(['follow', 'review']).optional(),
   relocation: RelocationPolicySchema.default('review'),
+  acceptMissing: z.boolean().optional(),
+  acceptUnresolved: z.boolean().optional(),
+})
+export type LocationChangeRules = z.infer<typeof LocationChangeRulesSchema>
+
+/** Existing root rules remain SaanSeoi rules; community rules are independently configurable. */
+export const ProjectLocationPolicySchema = LocationChangeRulesSchema.extend({
+  version: z.literal(1),
+  discoveryRadiusMetres: z.number().int().min(50).max(1000).optional(),
+  sameSources: z.boolean().optional(),
+  community: LocationChangeRulesSchema.optional(),
 })
 
 export type ProjectLocationPolicy = z.infer<typeof ProjectLocationPolicySchema>
@@ -133,4 +154,18 @@ export function resolveRelocationPolicy(
   return layerPolicy == null
     ? policy.relocation
     : RelocationPolicySchema.parse(layerPolicy)
+}
+
+/** Resolve the selected origin without conflating a shared correction with publisher evidence.
+ * @param policy Validated effective Organisation/Project policy.
+ * @param origin Authenticated revision provenance, never a client-selected bypass.
+ * @returns Independent rules with conservative identity defaults and automatic communications.
+ */
+export function locationRulesForOrigin(
+  policy: ProjectLocationPolicy,
+  origin: 'saanseoi' | 'community',
+): LocationChangeRules {
+  return origin === 'community' && !policy.sameSources
+    ? (policy.community ?? DEFAULT_PROJECT_LOCATION_POLICY)
+    : policy
 }

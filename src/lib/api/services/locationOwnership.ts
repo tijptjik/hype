@@ -33,9 +33,9 @@ export async function requireLocationOrganisationManager(
   if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
 }
 
-/** Resolve shared contact editing from project/Organisation authority; translation rights do not qualify.
+/** Resolve community curation editing from project/Organisation authority; translation rights do not qualify.
  * @param ctx Fresh server session. @param projectId Persisted project establishing scope.
- * @returns Field-authoring rights; sensitive shared fields always require SuperAdmin.
+ * @returns Field-authoring rights for identity, address and communications; adoption remains policy-controlled.
  */
 export async function sharedLocationEditRights(
   ctx: GuardedBaseContext,

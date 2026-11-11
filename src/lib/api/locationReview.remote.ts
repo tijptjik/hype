@@ -10,6 +10,7 @@ import { z } from 'zod'
 // REMOTE
 import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
+import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 import { authorizeFeatureUpdateForSubmission } from '#lib/api/services/authz/index.js'
 // SERVICES
 import { probeFeatureQuery } from '#lib/db/services/feature.js'
@@ -47,12 +48,14 @@ const decisionInput = reviewInput.extend({
  * Require inherited-field editing permissions before reading source review evidence.
  * @param ctx Authenticated request context.
  * @param featureId Feature whose persisted ancestry determines authorization.
+ * @param organisationWide Whether this decision changes every consumer in the Organisation.
  * @returns Persisted project scope; caller-supplied project/actor values are never accepted.
  * @remarks Both groups include non-translation fields; translators cannot review or adopt them.
  */
 async function requireReviewer(
   ctx: GuardedBaseContext,
   featureId: string,
+  organisationWide = false,
 ): Promise<string> {
   const probe = await probeFeatureQuery(ctx.db, { ref: featureId, refKey: 'id' })
   if (!probe) error(404, 'FEATURE_NOT_FOUND')
@@ -63,6 +66,8 @@ async function requireReviewer(
     submittedData: { i18n: true, properties: true, geometry: true, addressMeta: true },
   })
   if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+  if (organisationWide)
+    await requireLocationOrganisationManager(ctx, probe.organisationId)
   return probe.projectId
 }
 
@@ -143,7 +148,7 @@ export const reevaluateFeatureLocationReview = guardedCommand(
 export const rejectFeatureLocationReview = guardedCommand(
   decisionInput,
   async (input, ctx) => {
-    const projectId = await requireReviewer(ctx, input.featureId)
+    const projectId = await requireReviewer(ctx, input.featureId, true)
     const result = await rejectLocationAdoptionGroup(ctx.db, {
       ...input,
       projectId,
@@ -164,7 +169,7 @@ export const rejectFeatureLocationReview = guardedCommand(
 export const acceptFeatureLocationReview = guardedCommand(
   decisionInput,
   async (input, ctx) => {
-    const projectId = await requireReviewer(ctx, input.featureId)
+    const projectId = await requireReviewer(ctx, input.featureId, true)
     const result = await applyLocationAdoptionGroup(ctx.db, {
       ...input,
       projectId,

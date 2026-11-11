@@ -14,9 +14,9 @@ export function setupLifecycleDatabase(
 ) {
   const sqlite = new DatabaseSync(':memory:')
   sqlite.exec(`PRAGMA foreign_keys=ON;
-    CREATE TABLE organisation(id TEXT PRIMARY KEY);
+    CREATE TABLE organisation(id TEXT PRIMARY KEY,settings TEXT NOT NULL DEFAULT '{}');
     CREATE TABLE organisationI18n(organisationId TEXT,locale TEXT,name TEXT,nameShort TEXT);
-    INSERT INTO organisation VALUES ('p'),('other');
+    INSERT INTO organisation(id) VALUES ('p'),('other');
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
       cardStyleCode TEXT, useAllInOrgContext INTEGER);

@@ -9,6 +9,7 @@ import {
   location as locationTable,
 } from '../schema/location'
 // DOMAIN
+import { equalLocationValue } from '#lib/locations/baseline.js'
 import { planLocationAdoption } from '#lib/locations/adoption.js'
 // SERVICES
 import { getAcceptedFeatureLocation, getProjectLocationSettings } from './location'
@@ -122,11 +123,33 @@ export async function previewFeatureLocationAdoption(
       policy.locationSharedRevision ?? null,
     )
   ).facts
-  const candidateOverrides = correction?.overrides ?? association.overrides
+  const candidateOverrides = structuredClone(
+    correction?.overrides ?? association.overrides,
+  )
+  // Evaluate changed evidence without letting the existing customization hide the incoming change.
+  for (const field of Object.keys(candidateOverrides)) {
+    if (field === 'freshness') continue
+    const before =
+      field === 'location'
+        ? location.facts.location
+        : facts.facts[field as keyof typeof facts.facts]
+    const after = candidate.facts[field as keyof typeof candidate.facts]
+    if (!equalLocationValue(before, after)) {
+      delete (candidateOverrides as Record<string, unknown>)[field]
+      if (candidateOverrides.freshness) delete candidateOverrides.freshness[field]
+    }
+  }
   return {
     sharedRevision: shared.revision,
     candidateOverrides,
     plan: planLocationAdoption({
+      origin:
+        candidate.id === facts.id &&
+        shared.revision !== (policy.factsSharedRevision ?? null)
+          ? 'community'
+          : candidate.origin === 'local'
+            ? 'community'
+            : 'saanseoi',
       facts,
       location,
       candidate,

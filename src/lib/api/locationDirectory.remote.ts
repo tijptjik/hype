@@ -9,6 +9,7 @@ import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
 import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 // DOMAIN
+import { LocalizedCurationTextSchema } from '#lib/locations/curationIdentity.js'
 import {
   LIFECYCLE_STATUSES,
   OperatingStatusSchema,
@@ -133,7 +134,9 @@ export const getLocation = guardedQuery(
     })
     const resource = result.data[0]
     const canEditShared = Boolean(
-      ctx.user.superAdmin && !ctx.user.isAnonymous && identity.state !== 'redirect',
+      (ctx.user.superAdmin || editingOrganisationId !== null) &&
+        !ctx.user.isAnonymous &&
+        ['linked', 'unresolved'].includes(identity.state),
     )
     const source =
       resource?.revisionId && canEditShared
@@ -205,6 +208,9 @@ export const saveLocalLocationAddress = guardedCommand(
     expectedOrganisationRevision: z.string().min(1).nullable(),
     footprint: LocalLocationFootprintSchema.nullable().optional(),
     names: LocationNamesEditSchema.optional(),
+    branch: LocalizedCurationTextSchema.optional(),
+    format: LocalizedCurationTextSchema.optional(),
+    branchId: z.string().max(200).optional(),
     operatingStatus: OperatingStatusSchema.nullable().optional(),
     buildingStatus: BuildingStatusSchema.nullable().optional(),
     successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),

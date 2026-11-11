@@ -1337,6 +1337,9 @@ describe('standalone Location reads', () => {
     expect(await getLocation({ id: 'location' })).toEqual({
       id: 'location',
       canEditAddress: true,
+      canEditShared: false,
+      sharedFacts: undefined,
+      sharedRevision: null,
       editingOrganisationId: 'p',
     })
     expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {

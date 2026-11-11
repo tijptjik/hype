@@ -1,3 +1,4 @@
+import { LocalizedCurationTextSchema } from './curationIdentity'
 // VALIDATION
 import { z } from 'zod'
 import { OperatingStatusSchema, BuildingStatusSchema } from './entityStatus'
@@ -14,6 +15,11 @@ export const LocationBrandsSchema = z.array(
 const identifier = z.string().trim().min(1)
 
 export const EstablishmentDetailsSchema = z.strictObject({
+  branch: LocalizedCurationTextSchema.optional(),
+  format: LocalizedCurationTextSchema.optional(),
+  branchId: z.string().max(200).optional(),
+  groupId: z.string().min(1).nullable().optional(),
+  brandId: z.string().min(1).nullable().optional(),
   brands: LocationBrandsSchema,
   operatingStatus: OperatingStatusSchema.nullable().optional(),
 })

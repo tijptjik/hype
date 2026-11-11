@@ -64,7 +64,7 @@ export const SharedCorrectionPatchSchema = z
           message: 'This field requires a replacement value or inheritance',
         })
       }
-      if (!change || change.mode !== 'override') continue
+      if (change?.mode !== 'override') continue
       const parsed = SharedCorrectionValuesSchema.shape[
         field as SharedCorrectionField
       ].safeParse(change.value)
@@ -92,22 +92,15 @@ export type SharedCorrections = Partial<
 >
 
 /** Enforce shared-field authority independently of Organisation override authority.
- * @param patch Validated changes. @param rights Server-resolved persisted permissions.
- * @returns Nothing; rejects every sensitive field unless the actor is SuperAdmin.
+ * @param _patch Validated changes. @param rights Server-resolved persisted permissions.
+ * @returns Nothing; rejects edits without community-curation authority.
  */
 export function authorizeSharedCorrection(
-  patch: SharedCorrectionPatch,
+  _patch: SharedCorrectionPatch,
   rights: { canEdit: boolean; superAdmin: boolean },
 ): void {
   if (!rights.canEdit && !rights.superAdmin)
     throw new Error('SHARED_LOCATION_EDIT_FORBIDDEN')
-  if (
-    !rights.superAdmin &&
-    Object.keys(patch).some(
-      field => !(SHARED_CONTACT_FIELDS as readonly string[]).includes(field),
-    )
-  )
-    throw new Error('SHARED_LOCATION_FIELD_REQUIRES_SUPERADMIN')
 }
 
 /** Record the actual source evidence, not the previously corrected display value.
@@ -147,7 +140,7 @@ export function amendSharedCorrections(
 /** Resolve current source evidence beneath a shared correction.
  * @param source Immutable source facts. @param corrections Explicit retained correction snapshot.
  * @returns Effective facts and per-field history status. Omission never means upstream deletion.
- * @remarks A changed contact field supersedes its correction; sensitive SuperAdmin corrections remain until explicitly reset.
+ * @remarks A changed contact field supersedes its correction; community identity corrections remain until explicitly reset.
  */
 export function resolveSharedCorrections(
   source: LocationFacts,
@@ -194,11 +187,15 @@ export function resolveSharedCorrections(
     }
     status[key] = 'active'
     const empty =
-      key === 'phoneNumber' || key === 'brands' || key === 'websites'
-        ? []
-        : key === 'names' || key === 'socials'
+      key === 'branchId'
+        ? ''
+        : key === 'branch' || key === 'format'
           ? {}
-          : null
+          : key === 'phoneNumber' || key === 'brands' || key === 'websites'
+            ? []
+            : key === 'names' || key === 'socials'
+              ? {}
+              : null
     Object.assign(facts, {
       [key]: entry.choice.mode === 'clear' ? empty : entry.choice.value,
     })

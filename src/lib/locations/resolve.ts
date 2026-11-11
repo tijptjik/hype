@@ -22,6 +22,11 @@ export function resolveLocationField<T>(
 }
 
 export type EffectiveLocationFacts = {
+  branch?: Record<string, string> | null
+  format?: Record<string, string> | null
+  branchId?: string | null
+  groupId?: string | null
+  brandId?: string | null
   websites?: LocationFacts['websites']
   socials?: LocationFacts['socials']
   accessibility?: LocationFacts['accessibility']
@@ -69,6 +74,21 @@ export function resolveFeatureLocation(
     )
   }
   return {
+    ...(facts.format !== undefined || overrides.format
+      ? { format: resolveLocationField(facts.format ?? {}, overrides.format) }
+      : {}),
+    ...(facts.branchId !== undefined || overrides.branchId
+      ? { branchId: resolveLocationField(facts.branchId ?? '', overrides.branchId) }
+      : {}),
+    ...(facts.groupId !== undefined || overrides.groupId
+      ? { groupId: resolveLocationField(facts.groupId ?? '', overrides.groupId) }
+      : {}),
+    ...(facts.brandId !== undefined || overrides.brandId
+      ? { brandId: resolveLocationField(facts.brandId ?? '', overrides.brandId) }
+      : {}),
+    ...(facts.branch !== undefined || overrides.branch
+      ? { branch: resolveLocationField(facts.branch ?? {}, overrides.branch) }
+      : {}),
     ...(facts.footprint !== undefined || overrides.footprint
       ? { footprint: resolveLocationField(facts.footprint, overrides.footprint) }
       : {}),
