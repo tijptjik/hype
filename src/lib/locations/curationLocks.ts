@@ -45,6 +45,45 @@ export const CURATION_LOCK_LABELS: Record<CurationLockField, string> = {
   'location.address': 'Address, floor and unit',
 }
 
+/** Policy areas group every publicly editable curation field exactly once. Branch ID is internal-only. */
+export const CURATION_LOCK_GROUPS = [
+  {
+    label: 'Identity',
+    fields: [
+      'names',
+      'brands',
+      'brandId',
+      'groupId',
+      'branch',
+      'format',
+      'entity',
+      'operatingStatus',
+      'buildingStatus',
+    ],
+  },
+  { label: 'Address', fields: ['location.address', 'accessibility'] },
+  { label: 'Map position', fields: ['location.geometry', 'footprint'] },
+  { label: 'Relocation', fields: ['successorLocationId'] },
+  { label: 'Communications', fields: ['phoneNumber', 'websites', 'socials'] },
+] as const satisfies ReadonlyArray<{
+  label: string
+  fields: readonly CurationLockField[]
+}>
+export const PUBLIC_CURATION_LOCK_FIELDS = CURATION_LOCK_GROUPS.flatMap(group => [
+  ...group.fields,
+])
+
+/** Count locked fields without counting retained internal-only or unknown keys.
+ * @param fields Stored openness controls. @param keys Fields included in this control.
+ * @returns Number explicitly locked.
+ */
+export function countCurationLocks(
+  fields: CurationOpenFields,
+  keys: readonly CurationLockField[] = PUBLIC_CURATION_LOCK_FIELDS,
+): number {
+  return keys.filter(key => fields[key] === false).length
+}
+
 /** Reject changes to closed community fields; SuperAdmin must explicitly unlock before editing.
  * @param patch Validated community edit intent.
  * @param current Current curated values, used to distinguish address from marker changes.

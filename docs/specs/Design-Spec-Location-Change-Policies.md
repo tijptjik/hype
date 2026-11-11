@@ -150,3 +150,17 @@ values, accepted community overlay, Organisation customization, resolved inherit
 fields, then localized display generation and manual name precedence. A separate second
 diagram explains editing, locking, policy acceptance and review. Approved but unfinished
 template and sparse-layer behavior remains explicitly labeled as target behavior.
+
+### Lock controls
+
+Switches are on when locked. Identity, Address, Map position, Relocation and
+Communications group their fields; a category switch changes every field in that area.
+Address includes accessibility; Map position includes footprint. The lock in the compact
+dialog header changes all 17 community-editable fields. Identity and Address form the
+left desktop column; the remaining policy areas form the right. Section icons and inline
+counts distinguish category switches from the smaller field switches. Mobile uses one
+column. Partially locked categories and the toolbar show the locked-field count. Branch
+ID is internal-only: it is excluded from these switches and counts, and community
+commands reject direct or nested branch ID edits, including those submitted by
+SuperAdmin. Existing evidence is retained; author branch IDs through the Internal
+destination.

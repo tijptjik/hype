@@ -6,7 +6,12 @@ import { afterEach, expect, it } from 'vitest'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // DOMAIN
-import { assertCurationFieldsOpen } from '#lib/locations/curationLocks.js'
+import {
+  assertCurationFieldsOpen,
+  PUBLIC_CURATION_LOCK_FIELDS,
+  CurationLockFieldSchema,
+  countCurationLocks,
+} from '#lib/locations/curationLocks.js'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
 // SERVICES
 import {
@@ -231,6 +236,16 @@ it('rejects internal Locations, invalid booleans and cross-Location history chai
   ).toThrow('boolean')
   expect(f.sqlite.prepare('PRAGMA integrity_check').get()?.integrity_check).toBe('ok')
   expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+})
+
+it('groups every public field once and excludes internal identifiers from counts', () => {
+  expect(new Set(PUBLIC_CURATION_LOCK_FIELDS).size).toBe(
+    PUBLIC_CURATION_LOCK_FIELDS.length,
+  )
+  expect([...PUBLIC_CURATION_LOCK_FIELDS].sort()).toEqual(
+    CurationLockFieldSchema.options.filter(field => field !== 'branchId').sort(),
+  )
+  expect(countCurationLocks({ names: false, branchId: false, websites: true })).toBe(1)
 })
 
 it('cannot remove a retained nested branch ID through a community entity reset', () => {
