@@ -135,6 +135,8 @@ const displayKinds = $derived(
   ).filter(
     kind =>
       kind !== 'infrastructure' &&
+      // Retain an unclassified source for review without offering families as classes.
+      (!['built', 'natural'].includes(kind) || kind === origin.kind) &&
       (!allowedLocationKinds || allowedLocationKinds.includes(kind)),
   ),
 )

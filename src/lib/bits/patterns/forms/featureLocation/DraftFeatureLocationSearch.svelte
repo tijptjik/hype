@@ -1353,6 +1353,12 @@ async function acceptResult(result: Result): Promise<void> {
   onSelect({
     ...result,
     localKind: result.source ? undefined : result.localKind,
+    ...(result.kind === 'establishment'
+      ? {
+          localKind: result.source ? undefined : (result.localKind ?? result.kind),
+          associationConfirmed: true,
+        }
+      : {}),
     nameMode: 'independent',
   })
   accepted = true
@@ -1365,6 +1371,14 @@ let autoAcceptSpecific = $state(false)
  * @returns Nothing; any accepted identity remains a draft until the Feature is saved.
  */
 function openAssociation(result: Result, explicitSelection = false): void {
+  if (
+    explicitSelection &&
+    result.kind === 'establishment' &&
+    (!allowedLocationKinds || allowedLocationKinds.includes(result.kind))
+  ) {
+    void acceptResult(result)
+    return
+  }
   autoAcceptSpecific = explicitSelection
   onSelectionStart?.()
   if (selected?.id !== result.id) choose(result)

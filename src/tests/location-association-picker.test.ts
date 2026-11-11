@@ -1421,3 +1421,28 @@ it('deliberately selects an existing building part without converting address fl
     expect.objectContaining({ kind: 'building_part', identity: selected.identity }),
   )
 })
+
+it('limits the resolution choices to eligible classes and keeps broad families out of the default guide', async () => {
+  const view = render(Picker, {
+    origin: candidate(),
+    allowedLocationKinds: ['establishment'],
+    search: async () => ({ candidates: [], incomplete: false }),
+    onAccept: vi.fn(),
+    onCancel: vi.fn(),
+  })
+  await waitFor(() =>
+    expect(
+      document
+        .querySelector('[data-location-association-picker]')
+        ?.classList.contains('hidden'),
+    ).toBe(false),
+  )
+  expect(
+    [...document.querySelectorAll('[data-association-kind]')].map(node =>
+      node.getAttribute('data-association-kind'),
+    ),
+  ).toEqual(['establishment'])
+  await view.rerender({ allowedLocationKinds: undefined })
+  expect(document.querySelector('[data-association-kind="built"]')).toBeNull()
+  expect(document.querySelector('[data-association-kind="natural"]')).toBeNull()
+})

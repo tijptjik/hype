@@ -3,6 +3,7 @@ import FeatureNamePreview from '#lib/bits/patterns/forms/featureIntent/FeatureNa
 import TargetContextChoice from '#lib/bits/patterns/forms/featureIntent/TargetContextChoice.svelte'
 import {
   TARGET_CONTEXTS,
+  TargetContextSchema,
   targetLocationKinds,
   targetSuggestionKinds,
   type TargetContext,
@@ -748,10 +749,16 @@ const availableTargetContexts = $derived(
   selectedFeatureType?.targetContexts ??
     TARGET_CONTEXTS.filter(kind => selectedFeatureType?.locationKinds.includes(kind)),
 )
+const effectiveTargetContext = $derived.by((): TargetContext | null => {
+  if (selectedTargetContext || isNewFeatureRef) return selectedTargetContext
+  const retained = TargetContextSchema.safeParse(currentFeatureData.targetContext)
+  return retained.success ? retained.data : null
+})
 const eligibleTargetKinds = $derived(
-  selectedTargetContext
-    ? targetLocationKinds(selectedTargetContext)
-    : selectedFeatureType?.locationKinds,
+  effectiveTargetContext
+    ? targetLocationKinds(effectiveTargetContext)
+    : (selectedFeatureType?.targetContexts?.flatMap(targetLocationKinds) ??
+        selectedFeatureType?.locationKinds),
 )
 /** Select physical intent independently of any broader matched record. @param context Intended target. @returns Nothing. */
 function chooseTargetContext(context: TargetContext): void {
@@ -5039,6 +5046,8 @@ async function refreshLocationSource(): Promise<void> {
             {/if}
             {#if currentFeatureId && feature?.data?.modifiedAt}
               <FeatureLocationSection
+                allowedLocationKinds={eligibleTargetKinds}
+                preferredKind={effectiveTargetContext ?? undefined}
                 pendingLocation={draftLocalKind || draftPlaceSource
                   ? {
                       names:

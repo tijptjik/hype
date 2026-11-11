@@ -102,8 +102,12 @@ let {
   buildingAssociationRequest,
   onBuildingAssociationRequestConsumed,
   pendingLocation,
+  allowedLocationKinds,
+  preferredKind,
 }: {
   address: FeatureAddress
+  allowedLocationKinds?: readonly string[]
+  preferredKind?: DraftLocationSearchResult['kind']
   pendingLocation?: { names: Record<string, string>; kind: LocationKind }
   onAssociationSelected?: (
     result: DraftLocationSearchResult,
@@ -1072,6 +1076,7 @@ async function link(): Promise<void> {
   {#if associationOrigin}
     {#key associationOrigin}
       <LocationAssociationPicker
+        {allowedLocationKinds}
         showHeading={false}
         {onMapCandidates}
         onSpaceNeeded={onAssociationSpaceNeeded}
@@ -1416,6 +1421,8 @@ async function link(): Promise<void> {
   {/if}
 {/snippet}
 <DraftFeatureLocationSearch
+  {allowedLocationKinds}
+  {preferredKind}
   resolutionOrigin="existing-feature"
   onExitResolution={() => {
     cancelDiscovery()

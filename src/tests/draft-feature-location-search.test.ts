@@ -97,9 +97,15 @@ async function acceptLocation(): Promise<void> {
     return
   }
   await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
-  await fireEvent.click(
-    await screen.findByRole('button', { name: /^Use(?: Location)?$/ }),
+  // Establishments finish immediately; less-specific records still need review.
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('combobox', { name: 'Location sync' }) ??
+        screen.queryByRole('button', { name: /^Use(?: Location)?$/ }),
+    ).not.toBeNull(),
   )
+  const confirm = screen.queryByRole('button', { name: /^Use(?: Location)?$/ })
+  if (confirm) await fireEvent.click(confirm)
 }
 
 it('focuses after navigation, searches while typing and returns the explicitly selected editable draft', async () => {
@@ -1876,7 +1882,7 @@ it('previews on repeated Enter and requires the explicit location action', async
   await acceptLocation()
   await waitFor(() =>
     expect(onSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'place:diana', nameMode: undefined }),
+      expect.objectContaining({ id: 'place:diana', nameMode: 'independent' }),
     ),
   )
   expect(onSelect).toHaveBeenCalledTimes(1)
@@ -1922,7 +1928,7 @@ it('removes and guards Back to results once the accepted selection has been save
   await acceptLocation()
   await waitFor(() =>
     expect(onSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ nameMode: undefined }),
+      expect.objectContaining({ nameMode: 'independent' }),
     ),
   )
   expect(screen.getByRole('button', { name: 'Back to proposed location' })).toBeTruthy()
@@ -3221,3 +3227,46 @@ it('uses an upstream location even when restored draft state contains a local cr
   expect(onSelect.mock.lastCall?.[0]).toMatchObject({ source: row.source })
   expect(onSelect.mock.lastCall?.[0].localKind).toBeUndefined()
 })
+
+it.each(['establishment', undefined] as const)(
+  'accepts an establishment without another review with preferred kind %s',
+  async preferredKind => {
+    vi.useRealTimers()
+    const onSelect = vi.fn()
+    const view = render(DraftSearch, {
+      active: true,
+      focusRequest: 0,
+      preferredKind,
+      allowedLocationKinds: ['establishment'],
+      onSelect,
+    })
+    const row = {
+      id: 'bakery',
+      kind: 'establishment' as const,
+      names: { en: 'Arome Bakery' },
+      identity: { locationId: 'bakery', revisionId: 'r1' },
+      address: emptyFeatureAddress(),
+    }
+    view.component.restoreProgress({
+      ...view.component.getProgress(),
+      query: 'arome',
+      receivedRows: [row],
+      searched: true,
+    })
+    const button = await screen.findByRole('button', { name: /Arome Bakery/ })
+    await fireEvent.click(button)
+    expect(onSelect).not.toHaveBeenCalled()
+    await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
+    await waitFor(() =>
+      expect(onSelect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'establishment',
+          identity: row.identity,
+          localKind: 'establishment',
+          associationConfirmed: true,
+        }),
+      ),
+    )
+    expect(document.querySelector('[data-location-association-picker]')).toBeNull()
+  },
+)
