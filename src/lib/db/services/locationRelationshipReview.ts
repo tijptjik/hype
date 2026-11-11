@@ -246,12 +246,12 @@ export async function readLocationLineage(
   },
 ): Promise<{
   rows: (Record<string, unknown> & {
-    participants: { locationId: string; side: string }[]
+    participants: { locationId: string; side: string; label?: string }[]
   })[]
   nextCursor: string | null
 }> {
   const rows = await db.all<Record<string, unknown>>(
-    sql`SELECT r.*,(SELECT json_group_array(json_object('locationId',p.locationId,'side',p.side)) FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id) participants FROM ${sql.identifier('locationTransition' + (input.history ? '' : 'Head'))} r WHERE ${input.history ? sql`(r.scopeOrganisationId IS NULL OR r.scopeOrganisationId IS ${input.scope})` : relationshipScopeSql('locationTransition', input.scope)} AND r.id>${input.afterId ?? ''} AND EXISTS(SELECT 1 FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id AND ${canonicalLocationSQL(sql`p.locationId`)}=${input.locationId}) AND NOT EXISTS(SELECT 1 FROM locationTransitionParticipant p JOIN location l ON l.id=${canonicalLocationSQL(sql`p.locationId`)} WHERE p.transitionRevisionId=r.id AND l.state='manual' AND l.ownerOrganisationId IS NOT ${input.scope}) ORDER BY r.id LIMIT 26`,
+    sql`SELECT r.*,(SELECT json_group_array(json_object('locationId',p.locationId,'side',p.side,'label',(SELECT COALESCE(json_extract(v.facts,'$.common.names.en'),p.locationId) FROM locationRevision v WHERE v.locationId=p.locationId ORDER BY v.version DESC LIMIT 1))) FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id) participants FROM ${sql.identifier('locationTransition' + (input.history ? '' : 'Head'))} r WHERE ${input.history ? sql`(r.scopeOrganisationId IS NULL OR r.scopeOrganisationId IS ${input.scope})` : relationshipScopeSql('locationTransition', input.scope)} AND r.id>${input.afterId ?? ''} AND EXISTS(SELECT 1 FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id AND ${canonicalLocationSQL(sql`p.locationId`)}=${input.locationId}) AND NOT EXISTS(SELECT 1 FROM locationTransitionParticipant p JOIN location l ON l.id=${canonicalLocationSQL(sql`p.locationId`)} WHERE p.transitionRevisionId=r.id AND l.state='manual' AND l.ownerOrganisationId IS NOT ${input.scope}) ORDER BY r.id LIMIT 26`,
   )
   return {
     rows: rows.slice(0, 25).map(({ provenance, actorId, ...r }) => ({

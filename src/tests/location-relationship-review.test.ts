@@ -18,6 +18,10 @@ afterEach(() => {
 function setup() {
   const s = setupLifecycleDatabase(true)
   stores.push(s)
+  // Legacy lifecycle fixtures store the matching discriminator directly in kind.
+  s.sqlite.exec(
+    'ALTER TABLE location ADD COLUMN matchingType TEXT GENERATED ALWAYS AS (kind) VIRTUAL',
+  )
   s.sqlite.exec(
     "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('building','building','unresolved','p'),('other-building','building','unresolved','p'),('private','building','manual','other')",
   )
@@ -206,12 +210,30 @@ it('presents evidenced replacement lineage without redirecting either identity',
     },
     'editor',
   )
+  s.sqlite
+    .prepare(
+      'INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES(?,?,?,?,?,?,?)',
+    )
+    .run(
+      'building-label',
+      'building',
+      1,
+      'local',
+      'fixture',
+      '{}',
+      JSON.stringify({ common: { names: { en: 'Harbour House' } } }),
+    )
   const result = await readLocationLineage(s.db, {
     locationId: 'building',
     scope: null,
   })
   expect(result.rows).toHaveLength(1)
   expect(result.rows[0].participants).toHaveLength(2)
+  expect(result.rows[0].participants).toContainEqual({
+    locationId: 'building',
+    side: 'before',
+    label: 'Harbour House',
+  })
   expect(
     s.sqlite.prepare("SELECT redirectTargetId FROM location WHERE id='building'").get()
       ?.redirectTargetId,

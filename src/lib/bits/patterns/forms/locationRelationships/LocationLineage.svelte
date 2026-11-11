@@ -3,6 +3,9 @@
 import * as m from '#lib/paraglide/messages.js'
 // BITS
 import { Button } from '#lib/bits/core/button/index.js'
+import { SelectField, TextInput, TextArea } from '#lib/bits/custom/form/index.js'
+import HistoryIcon from 'virtual:icons/lucide/history'
+import RelationshipLocationPicker from './RelationshipLocationPicker.svelte'
 // API
 import {
   getLocationLineage,
@@ -12,10 +15,18 @@ let {
   locationId,
   organisationId,
   canEdit = false,
-}: { locationId: string; organisationId: string | null; canEdit?: boolean } = $props()
+  queryScope = '',
+}: {
+  locationId: string
+  organisationId: string | null
+  canEdit?: boolean
+  queryScope?: string
+} = $props()
 let type = $state<'replacement' | 'merge' | 'split' | 'reconfiguration'>('replacement')
-let before = $state('')
-let after = $state('')
+const uid = $props.id()
+let adding = $state(false)
+let before = $state<{ id: string; label: string }[]>([])
+let after = $state<{ id: string; label: string }[]>([])
 let sourceUrl = $state('')
 let description = $state('')
 let busy = $state(false)
@@ -34,14 +45,8 @@ async function record(): Promise<void> {
       assertionState: 'asserted',
       type,
       basis: 'real_world',
-      before: (before || locationId)
-        .split(',')
-        .map(v => v.trim())
-        .filter(Boolean),
-      after: after
-        .split(',')
-        .map(v => v.trim())
-        .filter(Boolean),
+      before: before.length ? before.map(item => item.id) : [locationId],
+      after: after.map(item => item.id),
       observedAt: new Date().toISOString(),
       verifiedAt: null,
       effectiveFrom: null,
@@ -59,8 +64,9 @@ async function record(): Promise<void> {
     pages = []
     afterId = undefined
     await request.refresh()
-    before = ''
-    after = ''
+    before = []
+    after = []
+    adding = false
     sourceUrl = ''
     description = ''
   } catch (error) {
@@ -72,7 +78,9 @@ async function record(): Promise<void> {
 let history = $state(false)
 let afterId = $state<string | undefined>()
 let pages = $state<
-  (Record<string, unknown> & { participants: { locationId: string; side: string }[] })[]
+  (Record<string, unknown> & {
+    participants: { locationId: string; side: string; label?: string }[]
+  })[]
 >([])
 const request = $derived(
   getLocationLineage({ locationId, organisationId, history, afterId }),
@@ -92,14 +100,42 @@ function toggle(): void {
   afterId = undefined
 }
 </script>
-<section class="border-border space-y-3 border-t pt-4">
-  <h4 class="font-medium">{m.relationship_lineage()}</h4>
-  <p class="text-muted-foreground text-sm">{m.relationship_lineage_hint()}</p>
-  <Button
-    type="button"
-    text={history ? m.relationship_current() : m.relationship_history()}
-    onClick={toggle}
-  />
+<section class="border-border/50 min-w-0 space-y-4 rounded-xl border p-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h4 class="text-sm font-medium">{m.relationship_lineage()}</h4>
+    <div class="flex items-center gap-2">
+      {#if canEdit}
+        <Button
+          text={adding ? 'Cancel' : m.lineage_record()}
+          size="sm"
+          style="ghost"
+          disabled={busy}
+          onClick={() => (adding = !adding)}
+        />
+      {/if}
+      <Button
+        size="sm"
+        style={history ? 'soft' : 'ghost'}
+        modifier="square"
+        iconComponent={HistoryIcon}
+        hideLabel
+        hideLabelInstantly
+        attrs={{
+          'aria-pressed': history,
+          'data-tooltip': history ? 'Show latest changes' : 'Show version history',
+        }}
+        type="button"
+        text={history ? m.relationship_current() : m.relationship_history()}
+        onClick={toggle}
+      />
+    </div>
+  </div>
+  <p class="text-muted-foreground max-w-3xl text-sm">{m.relationship_lineage_hint()}</p>
+  {#if history}
+    <p class="text-primary text-xs font-medium">
+      Version history · includes superseded events
+    </p>
+  {/if}
   {#if !request.ready}
     <div
       class="bg-muted h-16 animate-pulse rounded"
@@ -108,7 +144,7 @@ function toggle(): void {
     ></div>
   {/if}
   {#each rows as row (String(row.id))}
-    <article class="border-border space-y-2 rounded border p-3 text-sm">
+    <article class="bg-muted/20 space-y-3 rounded-lg p-4 text-sm">
       <p>
         {String(row.type)}
         · {String(row.basis)} · {String(row.effectiveFrom ?? '')}
@@ -121,65 +157,100 @@ function toggle(): void {
             (organisationId
               ? '?organisation=' + encodeURIComponent(organisationId)
               : '')}
-          >{participant.side}: {participant.locationId}</a
+          >{participant.side}: {participant.label ?? participant.locationId}</a
         >
       {/each}
     </article>
   {:else}
-    <p class="text-muted-foreground text-sm">{m.relationship_empty()}</p>
+    {#if request.ready}
+      <p class="text-muted-foreground bg-muted/20 rounded-lg px-4 py-6 text-sm">
+        {m.relationship_empty()}
+      </p>
+    {/if}
   {/each}
   {#if request.current?.nextCursor}
     <Button type="button" text={m.relationship_more()} onClick={more} />
   {/if}
-  {#if canEdit}
-    <details class="space-y-3">
-      <summary class="cursor-pointer text-sm font-medium">{m.lineage_record()}</summary>
-      <p class="text-muted-foreground text-sm">{m.lineage_id_hint()}</p>
-      <label class="block text-sm"
-        >{m.lineage_type()}
-        <select
-          class="border-border bg-background rounded border p-2"
-          bind:value={type}
-        >
-          <option value="replacement">{m.lineage_replacement()}</option>
-          <option value="merge">{m.lineage_merge()}</option>
-          <option value="split">{m.lineage_split()}</option>
-          <option value="reconfiguration">{m.lineage_reconfiguration()}</option>
-        </select></label
-      >
-      <label class="block text-sm"
-        >{m.lineage_before()}<input
-          class="border-border bg-background mt-1 w-full rounded border p-2"
-          bind:value={before}
-          placeholder={locationId}
-        ></label
-      >
-      <label class="block text-sm"
-        >{m.lineage_after()}<input
-          class="border-border bg-background mt-1 w-full rounded border p-2"
-          bind:value={after}
-        ></label
-      >
-      <label class="block text-sm"
-        >{m.lineage_source()}<input
-          class="border-border bg-background mt-1 w-full rounded border p-2"
-          type="url"
-          bind:value={sourceUrl}
-        ></label
-      >
-      <label class="block text-sm"
-        >{m.lineage_description()}<textarea
-          class="border-border bg-background mt-1 w-full rounded border p-2"
-          bind:value={description}
-        ></textarea></label
-      >
-      <Button
-        type="button"
-        text={m.lineage_record()}
-        disabled={busy || !after.trim() || !sourceUrl || !description.trim()}
-        onClick={record}
+  {#if canEdit && adding}
+    <fieldset
+      disabled={busy}
+      class="bg-muted/20 grid min-w-0 gap-6 rounded-xl p-5 md:grid-cols-2"
+    >
+      <div class="md:col-span-2">
+        <SelectField
+          triggerClass="bg-transparent! hover:bg-transparent! shadow-none!"
+          id={uid + '-type'}
+          label={m.lineage_type()}
+          value={type}
+          items={[
+            { value: 'replacement', label: m.lineage_replacement() },
+            { value: 'merge', label: m.lineage_merge() },
+            { value: 'split', label: m.lineage_split() },
+            { value: 'reconfiguration', label: m.lineage_reconfiguration() },
+          ]}
+          onValueChange={value => (type = value as typeof type)}
+        />
+      </div>
+      <div class="min-w-0 space-y-2">
+        <RelationshipLocationPicker
+          label="Before · Locations involved"
+          selected={before}
+          onChange={items => (before = items)}
+          {organisationId}
+          {queryScope}
+          multiple
+          disabled={busy}
+        />
+        <p class="text-muted-foreground text-xs">Leave empty to use this Location.</p>
+      </div>
+      <RelationshipLocationPicker
+        label="After · Resulting Locations"
+        selected={after}
+        onChange={items => (after = items)}
+        {organisationId}
+        {queryScope}
+        multiple
+        disabled={busy}
       />
-    </details>
+      <TextInput
+        variant="resource"
+        id={uid + '-source'}
+        name=""
+        label={m.lineage_source()}
+        inputAttrs={{ inputmode: 'url' }}
+        required
+        bind:value={sourceUrl}
+        class="md:col-span-2"
+      />
+      <TextArea
+        controlClass="bg-transparent!"
+        id={uid + '-description'}
+        name=""
+        label={m.lineage_description()}
+        rows={3}
+        required
+        bind:value={description}
+        class="md:col-span-2"
+      />
+      <p class="text-muted-foreground text-xs md:col-span-2">
+        This records a real-world change. It does not merge identities, redirect
+        Locations or move Features.
+      </p>
+      <div class="flex flex-wrap gap-2 md:col-span-2">
+        <Button
+          text={busy ? 'Recording…' : m.lineage_record()}
+          color="primary"
+          disabled={busy || !after.length || !sourceUrl || !description.trim()}
+          onClick={record}
+        />
+        <Button
+          text="Cancel"
+          style="ghost"
+          disabled={busy}
+          onClick={() => (adding = false)}
+        />
+      </div>
+    </fieldset>
   {/if}
   {#if failure}
     <p role="alert" class="text-destructive text-sm">{failure}</p>

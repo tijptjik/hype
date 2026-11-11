@@ -5,15 +5,19 @@ import { canOperateIn } from '#lib/features/locationPolicy.js'
 // API
 import {
   saveLocationRelationship,
+  getRelationshipPage,
   reconcilePlacementPage,
 } from '#lib/api/locationRelationships.remote.js'
-import { getLocations } from '#lib/api/locationDirectory.remote.js'
+// BITS
+import { Button } from '#lib/bits/core/button/index.js'
+import { SelectField, TextInput, TextArea } from '#lib/bits/custom/form/index.js'
+import RelationshipLocationPicker from './RelationshipLocationPicker.svelte'
 // COMPONENTS
 import RelationshipPage from './RelationshipPage.svelte'
 import LocationLineage from './LocationLineage.svelte'
 // TYPES
 import type { LocationKind } from '#lib/locations/kinds.js'
-import type { RelationshipInput } from '#lib/locations/relationships.js'
+import { validKnownDate, type RelationshipInput } from '#lib/locations/relationships.js'
 
 let {
   locationId,
@@ -29,30 +33,53 @@ let {
   canEdit?: boolean
 } = $props()
 let refreshVersion = $state(0)
-let search = $state('')
-let targetId = $state('')
+const uid = $props.id()
+let adding = $state(false)
+let selected = $state<{ id: string; label: string }[]>([])
+const targetId = $derived(selected[0]?.id ?? '')
 let relation = $state<'locationMembership' | 'locationOccupancy'>('locationMembership')
 let relationshipState = $state<'current' | 'former' | 'unconfirmed'>('unconfirmed')
 let description = $state('')
 let sourceUrl = $state('')
+let starts = $state('')
+let ends = $state('')
+/** Parse an optional boundary without inventing missing months or days.
+ * @param value User-entered year, month or day.
+ * @returns A validated boundary, null when blank, or undefined when invalid.
+ */
+function boundary(
+  value: string,
+): { value: string; precision: 'year' | 'month' | 'day' } | null | undefined {
+  if (!value.trim()) return null
+  const text = value.trim()
+  const precision = text.length === 4 ? 'year' : text.length === 7 ? 'month' : 'day'
+  return validKnownDate(text, precision) ? { value: text, precision } : undefined
+}
+const datesValid = $derived(
+  boundary(starts) !== undefined &&
+    boundary(ends) !== undefined &&
+    (!starts || !ends || starts <= ends),
+)
+const evidenceValid = $derived(
+  (!sourceUrl && !description.trim()) ||
+    (/^https?:\/\//.test(sourceUrl) && Boolean(description.trim())),
+)
 let saving = $state(false)
 let failure = $state('')
-const targets = $derived(
-  search.trim().length > 1
-    ? getLocations({
-        q: search.trim(),
-        organisationId: organisationId ?? undefined,
-        scope: queryScope,
-      })
-    : null,
-)
 const canOccupy = $derived(kind === 'establishment' || kind === 'service_point')
 const canContain = $derived(
   kind === 'building' || kind === 'building_part' || kind === 'premises',
 )
 
-/** Append a new episode or a complete correction without modifying a prior assertion. */
-async function save(previous?: Record<string, unknown>, suppress = false) {
+/** Append a new episode or complete correction without modifying a prior assertion.
+ * @param previous Existing assertion to correct.
+ * @param suppress Hide the assertion in the selected scope.
+ * @returns Resolves after saving and reconciling affected placements.
+ */
+async function save(
+  previous?: Record<string, unknown>,
+  suppress = false,
+): Promise<void> {
   failure = ''
   saving = true
   try {
@@ -81,13 +108,13 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
             value: String(previous.effectiveFrom),
             precision: previous.effectiveFromPrecision,
           }
-        : null,
+        : boundary(starts),
       effectiveTo: previous?.effectiveTo
         ? {
             value: String(previous.effectiveTo),
             precision: previous.effectiveToPrecision,
           }
-        : null,
+        : boundary(ends),
       evidence:
         sourceUrl && description
           ? [
@@ -142,9 +169,21 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
       })
       cursor = next.nextCursor
     }
+    // Refresh the remote cache before remounting cards so the newly saved assertion is visible.
+    await getRelationshipPage({
+      locationId,
+      organisationId,
+      table,
+      history: false,
+      afterId: undefined,
+    }).refresh()
     refreshVersion += 1
-    targetId = ''
-    search = ''
+    selected = []
+    sourceUrl = ''
+    description = ''
+    starts = ''
+    ends = ''
+    adding = false
   } catch (error) {
     failure = error instanceof Error ? error.message : 'Could not save relationship'
   } finally {
@@ -153,14 +192,26 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
 }
 </script>
 
-<section
-  class="border-border space-y-4 border-t pt-6"
-  aria-label="Location relationships"
->
-  <h3 class="text-base font-semibold">{m.location_relationships_title()}</h3>
-  <p class="text-muted-foreground text-sm">
-    {m.location_operating_help()}
-  </p>
+<section class="space-y-8" aria-label="Location relationships">
+  <div class="space-y-2">
+    <h3 class="text-base font-semibold">Location relationships</h3>
+    <p class="text-muted-foreground max-w-3xl text-sm">
+      Manage where this place belongs, where it operates, and how it changed over time.
+      Features linked to this place are listed separately in Features.
+    </p>
+    {#if canEdit}
+      <p class="text-muted-foreground text-xs">
+        Relationship actions save immediately and retain a version in history. Cancel
+        closes an unsaved editor; it does not undo recorded changes.
+      </p>
+    {/if}
+    <p class="text-muted-foreground text-xs">
+      {organisationId
+        ? 'Changes apply to this organisation’s view.'
+        : 'Changes apply to the shared Location record.'}
+      Previous versions are retained.
+    </p>
+  </div>
   {#key locationId + ':' + organisationId + ':' + refreshVersion}
     {#each ['locationMembership', 'locationOccupancy', 'locationAddress'] as table}
       <RelationshipPage
@@ -170,79 +221,124 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
         table={table as 'locationMembership' | 'locationOccupancy' | 'locationAddress'}
         onSave={save}
         {saving}
-      />
+      >
+        {#snippet actions()}
+          {#if canEdit &&
+            ((table === 'locationOccupancy' && canOccupy) ||
+              (table === 'locationMembership' && canContain))}
+            <Button
+              text={adding
+                ? 'Cancel'
+                : canOccupy
+                  ? m.location_operating_period()
+                  : 'Add to complex'}
+              size="sm"
+              style="ghost"
+              disabled={saving}
+              onClick={() => (adding = !adding)}
+            />
+          {/if}
+        {/snippet}
+        {#snippet editor()}
+          {#if adding &&
+            canEdit &&
+            ((table === 'locationOccupancy' && canOccupy) ||
+              (table === 'locationMembership' && canContain))}
+            <fieldset
+              disabled={saving}
+              class="bg-muted/20 grid min-w-0 gap-6 rounded-xl p-5 md:grid-cols-2"
+            >
+              <div class="min-w-0 md:col-span-2">
+                <RelationshipLocationPicker
+                  label={canOccupy ? m.location_operates_in() : 'Containing complex'}
+                  {selected}
+                  onChange={items => (selected = items)}
+                  {organisationId}
+                  {queryScope}
+                  exclude={[locationId]}
+                  accepts={target =>
+                    canOccupy
+                      ? canOperateIn(kind, target)
+                      : kind === 'building_part'
+                        ? target === 'building_part'
+                        : target === 'premises'}
+                  disabled={saving}
+                />
+              </div>
+              <SelectField
+                triggerClass="bg-transparent! hover:bg-transparent! shadow-none!"
+                id={uid + '-status'}
+                label="Relationship status"
+                value={relationshipState}
+                items={['unconfirmed', 'current', 'former'].map(value => ({
+                  value,
+                  label: value[0].toUpperCase() + value.slice(1),
+                }))}
+                onValueChange={value =>
+                  (relationshipState = value as typeof relationshipState)}
+              />
+              <TextInput
+                variant="resource"
+                id={uid + '-source'}
+                name=""
+                label="Supporting source URL (optional)"
+                inputAttrs={{ inputmode: 'url' }}
+                bind:value={sourceUrl}
+              />
+              <TextInput
+                variant="resource"
+                id={uid + '-starts'}
+                name=""
+                label="From (optional)"
+                placeholder="YYYY, YYYY-MM or YYYY-MM-DD"
+                bind:value={starts}
+              />
+              <TextInput
+                variant="resource"
+                id={uid + '-ends'}
+                name=""
+                label="Until (optional)"
+                placeholder="YYYY, YYYY-MM or YYYY-MM-DD"
+                bind:value={ends}
+              />
+              {#if !datesValid}
+                <p class="text-destructive text-xs md:col-span-2">
+                  Use a valid year, month or date, with the end after the start.
+                </p>
+              {/if}
+              <TextArea
+                controlClass="bg-transparent!"
+                id={uid + '-description'}
+                name=""
+                label="What does the source establish?"
+                rows={3}
+                bind:value={description}
+                class="md:col-span-2"
+              />
+              <p class="text-muted-foreground text-xs md:col-span-2">
+                {m.location_operating_help()}
+              </p>
+              <div class="flex flex-wrap gap-2 md:col-span-2">
+                <Button
+                  text={saving ? 'Recording…' : 'Record relationship'}
+                  color="primary"
+                  disabled={saving || !targetId || !evidenceValid || !datesValid}
+                  onClick={() => save()}
+                />
+                <Button
+                  text="Cancel"
+                  style="ghost"
+                  disabled={saving}
+                  onClick={() => (adding = false)}
+                />
+              </div>
+            </fieldset>
+          {/if}
+        {/snippet}
+      </RelationshipPage>
     {/each}
-    <LocationLineage {locationId} {organisationId} {canEdit} />
+    <LocationLineage {locationId} {organisationId} {queryScope} {canEdit} />
   {/key}
-  {#if canEdit && (canOccupy || canContain)}
-    <details class="space-y-3">
-      <summary class="cursor-pointer text-sm font-medium">
-        {canOccupy ? m.location_operating_period() : 'Add to complex'}
-      </summary>
-      <label class="block text-sm"
-        >{canOccupy ? m.location_operates_in() : 'Containing complex'}
-        <input
-          class="border-border bg-background mt-1 w-full rounded border p-2"
-          bind:value={search}
-          placeholder="Search Locations"
-        >
-      </label>
-      {#if targets}
-        {#await targets then matches}
-          <select
-            class="border-border bg-background w-full rounded border p-2"
-            bind:value={targetId}
-            aria-label="Destination Location"
-          >
-            <option value="">Select a Location</option>
-            {#each matches.data.filter(
-              item =>
-                item.id !== locationId &&
-                (canOccupy
-                  ? canOperateIn(kind, item.kind)
-                  : kind === 'building_part'
-                    ? item.kind === 'building_part'
-                    : item.kind === 'premises'),
-            ) as item}
-              <option value={item.id}>{item.facts?.names.en ?? item.id}</option>
-            {/each}
-          </select>
-        {/await}
-      {/if}
-      <label class="block text-sm"
-        >Relationship status
-        <select
-          class="border-border bg-background rounded border p-2"
-          bind:value={relationshipState}
-        >
-          <option value="unconfirmed">Unconfirmed</option>
-          <option value="current">Current</option>
-          <option value="former">Former</option>
-        </select></label
-      >
-      <label class="block text-sm"
-        >Supporting source URL (optional)<input
-          class="border-border bg-background mt-1 w-full rounded border p-2"
-          type="url"
-          bind:value={sourceUrl}
-        ></label
-      >
-      <label class="block text-sm"
-        >What does it establish?<textarea
-          class="border-border bg-background mt-1 w-full rounded border p-2"
-          bind:value={description}
-        ></textarea></label
-      >
-      <button
-        type="button"
-        class="bg-primary text-primary-foreground rounded px-3 py-2 disabled:opacity-50"
-        disabled={saving || !targetId}
-        onclick={() => save()}
-      >
-        Record relationship
-      </button>
-    </details>
-  {/if}
   {#if failure}
     <p role="alert" class="text-destructive text-sm">{failure}</p>
   {/if}
