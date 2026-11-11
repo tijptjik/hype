@@ -27,6 +27,44 @@ const makeSource = (id: string, title: string) => ({
       },
     },
     properties: {
+      phone: {
+        selection: {
+          propertyValueId: null,
+          value: null,
+          valueJson: JSON.stringify(
+            id === 'primary' ? ['+85221234567', '+31201234567'] : ['+85223456789'],
+          ),
+          definition: {
+            key: 'phoneNumber',
+            type: 'specifier',
+            dataType: 'text',
+            component: 'PhoneField',
+            isTranslatable: false,
+            labels: { en: { value: 'Phone Number' } },
+            selectedOption: null,
+          },
+        },
+        translations: {},
+      },
+      aliases: {
+        selection: {
+          propertyValueId: null,
+          value: JSON.stringify(
+            id === 'primary' ? ['First alias', 'Second alias'] : ['Incoming alias'],
+          ),
+          valueJson: null,
+          definition: {
+            key: 'aliases',
+            type: 'specifier',
+            dataType: 'text',
+            component: 'TextField',
+            isTranslatable: false,
+            labels: { en: { value: 'Aliases' } },
+            selectedOption: null,
+          },
+        },
+        translations: {},
+      },
       category: {
         selection: {
           propertyValueId: `option-${id}`,
@@ -414,6 +452,100 @@ for await (const { name, browser } of browserCases({ map: true })) {
           .getAttribute('data-import-state')) !== 'equal'
       )
         throw Error('Equal fields were not marked')
+      const keptPhones = dialog.getByRole('list', {
+        name: 'Keep Phone Number en',
+        exact: true,
+      })
+      if (
+        JSON.stringify(
+          await keptPhones
+            .locator('li')
+            .allTextContents()
+            .then(values => values.map(value => value.trim())),
+        ) !== JSON.stringify(['+852 2123 4567', '+31 20 123 4567'])
+      )
+        throw Error('Phone array did not use shared international formatting')
+      await dialog
+        .getByRole('button', { name: 'Import Phone Number en', exact: true })
+        .click()
+      await keptPhones.getByText('+852 2345 6789', { exact: true }).waitFor()
+      await dialog
+        .getByRole('button', { name: 'Undo import Phone Number en', exact: true })
+        .click()
+      await keptPhones.getByText('+852 2123 4567', { exact: true }).waitFor()
+      await keptPhones.scrollIntoViewIfNeeded()
+      await page.screenshot({
+        path: `${directory}/${name}-${theme}-${width}-array-fields.png`,
+      })
+      await dialog
+        .getByLabel('Keep Aliases en 1', { exact: true })
+        .fill('Reviewed alias')
+      await dialog.getByLabel('Keep Aliases en 1', { exact: true }).press('Tab')
+      await dialog
+        .getByRole('button', { name: 'Multilingual', exact: true })
+        .scrollIntoViewIfNeeded()
+      const diffToggle = dialog.getByRole('button', { name: 'Diff Only', exact: true })
+      const multilingualButton = dialog.getByRole('button', {
+        name: 'Multilingual',
+        exact: true,
+      })
+      const diffBounds = (await diffToggle.boundingBox())!
+      const multilingualBounds = (await multilingualButton.boundingBox())!
+      if (diffBounds.x < multilingualBounds.x + multilingualBounds.width - 1)
+        throw Error('Diff Only is not right of Multilingual')
+      if (
+        (await dialog
+          .getByLabel('Discard last seen', { exact: true })
+          .getAttribute('type')) !== 'date'
+      )
+        throw Error('Discard date does not use the same native format as Keep')
+      await diffToggle.click()
+      await diffToggle.and(dialog.locator('[aria-pressed="true"]')).waitFor()
+      if (await dialog.locator('[data-import-state="equal"]').count())
+        throw Error('Diff Only retained matching rows')
+      if (await dialog.getByRole('heading', { name: 'Location', exact: true }).count())
+        throw Error('Diff Only retained matching displayed addresses')
+      await dialog
+        .getByRole('button', { name: 'Import Phone Number en', exact: true })
+        .click()
+      await dialog
+        .getByRole('list', { name: 'Keep Phone Number en', exact: true })
+        .getByText('+852 2345 6789', { exact: true })
+        .waitFor()
+      await dialog
+        .getByRole('button', { name: 'Undo import Phone Number en', exact: true })
+        .waitFor()
+
+      if (
+        await dialog.getByRole('heading', { name: 'Status', exact: true }).isVisible()
+      )
+        throw Error('Diff Only retained an empty section')
+      await dialog.getByLabel('Keep name en', { exact: true }).waitFor()
+      await dialog
+        .getByRole('button', { name: 'Undo import Phone Number en', exact: true })
+        .click()
+      await dialog
+        .getByRole('list', { name: 'Keep Phone Number en', exact: true })
+        .getByText('+852 2123 4567', { exact: true })
+        .waitFor()
+      await diffToggle.click()
+      await dialog.getByLabel('Keep last seen', { exact: true }).waitFor()
+
+      await dialog
+        .getByLabel('Keep description en', { exact: true })
+        .fill('Pending edit')
+      await diffToggle.click()
+      await diffToggle.and(dialog.locator('[aria-pressed="true"]')).waitFor()
+      await page.waitForFunction(() =>
+        (window as any).__dialogSnapshots.every((snapshot: any) => snapshot.finished),
+      )
+      if (await dialog.getByLabel('Keep description en', { exact: true }).count())
+        throw Error('Diff Only changed its original row set after editing')
+      await page.screenshot({
+        path: `${directory}/${name}-${theme}-${width}-diff-only.png`,
+      })
+      await diffToggle.click()
+      await diffToggle.and(dialog.locator('[aria-pressed="false"]')).waitFor()
       await dialog.getByRole('button', { name: 'Multilingual', exact: true }).click()
       await dialog.getByLabel('Keep name zh-hant', { exact: true }).waitFor()
       await dialog
@@ -493,6 +625,8 @@ for await (const { name, browser } of browserCases({ map: true })) {
       if (
         output.propertyTranslationEdits.notes.en !== 'Reviewed note' ||
         output.propertyEdits.rank !== '3' ||
+        output.propertyEdits.aliases !==
+          JSON.stringify(['Reviewed alias', 'Second alias']) ||
         output.descriptions['zh-hant'] !== '審閱後的說明'
       )
         throw Error('Field edits were lost')

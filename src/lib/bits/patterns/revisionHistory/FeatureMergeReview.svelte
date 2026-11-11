@@ -14,6 +14,12 @@ import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
 import { shortLocaleLabel } from '#lib/bits/custom/localeControls/localeControls.js'
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
 import MergeImportControl from './MergeImportControl.svelte'
+import MergeComparisonRow from './MergeComparisonRow.svelte'
+import MergePropertyValue from './MergePropertyValue.svelte'
+import {
+  mergePropertyComparison,
+  mergePropertyEntries,
+} from './mergePropertyDisplay.js'
 import FeatureMergePhotos from './FeatureMergePhotos.svelte'
 // DOMAIN
 import { identityTitle } from './featureIdentity.types'
@@ -21,6 +27,7 @@ import { transitionReviewDialog } from '#lib/bits/core/dialog/dialogTransition.j
 // ICONS
 import ReplaceIcon from 'virtual:icons/lucide/replace'
 import DistanceIcon from 'virtual:icons/lucide/move-horizontal'
+import DiffIcon from 'virtual:icons/lucide/diff'
 // TYPES
 import type { IdentitySource } from './featureIdentity.types'
 import type { FeatureIdentitySelection } from '#lib/revisions/featureIdentityPlan.js'
@@ -45,6 +52,7 @@ const inheritedLocation = $derived(placementSource.content.placement.location)
 const languages = $derived(Object.keys(output.titles ?? {}))
 const locale = $derived(languages.includes('en') ? 'en' : (languages[0] ?? 'en'))
 let multilingual = $state(false)
+let diffOnly = $state(false)
 let visibleLocales = $state<string[]>([])
 const shownLocales = $derived(
   multilingual
@@ -350,342 +358,462 @@ function editProperty(
     <p role="status" class="text-error col-span-3 text-sm">{categoryError}</p>
   {/if}
   <div
-    class="border-border col-span-3 mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b pb-2"
+    class="border-border col-span-3 mt-4 flex items-center justify-between gap-3 border-b pb-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
   >
     <h4 class="col-start-2 text-center font-medium">Profile</h4>
-    <LocaleToolbar
-      class="col-start-3 min-w-0 justify-self-end max-sm:[&_[data-control-label]]:hidden"
-      selectedLocales={languages}
-      visibleLocales={visibleLocales.length ? visibleLocales : languages}
-      options={localeOptions}
-      expanded={multilingual}
-      onExpandedChange={value =>
-        transitionReviewDialog(() => {
-          multilingual = value
-        })}
-      onChange={change => {
-        visibleLocales = change.visibleLocales
-      }}
-      allowAdd={false}
-      disabled={busy}
-    />
+    <div class="col-start-3 flex min-w-0 flex-wrap items-center justify-end gap-2">
+      <LocaleToolbar
+        class="min-w-0 max-sm:[&_[data-control-label]]:hidden"
+        selectedLocales={languages}
+        visibleLocales={visibleLocales.length ? visibleLocales : languages}
+        options={localeOptions}
+        expanded={multilingual}
+        onExpandedChange={value =>
+          transitionReviewDialog(() => {
+            multilingual = value
+          })}
+        onChange={change => {
+          visibleLocales = change.visibleLocales
+        }}
+        allowAdd={false}
+        disabled={busy}
+      />
+      <button
+        type="button"
+        class="text-muted-foreground hover:text-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary focus-visible:outline-primary inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium focus-visible:outline-2"
+        aria-pressed={diffOnly}
+        disabled={busy}
+        onclick={() =>
+          transitionReviewDialog(() => {
+            diffOnly = !diffOnly
+          })}
+      >
+        <DiffIcon class="size-4 shrink-0" aria-hidden="true" />
+        Diff Only
+      </button>
+    </div>
   </div>
   {#each ['title', 'description'] as key}
-    <h5 class="text-muted-foreground col-span-3 mt-2 text-center text-xs font-medium">
-      {key === 'title' ? 'Name' : 'Description'}
-    </h5>
-    {#each shownLocales as language}
-      {@const incoming =
-        key === 'title'
-          ? (discard.content.translations[language]?.title.value ?? '')
-          : (discard.content.translations[language]?.description.value ?? '')}
-      {@const existing =
-        key === 'title'
-          ? (keep.content.translations[language]?.title.value ?? '')
-          : (keep.content.translations[language]?.description.value ?? '')}
-      {@const current =
-        key === 'title'
-          ? (output.titles?.[language] ?? '')
-          : (output.descriptions?.[language] ?? '')}
-      <div
-        class="flex min-w-0 flex-row-reverse items-start gap-2 py-2 text-right text-sm"
-      >
-        {#if multilingual}
-          <span
-            class="text-muted-foreground shrink-0 font-mono text-xs whitespace-nowrap"
-            data-merge-locale
-            >{shortLocaleLabel(language)}</span
-          >
-        {/if}
-        <p class="min-w-0 break-words whitespace-pre-wrap">{incoming || '—'}</p>
-      </div>
-      <MergeImportControl
-        {incoming}
-        {existing}
-        {current}
-        label={`${key} ${language}`}
-        disabled={busy ||
-          (key === 'title' &&
-            Boolean(
-              inheritedLocation &&
-                inheritedLocation.acceptancePolicy?.nameMode !== 'independent',
-            ))}
-        onToggle={importing => {
-          if (key === 'title')
-            output.titles![language] = importing ? incoming : existing
-          else
-            output.descriptions![language] = (importing ? incoming : existing) || null
-        }}
-      />
-      <div class="flex min-w-0 items-start gap-2">
-        {#if multilingual}
-          <span
-            class="text-muted-foreground shrink-0 pt-2 font-mono text-xs whitespace-nowrap"
-            data-merge-locale
-            >{shortLocaleLabel(language)}</span
-          >
-        {/if}
-        {#if key === 'title'}
-          <input
-            id={`${inputId}-${key}-${language}`}
-            class={field}
-            value={current}
-            aria-label={`Keep name ${language}`}
-            disabled={busy ||
-              Boolean(
-                inheritedLocation &&
-                  inheritedLocation.acceptancePolicy?.nameMode !== 'independent',
-              )}
-            oninput={event => (output.titles![language] = event.currentTarget.value)}
-          >
-        {:else}
-          <textarea
-            id={`${inputId}-${key}-${language}`}
-            class={field}
-            rows="3"
-            value={current}
-            aria-label={`Keep description ${language}`}
-            disabled={busy}
-            oninput={event =>
-              (output.descriptions![language] = event.currentTarget.value || null)}
-          ></textarea>
-        {/if}
-      </div>
-    {/each}
-  {/each}
-  <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
-    Status
-  </h4>
-  {#each [
-    {
-      key: 'isIntangible',
-      label: 'Feature status',
-      incoming: discard.content.profile.isIntangible,
-      existing: keep.content.profile.isIntangible,
-      yes: 'Historical',
-      no: 'Current',
-    },
-    {
-      key: 'isVisitable',
-      label: 'Visits',
-      incoming: discard.content.profile.visitability.isVisitable,
-      existing: keep.content.profile.visitability.isVisitable,
-      yes: 'Visitable',
-      no: 'Not visitable',
-    },
-  ] as row}
-    <h5 class="text-muted-foreground col-span-3 text-center text-xs">{row.label}</h5>
-    <p class="self-center text-right text-sm">{row.incoming ? row.yes : row.no}</p>
-    <MergeImportControl
-      incoming={row.incoming}
-      existing={row.existing}
-      current={row.key === 'isIntangible'
-        ? output.profileEdits?.isIntangible
-        : output.profileEdits?.isVisitable}
-      label={row.label}
-      disabled={busy}
-      onToggle={importing => {
-        if (row.key === 'isIntangible')
-          output.profileEdits!.isIntangible = importing ? row.incoming : row.existing
-        else output.profileEdits!.isVisitable = importing ? row.incoming : row.existing
-      }}
-    />
-    <select
-      class={field}
-      aria-label={`Keep ${row.label}`}
-      disabled={busy}
-      value={String(
-        row.key === 'isIntangible'
-          ? output.profileEdits?.isIntangible
-          : output.profileEdits?.isVisitable,
-      )}
-      onchange={event => {
-        if (row.key === 'isIntangible')
-          output.profileEdits!.isIntangible = event.currentTarget.value === 'true'
-        else output.profileEdits!.isVisitable = event.currentTarget.value === 'true'
-      }}
-    >
-      <option value="false">{row.no}</option>
-      <option value="true">{row.yes}</option>
-    </select>
-  {/each}
-  <h5 class="text-muted-foreground col-span-3 text-center text-xs">Last seen</h5>
-  <p class="self-center text-right text-sm">
-    {discard.content.profile.visitability.asOf ?? '—'}
-  </p>
-  <MergeImportControl
-    incoming={discard.content.profile.visitability.asOf}
-    existing={keep.content.profile.visitability.asOf}
-    current={output.profileEdits?.asOf}
-    label="last seen"
-    disabled={busy}
-    onToggle={importing => {
-      output.profileEdits ??= {}
-      output.profileEdits.asOf = importing
-        ? discard.content.profile.visitability.asOf
-        : keep.content.profile.visitability.asOf
-    }}
-  />
-  <input
-    type="date"
-    class={field}
-    aria-label="Keep last seen"
-    value={output.profileEdits?.asOf ?? ''}
-    disabled={busy}
-    oninput={event => (output.profileEdits!.asOf = event.currentTarget.value || null)}
-  >
-  <p class="text-muted-foreground col-span-3 text-center text-xs">
-    Choose whether to bring over the last seen date.
-  </p>
-  <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
-    Location
-  </h4>
-  <p class="min-w-0 self-center text-right text-sm break-words whitespace-normal">
-    {discard.content.translations[locale]?.address.value || '—'}
-  </p>
-  <MergeImportControl
-    incoming={discard.content.placement}
-    existing={keep.content.placement}
-    current={output.placementSourceFeatureId === discard.featureId
-      ? discard.content.placement
-      : keep.content.placement}
-    label="location"
-    disabled={busy}
-    onToggle={importing => {
-      choosePlacement(importing ? discard : keep)
-    }}
-  />
-  <p class="min-w-0 rounded-md px-2 py-2 text-sm break-words whitespace-normal">
-    {(output.placementSourceFeatureId === discard.featureId ? discard : keep).content
-      .translations[locale]?.address.value || '—'}
-  </p>
-  {#each propertyGroups as group}
-    <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
-      {group.label}
-    </h4>
-    {#each group.ids as id}
-      {@const chosen = output.properties?.find(property => property.propertyId === id)}
-      {@const chosenSource = sources.find(
-        source => source.featureId === chosen?.sourceFeatureId,
-      )}
-      {@const definition = (
-        keep.content.properties[id] ?? discard.content.properties[id]
-      ).selection.definition}
-      {@const selected = chosenSource?.content.properties[id]?.selection}
-      {@const translated = definition.isTranslatable && !selected?.propertyValueId}
-      {@const editable =
-        selected &&
-        definition.type !== 'classifier' &&
-        definition.type !== 'category' &&
-        !selected.propertyValueId &&
-        !selected.valueJson &&
-        ['text', 'number', 'date'].includes(definition.dataType) &&
-        !(inheritedLocation && definition.component === 'PhoneField')}
-      <h5 class="text-muted-foreground col-span-3 text-center text-xs font-medium">
-        {propertyLabel(id)}
+    <div class="contents [&:not(:has([data-merge-row]))]:hidden">
+      <h5 class="text-muted-foreground col-span-3 mt-2 text-center text-xs font-medium">
+        {key === 'title' ? 'Name' : 'Description'}
       </h5>
-      {#each translated ? shownLocales : [locale] as language}
-        <div class="flex min-w-0 flex-row-reverse gap-2 self-center text-right text-sm">
-          {#if translated && multilingual}
-            <span
-              class="text-muted-foreground shrink-0 font-mono text-xs whitespace-nowrap"
-              data-merge-locale
-              >{shortLocaleLabel(language)}</span
-            >
-          {/if}
-          <p class="min-w-0 break-words whitespace-pre-wrap">
-            {propertyText(discard, id, language) || '—'}
-          </p>
-        </div>
-        <MergeImportControl
-          incoming={{
-            option: discard.content.properties[id]?.selection.propertyValueId ?? null,
-            value: propertyText(discard, id, language),
-          }}
-          existing={{
-            option: keep.content.properties[id]?.selection.propertyValueId ?? null,
-            value: propertyText(keep, id, language),
-          }}
-          current={{
-            option: Object.hasOwn(output.propertyOptionEdits ?? {}, id)
-              ? output.propertyOptionEdits![id]
-              : (selected?.propertyValueId ?? null),
-            value: resultText(id, language),
-          }}
-          label={`${propertyLabel(id)} ${language}`}
-          disabled={busy ||
-            !discard.content.properties[id] ||
-            Boolean(inheritedLocation && definition.component === 'PhoneField')}
-          onToggle={importing => {
-            const sourceId = importing ? discard.featureId : keep.featureId
-            if (
-              sources.find(source => source.featureId === sourceId)?.content.properties[
-                id
-              ]
-            )
-              chooseProperty(id, sourceId)
-          }}
-        />
-        <div class="min-w-0 space-y-2">
-          {#if definition.type === 'classifier'}
-            <select
-              class={field}
-              aria-label={`Keep ${propertyLabel(id)} category`}
-              disabled={busy || !categoryOptions[id]}
-              value={Object.hasOwn(output.propertyOptionEdits ?? {}, id)
-                ? (output.propertyOptionEdits![id] ?? '')
-                : (selected?.propertyValueId ?? '')}
-              onchange={event => chooseOption(id, event.currentTarget.value)}
-            >
-              <option value="">None</option>
-              {#each categoryOptions[id] ?? [] as option}
-                <option value={option.id}>{option.label}</option>
-              {/each}
-            </select>
-          {:else if !editable}
-            <select
-              class={field}
-              aria-label={`Keep ${propertyLabel(id)} source ${language}`}
-              disabled={busy ||
-                Boolean(inheritedLocation && definition.component === 'PhoneField')}
-              value={chosen?.sourceFeatureId ?? ''}
-              onchange={event => chooseProperty(id, event.currentTarget.value)}
-            >
-              {#each sources.filter(source => source.content.properties[id]) as source}
-                <option value={source.featureId}>
-                  {source.featureId === keep.featureId ? 'Existing' : 'Import'}:
-                  {propertyText(source, id, language) || 'Empty'}
-                </option>
-              {/each}
-            </select>
-          {/if}
-          {#if editable}
-            <label class="flex min-w-0 items-start gap-2"
-              >{#if translated && multilingual}
-                <span
-                  class="text-muted-foreground shrink-0 pt-2 font-mono text-xs whitespace-nowrap"
-                  data-merge-locale
-                  >{shortLocaleLabel(language)}</span
-                >
-              {/if}
+      {#each shownLocales as language}
+        {@const incoming =
+          key === 'title'
+            ? (discard.content.translations[language]?.title.value ?? '')
+            : (discard.content.translations[language]?.description.value ?? '')}
+        {@const existing =
+          key === 'title'
+            ? (keep.content.translations[language]?.title.value ?? '')
+            : (keep.content.translations[language]?.description.value ?? '')}
+        {@const current =
+          key === 'title'
+            ? (output.titles?.[language] ?? '')
+            : (output.descriptions?.[language] ?? '')}
+        <MergeComparisonRow {diffOnly} {incoming} {existing}>
+          <div
+            class="flex min-w-0 flex-row-reverse items-start gap-2 py-2 text-right text-sm"
+          >
+            {#if multilingual}
+              <span
+                class="text-muted-foreground shrink-0 font-mono text-xs whitespace-nowrap"
+                data-merge-locale
+                >{shortLocaleLabel(language)}</span
+              >
+            {/if}
+            <p class="min-w-0 break-words whitespace-pre-wrap">{incoming || '—'}</p>
+          </div>
+          <MergeImportControl
+            {incoming}
+            {existing}
+            {current}
+            label={`${key} ${language}`}
+            disabled={busy ||
+              (key === 'title' &&
+                Boolean(
+                  inheritedLocation &&
+                    inheritedLocation.acceptancePolicy?.nameMode !== 'independent',
+                ))}
+            onToggle={importing => {
+              if (key === 'title')
+                output.titles![language] = importing ? incoming : existing
+              else
+                output.descriptions![language] =
+                  (importing ? incoming : existing) || null
+            }}
+          />
+          <div class="flex min-w-0 items-start gap-2">
+            {#if multilingual}
+              <span
+                class="text-muted-foreground shrink-0 pt-2 font-mono text-xs whitespace-nowrap"
+                data-merge-locale
+                >{shortLocaleLabel(language)}</span
+              >
+            {/if}
+            {#if key === 'title'}
               <input
+                id={`${inputId}-${key}-${language}`}
                 class={field}
-                type={definition.dataType === 'number'
-                  ? 'number'
-                  : definition.dataType === 'date'
-                    ? 'date'
-                    : 'text'}
-                aria-label={`Keep ${propertyLabel(id)} value ${language}`}
-                value={resultText(id, language)}
+                value={current}
+                aria-label={`Keep name ${language}`}
+                disabled={busy ||
+                  Boolean(
+                    inheritedLocation &&
+                      inheritedLocation.acceptancePolicy?.nameMode !== 'independent',
+                  )}
+                oninput={event =>
+                  (output.titles![language] = event.currentTarget.value)}
+              >
+            {:else}
+              <textarea
+                id={`${inputId}-${key}-${language}`}
+                class={field}
+                rows="3"
+                value={current}
+                aria-label={`Keep description ${language}`}
                 disabled={busy}
                 oninput={event =>
-                  editProperty(id, language, event.currentTarget.value, translated)}
-              ></label
+                  (output.descriptions![language] = event.currentTarget.value || null)}
+              ></textarea>
+            {/if}
+          </div>
+        </MergeComparisonRow>
+      {/each}
+    </div>
+  {/each}
+  <div class="contents [&:not(:has([data-merge-row]))]:hidden">
+    <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
+      Status
+    </h4>
+    {#each [
+      {
+        key: 'isIntangible',
+        label: 'Feature status',
+        incoming: discard.content.profile.isIntangible,
+        existing: keep.content.profile.isIntangible,
+        yes: 'Historical',
+        no: 'Current',
+      },
+      {
+        key: 'isVisitable',
+        label: 'Visits',
+        incoming: discard.content.profile.visitability.isVisitable,
+        existing: keep.content.profile.visitability.isVisitable,
+        yes: 'Visitable',
+        no: 'Not visitable',
+      },
+    ] as row}
+      <MergeComparisonRow {diffOnly} incoming={row.incoming} existing={row.existing}>
+        <h5 class="text-muted-foreground col-span-3 text-center text-xs">
+          {row.label}
+        </h5>
+        <p class="self-center text-right text-sm">{row.incoming ? row.yes : row.no}</p>
+        <MergeImportControl
+          incoming={row.incoming}
+          existing={row.existing}
+          current={row.key === 'isIntangible'
+            ? output.profileEdits?.isIntangible
+            : output.profileEdits?.isVisitable}
+          label={row.label}
+          disabled={busy}
+          onToggle={importing => {
+            if (row.key === 'isIntangible')
+              output.profileEdits!.isIntangible = importing
+                ? row.incoming
+                : row.existing
+            else
+              output.profileEdits!.isVisitable = importing ? row.incoming : row.existing
+          }}
+        />
+        <select
+          class={field}
+          aria-label={`Keep ${row.label}`}
+          disabled={busy}
+          value={String(
+            row.key === 'isIntangible'
+              ? output.profileEdits?.isIntangible
+              : output.profileEdits?.isVisitable,
+          )}
+          onchange={event => {
+            if (row.key === 'isIntangible')
+              output.profileEdits!.isIntangible = event.currentTarget.value === 'true'
+            else output.profileEdits!.isVisitable = event.currentTarget.value === 'true'
+          }}
+        >
+          <option value="false">{row.no}</option>
+          <option value="true">{row.yes}</option>
+        </select>
+      </MergeComparisonRow>
+    {/each}
+    <MergeComparisonRow
+      {diffOnly}
+      incoming={discard.content.profile.visitability.asOf}
+      existing={keep.content.profile.visitability.asOf}
+    >
+      <h5 class="text-muted-foreground col-span-3 text-center text-xs">Last seen</h5>
+      {#if discard.content.profile.visitability.asOf}
+        <input
+          type="date"
+          class="w-full min-w-0 self-center border-0 bg-transparent py-2 text-right text-sm [color-scheme:normal] [&::-webkit-calendar-picker-indicator]:hidden"
+          aria-label="Discard last seen"
+          value={discard.content.profile.visitability.asOf}
+          readonly
+          tabindex="-1"
+        >
+      {:else}
+        <p class="self-center text-right text-sm">—</p>
+      {/if}
+      <MergeImportControl
+        incoming={discard.content.profile.visitability.asOf}
+        existing={keep.content.profile.visitability.asOf}
+        current={output.profileEdits?.asOf}
+        label="last seen"
+        disabled={busy}
+        onToggle={importing => {
+          output.profileEdits ??= {}
+          output.profileEdits.asOf = importing
+            ? discard.content.profile.visitability.asOf
+            : keep.content.profile.visitability.asOf
+        }}
+      />
+      <input
+        type="date"
+        class={field}
+        aria-label="Keep last seen"
+        value={output.profileEdits?.asOf ?? ''}
+        disabled={busy}
+        oninput={event =>
+          (output.profileEdits!.asOf = event.currentTarget.value || null)}
+      >
+      <p class="text-muted-foreground col-span-3 text-center text-xs">
+        Choose whether to bring over the last seen date.
+      </p>
+    </MergeComparisonRow>
+  </div>
+  <MergeComparisonRow
+    {diffOnly}
+    incoming={discard.content.translations[locale]?.address.value ?? ''}
+    existing={keep.content.translations[locale]?.address.value ?? ''}
+  >
+    <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
+      Location
+    </h4>
+    <p class="min-w-0 self-center text-right text-sm break-words whitespace-normal">
+      {discard.content.translations[locale]?.address.value || '—'}
+    </p>
+    <MergeImportControl
+      incoming={discard.content.placement}
+      existing={keep.content.placement}
+      current={output.placementSourceFeatureId === discard.featureId
+        ? discard.content.placement
+        : keep.content.placement}
+      label="location"
+      disabled={busy}
+      onToggle={importing => {
+        choosePlacement(importing ? discard : keep)
+      }}
+    />
+    <p class="min-w-0 rounded-md px-2 py-2 text-sm break-words whitespace-normal">
+      {(output.placementSourceFeatureId === discard.featureId ? discard : keep).content
+        .translations[locale]?.address.value || '—'}
+    </p>
+  </MergeComparisonRow>
+  {#each propertyGroups as group}
+    <div class="contents [&:not(:has([data-merge-row]))]:hidden">
+      <h4 class="border-border col-span-3 mt-5 border-b pb-2 text-center font-medium">
+        {group.label}
+      </h4>
+      {#each group.ids as id}
+        {@const chosen = output.properties?.find(
+          property => property.propertyId === id,
+        )}
+        {@const chosenSource = sources.find(
+          source => source.featureId === chosen?.sourceFeatureId,
+        )}
+        {@const definition = (
+          keep.content.properties[id] ?? discard.content.properties[id]
+        ).selection.definition}
+        {@const selected = chosenSource?.content.properties[id]?.selection}
+        {@const translated = definition.isTranslatable && !selected?.propertyValueId}
+        {@const editable =
+          selected &&
+          definition.type !== 'classifier' &&
+          definition.type !== 'category' &&
+          !selected.propertyValueId &&
+          !selected.valueJson &&
+          ['text', 'number', 'date'].includes(definition.dataType) &&
+          !(inheritedLocation && definition.component === 'PhoneField')}
+        <div class="contents [&:not(:has([data-merge-row]))]:hidden">
+          <h5 class="text-muted-foreground col-span-3 text-center text-xs font-medium">
+            {propertyLabel(id)}
+          </h5>
+          {#each translated ? shownLocales : [locale] as language}
+            {@const phone = definition.component === 'PhoneField'}
+            {@const collection = mergePropertyEntries(resultText(id, language), phone)}
+            {@const collectionField =
+              collection !== null ||
+              sources.some(
+                source =>
+                  mergePropertyEntries(propertyText(source, id, language), phone) !==
+                  null,
+              )}
+            <MergeComparisonRow
+              {diffOnly}
+              incoming={mergePropertyComparison(
+                propertyText(discard, id, language),
+                phone,
+              )}
+              existing={mergePropertyComparison(
+                propertyText(keep, id, language),
+                phone,
+              )}
             >
-          {/if}
+              <div
+                class="flex min-w-0 flex-row-reverse gap-2 self-center text-right text-sm"
+              >
+                {#if translated && multilingual}
+                  <span
+                    class="text-muted-foreground shrink-0 font-mono text-xs whitespace-nowrap"
+                    data-merge-locale
+                    >{shortLocaleLabel(language)}</span
+                  >
+                {/if}
+                <div class="min-w-0">
+                  {#if definition.dataType === 'date' &&
+                    propertyText(discard, id, language)}
+                    <input
+                      type="date"
+                      class="w-full min-w-0 border-0 bg-transparent text-right text-sm [&::-webkit-calendar-picker-indicator]:hidden"
+                      aria-label={`Discard ${propertyLabel(id)} ${language}`}
+                      value={propertyText(discard, id, language)}
+                      readonly
+                      tabindex="-1"
+                    >
+                  {:else}
+                    <MergePropertyValue
+                      value={propertyText(discard, id, language)}
+                      {phone}
+                      label={`Discard ${propertyLabel(id)} ${language}`}
+                    />
+                  {/if}
+                </div>
+              </div>
+              <MergeImportControl
+                incoming={{
+                  option:
+                    discard.content.properties[id]?.selection.propertyValueId ?? null,
+                  value: propertyText(discard, id, language),
+                }}
+                existing={{
+                  option:
+                    keep.content.properties[id]?.selection.propertyValueId ?? null,
+                  value: propertyText(keep, id, language),
+                }}
+                current={{
+                  option: Object.hasOwn(output.propertyOptionEdits ?? {}, id)
+                    ? output.propertyOptionEdits![id]
+                    : (selected?.propertyValueId ?? null),
+                  value: resultText(id, language),
+                }}
+                label={`${propertyLabel(id)} ${language}`}
+                disabled={busy ||
+                  !discard.content.properties[id] ||
+                  Boolean(inheritedLocation && definition.component === 'PhoneField')}
+                onToggle={importing => {
+                  const sourceId = importing ? discard.featureId : keep.featureId
+                  if (
+                    sources.find(source => source.featureId === sourceId)?.content
+                      .properties[id]
+                  )
+                    chooseProperty(id, sourceId)
+                }}
+              />
+              <div class="min-w-0 space-y-2">
+                {#if definition.type === 'classifier'}
+                  <select
+                    class={field}
+                    aria-label={`Keep ${propertyLabel(id)} category`}
+                    disabled={busy || !categoryOptions[id]}
+                    value={Object.hasOwn(output.propertyOptionEdits ?? {}, id)
+                      ? (output.propertyOptionEdits![id] ?? '')
+                      : (selected?.propertyValueId ?? '')}
+                    onchange={event => chooseOption(id, event.currentTarget.value)}
+                  >
+                    <option value="">None</option>
+                    {#each categoryOptions[id] ?? [] as option}
+                      <option value={option.id}>{option.label}</option>
+                    {/each}
+                  </select>
+                {:else if !editable}
+                  <select
+                    class={field}
+                    aria-label={`Keep ${propertyLabel(id)} source ${language}`}
+                    disabled={busy ||
+                      Boolean(
+                        inheritedLocation && definition.component === 'PhoneField',
+                      )}
+                    value={chosen?.sourceFeatureId ?? ''}
+                    onchange={event => chooseProperty(id, event.currentTarget.value)}
+                  >
+                    {#each sources.filter(
+                      source => source.content.properties[id],
+                    ) as source}
+                      <option value={source.featureId}>
+                        {source.featureId === keep.featureId
+                          ? 'Existing'
+                          : 'Import'}{collectionField
+                          ? ''
+                          : `: ${propertyText(source, id, language) || 'Empty'}`}
+                      </option>
+                    {/each}
+                  </select>
+                {/if}
+                {#if collection !== null || (collectionField && !editable)}
+                  <MergePropertyValue
+                    value={resultText(id, language)}
+                    {phone}
+                    label={`Keep ${propertyLabel(id)} ${language}`}
+                    disabled={busy}
+                    onChange={editable
+                      ? value => editProperty(id, language, value, translated)
+                      : undefined}
+                  />
+                {:else if editable}
+                  <label class="flex min-w-0 items-start gap-2"
+                    >{#if translated && multilingual}
+                      <span
+                        class="text-muted-foreground shrink-0 pt-2 font-mono text-xs whitespace-nowrap"
+                        data-merge-locale
+                        >{shortLocaleLabel(language)}</span
+                      >
+                    {/if}
+                    <input
+                      class={field}
+                      type={definition.dataType === 'number'
+                        ? 'number'
+                        : definition.dataType === 'date'
+                          ? 'date'
+                          : 'text'}
+                      aria-label={`Keep ${propertyLabel(id)} value ${language}`}
+                      value={resultText(id, language)}
+                      disabled={busy}
+                      oninput={event =>
+                        editProperty(
+                          id,
+                          language,
+                          event.currentTarget.value,
+                          translated,
+                        )}
+                    ></label
+                  >
+                {/if}
+              </div>
+            </MergeComparisonRow>
+          {/each}
         </div>
       {/each}
-    {/each}
+    </div>
   {/each}
 </div>
 <FeatureMergePhotos {sources} bind:output {busy} />
