@@ -35,7 +35,7 @@ type Workspace = FeatureRevisionWorkspace & {
   fields: ('title' | 'description')[]
 }
 const headerCtrl = getContext<HeaderCtrl | undefined>(HEADER_CTRL_KEY)
-let expandAll = $state(true)
+let expandAll = $state(false)
 let workspace = $state<Workspace | null>(null)
 let busy = $state(false)
 let message = $state('')
