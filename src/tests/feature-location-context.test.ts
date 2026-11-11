@@ -63,7 +63,11 @@ const rule = {
 describe('new feature location intent', () => {
   it('separates establishment discovery from physical targets and validates configured contexts', () => {
     expect(targetSuggestionKinds('building_part')).toContain('establishment')
-    expect(targetLocationKinds('building_part')).toEqual([
+    expect(targetLocationKinds('building_part')).toEqual(['building_part'])
+    expect(targetLocationKinds('service_point')).toEqual(['service_point'])
+    expect(targetSuggestionKinds('service_point')).toEqual([
+      'service_point',
+      'establishment',
       'building_part',
       'building',
       'premises',
@@ -143,9 +147,9 @@ describe('new feature location intent', () => {
       await expect(
         assertFeatureIntentLocation(db, 'sign', 'part'),
       ).resolves.toBeUndefined()
-      await expect(
-        assertFeatureIntentLocation(db, 'sign', 'building'),
-      ).resolves.toBeUndefined()
+      await expect(assertFeatureIntentLocation(db, 'sign', 'building')).rejects.toThrow(
+        'not permitted',
+      )
       await expect(assertFeatureIntentLocation(db, 'sign', 'shop')).rejects.toThrow(
         'not permitted',
       )

@@ -36,39 +36,53 @@ export const TargetContextSchema = z.preprocess(
 export type TargetContext = z.infer<typeof TargetContextSchema>
 export const AssociationRelationSchema = z.enum(['locatedAt', 'represents'])
 
-/** Shared physical matching order; source availability never changes target identity. */
-export const TARGET_FALLBACKS: Record<TargetContext, readonly TargetContext[]> = {
-  building_part: ['building', 'premises', 'address'],
-  building: ['premises', 'address'],
-  premises: ['address'],
-  infrastructure: ['built', 'address'],
-  built: ['address'],
-  structure: ['built', 'address'],
-  landform: ['natural'],
-  coastal_feature: ['natural'],
-  water_feature: ['natural'],
+/** Starting records supply editable address/position data, never identity permission. */
+export const TARGET_STARTING_KINDS: Record<TargetContext, readonly TargetContext[]> = {
+  premises: ['building', 'establishment', 'address'],
+  building: ['premises', 'building_part', 'establishment', 'address'],
+  building_part: ['building', 'premises', 'establishment', 'address'],
+  structure: [
+    'premises',
+    'building',
+    'address',
+    'landform',
+    'coastal_feature',
+    'water_feature',
+  ],
   street: ['address'],
-  address: [],
-  establishment: [],
-  service_point: [],
-  natural: [],
+  landform: ['natural', 'coastal_feature', 'water_feature'],
+  coastal_feature: ['natural', 'landform', 'water_feature'],
+  water_feature: ['natural', 'landform', 'coastal_feature'],
+  establishment: ['building_part', 'building', 'premises', 'address'],
+  service_point: ['establishment', 'building_part', 'building', 'premises', 'address'],
+  address: [
+    'premises',
+    'building',
+    'building_part',
+    'structure',
+    'street',
+    'establishment',
+    'service_point',
+  ],
+  infrastructure: ['built', 'premises', 'address'],
+  built: ['premises', 'address'],
+  natural: ['landform', 'coastal_feature', 'water_feature'],
 }
 
-/** Return eligible targets in preferred-first order. @param context Intended location. @returns Direct kind followed by explicit fallbacks. */
+/** Return identity-compatible kinds, independently of starting-record suggestions.
+ * @param context Intended identity. @returns Same kind/class, including explicitly broad legacy intents.
+ */
 export function targetLocationKinds(context: TargetContext): TargetContext[] {
-  return expandLocationMatchingTypes([
-    context,
-    ...TARGET_FALLBACKS[context],
-  ]) as TargetContext[]
+  return expandLocationMatchingTypes([context]) as TargetContext[]
 }
 
-/** Establishments can supply evidence for a building part, never substitute for it.
- * @param context Intended location. @returns Permitted discovery result kinds.
+/** Return discoverable identities and starting records without widening link permission.
+ * @param context Intended location. @returns Preferred identity first, then useful starting kinds.
  */
 export function targetSuggestionKinds(context: TargetContext): TargetContext[] {
-  return context === 'building_part'
-    ? [...targetLocationKinds(context), 'establishment']
-    : targetLocationKinds(context)
+  return [
+    ...new Set([...targetLocationKinds(context), ...TARGET_STARTING_KINDS[context]]),
+  ]
 }
 
 /** Identify an optional operating relationship independently of copied address data.

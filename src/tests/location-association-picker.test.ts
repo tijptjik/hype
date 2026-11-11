@@ -1446,3 +1446,37 @@ it('limits the resolution choices to eligible classes and keeps broad families o
   expect(document.querySelector('[data-association-kind="built"]')).toBeNull()
   expect(document.querySelector('[data-association-kind="natural"]')).toBeNull()
 })
+
+it('creates a distinct service point from an establishment with optional operating relationship', async () => {
+  const onAccept = vi.fn()
+  const search = vi.fn().mockResolvedValue({ candidates: [], incomplete: false })
+  render(Picker, {
+    origin: candidate('establishment'),
+    allowedLocationKinds: ['service_point'],
+    createNew: true,
+    search,
+    onAccept,
+    onCancel: vi.fn(),
+  })
+  const name = await screen.findByRole('textbox', { name: /Service point.*Name/i })
+  await waitFor(() => expect(search).toHaveBeenCalled())
+  expect(search.mock.calls.every(([input]) => input.kind === 'service_point')).toBe(
+    true,
+  )
+  expect((name as HTMLInputElement).value).toBe('')
+  await fireEvent.input(name, { target: { value: 'Recycling point' } })
+  await fireEvent.click(screen.getByRole('checkbox', { name: 'Operates in Cafe' }))
+  await fireEvent.click(
+    await screen.findByRole('button', { name: 'Create service point' }),
+  )
+  await waitFor(() => expect(onAccept).toHaveBeenCalled())
+  const result = onAccept.mock.lastCall?.[0]
+  expect(result).toMatchObject({
+    kind: 'service_point',
+    localKind: 'service_point',
+    names: { en: 'Recycling point' },
+    address: { association: { mode: 'unlinked', operatesInLocationId: 'l' } },
+  })
+  expect(result.identity).toBeUndefined()
+  expect(result.source).toBeUndefined()
+})

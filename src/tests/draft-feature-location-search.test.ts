@@ -96,7 +96,7 @@ async function acceptLocation(): Promise<void> {
     await setLocationSync(true)
     return
   }
-  await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Use this location' }))
   // Establishments finish immediately; less-specific records still need review.
   await waitFor(() =>
     expect(
@@ -1513,7 +1513,7 @@ it('groups co-located Building alternatives and confirms a cached building marke
   await fireEvent.click(
     document.querySelector<HTMLButtonElement>('[data-result-kind="address"]')!,
   )
-  await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Use this location' }))
   await fireEvent.click(screen.getByRole('radio', { name: 'Building' }))
   await fireEvent.click(
     await screen.findByRole('button', { name: /Hollywood Building.*186A/ }),
@@ -1577,7 +1577,7 @@ it('cross-references a building absent from discovery results without accepting 
   await fireEvent.click(
     await screen.findByRole('button', { name: /188.*Hollywood Road/ }),
   )
-  await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Use this location' }))
   await fireEvent.click(screen.getByRole('radio', { name: 'Building' }))
   await screen.findByRole('button', { name: /^Use (?:Recommended Location|Location)$/ })
   expect(mocks.buildings).toHaveBeenLastCalledWith(
@@ -1876,7 +1876,7 @@ it('previews on repeated Enter and requires the explicit location action', async
   })
   await fireEvent.keyDown(input, { key: 'Enter' })
   expect(document.activeElement).toBe(result)
-  expect(screen.getByRole('button', { name: 'Locate feature here' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Use this location' })).toBeTruthy()
   expect(onSelect).not.toHaveBeenCalled()
   await fireEvent.keyDown(result, { key: 'Enter', repeat: true })
   expect(onSelect).not.toHaveBeenCalled()
@@ -1994,7 +1994,7 @@ it.each([
       name: /Wisdom Centre.*35.*Hollywood Road/i,
     })
     await fireEvent.click(row)
-    await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Use this location' }))
     await fireEvent.click(screen.getByRole('radio', { name: label }))
     await fireEvent.input(screen.getByRole('textbox', { name: `${label} · Name` }), {
       target: { value: names.en },
@@ -2050,7 +2050,7 @@ it('requires a choice after repeated row clicks and restores the original cached
   expect(onSelect).not.toHaveBeenCalled()
   expect(screen.queryByRole('button', { name: 'Link and use Name' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Just use address' })).toBeTruthy()
-  await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Use this location' }))
   await fireEvent.click(screen.getByRole('radio', { name: 'Building' }))
   await fireEvent.input(screen.getByRole('textbox', { name: 'Building · Name' }), {
     target: { value: 'Example Building' },
@@ -3259,7 +3259,7 @@ it.each(['establishment', undefined] as const)(
     const button = await screen.findByRole('button', { name: /Arome Bakery/ })
     await fireEvent.click(button)
     expect(onSelect).not.toHaveBeenCalled()
-    await fireEvent.click(screen.getByRole('button', { name: 'Locate feature here' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Use this location' }))
     await waitFor(() =>
       expect(onSelect).toHaveBeenCalledWith(
         expect.objectContaining({

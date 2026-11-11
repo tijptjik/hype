@@ -79,6 +79,8 @@ import {
   locationSearchColor,
   type LocationSearchMarker,
 } from '#lib/locations/searchPresentation.js'
+// DOMAIN
+import { canOperateIn } from '#lib/features/locationPolicy.js'
 // BITS COMPONENTS
 import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
@@ -101,12 +103,14 @@ let {
   onMapCandidates,
   showHeading = true,
   autoAcceptSpecific = false,
+  createNew = false,
   markerNumberFor = () => 0,
 }: {
   origin: Result
   allowedLocationKinds?: readonly string[]
   showHeading?: boolean
   autoAcceptSpecific?: boolean
+  createNew?: boolean
   cached?: Result[]
   projectId?: string
   search: (input: AssociationSearchInput) => Promise<AssociationSearchResult>
@@ -140,9 +144,30 @@ const displayKinds = $derived(
       (!allowedLocationKinds || allowedLocationKinds.includes(kind)),
   ),
 )
-const initial = untrack(() => origin)
+const initial = untrack((): Result => {
+  if (!createNew) return origin
+  const intended = (configuredLocationKinds?.[0] ?? origin.kind) as AssociationKind
+  return {
+    id: `custom:${origin.id}:${intended}`,
+    kind: intended,
+    localKind: intended,
+    names: {},
+    recordMode: 'unlinked',
+    address: {
+      ...origin.address,
+      association: {
+        originKind: intended,
+        kind: intended,
+        mode: 'unlinked',
+        lookup: 'not-checked',
+        names: {},
+      },
+    },
+  }
+})
 let buildingId = $state(initial.address.association?.buildingId ?? '')
 let parentPartId = $state(initial.address.association?.parentPartId ?? '')
+let operatesIn = $state(false)
 const originalAddress = $derived(
   normalizeAssociationComponents($state.snapshot(origin.address)),
 )
@@ -669,6 +694,8 @@ async function reconcile(value: AssociationKind): Promise<void> {
     // A unique complete semantic match may preselect a draft, but never silently save or override an explicit choice.
     const exact = candidates[value].filter(row => associationMatch(origin, row).exact)
     if (
+      !createNew &&
+      (!allowedLocationKinds || allowedLocationKinds.includes(value)) &&
       !found.incomplete &&
       exact.length === 1 &&
       !matched &&
@@ -767,6 +794,7 @@ const levelReviews: Partial<
 > = {}
 /** Switch the association level without accepting a record or losing name drafts. @param value New kind. @returns Nothing. */
 function selectKind(value: AssociationKind): void {
+  if (allowedLocationKinds && !allowedLocationKinds.includes(value)) return
   // Reselecting the active level preserves its comparison and unsaved corrections.
   if (value === kind) return
   editingPin = null
@@ -818,6 +846,7 @@ function selectKind(value: AssociationKind): void {
 }
 /** Prepare a candidate comparison before association. @param row Explicitly selected candidate. @returns Nothing. */
 function compare(row: Result): void {
+  if (allowedLocationKinds && !allowedLocationKinds.includes(row.kind)) return
   editingPin = null
   userChoseKind = true
   inferred = false
@@ -944,6 +973,10 @@ function accept(manual = false): void {
       ? { buildingId: buildingId || undefined, parentPartId: parentPartId || undefined }
       : {}),
     kind: selectedKind,
+    operatesInLocationId:
+      operatesIn && (!target || custom) && canOperateIn(selectedKind, origin.kind)
+        ? origin.identity?.locationId
+        : undefined,
     mode,
     names: selectedNames,
     lookup:
@@ -1161,7 +1194,7 @@ onMount(() => {
   }
   const initialSearches: Promise<void>[] = []
   // Discover establishment alternatives for address origins too, before revealing match scores.
-  for (const value of ASSOCIATION_KINDS)
+  for (const value of displayKinds)
     if (
       value !== 'address' &&
       (value === kind || value === 'establishment' || Object.keys(names[value]).length)
@@ -1641,7 +1674,7 @@ onDestroy(() => {
                 ? m.association_match_score({ score: matchStrength(value) })
                 : present(value)
                   ? m.association_address_evidence()
-                  : m.association_missing()}
+                  : undefined}
             >
               <span
                 class="min-h-0 overflow-hidden transition-opacity duration-200 {selectorExpanded
@@ -2248,6 +2281,15 @@ onDestroy(() => {
               </button>
             </section>
           {/if}
+          {#if !matched && origin.identity && canOperateIn(kind, origin.kind)}
+            <label class="mx-auto flex max-w-3xl items-center gap-2 text-sm">
+              <input type="checkbox" bind:checked={operatesIn}>
+              Operates in
+              {origin.names[tag] ||
+                Object.values(origin.names).find(Boolean) ||
+                'this location'}
+            </label>
+          {/if}
           {#if kind === 'building_part' && !matched?.identity && projectId}
             <BuildingPartParents
               {projectId}
@@ -2263,7 +2305,9 @@ onDestroy(() => {
               : 'flex justify-center'}"
             data-association-actions
           >
-            {#if matched && comparingRecords}
+            {#if matched &&
+              comparingRecords &&
+              (!allowedLocationKinds || allowedLocationKinds.includes(origin.kind))}
               <button
                 type="button"
                 class="text-primary hover:bg-primary/10 focus-visible:outline-primary col-start-1 row-start-1 max-w-full justify-self-end rounded-md px-3 py-2 text-center text-sm font-medium break-words whitespace-normal focus-visible:outline-2 sm:px-4"

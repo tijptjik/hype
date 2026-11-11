@@ -271,7 +271,7 @@ $effect(() => {
     untrack(() => {
       includeShops = kinds.includes('establishment')
       includeBuildings = kinds.includes('building')
-      includeAddresses = kinds.includes('address') || Boolean(preferredKind)
+      includeAddresses = kinds.includes('address')
     })
 })
 const searchBuildings = $derived(includeBuildings)
@@ -1390,20 +1390,29 @@ async function acceptResult(result: Result): Promise<void> {
 }
 
 let autoAcceptSpecific = $state(false)
+let createNewAssociation = $state(false)
 /** Open association review, allowing an explicit selection to skip redundant confirmation.
  * @param result Starting record. @param explicitSelection User chose Locate feature here.
  * @returns Nothing; any accepted identity remains a draft until the Feature is saved.
  */
-function openAssociation(result: Result, explicitSelection = false): void {
+function openAssociation(
+  result: Result,
+  explicitSelection = false,
+  createNew = false,
+): void {
   if (
     explicitSelection &&
+    !createNew &&
     result.kind === 'establishment' &&
     (!allowedLocationKinds || allowedLocationKinds.includes(result.kind))
   ) {
     void acceptResult(result)
     return
   }
-  autoAcceptSpecific = explicitSelection
+  createNewAssociation =
+    createNew ||
+    Boolean(allowedLocationKinds && !allowedLocationKinds.includes(result.kind))
+  autoAcceptSpecific = explicitSelection && !createNewAssociation
   onSelectionStart?.()
   if (selected?.id !== result.id) choose(result)
   associationOrigin = {
@@ -1849,6 +1858,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               style:--search-color={locationSearchColor(kind)}
               aria-label={label}
               aria-pressed={enabled}
+              disabled={Boolean(suggestionKinds && !suggestionKinds.includes(kind))}
               aria-busy={pendingKinds.has(kind)}
               data-tooltip={label}
               onclick={() => {
@@ -1947,7 +1957,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 }
               }}
             >
-            {#if !loading && (rows.length || searched)}
+            {#if !loading && !addressLoadingMore && (rows.length || searched)}
               <span role="status" class="text-muted-foreground shrink-0 px-2 text-xs"
                 >{m.feature_search_result_count({ count: visibleRows.length })}</span
               >
@@ -2090,7 +2100,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
   {@const busy = kind === 'address' ? addressLoadingMore : moreLoading[kind]}
   {@const pageError = kind === 'address' ? addressPageError : moreErrors[kind]}
   {@const addressCount =
-    kind === 'address' ? receivedRows.filter(row => row.kind === 'address').length : 0}
+    kind === 'address' ? rows.filter(row => row.kind === 'address').length : 0}
   {#if enabled &&
     paging &&
     !currentGroup &&
@@ -2183,6 +2193,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         {allowedLocationKinds}
         showHeading={false}
         {autoAcceptSpecific}
+        createNew={createNewAssociation}
         {onMapCandidates}
         markerNumberFor={result =>
           result.id === selected?.id && selectedResultNumber !== undefined
@@ -2408,37 +2419,41 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   onkeydown={event => handleResultTab(event, index)}
                   onclick={() => openAssociation(result, true)}
                 >
-                  {m.association_locate()}
+                  {allowedLocationKinds && !allowedLocationKinds.includes(result.kind)
+                    ? 'Create here'
+                    : 'Use this location'}
                 </button>
-                <button
-                  type="button"
-                  class="border-secondary bg-secondary text-secondary-content focus-visible:outline-secondary rounded-md border px-3 py-2 text-sm font-medium hover:bg-[color-mix(in_oklab,var(--color-secondary)_92%,black)] focus-visible:outline-2 dark:text-white"
-                  onkeydown={event => handleResultTab(event, index)}
-                  disabled={Boolean(
-                    allowedLocationKinds && !allowedLocationKinds.includes('address'),
-                  )}
-                  onclick={() =>
-                    acceptResult({
-                      ...result,
-                      kind: 'address',
-                      source: undefined,
-                      identity: undefined,
-                      buildingSource: undefined,
-                      names: {},
-                      address: {
-                        ...result.address,
-                        association: {
-                          originKind: result.kind,
-                          kind: 'address',
-                          mode: 'manual',
-                          lookup: 'not-checked',
-                          names: {},
+                {#if !allowedLocationKinds || allowedLocationKinds.includes('address')}
+                  <button
+                    type="button"
+                    class="border-secondary bg-secondary text-secondary-content focus-visible:outline-secondary rounded-md border px-3 py-2 text-sm font-medium hover:bg-[color-mix(in_oklab,var(--color-secondary)_92%,black)] focus-visible:outline-2 dark:text-white"
+                    onkeydown={event => handleResultTab(event, index)}
+                    disabled={Boolean(
+                      allowedLocationKinds && !allowedLocationKinds.includes('address'),
+                    )}
+                    onclick={() =>
+                      acceptResult({
+                        ...result,
+                        kind: 'address',
+                        source: undefined,
+                        identity: undefined,
+                        buildingSource: undefined,
+                        names: {},
+                        address: {
+                          ...result.address,
+                          association: {
+                            originKind: result.kind,
+                            kind: 'address',
+                            mode: 'manual',
+                            lookup: 'not-checked',
+                            names: {},
+                          },
                         },
-                      },
-                    })}
-                >
-                  {m.feature_search_use_address()}
-                </button>
+                      })}
+                  >
+                    {m.feature_search_use_address()}
+                  </button>
+                {/if}
               </div>
             {/if}
             {#if visibleRows[index + 1]?.kind !== result.kind}
@@ -2457,6 +2472,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         {/each}
         {#if searched &&
           !loading &&
+          !addressLoadingMore &&
           !rows.length &&
           !placesFailed &&
           !placesPartial &&
