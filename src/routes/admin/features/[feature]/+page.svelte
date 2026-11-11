@@ -4384,7 +4384,7 @@ async function refreshLocationSource(): Promise<void> {
       style: `--feature-preview-height:${visualSectionHeight}px;--feature-draft-offset:${setupPending ? setupProgressHeight : 0}px`,
     }}
     isReady={isNewFeatureRef || Boolean(currentFeatureId)}
-    class={`${FEATURE_EDITOR_FORM_CLASS} ${setupPending ? 'flex h-full min-h-0 flex-col overflow-hidden' : ''}`}
+    class={`${FEATURE_EDITOR_FORM_CLASS} relative ${setupPending ? 'flex h-full min-h-0 flex-col overflow-hidden' : ''}`}
   >
     {#snippet fallback()}
       <div
@@ -4420,6 +4420,18 @@ async function refreshLocationSource(): Promise<void> {
       </div>
     {/snippet}
     <HiddenInputs inputs={programmaticFeatureInputEntries} />
+    {#if !setupQuestionsPending &&
+      showsVisualSection &&
+      isLocationFacet &&
+      draftSearchFilterPanel}
+      <!-- Use the map and setup progress area together for the category browser. -->
+      <div
+        class="absolute inset-x-0 top-0 z-30 flex h-[calc(var(--feature-preview-height)+var(--feature-draft-offset))] items-end justify-center overflow-hidden bg-black/15"
+        data-location-filter-panel
+      >
+        {@render draftSearchFilterPanel()}
+      </div>
+    {/if}
     {#if setupPending}
       <FeatureSetup
         bind:step={setupStep}
@@ -4540,14 +4552,6 @@ async function refreshLocationSource(): Promise<void> {
                   draggable={isEditing}
                   onCoordinateChange={handlePinDrop}
                 />
-                {#if isLocationFacet && draftSearchFilterPanel}
-                  <div
-                    class="absolute inset-0 z-20 flex items-end justify-center overflow-hidden bg-black/15"
-                    data-location-filter-panel
-                  >
-                    {@render draftSearchFilterPanel()}
-                  </div>
-                {/if}
                 {#if isLocationFacet && sharedLocationMapControls}
                   <div
                     class="pointer-events-none absolute inset-3 z-10 flex items-start justify-end [&>*]:pointer-events-auto"

@@ -37,6 +37,8 @@ let path = $state<PlaceTaxonomyNode[]>(
 )
 let settingsOpen = $state(false)
 let search = $state('')
+let previewQuery = $state<string | undefined>()
+const showSearchResults = $derived(Boolean(search.trim()) && search !== previewQuery)
 let panel: HTMLElement
 let columnsElement: HTMLElement | undefined = $state()
 const columns = $derived([
@@ -54,8 +56,14 @@ const matches = $derived.by(() => {
   return visit(placeTaxonomy)
 })
 onMount(() => panel.focus())
+$effect(() => {
+  // Open the sole match's category preview without interrupting further typing.
+  const match = matches.length === 1 ? matches[0] : undefined
+  if (match) untrack(() => choose(match))
+})
 /** Select one coherent branch, replacing incompatible category/type constraints.
- * @param node Publisher category. @returns Nothing.
+ * @param node Publisher category.
+ * @returns Nothing.
  */
 function choose(node: PlaceTaxonomyNode): void {
   path = placeTaxonomyPath(node.name)
@@ -65,7 +73,7 @@ function choose(node: PlaceTaxonomyNode): void {
       ? { taxonomyCategory: node.name }
       : { taxonomyPrimary: node.name }),
   }
-  search = ''
+  previewQuery = search
   void tick().then(() =>
     columnsElement?.scrollTo({
       left: columnsElement.scrollWidth,
@@ -86,7 +94,7 @@ function choose(node: PlaceTaxonomyNode): void {
       event.key === 'Enter' &&
       !event.isComposing &&
       path.length &&
-      !search.trim() &&
+      !showSearchResults &&
       (event.target === panel ||
         event.target instanceof HTMLInputElement ||
         (event.target instanceof HTMLElement &&
@@ -111,10 +119,13 @@ function choose(node: PlaceTaxonomyNode): void {
   <div
     class="border-border flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3"
   >
-    <h3 class="flex items-center gap-2 font-semibold">
+    <h3 class="flex shrink-0 items-center gap-2 font-semibold">
       <FilterIcon class="size-4" />{m.feature_search_filters()}
     </h3>
-    <div class="flex items-center gap-2">
+    <p class="text-muted-foreground min-w-0 flex-1 text-xs">
+      {m.feature_search_filter_help()}
+    </p>
+    <div class="flex shrink-0 items-center gap-2">
       <button
         type="button"
         aria-label={m.feature_search_status()}
@@ -169,20 +180,24 @@ function choose(node: PlaceTaxonomyNode): void {
       placeholder={m.feature_search_category_search()}
       class="border-border bg-panel focus:ring-primary w-full rounded-lg border px-3 py-2 outline-none focus:ring-2"
     >
-    <p class="text-muted-foreground text-xs">
-      {path.length
-        ? path.map(node => node.label).join(' › ')
-        : m.feature_search_filter_help()}
-    </p>
+    {#if path.length}
+      <p class="text-muted-foreground text-xs">
+        {path.map(node => node.label).join(' › ')}
+      </p>
+    {/if}
   </div>
-  {#if search.trim()}
+  {#if showSearchResults}
     <div
       class="grid min-h-0 flex-1 auto-rows-max grid-cols-2 content-start gap-1 overflow-y-auto px-4 pb-3 md:grid-cols-3"
     >
       {#each matches as node (node.name)}
         <button
           type="button"
-          class="hover:bg-muted focus-visible:outline-primary rounded-md px-3 py-2 text-left text-sm focus-visible:outline-2 focus-visible:-outline-offset-2"
+          aria-pressed={path.at(-1)?.name === node.name}
+          class={[
+            'hover:bg-muted focus-visible:outline-primary rounded-md px-3 py-2 text-left text-sm focus-visible:outline-2 focus-visible:-outline-offset-2',
+            path.at(-1)?.name === node.name && 'bg-primary/15 text-primary',
+          ]}
           onclick={() => choose(node)}
         >
           {node.label}
