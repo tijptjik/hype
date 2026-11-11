@@ -647,7 +647,7 @@ $effect(() => {
         {coordinates}
         centered={true}
         availableWidth={toolbarWidth}
-        showDisplayChoice={isEditing}
+        showDisplayChoice
         stale={divisionsStale}
         {locationKind}
         {divisions}

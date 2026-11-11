@@ -1,6 +1,9 @@
 <script lang="ts">
+// BITS COMPONENTS
+import { DropdownMenu, Tooltip } from 'bits-ui'
 // ICONS
 import What3WordsIcon from 'virtual:icons/lucide/whole-word'
+import CheckIcon from 'virtual:icons/lucide/check'
 import AutomaticIcon from 'virtual:icons/lucide/sparkles'
 import AddressIcon from 'virtual:icons/lucide/map-pin-house'
 import PlusCodeIcon from 'virtual:icons/lucide/grid-2x2'
@@ -8,8 +11,12 @@ import PlusCodeIcon from 'virtual:icons/lucide/grid-2x2'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 let {
   value = 'automatic',
+  compact = false,
+  readOnly = false,
   onChange,
 }: {
+  compact?: boolean
+  readOnly?: boolean
   value?: FeatureAddress['locationDisplayMode']
   onChange: (value: NonNullable<FeatureAddress['locationDisplayMode']>) => void
 } = $props()
@@ -33,31 +40,130 @@ const options = [
     description: 'Display a Plus Code from the feature marker',
   },
 ] as const
+let trigger = $state<HTMLButtonElement | null>(null)
+let open = $state(false)
+let helpOpen = $state(false)
+$effect(() => {
+  if (open && helpOpen) helpOpen = false
+})
+const current = $derived(options.find(option => option.value === value) ?? options[0])
 </script>
 
-<fieldset
-  aria-label="Display location using"
-  class="border-border flex shrink-0 items-center rounded-lg border p-0.5"
->
-  {#each options as option (option.value)}
-    <button
-      type="button"
-      aria-label={option.label}
-      aria-pressed={value === option.value}
-      data-tooltip={option.description}
-      class="text-muted-foreground hover:bg-primary/10 hover:text-primary aria-pressed:bg-primary/10 aria-pressed:text-primary focus-visible:outline-primary flex size-9 items-center justify-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-      onclick={() => onChange(option.value)}
-    >
-      <option.icon class="size-4" aria-hidden="true" />
-    </button>
-  {/each}
-  <button
-    type="button"
-    disabled
-    aria-label="What3Words — not yet available"
-    data-tooltip="What3Words integration is not yet available"
-    class="text-muted-foreground flex size-9 cursor-not-allowed items-center justify-center rounded-md opacity-40"
-  >
-    <What3WordsIcon class="size-4" aria-hidden="true" />
-  </button>
-</fieldset>
+<!-- Hover help must not add a competing click-to-open popover around the menu. -->
+<Tooltip.Provider delayDuration={1200}>
+  <Tooltip.Root bind:open={helpOpen}>
+    <Tooltip.Trigger tabindex={-1}>
+      {#snippet child({ props })}
+        <span {...props} class="inline-flex">
+          {#if readOnly}
+            <button
+              type="button"
+              aria-label={`Display location using: ${current.label}`}
+              class="text-muted-foreground focus-visible:outline-primary inline-flex shrink-0 items-center justify-center rounded focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <current.icon class={compact ? 'size-5' : 'size-7'} aria-hidden="true" />
+            </button>
+          {:else}
+            <DropdownMenu.Root bind:open onOpenChange={() => (helpOpen = false)}>
+              <DropdownMenu.Trigger
+                bind:ref={trigger}
+                aria-label={`Display location using: ${current.label}`}
+                class="text-muted-foreground hover:text-primary focus-visible:outline-primary inline-flex shrink-0 items-center justify-center rounded transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                <current.icon
+                  class={compact ? 'size-5' : 'size-7'}
+                  aria-hidden="true"
+                />
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  onCloseAutoFocus={event => {
+                    event.preventDefault()
+                    trigger?.focus({ preventScroll: true })
+                  }}
+                  side="bottom"
+                  align="start"
+                  sideOffset={8}
+                  class="bits-theme border-border bg-panel text-foreground z-[1200] w-80 max-w-[calc(100vw-2rem)] rounded-xl border p-1.5 shadow-xl outline-none"
+                >
+                  <DropdownMenu.RadioGroup
+                    value={value ?? 'automatic'}
+                    onValueChange={next => {
+                      const option = options.find(option => option.value === next)
+                      if (option) onChange(option.value)
+                    }}
+                    aria-label="Display location using"
+                  >
+                    {#each options as option (option.value)}
+                      <DropdownMenu.RadioItem
+                        value={option.value}
+                        textValue={option.label}
+                        class="data-highlighted:bg-primary/10 grid cursor-pointer grid-cols-[20px_minmax(0,1fr)_16px] items-center gap-3 rounded-lg px-3 py-2.5 outline-none"
+                      >
+                        <option.icon class="size-5" aria-hidden="true" />
+                        <span class="min-w-0">
+                          <span class="block text-sm font-medium">{option.label}</span>
+                          <span
+                            class="text-muted-foreground block text-xs whitespace-normal"
+                            >{option.description}</span
+                          >
+                        </span>
+                        {#if current.value === option.value}
+                          <CheckIcon class="text-primary size-4" aria-hidden="true" />
+                        {/if}
+                      </DropdownMenu.RadioItem>
+                    {/each}
+                  </DropdownMenu.RadioGroup>
+                  <DropdownMenu.Item
+                    disabled
+                    textValue="What3Words"
+                    class="text-muted-foreground flex items-center gap-3 rounded-lg px-3 py-2.5 opacity-40"
+                  >
+                    <What3WordsIcon class="size-5 shrink-0" aria-hidden="true" />
+                    <span
+                      ><span class="block text-sm font-medium">What3Words</span
+                      ><span class="block text-xs">Not yet available</span></span
+                    >
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
+          {/if}
+        </span>
+      {/snippet}
+    </Tooltip.Trigger>
+    <Tooltip.Portal>
+      <Tooltip.Content
+        role="tooltip"
+        side="top"
+        sideOffset={8}
+        collisionPadding={16}
+        class="bits-theme bits-tooltip__content max-w-80 space-y-3 p-3 text-sm"
+      >
+        <p class="font-semibold">Display location using: {current.label}</p>
+        {#each options as option (option.value)}
+          <div class="flex items-start gap-3">
+            <option.icon
+              class="text-primary mt-0.5 size-5 shrink-0"
+              aria-hidden="true"
+            />
+            <div>
+              <p class="font-medium">{option.label}</p>
+              <p class="text-muted-foreground text-xs">{option.description}</p>
+            </div>
+          </div>
+        {/each}
+        <div class="text-muted-foreground flex items-start gap-3">
+          <What3WordsIcon class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+          <div>
+            <p class="font-medium">What3Words</p>
+            <p class="text-xs">Not yet available</p>
+          </div>
+        </div>
+        {#if !readOnly}
+          <p class="text-muted-foreground text-xs">Click to change the display mode.</p>
+        {/if}
+      </Tooltip.Content>
+    </Tooltip.Portal>
+  </Tooltip.Root>
+</Tooltip.Provider>

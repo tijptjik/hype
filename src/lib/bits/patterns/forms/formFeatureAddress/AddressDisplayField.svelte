@@ -139,26 +139,29 @@ let input = $state<HTMLTextAreaElement>()
           ? 'col-start-2 row-start-2'
           : ''}"
       >
-        {#if isEditing && showDisplayChoice}
+        {#if showDisplayChoice}
           <LocationDisplayChoice
+            readOnly={!isEditing}
+            {compact}
             value={address.locationDisplayMode}
             onChange={locationDisplayMode =>
               onChange({ ...address, locationDisplayMode })}
           />
+        {:else}
+          <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+            {#snippet trigger()}
+              <button
+                type="button"
+                aria-label={m.feature_address_formattedAddress()}
+                class="text-muted-foreground inline-flex shrink-0 rounded"
+              >
+                <MarkerIcon class={compact ? 'size-5' : 'size-7'} aria-hidden="true" />
+              </button>
+            {/snippet}
+            <span class="block">{m.feature_address_formattedAddress()}</span>
+            <span class="block">{m.feature_address_composed_help()}</span>
+          </SimpleTooltip>
         {/if}
-        <SimpleTooltip contentProps={{ role: 'tooltip' }}>
-          {#snippet trigger()}
-            <button
-              type="button"
-              aria-label={m.feature_address_formattedAddress()}
-              class="text-muted-foreground inline-flex shrink-0 rounded"
-            >
-              <MarkerIcon class={compact ? 'size-5' : 'size-7'} aria-hidden="true" />
-            </button>
-          {/snippet}
-          <span class="block">{m.feature_address_formattedAddress()}</span>
-          <span class="block">{m.feature_address_composed_help()}</span>
-        </SimpleTooltip>
       </div>
       <div
         style:grid-column={stacked ? '1 / -1' : undefined}
