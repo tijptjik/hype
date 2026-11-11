@@ -65,16 +65,12 @@ for (const [name, engine] of [
           throw Error(`Loading geometry changed: ${JSON.stringify({ before, after })}`)
       }
       const progress = page.getByRole('list', { name: 'Setup progress' })
-      const singleLine = await progress
-        .locator('button > span:last-child')
-        .evaluateAll(labels =>
-          labels.every(
-            label =>
-              label.getBoundingClientRect().height <=
-              parseFloat(getComputedStyle(label).lineHeight) + 1,
-          ),
+      const contained = await progress
+        .locator('button')
+        .evaluateAll(buttons =>
+          buttons.every(button => button.scrollWidth <= button.clientWidth),
         )
-      if (!singleLine) throw Error('Setup question wrapped')
+      if (!contained) throw Error('Progress label overflows its step')
       await progress
         .getByRole('button', { name: /What map are you adding to/ })
         .waitFor()
@@ -86,7 +82,7 @@ for (const [name, engine] of [
         throw Error('Preloaded draft answered the map question')
       const centered = await page.locator('[data-setup-content]').evaluate(el => {
         const content = el.getBoundingClientRect()
-        const surface = el.parentElement!.getBoundingClientRect()
+        const surface = el.parentElement?.getBoundingClientRect()
         return (
           Math.abs(
             (content.top + content.bottom) / 2 - (surface.top + surface.bottom) / 2,
@@ -101,8 +97,8 @@ for (const [name, engine] of [
       const questionBox = await page
         .getByRole('heading', { name: 'What map are you adding to?' })
         .boundingBox()
-      if (!progressBox || !questionBox || progressBox.y <= questionBox.y)
-        throw Error('Progress must sit below the question card')
+      if (!progressBox || !questionBox || progressBox.y >= questionBox.y)
+        throw Error('Progress must sit above the question inside the shared surface')
       if ((await progress.getByRole('button').count()) !== 4)
         throw Error('Missing fourth location step')
       const search = page.getByRole('searchbox')
@@ -157,11 +153,7 @@ for (const [name, engine] of [
       if (Math.max(...stepCenters) - Math.min(...stepCenters) > 1)
         throw Error('Setup steps not vertically centered')
       const locationProgress = await progress.boundingBox()
-      if (
-        !locationProgress ||
-        locationProgress.y !== 0 ||
-        locationProgress.width !== width
-      )
+      if (locationProgress?.y !== 0 || locationProgress.width !== width)
         throw Error('Location step progress is not flush and full width')
       await page.getByText('Searching for building_part', { exact: true }).waitFor()
       await page.getByRole('button', { name: /Open bookstores/, exact: false }).click()

@@ -11,6 +11,9 @@ import LayerIcon from 'virtual:icons/lucide/layers'
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 import OrganisationIcon from 'virtual:icons/lucide/users'
 import CheckIcon from 'virtual:icons/lucide/check'
+import ArrowRightIcon from 'virtual:icons/lucide/arrow-right'
+// SERVICES
+import { getURLfromImage } from '#lib/client/services/image.js'
 // DOMAIN
 import { setupResourceLabel, setupResourceMatches } from './featureSetup.types'
 import { featureTypeLabel } from '#lib/features/intents.js'
@@ -206,18 +209,55 @@ function selectLayer(next: ParentSectionLayerItem): void {
   onLayer(next)
   step = 1
 }
+
+let failedImages = $state<string[]>([])
+/** Resolve a layer's organization image using the shared image pipeline.
+ * @param item Layer whose owning organization supplies its visual identity.
+ * @returns A thumbnail URL, or null when an image is missing or invalid.
+ */
+function organisationImage(item: ParentSectionLayerItem): string | null {
+  const organisation = catalogue.organisations.find(
+    row => row.id === item.organisationId,
+  )
+  if (!organisation?.image || failedImages.includes(organisation.id)) return null
+  try {
+    return getURLfromImage({
+      image: organisation.image,
+      transformation: 'c_fit,h_80,w_80',
+    })
+  } catch {
+    return null
+  }
+}
 </script>
+{#snippet destinationIcon(item: ParentSectionLayerItem)}
+  {@const src = organisationImage(item)}
+  {#if src}
+    <img
+      {src}
+      alt=""
+      width="40"
+      height="40"
+      class="size-10 shrink-0 rounded-lg object-contain"
+      onerror={() => {
+        failedImages = [...failedImages, item.organisationId]
+      }}
+    >
+  {:else}
+    <LayerIcon class="text-primary bg-primary/10 size-10 shrink-0 rounded-lg p-2" />
+  {/if}
+{/snippet}
 {#snippet hierarchy(item: ParentSectionLayerItem)}
   {@const organisation = catalogue.organisations.find(
     row => row.id === item.organisationId,
   )}
   {@const project = catalogue.projects.find(row => row.id === item.projectId)}
-  <span class="flex flex-wrap gap-x-1 font-mono text-xs tracking-widest uppercase">
+  <span class="flex flex-wrap gap-x-1 text-xs">
     <span class="text-primary"
       >{organisation ? setupResourceLabel(organisation) : item.organisationId}</span
     >
     <span aria-hidden="true">›</span>
-    <span class="text-accent"
+    <span class="text-muted-foreground"
       >{project
         ? getProjectDisplayName(
             project,
@@ -232,21 +272,20 @@ function selectLayer(next: ParentSectionLayerItem): void {
   bind:clientHeight={measuredHeight}
   class="flex w-full min-w-0 flex-col motion-safe:transition-[padding] motion-safe:duration-200 {step <
   3
-    ? 'min-h-0 flex-1 overflow-y-auto p-6'
+    ? 'min-h-0 flex-1 overflow-y-auto p-4 sm:p-8'
     : 'shrink-0'}"
   aria-label={m.setup_accessible_label()}
 >
   <div
     class="mx-auto flex w-full min-w-0 shrink-0 flex-col {step < 3
-      ? 'my-auto max-w-6xl'
+      ? 'bg-panel border-border my-auto max-w-3xl overflow-hidden rounded-2xl border shadow-sm'
       : ''}"
     data-setup-content
   >
     <ol
-      class="grid w-full grid-cols-[repeat(4,minmax(max-content,1fr))] gap-1 overflow-x-auto bg-slate-900 motion-safe:transition-[max-width,border-radius] motion-safe:duration-200 px-2 py-1 text-white {step <
-      3
-        ? 'order-last mx-auto mt-5 rounded-xl'
-        : ''}"
+      class="grid w-full grid-cols-4 gap-1 border-b border-border p-2 sm:p-3 {step < 3
+        ? 'bg-base-200/40 text-base-content'
+        : 'bg-slate-900 text-white'}"
       aria-label={m.setup_progress()}
     >
       {#each labels as label, index}
@@ -256,14 +295,18 @@ function selectLayer(next: ParentSectionLayerItem): void {
             disabled={(index === 1 && !layerAnswered) ||
               (index === 2 && !typeAnswered) ||
               (index === 3 && !contextAnswered)}
+            aria-label={label}
             aria-current={step === index ? 'step' : undefined}
-            class="focus-visible:outline-primary flex h-full w-full min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-3 text-center disabled:opacity-60"
+            class="focus-visible:outline-primary flex h-full w-full min-w-0 flex-col items-center gap-2 rounded-lg px-1 py-2 text-center transition-colors sm:flex-row sm:px-3 sm:text-left disabled:opacity-50 {step ===
+              index && step < 3
+              ? 'bg-primary/10'
+              : ''}"
             onclick={() => navigateToStep(index)}
           >
             <span
               class="border-primary flex size-6 shrink-0 items-center justify-center rounded-full border text-xs"
               class:bg-primary={step === index}
-              class:text-primary-foreground={step === index}
+              class:text-white={step === index}
             >
               {#if index < step}
                 <CheckIcon class="size-3" />
@@ -271,7 +314,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
                 {index + 1}
               {/if}
             </span>
-            <span class="grid gap-0.5 text-left">
+            <span class="grid min-w-0 gap-0.5">
               {#if step >= 3 && index < 3}
                 <span class="text-xs text-slate-300"
                   >{[m.setup_layer(), m.setup_feature_kind(), m.setup_location_kind()][
@@ -279,7 +322,16 @@ function selectLayer(next: ParentSectionLayerItem): void {
                   ]}</span
                 >
               {/if}
-              <span class="text-sm whitespace-nowrap">{label}</span>
+              <span class="text-xs font-medium break-words whitespace-normal sm:text-sm"
+                >{step < 3
+                  ? [
+                      m.setup_layer(),
+                      m.setup_feature_kind(),
+                      m.setup_location_kind(),
+                      m.setup_find_location(),
+                    ][index]
+                  : label}</span
+              >
             </span>
           </button>
         </li>
@@ -287,12 +339,12 @@ function selectLayer(next: ParentSectionLayerItem): void {
     </ol>
     <div
       hidden={step !== 0}
-      class="bg-panel text-base-content border-border mx-auto w-full max-w-4xl rounded-2xl border p-5 shadow-sm sm:p-10"
+      class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8"
     >
-      <h2 class="mb-3 text-center text-2xl font-semibold tracking-tight">
+      <h2 class="mb-2 text-2xl font-semibold tracking-tight sm:text-3xl">
         {m.setup_map_question()}
       </h2>
-      <label class="mx-auto grid max-w-xl gap-3 text-center text-sm"
+      <label class="text-muted-foreground grid gap-5 text-sm"
         >{searchSubtitle}
         <input
           type="search"
@@ -300,18 +352,17 @@ function selectLayer(next: ParentSectionLayerItem): void {
             if (event.key === 'Enter') event.preventDefault()
           }}
           bind:value={query}
-          class="bg-panel border-border w-full min-w-0 rounded-lg border p-3"
+          class="bg-panel text-base-content border-border focus-visible:outline-primary w-full min-w-0 rounded-lg border p-3"
           placeholder={m.setup_search_name()}
         >
       </label>
+
       {#if !loading &&
         !query &&
         !scope.organisationId &&
         !scope.projectId &&
         recent.length}
-        <p
-          class="text-muted-foreground mt-7 text-center text-xs font-medium tracking-wide"
-        >
+        <p class="text-muted-foreground mt-6 text-xs font-medium tracking-wide">
           {m.setup_recent()}
         </p>
         <section
@@ -321,13 +372,14 @@ function selectLayer(next: ParentSectionLayerItem): void {
           {#each recent as item (item.id)}
             <button
               type="button"
-              class="bg-panel border-border hover:border-primary focus-visible:outline-primary hover:bg-base-200 flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors"
+              class="bg-panel border-border hover:border-primary focus-visible:ring-primary/50 hover:bg-base-200 flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
               aria-pressed={item.id === confirmedLayerId}
-              class:ring-2={item.id === confirmedLayerId}
+              class:ring-inset={item.id === confirmedLayerId}
+              class:ring-1={item.id === confirmedLayerId}
               class:ring-primary={item.id === confirmedLayerId}
               onclick={() => selectLayer(item)}
             >
-              <LayerIcon class="text-primary bg-primary/10 size-10 rounded-lg p-2" />
+              {@render destinationIcon(item)}
               <span
                 class="text-muted-foreground min-h-8 text-xs break-words whitespace-normal"
                 >{@render hierarchy(item)}</span
@@ -341,9 +393,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
       {/if}
       {#if loading}
         <div role="status" aria-busy="true" aria-label={m.setup_loading_layers()}>
-          <p
-            class="text-muted-foreground mt-7 text-center text-xs font-medium tracking-wide"
-          >
+          <p class="text-muted-foreground mt-6 text-xs font-medium tracking-wide">
             {m.setup_recent()}
           </p>
           <div class="my-3 flex gap-3 overflow-hidden pb-2" aria-hidden="true">
@@ -432,18 +482,24 @@ function selectLayer(next: ParentSectionLayerItem): void {
                 {#each layers as item (item.id)}
                   <button
                     type="button"
-                    class="bg-panel border-border hover:border-primary grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-lg border p-3 text-left"
+                    class="bg-panel border-border hover:border-primary group hover:bg-primary/5 focus-visible:ring-primary/50 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                     aria-pressed={item.id === confirmedLayerId}
-                    class:ring-2={item.id === confirmedLayerId}
+                    class:ring-inset={item.id === confirmedLayerId}
+                    class:ring-1={item.id === confirmedLayerId}
                     class:ring-primary={item.id === confirmedLayerId}
                     onclick={() => selectLayer(item)}
                   >
-                    <LayerIcon class="text-primary size-5" />
+                    {@render destinationIcon(item)}
                     <span class="min-w-0 break-words whitespace-normal"
                       ><span class="text-muted-foreground block text-xs"
                         >{@render hierarchy(item)}</span
-                      >{setupResourceLabel(item)}</span
+                      ><span class="block font-semibold"
+                        >{setupResourceLabel(item)}</span
+                      ></span
                     >
+                    <ArrowRightIcon
+                      class="text-muted-foreground size-4 transition-transform group-hover:translate-x-0.5"
+                    />
                   </button>
                 {/each}
               </div>
@@ -460,7 +516,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
     {#if layerAnswered && layer && sourceLayerId}
       <div
         hidden={step !== 1}
-        class="bg-panel text-base-content border-border mx-auto w-full max-w-4xl rounded-2xl border p-5 shadow-sm sm:p-10 [&_h3]:text-center"
+        class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_h3]:text-center"
       >
         <FeatureIntentChoice
           layerId={sourceLayerId}
@@ -477,7 +533,7 @@ function selectLayer(next: ParentSectionLayerItem): void {
     {/if}
     <div
       hidden={step !== 2}
-      class="bg-panel text-base-content border-border mx-auto w-full max-w-4xl rounded-2xl border p-5 shadow-sm sm:p-10 [&_legend]:w-full [&_legend]:text-center"
+      class="bg-panel text-base-content mx-auto w-full p-5 sm:p-8 [&_legend]:w-full [&_legend]:text-center"
     >
       <TargetContextChoice
         {contexts}
