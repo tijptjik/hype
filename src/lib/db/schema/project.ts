@@ -1,3 +1,5 @@
+// AUTOMATIC TRANSLATIONS
+import { automaticTranslationColumns } from './automaticTranslation'
 import type { MarkerStyleCode } from '#lib/features/markerStyle.js'
 import type { ProjectLocationPolicy } from '#lib/locations/model.js'
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
@@ -119,6 +121,7 @@ export const project = sqliteTable('project', {
 export const projectI18n = sqliteTable(
   'projectI18n',
   {
+    ...automaticTranslationColumns(),
     projectId: text('projectId')
       .notNull()
       .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),

@@ -1,3 +1,4 @@
+import { automaticMetadataForForm } from '#lib/i18n/automaticSchema.js'
 // CONTENT LOCALES
 import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // I18N
@@ -69,7 +70,15 @@ function normalizeHubSubscriptionService(
  */
 function normalizeHubFormLocale(
   root: HubFormRootForDefaults | null | undefined,
-  locale: { [K in keyof HubFormLocale]?: HubFormLocale[K] | null } | null | undefined,
+  locale:
+    | ({
+        [K in Exclude<
+          keyof HubFormLocale,
+          'autoTranslated' | 'translationProvenance'
+        >]?: HubFormLocale[K] | null
+      } & { autoTranslated?: unknown; translationProvenance?: unknown })
+    | null
+    | undefined,
   localeKey: string,
 ): HubFormLocale {
   const templateLocale =
@@ -77,6 +86,7 @@ function normalizeHubFormLocale(
       ? localeKey
       : null
   return {
+    ...automaticMetadataForForm(locale),
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
     description: locale?.description ?? '',

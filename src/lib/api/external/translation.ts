@@ -1,8 +1,19 @@
+// TRANSLATION PROVENANCE
+import {
+  translationSourceHash,
+  type AutomaticTranslation,
+} from '#lib/i18n/automatic.js'
 // CONTENT LOCALES
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 
 export type ContentTranslationResult =
-  | { status: 'translated'; text: string; source: string; target: string }
+  | {
+      status: 'translated'
+      text: string
+      source: string
+      target: string
+      automatic: AutomaticTranslation
+    }
   | { status: 'unsupported'; source: string; target: string; message: string }
   | { status: 'error'; source: string; target: string; message: string }
 
@@ -157,7 +168,21 @@ export async function translateContentField(
       )
       .join('')
     if (!text.trim()) throw new TranslationProviderError('Empty translation response')
-    return { status: 'translated', text, source, target }
+    return {
+      status: 'translated',
+      text,
+      source,
+      target,
+      automatic: {
+        value: text,
+        sourceLocale: source,
+        sourceText: input.text,
+        sourceHash: await translationSourceHash(input.text),
+        provider: 'azure-translator',
+        model: null,
+        generatedAt: new Date().toISOString(),
+      },
+    }
   } catch (error) {
     return {
       status:

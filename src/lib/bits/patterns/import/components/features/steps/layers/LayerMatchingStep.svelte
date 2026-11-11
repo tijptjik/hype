@@ -222,7 +222,9 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
       {#each Object.keys(SupportedLocales) as locale}
         {@const localeKey = locale as LayerFormLocaleKey}
-        {@const localeCode = SupportedLocales[localeKey] as Locale}
+        {@const localeCode = SupportedLocales[
+          locale as keyof typeof SupportedLocales
+        ] as Locale}
         <fieldset
           class="border-base-content/20 bg-base-100/70 relative min-w-0 space-y-4 overflow-visible rounded-xl border p-4"
           onmouseenter={() => handleLayerLocaleEnter(localeKey)}

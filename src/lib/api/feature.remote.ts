@@ -1,3 +1,10 @@
+// BACKGROUND TRANSLATIONS
+import {
+  scheduleAutomaticTranslations,
+  scheduleFeaturePropertyTranslations,
+} from '#lib/api/services/automaticTranslations.js'
+// AUTOMATIC TRANSLATIONS
+import { prepareAutomaticTranslationSubmission } from '#lib/db/services/automaticTranslation.js'
 import { suppliedModelTab } from '#lib/forms/modelTabs.js'
 import type { FeatureEntityFormData } from '#lib/db/zod/schema/feature.form.js'
 // CONTENT LOCALES
@@ -549,6 +556,28 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const parsed = FeatureFormData.safeParse(input)
   if (!parsed.success) return invalid(...parsed.error.issues)
   const params = parsed.data
+  /** Validate signed metadata only after the owning authorization check. */
+  async function prepareTranslations(): Promise<void> {
+    await prepareAutomaticTranslationSubmission({
+      db: ctx.db,
+      resource: 'feature',
+      id: params.meta?.id,
+      rows: data.i18n,
+      actorId: ctx.user.id,
+      secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+    })
+    for (const property of data.properties ?? []) {
+      await prepareAutomaticTranslationSubmission({
+        db,
+        resource: 'featureProperty',
+        id: params.meta?.id,
+        propertyId: property.propertyId,
+        rows: property.i18n,
+        actorId: user.id,
+        secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+      })
+    }
+  }
   const issue = ctx.issue
   const { meta } = params
   let data: FeatureFormPatch = { ...params.data }
@@ -624,6 +653,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     if (!createDecision.allowed) {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
+    await prepareTranslations()
 
     try {
       submittedProperties = await validateFeaturePhoneProperties(
@@ -715,6 +745,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     if (!created.isDraft)
       recordContribution(ctx.event.locals, 'contribution.new_feature', created.id)
     scheduleFeatureMtr(ctx.event.locals.platform, created.id)
+    scheduleAutomaticTranslations(ctx, 'feature', created.id, params.data.i18n)
+    scheduleFeaturePropertyTranslations(ctx, created.id, params.data.properties)
     return toCreatedResponseShape(created)
   }
 
@@ -810,6 +842,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       ),
     )
   }
+  await prepareTranslations()
 
   // Authorize the source first, then resolve and independently authorize the destination.
   if (parentsChanged) {
@@ -878,6 +911,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
             locale,
             {
               ...row,
+              autoTranslated: row.autoTranslated ?? undefined,
+              translationProvenance: row.translationProvenance ?? undefined,
               description: row.description ?? undefined,
               displayAddress: row.displayAddress ?? undefined,
             },
@@ -1084,6 +1119,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       if (!currentWithRelations.isDraft)
         recordContribution(ctx.event.locals, 'contribution.edit', current.id)
       if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, current.id)
+      scheduleAutomaticTranslations(ctx, 'feature', current.id, params.data.i18n)
+      scheduleFeaturePropertyTranslations(ctx, current.id, params.data.properties)
       return { data: { id: current.id }, revisionApplied: revision.revisionId }
     }
   } catch (cause) {
@@ -1103,6 +1140,12 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       recordContribution(ctx.event.locals, 'contribution.edit', linkedSave.feature.id)
     if (linkedSave.geometryChanged)
       scheduleFeatureMtr(ctx.event.locals.platform, linkedSave.feature.id)
+    scheduleAutomaticTranslations(
+      ctx,
+      'feature',
+      linkedSave.feature.id,
+      params.data.i18n,
+    )
     return toCreatedResponseShape(linkedSave.feature)
   }
 
@@ -1113,6 +1156,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   if (!persisted.isDraft)
     recordContribution(ctx.event.locals, 'contribution.edit', persisted.id)
   if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, persisted.id)
+  scheduleAutomaticTranslations(ctx, 'feature', persisted.id, params.data.i18n)
+  scheduleFeaturePropertyTranslations(ctx, persisted.id, params.data.properties)
   return toCreatedResponseShape(persisted)
 })
 

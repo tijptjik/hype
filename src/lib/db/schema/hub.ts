@@ -1,3 +1,5 @@
+// AUTOMATIC TRANSLATIONS
+import { automaticTranslationColumns } from './automaticTranslation'
 // DB
 import { nanoid } from 'nanoid'
 // ORM
@@ -75,6 +77,7 @@ export const hub = sqliteTable('hub', {
 export const hubI18n = sqliteTable(
   'hubI18n',
   {
+    ...automaticTranslationColumns(),
     hubId: text('hubId')
       .notNull()
       .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),

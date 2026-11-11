@@ -70,7 +70,7 @@ export function organisationSnapshotExpression(logoStorage = false): SQL {
     'record',json(${profile}),
     'i18n',json((SELECT json_group_object(locale,json(content)) FROM (
       SELECT ${organisationI18n.locale} AS locale,${translation} AS content FROM ${organisationI18n}
-      WHERE ${organisationI18n.organisationId}=${organisation.id} ORDER BY ${organisationI18n.locale}))),
+      WHERE ${organisationI18n.organisationId}=${organisation.id} AND COALESCE(${organisationI18n.isAutomaticOnly},0)=0 ORDER BY ${organisationI18n.locale}))),
     'userPolicy',json(COALESCE((SELECT ${policy} FROM ${organisationUserPolicy} WHERE ${organisationUserPolicy.organisationId}=${organisation.id}),'null')),
     'properties',json((SELECT json_group_object(propertyId,json_object('rank',rank)) FROM (
       SELECT ${organisationProperty.propertyId} AS propertyId,${organisationProperty.rank} AS rank FROM ${organisationProperty}

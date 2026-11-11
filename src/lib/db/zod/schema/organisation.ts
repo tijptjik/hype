@@ -1,3 +1,4 @@
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 // CONTENT LOCALES
 import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
 // ZOD
@@ -95,7 +96,9 @@ export const OrganisationUpdate = createUpdateSchema(organisation).extend({
   capabilities: CapabilityBase.optional(),
 })
 
-export const OrganisationI18nBase = createSelectSchema(organisationI18n)
+export const OrganisationI18nBase = createSelectSchema(organisationI18n).extend(
+  automaticTranslationReadFields,
+)
 
 export const OrganisationI18nInsert = createInsertSchema(organisationI18n).omit({
   organisationId: true,

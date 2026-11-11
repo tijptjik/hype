@@ -93,6 +93,28 @@ function fixture() {
 }
 
 describe('complete Feature revision source fencing', () => {
+  it('retains private cache metadata without treating cache writes as editorial drift', async () => {
+    const f = fixture()
+    const before = await f.captureRequired()
+    f.sqlite.exec(`UPDATE featureI18n SET autoTranslated='{"title":{"value":"Cached"}}' WHERE featureId='f' AND locale='en';
+      INSERT INTO featureI18n(featureId,locale,title,titleGen,isAutomaticOnly,autoTranslated) VALUES ('f','ja','',1,1,'{"title":{"value":"Japanese cache"}}');`)
+    expect(await executeRevisionBatch(f.db, before.unchanged, [])).toEqual([])
+    const after = await f.captureRequired()
+    expect(after.snapshot).toMatchObject({
+      translations: expect.arrayContaining([
+        expect.objectContaining({
+          locale: 'ja',
+          isAutomaticOnly: true,
+          autoTranslated: { title: { value: 'Japanese cache' } },
+        }),
+      ]),
+    })
+    f.sqlite.exec(
+      "UPDATE featureI18n SET title='Authored change' WHERE featureId='f' AND locale='en'",
+    )
+    expect(await executeRevisionBatch(f.db, after.unchanged, [])).toBeNull()
+  })
+
   it('captures children, accepted references and private context in one scoped read', async () => {
     const f = fixture()
     const source = await f.captureRequired()

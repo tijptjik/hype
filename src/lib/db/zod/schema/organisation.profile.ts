@@ -1,3 +1,6 @@
+import { ContentTagInput } from '#lib/i18n/contentRecords.js'
+// TRANSLATION METADATA
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 // ZOD
 import { z } from 'zod'
 // SHARED CONTRACTS
@@ -36,8 +39,9 @@ const OrganisationBase = z.object({
   permitUserDetailsEdit: z.boolean(),
 })
 export const OrganisationI18nReadSchema = z.object({
+  ...automaticTranslationReadFields,
   organisationId: z.string(),
-  locale: z.enum(supportedLocales as [string, ...string[]]),
+  locale: ContentTagInput,
   name: z.string(),
   nameGen: z.boolean(),
   nameShort: z.string(),

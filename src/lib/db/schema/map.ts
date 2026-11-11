@@ -1,3 +1,5 @@
+// AUTOMATIC TRANSLATIONS
+import { automaticTranslationColumns } from './automaticTranslation'
 import { sql } from 'drizzle-orm'
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { nanoid } from 'nanoid'
@@ -33,6 +35,7 @@ export const mapStyles = sqliteTable('mapStyles', {
 export const mapStyleI18n = sqliteTable(
   'mapStyleI18n',
   {
+    ...automaticTranslationColumns(),
     mapStyleId: text('mapStyleId')
       .notNull()
       .references(() => mapStyles.id, { onDelete: 'cascade', onUpdate: 'cascade' }),

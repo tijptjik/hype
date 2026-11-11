@@ -1,3 +1,4 @@
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 import { FeatureNameTemplateSchema } from '#lib/features/locationPolicy.js'
 // SHARED TRANSLATIONS
 import { FeatureI18nBase } from './featureI18n'
@@ -240,6 +241,7 @@ export const FeaturePropertyUpdate = createUpdateSchema(featureProperty)
   })
 
 export const FeaturePropertyI18nBase = createSelectSchema(featurePropertyI18n).extend({
+  ...automaticTranslationReadFields,
   locale: ContentTagInput,
   valueGen: FormBoolean.optional(),
 })

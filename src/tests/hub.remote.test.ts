@@ -1,6 +1,16 @@
 import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('#lib/db/services/automaticTranslation.js', () => ({
+  prepareAutomaticTranslationSubmission: vi.fn(async () => {}),
+  preparePropertyTranslationSubmission: vi.fn(async () => {}),
+}))
+vi.mock('#lib/api/services/automaticTranslations.js', () => ({
+  scheduleAutomaticTranslations: vi.fn(),
+  schedulePropertyTranslations: vi.fn(),
+  scheduleFeaturePropertyTranslations: vi.fn(),
+}))
 import { error as httpError } from '@sveltejs/kit'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'

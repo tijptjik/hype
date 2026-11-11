@@ -1,3 +1,6 @@
+import { contentLocaleMap } from '#lib/i18n/contentRecords.js'
+// TRANSLATION METADATA
+import { automaticTranslationFormFields } from '#lib/i18n/automaticSchema.js'
 import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
@@ -145,14 +148,11 @@ export const ProjectLicenseBase = z.preprocess(
 // ═══════════════════════
 
 export const ProjectI18nFormData = z.object({
-  name: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_name() }) })
-    .max(128, { message: m.admin__validation_lte_128_chars() }),
+  ...automaticTranslationFormFields,
+  name: z.string().max(128, { message: m.admin__validation_lte_128_chars() }),
   nameGen: FormBoolean.default(false),
   nameShort: z
     .string()
-    .min(1, { message: m.field_is_required({ field: m.field_short_name() }) })
     .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   nameShortGen: FormBoolean.default(false),
   description: z
@@ -170,11 +170,10 @@ export const ProjectRoleFormData = z.object({
   capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
 
-export const ProjectI18nByLocaleFormData = z.object({
-  en: ProjectI18nFormData,
-  zhHans: ProjectI18nFormData,
-  zhHant: ProjectI18nFormData,
-})
+export const ProjectI18nByLocaleFormData = contentLocaleMap(ProjectI18nFormData).refine(
+  rows => Object.values(rows).some(row => row.name.trim() && row.nameShort.trim()),
+  'Add a name and short name in at least one language.',
+)
 
 export const ProjectUserRolesFormData = z.array(ProjectRoleFormData)
 

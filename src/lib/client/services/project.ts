@@ -1,3 +1,5 @@
+import { adaptContentMap } from '#lib/i18n/contentRecords.js'
+import { automaticMetadataForForm } from '#lib/i18n/automaticSchema.js'
 // CONTENT LOCALES
 import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // CONTENT LOCALES
@@ -61,15 +63,17 @@ import type {
 
 function normalizeProjectFormLocale(
   locale:
-    | {
-        [K in keyof ProjectFormInput['data']['i18n']['en']]?:
-          | ProjectFormInput['data']['i18n']['en'][K]
-          | null
-      }
+    | ({
+        [K in Exclude<
+          keyof ProjectFormInput['data']['i18n']['en'],
+          'autoTranslated' | 'translationProvenance'
+        >]?: ProjectFormInput['data']['i18n']['en'][K] | null
+      } & { autoTranslated?: unknown; translationProvenance?: unknown })
     | null
     | undefined,
 ): ProjectFormInput['data']['i18n']['en'] {
   return {
+    ...automaticMetadataForForm(locale),
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
     description: locale?.description ?? '',
@@ -330,11 +334,14 @@ export function toProjectFormInput(
       flags: { ...data.flags },
       code: data.code,
       useAllInOrgContext: data.useAllInOrgContext ?? false,
-      i18n: {
-        en: normalizeProjectFormLocale(data.i18n?.en),
-        zhHans: normalizeProjectFormLocale(data.i18n?.zhHans),
-        zhHant: normalizeProjectFormLocale(data.i18n?.zhHant),
-      },
+      i18n: Object.fromEntries(
+        Object.entries({
+          en: undefined,
+          zhHans: undefined,
+          zhHant: undefined,
+          ...adaptContentMap(data.i18n ?? {}),
+        }).map(([locale, row]) => [locale, normalizeProjectFormLocale(row)]),
+      ),
       license: normalizeProjectLicense(data.license),
       capabilities: normalizeProjectCapabilities(data.capabilities),
       userRoles: (data.userRoles ?? []).map(userRole => ({

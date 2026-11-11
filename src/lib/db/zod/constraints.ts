@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { ContentTagInput } from '#lib/i18n/contentRecords.js'
 import { z } from 'zod'
 import { m } from '#lib/i18n.js'
 import type {
@@ -132,7 +134,7 @@ export const getLocales = <T extends z.ZodType>(
   requiredStringKeys: string[] = ['value', 'label'],
 ) =>
   z
-    .partialRecord(z.enum(['en', 'zhHans', 'zhHant']), model)
+    .record(ContentTagInput, model)
     .optional()
     .nullable()
     .refine(

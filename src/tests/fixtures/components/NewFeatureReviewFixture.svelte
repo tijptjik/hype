@@ -67,7 +67,18 @@ const layers = ['Current', 'Other'].map(name => ({
   id: name.toLowerCase(),
   code: name,
   projectId: 'project',
-  i18n: { en: { name } },
+  i18n: {
+    en: {
+      layerId: name.toLowerCase(),
+      locale: 'en',
+      name,
+      nameShort: name,
+      description: '',
+      nameGen: false,
+      nameShortGen: false,
+      descriptionGen: false,
+    },
+  },
 })) as TaskEditorLayerOption[]
 let layerId = $state('current')
 let loading = $state(new URLSearchParams(location.search).has('pending'))

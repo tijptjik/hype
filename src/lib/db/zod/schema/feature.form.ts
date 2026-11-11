@@ -1,3 +1,8 @@
+// TRANSLATION METADATA
+import {
+  automaticTranslationStructuredFormFields,
+  automaticTranslationFormFields,
+} from '#lib/i18n/automaticSchema.js'
 import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 import {
   FeatureKindSchema,
@@ -33,6 +38,7 @@ import type { GeometryObject } from 'geojson'
 // ---
 
 export const FeatureI18nFormData = z.object({
+  ...automaticTranslationFormFields,
   nameOverride: z.string().max(1000).nullish(),
   title: z.string().max(128, { message: m.admin__validation_lte_128_chars() }),
   titleGen: FormBoolean.default(false),
@@ -50,6 +56,7 @@ export const FeatureI18nFormData = z.object({
 })
 
 export const FeatureDraftI18nFormData = z.object({
+  ...automaticTranslationFormFields,
   nameOverride: z.string().max(1000).nullish(),
   title: z.string().max(128, { message: m.admin__validation_lte_128_chars() }),
   titleGen: FormBoolean.default(false),
@@ -67,6 +74,7 @@ export const FeatureDraftI18nFormData = z.object({
 })
 
 export const FeaturePropertyI18nFormData = z.object({
+  ...automaticTranslationStructuredFormFields,
   value: z.string().optional(),
   valueGen: FormBoolean.default(false),
 })

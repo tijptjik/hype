@@ -19,7 +19,11 @@ import {
 } from 'drizzle-orm'
 // I18N
 import { toLocaleKey, toLocaleKebab } from '#lib/i18n.js'
-import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
+import {
+  contentMapToStorage,
+  contentFormKey,
+  contentStorageTag,
+} from '#lib/i18n/contentRecords.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
 // SCHEMA
 import * as schema from './schema'
@@ -432,10 +436,10 @@ function normalizeLocaleRecordEntries<T extends Record<string, unknown>>(
 ): Record<string, T> {
   return Object.entries(i18n).reduce(
     (acc, [rawLocale, entry]) => {
-      const inferredLocale = toLocaleKebab(rawLocale as Locale)
+      const inferredLocale = contentStorageTag(rawLocale)
       const locale =
         typeof entry?.locale === 'string' && entry.locale.length > 0
-          ? toLocaleKebab(entry.locale as Locale)
+          ? contentStorageTag(entry.locale)
           : inferredLocale
       acc[locale] = {
         ...entry,
@@ -457,7 +461,7 @@ function toFormLocaleRecord<T extends Record<string, unknown>>(
         typeof entry?.locale === 'string' && entry.locale.length > 0
           ? entry.locale
           : rawLocale
-      acc[toLocaleKey(locale as Locale)] = entry
+      acc[contentFormKey(locale)] = entry
       return acc
     },
     {} as Record<string, T>,
@@ -549,7 +553,7 @@ export const toLocaleMap = <T extends LocaleBundle>(
     if (i18n.length === 0) return null
     return i18n.reduce(
       (acc: Record<Locale, T>, bundle: T) => {
-        const locale = toLocaleKebab(bundle.locale as Locale | LocaleKey)
+        const locale = contentStorageTag(bundle.locale ?? 'en') as Locale
         const isCanonicalLocale = bundle.locale === locale
 
         // Prefer canonical DB-locale rows when stale camelCase duplicates exist.

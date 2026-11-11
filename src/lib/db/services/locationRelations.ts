@@ -95,6 +95,9 @@ export function prepareFeatureFormRelations(
       displayAddress: value.displayAddress,
       displayAddressGen: value.displayAddressGen,
       addressProperties: value.addressProperties,
+      isAutomaticOnly: 'isAutomaticOnly' in value && value.isAutomaticOnly === true,
+      autoTranslated: value.autoTranslated,
+      translationProvenance: value.translationProvenance,
     }
     queries.push(
       db
@@ -108,6 +111,7 @@ export function prepareFeatureFormRelations(
           ),
         ),
       db.insert(featureI18n).select(sql`SELECT
+      ${Number('isAutomaticOnly' in value && value.isAutomaticOnly === true)}, ${value.autoTranslated == null ? null : JSON.stringify(value.autoTranslated)}, ${value.translationProvenance == null ? null : JSON.stringify(value.translationProvenance)},
       ${featureId}, ${locale}, ${value.baseName ?? value.title ?? ''}, ${value.nameOverride ?? null}, CASE WHEN ${keepNames} THEN '' ELSE ${value.title ?? ''} END, ${Number(value.titleGen ?? true)},
       ${value.description ?? null}, ${Number(value.descriptionGen ?? true)},
       ${value.displayAddress ?? null}, ${Number(value.displayAddressGen ?? true)},
@@ -165,7 +169,14 @@ export function prepareFeatureFormRelations(
       queries.push(
         db
           .update(featurePropertyI18n)
-          .set({ value: translation.value, valueGen: translation.valueGen })
+          .set({
+            value: translation.value,
+            valueGen: translation.valueGen,
+            isAutomaticOnly:
+              'isAutomaticOnly' in translation && translation.isAutomaticOnly === true,
+            autoTranslated: translation.autoTranslated,
+            translationProvenance: translation.translationProvenance,
+          })
           .where(
             and(
               eq(featurePropertyI18n.featureId, featureId),
@@ -175,6 +186,7 @@ export function prepareFeatureFormRelations(
             ),
           ),
         db.insert(featurePropertyI18n).select(sql`SELECT
+        ${Number('isAutomaticOnly' in translation && translation.isAutomaticOnly === true)}, ${translation.autoTranslated == null ? null : JSON.stringify(translation.autoTranslated)}, ${translation.translationProvenance == null ? null : JSON.stringify(translation.translationProvenance)},
         ${featureId}, ${property.propertyId}, ${locale},
         ${translation.value ?? null}, ${Number(translation.valueGen ?? false)} WHERE ${guard}
         AND NOT EXISTS(SELECT 1 FROM featurePropertyI18n WHERE featureId=${featureId} AND propertyId=${property.propertyId} AND locale=${locale})`),

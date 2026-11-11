@@ -1,3 +1,13 @@
+// BACKGROUND TRANSLATIONS
+import {
+  scheduleAutomaticTranslations,
+  schedulePropertyTranslations,
+} from '#lib/api/services/automaticTranslations.js'
+// AUTOMATIC TRANSLATIONS
+import {
+  prepareAutomaticTranslationSubmission,
+  preparePropertyTranslationSubmission,
+} from '#lib/db/services/automaticTranslation.js'
 import { suppliedModelTab } from '#lib/forms/modelTabs.js'
 import type { OrganisationEntityFormData } from '#lib/db/zod/schema/organisation.form.js'
 // ORGANISATION SETTINGS
@@ -381,6 +391,23 @@ export const organisationForm = guardedForm(
   ): Promise<{ data: { id: string; modifiedAt: string } }> => {
     // Parse and normalize submitted form input.
     const params = OrganisationFormData.parse(input)
+    /** Validate signed metadata only after the owning authorization check. */
+    async function prepareTranslations(): Promise<void> {
+      await preparePropertyTranslationSubmission({
+        db: ctx.db,
+        properties: params.data.properties,
+        actorId: ctx.user.id,
+        secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+      })
+      await prepareAutomaticTranslationSubmission({
+        db: ctx.db,
+        resource: 'organisation',
+        id: params.meta?.id,
+        rows: params.data.i18n,
+        actorId: ctx.user.id,
+        secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+      })
+    }
 
     const { db, user, userRoles, event, invalid } = ctx
     const issue = ctx.issue
@@ -467,6 +494,7 @@ export const organisationForm = guardedForm(
       if (!createDecision.allowed) {
         invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
       }
+      await prepareTranslations()
 
       await validateUniqueNonReservedCode({
         code: normalizedCode,
@@ -507,6 +535,9 @@ export const organisationForm = guardedForm(
         { actorId: user.id, reason: 'Organisation created' },
       )
 
+      scheduleAutomaticTranslations(ctx, 'organisation', created.id, params.data.i18n)
+      schedulePropertyTranslations(ctx, params.data.properties)
+
       return toCreatedResponseShape(created)
     }
 
@@ -533,6 +564,7 @@ export const organisationForm = guardedForm(
     if (!updateDecision.allowed) {
       invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
+    await prepareTranslations()
 
     // Ordinary form saves may echo the current flag but cannot grant or revoke it.
     if (
@@ -632,6 +664,8 @@ export const organisationForm = guardedForm(
     // Translations and role assignments committed with the core revision above.
 
     // Return persisted identity and write token.
+    scheduleAutomaticTranslations(ctx, 'organisation', persisted.id, params.data.i18n)
+    schedulePropertyTranslations(ctx, params.data.properties)
     return toCreatedResponseShape(persisted)
   },
 )

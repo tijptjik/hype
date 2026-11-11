@@ -1,3 +1,5 @@
+// TRANSLATION METADATA
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 // ZOD
 import { z } from 'zod'
 // LOCALES
@@ -7,6 +9,7 @@ import type { AddressProperties } from '#lib/utils/address.types.js'
 
 /** Persisted translations shared by read profiles and CSV import normalization. */
 export const FeatureI18nBase = z.object({
+  ...automaticTranslationReadFields,
   featureId: z.string(),
   locale: ContentTagInput,
   baseName: z.string().nullish(),

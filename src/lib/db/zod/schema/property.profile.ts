@@ -1,3 +1,4 @@
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 // ZOD
 import { z } from 'zod'
 // DOMAIN
@@ -53,6 +54,7 @@ export const PropertyValueRecord = z.object({
   value: z.string().nullable(),
 })
 export const PropertyI18nRecord = z.object({
+  ...automaticTranslationReadFields,
   propertyId: z.string(),
   locale: ContentTagInput,
   label: z.string(),
@@ -61,6 +63,7 @@ export const PropertyI18nRecord = z.object({
   placeholderGen: z.boolean(),
 })
 export const PropertyValueI18nRecord = z.object({
+  ...automaticTranslationReadFields,
   propertyValueId: z.string(),
   locale: ContentTagInput,
   value: z.string(),

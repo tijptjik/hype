@@ -112,10 +112,14 @@ export function populatedContentMapToStorage<T extends Record<string, unknown>>(
   fields: readonly string[],
 ): Record<string, T> {
   return Object.fromEntries(
-    Object.entries(contentMapToStorage(values)).filter(([, row]) =>
-      fields.some(
-        field => typeof row[field] === 'string' && row[field].trim().length > 0,
-      ),
+    Object.entries(contentMapToStorage(values)).filter(
+      ([, row]) =>
+        (row.autoTranslated &&
+          typeof row.autoTranslated === 'object' &&
+          Object.keys(row.autoTranslated).length > 0) ||
+        fields.some(
+          field => typeof row[field] === 'string' && row[field].trim().length > 0,
+        ),
     ),
   )
 }

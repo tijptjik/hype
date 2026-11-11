@@ -1,3 +1,4 @@
+import { automaticMetadataForForm } from '#lib/i18n/automaticSchema.js'
 // CONTENT LOCALE ADAPTERS
 import { adaptContentMap, canonicalContentTag } from '#lib/i18n/contentRecords.js'
 import { browser } from '$app/env'
@@ -299,6 +300,7 @@ export function toFeatureFormInput(
         }).map(([locale, row]) => [
           locale,
           {
+            ...automaticMetadataForForm(row),
             // Edit the authored base so generated suffixes never become permanent text.
             title: row.baseName ?? row.title ?? '',
             titleGen: row.titleGen ?? false,
@@ -326,6 +328,7 @@ export function toFeatureFormInput(
             }).map(([locale, row]) => [
               locale,
               {
+                ...automaticMetadataForForm(row),
                 value: row.value ?? '',
                 valueGen: row.valueGen ?? false,
               },
@@ -450,6 +453,16 @@ export function getProgrammaticFeatureInputEntries(
           `data.properties[${index}].i18n.${locale}.valueGen`,
           Boolean(propertyI18n[locale]?.valueGen),
         )
+        for (const metadata of ['autoTranslated', 'translationProvenance'] as const) {
+          for (const [field, entry] of Object.entries(
+            propertyI18n[locale]?.[metadata] ?? {},
+          )) {
+            appendEntry(
+              `data.properties[${index}].i18n.${locale}.${metadata}.${field}`,
+              typeof entry === 'string' ? entry : JSON.stringify(entry),
+            )
+          }
+        }
       })
     }
   })

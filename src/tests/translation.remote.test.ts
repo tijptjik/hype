@@ -13,6 +13,15 @@ const { mockTranslateWithAzure, mockTranslateField, mockGuardedContext } = vi.ho
         ...input,
         status: 'translated' as const,
         text: '翻訳',
+        automatic: {
+          value: '翻訳',
+          sourceLocale: input.source,
+          sourceText: input.text,
+          sourceHash: 'hash',
+          provider: 'azure-translator',
+          model: null,
+          generatedAt: '2026-11-12T00:00:00Z',
+        },
       }),
     ),
     mockGuardedContext: vi.fn(),
@@ -59,6 +68,7 @@ describe('translation.remote', () => {
           platform: {
             env: {
               AZURE_TRANSLATION_KEY: 'key-1',
+              AUTH_SECRET: 'test-signing-secret',
               PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
             },
           },
@@ -115,6 +125,7 @@ describe('translation.remote', () => {
           platform: {
             env: {
               AZURE_TRANSLATION_KEY: 'key-1',
+              AUTH_SECRET: 'test-signing-secret',
               PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
             },
           },
@@ -171,6 +182,12 @@ describe('translation.remote', () => {
       source: 'en',
       target: 'ja',
       text: '翻訳',
+      automatic: expect.objectContaining({
+        value: '翻訳',
+        sourceLocale: 'en',
+        sourceText: 'Cafe',
+        receipt: expect.any(String),
+      }),
     })
     expect(mockTranslateField).toHaveBeenCalledWith(input, 'eastasia', 'key-1')
     expect(input.text).toBe('Cafe')

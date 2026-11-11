@@ -20,14 +20,32 @@ function jsonColumn(column: SQLiteColumn): SQL {
  * Builds a deterministic row object from trusted schema metadata.
  * @param table Table whose owned fields are captured.
  * @param excluded Identity/concurrency fields that do not represent authored changes.
+ * @param includeAutomaticCache Include cache metadata only for private mutable-source reads.
  * @returns SQL JSON object with stable key order.
  */
-export function rowSnapshot(table: SQLiteTable, excluded: readonly string[]): SQL {
-  const parts = Object.entries(getTableColumns(table))
-    .filter(([key]) => !excluded.includes(key))
+export function rowSnapshot(
+  table: SQLiteTable,
+  excluded: readonly string[],
+  includeAutomaticCache = false,
+): SQL {
+  const columns = getTableColumns(table)
+  const parts = Object.entries(columns)
+    .filter(
+      ([key]) =>
+        !excluded.includes(key) &&
+        (includeAutomaticCache ||
+          !['isAutomaticOnly', 'autoTranslated', 'translationProvenance'].includes(
+            key,
+          )),
+    )
     .flatMap(([key, column]) => [
       sql.raw(`'${key.replaceAll("'", "''")}'`),
       jsonColumn(column),
     ])
-  return sql`json_object(${sql.join(parts, sql`,`)})`
+  const content = sql`json_object(${sql.join(parts, sql`,`)})`
+  if (includeAutomaticCache) return content
+  // Cache writes are not authored revisions; omit absent provenance to retain legacy hashes.
+  return columns.translationProvenance && !excluded.includes('translationProvenance')
+    ? sql`json_patch(${content},CASE WHEN ${columns.translationProvenance} IS NULL THEN '{}' ELSE json_object('translationProvenance',json(${columns.translationProvenance})) END)`
+    : content
 }

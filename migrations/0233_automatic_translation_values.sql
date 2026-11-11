@@ -1,0 +1,28 @@
+-- Automatic values never replace published locale fields or imply editorial acceptance.
+ALTER TABLE `featureI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `featureI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `featureI18n` ADD COLUMN `translationProvenance` text;
+ALTER TABLE `featurePropertyI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `featurePropertyI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `featurePropertyI18n` ADD COLUMN `translationProvenance` text;
+ALTER TABLE `projectI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `projectI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `projectI18n` ADD COLUMN `translationProvenance` text;
+ALTER TABLE `organisationI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `organisationI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `organisationI18n` ADD COLUMN `translationProvenance` text;
+ALTER TABLE `hubI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `hubI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `hubI18n` ADD COLUMN `translationProvenance` text;
+ALTER TABLE `layerI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `layerI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `layerI18n` ADD COLUMN `translationProvenance` text;
+ALTER TABLE `propertyI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `propertyI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `propertyI18n` ADD COLUMN `translationProvenance` text;
+ALTER TABLE `propertyValueI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `propertyValueI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `propertyValueI18n` ADD COLUMN `translationProvenance` text;
+ALTER TABLE `mapStyleI18n` ADD COLUMN `isAutomaticOnly` integer NOT NULL DEFAULT 0;
+ALTER TABLE `mapStyleI18n` ADD COLUMN `autoTranslated` text;
+ALTER TABLE `mapStyleI18n` ADD COLUMN `translationProvenance` text;

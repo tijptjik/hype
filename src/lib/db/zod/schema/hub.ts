@@ -1,3 +1,4 @@
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 // I18N
 import { contentLocaleMap, ContentTagInput } from '#lib/i18n/contentRecords.js'
 // ZOD
@@ -77,7 +78,9 @@ export const HubInsert = createInsertSchema(hub)
 
 export const HubUpdate = createUpdateSchema(hub)
 
-export const HubI18nBase = createSelectSchema(hubI18n, { locale: ContentTagInput })
+export const HubI18nBase = createSelectSchema(hubI18n, {
+  locale: ContentTagInput,
+}).extend(automaticTranslationReadFields)
 
 export const HubI18nInsert = createInsertSchema(hubI18n, {
   locale: ContentTagInput,
@@ -110,7 +113,9 @@ export const HubUserStateBase = createSelectSchema(hubUserState)
 export const HubLayerBase = createSelectSchema(hubLayer)
 
 const HubLayerLayer = createSelectSchema(layer).extend({
-  i18n: getLocales(createSelectSchema(layerI18n)),
+  i18n: getLocales(
+    createSelectSchema(layerI18n).extend(automaticTranslationReadFields),
+  ),
 })
 
 export const HubLayerWithLayer = HubLayerBase.extend({
@@ -119,12 +124,16 @@ export const HubLayerWithLayer = HubLayerBase.extend({
 
 const HubOrganisationBase = createSelectSchema(organisation)
 export const HubOrganisationWithI18n = HubOrganisationBase.extend({
-  i18n: getLocales(createSelectSchema(organisationI18n)),
+  i18n: getLocales(
+    createSelectSchema(organisationI18n).extend(automaticTranslationReadFields),
+  ),
   image: ImageContextEnvelopeAPI.nullish(),
 })
 
 const HubOrganisationRaw = HubOrganisationBase.extend({
-  i18n: z.array(createSelectSchema(organisationI18n)),
+  i18n: z.array(
+    createSelectSchema(organisationI18n).extend(automaticTranslationReadFields),
+  ),
   image: ImageBase.nullish(),
 })
 

@@ -1,3 +1,5 @@
+// TRANSLATION METADATA
+import { automaticTranslationFormFields } from '#lib/i18n/automaticSchema.js'
 import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
@@ -25,6 +27,7 @@ import { ProjectPropertyFormData } from './property.form'
 // ---
 
 export const HubI18nFormData = z.object({
+  ...automaticTranslationFormFields,
   name: z
     .string()
     .max(128, { message: m.admin__validation_lte_128_chars() })

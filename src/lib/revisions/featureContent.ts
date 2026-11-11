@@ -1,3 +1,8 @@
+// TRANSLATION METADATA
+import {
+  AutomaticTranslationsSchema,
+  TranslationProvenanceSchema,
+} from '#lib/i18n/automaticSchema.js'
 import {
   FeatureNameTemplateSchema,
   FeatureKindSchema,
@@ -38,10 +43,12 @@ const id = z
   )
 const jsonObject = z.record(z.string(), z.json())
 const textValue = z.strictObject({
+  translationProvenance: TranslationProvenanceSchema.optional(),
   value: z.string().nullable(),
   generated: z.boolean().nullable(),
 })
 const translation = z.strictObject({
+  translationProvenance: TranslationProvenanceSchema.optional(),
   // Optional preserves immutable pre-migration hashes; title.value remains authored base text.
   nameOverride: z.string().nullable().optional(),
   title: z.strictObject({ value: z.string(), generated: z.boolean() }),

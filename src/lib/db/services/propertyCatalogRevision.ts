@@ -94,12 +94,12 @@ export function propertyCatalogSnapshot(target: PropertyCatalogScope): SQL {
       'record',json(${record}),
       'i18n',json((SELECT json_group_object(locale,json(content)) FROM (
         SELECT ${propertyI18n.locale} AS locale,${translation} AS content FROM ${propertyI18n}
-        WHERE ${propertyI18n.propertyId}=${property.id} ORDER BY ${propertyI18n.locale}))),
+        WHERE ${propertyI18n.propertyId}=${property.id} AND COALESCE(${propertyI18n.isAutomaticOnly},0)=0 ORDER BY ${propertyI18n.locale}))),
       'values',json((SELECT json_group_object(id,json(content)) FROM (
         SELECT ${propertyValue.id} AS id,json_object('record',json(${option}),'i18n',
           json((SELECT json_group_object(locale,json(content)) FROM (
             SELECT ${propertyValueI18n.locale} AS locale,${optionTranslation} AS content FROM ${propertyValueI18n}
-            WHERE ${propertyValueI18n.propertyValueId}=${propertyValue.id} ORDER BY ${propertyValueI18n.locale})))) AS content
+            WHERE ${propertyValueI18n.propertyValueId}=${propertyValue.id} AND COALESCE(${propertyValueI18n.isAutomaticOnly},0)=0 ORDER BY ${propertyValueI18n.locale})))) AS content
         FROM ${propertyValue} WHERE ${propertyValue.propertyId}=${property.id} ORDER BY ${propertyValue.id})))
     ) AS content FROM ${property}
     WHERE ${property.scope}=${target.scope} AND ${owner}=${target.id} ORDER BY ${property.id}))`

@@ -1,3 +1,4 @@
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
 import { CompactAncestorsSchema } from './api'
@@ -77,7 +78,9 @@ export const LayerRecordUpdate = createUpdateSchema(layer).extend({
   metadata: LayerMetadataSchema.optional(),
 })
 
-export const LayerI18nRecord = createSelectSchema(layerI18n)
+export const LayerI18nRecord = createSelectSchema(layerI18n).extend(
+  automaticTranslationReadFields,
+)
 
 export const LayerI18nRecordCreate = createInsertSchema(layerI18n)
   .extend({

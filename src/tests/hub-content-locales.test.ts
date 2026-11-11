@@ -84,7 +84,9 @@ it('round-trips all hub fields and provenance through SQLite, API validation and
             Object.fromEntries(
               Object.entries(row).map(([key, value]) => [
                 key,
-                key.endsWith('Gen') && value !== null ? Boolean(value) : value,
+                (key.endsWith('Gen') || key === 'isAutomaticOnly') && value !== null
+                  ? Boolean(value)
+                  : value,
               ]),
             ),
           ),

@@ -1,3 +1,13 @@
+// BACKGROUND TRANSLATIONS
+import {
+  scheduleAutomaticTranslations,
+  schedulePropertyTranslations,
+} from '#lib/api/services/automaticTranslations.js'
+// AUTOMATIC TRANSLATIONS
+import {
+  prepareAutomaticTranslationSubmission,
+  preparePropertyTranslationSubmission,
+} from '#lib/db/services/automaticTranslation.js'
 import { FeatureIntentPolicyError } from '#lib/db/services/featureIntentPolicy.js'
 import { getFeatureIntentSettings } from './featureIntents.remote.js'
 import { suppliedModelTab } from '#lib/forms/modelTabs.js'
@@ -283,6 +293,24 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Parse and normalize submitted form input.
   const params = HubFormData.parse(input)
+  /** Validate signed metadata only after the owning authorization check. */
+  async function prepareTranslations(): Promise<void> {
+    await preparePropertyTranslationSubmission({
+      db: ctx.db,
+      properties: params.data.properties,
+      actorId: ctx.user.id,
+      secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+    })
+    await prepareAutomaticTranslationSubmission({
+      db: ctx.db,
+      resource: 'hub',
+      id: params.meta?.id,
+      rows: params.data.i18n,
+      actorId: ctx.user.id,
+      secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+    })
+  }
+
   hasSubmittedPropertiesField = suppliedModelTab(params, 'fields', 'properties')
   hasSubmittedLayerDefaultsField = suppliedModelTab(params, 'layers', 'layerDefaults')
   const hasSubmittedRoles = suppliedModelTab(params, 'members', 'userRoles')
@@ -380,6 +408,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     if (!createDecision.allowed) {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
+    await prepareTranslations()
 
     await validateUniqueNonReservedCode({
       code: createData.code.trim(),
@@ -433,6 +462,9 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
       { actorId: user.id, reason: 'Hub created with organisation assignments' },
     )
 
+    scheduleAutomaticTranslations(ctx, 'hub', created.id, params.data.i18n)
+    schedulePropertyTranslations(ctx, params.data.properties)
+
     return toCreatedResponseShape(created)
   }
 
@@ -454,6 +486,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   if (!updateDecision.allowed) {
     invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
   }
+  await prepareTranslations()
 
   const existingRoleRows = hasSubmittedRoles ? await listUserRoles(db, current.id) : []
 
@@ -586,6 +619,8 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   // Return persisted identity and write token.
   if (data.featureIntentSettings)
     await getFeatureIntentSettings({ type: 'hub', id: current.id }).refresh()
+  scheduleAutomaticTranslations(ctx, 'hub', persisted.id, params.data.i18n)
+  schedulePropertyTranslations(ctx, params.data.properties)
   return toCreatedResponseShape(persisted)
 })
 

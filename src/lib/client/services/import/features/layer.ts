@@ -750,6 +750,7 @@ export function showLayerCreationForm(importCtx: ImportCtx, prefillValue?: strin
 
   // Initialize the layer form with pre-filled data if provided
   const emptyLayer = {
+    projectId: '',
     i18n: {
       en: {
         name: selectedLocale === 'en' ? prefillValue || '' : '',

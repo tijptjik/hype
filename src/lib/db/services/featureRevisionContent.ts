@@ -77,9 +77,20 @@ function indexRows(rows: Row[], key: string): Record<string, Row> {
  */
 function translations(rows: Row[], value: string, generated: string): RevisionValue {
   return Object.fromEntries(
-    Object.entries(indexRows(rows, 'locale')).map(([locale, row]) => [
+    Object.entries(
+      indexRows(
+        rows.filter(row => row.isAutomaticOnly !== true),
+        'locale',
+      ),
+    ).map(([locale, row]) => [
       locale,
-      { value: row[value], generated: row[generated] },
+      {
+        value: row[value],
+        generated: row[generated],
+        ...(row.translationProvenance
+          ? { translationProvenance: row.translationProvenance }
+          : {}),
+      },
     ]),
   )
 }
@@ -267,9 +278,17 @@ export function buildFeatureRevisionBaselineContent(
     },
     detachedBrands: detached?.brands ?? null,
     translations: Object.fromEntries(
-      Object.entries(indexRows(source.translations, 'locale')).map(([locale, row]) => [
+      Object.entries(
+        indexRows(
+          source.translations.filter(row => row.isAutomaticOnly !== true),
+          'locale',
+        ),
+      ).map(([locale, row]) => [
         locale,
         {
+          ...(row.translationProvenance
+            ? { translationProvenance: row.translationProvenance }
+            : {}),
           title: { value: row.baseName ?? row.title, generated: row.titleGen },
           ...(row.nameOverride !== undefined ? { nameOverride: row.nameOverride } : {}),
           description: { value: row.description, generated: row.descriptionGen },

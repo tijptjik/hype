@@ -1,3 +1,13 @@
+// BACKGROUND TRANSLATIONS
+import {
+  scheduleAutomaticTranslations,
+  schedulePropertyTranslations,
+} from '#lib/api/services/automaticTranslations.js'
+// AUTOMATIC TRANSLATIONS
+import {
+  prepareAutomaticTranslationSubmission,
+  preparePropertyTranslationSubmission,
+} from '#lib/db/services/automaticTranslation.js'
 import { FeatureIntentPolicyError } from '#lib/db/services/featureIntentPolicy.js'
 import { getFeatureIntentSettings } from './featureIntents.remote.js'
 import { suppliedModelTab } from '#lib/forms/modelTabs.js'
@@ -547,6 +557,23 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Parse and normalize submitted form input.
   const params = ProjectFormData.parse(input)
+  /** Validate signed metadata only after the owning authorization check. */
+  async function prepareTranslations(): Promise<void> {
+    await preparePropertyTranslationSubmission({
+      db: ctx.db,
+      properties: params.data.properties,
+      actorId: ctx.user.id,
+      secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+    })
+    await prepareAutomaticTranslationSubmission({
+      db: ctx.db,
+      resource: 'project',
+      id: params.meta?.id,
+      rows: params.data.i18n,
+      actorId: ctx.user.id,
+      secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+    })
+  }
 
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
@@ -714,6 +741,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     if (!createDecision.allowed) {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
+    await prepareTranslations()
 
     const {
       submittedProjectCapabilities,
@@ -778,6 +806,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       if (isProjectMapStyleUnavailable(cause)) invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
       throw cause
     })
+
+    scheduleAutomaticTranslations(ctx, 'project', created.id, params.data.i18n)
+    schedulePropertyTranslations(ctx, params.data.properties)
 
     return toCreatedResponseShape(created)
   }
@@ -877,6 +908,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       ),
     )
   }
+  await prepareTranslations()
 
   const {
     submittedProjectCapabilities,
@@ -1236,6 +1268,8 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   if (data.featureIntentSettings)
     await getFeatureIntentSettings({ type: 'project', id: current.id }).refresh()
+  scheduleAutomaticTranslations(ctx, 'project', persisted.id, params.data.i18n)
+  schedulePropertyTranslations(ctx, params.data.properties)
   return toCreatedResponseShape(persisted)
 })
 

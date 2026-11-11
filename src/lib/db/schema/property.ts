@@ -1,3 +1,5 @@
+// AUTOMATIC TRANSLATIONS
+import { automaticTranslationColumns } from './automaticTranslation'
 import {
   integer,
   primaryKey,
@@ -195,6 +197,7 @@ export const organisationProperty = sqliteTable(
  * Stores multilingual content for properties
  */
 export const propertyI18n = sqliteTable('propertyI18n', {
+  ...automaticTranslationColumns(),
   propertyId: text('propertyId')
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -235,6 +238,7 @@ export const propertyValue = sqliteTable('propertyValue', {
 export const propertyValueI18n = sqliteTable(
   'propertyValueI18n',
   {
+    ...automaticTranslationColumns(),
     propertyValueId: text('propertyValueId')
       .notNull()
       .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),

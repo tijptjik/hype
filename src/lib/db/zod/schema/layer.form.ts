@@ -1,3 +1,6 @@
+import { contentLocaleMap } from '#lib/i18n/contentRecords.js'
+// TRANSLATION METADATA
+import { automaticTranslationFormFields } from '#lib/i18n/automaticSchema.js'
 import { SubmittedTabsSchema, modelFormSchema } from '#lib/forms/modelTabs.js'
 import { FeatureIntentSettingsFormData } from '#lib/features/intents.js'
 // ZOD
@@ -18,13 +21,10 @@ import { LayerMetadataSchema } from './layerMetadata'
 // ---
 
 export const LayerI18nFormData = z.object({
-  name: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_name() }) })
-    .max(128, { message: m.admin__validation_lte_128_chars() }),
+  ...automaticTranslationFormFields,
+  name: z.string().max(128, { message: m.admin__validation_lte_128_chars() }),
   nameShort: z
     .string()
-    .min(1, { message: m.field_is_required({ field: m.field_short_name() }) })
     .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   description: z
     .string()
@@ -35,11 +35,10 @@ export const LayerI18nFormData = z.object({
   descriptionGen: FormBoolean.optional(),
 })
 
-export const LayerI18nByLocaleFormData = z.object({
-  en: LayerI18nFormData,
-  zhHans: LayerI18nFormData,
-  zhHant: LayerI18nFormData,
-})
+export const LayerI18nByLocaleFormData = contentLocaleMap(LayerI18nFormData).refine(
+  rows => Object.values(rows).some(row => row.name.trim() && row.nameShort.trim()),
+  'Add a name and short name in at least one language.',
+)
 
 export const LayerPropertyFormData = z.object({
   propertyId: z

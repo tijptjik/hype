@@ -1,3 +1,7 @@
+// BACKGROUND TRANSLATIONS
+import { scheduleAutomaticTranslations } from '#lib/api/services/automaticTranslations.js'
+// AUTOMATIC TRANSLATIONS
+import { prepareAutomaticTranslationSubmission } from '#lib/db/services/automaticTranslation.js'
 import { FeatureIntentPolicyError } from '#lib/db/services/featureIntentPolicy.js'
 import { getFeatureIntentSettings } from './featureIntents.remote.js'
 import { suppliedModelTab } from '#lib/forms/modelTabs.js'
@@ -268,6 +272,18 @@ export const getLayer = getLayerQuery as unknown as <P extends LayerProfile = 'd
  */
 export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   const params = LayerFormData.parse(input)
+  /** Validate signed metadata only after the owning authorization check. */
+  async function prepareTranslations(): Promise<void> {
+    await prepareAutomaticTranslationSubmission({
+      db: ctx.db,
+      resource: 'layer',
+      id: params.meta?.id,
+      rows: params.data.i18n,
+      actorId: ctx.user.id,
+      secret: ctx.event.locals.platform?.env.AUTH_SECRET,
+    })
+  }
+
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
   const { meta, data } = params
@@ -319,6 +335,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     if (createData.relocationUpdatePolicy) {
       invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
     }
+    await prepareTranslations()
     const created = await createLayerFromSubmission({
       db,
       user,
@@ -330,6 +347,8 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
       onForbidden: message => invalid(issue(toIssueDetailMessage(message))),
       onInvalidProperties: message => invalid(issue.data.properties(message)),
     })
+
+    scheduleAutomaticTranslations(ctx, 'layer', created.id, params.data.i18n)
 
     return toCreatedResponseShape(created)
   }
@@ -384,6 +403,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   if (!updateDecision.allowed) {
     invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
   }
+  await prepareTranslations()
 
   let propertiesChanged = false
   if (hasSubmittedProperties) {
@@ -458,6 +478,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
 
   if (data.featureIntentSettings)
     await getFeatureIntentSettings({ type: 'layer', id: current.id }).refresh()
+  scheduleAutomaticTranslations(ctx, 'layer', persisted.id, params.data.i18n)
   return toCreatedResponseShape(persisted)
 })
 

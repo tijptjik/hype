@@ -1,3 +1,4 @@
+import { automaticMetadataForForm } from '#lib/i18n/automaticSchema.js'
 // SCHEMA
 import { LayerMetadataSchema } from '#lib/db/zod/schema/layerMetadata.js'
 import type { ParentSectionProjectItem } from '#lib/bits/patterns/forms/formParentSection/formParentSection.types.js'
@@ -87,6 +88,7 @@ function normalizeLayerFormLocale(
   locale: Partial<LayerFormLocale> | null | undefined,
 ): LayerFormLocale {
   return {
+    ...automaticMetadataForForm(locale),
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
     description: locale?.description ?? '',
@@ -154,11 +156,14 @@ export function toLayerFormInput(data?: Layer | null): LayerFormInput {
     data: {
       organisationId: data.organisationId,
       projectId: data.projectId,
-      i18n: {
-        en: normalizeLayerFormLocale(toLocale(i18nRecord?.en)),
-        zhHans: normalizeLayerFormLocale(toLocale(i18nRecord?.zhHans)),
-        zhHant: normalizeLayerFormLocale(toLocale(i18nRecord?.zhHant)),
-      },
+      i18n: Object.fromEntries(
+        Object.entries({
+          en: undefined,
+          zhHans: undefined,
+          zhHant: undefined,
+          ...i18nRecord,
+        }).map(([locale, row]) => [locale, normalizeLayerFormLocale(toLocale(row))]),
+      ),
       properties: (data.properties ?? [])
         .filter(
           (
@@ -706,16 +711,13 @@ const toComparableLayerI18n = (value: unknown): LayerI18nPatch | undefined => {
     return Object.keys(patch).length > 0 ? patch : undefined
   }
 
-  const en = normalizeLocalePatch(i18nRecord?.en)
-  const zhHans = normalizeLocalePatch(i18nRecord?.zhHans)
-  const zhHant = normalizeLocalePatch(i18nRecord?.zhHant)
-  if (!en && !zhHans && !zhHant) return undefined
-
-  return {
-    ...(en ? { en } : {}),
-    ...(zhHans ? { zhHans } : {}),
-    ...(zhHant ? { zhHant } : {}),
-  }
+  const patches = Object.fromEntries(
+    Object.entries(i18nRecord ?? {}).flatMap(([locale, row]) => {
+      const patch = normalizeLocalePatch(row)
+      return patch ? [[locale, patch]] : []
+    }),
+  )
+  return Object.keys(patches).length ? patches : undefined
 }
 
 /**

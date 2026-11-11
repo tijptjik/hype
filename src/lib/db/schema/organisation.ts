@@ -1,3 +1,5 @@
+// AUTOMATIC TRANSLATIONS
+import { automaticTranslationColumns } from './automaticTranslation'
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -114,6 +116,7 @@ export const organisation = sqliteTable('organisation', {
 export const organisationI18n = sqliteTable(
   'organisationI18n',
   {
+    ...automaticTranslationColumns(),
     organisationId: text('organisationId')
       .notNull()
       .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),

@@ -76,9 +76,12 @@ const contracts = {
 function collection(table: SQLiteTable, owner: string, key: string, parent: SQL): SQL {
   const columns = getTableColumns(table)
   const content = rowSnapshot(table, [owner, key])
+  const editorial = columns.isAutomaticOnly
+    ? sql`COALESCE(${columns.isAutomaticOnly},0)=0`
+    : sql`1`
   return sql`json((SELECT json_group_object(childKey,json(content)) FROM (
     SELECT ${columns[key]} AS childKey,${content} AS content FROM ${table}
-    WHERE ${columns[owner]}=${parent} ORDER BY ${columns[key]})))`
+    WHERE ${columns[owner]}=${parent} AND ${editorial} ORDER BY ${columns[key]})))`
 }
 
 /**

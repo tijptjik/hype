@@ -1,6 +1,16 @@
 // @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('#lib/db/services/automaticTranslation.js', () => ({
+  prepareAutomaticTranslationSubmission: vi.fn(async () => {}),
+  preparePropertyTranslationSubmission: vi.fn(async () => {}),
+}))
+vi.mock('#lib/api/services/automaticTranslations.js', () => ({
+  scheduleAutomaticTranslations: vi.fn(),
+  schedulePropertyTranslations: vi.fn(),
+  scheduleFeaturePropertyTranslations: vi.fn(),
+}))
+
 // Panel query registration is isolated from this resource's authorization fixtures.
 vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { createAuthzMatrixReporter } from './authz-matrix-report'

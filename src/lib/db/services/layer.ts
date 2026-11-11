@@ -1,3 +1,4 @@
+import { contentRowsToForm } from '#lib/i18n/contentRecords.js'
 import { prepareFeatureIntentPolicySave } from './featureIntentPolicy.js'
 import type { FeatureIntentSettingsPatch } from '#lib/features/intents.js'
 // INDEX QUERY
@@ -549,7 +550,7 @@ export const listAssignableTaskLayers = async (
     id: row.id as Id,
     code: null,
     projectId,
-    i18n: transformI18nSafely(row.i18n) ?? {},
+    i18n: contentRowsToForm(row.i18n),
   }))
 }
 

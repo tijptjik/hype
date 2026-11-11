@@ -1808,9 +1808,13 @@ export function getFeatureCardDisplayProperties(
       )
         return []
 
+      const cached = appCtx.cache.property.get(featureProperty.propertyId)
       const property =
-        featureProperty.property ??
-        appCtx.cache.property.get(featureProperty.propertyId)
+        cached &&
+        (!featureProperty.property ||
+          cached.modifiedAt === featureProperty.property.modifiedAt)
+          ? cached
+          : (featureProperty.property ?? cached)
       if (
         !property ||
         property.audience === 'internal' ||

@@ -1,3 +1,5 @@
+// AUTOMATIC TRANSLATIONS
+import { automaticTranslationColumns } from './automaticTranslation'
 import {
   integer,
   primaryKey,
@@ -98,6 +100,7 @@ export const layer = sqliteTable(
 export const layerI18n = sqliteTable(
   'layerI18n',
   {
+    ...automaticTranslationColumns(),
     layerId: text('layerId')
       .notNull()
       .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),

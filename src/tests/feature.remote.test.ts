@@ -1,6 +1,16 @@
 // @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('#lib/db/services/automaticTranslation.js', () => ({
+  prepareAutomaticTranslationSubmission: vi.fn(async () => {}),
+  preparePropertyTranslationSubmission: vi.fn(async () => {}),
+}))
+vi.mock('#lib/api/services/automaticTranslations.js', () => ({
+  scheduleAutomaticTranslations: vi.fn(),
+  schedulePropertyTranslations: vi.fn(),
+  scheduleFeaturePropertyTranslations: vi.fn(),
+}))
+
 import { readFeaturePresentationPolicy } from '#lib/db/services/featurePresentationPolicy.js'
 vi.mock('#lib/db/services/featureParentTransfer.js', async importOriginal => ({
   ...(await importOriginal<
@@ -14,6 +24,7 @@ vi.mock('#lib/db/services/featureParentTransfer.js', async importOriginal => ({
     }),
   ),
 }))
+// Translation receipt validation has its own fixtures; this suite checks Feature authorization routing.
 vi.mock('#lib/db/services/historicalLayers.js', () => ({
   historicalSourceLayerId: vi.fn(async () => null),
 }))

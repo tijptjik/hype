@@ -1,3 +1,4 @@
+import { automaticMetadataForForm } from '#lib/i18n/automaticSchema.js'
 // CONTENT LOCALES
 import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // ROLE POLICY
@@ -41,6 +42,7 @@ function cloneOrganisationProperties(
     }>(property.i18n)
     // Initialize editable labels while retaining every locale and stored generation flag.
     const locale = (key: string) => ({
+      ...automaticMetadataForForm(locales?.[key]),
       label: locales?.[key]?.label ?? '',
       labelGen: locales?.[key]?.labelGen ?? false,
       placeholder: locales?.[key]?.placeholder ?? '',
@@ -61,6 +63,7 @@ function cloneOrganisationProperties(
         }>(value.i18n)
         // Normalize nullable stored values into editable text.
         const valueLocale = (key: string) => ({
+          ...automaticMetadataForForm(valueLocales?.[key]),
           value: valueLocales?.[key]?.value ?? '',
           valueGen: valueLocales?.[key]?.valueGen ?? false,
         })
@@ -77,9 +80,16 @@ function cloneOrganisationProperties(
 }
 
 function normalizeOrganisationFormLocale(
-  locale: OrganisationFormLocaleSource,
+  locale:
+    | (Omit<
+        NonNullable<OrganisationFormLocaleSource>,
+        'autoTranslated' | 'translationProvenance'
+      > & { autoTranslated?: unknown; translationProvenance?: unknown })
+    | null
+    | undefined,
 ): OrganisationFormInput['data']['i18n']['en'] {
   return {
+    ...automaticMetadataForForm(locale),
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
     description: locale?.description ?? '',
@@ -162,11 +172,14 @@ export function toOrganisationFormInput(
       capabilities: normalizeOrganisationCapabilities(data.capabilities),
       defaultLocationVisibility: data.defaultLocationVisibility ?? 'shared',
       permitUserDetailsEdit: data.permitUserDetailsEdit === true,
-      i18n: {
-        en: normalizeOrganisationFormLocale(data.i18n?.en),
-        zhHans: normalizeOrganisationFormLocale(data.i18n?.zhHans),
-        zhHant: normalizeOrganisationFormLocale(data.i18n?.zhHant),
-      },
+      i18n: Object.fromEntries(
+        Object.entries({
+          en: undefined,
+          zhHans: undefined,
+          zhHant: undefined,
+          ...adaptContentMap(data.i18n ?? {}),
+        }).map(([locale, row]) => [locale, normalizeOrganisationFormLocale(row)]),
+      ),
       userRoles: (data.userRoles ?? [])
         .filter(userRole => isOrganisationStaffRole(userRole.role))
         .map(userRole => ({

@@ -131,6 +131,10 @@ export function buildFeatureFormCandidate(
       ...prior,
       featureId: source.record.id,
       locale,
+      isAutomaticOnly: 'isAutomaticOnly' in value && value.isAutomaticOnly === true,
+      autoTranslated: value.autoTranslated ?? prior?.autoTranslated ?? null,
+      translationProvenance:
+        value.translationProvenance ?? prior?.translationProvenance ?? null,
       baseName: value.title ?? prior?.baseName ?? prior?.title ?? '',
       title: value.title ?? prior?.baseName ?? prior?.title ?? '',
       nameOverride: previous.profile.nameTemplate
@@ -217,6 +221,11 @@ export function buildFeatureFormCandidate(
               ? (prior?.value ?? null)
               : translation.value,
           valueGen: translation.valueGen ?? prior?.valueGen ?? false,
+          isAutomaticOnly:
+            'isAutomaticOnly' in translation && translation.isAutomaticOnly === true,
+          autoTranslated: translation.autoTranslated ?? prior?.autoTranslated ?? null,
+          translationProvenance:
+            translation.translationProvenance ?? prior?.translationProvenance ?? null,
         })
       }
       source.propertyTranslations = [

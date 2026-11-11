@@ -1,3 +1,4 @@
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 // CONTENT LOCALES
 import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
 import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
@@ -112,7 +113,9 @@ export const ProjectUpdate = createUpdateSchema(project).extend({
   license: ProjectLicenseBase.optional(),
 })
 
-export const ProjectI18nBase = createSelectSchema(projectI18n)
+export const ProjectI18nBase = createSelectSchema(projectI18n).extend(
+  automaticTranslationReadFields,
+)
 
 export const ProjectI18nInsert = createInsertSchema(projectI18n).omit({
   projectId: true,

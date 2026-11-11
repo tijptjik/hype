@@ -235,7 +235,11 @@ function fixture(linked = false, catalogueCascades = false) {
     }
   }
   seed(feature, [source.record])
-  seed(featureI18n, source.translations)
+  // Match the schema default so authored rows remain in automatic-translation-aware projections.
+  seed(
+    featureI18n,
+    source.translations.map(row => ({ isAutomaticOnly: 0, ...row })),
+  )
   seed(property, source.fieldDefinitions)
   seed(propertyI18n, source.fieldTranslations)
   seed(propertyValue, source.fieldOptions)

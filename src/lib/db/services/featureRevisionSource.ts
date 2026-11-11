@@ -29,7 +29,7 @@ import type { RevisionValue } from '#lib/revisions/merge.js'
 // TABLE OF CONTENTS
 // ═══════════════════════
 // 1. COMPLETE SOURCE EVIDENCE
-// - rows
+// - sourceRows
 // - sourceExpression
 // 2. AUTHORIZED CAPTURE AND TRANSACTIONAL DRIFT FENCE
 // - readFeatureRevisionSource
@@ -51,13 +51,23 @@ export type FeatureRevisionSource = {
  * @param table Trusted schema table.
  * @param predicate Correlation to the owning Feature or its related row.
  * @param keys Unique ordering columns from the trusted table schema.
+ * @param includeAutomaticCache Include private cache rows when reading, but not fencing editorial changes.
  * @returns JSON array retaining nulls, booleans and structured values.
  */
-function rows(table: SQLiteTable, predicate: SQL, keys: readonly string[]): SQL {
+function sourceRows(
+  table: SQLiteTable,
+  predicate: SQL,
+  keys: readonly string[],
+  includeAutomaticCache: boolean,
+): SQL {
   const columns = getTableColumns(table)
+  const editorial =
+    !includeAutomaticCache && columns.isAutomaticOnly
+      ? sql`COALESCE(${columns.isAutomaticOnly},0)=0`
+      : sql`1`
   return sql`json((SELECT json_group_array(json(content)) FROM (
-    SELECT ${rowSnapshot(table, [])} AS content FROM ${table}
-    WHERE ${predicate} ORDER BY ${sql.join(
+    SELECT ${rowSnapshot(table, [], includeAutomaticCache)} AS content FROM ${table}
+    WHERE ${predicate} AND ${editorial} ORDER BY ${sql.join(
       keys.map(key => sql`${columns[key]}`),
       sql`, `,
     )})))`
@@ -66,6 +76,7 @@ function rows(table: SQLiteTable, predicate: SQL, keys: readonly string[]): SQL 
 /**
  * Builds the complete mutable source comparison for initial Feature enrollment.
  * @param additionalPropertyIds Server-validated proposed property identities to fence alongside assigned fields.
+ * @param includeAutomaticCache Retain cache metadata in private reads; omit it from the write fence.
  * @returns Expression correlated to the outer Feature, evaluated in one SQL statement.
  * @remarks This deliberately includes live controls and shared definition evidence to
  * fence races. NEVER store this object directly as revision content, expose it to
@@ -74,7 +85,12 @@ function rows(table: SQLiteTable, predicate: SQL, keys: readonly string[]): SQL 
  * source histories are immutable and remain referenced through their accepted IDs.
  * Image bytes/remote metadata still require verified immutable asset ingestion.
  */
-function sourceExpression(additionalPropertyIds: readonly string[] = []): SQL {
+function sourceExpression(
+  additionalPropertyIds: readonly string[] = [],
+  includeAutomaticCache = true,
+): SQL {
+  const rows = (table: SQLiteTable, predicate: SQL, keys: readonly string[]): SQL =>
+    sourceRows(table, predicate, keys, includeAutomaticCache)
   const id = sql`${feature.id}`
   const assigned = sql`SELECT ${featureProperty.propertyId} FROM ${featureProperty}
     WHERE ${featureProperty.featureId}=${id}
@@ -123,13 +139,17 @@ export async function readFeatureRevisionSource(
   additionalPropertyIds: readonly string[] = [],
 ): Promise<FeatureRevisionSource | null> {
   const expression = sourceExpression(additionalPropertyIds)
+  const editorial = sourceExpression(additionalPropertyIds, false)
   // Raw SQL preserves qualified correlation inside nested Drizzle JSON expressions.
-  const row = await db.get<{ content: string }>(sql`SELECT ${expression} AS content
+  const row = await db.get<{
+    content: string
+    editorial: string
+  }>(sql`SELECT ${expression} AS content, ${editorial} AS editorial
     FROM ${feature} WHERE ${feature.id}=${featureId} AND (${guard})`)
   if (!row) return null
   return {
     snapshot: JSON.parse(row.content) as RevisionValue,
     unchanged: sql`(${guard}) AND EXISTS (SELECT 1 FROM ${feature}
-      WHERE ${feature.id}=${featureId} AND ${expression}=${row.content})`,
+      WHERE ${feature.id}=${featureId} AND ${editorial}=${row.editorial})`,
   }
 }

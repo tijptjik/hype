@@ -1,3 +1,4 @@
+import { automaticTranslationStructuredFormFields } from '#lib/i18n/automaticSchema.js'
 // ZOD
 import { z } from 'zod'
 // I18N
@@ -210,6 +211,7 @@ export const withPropertyFieldRequirements = <TSchema extends z.ZodTypeAny>(
 // ═══════════════════════
 
 export const PropertyI18nFormData = z.object({
+  ...automaticTranslationStructuredFormFields,
   label: z.string().max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   labelGen: FormBoolean.default(false),
   placeholder: z
@@ -226,6 +228,7 @@ export const PropertyI18nByLocaleFormData = contentLocaleMap(
 })
 
 export const PropertyValueI18nFormData = z.object({
+  ...automaticTranslationStructuredFormFields,
   value: z.string(),
   valueGen: FormBoolean.default(false),
 })

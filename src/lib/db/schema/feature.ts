@@ -1,3 +1,5 @@
+// AUTOMATIC TRANSLATIONS
+import { automaticTranslationColumns } from './automaticTranslation'
 import type { FeatureNameTemplate } from '#lib/features/locationPolicy.js'
 import {
   check,
@@ -263,6 +265,7 @@ export const feature = sqliteTable(
 export const featureI18n = sqliteTable(
   'featureI18n',
   {
+    ...automaticTranslationColumns(),
     featureId: text('featureId')
       .notNull()
       .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
@@ -346,6 +349,7 @@ export const featureProperty = sqliteTable(
 export const featurePropertyI18n = sqliteTable(
   'featurePropertyI18n',
   {
+    ...automaticTranslationColumns(),
     featureId: text('featureId')
       .notNull()
       .references(() => feature.id, {

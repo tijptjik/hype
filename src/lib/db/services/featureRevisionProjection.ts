@@ -42,6 +42,8 @@ type EditorialRows = {
     title: string
     baseName: string
     nameOverride: string | null
+    autoTranslated: typeof featureI18n.$inferSelect.autoTranslated
+    translationProvenance: typeof featureI18n.$inferSelect.translationProvenance
     titleGen: boolean
     description: string | null
     descriptionGen: boolean
@@ -99,7 +101,13 @@ function exactRows(
 ): SQL {
   const columns = getTableColumns(table)
   const comparisons = Object.entries(columns)
-    .filter(([key]) => key !== 'featureId' && !ignoredColumns.includes(key))
+    .filter(
+      ([key]) =>
+        key !== 'featureId' &&
+        key !== 'autoTranslated' &&
+        key !== 'isAutomaticOnly' &&
+        !ignoredColumns.includes(key),
+    )
     .map(([key, column]) => {
       const value = sql`json_extract(expected.value,${sql.raw(`'$.${key}'`)})`
       // title is a derived projection; retained title-only rows still have authored bases.
@@ -109,8 +117,12 @@ function exactRows(
         ? jsonEqual(sql`${column}`, value)
         : sql`${column} IS ${value}`
     })
-  return sql`(SELECT count(*) FROM ${table} WHERE ${columns.featureId}=${featureId})=${expected.length}
-    AND NOT EXISTS (SELECT 1 FROM ${table} WHERE ${columns.featureId}=${featureId}
+  const editorial =
+    'isAutomaticOnly' in columns
+      ? sql`COALESCE(${columns.isAutomaticOnly},0)=0`
+      : sql`1`
+  return sql`(SELECT count(*) FROM ${table} WHERE ${columns.featureId}=${featureId} AND ${editorial})=${expected.length}
+    AND NOT EXISTS (SELECT 1 FROM ${table} WHERE ${columns.featureId}=${featureId} AND ${editorial}
       AND NOT EXISTS (SELECT 1 FROM json_each(${JSON.stringify(expected)}) expected
         WHERE ${sql.join(
           comparisons.map(item => sql`(${item})`),
@@ -130,6 +142,8 @@ function editorialRows(content: FeatureRevisionContent): EditorialRows {
       title: featureRevisionBaseName(content, locale),
       baseName: featureRevisionBaseName(content, locale),
       nameOverride: featureRevisionNameOverride(content, locale),
+      autoTranslated: null,
+      translationProvenance: row.translationProvenance ?? null,
       titleGen: row.title.generated,
       description: row.description.value,
       descriptionGen: row.description.generated,
@@ -149,6 +163,9 @@ function editorialRows(content: FeatureRevisionContent): EditorialRows {
         locale,
         value: value.value,
         valueGen: value.generated,
+        autoTranslated: null,
+        isAutomaticOnly: false,
+        translationProvenance: value.translationProvenance ?? null,
       })),
     ),
   }
@@ -372,6 +389,11 @@ export function prepareFeatureEditorialProjection(
     throw new Error('Gallery projection differs from its revision')
 
   const rows = editorialRows(content)
+  // Cache writes are independent of publication; preserve them while rebuilding editorial rows.
+  for (const row of rows.i18n) {
+    const stored = source.translations.find(value => value.locale === row.locale)
+    row.autoTranslated = (stored?.autoTranslated ?? null) as typeof row.autoTranslated
+  }
   const galleryProjection =
     galleryChanged && input.gallery
       ? prepareFeatureGalleryProjection(db, {
@@ -500,9 +522,15 @@ export function prepareFeatureEditorialProjection(
     prepareRevisionCheck(db, sql`changes()=1`),
     db
       .delete(featurePropertyI18n)
-      .where(eq(featurePropertyI18n.featureId, input.featureId)),
+      .where(
+        sql`${featurePropertyI18n.featureId}=${input.featureId} AND (COALESCE(${featurePropertyI18n.isAutomaticOnly},0)=0 OR ${featurePropertyI18n.propertyId} NOT IN (SELECT value FROM json_each(${JSON.stringify(rows.properties.map(row => row.propertyId))})))`,
+      ),
     db.delete(featureProperty).where(eq(featureProperty.featureId, input.featureId)),
-    db.delete(featureI18n).where(eq(featureI18n.featureId, input.featureId)),
+    db
+      .delete(featureI18n)
+      .where(
+        sql`${featureI18n.featureId}=${input.featureId} AND COALESCE(${featureI18n.isAutomaticOnly},0)=0`,
+      ),
   ]
   // Identity review adopts only server-selected, already-accepted Location evidence.
   if (input.identity && associationChanged) {
@@ -569,6 +597,11 @@ export function prepareFeatureEditorialProjection(
   // Each child insert stays below the binding limit; all rows execute in this same batch.
   for (const row of rows.i18n)
     statements.push(
+      db
+        .delete(featureI18n)
+        .where(
+          sql`${featureI18n.featureId}=${input.featureId} AND ${featureI18n.locale}=${row.locale} AND ${featureI18n.isAutomaticOnly}=1`,
+        ),
       db.insert(featureI18n).values({
         ...row,
         featureId: input.featureId,
@@ -582,7 +615,21 @@ export function prepareFeatureEditorialProjection(
     )
   for (const row of rows.propertyI18n)
     statements.push(
-      db.insert(featurePropertyI18n).values({ ...row, featureId: input.featureId }),
+      db
+        .delete(featurePropertyI18n)
+        .where(
+          sql`${featurePropertyI18n.featureId}=${input.featureId} AND ${featurePropertyI18n.propertyId}=${row.propertyId} AND ${featurePropertyI18n.locale}=${row.locale} AND ${featurePropertyI18n.isAutomaticOnly}=1`,
+        ),
+      db.insert(featurePropertyI18n).values({
+        ...row,
+        featureId: input.featureId,
+        autoTranslated:
+          (source.propertyTranslations.find(
+            prior => prior.propertyId === row.propertyId && prior.locale === row.locale,
+          )
+            ?.autoTranslated as typeof featurePropertyI18n.$inferInsert.autoTranslated) ??
+          null,
+      }),
     )
   if (galleryProjection) statements.push(...galleryProjection.statements)
   return {
