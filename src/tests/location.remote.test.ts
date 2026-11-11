@@ -1283,6 +1283,13 @@ describe('canonical candidate import boundary', () => {
   })
 })
 
+vi.mock('#lib/db/services/locationCurationLocks.js', () => ({
+  readLocationCurationLocks: vi.fn(async () => ({
+    revision: null,
+    openFields: {},
+    available: true,
+  })),
+}))
 vi.mock('#lib/db/services/locationDirectory.js', () => ({
   listLocationResources: mocks.directory,
 }))
@@ -1338,6 +1345,8 @@ describe('standalone Location reads', () => {
       id: 'location',
       canEditAddress: true,
       canEditShared: false,
+      canManageCommunityLocks: false,
+      communityLocks: { revision: null, openFields: {}, available: true },
       sharedFacts: undefined,
       sharedRevision: null,
       editingOrganisationId: 'p',
@@ -1349,6 +1358,33 @@ describe('standalone Location reads', () => {
     await expect(
       getLocation({ id: 'location', projectId: 'other' } as never),
     ).rejects.toThrow()
+  })
+  it('exposes lock administration only for SuperAdmin on community records', async () => {
+    mocks.probeIdentity.mockResolvedValue({
+      id: 'location',
+      state: 'linked',
+      ssId: 'source',
+      ownerOrganisationId: null,
+    })
+    mocks.directory.mockResolvedValue({ data: [{ id: 'location' }], nextCursor: null })
+    expect((await getLocation({ id: 'location' }))?.canManageCommunityLocks).toBe(false)
+    Object.assign(mocks.context.user, { superAdmin: true })
+    try {
+      expect((await getLocation({ id: 'location' }))?.canManageCommunityLocks).toBe(
+        true,
+      )
+      mocks.probeIdentity.mockResolvedValue({
+        id: 'location',
+        state: 'manual',
+        ssId: null,
+        ownerOrganisationId: 'p',
+      })
+      expect((await getLocation({ id: 'location' }))?.canManageCommunityLocks).toBe(
+        false,
+      )
+    } finally {
+      Reflect.deleteProperty(mocks.context.user, 'superAdmin')
+    }
   })
   it('returns missing if ownership changed after authorization', async () => {
     mocks.directory.mockResolvedValue({ data: [], nextCursor: null })

@@ -11,6 +11,12 @@ import {
   SharedCorrectionFieldSchema,
 } from '#lib/locations/sharedCorrection.js'
 import { readLocationFacts } from '#lib/locations/factsSnapshot.js'
+// CURATION LOCKS
+import { assertCurationFieldsOpen } from '#lib/locations/curationLocks.js'
+import {
+  readLocationCurationLocks,
+  locationCurationLockFence,
+} from './locationCurationLocks'
 // TRANSACTIONS
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
 // TYPES
@@ -129,6 +135,16 @@ export async function prepareSharedLocationCorrection(
   )
     throw new Error('BRANCH_REQUIRES_ESTABLISHMENT')
   const facts = readLocationFacts(source.facts)
+  const locks = await readLocationCurationLocks(db, input.locationId)
+  assertCurationFieldsOpen(
+    patch,
+    resolveSharedCorrections(
+      facts,
+      previous ? JSON.parse(previous.corrections) : {},
+      false,
+    ).facts,
+    locks.openFields,
+  )
   const id = crypto.randomUUID(),
     editedAt = new Date().toISOString()
   const corrections = amendSharedCorrections(
@@ -142,7 +158,7 @@ export async function prepareSharedLocationCorrection(
       omittedFields: omittedSourceContacts(source.rawSource),
     },
   )
-  const guard = sql`(${input.guard}) AND (SELECT id FROM locationSharedHead WHERE locationId=${input.locationId}) IS ${input.expectedRevision}
+  const guard = sql`(${input.guard}) AND (${locationCurationLockFence(input.locationId, locks)}) AND (SELECT id FROM locationSharedHead WHERE locationId=${input.locationId}) IS ${input.expectedRevision}
     AND (SELECT id FROM locationRevision WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1)=${input.sourceRevisionId}`
   const queries = [
     prepareRevisionCheck(db, guard),

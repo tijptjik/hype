@@ -27,6 +27,7 @@ import { AddressDivisionOverridesSchema } from '#lib/addresses/divisions.js'
 import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 // DB
+import { readLocationCurationLocks } from '#lib/db/services/locationCurationLocks.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import { listLocationLinkedFeatures } from '#lib/db/services/locationFeatures.js'
@@ -152,6 +153,12 @@ export const getLocation = guardedQuery(
           ...resource,
           editingOrganisationId,
           canEditShared,
+          canManageCommunityLocks: Boolean(
+            ctx.user.superAdmin &&
+              !ctx.user.isAnonymous &&
+              ['linked', 'unresolved'].includes(identity.state),
+          ),
+          communityLocks: await readLocationCurationLocks(ctx.db, input.id),
           sharedFacts: shared?.facts,
           sharedRevision: shared?.revision ?? null,
           canEditAddress:

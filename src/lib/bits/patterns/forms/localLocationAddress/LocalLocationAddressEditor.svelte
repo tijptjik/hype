@@ -4,6 +4,7 @@ import type { SharedCorrectionPatch } from '#lib/locations/sharedCorrection.js'
 import type { LocationBrandEdit } from '#lib/locations/brandEdit.js'
 import LocationBrandEditor from '../featureLocation/LocationBrandEditor.svelte'
 // COMPONENTS
+import CommunityCurationLocks from './CommunityCurationLocks.svelte'
 import LocationAccessibility from '../featureLocation/LocationAccessibility.svelte'
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
@@ -30,6 +31,10 @@ import MapPrimitive from '../formMapSection/components/MapPrimitive.svelte'
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 // API
 import {
+  getCommunityCurationLocks,
+  setCommunityCurationLocks,
+} from '#lib/api/locationCurationLocks.remote.js'
+import {
   saveLocalLocationAddress,
   searchDirectoryLocationPlaces,
 } from '#lib/api/locationDirectory.remote.js'
@@ -52,6 +57,7 @@ import {
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // TYPES
+import type { CurationLockField } from '#lib/locations/curationLocks.js'
 import type { HeaderFormActionsState } from '#lib/context/headerState.types.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { LocationResource } from '#lib/locations/resource.js'
@@ -74,6 +80,14 @@ let {
 let correctionScope = $state<'organisation' | 'shared'>(
   untrack(() => (place.canEditShared ? 'shared' : 'organisation')),
 )
+/** Disable known closed community fields without restricting Internal customizations.
+ * @param field Canonical curation field. @returns Whether this edit destination is locked.
+ */
+function communityClosed(field: CurationLockField): boolean {
+  return (
+    correctionScope === 'shared' && place.communityLocks?.openFields[field] === false
+  )
+}
 let branch = $state<Record<string, string>>({})
 let format = $state<Record<string, string>>({})
 let branchId = $state('')
@@ -314,6 +328,7 @@ async function lookup(query?: string): Promise<void> {
  * @param next Proposed WGS84 coordinate pair. @returns Nothing; invalid coordinates remain unsaved.
  */
 function moveMarker(next: number[]): void {
+  if (communityClosed('location.geometry')) return
   coordinateInvalid =
     !next.every(Number.isFinite) || Math.abs(next[0]) > 180 || Math.abs(next[1]) > 90
   if (coordinateInvalid) return
@@ -595,7 +610,7 @@ $effect(() => {
         onMapReady={controller => (numberMapController = controller)}
         coordinates={point}
         addressMeta={{ address }}
-        draggable={editing && !busy}
+        draggable={editing && !busy && !communityClosed('location.geometry')}
         onCoordinateChange={moveMarker}
       />
     {/snippet}
@@ -627,6 +642,25 @@ $effect(() => {
         <span class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"
           >{kindLabel}</span
         >
+        {#if place.canManageCommunityLocks}
+          <CommunityCurationLocks
+            disabled={busy}
+            openFields={place.communityLocks?.openFields ?? {}}
+            load={async () => {
+              const controls = getCommunityCurationLocks({ locationId: place.id })
+              await controls.refresh()
+              return await controls
+            }}
+            save={async (expectedRevision, openFields) => {
+              await setCommunityCurationLocks({
+                locationId: place.id,
+                expectedRevision,
+                openFields,
+              })
+              await onSaved()
+            }}
+          />
+        {/if}
       </div>
     {/snippet}
     {#snippet locationContent()}
@@ -675,6 +709,15 @@ $effect(() => {
                   </p>
                 {/if}
               {/if}
+              {#if correctionScope === 'shared' &&
+                Object.values(place.communityLocks?.openFields ?? {}).some(
+                  value => value === false,
+                )}
+                <p class="text-muted-foreground text-sm">
+                  Some community fields are locked. A save that changes a locked field
+                  is rejected as a whole. Use Internal for Organisation customizations.
+                </p>
+              {/if}
               <div class="max-w-72">
                 <LocationKindField
                   value={kind}
@@ -713,7 +756,7 @@ $effect(() => {
                 kind={activeKind}
                 localeState={editorLocaleState}
                 translations={localeState.expanded}
-                isEditing={!busy}
+                isEditing={!busy && !communityClosed('names')}
                 recordKey={`${place.id}:${correctionScope}`}
                 onChange={next =>
                   (names = Object.fromEntries(
@@ -733,7 +776,7 @@ $effect(() => {
                           class="border-border bg-background rounded-lg border px-3 py-2"
                           maxlength="1000"
                           value={branch[locale] ?? ''}
-                          disabled={busy}
+                          disabled={busy || communityClosed('branch')}
                           oninput={event =>
                             (branch = {
                               ...branch,
@@ -747,7 +790,7 @@ $effect(() => {
                           class="border-border bg-background rounded-lg border px-3 py-2"
                           maxlength="1000"
                           value={format[locale] ?? ''}
-                          disabled={busy}
+                          disabled={busy || communityClosed('format')}
                           oninput={event =>
                             (format = {
                               ...format,
@@ -763,7 +806,7 @@ $effect(() => {
                       class="border-border bg-background rounded-lg border px-3 py-2"
                       maxlength="200"
                       bind:value={branchId}
-                      disabled={busy}
+                      disabled={busy || communityClosed('branchId')}
                     ></label
                   >
                 </div>
@@ -776,7 +819,7 @@ $effect(() => {
                     effective: { brands: editableFacts?.brands ?? [] },
                   }}
                   edit={sharedBrandEdit}
-                  isEditing={!busy}
+                  isEditing={!busy && !communityClosed('brands')}
                   onChange={value => (sharedBrandEdit = value)}
                 />
               {/if}
@@ -860,7 +903,7 @@ $effect(() => {
               {/each}
             {/if}
             <fieldset
-              disabled={busy}
+              disabled={busy || communityClosed('location.address')}
               class="@container grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-start gap-8"
             >
               <AddressDetails

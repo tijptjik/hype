@@ -14,6 +14,8 @@ export type LocationResource = {
     releaseId: string | null
     snapshotId: string | null
   }
+  canManageCommunityLocks?: boolean
+  communityLocks?: import('./curationLocks').CurationLocks
   canEditShared?: boolean
   sharedFacts?: LocationFacts
   sharedRevision?: string | null
