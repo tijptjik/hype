@@ -2251,7 +2251,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
     !rows.length}
     <section
       aria-label={m.feature_find_by()}
-      class="flex flex-1 items-center justify-center px-6 py-10"
+      class="flex flex-1 items-center justify-center px-6 pt-10 pb-[calc(2.5rem+var(--facet-overlay-bottom-space,0px))]"
     >
       <div
         class="sm:divide-border/60 grid w-full max-w-4xl gap-8 sm:grid-cols-2 sm:gap-0 sm:divide-x"

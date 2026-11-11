@@ -33,6 +33,7 @@ let bodyHeight = $state<number | null>(null)
 let tailSpacer = $state(0)
 let navShellStyle = $state('')
 let bodyBottomPadding = $state(0)
+let overlayBottomSpace = $state(0)
 let isScrolled = $state(false)
 
 const hasFacetNav = $derived(Boolean(previousAction || nextAction || centerAction))
@@ -80,6 +81,7 @@ const bodyStyle = $derived(
       ? `--bits-main-section-body-height: ${Math.max(0, bodyHeight)}px`
       : '--bits-main-section-body-height: auto',
     `padding-bottom: ${Math.max(0, bodyBottomPadding)}px`,
+    `--facet-overlay-bottom-space: ${overlayBottomSpace}px`,
     // Extra travel must follow the content instead of sitting behind overflowing flex children.
     extraScroll > 0 ? `min-height: ${Math.max(0, bodyMinHeight)}px` : '',
     navMode !== 'centered' && bodyHeight != null
@@ -202,6 +204,7 @@ function measureLayout(measureContent = true): void {
   if (!isVisible) return
   const facet = facetElement
   const body = bodyElement
+  overlayBottomSpace = 0
 
   if (!facet || !body) {
     bodyMinHeight = 0
@@ -234,6 +237,12 @@ function measureLayout(measureContent = true): void {
   const navHeight = hasFacetNav && navElement ? navElement.offsetHeight : 0
   const facetRect = facet.getBoundingClientRect()
   const bottomInset = Math.max(16, window.innerHeight - facetRect.bottom + 16)
+  // Empty states can center above overlay actions without shortening result lists.
+  if (navMode === 'overlay' && hasFacetNav)
+    overlayBottomSpace = Math.max(
+      0,
+      navHeight + bottomInset - (window.innerHeight - facetRect.bottom),
+    )
   // Anchor to the facet itself; the navigation shell owns its content gutter.
   const left = Math.max(0, Math.round(facetRect.left))
   const width = Math.max(0, Math.round(facetRect.width))
