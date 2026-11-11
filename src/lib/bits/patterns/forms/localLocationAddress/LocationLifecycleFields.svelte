@@ -65,12 +65,15 @@ function update(status: string): void {
 {#if supported}
   <section
     class="border-border space-y-4 border-b pb-6"
-    aria-label={m.location_lifecycle_title()}
+    aria-label={m.location_lifecycle_status()}
   >
-    <h2 class="text-lg font-semibold">{m.location_lifecycle_title()}</h2>
     {#if isEditing}
-      <fieldset {disabled} class="min-w-0 space-y-4">
+      <fieldset
+        {disabled}
+        class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] items-start gap-x-8 gap-y-3"
+      >
         <SelectField
+          triggerClass="bg-transparent! hover:bg-transparent! shadow-none!"
           id={`${uid}-status`}
           label={m.location_lifecycle_status()}
           placeholder={m.location_lifecycle_status()}
@@ -78,9 +81,14 @@ function update(status: string): void {
           {items}
           onValueChange={update}
         />
-        <p class="text-muted-foreground text-sm">{m.location_lifecycle_help()}</p>
+        <p
+          class="text-muted-foreground order-last col-span-full text-xs leading-relaxed"
+        >
+          {m.location_lifecycle_help()}
+        </p>
         <TextInput
           id={`${uid}-successor`}
+          controlClass="bg-transparent!"
           name=""
           label={m.location_successor_id()}
           value={successorLocationId ?? ''}

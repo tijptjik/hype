@@ -21,6 +21,7 @@ let {
   locationActions,
   toolbarControls,
   toolbarInfo,
+  toolbarInfoBeforeCoordinates = false,
   locationMapControls,
   fixedMap = false,
   showMap = true,
@@ -46,6 +47,7 @@ let {
   locationActions?: Snippet
   toolbarControls?: Snippet
   toolbarInfo?: Snippet
+  toolbarInfoBeforeCoordinates?: boolean
   locationMapControls?: Snippet
   fixedMap?: boolean
   showMap?: boolean
@@ -373,6 +375,9 @@ function measureToolbar(
           {@render toolbarControls()}
         </div>
       {/if}
+      {#if toolbarInfoBeforeCoordinates}
+        {@render toolbarInfo?.()}
+      {/if}
       {#if showCoordinates && !coordinatesInLocationControl}
         <div
           data-address-toolbar-coordinates
@@ -381,7 +386,9 @@ function measureToolbar(
           {@render coordinatesControl()}
         </div>
       {/if}
-      {@render toolbarInfo?.()}
+      {#if !toolbarInfoBeforeCoordinates}
+        {@render toolbarInfo?.()}
+      {/if}
     </div>
     {#if showLookup && (isEditing || sourceId) && (!isEditing || !showCoordinates)}
       <div

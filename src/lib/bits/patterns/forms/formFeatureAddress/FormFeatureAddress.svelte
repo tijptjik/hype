@@ -71,6 +71,7 @@ let {
   locationActions,
   toolbarControls,
   toolbarInfo,
+  toolbarInfoBeforeCoordinates = false,
   locationMapControls,
   fixedMap = false,
   showMap = true,
@@ -128,6 +129,7 @@ let {
   centerLocationControl?: boolean
   toolbarControls?: Snippet
   toolbarInfo?: Snippet
+  toolbarInfoBeforeCoordinates?: boolean
   locationActions?: Snippet
   locationMapControls?: Snippet
   fixedMap?: boolean
@@ -673,6 +675,7 @@ $effect(() => {
   locationActions={showEmptyAddressActions ? undefined : locationActions}
   {toolbarControls}
   {toolbarInfo}
+  {toolbarInfoBeforeCoordinates}
   {locationMapControls}
   {fixedMap}
   {showMap}

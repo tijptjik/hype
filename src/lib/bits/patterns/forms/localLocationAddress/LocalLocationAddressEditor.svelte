@@ -15,13 +15,17 @@ import AddressDetails from '../formFeatureAddress/AddressDetails.svelte'
 import AddressDivisions from '../formFeatureAddress/AddressDivisions.svelte'
 import LocalAddressParseReview from './LocalAddressParseReview.svelte'
 import LocationRecordDetails from './LocationRecordDetails.svelte'
+import LocationLocaleField from './LocationLocaleField.svelte'
+import { TextInput } from '#lib/bits/custom/form/index.js'
 import DraftLocationNameFields from '../featureLocation/DraftLocationNameFields.svelte'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions.js'
 import type { ProfileLocaleState } from '../featureLocation/profileLocales.js'
 import LocationLifecycleFields from './LocationLifecycleFields.svelte'
+import { lifecycleLabel } from '#lib/locations/lifecycle.i18n.js'
 import {
+  lifecycleStatus,
   validateLocationStatusKind,
   type LocationLifecycleSummary,
 } from '#lib/locations/lifecycle.js'
@@ -62,7 +66,7 @@ import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { LocationResource } from '#lib/locations/resource.js'
 
 let {
-  place,
+  place: sourcePlace,
   queryScope,
   isEditing = false,
   // Header facets retain the parent-owned draft across Profile and Relationships.
@@ -79,23 +83,28 @@ let {
   onControlsChange: (controls: Partial<HeaderFormActionsState>) => void
   onSaved: () => Promise<void>
 } = $props()
-let correctionScope = $state<'organisation' | 'shared'>(
-  untrack(() => (place.canEditShared ? 'shared' : 'organisation')),
+const communityRecord = $derived(['linked', 'unresolved'].includes(sourcePlace.state))
+// The standalone record displays community facts, never an Organisation's consuming overrides.
+const place = $derived(
+  communityRecord && sourcePlace.sharedFacts
+    ? { ...sourcePlace, facts: sourcePlace.sharedFacts, organisationRevision: null }
+    : sourcePlace,
 )
-/** Disable known closed community fields without restricting Internal customizations.
- * @param field Canonical curation field. @returns Whether this edit destination is locked.
+const canEditRecord = $derived(
+  Boolean(place.canEditAddress && (!communityRecord || place.canEditShared)),
+)
+/** Disable closed community fields on the standalone Location record.
+ * @param field Canonical curation field. @returns Whether this community field is locked.
  */
 function communityClosed(field: CurationLockField): boolean {
-  return (
-    correctionScope === 'shared' && place.communityLocks?.openFields[field] === false
-  )
+  return communityRecord && place.communityLocks?.openFields[field] === false
 }
 let branch = $state<Record<string, string>>({})
 let format = $state<Record<string, string>>({})
 let branchId = $state('')
 let sharedBrandEdit = $state<LocationBrandEdit | undefined>()
 const editableFacts = $derived(
-  correctionScope === 'shared' ? (place.sharedFacts ?? place.facts) : place.facts,
+  communityRecord ? (place.sharedFacts ?? place.facts) : place.facts,
 )
 let draft = $state<FeatureAddress | null>(null)
 let names = $state<Record<string, string>>({})
@@ -183,13 +192,13 @@ const point = $derived(
 )
 const activeKind = $derived(editing ? kind : place.kind)
 const kindLabel = $derived(locationKindLabel(activeKind))
-
+const status = $derived(lifecycleStatus(editing ? lifecycle : place.facts))
 /** Capture an independent editable copy and both revision fences; no source evidence is rewritten.
  * @returns Nothing; concurrent changes cannot silently replace this draft.
  */
 function edit(): void {
   if (
-    !place.canEditAddress ||
+    !canEditRecord ||
     place.state === 'redirect' ||
     !editableFacts ||
     !place.revisionId
@@ -380,6 +389,7 @@ function selectLookup(candidate: LookupCandidate): void {
  */
 async function save(): Promise<void> {
   if (
+    !canEditRecord ||
     busy ||
     lookingUp ||
     coordinateInvalid ||
@@ -391,7 +401,7 @@ async function save(): Promise<void> {
   busy = true
   failed = false
   try {
-    if (correctionScope === 'shared') {
+    if (communityRecord) {
       if (!place.canEditShared || !editableFacts)
         throw new Error('Shared editing unavailable')
       const patch: SharedCorrectionPatch = {}
@@ -571,7 +581,7 @@ $effect(() => {
         ]) !== initialSignature),
     isSubmitting: busy || lookingUp,
     hasIssues: coordinateInvalid || namesInvalid || lifecycleInvalid,
-    canEdit: Boolean(place.canEditAddress && place.state !== 'redirect' && place.facts),
+    canEdit: Boolean(canEditRecord && place.state !== 'redirect' && place.facts),
     content: place.canManageCommunityLocks ? lockControls : null,
     canPublish: false,
     showPublishAction: false,
@@ -605,74 +615,37 @@ $effect(() => {
 {/snippet}
 
 {#snippet recordContent()}
-  {#if recordView === 'relationships'}
-    <div class="space-y-6 px-6 py-6">
-      <LocationRelationships
-        locationId={place.id}
-        kind={place.kind}
-        organisationId={place.editingOrganisationId ?? null}
-        {queryScope}
-        canEdit={editing && Boolean(place.canEditAddress)}
-      />
-    </div>
-  {:else if place.facts}
+  {#if recordView === 'core'}
     <div class="grid gap-6 px-6 py-6 @min-[900px]:grid-cols-[15rem_minmax(0,1fr)]">
       <LocationRecordDetails {place} isEditing={editing} />
       <div
         class="@min-[900px]:border-border min-w-0 space-y-6 @min-[900px]:border-l @min-[900px]:pl-6"
       >
+        {#if !place.facts}
+          <LocationAccessibility locationId={place.id} />
+        {/if}
         {#if editing}
           <section
             class="border-border space-y-5 border-b pb-6"
             aria-label={m.location_record_identity()}
           >
             <h2 class="text-lg font-semibold">{m.location_record_identity()}</h2>
-            {#if place.canEditShared}
-              <label class="grid gap-1 text-sm"
-                >Edit destination
-                <select
-                  class="border-border bg-background rounded border p-2"
-                  value={correctionScope}
-                  disabled={busy}
-                  onchange={event => {
-                    correctionScope =
-                      event.currentTarget.value === 'shared' ? 'shared' : 'organisation'
-                    edit()
-                  }}
-                >
-                  <option value="shared">Community</option>
-                  {#if place.editingOrganisationId}
-                    <option value="organisation">Internal</option>
-                  {/if}
-                </select>
-              </label>
-              {#if correctionScope === 'shared'}
-                <p class="text-muted-foreground text-sm">
-                  Contribute these edits to the community curations for this Location.
-                  Acceptance follows each Organisation’s location policies. Upstream
-                  evidence remains intact.
-                </p>
-              {:else}
-                <p class="text-muted-foreground text-sm">
-                  Save these edits as Organisation customizations without contributing
-                  them to community curations.
-                </p>
-              {/if}
-            {/if}
-            {#if correctionScope === 'shared' &&
+            {#if communityRecord &&
               Object.values(place.communityLocks?.openFields ?? {}).some(
                 value => value === false,
               )}
               <p class="text-muted-foreground text-sm">
                 Some community fields are locked. A save that changes a locked field is
-                rejected as a whole. Use Internal for Organisation customizations.
+                rejected as a whole.
               </p>
             {/if}
-            <div class="max-w-72">
+            <div
+              class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-8"
+            >
               <LocationKindField
                 value={kind}
                 disabled={busy ||
-                  correctionScope === 'shared' ||
+                  communityRecord ||
                   place.ssId !== null ||
                   place.ownerOrganisationId !== place.editingOrganisationId}
                 onChange={next => {
@@ -707,7 +680,7 @@ $effect(() => {
               localeState={editorLocaleState}
               translations={localeState.expanded}
               isEditing={!busy && !communityClosed('names')}
-              recordKey={`${place.id}:${correctionScope}`}
+              recordKey={place.id}
               onChange={next =>
                 (names = Object.fromEntries(
                   Object.entries(next).map(([tag, value]) => [
@@ -717,52 +690,42 @@ $effect(() => {
                 ))}
             />
             {#if activeKind === 'establishment'}
-              <div class="grid gap-4">
-                {#each ['en', 'zh-Hant', 'zh-Hans'] as locale}
-                  <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="flex flex-col gap-2 text-sm"
-                      ><span>Branch · {locale}</span>
-                      <input
-                        class="border-border bg-background rounded-lg border px-3 py-2"
-                        maxlength="1000"
-                        value={branch[locale] ?? ''}
-                        disabled={busy || communityClosed('branch')}
-                        oninput={event =>
-                          (branch = {
-                            ...branch,
-                            [locale]: event.currentTarget.value,
-                          })}
-                      ></label
-                    >
-                    <label class="flex flex-col gap-2 text-sm"
-                      ><span>Format · {locale}</span>
-                      <input
-                        class="border-border bg-background rounded-lg border px-3 py-2"
-                        maxlength="1000"
-                        value={format[locale] ?? ''}
-                        disabled={busy || communityClosed('format')}
-                        oninput={event =>
-                          (format = {
-                            ...format,
-                            [locale]: event.currentTarget.value,
-                          })}
-                      ></label
-                    >
-                  </div>
-                {/each}
-                <label class="flex flex-col gap-2 text-sm"
-                  ><span>Branch ID · Internal</span>
-                  <input
-                    class="border-border bg-background rounded-lg border px-3 py-2"
-                    maxlength="200"
-                    bind:value={branchId}
-                    disabled={busy || correctionScope === 'shared'}
-                  ></label
-                >
+              <div
+                class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-start gap-8"
+              >
+                <LocationLocaleField
+                  label={m.location_field_branch()}
+                  value={branch}
+                  localeState={editorLocaleState}
+                  translations={localeState.expanded}
+                  disabled={busy || communityClosed('branch')}
+                  onChange={next => (branch = next)}
+                />
+                <LocationLocaleField
+                  label={m.location_field_format()}
+                  value={format}
+                  localeState={editorLocaleState}
+                  translations={localeState.expanded}
+                  disabled={busy || communityClosed('format')}
+                  onChange={next => (format = next)}
+                />
+                {#if !communityRecord}
+                  <TextInput
+                    name=""
+                    label={m.location_field_branch_id()}
+                    value={branchId}
+                    isEditing={!busy && !communityRecord}
+                    inputAttrs={{ maxlength: 200 }}
+                    controlClass="bg-transparent!"
+                    onValueChange={next => (branchId = next)}
+                  />
+                {/if}
               </div>
             {/if}
-            {#if place.canEditShared && correctionScope === 'shared'}
+            {#if place.canEditShared && communityRecord}
               <LocationBrandEditor
+                localeState={editorLocaleState}
+                translations={localeState.expanded}
                 association={{
                   version: place.sharedRevision ?? expectedRevisionId,
                   brandMode: 'inherit',
@@ -780,17 +743,19 @@ $effect(() => {
             {/if}
           </section>
         {/if}
-        <LocationLifecycleFields
-          value={editing ? lifecycle : (place.facts ?? undefined)}
-          successorLocationId={editing
-            ? successorLocationId
-            : place.facts?.successorLocationId}
-          onSuccessorChange={next => (successorLocationId = next)}
-          kind={activeKind}
-          isEditing={editing}
-          disabled={busy}
-          onChange={next => (lifecycle = next)}
-        />
+        {#if editing}
+          <LocationLifecycleFields
+            value={editing ? lifecycle : (place.facts ?? undefined)}
+            successorLocationId={editing
+              ? successorLocationId
+              : place.facts?.successorLocationId}
+            onSuccessorChange={next => (successorLocationId = next)}
+            kind={activeKind}
+            isEditing={editing}
+            disabled={busy}
+            onChange={next => (lifecycle = next)}
+          />
+        {/if}
         {#if lifecycleInvalid}
           <p role="alert" class="text-destructive text-sm">
             {m.location_lifecycle_invalid()}
@@ -883,7 +848,7 @@ $effect(() => {
             />
             {#if editing && draft}
               {@const content = localAddressContent($state.snapshot(draft))}
-              <details class="border-border border-t pt-4">
+              <details class="border-border col-span-full border-t pt-4">
                 <summary class="text-muted-foreground cursor-pointer text-sm">
                   {m.location_address_parse()}
                 </summary>
@@ -915,10 +880,24 @@ $effect(() => {
         {/if}
       </div>
     </div>
-  {:else}
+  {:else if recordView === 'relationships'}
     <div class="space-y-6 px-6 py-6">
-      <LocationRecordDetails {place} />
-      <LocationAccessibility locationId={place.id} />
+      <LocationRelationships
+        locationId={place.id}
+        kind={place.kind}
+        organisationId={place.editingOrganisationId ?? null}
+        {queryScope}
+        canEdit={editing && Boolean(place.canEditAddress)}
+      />
+
+      {#if place.facts?.successorLocationId}
+        <a
+          class="text-primary text-sm underline"
+          href={`/admin/locations/${encodeURIComponent(place.facts.successorLocationId)}`}
+        >
+          {m.location_successor_id()}: {place.facts.successorLocationId}
+        </a>
+      {/if}
     </div>
   {/if}
 {/snippet}
@@ -932,6 +911,7 @@ $effect(() => {
     isLoading={busy || lookingUp}
     fixedMap={true}
     hideDetails={true}
+    toolbarInfoBeforeCoordinates={true}
     showLookup={false}
     show3dAddressOptions={activeKind !== 'building'}
     onCoordinateChange={moveMarker}
@@ -983,6 +963,11 @@ $effect(() => {
         <span class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"
           >{kindLabel}</span
         >
+        {#if status !== 'unknown'}
+          <span class="text-muted-foreground shrink-0 text-xs" data-location-status
+            >{lifecycleLabel(status)}</span
+          >
+        {/if}
       </div>
     {/snippet}
     {#snippet locationContent()}

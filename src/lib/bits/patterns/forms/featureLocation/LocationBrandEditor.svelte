@@ -3,13 +3,15 @@
 import { m } from '#lib/i18n.js'
 // BITS
 import { Button } from '#lib/bits/core/index.js'
-import { SelectField, TextInput } from '#lib/bits/custom/form/index.js'
+import LocationLocaleField from '../localLocationAddress/LocationLocaleField.svelte'
+import { SelectField } from '#lib/bits/custom/form/index.js'
 // DOMAIN
 import {
   LocationBrandEditSchema,
   type LocationBrandEdit,
 } from '#lib/locations/brandEdit.js'
 // TYPES
+import type { ProfileLocaleState } from './profileLocales.js'
 import type { AcceptedFeatureLocation } from '#lib/db/services/location.js'
 import type { LocationBrand } from '#lib/locations/model.js'
 
@@ -19,11 +21,15 @@ let {
   isEditing,
   onChange,
   canInherit = true,
+  localeState,
+  translations = true,
 }: {
   association: Pick<AcceptedFeatureLocation, 'version' | 'brandMode'> & {
     effective: Pick<AcceptedFeatureLocation['effective'], 'brands'>
   }
   canInherit?: boolean
+  localeState?: ProfileLocaleState
+  translations?: boolean
   edit?: unknown
   isEditing: boolean
   onChange: (edit: LocationBrandEdit) => void
@@ -50,19 +56,29 @@ function change(choice: LocationBrandEdit['choice']): void {
     choice,
   })
 }
-
-/** Replace one localized name, retaining other locales and source identifiers. */
-function rename(index: number, locale: string, value: string): void {
+/** Replace localized names while retaining other brands and source identifiers.
+ * @param index Position of the edited brand.
+ * @param names Complete language map from the shared locale editor.
+ * @returns Nothing; stages an override against the original revision.
+ */
+function rename(index: number, names: Record<string, string>): void {
   const next: LocationBrand[] = structuredClone($state.snapshot(brands))
-  next[index].names[locale] = value
+  next[index].names = Object.fromEntries(
+    Object.entries(names).map(([locale, value]) => [locale.toLowerCase(), value]),
+  )
   change({ mode: 'override', value: next })
 }
 </script>
 
-<div class="border-border space-y-3 rounded-xl border p-4">
+<section
+  class="border-border min-w-0 space-y-4 border-t pt-5"
+  aria-label={m.location_brand_title()}
+>
+  <h3 class="text-base font-semibold">{m.location_brand_title()}</h3>
   <SelectField
+    triggerClass="bg-transparent! hover:bg-transparent! shadow-none!"
     id="location-brand-mode"
-    label={m.location_brand_title()}
+    label={m.location_brand_source()}
     placeholder={m.location_brand_title()}
     triggerAttrs={{ id: 'location-brand-mode' }}
     value={mode}
@@ -77,20 +93,14 @@ function rename(index: number, locale: string, value: string): void {
   {#if mode === 'override'}
     {#each brands as brand, index}
       <div class="border-border space-y-2 rounded-lg border p-3">
-        {#each ['en', 'zh-hant', 'zh-hans'] as locale}
-          <TextInput
-            id={`location-brand-${index}-${locale}`}
-            name=""
-            label={locale === 'en'
-              ? 'English'
-              : locale === 'zh-hant'
-                ? '繁體中文'
-                : '简体中文'}
-            value={brand.names[locale] ?? ''}
-            {isEditing}
-            onValueChange={value => rename(index, locale, value)}
-          />
-        {/each}
+        <LocationLocaleField
+          label={m.field_name()}
+          value={brand.names}
+          {localeState}
+          {translations}
+          disabled={!isEditing}
+          onChange={names => rename(index, names)}
+        />
         {#if isEditing}
           <Button
             type="button"
@@ -121,4 +131,4 @@ function rename(index: number, locale: string, value: string): void {
             .join(' / ') || m.location_brand_none()}
     </p>
   {/if}
-</div>
+</section>

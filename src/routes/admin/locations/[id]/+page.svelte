@@ -77,10 +77,12 @@ $effect(() => {
       : getLocaleKey() === 'zhHans'
         ? 'zh-hans'
         : 'en'
+  // Match the community record displayed by the standalone editor, even with Organisation context.
+  const facts = place?.sharedFacts ?? place?.facts
   const title =
-    place?.facts?.names[locale] ||
-    place?.facts?.names.en ||
-    Object.values(place?.facts?.names ?? {}).find(Boolean) ||
+    facts?.names[locale] ||
+    facts?.names.en ||
+    Object.values(facts?.names ?? {}).find(Boolean) ||
     m.location_policy_tab()
   untrack(() => {
     header.setHeaderForEntity(title, MapPin, facetTabs)

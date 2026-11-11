@@ -52,6 +52,7 @@ const classes = $derived(
 )
 </script>
 <SelectField
+  triggerClass="bg-transparent! hover:bg-transparent! shadow-none!"
   id={`${uid}-kind`}
   label={locationTaxonomyLabel('kind')}
   value={taxonomy.kind}
@@ -70,6 +71,7 @@ const classes = $derived(
   taxonomy.kind === 'geographic' ||
   taxonomy.kind === 'operational'}
   <SelectField
+    triggerClass="bg-transparent! hover:bg-transparent! shadow-none!"
     id={`${uid}-class`}
     label={locationTaxonomyLabel('class')}
     value={value === 'infrastructure' ? 'built' : value}

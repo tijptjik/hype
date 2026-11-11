@@ -198,9 +198,17 @@ const brandNames = $derived(
       <div>
         <dt class="text-muted-foreground mb-1 text-xs">{m.location_record_source()}</dt>
         <dd class="text-sm">
-          {place.metadata.origin === 'local'
-            ? m.location_record_local_source()
-            : 'SaanSeoi'}
+          {#if place.metadata.origin === 'local'}
+            {m.location_record_local_source()}
+          {:else}
+            <a
+              href="https://saanseoi.hk/docs?family=places"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary hover:underline"
+              >SaanSeoi</a
+            >
+          {/if}
         </dd>
       </div>
     {/if}
