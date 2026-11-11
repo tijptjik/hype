@@ -1,6 +1,6 @@
 // SVELTEKIT
 import { goto } from '$app/navigation'
-import { page } from '$app/state'
+import { navigating, page } from '$app/state'
 // CONSTANTS
 import { NEW_REF } from '#lib/constants.js'
 // CONTEXT
@@ -380,11 +380,32 @@ export function useAdminHeaderModel(
   // DERIVED :: RESOURCE / ROUTE
   const headerResourceType = $derived(adminCtx.activeResourceType)
   const isIndex = $derived(adminCtx.activeResourceRef === false)
-  const isEmbeddedIndex = $derived(headerCtrl.state.search?.indexView === true)
+  // Destination tabs define their controls before the lazy index registers its search.
+  const destinationFacet = $derived(
+    navigating.to
+      ? navigating.to.url.hash.slice(1)
+      : (headerCtrl.state.meta.activeFacet ?? adminCtx.activeFacet),
+  )
+  const isIndexFacet = $derived(
+    !isIndex && (destinationFacet === 'features' || destinationFacet === 'users'),
+  )
+  const isEmbeddedIndex = $derived(
+    isIndexFacet || headerCtrl.state.search?.indexView === true,
+  )
   const presentationResourceType = $derived(
-    isEmbeddedIndex
-      ? (headerCtrl.state.search?.resourceType ?? FirstClassResource.user)
-      : headerResourceType,
+    isIndexFacet
+      ? destinationFacet === 'features'
+        ? FirstClassResource.feature
+        : FirstClassResource.user
+      : isEmbeddedIndex
+        ? (headerCtrl.state.search?.resourceType ?? FirstClassResource.user)
+        : headerResourceType,
+  )
+  const indexControlsReady = $derived(
+    !isIndexFacet ||
+      (headerCtrl.state.search?.indexView === true &&
+        (headerCtrl.state.search.resourceType ?? FirstClassResource.user) ===
+          presentationResourceType),
   )
   const presentationListUi = $derived(
     headerCtrl.state.search?.listUi ?? adminCtx.listUi,
@@ -775,6 +796,7 @@ export function useAdminHeaderModel(
       icon: isControlBarVisible ? FunnelX : Funnel,
       alwaysHideLabel: true,
       hideLabelInstantly: true,
+      disabled: !indexControlsReady,
       onClick: handleControlsToggle,
     }
   })
@@ -791,6 +813,7 @@ export function useAdminHeaderModel(
       icon: nextLayoutActionMeta.icon,
       alwaysHideLabel: true,
       hideLabelInstantly: true,
+      disabled: !indexControlsReady,
       onClick: handleAdvanceLayout,
     }
   })
@@ -971,8 +994,12 @@ export function useAdminHeaderModel(
       isVisible: resolvedVisibility.showViewActions,
       controlsAction: controlsAction ?? customViewActions[0],
       layoutAction,
-      extraActions: controlsAction ? customViewActions : customViewActions.slice(1),
-      content: inlineViewActionContent,
+      extraActions: isIndexFacet
+        ? []
+        : controlsAction
+          ? customViewActions
+          : customViewActions.slice(1),
+      content: isIndexFacet ? null : inlineViewActionContent,
     },
     taskActions: {
       isVisible:
