@@ -1702,6 +1702,8 @@
   "location_record_type": "Record type",
   "location_record_revision": "Revision",
   "location_record_owner": "Owner",
+  "location_field_phone": "Phone",
+  "location_field_edit_mode": "{field} edits",
   "location_field_branch": "Branch",
   "location_field_format": "Format",
   "location_field_branch_id": "Branch ID · Internal",

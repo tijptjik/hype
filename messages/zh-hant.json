@@ -1702,6 +1702,8 @@
   "location_record_type": "記錄類型",
   "location_record_revision": "版本",
   "location_record_owner": "擁有者",
+  "location_field_phone": "電話",
+  "location_field_edit_mode": "{field}編輯範圍",
   "location_field_branch": "分店",
   "location_field_format": "業態",
   "location_field_branch_id": "分店識別碼 · 內部",

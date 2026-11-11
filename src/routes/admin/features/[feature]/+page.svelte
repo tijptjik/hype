@@ -5186,7 +5186,7 @@ async function refreshLocationSource(): Promise<void> {
                     >
                       {#each [
                         ['names', m.location_review_names()],
-                        ['phoneNumber', 'Phone'],
+                        ['phoneNumber', m.location_field_phone()],
                         ['brands', m.location_brand_title()],
                         ['location', m.feature_address_title()],
                       ] as const as [field, label]}
@@ -5194,7 +5194,7 @@ async function refreshLocationSource(): Promise<void> {
                           <span>{label}</span>
                           <select
                             class="bg-background text-foreground border-input rounded-md border px-2 py-1 text-xs"
-                            aria-label={`${label} edits`}
+                            aria-label={m.location_field_edit_mode({ field: label })}
                             value={locationFieldModes?.[field] ??
                               acceptedNameSource.current.fieldEditModes?.[field] ??
                               (acceptedNameSource.current.state === 'manual'
@@ -5229,30 +5229,35 @@ async function refreshLocationSource(): Promise<void> {
                       {/each}
                     </div>
                   {/if}
-                  <!-- Linked names use per-field community contributions and Organisation overrides. -->
-                  <DraftLocationNameFields
-                    localeState={profileLocaleState}
-                    names={profileLocationNames}
-                    kind={acceptedNameSource?.current?.kind ?? 'unknown'}
-                    {translations}
-                    {isEditing}
-                    recordKey={currentFeatureId}
-                    onChange={names => {
-                      const changed = Object.fromEntries(
-                        Object.entries(names).filter(
-                          ([locale, value]) => value !== profileLocationNames[locale],
-                        ),
-                      )
-                      updateFeatureData(data => ({
-                        ...data,
-                        locationNames: {
-                          ...(data.locationNames as Record<string, string> | undefined),
-                          ...changed,
-                        },
-                      }))
-                      hasProgrammaticDirtyChanges = true
-                    }}
-                  />
+                  {#if acceptedNameSource?.current?.kind !== 'building' ||
+                    !Object.keys(addressBuildingNames(editorAddress)).length}
+                    <!-- Linked names use per-field community contributions and Organisation overrides. -->
+                    <DraftLocationNameFields
+                      localeState={profileLocaleState}
+                      names={profileLocationNames}
+                      kind={acceptedNameSource?.current?.kind ?? 'unknown'}
+                      {translations}
+                      {isEditing}
+                      recordKey={currentFeatureId}
+                      onChange={names => {
+                        const changed = Object.fromEntries(
+                          Object.entries(names).filter(
+                            ([locale, value]) => value !== profileLocationNames[locale],
+                          ),
+                        )
+                        updateFeatureData(data => ({
+                          ...data,
+                          locationNames: {
+                            ...(data.locationNames as
+                              | Record<string, string>
+                              | undefined),
+                            ...changed,
+                          },
+                        }))
+                        hasProgrammaticDirtyChanges = true
+                      }}
+                    />
+                  {/if}
                 {/snippet}
                 {#snippet identityControls()}
                   {@render locationSyncControl?.(!isEditing || placeLinkBusy)}
@@ -5328,11 +5333,7 @@ async function refreshLocationSource(): Promise<void> {
                     : undefined}
                   identityFields={draftLocalKind === 'establishment'
                     ? identityFields
-                    : !isNewFeatureRef &&
-                        profileNamesLocked &&
-                        acceptedNameSource?.current &&
-                        (acceptedNameSource.current.kind !== 'building' ||
-                          !Object.keys(addressBuildingNames(editorAddress)).length)
+                    : !isNewFeatureRef && acceptedNameSource?.current
                       ? savedIdentityFields
                       : undefined}
                   locationKind={locationKind ?? draftLocalKind}
