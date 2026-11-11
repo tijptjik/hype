@@ -439,18 +439,29 @@ let focusedResult = $state<string | null>(null)
 const highlightedResult = $derived(hovered ?? focusedResult)
 /** Centre a result without moving keyboard focus off its row or action.
  * @param row Result wrapper in the scrollable list.
+ * @param revealOnly Leave fully visible rows in place and animate offscreen reveals.
  * @returns Nothing.
  */
-function centreResult(row: HTMLElement): void {
+function centreResult(row: HTMLElement, revealOnly = false): void {
   if (!resultsElement || !resultsElement.contains(row)) return
+  const bounds = row.getBoundingClientRect()
+  const top = resultsElement.getBoundingClientRect().top + resultsElement.clientTop
+  if (
+    revealOnly &&
+    bounds.top >= top &&
+    bounds.bottom <= top + resultsElement.clientHeight
+  )
+    return
   resultsElement.scrollTo({
     top:
       resultsElement.scrollTop +
-      row.getBoundingClientRect().top -
-      resultsElement.getBoundingClientRect().top -
-      resultsElement.clientTop -
-      (resultsElement.clientHeight - row.getBoundingClientRect().height) / 2,
-    behavior: 'instant',
+      bounds.top -
+      top -
+      (resultsElement.clientHeight - bounds.height) / 2,
+    behavior:
+      revealOnly && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'smooth'
+        : 'instant',
   })
 }
 // Follow the stable highlighted ID after streamed rows reorder, not pointer movement.
@@ -1277,6 +1288,20 @@ function publishMarkers(): void {
         onPreview?.(associationPreview)
         return
       }
+      const row = Array.from(
+        resultsElement?.querySelectorAll<HTMLElement>('[data-search-result]') ?? [],
+      ).find(element => element.dataset.searchResult === id)
+      if (row) {
+        const result = markerRows.find(result => result.id === id)
+        if (!result) return
+        choose(result)
+        focusedResult = id
+        // Reveal after the selected row's actions have changed its layout.
+        void tick().then(() => {
+          if (selected?.id === id) centreResult(row, true)
+        })
+        return
+      }
       const result = markerRows.find(row => row.id === id)
       if (result) choose(result)
     }),
@@ -1318,15 +1343,6 @@ function choose(result: Result): void {
   accepted = false
   onPreview?.(result)
   // Identity resolution begins only when the user opens the association picker.
-  // Wait until the click has completed and its actions have rendered before moving the row.
-  void tick().then(async () => {
-    const row = Array.from(
-      resultsElement?.querySelectorAll<HTMLElement>('[data-search-result]') ?? [],
-    ).find(element => element.dataset.searchResult === result.id)
-    if (!row) return
-    await Promise.allSettled(row.getAnimations().map(animation => animation.finished))
-    if (selected?.id === result.id && !accepted) centreResult(row)
-  })
 }
 /** Accept only an explicit location action; name linking belongs to Profile.
  * @param result Source row.
