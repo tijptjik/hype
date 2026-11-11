@@ -17,6 +17,22 @@ beforeEach(() => {
 })
 
 describe('header context reloads', () => {
+  it('retains the resource title through pending sidebar switches until the next name resolves', async () => {
+    const { HeaderCtrl } = await import('#lib/context/header.svelte.js')
+    const header = new HeaderCtrl()
+    expect(header.resolveEntityTitle(undefined, 'Organisation')).toBe('Organisation')
+    header.state.meta.title = 'Hong Kong Ghost Signs'
+    for (const pending of [undefined, null, '']) {
+      header.state.meta.title = header.resolveEntityTitle(pending, 'Organisation')
+      expect(header.state.meta.title).toBe('Hong Kong Ghost Signs')
+    }
+    header.state.meta.title = header.resolveEntityTitle('City Recorder', 'Organisation')
+    expect(header.state.meta.title).toBe('City Recorder')
+    expect(header.resolveEntityTitle(undefined, 'Organisation')).toBe('City Recorder')
+    header.clearMeta()
+    expect(header.resolveEntityTitle(undefined, 'Organisation')).toBe('Organisation')
+  })
+
   it('resolves the mounted header after a page consumer reloads', async () => {
     const provider = await import('#lib/context/header.svelte.js')
     const header = provider.setHeaderCtrl()

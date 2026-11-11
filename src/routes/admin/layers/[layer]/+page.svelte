@@ -1361,8 +1361,10 @@ $effect(() => {
 $effect(() => {
   const title =
     (isNewLayerRef ? `${NEW_TITLE} ${m.maps__layers()}` : undefined) ??
-    layer?.data?.i18n?.[getLocaleKey()]?.name ??
-    m.maps__layers()
+    headerCtrl.resolveEntityTitle(
+      layer?.data?.i18n?.[getLocaleKey()]?.name,
+      m.maps__layers(),
+    )
   const displayFacets = resolveOptimisticHeaderFacets(
     isCurrentRefSettled,
     headerFacetTabsWithIssues,

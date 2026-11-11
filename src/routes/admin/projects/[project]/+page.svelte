@@ -2701,9 +2701,11 @@ $effect(() => {
 $effect(() => {
   const title =
     (isNewProjectRef ? `${NEW_TITLE} ${m.deft_mealy_ant_vent()}` : undefined) ??
-    optimisticProjectData?.i18n?.[getLocaleKey()]?.name ??
-    optimisticProjectData?.code ??
-    m.deft_mealy_ant_vent()
+    headerCtrl.resolveEntityTitle(
+      optimisticProjectData?.i18n?.[getLocaleKey()]?.name ??
+        optimisticProjectData?.code,
+      m.deft_mealy_ant_vent(),
+    )
   const displayFacets = resolveOptimisticHeaderFacets(
     isHeaderTransitionSettled,
     resolvedFacetTabsWithIssues,

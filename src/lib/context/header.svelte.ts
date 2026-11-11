@@ -307,6 +307,17 @@ export class HeaderCtrl {
   }
 
   /**
+   * Keep the displayed name until a subsequent entity's name is available.
+   * @param title Resolved entity name, or an empty value while loading.
+   * @param fallback Label used when no previous title is available.
+   * @returns The resolved name or the retained display title.
+   * @remarks Retains presentation only; route identity and actions remain route-owned.
+   */
+  resolveEntityTitle(title: string | null | undefined, fallback: string): string {
+    return title || untrack(() => this.state.meta.title) || fallback
+  }
+
+  /**
    * Configure header for entity/detail routes.
    * @param title - Header title.
    * @param icon - Header icon component.

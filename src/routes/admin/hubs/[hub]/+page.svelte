@@ -1527,9 +1527,10 @@ $effect(() => {
 $effect(() => {
   const title =
     (isNewHubRef ? `${NEW_TITLE} ${m.hub__title()}` : undefined) ??
-    hub?.data?.i18n?.[getLocaleKey()]?.name ??
-    hub?.data?.code ??
-    m.hub__title()
+    headerCtrl.resolveEntityTitle(
+      hub?.data?.i18n?.[getLocaleKey()]?.name ?? hub?.data?.code,
+      m.hub__title(),
+    )
   const displayFacets = resolveOptimisticHeaderFacets(
     isCurrentRefSettled,
     resolvedFacetTabsWithIssues,

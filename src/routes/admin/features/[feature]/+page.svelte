@@ -2295,7 +2295,9 @@ const title = $derived(
     ? 'New Feature'
     : currentFeatureData.i18n?.[localeKey]?.title ||
         feature?.data?.i18n?.[localeKey]?.title ||
-        (isNewFeatureRef ? NEW_TITLE : m.resource_loading()),
+        (isNewFeatureRef
+          ? NEW_TITLE
+          : headerCtrl.resolveEntityTitle(undefined, m.resource_loading())),
 )
 
 // Parent records own policy. The Feature's tiny read projection covers the first editable frame.

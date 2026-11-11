@@ -23,7 +23,8 @@ vi.mock('#lib/context/admin.svelte.js', () => ({
 vi.mock('#lib/context/header.svelte.js', () => ({
   getEntityVisibility: () => ({ showFacets: true, showFilter: false }),
   getHeaderCtrl: () => ({
-    state: { meta: { facets: mocks.facets } },
+    state: { meta: { facets: mocks.facets, title: 'Hong Kong Ghost Signs' } },
+    resolveEntityTitle: (title: string) => title || 'Hong Kong Ghost Signs',
     setSearch: mocks.search,
     setViewActions: mocks.actions,
     setHeaderForEntity: mocks.entity,
@@ -122,6 +123,16 @@ it('registers top-header search, keeps it through owner loading, and clears it o
   page.unmount()
   expect(mocks.search).toHaveBeenLastCalledWith(null)
   expect(mocks.actions).toHaveBeenLastCalledWith([])
+})
+
+it('retains the resource name while changelog data is pending', async () => {
+  mocks.query.mockImplementationOnce(() => new Promise(() => {}))
+  render(AdminResourceChangelog, {
+    props: { resource: 'organisation', resourceRef: 'ghost-signs' },
+    context: new Map([[Symbol.for('hype.context.responsive'), new ResponsiveCtx()]]),
+  })
+  await vi.waitFor(() => expect(mocks.entity).toHaveBeenCalled())
+  expect(mocks.entity.mock.calls.at(-1)?.[0]).toBe('Hong Kong Ghost Signs')
 })
 
 it('retains the available Users action when entering descendant history', async () => {

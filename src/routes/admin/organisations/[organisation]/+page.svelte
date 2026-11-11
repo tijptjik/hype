@@ -1393,9 +1393,11 @@ $effect(() => {
 $effect(() => {
   const title =
     (isNewOrganisationRef ? `${NEW_TITLE} ${m.any_small_midge_aim()}` : undefined) ??
-    optimisticOrganisationData?.i18n?.[getLocaleKey()]?.name ??
-    optimisticOrganisationData?.code ??
-    m.any_small_midge_aim()
+    headerCtrl.resolveEntityTitle(
+      optimisticOrganisationData?.i18n?.[getLocaleKey()]?.name ??
+        optimisticOrganisationData?.code,
+      m.any_small_midge_aim(),
+    )
   // A scope toggle keeps the same navigation while the organisation profile reloads.
   const returningFromChangelog =
     historyScopeReturnPath === `${page.url.pathname}/changelog`

@@ -163,13 +163,18 @@ $effect(() => {
       : getAdminFacetTabsForResource(FirstClassResource[resource]),
   )
   facets.set('changelog', { label: 'Changelog', icon: HistoryIcon })
-  headerCtrl.setHeaderForEntity(ownerName || resourceRef, icons[resource], facets, {
-    showFilter: true,
-    showViewActions: true,
-    showFormActions: false,
-    showControlBarToggle: false,
-    showLayoutToggle: false,
-  })
+  headerCtrl.setHeaderForEntity(
+    headerCtrl.resolveEntityTitle(ownerName, resourceRef),
+    icons[resource],
+    facets,
+    {
+      showFilter: true,
+      showViewActions: true,
+      showFormActions: false,
+      showControlBarToggle: false,
+      showLayoutToggle: false,
+    },
+  )
   headerCtrl.setFacets(facets, { active: 'changelog', onFacetChange: selectFacet })
   headerCtrl.setTitleMenuItems([])
   headerCtrl.clearFormActions()
