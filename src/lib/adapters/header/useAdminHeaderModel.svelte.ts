@@ -30,7 +30,6 @@ import Trash2 from 'virtual:icons/proicons/delete'
 import ClockIcon from 'virtual:icons/lucide/clock'
 import RefreshIcon from 'virtual:icons/proicons/arrow-sync'
 import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
-import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 import Undo2 from 'virtual:icons/proicons/arrow-undo'
 import X from 'virtual:icons/proicons/cancel'
 // ENUMS
@@ -921,9 +920,9 @@ export function useAdminHeaderModel(
       { id: 'history-refresh', text: 'Refresh', icon: RefreshIcon },
       {
         id: 'history-expand',
-        text: isChangelog ? 'Expand all' : 'Collapse all',
-        icon: isChangelog ? ExpandIcon : CollapseIcon,
-        attrs: { 'aria-expanded': !isChangelog },
+        text: 'Expand all',
+        icon: ExpandIcon,
+        attrs: { 'aria-expanded': false },
       },
     ].map(slot => {
       // Outgoing route controls must not override the destination's loading state.

@@ -34,6 +34,25 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
+it('keeps every revision collapsed on initial load and after returning to history', async () => {
+  query.mockResolvedValue({
+    available: true,
+    entries: [entry, { ...entry, id: 'older', reason: 'Earlier correction' }],
+    nextCursor: null,
+  })
+  for (let visit = 0; visit < 2; visit++) {
+    const view = render(OrganisationHistory, { organisationId: 'o' })
+    await screen.findByText('Earlier correction')
+    const disclosures = screen.getAllByRole('button', { name: '1 changed field' })
+    expect(disclosures).toHaveLength(2)
+    for (const disclosure of disclosures)
+      expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+    await fireEvent.click(disclosures[0])
+    expect(disclosures[0].getAttribute('aria-expanded')).toBe('true')
+    view.unmount()
+  }
+})
+
 it('shows comparisons, loads older entries and clears evidence after access failure', async () => {
   query
     .mockResolvedValueOnce({ available: true, entries: [entry], nextCursor: 5 })
@@ -96,11 +115,13 @@ it('ignores an old request after switching organisation', async () => {
   expect(screen.queryByText('Translation corrected')).toBeNull()
 })
 
-it('opens the latest comparison, exposes elapsed time and toggles individual changes', async () => {
+it('starts collapsed, exposes elapsed time and toggles individual changes', async () => {
   query.mockResolvedValueOnce({ available: true, entries: [entry], nextCursor: null })
   render(OrganisationHistory, { organisationId: 'o' })
   await screen.findByText('2 hours since previous version')
   const disclosure = screen.getByRole('button', { name: /1 changed field/ })
+  expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+  await fireEvent.click(disclosure)
   expect(disclosure.getAttribute('aria-expanded')).toBe('true')
   expect(screen.getByText('Old name').closest('[hidden]')).toBeNull()
   expect(screen.getByText(/ago|in .*hours/).getAttribute('datetime')).toBe(
@@ -158,7 +179,7 @@ it('shows translated resource names together in a locale table', async () => {
     ],
   })
   render(OrganisationHistory, { organisationId: 'org' })
-  expect(await screen.findByRole('button', { name: '1 changed field' })).toBeTruthy()
+  await fireEvent.click(await screen.findByRole('button', { name: '1 changed field' }))
   expect(screen.getAllByRole('table')).toHaveLength(1)
   expect(screen.getByRole('rowheader', { name: 'en' })).toBeTruthy()
   expect(screen.getByRole('rowheader', { name: 'zh-Hant' })).toBeTruthy()
