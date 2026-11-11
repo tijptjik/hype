@@ -4384,7 +4384,7 @@ async function refreshLocationSource(): Promise<void> {
       style: `--feature-preview-height:${visualSectionHeight}px;--feature-draft-offset:${setupPending ? setupProgressHeight : 0}px`,
     }}
     isReady={isNewFeatureRef || Boolean(currentFeatureId)}
-    class={`${FEATURE_EDITOR_FORM_CLASS} relative ${setupPending ? 'flex h-full min-h-0 flex-col overflow-hidden' : ''}`}
+    class={`${FEATURE_EDITOR_FORM_CLASS} relative h-full min-h-0 ${setupPending ? 'flex flex-col overflow-hidden' : ''}`}
   >
     {#snippet fallback()}
       <div
