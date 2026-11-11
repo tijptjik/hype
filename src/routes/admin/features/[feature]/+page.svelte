@@ -258,6 +258,7 @@ import {
 import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
 import FeatureIcon from 'virtual:icons/proicons/location'
+import FeatureTypeIcon from '#lib/bits/custom/icon/FeatureTypeIcon.svelte'
 import AddFeatureIcon from 'virtual:icons/proicons/add'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
@@ -4812,7 +4813,18 @@ async function refreshLocationSource(): Promise<void> {
                     />
                   {/snippet}
                   {#snippet toolbarMessage()}
-                    <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+                    <div class="flex min-w-0 items-center gap-3">
+                      {#if !isNewFeatureRef && currentFeatureData.featureType}
+                        <span
+                          class="text-muted-foreground inline-flex min-h-8 items-center gap-2 text-xs"
+                          data-feature-type
+                        >
+                          <FeatureTypeIcon class="size-5" aria-hidden="true" />
+                          <span>{currentFeatureData.featureType}</span>
+                        </span>
+                      {/if}
+                      <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+                    </div>
                   {/snippet}
                   {#snippet children(field, locale, onEditStart, prefix)}
                     {@const key = contentFormKey(locale)}
