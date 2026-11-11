@@ -397,6 +397,13 @@
     @apply bg-accent text-accent-content;
   }
 
+  .bits-theme[data-admin-shell] {
+    /* Keep one canvas behind the header, side panels, and deferred main entrance. */
+    background-color: var(--color-canvas);
+    background-image: var(--admin-background);
+    @apply bg-fixed;
+  }
+
   .bits-theme .bits-admin-shell {
     @apply flex h-full min-h-0 w-full min-w-0 overflow-hidden drag-none;
     -webkit-user-drag: none;
@@ -408,9 +415,7 @@
     --form-control-edit-fill: var(--color-canvas);
     --form-control-border: var(--color-border);
     --form-label: var(--color-muted-foreground);
-    background-color: var(--color-canvas);
-    background-image: var(--admin-background);
-    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-fixed;
+    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden;
     container-type: inline-size;
     container-name: bits-admin-shell-main;
   }

@@ -1,4 +1,8 @@
 <script lang="ts">
+// SVELTE
+import { fade, fly } from 'svelte/transition'
+import { cubicInOut } from 'svelte/easing'
+import { prefersReducedMotion } from 'svelte/motion'
 // SVELTEKIT
 import { page } from '$app/state'
 import { onNavigate } from '$app/navigation'
@@ -39,6 +43,7 @@ onNavigate(({ from, to }) => {
 })
 
 let mainElement = $state<HTMLElement | null>(null)
+let mainEntered = $state(false)
 let contentStart = $state<number | undefined>(undefined)
 
 // Follow sidebar resizing so desktop tabs share the main panel's content gutter.
@@ -64,14 +69,28 @@ const footerConfig = $derived(headerProps.footer ?? null)
 
 <MinWidthGuard {minWidth} {title} {description} {widthLabel} {icon}>
   {#if isReady}
-    <div class="bits-theme relative flex h-full min-h-0 w-full min-w-0 overflow-hidden">
+    <div
+      data-admin-shell
+      class="bits-theme relative flex h-full min-h-0 w-full min-w-0 overflow-hidden"
+    >
       <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <Header
-          {...resolvedHeaderProps as HeaderProps}
-          class={[headerProps.class, 'shrink-0 border-b border-border']
-            .filter(Boolean)
-            .join(' ')}
-        />
+        <!-- Reserve the full header height while its surface slides into place. -->
+        <div
+          class="relative z-10 shrink-0"
+          in:fly|global={{
+            y: '-100%',
+            opacity: 1,
+            duration: prefersReducedMotion.current ? 0 : 500,
+            easing: cubicInOut,
+          }}
+        >
+          <Header
+            {...resolvedHeaderProps as HeaderProps}
+            class={[headerProps.class, 'shrink-0 border-b border-border']
+              .filter(Boolean)
+              .join(' ')}
+          />
+        </div>
         <div class="bits-admin-shell flex-1">
           <AutoHide
             enabled={isPrimaryPanelAutoHide}
@@ -82,7 +101,18 @@ const footerConfig = $derived(headerProps.footer ?? null)
             {@render sidebar()}
           </AutoHide>
 
-          <main bind:this={mainElement} class="bits-admin-shell__main">
+          <!-- Mount and measure content immediately, but reveal it after the panels settle. -->
+          <main
+            bind:this={mainElement}
+            class="bits-admin-shell__main"
+            inert={!mainEntered}
+            in:fade|global={{
+              delay: prefersReducedMotion.current ? 0 : 500,
+              duration: prefersReducedMotion.current ? 0 : 200,
+            }}
+            onintrostart={() => (mainEntered = false)}
+            onintroend={() => (mainEntered = true)}
+          >
             {#if isContentReady}
               <HeaderControlBar controlBar={headerProps.controlBar} />
               <RouteViewport bind:this={routeViewport} routeKey={page.url.pathname}>
