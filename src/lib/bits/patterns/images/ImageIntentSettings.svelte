@@ -20,6 +20,7 @@ import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import { SimpleTooltip } from '#lib/bits/core/index.js'
 import Button from '#lib/bits/core/button/Button.svelte'
 import Switch from '#lib/bits/custom/switch/Switch.svelte'
+import * as Card from '#lib/bits/custom/card/index.js'
 import ChoiceDialog from '#lib/bits/core/dialog/ChoiceDialog.svelte'
 // DOMAIN
 import { DEFAULT_IMAGE_INTENTS, IMAGE_INTENT_ROLES } from '#lib/images/intents.js'
@@ -251,48 +252,73 @@ $effect(() => {
   </SectionHeader>
   <div class="flex min-w-0 flex-col gap-5 p-6">
     {#if scopeType === 'project'}
-      <label
-        for={`automatic-${scopeId}`}
-        class="border-border flex items-center justify-between gap-4 rounded-md border p-3"
+      <div
+        class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-x-8 gap-y-3"
       >
-        <span class="text-sm"
-          >Automatically publish all unclassified images<span
-            class="text-muted-foreground mt-1 block text-xs"
-            >New uploads are assigned to
-            {intents.find(intent => intent.id === 'general')?.label ?? 'General'}.
-            Contributor photos still require approval.</span
-          ></span
+        <Card.Root
+          size="md"
+          class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
         >
-        <Switch
-          id={`automatic-${scopeId}`}
-          checked={automatic}
-          disabled={locked}
-          onCheckedChange={value => {
-            automatic = value === true
-            changed = true
-          }}
-        />
-      </label>
-      <label
-        for={`inherit-${scopeId}`}
-        class="border-border flex items-center justify-between gap-4 rounded-md border p-3"
-      >
-        <span class="text-sm"
-          >Inherit from Hub<span class="text-muted-foreground mt-1 block text-xs"
-            >Turn off to customise a copy for this Project.</span
-          ></span
+          <label
+            for={`automatic-${scopeId}`}
+            class="flex min-w-0 flex-1 flex-col justify-center px-5 py-3 text-sm font-semibold"
+          >
+            <span>Automatically publish all unclassified images</span>
+            <span class="text-muted-foreground mt-1 block text-xs font-normal">
+              New uploads are assigned to
+              {intents.find(intent => intent.id === 'general')?.label ?? 'General'}.
+              Contributor photos still require approval.
+            </span>
+          </label>
+          <Card.Actions
+            padding="md"
+            bg="none"
+            class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
+          >
+            <Switch
+              id={`automatic-${scopeId}`}
+              size="sm"
+              checked={automatic}
+              disabled={locked}
+              onCheckedChange={value => {
+                automatic = value === true
+                changed = true
+              }}
+            />
+          </Card.Actions>
+        </Card.Root>
+        <Card.Root
+          size="md"
+          class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
         >
-        <Switch
-          id={`inherit-${scopeId}`}
-          checked={inherited}
-          disabled={locked}
-          onCheckedChange={value => {
-            inherited = value === true
-            if (value) intents = structuredClone(inheritedIntents)
-            changed = true
-          }}
-        />
-      </label>
+          <label
+            for={`inherit-${scopeId}`}
+            class="flex min-w-0 flex-1 flex-col justify-center px-5 py-3 text-sm font-semibold"
+          >
+            <span>Inherit from Hub</span>
+            <span class="text-muted-foreground mt-1 block text-xs font-normal">
+              Turn off to customise a copy for this Project.
+            </span>
+          </label>
+          <Card.Actions
+            padding="md"
+            bg="none"
+            class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
+          >
+            <Switch
+              id={`inherit-${scopeId}`}
+              size="sm"
+              checked={inherited}
+              disabled={locked}
+              onCheckedChange={value => {
+                inherited = value === true
+                if (value) intents = structuredClone(inheritedIntents)
+                changed = true
+              }}
+            />
+          </Card.Actions>
+        </Card.Root>
+      </div>
     {/if}
     <!-- The pending catalogue shares the loaded row grid, including mobile action rows. -->
     <ol
