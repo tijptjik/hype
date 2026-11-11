@@ -4,7 +4,7 @@ import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
 import PublishUnclassifiedImagesDialog from '#lib/bits/patterns/images/PublishUnclassifiedImagesDialog.svelte'
 // SVELTE
-import { page } from '$app/state'
+import { navigating, page } from '$app/state'
 import { untrack } from 'svelte'
 // THIRD-PARTY
 import { toast } from 'svelte-sonner'
@@ -194,6 +194,8 @@ import type { ImagePresentation } from '#lib/images/presentation.js'
 const adminCtx = getAdminCtx()
 
 const headerCtrl = getHeaderCtrl()
+// Capture the route handoff before SvelteKit clears its navigation state.
+const historyScopeReturnPath = untrack(() => navigating.from?.url.pathname)
 
 // § Config
 
@@ -1394,11 +1396,19 @@ $effect(() => {
     optimisticOrganisationData?.i18n?.[getLocaleKey()]?.name ??
     optimisticOrganisationData?.code ??
     m.any_small_midge_aim()
-  const displayFacets = resolveOptimisticHeaderFacets(
-    isCurrentRefSettled,
-    resolvedFacetTabsWithIssues,
-    optimisticHeaderState,
-  )
+  // A scope toggle keeps the same navigation while the organisation profile reloads.
+  const returningFromChangelog =
+    historyScopeReturnPath === `${page.url.pathname}/changelog`
+  const displayFacets =
+    returningFromChangelog &&
+    !isCurrentRefSettled &&
+    optimisticHeaderState.facets.length > 0
+      ? optimisticHeaderState.facets.filter(facet => facet.ref !== 'changelog')
+      : resolveOptimisticHeaderFacets(
+          isCurrentRefSettled,
+          resolvedFacetTabsWithIssues,
+          optimisticHeaderState,
+        )
   const facetKey = Array.isArray(displayFacets)
     ? displayFacets
         .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
