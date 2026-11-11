@@ -16,7 +16,8 @@ import { and, eq, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
 import { location as locationTable, locationRevision } from '../schema/location'
-import { locationMembership } from '../schema/locationRelationships'
+import { canOperateIn } from '#lib/features/locationPolicy.js'
+import { locationOccupancy, locationMembership } from '../schema/locationRelationships'
 // SHARED PARSER
 import { parseAddressContent } from '@saanseoi/address'
 // VALIDATION
@@ -116,6 +117,16 @@ export async function createLocalLocation(
       if (!parent) throw new Error('Building or parent part unavailable')
     }
   }
+  // Operating relationships are explicit, scoped host identities, never inferred from copied text.
+  if (parsed.operatesInLocationId) {
+    const host = await db.get<{
+      matchingType: string
+    }>(sql`SELECT matchingType FROM location
+      WHERE id=${parsed.operatesInLocationId} AND state!='redirect'
+      AND (state!='manual' OR (${parsed.state}='manual' AND ownerOrganisationId=${organisationId}))`)
+    if (!host || !canOperateIn(parsed.kind, host.matchingType))
+      throw new Error('Operating host unavailable or incompatible')
+  }
   const rawSource = {
     kind: verified ? 'building-export-baseline' : 'local-baseline',
     ...(verified ? { buildingSource: verified.buildingSource } : {}),
@@ -179,6 +190,26 @@ export async function createLocalLocation(
       ${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(parsed.facts, parsed.kind)},
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE EXISTS(SELECT 1 FROM location WHERE id=${locationId})`),
     ...memberships,
+    ...(parsed.operatesInLocationId
+      ? (() => {
+          const id = nanoid(12)
+          return [
+            db.insert(locationOccupancy).values({
+              id,
+              relationshipId: id,
+              previousRevisionId: null,
+              scopeOrganisationId: parsed.state === 'manual' ? organisationId : null,
+              assertionState: 'asserted',
+              evidence: [],
+              provenance: { process: 'operating-location-authoring' },
+              actorId,
+              establishmentLocationId: locationId,
+              containerLocationId: parsed.operatesInLocationId,
+              occupancyState: 'current',
+            }),
+          ]
+        })()
+      : []),
   ])
   if (!result[0].length) throw new Error('Successor Location unavailable')
   return { locationId, revisionId }

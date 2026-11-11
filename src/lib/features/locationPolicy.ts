@@ -71,6 +71,18 @@ export function targetSuggestionKinds(context: TargetContext): TargetContext[] {
     : targetLocationKinds(context)
 }
 
+/** Identify an optional operating relationship independently of copied address data.
+ * @param kind New location kind. @param host Existing host kind.
+ * @returns Whether an explicit Operates in relationship is supported.
+ */
+export function canOperateIn(kind: string, host: string): boolean {
+  return (
+    (kind === 'establishment' || kind === 'service_point') &&
+    (['premises', 'building', 'building_part', 'structure'].includes(host) ||
+      (kind === 'service_point' && host === 'establishment'))
+  )
+}
+
 const localizedCase = z.strictObject({
   true: z.string().max(200),
   false: z.string().max(200),

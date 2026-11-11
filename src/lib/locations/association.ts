@@ -44,6 +44,7 @@ export const AddressAssociationSchema = z.strictObject({
   targetId: z.string().optional(),
   buildingId: z.string().min(1).max(200).optional(),
   parentPartId: z.string().min(1).max(200).optional(),
+  operatesInLocationId: z.string().trim().min(1).max(200).optional(),
   // Both immutable publications survive component choices; no mixed source identity is invented.
   originalSource: LocationFactsSchema.shape.location.shape.address.optional(),
   matchedSource: LocationFactsSchema.shape.location.shape.address.optional(),

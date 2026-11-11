@@ -384,3 +384,96 @@ it('normalizes existing address identities without changing their IDs', () => {
     })),
   )
 })
+
+it('creates an explicit service-point operating relationship without linking the host identity', async () => {
+  const { sqlite, db } = setup()
+  sqlite.exec(
+    readFileSync('migrations/0222_location_operating_relationships.sql', 'utf8'),
+  )
+  const input = {
+    state: 'unresolved',
+    kind: 'service_point',
+    operatesInLocationId: 'shop',
+    facts: {
+      names: { en: 'Recycling point' },
+      brands: [],
+      phoneNumber: [],
+      location: {
+        geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+        address: {
+          status: 'unresolved',
+          address2dId: null,
+          address3dId: null,
+          address3dUnitId: null,
+          snapshotId: null,
+          rawSource: {},
+          fallbackDisplay: {},
+        },
+      },
+    },
+  }
+  const created = await createLocalLocation(db, 'p', input, 'actor')
+  expect(created.locationId).not.toBe('shop')
+  const relation = sqlite
+    .prepare(
+      'SELECT establishmentLocationId,containerLocationId,occupancyState,verifiedAt FROM locationOccupancy',
+    )
+    .get()
+  expect(relation).toEqual({
+    establishmentLocationId: created.locationId,
+    containerLocationId: 'shop',
+    occupancyState: 'current',
+    verifiedAt: null,
+  })
+  expect(() =>
+    sqlite.exec("UPDATE location SET kind='built', class='building' WHERE id='shop'"),
+  ).not.toThrow()
+  expect(() =>
+    sqlite.exec(
+      "UPDATE location SET kind='geographic', class='landform' WHERE id='shop'",
+    ),
+  ).toThrow()
+  await expect(
+    createLocalLocation(db, 'p', { ...input, operatesInLocationId: 'nature' }, 'actor'),
+  ).rejects.toThrow('Operating host')
+  await expect(
+    createLocalLocation(db, 'p', { ...input, kind: 'building' }, 'actor'),
+  ).rejects.toThrow()
+  expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+})
+
+it('copying starting data alone creates no operating relationship', async () => {
+  const { sqlite, db } = setup()
+  sqlite.exec(
+    readFileSync('migrations/0222_location_operating_relationships.sql', 'utf8'),
+  )
+  await createLocalLocation(
+    db,
+    'p',
+    {
+      state: 'unresolved',
+      kind: 'service_point',
+      facts: {
+        names: { en: 'Independent point' },
+        brands: [],
+        phoneNumber: [],
+        location: {
+          geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+          address: {
+            status: 'unresolved',
+            address2dId: null,
+            address3dId: null,
+            address3dUnitId: null,
+            snapshotId: null,
+            rawSource: {},
+            fallbackDisplay: {},
+          },
+        },
+      },
+    },
+    'actor',
+  )
+  expect(sqlite.prepare('SELECT count(*) AS n FROM locationOccupancy').get()).toEqual({
+    n: 0,
+  })
+})

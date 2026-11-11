@@ -73,6 +73,7 @@ export function localIdentityFromAddress(
   const content = localAddressContent(address)
   return LocalLocationInputSchema.parse({
     kind,
+    operatesInLocationId: address.association?.operatesInLocationId,
     ...(kind === 'building_part'
       ? {
           buildingId: address.association?.buildingId,

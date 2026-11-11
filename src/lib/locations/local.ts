@@ -44,6 +44,7 @@ export const LocalLocationInputSchema = z
       .optional(),
     buildingId: z.string().trim().min(1).max(200).optional(),
     parentPartId: z.string().trim().min(1).max(200).optional(),
+    operatesInLocationId: z.string().trim().min(1).max(200).optional(),
     // Consent is independent of source matching state and Organisation visibility.
     sharingPreference: z.enum(['private', 'allow-sharing']).default('private'),
     parseSource: z.record(z.string().max(35), z.string().max(10000)).optional(),
@@ -145,6 +146,15 @@ export const LocalLocationInputSchema = z
         path: ['buildingId'],
         message:
           'Building parts require an owning building; other kinds cannot claim part membership',
+      })
+    if (
+      input.operatesInLocationId &&
+      !['establishment', 'service_point'].includes(input.kind)
+    )
+      context.addIssue({
+        code: 'custom',
+        path: ['operatesInLocationId'],
+        message: 'Only operational locations can operate in a host',
       })
     try {
       input.kind = classifyLocationFactsKind(input.kind, input.facts)

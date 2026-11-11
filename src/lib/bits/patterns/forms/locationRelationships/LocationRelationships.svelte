@@ -1,4 +1,5 @@
 <script lang="ts">
+import { canOperateIn } from '#lib/features/locationPolicy.js'
 // API
 import {
   saveLocationRelationship,
@@ -43,7 +44,7 @@ const targets = $derived(
       })
     : null,
 )
-const canOccupy = $derived(kind === 'establishment')
+const canOccupy = $derived(kind === 'establishment' || kind === 'service_point')
 const canContain = $derived(
   kind === 'building' || kind === 'building_part' || kind === 'premises',
 )
@@ -154,10 +155,10 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
   class="border-border space-y-4 border-t pt-6"
   aria-label="Location relationships"
 >
-  <h3 class="text-base font-semibold">Buildings, complexes and occupants</h3>
+  <h3 class="text-base font-semibold">Physical membership and operating locations</h3>
   <p class="text-muted-foreground text-sm">
-    Verified occupancy changes are checked against each Feature’s relocation policy.
-    Features either stay here, wait for review, or follow when their address and
+    Verified operating-location changes are checked against each Feature’s relocation
+    policy. Features either stay here, wait for review, or follow when their address and
     directions need no review.
   </p>
   {#key locationId + ':' + organisationId + ':' + refreshVersion}
@@ -176,10 +177,10 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
   {#if canEdit && (canOccupy || canContain)}
     <details class="space-y-3">
       <summary class="cursor-pointer text-sm font-medium">
-        {canOccupy ? 'Record an occupancy episode' : 'Add to complex'}
+        {canOccupy ? 'Record an operating period' : 'Add to complex'}
       </summary>
       <label class="block text-sm"
-        >{canOccupy ? 'Building or complex' : 'Containing complex'}
+        >{canOccupy ? 'Operates in' : 'Containing complex'}
         <input
           class="border-border bg-background mt-1 w-full rounded border p-2"
           bind:value={search}
@@ -197,11 +198,11 @@ async function save(previous?: Record<string, unknown>, suppress = false) {
             {#each matches.data.filter(
               item =>
                 item.id !== locationId &&
-                (kind === 'building_part'
-                  ? item.kind === 'building_part'
-                  : item.kind === 'premises' ||
-                    (canOccupy &&
-                      (item.kind === 'building' || item.kind === 'building_part'))),
+                (canOccupy
+                  ? canOperateIn(kind, item.kind)
+                  : kind === 'building_part'
+                    ? item.kind === 'building_part'
+                    : item.kind === 'premises'),
             ) as item}
               <option value={item.id}>{item.facts?.names.en ?? item.id}</option>
             {/each}
