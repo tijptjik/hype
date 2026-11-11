@@ -220,3 +220,24 @@ export const setOrganisationTemplateDefault = guardedCommand(
     return { version: input.version + 1 }
   },
 )
+
+/** List a bounded, stable page of accepted consumers before explicit regeneration.
+ * @param input Organisation, template identity and last inspected Feature ID.
+ * @returns At most twenty consumers with accepted revision fences and current names.
+ * @remarks Only this Organisation's active identities are returned, including archived Features.
+ * Consumers keep accepted Location pins; listing does not adopt any upstream or community update.
+ */
+export const getDisplayTemplateConsumers = guardedQuery(
+  z.strictObject({
+    organisationId: z.string().min(1),
+    templateId: z.string().min(1),
+    after: z.string().nullable(),
+  }),
+  async (input, ctx) => {
+    await authorizeTemplateScope(ctx, input.organisationId)
+    const { readDisplayTemplateConsumers } = await import(
+      '#lib/db/services/displayTemplateConsumers.js'
+    )
+    return readDisplayTemplateConsumers(ctx.db, input)
+  },
+)

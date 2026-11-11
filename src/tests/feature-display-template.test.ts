@@ -213,3 +213,48 @@ it('materializes the inherited central template inside new Feature creation', as
   ).toEqual({ title: '[New bakery]', baseName: 'New bakery' })
   expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
 })
+
+it('rejects a stale inspected consumer before template regeneration', async () => {
+  const f = await fixture()
+  await edit(f, content => {
+    content.profile.nameTemplate = {
+      rule: {
+        base: 'feature',
+        conditions: [],
+        registry: { id: 'central', version: 1 },
+      },
+    }
+    return content
+  })
+  const { readDisplayTemplateConsumers } = await import(
+    '../lib/db/services/displayTemplateConsumers'
+  )
+  const page = await readDisplayTemplateConsumers(f.db, {
+    organisationId: 'org',
+    templateId: 'central',
+    after: null,
+  })
+  const inspected = page.consumers[0]
+  expect(inspected.featureId).toBe('f')
+  await edit(f, content => {
+    content.translations.en.title.value = 'New author value'
+    return content
+  })
+  expect(
+    await saveFeatureEdit(f.db, {
+      featureId: inspected.featureId,
+      actorId: 'author',
+      guard: sql`organisationId='org'`,
+      expectedRevisionId: inspected.revisionId,
+      expectedVersion: inspected.version,
+      revisionBoundary: true,
+      derive: content => content,
+      validate: () => [],
+    }),
+  ).toBeNull()
+  expect(
+    f.sqlite
+      .prepare("SELECT title FROM featureI18n WHERE featureId='f' AND locale='en'")
+      .get(),
+  ).toEqual({ title: '[New author value]' })
+})

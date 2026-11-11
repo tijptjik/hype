@@ -15,6 +15,7 @@ import {
 } from '#lib/api/displayTemplates.remote.js'
 import { getFeatureNameProperties } from '#lib/api/featureIntents.remote.js'
 // COMPONENTS
+import TemplateConsumers from '#lib/bits/patterns/forms/displayTemplate/TemplateConsumers.svelte'
 import OrganisationTemplateDefaults from '#lib/bits/patterns/forms/displayTemplate/OrganisationTemplateDefaults.svelte'
 import DisplayTemplateEditor from '#lib/bits/patterns/forms/displayTemplate/DisplayTemplateEditor.svelte'
 import { Button } from '#lib/bits/core/index.js'
@@ -229,7 +230,7 @@ async function save(): Promise<void> {
       </button>
     {/each}
   </aside>
-  <div class="min-w-0 space-y-4">
+  <div class="grid min-w-0 gap-8">
     {#if organisationId && !featureId && !loading}
       <OrganisationTemplateDefaults {organisationId} templates={records} />
     {/if}
@@ -251,6 +252,11 @@ async function save(): Promise<void> {
         disabled={busy}
         onClick={applyTemplate}
       />
+    {/if}
+    {#if selected && organisationId && !featureId}
+      {#key `${organisationId}:${selected.id}:${selected.version}`}
+        <TemplateConsumers {organisationId} template={selected} />
+      {/key}
     {/if}
     {#if draft}
       <fieldset

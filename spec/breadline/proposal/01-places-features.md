@@ -3754,3 +3754,11 @@ existing Profile, Policies and Fields tabs in sequence; generation displays edit
 proposals in the existing controls, and only explicit acceptance fills authored values.
 Readers default to published-language fallback. Opted-in readers can use a current
 requested-language automatic value, with a robot control revealing its original.
+
+Explicit template regeneration (Refs #178) now lists accepted Organisation consumers in
+bounded pages and regenerates each inspected Feature through the existing revision
+transaction. Stale consumers are reported for reload; accepted Location pins and manual
+names remain authoritative. `display-template-consumers.test.ts` covers page boundaries,
+private ownership and retired identities, and `feature-display-template.test.ts`
+verifies stale regeneration cannot overwrite a newer edit. Automatic community-template
+policy adoption remains pending.
