@@ -15,7 +15,11 @@ import AddressDetails from '../formFeatureAddress/AddressDetails.svelte'
 import AddressDivisions from '../formFeatureAddress/AddressDivisions.svelte'
 import LocalAddressParseReview from './LocalAddressParseReview.svelte'
 import LocationRecordDetails from './LocationRecordDetails.svelte'
-import LocationNameFields from './LocationNameFields.svelte'
+import DraftLocationNameFields from '../featureLocation/DraftLocationNameFields.svelte'
+import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
+import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions.js'
+import type { ProfileLocaleState } from '../featureLocation/profileLocales.js'
 import LocationLifecycleFields from './LocationLifecycleFields.svelte'
 import {
   validateLocationStatusKind,
@@ -76,6 +80,16 @@ const editableFacts = $derived(
 )
 let draft = $state<FeatureAddress | null>(null)
 let names = $state<Record<string, string>>({})
+let localeState = $state<ProfileLocaleState>({
+  selectedLocales: normalizeContentLocales([
+    getLocaleKey(),
+    'en',
+    'zh-Hant',
+    'zh-Hans',
+  ]),
+  visibleLocales: normalizeContentLocales([getLocaleKey(), 'en', 'zh-Hant', 'zh-Hans']),
+  expanded: false,
+})
 let lifecycle = $state<LocationLifecycleSummary>({})
 let successorLocationId = $state<string | null>(null)
 let initialLifecycleSignature = $state('')
@@ -452,6 +466,34 @@ const title = $derived(
     place.id,
 )
 
+// Keep every stored language reachable from the shared names/address toolbar.
+const contentLocales = $derived(
+  normalizeContentLocales([
+    ...Object.keys(editing ? names : (place.facts?.names ?? {})),
+    ...Object.keys(address.overrides),
+    ...Object.keys(address.accessHints ?? {}),
+    ...Object.keys(
+      (
+        address.association?.content ??
+        address.canonical?.content ??
+        address.source.canonical?.content ??
+        address.source.authored
+      )?.i18n ?? {},
+    ),
+  ]),
+)
+const selectedLocales = $derived(
+  normalizeContentLocales([...localeState.selectedLocales, ...contentLocales]),
+)
+const editorLocaleState = $derived({
+  ...localeState,
+  selectedLocales,
+  visibleLocales: [
+    ...localeState.visibleLocales,
+    ...selectedLocales.filter(tag => !localeState.selectedLocales.includes(tag)),
+  ],
+})
+
 /** Discard this edit and invalidate outstanding lookup responses.
  * @returns Nothing; accepted Location facts remain unchanged.
  */
@@ -509,7 +551,7 @@ $effect(() => {
     isLoading={busy || lookingUp}
     fixedMap={true}
     hideDetails={true}
-    showLookup={editing}
+    showLookup={false}
     show3dAddressOptions={activeKind !== 'building'}
     onCoordinateChange={moveMarker}
     onCoordinateValidityChange={valid => (coordinateInvalid = !valid)}
@@ -530,6 +572,23 @@ $effect(() => {
         addressMeta={{ address }}
         draggable={editing && !busy}
         onCoordinateChange={moveMarker}
+      />
+    {/snippet}
+    {#snippet toolbarInfo()}
+      <LocaleToolbar
+        horizontal={true}
+        class="max-w-[calc(100vw-8rem)]"
+        {selectedLocales}
+        visibleLocales={editorLocaleState.visibleLocales}
+        expanded={localeState.expanded}
+        options={contentLocaleOptions(getLocaleKey())}
+        allowAdd={editing}
+        disabled={busy}
+        {contentLocales}
+        onExpandedChange={expanded =>
+          (localeState = { ...editorLocaleState, expanded })}
+        onChange={change =>
+          (localeState = { ...change, expanded: localeState.expanded })}
       />
     {/snippet}
     {#snippet locationControl()}
@@ -618,10 +677,20 @@ $effect(() => {
                   }}
                 />
               </div>
-              <LocationNameFields
+              <DraftLocationNameFields
                 {names}
-                disabled={busy}
-                onChange={next => (names = next)}
+                kind={activeKind}
+                localeState={editorLocaleState}
+                translations={localeState.expanded}
+                isEditing={!busy}
+                recordKey={`${place.id}:${correctionScope}`}
+                onChange={next =>
+                  (names = Object.fromEntries(
+                    Object.entries(next).map(([tag, value]) => [
+                      tag.toLowerCase(),
+                      value,
+                    ]),
+                  ))}
               />
               {#if place.canEditShared && correctionScope === 'shared'}
                 <LocationBrandEditor
@@ -716,6 +785,10 @@ $effect(() => {
             {/if}
             <fieldset disabled={busy} class="min-w-0 space-y-6">
               <AddressDetails
+                localeState={editorLocaleState}
+                translations={localeState.expanded}
+                showLocaleToolbar={false}
+                onLocaleStateChange={next => (localeState = next)}
                 suggestionKey={JSON.stringify([place.id, point])}
                 onSuggestStreetNumber={async () =>
                   (await numberMapController?.getStreetNumberAt?.([

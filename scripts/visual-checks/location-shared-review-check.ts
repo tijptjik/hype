@@ -12,7 +12,7 @@ for await (const { name, browser } of browserCases()) {
       errors.push(error.message)
       console.error(error.message)
     })
-    for (const component of ['AddressMap', 'MapPrimitive'])
+    for (const component of ['MapPrimitive'])
       await page.route(`**/${component}.svelte*`, route =>
         route.fulfill({
           contentType: 'application/javascript',
@@ -44,50 +44,60 @@ for await (const { name, browser } of browserCases()) {
       }),
     )
     await page.goto(`${base}/__shared-editor.html?superadmin=${superAdmin}`)
-    await page
-      .getByRole('textbox', { name: /English/ })
-      .first()
-      .waitFor({ timeout: 20000 })
-      .catch(async error => {
-        console.error(await page.locator('body').innerText())
-        throw error
+    const names = page.locator('[data-draft-location-name]')
+    await names
+      .getByRole('button', {
+        name: superAdmin ? 'Hype original name' : 'Original name',
+        exact: true,
       })
+      .waitFor()
     assert.equal(
       await page.getByRole('combobox', { name: 'Correction scope' }).count(),
       superAdmin ? 1 : 0,
     )
+    const multilingual = page.getByRole('button', { name: 'Multilingual', exact: true })
+    assert.equal(await multilingual.count(), 1)
+    assert.equal(
+      await page
+        .locator('[data-address-toolbar-settings]')
+        .getByRole('button', { name: 'Multilingual', exact: true })
+        .count(),
+      1,
+    )
+    assert.equal(await page.locator('[data-location-name-fields]').count(), 0)
+    await multilingual.click()
+    assert.equal(await names.locator('fieldset > div').count(), 3)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.waitForTimeout(250)
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    )
+    await page.screenshot({
+      path: `output/playwright/location-shared/${name}-${superAdmin}-narrow.png`,
+      fullPage: true,
+    })
+    await page.setViewportSize({ width: 1100, height: 1000 })
+    await multilingual.click()
+    await page.waitForTimeout(250)
+    assert.equal(await names.locator('fieldset > div').count(), 1)
     if (superAdmin) {
-      assert.equal(
-        await page
-          .getByRole('textbox', { name: /English/ })
-          .first()
-          .inputValue(),
-        'Hype original name',
-      )
       await page
         .getByRole('combobox', { name: 'Correction scope' })
         .selectOption('organisation')
-      assert.equal(
-        await page
-          .getByRole('textbox', { name: /English/ })
-          .first()
-          .inputValue(),
-        'Original name',
-      )
+      await names.getByRole('button', { name: 'Original name', exact: true }).waitFor()
       await page
         .getByRole('combobox', { name: 'Correction scope' })
         .selectOption('shared')
-      assert.equal(
-        await page
-          .getByRole('textbox', { name: /English/ })
-          .first()
-          .inputValue(),
-        'Hype original name',
-      )
     }
-    await page
-      .getByRole('textbox', { name: /English/ })
-      .first()
+    await names
+      .getByRole('button', {
+        name: superAdmin ? 'Hype original name' : 'Original name',
+        exact: true,
+      })
+      .click()
+    await names
+      .getByRole('textbox', { name: 'Name', exact: true })
       .fill('Verified corrected name')
     await page.screenshot({
       path: `output/playwright/location-shared/${name}-${superAdmin ? 'superadmin' : 'organisation'}-editing.png`,

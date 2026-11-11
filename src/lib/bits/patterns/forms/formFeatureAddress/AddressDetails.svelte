@@ -121,6 +121,7 @@ let {
   address,
   localeState,
   onLocaleStateChange,
+  showLocaleToolbar = true,
   activeBuildingSource,
   activeLocationNames = {},
   isLocationReplacementDraft = false,
@@ -157,6 +158,7 @@ let {
   onChange,
 }: {
   address: FeatureAddress
+  showLocaleToolbar?: boolean
   localeState?: ProfileLocaleState
   onLocaleStateChange?: (state: ProfileLocaleState) => void
   activeBuildingSource?: BuildingSource
@@ -1513,17 +1515,19 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     </h2>
     <div class="flex min-w-0 flex-wrap items-center gap-2">
       {@render identityControls?.()}
-      <LocaleToolbar
-        {selectedLocales}
-        visibleLocales={addressLocaleState.visibleLocales}
-        expanded={translations}
-        options={contentLocaleOptions(getLocaleKey())}
-        allowAdd={isEditing}
-        {contentLocales}
-        onExpandedChange={expanded =>
-          changeLocaleState({ ...addressLocaleState, expanded })}
-        onChange={change => changeLocaleState({ ...change, expanded: translations })}
-      />
+      {#if showLocaleToolbar}
+        <LocaleToolbar
+          {selectedLocales}
+          visibleLocales={addressLocaleState.visibleLocales}
+          expanded={translations}
+          options={contentLocaleOptions(getLocaleKey())}
+          allowAdd={isEditing}
+          {contentLocales}
+          onExpandedChange={expanded =>
+            changeLocaleState({ ...addressLocaleState, expanded })}
+          onChange={change => changeLocaleState({ ...change, expanded: translations })}
+        />
+      {/if}
       {@render identityInfo?.()}
     </div>
   </div>
