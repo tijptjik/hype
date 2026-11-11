@@ -1,5 +1,6 @@
 // TESTING
 import { describe, expect, it, vi } from 'vitest'
+import { SharedCorrectionPatchSchema } from '#lib/locations/sharedCorrection.js'
 // VALIDATION
 import {
   normalizeHongKongPhoneNumber,
@@ -161,4 +162,37 @@ describe('international feature phone numbers', () => {
 it('ignores empty editor rows while retaining invalid-number rejection', () => {
   expect(readPhoneNumbers('["+31613401674", "", "  "]')).toEqual(['+31613401674'])
   expect(readPhoneNumbers('["+31613401674", "invalid"]')).toBeNull()
+})
+
+it('accepts international shared Location phones and rejects malformed numbers', async () => {
+  const db = {
+    query: {
+      property: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { id: 'shared', key: 'phoneNumber', component: 'PhoneField' },
+          ]),
+      },
+    },
+  } as unknown as Database
+  const value = '["+85223753668","+31413379222"]'
+  expect(
+    await validateFeaturePhoneProperties(db, [{ propertyId: 'shared', value }]),
+  ).toMatchObject([{ value }])
+  expect(
+    SharedCorrectionPatchSchema.safeParse({
+      phoneNumber: { mode: 'override', value: JSON.parse(value) },
+    }).success,
+  ).toBe(true)
+  expect(
+    SharedCorrectionPatchSchema.safeParse({
+      phoneNumber: { mode: 'override', value: ['+31413379222x'] },
+    }).success,
+  ).toBe(false)
+  await expect(
+    validateFeaturePhoneProperties(db, [
+      { propertyId: 'shared', value: '+31413379222x' },
+    ]),
+  ).rejects.toThrow()
 })

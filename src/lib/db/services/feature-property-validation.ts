@@ -128,7 +128,11 @@ export async function validateFeaturePhoneProperties<T extends PropertyInput>(
       const value = row.value?.trim() ?? ''
       const numbers = readPhoneNumbers(value)
       const normalized = numbers?.map(number => normalizePhoneNumber(number))
-      if (numbers === null || row.propertyValueId) {
+      if (
+        numbers === null ||
+        normalized?.some(number => !number) ||
+        row.propertyValueId
+      ) {
         throw new Error(m.property__phone_invalid())
       }
       // A phone collection has one canonical ordered value, never locale-specific alternatives.

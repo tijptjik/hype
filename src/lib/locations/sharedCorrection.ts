@@ -1,4 +1,4 @@
-import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
+import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
 // VALIDATION
 import { z } from 'zod'
 import { LocationFactsSchema } from './validation'
@@ -29,10 +29,7 @@ export const SharedCorrectionValuesSchema = LocationFactsSchema.partial().extend
     .array(
       z
         .string()
-        .refine(
-          value => Boolean(normalizeHongKongPhoneNumber(value)),
-          'Invalid phone number',
-        ),
+        .refine(value => Boolean(normalizePhoneNumber(value)), 'Invalid phone number'),
     )
     .optional(),
   websites: WebsitesSchema.optional(),
