@@ -1921,7 +1921,12 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
           {/each}
         </div>
       </fieldset>
-      <div class="flex min-w-0 flex-1 basis-64 items-center justify-center gap-3">
+      {#if findMode === 'pin' && coordinatesControl}
+        <div class="max-w-full min-w-0 shrink-0 overflow-x-auto">
+          {@render coordinatesControl()}
+        </div>
+      {/if}
+      <div class="flex min-w-0 flex-1 basis-64 items-center justify-center gap-2">
         {#if showSearchTypePrompt && !hasSearchTypes}
           <p
             role="status"
@@ -2005,15 +2010,6 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             </button>
           </div>
         {:else if hasPin && coordinates}
-          <button
-            type="button"
-            class="bg-primary min-h-11 shrink-0 rounded-lg px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
-            bind:this={nearbyButton}
-            disabled={loading || !hasSearchTypes}
-            onclick={() => void search(true)}
-          >
-            {m.feature_search_nearby()}
-          </button>
           <div
             class="border-border bg-panel focus-within:ring-primary flex min-w-0 flex-1 items-center rounded-lg border focus-within:ring-2"
           >
@@ -2053,6 +2049,20 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             {/if}
           </div>
         {/if}
+        {#if findMode === 'pin' &&
+          hasPin &&
+          coordinates &&
+          !(showSearchTypePrompt && !hasSearchTypes)}
+          <button
+            type="button"
+            class="bg-primary min-h-12 min-w-48 shrink-0 rounded-lg px-6 py-3 text-sm font-semibold text-white disabled:opacity-40"
+            bind:this={nearbyButton}
+            disabled={loading || !hasSearchTypes}
+            onclick={() => void search(true)}
+          >
+            {m.feature_search_nearby()}
+          </button>
+        {/if}
         <button
           bind:this={filterButton}
           type="button"
@@ -2072,9 +2082,6 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
           {/if}
         </button>
       </div>
-      {#if findMode === 'pin' && coordinatesControl}
-        <div class="min-w-0 shrink-0">{@render coordinatesControl()}</div>
-      {/if}
       <fieldset
         aria-label={m.feature_find_by()}
         class="border-border bg-muted/40 inline-flex shrink-0 rounded-lg border p-1"
