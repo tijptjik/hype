@@ -7,7 +7,7 @@ import {
   resourceIndexSearchCondition,
 } from './resourceIndexFilters.js'
 import type { ResourceIndexFilters } from '#lib/resources/indexQuery.js'
-import { gt } from 'drizzle-orm'
+import { gt, lt, asc, desc } from 'drizzle-orm'
 // IDS
 import { nanoid } from 'nanoid'
 // DRIZZLE
@@ -408,28 +408,62 @@ export const listLayers = async (
     conditions.push(gt(layer.id, pagination.afterId))
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
-  const orderBy = toOrderByWithLocalizedFields({
-    conditions,
-    cursor:
-      pagination?.afterId && pagination.afterValue !== undefined
-        ? { id: pagination.afterId, value: pagination.afterValue }
-        : undefined,
-    db,
-    locale: query?.locale,
-    sortBy,
-    sortOrder,
-    fallbackColumn: layer.modifiedAt,
-    baseTable: layer,
-    localizedSortColumns: {
-      name: layerI18n.name,
-      nameShort: layerI18n.nameShort,
-      description: layerI18n.description,
-    },
-    i18nTable: layerI18n,
-    parentIdColumn: layer.id,
-    foreignKeyColumn: layerI18n.layerId,
-    localeColumn: layerI18n.locale,
-  })
+  // Contribution activity is independent of edits to layer settings and migration timestamps.
+  const contributionActivity = sql<string>`coalesce((
+    SELECT max(activity.at) FROM (
+      SELECT f.createdAt AS at FROM feature f
+        WHERE f.layerId = ${layer.id} AND f.isDraft = 0
+      UNION ALL
+      SELECT cs.createdAt AS at FROM featureRevision r
+        JOIN feature f ON f.id = r.featureId
+        JOIN revisionChangeSet cs ON cs.id = r.changeSetId
+        WHERE f.layerId = ${layer.id} AND f.isDraft = 0
+          AND cs.origin IN ('user', 'import', 'restore')
+    ) activity
+  ), '')`
+  if (
+    sortBy === 'contributionActivity' &&
+    pagination?.afterId &&
+    pagination.afterValue !== undefined
+  ) {
+    const comparison = sortOrder === 'desc' ? lt : gt
+    const cursor = or(
+      comparison(contributionActivity, String(pagination.afterValue ?? '')),
+      and(
+        eq(contributionActivity, String(pagination.afterValue ?? '')),
+        gt(layer.id, pagination.afterId),
+      ),
+    )
+    if (cursor) conditions.push(cursor)
+  }
+  const orderBy =
+    sortBy === 'contributionActivity'
+      ? [
+          sortOrder === 'desc' ? desc(contributionActivity) : asc(contributionActivity),
+          asc(layer.id),
+        ]
+      : toOrderByWithLocalizedFields({
+          conditions,
+          cursor:
+            pagination?.afterId && pagination.afterValue !== undefined
+              ? { id: pagination.afterId, value: pagination.afterValue }
+              : undefined,
+          db,
+          locale: query?.locale,
+          sortBy,
+          sortOrder,
+          fallbackColumn: layer.modifiedAt,
+          baseTable: layer,
+          localizedSortColumns: {
+            name: layerI18n.name,
+            nameShort: layerI18n.nameShort,
+            description: layerI18n.description,
+          },
+          i18nTable: layerI18n,
+          parentIdColumn: layer.id,
+          foreignKeyColumn: layerI18n.layerId,
+          localeColumn: layerI18n.locale,
+        })
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   let data = await retryBusyRead(() =>

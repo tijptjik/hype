@@ -44,6 +44,8 @@ function setup() {
     schema.location,
     schema.locationRevision,
     schema.feature,
+    schema.featureRevision,
+    schema.revisionChangeSet,
     schema.featureI18n,
     schema.featureLocation,
     schema.user,
@@ -291,5 +293,36 @@ describe('resource index SQL membership and totals', () => {
         .where(taskIndexSearchCondition(text))
       expect(rows.map(row => row.id)).toEqual(['a'])
     }
+  })
+})
+
+describe('layer contribution ordering', () => {
+  it('ranks Feature history ahead of layer edits, ignoring drafts and maintenance revisions', async () => {
+    const { sqlite, db, opts } = setup()
+    sqlite.exec(`
+      INSERT INTO layer(id,modifiedAt) VALUES ('active','2020-01-01'),('settings-only','2099-01-01'),('created','2025-01-01'),('empty','2100-01-01');
+      INSERT INTO feature(id,layerId,isDraft,createdAt) VALUES ('a','active',0,'2020-01-01'),('b','settings-only',0,'2021-01-01'),('c','created',0,'2026-01-01'),('draft','settings-only',1,'2100-01-01');
+      INSERT INTO revisionChangeSet(id,origin,createdAt) VALUES ('user','user','2026-11-10'),('maintenance','migration','2099-01-01'),('draft-edit','user','2100-01-01');
+      INSERT INTO featureRevision(id,featureId,changeSetId) VALUES ('r1','a','user'),('r2','b','maintenance'),('r3','draft','draft-edit');
+    `)
+    const result = await listLayers(db, {}, [], opts, undefined, {
+      sortBy: 'contributionActivity',
+      sortOrder: 'desc',
+    })
+    expect(result.data.map(row => row.id)).toEqual([
+      'active',
+      'created',
+      'settings-only',
+      'empty',
+    ])
+    const next = await listLayers(
+      db,
+      {},
+      [],
+      opts,
+      { afterId: 'active', afterValue: '2026-11-10' },
+      { sortBy: 'contributionActivity', sortOrder: 'desc' },
+    )
+    expect(next.data.map(row => row.id)).toEqual(['created', 'settings-only', 'empty'])
   })
 })
