@@ -36,12 +36,6 @@ export function useLanguageSettingsModel(appCtx: ResourceViewCtx) {
       code: 'isTranslateButtonVisible',
       currentValue: userPreferences.isTranslateButtonVisible,
     },
-    {
-      name: m.settings_language_prefer_placeholders(),
-      description: m.settings_language_prefer_placeholders_description(),
-      code: 'preferFallbackInCurrentLocale',
-      currentValue: userPreferences.preferFallbackInCurrentLocale,
-    },
   ])
 
   // For collapsible sections

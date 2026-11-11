@@ -27,6 +27,8 @@ export type PortalGeometry = {
 }
 
 export type FeaturePropertyItem = {
+  labelResolution?: import('#lib/i18n/automatic.js').ContentResolution
+  valueResolution?: import('#lib/i18n/automatic.js').ContentResolution
   display?: import('#lib/properties/value.js').PropertyDisplay
   id: string
   label: string

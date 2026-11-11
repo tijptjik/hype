@@ -1362,7 +1362,8 @@ export class OmniCtx {
       ...this.appCtx.view.getUserPreferences(),
       fallbackLocales: ['en'] as Locale[],
       preferFallbackInCurrentLocale: false,
-      allowMachineTranslation: true,
+      allowMachineTranslation:
+        this.appCtx.view.getUserPreferences().allowMachineTranslation,
     }
 
     const address =

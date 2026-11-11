@@ -1,4 +1,6 @@
 <script lang="ts">
+import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
+import { normalizeContentLocale } from '#lib/content-locales/model.js'
 // THIRD PARTY
 // I18N
 import { getLocale, getLocaleKey, setLocale as setRuntimeLocale } from '#lib/i18n.js'
@@ -98,50 +100,29 @@ const handleLocaleChange = (...args: Parameters<typeof model.handleLocaleChange>
     </fieldset>
 
     {#if fullModel}
-      <!-- Additional Languages Section -->
-      <SettingsDisclosure
-        title={m.settings_language_additional()}
-        bind:open={additionalOpen}
-      >
-        <div class="flex flex-col gap-6 px-1 pt-3 pb-3">
-          {#each supportedLocales.filter(
-            locale => locale !== currentLocale,
-          ) as locale (locale)}
-            {@const localeKey = LocaleKeysMap[locale] as LocaleKey}
-            {@const isFallbackSelected =
-              fullModel.userPreferences.fallbackLocales?.includes(locale) || false}
-            <div class="flex w-full flex-row items-start justify-between gap-4 py-1">
-              <label
-                for={`${languageId}-fallback-${locale}`}
-                class="flex min-w-0 grow cursor-pointer flex-col text-left"
-              >
-                <span class="text-base-content text-sm font-medium"
-                  >{localeNames[localeKey][localeKey]}</span
-                >
-                {#if localeNames[currentLocaleKey][localeKey]}
-                  <span class="text-muted-foreground text-xs leading-relaxed"
-                    >{localeNames[currentLocaleKey][localeKey]}</span
-                  >
-                {/if}
-              </label>
-              <div class="flex h-5 shrink-0 items-center">
-                <Switch
-                  id={`${languageId}-fallback-${locale}`}
-                  class="shrink-0"
-                  size="sm"
-                  color="primary"
-                  checked={isFallbackSelected}
-                  disabled={fullModel.isSavingPreferences}
-                  onCheckedChange={checked =>
-                    void fullModel.updatePreferences(
-                      fullModel.getNextFallbackPreferences(locale, checked === true),
-                    )}
-                />
-              </div>
-            </div>
+      <!-- Reading language is independent of the interface language. -->
+      <label class="flex min-w-0 flex-col gap-2 text-sm">
+        {m.translation_reading_language()}
+        <select
+          class="border-border bg-panel min-w-0 rounded-md border px-3 py-2"
+          value={normalizeContentLocale(
+            fullModel.userPreferences.contentLocale ?? currentLocale,
+          ) ?? 'en'}
+          disabled={fullModel.isSavingPreferences}
+          onchange={event =>
+            void fullModel.updatePreferences({
+              ...fullModel.userPreferences,
+              contentLocale: event.currentTarget.value,
+            })}
+        >
+          {#each contentLocaleOptions(currentLocaleKey) as option (option.tag)}
+            <option value={option.tag}>{option.name} · {option.autonym}</option>
           {/each}
-        </div>
-      </SettingsDisclosure>
+        </select>
+        <span class="text-muted-foreground text-xs"
+          >{m.translation_fallback_help()}</span
+        >
+      </label>
 
       <!-- Advanced Settings Section -->
       <SettingsDisclosure

@@ -12,6 +12,7 @@ import Funnel from 'virtual:icons/proicons/filter'
 import XMark from 'virtual:icons/proicons/cancel'
 import { Icon } from '#lib/bits/index.js'
 // COMPONENTS
+import ContentText from '#lib/bits/custom/text/ContentText.svelte'
 import ResourceHierarchyPath from '#lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
@@ -236,7 +237,18 @@ afterNavigate(async ({ shallow }) => {
           class="bits-panel-item-resource__name"
           class:bits-panel-item-resource__name--active={isCurrentActive}
         >
-          {name}
+          <ContentText
+            record={resource}
+            resource={resourceType === 'neighbourhood'
+              ? undefined
+              : (resourceType as
+                  | 'feature'
+                  | 'hub'
+                  | 'organisation'
+                  | 'project'
+                  | 'layer')}
+            fallback={name}
+          />
         </p>
       </div>
     {/if}
@@ -262,7 +274,13 @@ afterNavigate(async ({ shallow }) => {
       class="bits-theme bg-panel text-base-content pointer-events-auto fixed z-50 min-h-4 min-w-10 rounded-r-md px-3 py-2 text-center text-sm whitespace-nowrap"
       style="top: {tooltipPosition.top}px; left: {tooltipPosition.left}px;"
     >
-      {name}
+      <ContentText
+        record={resource}
+        resource={resourceType === 'neighbourhood'
+          ? undefined
+          : (resourceType as 'feature' | 'hub' | 'organisation' | 'project' | 'layer')}
+        fallback={name}
+      />
     </div>
   </Portal>
 {/if}

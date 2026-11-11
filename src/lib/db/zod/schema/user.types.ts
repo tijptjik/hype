@@ -129,6 +129,7 @@ export type AdminPreferenceCode =
   | 'isPrimaryPanelAutoHide'
 
 export type UserPreferences = {
+  contentLocale?: string | null
   fallbackLocales: Locale[]
   allowMachineTranslation: boolean
   preferFallbackInCurrentLocale: boolean

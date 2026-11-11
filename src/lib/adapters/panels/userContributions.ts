@@ -68,11 +68,11 @@ export function createUserContributionsModel(
     getFeatureAddress: (feature: FeatureFromCollection) =>
       getI18n(feature, 'displayAddress', {
         ...app.getUserPreferences(),
-        allowMachineTranslation: true,
+        allowMachineTranslation: app.getUserPreferences().allowMachineTranslation,
       }),
     getProjectTitle: (
       project: Parameters<ResourceViewCtx['getContextualProjectName']>[0],
-    ): string => getI18n(project, 'name', { allowMachineTranslation: true }) ?? '',
+    ): string => getI18n(project, 'name', app.getUserPreferences()) ?? '',
     ...navigation,
   }
 }

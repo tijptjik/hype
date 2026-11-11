@@ -3,12 +3,15 @@ import type { Locale as DateFnsLocale } from 'date-fns'
 import { enGB } from 'date-fns/locale/en-GB'
 import { zhCN } from 'date-fns/locale/zh-CN'
 import { zhHK } from 'date-fns/locale/zh-HK'
+import { adaptContentMap, contentFormKey } from '#lib/i18n/contentRecords.js'
+// CONTENT RESOLUTION
+import { contentLocaleOrder, resolveContentField } from '#lib/i18n/automatic.js'
 // PROPERTY VALUES
 import { isRangeProperty, rangeText, singleDateText } from '#lib/properties/range.js'
 import { displayLinkValue, type PropertyDisplay } from '#lib/properties/value.js'
 import { phoneDisplay, readPhoneNumbers } from '#lib/utils/phone-property.js'
 // I18N
-import { normalizeLocaleCode, toLocaleKebab } from '#lib/i18n/localeRecords.js'
+import { toLocaleKebab } from '#lib/i18n/localeRecords.js'
 import * as runtime from '#lib/paraglide/runtime.js'
 import * as m from '#lib/paraglide/messages.js'
 // TYPES
@@ -112,10 +115,13 @@ export function setLocale(
  * @param localeKey - The preferred form locale key.
  * @returns Ordered form locale keys with preferred locale first.
  */
-export function getLocaleOrder(localeKey: LocaleKey): LocaleKey[] {
-  if (localeKey === 'en') return ['en', 'zhHant', 'zhHans']
-  if (localeKey === 'zhHant') return ['zhHant', 'zhHans', 'en']
-  return ['zhHans', 'zhHant', 'en']
+export function getLocaleOrder(localeKey: LocaleKey): LocaleKey[]
+export function getLocaleOrder(locale: string, available?: readonly string[]): string[]
+export function getLocaleOrder(
+  locale: string,
+  available: readonly string[] = [],
+): string[] {
+  return contentLocaleOrder(locale, available).map(contentFormKey)
 }
 
 export function toLocaleKey(locale: string): LocaleKey {
@@ -180,30 +186,9 @@ export function getDatetimeLocale(): string {
  * @returns Canonical form-keyed i18n object.
  */
 export function toFormLocaleRecord<T>(
-  i18n:
-    | Partial<Record<LocaleKey, T>>
-    | Partial<Record<Locale, T>>
-    | Record<string, T>
-    | null
-    | undefined,
-): Partial<Record<LocaleKey, T>> | null | undefined {
-  if (!i18n) return i18n
-
-  const out: Partial<Record<LocaleKey, T>> = {}
-  for (const [rawKey, value] of Object.entries(i18n)) {
-    const normalizedLocale = normalizeLocaleCode(rawKey)
-    if (
-      normalizedLocale !== 'en' &&
-      normalizedLocale !== 'zh-hans' &&
-      normalizedLocale !== 'zh-hant'
-    ) {
-      continue
-    }
-    const formLocaleKey = toLocaleKey(normalizedLocale)
-    out[formLocaleKey] = value
-  }
-
-  return out
+  i18n: Record<string, T> | null | undefined,
+): Record<string, T> | null | undefined {
+  return i18n ? adaptContentMap(i18n, contentFormKey) : i18n
 }
 
 /**
@@ -240,22 +225,14 @@ export function getFallbackLocales(locale: Locale): Locale[] {
 }
 
 /**
- * Resolve the locale search chain for i18n reads using runtime locale first and
- * any user-selected fallback locales after that.
+ * Resolve the locale search chain from the reading language and fixed content fallbacks.
  * @param userPreferences - User preferences with defaults applied.
  * @returns Ordered locale keys without duplicates.
  */
-function getUserLocaleSearchOrder(userPreferences: UserPreferences): LocaleKey[] {
-  const localeOrder = [getLocaleKey()]
-
-  for (const fallbackLocale of userPreferences.fallbackLocales ?? []) {
-    const fallbackLocaleKey = toLocaleKey(fallbackLocale)
-    if (!localeOrder.includes(fallbackLocaleKey)) {
-      localeOrder.push(fallbackLocaleKey)
-    }
-  }
-
-  return localeOrder
+function getUserLocaleSearchOrder(userPreferences: UserPreferences): string[] {
+  return contentLocaleOrder(userPreferences.contentLocale ?? getLocale()).map(
+    contentFormKey,
+  )
 }
 
 const defaultUserPreferences: UserPreferences = {
@@ -288,20 +265,6 @@ function resolveUserPreferences(
       userPreferences?.isTranslateButtonVisible ??
       defaultUserPreferences.isTranslateButtonVisible,
   }
-}
-
-/**
- * Read a locale entry from a mixed-key i18n record supporting both camelCase
- * form keys and kebab-case locale codes.
- * @param i18nObj - I18n record with locale-keyed entries.
- * @param localeKey - Canonical form locale key.
- * @returns Matching locale entry when present.
- */
-function getLocaleEntry<T>(
-  i18nObj: Record<string, T>,
-  localeKey: LocaleKey,
-): T | undefined {
-  return i18nObj[localeKey] ?? i18nObj[toLocaleKebab(localeKey)]
 }
 
 // ═══════════════════════
@@ -341,40 +304,16 @@ export function getI18n<T>(
     i18nObj = obj as Record<string, T>
   }
 
-  // CONFIG : Resolve runtime locale plus user-selected fallback locales.
-  const resolvedUserPreferences = resolveUserPreferences(userPreferences)
-  const localeOrder = getUserLocaleSearchOrder(resolvedUserPreferences)
-  // indicator for machine-translated values
-  const genField = `${field}Gen`
-
-  // Prefer human-authored translations across the user locale chain first.
-  for (const localeKey of localeOrder) {
-    const localeEntry = getLocaleEntry(i18nObj, localeKey)
-    const translation = localeEntry?.[field as keyof T] as string | undefined
-    const isGenerated = Boolean(localeEntry?.[genField as keyof T])
-
-    if (!translation) continue
-    if (!isGenerated || skipGenFieldCheck) return translation
-  }
-
-  // Only surface generated values when the caller bypasses the check or the
-  // user has explicitly allowed machine translations.
-  if (
-    resolvedUserPreferences.allowMachineTranslation &&
-    !resolvedUserPreferences.preferFallbackInCurrentLocale
-  ) {
-    for (const localeKey of localeOrder) {
-      const localeEntry = getLocaleEntry(i18nObj, localeKey)
-      const translation = localeEntry?.[field as keyof T] as string | undefined
-      const isGenerated = Boolean(localeEntry?.[genField as keyof T])
-
-      if (translation && isGenerated) return translation
-    }
-  }
-
-  // SWTICH : CATCHALL CASE
-  // If all prior attempts to get a translation (human, allowed machine, or newly generated machine) have failed or were skipped due to preferences, this is the last resort.
-  return resolvedFallback
+  // Resolve each field independently; legacy preference lists cannot reorder canonical fallbacks.
+  const preferences = resolveUserPreferences(userPreferences)
+  const resolution = resolveContentField(
+    i18nObj,
+    field,
+    preferences.contentLocale ?? getLocale(),
+    preferences.allowMachineTranslation,
+    skipGenFieldCheck,
+  )
+  return resolution.kind === 'missing' ? resolvedFallback : resolution.value
 }
 
 /**

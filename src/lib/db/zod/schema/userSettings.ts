@@ -1,3 +1,4 @@
+import { ContentTagInput } from '#lib/i18n/contentRecords.js'
 // ZOD
 import { z } from 'zod'
 // THEME
@@ -5,6 +6,7 @@ import { ThemePreferencesSchema } from '#lib/themes/preferences.js'
 
 const UserPreferencesSchema = z
   .object({
+    contentLocale: ContentTagInput.nullish(),
     fallbackLocales: z.array(z.string()).nullish(),
     allowMachineTranslation: z.boolean().nullish(),
     preferFallbackInCurrentLocale: z.boolean().nullish(),

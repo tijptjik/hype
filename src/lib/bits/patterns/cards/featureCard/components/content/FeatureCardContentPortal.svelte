@@ -24,12 +24,9 @@ let {
 } = $props()
 
 const appCtx = getSurfaceCtx()
-const userPreferences = $derived({
-  ...appCtx.getUserPreferences(),
-  allowMachineTranslation: true,
-})
+const userPreferences = $derived(appCtx.getUserPreferences())
 const displayAddress = $derived(
-  getI18n(feature as Feature, 'displayAddress', userPreferences, '', true).trim(),
+  getI18n(feature as Feature, 'displayAddress', userPreferences, '').trim(),
 )
 // Venue identity stays separate from the Feature title and the postal address.
 const venueName = $derived(

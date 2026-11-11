@@ -77,12 +77,8 @@ export async function searchAllAsync(
   appCtx: ResourceViewCtx,
 ): Promise<SearchResult[]> {
   const results: SearchResult[] = []
-  // Search labels must remain visible when the only matching title is a generated
-  // translation; the feature card uses the same policy for navigation chrome.
-  const searchPreferences = {
-    ...appCtx.getUserPreferences(),
-    allowMachineTranslation: true,
-  }
+  // Search labels follow the reader's explicit translation preference and published fallback.
+  const searchPreferences = appCtx.getUserPreferences()
 
   // Source 1 - Walks: the matching count comes from the user's filtered list query.
   const wishlistQuery = appCtx.resources.featureQueries.searchWishlist

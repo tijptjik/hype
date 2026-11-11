@@ -43,7 +43,7 @@ export function getCachedFeatureRowModel(
   const model: FeatureRowModel = {
     id: feature.id,
     title:
-      getI18n(feature as never, 'title', userPreferences, feature.id, true)?.trim() ||
+      getI18n(feature as never, 'title', userPreferences, feature.id)?.trim() ||
       feature.id,
     description:
       getI18n(

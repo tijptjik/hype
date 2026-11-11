@@ -184,7 +184,7 @@ describe('getI18n', () => {
     expect(value).toBe('繁體標題')
   })
 
-  it('returns generated fallback-locale values when machine translation is allowed', async () => {
+  it('does not use generated fallback-language values even when AI is enabled', async () => {
     await setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
@@ -205,7 +205,7 @@ describe('getI18n', () => {
       'No title',
     )
 
-    expect(value).toBe('AI 繁體標題')
+    expect(value).toBe('No title')
   })
 
   it('prefers placeholders over generated values when that setting is enabled', async () => {

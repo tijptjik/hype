@@ -1,4 +1,12 @@
 <script lang="ts">
+// TRANSLATION
+import { resolveContentField } from '#lib/i18n/automatic.js'
+import {
+  getAutomaticTranslations,
+  getAutomaticFeaturePropertyTranslations,
+} from '#lib/api/translation.remote.js'
+import { contentRowsToForm } from '#lib/i18n/contentRecords.js'
+import AutomaticTranslationIndicator from '#lib/bits/custom/text/AutomaticTranslationIndicator.svelte'
 // COMPONENTS
 import LocationLifecycleBadge from '#lib/bits/patterns/forms/localLocationAddress/LocationLifecycleBadge.svelte'
 // ICONS
@@ -16,7 +24,7 @@ import {
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 // I18N
-import { getI18n, m } from '#lib/i18n.js'
+import { getI18n, getLocale, m } from '#lib/i18n.js'
 // TYPES
 import type {
   Feature,
@@ -37,6 +45,67 @@ let {
 const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const userPreferences = $derived(appCtx.getUserPreferences())
+const contentLocale = $derived(userPreferences.contentLocale ?? getLocale())
+const titleResolution = $derived(
+  resolveContentField(
+    feature.i18n ?? {},
+    'title',
+    contentLocale,
+    userPreferences.allowMachineTranslation,
+  ),
+)
+let requestedTranslation = ''
+$effect(() => {
+  if (
+    !userPreferences.allowMachineTranslation ||
+    cardCtx.isNewMode ||
+    !('id' in feature) ||
+    !('modifiedAt' in feature)
+  )
+    return
+  const id = feature.id
+  const target = contentLocale
+  const revision = appCtx.account.revision
+  const modifiedAt = feature.modifiedAt
+  const requestKey = `${revision}:${id}:${modifiedAt}:${target}`
+  if (requestedTranslation === requestKey) return
+  requestedTranslation = requestKey
+  void Promise.all([
+    getAutomaticTranslations({ resource: 'feature', id, target }),
+    getAutomaticFeaturePropertyTranslations({ id, target }).catch(
+      () => ({}) as Record<string, Record<string, unknown>>,
+    ),
+  ])
+    .then(([rows, properties]) => {
+      if (
+        appCtx.account.revision !== revision ||
+        contentLocale !== target ||
+        !userPreferences.allowMachineTranslation
+      )
+        return
+      const current = appCtx.cache.feature.get(id)
+      if (!current || current.modifiedAt !== modifiedAt) return
+      const i18n = contentRowsToForm(Object.values(rows) as Array<{ locale: string }>)
+      appCtx.cache.feature.set(id, {
+        ...current,
+        i18n: { ...current.i18n, ...i18n } as typeof current.i18n,
+        properties: current.properties.map(property => ({
+          ...property,
+          i18n: {
+            ...property.i18n,
+            ...contentRowsToForm(
+              Object.values(properties[property.propertyId] ?? {}) as Array<{
+                locale: string
+              }>,
+            ),
+          } as typeof property.i18n,
+        })),
+      })
+    })
+    .catch(() => {
+      /* The published fallback remains visible when generation fails. */
+    })
+})
 
 const gradePropertyId: Id = $derived(
   appCtx.cache.layer
@@ -178,6 +247,7 @@ function handleGradeSelect(newGrade: number): void {
         containerClass="block w-full"
         textClass="text-lg text-base-content"
       />
+      <AutomaticTranslationIndicator resolution={titleResolution} />
       <LocationLifecycleBadge
         value={'locationLifecycle' in feature ? feature.locationLifecycle : undefined}
       />

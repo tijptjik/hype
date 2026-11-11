@@ -1,4 +1,9 @@
 <script lang="ts">
+// TRANSLATION
+import { requestAutomaticPropertyTranslations } from '#lib/client/services/automaticTranslations.js'
+import { resolveContentField } from '#lib/i18n/automatic.js'
+import { getLocale } from '#lib/i18n.js'
+import AutomaticTranslationIndicator from '#lib/bits/custom/text/AutomaticTranslationIndicator.svelte'
 // SVELTE
 import { onMount, tick } from 'svelte'
 import { fly } from 'svelte/transition'
@@ -194,6 +199,14 @@ let contentMeasureFrame = 0
 const collapsedLineCount = $derived(
   getFeatureCardCollapsedDescriptionLineCount(responsiveCtx.visibleWindowHeight),
 )
+const descriptionResolution = $derived(
+  resolveContentField(
+    feature.i18n ?? {},
+    'description',
+    userPreferences.contentLocale ?? getLocale(),
+    userPreferences.allowMachineTranslation,
+  ),
+)
 const descriptionHtml = $derived(
   getI18n(feature, 'description', userPreferences, m.zany_merry_seahorse_treasure()),
 )
@@ -223,10 +236,37 @@ const featureProperties = $derived(
       getFPI18n(property, userPreferences) !== m.great_crazy_squid_promise(),
   ),
 )
+$effect(() => {
+  if (!userPreferences.allowMachineTranslation) return
+  for (const row of featureProperties) {
+    if (row.property)
+      void requestAutomaticPropertyTranslations(
+        appCtx,
+        row.property,
+        userPreferences.contentLocale ?? getLocale(),
+      )
+  }
+})
 const featurePropertyItems = $derived.by((): FeaturePropertyItem[] => {
   const items = featureProperties.map(property => ({
     id: property.propertyId,
     label: getI18n(property.property, 'label', userPreferences),
+    labelResolution: resolveContentField(
+      property.property?.i18n ?? {},
+      'label',
+      userPreferences.contentLocale ?? getLocale(),
+      userPreferences.allowMachineTranslation,
+    ),
+    valueResolution: resolveContentField(
+      property.property?.type === 'classifier'
+        ? (property.property.values?.find(
+            value => value.id === property.propertyValueId,
+          )?.i18n ?? {})
+        : (property.i18n ?? {}),
+      'value',
+      userPreferences.contentLocale ?? getLocale(),
+      userPreferences.allowMachineTranslation,
+    ),
     value:
       property.property?.dataType === 'link'
         ? (() => {
@@ -596,7 +636,10 @@ const expandedFullDescriptionLayout = $derived.by(() => {
   while (lines.length && !lines.at(-1)?.text.trim()) lines.pop()
   const last = lines.at(-1)
   if (!last) return result
-  const reserved = toggleWidth + DESCRIPTION_TOGGLE_GAP_PX
+  const reserved =
+    toggleWidth +
+    DESCRIPTION_TOGGLE_GAP_PX +
+    (descriptionResolution.kind === 'automatic' ? 32 : 0)
   if (
     measurePreparedTextWidth(last.text.trimEnd(), DESCRIPTION_FONT) + reserved <=
     last.width
@@ -824,7 +867,11 @@ function appendTruncationEllipsis(
 
     const truncatedLineWidth = Math.max(
       1,
-      line.width - ellipsisWidth - toggleWidth - DESCRIPTION_TOGGLE_GAP_PX,
+      line.width -
+        ellipsisWidth -
+        toggleWidth -
+        DESCRIPTION_TOGGLE_GAP_PX -
+        (descriptionResolution.kind === 'automatic' ? 32 : 0),
     )
     const truncatedLine = layoutNextLine(prepared, truncatedLineWidth, line.start)
     const truncatedText = truncatedLine?.text.trim() ?? ''
@@ -1014,6 +1061,14 @@ $effect(() => {
           {/each}
         </div>
       </div>
+    </div>
+  {/if}
+  {#if hasDescription && descriptionResolution.kind === 'automatic'}
+    <div
+      class="pointer-events-auto absolute z-40"
+      style={`top: ${CONTENT_TOP_PADDING_PX + ((expanded ? expandedDescriptionLines : visibleCollapsedDescriptionLines).at(-1)?.top ?? 0)}px; left: ${contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX + lastTextWidth + DESCRIPTION_TOGGLE_GAP_PX + (showToggle ? toggleWidth + DESCRIPTION_TOGGLE_GAP_PX : 0)}px;`}
+    >
+      <AutomaticTranslationIndicator resolution={descriptionResolution} />
     </div>
   {/if}
   {#if showToggle}

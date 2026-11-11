@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import ContentText from '#lib/bits/custom/text/ContentText.svelte'
 // I18N
 import { getI18n } from '#lib/i18n.js'
 // CONTEXT
@@ -37,14 +39,28 @@ const projectName = $derived(
 
 {#if organisationName || projectName}
   <p class="flex items-start space-x-0.5 font-mono text-xs tracking-widest uppercase">
-    {#if organisationName}
-      <span class="text-primary min-w-0">{organisationName}</span>
+    {#if organisationName && hierarchy.organisation}
+      <span class="text-primary min-w-0"
+        ><ContentText
+          record={hierarchy.organisation}
+          resource="organisation"
+          field="nameShort"
+          fallback={organisationName}
+        /></span
+      >
     {/if}
-    {#if projectName}
-      {#if organisationName}
+    {#if projectName && hierarchy.project}
+      {#if organisationName && hierarchy.organisation}
         <span class="shrink-0 px-0">›</span>
       {/if}
-      <span class="text-accent min-w-0">{projectName}</span>
+      <span class="text-accent min-w-0"
+        ><ContentText
+          record={hierarchy.project}
+          resource="project"
+          field="nameShort"
+          fallback={projectName}
+        /></span
+      >
     {/if}
   </p>
 {/if}

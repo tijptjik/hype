@@ -1,4 +1,5 @@
 <script lang="ts">
+import AutomaticTranslationIndicator from '#lib/bits/custom/text/AutomaticTranslationIndicator.svelte'
 import FeaturePropertyValue from './FeaturePropertyValue.svelte'
 // SERVICES
 import { getFeatureCardDisplayProperties } from '#lib/client/services/property.js'
@@ -52,7 +53,7 @@ const featureProperties = $derived(
   ),
 )
 const featurePropertyItems = $derived.by(
-  () =>
+  (): import('../FeatureCardContent.types').FeaturePropertyItem[] =>
     items ??
     featureProperties.map(property => ({
       id: property.propertyId,
@@ -111,6 +112,9 @@ $effect(() => {
           class="text-muted-foreground font-mono text-xs leading-4 font-normal uppercase"
         >
           {property.label}
+          {#if property.labelResolution}
+            <AutomaticTranslationIndicator resolution={property.labelResolution} />
+          {/if}
         </span>
         <div
           class={`mt-0.5 overflow-hidden text-base leading-[22px] font-medium break-words ${
@@ -125,6 +129,9 @@ $effect(() => {
           };`}
         >
           <FeaturePropertyValue display={property.display} value={property.value} />
+          {#if property.valueResolution}
+            <AutomaticTranslationIndicator resolution={property.valueResolution} />
+          {/if}
         </div>
       </div>
     {/each}
