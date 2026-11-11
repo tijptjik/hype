@@ -87,7 +87,11 @@ $effect(() => {
 })
 </script>
 
-<section class="w-full min-w-0 space-y-4 pb-12" aria-label="Feature revisions">
+<section
+  class="w-full min-w-0 space-y-4 pb-12"
+  aria-label="Feature revisions"
+  data-history-surface
+>
   <FormSurface class="mb-0!">
     <SectionHeader>
       {#snippet left()}

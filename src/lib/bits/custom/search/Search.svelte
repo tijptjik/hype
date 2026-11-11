@@ -275,7 +275,7 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper
       class={resultsLayout === 'inline' ? 'mt-2' : 'bits-search__results mx-[5%]'}
     >
-      <div class="bg-primary/70 rounded-lg px-1 py-1 shadow-sm">
+      <div class="bg-panel rounded-lg p-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
           <div class="flex max-h-80 flex-col gap-1 overflow-y-auto overscroll-contain">
             {#each results as item, index (index)}
@@ -312,7 +312,7 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper
       class={resultsLayout === 'inline' ? 'mt-2' : 'bits-search__results mx-[5%]'}
     >
-      <div class="bg-primary/70 rounded-lg px-1 py-1 shadow-sm">
+      <div class="bg-panel rounded-lg p-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
           <div class="flex max-h-80 flex-col gap-1 overflow-y-auto overscroll-contain">
             <div

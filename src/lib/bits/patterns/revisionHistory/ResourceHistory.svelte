@@ -185,6 +185,7 @@ $effect(() => {
   class="@container w-full min-w-0 pb-12"
   aria-label={`${resourceLabel[0].toUpperCase()}${resourceLabel.slice(1)} history`}
   aria-busy={loading}
+  data-history-surface
 >
   <!-- Use the same surface-owned heading treatment as Descriptions and Fields. -->
   <FormSurface class="mb-0!">

@@ -451,4 +451,14 @@
     background-repeat: no-repeat;
     background-attachment: local;
   }
+
+  /* History owns the same plain surface before and after its deferred data arrives. */
+  .bits-theme
+    .bits-admin-shell__main:has(
+      [data-history-surface],
+      [aria-busy="true"][aria-label="Loading history"]
+    ) {
+    background-color: var(--color-panel);
+    background-image: none;
+  }
 }
