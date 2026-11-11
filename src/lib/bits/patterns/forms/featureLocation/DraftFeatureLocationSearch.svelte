@@ -230,7 +230,15 @@ function closeFilters(): void {
  */
 function applyFilters(value: PlaceSearchFilters): void {
   filters = { ...value }
-  if (hasPlaceSearchCategory(value)) includeShops = true
+  // Applied place filters start with matching places; other providers remain opt-in.
+  if (
+    hasPlaceSearchCategory(value) ||
+    (value.operatingStatus && value.operatingStatus !== 'open')
+  ) {
+    includeShops = true
+    includeBuildings = false
+    includeAddresses = false
+  }
   expandedGroup = null
   selected = null
   accepted = false
@@ -276,7 +284,7 @@ $effect(() => {
 })
 const searchBuildings = $derived(includeBuildings)
 const hasPlaceCategory = $derived(hasPlaceSearchCategory(filters))
-const searchAddresses = $derived(includeAddresses && !hasPlaceCategory)
+const searchAddresses = $derived(includeAddresses)
 let subsetBackButton: HTMLButtonElement | undefined = $state()
 const hasSearchTypes = $derived(includeShops || searchAddresses || searchBuildings)
 // Category-only searches use Places; buildings and addresses still require text.

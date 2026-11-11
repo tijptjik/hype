@@ -827,6 +827,15 @@ it('applies filters only on acceptance, badges active filters, and clears result
       }),
     ),
   )
+  for (const name of ['Building', 'Address']) {
+    const toggle = screen.getByRole('button', { name })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(toggle).toBeEnabled()
+    await fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  }
+  await waitFor(() => expect(mocks.buildings).toHaveBeenCalled())
+  await waitFor(() => expect(mocks.pages).toHaveBeenCalled())
   expect(screen.getByRole('button', { name: 'Place filters' }).textContent).toContain(
     '1',
   )
