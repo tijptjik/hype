@@ -27,6 +27,7 @@ export type ParentOrganisationRecord = {
 }
 
 export type ParentProjectRecord = {
+  useAllInOrgContext?: boolean
   flags?: ParentSectionProjectItem['flags']
   id?: string | null
   organisationId?: string | null
@@ -190,6 +191,7 @@ export function toParentProjectItem(
   if (!project?.id) return null
   return {
     flags: project.flags,
+    useAllInOrgContext: project.useAllInOrgContext,
     id: project.id,
     organisationId: project.organisationId ?? '',
     code: project.code ?? '',

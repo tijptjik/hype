@@ -16,6 +16,7 @@ export interface ParentSectionItemBase extends Record<string, unknown> {
 export interface ParentSectionOrganisationItem extends ParentSectionItemBase {}
 
 export interface ParentSectionProjectItem extends ParentSectionItemBase {
+  useAllInOrgContext?: boolean
   flags?: import('#lib/projects/flags.js').ProjectFlags
   mapStyle?: { code: string } | null
   organisationId: string
