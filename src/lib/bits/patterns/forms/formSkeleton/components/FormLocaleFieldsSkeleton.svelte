@@ -1,10 +1,14 @@
 <script lang="ts">
 // SVELTE
-import type { Component } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 // BITS
 import FormI18nSection from '../../formI18nSection/FormI18nSection.svelte'
 import FormFieldSkeleton from './FormFieldSkeleton.svelte'
-import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
+import FeatureProfileEditor from '../../featureLocation/FeatureProfileEditor.svelte'
+import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import { restoreProfileLocales } from '../../featureLocation/profileLocales.js'
+import { contentLocaleOptions } from '../../contentLocaleDefaults/contentLocaleOptions.js'
+import { getLocaleKey } from '#lib/i18n.js'
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
 // TYPES
 import type { LocaleKey } from '#lib/types.js'
@@ -14,43 +18,101 @@ let {
   locales,
   fields,
   byField = false,
+  expanded = false,
+  stackNames = true,
+  subtitle,
+  afterField,
+  toolbarHeader,
+  placeholder,
+  horizontalToolbar = false,
+  stickyFieldHeaders = ['description'],
 }: {
+  placeholder?: Snippet<[string]>
+  toolbarHeader?: Snippet<[Snippet]>
+  horizontalToolbar?: boolean
+  stickyFieldHeaders?: boolean | string[]
   title: string
   icon?: Component
   locales: LocaleKey[]
-  fields: Array<{ label: string; multiline?: boolean }>
+  fields: Array<{ key?: string; label: string; multiline?: boolean }>
   byField?: boolean
+  expanded?: boolean
+  stackNames?: boolean
+  subtitle?: string
+  afterField?: import('svelte').Snippet<[string]>
 } = $props()
+const localeState = $derived({ ...restoreProfileLocales(locales, {}), expanded })
+const configs = $derived(
+  fields.map((field, index) => ({
+    key:
+      field.key ??
+      (field.multiline ? 'description' : index === 0 ? 'name' : 'nameShort'),
+    label: field.label,
+    kind: field.multiline ? ('textarea' as const) : ('input' as const),
+  })),
+)
 </script>
 
-<div aria-hidden="true">
+<div aria-hidden="true" inert>
   {#if byField}
-    <SectionHeader {title} {icon} />
-    <div class="px-6 pt-6 pb-6">
-      <div class="border-border/50 mb-6 flex justify-end border-b pb-3">
-        <Skeleton class="h-8 w-28" />
-      </div>
-      <div class="grid min-w-0 gap-6 md:grid-cols-3 md:grid-rows-[min-content_1fr]">
-        {#each fields as field, index}
-          <section
-            class="min-w-0 {field.multiline
-              ? 'md:col-span-2 md:col-start-2 md:row-span-2 md:row-start-1 md:h-full md:border-l md:border-border/50 md:pl-6'
-              : index === 1
-                ? 'md:col-start-1 md:row-start-2'
-                : 'md:col-start-1 md:row-start-1'}"
-          >
-            <h3 class="flex min-h-7 items-center text-sm font-semibold">
-              {field.label}
-            </h3>
-            <div class="mt-3 space-y-2">
-              {#each locales as locale}
-                <FormFieldSkeleton label={`${field.label} ${locale}`} inline />
-              {/each}
-            </div>
-          </section>
-        {/each}
-      </div>
+    <div class="mb-4">
+      {#snippet localeToolbar()}
+        <LocaleToolbar
+          horizontal={horizontalToolbar}
+          selectedLocales={localeState.selectedLocales}
+          visibleLocales={localeState.visibleLocales}
+          options={contentLocaleOptions(getLocaleKey())}
+          {expanded}
+          disabled
+          allowAdd={false}
+          onExpandedChange={() => {}}
+          onChange={() => {}}
+        />
+      {/snippet}
+      {#if toolbarHeader}
+        {@render toolbarHeader(localeToolbar)}
+      {:else}
+        <SectionHeader
+          {title}
+          {icon}
+          description={subtitle}
+          class="grid-cols-1! gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]! [&_.bits-form\_\_section-header-right]:[container-type:normal]! [&_.bits-form\_\_section-header-right]:block [&_.bits-form\_\_section-header-right]:min-w-0"
+        >
+          {#snippet right()}
+            {@render localeToolbar()}
+          {/snippet}
+        </SectionHeader>
+      {/if}
     </div>
+    <!-- Use the production field grid and language visibility rather than an expanded approximation. -->
+    <FeatureProfileEditor
+      loading={!placeholder}
+      contextKey={`loading:${title}`}
+      {stackNames}
+      showToolbar={false}
+      showPrimaryLocaleHeader={false}
+      localeHeaderPlacement="gutter"
+      {stickyFieldHeaders}
+      {localeState}
+      onLocaleStateChange={() => {}}
+      values={{}}
+      fieldConfigs={configs}
+      {afterField}
+      translate={async () => ({ status: 'translated', text: '' })}
+      onTranslated={() => {}}
+    >
+      {#snippet children(field)}
+        {#if placeholder}
+          {@render placeholder(field)}
+        {:else}
+          <div
+            class={field === 'description'
+              ? 'min-h-[calc(42px+1.25rem)] md:min-h-[42px]'
+              : 'min-h-[42px]'}
+          ></div>
+        {/if}
+      {/snippet}
+    </FeatureProfileEditor>
   {:else}
     <FormI18nSection
       {title}

@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import type { Component } from 'svelte'
+import DescriptionsIcon from 'virtual:icons/lucide/file-text'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
@@ -13,7 +14,8 @@ import FormMemberRowsSkeleton from './components/FormMemberRowsSkeleton.svelte'
 import type { LocaleKey } from '#lib/types.js'
 let {
   locales,
-  profileIcon,
+  profileIcon = DescriptionsIcon,
+  expanded = false,
   membersIcon,
   detailsIcon,
   membersTitle,
@@ -22,6 +24,7 @@ let {
 }: {
   locales: LocaleKey[]
   profileIcon?: Component
+  expanded?: boolean
   membersIcon?: Component
   detailsIcon?: Component
   membersTitle: string
@@ -35,7 +38,9 @@ let {
   <FormSurface>
     <FormLocaleFieldsSkeleton
       byField
-      title="Profile"
+      title="Descriptions"
+      subtitle="Names and descriptions in each language"
+      {expanded}
       icon={profileIcon}
       {locales}
       fields={[
@@ -45,6 +50,7 @@ let {
       ]}
     />
     <FormSectionSkeleton
+      reserveSearch
       title={membersTitle}
       subtitle={membersSubtitle}
       icon={membersIcon}
@@ -52,11 +58,11 @@ let {
       <FormMemberRowsSkeleton count={memberCount} />
     </FormSectionSkeleton>
     <FormSectionSkeleton title="Details" icon={detailsIcon}>
-      <div class="bits-form__i18n-card no-i18n">
-        <div class="flex flex-col gap-4 pt-2 pb-2">
-          <FormFieldSkeleton label="Code" />
-          <FormFieldSkeleton label="Url" />
-        </div>
+      <div
+        class="md:[&>section+section]:border-border/50 grid min-w-0 gap-6 px-6 py-6 md:grid-cols-2 md:[&>section+section]:border-l md:[&>section+section]:pl-6"
+      >
+        <FormFieldSkeleton label="Code" readOnly />
+        <FormFieldSkeleton label="Url" readOnly />
       </div>
     </FormSectionSkeleton>
   </FormSurface>

@@ -16,6 +16,9 @@ import { HubSubscriptionService } from '#lib/enums.js'
 import FormOrganisationsSection from '#lib/bits/patterns/forms/formOrganisationsSection/FormOrganisationsSection.svelte'
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import { formSelectionSectionStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
+import HubRoutingSkeleton from '#lib/bits/patterns/forms/formSkeleton/components/HubRoutingSkeleton.svelte'
+import HubOrganisationsSkeleton from '#lib/bits/patterns/forms/formSkeleton/components/HubOrganisationsSkeleton.svelte'
+import HubSubscriptionSkeleton from '#lib/bits/patterns/forms/formSkeleton/components/HubSubscriptionSkeleton.svelte'
 // TYPES
 import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 import type { DescriptorData } from '#lib/bits/patterns/forms/formI18nSection/components/formI18nDescriptorFields.types.js'
@@ -39,6 +42,7 @@ let {
 } = $props()
 setResponsiveCtx()
 let mode = $state('organisation')
+let subscriptionLoading = $state(false)
 let tab = $state('profile')
 let multilingualExpanded = $state(false)
 let contentLocaleSelection = $state<LocaleSelection | null>(null)
@@ -179,6 +183,9 @@ const form = {
 </script>
 <div class="bits-theme bg-panel text-foreground min-h-screen">
   <nav class="flex flex-wrap gap-4 p-6">
+    <button type="button" onclick={() => (subscriptionLoading = !subscriptionLoading)}>
+      Toggle subscription loading
+    </button>
     <button
       type="button"
       onclick={() => {
@@ -322,67 +329,90 @@ const form = {
         >
           {#snippet children(localeState)}
             {#if mode === 'hub'}
-              <FormOrganisationsSection
-                title="Organisations"
-                subtitle="Belonging to this hub"
-                class={formSelectionSectionStyles}
-                {organisations}
-                {selections}
-                isEditing={editing}
-                canSetCoreInclusive
-                onSearchOrganisations={async () => [
-                  {
-                    id: 'new',
-                    code: 'new',
-                    image: null,
-                    i18n: { en: { name: 'New partner' } },
-                  },
-                ]}
-                onAddOrganisation={organisation => {
-                  organisations = [
-                    ...organisations,
-                    organisation as (typeof organisations)[number],
-                  ]
-                }}
-                onRemoveOrganisation={id => {
-                  organisations = organisations.filter(
-                    organisation => organisation.id !== id,
-                  )
-                }}
-                onToggleCoreInclusive={(id, value) => {
-                  selections = selections.map(row =>
-                    row.organisationId === id
-                      ? { ...row, isCoreInclusive: value }
-                      : row,
-                  )
-                }}
-                onToggleHubExclusive={(id, value) => {
-                  selections = selections.map(row =>
-                    row.organisationId === id ? { ...row, isHubExclusive: value } : row,
-                  )
-                }}
-              />
-              <FormHubSpecifiersFields
-                {form}
-                isEditing={editing}
-                isRequiredInPreflight={() => false}
-              />
-              <FormHubSubscriptionSection
-                {form}
-                {localeState}
-                recordKey={mode}
-                isEditing={editing}
-                isSubscriptionAvailable={available}
-                subscriptionService={HubSubscriptionService.substack}
-                subscriptionPlacement={placement}
-                translate={provider}
-                onAvailabilityChange={value => {
-                  available = value
-                }}
-                onPlacementChange={(key, value) => {
-                  placement = { ...placement, [key]: value }
-                }}
-              />
+              <div data-hub-organisations-comparison>
+                {#if subscriptionLoading}
+                  <HubOrganisationsSkeleton />
+                {:else}
+                  <FormOrganisationsSection
+                    title="Organisations"
+                    subtitle="Belonging to this hub"
+                    class={formSelectionSectionStyles}
+                    {organisations}
+                    {selections}
+                    isEditing={editing}
+                    canSetCoreInclusive
+                    onSearchOrganisations={async () => [
+                      {
+                        id: 'new',
+                        code: 'new',
+                        image: null,
+                        i18n: { en: { name: 'New partner' } },
+                      },
+                    ]}
+                    onAddOrganisation={organisation => {
+                      organisations = [
+                        ...organisations,
+                        organisation as (typeof organisations)[number],
+                      ]
+                    }}
+                    onRemoveOrganisation={id => {
+                      organisations = organisations.filter(
+                        organisation => organisation.id !== id,
+                      )
+                    }}
+                    onToggleCoreInclusive={(id, value) => {
+                      selections = selections.map(row =>
+                        row.organisationId === id
+                          ? { ...row, isCoreInclusive: value }
+                          : row,
+                      )
+                    }}
+                    onToggleHubExclusive={(id, value) => {
+                      selections = selections.map(row =>
+                        row.organisationId === id
+                          ? { ...row, isHubExclusive: value }
+                          : row,
+                      )
+                    }}
+                  />
+                {/if}
+              </div>
+              <div data-hub-routing-comparison>
+                {#if subscriptionLoading}
+                  <HubRoutingSkeleton />
+                {:else}
+                  <FormHubSpecifiersFields
+                    {form}
+                    isEditing={editing}
+                    isRequiredInPreflight={() => false}
+                  />
+                {/if}
+              </div>
+              <div data-subscription-comparison>
+                {#if subscriptionLoading}
+                  <HubSubscriptionSkeleton
+                    locales={['en', 'zhHant', 'zhHans']}
+                    expanded={multilingualExpanded}
+                  />
+                {:else}
+                  <FormHubSubscriptionSection
+                    {form}
+                    {localeState}
+                    recordKey={mode}
+                    isEditing={editing}
+                    isSubscriptionAvailable={available}
+                    subscriptionService={HubSubscriptionService.substack}
+                    subscriptionPlacement={placement}
+                    translate={provider}
+                    onAvailabilityChange={value => {
+                      available = value
+                    }}
+                    onPlacementChange={(key, value) => {
+                      placement = { ...placement, [key]: value }
+                    }}
+                  />
+                {/if}
+              </div>
             {/if}
           {/snippet}
         </FormI18nDescriptorProfile>

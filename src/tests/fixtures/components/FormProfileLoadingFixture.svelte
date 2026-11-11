@@ -4,10 +4,9 @@ import Form from '#lib/bits/custom/main/Form.svelte'
 import { FormProfileSkeleton } from '#lib/bits/patterns/forms/formSkeleton/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
-import FormI18nSection from '#lib/bits/patterns/forms/formI18nSection/FormI18nSection.svelte'
+import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 import FormUserRolesSection from '#lib/bits/patterns/forms/formUserRolesSection/FormUserRolesSection.svelte'
 import FormSpecifiersFields from '#lib/bits/patterns/forms/formI18nSection/components/FormSpecifiersFields.svelte'
-import { TextInput, TextArea } from '#lib/bits/custom/form/index.js'
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
 import Type from 'virtual:icons/proicons/text'
 import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types.js'
@@ -28,10 +27,40 @@ const locales = ['en', 'zhHant', 'zhHans'] as const
 const users = ['Alex Chan', 'Robin Lee', 'Sam Wong'].map((name, index) => ({
   userId: String(index),
   role: 'owner',
-  user: { id: String(index), name },
+  user: { id: String(index), name, username: `user${index}` },
 })) as OrganisationRoleUser[]
+const descriptorValues = {
+  i18n: {
+    en: {
+      name: 'HKFoodWorks',
+      nameShort: 'HKFoodWorks',
+      description: 'A registered charity dedicated to sustainable food futures.',
+    },
+  },
+}
+const descriptorFields = new Proxy(
+  {},
+  {
+    get: (_target, locale: string) =>
+      new Proxy(
+        {},
+        {
+          get: (_row, key: string) => ({
+            as: (type: string) => ({
+              type,
+              value: descriptorValues.i18n[locale as 'en']?.[key as 'name'] ?? '',
+            }),
+            set: () => {},
+            issues: () => undefined,
+          }),
+        },
+      ),
+  },
+)
 const form = {
   fields: {
+    value: () => ({ data: descriptorValues }),
+    set: () => {},
     data: {
       code: {
         set: () => {},
@@ -54,46 +83,30 @@ const form = {
       {#snippet fallback()}
         <FormProfileSkeleton
           locales={[...locales]}
-          profileIcon={OrganisationIcon}
           membersIcon={OrganisationIcon}
           detailsIcon={Type}
-          membersTitle="Members"
-          membersSubtitle="Members can hold roles in projects"
+          membersTitle="Staff"
+          membersSubtitle="Owners and members manage this organisation."
         />
       {/snippet}
       <FormSurface>
-        <FormI18nSection
-          title="Profile"
-          locales={[...locales]}
+        <FormI18nDescriptorProfile
+          {form}
+          fields={descriptorFields}
+          defaultLocales={[...locales]}
+          recordKey="fixture"
           isEditing={editing}
-          localeCodeClass="absolute right-6 top-3 text-base font-medium uppercase text-muted-foreground"
-        >
-          {#snippet left()}
-            <div class="flex items-center gap-3">
-              <OrganisationIcon class="text-primary size-6" />
-              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
-            </div>
-          {/snippet}
-          {#snippet children(locale)}
-            <TextInput label="Name" value="HKFoodWorks" {locale} isEditing={editing} />
-            <TextInput
-              label="Short Name"
-              value="HKFoodWorks"
-              {locale}
-              isEditing={editing}
-            />
-            <TextArea
-              label="Description"
-              value="A registered charity dedicated to sustainable food futures."
-              {locale}
-              isEditing={editing}
-            />
-          {/snippet}
-        </FormI18nSection>
+          isRequiredInPreflight={() => false}
+          stickyFieldHeaders={['description']}
+          showPrimaryLocaleHeader={false}
+          localeHeaderPlacement="gutter"
+          translate={async () => ({ status: 'translated', text: '' })}
+          onChange={() => {}}
+        />
         <div class={formSectionDividerStyles}>
           <FormUserRolesSection
-            title="Members"
-            subtitle="Members can hold roles in projects"
+            title="Staff"
+            subtitle="Owners and members manage this organisation."
             icon={OrganisationIcon}
             userRoles={users}
             currentUserId="0"
