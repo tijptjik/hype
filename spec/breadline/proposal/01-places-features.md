@@ -1,5 +1,13 @@
 # Locations, Feature inheritance and SaanSeoi Addresses
 
+Feature creation setup (Refs #194, parent #180): new Features select their Layer,
+Feature type and Location kind before entering Location search. Single-option stages
+advance automatically; accepting a Location opens the Profile. Organisation, Project and
+Layer feature tabs provide a scoped New action that preserves the parent hierarchy. The
+setup uses the existing authorized creation catalogue and retains explicit choices when
+multiple options remain. Browser coverage lives in
+`scripts/visual-checks/feature-setup-check.ts`.
+
 Staff Location propagation (11 November 2026, Refs #194, parent #180): authorized shared
 corrections from the Location or Feature editor update linked Features and accepted
 history in the same transaction as Save. Copied discovery-address metadata does not

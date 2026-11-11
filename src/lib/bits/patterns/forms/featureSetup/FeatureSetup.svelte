@@ -1,0 +1,489 @@
+<script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
+// COMPONENTS
+import FeatureIntentChoice from '../featureIntent/FeatureIntentChoice.svelte'
+import TargetContextChoice from '../featureIntent/TargetContextChoice.svelte'
+// ICONS
+import LayerIcon from 'virtual:icons/lucide/layers'
+import ProjectIcon from 'virtual:icons/lucide/layout-grid'
+import OrganisationIcon from 'virtual:icons/lucide/users'
+import CheckIcon from 'virtual:icons/lucide/check'
+// DOMAIN
+import { setupResourceLabel, setupResourceMatches } from './featureSetup.types'
+import { featureTypeLabel } from '#lib/features/intents.js'
+import { getProjectDisplayName } from '#lib/projectNames.js'
+import { getLocaleKey } from '#lib/i18n.js'
+import { targetContextLabel } from '#lib/features/locationPolicy.i18n.js'
+// TYPES
+import type { FeatureSetupResults, FeatureSetupScope } from './featureSetup.types'
+import type { ParentSectionLayerItem } from '../formParentSection/formParentSection.types'
+import type { FeatureType } from '#lib/features/intents.js'
+import type { TargetContext } from '#lib/features/locationPolicy.js'
+
+let {
+  step = $bindable(0),
+  layer,
+  sourceLayerId,
+  initialScope = {},
+  initialLayerId,
+  type,
+  context,
+  contexts,
+  load,
+  onLayer,
+  onType,
+  onContext,
+  onSearch,
+  onHeightChange,
+}: {
+  step?: number
+  layer: ParentSectionLayerItem | null
+  sourceLayerId?: string
+  initialScope?: FeatureSetupScope
+  initialLayerId?: string
+  type: FeatureType | null
+  context: TargetContext | null
+  contexts: readonly TargetContext[]
+  load: (query: string, scope: FeatureSetupScope) => Promise<FeatureSetupResults>
+  onLayer: (layer: ParentSectionLayerItem) => void
+  onType: (type: FeatureType | null) => void
+  onContext: (context: TargetContext) => void
+  onHeightChange?: (height: number) => void
+  onSearch: () => void
+} = $props()
+let measuredHeight = $state(0)
+$effect(() => {
+  onHeightChange?.(step >= 3 ? measuredHeight : 0)
+})
+let confirmedLayerId = $state<string | null>(untrack(() => initialLayerId ?? null))
+let initialLayerApplied = $state(false)
+let confirmedTypeId = $state<string | null>(null)
+let typeAdvancePending = $state(false)
+let confirmedContext = $state<TargetContext | null>(null)
+const layerAnswered = $derived(Boolean(layer && layer.id === confirmedLayerId))
+const typeAnswered = $derived(
+  Boolean(layerAnswered && type && type.id === confirmedTypeId),
+)
+const contextAnswered = $derived(
+  typeAnswered && context !== null && context === confirmedContext,
+)
+const contextOptions = $derived([
+  ...new Set(
+    contexts.map(value => (value === 'infrastructure' ? ('built' as const) : value)),
+  ),
+])
+let query = $state('')
+let scope = $state<FeatureSetupScope>(untrack(() => ({ ...initialScope })))
+let catalogue = $state<FeatureSetupResults>({
+  organisations: [],
+  projects: [],
+  layers: [],
+})
+const searchSubtitle = $derived.by((): string => {
+  if (scope.projectId) {
+    const project = catalogue.projects.find(item => item.id === scope.projectId)
+    const name = project?.i18n?.en?.name
+    return name
+      ? `Search layers belonging to ${name}`
+      : 'Search layers belonging to this project'
+  }
+  if (scope.organisationId) {
+    const organisation = catalogue.organisations.find(
+      item => item.id === scope.organisationId,
+    )
+    const name = organisation?.i18n?.en?.name
+    return name
+      ? `Search projects and layers belonging to ${name}`
+      : 'Search projects and layers belonging to this organisation'
+  }
+  return 'Search organisations, projects and layers'
+})
+const recent = $derived(catalogue.layers)
+// Search the complete authorized catalogue without discarding or re-fetching results.
+const results = $derived({
+  organisations: catalogue.organisations,
+  projects: catalogue.projects.filter(
+    item =>
+      (!scope.organisationId || item.organisationId === scope.organisationId) &&
+      (!scope.projectId || item.id === scope.projectId),
+  ),
+  layers: catalogue.layers.filter(
+    item =>
+      (!scope.organisationId || item.organisationId === scope.organisationId) &&
+      (!scope.projectId || item.projectId === scope.projectId) &&
+      (!query.trim() ||
+        setupResourceMatches(item, query) ||
+        catalogue.projects.some(
+          parent => parent.id === item.projectId && setupResourceMatches(parent, query),
+        ) ||
+        catalogue.organisations.some(
+          parent =>
+            parent.id === item.organisationId && setupResourceMatches(parent, query),
+        )),
+  ),
+})
+let loading = $state(false)
+let failed = $state(false)
+let retry = $state(0)
+const labels = $derived([
+  layerAnswered && layer ? setupResourceLabel(layer) : 'What map are you adding to?',
+  typeAnswered && type
+    ? featureTypeLabel(type, getLocaleKey())
+    : 'What are you adding?',
+  contextAnswered && context ? targetContextLabel(context) : 'Where is it located?',
+  'Find the location',
+])
+$effect(() => {
+  retry
+  let cancelled = false
+  loading = true
+  failed = false
+  untrack(() => load('', {}))
+    .then(value => {
+      if (!cancelled) catalogue = value
+    })
+    .catch(() => {
+      if (!cancelled) failed = true
+    })
+    .finally(() => {
+      if (!cancelled) loading = false
+    })
+  return () => {
+    cancelled = true
+  }
+})
+// Skip determined stages only after their upstream selection and data are ready.
+$effect(() => {
+  if (step === 0 && !loading && !failed) {
+    // Apply a linked layer once, so returning to step one still permits changing it.
+    if (initialLayerId && !initialLayerApplied) {
+      const initialLayer = catalogue.layers.find(item => item.id === initialLayerId)
+      if (initialLayer) {
+        initialLayerApplied = true
+        untrack(() => selectLayer(initialLayer))
+      }
+    } else if (!initialLayerId && catalogue.layers.length === 1) {
+      untrack(() => selectLayer(catalogue.layers[0]))
+    }
+  }
+  // A sole type can resolve while the linked layer is still being applied.
+  if (step === 1 && typeAnswered && typeAdvancePending) {
+    typeAdvancePending = false
+    step = 2
+  }
+  if (step === 2 && typeAnswered) {
+    const options = contextOptions
+    if (options.length === 1) {
+      untrack(() => {
+        confirmedContext = options[0]
+        onContext(options[0])
+        step = 3
+        onSearch()
+      })
+    }
+  }
+})
+/** Resolve determined stages before navigation so the active search stays mounted.
+ * @param next Requested setup stage. @returns Nothing.
+ */
+function navigateToStep(next: number): void {
+  if (next === 2 && contextAnswered && contextOptions.length === 1) next = 3
+  if (next === step) return
+  step = next
+  if (next === 3) onSearch()
+}
+/** Move to type selection only after committing one coherent parent hierarchy.
+ * @param next Accessible layer selected by the contributor. @returns Nothing.
+ */
+function selectLayer(next: ParentSectionLayerItem): void {
+  if (next.id !== confirmedLayerId) {
+    confirmedTypeId = null
+    confirmedContext = null
+    onType(null)
+  }
+  confirmedLayerId = next.id
+  onLayer(next)
+  step = 1
+}
+</script>
+{#snippet hierarchy(item: ParentSectionLayerItem)}
+  {@const organisation = catalogue.organisations.find(
+    row => row.id === item.organisationId,
+  )}
+  {@const project = catalogue.projects.find(row => row.id === item.projectId)}
+  <span class="flex flex-wrap gap-x-1 font-mono text-xs tracking-widest uppercase">
+    <span class="text-primary"
+      >{organisation ? setupResourceLabel(organisation) : item.organisationId}</span
+    >
+    <span aria-hidden="true">›</span>
+    <span class="text-accent"
+      >{project
+        ? getProjectDisplayName(
+            project,
+            {},
+            { inOrganisationContext: Boolean(organisation) },
+          ) || setupResourceLabel(project)
+        : item.projectId}</span
+    >
+  </span>
+{/snippet}
+<section
+  bind:clientHeight={measuredHeight}
+  class="flex w-full min-w-0 flex-col motion-safe:transition-[padding] motion-safe:duration-200 {step <
+  3
+    ? 'min-h-0 flex-1 overflow-y-auto p-6'
+    : 'shrink-0'}"
+  aria-label="New feature setup"
+>
+  <div
+    class="mx-auto flex w-full min-w-0 shrink-0 flex-col {step < 3
+      ? 'my-auto max-w-6xl'
+      : ''}"
+    data-setup-content
+  >
+    <ol
+      class="grid w-full grid-cols-[repeat(4,minmax(max-content,1fr))] gap-1 overflow-x-auto bg-slate-900 motion-safe:transition-[max-width,border-radius] motion-safe:duration-200 px-2 py-1 text-white {step <
+      3
+        ? 'order-last mx-auto mt-5 rounded-xl'
+        : ''}"
+      aria-label="Setup progress"
+    >
+      {#each labels as label, index}
+        <li class="flex min-w-0 items-stretch">
+          <button
+            type="button"
+            disabled={(index === 1 && !layerAnswered) ||
+              (index === 2 && !typeAnswered) ||
+              (index === 3 && !contextAnswered)}
+            aria-current={step === index ? 'step' : undefined}
+            class="focus-visible:outline-primary flex h-full w-full min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-3 text-center disabled:opacity-60"
+            onclick={() => navigateToStep(index)}
+          >
+            <span
+              class="border-primary flex size-6 shrink-0 items-center justify-center rounded-full border text-xs"
+              class:bg-primary={step === index}
+              class:text-primary-foreground={step === index}
+            >
+              {#if index < step}
+                <CheckIcon class="size-3" />
+              {:else}
+                {index + 1}
+              {/if}
+            </span>
+            <span class="grid gap-0.5 text-left">
+              {#if step >= 3 && index < 3}
+                <span class="text-xs text-slate-300"
+                  >{['Layer', 'Feature kind', 'Location kind'][index]}</span
+                >
+              {/if}
+              <span class="text-sm whitespace-nowrap">{label}</span>
+            </span>
+          </button>
+        </li>
+      {/each}
+    </ol>
+    <div
+      hidden={step !== 0}
+      class="bg-panel text-base-content border-border mx-auto w-full max-w-4xl rounded-2xl border p-5 shadow-sm sm:p-10"
+    >
+      <h2 class="mb-3 text-center text-2xl font-semibold tracking-tight">
+        What map are you adding to?
+      </h2>
+      <label class="mx-auto grid max-w-xl gap-3 text-center text-sm"
+        >{searchSubtitle}
+        <input
+          type="search"
+          onkeydown={event => {
+            if (event.key === 'Enter') event.preventDefault()
+          }}
+          bind:value={query}
+          class="bg-panel border-border w-full min-w-0 rounded-lg border p-3"
+          placeholder="Search by name…"
+        >
+      </label>
+      {#if !loading &&
+        !query &&
+        !scope.organisationId &&
+        !scope.projectId &&
+        recent.length}
+        <p
+          class="text-muted-foreground mt-7 text-center text-xs font-medium tracking-wide"
+        >
+          Recently contributed to
+        </p>
+        <section
+          class="my-3 flex gap-3 overflow-x-auto pb-2"
+          aria-label="Recent layers"
+        >
+          {#each recent as item (item.id)}
+            <button
+              type="button"
+              class="bg-panel border-border hover:border-primary focus-visible:outline-primary hover:bg-base-200 flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors"
+              aria-pressed={item.id === confirmedLayerId}
+              class:ring-2={item.id === confirmedLayerId}
+              class:ring-primary={item.id === confirmedLayerId}
+              onclick={() => selectLayer(item)}
+            >
+              <LayerIcon class="text-primary bg-primary/10 size-10 rounded-lg p-2" />
+              <span
+                class="text-muted-foreground min-h-8 text-xs break-words whitespace-normal"
+                >{@render hierarchy(item)}</span
+              >
+              <span class="mt-auto font-semibold break-words whitespace-normal"
+                >{setupResourceLabel(item)}</span
+              >
+            </button>
+          {/each}
+        </section>
+      {/if}
+      {#if loading}
+        <div role="status" aria-busy="true" aria-label="Loading available layers">
+          <p
+            class="text-muted-foreground mt-7 text-center text-xs font-medium tracking-wide"
+          >
+            Recently contributed to
+          </p>
+          <div class="my-3 flex gap-3 overflow-hidden pb-2" aria-hidden="true">
+            {#each [0, 1, 2, 3] as placeholder (placeholder)}
+              <div
+                class="border-border flex min-h-40 w-56 shrink-0 flex-col items-start gap-3 rounded-xl border p-4"
+              >
+                <div
+                  class="bg-muted size-10 rounded-lg motion-safe:animate-pulse"
+                ></div>
+                <div class="min-h-8 w-full">
+                  <div
+                    class="bg-muted h-3 w-full rounded motion-safe:animate-pulse"
+                  ></div>
+                  <div
+                    class="bg-muted mt-1 h-3 w-3/4 rounded motion-safe:animate-pulse"
+                  ></div>
+                </div>
+                <div class="mt-auto flex h-6 w-3/4 items-center">
+                  <div
+                    class="bg-muted h-4 w-full rounded motion-safe:animate-pulse"
+                  ></div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {:else if failed}
+        <p role="alert" class="my-4">Unable to load available layers.</p>
+        <button type="button" class="underline" onclick={() => retry++}>Retry</button>
+      {:else}
+        {#if query && !scope.organisationId && !scope.projectId}
+          <div class="my-4 grid gap-2 sm:grid-cols-2">
+            {#each results.organisations.filter(item =>
+              setupResourceMatches(item, query),
+            ) as item (item.id)}
+              <button
+                type="button"
+                class="bg-panel border-border flex items-center gap-3 rounded-lg border p-3 text-left"
+                onclick={() => {
+                  scope = { organisationId: item.id }
+                  query = ''
+                }}
+              >
+                <OrganisationIcon class="size-5 shrink-0" />
+                <span
+                  >{setupResourceLabel(item)}
+                  <small class="text-muted-foreground">Organisation</small></span
+                >
+              </button>
+            {/each}
+            {#each results.projects.filter(item =>
+              setupResourceMatches(item, query),
+            ) as item (item.id)}
+              <button
+                type="button"
+                class="bg-panel border-border flex items-center gap-3 rounded-lg border p-3 text-left"
+                onclick={() => {
+                  scope = { projectId: item.id }
+                  query = ''
+                }}
+              >
+                <ProjectIcon class="size-5 shrink-0" />
+                <span
+                  >{setupResourceLabel(item)}
+                  <small class="text-muted-foreground">Project</small></span
+                >
+              </button>
+            {/each}
+          </div>
+        {/if}
+        {#if query || scope.organisationId || scope.projectId}
+          {#each results.projects.filter(
+            item => !scope.projectId || item.id === scope.projectId,
+          ) as project (project.id)}
+            {@const layers = results.layers.filter(
+              item => item.projectId === project.id,
+            )}
+            {#if layers.length}
+              <h3 class="mt-5 mb-2 font-semibold">{setupResourceLabel(project)}</h3>
+              <div class="grid gap-2 sm:grid-cols-2">
+                {#each layers as item (item.id)}
+                  <button
+                    type="button"
+                    class="bg-panel border-border hover:border-primary grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-lg border p-3 text-left"
+                    aria-pressed={item.id === confirmedLayerId}
+                    class:ring-2={item.id === confirmedLayerId}
+                    class:ring-primary={item.id === confirmedLayerId}
+                    onclick={() => selectLayer(item)}
+                  >
+                    <LayerIcon class="text-primary size-5" />
+                    <span class="min-w-0 break-words whitespace-normal"
+                      ><span class="text-muted-foreground block text-xs"
+                        >{@render hierarchy(item)}</span
+                      >{setupResourceLabel(item)}</span
+                    >
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          {/each}
+        {/if}
+        {#if !results.layers.length}
+          <p class="text-muted-foreground my-4 text-sm">
+            No matching layers. Choose an organisation or project, or try another
+            search.
+          </p>
+        {/if}
+      {/if}
+    </div>
+    {#if layerAnswered && layer && sourceLayerId}
+      <div
+        hidden={step !== 1}
+        class="bg-panel text-base-content border-border mx-auto w-full max-w-4xl rounded-2xl border p-5 shadow-sm sm:p-10 [&_h3]:text-center"
+      >
+        <FeatureIntentChoice
+          layerId={sourceLayerId}
+          value={typeAnswered ? type?.id : null}
+          requireSelection={true}
+          onChange={next => {
+            if (next?.id !== confirmedTypeId) confirmedContext = null
+            confirmedTypeId = next?.id ?? null
+            onType(next)
+            typeAdvancePending = Boolean(next)
+          }}
+        />
+      </div>
+    {/if}
+    <div
+      hidden={step !== 2}
+      class="bg-panel text-base-content border-border mx-auto w-full max-w-4xl rounded-2xl border p-5 shadow-sm sm:p-10 [&_legend]:w-full [&_legend]:text-center"
+    >
+      <TargetContextChoice
+        {contexts}
+        value={contextAnswered ? context : null}
+        onChange={next => {
+          confirmedContext = next
+          onContext(next)
+          step = 3
+          onSearch()
+        }}
+      />
+    </div>
+  </div>
+</section>

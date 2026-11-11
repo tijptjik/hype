@@ -21,8 +21,10 @@ let {
   layerId,
   value,
   onChange,
+  requireSelection = false,
 }: {
   layerId: string
+  requireSelection?: boolean
   value?: string | null
   onChange: (type: FeatureType | null) => void
 } = $props()
@@ -61,7 +63,7 @@ $effect(() => {
       if (cancelled) return
       types = result
       if (result.length === 1) onChange(result[0])
-      else {
+      else if (!requireSelection) {
         const retained = result.find(type => type.id === previous)
         if (retained) onChange(retained)
       }
