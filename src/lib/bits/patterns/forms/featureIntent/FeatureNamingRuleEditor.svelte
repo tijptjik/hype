@@ -19,7 +19,7 @@ let {
   onCancel,
 }: {
   id: string
-  scopeType: 'hub' | 'project' | 'layer'
+  scopeType: 'hub' | 'organisation' | 'project' | 'layer'
   scopeId: string
   inheritedRule: FeatureNameRule
   override?: FeatureNameRule

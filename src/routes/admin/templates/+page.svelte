@@ -15,6 +15,7 @@ import {
 } from '#lib/api/displayTemplates.remote.js'
 import { getFeatureNameProperties } from '#lib/api/featureIntents.remote.js'
 // COMPONENTS
+import OrganisationTemplateDefaults from '#lib/bits/patterns/forms/displayTemplate/OrganisationTemplateDefaults.svelte'
 import DisplayTemplateEditor from '#lib/bits/patterns/forms/displayTemplate/DisplayTemplateEditor.svelte'
 import { Button } from '#lib/bits/core/index.js'
 // I18N
@@ -229,6 +230,9 @@ async function save(): Promise<void> {
     {/each}
   </aside>
   <div class="min-w-0 space-y-4">
+    {#if organisationId && !featureId && !loading}
+      <OrganisationTemplateDefaults {organisationId} templates={records} />
+    {/if}
     {#if failed}
       <p role="alert" class="text-destructive text-sm">
         {m.display_templates_failed()}

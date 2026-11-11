@@ -13,7 +13,7 @@ let {
   triggerId,
   onConfigure,
 }: {
-  scopeType: 'hub' | 'project' | 'layer'
+  scopeType: 'hub' | 'organisation' | 'project' | 'layer'
   override?: FeatureNameRule
   onChange: (rule: FeatureNameRule | undefined) => void
   disabled?: boolean
@@ -23,7 +23,13 @@ let {
   onConfigure: () => void
 } = $props()
 const parent = $derived(
-  scopeType === 'layer' ? 'project' : scopeType === 'project' ? 'hub' : 'application',
+  scopeType === 'layer'
+    ? 'project'
+    : scopeType === 'project'
+      ? 'organisation'
+      : scopeType === 'organisation'
+        ? 'hub'
+        : 'application',
 )
 </script>
 <section

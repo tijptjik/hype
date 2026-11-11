@@ -56,6 +56,7 @@ function fixture() {
   )
   f.sqlite.exec(readFileSync('migrations/0214_feature_location_context.sql', 'utf8'))
   f.sqlite.exec(readFileSync('migrations/0221_feature_naming_policy.sql', 'utf8'))
+  f.sqlite.exec(readFileSync('migrations/0236_organisation_naming_policy.sql', 'utf8'))
   return { ...f, db: f.db as unknown as Database }
 }
 const ghost = {
@@ -176,7 +177,7 @@ describe('Feature intent', () => {
       await prepareFeatureNameDependencyChecks(f.db, 'project', [
         { id: 'paid', dataType: 'boolean', audience: 'public' },
       ]),
-    ).toHaveLength(3)
+    ).toHaveLength(4)
   })
   it('commits model policy with its parent and rolls back both on a stale ancestor', async () => {
     const f = fixture()
@@ -743,4 +744,79 @@ it('inherits central template references through Project and Layer and rejects f
       },
     }),
   ).rejects.toThrow('unavailable')
+})
+
+it('inherits Organisation naming independently and fences a concurrent Organisation edit', async () => {
+  const f = fixture()
+  const scope = { type: 'organisation' as const, id: 'org' }
+  const rule = { base: 'feature' as const, conditions: [] }
+  expect(
+    await saveFeatureIntentPolicy(f.db, {
+      scope,
+      definition: null,
+      namingRules: { [DEFAULT_FEATURE_TYPES[0].id]: rule },
+      version: 0,
+      actorId: 'editor',
+      guard: sql`1`,
+    }),
+  ).toBe(true)
+  const project = await readFeatureIntentPolicy(f.db, {
+    type: 'project',
+    id: 'project',
+  })
+  expect(project.types[0].nameRule).toEqual(rule)
+  expect(project.lineage.map(item => item.scope.type)).toEqual([
+    'hub',
+    'organisation',
+    'project',
+  ])
+  const statements = required(
+    await prepareFeatureIntentPolicySave(f.db, {
+      scope: { type: 'project', id: 'project' },
+      definition: null,
+      namingRules: {},
+      version: project.version,
+      fingerprint: project.fingerprint,
+      actorId: 'editor',
+    }),
+  )
+  await saveFeatureIntentPolicy(f.db, {
+    scope,
+    definition: null,
+    namingRules: {},
+    version: 1,
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  expect(await executeRevisionBatch(f.db, sql`1`, statements)).toBeNull()
+  expect(
+    f.sqlite
+      .prepare("SELECT count(*) n FROM featureIntentPolicy WHERE scopeType='project'")
+      .get(),
+  ).toEqual({ n: 0 })
+  expect(
+    (await readFeatureIntentPolicy(f.db, { type: 'layer', id: 'layer' })).types[0]
+      .nameRule,
+  ).not.toEqual(rule)
+})
+
+it('preserves existing policies and immutable revisions when adding Organisation scope', () => {
+  const f = publicationSqlite({})
+  connections.push(f)
+  f.sqlite.exec(
+    "CREATE TABLE user(id TEXT PRIMARY KEY); INSERT INTO user VALUES('editor'); CREATE TABLE feature(id TEXT);",
+  )
+  f.sqlite.exec(readFileSync('migrations/0211_feature_intent.sql', 'utf8'))
+  f.sqlite.exec(readFileSync('migrations/0221_feature_naming_policy.sql', 'utf8'))
+  f.sqlite.exec(`INSERT INTO featureIntentPolicy VALUES('project','p',NULL,7,'editor','{}');
+    INSERT INTO featureIntentPolicyRevision(id,scopeType,scopeId,definition,version,actorId,namingRules)
+      VALUES('r','project','p',NULL,7,'editor','{}');`)
+  const policies = f.sqlite.prepare('SELECT * FROM featureIntentPolicy').all()
+  const revisions = f.sqlite.prepare('SELECT * FROM featureIntentPolicyRevision').all()
+  f.sqlite.exec(readFileSync('migrations/0236_organisation_naming_policy.sql', 'utf8'))
+  expect(f.sqlite.prepare('SELECT * FROM featureIntentPolicy').all()).toEqual(policies)
+  expect(f.sqlite.prepare('SELECT * FROM featureIntentPolicyRevision').all()).toEqual(
+    revisions,
+  )
+  expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
 })

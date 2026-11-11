@@ -3713,3 +3713,11 @@ materialize generated names atomically. See `feature-display-template.test.ts` a
 0234/0235 after backup/rehearsal, and `scripts/visual-checks/template-registry-check.ts`
 verifies authenticated load/save/reload in Chromium and Firefox. Remote rollout remains
 deferred; Organisation/community defaults and bulk adoption remain pending.
+
+Organisation template defaults (Refs #178) now sit between Hub and Project. Managers
+select or reset a per-type central reference at `/admin/templates?organisation=<id>`.
+Ancestry version checks reject stale edits, and existing Feature names retain their
+accepted versions. Migration 0236 preserves current policies and immutable revisions; it
+is applied locally only. The authenticated Organisation-default browser check covers
+save, reload and reset in Chromium and Firefox. Community template adoption and bulk
+regeneration remain separate work; this does not add Layer-level Location policies.

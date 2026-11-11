@@ -37,7 +37,10 @@ import type { Database } from '#lib/types.js'
 // 2. Authorized policy writes
 // 3. Feature authoring and association validation
 
-export type FeatureIntentScope = { type: 'hub' | 'project' | 'layer'; id: string }
+export type FeatureIntentScope = {
+  type: 'hub' | 'organisation' | 'project' | 'layer'
+  id: string
+}
 export type FeatureIntentPolicy = {
   types: FeatureType[]
   inheritedTypes: FeatureType[]
@@ -81,13 +84,22 @@ export async function readFeatureIntentPolicy(
         ? await db.get<{ id: string }>(
             sql`SELECT projectId id FROM layer WHERE id=${scope.id}`,
           )
-        : await db.get<{ id: string }>(
-            sql`SELECT coalesce(o.hubId,(SELECT id FROM hub WHERE code='core')) id FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.id=${scope.id}`,
-          )
+        : scope.type === 'project'
+          ? await db.get<{ id: string }>(
+              sql`SELECT organisationId id FROM project WHERE id=${scope.id}`,
+            )
+          : await db.get<{ id: string }>(
+              sql`SELECT coalesce(hubId,(SELECT id FROM hub WHERE code='core')) id FROM organisation WHERE id=${scope.id}`,
+            )
     if (!parent) throw new Error('Feature policy owner no longer exists')
     if (parent.id) {
       const resolved = await readFeatureIntentPolicy(db, {
-        type: scope.type === 'layer' ? 'project' : 'hub',
+        type:
+          scope.type === 'layer'
+            ? 'project'
+            : scope.type === 'project'
+              ? 'organisation'
+              : 'hub',
         id: parent.id,
       })
       inheritedTypes = resolved.types
@@ -346,9 +358,11 @@ export async function prepareFeatureIntentPolicySave(
     const owner =
       input.scope.type === 'hub'
         ? sql`NULL`
-        : input.scope.type === 'project'
-          ? sql`(SELECT organisationId FROM project WHERE id=${input.scope.id})`
-          : sql`(SELECT p.organisationId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${input.scope.id})`
+        : input.scope.type === 'organisation'
+          ? sql`${input.scope.id}`
+          : input.scope.type === 'project'
+            ? sql`(SELECT organisationId FROM project WHERE id=${input.scope.id})`
+            : sql`(SELECT p.organisationId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${input.scope.id})`
     const guard = sql`EXISTS(SELECT 1 FROM displayTemplate t JOIN displayTemplateRevision r ON r.templateId=t.id
       WHERE t.id=${reference.id} AND r.version=${reference.version} AND (t.organisationId IS NULL OR t.organisationId IS ${owner}))`
     const available = await db.get<{ ok: number }>(sql`SELECT ${guard} ok`)

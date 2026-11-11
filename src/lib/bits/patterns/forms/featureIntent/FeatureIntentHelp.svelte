@@ -24,7 +24,7 @@ let {
 }: {
   topic: 'kind' | 'relation' | 'start' | 'missing' | 'naming' | 'fields'
   label: string
-  scopeType?: 'hub' | 'project' | 'layer'
+  scopeType?: 'hub' | 'organisation' | 'project' | 'layer'
 } = $props()
 const sections = $derived(
   {

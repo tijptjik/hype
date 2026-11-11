@@ -122,12 +122,12 @@ transaction. Legacy storage without accepted Feature history retains its compati
 application path.
 
 Remaining integration: sparse identity/local layer migration and internal publication;
-catalogue/import/editor; skip policies and template policy; community and Organisation
-template assignments and bulk version adoption; global Branch property inheritance;
-default community contribution routing for ordinary Feature Location name/address saves
-(the dedicated community commands already exist). Current reviews still use Feature
-facts and position groups. The diagram is a design contract, not evidence that these
-pending paths work.
+catalogue/import/editor; skip policies and template policy; community template
+assignments and bulk version adoption; global Branch property inheritance; default
+community contribution routing for ordinary Feature Location name/address saves (the
+dedicated community commands already exist). Current reviews still use Feature facts and
+position groups. The diagram is a design contract, not evidence that these pending paths
+work.
 
 ## Central template implementation
 
@@ -156,13 +156,17 @@ and applied locally; remote rollout remains deferred.
 Validation covers the parser, registry history/ownership fences, accepted Feature
 materialization, manual clears, explicit version adoption and legacy naming regressions.
 The helper editor has headless Chromium and Firefox checks at desktop and mobile widths.
-Hub, Project and Layer naming settings can select and inherit central references. New
-staff Features, accepted creation contributions and split identities materialize these
-names in their creation transaction. Private template references are checked against the
-consumer Organisation before saving defaults or creating Features. Community and
-Organisation defaults, bulk adoption, brand/group catalogue resolution and fine-grained
-template policies remain pending. The explicit assignment path does not imply these
-paths are complete.
+Hub, Organisation, Project and Layer naming settings can select and inherit central
+references. New staff Features, accepted creation contributions and split identities
+materialize these names in their creation transaction. Private template references are
+checked against the consumer Organisation before saving defaults or creating Features.
+Organisation defaults are managed at `/admin/templates?organisation=<id>` per feature
+type. Resetting a default restores Hub inheritance; Project and Layer overrides retain
+precedence. Migration 0236 preserves existing policies and revision history while adding
+the Organisation scope. Saving a default affects subsequent creation and does not
+rewrite accepted Feature names. Community defaults, bulk adoption, brand/group catalogue
+resolution and fine-grained template policies remain pending. The explicit assignment
+path does not imply these paths are complete.
 
 ## Community curation field locks
 

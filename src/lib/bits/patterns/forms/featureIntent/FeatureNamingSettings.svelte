@@ -53,7 +53,7 @@ let {
   locales = ['en', 'zh-Hant', 'zh-Hans'],
   disabled = false,
 }: {
-  scopeType: 'hub' | 'project' | 'layer'
+  scopeType: 'hub' | 'organisation' | 'project' | 'layer'
   scopeId: string
   rule: FeatureNameRule
   locales?: string[]

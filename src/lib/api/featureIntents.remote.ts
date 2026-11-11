@@ -12,6 +12,7 @@ import {
   authorizeProjectUpdateForSubmission,
   authorizeFeatureCreateForSubmission,
 } from './services/authz'
+import { requireLocationOrganisationManager } from './services/locationOwnership'
 import { authorizeLayerUpdateForSubmission } from './services/authz/layerPolicy'
 // SERVICES
 import {
@@ -33,7 +34,7 @@ import type { GuardedBaseContext } from './guarded.types'
 // 3. Feature authoring and association validation
 
 const scopeSchema = z.strictObject({
-  type: z.enum(['hub', 'project', 'layer']),
+  type: z.enum(['hub', 'organisation', 'project', 'layer']),
   id: z.string().min(1),
 })
 
@@ -46,6 +47,10 @@ async function authorizeSettings(
   scope: FeatureIntentScope,
 ): Promise<SQL> {
   if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+  if (scope.type === 'organisation') {
+    await requireLocationOrganisationManager(ctx, scope.id)
+    return sql`EXISTS(SELECT 1 FROM organisation WHERE id=${scope.id})`
+  }
   if (scope.type === 'hub') {
     const row = await ctx.db.get<{ id: string }>(
       sql`SELECT id FROM hub WHERE id=${scope.id}`,
@@ -172,7 +177,7 @@ export const getFeatureNameFieldsProject = guardedQuery(
   async (scope, ctx): Promise<string | null> => {
     await authorizeSettings(ctx, scope)
     if (scope.type === 'project') return scope.id
-    if (scope.type === 'hub') return null
+    if (scope.type === 'hub' || scope.type === 'organisation') return null
     const row = await ctx.db.get<{ projectId: string }>(
       sql`SELECT projectId FROM layer WHERE id=${scope.id}`,
     )
@@ -191,11 +196,13 @@ export const getFeatureNamingTemplates = guardedQuery(
     const owner =
       scope.type === 'hub'
         ? null
-        : await ctx.db.get<{ organisationId: string }>(
-            scope.type === 'project'
-              ? sql`SELECT organisationId FROM project WHERE id=${scope.id}`
-              : sql`SELECT p.organisationId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${scope.id}`,
-          )
+        : scope.type === 'organisation'
+          ? { organisationId: scope.id }
+          : await ctx.db.get<{ organisationId: string }>(
+              scope.type === 'project'
+                ? sql`SELECT organisationId FROM project WHERE id=${scope.id}`
+                : sql`SELECT p.organisationId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${scope.id}`,
+            )
     const { listDisplayTemplates } = await import('#lib/db/services/displayTemplate.js')
     return listDisplayTemplates(ctx.db, owner?.organisationId ?? null)
   },

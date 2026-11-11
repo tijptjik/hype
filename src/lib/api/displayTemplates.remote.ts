@@ -9,6 +9,7 @@ import { guardedCommand, guardedQuery } from './server/guarded'
 // AUTHORIZATION
 import { requireLocationOrganisationManager } from './services/locationOwnership'
 // DOMAIN
+import { FeatureTypesSchema } from '#lib/features/intents.js'
 import { DisplayTemplateDefinitionSchema } from '#lib/templates/registry.js'
 // SERVICES
 import {
@@ -150,5 +151,72 @@ export const setFeatureDisplayTemplate = guardedCommand(
     })
     if (!revisionId) error(409, 'FEATURE_VERSION_CHANGED')
     return { revisionId }
+  },
+)
+
+/** Read Organisation naming defaults and their inherited feature types.
+ * @param input Organisation identity. @returns Versioned defaults for explicit adoption.
+ */
+export const getOrganisationTemplateDefaults = guardedQuery(
+  z.strictObject({ organisationId: z.string().min(1) }),
+  async (input, ctx) => {
+    await authorizeTemplateScope(ctx, input.organisationId)
+    const { readFeatureIntentPolicy } = await import(
+      '#lib/db/services/featureIntentPolicy.js'
+    )
+    return readFeatureIntentPolicy(ctx.db, {
+      type: 'organisation',
+      id: input.organisationId,
+    })
+  },
+)
+
+/** Set or reset one Organisation default without rewriting accepted Feature names.
+ * @param input Inspected policy version, feature type and immutable template reference.
+ * @returns Completion after an attributed, concurrency-fenced policy write.
+ * @remarks Project and Layer overrides retain precedence. Existing Features retain their accepted versions.
+ */
+export const setOrganisationTemplateDefault = guardedCommand(
+  z.strictObject({
+    organisationId: z.string().min(1),
+    featureType: z.string().min(1),
+    version: z.number().int().min(0),
+    fingerprint: z.string(),
+    reference: z
+      .strictObject({ id: z.string().min(1), version: z.number().int().positive() })
+      .nullable(),
+  }),
+  async (input, ctx) => {
+    const guard = await authorizeTemplateScope(ctx, input.organisationId)
+    const { readFeatureIntentPolicy, prepareFeatureIntentPolicySave } = await import(
+      '#lib/db/services/featureIntentPolicy.js'
+    )
+    const { executeRevisionBatch } = await import('#lib/db/services/revisionBatch.js')
+    const owner = { type: 'organisation' as const, id: input.organisationId }
+    const current = await readFeatureIntentPolicy(ctx.db, owner)
+    const type = current.types.find(type => type.id === input.featureType)
+    if (!type) error(400, 'FEATURE_TYPE_UNAVAILABLE')
+    const namingRules = { ...current.namingRules }
+    if (input.reference)
+      namingRules[input.featureType] = {
+        base: type.nameRule?.base ?? 'location',
+        conditions: [],
+        registry: input.reference,
+      }
+    else delete namingRules[input.featureType]
+    const statements = await prepareFeatureIntentPolicySave(ctx.db, {
+      scope: owner,
+      actorId: ctx.user.id,
+      version: input.version,
+      fingerprint: input.fingerprint,
+      definition:
+        current.definition === null
+          ? null
+          : FeatureTypesSchema.parse(current.definition),
+      namingRules,
+    })
+    if (!statements || !(await executeRevisionBatch(ctx.db, guard, statements)))
+      error(409, 'POLICY_VERSION_CHANGED')
+    return { version: input.version + 1 }
   },
 )
