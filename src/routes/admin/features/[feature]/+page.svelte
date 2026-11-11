@@ -1,6 +1,8 @@
 <script lang="ts">
-import FeatureNamePreview from '#lib/bits/patterns/forms/featureIntent/FeatureNamePreview.svelte'
+import FeatureRuleTitleField from '#lib/bits/patterns/forms/featureIntent/FeatureRuleTitleField.svelte'
 import {
+  generateFeatureName,
+  nameBooleanValue,
   TARGET_CONTEXTS,
   TargetContextSchema,
   targetLocationKinds,
@@ -2352,10 +2354,83 @@ const profileNameMode = $derived(
         acceptedNameSource?.current?.nameMode ??
         'independent'),
 )
+// Resolve the displayed Title without feeding computed modifiers back into the authored base.
+const profileNameRule = $derived(
+  isNewFeatureRef
+    ? (selectedFeatureType?.nameRule ??
+        (selectedFeatureType?.relation === 'represents'
+          ? { base: 'location' as const, conditions: [] }
+          : null))
+    : (feature?.data?.nameTemplate?.rule ?? null),
+)
+const profileNameOverrides = $derived(
+  (currentFeatureData.nameOverrides ?? {}) as Record<string, string>,
+)
+const profileValues = $derived.by(
+  (): Record<string, { title?: string; description?: string }> => {
+    const rule = profileNameRule
+    if (!rule) return currentFeatureData.i18n
+    const properties = Object.fromEntries(
+      (currentFeatureData.properties ?? []).map(row => [
+        row.propertyId,
+        rule.conditions.some(
+          condition =>
+            condition.propertyId === row.propertyId && condition.test === 'hasValue',
+        )
+          ? row.value
+          : nameBooleanValue(row.value),
+      ]),
+    )
+    return Object.fromEntries(
+      Object.entries(currentFeatureData.i18n).map(([locale, row]) => [
+        locale,
+        {
+          ...row,
+          title: generateFeatureName({
+            rule,
+            locale,
+            locationName: Object.entries(profileLocationNames).find(
+              ([tag]) => canonicalContentTag(tag) === canonicalContentTag(locale),
+            )?.[1],
+            featureName: row.title,
+            properties,
+            override: profileNameOverrides[canonicalContentTag(locale)],
+          }),
+        },
+      ]),
+    )
+  },
+)
 const profileNamesLocked = $derived(profileNameMode === 'inherit')
+const profileTitlesLocked = $derived(
+  profileNamesLocked && !Object.keys(profileNameOverrides).length,
+)
+
+/** Store an explicit final title without replacing the naming rule's source.
+ * @param locale Edited content locale. @param title Override, or undefined to restore the rule.
+ * @param generated Whether the title is machine generated. @returns Nothing.
+ */
+function changeRuleTitle(
+  locale: string,
+  title: string | undefined,
+  generated: boolean,
+): void {
+  const key = contentFormKey(locale)
+  const tag = canonicalContentTag(locale)
+  updateFeatureData(data => {
+    const nameOverrides = { ...((data.nameOverrides ?? {}) as Record<string, string>) }
+    if (title === undefined) delete nameOverrides[tag]
+    else nameOverrides[tag] = title
+    return {
+      ...data,
+      nameOverrides,
+      i18n: { ...data.i18n, [key]: { ...data.i18n[key], titleGen: generated } },
+    }
+  })
+}
 // Existing independent titles must not hide the explicit option to inherit the Location name.
 const canOfferLocationName = $derived(
-  !profileNamesLocked && Object.values(profileLocationNames).some(name => name.trim()),
+  !profileTitlesLocked && Object.values(profileLocationNames).some(name => name.trim()),
 )
 
 /** Copy Location names into Feature titles while recording explicit inheritance intent.
@@ -2400,6 +2475,7 @@ function inheritLocationNames(names: Record<string, string>): void {
  * @returns Nothing; the association save stores the selected mode.
  */
 function useLocationName(): void {
+  if (profileNameRule) updateFeatureData(data => ({ ...data, nameOverrides: {} }))
   draftLocalNameMode = 'inherit'
   if (draftPlaceSource) draftPlaceSource = { ...draftPlaceSource, nameMode: 'inherit' }
   inheritLocationNames(profileLocationNames)
@@ -2408,6 +2484,15 @@ function useLocationName(): void {
  * @returns Nothing; the normal form save persists the explicit record choice.
  */
 function useIndependentFeatureName(): void {
+  if (profileNameRule) {
+    const nameOverrides = Object.fromEntries(
+      Object.entries(profileValues).map(([locale, row]) => [
+        canonicalContentTag(locale),
+        row.title ?? '',
+      ]),
+    )
+    updateFeatureData(data => ({ ...data, nameOverrides }))
+  }
   draftLocalNameMode = 'independent'
   if (draftPlaceSource)
     draftPlaceSource = { ...draftPlaceSource, nameMode: 'independent' }
@@ -4548,24 +4633,6 @@ async function refreshLocationSource(): Promise<void> {
           {#if isNewFeatureRef && layerIdValue}
             {#key layerIdValue}
               {#if selectedFeatureType}
-                {#if selectedFeatureType.nameRule ||
-                  selectedFeatureType.relation === 'represents'}
-                  <FeatureNamePreview
-                    rule={selectedFeatureType.nameRule ?? {
-                      base: 'location',
-                      conditions: [],
-                    }}
-                    names={profileLocationNames}
-                    titles={currentFeatureData.i18n}
-                    properties={currentFeatureData.properties ?? []}
-                    overrides={(currentFeatureData.nameOverrides ?? {}) as Record<
-                      string,
-                      string
-                    >}
-                    onChange={nameOverrides =>
-                      updateFeatureData(data => ({ ...data, nameOverrides }))}
-                  />
-                {/if}
                 {#if showMissingLocationPrompt}
                   <section role="status" class="mb-8 grid gap-3 rounded-lg border p-4">
                     <p>
@@ -4598,21 +4665,6 @@ async function refreshLocationSource(): Promise<void> {
                 {/if}
               {/if}
             {/key}
-          {/if}
-
-          {#if !isNewFeatureRef && feature?.data?.nameTemplate && isEditing}
-            <FeatureNamePreview
-              rule={feature.data.nameTemplate.rule}
-              names={profileLocationNames}
-              titles={currentFeatureData.i18n}
-              properties={currentFeatureData.properties ?? []}
-              overrides={(currentFeatureData.nameOverrides ?? {}) as Record<
-                string,
-                string
-              >}
-              onChange={nameOverrides =>
-                updateFeatureData(data => ({ ...data, nameOverrides }))}
-            />
           {/if}
 
           {#if needsLayerSelection || !showNameFields}
@@ -4674,15 +4726,16 @@ async function refreshLocationSource(): Promise<void> {
                 <FeatureProfileEditor
                   localeState={profileLocaleState}
                   onLocaleStateChange={setProfileLocaleState}
-                  values={currentFeatureData.i18n}
+                  values={profileValues}
                   contextKey={`${profileScope}:${profileEpoch}:${profileNameMode}:${isEditing}`}
                   {isEditing}
                   loading={!isCurrentRefSettled}
                   retainContent={Boolean(currentFeatureId)}
                   recordKey={currentFeatureId ?? ''}
                   allowDescriptions={featurePresentationPolicy.allowDescriptions}
-                  inherited={profileNamesLocked}
-                  policyRequired={featurePresentationPolicy.locationBasedNames}
+                  inherited={profileTitlesLocked}
+                  policyRequired={featurePresentationPolicy.locationBasedNames &&
+                    !profileNameRule}
                   offerName={canOfferLocationName}
                   locationNames={profileLocationNames}
                   onUseName={useLocationName}
@@ -4690,7 +4743,11 @@ async function refreshLocationSource(): Promise<void> {
                   onEditLocation={() => goToFacet('location')}
                   translate={(source, target, text) =>
                     translateContentField({ source, target, text })}
-                  onTranslated={applyProfileTranslation}
+                  onTranslated={(field, locale, text) => {
+                    if (field === 'title' && profileNameRule)
+                      changeRuleTitle(locale, text, true)
+                    else applyProfileTranslation(field, locale, text)
+                  }}
                 >
                   {#snippet toolbarMessage()}
                     <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
@@ -4701,7 +4758,23 @@ async function refreshLocationSource(): Promise<void> {
                     {@const config = featureDescriptorFieldConfigs.find(
                       config => config.key === field,
                     )}
-                    {#if config}
+                    {#if config && field === 'title' && profileNameRule}
+                      <FeatureRuleTitleField
+                        value={profileValues[key]?.title ?? ''}
+                        override={profileNameOverrides[canonicalContentTag(locale)]}
+                        generated={currentFeatureData.i18n[key]?.titleGen === true ||
+                          currentFeatureData.i18n[key]?.titleGen === 'true'}
+                        baseName={currentFeatureData.i18n[key]?.title ?? ''}
+                        fields={formCtx.form.fields.data.i18n[key]}
+                        label={`${config.label} · ${language.name}`}
+                        {prefix}
+                        editable={isEditing && !profileTitlesLocked}
+                        required={isRequiredInPreflight(['data', 'i18n', key, 'title'])}
+                        onChange={(title, generated) =>
+                          changeRuleTitle(locale, title, generated)}
+                        {onEditStart}
+                      />
+                    {:else if config}
                       <FormI18nDescriptorFields
                         form={formCtx.form}
                         fields={formCtx.form.fields.data.i18n[key]}

@@ -3454,6 +3454,15 @@ the derived display title. Compatibility readers resolve older `baseNames`/`over
 inside historical templates without rewriting history. The existing form transport's
 `title` input edits `baseName`, never the computed title returned by read APIs.
 
+The Feature form displays resolved names in the existing multilingual Title field,
+without a separate name-preview panel. Unlink captures the resolved titles as per-locale
+overrides; inline edits and translations update those overrides while the submitted base
+names remain separate. Use name clears the overrides and restores Location naming. The
+field retains its existing typography, verification control and inline Escape
+cancellation. Component checks cover cancellation and base-name preservation; headless
+Chromium and Firefox checks cover desktop and 390px layouts. Authenticated admin
+save/reopen verification remains separate from this component evidence.
+
 This naming-model follow-up is tracked under #241. Local verification: 198 tests pass
 across eight focused files, including migrated revision saves and form input separation.
 Migration 0220 was rehearsed and applied to the local D1 database: all 4,736
