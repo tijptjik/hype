@@ -4,8 +4,9 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 // COMPONENTS
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
+// VALUE FORMATTING
+import { phoneDisplay } from '#lib/utils/phone-property.js'
 // ICONS
-import PhoneIcon from 'virtual:icons/lucide/phone'
 import BrandIcon from 'virtual:icons/lucide/tag'
 // TYPES
 import type { LocationResource } from '#lib/locations/resource.js'
@@ -102,11 +103,21 @@ const brandNames = $derived(
     {#if place.facts.phoneNumber.length}
       <div class="space-y-2">
         {#each place.facts.phoneNumber as phone}
-          <a
-            class="text-primary flex items-center gap-2 text-sm hover:underline"
-            href={`tel:${phone}`}
-            ><PhoneIcon class="size-4" aria-hidden="true" />{phone}</a
-          >
+          {@const display = phoneDisplay(phone)}
+          <div class="flex items-center gap-2 text-sm">
+            {#if display.flag}
+              <span role="img" aria-label={display.country} class="text-xl leading-none"
+                >{display.flag}</span
+              >
+            {/if}
+            {#if display.href}
+              <a class="text-primary tabular-nums hover:underline" href={display.href}
+                >{display.text}</a
+              >
+            {:else}
+              <span>{display.text}</span>
+            {/if}
+          </div>
         {/each}
       </div>
     {/if}
