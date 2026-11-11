@@ -981,10 +981,8 @@ async function link(): Promise<void> {
         (accepted.current.kind === 'address' ? 'manual' : undefined),
       { identity: { ssId: accepted.current.ssId ?? undefined } },
     )}
-    <a
-      href={`/admin/features/${encodeURIComponent(featureId)}#updates`}
-      class="text-primary hover:bg-primary/10 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm"
-      aria-label={m.feature_updates_connection()}
+    <span
+      class="text-primary inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm"
     >
       <LocationAssociationIcon {mode} />
       <span
@@ -994,7 +992,7 @@ async function link(): Promise<void> {
             ? m.association_linked()
             : m.association_unlinked()}</span
       >
-    </a>
+    </span>
   {/if}
 {/snippet}
 {#snippet emptyMapControls()}
