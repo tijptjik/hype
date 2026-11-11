@@ -283,7 +283,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
 >
   <div
     class={horizontal
-      ? 'flex min-h-10 min-w-0 items-center gap-2'
+      ? 'flex min-h-10 min-w-0 items-center justify-end gap-2'
       : alwaysExpanded
         ? 'min-w-0'
         : 'flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 sm:flex-nowrap'}
@@ -295,7 +295,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
         inert={!isExpanded}
         aria-hidden={!isExpanded}
         class={horizontal
-          ? 'max-w-96 min-w-0 flex-1'
+          ? 'max-w-96 min-w-0 flex-initial'
           : alwaysExpanded
             ? 'min-w-0'
             : 'order-2 min-w-0 basis-full sm:order-none sm:flex-1 sm:basis-auto'}
