@@ -1888,6 +1888,10 @@ $effect(() => {
 
   const nextSeed = toEmptyFeatureFormInput()
 
+  // Scoped feature indexes carry the owning hierarchy into the first setup step.
+  nextSeed.data.organisationId = page.url.searchParams.get('organisationId') ?? ''
+  nextSeed.data.projectId = page.url.searchParams.get('projectId') ?? ''
+  nextSeed.data.layerId = page.url.searchParams.get('layerId') ?? ''
   nextSeed.data.contributorId = currentUser?.id ?? null
   emptyFeatureFormSeed = nextSeed
   featureFormSource = nextSeed
@@ -4374,6 +4378,11 @@ async function refreshLocationSource(): Promise<void> {
     {#if setupPending}
       <FeatureSetup
         bind:step={setupStep}
+        initialLayerId={page.url.searchParams.get('layerId') ?? undefined}
+        initialScope={{
+          organisationId: page.url.searchParams.get('organisationId') ?? undefined,
+          projectId: page.url.searchParams.get('projectId') ?? undefined,
+        }}
         onHeightChange={height => (setupProgressHeight = height)}
         layer={selectedLayer}
         sourceLayerId={layerIdValue

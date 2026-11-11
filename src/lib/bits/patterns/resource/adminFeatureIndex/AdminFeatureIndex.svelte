@@ -65,7 +65,10 @@ import type { Resource, LocaleKey } from '#lib/types.js'
 // TYPES
 import type { ResourceBulkEditOption } from '#lib/client/services/bulkEdit.types.js'
 
-let { showTotalCount = false }: { showTotalCount?: boolean } = $props()
+let {
+  showTotalCount = false,
+  onCreate,
+}: { showTotalCount?: boolean; onCreate?: () => void } = $props()
 
 type FeatureBulkStateField =
   | 'isPublished'
@@ -1146,6 +1149,7 @@ $effect(() => {
     ResourceControlBar,
     {
       resource: FirstClassResource.feature,
+      onCreate,
       count: matchingCount,
       countLoading:
         matchingCountLoading || (!remoteMatchesCurrentQuery && !remotePageError),

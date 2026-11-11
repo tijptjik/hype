@@ -1,7 +1,12 @@
 <script lang="ts">
 // SVELTE
 import { tick } from 'svelte'
+// I18N
+import { m } from '#lib/i18n.js'
+// ICONS
+import PlusIcon from 'virtual:icons/proicons/add'
 // COMPONENTS
+import Button from '#lib/bits/core/button/Button.svelte'
 import FilterCtrl from './ResourceControlBarFilterCtrl.svelte'
 import FilterReset from './ResourceControlBarFilterReset.svelte'
 import ResultCount from './ResourceControlBarResultCount.svelte'
@@ -11,6 +16,7 @@ import type { ResourceControlBarRootProps } from './resourceControlBarPrimitives
 
 let {
   filterLabel,
+  onCreate,
   filterIcon,
   hasActiveSection = false,
   disableMenuToggle = false,
@@ -309,6 +315,18 @@ $effect(() => {
     class={isBulkOpen || isCompactSortOpen ? 'hidden' : 'flex min-w-0 items-center'}
     inert={isBulkOpen || isCompactSortOpen}
   >
+    {#if onCreate}
+      <Button
+        text={m.gallery__new_badge()}
+        iconComponent={PlusIcon}
+        iconClasses="h-6 w-6"
+        style="outline"
+        color="light"
+        size="sm"
+        class="border-base-300! hover:bg-base-300/10! ml-4 shrink-0 bg-transparent! text-sm font-medium opacity-70 transition-opacity duration-300 hover:opacity-100"
+        onClick={onCreate}
+      />
+    {/if}
     <FilterCtrl
       label={filterLabel}
       icon={filterIcon}

@@ -74,6 +74,10 @@ async function load(
 >
   <FeatureSetup
     initialLayerId={location.search.includes('linked') ? 'layer' : undefined}
+    initialScope={{
+      organisationId: location.search.includes('organisation') ? 'org' : undefined,
+      projectId: location.search.includes('project') ? 'project' : undefined,
+    }}
     bind:step
     {layer}
     sourceLayerId={layer?.id}

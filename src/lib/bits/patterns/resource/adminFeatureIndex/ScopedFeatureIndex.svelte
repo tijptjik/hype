@@ -9,6 +9,8 @@ import { getAdminCtx, setAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl, setHeaderCtrl } from '#lib/context/header.svelte.js'
 import { setSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // SERVICES
+import { navigateOnAdmin } from '#lib/navigation/admin.js'
+import { NEW_REF } from '#lib/constants.js'
 import { createScopedFeatureView } from '#lib/client/services/scopedFeatureView.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
@@ -57,6 +59,35 @@ $effect(() => {
     active = false
   }
 })
+
+/**
+ * Open feature creation with this view's parent hierarchy selected.
+ * @returns Completion after resolving the parent IDs and starting navigation.
+ */
+async function createFeature(): Promise<void> {
+  try {
+    const selection: Record<string, string> = {}
+    if (resourceType === 'organisation') {
+      selection.organisationId = resourceId
+    } else {
+      const entity =
+        resourceType === 'layer'
+          ? await parent.view.getLayerById(resourceId)
+          : await parent.view.getProjectById(resourceId)
+      if (!entity) throw new Error('Parent resource is unavailable')
+      selection.organisationId = entity.organisationId
+      if (resourceType === 'layer' && 'projectId' in entity) {
+        selection.projectId = entity.projectId
+        selection.layerId = resourceId
+      } else {
+        selection.projectId = resourceId
+      }
+    }
+    navigateOnAdmin(parent, FirstClassResource.feature, NEW_REF, 'core', selection)
+  } catch {
+    toast.error(m.bootstrap__error())
+  }
+}
 
 // Keep native collection updates local, including optimistic bulk changes.
 $effect(() => {
@@ -124,6 +155,6 @@ onDestroy(() => {
     />
   {/if}
   <div class="relative flex min-h-0 flex-1 flex-col">
-    <AdminFeatureIndex showTotalCount />
+    <AdminFeatureIndex showTotalCount onCreate={createFeature} />
   </div>
 </div>

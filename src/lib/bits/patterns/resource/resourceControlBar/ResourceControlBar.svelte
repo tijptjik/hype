@@ -35,8 +35,10 @@ let {
   filters,
   sortables,
   bulkEdit,
+  onCreate,
 }: {
   resource: NavigableResource
+  onCreate?: () => void
   count?: number | null
   countLoading?: boolean
   filters: ResourceControlBarConfig
@@ -161,6 +163,7 @@ $effect(() => {
     disableMenuToggle={Boolean(singleSectionConfig)}
     showBulkEdit={Boolean(bulkEdit)}
     showSort={Boolean(sortables)}
+    {onCreate}
     {count}
     {countLoading}
     resetDisabled={totalFilterCount === 0}

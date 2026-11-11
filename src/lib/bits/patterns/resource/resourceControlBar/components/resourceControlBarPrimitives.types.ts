@@ -5,6 +5,7 @@ import type { ResourceBulkEditConfig } from '#lib/client/services/bulkEdit.types
 
 export type ResourceControlBarRootProps = {
   filterLabel: string
+  onCreate?: () => void
   filterIcon?: Component
   hasActiveSection?: boolean
   disableMenuToggle?: boolean

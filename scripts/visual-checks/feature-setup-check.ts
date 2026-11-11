@@ -211,6 +211,19 @@ for (const [name, engine] of [
       console.log(
         `${name} ${width}: linked layer skips determined type and location stages`,
       )
+      for (const [scope, subtitle] of [
+        ['organisation', 'Search projects and layers belonging to Cultural Foundation'],
+        ['project', 'Search layers belonging to Independent Bookstores'],
+      ]) {
+        await page.goto(`${base}/__feature-setup.html?${scope}`)
+        await page.getByText(subtitle, { exact: true }).waitFor()
+        if (
+          await page
+            .getByRole('button', { name: 'All organisations and projects' })
+            .count()
+        )
+          throw Error('Removed scope-reset link returned')
+      }
       await page.close()
     }
   } finally {
