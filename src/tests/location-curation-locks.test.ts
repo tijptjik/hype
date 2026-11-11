@@ -232,3 +232,25 @@ it('rejects internal Locations, invalid booleans and cross-Location history chai
   expect(f.sqlite.prepare('PRAGMA integrity_check').get()?.integrity_check).toBe('ok')
   expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
 })
+
+it('cannot remove a retained nested branch ID through a community entity reset', () => {
+  const current = {
+    ...facts,
+    entity: { kind: 'establishment', details: { brands: [], branchId: '0012' } },
+  } as typeof facts
+  expect(() =>
+    assertCurationFieldsOpen({ entity: { mode: 'inherit' } }, current, {}),
+  ).toThrow('BRANCH_ID_INTERNAL_ONLY')
+  expect(() =>
+    assertCurationFieldsOpen(
+      {
+        entity: {
+          mode: 'override',
+          value: { kind: 'establishment', details: { brands: [] } },
+        },
+      },
+      current,
+      {},
+    ),
+  ).toThrow('BRANCH_ID_INTERNAL_ONLY')
+})

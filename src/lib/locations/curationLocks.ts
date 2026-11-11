@@ -56,6 +56,13 @@ export function assertCurationFieldsOpen(
   current: LocationFacts,
   openFields: CurationOpenFields,
 ): void {
+  // Replacing/resetting the entity envelope must not remove a retained internal identifier.
+  if (
+    patch.entity &&
+    current.entity?.details &&
+    Object.hasOwn(current.entity.details, 'branchId')
+  )
+    throw new Error('BRANCH_ID_INTERNAL_ONLY')
   const touched = new Set<CurationLockField>()
   for (const field of Object.keys(patch) as Array<keyof SharedCorrectionPatch>) {
     if (field !== 'location') touched.add(field)

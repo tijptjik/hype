@@ -192,3 +192,21 @@ it('retains localized community identity, textual branch IDs and explicit clears
     branchId: '',
   })
 })
+
+it.each([false, true])(
+  'keeps branch IDs internal even when SuperAdmin is %s',
+  superAdmin => {
+    for (const patch of [
+      { branchId: { mode: 'override', value: '0012' } },
+      { branchId: { mode: 'clear' } },
+      { branchId: { mode: 'inherit' } },
+      { entity: { mode: 'override', value: { details: { branchId: '0012' } } } },
+    ])
+      expect(() =>
+        authorizeSharedCorrection(
+          patch as Parameters<typeof authorizeSharedCorrection>[0],
+          { canEdit: true, superAdmin },
+        ),
+      ).toThrow('BRANCH_ID_INTERNAL_ONLY')
+  },
+)

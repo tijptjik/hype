@@ -430,8 +430,6 @@ async function save(): Promise<void> {
         patch.branch = { mode: 'override', value: branch }
       if (JSON.stringify(format) !== JSON.stringify(editableFacts?.format ?? {}))
         patch.format = { mode: 'override', value: $state.snapshot(format) }
-      if (branchId !== (editableFacts?.branchId ?? ''))
-        patch.branchId = { mode: 'override', value: branchId }
       if (sharedBrandEdit) patch.brands = sharedBrandEdit.choice
       if (Object.keys(patch).length)
         await saveSharedLocationDirectoryCorrection({
@@ -801,12 +799,12 @@ $effect(() => {
                     </div>
                   {/each}
                   <label class="flex flex-col gap-2 text-sm"
-                    ><span>Branch ID</span>
+                    ><span>Branch ID · Internal</span>
                     <input
                       class="border-border bg-background rounded-lg border px-3 py-2"
                       maxlength="200"
                       bind:value={branchId}
-                      disabled={busy || communityClosed('branchId')}
+                      disabled={busy || correctionScope === 'shared'}
                     ></label
                   >
                 </div>

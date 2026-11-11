@@ -92,15 +92,22 @@ export type SharedCorrections = Partial<
 >
 
 /** Enforce shared-field authority independently of Organisation override authority.
- * @param _patch Validated changes. @param rights Server-resolved persisted permissions.
+ * @param patch Validated changes. @param rights Server-resolved persisted permissions.
  * @returns Nothing; rejects edits without community-curation authority.
  */
 export function authorizeSharedCorrection(
-  _patch: SharedCorrectionPatch,
+  patch: SharedCorrectionPatch,
   rights: { canEdit: boolean; superAdmin: boolean },
 ): void {
   if (!rights.canEdit && !rights.superAdmin)
     throw new Error('SHARED_LOCATION_EDIT_FORBIDDEN')
+  // Group-issued branch identifiers are authored only in Organisation customizations.
+  const entity =
+    patch.entity?.mode === 'override'
+      ? (patch.entity.value as LocationFacts['entity'])
+      : undefined
+  if (patch.branchId || (entity?.details && Object.hasOwn(entity.details, 'branchId')))
+    throw new Error('BRANCH_ID_INTERNAL_ONLY')
 }
 
 /** Record the actual source evidence, not the previously corrected display value.

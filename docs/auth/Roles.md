@@ -298,3 +298,7 @@ community Locations. Ordinary community edit authority does not grant lock autho
 Locked fields reject edits from every role until unlocked, including resets to
 inheritance. Internal Organisation customizations and the upstream ingestion workflow
 are unaffected.
+
+Branch ID is an internal Organisation identifier. Community correction commands reject
+its edits, including edits inside an entity envelope, for every role. It remains
+editable through the Internal destination under Organisation customization permissions.
