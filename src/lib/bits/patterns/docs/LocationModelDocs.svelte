@@ -1,6 +1,7 @@
 <script lang="ts">
 // COMPONENTS
 import LocationMatchingDocs from './LocationMatchingDocs.svelte'
+import LocationChangePolicyDocs from './LocationChangePolicyDocs.svelte'
 import MermaidDiagram from '#lib/bits/custom/mermaidDiagram/MermaidDiagram.svelte'
 // DOCS
 import {
@@ -40,6 +41,9 @@ let viewportHeight = $state(0)
         <a class="underline underline-offset-4" href="#history">Identity over time</a>
         <a class="underline underline-offset-4" href="#location-matching"
           >Location Matching</a
+        >
+        <a class="underline underline-offset-4" href="#location-change-policies"
+          >Location updates</a
         >
       </nav>
     </header>
@@ -446,5 +450,6 @@ let viewportHeight = $state(0)
       </p>
     </section>
     <LocationMatchingDocs />
+    <LocationChangePolicyDocs />
   </article>
 </div>

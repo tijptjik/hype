@@ -718,9 +718,9 @@ authorization follows the request-time checks used by other commands.
 
 ## Location correction authority and precedence
 
-Location values resolve in order: upstream evidence, Hype shared corrections, then
-Organisation overrides (including explicit suppression). This supersedes any older rule
-that routes all Location corrections to the Organisation layer.
+Location values resolve in order: upstream evidence, accepted community curations, then
+Organisation customizations (including explicit suppression). This supersedes any older
+rule that routes all Location corrections to the Organisation layer.
 
 An explicit edit of the universal `phoneNumber` property through a Feature requires
 permission to update that Feature's properties and writes the shared Location phone in
@@ -730,28 +730,41 @@ even when the Feature pins an older revision; transaction-time concurrency guard
 immutable actor-attributed history still apply. WhatsApp and custom phone properties
 remain Feature-owned. Explicit Organisation overrides retain their separate precedence.
 
-Standalone shared phone corrections, websites, socials and accessibility require Project
-or Organisation editing authority from persisted resource ancestry. Shared names,
-addresses, brands and other sensitive fields require SuperAdmin. Organisation
-corrections require Organisation authority. Client-submitted owner IDs or field labels
-never establish permission. Apply the same checks to direct saves, reset operations and
-staff acceptance of third-party task proposals.
+Community corrections, including names, addresses, brands and communications, require
+Project editing authority through the Feature-scoped command or Organisation management
+authority through the standalone directory command. SuperAdmin may also contribute.
+Internal customizations require Organisation authority. Client-submitted owner IDs or
+field labels never establish permission. Apply the same checks to direct saves, reset
+operations and staff acceptance of third-party task proposals.
 
 Every shared correction retains the original source evidence, source revision,
 replacement or suppression, actor and time. Correction revisions are immutable.
 Unchanged or omitted upstream contact evidence retains the correction. Changed upstream
 contact evidence supersedes it durably; agreement retires a redundant correction. A
-later upstream reversion must not reactivate a retired correction. Sensitive SuperAdmin
-corrections remain until explicitly reset. Organisation retain/follow policy applies
-above the shared layer. Accepted Feature revisions pin the evidence they adopted;
-reading history must never substitute the current head.
+later upstream reversion must not reactivate a retired correction. Community identity
+curations remain until explicitly reset. Organisation retain/follow policy applies above
+the shared layer. Accepted Feature revisions pin the evidence they adopted; reading
+history must never substitute the current head.
 
-The standalone Location editor exposes Hype shared scope only to SuperAdmin. Its
-Organisation scope continues to write Organisation overrides, even for SuperAdmin;
-choosing an Organisation never implicitly edits shared evidence. Both commands recheck
-authority and displayed revisions on the server.
+The standalone Location editor exposes the Community destination to permissioned
+Organisation managers and SuperAdmin for community Locations. Internal saves
+Organisation customizations, even for SuperAdmin. The edit destination does not change
+Location visibility. Internal Locations cannot receive community writes. Both commands
+recheck authority and displayed revisions on the server.
 
 Staff may accept a subset of a third-party proposal's fields. The server accepts only
 fields present in the retained proposal and checks each field's destination authority.
 The immutable merge receipt records the selected patch and reviewer. Unchecked fields
 remain unchanged, and the decision completes that proposal.
+
+### Organisation-wide Location adoption
+
+Accept and Keep-current decisions in the accepted Feature history workflow require
+Organisation management authority from the initiating Feature's persisted ancestry.
+Feature editing authority alone does not grant permission over sibling Projects.
+Automatic acceptance executes the persisted Project policy and synchronizes the accepted
+fields across its Organisation. Every affected Feature revision and the Organisation
+customization revision share one atomic, concurrency-fenced batch. Other Organisations
+are excluded. Acceptance releases affected customizations; Keep-current stores explicit
+retained values or suppressions. Independent Feature names and placements remain
+separate.

@@ -3655,3 +3655,11 @@ pin during association review preserves that identity; it does not authorize cre
 replacement Location. Explicit “Create” actions retain the local-authoring path.
 Regression coverage lives in `draft-feature-location-search.test.ts` and
 `location-association-picker.test.ts`.
+
+## Source-specific Location changes
+
+See
+[Location change policies](../../../docs/specs/Design-Spec-Location-Change-Policies.md)
+for branch provenance, Organisation/Project defaults, source-specific exceptions and the
+accept/review diagram. The document records the remaining adoption-group and permission
+boundaries explicitly. Refs #178.

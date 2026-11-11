@@ -11,7 +11,13 @@ An authorised staff edit takes effect on Save and records its history in the sam
 transaction. This includes translation-only edits within the Translator's allowed
 fields, image metadata/rotation and shared Location corrections by Organisation
 managers. Saving content preserves publication visibility; publish/unpublish remain
-separate permissions and actions. Staff edits do not create review proposals.
+separate permissions and actions. Staff edits take effect on the edited resource
+immediately. Shared Location changes are assessed through consuming Project policies:
+community policy can hold identity, address and marker changes for review while
+communications follow automatically. An accepting Project synchronizes that field across
+its Organisation. Explicit Accept and Keep-current decisions require Organisation
+management authority because they affect sibling Projects; they cannot be authorized
+solely by Feature editing rights.
 
 Authority remains resource-specific: Feature editing does not grant Organisation
 correction rights. Contributor task submissions and proposed shared corrections from
@@ -264,7 +270,7 @@ can select global scopes. Assets is restricted to Hub Admins and SuperAdmins; sh
 Data remains restricted to SuperAdmins and core Hub Admins. Analytics delegation does
 not grant contact-directory/user-search access.
 
-## Hype shared Location corrections
+## Community Location curations
 
 Location authority is field-specific and separate from Feature editing authority.
 Permission to update a Feature's properties also authorizes its universal phone edit to
@@ -273,10 +279,22 @@ wins at the shared layer; older Feature pins do not block it. This does not gran
 editing rights to other Location fields. WhatsApp and custom phone fields remain
 Feature-owned. Project or Organisation editors may also correct shared phone numbers,
 websites, social profiles and accessibility through the standalone Location correction
-path. Translation-only rights do not grant this authority. Only SuperAdmin may correct
-shared names, addresses, brands or other sensitive Location facts.
+path. Translation-only rights do not grant this authority. Permissioned Project editors
+may also contribute names, addresses, brands and other Location identity fields through
+the Feature-scoped community command. Standalone directory writes require Organisation
+management authority or SuperAdmin. Adoption remains subject to consumer policies.
 Organisation-authorized editors may instead maintain those values as Organisation
-overrides; those edits must not rewrite the shared baseline. Third-party submissions
-remain proposals until an authorized staff reviewer accepts them. Acceptance requires
-authority for each destination field, not merely access to the task. Staff edits with
-the required authority save directly.
+customizations using the Internal edit destination; those edits do not contribute to
+community curations. Location visibility is independent of the edit destination.
+Third-party submissions remain proposals until an authorized staff reviewer accepts
+them. Acceptance requires authority for each destination field, not merely access to the
+task. Staff edits with the required authority save directly.
+
+## Community curation locks
+
+Only authenticated SuperAdmin users can set or unset per-field community curation
+openness. The Location record toolbar shows lock administration only to that role on
+community Locations. Ordinary community edit authority does not grant lock authority.
+Locked fields reject edits from every role until unlocked, including resets to
+inheritance. Internal Organisation customizations and the upstream ingestion workflow
+are unaffected.
