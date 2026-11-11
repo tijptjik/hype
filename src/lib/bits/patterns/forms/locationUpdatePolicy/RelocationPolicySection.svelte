@@ -3,7 +3,7 @@
 import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
 import { SectionHeader } from '#lib/bits/custom/index.js'
-import { Select } from '#lib/bits/core/index.js'
+import PolicySelect from './PolicySelect.svelte'
 // ICONS
 import MapPinIcon from 'virtual:icons/proicons/location'
 import ShopIcon from 'virtual:icons/lucide/store'
@@ -65,31 +65,24 @@ const items = $derived([
           </p>
         </div>
       </div>
-      {#if isEditing}
-        <Select
-          triggerClass="relative shrink-0 cursor-pointer bg-background/50! border-[var(--form-control-border)]!"
-          placeholder={m.location_policy_relocation()}
-          value={value ?? 'inherit'}
-          {items}
-          {isEditing}
-          disabled={saving}
-          triggerAttrs={{ 'aria-label': m.location_policy_relocation() }}
-          onValueChange={selected => {
-            if (selected === 'inherit' && allowInherit) onValueChange(null)
-            else if (
-              selected === 'fixed' ||
-              selected === 'review' ||
-              selected === 'follow'
-            ) {
-              onValueChange(selected)
-            }
-          }}
-        />
-      {:else}
-        <p class="flex min-h-12 items-center text-sm font-medium">
-          {value == null ? m.location_policy_inherit() : labels[value]}
-        </p>
-      {/if}
+      <PolicySelect
+        label={m.location_policy_relocation()}
+        value={value ?? 'inherit'}
+        {items}
+        {isEditing}
+        disabled={saving}
+        onValueChange={selected => {
+          if (selected === 'inherit' && allowInherit) onValueChange(null)
+          else if (
+            selected === 'fixed' ||
+            selected === 'review' ||
+            selected === 'follow'
+          ) {
+            onValueChange(selected)
+          }
+        }}
+      />
+
       {#if allowInherit && inherited}
         <p class="text-muted-foreground text-sm">
           {m.location_policy_project_default({ policy: '' })}

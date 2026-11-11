@@ -78,6 +78,7 @@ import {
 import { getProjects } from '#lib/api/project.remote.js'
 import { getLayerRelocationPolicy } from '#lib/api/layerLocationPolicy.remote.js'
 import LayerRelocationPolicyPanel from '#lib/bits/patterns/forms/locationUpdatePolicy/LayerRelocationPolicyPanel.svelte'
+import PolicySelect from '#lib/bits/patterns/forms/locationUpdatePolicy/PolicySelect.svelte'
 import { getProjectProperties } from '#lib/api/property.remote.js'
 import {
   resolveLayerProjectSelectionScope,
@@ -1755,17 +1756,21 @@ $effect(() => {
               {@const policyValue =
                 formCtx.form.fields.value().data?.metadata?.[setting.key]}
               <div
-                class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-xl border border-[var(--form-control-border)] bg-[var(--form-control-edit-fill)] px-5 py-3"
+                class="flex min-w-0 flex-wrap items-center gap-4 rounded-xl border border-[var(--form-control-border)] bg-[var(--form-control-edit-fill)] px-5 py-3"
               >
-                <h3 class="min-w-0 text-sm font-semibold break-words whitespace-normal">
+                <h3
+                  class="min-w-0 flex-1 basis-48 text-sm font-semibold break-words whitespace-normal"
+                >
                   {setting.label}
                 </h3>
                 <div
-                  class="flex min-w-0 flex-wrap items-center justify-end gap-x-4 gap-y-2"
+                  class="ml-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-x-6 gap-y-2"
                 >
                   {#if selectedParentProject}
-                    <p class="text-muted-foreground text-sm">
-                      {m.location_policy_project_default({ policy: '' })}
+                    <p
+                      class="text-muted-foreground flex flex-wrap items-baseline gap-x-2 border-r border-[var(--form-control-border)] pr-6 text-sm"
+                    >
+                      <span>{m.location_policy_project_default({ policy: '' })}</span>
                       <span class="text-foreground font-medium">
                         {setting.projectDefault
                           ? m.feature_policy_enabled()
@@ -1773,39 +1778,24 @@ $effect(() => {
                       </span>
                     </p>
                   {/if}
-                  {#if isEditing && canEditLayerFields}
-                    <Select
-                      class="w-auto! min-w-0! justify-self-end"
-                      reserveTriggerSpace
-                      displayClass="px-3! [&>div]:p-0!"
-                      triggerClass="relative shrink-0 cursor-pointer gap-2 bg-background/50! border-[var(--form-control-border)]!"
-                      placeholder={setting.label}
-                      value={policyValue == null ? 'inherit' : String(policyValue)}
-                      items={[
-                        { value: 'inherit', label: m.location_policy_inherit() },
-                        { value: 'true', label: m.feature_policy_enabled() },
-                        { value: 'false', label: m.feature_policy_disabled() },
-                      ]}
-                      isEditing={isEditing && canEditLayerFields}
-                      disabled={formCtx.submitting}
-                      triggerAttrs={{ 'aria-label': setting.label }}
-                      onValueChange={value =>
-                        setFeaturePolicyOverride(
-                          setting.key as
-                            | 'allowFeatureDescriptions'
-                            | 'locationBasedFeatureNames',
-                          value === 'inherit' ? '' : value,
-                        )}
-                    />
-                  {:else}
-                    <p class="flex min-h-12 items-center text-sm font-medium">
-                      {policyValue == null
-                        ? m.location_policy_inherit()
-                        : policyValue
-                          ? m.feature_policy_enabled()
-                          : m.feature_policy_disabled()}
-                    </p>
-                  {/if}
+                  <PolicySelect
+                    label={setting.label}
+                    value={policyValue == null ? 'inherit' : String(policyValue)}
+                    items={[
+                      { value: 'inherit', label: m.location_policy_inherit() },
+                      { value: 'true', label: m.feature_policy_enabled() },
+                      { value: 'false', label: m.feature_policy_disabled() },
+                    ]}
+                    isEditing={isEditing && canEditLayerFields}
+                    disabled={formCtx.submitting}
+                    onValueChange={value =>
+                      setFeaturePolicyOverride(
+                        setting.key as
+                          | 'allowFeatureDescriptions'
+                          | 'locationBasedFeatureNames',
+                        value === 'inherit' ? '' : value,
+                      )}
+                  />
                 </div>
               </div>
             {/each}
