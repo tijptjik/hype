@@ -48,6 +48,7 @@ let contentWidth = $state<number | undefined>(undefined)
         style={action.style ?? 'ghost'}
         labelClasses={HEADER_BUTTON_LABEL_CLASSES}
         iconComponent={action.icon}
+        iconClasses={action.iconClass}
         hideLabel={hideLabel || action.alwaysHideLabel}
         hideLabelInstantly={action.hideLabelInstantly ?? action.alwaysHideLabel}
         disabled={action.disabled}

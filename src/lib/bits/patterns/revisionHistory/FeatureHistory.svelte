@@ -50,7 +50,8 @@ $effect(() => {
       id: 'history-refresh',
       icon: RefreshIcon,
       alwaysHideLabel: true,
-      disabled: busy,
+      iconClass: busy ? 'motion-safe:animate-spin' : '',
+      attrs: { 'aria-busy': busy },
       onClick: () => {
         void run(load)
       },

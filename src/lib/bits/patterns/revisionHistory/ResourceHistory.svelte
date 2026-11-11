@@ -105,8 +105,10 @@ $effect(() => {
       text: 'Refresh',
       icon: RefreshIcon,
       alwaysHideLabel: true,
-      disabled: loading,
+      iconClass: loading ? 'motion-safe:animate-spin' : '',
+      attrs: { 'aria-busy': loading },
       onClick: () => {
+        if (loading) return
         void load()
       },
     },

@@ -364,8 +364,10 @@ const toolbarActions = $derived<HeaderButtonActionConfig[]>([
     hideLabelInstantly: true,
     style: 'ghost',
     color: 'neutral',
-    disabled: loading,
+    iconClass: loading ? 'motion-safe:animate-spin' : '',
+    attrs: { 'aria-busy': loading },
     onClick: () => {
+      if (loading) return
       void load(true, true)
     },
   },
@@ -457,11 +459,14 @@ $effect(() => {
   {#if !onActions}
     <SectionHeader
       class="border-border/50 border-b bg-transparent!"
-      actions={toolbarActions.map(({ icon, alwaysHideLabel, ...action }) => ({
-        ...action,
-        iconComponent: icon,
-        hideLabel: alwaysHideLabel,
-      }))}
+      actions={toolbarActions.map(
+        ({ icon, iconClass, alwaysHideLabel, ...action }) => ({
+          ...action,
+          iconComponent: icon,
+          iconClasses: iconClass,
+          hideLabel: alwaysHideLabel,
+        }),
+      )}
     />
   {/if}
   {#if showFilters}
