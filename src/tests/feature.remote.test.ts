@@ -1561,6 +1561,7 @@ describe('feature.remote authz matrix', () => {
         expect.any(Object),
         expect.objectContaining({
           id: 'feature-1',
+          actorId: 'u-1',
           state: true,
           expectedScope: expect.objectContaining({
             organisationId: 'org-1',

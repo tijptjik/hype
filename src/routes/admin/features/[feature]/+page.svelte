@@ -65,6 +65,8 @@ import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
 
 // TOAST
 import { toast } from 'svelte-sonner'
+// FORM ERRORS
+import { submissionErrorMessage } from '#lib/forms/submissionError.js'
 // FEATURE AUTHORING POLICY
 import { resolveFeaturePresentationPolicy } from '#lib/features/presentationPolicy.js'
 // PUBLICATION
@@ -2636,10 +2638,12 @@ async function handleFeatureStateToggle(
           ? m.forms__delete()
           : m.forms__restored(),
     )
-  } catch {
+  } catch (cause) {
     mutation.settle(false)
     if (!isCurrentAction()) return
-    toast.error(m.long_crazy_peacock_care())
+    toast.error(m.long_crazy_peacock_care(), {
+      description: submissionErrorMessage(cause),
+    })
   } finally {
     if (isCurrentAction()) setBusy(false)
   }

@@ -1253,6 +1253,7 @@ export const archiveFeature = guardedCommand(
         id: featureId,
         expectedScope: probed,
         state: params.state,
+        actorId: user.id,
       }),
       () => {
         throw error(404, 'FEATURE_NOT_FOUND')
@@ -1411,6 +1412,7 @@ async function applyFeatureBulkStateField(
         id: featureId,
         expectedScope: probed,
         state: params.value,
+        actorId: user.id,
       }),
       () => {
         throw error(404, 'FEATURE_NOT_FOUND')

@@ -204,6 +204,7 @@ for (const state of [false, true]) {
         const before = sqlite.prepare('SELECT * FROM feature').all()
         const result = await updateFeatureArchivedStateById(db, {
           id: 'f',
+          actorId: 'editor',
           state,
           expectedScope,
         })

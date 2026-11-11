@@ -12,6 +12,7 @@ import {
 } from '#lib/db/services/featureLifecycle.js'
 import { buildFeatureChanges } from '#lib/revisions/featureChanges.js'
 import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
+import { routeFeatureRevisionArchive } from '#lib/db/services/featureRevisionArchive.js'
 const connections: ReturnType<typeof lifecycleFixture>[] = []
 afterEach(() => {
   for (const f of connections.splice(0)) f.sqlite.close()
@@ -24,6 +25,27 @@ async function fixture(published = true) {
 }
 
 describe('one accepted Feature history', () => {
+  it('routes archive and restore through attributed history and rejects stale scope', async () => {
+    const f = await fixture(false)
+    expect(
+      await routeFeatureRevisionArchive(f.db, {
+        ...command,
+        state: true,
+        guard: sql`0`,
+      }),
+    ).toBe('stale')
+    for (const state of [true, false]) {
+      expect(
+        await routeFeatureRevisionArchive(f.db, {
+          ...command,
+          state,
+        }),
+      ).toBe('updated')
+      const current = await readCurrentFeatureRevision(f.db, command)
+      expect(current?.state.isArchived).toBe(state)
+      expect(current?.revisionId).not.toBe(f.initial.revisionId)
+    }
+  })
   it.each([true, false])(
     'saves directly without changing visibility (%s)',
     async published => {

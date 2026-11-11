@@ -23,6 +23,7 @@ import { refreshRemoteQuery } from '#lib/remote/index.js'
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // DOMAIN
 import { featurePoint, featureDistance } from '#lib/features/nearby.js'
+import { submissionErrorMessage } from '#lib/forms/submissionError.js'
 import FeatureMergeReview from './FeatureMergeReview.svelte'
 import { identityTitle } from './featureIdentity.types'
 // BITS COMPONENTS
@@ -339,7 +340,7 @@ async function apply(): Promise<void> {
     open = false
     await onApplied(result.outputs)
   } catch (cause) {
-    message = cause instanceof Error ? cause.message : 'Unable to apply changes'
+    message = submissionErrorMessage(cause) ?? 'Unable to apply changes'
   } finally {
     busy = false
   }

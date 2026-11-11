@@ -53,6 +53,7 @@ import {
   featureLegacyPublicationGuard,
 } from './featureRevisionPublication'
 import { featureRevisionCreationEnabled } from './featureCreationRevision'
+import { routeFeatureRevisionArchive } from './featureRevisionArchive'
 // TYPES
 import type {
   Database,
@@ -846,8 +847,9 @@ export const updateFeaturePublishedStateById = async (
  * @param db - The database instance.
  * @param params - The target feature id and next archived state.
  * @param params.expectedScope Persisted ancestry used to authorize the command.
+ * @param params.actorId Actor attributed to the archive or restore revision.
  * @returns Updated Feature, or undefined for a missing, moved or skipped target.
- * @remarks Scope is rechecked in the UPDATE statement; role grants are not re-read.
+ * @remarks Lifecycle storage records an attributed revision. Scope is rechecked in the transaction; role grants are not re-read.
  */
 export const updateFeatureArchivedStateById = async (
   db: Database,
@@ -855,8 +857,22 @@ export const updateFeatureArchivedStateById = async (
     id: Id
     expectedScope: Omit<FeatureCommandProbe, 'id'>
     state: boolean
+    actorId: string
   },
 ): Promise<FeatureDB | undefined> => {
+  // Enrolled Features require attributed history before their projection can change.
+  const routed = await routeFeatureRevisionArchive(db, {
+    featureId: params.id,
+    actorId: params.actorId,
+    state: params.state,
+    guard: buildFeatureCommandScopeGuard(db, params.id, params.expectedScope),
+  })
+  if (routed !== 'legacy') {
+    if (routed === 'stale') return undefined
+    return (await db.select().from(feature).where(eq(feature.id, params.id)).get()) as
+      | FeatureDB
+      | undefined
+  }
   const [updated] = await db
     .update(feature)
     .set({
