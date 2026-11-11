@@ -122,12 +122,43 @@ transaction. Legacy storage without accepted Feature history retains its compati
 application path.
 
 Remaining integration: sparse identity/local layer migration and internal publication;
-catalogue/import/editor; skip policies and template policy; central DSL
-registry/editor/dependency regeneration; global Branch property inheritance; default
-community contribution routing for ordinary Feature Location name/address saves (the
-dedicated community commands already exist). Current reviews still use Feature facts and
-position groups. The diagram is a design contract, not evidence that these pending paths
-work.
+catalogue/import/editor; skip policies and template policy; inherited template
+assignments, creation-path template materialization and bulk version adoption; global
+Branch property inheritance; default community contribution routing for ordinary Feature
+Location name/address saves (the dedicated community commands already exist). Current
+reviews still use Feature facts and position groups. The diagram is a design contract,
+not evidence that these pending paths work.
+
+## Central template implementation
+
+The registry editor is available at `/admin/templates`; an Organisation context uses
+`?organisation=<id>`, and the Feature profile links to `?feature=<id>` for explicit
+assignment and regeneration. Templates retain immutable locale-specific versions.
+Community registry administration requires SuperAdmin; Organisation managers can author
+private templates and assign available versions to their Features. Publishing a version
+does not silently change existing references.
+
+The DSL implements tags, `??`, `pair(left, right, separator)`,
+`optional(value, prefix, suffix)` and `cases(value, trueText, falseText, missingText)`.
+The editor inserts tags, pairs and cases, with per-locale sample previews. False and
+missing are distinct. Templates cannot execute code or access arbitrary record fields.
+Location templates cannot reference Feature properties; Branch ID is not a Location tag.
+
+An explicit Feature reference lives at `nameTemplate.rule.registry`, containing only
+`id` and `version`. Authored base names and manual overrides remain separate. Accepted
+Feature edits and accepted automation capture regenerate `featureDisplayTemplateOutput`
+in the same transaction, using accepted Location pins and captured property definitions.
+Community adoption supplies its transaction's prepared accepted facts directly. The
+existing naming view projects this output to `featureI18n.title`; manual overrides win.
+Legacy rules retain their previous SQL behavior. The migrations are prepared, not
+applied.
+
+Validation covers the parser, registry history/ownership fences, accepted Feature
+materialization, manual clears, explicit version adoption and legacy naming regressions.
+The helper editor has headless Chromium and Firefox checks at desktop and mobile widths.
+Inherited system/community/Organisation/Project/Layer assignment, new-Feature creation,
+bulk adoption, brand/group catalogue resolution and fine-grained template policies
+remain pending. The explicit assignment path does not imply these paths are complete.
 
 ## Community curation field locks
 

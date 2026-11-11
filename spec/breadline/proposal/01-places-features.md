@@ -3674,3 +3674,13 @@ See
 for branch provenance, Organisation/Project defaults, source-specific exceptions and the
 accept/review diagram. The document records the remaining adoption-group and permission
 boundaries explicitly. Refs #178.
+
+### Central localized display templates (Refs #178)
+
+The explicit Feature template path uses immutable central versions, a bounded expression
+language and an editor at `/admin/templates`. Accepted edits materialize generated names
+separately from authored bases and overrides. Community adoption renders from the same
+prepared accepted facts as its transaction. See
+[the implementation boundary](../../../docs/specs/Design-Spec-Location-Change-Policies.md#central-template-implementation)
+for supported paths, validation and pending inherited assignments. Migrations 0234 and
+0235 are prepared only; rollout and deployed verification are deferred by request.

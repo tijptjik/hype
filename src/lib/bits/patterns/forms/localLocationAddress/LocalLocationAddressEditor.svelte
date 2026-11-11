@@ -974,9 +974,6 @@ $effect(() => {
             organisationId={place.editingOrganisationId ?? undefined}
             {queryScope}
           />
-          <p class="text-muted-foreground text-sm leading-relaxed">
-            {m.location_directory_detail_help()}
-          </p>
         </div>
       </div>
     {/snippet}
