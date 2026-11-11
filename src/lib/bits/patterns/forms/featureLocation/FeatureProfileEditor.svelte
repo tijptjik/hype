@@ -459,7 +459,7 @@ function autonym(locale: string): string {
               data-profile-locale={locale}
             >
               <div
-                class="relative min-h-0 {stickyHeader && shown.includes(locale)
+                class="relative min-h-0 min-w-0 {stickyHeader && shown.includes(locale)
                   ? 'overflow-visible'
                   : 'overflow-hidden'} {gutter
                   ? 'grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-2'

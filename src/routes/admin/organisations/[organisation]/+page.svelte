@@ -113,11 +113,9 @@ import { contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleD
 import { resolveContentLocales } from '#lib/content-locales/resolve.js'
 // BITS COMPONENTS
 import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
-import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
-import {
-  FormSectionSkeleton,
-  FormProfileSkeleton,
-} from '#lib/bits/patterns/forms/formSkeleton/index.js'
+import ResourceFormSkeleton from '#lib/bits/patterns/forms/formSkeleton/ResourceFormSkeleton.svelte'
+import OrganisationCapabilitiesSkeleton from '#lib/bits/patterns/capabilities/organisationCapabilities/OrganisationCapabilitiesSkeleton.svelte'
+import { FormProfileSkeleton } from '#lib/bits/patterns/forms/formSkeleton/index.js'
 import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
 import AnalyticsGrant from '#lib/bits/patterns/analytics/AnalyticsGrant.svelte'
 import OrganisationCapabilities from '#lib/bits/patterns/capabilities/organisationCapabilities/OrganisationCapabilities.svelte'
@@ -140,7 +138,6 @@ import type { OrganisationFacet } from '#lib/navigation/index.js'
 // UTILS
 import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
-import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
@@ -1583,32 +1580,23 @@ $effect(() => {
               </button>
             </div>
           </FormSurface>
+        {:else if isCapabilitiesFacet}
+          <OrganisationCapabilitiesSkeleton />
         {:else if !isCoreFacet}
-          <FormSurface>
-            <section aria-label={m.resource_loading()} aria-busy="true">
-              <FormSectionSkeleton
-                divided={false}
-                title={isCapabilitiesFacet
-                  ? m.resources__capabilities()
-                  : m.admin__forms_common_fields()}
-                icon={isCapabilitiesFacet ? ShieldIcon : Type}
-              >
-                <div class="space-y-4 p-6">
-                  {#each Array(3) as _}
-                    <Skeleton class="h-14 w-full rounded-md" />
-                  {/each}
-                </div>
-              </FormSectionSkeleton>
-            </section>
-          </FormSurface>
+          <ResourceFormSkeleton
+            resource="organisation"
+            facet={activeFacet}
+            {locales}
+            expanded={multilingualExpanded}
+          />
         {:else}
           <FormProfileSkeleton
             {locales}
-            profileIcon={OrganisationIcon}
+            expanded={multilingualExpanded}
             membersIcon={OrganisationIcon}
             detailsIcon={Type}
-            membersTitle={m.admin__forms_organisation_members_title()}
-            membersSubtitle={m.admin__forms_organisation_members_subtitle()}
+            membersTitle="Staff"
+            membersSubtitle="Owners and members manage this organisation."
           />
         {/if}
       </Main.Facet>

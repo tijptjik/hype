@@ -1,5 +1,7 @@
 <script lang="ts">
 import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
+// LOADING PRESENTATION
+import ResourceFormSkeleton from '#lib/bits/patterns/forms/formSkeleton/ResourceFormSkeleton.svelte'
 // DEFERRED FACETS
 import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE INTENTS
@@ -8,6 +10,8 @@ import ImageIntentSettings from '#lib/bits/patterns/images/ImageIntentSettings.s
 
 // ROLE HIERARCHY
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
+// COMPONENTS
+import HubPoliciesHeader from '#lib/bits/patterns/forms/formI18nSection/components/HubPoliciesHeader.svelte'
 // SVELTE
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
@@ -122,8 +126,6 @@ import {
   formSelectionSectionStyles,
 } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
-import { fitSectionHeader } from '#lib/bits/custom/form/fitSectionHeader.js'
-import { responsiveSectionHeaderClasses } from '#lib/bits/custom/form/responsiveSectionHeader.styles.js'
 import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import type { HubOrganisationItem } from '#lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types.js'
 // ADAPTERS
@@ -146,9 +148,7 @@ import Blend from 'virtual:icons/proicons/shape-intersect'
 import AdminIcon from 'virtual:icons/proicons/shield'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import HubIcon from 'virtual:icons/proicons/building-multiple'
-import RefreshCw from 'virtual:icons/proicons/arrow-sync'
 import Type from 'virtual:icons/proicons/text'
-import PoliciesIcon from 'virtual:icons/proicons/shield-checkmark'
 // ENUMS
 import {
   classifierComponentTypes,
@@ -1657,6 +1657,12 @@ $effect(() => {
     {#if formCtx.form.fields.value().data?.imageIntentSettings !== undefined}
       <input {...imageIntentInputAttrs()}>
     {/if}
+    {#snippet fallback()}
+      <Main.Facet isVisible={true} fillHeight class="right-0! left-0!">
+        <ResourceFormSkeleton resource="hub" facet={activeFacet} {locales} />
+      </Main.Facet>
+    {/snippet}
+
     <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
@@ -1927,31 +1933,11 @@ $effect(() => {
           onChange={revalidateAfterProgrammaticChange}
         >
           {#snippet toolbarHeader(toolbar)}
-            <div class={responsiveSectionHeaderClasses} use:fitSectionHeader>
-              <SectionHeader
-                title="Policies"
-                icon={PoliciesIcon}
-                description="Configure the privacy policy and terms of service shown for this hub."
-                showControlLabels
-              >
-                {#snippet right()}
-                  {@render toolbar()}
-                {/snippet}
-                {#snippet afterControls()}
-                  <button
-                    type="button"
-                    aria-label="Regenerate policies"
-                    title="Regenerate policies"
-                    disabled={!isEditing}
-                    onclick={onRegeneratePolicies}
-                    class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
-                  >
-                    <RefreshCw class="size-4" />
-                    <span data-control-label>Regenerate</span>
-                  </button>
-                {/snippet}
-              </SectionHeader>
-            </div>
+            <HubPoliciesHeader
+              {toolbar}
+              disabled={!isEditing}
+              onRegenerate={onRegeneratePolicies}
+            />
           {/snippet}
           {#snippet renderValue(_field, value)}
             <HubPolicyDocumentBody

@@ -1,5 +1,7 @@
 <script lang="ts">
 import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
+// LOADING PRESENTATION
+import ResourceFormSkeleton from '#lib/bits/patterns/forms/formSkeleton/ResourceFormSkeleton.svelte'
 // DEFERRED FACETS
 import Deferred from '#lib/bits/custom/deferred/Deferred.svelte'
 // IMAGE PUBLICATION
@@ -1501,6 +1503,12 @@ $effect(() => {
     attrs={formCtx.attributes}
     isReady={Boolean(formCtx.form?.fields && (layer?.data || isNewLayerRef))}
   >
+    {#snippet fallback()}
+      <Main.Facet isVisible={true} fillHeight class="right-0! left-0!">
+        <ResourceFormSkeleton resource="layer" facet={activeFacet} {locales} />
+      </Main.Facet>
+    {/snippet}
+
     <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
