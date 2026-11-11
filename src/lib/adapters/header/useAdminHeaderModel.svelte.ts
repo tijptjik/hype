@@ -516,6 +516,44 @@ export function useAdminHeaderModel(
   const headerIcon = $derived(headerCtrl.state.meta.icon)
   const headerIconHoverColor = $derived(getHeaderIconHoverColor(headerResourceType))
   const formActions = $derived(headerCtrl.state.formActions)
+  // Cache presentation only: route callbacks must never survive their owning form.
+  const previewAvailabilityKey = $derived.by((): string | null => {
+    const resourceType = adminCtx.activeResourceType
+    const resourceRef = adminCtx.activeResourceRef
+    if (!currentUser || !resourceType || !resourceRef || resourceRef === NEW_REF)
+      return null
+    const resource = appCtx.getResourceByRefSync(resourceType, resourceRef)
+    if (!resource) return null
+    return JSON.stringify([
+      appCtx.resources.scopeKey,
+      currentUser.id,
+      currentUser.isAnonymous,
+      currentUser.superAdmin,
+      currentUser.roles,
+      resourceType,
+      resourceRef,
+      resource,
+    ])
+  })
+  let cachedPreviewKey = $state<string | null>(null)
+  let lastPreviewHandler: (() => void) | null = null
+  $effect(() => {
+    const key = previewAvailabilityKey
+    if (key !== cachedPreviewKey) cachedPreviewKey = null
+    if (
+      key &&
+      formActions?.preview &&
+      formActions.preview !== lastPreviewHandler &&
+      isFormView &&
+      !navigating.to
+    ) {
+      cachedPreviewKey = key
+      lastPreviewHandler = formActions.preview
+    }
+  })
+  const hasCachedPreview = $derived(
+    previewAvailabilityKey !== null && cachedPreviewKey === previewAvailabilityKey,
+  )
   const syncCrumbs = $derived.by(() => getCachedHeaderCrumbs())
 
   // DERIVED :: NAVIGATION
@@ -1062,7 +1100,7 @@ export function useAdminHeaderModel(
     }
   })
 
-  // Preview uses the current resource's role-derived handler and saved state; keep its slot while editing.
+  // Keep the authorized Preview slot across tabs while the current form rebinds its handler.
   const previewAction = $derived.by((): HeaderButtonActionConfig | null => {
     if (isDeleted || (!formActions?.preview && !hasCachedPreview)) return null
     return {
