@@ -260,6 +260,7 @@ import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // BITS COMPONENTS
+import FeatureVisualSkeleton from '#lib/bits/patterns/forms/formSkeleton/FeatureVisualSkeleton.svelte'
 import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 import HistorySkeleton from '#lib/bits/patterns/revisionHistory/HistorySkeleton.svelte'
 import ImageWorkspaceSkeleton from '#lib/bits/patterns/images/ImageWorkspaceSkeleton.svelte'
@@ -761,6 +762,10 @@ const DEFAULT_FEATURE_MAP_ZOOM = 19
 let draftHasPin = $state(false)
 let draftHasAddress = $state(false)
 let editorViewportHeight = $state(1040)
+// Share responsive sizing with the loading preview, including taller desktop windows.
+const profileVisualHeight = $derived(
+  Math.max(64, Math.min(720, editorViewportHeight * 0.55)),
+)
 let selectedFeatureType = $state<FeatureType | null>(null)
 let selectedTargetContext = $state<TargetContext | null>(null)
 let missingLocationAcknowledged = $state(false)
@@ -4427,32 +4432,35 @@ async function refreshLocationSource(): Promise<void> {
   >
     {#snippet fallback()}
       <div
-        class="flex h-full min-h-0 w-full flex-col overflow-hidden"
+        class="bits-theme bg-panel flex h-full min-h-0 w-full flex-col overflow-hidden"
         role="status"
         aria-busy="true"
         aria-label={m.resource_loading()}
       >
-        <div
-          class="bg-foreground/10 shrink-0 motion-safe:animate-pulse"
-          style:height={`${visualSectionHeight}px`}
-        ></div>
-        <FeatureProfileEditor
-          loading
-          showToolbar
-          localeState={profileLocaleState}
-          onLocaleStateChange={() => {}}
-          values={{}}
-          contextKey={profileScope}
-          allowDescriptions={featurePresentationPolicy.allowDescriptions}
-          translate={async () => ({ status: 'translated', text: '' })}
-          onTranslated={() => {}}
-        >
-          {#snippet children(field)}
-            <div
-              class={field === 'description' ? 'min-h-32 w-full' : 'min-h-10 w-full'}
-            ></div>
-          {/snippet}
-        </FeatureProfileEditor>
+        <FeatureVisualSkeleton
+          expandedHeight={isLocationFacet ? 320 : profileVisualHeight}
+          showImage={!isLocationFacet}
+          showControls={!isLocationFacet}
+        />
+        <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-7! pb-12`}>
+          <FeatureProfileEditor
+            loading
+            showToolbar
+            localeState={profileLocaleState}
+            onLocaleStateChange={() => {}}
+            values={{}}
+            contextKey={profileScope}
+            allowDescriptions={featurePresentationPolicy.allowDescriptions}
+            translate={async () => ({ status: 'translated', text: '' })}
+            onTranslated={() => {}}
+          >
+            {#snippet children(field)}
+              <div
+                class={field === 'description' ? 'min-h-32 w-full' : 'min-h-10 w-full'}
+              ></div>
+            {/snippet}
+          </FeatureProfileEditor>
+        </FormSurface>
       </div>
     {/snippet}
     <HiddenInputs inputs={programmaticFeatureInputEntries} />
@@ -4486,9 +4494,7 @@ async function refreshLocationSource(): Promise<void> {
       {#if showsVisualSection}
         <FormFeatureVisualSection
           bind:this={featureVisualSection}
-          expandedHeight={isLocationFacet
-            ? 320
-            : Math.min(1200, editorViewportHeight * 0.5)}
+          expandedHeight={isLocationFacet ? 320 : profileVisualHeight}
           minimumHeight={isLocationFacet ? 320 : 64}
           showImage={!isLocationFacet}
           showControls={!isLocationFacet}
