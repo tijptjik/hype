@@ -8,9 +8,9 @@ import {
   getAddressDisplay,
 } from '#lib/addresses/featureAddress.js'
 let displayToolbarWidth = $state(0)
+let coordinates = $state([0, 0])
 let displayAddress = $state({
   ...emptyFeatureAddress({ en: '123 Example Road' }),
-  markerCoordinates: [0, 0] as [number, number],
 })
 import FeatureIntentChoice from '#lib/bits/patterns/forms/featureIntent/FeatureIntentChoice.svelte'
 import TargetContextChoice from '#lib/bits/patterns/forms/featureIntent/TargetContextChoice.svelte'
@@ -53,6 +53,7 @@ const rule = {
     data-display-toolbar
   >
     <AddressDisplayField
+      {coordinates}
       address={displayAddress}
       locale="en"
       isEditing={true}
@@ -64,15 +65,13 @@ const rule = {
       onChange={value =>
         (displayAddress = {
           ...value,
-          markerCoordinates: value.markerCoordinates ?? [0, 0],
         })}
     />
   </div>
-  <p data-location-display>{getAddressDisplay(displayAddress, 'en')}</p>
-  <button
-    type="button"
-    onclick={() => (displayAddress.markerCoordinates = [8.524997, 47.36559])}
-  >
+  <p data-location-display>
+    {getAddressDisplay(displayAddress, 'en', [], undefined, coordinates)}
+  </p>
+  <button type="button" onclick={() => (coordinates = [8.524997, 47.36559])}>
     Move test marker
   </button>
   <p>Layer: Ghost signs</p>

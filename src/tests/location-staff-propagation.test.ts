@@ -93,9 +93,11 @@ it('updates the marker, accepted pin, address and history without a review or vi
   expect(after?.content.placement.geometry).toEqual(geometry)
   expect(after?.content.placement.location?.acceptedGeometry).toEqual(geometry)
   expect(after?.content.placement.addressMeta?.address).toMatchObject({
-    coordinates: geometry.coordinates,
-    markerCoordinates: geometry.coordinates,
+    coordinates: null,
   })
+  expect(after?.content.placement.addressMeta?.address).not.toHaveProperty(
+    'markerCoordinates',
+  )
   expect(
     after?.content.placement.location?.acceptancePolicy?.locationMode,
   ).toBeUndefined()

@@ -678,7 +678,7 @@ export async function decideLocationPlacement(
       revisionId: canonical.id,
       content: placement.content!,
     },
-    coordinates: newGeometry.coordinates,
+    coordinates: placement.kind === 'relocation' ? null : oldAddress.coordinates,
     overrides: fields,
     accessHints: hints,
     ...(placement.kind === 'relocation'
@@ -767,6 +767,9 @@ export async function decideLocationPlacement(
           displayAddress: getAddressDisplay(
             nextAddress,
             locale as keyof typeof ADDRESS_LOCALES,
+            [],
+            undefined,
+            newGeometry.coordinates,
           ),
         })
         .where(
@@ -832,6 +835,9 @@ export async function decideLocationPlacement(
           content.translations[locale].address.value = getAddressDisplay(
             nextAddress,
             locale as keyof typeof ADDRESS_LOCALES,
+            [],
+            undefined,
+            newGeometry.coordinates,
           )
       }
       return content

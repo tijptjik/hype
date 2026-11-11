@@ -1,6 +1,7 @@
 // CONTENT LOCALES
 import { adaptContentMap, contentStorageTag } from '#lib/i18n/contentRecords.js'
 // ADDRESS
+import { addressSourceCoordinates } from '#lib/addresses/sourceCoordinates.js'
 import {
   ADDRESS_LOCALES,
   FeatureAddressSchema,
@@ -62,9 +63,8 @@ export function materializeEffectiveLocation(input: {
                 locationDisplayMode:
                   input.data.addressMeta?.address?.locationDisplayMode,
               }),
-          markerCoordinates: effective.location.geometry.coordinates,
           source: effective.location.address,
-          coordinates: effective.location.geometry.coordinates,
+          coordinates: addressSourceCoordinates(effective.location.address),
           matchStatus: effective.location.address.status,
           overrides: {},
         })
@@ -85,6 +85,9 @@ export function materializeEffectiveLocation(input: {
           locale as keyof typeof ADDRESS_LOCALES,
           [],
           input.facts.entity?.kind,
+          independentPlacement && input.data.geometry?.type === 'Point'
+            ? input.data.geometry.coordinates
+            : effective.location.geometry.coordinates,
         ),
         displayAddressGen: input.facts.entity?.kind === 'building',
         addressProperties: {},

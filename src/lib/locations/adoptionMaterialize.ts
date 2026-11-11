@@ -1,6 +1,7 @@
 // CONTENT LOCALES
 import { adaptContentMap } from '#lib/i18n/contentRecords.js'
 // DOMAIN
+import { addressSourceCoordinates } from '#lib/addresses/sourceCoordinates.js'
 import {
   ADDRESS_LOCALES,
   FeatureAddressSchema,
@@ -61,9 +62,8 @@ export function materializeLocationAdoption(input: {
     const address = FeatureAddressSchema.parse({
       version: 1,
       locationDisplayMode: data.addressMeta?.address?.locationDisplayMode,
-      markerCoordinates: location.geometry.coordinates,
       source: reference,
-      coordinates: location.geometry.coordinates,
+      coordinates: addressSourceCoordinates(location.address),
       matchStatus: reference.status,
       overrides: {},
     })
@@ -75,7 +75,13 @@ export function materializeLocationAdoption(input: {
       if (!i18n[locale]) continue
       i18n[locale] = {
         ...i18n[locale],
-        displayAddress: getAddressDisplay(address, locale, [], facts.entity?.kind),
+        displayAddress: getAddressDisplay(
+          address,
+          locale,
+          [],
+          facts.entity?.kind,
+          location.geometry.coordinates,
+        ),
         displayAddressGen: true,
         addressProperties: {},
       }

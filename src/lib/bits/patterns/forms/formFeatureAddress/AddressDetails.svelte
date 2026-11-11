@@ -128,6 +128,7 @@ let {
   onBuildingNameBlur,
   onSuggestStreetNumber,
   suggestionKey = '',
+  coordinates,
   locationKind,
   identityFields,
   identityControls,
@@ -169,6 +170,7 @@ let {
   onBuildingNameBlur?: () => void
   onSuggestStreetNumber?: () => Promise<string | null>
   suggestionKey?: string
+  coordinates?: readonly number[] | null
   locationKind?: string
   identityFields?: Snippet<[boolean]>
   identityControls?: Snippet
@@ -1644,6 +1646,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                 >
                 {#if locale}
                   <AddressDisplayField
+                    {coordinates}
                     stale={displayStale}
                     {locationKind}
                     {divisions}
@@ -2041,6 +2044,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                 >
                                   {#if field === 'formattedAddress'}
                                     <AddressDisplayField
+                                      {coordinates}
                                       stale={displayStale}
                                       {locationKind}
                                       {divisions}

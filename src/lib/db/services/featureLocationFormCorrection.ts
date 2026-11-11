@@ -2,6 +2,7 @@ import { SharedFieldPinsSchema } from '#lib/locations/sharedCorrection.js'
 // DRIZZLE
 import { sql, type SQL } from 'drizzle-orm'
 // DOMAIN
+import { addressSourceCoordinates } from '#lib/addresses/sourceCoordinates.js'
 import { equalRevisionValue } from '#lib/revisions/merge.js'
 import { FeatureLocationOverridesSchema } from '#lib/locations/validation.js'
 import { FeatureAddressSchema } from '#lib/addresses/featureAddress.js'
@@ -229,7 +230,7 @@ export async function prepareFeatureLocationFormCorrection(
         address: FeatureAddressSchema.parse({
           version: 1,
           source: effective.location.address,
-          coordinates: effective.location.geometry.coordinates,
+          coordinates: addressSourceCoordinates(effective.location.address),
           matchStatus: effective.location.address.status,
           overrides: {},
         }),

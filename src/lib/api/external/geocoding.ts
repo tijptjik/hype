@@ -226,7 +226,7 @@ export function parseGeocodeResult(
       ]),
     ),
   )
-  canonical.coordinates = [point[0], point[1]]
+  canonical.coordinates = address.geometry?.coordinates ?? null
   canonical.matchStatus =
     candidate.attributes.status === 'resolved' ? 'resolved' : 'ambiguous'
   canonical.query = 'address' in input ? input.address : undefined

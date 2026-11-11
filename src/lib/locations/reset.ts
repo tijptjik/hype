@@ -9,6 +9,7 @@ import {
 import { z } from 'zod'
 import { LocationFactsSchema } from './validation'
 // ADDRESS
+import { addressSourceCoordinates } from '#lib/addresses/sourceCoordinates.js'
 import {
   ADDRESS_LOCALES,
   FeatureAddressSchema,
@@ -80,9 +81,8 @@ export function materializeLocationReset(input: {
     const address = FeatureAddressSchema.parse({
       version: 1,
       locationDisplayMode: data.addressMeta?.address?.locationDisplayMode,
-      markerCoordinates: location.geometry.coordinates,
       source: location.address,
-      coordinates: location.geometry.coordinates,
+      coordinates: addressSourceCoordinates(location.address),
       matchStatus: location.address.status,
       overrides: {},
     })
@@ -94,7 +94,13 @@ export function materializeLocationReset(input: {
       if (!i18n[locale]) continue
       i18n[locale] = {
         ...i18n[locale],
-        displayAddress: getAddressDisplay(address, locale, [], facts.entity?.kind),
+        displayAddress: getAddressDisplay(
+          address,
+          locale,
+          [],
+          facts.entity?.kind,
+          location.geometry.coordinates,
+        ),
         displayAddressGen: true,
         addressProperties: {},
       }

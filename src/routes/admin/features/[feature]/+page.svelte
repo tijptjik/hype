@@ -2924,9 +2924,6 @@ const editorAddress = $derived.by((): FeatureAddress => {
   if (currentFeatureData.addressMeta?.address)
     return {
       ...currentFeatureData.addressMeta.address,
-      markerCoordinates: featureCoordinates
-        ? [featureCoordinates[0], featureCoordinates[1]]
-        : null,
     }
   // Unsaved and not-yet-migrated records retain their original labels as evidence.
   const fallback = Object.fromEntries(
@@ -2937,9 +2934,6 @@ const editorAddress = $derived.by((): FeatureAddress => {
     ]),
   )
   const address = emptyFeatureAddress(fallback)
-  address.markerCoordinates = featureCoordinates
-    ? [featureCoordinates[0], featureCoordinates[1]]
-    : null
   address.legacy = {
     addressMeta: currentFeatureData.addressMeta ?? {},
     i18n: currentFeatureData.i18n ?? {},
@@ -2966,9 +2960,6 @@ function updateAddressDraft(address: FeatureAddress): void {
     ...address,
     locationDisplayMode:
       address.locationDisplayMode ?? editorAddress.locationDisplayMode,
-    markerCoordinates: featureCoordinates
-      ? [featureCoordinates[0], featureCoordinates[1]]
-      : null,
   }
   // Reviewed Location identity survives Feature-owned address corrections; unreviewed map matches remain exact.
   if (
@@ -2993,6 +2984,9 @@ function updateAddressDraft(address: FeatureAddress): void {
           displayAddress: getAddressDisplay(
             address,
             locale as keyof typeof ADDRESS_LOCALES,
+            [],
+            undefined,
+            featureCoordinates,
           ),
           displayAddressGen:
             Object.keys(

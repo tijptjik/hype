@@ -79,7 +79,7 @@ const fields = z.partialRecord(
 const featureAddressBase = z.strictObject({
   version: z.literal(1),
   locationDisplayMode: z.enum(['automatic', 'address', 'plus_code']).optional(),
-  // Feature-owned marker, distinct from the matched address's source coordinates.
+  // Legacy input only; new projections discard this redundant geometry copy.
   markerCoordinates: z
     .tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
     .nullable()
@@ -118,8 +118,8 @@ const featureAddressBase = z.strictObject({
   query: z.string().optional(),
 })
 export type FeatureAddress = z.infer<typeof featureAddressBase>
-export const FeatureAddressSchema = featureAddressBase.superRefine(
-  (address, context) => {
+export const FeatureAddressSchema = featureAddressBase
+  .superRefine((address, context) => {
     // Validate explicit edits without rejecting or rewriting retained provider evidence.
     for (const [locale, corrections] of Object.entries(address.overrides)) {
       const issue = streetNumberIssue(corrections)
@@ -165,8 +165,12 @@ export const FeatureAddressSchema = featureAddressBase.superRefine(
         message: 'Unit does not belong to the selected address publication',
         path: ['source', 'address3dUnitId'],
       })
-  },
-)
+  })
+  .transform(address => {
+    // Accept old stored envelopes without propagating their redundant marker copy.
+    delete address.markerCoordinates
+    return address
+  })
 
 // Submit the canonical envelope as one JSON value: dotted form paths lose nulls,
 // empty collections, source locale tags and arbitrary JSON:API attribution keys.
@@ -342,10 +346,11 @@ export function getAddressPresentationLocale(
 }
 
 /** Resolve the Feature's chosen location label without changing address evidence.
- * @param address Feature-owned address envelope and marker.
+ * @param address Address evidence and Feature-owned display preferences.
  * @param locale Display language.
  * @param divisions Geography resolved from the Feature marker.
  * @param locationKind Associated entity kind.
+ * @param markerCoordinates Actual Feature geometry, supplied separately from address evidence.
  * @returns Address or full Plus Code with available locality context.
  */
 export function getAddressDisplay(
@@ -353,12 +358,13 @@ export function getAddressDisplay(
   locale: LocaleKey,
   divisions: AddressDivision[] = [],
   locationKind?: string,
+  markerCoordinates?: readonly number[] | null,
 ): string {
   const mode = address.locationDisplayMode ?? 'automatic'
   const structured = getStructuredAddressDisplay(address, locale, [], locationKind)
   if (mode === 'address' || (mode === 'automatic' && structured.trim()))
     return getStructuredAddressDisplay(address, locale, divisions, locationKind)
-  const code = featurePlusCode(address.markerCoordinates)
+  const code = featurePlusCode(markerCoordinates)
   if (!code)
     return mode === 'plus_code'
       ? ''
@@ -765,13 +771,10 @@ export function projectFeatureAddress<
     geometry.type === 'Point' && geometry.coordinates
       ? invalidateAddressLocation(data.addressMeta, geometry.coordinates)
       : data.addressMeta
-  let address: FeatureAddress = {
-    ...metadata.address!,
-    markerCoordinates:
-      geometry.type === 'Point' && geometry.coordinates
-        ? ([geometry.coordinates[0], geometry.coordinates[1]] as [number, number])
-        : null,
-  }
+  const markerCoordinates = geometry.type === 'Point' ? geometry.coordinates : null
+  let address: FeatureAddress = { ...metadata.address! }
+  // Old snapshots remain readable; new writes do not persist a duplicate marker.
+  delete address.markerCoordinates
   // Preserve explicit manual display values from the public contribution and import flows.
   for (const locale of Object.keys(ADDRESS_LOCALES) as LocaleKey[]) {
     const translation = data.i18n[locale]
@@ -781,7 +784,8 @@ export function projectFeatureAddress<
       (translation.displayAddressGen === false ||
         translation.displayAddressGen === 'false') &&
       translation.displayAddress != null &&
-      translation.displayAddress !== getAddressDisplay(address, locale)
+      translation.displayAddress !==
+        getAddressDisplay(address, locale, [], undefined, markerCoordinates)
     )
       address = setAddressOverride(
         address,
@@ -800,7 +804,13 @@ export function projectFeatureAddress<
           ? translation
           : {
               ...translation,
-              displayAddress: getAddressDisplay(address, locale as LocaleKey),
+              displayAddress: getAddressDisplay(
+                address,
+                locale as LocaleKey,
+                [],
+                undefined,
+                markerCoordinates,
+              ),
               displayAddressGen:
                 Object.keys(
                   address.overrides[ADDRESS_LOCALES[locale as LocaleKey]] ?? {},

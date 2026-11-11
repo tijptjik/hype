@@ -1,3 +1,12 @@
+Coordinate ownership (11 November 2026, Refs #194, parent #180): Feature geometry owns
+the user marker. Address coordinates retain the provider address point; reverse lookup
+must not substitute the requested pin. Location materialization, adoption and reset read
+that point from retained address evidence, using null when no source point exists.
+Address formatting receives marker geometry separately for Plus Codes. Legacy
+`address.markerCoordinates` is accepted on read and omitted from new writes; immutable
+historical revisions are not rewritten. Canonical relocation clears the former address
+point rather than assigning the new marker to it.
+
 # Locations, Feature inheritance and SaanSeoi Addresses
 
 Feature creation setup (Refs #194, parent #180): new Features select their Layer,

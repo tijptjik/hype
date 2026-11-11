@@ -159,7 +159,7 @@ it('nearby Address discovery uses candidate coordinates and configurable bounds'
   })
   expect(results[0].addressMeta.address?.coordinates).toEqual([114.15862, 22.27886])
   expect(parseGeocodeResult(response(), pin)?.addressMeta.address?.coordinates).toEqual(
-    [pin.lng, pin.lat],
+    [114.15862, 22.27886],
   )
 })
 

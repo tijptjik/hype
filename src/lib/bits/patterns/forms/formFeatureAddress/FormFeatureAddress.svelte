@@ -644,6 +644,7 @@ $effect(() => {
       data-address-toolbar-display
     >
       <AddressDisplayField
+        {coordinates}
         centered={true}
         availableWidth={toolbarWidth}
         showDisplayChoice={isEditing}
@@ -874,6 +875,7 @@ $effect(() => {
     >
       {#if showAddressDetails}
         <AddressDetails
+          {coordinates}
           displayStale={divisionsStale}
           {onMatchLocation}
           emptyAddressActions={showEmptyAddressActions ? locationActions : undefined}

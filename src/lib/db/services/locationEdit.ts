@@ -291,6 +291,11 @@ export async function saveLinkedFeatureForm(
               displayAddress: getAddressDisplay(
                 address,
                 locale as 'en' | 'zhHant' | 'zhHans',
+                [],
+                undefined,
+                materializedData.geometry?.type === 'Point'
+                  ? materializedData.geometry.coordinates
+                  : null,
               ),
             }
           : row,

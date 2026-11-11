@@ -31,6 +31,7 @@ import type { LocaleKey } from '#lib/types.js'
 let {
   address,
   locationKind,
+  coordinates,
   divisions = [],
   locale,
   isEditing,
@@ -46,6 +47,7 @@ let {
   onChange,
 }: {
   address: FeatureAddress
+  coordinates?: readonly number[] | null
   locationKind?: string
   divisions?: AddressDivision[]
   locale: LocaleKey
@@ -71,7 +73,9 @@ $effect(() => {
   if (!isEditing) editGeneration += 1
 })
 const uid = $props.id()
-const value = $derived(getAddressDisplay(address, locale, divisions, locationKind))
+const value = $derived(
+  getAddressDisplay(address, locale, divisions, locationKind, coordinates),
+)
 const unlocked = $derived(
   Object.hasOwn(address.overrides[ADDRESS_LOCALES[locale]] ?? {}, 'formattedAddress'),
 )
@@ -83,6 +87,7 @@ const custom = $derived(
         locale,
         divisions,
         locationKind,
+        coordinates,
       ),
 )
 let groupWidth = $state(0)
@@ -265,7 +270,7 @@ let input = $state<HTMLTextAreaElement>()
     {@const sources = (Object.keys(ADDRESS_LOCALES) as LocaleKey[]).filter(
       source =>
         source !== locale &&
-        getAddressDisplay(address, source, divisions, locationKind).trim(),
+        getAddressDisplay(address, source, divisions, locationKind, coordinates).trim(),
     )}
     {#if sources.length}
       <div class="pl-20">
@@ -284,6 +289,7 @@ let input = $state<HTMLTextAreaElement>()
               toLocaleKey(source),
               divisions,
               locationKind,
+              coordinates,
             )
             const [translated] = await translateText(source, target, [original])
             // A changed address or manual input invalidates this pending translation.
@@ -294,7 +300,13 @@ let input = $state<HTMLTextAreaElement>()
               generation === editGeneration &&
               locale === originalLocale &&
               address === originalAddress &&
-              !getAddressDisplay(address, locale, divisions, locationKind).trim()
+              !getAddressDisplay(
+                address,
+                locale,
+                divisions,
+                locationKind,
+                coordinates,
+              ).trim()
             )
               onChange(
                 setAddressOverride(
