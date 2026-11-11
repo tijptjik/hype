@@ -25,8 +25,4 @@ $effect(() => {
 })
 </script>
 
-<svelte:head>
-  <title>Docs · Hype</title>
-</svelte:head>
-
 <LocationModelDocs />

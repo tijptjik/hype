@@ -1,5 +1,8 @@
 <!-- biome-ignore-all lint/a11y/noNoninteractiveTabindex: The overflow region must support keyboard scrolling on narrow screens. -->
 <script lang="ts">
+// ICONS
+import MaximizeIcon from 'virtual:icons/lucide/maximize'
+import XIcon from 'virtual:icons/lucide/x'
 // TYPES
 import type { Mounted } from 'pele/core'
 
@@ -9,6 +12,10 @@ let {
   naturalSize = false,
 }: { source: string; label: string; naturalSize?: boolean } = $props()
 let container = $state<HTMLDivElement>()
+let lightbox = $state<HTMLDialogElement>()
+let fullscreenContainer = $state<HTMLDivElement>()
+let fullscreen = $state(false)
+let fullscreenError = $state(false)
 let error = $state(false)
 let loading = $state(true)
 let diagramWidth = $state(0)
@@ -52,6 +59,53 @@ function endPan(event: PointerEvent): void {
     viewport.releasePointerCapture(event.pointerId)
 }
 
+/** Open the native modal in the top layer and retain native focus restoration.
+ * @returns Nothing.
+ */
+function openFullscreen(): void {
+  lightbox?.showModal()
+  fullscreen = true
+}
+
+$effect(() => {
+  const element = fullscreenContainer
+  const text = source
+  if (!fullscreen || !element) return
+  let disposed = false
+  let diagram: Mounted | undefined
+  fullscreenError = false
+
+  // Render independently so the inline diagram retains its size and pan position.
+  void Promise.all([import('pele/core'), import('pele/diagrams/flowchart')])
+    .then(([pele, flowchart]) => {
+      if (disposed) return
+      pele.register(flowchart.default)
+      diagram = pele.mount(element, text, {
+        zoom: false,
+        onRender: result => {
+          const svg = element.querySelector('svg')
+          if (!svg) return
+          // Fit both axes while preserving the complete diagram's aspect ratio.
+          svg.setAttribute('viewBox', `0 0 ${result.width} ${result.height}`)
+          svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+          svg.setAttribute('width', '100%')
+          svg.setAttribute('height', '100%')
+        },
+        onError: () => {
+          fullscreenError = true
+        },
+      })
+    })
+    .catch(() => {
+      fullscreenError = true
+    })
+
+  return () => {
+    disposed = true
+    diagram?.destroy()
+  }
+})
+
 $effect(() => {
   const element = container
   const text = source
@@ -92,7 +146,19 @@ $effect(() => {
 </script>
 
 <figure class="min-w-0">
-  <figcaption class="text-muted-foreground mb-3 text-sm">{label}</figcaption>
+  <div class="mb-3 flex items-start justify-between gap-3">
+    <figcaption class="text-muted-foreground text-sm">{label}</figcaption>
+    <button
+      type="button"
+      class="border-border hover:bg-base-200 focus-visible:outline-primary flex shrink-0 items-center gap-2 rounded-md border px-3 py-2 text-sm focus-visible:outline-2 disabled:opacity-50"
+      aria-label={`View ${label} full screen`}
+      disabled={loading || error}
+      onclick={openFullscreen}
+    >
+      <MaximizeIcon class="size-4" />
+      Full screen
+    </button>
+  </div>
   {#if error}
     <p role="alert">
       The diagram could not be rendered. Its Mermaid source is available below.
@@ -155,3 +221,39 @@ $effect(() => {
     ><code>{source}</code></pre>
   </details>
 </figure>
+
+<dialog
+  bind:this={lightbox}
+  aria-label={`${label} — full screen`}
+  class="bg-base-100 text-base-content fixed inset-0 m-0 h-dvh max-h-none w-dvw max-w-none overflow-hidden p-0 backdrop:bg-black/80"
+  onclose={() => {
+    fullscreen = false
+  }}
+>
+  <div class="flex h-full min-h-0 flex-col p-4 sm:p-6">
+    <div class="mb-4 flex shrink-0 items-start justify-between gap-4">
+      <h2 class="text-lg font-semibold">{label}</h2>
+      <button
+        type="button"
+        class="border-border hover:bg-base-200 focus-visible:outline-primary flex shrink-0 items-center gap-2 rounded-md border px-3 py-2 focus-visible:outline-2"
+        aria-label="Close full-screen diagram"
+        onclick={() => lightbox?.close()}
+      >
+        <XIcon class="size-4" />
+        Close
+      </button>
+    </div>
+    {#if fullscreenError}
+      <p role="alert">
+        The diagram could not be rendered. Close this view to read its Mermaid source.
+      </p>
+    {/if}
+    <div
+      bind:this={fullscreenContainer}
+      class="min-h-0 min-w-0 flex-1 overflow-hidden [&_svg]:block [&_svg]:h-full! [&_svg]:max-h-full [&_svg]:w-full! [&_svg]:max-w-full"
+      role="img"
+      aria-label={label}
+      style="--pele-bg:var(--color-base-100);--pele-fg:var(--color-base-content);--pele-muted:var(--color-base-content);--pele-line:var(--color-base-content);--pele-surface:var(--color-base-200);--pele-surface-alt:var(--color-base-300);--pele-border:var(--color-base-content);--pele-accent:var(--color-primary);--pele-error:var(--color-error);--pele-font:var(--font-sans);"
+    ></div>
+  </div>
+</dialog>

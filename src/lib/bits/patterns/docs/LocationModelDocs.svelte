@@ -1,5 +1,6 @@
 <script lang="ts">
 // COMPONENTS
+import LocationMatchingDocs from './LocationMatchingDocs.svelte'
 import MermaidDiagram from '#lib/bits/custom/mermaidDiagram/MermaidDiagram.svelte'
 // DOCS
 import {
@@ -37,6 +38,9 @@ let viewportHeight = $state(0)
         <a class="underline underline-offset-4" href="#divisions">Divisions</a>
         <a class="underline underline-offset-4" href="#address">Address composition</a>
         <a class="underline underline-offset-4" href="#history">Identity over time</a>
+        <a class="underline underline-offset-4" href="#location-matching"
+          >Location Matching</a
+        >
       </nav>
     </header>
 
@@ -441,5 +445,6 @@ let viewportHeight = $state(0)
         A successor tenant is not a duplicate of its predecessor.
       </p>
     </section>
+    <LocationMatchingDocs />
   </article>
 </div>
