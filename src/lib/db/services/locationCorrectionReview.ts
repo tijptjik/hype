@@ -414,7 +414,9 @@ async function prepareRoutedLocationCorrection(
     fields: Object.keys(patch),
     includeLocation: Boolean(patch.location),
     organisation: { revision: organisation.revision, overrides },
-    guard: context.unchanged,
+    // The batch checks the old head before writes; adoption runs after that head advances.
+    // Keep the authorization fence without rechecking the now-superseded Organisation revision.
+    guard: input.guard,
   })
   return {
     sharedRevision: shared?.id,

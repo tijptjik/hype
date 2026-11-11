@@ -737,3 +737,40 @@ it('retains the author override until a later revision accepts that field only',
     brands: { mode: 'clear' },
   })
 })
+
+it('commits an Organisation correction and its Feature adoption after advancing the head', async () => {
+  const f = await setup()
+  f.sqlite.exec(
+    "CREATE TABLE locationCorrectionProposal(id TEXT); CREATE TABLE location(id TEXT PRIMARY KEY,state TEXT,ownerOrganisationId TEXT); INSERT INTO location VALUES('place','linked',NULL)",
+  )
+  const { applyLocationCorrection, readLocationCorrectionContext } = await import(
+    '#lib/db/services/locationCorrectionReview.js'
+  )
+  const row = f.sqlite
+    .prepare('SELECT projectId,organisationId FROM feature WHERE id=?')
+    .get('f') as { projectId: string; organisationId: string }
+  const scope = { ...row, featureId: 'f', guard: sql`1` }
+  const before = await readLocationCorrectionContext(f.db, scope)
+  expect(before).not.toBeNull()
+  const saved = await applyLocationCorrection(f.db, {
+    ...scope,
+    actorId: 'staff',
+    reason: 'Correct the accepted name',
+    expectedAssociationVersion: before!.association.version,
+    expectedOrganisationRevision: before!.expectedOrganisationRevision,
+    patch: { names: { en: { mode: 'override', value: 'Corrected name' } } },
+    canEditOrganisation: true,
+  })
+  expect(saved).not.toBeNull()
+  const after = await readCurrentFeatureRevision(f.db, {
+    featureId: 'f',
+    guard: sql`1`,
+  })
+  expect(after?.content.placement.location?.acceptedOverrides.names?.en).toEqual({
+    mode: 'override',
+    value: 'Corrected name',
+  })
+  expect(
+    (await readLocationCorrectionContext(f.db, scope))?.expectedOrganisationRevision,
+  ).toBe(saved)
+})
