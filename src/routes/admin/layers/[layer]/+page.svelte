@@ -1837,7 +1837,7 @@ $effect(() => {
             import('#lib/bits/patterns/revisionHistory/AdminResourceHistory.svelte')}
         >
           {#snippet pending()}
-            <HistorySkeleton />
+            <HistorySkeleton showFields={false} />
           {/snippet}
           {#snippet children(module)}
             <module.default resource="layer" resourceId={deferredResourceId} />

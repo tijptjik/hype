@@ -165,6 +165,10 @@ $effect(() => {
   facets.set('changelog', { label: 'Changelog', icon: HistoryIcon })
   headerCtrl.setHeaderForEntity(ownerName || resourceRef, icons[resource], facets, {
     showFilter: true,
+    showViewActions: true,
+    showFormActions: false,
+    showControlBarToggle: false,
+    showLayoutToggle: false,
   })
   headerCtrl.setFacets(facets, { active: 'changelog', onFacetChange: selectFacet })
   headerCtrl.setTitleMenuItems([])
@@ -187,6 +191,7 @@ $effect(() => {
   })
 })
 onDestroy(() => {
+  headerCtrl.setViewActions([])
   headerCtrl.setSearch(null)
   visitGeneration++
   headerCtrl.clearFormActions()
@@ -217,6 +222,7 @@ onMount(() => {
         bind:filters
         {lastCheckedAt}
         onLoaded={handleLoaded}
+        onActions={actions => headerCtrl.setViewActions(actions)}
       />
       {#if trackingFailed}
         <div

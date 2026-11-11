@@ -74,6 +74,26 @@ const filterCount = $derived(
 )
 let result = $state<ChangelogPage | null>(null)
 let loading = $state(true)
+let loadingViewport = $state<HTMLDivElement>()
+let loadingRowCount = $state(8)
+
+// Fill the initial viewport using the actual row height at the current breakpoint.
+$effect(() => {
+  const viewport = loadingViewport
+  const row = viewport?.querySelector('[data-changelog-skeleton-row]')
+  if (!viewport || !row) return
+  const measure = (): void => {
+    const rowHeight = row.getBoundingClientRect().height
+    if (rowHeight > 0) {
+      loadingRowCount = Math.max(1, Math.ceil(viewport.clientHeight / rowHeight))
+    }
+  }
+  const observer = new ResizeObserver(measure)
+  observer.observe(viewport)
+  observer.observe(row)
+  measure()
+  return () => observer.disconnect()
+})
 let failed = $state(false)
 let entries = $state<ChangelogEntry[]>([])
 let nextCursor = $state<ChangelogCursor | null>(null)
@@ -707,8 +727,8 @@ $effect(() => {
       {/key}
     </div>
   {:else if loading}
-    <div class="min-h-0 flex-1 overflow-hidden">
-      {@render loadingRows(8, 'Loading changes')}
+    <div bind:this={loadingViewport} class="min-h-0 flex-1 overflow-hidden">
+      {@render loadingRows(loadingRowCount, 'Loading changes')}
     </div>
   {:else if !loading && !failed && !nextCursor}
     {#if checkBoundary?.position === 'empty'}

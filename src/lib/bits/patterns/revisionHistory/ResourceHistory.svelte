@@ -311,7 +311,7 @@ $effect(() => {
   {#if hasFilters && !visibleEntries.size}
     <p role="status" class={styles.notice}>No matches in loaded history.</p>
   {/if}
-  <ol class="px-3 py-5 @[36rem]:px-5">
+  <ol hidden={entries.length === 0} class="px-3 py-5 @[36rem]:px-5">
     {#each entries as entry, index (entry.id)}
       <!-- Snapshots retain the logo on every save; show it only for a logo change or baseline. -->
       {@const hasLogo =
@@ -643,7 +643,11 @@ $effect(() => {
     {/each}
   </ol>
   {#if loading}
-    <HistorySkeleton heading={false} count={entries.length ? 1 : 3} />
+    <HistorySkeleton
+      heading={false}
+      expanded={entries.length === 0}
+      count={entries.length ? 1 : 3}
+    />
   {/if}
   {#if nextCursor !== null && !failed}
     <div class="px-6 py-3">

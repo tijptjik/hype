@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 // TESTS
-import { cleanup, render } from '@testing-library/svelte/pure'
+import { cleanup, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   search: vi.fn(),
+  actions: vi.fn(),
   entity: vi.fn(),
   query: vi.fn(),
   facets: [
@@ -24,6 +25,7 @@ vi.mock('#lib/context/header.svelte.js', () => ({
   getHeaderCtrl: () => ({
     state: { meta: { facets: mocks.facets } },
     setSearch: mocks.search,
+    setViewActions: mocks.actions,
     setHeaderForEntity: mocks.entity,
     setFacets: vi.fn(),
     setTitleMenuItems: vi.fn(),
@@ -83,11 +85,28 @@ it('registers top-header search, keeps it through owner loading, and clears it o
       'Organisation',
       expect.anything(),
       expect.any(Map),
-      { showFilter: true },
+      {
+        showFilter: true,
+        showViewActions: true,
+        showFormActions: false,
+        showControlBarToggle: false,
+        showLayoutToggle: false,
+      },
     ),
   )
   const facets = mocks.entity.mock.calls.at(-1)?.[2] as Map<string, unknown>
   expect([...facets.keys()]).toEqual(['features', 'updates', 'changelog'])
+  expect(screen.queryByRole('heading', { name: 'Changelog' })).toBeNull()
+  const actions = mocks.actions.mock.calls.at(-1)?.[0]
+  expect(actions.map((action: { text: string }) => action.text)).toEqual([
+    'Filters',
+    'Refresh',
+    'Expand all',
+  ])
+  actions[0].onClick()
+  await vi.waitFor(() =>
+    expect(mocks.actions.mock.calls.at(-1)?.[0][0].attrs['aria-expanded']).toBe(true),
+  )
   const search = mocks.search.mock.calls.at(-1)?.[0]
   expect(search).toMatchObject({ query: '', placeholder: 'Search changes' })
   search.onFilter('house')
@@ -102,6 +121,7 @@ it('registers top-header search, keeps it through owner loading, and clears it o
   await vi.waitFor(() => expect(mocks.search.mock.calls.at(-1)?.[0].query).toBe(''))
   page.unmount()
   expect(mocks.search).toHaveBeenLastCalledWith(null)
+  expect(mocks.actions).toHaveBeenLastCalledWith([])
 })
 
 it('retains the available Users action when entering descendant history', async () => {
