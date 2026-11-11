@@ -21,6 +21,7 @@ import {
 } from '#lib/bits/custom/localeControls/localeControls.js'
 // TYPES
 import type { ProfileLocaleState } from './profileLocales.js'
+import type { LocationKind } from '#lib/locations/kinds.js'
 
 const prefersReducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)')
 let {
@@ -34,20 +35,7 @@ let {
   onBlur,
 }: {
   names: Record<string, string>
-  kind:
-    | 'premises'
-    | 'building'
-    | 'building_part'
-    | 'infrastructure'
-    | 'built'
-    | 'structure'
-    | 'landform'
-    | 'coastal_feature'
-    | 'water_feature'
-    | 'service_point'
-    | 'street'
-    | 'natural'
-    | 'establishment'
+  kind: LocationKind
   localeState?: ProfileLocaleState
   translations: boolean
   isEditing: boolean
