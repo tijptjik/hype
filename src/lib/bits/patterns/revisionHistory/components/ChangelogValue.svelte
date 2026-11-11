@@ -1,6 +1,9 @@
 <script lang="ts">
 // COMPONENTS
 import HistoryValue from './HistoryValue.svelte'
+import ChangelogCoordinateMap from './ChangelogCoordinateMap.svelte'
+// PRESENTATION
+import { revisionCoordinates } from '#lib/revisions/coordinateChange.js'
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 // TYPES
 import type { ChangelogEntry } from '#lib/revisions/changelog.js'
@@ -19,6 +22,7 @@ let {
   metadataOpen?: boolean
 } = $props()
 const slot = $derived(change[side])
+const coordinates = $derived(revisionCoordinates(change.path, slot))
 /** Read an immutable image pin without interpreting arbitrary text as an image.
  * @param value Privacy-filtered historical value.
  * @returns Image identity and revision when explicitly recorded together.
@@ -71,7 +75,9 @@ let failedSource = $state<string | null>(null)
 let loadedSource = $state<string | null>(null)
 </script>
 
-{#if src && failedSource !== src}
+{#if coordinates}
+  <ChangelogCoordinateMap {change} {coordinates} {side} />
+{:else if src && failedSource !== src}
   {#key src}
     <div
       class="border-border/50 relative h-64 w-96 max-w-full overflow-hidden rounded-md border"
