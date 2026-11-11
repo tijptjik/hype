@@ -8,6 +8,10 @@ import { and, eq, sql, type SQL } from 'drizzle-orm'
 import { property, propertyI18n } from '../schema/property'
 import { hub } from '../schema/hub'
 // DOMAIN
+import {
+  locationActionReasons,
+  type LocationHistoryAction,
+} from '#lib/revisions/locationActions.js'
 import { resolveFeatureLocation } from '#lib/locations/resolve.js'
 import { materializeEffectiveLocation } from '#lib/locations/materialize.js'
 import { contentStorageTag } from '#lib/i18n/contentRecords.js'
@@ -36,6 +40,7 @@ export async function prepareSharedFeatureAdoption(
     featureId: string
     projectId: string
     actorId: string
+    action: LocationHistoryAction
     locationId: string
     sharedRevisionId: string | null
     sourceRevisionId: string
@@ -121,7 +126,7 @@ export async function prepareSharedFeatureAdoption(
     expectedRevisionId: current.revisionId,
     expectedVersion: current.version,
     origin: 'user',
-    reason: 'Shared Location correction accepted',
+    reason: locationActionReasons[input.action],
     identity: { actorId: input.actorId },
     validate: () => [],
     derive: (before, captured) => {

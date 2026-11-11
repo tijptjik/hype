@@ -60,6 +60,7 @@ export async function prepareStaffLocationPropagation(
       continue
     const prepared = await prepareSharedFeatureAdoption(db, {
       ...input,
+      action: 'staff-update',
       featureId: row.id,
       projectId: row.projectId,
       includeLocation: input.fields.includes('location'),

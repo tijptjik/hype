@@ -396,6 +396,7 @@ export const setOrganisationLocationFollowPolicy = guardedCommand(
     })
     const feature = await prepareSharedFeatureAdoption(ctx.db, {
       ...command,
+      action: 'policy-update',
       locationId: context.association.locationId,
       sourceRevisionId: source.id,
       actorId: ctx.user.id,

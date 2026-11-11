@@ -1,9 +1,11 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // REVISIONS
+import { locationActionReasons } from '#lib/revisions/locationActions.js'
 import { matchesChangelogFilters } from '#lib/revisions/changelogFilters.js'
 import { diffRevisionValues } from '#lib/revisions/diff.js'
 // SERVICES
+import { locationHistoryReason } from './locationHistoryReason'
 import { revisionActivityTime } from './revisionEditWindow'
 import { hasFeatureLifecycleStorage } from './featureLifecycle'
 import { userChangelogGuard } from './userChangelogScope'
@@ -388,10 +390,16 @@ export async function listResourceChangelog(
   // Literal metadata search uses instr, so percent and underscore are ordinary characters.
   if (filters.search?.trim()) {
     const search = filters.search.trim().toLowerCase()
+    // Legacy reasons are resolved after authorization; retain candidates for their displayed labels.
+    const legacyLocationMatch = [
+      ...Object.values(locationActionReasons),
+      'Location updated',
+    ].some(label => label.toLowerCase().includes(search))
     predicates.push(sql`(instr(lower(name),${search})>0 OR instr(lower(resourceId),${search})>0
       OR instr(lower(displayActorId),${search})>0 OR instr(lower(actorId),${search})>0 OR instr(lower(COALESCE(actorName,'')),${search})>0
       OR instr(lower(COALESCE(actorUsername,'')),${search})>0 OR instr(lower(COALESCE(actorDisplayUsername,'')),${search})>0
-      OR instr(lower(COALESCE(reason,'')),${search})>0)`)
+      OR instr(lower(COALESCE(reason,'')),${search})>0
+      OR (${Number(legacyLocationMatch)}=1 AND reason='Shared Location correction accepted'))`)
   }
   const pages = await Promise.allSettled(
     groups.map(group =>
@@ -499,7 +507,10 @@ export async function listResourceChangelog(
               role: row.baselineActorRole,
             }
           : null,
-      reason: row.reason,
+      reason:
+        row.resourceType === 'feature'
+          ? await locationHistoryReason(db, row)
+          : row.reason,
       initial,
       baseline,
       unpublished,

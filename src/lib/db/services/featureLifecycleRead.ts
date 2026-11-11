@@ -1,6 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // SERVICES
+import { locationHistoryReason } from './locationHistoryReason'
 import {
   describeFeatureTransfers,
   type FeatureTransferPath,
@@ -58,6 +59,7 @@ export async function readFeatureLifecycleHistory(
   WHERE r.featureId=${input.featureId} AND r.sequence IS NOT NULL AND (${input.guard})
     AND (${input.beforeVersion ?? null} IS NULL OR r.sequence<${input.beforeVersion ?? null})
   ORDER BY r.sequence DESC LIMIT 50`)
+  for (const row of rows) row.reason = await locationHistoryReason(db, row)
   await describeFeatureTransfers(db, rows)
   return rows.map(({ recordState, ...row }) => ({
     ...row,

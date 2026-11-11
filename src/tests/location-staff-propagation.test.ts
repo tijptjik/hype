@@ -108,6 +108,12 @@ it('updates the marker, accepted pin, address and history without a review or vi
   expect(after?.state).toEqual(before?.state)
   expect(after?.revisionId).not.toBe(before?.revisionId)
   expect(
+    f.sqlite
+      .prepare(`SELECT c.reason FROM featureRevision r
+      JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE r.id=?`)
+      .get(after?.revisionId ?? '')?.reason,
+  ).toBe('Staff updated location')
+  expect(
     f.sqlite.prepare('SELECT count(*) n FROM featureRevisionProposal').get()?.n,
   ).toBe(0)
   expect(f.sqlite.prepare('SELECT status FROM locationRefreshItem').get()?.status).toBe(

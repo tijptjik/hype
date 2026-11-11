@@ -3,6 +3,7 @@ import {
   prepareSharedLocationCorrection,
   readSharedLocationCorrection,
 } from './locationShared'
+import type { LocationHistoryAction } from '#lib/revisions/locationActions.js'
 import { prepareSharedFeatureAdoption } from './locationSharedFeature'
 import { readLocationFacts } from '#lib/locations/factsSnapshot.js'
 import {
@@ -268,6 +269,7 @@ export async function decideLocationCorrection(
     sharedRights: input.sharedRights ?? { canEdit: false, superAdmin: false },
     canEditOrganisation: input.canEditOrganisation ?? true,
     proposalCreatedAt: proposal.createdAt,
+    action: 'contribution-accepted',
     provenance: {
       kind: 'task-correction',
       proposalId: proposal.id,
@@ -326,6 +328,7 @@ export async function applyLocationCorrection(
     context,
     sharedRights: input.sharedRights ?? { canEdit: false, superAdmin: false },
     canEditOrganisation: input.canEditOrganisation ?? true,
+    action: 'staff-update',
     provenance: {
       kind: 'staff-correction',
       featureId: input.featureId,
@@ -348,6 +351,7 @@ async function prepareRoutedLocationCorrection(
     context: LocationCorrectionContext
     sharedRights: { canEdit: boolean; superAdmin: boolean }
     canEditOrganisation: boolean
+    action: LocationHistoryAction
     provenance: Record<string, unknown>
     proposalCreatedAt?: string
   },
@@ -403,6 +407,7 @@ async function prepareRoutedLocationCorrection(
     projectId: input.projectId,
     actorId: input.actorId,
     locationId: context.association.locationId,
+    action: input.action,
     sourceRevisionId: latest.id,
     sharedRevisionId: shared?.id ?? head?.id ?? null,
     facts: shared?.facts ?? readLocationFacts(latest.facts),
