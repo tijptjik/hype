@@ -70,7 +70,7 @@ import type {
 } from '@thisux/sveltednd'
 
 const inheritedHubReview =
-  getContext<boolean | undefined>(hubTranslationReviewKey) ?? false
+  getContext<boolean | undefined>(hubTranslationReviewKey) ?? true
 const inheritedReviewGroup = getContext<TranslationReviewGroup | undefined>(
   translationReviewGroupKey,
 )
@@ -400,6 +400,12 @@ const pendingProposals = $derived(
 )
 
 const reviewSection: TranslationReviewSection = {
+  outstandingKeys: () =>
+    missingOrigins.flatMap(origin =>
+      locales
+        .filter(locale => translationNeedsReview(origin, locale))
+        .map(locale => `${property.id}:${translationKey(origin)}:${locale}`),
+    ),
   missingKeys: () =>
     missingOrigins.flatMap(origin =>
       locales
@@ -580,6 +586,7 @@ async function generateMissing(
   mode?: TranslationSourceMode,
   onProgress?: (fallback?: boolean) => void,
 ): Promise<void> {
+  editorRoot?.scrollIntoView?.({ block: 'center' })
   for (const origin of missingOrigins) {
     if (hubReview && mode) {
       for (const target of locales.filter(
@@ -1573,7 +1580,6 @@ $effect(() => {
                     missing={hubReview &&
                       reviewOpen &&
                       !value.trim() &&
-                      !proposal?.value.trim() &&
                       translationNeedsReview({ type: field }, locale) &&
                       (getTranslationSources({ type: field }).length > 0 ||
                         Boolean(value.trim()))}
@@ -1855,6 +1861,7 @@ $effect(() => {
                                       attrs={{}}
                                       required={false}
                                       {isEditing}
+                                      missing={reviewOpen && !valueDisplayText.trim()}
                                       proposal={proposal.value}
                                       onProposal={text => {
                                         proposal.value = text

@@ -1,7 +1,7 @@
 // CONTENT LOCALES
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 
-/** Hub-only rollout switch for the save dialogue and inline proposals. */
+/** Compatibility context for the shared save dialogue and inline proposals; enabled by default. */
 export const hubTranslationReviewKey = Symbol('hub-translation-review')
 export type TranslationSourceMode = 'english' | 'nearest'
 const european = new Set(

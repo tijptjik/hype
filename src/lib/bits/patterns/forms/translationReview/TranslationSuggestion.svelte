@@ -94,7 +94,10 @@ async function finish(event: FocusEvent): Promise<void> {
         title={m.translation_hub_accept()}
         class="text-primary hover:bg-primary/10 flex size-8 items-center justify-center rounded"
         onpointerdown={event => event.preventDefault()}
-        onclick={() => onAccept(false)}
+        onclick={event => {
+          event.stopPropagation()
+          onAccept(false)
+        }}
       >
         <CheckIcon class="size-4" />
       </button>
@@ -104,7 +107,10 @@ async function finish(event: FocusEvent): Promise<void> {
         title={m.translation_hub_reject()}
         class="text-muted-foreground hover:bg-muted flex size-8 items-center justify-center rounded"
         onpointerdown={event => event.preventDefault()}
-        onclick={onReject}
+        onclick={event => {
+          event.stopPropagation()
+          onReject()
+        }}
       >
         <XIcon class="size-4" />
       </button>

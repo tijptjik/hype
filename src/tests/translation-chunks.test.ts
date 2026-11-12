@@ -12,6 +12,12 @@ describe('content translation chunks', () => {
       'paragraphs',
       `${'First paragraph. '.repeat(280)}\n\n${'Second paragraph. '.repeat(280)}\n\nEnd.`,
     ],
+    [
+      'Markdown policy',
+      '# 私隱政策\n\n## 資料收集\n\n' +
+        '我們只收集必要的資料。'.repeat(600) +
+        '\n\n[聯絡我們](https://example.com/privacy)',
+    ],
     ['long unbroken text', '字'.repeat(16_000)],
     ['surrogate boundary', `${'a'.repeat(4999)}😀${'b'.repeat(6000)}`],
     ['boundary whitespace', `  ${'word '.repeat(2500)}\n\n  `],

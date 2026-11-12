@@ -8,10 +8,11 @@ import {
 } from '#lib/forms/translationSource.js'
 import TranslationReviewDialog from '../translationReview/TranslationReviewDialog.svelte'
 const inheritedHubReview =
-  getContext<boolean | undefined>(hubTranslationReviewKey) ?? false
+  getContext<boolean | undefined>(hubTranslationReviewKey) ?? true
 // TRANSLATION REVIEW
 import {
   registerTranslationReview,
+  generateTranslationReview,
   completeTranslationReview,
   type TranslationReviewSection,
 } from '#lib/forms/translationReview.js'
@@ -86,7 +87,7 @@ setContext(
   untrack(() => hubReview),
 )
 
-let reviewAnchor: HTMLSpanElement
+let reviewAnchor = $state<HTMLSpanElement>()
 let reviewOpen = $state(false)
 let reviewBusy = $state(false)
 let reviewCompleted = $state(0)
@@ -109,6 +110,14 @@ const reviewGroup: TranslationReviewGroup = {
 }
 setContext(translationReviewGroupKey, reviewGroup)
 const reviewSection: TranslationReviewSection = {
+  generate: mode => generateReview(mode),
+  close: () => {
+    reviewOpen = false
+  },
+  outstandingKeys: () =>
+    reviewMembers.flatMap(
+      member => member.outstandingKeys?.() ?? member.missingKeys?.() ?? [],
+    ),
   acceptFilled: () => {
     for (const member of reviewMembers) member.acceptFilled?.()
   },
@@ -129,13 +138,16 @@ const reviewSection: TranslationReviewSection = {
 }
 $effect(() => {
   const form = reviewAnchor?.closest('form')
-  if (form && isEditing) return registerTranslationReview(form, reviewSection)
+  if (form && isEditing)
+    return registerTranslationReview(form, reviewSection, reviewAnchor)
 })
 
 /** Generate suggestions for the entire Fields tab without filling authored controls.
  * @returns Completion of sequential property requests.
  */
 async function generateReview(mode?: TranslationSourceMode): Promise<void> {
+  isCollapsedAll = false
+  collapseAllVersion += 1
   reviewBusy = true
   reviewCompleted = 0
   sourceFallback = false
@@ -353,6 +365,7 @@ $effect(() => {
 {#if reviewOpen && hubReview}
   <TranslationReviewDialog
     details={reviewMembers.flatMap(member => member.details?.() ?? [])}
+    form={reviewAnchor?.closest('form')}
     busy={reviewBusy}
     completed={reviewCompleted}
     total={reviewTotal}
@@ -360,7 +373,8 @@ $effect(() => {
     pending={reviewMembers.some(member => member.pending())}
     allReady={reviewMembers.every(member => !member.missing() || member.ready?.())}
     englishAvailable={reviewMembers.some(member => member.englishAvailable?.())}
-    onGenerate={mode => void generateReview(mode)}
+    onGenerate={mode =>
+      void generateTranslationReview(reviewAnchor?.closest('form'), mode)}
     onAccept={() => void finishReview(true)}
     onSkip={() => void finishReview(false)}
     onClose={() => {

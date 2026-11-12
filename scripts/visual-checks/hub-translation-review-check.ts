@@ -54,6 +54,29 @@ for (const type of [chromium]) {
       await page.getByRole('button', { name: 'Save record' }).click()
       console.log(type.name(), width, 'opened review')
       const dialog = page.getByRole('dialog')
+      await dialog
+        .getByRole('heading', { name: 'Tabs with missing translations' })
+        .waitFor()
+      const overview = dialog.getByRole('navigation', {
+        name: 'Tabs with missing translations',
+      })
+      await overview.getByRole('button', { name: /Profile.*2 fields/ }).waitFor()
+      await overview.getByRole('button', { name: /Policies.*2 fields/ }).click()
+      await page.waitForFunction(
+        () =>
+          document
+            .querySelector('[data-review-fixture]')
+            ?.getAttribute('data-active') === 'description',
+      )
+      if ((await page.locator('[data-translation-dialog]').count()) !== 1)
+        throw Error('Multiple review dialogs remained open')
+      await overview.getByRole('button', { name: /Profile.*2 fields/ }).click()
+      await page.waitForFunction(
+        () =>
+          document
+            .querySelector('[data-review-fixture]')
+            ?.getAttribute('data-active') === 'title',
+      )
       const source = dialog.getByRole('button', { name: 'Translate from English' })
       await source.waitFor()
       if ((await source.locator('svg').count()) !== 1)
@@ -74,6 +97,13 @@ for (const type of [chromium]) {
         .waitFor()
       await dialog.getByRole('button', { name: 'Accept all and continue' }).waitFor()
       await source.waitFor({ state: 'detached' })
+      const outlined = page.locator('[data-translation-suggestion]:visible').first()
+      if (
+        !(await outlined.evaluate(
+          node => !!node.closest('[data-missing-translation="true"]'),
+        ))
+      )
+        throw Error('Pending suggestion lost missing-translation highlight')
       await dialog.getByRole('button', { name: 'Close translation review' }).click()
       await page.screenshot({
         animations: 'disabled',
@@ -104,6 +134,24 @@ for (const type of [chromium]) {
       await dialog.getByRole('button', { name: 'Translate from English' }).click()
       await dialog.getByRole('button', { name: 'Accept all and continue' }).waitFor()
       await dialog.getByRole('button', { name: 'Close translation review' }).click()
+      // Explicit acceptance must reveal a preview; a subsequent content click still opens Markdown.
+      const lastDescription = page
+        .locator('[data-translation-suggestion]:visible')
+        .last()
+      await lastDescription
+        .getByRole('button', { name: 'Accept Translation', exact: true })
+        .click()
+      if (await page.locator('[data-markdown-editor]:visible').count())
+        throw Error('Accept opened Markdown editor')
+      const acceptedDescription = page.getByRole('button', {
+        name: 'description ja',
+        exact: true,
+      })
+      await acceptedDescription.click()
+      await page.locator('[data-markdown-editor]:visible').waitFor()
+      await page.getByRole('button', { name: 'Done', exact: true }).click()
+      if (await page.locator('[data-markdown-editor]:visible').count())
+        throw Error('Done left editor open')
       const description = page.locator('[data-translation-suggestion]:visible').first()
       await description.getByRole('button', { name: /suggestion/i }).click()
       const editor = description.locator('.ProseMirror[contenteditable=true]')

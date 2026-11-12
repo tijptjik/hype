@@ -1,5 +1,9 @@
 <script lang="ts">
 // SVELTE
+import {
+  acceptAllTranslationReview,
+  translationReviewTabs,
+} from '#lib/forms/translationReview.js'
 import { onMount } from 'svelte'
 import { fly } from 'svelte/transition'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
@@ -8,6 +12,7 @@ import { m } from '#lib/i18n.js'
 // TYPES
 import type { TranslationSourceMode } from '#lib/forms/translationSource.js'
 let {
+  form,
   sourceFallback = false,
   allReady = false,
   completed = 0,
@@ -20,6 +25,7 @@ let {
   onSkip,
   onClose,
 }: {
+  form?: HTMLFormElement | null
   sourceFallback?: boolean
   details?: string[]
   completed?: number
@@ -33,15 +39,25 @@ let {
   onSkip: () => void
   onClose: () => void
 } = $props()
+const tabs = $derived(translationReviewTabs(form))
+const tabLabels = $derived<Record<string, string>>({
+  core: m.translation_tab_profile(),
+  fields: m.translation_tab_fields(),
+  policies: m.translation_tab_policies(),
+  location: m.translation_tab_location(),
+  capabilities: m.translation_tab_capabilities(),
+  images: m.translation_tab_images(),
+})
 let panel: HTMLDivElement
 let top = $state(72)
 let left = $state(16)
 const titleId = $props.id()
 /** Locate the visible Save control when responsive headers keep both variants mounted. */
 function saveControl(): HTMLElement | undefined {
-  return [...document.querySelectorAll<HTMLElement>('[data-header-save]')].find(
-    button => button.checkVisibility(),
-  )
+  return [
+    ...(form?.querySelectorAll<HTMLElement>('[data-header-save]') ?? []),
+    ...document.querySelectorAll<HTMLElement>('[data-header-save]'),
+  ].find(button => button.checkVisibility?.() ?? button.getClientRects().length > 0)
 }
 /** Dismiss the source chooser without saving and return focus to its Save trigger. */
 function dismiss(): void {
@@ -50,7 +66,10 @@ function dismiss(): void {
 }
 onMount(() => {
   // Keep the dialogue outside scrolling form cards and align it beneath the actual Save control.
-  document.body.append(panel)
+  const modal = form?.closest<HTMLElement>('[role="dialog"]')
+  // Keep image-caption review inside its existing modal focus boundary.
+  ;(modal ?? document.body).append(panel)
+  if (modal) panel.style.position = 'absolute'
   const anchor = saveControl()
   const position = () => {
     const rect = saveControl()?.getBoundingClientRect()
@@ -60,6 +79,14 @@ onMount(() => {
       ? rect.left + rect.width / 2 - width / 2
       : (window.innerWidth - width) / 2
     left = Math.max(16, Math.min(centered, window.innerWidth - width - 16))
+    if (modal) {
+      const bounds = modal.getBoundingClientRect()
+      left = Math.max(8, Math.min(left - bounds.left, bounds.width - width - 8))
+      top = Math.max(
+        8,
+        Math.min(top - bounds.top, bounds.height - panel.offsetHeight - 8),
+      )
+    }
   }
   position()
   const observer = new ResizeObserver(position)
@@ -106,7 +133,29 @@ onMount(() => {
     </button>
   </div>
   <p class="mt-2 text-sm">{m.translation_hub_missing()}</p>
-  <div class="mt-4 flex flex-col gap-2">
+  {#if tabs.length}
+    <div class="border-border/60 mt-5 border-t pt-4">
+      <h3 class="mb-3 text-sm font-semibold">{m.translation_review_tabs()}</h3>
+      <nav class="flex flex-wrap gap-2" aria-label={m.translation_review_tabs()}>
+        {#each tabs as tab (tab.id)}
+          <button
+            type="button"
+            disabled={busy}
+            onclick={tab.open}
+            class="border-border text-foreground hover:bg-muted/50 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
+          >
+            {tabLabels[tab.id] ?? tab.id}
+            <span class="text-muted-foreground text-xs"
+              >{tab.count === 1
+                ? m.translation_review_single_field()
+                : m.translation_review_field_count({ count: tab.count })}</span
+            >
+          </button>
+        {/each}
+      </nav>
+    </div>
+  {/if}
+  <div class="mt-6 flex flex-col gap-2">
     {#if busy}
       <p
         role="status"
@@ -158,7 +207,9 @@ onMount(() => {
         type="button"
         class="rounded-md bg-cyan-800 px-3 py-2 text-sm text-white! hover:bg-cyan-900 disabled:opacity-50"
         disabled={busy}
-        onclick={onAccept}
+        onclick={() => {
+          if (!acceptAllTranslationReview(form)) onAccept()
+        }}
       >
         {pending ? m.translation_review_accept_all() : m.continue()}
       </button>

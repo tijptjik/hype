@@ -11,7 +11,7 @@ import {
 import TranslationReviewDialog from '../translationReview/TranslationReviewDialog.svelte'
 import TranslationSuggestion from '../translationReview/TranslationSuggestion.svelte'
 const inheritedHubReview =
-  getContext<boolean | undefined>(hubTranslationReviewKey) ?? false
+  getContext<boolean | undefined>(hubTranslationReviewKey) ?? true
 // ICONS
 import ArrowUpIcon from 'virtual:icons/proicons/arrow-up'
 // I18N
@@ -38,6 +38,7 @@ import {
 // TRANSLATION REVIEW
 import {
   registerTranslationReview,
+  generateTranslationReview,
   completeTranslationReview,
   type TranslationReviewSection,
 } from '#lib/forms/translationReview.js'
@@ -305,6 +306,11 @@ function translatorLocked(field: Field): boolean {
   )
 }
 const reviewSection: TranslationReviewSection = {
+  generate: mode => proposeMissing(mode),
+  close: () => {
+    reviewOpen = false
+  },
+  outstandingKeys: () => missing.map(item => `${item.field}:${item.locale}`),
   missingKeys: () =>
     missing
       .filter(
@@ -332,7 +338,8 @@ const reviewSection: TranslationReviewSection = {
 }
 $effect(() => {
   const form = reviewElement?.closest('form')
-  if (form && isEditing) return registerTranslationReview(form, reviewSection)
+  if (form && isEditing)
+    return registerTranslationReview(form, reviewSection, reviewElement)
 })
 let reviewCompleted = $state(0)
 let reviewTotal = $state(0)
@@ -351,6 +358,11 @@ async function proposeMissing(mode?: TranslationSourceMode): Promise<void> {
       for (const item of [...missing].filter(
         item => !proposalIsCurrent(item.field, item.locale),
       )) {
+        reviewElement
+          ?.querySelector<HTMLElement>(
+            `[data-translation-cell="${CSS.escape(`${item.locale}:${item.field}`)}"]`,
+          )
+          ?.scrollIntoView?.({ block: 'center' })
         const sources = Object.keys(values).filter(locale =>
           hasProfileText(values[contentFormKey(locale)]?.[item.field]),
         )
@@ -551,6 +563,7 @@ function autonym(locale: string): string {
           .map(item => name(item.locale))
         return targets.length ? [`${label}: ${targets.join(', ')}`] : []
       })}
+      form={reviewElement?.closest('form')}
       busy={reviewGenerating || Object.values(busy).some(Boolean)}
       completed={reviewCompleted}
       total={reviewTotal}
@@ -568,7 +581,8 @@ function autonym(locale: string): string {
           ),
         ),
       )}
-      onGenerate={mode => void proposeMissing(mode)}
+      onGenerate={mode =>
+        void generateTranslationReview(reviewElement?.closest('form'), mode)}
       onAccept={() => void finishReview(true)}
       onSkip={() => void finishReview(false)}
       onClose={() => {
@@ -852,11 +866,12 @@ function autonym(locale: string): string {
                 {/if}
                 <!-- Preserve actual field geometry, including wrapped content, beneath the skeleton. -->
                 <div
-                  class="min-w-0 {showSkeleton ? 'invisible [&_*]:invisible!' : ''}"
+                  class="min-w-0 [&[data-missing-translation=true]_input]:outline [&[data-missing-translation=true]_input]:outline-1 [&[data-missing-translation=true]_input]:outline-red-600/50 [&[data-missing-translation=true]_textarea]:outline [&[data-missing-translation=true]_textarea]:outline-1 [&[data-missing-translation=true]_textarea]:outline-red-600/50 {showSkeleton
+                    ? 'invisible [&_*]:invisible!'
+                    : ''}"
                   data-missing-translation={(hubReview &&
                     reviewStarted &&
                     !hasProfileText(values[contentFormKey(locale)]?.[field]) &&
-                    !hasProfileText(proposal?.text) &&
                     missing.some(
                       item => item.field === field && item.locale === locale,
                     )) ||
@@ -962,15 +977,21 @@ function autonym(locale: string): string {
                         !hasProfileText(publishedProfileText(values, locale, field)),
                     )}
                   >
-                    {@render children(
-                      field,
-                      locale,
-                      () => translator.touch(locale, field),
-                      stickyHeader || locale === shown[0]
-                        ? ''
-                        : shortLocaleLabel(locale),
-                      editorTranslationActions,
+                    <!-- Acceptance reveals a fresh preview, not an editor left active behind the proposal. -->
+                    {#key Boolean(
+                      proposal &&
+                        !hasProfileText(publishedProfileText(values, locale, field)),
                     )}
+                      {@render children(
+                        field,
+                        locale,
+                        () => translator.touch(locale, field),
+                        stickyHeader || locale === shown[0]
+                          ? ''
+                          : shortLocaleLabel(locale),
+                        editorTranslationActions,
+                      )}
+                    {/key}
                   </div>
                 </div>
               </div>

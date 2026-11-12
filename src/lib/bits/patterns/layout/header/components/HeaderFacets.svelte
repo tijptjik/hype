@@ -1,6 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+// TRANSLATION STATUS
+import { translatingTab } from '#lib/forms/translationReview.js'
+import TranslatingIcon from 'virtual:icons/lucide/loader-circle'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // TYPES
@@ -87,13 +90,18 @@ $effect(() => {
               text={facet.label}
               attrs={{
                 'aria-current': isActive ? 'page' : undefined,
+                'data-facet-ref': facet.ref,
+                'aria-busy': $translatingTab === facet.ref ? true : undefined,
                 'data-tooltip': hideLabel || facet.hideLabel ? facet.label : undefined,
               }}
               {color}
               style="ghost"
               class={`${facetButtonClass} w-max whitespace-nowrap`}
               labelClasses={HEADER_BUTTON_LABEL_CLASSES}
-              iconComponent={facet.icon}
+              iconComponent={$translatingTab === facet.ref
+                ? TranslatingIcon
+                : facet.icon}
+              iconClasses={$translatingTab === facet.ref ? 'animate-spin' : ''}
               hideLabel={hideLabel || facet.hideLabel}
               disabled={facet.disabled === true}
               onClick={() => onFacetChange?.(facet.ref)}
