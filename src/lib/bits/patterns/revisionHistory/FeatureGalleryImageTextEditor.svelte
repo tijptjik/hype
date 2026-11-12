@@ -387,88 +387,96 @@ $effect(() => {
         if (busy) event.preventDefault()
       }}
     >
-      <div class="flex min-w-0 shrink-0 items-center gap-3 px-6 pt-5 pb-4">
-        <Dialog.Title class="shrink-0 text-lg font-semibold"
-          >{labels.edit}</Dialog.Title
-        >
-        <LocaleToolbar
-          {...effectiveLocaleState}
-          options={contentLocaleOptions(getLocaleKey())}
-          class="ml-auto min-w-0 max-sm:[&_[data-control-label]]:hidden"
-          horizontal
-          allowAdd={!disabled && !!gallery && !loading}
-          disabled={disabled || !gallery || loading}
-          onExpandedChange={expanded =>
-            updateCaptionLocales({ ...effectiveLocaleState, expanded })}
-          onChange={change => {
-            localeState = {
-              ...localeState,
-              selectedLocales: change.selectedLocales,
-              visibleLocales: change.visibleLocales,
-            }
-          }}
-        />
-      </div>
-      <div class="min-h-0 overflow-y-auto" aria-busy={loading || busy}>
-        {#if gallery || loading}
-          <FeatureProfileEditor
-            {loading}
-            showToolbar={false}
-            localeState={effectiveLocaleState}
-            onLocaleStateChange={updateCaptionLocales}
-            {values}
-            contextKey={`${featureId}:${editingImageId}:${open}`}
-            isEditing={!disabled}
-            fieldConfigs={[
-              { key: 'caption', label: labels.caption },
-              { key: 'alt', label: labels.alt },
-            ]}
-            translate={(source, target, text) =>
-              translateContentField({ source, target, text })}
-            onTranslated={edit}
+      <form
+        class="flex min-h-0 flex-col"
+        onsubmit={event => {
+          event.preventDefault()
+          void save()
+        }}
+      >
+        <div class="flex min-w-0 shrink-0 items-center gap-3 px-6 pt-5 pb-4">
+          <Dialog.Title class="shrink-0 text-lg font-semibold"
+            >{labels.edit}</Dialog.Title
           >
-            {#snippet children(field, locale, onEditStart, prefix)}
-              <TextAreaField
-                id={`image-text-${field}-${contentFormKey(locale)}`}
-                label={prefix || undefined}
-                class={prefix ? '' : '[&>.bits-form__label]:hidden'}
-                value={values[contentFormKey(locale)]?.[field] ?? ''}
-                placeholder=" "
-                {disabled}
-                rows={3}
-                textareaAttrs={{
-                  'aria-label': `${field === 'caption' ? labels.caption : labels.alt} · ${locale}`,
-                  lang: canonicalContentTag(locale),
-                  maxlength: field === 'caption' ? 4000 : 2000,
-                  onfocus: onEditStart,
-                }}
-                onValueChange={text => {
-                  onEditStart()
-                  edit(field, locale, text)
-                }}
-              />
-            {/snippet}
-          </FeatureProfileEditor>
-        {/if}
-        {#if message}
-          <p role="status" class="text-error px-6 pb-4 text-sm">{message}</p>
-        {/if}
-      </div>
-      <div class="flex shrink-0 justify-end gap-2 px-6 py-4">
-        <Button
-          type="button"
-          text={m.cancel()}
-          style="transparent"
-          disabled={busy}
-          onClick={() => setOpen(false)}
-        />
-        <Button
-          type="button"
-          text={m.forms__save()}
-          disabled={disabled || loading || !gallery || !changed}
-          onClick={() => void save()}
-        />
-      </div>
+          <LocaleToolbar
+            {...effectiveLocaleState}
+            options={contentLocaleOptions(getLocaleKey())}
+            class="ml-auto min-w-0 max-sm:[&_[data-control-label]]:hidden"
+            horizontal
+            allowAdd={!disabled && !!gallery && !loading}
+            disabled={disabled || !gallery || loading}
+            onExpandedChange={expanded =>
+              updateCaptionLocales({ ...effectiveLocaleState, expanded })}
+            onChange={change => {
+              localeState = {
+                ...localeState,
+                selectedLocales: change.selectedLocales,
+                visibleLocales: change.visibleLocales,
+              }
+            }}
+          />
+        </div>
+        <div class="min-h-0 overflow-y-auto" aria-busy={loading || busy}>
+          {#if gallery || loading}
+            <FeatureProfileEditor
+              {loading}
+              showToolbar={false}
+              localeState={effectiveLocaleState}
+              onLocaleStateChange={updateCaptionLocales}
+              {values}
+              contextKey={`${featureId}:${editingImageId}:${open}`}
+              isEditing={!disabled}
+              fieldConfigs={[
+                { key: 'caption', label: labels.caption },
+                { key: 'alt', label: labels.alt },
+              ]}
+              translate={(source, target, text) =>
+                translateContentField({ source, target, text })}
+              onTranslated={edit}
+            >
+              {#snippet children(field, locale, onEditStart, prefix)}
+                <TextAreaField
+                  id={`image-text-${field}-${contentFormKey(locale)}`}
+                  label={prefix || undefined}
+                  class={prefix ? '' : '[&>.bits-form__label]:hidden'}
+                  value={values[contentFormKey(locale)]?.[field] ?? ''}
+                  placeholder=" "
+                  {disabled}
+                  rows={3}
+                  textareaAttrs={{
+                    'aria-label': `${field === 'caption' ? labels.caption : labels.alt} · ${locale}`,
+                    lang: canonicalContentTag(locale),
+                    maxlength: field === 'caption' ? 4000 : 2000,
+                    onfocus: onEditStart,
+                  }}
+                  onValueChange={text => {
+                    onEditStart()
+                    edit(field, locale, text)
+                  }}
+                />
+              {/snippet}
+            </FeatureProfileEditor>
+          {/if}
+          {#if message}
+            <p role="status" class="text-error px-6 pb-4 text-sm">{message}</p>
+          {/if}
+        </div>
+        <div class="flex shrink-0 justify-end gap-2 px-6 py-4">
+          <Button
+            type="button"
+            text={m.cancel()}
+            style="transparent"
+            disabled={busy}
+            onClick={() => setOpen(false)}
+          />
+          <Button
+            type="submit"
+            attrs={{ 'data-header-save': '' }}
+            text={m.forms__save()}
+            disabled={disabled || loading || !gallery || !changed}
+          />
+        </div>
+      </form>
     </Dialog.Content>
   </Dialog.Portal>
 </Dialog.Root>

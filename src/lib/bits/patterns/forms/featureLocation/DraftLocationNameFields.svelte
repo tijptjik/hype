@@ -1,4 +1,8 @@
 <script lang="ts">
+// TRANSLATION REVIEW
+import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
+import MultilingualReviewPanel from '../translationReview/MultilingualReviewPanel.svelte'
+import TranslationSuggestion from '../translationReview/TranslationSuggestion.svelte'
 // SVELTE
 import { onDestroy, tick } from 'svelte'
 import { flip } from 'svelte/animate'
@@ -50,19 +54,22 @@ const locales = $derived(
     ...Object.keys(names).filter(tag => names[tag]?.trim()),
   ]).filter(tag => !/^und(?:-|$)/i.test(tag)),
 )
+let reviewVisible = $state(false)
 const shown = $derived(
-  displayedLocales(
-    {
-      selectedLocales: locales,
-      visibleLocales: localeState
-        ? [
-            ...localeState.visibleLocales,
-            ...locales.filter(tag => !localeState.selectedLocales.includes(tag)),
-          ]
-        : locales,
-    },
-    translations,
-  ),
+  reviewVisible
+    ? locales
+    : displayedLocales(
+        {
+          selectedLocales: locales,
+          visibleLocales: localeState
+            ? [
+                ...localeState.visibleLocales,
+                ...locales.filter(tag => !localeState.selectedLocales.includes(tag)),
+              ]
+            : locales,
+        },
+        translations,
+      ),
 )
 const canonicalNames = $derived(
   Object.fromEntries(
@@ -71,6 +78,20 @@ const canonicalNames = $derived(
       name,
     ]),
   ),
+)
+const review = new MultilingualReview(
+  () =>
+    locales.map(locale => ({
+      key: `${recordKey ?? ''}:${kind}:${locale}`,
+      field: 'name',
+      locale,
+      value: canonicalNames[locale] ?? '',
+      set: (text: string) => onChange({ ...canonicalNames, [locale]: text }),
+    })),
+  () => isEditing,
+  () => {
+    reviewVisible = true
+  },
 )
 let editingLocale = $state<string | null>(null)
 let translating = $state<string | null>(null)
@@ -82,11 +103,13 @@ onDestroy(() => {
 </script>
 
 <section class="col-span-6 min-w-0 space-y-3 pb-3" data-draft-location-name>
+  <MultilingualReviewPanel {review} />
   <h3 class="text-muted-foreground text-xs font-medium">{locationKindLabel(kind)}</h3>
   <fieldset class="min-w-0 space-y-2">
     <legend class="mb-1 text-sm font-medium">{m.field_name()}</legend>
     {#each shown as locale (locale)}
       {@const tag = locale}
+      {@const reviewKey = `${recordKey ?? ''}:${kind}:${locale}`}
       {@const sources = locales.filter(
         source => source !== locale && canonicalNames[source]?.trim(),
       )}
@@ -95,15 +118,30 @@ onDestroy(() => {
         transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
         class="flex min-w-0 items-start gap-2"
       >
-        {#if translations}
+        {#if translations || reviewVisible}
           <span
             class="text-muted-foreground flex h-10 w-[3em] shrink-0 items-center font-mono text-xs"
             >{shortLocaleLabel(locale)}</span
           >
         {/if}
         <LocationIcon {kind} class="text-muted-foreground mt-1.5 size-7 shrink-0" />
-        <div class="min-w-0 flex-1">
-          {#if editingLocale === locale && isEditing}
+        <div
+          class="min-w-0 flex-1 rounded-md {review.started &&
+          !canonicalNames[tag]?.trim()
+            ? 'outline outline-1 outline-red-600/50'
+            : ''}"
+        >
+          {#if review.current(reviewKey)}
+            <TranslationSuggestion
+              value={review.proposals[reviewKey].value}
+              label={m.field_name()}
+              onChange={text => {
+                review.proposals[reviewKey].value = text
+              }}
+              onAccept={edited => review.accept(reviewKey, edited)}
+              onReject={() => review.reject(reviewKey)}
+            />
+          {:else if editingLocale === locale && isEditing}
             <input
               onblur={() => {
                 editingLocale = null

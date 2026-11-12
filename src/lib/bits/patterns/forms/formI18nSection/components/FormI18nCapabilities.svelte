@@ -1,4 +1,8 @@
 <script lang="ts">
+// TRANSLATION REVIEW
+import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
+import MultilingualReviewPanel from '../../translationReview/MultilingualReviewPanel.svelte'
+import TranslationSuggestion from '../../translationReview/TranslationSuggestion.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 import { canonicalContentTag, contentStorageTag } from '#lib/i18n/contentRecords.js'
@@ -40,9 +44,11 @@ let {
   currentLocaleKey,
   resetVersion = 0,
   onTranslate,
+  onReveal,
   isEditing = false,
   isRequiredInPreflight,
 }: {
+  onReveal?: () => void
   fields: CapabilityFormFields
   capabilityKeys: CapabilityKey[]
   locales: string[]
@@ -120,9 +126,28 @@ async function fill(capabilityKey: CapabilityKey, source: string): Promise<void>
     busy[capabilityKey] = undefined
   }
 }
+const review = new MultilingualReview(
+  () =>
+    capabilityKeys.flatMap(key =>
+      locales
+        .filter(locale => fields[key]?.i18n?.[locale])
+        .map(locale => ({
+          key: `${key}:${locale}`,
+          field: key,
+          locale: canonicalContentTag(locale),
+          value: values[key]?.[locale] ?? '',
+          set: text => {
+            fields[key]?.i18n?.[locale]?.set(text)
+          },
+        })),
+    ),
+  () => isEditing,
+  () => onReveal?.(),
+)
 </script>
 
 <div class="@container/capability-labels">
+  <MultilingualReviewPanel {review} />
   <div
     class="grid min-w-0 grid-cols-1 gap-x-6 gap-y-8 px-6 pb-6 @min-[40rem]/capability-labels:grid-cols-[repeat(var(--capability-mid-columns),minmax(0,1fr))] @min-[64rem]/capability-labels:grid-cols-[repeat(var(--capability-columns),minmax(0,1fr))]"
     style:--capability-columns={columns}
@@ -190,28 +215,50 @@ async function fill(capabilityKey: CapabilityKey, source: string): Promise<void>
                   ? '8px'
                   : '0px'}
               >
-                <div class="min-h-0 overflow-hidden">
-                  <FormI18nInlineRow
-                    label={`${capabilityKey} · ${shortLocaleLabel(canonicalContentTag(locale))}`}
-                    prefix={locale === visibleLocales[0]
-                      ? ''
-                      : shortLocaleLabel(canonicalContentTag(locale))}
-                    {attrs}
-                    {value}
-                    issues={field.issues()}
-                    editable={isEditing}
-                    showVerification={false}
-                    required={isRequiredInPreflight([
-                      'data',
-                      'capabilities',
-                      capabilityKey,
-                      'i18n',
-                      locale,
-                    ])}
-                    onStart={() => beforeEdit.set(path, value)}
-                    onCancel={() => field.set(beforeEdit.get(path) ?? '')}
-                    onClear={() => field.set('')}
-                  />
+                <div
+                  class="min-h-0 overflow-hidden"
+                  data-missing-translation={(review.started &&
+                    !value.trim() &&
+                    review.missing.some(
+                      cell => cell.key === `${capabilityKey}:${locale}`,
+                    )) ||
+                    undefined}
+                >
+                  {#if review.current(`${capabilityKey}:${locale}`)}
+                    {@const key = `${capabilityKey}:${locale}`}
+                    <TranslationSuggestion
+                      value={review.proposals[key]?.value ?? ''}
+                      label={`${capabilityKey} · ${shortLocaleLabel(canonicalContentTag(locale))}`}
+                      prefix={shortLocaleLabel(canonicalContentTag(locale))}
+                      onChange={text => {
+                        if (review.proposals[key]) review.proposals[key].value = text
+                      }}
+                      onAccept={edited => review.accept(key, edited)}
+                      onReject={() => review.reject(key)}
+                    />
+                  {:else}
+                    <FormI18nInlineRow
+                      label={`${capabilityKey} · ${shortLocaleLabel(canonicalContentTag(locale))}`}
+                      prefix={locale === visibleLocales[0]
+                        ? ''
+                        : shortLocaleLabel(canonicalContentTag(locale))}
+                      {attrs}
+                      {value}
+                      issues={field.issues()}
+                      editable={isEditing}
+                      showVerification={false}
+                      required={isRequiredInPreflight([
+                        'data',
+                        'capabilities',
+                        capabilityKey,
+                        'i18n',
+                        locale,
+                      ])}
+                      onStart={() => beforeEdit.set(path, value)}
+                      onCancel={() => field.set(beforeEdit.get(path) ?? '')}
+                      onClear={() => field.set('')}
+                    />
+                  {/if}
                 </div>
               </div>
             {/if}

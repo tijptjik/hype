@@ -156,6 +156,10 @@ const headerClass = 'bits-form__capabilities-header'
           {/snippet}
         </SectionHeader>
         <FormI18nCapabilities
+          onReveal={() => {
+            multilingual = true
+            localeSelection = { selectedLocales, visibleLocales: [...selectedLocales] }
+          }}
           fields={formCapabilityFields}
           capabilityKeys={selectedCapabilityKeys}
           locales={selectedLocales.map(contentFormKey)}

@@ -5096,7 +5096,13 @@ async function refreshLocationSource(): Promise<void> {
                 {localeKey}
                 locales={profileLocaleState.selectedLocales}
                 onReveal={() => goToFacet('fields')}
-                onTranslation={(propertyId, locale, automatic, acceptedValue) => {
+                onTranslation={(
+                  propertyId,
+                  locale,
+                  automatic,
+                  acceptedValue,
+                  humanVerified = false,
+                ) => {
                   updateFeatureData(data => ({
                     ...data,
                     properties: (data.properties ?? []).map(property =>
@@ -5122,6 +5128,7 @@ async function refreshLocationSource(): Promise<void> {
                                           ?.translationProvenance,
                                         value: {
                                           ...automatic,
+                                          humanVerified,
                                           acceptedValue,
                                           acceptedBy: 'pending',
                                           acceptedAt: new Date().toISOString(),

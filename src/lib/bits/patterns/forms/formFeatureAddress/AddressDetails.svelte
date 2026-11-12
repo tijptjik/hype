@@ -1,4 +1,9 @@
 <script lang="ts">
+// TRANSLATION REVIEW
+import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
+import MultilingualReviewPanel from '../translationReview/MultilingualReviewPanel.svelte'
+import TranslationSuggestion from '../translationReview/TranslationSuggestion.svelte'
+
 // ADDRESS LOCALES
 import { addressLocaleLabel } from './addressLocaleLabel.js'
 // SVELTE
@@ -1125,6 +1130,24 @@ function accessHintValue(locale: string): string {
     (locales.includes(locale as LocaleKey) ? (locale as LocaleKey) : undefined)
   return address.accessHints?.[key ? ADDRESS_LOCALES[key] : locale.toLowerCase()] ?? ''
 }
+// Review authored directions without translating structured address identities or numbers.
+const accessReview = new MultilingualReview(
+  () =>
+    selectedLocales.map(locale => ({
+      key: `accessHint:${locale}`,
+      field: 'accessHint',
+      locale,
+      value: accessHintValue(locale),
+      set: (text: string) => editAdditionalLocale(locale, 'accessHint', text),
+    })),
+  () => isEditing && visibleFields.includes('accessHint'),
+  () =>
+    changeLocaleState({
+      ...addressLocaleState,
+      expanded: true,
+      visibleLocales: selectedLocales,
+    }),
+)
 const accessHintSources = $derived(
   selectedLocales.filter(locale => accessHintValue(locale).trim()),
 )
@@ -1504,6 +1527,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
   aria-label={splitColumns ? m.feature_location_title() : m.feature_address_title()}
   data-address-details
 >
+  <MultilingualReviewPanel review={accessReview} />
   <div
     class="flex min-h-10 flex-wrap items-center justify-between gap-2 {splitColumns &&
     isEditing
@@ -1853,6 +1877,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                               </p>
                             {/if}
                             {#each shownLocales as locale (locale)}
+                              {@const reviewKey = `accessHint:${locale}`}
                               <div
                                 animate:flip={{
                                   duration: prefersReducedMotion.current ? 0 : 200,
@@ -1862,47 +1887,71 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                   duration: prefersReducedMotion.current ? 0 : 200,
                                 }}
                               >
-                                <FormI18nInlineRow
-                                  value={accessHintValue(locale)}
-                                  label={translations
-                                    ? `${labels.accessHint} · ${addressLocaleKey(locale) ? addressLocaleLabel(addressLocaleKey(locale)!) : shortLocaleLabel(locale)}`
-                                    : labels.accessHint}
-                                  prefix={translations ? shortLocaleLabel(locale) : ''}
-                                  editable={isEditing}
-                                  showVerification={false}
-                                  required={false}
-                                  issues={undefined}
-                                  attrs={{
-                                    id: `${uid}-${locale}-access-hint`,
-                                    placeholder: examples.accessHint(
-                                      {},
-                                      {
-                                        locale:
-                                          ADDRESS_LOCALES[
-                                            addressLocaleKey(locale) ?? getLocaleKey()
-                                          ],
-                                      },
-                                    ),
-                                    oninput: (event: Event) =>
-                                      editAdditionalLocale(
-                                        locale,
-                                        'accessHint',
-                                        (event.currentTarget as HTMLInputElement).value,
-                                      ),
-                                  }}
-                                  onStart={() => {
-                                    accessHintBeforeEdit[locale] =
-                                      accessHintValue(locale)
-                                  }}
-                                  onCancel={() =>
-                                    editAdditionalLocale(
-                                      locale,
-                                      'accessHint',
-                                      accessHintBeforeEdit[locale] ?? '',
-                                    )}
-                                  onClear={() =>
-                                    editAdditionalLocale(locale, 'accessHint', '')}
-                                />
+                                <div
+                                  data-missing-translation={(accessReview.started &&
+                                    !accessHintValue(locale).trim()) ||
+                                    undefined}
+                                >
+                                  {#if accessReview.current(reviewKey)}
+                                    <TranslationSuggestion
+                                      value={accessReview.proposals[reviewKey].value}
+                                      label={labels.accessHint}
+                                      prefix={shortLocaleLabel(locale)}
+                                      onChange={text => {
+                                        accessReview.proposals[reviewKey].value = text
+                                      }}
+                                      onAccept={edited =>
+                                        accessReview.accept(reviewKey, edited)}
+                                      onReject={() => accessReview.reject(reviewKey)}
+                                    />
+                                  {:else}
+                                    <FormI18nInlineRow
+                                      value={accessHintValue(locale)}
+                                      label={translations
+                                        ? `${labels.accessHint} · ${addressLocaleKey(locale) ? addressLocaleLabel(addressLocaleKey(locale)!) : shortLocaleLabel(locale)}`
+                                        : labels.accessHint}
+                                      prefix={translations
+                                        ? shortLocaleLabel(locale)
+                                        : ''}
+                                      editable={isEditing}
+                                      showVerification={false}
+                                      required={false}
+                                      issues={undefined}
+                                      attrs={{
+                                        id: `${uid}-${locale}-access-hint`,
+                                        placeholder: examples.accessHint(
+                                          {},
+                                          {
+                                            locale:
+                                              ADDRESS_LOCALES[
+                                                addressLocaleKey(locale) ??
+                                                  getLocaleKey()
+                                              ],
+                                          },
+                                        ),
+                                        oninput: (event: Event) =>
+                                          editAdditionalLocale(
+                                            locale,
+                                            'accessHint',
+                                            (event.currentTarget as HTMLInputElement)
+                                              .value,
+                                          ),
+                                      }}
+                                      onStart={() => {
+                                        accessHintBeforeEdit[locale] =
+                                          accessHintValue(locale)
+                                      }}
+                                      onCancel={() =>
+                                        editAdditionalLocale(
+                                          locale,
+                                          'accessHint',
+                                          accessHintBeforeEdit[locale] ?? '',
+                                        )}
+                                      onClear={() =>
+                                        editAdditionalLocale(locale, 'accessHint', '')}
+                                    />
+                                  {/if}
+                                </div>
                               </div>
                             {/each}
                           </fieldset>

@@ -1,4 +1,6 @@
 <script lang="ts">
+let reviewForm: HTMLFormElement
+
 import IdentityCataloguePicker from '../identityCatalogue/IdentityCataloguePicker.svelte'
 import { saveSharedLocationDirectoryCorrection } from '#lib/api/locationShared.remote.js'
 import type { SharedCorrectionPatch } from '#lib/locations/sharedCorrection.js'
@@ -604,7 +606,7 @@ $effect(() => {
     showPublishAction: false,
     showDeleteAction: false,
     submit: () => {
-      void save()
+      reviewForm?.requestSubmit()
     },
     reset: cancel,
   })
@@ -956,78 +958,88 @@ $effect(() => {
   </Tabs>
 {/snippet}
 
-{#if place.facts}
-  <FormFeatureAddress
-    locationKind={activeKind}
-    {address}
-    coordinates={point}
-    isEditing={editing}
-    isLoading={busy || lookingUp}
-    fixedMap={true}
-    hideDetails={true}
-    toolbarInfoBeforeCoordinates={true}
-    showLookup={false}
-    show3dAddressOptions={activeKind !== 'building'}
-    onCoordinateChange={moveMarker}
-    onCoordinateValidityChange={valid => (coordinateInvalid = !valid)}
-    onLookup={lookup}
-    onChange={next => (draft = next)}
-    onSelectCandidate={candidate => {
-      const selections = draft?.divisionOverrides
-      draft = localAddressDraft(
-        prepareLocalLocationAddress($state.snapshot(address), candidate),
-      )
-      draft.divisionOverrides = selections
-    }}
-  >
-    {#snippet map()}
-      <MapPrimitive
-        onMapReady={controller => (numberMapController = controller)}
-        coordinates={point}
-        addressMeta={{ address }}
-        draggable={editing && !busy && !communityClosed('location.geometry')}
-        onCoordinateChange={moveMarker}
-      />
-    {/snippet}
-    {#snippet toolbarInfo()}
-      <LocaleToolbar
-        horizontal={true}
-        class="max-w-[calc(100vw-8rem)]"
-        {selectedLocales}
-        visibleLocales={editorLocaleState.visibleLocales}
-        expanded={localeState.expanded}
-        options={contentLocaleOptions(getLocaleKey())}
-        allowAdd={editing}
-        disabled={busy}
-        {contentLocales}
-        onExpandedChange={expanded =>
-          (localeState = { ...editorLocaleState, expanded })}
-        onChange={change =>
-          (localeState = { ...change, expanded: localeState.expanded })}
-      />
-    {/snippet}
-    {#snippet locationControl()}
-      <div
-        class="text-primary flex min-w-0 items-center gap-2"
-        data-location-record
-        data-tooltip={kindLabel}
-      >
-        <LocationIcon kind={activeKind} class="size-6 shrink-0" />
-        <span class="truncate text-sm font-semibold">{title}</span>
-        <span class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"
-          >{kindLabel}</span
+<form
+  class="contents"
+  bind:this={reviewForm}
+  onsubmit={event => {
+    event.preventDefault()
+    void save()
+  }}
+>
+  {#if place.facts}
+    <FormFeatureAddress
+      locationKind={activeKind}
+      {address}
+      coordinates={point}
+      isEditing={editing}
+      isLoading={busy || lookingUp}
+      fixedMap={true}
+      hideDetails={true}
+      toolbarInfoBeforeCoordinates={true}
+      showLookup={false}
+      show3dAddressOptions={activeKind !== 'building'}
+      onCoordinateChange={moveMarker}
+      onCoordinateValidityChange={valid => (coordinateInvalid = !valid)}
+      onLookup={lookup}
+      onChange={next => (draft = next)}
+      onSelectCandidate={candidate => {
+        const selections = draft?.divisionOverrides
+        draft = localAddressDraft(
+          prepareLocalLocationAddress($state.snapshot(address), candidate),
+        )
+        draft.divisionOverrides = selections
+      }}
+    >
+      {#snippet map()}
+        <MapPrimitive
+          onMapReady={controller => (numberMapController = controller)}
+          coordinates={point}
+          addressMeta={{ address }}
+          draggable={editing && !busy && !communityClosed('location.geometry')}
+          onCoordinateChange={moveMarker}
+        />
+      {/snippet}
+      {#snippet toolbarInfo()}
+        <LocaleToolbar
+          horizontal={true}
+          class="max-w-[calc(100vw-8rem)]"
+          {selectedLocales}
+          visibleLocales={editorLocaleState.visibleLocales}
+          expanded={localeState.expanded}
+          options={contentLocaleOptions(getLocaleKey())}
+          allowAdd={editing}
+          disabled={busy}
+          {contentLocales}
+          onExpandedChange={expanded =>
+            (localeState = { ...editorLocaleState, expanded })}
+          onChange={change =>
+            (localeState = { ...change, expanded: localeState.expanded })}
+        />
+      {/snippet}
+      {#snippet locationControl()}
+        <div
+          class="text-primary flex min-w-0 items-center gap-2"
+          data-location-record
+          data-tooltip={kindLabel}
         >
-        {#if status !== 'unknown'}
-          <span class="text-muted-foreground shrink-0 text-xs" data-location-status
-            >{lifecycleLabel(status)}</span
+          <LocationIcon kind={activeKind} class="size-6 shrink-0" />
+          <span class="truncate text-sm font-semibold">{title}</span>
+          <span
+            class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"
+            >{kindLabel}</span
           >
-        {/if}
-      </div>
-    {/snippet}
-    {#snippet locationContent()}
-      {@render recordContent()}
-    {/snippet}
-  </FormFeatureAddress>
-{:else}
-  {@render recordContent()}
-{/if}
+          {#if status !== 'unknown'}
+            <span class="text-muted-foreground shrink-0 text-xs" data-location-status
+              >{lifecycleLabel(status)}</span
+            >
+          {/if}
+        </div>
+      {/snippet}
+      {#snippet locationContent()}
+        {@render recordContent()}
+      {/snippet}
+    </FormFeatureAddress>
+  {:else}
+    {@render recordContent()}
+  {/if}
+</form>

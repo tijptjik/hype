@@ -7,7 +7,14 @@ import {
   waitFor,
 } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import Fields from '#lib/bits/patterns/forms/formFeatureFields/FormFeatureFields.svelte'
+import Fields from './fixtures/components/FeatureFieldReviewFixture.svelte'
+
+// Browser checks cover animation; jsdom has no Web Animations API.
+vi.mock('svelte/transition', () => ({
+  fade: () => ({ duration: 0 }),
+  fly: () => ({ duration: 0 }),
+  slide: () => ({ duration: 0 }),
+}))
 
 const { translate } = vi.hoisted(() => ({
   translate: vi.fn(async (input: { source: string; target: string; text: string }) => ({
@@ -44,18 +51,23 @@ it('keeps a fourth-language field suggestion unpublished until explicit acceptan
       ja: { value: '', valueGen: false },
     },
   }
-  render(Fields, {
-    localeKey: 'en',
-    locales: ['en', 'ja'],
-    nonTranslatableItems: [],
-    translatableSpecifierItems: [row],
-    onTranslation,
-    onValueChange,
-    onTranslate: async () => false,
-    onResetLocale: () => {},
-    onToggleGenAI: () => {},
+  const view = render(Fields, {
+    fields: {
+      localeKey: 'en',
+      locales: ['en', 'ja'],
+      nonTranslatableItems: [],
+      translatableSpecifierItems: [row],
+      onTranslation,
+      onValueChange,
+      onTranslate: async () => false,
+      onResetLocale: () => {},
+      onToggleGenAI: () => {},
+    },
   })
-  await fireEvent.click(screen.getByRole('button', { name: 'Translate with AI' }))
+  const form = view.container.querySelector('form')
+  if (!form) throw Error('Missing fixture form')
+  await fireEvent.submit(form)
+  await fireEvent.click(screen.getByRole('button', { name: 'Translate from English' }))
   await waitFor(() => expect(onTranslation).toHaveBeenCalledTimes(1))
   expect(translate).toHaveBeenCalledWith({
     source: 'en',
@@ -65,11 +77,12 @@ it('keeps a fourth-language field suggestion unpublished until explicit acceptan
   expect(onTranslation.mock.calls[0]).toHaveLength(3)
   expect(onValueChange).not.toHaveBeenCalled()
   expect(row.i18n.ja.value).toBe('')
-  await fireEvent.click(screen.getByRole('button', { name: 'Accept translation' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Accept Translation' }))
   expect(onTranslation.mock.calls[1]).toEqual([
     'access',
     'ja',
     expect.objectContaining({ sourceLocale: 'en' }),
     '提案',
+    false,
   ])
 })

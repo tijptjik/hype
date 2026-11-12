@@ -19,6 +19,7 @@ export type FormFeatureFieldsProps = {
     locale: string,
     automatic: import('#lib/i18n/automatic.js').AutomaticTranslation,
     acceptedValue?: string,
+    humanVerified?: boolean,
   ) => void
   nonTranslatableItems: FeatureFieldSectionItem[]
   translatableSpecifierItems: FormFeatureFieldsTranslatableItem[]
