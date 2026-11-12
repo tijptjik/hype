@@ -3832,3 +3832,26 @@ membership does not automatically propagate to Location curation.
 
 `src/tests/identity-catalogue.test.ts` covers nested saves, clearing, retained history,
 migration backfill, invalid parents, cycle rejection and stale-save rollback.
+
+### Catalogue profile and donor identity migration (Refs #194)
+
+The catalogue uses `/admin/catalog/brand/[code]` and `/admin/catalog/group/[code]`.
+Codes are unique within each kind; existing ID links redirect when a code exists.
+Profile editing uses localized names, taxonomy categories, group membership, image
+upload and success notifications. The read-only Features tab filters by accepted
+Location Brand ID, including organisation choices; pending community updates do not
+enter the index.
+
+The repeatable donor identity specification remains in
+`migrations/pending/breadline-donor-identity/curate.sql`. Its local runner defaults to a
+preview on a copy and requires `--apply` for mutation. It is deliberately not part of
+automatic migration rollout while donor decisions are being reviewed.
+`catalogue:logos:sync:dev` repairs missing development PNG objects with byte-level
+verification, without changing catalogue IDs or writing to production.
+
+Verification: catalogue service tests cover code lookup, disambiguation, taxonomy
+validation and atomic group creation. `donor-catalogue-check.ts` covers authenticated
+profile/index navigation, keyboard selection, locale controls and code redirects.
+Remaining acceptance work includes unresolved donor decisions, accepted Brand ID
+propagation into existing Features, actual save-toast assertions, and repairing any
+remaining missing development logo objects. Deployment is deferred.
