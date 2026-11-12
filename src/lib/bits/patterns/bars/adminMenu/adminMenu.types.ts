@@ -5,6 +5,7 @@ import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 export interface AdminMenuItem {
   href: string
   label: string
+  compactLabel?: string
   icon: Component<Record<string, unknown>>
   onClick?: ((event: MouseEvent) => void) | null
   notificationCount?: number
