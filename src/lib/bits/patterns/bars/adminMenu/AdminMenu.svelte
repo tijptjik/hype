@@ -30,6 +30,7 @@ import StoreIcon from '#lib/bits/custom/icon/StoreIcon.svelte'
 import ChatIcon from 'virtual:icons/proicons/chat'
 import TemplateIcon from 'virtual:icons/proicons/code'
 import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import CameraIcon from 'virtual:icons/proicons/camera'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
@@ -180,6 +181,21 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   items.push({ href: `${ADMIN_PATH}/messaging`, label: 'Messaging', icon: ChatIcon })
   if (adminCtx.view.isSuperAdmin())
     items.push({ href: `${ADMIN_PATH}/docs`, label: 'Docs', icon: BookOpenIcon })
+
+  if (
+    adminCtx.view.isSuperAdmin() ||
+    adminCtx.view.user?.roles?.some(
+      role =>
+        (role.type === 'project' && ['maintainer', 'owner'].includes(role.role)) ||
+        (role.type === 'organisation' && role.role === 'owner') ||
+        (role.type === 'hub' && role.role === 'admin'),
+    )
+  )
+    items.push({
+      href: `${ADMIN_PATH}/fieldresearch`,
+      label: 'Field research',
+      icon: CameraIcon,
+    })
 
   return items
 })
