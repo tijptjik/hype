@@ -288,3 +288,16 @@ it('edits policy markdown inline, cancels safely and translates only the chosen 
     '# Terms of Service',
   )
 })
+
+it('registers a shared authoring locale selected on another resource tab without copying text', async () => {
+  const view = render(Fixture)
+  const original = snapshot(view.container).data.i18n.en
+  await fireEvent.click(
+    screen.getByRole('button', { name: 'Select French from another tab' }),
+  )
+  expect(snapshot(view.container).data.i18n.fr).toBeUndefined()
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
+  await waitFor(() => expect(snapshot(view.container).data.i18n.fr?.name).toBe(''))
+  expect(snapshot(view.container).data.i18n.fr.description).toBe('')
+  expect(snapshot(view.container).data.i18n.en).toEqual(original)
+})

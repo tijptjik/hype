@@ -183,6 +183,18 @@ const form = {
 </script>
 <div class="bits-theme bg-panel text-foreground min-h-screen">
   <nav class="flex flex-wrap gap-4 p-6">
+    <button
+      type="button"
+      onclick={() => {
+        contentLocaleSelection = {
+          selectedLocales: ['en', 'fr'],
+          visibleLocales: ['en', 'fr'],
+        }
+      }}
+    >
+      Select French from another tab
+    </button>
+
     <button type="button" onclick={() => (subscriptionLoading = !subscriptionLoading)}>
       Toggle subscription loading
     </button>

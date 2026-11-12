@@ -1,3 +1,8 @@
+// TABLE OF CONTENTS
+// 1. Access and provider transport
+// 2. Read-only Hype and source discovery
+// 3. Explicit import and identity review
+// ---
 // SVELTE
 import { error } from '@sveltejs/kit'
 // VALIDATION

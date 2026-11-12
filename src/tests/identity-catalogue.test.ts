@@ -20,7 +20,10 @@ import {
 } from '../lib/db/services/locationShared'
 import { executeRevisionBatch } from '../lib/db/services/revisionBatch'
 // DOMAIN
-import { seedIdentityCatalogue } from '../lib/locations/identityCatalogue'
+import {
+  IdentityCatalogueContentSchema,
+  seedIdentityCatalogue,
+} from '../lib/locations/identityCatalogue'
 import { emptyFeatureAddress } from '../lib/addresses/featureAddress'
 // FIXTURES
 import { publicationSqlite } from './fixtures/publicationSqlite'
@@ -607,4 +610,12 @@ it('saves intentionally untranslated catalogue names without filling them from a
   expect(record?.i18n.en.name).toBe('Kitchen')
   expect(record?.i18n['zh-Hant'].name).toBe('')
   expect(record?.i18n['zh-Hans'].name).toBe('')
+})
+
+it('accepts blank lines while editing discovery terms and normalizes them on save', () => {
+  const record = IdentityCatalogueContentSchema.parse({
+    ...seedIdentityCatalogue({ en: 'AROME' }),
+    discovery: { terms: [' AROME Bakery ', '', '東海堂', '  '] },
+  })
+  expect(record.discovery?.terms).toEqual(['AROME Bakery', '東海堂'])
 })
