@@ -455,19 +455,26 @@ let viewportHeight = $state(0)
         Translations and search
       </h2>
       <p class="mt-3 max-w-3xl">
-        Location revision content stores translated fields together under
-        <code>facts.i18n[locale]</code>: <code>name</code>, <code>branch</code>,
+        Translated Location fields live only in <code>locationRevisionI18n</code>, keyed
+        by revision and locale: <code>name</code>, <code>branch</code>,
         <code>format</code>, <code>displayAddress</code> and
-        <code>displayAddressOverride</code>. Branch IDs and catalogue links are
-        non-translatable identifiers. Raw provider evidence stays unchanged.
+        <code>displayAddressOverride</code>. The parent revision stores non-translated
+        facts. Branch IDs and catalogue links are non-translatable identifiers. Raw
+        provider evidence stays unchanged.
       </p>
       <p class="mt-3 max-w-3xl">
-        Each revision also has dedicated <code>locationRevisionI18n</code> rows, keyed
-        by revision and locale, maintained atomically from its content. Brand and group
-        catalogue search uses <code>identityCatalogueI18n</code>. Feature search has an
-        FTS index; Location search currently uses substring matching after resolving the
-        permitted community and Organisation layers. Translation rows do not by
-        themselves provide indexed substring search.
+        The <code>locationRevisionContent</code> view assembles
+        <code>facts.i18n[locale]</code>
+        for readers without storing another copy. Writes through that view save facts
+        and locale rows atomically; both are immutable. Brand and group names likewise
+        live only in
+        <code>identityCatalogueI18n</code>, keyed by catalogue, version and locale.
+        Choosing a newer catalogue version does not change an accepted older version.
+      </p>
+      <p class="mt-3 max-w-3xl">
+        Feature search has an FTS index. Location search uses the translation rows and
+        resolves permitted community and Organisation layers before substring matching.
+        Translation tables do not by themselves provide indexed substring search.
       </p>
       <p class="mt-3 max-w-3xl">
         Structured Address content retains the shared Address contract, including its

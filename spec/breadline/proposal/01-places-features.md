@@ -3796,22 +3796,24 @@ accepted Location Branch is a separate integration.
 
 ### Pre-release translation storage correction (Refs #194)
 
-Migration 0238 standardizes Location revision content on
-`locationRevision.facts.i18n[locale]`, with scalar `name`, `branch`, `format`,
-`displayAddress` and `displayAddressOverride` fields. It removes the earlier field-first
-locale maps; raw publisher evidence is unchanged. Branch IDs remain non-translatable.
-Structured Address content retains its shared `i18n` and `unitI18n` contract. Correction
-operations are separate from normalized content.
+Migration 0241 replaces the intermediate duplicated JSON/query projection with one
+authoritative translation store. `locationRevision.facts` contains non-translated facts;
+`locationRevisionI18n` contains the translated `name`, `branch`, `format`,
+`displayAddress` and `displayAddressOverride`, keyed by revision and locale. Raw source
+evidence remains untouched. Structured Address values retain their separate shared
+Address contract.
 
-`locationRevisionI18n` provides relational translation rows keyed by revision and
-locale, populated atomically by an insertion trigger. Migration 0239 similarly projects
-the current brand/group catalogue into `identityCatalogueI18n`. Migration 0240 makes
-Property translation identity unique by Property and locale. Feature search already uses
-FTS5; Location search still resolves permitted overlays before substring matching and
-does not yet have a Location FTS index.
+`locationRevisionContent` assembles the locale-first snapshot at read time. Its atomic
+insert trigger splits the input into facts and locale rows; a guarded write scope
+prevents later additions, and immutable-row guards prevent editing or deleting
+translations. The view is not materialized. `identityCatalogueI18n` similarly owns names
+by catalogue, version and locale; `identityCatalogueRevisionContent` assembles each
+pinned version without duplicating its names in revision JSON.
 
-The local rebuild exports production read-only, merges Breadline, initializes verified
-revision baselines and converts the Feature lifecycle before applying
-lifecycle-dependent fixture migrations. `--resume` reuses hash-checked private exports
-and successful stage receipts. Installation remains a separate local step after schema,
-translation projection, integrity and foreign-key validation.
+Feature search uses FTS5. Location search resolves permitted overlays before substring
+matching; no Location FTS index has been added.
+
+The reproducible local rebuild and approved media recovery workflow is documented in
+[Local database rebuild](../../../docs/refactor-guides/Local-Database-Rebuild.md). It
+retains export hashes and stage receipts, verifies exact recovery evidence, and backs up
+the previous local database before installation. Production remains read-only.
