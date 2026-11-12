@@ -44,6 +44,8 @@ export type PropertyTranslationOrigin =
   | { type: 'value'; valueId: Id }
 
 export type FormFieldCardBodyProps = {
+  hubReview?: boolean
+  reviewGroup?: import('#lib/forms/translationReviewGroup.js').TranslationReviewGroup
   multilingual?: boolean
   visibleLocales?: string[]
   property: Property

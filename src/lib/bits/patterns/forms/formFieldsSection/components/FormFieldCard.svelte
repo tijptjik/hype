@@ -11,6 +11,8 @@ import FormFieldCardBody from './FormFieldCardBody.svelte'
 import type { FormFieldCardProps } from '../formFieldsSection.types'
 
 let {
+  hubReview,
+  reviewGroup,
   property,
   propertyIndex,
   sectionRank,
@@ -217,6 +219,8 @@ const cardClass = $derived(
     {#snippet cardBodyContent()}
       <div class="bits-project-field-card__body-inner">
         <FormFieldCardBody
+          {hubReview}
+          {reviewGroup}
           {property}
           {propertyIndex}
           {sectionRank}

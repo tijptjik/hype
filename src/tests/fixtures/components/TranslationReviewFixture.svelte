@@ -1,21 +1,36 @@
 <script lang="ts">
+const hubReview = new URLSearchParams(location.search).has('hub')
+
 import FeatureProfileEditor from '#lib/bits/patterns/forms/featureLocation/FeatureProfileEditor.svelte'
 import FormI18nInlineRow from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nInlineRow.svelte'
 import AutomaticTranslationIndicator from '#lib/bits/custom/text/AutomaticTranslationIndicator.svelte'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
 import type { ProfileLocaleState } from '#lib/bits/patterns/forms/featureLocation/profileLocales.js'
 import type { ProfileValues } from '#lib/bits/patterns/forms/featureLocation/profileTranslation.js'
+const legacy = new URLSearchParams(location.search).has('legacy')
+const fallback = new URLSearchParams(location.search).has('fallback')
+const filled = new URLSearchParams(location.search).has('filled')
 let active = $state('title')
 let saved = $state(0)
 let values = $state<ProfileValues>({
   en: {
-    title: 'A community kitchen',
+    title: fallback ? '' : 'A community kitchen',
     description: 'Everyone is welcome.',
     titleGen: false,
     descriptionGen: false,
   },
-  zhHant: { title: '', description: '' },
-  ja: { title: '', description: '' },
+  zhHant: {
+    title: legacy || filled || fallback ? 'Existing AI title' : '',
+    titleGen: legacy || filled || fallback,
+    description: filled ? 'AI description' : '',
+    descriptionGen: filled,
+  },
+  ja: {
+    title: filled ? 'AI title' : '',
+    description: filled ? 'AI description' : '',
+    titleGen: filled,
+    descriptionGen: filled,
+  },
 })
 let locales = $state<ProfileLocaleState>({
   selectedLocales: ['en', 'zh-Hant', 'ja'],
@@ -28,6 +43,8 @@ let locales = $state<ProfileLocaleState>({
   data-review-fixture
   data-active={active}
   data-saved={saved}
+  data-values={JSON.stringify(values)}
+  data-expanded={locales.expanded}
 >
   <form
     onsubmit={event => {
@@ -38,6 +55,7 @@ let locales = $state<ProfileLocaleState>({
     {#each ['title', 'description'] as tab}
       <section hidden={active !== tab}>
         <FeatureProfileEditor
+          {hubReview}
           localeState={locales}
           onLocaleStateChange={state => {
             locales = state
@@ -49,10 +67,10 @@ let locales = $state<ProfileLocaleState>({
           onReveal={() => {
             active = tab
           }}
-          translate={async (_source, target, text) => ({
-            status: 'translated',
-            text: `${target}: ${text}`,
-          })}
+          translate={async (_source, target, text) => {
+            await new Promise(resolve => setTimeout(resolve, 500))
+            return { status: 'translated', text: `${target}: ${text}` }
+          }}
           onTranslated={(field, locale, text) => {
             const key = contentFormKey(locale)
             values = {
@@ -91,7 +109,13 @@ let locales = $state<ProfileLocaleState>({
         </FeatureProfileEditor>
       </section>
     {/each}
-    <button type="submit" class="border-border rounded border p-3">Save record</button>
+    <button
+      data-header-save
+      type="submit"
+      class="border-border bg-panel fixed top-3 right-4 z-50 rounded border p-3"
+    >
+      Save record
+    </button>
   </form>
   <p>
     Japanese label

@@ -39,6 +39,7 @@ export interface ProfileTranslationController<Field extends string = ProfileFiel
  * the target is still empty, and cancel on reset/unmount. Applying a result is synchronous.
  */
 export function createProfileTranslator<Field extends string = ProfileField>(options: {
+  allowUnconfirmedTargets?: boolean
   values: () => ProfileValues<Field>
   context: () => unknown
   locked: (field: Field) => boolean
@@ -74,14 +75,28 @@ export function createProfileTranslator<Field extends string = ProfileField>(opt
       selected: readonly string[],
     ): Promise<ProfileTranslationResult[]> {
       if (running.has(field) || options.locked(field)) return []
-      const text = publishedProfileText(options.values(), source, field)
+      const text = options.allowUnconfirmedTargets
+        ? read(source, field)
+        : publishedProfileText(options.values(), source, field)
       if (!hasProfileText(text)) return []
       const context = options.context()
       const token = epoch
       const sourceRevision = revision(source, field)
       const targets = [...new Set(selected)]
-        .filter(locale => locale !== source && !hasProfileText(read(locale, field)))
-        .map(locale => ({ locale, revision: revision(locale, field) }))
+        .filter(
+          locale =>
+            locale !== source &&
+            !hasProfileText(
+              options.allowUnconfirmedTargets
+                ? publishedProfileText(options.values(), locale, field)
+                : read(locale, field),
+            ),
+        )
+        .map(locale => ({
+          locale,
+          revision: revision(locale, field),
+          text: read(locale, field),
+        }))
       const results: ProfileTranslationResult[] = []
       running.add(field)
       let next = 0
@@ -99,7 +114,11 @@ export function createProfileTranslator<Field extends string = ProfileField>(opt
               const target = targets[next++]
               if (
                 !valid() ||
-                hasProfileText(read(target.locale, field)) ||
+                read(target.locale, field) !== target.text ||
+                (options.allowUnconfirmedTargets &&
+                  hasProfileText(
+                    publishedProfileText(options.values(), target.locale, field),
+                  )) ||
                 target.revision !== revision(target.locale, field)
               ) {
                 results.push({ locale: target.locale, status: 'stale' })
@@ -109,7 +128,11 @@ export function createProfileTranslator<Field extends string = ProfileField>(opt
                 const result = await options.translate(source, target.locale, text)
                 if (
                   !valid() ||
-                  hasProfileText(read(target.locale, field)) ||
+                  read(target.locale, field) !== target.text ||
+                  (options.allowUnconfirmedTargets &&
+                    hasProfileText(
+                      publishedProfileText(options.values(), target.locale, field),
+                    )) ||
                   target.revision !== revision(target.locale, field)
                 ) {
                   results.push({ locale: target.locale, status: 'stale' })
@@ -151,4 +174,19 @@ export function publishedProfileText<Field extends string>(
   return row?.isAutomaticOnly || generated === true || generated === 'true'
     ? ''
     : (row?.[field] ?? '')
+}
+
+/** Read a stored machine-generated value that still needs explicit human confirmation.
+ * @param values Content rows. @param locale Target language. @param field Field identity.
+ * @returns Unconfirmed stored text, or an empty string.
+ */
+export function unconfirmedProfileText<Field extends string>(
+  values: ProfileValues<Field>,
+  locale: string,
+  field: Field,
+): string {
+  const row = values[contentFormKey(locale)]
+  return row?.[`${field}Gen`] === true || row?.[`${field}Gen`] === 'true'
+    ? (row?.[field] ?? '')
+    : ''
 }

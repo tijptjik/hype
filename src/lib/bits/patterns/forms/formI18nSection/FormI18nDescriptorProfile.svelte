@@ -31,6 +31,7 @@ import type { ProfileLocaleState } from '../featureLocation/profileLocales.js'
 type DescriptorField = GenAiField
 
 let {
+  hubReview,
   form,
   fields,
   defaultLocales,
@@ -56,6 +57,7 @@ let {
   toolbarHeader,
   afterField,
 }: {
+  hubReview?: boolean
   form: FormDataUpdaterForm<T>
   fields: Record<string, object>
   defaultLocales: string[]
@@ -171,6 +173,7 @@ function applyTranslation(
   locale: string,
   text: string,
   automatic?: AutomaticTranslation,
+  humanVerified = false,
 ): void {
   const current = form.fields.value()
   if (!current.data) return
@@ -185,12 +188,16 @@ function applyTranslation(
           ...current.data.i18n?.[key],
           [field]: text,
           [`${field}Gen`]: false,
-          ...(automatic
+          ...(automatic || current.data.i18n?.[key]?.[`${field}Gen`]
             ? {
                 translationProvenance: {
                   ...current.data.i18n?.[key]?.translationProvenance,
                   [field]: JSON.stringify({
-                    ...automatic,
+                    ...(automatic ?? {
+                      origin: 'legacy-ai',
+                      value: current.data.i18n?.[key]?.[field] ?? text,
+                    }),
+                    humanVerified,
                     acceptedValue: text,
                     acceptedBy: 'pending',
                     acceptedAt: new Date().toISOString(),
@@ -313,6 +320,7 @@ function stageAutomatic(
     {/if}
   </div>
   <FeatureProfileEditor
+    {hubReview}
     {stackNames}
     {stickyFieldHeaders}
     {showPrimaryLocaleHeader}

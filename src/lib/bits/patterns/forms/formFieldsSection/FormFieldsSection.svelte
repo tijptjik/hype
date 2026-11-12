@@ -1,6 +1,14 @@
 <script lang="ts">
 // SVELTE
-import { untrack, setContext, tick } from 'svelte'
+import { getContext, untrack, setContext, tick } from 'svelte'
+// HUB TRANSLATION REVIEW
+import {
+  hubTranslationReviewKey,
+  type TranslationSourceMode,
+} from '#lib/forms/translationSource.js'
+import TranslationReviewDialog from '../translationReview/TranslationReviewDialog.svelte'
+const inheritedHubReview =
+  getContext<boolean | undefined>(hubTranslationReviewKey) ?? false
 // TRANSLATION REVIEW
 import {
   registerTranslationReview,
@@ -43,6 +51,7 @@ import type {
 } from '#lib/bits/custom/localeControls/localeControls.types.js'
 
 let {
+  hubReview = inheritedHubReview,
   onReveal,
   items,
   icon,
@@ -72,20 +81,38 @@ let {
   class: className = '',
 }: FormFieldsSectionProps = $props()
 
+setContext(
+  hubTranslationReviewKey,
+  untrack(() => hubReview),
+)
+
 let reviewAnchor: HTMLSpanElement
 let reviewOpen = $state(false)
 let reviewBusy = $state(false)
-let reviewMembers = $state<TranslationReviewGroupMember[]>([])
-setContext<TranslationReviewGroup>(translationReviewGroupKey, {
+let reviewCompleted = $state(0)
+let reviewTotal = $state(0)
+let sourceFallback = $state(false)
+let reviewMembers = $state<
+  (TranslationReviewGroupMember & { registrationId: symbol })[]
+>([])
+const reviewGroup: TranslationReviewGroup = {
   open: () => reviewSection.open(),
   register(member) {
-    reviewMembers = [...reviewMembers, member]
+    const registrationId = Symbol()
+    reviewMembers = [...reviewMembers, { ...member, registrationId }]
     return () => {
-      reviewMembers = reviewMembers.filter(entry => entry !== member)
+      reviewMembers = reviewMembers.filter(
+        entry => entry.registrationId !== registrationId,
+      )
     }
   },
-})
+}
+setContext(translationReviewGroupKey, reviewGroup)
 const reviewSection: TranslationReviewSection = {
+  acceptFilled: () => {
+    for (const member of reviewMembers) member.acceptFilled?.()
+  },
+  missingKeys: () => reviewMembers.flatMap(member => member.missingKeys?.() ?? []),
   fingerprint: () => JSON.stringify(reviewMembers.map(member => member.fingerprint())),
   missing: () => isEditing && reviewMembers.some(member => member.missing()),
   open: () => {
@@ -108,10 +135,22 @@ $effect(() => {
 /** Generate suggestions for the entire Fields tab without filling authored controls.
  * @returns Completion of sequential property requests.
  */
-async function generateReview(): Promise<void> {
+async function generateReview(mode?: TranslationSourceMode): Promise<void> {
   reviewBusy = true
+  reviewCompleted = 0
+  sourceFallback = false
+  reviewTotal = reviewMembers.reduce(
+    (count, member) => count + (member.remaining?.() ?? 0),
+    0,
+  )
   try {
-    for (const member of reviewMembers) if (member.missing()) await member.generate()
+    for (const member of reviewMembers)
+      if (member.missing())
+        await member.generate(mode, fallback => {
+          sourceFallback ||= fallback === true
+          if (!fallback) reviewCompleted += 1
+        })
+    // Keep the dialogue open to expose the ready state after generation.
   } finally {
     reviewBusy = false
   }
@@ -170,7 +209,9 @@ const locales = $derived(
 const visibleLocales = $derived(localeSelection?.visibleLocales ?? locales)
 const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
 const sectionCard = $derived(
-  card ? { ...card, multilingual, locales, visibleLocales } : undefined,
+  card
+    ? { ...card, hubReview, reviewGroup, multilingual, locales, visibleLocales }
+    : undefined,
 )
 
 /** Apply one language-selection intent to every field in this section.
@@ -309,7 +350,24 @@ $effect(() => {
 })
 </script>
 <span bind:this={reviewAnchor} aria-hidden="true"></span>
-{#if reviewOpen}
+{#if reviewOpen && hubReview}
+  <TranslationReviewDialog
+    details={reviewMembers.flatMap(member => member.details?.() ?? [])}
+    busy={reviewBusy}
+    completed={reviewCompleted}
+    total={reviewTotal}
+    {sourceFallback}
+    pending={reviewMembers.some(member => member.pending())}
+    allReady={reviewMembers.every(member => !member.missing() || member.ready?.())}
+    englishAvailable={reviewMembers.some(member => member.englishAvailable?.())}
+    onGenerate={mode => void generateReview(mode)}
+    onAccept={() => void finishReview(true)}
+    onSkip={() => void finishReview(false)}
+    onClose={() => {
+      reviewOpen = false
+    }}
+  />
+{:else if reviewOpen}
   <div class="mx-6 mb-4 flex flex-wrap items-center gap-3 text-sm" role="status">
     <span
       >{m.translation_review_missing({

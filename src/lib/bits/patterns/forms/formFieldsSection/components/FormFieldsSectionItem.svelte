@@ -43,6 +43,8 @@ const resolvedCardContext = $derived.by(() => {
 <div class={itemClass}>
   {#if card && resolvedCardContext}
     <FormFieldCard
+      hubReview={card.hubReview}
+      reviewGroup={card.reviewGroup}
       {property}
       propertyIndex={resolvedCardContext.propertyIndex}
       sectionRank={index}

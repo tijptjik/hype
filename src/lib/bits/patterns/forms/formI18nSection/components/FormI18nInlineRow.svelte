@@ -17,6 +17,7 @@ import { hasMeaningfulText } from '../text'
 
 let {
   preview,
+  reviewActions,
   toolbarActions,
   showPreview = true,
   value,
@@ -37,6 +38,7 @@ let {
   onCancel,
   onClear,
 }: {
+  reviewActions?: Snippet
   toolbarActions?: Snippet
   preview?: Snippet
   showPreview?: boolean
@@ -80,7 +82,9 @@ async function open(): Promise<void> {
   await tick()
   if (active && token === session)
     root
-      .querySelector<HTMLInputElement>('input:not([type=hidden]), textarea')
+      .querySelector<HTMLElement>(
+        'input:not([type=hidden]):not([hidden]), textarea:not([hidden]), [contenteditable=true]',
+      )
       ?.focus({ preventScroll: true })
 }
 function close(): void {
@@ -143,12 +147,14 @@ const editorAttrs = $derived({
 >
   <!-- A stable prefix track interpolates the value's position instead of inserting a column. -->
   <span
-    class="text-muted-foreground flex min-h-[42px] min-w-0 items-center justify-center self-center overflow-hidden pr-2 text-center font-mono text-xs leading-[22px] whitespace-nowrap transition-opacity duration-200 ease-in-out motion-reduce:transition-none"
+    class="text-muted-foreground flex min-h-[42px] min-w-0 items-center justify-center self-start overflow-hidden pr-2 text-center font-mono text-xs leading-[22px] whitespace-nowrap transition-opacity duration-200 ease-in-out motion-reduce:transition-none"
     style:opacity={prefix ? 1 : 0}
     aria-hidden="true"
     >{prefixLabel}</span
   >
-  <div class="group/inline-field relative min-w-0">
+  <div
+    class="group/inline-field relative min-w-0 rounded-md [[data-missing-translation=true]_&]:outline [[data-missing-translation=true]_&]:outline-1 [[data-missing-translation=true]_&]:-outline-offset-1 [[data-missing-translation=true]_&]:outline-red-600/50"
+  >
     <!-- Keep the bound control mounted and registered in display mode and hidden locales. -->
     <div
       hidden={!active}
@@ -208,9 +214,9 @@ const editorAttrs = $derived({
       aria-label={label}
       aria-invalid={editable && issues?.length ? 'true' : undefined}
       aria-describedby={editable && issues?.length ? displayErrorId : undefined}
-      class="transition-[border-color,background-color] duration-180 motion-reduce:transition-none min-h-[42px] min-w-0 whitespace-normal break-words rounded-md pl-[11px] pr-9 {multiline
-        ? 'py-2'
-        : 'py-[9px]'} {monospace
+      class="transition-[border-color,background-color] duration-180 motion-reduce:transition-none min-h-[42px] min-w-0 whitespace-normal break-words rounded-md pl-[11px] {reviewActions
+        ? 'pr-20'
+        : 'pr-9'} {multiline ? 'py-2' : 'py-[9px]'} {monospace
         ? 'font-mono text-[13px]'
         : 'text-[15px]'} leading-[22px] {editable
         ? `cursor-text border ${issues?.length ? 'border-error' : 'border-border/30 hover:border-border/60'} hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2`
@@ -255,10 +261,15 @@ const editorAttrs = $derived({
         {/key}
       </div>
     </div>
+    {#if reviewActions && !active}
+      <div class="absolute top-1 right-1 flex items-center gap-1">
+        {@render reviewActions()}
+      </div>
+    {/if}
     {#if editable && !active && issues?.length}
       <div id={displayErrorId} role="alert"><FieldError {issues} class="px-3" /></div>
     {/if}
-    {#if editable && value.length && !(markdown && active)}
+    {#if editable && !reviewActions && value.length && !(markdown && active)}
       <button
         type="button"
         aria-label={`${m.filters__clear()} ${label}`}

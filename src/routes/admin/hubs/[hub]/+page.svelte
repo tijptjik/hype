@@ -1,4 +1,8 @@
 <script lang="ts">
+// HUB TRANSLATION REVIEW
+import { setContext } from 'svelte'
+import { hubTranslationReviewKey } from '#lib/forms/translationSource.js'
+setContext(hubTranslationReviewKey, true)
 import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
 // LOADING PRESENTATION
 import ResourceFormSkeleton from '#lib/bits/patterns/forms/formSkeleton/ResourceFormSkeleton.svelte'
@@ -1675,6 +1679,7 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          hubReview
           onReveal={() =>
             navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, 'core')}
           bind:expanded={multilingualExpanded}
@@ -1767,6 +1772,8 @@ $effect(() => {
             </div>
             <div class={formSectionDividerStyles}>
               <FormHubSubscriptionSection
+                onReveal={() =>
+                  navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, 'core')}
                 form={formCtx.form}
                 {isEditing}
                 isSubscriptionAvailable={Boolean(
@@ -1833,6 +1840,7 @@ $effect(() => {
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <!-- Empty fields fill the facet; populated fields retain trailing scroll clearance. -->
         <FormFieldsSection
+          hubReview
           onReveal={() =>
             navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, 'fields')}
           bind:multilingual={multilingualExpanded}
@@ -1900,6 +1908,7 @@ $effect(() => {
     >
       <FormSurface>
         <FormI18nDescriptorProfile
+          hubReview
           onReveal={() =>
             navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, 'policies')}
           bind:expanded={multilingualExpanded}

@@ -3,6 +3,8 @@ import { cx } from '#lib/bits/utils.js'
 
 /** Keep the third-party editor inside the form's typography, geometry and theme. */
 export const markdownEditorStyles = cx(
+  // The virtual-cursor stylesheet hides the native caret even when its plugin is disabled.
+  '[&_.ProseMirror]:caret-foreground! [&_.ProseMirror_*]:caret-foreground!',
   // Crepe's stock margins wrap a desktop toolbar and create a large tinted slab.
   '[&_.milkdown-top-bar]:static! [&_.milkdown-top-bar]:bg-transparent! [&_.milkdown-top-bar]:min-h-9! [&_.milkdown-top-bar]:px-2! [&_.milkdown-top-bar]:py-1! [&_.milkdown-top-bar]:border-border/40!',
   '[&_.top-bar-inner]:gap-0! [&_.top-bar-item]:m-0.5! [&_.top-bar-item]:size-7! [&_.top-bar-item]:p-1! [&_.top-bar-item_svg]:size-[18px]!',

@@ -165,6 +165,7 @@ function resolveIconClasses(icon?: unknown): string {
   {#if saveAction}
     <Button
       size="sm"
+      attrs={{ 'data-header-save': '' }}
       text={saveAction?.text ?? ''}
       color={saveAction?.color ?? 'success'}
       style={saveAction?.style ?? 'ghost'}

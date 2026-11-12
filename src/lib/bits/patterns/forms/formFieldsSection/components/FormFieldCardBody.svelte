@@ -1,4 +1,10 @@
 <script lang="ts">
+// HUB TRANSLATION REVIEW
+import {
+  hubTranslationReviewKey,
+  translationSource,
+  type TranslationSourceMode,
+} from '#lib/forms/translationSource.js'
 // SVELTE
 import { tick, getContext, untrack } from 'svelte'
 import {
@@ -63,7 +69,14 @@ import type {
   DragDropOptions,
 } from '@thisux/sveltednd'
 
+const inheritedHubReview =
+  getContext<boolean | undefined>(hubTranslationReviewKey) ?? false
+const inheritedReviewGroup = getContext<TranslationReviewGroup | undefined>(
+  translationReviewGroupKey,
+)
 let {
+  hubReview = inheritedHubReview,
+  reviewGroup = inheritedReviewGroup,
   property,
   propertyIndex,
   propertyFields,
@@ -252,7 +265,14 @@ function getTranslationSources(
   origin: PropertyTranslationOrigin,
   compact = false,
 ): Array<{ locale: string; label: string; accessibleLabel: string }> {
-  return locales
+  const stored =
+    origin.type === 'value'
+      ? property.values?.find(value => value.id === origin.valueId)?.i18n
+      : property.i18n
+  const candidates = hubReview
+    ? [...new Set([...locales, ...Object.keys(stored ?? {}).map(canonicalContentTag)])]
+    : locales
+  return candidates
     .filter(locale => {
       const row =
         origin.type === 'value'
@@ -263,7 +283,8 @@ function getTranslationSources(
           : getLocaleEntry(property.i18n, locale)
       return (
         translationText(origin, locale).trim() &&
-        !(row as Record<string, unknown> | undefined)?.[`${origin.type}Gen`]
+        (hubReview ||
+          !(row as Record<string, unknown> | undefined)?.[`${origin.type}Gen`])
       )
     })
     .map(locale => {
@@ -276,11 +297,21 @@ function getTranslationSources(
     })
 }
 
+/** Identify empty catalogue cells; existing AI values are already entered content.
+ * @param origin Field or option. @param locale Target language. @returns Whether translation is missing.
+ */
+function translationNeedsReview(
+  origin: PropertyTranslationOrigin,
+  locale: string,
+): boolean {
+  return !translationText(origin, locale).trim()
+}
+
 /** Check for unfilled target languages, including temporarily hidden locales.
  * @param origin Stable text-cell identity. @returns Whether translation can fill an empty cell.
  */
 function hasTranslationTargets(origin: PropertyTranslationOrigin): boolean {
-  return locales.some(locale => !translationText(origin, locale).trim())
+  return locales.some(locale => translationNeedsReview(origin, locale))
 }
 
 /** Fill missing translations in one field or option without overwriting authored cells.
@@ -290,6 +321,8 @@ function hasTranslationTargets(origin: PropertyTranslationOrigin): boolean {
 async function translateMissing(
   source: string,
   origin: PropertyTranslationOrigin,
+  targets: readonly string[] = locales,
+  replace = false,
 ): Promise<void> {
   if (translating) return
   translating = translationKey(origin)
@@ -299,18 +332,20 @@ async function translateMissing(
   reviewGroup?.open()
   try {
     const text = translationText(origin, source)
-    for (const target of locales) {
+    for (const target of targets) {
       if (
         source === target ||
-        translationText(origin, target).trim() ||
-        proposals[`${translationKey(origin)}:${target}`]
+        !translationNeedsReview(origin, target) ||
+        (!replace && proposals[`${translationKey(origin)}:${target}`])
       )
         continue
+      const previous = translationText(origin, target)
       const result = await translateContentField({ source, target, text })
       if (
         result.status !== 'translated' ||
         translationText(origin, source) !== text ||
-        translationText(origin, target).trim()
+        !translationNeedsReview(origin, target) ||
+        translationText(origin, target) !== previous
       )
         continue
       proposals[`${translationKey(origin)}:${target}`] = {
@@ -332,11 +367,14 @@ async function translateMissing(
 type Proposal = {
   origin: PropertyTranslationOrigin
   target: string
-  automatic: AutomaticTranslation
+  automatic?: AutomaticTranslation
+  legacyValue?: string
   value: string
+  humanVerified?: boolean
   accepted: boolean
 }
 let proposals = $state<Record<string, Proposal>>({})
+let dismissed = $state<Record<string, boolean>>({})
 let editorRoot: HTMLDivElement
 const origins = $derived<PropertyTranslationOrigin[]>([
   { type: 'label' },
@@ -348,16 +386,38 @@ const origins = $derived<PropertyTranslationOrigin[]>([
 ])
 const missingOrigins = $derived(
   origins.filter(
-    origin => getTranslationSources(origin).length && hasTranslationTargets(origin),
+    origin =>
+      (getTranslationSources(origin).length ||
+        (hubReview &&
+          locales.some(locale => translationText(origin, locale).trim()))) &&
+      hasTranslationTargets(origin),
   ),
 )
 const pendingProposals = $derived(
-  Object.values(proposals).filter(proposal => !proposal.accepted),
+  Object.values(proposals).filter(
+    proposal => !proposal.accepted && proposalIsCurrent(proposal),
+  ),
 )
-const reviewGroup = getContext<TranslationReviewGroup | undefined>(
-  translationReviewGroupKey,
-)
+
 const reviewSection: TranslationReviewSection = {
+  missingKeys: () =>
+    missingOrigins.flatMap(origin =>
+      locales
+        .filter(
+          locale =>
+            !translationText(origin, locale).trim() &&
+            !pendingProposals.some(
+              proposal =>
+                translationKey(proposal.origin) === translationKey(origin) &&
+                proposal.target === locale &&
+                proposal.value.trim(),
+            ),
+        )
+        .map(locale => `${property.id}:${translationKey(origin)}:${locale}:empty`),
+    ),
+  acceptFilled: () => {
+    for (const proposal of [...pendingProposals]) acceptProposal(proposal)
+  },
   fingerprint: () =>
     JSON.stringify([
       locales,
@@ -377,8 +437,60 @@ $effect(() => {
       reviewGroup.register({
         ...reviewSection,
         generate: generateMissing,
+        remaining: () =>
+          missingOrigins.reduce(
+            (count, origin) =>
+              count +
+              locales.filter(
+                locale =>
+                  translationNeedsReview(origin, locale) &&
+                  !proposalIsCurrent(proposals[`${translationKey(origin)}:${locale}`]),
+              ).length,
+            0,
+          ),
+        details: () =>
+          missingOrigins.flatMap(origin => {
+            const targets = locales
+              .filter(
+                locale =>
+                  !translationText(origin, locale).trim() &&
+                  !pendingProposals.some(
+                    proposal =>
+                      translationKey(proposal.origin) === translationKey(origin) &&
+                      proposal.target === locale &&
+                      proposal.value.trim(),
+                  ),
+              )
+              .map(locale => getContentLocaleRecord(locale, getLocaleKey()).name)
+            return targets.length
+              ? [
+                  `${getLocaleEntry(property.i18n, 'en')?.label || property.key} · ${origin.type === 'value' ? 'Option' : origin.type}: ${targets.join(', ')}`,
+                ]
+              : []
+          }),
+        englishAvailable: () =>
+          missingOrigins.some(origin =>
+            getTranslationSources(origin).some(source => source.locale === 'en'),
+          ),
         finish: finishReview,
-        pending: () => pendingProposals.length > 0,
+        pending: () => pendingProposals.some(proposal => proposal.value.trim()),
+        ready: () =>
+          missingOrigins.every(origin =>
+            locales
+              .filter(
+                locale =>
+                  !translationText(origin, locale).trim() &&
+                  !pendingProposals.some(
+                    proposal =>
+                      translationKey(proposal.origin) === translationKey(origin) &&
+                      proposal.target === locale &&
+                      proposal.value.trim(),
+                  ),
+              )
+              .every(locale =>
+                proposalIsCurrent(proposals[`${translationKey(origin)}:${locale}`]),
+              ),
+          ),
       }),
     )
   return registerTranslationReview(form, reviewSection)
@@ -397,10 +509,11 @@ $effect(() => {
           : getLocaleEntry(property.i18n, target)
       const automatic = automaticTranslationFromRow(row, origin.type)
       const key = `${translationKey(origin)}:${target}`
+      if (dismissed[key] || translationText(origin, target).trim()) continue
       if (
         automatic &&
         !proposals[key] &&
-        !translationText(origin, target).trim() &&
+        translationNeedsReview(origin, target) &&
         translationText(origin, automatic.sourceLocale) === automatic.sourceText
       )
         proposals[key] = {
@@ -416,13 +529,24 @@ $effect(() => {
 /** Accept only a still-current suggestion into the existing authored controls.
  * @param proposal Selected suggestion and immutable source snapshot. @returns Nothing.
  */
-function acceptProposal(proposal: Proposal): void {
-  if (
-    translationText(proposal.origin, proposal.automatic.sourceLocale) !==
-      proposal.automatic.sourceText ||
-    translationText(proposal.origin, proposal.target).trim()
+function proposalIsCurrent(proposal: Proposal | undefined): boolean {
+  return Boolean(
+    proposal?.value.trim() &&
+      (!proposal.automatic ||
+        translationText(proposal.origin, proposal.automatic.sourceLocale) ===
+          proposal.automatic.sourceText) &&
+      (proposal.legacyValue === undefined ||
+        translationText(proposal.origin, proposal.target) === proposal.legacyValue) &&
+      translationNeedsReview(proposal.origin, proposal.target),
   )
-    return
+}
+
+/** Accept a current proposal through the existing field update handlers.
+ * @param proposal Translation selected for acceptance.
+ * @returns Nothing.
+ */
+function acceptProposal(proposal: Proposal, edited = false): void {
+  if (!proposalIsCurrent(proposal)) return
   if (proposal.origin.type === 'value')
     onUpdateValueI18n(
       property.id,
@@ -435,14 +559,46 @@ function acceptProposal(proposal: Proposal): void {
     onUpdateI18n(property.id, proposal.target, proposal.origin.type, proposal.value)
     onUpdateI18n(property.id, proposal.target, `${proposal.origin.type}Gen`, false)
   }
+  proposal.humanVerified = edited
   proposal.accepted = true
 }
 
+/** Restore the authored control without replacing its saved value.
+ * @param proposal Suggestion being dismissed. @returns Nothing.
+ */
+function dismissProposal(proposal: Proposal): void {
+  const key = `${translationKey(proposal.origin)}:${proposal.target}`
+  dismissed = { ...dismissed, [key]: true }
+  const next = { ...proposals }
+  delete next[key]
+  proposals = next
+}
 /** Generate the missing cells in this property using each field's first authored source.
  * @returns Completion of bounded sequential provider requests.
  */
-async function generateMissing(): Promise<void> {
+async function generateMissing(
+  mode?: TranslationSourceMode,
+  onProgress?: (fallback?: boolean) => void,
+): Promise<void> {
   for (const origin of missingOrigins) {
+    if (hubReview && mode) {
+      for (const target of locales.filter(
+        locale =>
+          translationNeedsReview(origin, locale) &&
+          !proposalIsCurrent(proposals[`${translationKey(origin)}:${locale}`]),
+      )) {
+        const source = translationSource(
+          target,
+          getTranslationSources(origin).map(item => item.locale),
+          mode,
+        )
+        if (mode === 'english' && source && !source.toLowerCase().startsWith('en'))
+          onProgress?.(true)
+        if (source) await translateMissing(source, origin, [target], true)
+        onProgress?.()
+      }
+      continue
+    }
     const source = getTranslationSources(origin)[0]?.locale
     if (source) await translateMissing(source, origin)
   }
@@ -452,7 +608,7 @@ async function generateMissing(): Promise<void> {
  * @param accept Whether to accept every current suggestion. @returns Nothing.
  */
 async function finishReview(accept: boolean): Promise<void> {
-  if (accept) pendingProposals.forEach(acceptProposal)
+  if (accept) for (const proposal of pendingProposals) acceptProposal(proposal)
   await tick()
   if (accept && missingOrigins.length) return
   reviewOpen = false
@@ -1027,20 +1183,27 @@ $effect(() => {
   {#each Object.values(
     proposals,
   ) as proposal (`${translationKey(proposal.origin)}:${proposal.target}`)}
-    <input
-      {...getFieldAttrsWithValue(
-        [...proposalPath(proposal), 'autoTranslated', proposal.origin.type],
-        'hidden',
-        JSON.stringify(proposal.automatic),
-      )}
-    >
-    {#if proposal.accepted}
+    {#if proposal.automatic}
+      <input
+        {...getFieldAttrsWithValue(
+          [...proposalPath(proposal), 'autoTranslated', proposal.origin.type],
+          'hidden',
+          JSON.stringify(proposal.automatic),
+        )}
+      >
+    {/if}
+    {#if proposal.accepted &&
+      (proposal.automatic || proposal.legacyValue !== undefined)}
       <input
         {...getFieldAttrsWithValue(
           [...proposalPath(proposal), 'translationProvenance', proposal.origin.type],
           'hidden',
           JSON.stringify({
-            ...proposal.automatic,
+            ...(proposal.automatic ?? {
+              origin: 'legacy-ai',
+              value: proposal.legacyValue,
+            }),
+            humanVerified: proposal.humanVerified === true,
             acceptedValue: proposal.value,
             acceptedBy: 'pending',
             acceptedAt: new Date().toISOString(),
@@ -1404,17 +1567,35 @@ $effect(() => {
                     {...getFieldAttrsWithValue(['i18n', key, genKey], 'hidden', gen)}
                   >
                   <FormFieldLocaleText
+                    {hubReview}
+                    acceptedTranslation={getLocaleEntry(property.i18n, locale)
+                      ?.translationProvenance?.[field]}
+                    missing={hubReview &&
+                      reviewOpen &&
+                      !value.trim() &&
+                      !proposal?.value.trim() &&
+                      translationNeedsReview({ type: field }, locale) &&
+                      (getTranslationSources({ type: field }).length > 0 ||
+                        Boolean(value.trim()))}
                     proposal={proposal && !proposal.accepted
                       ? proposal.value
                       : undefined}
                     onProposal={text => {
                       if (proposal) proposal.value = text
                     }}
-                    onAccept={() => {
-                      if (proposal) acceptProposal(proposal)
+                    onAccept={edited => {
+                      if (proposal) acceptProposal(proposal, edited)
+                    }}
+                    onReject={() => {
+                      if (proposal) dismissProposal(proposal)
                     }}
                     {value}
-                    {gen}
+                    gen={gen ||
+                      Boolean(
+                        proposal?.accepted &&
+                          !proposal.humanVerified &&
+                          proposal.value === value,
+                      )}
                     {locale}
                     label={`${label} ${locale}`}
                     prefix={multilingual ? shortLocaleLabel(locale) : ''}
@@ -1665,6 +1846,7 @@ $effect(() => {
                                 {#if proposal && !proposal.accepted}
                                   <div class="min-w-0">
                                     <FormFieldLocaleText
+                                      {hubReview}
                                       value={valueDisplayText}
                                       gen={false}
                                       {locale}
@@ -1677,7 +1859,9 @@ $effect(() => {
                                       onProposal={text => {
                                         proposal.value = text
                                       }}
-                                      onAccept={() => acceptProposal(proposal)}
+                                      onAccept={edited =>
+                                        acceptProposal(proposal, edited)}
+                                      onReject={() => dismissProposal(proposal)}
                                       onValue={() => {}}
                                       onGen={() => {}}
                                     />
@@ -1687,6 +1871,27 @@ $effect(() => {
                                     <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
                                     <div
                                       class={`bits-project-field-card__value-editable focus-override pr-9! text-[15px]! leading-[22px]! font-normal! empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                                      style:outline={hubReview &&
+                                      reviewOpen &&
+                                      !valueDisplayText.trim() &&
+                                      translationNeedsReview(
+                                        { type: 'value', valueId: value.id },
+                                        locale,
+                                      ) &&
+                                      getTranslationSources({
+                                        type: 'value',
+                                        valueId: value.id,
+                                      }).length
+                                        ? '1px solid rgb(220 38 38 / 0.5)'
+                                        : undefined}
+                                      data-missing-translation={(hubReview &&
+                                        reviewOpen &&
+                                        !valueDisplayText.trim() &&
+                                        translationNeedsReview(
+                                          { type: 'value', valueId: value.id },
+                                          locale,
+                                        )) ||
+                                        undefined}
                                       role="textbox"
                                       aria-label={`Option ${valueIndex + 1} ${locale}`}
                                       data-placeholder="Option label"

@@ -2,6 +2,9 @@
 import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 // SVELTE
 import { untrack } from 'svelte'
+const hubReview =
+  typeof location !== 'undefined' && new URLSearchParams(location.search).has('hub')
+// Exercise explicit Hub mode even when tabs have no inherited route context.
 // SVELTEKIT
 // @ts-expect-error Exercise the installed remote-form registration contract.
 import * as kitForms from '../../../../node_modules/@sveltejs/kit/src/runtime/form-utils.js'
@@ -189,8 +192,18 @@ let editing = $state(true)
     <button type="button" onclick={() => (editing = !editing)}>Toggle editing</button>
   </div>
   <form data-field-form class={panelPadding ? 'flex min-h-0 flex-1 flex-col' : ''}>
+    {#if hubReview}
+      <button
+        type="submit"
+        data-header-save
+        class="bg-panel fixed top-3 right-4 z-50 rounded border p-3"
+      >
+        Save record
+      </button>
+    {/if}
     {#snippet fieldsSection()}
       <FormFieldsSection
+        {hubReview}
         isLoading={loading}
         bind:localeSelection
         bind:multilingual

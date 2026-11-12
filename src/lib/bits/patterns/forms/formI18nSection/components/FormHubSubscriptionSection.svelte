@@ -61,10 +61,12 @@ let {
   subscriptionPlacement,
   translate,
   onChange = () => {},
+  onReveal,
   onAvailabilityChange,
   onServiceChange,
   onPlacementChange,
 }: {
+  onReveal?: () => void
   form: HubSubscriptionForm<T>
   localeState: ProfileLocaleState
   recordKey: string
@@ -112,6 +114,7 @@ function applyTranslation(
   locale: string,
   text: string,
   automatic?: AutomaticTranslation,
+  humanVerified = false,
 ): void {
   const current = form.fields.value()
   if (!current.data) return
@@ -126,12 +129,16 @@ function applyTranslation(
           ...current.data.i18n?.[key],
           subscriptionBenefits: text,
           subscriptionBenefitsGen: false,
-          ...(automatic
+          ...(automatic || current.data.i18n?.[key]?.subscriptionBenefitsGen
             ? {
                 translationProvenance: {
                   ...current.data.i18n?.[key]?.translationProvenance,
                   subscriptionBenefits: JSON.stringify({
-                    ...automatic,
+                    ...(automatic ?? {
+                      origin: 'legacy-ai',
+                      value: current.data.i18n?.[key]?.subscriptionBenefits ?? text,
+                    }),
+                    humanVerified,
                     acceptedValue: text,
                     acceptedBy: 'pending',
                     acceptedAt: new Date().toISOString(),
@@ -239,6 +246,8 @@ function applyTranslation(
       data-subscription-benefits
     >
       <FeatureProfileEditor
+        hubReview
+        {onReveal}
         {localeState}
         onLocaleStateChange={() => {}}
         {values}

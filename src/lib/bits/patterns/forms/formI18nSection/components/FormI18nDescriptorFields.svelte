@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends DescriptorData">
+import { unverifiedAcceptance } from '#lib/i18n/automaticSchema.js'
 // SVELTE
 import type { Snippet } from 'svelte'
 // I18N
@@ -82,6 +83,14 @@ function toggleInline(field: GenAiField): void {
   const current = form.fields.value()
   const data = current.data
   if (!data) return
+  // Publication of accepted AI copy must not be toggled by its provenance indicator.
+  if (
+    unverifiedAcceptance(
+      data.i18n?.[locale]?.translationProvenance?.[field],
+      data.i18n?.[locale]?.[field],
+    )
+  )
+    return
   if (data.i18n?.[locale]) {
     toggleGenAiField(form, locale, field)
     return
@@ -175,7 +184,8 @@ function cancelEdit(): void {
         markdown={config.markdown}
         multiline={config.kind === 'textarea'}
         editable={isEditing && !config.readonly}
-        isGenAI={genValue}
+        isGenAI={genValue ||
+          unverifiedAcceptance(provenance, (attrs as { value?: string }).value)}
         {issues}
         {required}
         renderHtml={config.renderHtml ?? config.kind === 'textarea'}
@@ -205,8 +215,9 @@ function cancelEdit(): void {
         isTranslated={true}
         {required}
         isEditing={isEditing && !config.readonly}
-        isGenAI={genValue}
-        onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
+        isGenAI={genValue ||
+          unverifiedAcceptance(provenance, (attrs as { value?: string }).value)}
+        onToggleGenAI={() => toggleInline(config.key)}
         value={(attrs as { value?: string }).value ?? ''}
         {issues}
         textareaAttrs={attrs as Record<string, unknown>}
@@ -224,8 +235,9 @@ function cancelEdit(): void {
           isTranslated={true}
           {required}
           isEditing={isEditing && !config.readonly}
-          isGenAI={genValue}
-          onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
+          isGenAI={genValue ||
+            unverifiedAcceptance(provenance, (attrs as { value?: string }).value)}
+          onToggleGenAI={() => toggleInline(config.key)}
           value={(attrs as { value?: string }).value ?? ''}
           {issues}
           inputAttrs={attrs as Record<string, unknown>}

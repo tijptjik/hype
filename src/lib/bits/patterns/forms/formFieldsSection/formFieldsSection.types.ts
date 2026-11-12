@@ -24,6 +24,7 @@ export interface FormFieldsSectionLoadingItem {
 }
 
 export interface FormFieldsSectionProps {
+  hubReview?: boolean
   onReveal?: () => void
   icon?: Component
   keepHeader?: boolean
@@ -107,6 +108,8 @@ export interface FormFieldsSectionItemProps {
 }
 
 export interface FormFieldsSectionCardConfig extends FormFieldCardCallbacks {
+  hubReview?: boolean
+  reviewGroup?: import('#lib/forms/translationReviewGroup.js').TranslationReviewGroup
   /** Section-owned language presentation; stored translations are unchanged. */
   multilingual?: boolean
   visibleLocales?: string[]
@@ -191,6 +194,8 @@ export interface FormFieldCardCallbacks {
 }
 
 export interface FormFieldCardProps extends FormFieldCardCallbacks {
+  hubReview?: boolean
+  reviewGroup?: import('#lib/forms/translationReviewGroup.js').TranslationReviewGroup
   multilingual?: boolean
   visibleLocales?: string[]
   property: Property

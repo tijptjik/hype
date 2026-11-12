@@ -1,4 +1,12 @@
 <script lang="ts">
+// SVELTE
+import { getContext } from 'svelte'
+// HUB TRANSLATION REVIEW
+import { hubTranslationReviewKey } from '#lib/forms/translationSource.js'
+import TranslationSuggestion from '../../translationReview/TranslationSuggestion.svelte'
+const inheritedHubReview =
+  getContext<boolean | undefined>(hubTranslationReviewKey) ?? false
+import { unverifiedAcceptance } from '#lib/i18n/automaticSchema.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
@@ -7,6 +15,9 @@ import FormI18nInlineRow from '../../formI18nSection/components/FormI18nInlineRo
 import type { FormIssueLike } from '#lib/client/services/form.types.js'
 
 let {
+  hubReview = inheritedHubReview,
+  missing = false,
+  acceptedTranslation,
   value,
   gen,
   label,
@@ -21,10 +32,15 @@ let {
   proposal,
   onProposal,
   onAccept,
+  onReject,
 }: {
+  hubReview?: boolean
+  acceptedTranslation?: unknown
+  missing?: boolean
   proposal?: string
   onProposal?: (value: string) => void
-  onAccept?: () => void
+  onAccept?: (edited?: boolean) => void
+  onReject?: () => void
   value: string
   gen: boolean
   label: string
@@ -53,42 +69,62 @@ function input(event: Event): void {
 }
 </script>
 
-<FormI18nInlineRow
-  value={proposal ?? value}
-  {label}
-  {prefix}
-  {required}
-  editable={isEditing}
-  isGenAI={proposal !== undefined || gen}
-  showVerification={proposal === undefined}
-  issues={issues as import('$app/server').RemoteFormIssue[] | undefined}
-  attrs={proposal !== undefined
-    ? { lang: locale, oninput: input }
-    : { ...attrs, lang: locale, oninput: input }}
-  onStart={() => {
-    beforeEdit = { value, gen }
-  }}
-  onCancel={() => {
-    if (proposal !== undefined) return
-    if (beforeEdit) {
-      onValue(beforeEdit.value)
-      onGen(beforeEdit.gen)
-    }
-  }}
-  onClear={() => {
-    if (proposal !== undefined) {
-      onProposal?.('')
-      return
-    }
-    onValue('')
-    onGen(false)
-  }}
-  onToggle={() => onGen(!gen)}
-/>
+<div class="min-w-0" data-missing-translation={missing || undefined}>
+  {#if hubReview && proposal !== undefined}
+    <TranslationSuggestion
+      value={proposal}
+      {label}
+      {prefix}
+      onChange={text => onProposal?.(text)}
+      onAccept={edited => onAccept?.(edited)}
+      onReject={() => onReject?.()}
+    />
+    <input {...attrs} type="hidden" {value}>
+  {:else}
+    <FormI18nInlineRow
+      value={proposal ?? value}
+      {label}
+      {prefix}
+      {required}
+      editable={isEditing}
+      isGenAI={proposal !== undefined ||
+        gen ||
+        unverifiedAcceptance(acceptedTranslation, value)}
+      showVerification={proposal === undefined}
+      issues={issues as import('$app/server').RemoteFormIssue[] | undefined}
+      attrs={proposal !== undefined
+        ? { lang: locale, oninput: input }
+        : { ...attrs, lang: locale, oninput: input }}
+      onStart={() => {
+        beforeEdit = { value, gen }
+      }}
+      onCancel={() => {
+        if (proposal !== undefined) return
+        if (beforeEdit) {
+          onValue(beforeEdit.value)
+          onGen(beforeEdit.gen)
+        }
+      }}
+      onClear={() => {
+        if (proposal !== undefined) {
+          onProposal?.('')
+          return
+        }
+        onValue('')
+        onGen(false)
+      }}
+      onToggle={() => onGen(!gen)}
+    />
 
-{#if proposal !== undefined}
-  <input {...attrs} type="hidden" {value}>
-  <button type="button" class="text-primary mt-1 text-xs" onclick={onAccept}>
-    {m.translation_review_accept()}
-  </button>
-{/if}
+    {#if proposal !== undefined}
+      <input {...attrs} type="hidden" {value}>
+      <button
+        type="button"
+        class="text-primary mt-1 text-xs"
+        onclick={() => onAccept?.(false)}
+      >
+        {m.translation_review_accept()}
+      </button>
+    {/if}
+  {/if}
+</div>
