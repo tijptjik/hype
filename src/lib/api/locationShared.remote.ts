@@ -57,7 +57,7 @@ async function scope(ctx: GuardedBaseContext, featureId: string) {
     associationVersion: string
   }>(sql`
     SELECT l.id locationId,r.id revisionId,r.facts,r.rawSource,fl.version associationVersion FROM featureLocation fl
-    JOIN location l ON l.id=fl.locationId JOIN locationRevision r ON r.locationId=l.id
+    JOIN location l ON l.id=fl.locationId JOIN locationRevisionContent r ON r.locationId=l.id
     WHERE fl.featureId=${featureId} AND l.state IN ('linked','unresolved') AND (${guard})
     ORDER BY r.version DESC LIMIT 1`)
   if (!subject) error(404, 'SHARED_LOCATION_NOT_FOUND')

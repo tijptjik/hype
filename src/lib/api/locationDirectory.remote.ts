@@ -142,7 +142,7 @@ export const getLocation = guardedQuery(
     const source =
       resource?.revisionId && canEditShared
         ? await ctx.db.get<{ facts: string }>(
-            sql`SELECT facts FROM locationRevision WHERE id=${resource.revisionId} AND locationId=${input.id}`,
+            sql`SELECT facts FROM locationRevisionContent AS locationRevision WHERE id=${resource.revisionId} AND locationId=${input.id}`,
           )
         : null
     const shared = source

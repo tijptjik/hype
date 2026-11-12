@@ -369,7 +369,7 @@ async function prepareRoutedLocationCorrection(
     throw new Error('ORGANISATION_LOCATION_EDIT_FORBIDDEN')
   const context = input.context
   const latest = await db.get<{ id: string; facts: string }>(
-    sql`SELECT id,facts FROM locationRevision WHERE locationId=${context.association.locationId} ORDER BY version DESC LIMIT 1`,
+    sql`SELECT id,facts FROM locationRevisionContent AS locationRevision WHERE locationId=${context.association.locationId} ORDER BY version DESC LIMIT 1`,
   )
   if (!latest) throw new Error('LOCATION_SOURCE_UNAVAILABLE')
   const head = await readSharedLocationCorrection(db, context.association.locationId)

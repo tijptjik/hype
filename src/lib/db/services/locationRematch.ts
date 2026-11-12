@@ -268,7 +268,7 @@ async function processJob(
           },
         }
         const captureGuard = sql`${guard}
-          AND (SELECT id FROM locationRevision WHERE locationId=${job.locationId} ORDER BY version DESC LIMIT 1)=${baseline.expectedLatestRevisionId}
+          AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${job.locationId} ORDER BY version DESC LIMIT 1)=${baseline.expectedLatestRevisionId}
           AND EXISTS(SELECT 1 FROM location WHERE id=${job.locationId} AND state=${baseline.expectedState} AND ssId IS ${baseline.expectedSsId}
             AND ownerOrganisationId IS ${baseline.expectedOwnerOrganisationId} AND sourceAvailability=${baseline.expectedSourceAvailability})
           AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=${job.locationId}

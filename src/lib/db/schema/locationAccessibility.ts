@@ -2,7 +2,7 @@
 import { sql } from 'drizzle-orm'
 import { sqliteTable, text, uniqueIndex, index } from 'drizzle-orm/sqlite-core'
 // SCHEMA
-import { location, locationRevision } from './location'
+import { location, locationRevisionStorage } from './location'
 // TYPES
 import type { Accessibility } from '#lib/locations/accessibility.js'
 
@@ -17,7 +17,7 @@ export const locationAccessibility = sqliteTable(
     previousRevisionId: text('previousRevisionId'),
     locationRevisionId: text('locationRevisionId')
       .notNull()
-      .references(() => locationRevision.id),
+      .references(() => locationRevisionStorage.id),
     placementKey: text('placementKey').notNull(),
     valuesJson: text('valuesJson', { mode: 'json' }).$type<Accessibility>().notNull(),
     actorId: text('actorId').notNull(),

@@ -6,6 +6,7 @@ import {
   featureLocation,
   location as locationTable,
   locationRevision,
+  locationRevisionInput,
 } from '../schema/location'
 // DOMAIN
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
@@ -140,7 +141,7 @@ export async function applyUnresolvedFeatureSplit(
       .select(sql`SELECT ${plan.locationId},NULL,${locationTaxonomy(classifyLocationFactsKind('unknown', plan.facts)).kind},${locationTaxonomy(classifyLocationFactsKind('unknown', plan.facts)).class},${ownerOrganisationId},'unresolved','current',
       NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
     db
-      .insert(locationRevision)
+      .insert(locationRevisionInput)
       .select(sql`SELECT ${plan.revisionId},${plan.locationId},1,'local',
       NULL,NULL,NULL,NULL,${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(plan.facts, 'unknown')},
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),

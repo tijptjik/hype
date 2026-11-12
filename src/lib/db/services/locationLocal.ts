@@ -15,7 +15,11 @@ import { and, eq, sql } from 'drizzle-orm'
 // IDENTITY
 import { nanoid } from 'nanoid'
 // SCHEMA
-import { location as locationTable, locationRevision } from '../schema/location'
+import {
+  location as locationTable,
+  locationRevision,
+  locationRevisionInput,
+} from '../schema/location'
 import { canOperateIn } from '#lib/features/locationPolicy.js'
 import { locationOccupancy, locationMembership } from '../schema/locationRelationships'
 // SHARED PARSER
@@ -186,7 +190,7 @@ export async function createLocalLocation(
       NULL,NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${successorGuard}`)
       .returning({ id: locationTable.id }),
     db
-      .insert(locationRevision)
+      .insert(locationRevisionInput)
       .select(sql`SELECT ${revisionId},${locationId},1,'local',NULL,NULL,NULL,NULL,
       ${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(parsed.facts, parsed.kind)},
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE EXISTS(SELECT 1 FROM location WHERE id=${locationId})`),
@@ -271,7 +275,7 @@ export async function updateLocalLocationAddress(
         eq(locationTable.id, input.locationId),
         eq(locationRevision.id, input.expectedRevisionId),
         sql`${locationTable.state}!='redirect' AND (${locationTable.state}!='manual' OR ${locationTable.ownerOrganisationId}=${input.organisationId})`,
-        sql`${locationRevision.version}=(SELECT max(version) FROM locationRevision r WHERE r.locationId=${input.locationId} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
+        sql`${locationRevision.version}=(SELECT max(version) FROM locationRevisionContent r WHERE r.locationId=${input.locationId} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
       ),
     )
     .get()
@@ -390,10 +394,10 @@ export async function updateLocalLocationAddress(
         : undefined,
     expectedBaselineRevisionId: input.expectedRevisionId,
     expectedOrganisationRevision: current?.revision ?? null,
-    guard: sql`EXISTS(SELECT 1 FROM location p JOIN locationRevision r ON r.locationId=p.id
+    guard: sql`EXISTS(SELECT 1 FROM location p JOIN locationRevisionContent r ON r.locationId=p.id
       WHERE p.id=${input.locationId} AND p.state=${baseline.location.state} AND p.ssId IS ${baseline.location.ssId}
       AND p.ownerOrganisationId IS ${baseline.location.ownerOrganisationId} AND p.matchingType IN (${baseline.location.kind},${kind}) AND r.id=${input.expectedRevisionId}
-      AND (${Number(baseline.location.ssId === null && baseline.location.ownerOrganisationId === input.organisationId)} OR r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id AND (p.state!='linked' OR origin='saanseoi'))))
+      AND (${Number(baseline.location.ssId === null && baseline.location.ownerOrganisationId === input.organisationId)} OR r.version=(SELECT max(version) FROM locationRevisionContent AS locationRevision WHERE locationId=p.id AND (p.state!='linked' OR origin='saanseoi'))))
 `,
   })
   // Type changes share the new local baseline's guard and commit in the same batch as its facts.

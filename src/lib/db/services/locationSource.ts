@@ -15,6 +15,7 @@ import {
   location as locationTable,
   locationIdentityHistory,
   locationRevision,
+  locationRevisionInput,
 } from '../schema/location'
 // VALIDATION
 import { LocationFactsSchema } from '#lib/locations/validation.js'
@@ -161,8 +162,8 @@ export async function persistSaanSeoiPlace(
     .orderBy(locationRevision.version)
     .get()
   const revisionId = retainedRevision?.id ?? generatedRevisionId
-  guard = sql`(${guard}) AND ((SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1) IS ${latest?.id ?? null}
-    OR (SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${revisionId})`
+  guard = sql`(${guard}) AND ((SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1) IS ${latest?.id ?? null}
+    OR (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${revisionId})`
   const identityGuard = sql`EXISTS (SELECT 1 FROM location WHERE id=${locationId}
     AND ssId=${projection.ssId} AND state='linked')`
   const creationGuard = sql`${guard} AND NOT EXISTS
@@ -173,14 +174,12 @@ export async function persistSaanSeoiPlace(
       .select(sql`SELECT ${locationId},${projection.ssId},'operational','establishment',NULL,'linked','current',
         NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${creationGuard}`)
       .onConflictDoNothing({ target: locationTable.id }),
-    db
-      .insert(locationRevision)
-      .select(sql`SELECT ${revisionId},${locationId},
-        (SELECT coalesce(max(version),0)+1 FROM locationRevision WHERE locationId=${locationId}),
+    db.insert(locationRevisionInput).select(sql`SELECT ${revisionId},${locationId},
+        (SELECT coalesce(max(version),0)+1 FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId}),
         'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
         ${projection.snapshotId},${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(facts, 'establishment')},
-        strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${identityGuard}`)
-      .onConflictDoNothing({ target: locationRevision.id }),
+        strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${identityGuard}
+        AND NOT EXISTS(SELECT 1 FROM locationRevision WHERE id=${revisionId})`),
     db
       .update(locationTable)
       .set({ sourceAvailability: 'current' })
@@ -228,8 +227,8 @@ export async function persistForwardSaanSeoiPlace(
   }>(sql`SELECT p.id,p.ownerOrganisationId,p.state,p.sourceAvailability,r.id AS latestId,
     r.rawSource,r.facts,(SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=p.id
       AND NOT EXISTS(SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)) AS historyId
-    FROM location p LEFT JOIN locationRevision r ON r.locationId=p.id
-      AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id)
+    FROM location p LEFT JOIN locationRevisionContent r ON r.locationId=p.id
+      AND r.version=(SELECT max(version) FROM locationRevisionContent AS locationRevision WHERE locationId=p.id)
     WHERE p.ssId=${projection.ssId}`)
   if (existing) {
     if (
@@ -282,11 +281,11 @@ export async function persistForwardSaanSeoiPlace(
       AND p.sourceAvailability=${existing.sourceAvailability}
       AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=p.id AND NOT EXISTS
         (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing.historyId}
-      AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1)
+      AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1)
         IN (${existing.latestId},${prepared.revisionId}))`
     : sql`NOT EXISTS(SELECT 1 FROM location p WHERE p.ssId=${projection.ssId} AND
       (p.id!=${locationId} OR p.state!='linked' OR p.ownerOrganisationId IS NOT NULL OR p.sourceAvailability!='current'
-        OR EXISTS(SELECT 1 FROM locationRevision r WHERE r.locationId=p.id AND r.id!=${prepared.revisionId})
+        OR EXISTS(SELECT 1 FROM locationRevisionContent r WHERE r.locationId=p.id AND r.id!=${prepared.revisionId})
         OR EXISTS(SELECT 1 FROM locationIdentityHistory h WHERE h.locationId=p.id)))`
   const receipt = await persistSaanSeoiPlace(
     db,
@@ -296,12 +295,12 @@ export async function persistForwardSaanSeoiPlace(
   // Low-level persistence can return deterministic IDs after a rejected fence; verify before checkpointing.
   const retained = await db.get<{
     id: string
-  }>(sql`SELECT r.id FROM locationRevision r JOIN location p ON p.id=r.locationId
+  }>(sql`SELECT r.id FROM locationRevisionContent r JOIN location p ON p.id=r.locationId
     WHERE (${ownershipGuard}) AND r.id=${receipt.revisionId} AND p.id=${locationId} AND p.ssId=${projection.ssId}
       AND p.state='linked' AND p.sourceAvailability='current' AND p.ownerOrganisationId IS ${existing?.ownerOrganisationId ?? null}
       AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=p.id AND NOT EXISTS
         (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing?.historyId ?? null}
-      AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1)
+      AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1)
         IN (${existing?.latestId ?? null},${prepared.revisionId},${receipt.revisionId})`)
   if (!retained || receipt.locationId !== locationId)
     throw new LocationSourceConflictError(

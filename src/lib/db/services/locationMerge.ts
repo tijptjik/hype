@@ -31,6 +31,7 @@ import { nanoid } from 'nanoid'
 import {
   location as locationTable,
   locationRevision,
+  locationRevisionInput,
   featureLocation,
   locationIdentityHistory,
   locationIdentityReview,
@@ -64,7 +65,7 @@ function baselineGuard(value: LocationIdentityBaseline): SQL {
   return sql`EXISTS(SELECT 1 FROM location WHERE id=${value.locationId} AND state=${value.expectedState}
     AND ssId IS ${value.expectedSsId} AND ownerOrganisationId IS ${value.expectedOwnerOrganisationId}
     AND sourceAvailability=${value.expectedSourceAvailability})
-    AND (SELECT id FROM locationRevision WHERE locationId=${value.locationId} ORDER BY version DESC LIMIT 1)
+    AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${value.locationId} ORDER BY version DESC LIMIT 1)
       =${value.expectedLatestRevisionId}
     AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=${value.locationId}
       AND NOT EXISTS(SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id))
@@ -443,9 +444,9 @@ export async function applyLocationMergeReview(
       })
       .where(and(eq(locationTable.id, input.sourceLocationId), mergeGuard(row))),
     db
-      .insert(locationRevision)
+      .insert(locationRevisionInput)
       .select(sql`SELECT ${prefix}||version,${input.locationId},${targetLatest.version}+version,
-      origin,ssId,apiVersion,releaseId,snapshotId,contentHash,rawSource,facts,createdAt FROM locationRevision
+      origin,ssId,apiVersion,releaseId,snapshotId,contentHash,rawSource,facts,createdAt FROM locationRevisionContent AS locationRevision
       WHERE locationId=${input.sourceLocationId} AND ${receipt} ORDER BY version`),
     // Preserve original correction chains; copy their complete immutable lineage to the survivor.
     db.insert(organisationLocation).select(sql`SELECT
@@ -456,8 +457,8 @@ export async function applyLocationMergeReview(
       .update(featureLocation)
       .set({
         locationId: input.locationId,
-        factsRevisionId: sql`${prefix}||(SELECT version FROM locationRevision WHERE id=${featureLocation.factsRevisionId})`,
-        locationRevisionId: sql`${prefix}||(SELECT version FROM locationRevision WHERE id=${featureLocation.locationRevisionId})`,
+        factsRevisionId: sql`${prefix}||(SELECT version FROM locationRevisionContent AS locationRevision WHERE id=${featureLocation.factsRevisionId})`,
+        locationRevisionId: sql`${prefix}||(SELECT version FROM locationRevisionContent AS locationRevision WHERE id=${featureLocation.locationRevisionId})`,
         version: sql`${`mergeAssociation_${id}_`}||${featureLocation.featureId}`,
         actorId: input.actorId,
         factsOrganisationRevision: sql`CASE WHEN factsOrganisationRevision IS NULL THEN NULL ELSE ${'merge:' + id + ':'}||factsOrganisationRevision END`,

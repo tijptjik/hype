@@ -296,7 +296,7 @@ export async function prepareFeatureLocationFormCorrection(
     if (!input.authorizeCommunity) throw new Error('SHARED_LOCATION_EDIT_FORBIDDEN')
     const rights = await input.authorizeCommunity()
     const source = await db.get<{ id: string; facts: string }>(
-      sql`SELECT r.id,r.facts FROM locationRevision r JOIN location l ON l.id=r.locationId WHERE l.id=${association.locationId} AND l.state IN ('linked','unresolved') ORDER BY r.version DESC LIMIT 1`,
+      sql`SELECT r.id,r.facts FROM locationRevisionContent r JOIN location l ON l.id=r.locationId WHERE l.id=${association.locationId} AND l.state IN ('linked','unresolved') ORDER BY r.version DESC LIMIT 1`,
     )
     if (!source) throw new Error('LOCATION_SOURCE_UNAVAILABLE')
     const head = await readSharedLocationCorrection(db, association.locationId)

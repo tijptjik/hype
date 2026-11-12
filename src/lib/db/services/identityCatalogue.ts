@@ -37,7 +37,7 @@ export async function readIdentityCatalogue(
     version: number
     content: string
   }>(
-    sql`SELECT c.id,c.kind,r.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevision r ON r.catalogueId=c.id AND r.version=coalesce(${version ?? null},c.version) WHERE c.id=${id}`,
+    sql`SELECT c.id,c.kind,r.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=coalesce(${version ?? null},c.version) WHERE c.id=${id}`,
   )
   return row
     ? {
@@ -64,7 +64,7 @@ export async function searchIdentityCatalogue(
     version: number
     content: string
   }>(
-    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevision r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND (${search}='' OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND instr(lower(names.name),lower(${search}))>0)) ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id LIMIT 50`,
+    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND (${search}='' OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id LIMIT 50`,
   )
   return rows.map(row => ({
     id: row.id,

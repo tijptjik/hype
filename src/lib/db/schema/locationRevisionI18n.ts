@@ -2,15 +2,15 @@
 import { sql } from 'drizzle-orm'
 import { index, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 // SCHEMA
-import { locationRevision } from './location'
+import { locationRevisionStorage } from './location'
 
-/** Searchable translations projected atomically from normalized Location revision content. */
+/** Sole normalized storage of translated Location labels, immutable with their parent revision. */
 export const locationRevisionI18n = sqliteTable(
   'locationRevisionI18n',
   {
     revisionId: text('revisionId')
       .notNull()
-      .references(() => locationRevision.id),
+      .references(() => locationRevisionStorage.id),
     locale: text('locale').notNull(),
     name: text('name'),
     branch: text('branch'),

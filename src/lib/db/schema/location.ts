@@ -1,6 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 import {
+  alias,
   check,
   customType,
   foreignKey,
@@ -17,6 +18,7 @@ import {
   readLocationFacts,
   serializeLocationFacts,
 } from '#lib/locations/factsSnapshot.js'
+import type { LocationFactsSnapshot } from '#lib/locations/factsSnapshot.js'
 import { LOCATION_KINDS } from '#lib/locations/kinds.js'
 // SCHEMA
 import { feature } from './feature'
@@ -112,7 +114,7 @@ const locationFacts = customType<{ data: LocationFacts; driverData: string }>({
 })
 
 /** Append-only source snapshots or provenance-marked local baselines. */
-export const locationRevision = sqliteTable(
+export const locationRevisionStorage = sqliteTable(
   'locationRevision',
   {
     id: text('id').primaryKey(),
@@ -130,7 +132,10 @@ export const locationRevision = sqliteTable(
     rawSource: text('rawSource', { mode: 'json' })
       .$type<Record<string, unknown>>()
       .notNull(),
-    facts: locationFacts('facts').notNull(),
+    // Translated labels live only in locationRevisionI18n.
+    facts: text('facts', { mode: 'json' })
+      .$type<Omit<LocationFactsSnapshot, 'i18n'>>()
+      .notNull(),
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
@@ -151,6 +156,28 @@ export const locationRevision = sqliteTable(
     ),
   ],
 )
+
+/** Atomic input/read view; only its underlying facts and locale tables persist values. */
+export const locationRevisionInput = sqliteTable('locationRevisionContent', {
+  id: text('id').primaryKey(),
+  locationId: text('locationId').notNull(),
+  version: integer('version').notNull(),
+  origin: text('origin', { enum: ['saanseoi', 'local'] }).notNull(),
+  ssId: text('ssId'),
+  apiVersion: text('apiVersion'),
+  releaseId: text('releaseId'),
+  snapshotId: text('snapshotId'),
+  contentHash: text('contentHash').notNull(),
+  rawSource: text('rawSource', { mode: 'json' })
+    .$type<Record<string, unknown>>()
+    .notNull(),
+  facts: locationFacts('facts').notNull(),
+  createdAt: text('createdAt')
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+})
+/** Retain the domain join key while reading the assembled, non-persisted snapshot. */
+export const locationRevision = alias(locationRevisionInput, 'locationRevision')
 
 /** Accepted baseline and Organisation correction snapshots for one Feature. */
 export const featureLocation = sqliteTable(
@@ -197,11 +224,11 @@ export const featureLocation = sqliteTable(
     // Composite references prohibit accidentally adopting another Location's revision.
     foreignKey({
       columns: [table.locationId, table.factsRevisionId],
-      foreignColumns: [locationRevision.locationId, locationRevision.id],
+      foreignColumns: [locationRevisionStorage.locationId, locationRevisionStorage.id],
     }),
     foreignKey({
       columns: [table.locationId, table.locationRevisionId],
-      foreignColumns: [locationRevision.locationId, locationRevision.id],
+      foreignColumns: [locationRevisionStorage.locationId, locationRevisionStorage.id],
     }),
   ],
 )
@@ -361,7 +388,7 @@ export const locationIdentityHistory = sqliteTable(
     foreignKey({ columns: [table.previousHistoryId], foreignColumns: [table.id] }),
     foreignKey({
       columns: [table.locationId, table.sourceRevisionId],
-      foreignColumns: [locationRevision.locationId, locationRevision.id],
+      foreignColumns: [locationRevisionStorage.locationId, locationRevisionStorage.id],
     }),
     index('location_identity_history_location').on(
       table.locationId,

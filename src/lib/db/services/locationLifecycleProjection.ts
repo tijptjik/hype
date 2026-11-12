@@ -27,7 +27,7 @@ export function featureLocationLifecycleSQL(includeShared = true): SQL<string | 
   >`(SELECT CASE WHEN ${operating} IS NOT NULL OR ${building} IS NOT NULL
     THEN json_object('operatingStatus',${operating},'buildingStatus',${building}) END
     FROM featureLocation fp JOIN location p ON p.id=fp.locationId
-    JOIN locationRevision pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
+    JOIN locationRevisionContent pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
     WHERE fp.featureId="feature"."id" AND "feature"."isDraft"=0
       AND (p.state!='manual' OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id="feature"."projectId")))`
 }

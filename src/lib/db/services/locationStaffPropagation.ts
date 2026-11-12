@@ -98,7 +98,7 @@ export async function prepareStaffLocationPropagation(
     const binding = accepted?.content.placement.location
     if (!binding) throw new Error('FEATURE_CHANGED')
     const source = await db.get<{ facts: string }>(
-      sql`SELECT facts FROM locationRevision WHERE id=${binding.factsRevisionId} AND locationId=${input.locationId}`,
+      sql`SELECT facts FROM locationRevisionContent AS locationRevision WHERE id=${binding.factsRevisionId} AND locationId=${input.locationId}`,
     )
     if (!source) throw new Error('FEATURE_CHANGED')
     const previous = await sharedLocationFacts(
@@ -111,7 +111,7 @@ export async function prepareStaffLocationPropagation(
       binding.acceptancePolicy?.factsSharedFields,
     )
     const positionSource = await db.get<{ facts: string }>(
-      sql`SELECT facts FROM locationRevision WHERE id=${binding.locationRevisionId} AND locationId=${input.locationId}`,
+      sql`SELECT facts FROM locationRevisionContent AS locationRevision WHERE id=${binding.locationRevisionId} AND locationId=${input.locationId}`,
     )
     if (!positionSource) throw new Error('FEATURE_CHANGED')
     const position = await sharedLocationFacts(
@@ -325,7 +325,7 @@ export async function replayStaffLocationCorrection(
       ? await readOrganisationLocation(db, provenance.authorOrganisationId, locationId)
       : null
   const source = await db.get<{ id: string; facts: string }>(sql`
-    SELECT id,facts FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1`)
+    SELECT id,facts FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1`)
   if (!source || source.id !== shared.sourceRevisionId) return null
   const previous = await db.get<{ corrections: string }>(sql`
     SELECT p.corrections FROM locationSharedRevision r JOIN locationSharedRevision p ON p.id=r.previousRevisionId
@@ -360,7 +360,7 @@ export async function replayStaffLocationCorrection(
   })
   const guard = sql`(${prepared.guard}) AND
     (SELECT id FROM locationSharedHead WHERE locationId=${locationId})=${revisionId} AND
-    (SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${source.id} AND
+    (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${source.id} AND
     EXISTS(SELECT 1 FROM locationRefreshItem WHERE runId=${`shared:${revisionId}`} AND locationId=${locationId} AND origin='local' AND status='pending')`
   return (await executeRevisionBatch(db, guard, prepared.statements))
     ? 'processed'

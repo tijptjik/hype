@@ -151,9 +151,9 @@ export async function prepareSharedLocationCorrection(
     facts: string
     kind: string
     rawSource: string
-  }>(sql`SELECT r.facts,r.rawSource,l.matchingType kind FROM locationRevision r JOIN location l ON l.id=r.locationId
+  }>(sql`SELECT r.facts,r.rawSource,l.matchingType kind FROM locationRevisionContent r JOIN location l ON l.id=r.locationId
     WHERE r.id=${input.sourceRevisionId} AND l.id=${input.locationId} AND l.state!='redirect'
-    AND r.id=(SELECT id FROM locationRevision WHERE locationId=l.id ORDER BY version DESC LIMIT 1) AND (${input.guard})`)
+    AND r.id=(SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=l.id ORDER BY version DESC LIMIT 1) AND (${input.guard})`)
   const previous = await readSharedLocationCorrection(db, input.locationId)
   if (!source || (previous?.id ?? null) !== input.expectedRevision)
     throw new Error('SHARED_LOCATION_CHANGED')
@@ -203,7 +203,7 @@ export async function prepareSharedLocationCorrection(
       corrections[field].catalogue = cataloguePins[field]
   }
   const guard = sql`(${input.guard}) AND (${locationCurationLockFence(input.locationId, locks)}) AND (SELECT id FROM locationSharedHead WHERE locationId=${input.locationId}) IS ${input.expectedRevision}
-    AND (SELECT id FROM locationRevision WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1)=${input.sourceRevisionId}`
+    AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1)=${input.sourceRevisionId}`
   const queries = [
     prepareRevisionCheck(db, guard),
     db.insert(locationSharedRevision).values({
@@ -244,7 +244,7 @@ export async function reconcileSharedLocationSource(
   const head = await readSharedLocationCorrection(db, locationId)
   if (!head) return
   const source = await db.get<{ facts: string; rawSource: string }>(
-    sql`SELECT facts,rawSource FROM locationRevision WHERE id=${sourceRevisionId} AND locationId=${locationId}`,
+    sql`SELECT facts,rawSource FROM locationRevisionContent AS locationRevision WHERE id=${sourceRevisionId} AND locationId=${locationId}`,
   )
   if (!source) throw new Error('SHARED_LOCATION_SOURCE_UNAVAILABLE')
   const corrections: SharedCorrections = JSON.parse(head.corrections)
@@ -270,7 +270,7 @@ export async function reconcileSharedLocationSource(
   const saved = await executeRevisionBatch(
     db,
     sql`(SELECT id FROM locationSharedHead WHERE locationId=${locationId})=${head.id}
-    AND (SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${sourceRevisionId}`,
+    AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${sourceRevisionId}`,
     [
       db.insert(locationSharedRevision).values({
         id: crypto.randomUUID(),
@@ -298,7 +298,7 @@ export async function reconcileOrganisationSourcePolicies(
   const { prepareOrganisationLocationWrite } = await import('./organisationLocation')
   const { equalLocationValue } = await import('#lib/locations/baseline.js')
   const source = await db.get<{ facts: string; rawSource: string }>(
-    sql`SELECT facts,rawSource FROM locationRevision WHERE id=${sourceRevisionId} AND locationId=${locationId}`,
+    sql`SELECT facts,rawSource FROM locationRevisionContent AS locationRevision WHERE id=${sourceRevisionId} AND locationId=${locationId}`,
   )
   if (!source) return
   const facts = (
@@ -344,7 +344,7 @@ export async function reconcileOrganisationSourcePolicies(
     }
     if (!changed) continue
     const guard = sql`(SELECT revision FROM organisationLocationHead WHERE organisationId=${head.organisationId} AND locationId=${locationId})=${head.revision}
-      AND (SELECT id FROM locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${sourceRevisionId}`
+      AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1)=${sourceRevisionId}`
     const write = await prepareOrganisationLocationWrite(db, {
       organisationId: head.organisationId,
       locationId,

@@ -49,6 +49,13 @@ function fixture() {
     readFileSync('migrations/0237_identity_catalogue.sql', 'utf8') +
       readFileSync('migrations/0239_catalogue_i18n.sql', 'utf8'),
   )
+  f.sqlite.exec(
+    readFileSync('migrations/0241_authoritative_revision_translations.sql', 'utf8')
+      .split('DROP TRIGGER identity_catalogue_i18n_revision;')[1]
+      .split('DROP VIEW featureAcceptedNamingLocation;')[0]
+      .replace(/^/, 'DROP TRIGGER identity_catalogue_i18n_revision;'),
+  )
+  f.sqlite.exec('CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision')
   const facts = {
     names: { en: 'AROME Central' },
     brands: [{ identifiers: { breadlineBrand: 'arome' }, names: { en: 'AROME' } }],
@@ -231,4 +238,28 @@ it('publishes catalogue changes as new community evidence while keeping accepted
     (await sharedLocationFacts(f.db, 'place', f.facts, before.revision)).facts.brands[0]
       .names.en,
   ).toBe('AROME')
+})
+
+it('searches only the selected catalogue revision while retaining old translations once', async () => {
+  const f = fixture()
+  await ensureImportedBrand(f.db, f.facts.brands[0], 'import')
+  const record = (await searchIdentityCatalogue(f.db, 'brand', 'AROME'))[0]
+  await saveIdentityCatalogue(f.db, {
+    id: record.id,
+    kind: 'brand',
+    expectedVersion: record.version,
+    content: seedIdentityCatalogue({ en: 'New family' }),
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  expect(await searchIdentityCatalogue(f.db, 'brand', 'AROME')).toHaveLength(0)
+  expect(await searchIdentityCatalogue(f.db, 'brand', 'New family')).toHaveLength(1)
+  expect((await readIdentityCatalogue(f.db, record.id, 1))?.i18n.en.name).toBe('AROME')
+  expect(
+    f.sqlite
+      .prepare(
+        "SELECT count(*) n FROM identityCatalogueRevision WHERE json_type(content,'$.i18n') IS NOT NULL",
+      )
+      .get()?.n,
+  ).toBe(0)
 })

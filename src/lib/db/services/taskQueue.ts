@@ -63,9 +63,9 @@ export function taskQueueProjection(mockFeatureId?: string): SQL {
     JOIN feature f ON f.id=p.featureId AND f.projectId=p.projectId AND f.isDraft=0
     JOIN featureLocation fl ON fl.featureId=f.id AND fl.locationId=p.locationId
     JOIN location l ON l.id=fl.locationId AND l.state!='redirect'
-    JOIN locationRevision candidate ON candidate.id=p.candidateRevisionId AND candidate.locationId=l.id
-    JOIN locationRevision af ON af.id=fl.factsRevisionId AND af.locationId=l.id
-    JOIN locationRevision ap ON ap.id=fl.locationRevisionId AND ap.locationId=l.id
+    JOIN locationRevisionContent candidate ON candidate.id=p.candidateRevisionId AND candidate.locationId=l.id
+    JOIN locationRevisionContent af ON af.id=fl.factsRevisionId AND af.locationId=l.id
+    JOIN locationRevisionContent ap ON ap.id=fl.locationRevisionId AND ap.locationId=l.id
     CROSS JOIN (SELECT 'locationFacts' type,'facts' kind,'facts' fieldGroup
       UNION ALL SELECT 'locationPosition','position','location') g
     WHERE json_extract(p.evidence,'$.placement') IS NULL AND (l.state!='manual' OR l.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=f.projectId))
@@ -119,7 +119,7 @@ export function taskQueueProjection(mockFeatureId?: string): SQL {
       AND json_extract(r.baseline,'$.expectedState')=l.state
       AND json_extract(r.baseline,'$.expectedSsId') IS l.ssId
       AND json_extract(r.baseline,'$.expectedSourceAvailability')=l.sourceAvailability
-      AND json_extract(r.baseline,'$.expectedLatestRevisionId')=(SELECT id FROM locationRevision lr WHERE lr.locationId=l.id ORDER BY lr.version DESC LIMIT 1)
+      AND json_extract(r.baseline,'$.expectedLatestRevisionId')=(SELECT id FROM locationRevisionContent lr WHERE lr.locationId=l.id ORDER BY lr.version DESC LIMIT 1)
       AND json_extract(r.baseline,'$.expectedHistoryId') IS (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=l.id AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory nh WHERE nh.previousHistoryId=h.id))
       AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory h WHERE h.reviewId=r.id)
       AND NOT EXISTS (SELECT 1 FROM locationIdentityReview newer WHERE newer.locationId=r.locationId
@@ -180,7 +180,7 @@ export async function listTaskQueue(
       locationKind: string | null
     }
   >(
-    sql`${projection} SELECT task.*, (SELECT l.matchingType FROM location l WHERE l.id=json_extract(task.locationTask,'$.locationId')) locationKind, (SELECT (SELECT json_group_object(t.key,json_extract(t.value,'$.name')) FROM json_each(lr.facts,'$.i18n') t WHERE json_type(t.value,'$.name')='text') FROM locationRevision lr WHERE lr.locationId=json_extract(task.locationTask,'$.locationId') ORDER BY lr.version DESC LIMIT 1) locationNames FROM task WHERE ${where} ORDER BY ${sort} ${order},COALESCE(json_extract(task.locationTask,'$.matchScore'),0) DESC,COALESCE(json_extract(task.locationTask,'$.matchDistance'),0) ASC,task.id ASC LIMIT ${limit ?? -1} OFFSET ${offset}`,
+    sql`${projection} SELECT task.*, (SELECT l.matchingType FROM location l WHERE l.id=json_extract(task.locationTask,'$.locationId')) locationKind, (SELECT (SELECT json_group_object(t.key,json_extract(t.value,'$.name')) FROM json_each(lr.facts,'$.i18n') t WHERE json_type(t.value,'$.name')='text') FROM locationRevisionContent lr WHERE lr.locationId=json_extract(task.locationTask,'$.locationId') ORDER BY lr.version DESC LIMIT 1) locationNames FROM task WHERE ${where} ORDER BY ${sort} ${order},COALESCE(json_extract(task.locationTask,'$.matchScore'),0) DESC,COALESCE(json_extract(task.locationTask,'$.matchDistance'),0) ASC,task.id ASC LIMIT ${limit ?? -1} OFFSET ${offset}`,
   )
   // Hydrate only this page; JSON membership leaves room for relational LIMIT bindings.
   const nativeIds = refs.filter(row => !row.locationTask).map(row => row.id)

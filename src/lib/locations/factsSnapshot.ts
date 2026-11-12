@@ -13,8 +13,8 @@ type LocationFactsKind = LocationEntity['kind']
 
 // ═══════════════════════
 // TABLE OF CONTENTS
-// 1. VERSIONED STORAGE CONTRACT
-// 2. DISPLAY PROJECTION AND STORAGE CODEC
+// 1. VERSIONED CONTENT CONTRACT
+// 2. DISPLAY PROJECTION AND CONTENT CODEC
 // ---
 
 const {
@@ -46,7 +46,7 @@ const common = z.strictObject({
   }),
 })
 
-/** Every persisted revision carries its historical kind and explicit JSON contract version. */
+/** Every assembled revision carries its captured kind and explicit content contract version. */
 const localizedFields = z.strictObject({
   name: z.string().optional(),
   branch: z.string().optional(),
@@ -93,10 +93,10 @@ export const LocationFactsSnapshotSchema = z.discriminatedUnion('kind', [
 ])
 export type LocationFactsSnapshot = z.infer<typeof LocationFactsSnapshotSchema>
 
-/** Convert an application projection to a validated immutable snapshot.
+/** Convert an application projection to validated input for the atomic revision content view.
  * @param facts Validated common display values and optional entity-specific facts.
  * @param kind Entity kind at revision creation, never inferred from a later identity row.
- * @returns Versioned storage envelope with a strict kind-specific details object.
+ * @returns Versioned content envelope; the database stores translated fields separately.
  * @remarks Contacts are optional common data because HYPE's phone property is universal.
  */
 export function createLocationFactsSnapshot(

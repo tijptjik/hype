@@ -49,7 +49,7 @@ export async function prepareFeatureLocationMergeCapture(
     ),
   )
   const revisions = await db.all<{ id: string; version: number }>(
-    sql`SELECT id,version FROM locationRevision WHERE locationId=${input.sourceLocationId}`,
+    sql`SELECT id,version FROM locationRevisionContent AS locationRevision WHERE locationId=${input.sourceLocationId}`,
   )
   const remapped = new Map(
     revisions.map(row => [row.id, `mergeRevision_${input.mergeId}_${row.version}`]),

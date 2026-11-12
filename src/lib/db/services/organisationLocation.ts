@@ -8,6 +8,7 @@ import {
   organisationLocation,
   location as locationTable,
   locationRevision,
+  locationRevisionInput,
 } from '../schema/location'
 // DOMAIN
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
@@ -292,10 +293,10 @@ export async function prepareLocationCorrection(
           }
         : {}),
     }
-    const predecessor = sql`EXISTS(SELECT 1 FROM location p JOIN locationRevision r ON r.locationId=p.id WHERE p.id=${input.locationId} AND p.ssId IS NULL AND p.state IN ('manual','unresolved') AND p.ownerOrganisationId=${input.organisationId} AND r.id=${baseline.id} AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id)) AND ${head ? sql`EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${head.revision})` : sql`NOT EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId})`}`
+    const predecessor = sql`EXISTS(SELECT 1 FROM location p JOIN locationRevisionContent r ON r.locationId=p.id WHERE p.id=${input.locationId} AND p.ssId IS NULL AND p.state IN ('manual','unresolved') AND p.ownerOrganisationId=${input.organisationId} AND r.id=${baseline.id} AND r.version=(SELECT max(version) FROM locationRevisionContent AS locationRevision WHERE locationId=p.id)) AND ${head ? sql`EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId} AND revision=${head.revision})` : sql`NOT EXISTS(SELECT 1 FROM organisationLocationHead WHERE organisationId=${input.organisationId} AND locationId=${input.locationId})`}`
     queries.push(
       db
-        .insert(locationRevision)
+        .insert(locationRevisionInput)
         .select(
           sql`SELECT ${id},${input.locationId},${baseline.version + 1},'local',NULL,NULL,NULL,NULL,${id},${JSON.stringify(rawSource)},${serializeLocationFacts(facts, capturedKind)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${authoringGuard} AND ${predecessor}`,
         ),
@@ -313,12 +314,12 @@ export async function prepareLocationCorrection(
             and(
               eq(locationTable.id, input.locationId),
               eq(locationTable.kind, owner.kind),
-              sql`EXISTS(SELECT 1 FROM locationRevision WHERE id=${id})`,
+              sql`EXISTS(SELECT 1 FROM locationRevisionContent AS locationRevision WHERE id=${id})`,
             ),
           ),
       )
     baselineRevision = { id, facts }
-    guard = sql`${authoringGuard} AND EXISTS(SELECT 1 FROM locationRevision WHERE id=${id})`
+    guard = sql`${authoringGuard} AND EXISTS(SELECT 1 FROM locationRevisionContent AS locationRevision WHERE id=${id})`
     // Preserve pre-existing local differences while moving the edited fields into the owner's baseline.
     overrides = preserveFeatureLocationBaseline(input.after, facts, facts.location)
   }

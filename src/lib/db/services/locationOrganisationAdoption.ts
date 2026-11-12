@@ -119,7 +119,7 @@ export async function applyOrganisationLocationAdoption(
   if (!owner) return { status: 'conflict' }
   const organisationId = owner.organisationId
   const source = await db.get<{ facts: string }>(
-    sql`SELECT facts FROM locationRevision WHERE id=${proposal.candidateRevisionId} AND locationId=${proposal.locationId}`,
+    sql`SELECT facts FROM locationRevisionContent AS locationRevision WHERE id=${proposal.candidateRevisionId} AND locationId=${proposal.locationId}`,
   )
   const shared = await readSharedLocationCorrection(db, proposal.locationId)
   if (!source || (shared?.id ?? null) !== (proposal.evidence.sharedRevision ?? null))
@@ -187,7 +187,7 @@ export async function applyOrganisationLocationAdoption(
     AND (SELECT organisationId FROM project WHERE id=${input.projectId})=${organisationId}
     AND EXISTS(SELECT 1 FROM location WHERE id=${proposal.locationId} AND sourceAvailability='current' AND state!='redirect' AND (state!='manual' OR ownerOrganisationId=${organisationId}))
     AND EXISTS(SELECT 1 FROM locationAdoptionProposal WHERE id=${proposal.id} AND ${input.fieldGroup === 'facts' ? sql`factsDecision` : sql`locationDecision`} IS NULL)
-    AND (SELECT id FROM locationRevision WHERE locationId=${proposal.locationId} ORDER BY version DESC LIMIT 1)=${proposal.candidateRevisionId}`
+    AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${proposal.locationId} ORDER BY version DESC LIMIT 1)=${proposal.candidateRevisionId}`
   // Review only changed fields; rejecting a phone must not freeze unrelated names or brands.
   const fields = (input.fieldGroup === 'facts' ? [...factFields] : ['location']).filter(
     field => {

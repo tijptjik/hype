@@ -107,7 +107,7 @@ export async function readLocationIdentityBaseline(
       and(
         eq(locationTable.id, locationId),
         sql`${locationTable.ownerOrganisationId} IS ${ownerOrganisationId}`,
-        sql`${locationRevision.version}=(SELECT max(r.version) FROM locationRevision r WHERE r.locationId=${locationTable.id})`,
+        sql`${locationRevision.version}=(SELECT max(r.version) FROM locationRevisionContent r WHERE r.locationId=${locationTable.id})`,
       ),
     )
     .get()
@@ -147,7 +147,7 @@ export async function captureLocationIdentityReview(
     (SELECT 1 FROM location WHERE id=${baseline.locationId} AND ownerOrganisationId IS ${baseline.expectedOwnerOrganisationId}
       AND state=${baseline.expectedState} AND ssId IS ${baseline.expectedSsId}
       AND sourceAvailability=${baseline.expectedSourceAvailability})
-    AND (SELECT id FROM locationRevision WHERE locationId=${baseline.locationId} ORDER BY version DESC LIMIT 1)
+    AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${baseline.locationId} ORDER BY version DESC LIMIT 1)
       =${baseline.expectedLatestRevisionId}
     AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=${baseline.locationId}
       AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id))

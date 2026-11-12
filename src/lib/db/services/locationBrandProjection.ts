@@ -26,7 +26,7 @@ export function featureLocationBrandsSQL(includeShared = true): SQL<string | nul
     WHEN 'override' THEN json_extract(${acceptedLocationOverrideFieldSql('brands', includeShared)},'$.value')
     ELSE ${includeShared ? acceptedLocationFactsFieldSql('brands') : locationFactsFieldSql(sql.raw('pr.facts'), 'brands')} END
     FROM featureLocation fp JOIN location p ON p.id=fp.locationId
-    JOIN locationRevision pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
+    JOIN locationRevisionContent pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
     WHERE fp.featureId="feature"."id" AND "feature"."isDraft"=0
       AND (p.state!='manual' OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id="feature"."projectId"))),
     (CASE WHEN "feature"."isDraft"=0 AND NOT EXISTS

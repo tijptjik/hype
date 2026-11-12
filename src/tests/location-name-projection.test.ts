@@ -26,6 +26,7 @@ function fixture(includeShared = false) {
     CREATE TABLE featureLocation(featureId TEXT, locationId TEXT, factsRevisionId TEXT, acceptedOverrides TEXT);
     CREATE TABLE location(id TEXT, state TEXT, ownerOrganisationId TEXT);
     CREATE TABLE locationRevision(id TEXT, locationId TEXT, facts TEXT);
+    CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision;
     INSERT INTO project VALUES ('project','owner');
     INSERT INTO feature VALUES ('feature','project',0,'Independent Feature title');
     INSERT INTO location VALUES ('venue','manual','owner');

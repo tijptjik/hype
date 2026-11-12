@@ -25,7 +25,7 @@ export function featureLocationNamesSQL(includeShared = true): SQL<string | null
       FROM json_each(${acceptedLocationOverrideFieldSql('names', includeShared)}) name
       WHERE json_extract(name.value,'$.mode') IN ('override','clear')))
     FROM featureLocation fp JOIN location p ON p.id=fp.locationId
-    JOIN locationRevision pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
+    JOIN locationRevisionContent pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
     WHERE fp.featureId="feature"."id" AND "feature"."isDraft"=0
       AND (json_type(pr.facts,'$.schemaVersion') IS NULL OR json_extract(pr.facts,'$.schemaVersion')=1)
       AND (p.state!='manual' OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id="feature"."projectId")))`

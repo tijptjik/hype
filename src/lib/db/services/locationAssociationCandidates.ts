@@ -69,7 +69,7 @@ export async function nearbyAssociationLocations(
           eq(location.ownerOrganisationId, locationOwnerForProject(input.projectId)),
         ),
         or(sql`${location.ssId} IS NULL`, eq(location.sourceAvailability, 'current')),
-        sql`${locationRevision.version} = (SELECT max(latest.version) FROM locationRevision latest WHERE latest.locationId=${location.id})`,
+        sql`${locationRevision.version} = (SELECT max(latest.version) FROM locationRevisionContent latest WHERE latest.locationId=${location.id})`,
         sql`json_extract(${fields.location}, '$.geometry.coordinates[0]') BETWEEN ${lng - dx} AND ${lng + dx}`,
         sql`json_extract(${fields.location}, '$.geometry.coordinates[1]') BETWEEN ${lat - dy} AND ${lat + dy}`,
       ),

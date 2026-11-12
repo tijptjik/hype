@@ -70,7 +70,7 @@ export async function rejectLocationIdentityReview(
       AND p.state=json_extract(r.baseline,'$.expectedState')
       AND p.ssId IS json_extract(r.baseline,'$.expectedSsId')
       AND p.sourceAvailability=json_extract(r.baseline,'$.expectedSourceAvailability')
-      AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1) IS json_extract(r.baseline,'$.expectedLatestRevisionId')
+      AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=p.id ORDER BY version DESC LIMIT 1) IS json_extract(r.baseline,'$.expectedLatestRevisionId')
       AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=p.id AND NOT EXISTS
         (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)) IS json_extract(r.baseline,'$.expectedHistoryId')
       AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory WHERE reviewId=r.id)

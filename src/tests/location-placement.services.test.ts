@@ -85,7 +85,7 @@ async function setup(policy: 'follow' | 'fixed' | 'review' = 'review', hints = f
   }
   s.sqlite
     .prepare(
-      "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES('r','shop',1,'local','hash','{}',?)",
+      "INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES('r','shop',1,'local','hash','{}',?)",
     )
     .run(serializeLocationFacts(facts, 'establishment'))
   const content = createLocalLocationAddress()
@@ -245,7 +245,7 @@ describe('Feature revisions during placement acceptance', () => {
         "INSERT INTO hub VALUES('core','core'); INSERT INTO property(id,key,scope,hubId,type,component,dataType,audience,isTranslatable,dateResolution,timeMaxHour,cardinality,presentation) VALUES('phone','phoneNumber','hub','core','field','input','text','public',0,'day',24,'many','text')",
       )
       s.sqlite.exec(
-        "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('replacement','establishment','unresolved','p'); INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'replacement-r','replacement',1,origin,contentHash,rawSource,json_set(facts,'$.i18n.en.name','Replacement') FROM locationRevision WHERE id='r'",
+        "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('replacement','establishment','unresolved','p'); INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'replacement-r','replacement',1,origin,contentHash,rawSource,json_set(facts,'$.i18n.en.name','Replacement') FROM locationRevision WHERE id='r'",
       )
       const result = await relinkFeatureLocation(s.db, {
         featureId: 'f',
@@ -327,7 +327,7 @@ describe('Feature revisions during placement acceptance', () => {
       const s = await setup()
       const baseline = await enroll(s)
       s.sqlite.exec(
-        "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('replacement','establishment','unresolved','p'); INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'replacement-r','replacement',1,origin,contentHash,rawSource,facts FROM locationRevision WHERE id='r'",
+        "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('replacement','establishment','unresolved','p'); INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'replacement-r','replacement',1,origin,contentHash,rawSource,facts FROM locationRevisionContent WHERE id='r'",
       )
       if (fail)
         s.sqlite.exec(
@@ -1051,7 +1051,7 @@ it('transfers a legacy Feature with accepted occupancy and addressing into desti
     ALTER TABLE property ADD COLUMN type TEXT;
     CREATE TABLE layerProperty(layerId TEXT,propertyId TEXT);
     CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
-    INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'new-baseline','new',1,'local','container-hash','{}',json_remove(json_set(facts,'$.kind','building'),'$.details.brands') FROM locationRevision WHERE id='r';
+    INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'new-baseline','new',1,'local','container-hash','{}',json_remove(json_set(facts,'$.kind','building'),'$.details.brands') FROM locationRevisionContent WHERE id='r';
     INSERT INTO layer(id,projectId,organisationId) VALUES('destination','other','other');`)
   const current = required(
     s.sqlite.prepare("SELECT modifiedAt,addressMeta FROM feature WHERE id='f'").get(),

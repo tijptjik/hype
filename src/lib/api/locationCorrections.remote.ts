@@ -365,7 +365,7 @@ export const setOrganisationLocationFollowPolicy = guardedCommand(
       '#lib/db/services/revisionBatch.js'
     )
     const source = await ctx.db.get<{ id: string; facts: string }>(
-      sql`SELECT id,facts FROM locationRevision WHERE locationId=${context.association.locationId} ORDER BY version DESC LIMIT 1`,
+      sql`SELECT id,facts FROM locationRevisionContent AS locationRevision WHERE locationId=${context.association.locationId} ORDER BY version DESC LIMIT 1`,
     )
     if (!source) error(409, 'LOCATION_SOURCE_UNAVAILABLE')
     const shared = await sharedLocationFacts(

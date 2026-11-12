@@ -17,6 +17,7 @@ import {
   location as locationTable,
   locationIdentityHistory,
   locationRevision,
+  locationRevisionInput,
 } from '../schema/location'
 // SERVICES
 import { locationAliasIds } from './locationRedirect'
@@ -127,9 +128,9 @@ export async function acceptLocationIdentity(
   if (current.ssId === projection.ssId) return { status: 'unchanged' }
 
   const revisionGuard = input.expectedLatestRevisionId
-    ? sql`(SELECT id FROM locationRevision WHERE locationId=${input.locationId}
+    ? sql`(SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${input.locationId}
         ORDER BY version DESC LIMIT 1)=${input.expectedLatestRevisionId}`
-    : sql`(SELECT id FROM locationRevision WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1) IS ${retained?.id ?? null}`
+    : sql`(SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1) IS ${retained?.id ?? null}`
   const availabilityGuard = input.expectedSourceAvailability
     ? sql`(SELECT sourceAvailability FROM location WHERE id=${input.locationId})=${input.expectedSourceAvailability}`
     : sql`1`
@@ -176,9 +177,9 @@ export async function acceptLocationIdentity(
   const results = await db.batch([
     ...(correction?.queries ?? []),
     db
-      .insert(locationRevision)
+      .insert(locationRevisionInput)
       .select(sql`SELECT ${revisionId},${input.locationId},
-      (SELECT coalesce(max(version),0)+1 FROM locationRevision WHERE locationId=${input.locationId}),
+      (SELECT coalesce(max(version),0)+1 FROM locationRevisionContent AS locationRevision WHERE locationId=${input.locationId}),
       'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
       ${projection.snapshotId},${prepared.contentHash},${JSON.stringify(prepared.rawSource)},
       ${serializeLocationFacts(prepared.facts, 'establishment')},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${revisionGuard}`)
@@ -188,7 +189,7 @@ export async function acceptLocationIdentity(
       .select(sql`SELECT ${historyId},${input.locationId},
       ${input.expectedHistoryId},${input.expectedState},${input.expectedSsId},${projection.ssId},
       ${revisionId},${input.actorId},${reason},${input.reviewId ?? null},strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE ${guard} AND EXISTS (SELECT 1 FROM locationRevision WHERE id=${revisionId})`),
+      WHERE ${guard} AND EXISTS (SELECT 1 FROM locationRevisionContent AS locationRevision WHERE id=${revisionId})`),
     db
       .update(locationTable)
       .set({

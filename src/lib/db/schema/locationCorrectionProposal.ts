@@ -3,7 +3,7 @@ import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
 // SCHEMA
 import { feature } from './feature'
 import { organisation } from './organisation'
-import { location, locationRevision, organisationLocation } from './location'
+import { location, locationRevisionStorage, organisationLocation } from './location'
 // TYPES
 import type { EffectiveLocationFacts } from '#lib/locations/resolve.js'
 import type { FeatureLocationOverrides } from '#lib/locations/model.js'
@@ -23,10 +23,10 @@ export const locationCorrectionProposal = sqliteTable('locationCorrectionProposa
   associationVersion: text('associationVersion').notNull(),
   factsRevisionId: text('factsRevisionId')
     .notNull()
-    .references(() => locationRevision.id),
+    .references(() => locationRevisionStorage.id),
   locationRevisionId: text('locationRevisionId')
     .notNull()
-    .references(() => locationRevision.id),
+    .references(() => locationRevisionStorage.id),
   expectedOrganisationRevision: text('expectedOrganisationRevision').references(
     () => organisationLocation.revision,
   ),

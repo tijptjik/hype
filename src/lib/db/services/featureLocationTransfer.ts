@@ -6,6 +6,7 @@ import { feature } from '../schema/feature'
 import {
   location,
   locationRevision,
+  locationRevisionInput,
   organisationLocation,
   featureLocation,
 } from '../schema/location'
@@ -168,7 +169,7 @@ export async function prepareFeatureLocationTransfer(
         byte.toString(16).padStart(2, '0'),
       ).join('')
       writes.push(
-        db.insert(locationRevision).values({
+        db.insert(locationRevisionInput).values({
           ...snapshot,
           id: revisionId,
           locationId: next,

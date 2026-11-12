@@ -27,7 +27,7 @@ export async function linkImportedLocationBrands(
   )
   if (!storage) return false
   const source = await db.get<{ id: string; facts: string }>(
-    sql`SELECT r.id,r.facts FROM locationRevision r JOIN location l ON l.id=r.locationId WHERE l.id=${locationId} AND l.state IN ('linked','unresolved') ORDER BY r.version DESC LIMIT 1`,
+    sql`SELECT r.id,r.facts FROM locationRevisionContent r JOIN location l ON l.id=r.locationId WHERE l.id=${locationId} AND l.state IN ('linked','unresolved') ORDER BY r.version DESC LIMIT 1`,
   )
   if (!source) return false
   const brands = readLocationFacts(source.facts).brands
@@ -67,7 +67,7 @@ export async function importLocationBrandPage(
   actorId: string,
 ): Promise<{ linked: number; scanned: number; failed: string[]; next: string | null }> {
   const rows = await db.all<{ id: string }>(
-    sql`SELECT id FROM location WHERE state IN ('linked','unresolved') AND matchingType='establishment' AND EXISTS(SELECT 1 FROM locationRevision r WHERE r.locationId=location.id AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=location.id) AND json_array_length(coalesce(json_extract(r.facts,'$.details.brands'),json_extract(r.facts,'$.brands'),'[]'))>0) AND (${after} IS NULL OR id>${after}) ORDER BY id LIMIT 21`,
+    sql`SELECT id FROM location WHERE state IN ('linked','unresolved') AND matchingType='establishment' AND EXISTS(SELECT 1 FROM locationRevisionContent r WHERE r.locationId=location.id AND r.version=(SELECT max(version) FROM locationRevisionContent AS locationRevision WHERE locationId=location.id) AND json_array_length(coalesce(json_extract(r.facts,'$.details.brands'),json_extract(r.facts,'$.brands'),'[]'))>0) AND (${after} IS NULL OR id>${after}) ORDER BY id LIMIT 21`,
   )
   let linked = 0
   const failed: string[] = []
@@ -101,7 +101,7 @@ export async function publishCatalogueLocationPage(
   if (!record) throw new Error('CATALOGUE_IDENTITY_UNAVAILABLE')
   const field = record.kind === 'brand' ? 'brandId' : 'groupId'
   const rows = await db.all<{ id: string; revision: string; sourceRevisionId: string }>(
-    sql`SELECT h.locationId id,h.id revision,(SELECT id FROM locationRevision WHERE locationId=h.locationId ORDER BY version DESC LIMIT 1) sourceRevisionId FROM locationSharedHead h JOIN location l ON l.id=h.locationId WHERE l.state IN ('linked','unresolved') AND json_extract(h.corrections,${`$.${field}.choice.value`})=${id} AND json_extract(h.corrections,${`$.${field}.choice.mode`})='override' AND coalesce(json_extract(h.corrections,${`$.${field}.catalogue.version`}),0)<${record.version} AND (${after} IS NULL OR h.locationId>${after}) ORDER BY h.locationId LIMIT 21`,
+    sql`SELECT h.locationId id,h.id revision,(SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=h.locationId ORDER BY version DESC LIMIT 1) sourceRevisionId FROM locationSharedHead h JOIN location l ON l.id=h.locationId WHERE l.state IN ('linked','unresolved') AND json_extract(h.corrections,${`$.${field}.choice.value`})=${id} AND json_extract(h.corrections,${`$.${field}.choice.mode`})='override' AND coalesce(json_extract(h.corrections,${`$.${field}.catalogue.version`}),0)<${record.version} AND (${after} IS NULL OR h.locationId>${after}) ORDER BY h.locationId LIMIT 21`,
   )
   let linked = 0
   const failed: string[] = []

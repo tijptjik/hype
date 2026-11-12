@@ -119,7 +119,7 @@ export async function processLocationRefresh(
     const saved =
       await db.run(sql`UPDATE locationRefreshItem SET revisionId=${receipt.revisionId}
       WHERE runId=${input.runId} AND locationId=${row.locationId} AND ${guard}
-      AND EXISTS(SELECT 1 FROM locationRevision WHERE id=${receipt.revisionId} AND locationId=${row.locationId})`)
+      AND EXISTS(SELECT 1 FROM locationRevisionContent AS locationRevision WHERE id=${receipt.revisionId} AND locationId=${row.locationId})`)
     return saved.meta.changes ? 'ingested' : 'superseded'
   }
   const feature = await binding

@@ -77,6 +77,13 @@ export function setupLifecycleDatabase(
   ])
     sqlite.exec(readFileSync('migrations/' + migration, 'utf8'))
   sqlite.exec(readFileSync('migrations/0157_location_rematching.sql', 'utf8'))
+  sqlite.exec(
+    readFileSync(
+      'migrations/0241_authoritative_revision_translations.sql',
+      'utf8',
+    ).split('DROP TRIGGER identity_catalogue_i18n_revision;')[0],
+  )
+
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_location_scope_insert;

@@ -53,7 +53,7 @@ async function validateEvidence(
     const { resourceType, revisionId } = item.source
     let guard: SQL
     if (resourceType === 'locationRevision')
-      guard = sql`SELECT 1 FROM locationRevision r JOIN location l ON l.id=r.locationId WHERE r.id=${revisionId} AND (l.state!='manual' OR l.ownerOrganisationId IS ${scope})`
+      guard = sql`SELECT 1 FROM locationRevisionContent r JOIN location l ON l.id=r.locationId WHERE r.id=${revisionId} AND (l.state!='manual' OR l.ownerOrganisationId IS ${scope})`
     else if (resourceType === 'addressRevision')
       guard = sql`SELECT 1 FROM addressRevision WHERE id=${revisionId}`
     else
@@ -271,7 +271,7 @@ export async function readLocationRelationships(
     )
     const labels = endpoints.map(
       key =>
-        sql`(SELECT COALESCE(json_extract(v.facts,'$.i18n.en.name'),json_extract(v.facts,'$.names.en'),l.id) FROM location l LEFT JOIN locationRevision v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.version DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
+        sql`(SELECT COALESCE(json_extract(v.facts,'$.i18n.en.name'),json_extract(v.facts,'$.names.en'),l.id) FROM location l LEFT JOIN locationRevisionContent v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.version DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
     )
     const addressLabel =
       table === 'locationAddress'

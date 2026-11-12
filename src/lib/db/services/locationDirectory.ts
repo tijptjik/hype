@@ -52,7 +52,7 @@ export async function listLocationResources(
   )
   const revisionJoin = and(
     eq(locationRevision.locationId, locationTable.id),
-    sql`${locationRevision.version} = (SELECT max(r.version) FROM locationRevision r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
+    sql`${locationRevision.version} = (SELECT max(r.version) FROM locationRevisionContent r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
   )
   const match = and(
     // A parent-part picker only offers explicit members of the selected building.

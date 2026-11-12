@@ -2,7 +2,7 @@
 import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 // SCHEMA
-import { location, locationRevision } from './location'
+import { location, locationRevisionStorage } from './location'
 // TYPES
 import type { SharedCorrections } from '#lib/locations/sharedCorrection.js'
 /** Append-only shared corrections; migration triggers enforce one scoped history chain. */
@@ -14,7 +14,7 @@ export const locationSharedRevision = sqliteTable('locationSharedRevision', {
   previousRevisionId: text('previousRevisionId'),
   sourceRevisionId: text('sourceRevisionId')
     .notNull()
-    .references(() => locationRevision.id),
+    .references(() => locationRevisionStorage.id),
   corrections: text('corrections', { mode: 'json' })
     .$type<SharedCorrections>()
     .notNull(),

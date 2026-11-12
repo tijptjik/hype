@@ -76,7 +76,7 @@ export async function prepareSharedFeatureAdoption(
       (!address.success || address.data.association?.mode !== 'manual'),
   )
   const source = await db.get<{ facts: string }>(
-    sql`SELECT facts FROM locationRevision WHERE id=${accepted.factsRevisionId} AND locationId=${input.locationId}`,
+    sql`SELECT facts FROM locationRevisionContent AS locationRevision WHERE id=${accepted.factsRevisionId} AND locationId=${input.locationId}`,
   )
   if (!source) return null
   const previousFacts = (

@@ -46,7 +46,7 @@ export async function accessibilitySubject(
 ): Promise<Subject | null> {
   return (
     (await db.get<Subject>(sql`SELECT l.id,l.matchingType AS kind,v.id revisionId,v.facts FROM location l
-    JOIN locationRevision v ON v.locationId=l.id
+    JOIN locationRevisionContent v ON v.locationId=l.id
     WHERE l.id=${locationId} AND l.state IN ('linked','unresolved')
     AND l.matchingType IN ('establishment','building','premises') AND (l.state!='linked' OR v.origin='saanseoi')
     ORDER BY v.version DESC LIMIT 1`)) ?? null
@@ -123,7 +123,7 @@ export async function readLocationAccessibility(
         AND assertionState='asserted' AND occupancyState='current' ORDER BY id)) occupancy
     FROM locationOccupancyHead r JOIN location l ON l.id=${canonicalLocationSQL(sql`r.establishmentLocationId`)}
     JOIN locationAccessibilityHead a ON a.locationId=l.id
-    JOIN locationRevision v ON v.id=(SELECT latest.id FROM locationRevision latest
+    JOIN locationRevisionContent v ON v.id=(SELECT latest.id FROM locationRevisionContent latest
       WHERE latest.locationId=l.id AND (l.state!='linked' OR latest.origin='saanseoi') ORDER BY latest.version DESC LIMIT 1)
     WHERE ${canonicalLocationSQL(sql`r.containerLocationId`)}=${locationId}
     AND r.scopeOrganisationId IS NULL AND r.assertionState='asserted' AND r.occupancyState='current'
@@ -199,7 +199,7 @@ export async function saveLocationAccessibility(
       .insert(locationAccessibility)
       .select(sql`    SELECT ${id},${input.locationId},${input.expectedId},${subject.revisionId},${key},${JSON.stringify(input.values)},${actorId},strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE (SELECT id FROM locationAccessibilityHead WHERE locationId=${input.locationId}) IS ${input.expectedId}
-    AND (SELECT v.id FROM locationRevision v JOIN location l ON l.id=v.locationId
+    AND (SELECT v.id FROM locationRevisionContent v JOIN location l ON l.id=v.locationId
       WHERE l.id=${input.locationId} AND l.state IN ('linked','unresolved')
       AND l.matchingType IN ('establishment','building','premises')
       AND (l.state!='linked' OR v.origin='saanseoi') ORDER BY v.version DESC LIMIT 1)=${subject.revisionId}
