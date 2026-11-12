@@ -208,3 +208,67 @@ it('keeps automatic Feature values scoped to their property as well as their loc
       .get(),
   ).toMatchObject({ value: 'Second' })
 })
+
+it('retains known legacy AI origin when an editor confirms a stored generated value', async () => {
+  const { db, sqlite } = database()
+  sqlite.exec(
+    "UPDATE layerI18n SET name='Old machine text', nameGen=1 WHERE locale='en'",
+  )
+  const rows: Record<string, Record<string, unknown>> = {
+    en: { name: 'Reviewed text', nameGen: false },
+  }
+  await prepareAutomaticTranslationSubmission({
+    db,
+    resource: 'layer',
+    id: 'layer',
+    rows,
+    actorId: 'reviewer',
+  })
+  expect(rows.en.translationProvenance).toEqual({
+    name: {
+      origin: 'legacy-ai',
+      humanVerified: true,
+      value: 'Old machine text',
+      acceptedValue: 'Reviewed text',
+      acceptedBy: 'reviewer',
+      acceptedAt: expect.any(String),
+    },
+  })
+  expect(rows.en.autoTranslated).toBeNull()
+})
+
+it('publishes accepted legacy AI without marking it human-verified', async () => {
+  const { db, sqlite } = database()
+  sqlite.exec("UPDATE layerI18n SET name='Machine text', nameGen=1 WHERE locale='en'")
+  const rows: Record<string, Record<string, unknown>> = {
+    en: {
+      name: 'Machine text',
+      nameGen: false,
+      translationProvenance: {
+        name: {
+          origin: 'legacy-ai',
+          value: 'Machine text',
+          acceptedValue: 'Machine text',
+          humanVerified: false,
+          acceptedBy: 'pending',
+          acceptedAt: new Date().toISOString(),
+        },
+      },
+    },
+  }
+  await prepareAutomaticTranslationSubmission({
+    db,
+    resource: 'layer',
+    id: 'layer',
+    rows,
+    actorId: 'reviewer',
+  })
+  expect(rows.en.translationProvenance).toMatchObject({
+    name: {
+      humanVerified: false,
+      acceptedBy: 'reviewer',
+      acceptedValue: 'Machine text',
+    },
+  })
+  expect(resolveContentField(rows, 'name', 'en').value).toBe('Machine text')
+})

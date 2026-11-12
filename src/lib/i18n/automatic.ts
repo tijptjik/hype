@@ -13,7 +13,11 @@ export type AutomaticTranslation = {
   generatedAt: string
 }
 export type AutomaticTranslations = Record<string, AutomaticTranslation>
-export type TranslationAcceptance = AutomaticTranslation & {
+export type TranslationAcceptance = (
+  | AutomaticTranslation
+  | { origin: 'legacy-ai'; value: string }
+) & {
+  humanVerified?: boolean
   acceptedValue: string
   acceptedBy: string
   acceptedAt: string

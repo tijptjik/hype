@@ -22,11 +22,19 @@ export const AutomaticTranslationsSchema = z.record(
 )
 export const TranslationProvenanceSchema = z.record(
   z.string(),
-  AutomaticTranslationSchema.extend({
-    acceptedValue: z.string().max(64_000),
-    acceptedBy: z.string(),
-    acceptedAt: z.string().datetime(),
-  }),
+  z
+    .union([
+      AutomaticTranslationSchema,
+      z.object({ origin: z.literal('legacy-ai'), value: z.string().max(64_000) }),
+    ])
+    .and(
+      z.object({
+        humanVerified: z.boolean().optional(),
+        acceptedValue: z.string().max(64_000),
+        acceptedBy: z.string(),
+        acceptedAt: z.string().datetime(),
+      }),
+    ),
 )
 export const automaticTranslationReadFields = {
   isAutomaticOnly: z.boolean().optional(),
@@ -130,4 +138,22 @@ export function automaticTranslationFromRow(
   }
   const parsed = AutomaticTranslationSchema.safeParse(value)
   return parsed.success ? parsed.data : undefined
+}
+
+/** Read verification independently from publication for a current field value.
+ * @param raw Serialized or decoded acceptance. @param value Current field text.
+ * @returns Whether this exact accepted value remains unverified AI text.
+ */
+export function unverifiedAcceptance(raw: unknown, value: unknown): boolean {
+  try {
+    const acceptance = typeof raw === 'string' ? JSON.parse(raw) : raw
+    const parsed = TranslationProvenanceSchema.valueType.safeParse(acceptance)
+    return (
+      parsed.success &&
+      parsed.data.humanVerified === false &&
+      parsed.data.acceptedValue === value
+    )
+  } catch {
+    return false
+  }
 }

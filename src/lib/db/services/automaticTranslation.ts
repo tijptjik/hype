@@ -122,6 +122,24 @@ export async function prepareAutomaticTranslationSubmission(options: {
     }
     for (const [field, acceptance] of Object.entries(row.translationProvenance ?? {})) {
       if (acceptance.acceptedBy !== 'pending') continue
+      // Validate legacy acceptance against the stored value without inventing provider metadata.
+      if ('origin' in acceptance && acceptance.origin === 'legacy-ai') {
+        if (
+          prior?.[field] !== acceptance.value ||
+          !(prior?.[`${field}Gen`] === true || prior?.[`${field}Gen`] === 'true')
+        )
+          throw error(409, 'Original translation changed')
+        if (typeof row[field] !== 'string' || !(row[field] as string).trim())
+          throw error(400, 'Accepted translation is empty')
+        provenance[field] = {
+          ...acceptance,
+          acceptedValue: row[field] as string,
+          acceptedBy: actorId,
+          acceptedAt: new Date().toISOString(),
+        }
+        row[`${field}Gen`] = false
+        continue
+      }
       const candidate = automatic[field]
       const source = candidate
         ? sourceRows.get(contentFormKey(candidate.sourceLocale))
@@ -137,11 +155,33 @@ export async function prepareAutomaticTranslationSubmission(options: {
         throw error(400, 'Accepted translation is empty')
       provenance[field] = {
         ...candidate,
+        humanVerified: acceptance.humanVerified === true,
         acceptedValue: row[field] as string,
         acceptedBy: actorId,
         acceptedAt: new Date().toISOString(),
       }
       row[`${field}Gen`] = false
+    }
+    // Legacy generated fields have no reliable provider/source receipt; retain only their known AI origin.
+    for (const [field, value] of Object.entries(row)) {
+      if (
+        !provenance[field] &&
+        typeof value === 'string' &&
+        value.trim() &&
+        (prior?.[`${field}Gen`] === true || prior?.[`${field}Gen`] === 'true') &&
+        (row[`${field}Gen`] === false || row[`${field}Gen`] === 'false') &&
+        typeof prior?.[field] === 'string' &&
+        (prior[field] as string).trim()
+      ) {
+        provenance[field] = {
+          origin: 'legacy-ai',
+          humanVerified: value !== prior[field],
+          value: prior[field] as string,
+          acceptedValue: value,
+          acceptedBy: actorId,
+          acceptedAt: new Date().toISOString(),
+        }
+      }
     }
     if (prior?.isAutomaticOnly === true) {
       const fields =
