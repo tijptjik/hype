@@ -85,6 +85,13 @@
 - For admin UI verification, use the user's existing authenticated browser session. A
   redirect from a fresh unauthenticated Playwright context does not establish that no
   admin session is available.
+- An authenticated local admin account is available to agents. If the existing browser
+  session cannot be accessed, use `bun run dev:agent admin --port 4173` and run a
+  dedicated headless Playwright check through `dev-check`. The launcher in
+  `scripts/dev/agent.ts` seeds the reserved local accounts and enables the admin persona
+  without passwords or production accounts. Do not report admin verification as blocked
+  solely because browser integration is unavailable or a fresh context redirects to
+  sign-in; check this supported local authentication path first.
 - Start the app with `bun run dev -- --host 127.0.0.1 --port 4173`, then stop it after
   the check. Package Vite launchers use `dev-server` to keep server memory outside Zed.
   Wrap direct or temporary Vite launches with `dev-server` too; long-lived servers must
