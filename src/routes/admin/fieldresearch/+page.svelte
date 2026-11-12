@@ -11,10 +11,11 @@ adminCtx.setResourceType(false)
 </script>
 
 <Main.Root
+  class="px-0"
   onDimensionsChange={(width, height) =>
     adminCtx.view.layout.setMainDimensions(width, height)}
 >
-  <Main.Content class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+  <Main.Content class="flex min-h-0 flex-1 flex-col overflow-y-auto pt-0!">
     <FieldResearch />
   </Main.Content>
 </Main.Root>

@@ -6,11 +6,15 @@ import { researchErrorMessage } from '#lib/fieldResearch/presentation.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 import SaveIcon from 'virtual:icons/lucide/save'
 import { beforeNavigate, goto } from '$app/navigation'
+// I18N
+import { m } from '#lib/i18n.js'
 // API
 import {
   getResearchDestinations,
   mergeResearchCaptures,
   getResearchSessions,
+  archiveResearchSessions,
+  getResearchSessionFilters,
   createResearchSession,
   getResearchSession,
   getResearchImages,
@@ -30,7 +34,11 @@ import Heading from '#lib/bits/custom/text/Heading.svelte'
 import Subheading from '#lib/bits/custom/text/Subheading.svelte'
 import * as ImportPrimitive from '#lib/bits/patterns/import/components/index.js'
 import ResearchMap from './ResearchMap.svelte'
+import ResearchSessionRow from './ResearchSessionRow.svelte'
+import ResearchSessionControls from './ResearchSessionControls.svelte'
 // ICONS
+import Funnel from 'virtual:icons/proicons/filter'
+import FunnelX from 'virtual:icons/proicons/filter-cancel'
 import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
 import OrganisationIcon from 'virtual:icons/lucide/users'
 import UploadIcon from 'virtual:icons/proicons/arrow-upload'
@@ -48,6 +56,8 @@ import { normalizeUploadFileForAssetPipeline } from '#lib/images/upload.js'
 // TYPES
 import type {
   ResearchSession,
+  ResearchSessionIndexRow,
+  ResearchSessionFilters,
   ResearchImage,
   ResearchStack,
   ResearchCoordinates,
@@ -62,7 +72,83 @@ type QueueItem = {
   error?: string
 }
 let destinations = $state<Awaited<ReturnType<typeof getResearchDestinations>>>([])
-let sessions = $state<ResearchSession[]>([])
+let indexFilters = $state<ResearchSessionFilters>({
+  archive: 'active',
+  creatorId: '',
+  organisationId: '',
+  projectId: '',
+  layerId: '',
+  sortBy: 'createdAt',
+  sortOrder: 'desc',
+})
+let filterOptions = $state<Awaited<ReturnType<typeof getResearchSessionFilters>>>({
+  creators: [],
+  organisations: [],
+  projects: [],
+  layers: [],
+})
+let controlBarVisible = $state(true)
+let bulkMode = $state(false)
+let selectedSessions = $state<{ id: string; revision: number }[]>([])
+let bulkAction = $state('archive')
+let selectingAll = $state(false)
+let indexVersion = $state(0)
+
+/** Toggle a row in the current bulk selection without opening its workspace.
+ * @param row Session and revision shown in the index. @returns Nothing.
+ */
+function toggleSessionSelection(row: ResearchSessionIndexRow): void {
+  selectedSessions = selectedSessions.some(item => item.id === row.id)
+    ? selectedSessions.filter(item => item.id !== row.id)
+    : [...selectedSessions, { id: row.id, revision: row.revision }]
+}
+
+/** Load all matches for the current filters before selecting them.
+ * @returns When the complete bounded selection is ready.
+ */
+async function selectAllSessions(): Promise<void> {
+  selectingAll = true
+  const request = indexRequest
+  try {
+    const selected: { id: string; revision: number }[] = []
+    let before: string | undefined
+    for (;;) {
+      const rows = await refreshRemoteQuery(getResearchSessions({ ...request, before }))
+      if (request !== indexRequest || !bulkMode) return
+      selected.push(...rows.map(row => ({ id: row.id, revision: row.revision })))
+      if (selected.length > 5000)
+        throw new Error('Narrow the filters to select up to 5,000 sessions at once.')
+      if (rows.length < 50) break
+      before = rows[rows.length - 1].id
+    }
+    selectedSessions = selected
+  } catch (cause) {
+    toast.error(researchErrorMessage(cause))
+  } finally {
+    selectingAll = false
+  }
+}
+
+/** Archive or restore the observed selection, then reload counts and choices.
+ * @returns Once the atomic operation and index refresh have been requested.
+ */
+async function applySessionArchive(): Promise<void> {
+  await action(async () => {
+    const result = await archiveResearchSessions({
+      sessions: selectedSessions,
+      archived: bulkAction === 'archive',
+    })
+    selectedSessions = []
+    bulkMode = false
+    indexVersion += 1
+    toast.success(
+      `${result.count} ${result.count === 1 ? 'session' : 'sessions'} ${bulkAction === 'archive' ? 'archived' : 'restored'}.`,
+    )
+  })
+}
+
+let sessionCount = $state(0)
+let sessions = $state<ResearchSessionIndexRow[]>([])
 let session = $state<ResearchSession | null>(null)
 let images = $state.raw<ResearchImage[]>([])
 let stacks = $state.raw<ResearchStack[]>([])
@@ -70,6 +156,16 @@ let layers = $state<Awaited<ReturnType<typeof getResearchLayers>>>([])
 let projectId = $state('')
 let projectQuery = $state('')
 let sessionQuery = $state('')
+const indexRequest = $derived({
+  query: sessionQuery,
+  archive: indexFilters.archive,
+  creatorId: indexFilters.creatorId || undefined,
+  organisationId: indexFilters.organisationId || undefined,
+  projectId: indexFilters.projectId || undefined,
+  layerId: indexFilters.layerId || undefined,
+  sortBy: indexFilters.sortBy,
+  sortOrder: indexFilters.sortOrder,
+})
 let indexLoading = $state(false)
 const suggestedDestinations = $derived(
   destinations.filter(item =>
@@ -370,7 +466,7 @@ async function cancel(): Promise<void> {
     selected = null
     name = ''
     message = ''
-    sessions = await refreshRemoteQuery(getResearchSessions({ query: sessionQuery }))
+    sessions = await refreshRemoteQuery(getResearchSessions(indexRequest))
     hasMoreSessions = sessions.length === 50
   })
 }
@@ -397,7 +493,24 @@ $effect(() => {
   )
   headerCtrl.setViewActions(
     index
-      ? []
+      ? [
+          {
+            text: m.menu_filters(),
+            class: 'px-4',
+            color: 'neutral',
+            style: 'ghost',
+            icon: controlBarVisible ? FunnelX : Funnel,
+            alwaysHideLabel: true,
+            hideLabelInstantly: true,
+            attrs: {
+              'aria-expanded': controlBarVisible,
+              'aria-pressed': controlBarVisible,
+            },
+            onClick: () => {
+              controlBarVisible = !controlBarVisible
+            },
+          },
+        ]
       : [
           {
             text: 'Cancel',
@@ -433,23 +546,106 @@ $effect(() => {
         ],
   )
 })
+// Use the same layout-owned, fixed-height control region as the resource indexes.
+$effect(() => {
+  if (session || creating) {
+    headerCtrl.clearControlBar()
+    return
+  }
+  headerCtrl.setControlBar(
+    ResearchSessionControls,
+    {
+      bulk: {
+        isActive: bulkMode,
+        selectedCount: selectedSessions.length,
+        options: [
+          { value: 'archive', label: 'Archive' },
+          { value: 'restore', label: 'Restore' },
+        ],
+        selectedOptionValue: bulkAction,
+        applyDisabled: !selectedSessions.length || busy || selectingAll || indexLoading,
+        isSelectingAll: selectingAll,
+        progress: busy
+          ? {
+              completed: 0,
+              total: selectedSessions.length,
+              errors: 0,
+              isApplying: true,
+            }
+          : null,
+        onToggleMode: () => {
+          bulkMode = !bulkMode
+          selectedSessions = []
+        },
+        onSelectAll: selectAllSessions,
+        onInvertSelection: () => {
+          selectedSessions = sessions
+            .filter(row => !selectedSessions.some(item => item.id === row.id))
+            .map(row => ({ id: row.id, revision: row.revision }))
+        },
+        onOptionChange: value => {
+          bulkAction = value
+        },
+        onApply: applySessionArchive,
+      },
+      value: indexFilters,
+      options: filterOptions,
+      count: sessionCount,
+      loading: indexLoading,
+      onchange: value => {
+        indexFilters = value
+      },
+    },
+    { isVisible: controlBarVisible },
+  )
+})
+
 onDestroy(() => {
+  headerCtrl.clearControlBar()
   headerCtrl.setViewActions([])
   headerCtrl.setCreateAction(null)
   headerCtrl.setSearch(null)
 })
 
+// Recompute every association facet against the other selected facets.
+$effect(() => {
+  const { creatorId, organisationId, projectId, layerId, archive } = indexRequest
+  void indexVersion
+  let active = true
+  void refreshRemoteQuery(
+    getResearchSessionFilters({
+      creatorId,
+      organisationId,
+      projectId,
+      layerId,
+      archive,
+    }),
+  )
+    .then(options => {
+      if (active) filterOptions = options
+    })
+    .catch(cause => {
+      if (active) message = String(cause)
+    })
+  return () => {
+    active = false
+  }
+})
+
 // Search authorized sessions on the server, including records beyond the currently loaded page.
 $effect(() => {
-  const query = sessionQuery
+  const request = indexRequest
+  void indexVersion
+  selectedSessions = []
   if (session || creating) return
   let active = true
+  indexLoading = true
   const timer = setTimeout(() => {
-    indexLoading = true
-    void refreshRemoteQuery(getResearchSessions({ query }))
+    void refreshRemoteQuery(getResearchSessions(request))
       .then(rows => {
         if (active) {
           sessions = rows
+          sessionCount = rows[0]?.totalCount ?? 0
           hasMoreSessions = rows.length === 50
         }
       })
@@ -518,23 +714,27 @@ $effect(() => {
     {/if}
   </div>
 {:else}
-  <div class="flex min-h-full flex-1 flex-col pb-6">
-    <div class="mb-4 flex items-center justify-between gap-4">
-      <div>
-        <Heading level={4}
-          >{session
-            ? 'Field research'
-            : creating
-              ? 'Batch Image Upload'
-              : 'Field research'}</Heading
-        >
-        <Subheading level={4}
-          >{creating || session
-            ? 'Upload images, group them on the map, and create Features when ready.'
-            : 'Open a previous session or start a new field research.'}</Subheading
-        >
+  <div
+    class={`flex min-h-full flex-1 flex-col pb-6 ${session || creating ? 'p-6' : ''}`}
+  >
+    {#if session || creating}
+      <div class="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <Heading level={4}
+            >{session
+              ? 'Field research'
+              : creating
+                ? 'Batch Image Upload'
+                : 'Field research'}</Heading
+          >
+          <Subheading level={4}
+            >{creating || session
+              ? 'Upload images, group them on the map, and create Features when ready.'
+              : 'Open a previous session or start a new field research.'}</Subheading
+          >
+        </div>
       </div>
-    </div>
+    {/if}
 
     {#if message}
       <p role="alert" class="bg-error/10 text-error mb-4 rounded-lg p-3 text-sm">
@@ -547,33 +747,31 @@ $effect(() => {
 
     {#if !session && !creating}
       {#if sessions.length}
-        <section class="mt-6 shrink-0" aria-label="Research sessions">
-          <div class="divide-base-content/10 mt-3 divide-y">
-            {#each sessions as value}
-              <button
-                type="button"
-                class="hover:text-primary flex w-full items-center justify-between gap-4 py-3 text-left"
+        <section class="shrink-0 px-6" aria-label="Research sessions">
+          <div class="mt-3 space-y-2">
+            {#each sessions as value, index (value.id)}
+              <ResearchSessionRow
+                session={value}
+                {index}
                 disabled={busy}
-                onclick={() => action(() => open(value))}
-              >
-                <span>{value.name}</span
-                ><span class="text-sm opacity-60"
-                  >{new Date(value.createdAt).toLocaleDateString()}
-                  · {value.status}</span
-                >
-              </button>
+                selected={selectedSessions.some(item => item.id === value.id)}
+                onopen={() =>
+                  bulkMode ? toggleSessionSelection(value) : action(() => open(value))}
+              />
             {/each}
           </div>
           {#if hasMoreSessions}
             <Button
               text="Load more sessions"
-              disabled={busy}
+              disabled={busy || indexLoading}
               onClick={() =>
                 action(async () => {
+                  const request = indexRequest
                   const more = await getResearchSessions({
                     before: sessions[sessions.length - 1].id,
-                    query: sessionQuery,
+                    ...request,
                   })
+                  if (request !== indexRequest) return
                   sessions.push(...more)
                   hasMoreSessions = more.length === 50
                 })}
@@ -585,7 +783,14 @@ $effect(() => {
         <p class="text-muted-foreground py-8">
           {indexLoading
             ? 'Loading research sessions…'
-            : sessionQuery
+            : sessionQuery ||
+                indexFilters.archive !== 'active' ||
+                Boolean(
+                  indexFilters.creatorId ||
+                    indexFilters.organisationId ||
+                    indexFilters.projectId ||
+                    indexFilters.layerId,
+                )
               ? 'No matching research sessions.'
               : 'No research sessions yet. Press New to start one.'}
         </p>

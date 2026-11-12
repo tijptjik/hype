@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // DRIZZLE
-import { and, desc, eq, gt, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, sql, getTableColumns } from 'drizzle-orm'
 // API
 import { guardedCommand, guardedQuery } from './server/guarded.js'
 // SCHEMA
@@ -22,6 +22,7 @@ import { image as imageTable } from '#lib/db/schema/image.js'
 import { ImageContextResource } from '#lib/enums.js'
 import { ResearchCoordinatesSchema } from '#lib/fieldResearch/model.js'
 // SERVICES
+import { setResearchSessionsArchived } from '#lib/db/services/fieldResearchArchive.js'
 import {
   readResearchSession,
   clusterResearchImages,
@@ -104,28 +105,148 @@ export const getResearchLayers = guardedQuery(
 )
 
 /** Browse retained sessions with a stable identity cursor.
- * @param input Optional previous ID. @returns A bounded session page.
+ * @param input Optional cursor, name search, creator/destination filters and sort order. @returns A bounded session page with layer and creator display metadata.
  */
 export const getResearchSessions = guardedQuery(
-  z.object({ before: id.optional(), query: z.string().max(200).optional() }),
+  z.object({
+    before: id.optional(),
+    query: z.string().max(200).optional(),
+    archive: z.enum(['active', 'archived', 'all']).default('active'),
+    creatorId: id.optional(),
+    organisationId: id.optional(),
+    projectId: id.optional(),
+    layerId: id.optional(),
+    sortBy: z.enum(['createdAt', 'name']).default('createdAt'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  }),
   async (input, ctx) => {
     requireResearch(ctx)
+    const column = input.sortBy === 'name' ? sessions.name : sessions.createdAt
+    const cursorColumn = sql.raw(input.sortBy === 'name' ? 'name' : 'createdAt')
+    const direction = input.sortOrder === 'asc' ? asc : desc
+    const comparison = sql.raw(input.sortOrder === 'asc' ? '>' : '<')
     return ctx.db
-      .select()
+      .select({
+        ...getTableColumns(sessions),
+        totalCount: sql<number>`count(*) over()`,
+        photoCount: sql<number>`(SELECT count(*) FROM fieldResearchImage WHERE sessionId=fieldResearchSession.id)`,
+        stackCount: sql<number>`(SELECT count(*) FROM fieldResearchStack s WHERE s.sessionId=fieldResearchSession.id AND EXISTS(SELECT 1 FROM fieldResearchImage i WHERE i.stackId=s.id))`,
+        layerName: sql<
+          string | null
+        >`(SELECT name FROM layerI18n WHERE layerId=fieldResearchSession.layerId ORDER BY locale='en' DESC LIMIT 1)`,
+        creatorName: sql<
+          string | null
+        >`(SELECT COALESCE(NULLIF(name,''),displayUsername,username) FROM user WHERE id=${sessions.createdBy})`,
+        creatorImage: sql<
+          string | null
+        >`(SELECT image FROM user WHERE id=${sessions.createdBy})`,
+      })
       .from(sessions)
       .where(
         and(
           researchProjectAccess(ctx, sql`${sessions.projectId}`),
+          input.archive === 'all'
+            ? undefined
+            : eq(sessions.isArchived, input.archive === 'archived'),
+          input.creatorId ? eq(sessions.createdBy, input.creatorId) : undefined,
+          input.organisationId
+            ? eq(sessions.organisationId, input.organisationId)
+            : undefined,
+          input.projectId ? eq(sessions.projectId, input.projectId) : undefined,
+          input.layerId ? eq(sessions.layerId, input.layerId) : undefined,
           input.query?.trim()
             ? sql`instr(lower(${sessions.name}),lower(${input.query.trim()})) > 0`
             : undefined,
           input.before
-            ? sql`(${sessions.createdAt},${sessions.id}) < (SELECT createdAt,id FROM fieldResearchSession WHERE id=${input.before} AND ${researchProjectAccess(ctx, sql`fieldResearchSession.projectId`)})`
+            ? sql`(${column},${sessions.id}) ${comparison} (SELECT ${cursorColumn},id FROM fieldResearchSession WHERE id=${input.before} AND ${researchProjectAccess(ctx, sql`fieldResearchSession.projectId`)})`
             : undefined,
         ),
       )
-      .orderBy(desc(sessions.createdAt), desc(sessions.id))
+      .orderBy(direction(column), direction(sessions.id))
       .limit(50)
+  },
+)
+
+/** List filter choices only from sessions the current actor can manage.
+ * @param input Selected associations. @returns Choices matching the other facets across all authorized pages.
+ */
+export const getResearchSessionFilters = guardedQuery(
+  z.object({
+    archive: z.enum(['active', 'archived', 'all']).default('active'),
+    creatorId: id.optional(),
+    organisationId: id.optional(),
+    projectId: id.optional(),
+    layerId: id.optional(),
+  }),
+  async (input, ctx) => {
+    requireResearch(ctx)
+    /** Build a facet scope excluding its own selection so that choice remains editable.
+     * @param facet Facet whose available choices are requested.
+     * @returns Authorization and other selected association predicates.
+     */
+    const scope = (facet: keyof typeof input) =>
+      and(
+        researchProjectAccess(ctx, sql`s.projectId`),
+        input.archive === 'all'
+          ? undefined
+          : sql`s.isArchived=${input.archive === 'archived' ? 1 : 0}`,
+        facet !== 'creatorId' && input.creatorId
+          ? sql`s.createdBy=${input.creatorId}`
+          : undefined,
+        facet !== 'organisationId' && input.organisationId
+          ? sql`s.organisationId=${input.organisationId}`
+          : undefined,
+        facet !== 'projectId' && input.projectId
+          ? sql`s.projectId=${input.projectId}`
+          : undefined,
+        facet !== 'layerId' && input.layerId
+          ? sql`s.layerId=${input.layerId}`
+          : undefined,
+      )
+    // Distinct scoped choices avoid loading all session records into the browser.
+    const [creators, organisations, projects, layers] = await Promise.all([
+      ctx.db.all<{ value: string; label: string }>(
+        sql`SELECT DISTINCT s.createdBy value,COALESCE(NULLIF(u.name,''),u.displayUsername,u.username,s.createdBy) label FROM fieldResearchSession s LEFT JOIN user u ON u.id=s.createdBy WHERE ${scope('creatorId')} ORDER BY label`,
+      ),
+      ctx.db.all<{ value: string; label: string }>(
+        sql`SELECT DISTINCT s.organisationId value,COALESCE((SELECT name FROM organisationI18n WHERE organisationId=s.organisationId ORDER BY locale='en' DESC LIMIT 1),s.organisationId) label FROM fieldResearchSession s WHERE ${scope('organisationId')} ORDER BY label`,
+      ),
+      ctx.db.all<{ value: string; label: string }>(
+        sql`SELECT DISTINCT s.projectId value,COALESCE((SELECT name FROM projectI18n WHERE projectId=s.projectId ORDER BY locale='en' DESC LIMIT 1),s.projectId) label FROM fieldResearchSession s WHERE ${scope('projectId')} ORDER BY label`,
+      ),
+      ctx.db.all<{ value: string; label: string }>(
+        sql`SELECT DISTINCT s.layerId value,COALESCE((SELECT name FROM layerI18n WHERE layerId=s.layerId ORDER BY locale='en' DESC LIMIT 1),s.layerId) label FROM fieldResearchSession s WHERE s.layerId IS NOT NULL AND ${scope('layerId')} ORDER BY label`,
+      ),
+    ])
+    return { creators, organisations, projects, layers }
+  },
+)
+
+/** Archive or restore selected sessions with the same project-edit authority as the index.
+ * @param input Selected session revisions and desired archive state.
+ * @returns Number of changed sessions; stale or unauthorized selections change nothing.
+ */
+export const archiveResearchSessions = guardedCommand(
+  z.object({
+    sessions: z
+      .array(z.object({ id, revision: z.number().int().nonnegative() }))
+      .min(1)
+      .max(5000),
+    archived: z.boolean(),
+  }),
+  async (input, ctx) => {
+    requireResearch(ctx)
+    const changed = await setResearchSessionsArchived(
+      ctx,
+      input.sessions,
+      input.archived,
+    )
+    if (!changed)
+      error(
+        409,
+        'Some sessions changed or are no longer editable. Refresh and select them again.',
+      )
+    return { count: new Set(input.sessions.map(session => session.id)).size }
   },
 )
 

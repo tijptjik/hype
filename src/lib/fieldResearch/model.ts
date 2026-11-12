@@ -45,6 +45,9 @@ export type ResearchSession = {
   createdBy: string
   createdAt: string
   updatedAt: string
+  isArchived?: boolean
+  archivedAt?: string | null
+  archivedBy?: string | null
   completedAt: string | null
   status: 'uploading' | 'organising' | 'completed'
   revision: number
@@ -52,6 +55,23 @@ export type ResearchSession = {
   south: number | null
   east: number | null
   north: number | null
+}
+export type ResearchSessionFilters = {
+  archive: 'active' | 'archived' | 'all'
+  creatorId: string
+  organisationId: string
+  projectId: string
+  layerId: string
+  sortBy: 'createdAt' | 'name'
+  sortOrder: 'asc' | 'desc'
+}
+
+export type ResearchSessionIndexRow = ResearchSession & {
+  photoCount: number
+  stackCount: number
+  layerName: string | null
+  creatorName: string | null
+  creatorImage: string | null
 }
 export type ResearchImage = {
   id: string
