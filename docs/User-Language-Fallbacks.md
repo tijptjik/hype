@@ -114,3 +114,54 @@ WHERE NOT EXISTS (
 The SQL backfill updates existing preferences only. The schema source and application
 account creation defaults are updated in code; applying the backfill does not alter the
 existing SQLite column's historical default expression.
+
+### Hub editor source selection
+
+The Hub save dialogue is centered beneath Save and clamped to the viewport. It asks only
+when a submitted tab has genuinely empty translation values. Filled AI suggestions are
+accepted on save without a missing-translations prompt, retaining AI provenance and
+remaining unverified unless manually edited. Subtle red outlines identify input values,
+excluding locale labels; the dialogue does not repeat the highlighted fields. “Translate
+from English” prefers English and falls back to the nearest available source per field
+when English is missing, with a brief notice alongside translation progress. Existing AI
+text can serve as a source. “Translate from nearest language” chooses a source per
+target and field. For Chinese targets, prefer another Chinese locale, Japanese, Korean,
+English, other European languages, then other available languages. For English and
+European targets, prefer other European languages, then Traditional Chinese, Simplified
+Chinese, and other languages. Reader fallback ordering is unchanged.
+
+Generation keeps progress visible in the dialogue, then replaces source choices with
+acceptance actions when all suggestions are ready. Suggestions reuse the existing inline
+and Markdown editors. A checkmark accepts a suggestion; a cross dismisses it and
+restores the original field. Editing a suggestion and leaving its editor accepts the
+retained value. Save reopens review for unresolved fields and retains tab-by-tab
+continuation. This presentation currently applies only to Hub forms.
+
+Existing generated values remain ordinary fields, without missing-value outlines or
+accept/reject controls. Only new suggestions for empty values need review. Legacy AI
+origin is preserved without inventing unknown source or provider metadata. Accepting
+available suggestions keeps unresolved fields on the current tab; only a fully resolved
+tab advances automatically. “Continue without accepting” explicitly skips the current
+tab without confirming its generated values.
+
+Acceptance and human verification are separate. Accepting unchanged AI text publishes it
+with its machine-generated indicator intact. Only a manual text edit marks it as
+human-verified; acceptance provenance retains the AI origin in either case. The dialogue
+separates continuation with an OR divider and shows centered translation progress before
+returning to the appropriate review actions.
+
+### Organisation prompt frequency
+
+Advanced offers “Ask about missing translations only once”, disabled by default.
+Enabling it stores a server-owned activation timestamp in organisation settings.
+Organisation, project and feature save reviews compare their current missing cells with
+the form baseline. Once the record has been saved since activation, unchanged baseline
+gaps do not prompt again. Clearing a previously filled value, adding a language or
+adding a field still prompts. New records and records last saved before activation get
+the ordinary review. Disabling the setting restores ordinary prompts; reenabling starts
+a new activation boundary. A successful save refreshes the baseline.
+
+This uses the record save as the acknowledgement, as requested; it does not assert that
+each missing translation was individually reviewed. Hub-wide records do not inherit a
+single organisation's preference. All Hub tabs explicitly receive the same review mode
+so snippet mounting cannot restore the legacy inline banner.

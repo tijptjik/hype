@@ -2,6 +2,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
+import Switch from '#lib/bits/custom/switch/Switch.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import SectionHeader from '#lib/bits/custom/form/SectionHeader.svelte'
 import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
@@ -31,9 +32,11 @@ let {
   permissionAttrs,
   canManagePermissions,
   onPermissionChange,
+  onTranslationPromptOnceChange = () => {},
   onContentLocalesChange,
   onMultilingualDefaultsChange,
 }: {
+  onTranslationPromptOnceChange?: (value: boolean) => void
   name: string
   settings: OrganisationSettingsPatch
   inheritedLocales: string[]
@@ -73,12 +76,33 @@ let {
             onChange={onContentLocalesChange}
             {issues}
           />
-          <MultilingualDefaults
-            {...{ scope: 'organisation' as const }}
-            value={settings}
-            {disabled}
-            onChange={onMultilingualDefaultsChange}
-          />
+          <div class="grid min-w-0 content-start gap-4">
+            <MultilingualDefaults
+              {...{ scope: 'organisation' as const }}
+              value={settings}
+              {disabled}
+              onChange={onMultilingualDefaultsChange}
+            />
+            <div
+              class="border-border bg-foreground/4 flex items-center justify-between gap-4 rounded-lg border px-5 py-4"
+            >
+              <div class="min-w-0">
+                <label for="translation-prompt-once" class="text-sm font-medium"
+                  >{m.translation_prompt_once_label()}</label
+                >
+                <p class="text-muted-foreground mt-1 text-sm">
+                  {m.translation_prompt_once_description()}
+                </p>
+              </div>
+              <Switch
+                id="translation-prompt-once"
+                checked={settings.translationPromptOnce ?? false}
+                {disabled}
+                onCheckedChange={checked =>
+                  onTranslationPromptOnceChange(checked === true)}
+              />
+            </div>
+          </div>
         </div>
       </section>
       <section class="border-border flex min-w-0 flex-col gap-4 md:border-l">

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { translationPromptAttributes } from '#lib/forms/translationReview.js'
 import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
 // LOADING PRESENTATION
 import ResourceFormSkeleton from '#lib/bits/patterns/forms/formSkeleton/ResourceFormSkeleton.svelte'
@@ -2953,7 +2954,13 @@ $effect(() => {
 >
   <Main.Form
     bind:formEl={contentsElement}
-    attrs={formCtx.attributes}
+    attrs={{
+      ...formCtx.attributes,
+      ...translationPromptAttributes(
+        selectedParentOrganisation?.settings,
+        activeCommittedProjectData?.modifiedAt,
+      ),
+    }}
     isReady={Boolean(formCtx.form?.fields)}
   >
     {#if formCtx.form.fields.value().data?.imageIntentSettings !== undefined}

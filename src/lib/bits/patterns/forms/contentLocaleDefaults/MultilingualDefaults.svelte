@@ -42,6 +42,11 @@ const id = $props.id()
             ? m.content_multilingual_default()
             : m.address_multilingual_default()}</label
         >
+        <p class="text-muted-foreground mt-1 text-xs">
+          {key === 'multilingualContent'
+            ? m.content_multilingual_description()
+            : m.address_multilingual_description()}
+        </p>
         {#if scope === 'project'}
           <p class="text-muted-foreground mt-1 text-xs">
             {overridden

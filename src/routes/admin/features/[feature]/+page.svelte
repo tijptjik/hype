@@ -1,4 +1,5 @@
 <script lang="ts">
+import { translationPromptAttributes } from '#lib/forms/translationReview.js'
 import FeatureTitleSource from '#lib/bits/patterns/forms/featureIntent/FeatureTitleSource.svelte'
 import FeatureRuleTitleField from '#lib/bits/patterns/forms/featureIntent/FeatureRuleTitleField.svelte'
 import {
@@ -4494,6 +4495,10 @@ async function refreshLocationSource(): Promise<void> {
     bind:formEl={contentsElement}
     attrs={{
       ...formCtx.attributes,
+      ...translationPromptAttributes(
+        profileOrganisation?.settings,
+        committedFeature?.data?.modifiedAt,
+      ),
       style: `--feature-preview-height:${visualSectionHeight}px;--feature-draft-offset:${setupPending ? setupProgressHeight : 0}px`,
     }}
     isReady={isNewFeatureRef || Boolean(currentFeatureId)}

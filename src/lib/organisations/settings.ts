@@ -13,6 +13,7 @@ import { ChatAppearanceSchema } from '#lib/messaging/appearance.js'
 
 /** Organisation-only settings use the normal form's authorization and revision guard. */
 export const OrganisationSettingsPatchSchema = ContentLocaleSettingsPatchSchema.extend({
+  translationPromptOnce: z.boolean().optional(),
   messagingAppearance: ChatAppearanceSchema.optional(),
   locationPolicy: ProjectLocationPolicySchema.nullable().optional(),
 })
@@ -57,6 +58,8 @@ export function toOrganisationSettingsForm(
   settings?: ContentLocaleSettings,
 ): OrganisationSettingsPatch {
   const patch: OrganisationSettingsPatch = toContentLocaleSettingsForm(settings)
+  if (typeof settings?.translationPromptOnce === 'boolean')
+    patch.translationPromptOnce = settings.translationPromptOnce
   const appearance = ChatAppearanceSchema.safeParse(settings?.messagingAppearance)
   if (appearance.success) patch.messagingAppearance = appearance.data
   const policy = ProjectLocationPolicySchema.safeParse(settings?.locationPolicy)
@@ -73,12 +76,18 @@ export function applyOrganisationSettingsPatch(
   current: ContentLocaleSettings | null | undefined,
   patch?: OrganisationSettingsPatch,
 ): ContentLocaleSettings {
-  const { messagingAppearance, locationPolicy, ...locales } =
+  const { messagingAppearance, locationPolicy, translationPromptOnce, ...locales } =
     OrganisationSettingsPatchSchema.parse(patch ?? {})
   const next = applyContentLocaleSettingsPatch(current, locales)
   if (messagingAppearance !== undefined) next.messagingAppearance = messagingAppearance
   if (locationPolicy === null) delete next.locationPolicy
   else if (locationPolicy !== undefined)
     next.locationPolicy = JSON.parse(JSON.stringify(locationPolicy))
+  if (translationPromptOnce !== undefined) {
+    next.translationPromptOnce = translationPromptOnce
+    if (translationPromptOnce && current?.translationPromptOnce !== true)
+      next.translationPromptOnceSince = new Date().toISOString()
+    if (!translationPromptOnce) delete next.translationPromptOnceSince
+  }
   return next
 }

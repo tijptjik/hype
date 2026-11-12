@@ -1,4 +1,5 @@
 <script lang="ts">
+import { translationPromptAttributes } from '#lib/forms/translationReview.js'
 import LocationUpdatePolicyForm from '#lib/bits/patterns/forms/locationUpdatePolicy/LocationUpdatePolicyForm.svelte'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
 // DEFERRED FACETS
@@ -1558,7 +1559,13 @@ $effect(() => {
 >
   <Main.Form
     bind:formEl={contentsElement}
-    attrs={formCtx.attributes}
+    attrs={{
+      ...formCtx.attributes,
+      ...translationPromptAttributes(
+        committedOrganisation?.data?.settings,
+        committedOrganisation?.data?.modifiedAt,
+      ),
+    }}
     isReady={isFormReady}
   >
     {#snippet fallback()}
@@ -1635,6 +1642,8 @@ $effect(() => {
         issues={contentLocaleFormIssues(visibleAllIssues)}
         onContentLocalesChange={setContentLocales}
         onMultilingualDefaultsChange={setMultilingualDefaults}
+        onTranslationPromptOnceChange={translationPromptOnce =>
+          setMultilingualDefaults({ translationPromptOnce })}
         visibility={formCtx.form.fields.value().data?.defaultLocationVisibility ??
           'shared'}
         visibilityAttrs={formCtx.form.fields.data.defaultLocationVisibility.as(

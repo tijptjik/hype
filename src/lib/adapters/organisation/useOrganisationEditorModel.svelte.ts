@@ -69,7 +69,9 @@ interface OrganisationEditorModel {
   setMessagingAppearance: (appearance: ChatAppearance) => void
   setContentLocales: (locales: string[] | undefined) => void
   setMultilingualDefaults: (
-    patch: Partial<Record<MultilingualSettingKey, boolean | null>>,
+    patch: Partial<Record<MultilingualSettingKey, boolean | null>> & {
+      translationPromptOnce?: boolean
+    },
   ) => void
   setUserPolicy: (patch: Partial<OrganisationUserPolicy>) => void
   getHiddenOrganisationSettingsAttrs: () => Record<string, unknown>
@@ -209,7 +211,9 @@ export function useOrganisationEditorModel(
    * @returns Nothing.
    */
   function setMultilingualDefaults(
-    patch: Partial<Record<MultilingualSettingKey, boolean | null>>,
+    patch: Partial<Record<MultilingualSettingKey, boolean | null>> & {
+      translationPromptOnce?: boolean
+    },
   ): void {
     updateFormData(
       formCtx.form as unknown as FormDataUpdaterForm<
