@@ -22,7 +22,10 @@ import {
 import { getFeatureQueryCounts } from './featureCounts.js'
 import { retryBusyRead } from './sqlite.js'
 import { featureAuthoringSQL } from './featureAuthoringProjection.js'
-import { featureLocationBrandsSQL } from './locationBrandProjection.js'
+import {
+  featureLocationBrandCondition,
+  featureLocationBrandsSQL,
+} from './locationBrandProjection.js'
 import { featureLocationNamesSQL } from './locationNameProjection.js'
 import { featureLocationLifecycleSQL } from './locationLifecycleProjection.js'
 // SEARCH
@@ -91,6 +94,7 @@ export async function queryFeatureIndex(
   )
   if (input.location)
     conditions.push(locationFeatureCondition(input.location.id, input.location.view))
+  if (input.brandId) conditions.push(featureLocationBrandCondition(input.brandId))
   if (input.q) conditions.push(featureIndexSearchCondition(input.q, locale))
   // Nearby ranking scans only authorized IDs and geometry; hydrate the bounded page below.
   if (input.nearby) {
@@ -142,23 +146,24 @@ export async function queryFeatureIndex(
   }
   // Count requests use the identical authorized predicate without reading any row relations.
   if (input.countOnly) {
-    const counts = input.location
-      ? await locationCount()
-      : await getFeatureQueryCounts(
-          db,
-          queryInput,
-          conditions,
-          source,
-          input.q
-            ? null
-            : buildFeatureRollupConditions(
-                db,
-                queryInput,
-                [...authorizedConditions, ...filters],
-                hub,
-              ),
-          false,
-        )
+    const counts =
+      input.location || input.brandId
+        ? await locationCount()
+        : await getFeatureQueryCounts(
+            db,
+            queryInput,
+            conditions,
+            source,
+            input.q
+              ? null
+              : buildFeatureRollupConditions(
+                  db,
+                  queryInput,
+                  [...authorizedConditions, ...filters],
+                  hub,
+                ),
+            false,
+          )
     return { data: [], totalCount: counts.totalCount, hasMore: false, nextOffset: null }
   }
   const limit = input.pagination?.limit ?? 50
@@ -194,7 +199,7 @@ export async function queryFeatureIndex(
     ),
     input.includeCount === false
       ? Promise.resolve(null)
-      : input.location
+      : input.location || input.brandId
         ? locationCount()
         : getFeatureQueryCounts(
             db,

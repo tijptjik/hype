@@ -113,6 +113,54 @@ const input = {
 } as const
 
 describe('authoritative feature index', () => {
+  it('scopes brand rows and uncached counts before pagination and authorization', async () => {
+    const { sqlite, db, add, statements } = setup()
+    for (const id of ['a', 'b', 'other-brand', 'unauthorized']) add(id)
+    sqlite.exec(`
+      CREATE TABLE location(id TEXT,state TEXT,ownerOrganisationId TEXT);
+      CREATE TABLE locationRevisionContent(id TEXT,locationId TEXT,facts TEXT);
+      CREATE TABLE locationSharedRevision(id TEXT,locationId TEXT,corrections TEXT);
+      CREATE TABLE featureLocation(featureId TEXT,locationId TEXT,factsRevisionId TEXT,acceptancePolicy TEXT,acceptedOverrides TEXT);
+      INSERT INTO location VALUES('place','published',NULL);
+      INSERT INTO locationRevisionContent VALUES('facts','place','{"schemaVersion":1,"details":{}}');
+      INSERT INTO locationSharedRevision VALUES('accepted','place','{"brandId":{"choice":{"mode":"override","value":"brand-a"}}}');
+      INSERT INTO featureLocation SELECT id,'place','facts','{"factsSharedRevision":"accepted"}','{}' FROM feature;
+      UPDATE featureLocation SET acceptedOverrides='{"brandId":{"mode":"override","value":"brand-b"}}' WHERE featureId='other-brand';
+      UPDATE feature SET organisationId='other' WHERE id='unauthorized';
+    `)
+    const query = { ...input, brandId: 'brand-a', pagination: { limit: 1, offset: 0 } }
+    expect(await queryFeatureIndex(db, query, scope, hub, 'en')).toMatchObject({
+      data: [{ id: 'a' }],
+      totalCount: 2,
+      hasMore: true,
+      nextOffset: 1,
+    })
+    expect(
+      await queryFeatureIndex(
+        db,
+        { ...query, pagination: { limit: 1, offset: 1 } },
+        scope,
+        hub,
+        'en',
+      ),
+    ).toMatchObject({
+      data: [{ id: 'b' }],
+      totalCount: 2,
+      hasMore: false,
+    })
+    sqlite.exec("DELETE FROM featureLocation WHERE featureId='b'")
+    expect(
+      await queryFeatureIndex(db, { ...query, countOnly: true }, scope, hub, 'en'),
+    ).toMatchObject({ totalCount: 1 })
+    expect(
+      statements.some(
+        row =>
+          row.sql.includes('featureCountCache') ||
+          row.sql.includes('featureCountRollup'),
+      ),
+    ).toBe(false)
+  })
+
   it('filters Location rows and counts before pagination, without stale Feature-only count caches', async () => {
     const { sqlite, db, add, statements } = setup()
     sqlite.exec(`

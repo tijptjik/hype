@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm'
 import type { SQL, SQLWrapper } from 'drizzle-orm'
 
 const paths = {
+  brandId: '$.details.brandId',
   names: '$.i18n',
   phoneNumber: '$.common.phoneNumber',
   brands: '$.details.brands',

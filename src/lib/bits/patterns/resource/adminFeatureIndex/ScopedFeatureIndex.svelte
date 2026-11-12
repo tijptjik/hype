@@ -73,7 +73,7 @@ $effect(() => {
  * @returns Completion after resolving the parent IDs and starting navigation.
  */
 async function createFeature(): Promise<void> {
-  if (resourceType === 'location') return
+  if (resourceType === 'location' || resourceType === 'brand') return
   try {
     const selection: Record<string, string> = {}
     if (resourceType === 'organisation') {
@@ -190,8 +190,11 @@ onDestroy(() => {
     <AdminFeatureIndex
       showTotalCount
       {locationScope}
-      readOnly={resourceType === 'location'}
-      onCreate={resourceType === 'location' ? undefined : createFeature}
+      brandId={resourceType === 'brand' ? resourceId : undefined}
+      readOnly={resourceType === 'location' || resourceType === 'brand'}
+      onCreate={resourceType === 'location' || resourceType === 'brand'
+        ? undefined
+        : createFeature}
     />
   </div>
 </div>

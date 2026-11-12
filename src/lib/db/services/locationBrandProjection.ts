@@ -33,3 +33,22 @@ export function featureLocationBrandsSQL(includeShared = true): SQL<string | nul
         (SELECT 1 FROM featureLocation fp WHERE fp.featureId="feature"."id")
       THEN json_extract("feature"."localLocationBrands",'$.brands') END))`
 }
+
+/** Match a catalogue brand through a Feature's accepted Location identity.
+ * @param brandId Persisted catalogue brand ID.
+ * @returns A narrowing predicate for an independently authorized Feature query.
+ * @remarks Pending community revisions never enter this projection; explicit clears
+ * and organisation choices use the same precedence as resolved Location fields.
+ */
+export function featureLocationBrandCondition(brandId: string): SQL {
+  const override = acceptedLocationOverrideFieldSql('brandId')
+  return sql`EXISTS(SELECT 1 FROM featureLocation fp
+    JOIN location p ON p.id=fp.locationId
+    JOIN locationRevisionContent pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
+    WHERE fp.featureId="feature"."id" AND "feature"."isDraft"=0
+      AND (p.state!='manual' OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id="feature"."projectId"))
+      AND (CASE json_extract(${override},'$.mode')
+        WHEN 'clear' THEN NULL
+        WHEN 'override' THEN json_extract(${override},'$.value')
+        ELSE ${acceptedLocationFactsFieldSql('brandId')} END)=${brandId})`
+}

@@ -69,11 +69,13 @@ let {
   showTotalCount = false,
   onCreate,
   locationScope,
+  brandId,
   readOnly = false,
 }: {
   showTotalCount?: boolean
   onCreate?: () => void
   locationScope?: FeatureIndexQuery['location']
+  brandId?: string
   readOnly?: boolean
 } = $props()
 
@@ -324,6 +326,7 @@ const normalizedTextQuery = $derived(textQuery.trim())
 const ownerSignature = $derived(
   JSON.stringify([
     locationScope,
+    brandId,
     adminCtx.view.resources.scopeKey,
     adminCtx.view.cacheCtx.generation,
     adminCtx.view.scope.prisms,
@@ -338,6 +341,7 @@ const searchSignature = $derived(
     sortSignature,
     adminCtx.view.featuresQueryKey(),
     locationScope,
+    brandId,
     adminCtx.view.resources.scopeKey,
     adminCtx.view.cacheCtx.generation,
     getLocaleKey(),
@@ -540,6 +544,7 @@ async function loadMoreFeatureResults(): Promise<void> {
     const result = await refreshRemoteQuery(
       getFeatureIndexPage({
         location: locationScope,
+        brandId,
         conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
@@ -714,6 +719,7 @@ async function selectAllFeatureMatches(): Promise<void> {
         await refreshRemoteQuery(
           getFeatureIndexPage({
             location: locationScope,
+            brandId,
             conditions,
             prisms,
             sorting,
@@ -1036,6 +1042,7 @@ $effect(() => {
     matchingCountLoading = true
     const input: FeatureIndexQuery = {
       location: locationScope,
+      brandId,
       conditions: adminCtx.view.isSuperAdmin()
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
@@ -1115,7 +1122,7 @@ $effect(() => {
   // A changed account or prism cannot preview rows retained by the previous owner.
   const retained =
     remoteOwnerSignature === ownerSignature
-      ? (remoteMatchedEntities ?? (locationScope ? [] : optimisticEntities))
+      ? (remoteMatchedEntities ?? (locationScope || brandId ? [] : optimisticEntities))
       : []
   entities = adminCtx.view.filters.applyFeatureViewFilters(
     normalizedTextQuery

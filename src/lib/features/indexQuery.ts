@@ -44,6 +44,7 @@ export const FeatureIndexFiltersSchema = z
 
 export const FeatureIndexQuerySchema = ListQueryParamsSchema.extend({
   filters: FeatureIndexFiltersSchema.optional(),
+  brandId: z.string().min(1).max(200).optional(),
   location: z
     .object({
       id: z.string().min(1).max(200),
