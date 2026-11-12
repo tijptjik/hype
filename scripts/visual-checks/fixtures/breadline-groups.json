@@ -1,0 +1,37 @@
+[
+  {
+    "code": "maxims-group",
+    "id": "bl-group-maxims-group",
+    "name": "Maxim's Group"
+  },
+  {
+    "code": "dfi",
+    "id": "bl-group-dfi",
+    "name": "DFI Retail Group"
+  },
+  {
+    "code": "cra",
+    "id": "bl-group-cra",
+    "name": "Convenience Retail Asia"
+  },
+  {
+    "code": "yamazaki-group",
+    "id": "bl-group-yamazaki-group",
+    "name": "Yamazaki Baking Co., Ltd."
+  },
+  {
+    "code": "hsh",
+    "id": "bl-group-hsh",
+    "name": "The Hongkong and Shanghai Hotels, Limited"
+  },
+  {
+    "code": "wooloomooloo-group",
+    "id": "bl-group-wooloomooloo-group",
+    "name": "Wooloomooloo Group"
+  },
+  {
+    "code": "jc",
+    "id": "bl-group-jc",
+    "name": "JC Group"
+  }
+]
