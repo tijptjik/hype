@@ -7,6 +7,7 @@
     "url": "https://github.com/tijptjik/hype/issues"
   },
   "scripts": {
+    "catalogue:logos:sync:dev": "python3 scripts/catalogue/sync-dev-logos.py",
     "dev": "bash scripts/dev-server.sh vite dev",
     "dev:messaging-notifications": "wrangler dev --config workers/messaging-notifications/wrangler.jsonc --local --ip 127.0.0.1 --port 8796 --persist-to .wrangler/state",
     "dev:agent": "bun run scripts/dev/agent.ts",
