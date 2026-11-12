@@ -48,6 +48,7 @@ export async function listLocationResources(
     locationTable.id,
     locationRevision.facts,
     sql`${input.organisationId ?? null}`,
+    locationRevision.id,
   )
   const revisionJoin = and(
     eq(locationRevision.locationId, locationTable.id),

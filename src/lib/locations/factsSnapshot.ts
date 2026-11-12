@@ -17,8 +17,23 @@ type LocationFactsKind = LocationEntity['kind']
 // 2. DISPLAY PROJECTION AND STORAGE CODEC
 // ---
 
+const {
+  fallbackDisplay: _fallbackDisplay,
+  displayOverrides: _displayOverrides,
+  ...addressShape
+} = LocationFactsSchema.shape.location.shape.address.shape
+const storedAddress = z.strictObject(addressShape).superRefine((value, ctx) => {
+  // Reuse canonical identity validation after removing only the translated display columns.
+  const checked = LocationFactsSchema.shape.location.shape.address.safeParse({
+    ...value,
+    fallbackDisplay: {},
+  })
+  if (!checked.success)
+    for (const issue of checked.error.issues)
+      ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message })
+})
+
 const common = z.strictObject({
-  names: LocationFactsSchema.shape.names,
   footprint: LocationFactsSchema.shape.footprint,
   phoneNumber: z.array(z.string()).optional(),
   websites: LocationFactsSchema.shape.websites,
@@ -27,14 +42,37 @@ const common = z.strictObject({
   successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
   location: LocationFactsSchema.shape.location.extend({
     // A mountain or building need not have an address; the display projection supplies an empty one.
-    address: LocationFactsSchema.shape.location.shape.address.nullable().optional(),
+    address: storedAddress.nullable().optional(),
   }),
 })
 
 /** Every persisted revision carries its historical kind and explicit JSON contract version. */
-const envelope = { schemaVersion: z.literal(1), common }
+const localizedFields = z.strictObject({
+  name: z.string().optional(),
+  branch: z.string().optional(),
+  format: z.string().optional(),
+  displayAddress: z.string().optional(),
+  displayAddressOverride: z.string().optional(),
+})
+const envelope = {
+  schemaVersion: z.literal(1),
+  common,
+  i18n: z.record(z.string(), localizedFields),
+}
 export const LocationFactsSnapshotSchema = z.discriminatedUnion('kind', [
-  LocationEntitySchema.options[0].extend(envelope),
+  LocationEntitySchema.options[0].extend({
+    ...envelope,
+    details: LocationEntitySchema.options[0].shape.details
+      .omit({ branch: true, format: true })
+      .extend({
+        brands: z.array(
+          z.strictObject({
+            identifiers: z.record(z.string(), z.string()),
+            i18n: z.record(z.string(), z.strictObject({ name: z.string() })),
+          }),
+        ),
+      }),
+  }),
   LocationEntitySchema.options[1].extend(envelope),
   LocationEntitySchema.options[2].extend(envelope),
   LocationEntitySchema.options[3].extend(envelope),
@@ -83,8 +121,13 @@ export function createLocationFactsSnapshot(
   const entity = facts.entity
   const details: Record<string, unknown> = { ...entity?.details }
   if (kind === 'establishment') {
-    details.brands = facts.brands
-    for (const field of ['branch', 'format', 'branchId', 'groupId', 'brandId'] as const)
+    details.brands = facts.brands.map(brand => ({
+      identifiers: brand.identifiers,
+      i18n: Object.fromEntries(
+        Object.entries(brand.names).map(([locale, name]) => [locale, { name }]),
+      ),
+    }))
+    for (const field of ['branchId', 'groupId', 'brandId'] as const)
       if (facts[field] !== undefined) details[field] = facts[field]
     if (facts.operatingStatus !== undefined)
       details.operatingStatus = facts.operatingStatus
@@ -95,16 +138,38 @@ export function createLocationFactsSnapshot(
       details.buildingStatus = facts.buildingStatus
   } else if (facts.buildingStatus != null)
     throw new Error('Building status requires a building snapshot')
+  // All translated identity fields share one locale-first namespace, as in Hub revisions.
+  const i18n: Record<string, z.infer<typeof localizedFields>> = {}
+  for (const [field, values] of Object.entries({
+    name: facts.names,
+    branch: facts.branch,
+    format: facts.format,
+    displayAddress: facts.location.address.fallbackDisplay,
+    displayAddressOverride: facts.location.address.displayOverrides,
+  }))
+    for (const [locale, value] of Object.entries(values ?? {})) {
+      i18n[locale] ??= {}
+      i18n[locale][field as keyof z.infer<typeof localizedFields>] = value
+    }
+  delete details.branch
+  delete details.format
   return LocationFactsSnapshotSchema.parse({
     schemaVersion: 1,
+    i18n,
     kind,
     common: {
-      names: facts.names,
       websites: facts.websites,
       socials: facts.socials,
       accessibility: facts.accessibility,
       ...(facts.footprint !== undefined ? { footprint: facts.footprint } : {}),
-      location: facts.location,
+      location: {
+        ...facts.location,
+        address: Object.fromEntries(
+          Object.entries(facts.location.address).filter(
+            ([key]) => key !== 'fallbackDisplay' && key !== 'displayOverrides',
+          ),
+        ),
+      },
       ...(facts.phoneNumber.length ? { phoneNumber: facts.phoneNumber } : {}),
       ...(facts.successorLocationId !== undefined
         ? { successorLocationId: facts.successorLocationId }
@@ -114,10 +179,10 @@ export function createLocationFactsSnapshot(
   })
 }
 
-/** Read a versioned snapshot or retained legacy projection without rewriting source evidence.
+/** Read normalized revision content or an in-memory Location projection.
  * @param value JSON text or a decoded snapshot/projection.
  * @returns Existing Feature display projection; building/natural-specific details remain attached.
- * @remarks Unsupported explicit versions fail closed. Legacy support is for retained evidence and old fixtures.
+ * @remarks Unsupported explicit versions fail closed. Unversioned inputs are application projections; persisted writers always emit the normalized contract.
  */
 export function readLocationFacts(value: unknown): LocationFacts {
   const raw = typeof value === 'string' ? JSON.parse(value) : value
@@ -126,20 +191,65 @@ export function readLocationFacts(value: unknown): LocationFacts {
   const snapshot = LocationFactsSnapshotSchema.parse(raw)
   const entity = LocationEntitySchema.parse({
     kind: snapshot.kind,
-    details: snapshot.details,
+    details:
+      snapshot.kind === 'establishment'
+        ? {
+            ...snapshot.details,
+            brands: snapshot.details.brands.map(brand => ({
+              identifiers: brand.identifiers,
+              names: Object.fromEntries(
+                Object.entries(brand.i18n).map(([locale, row]) => [locale, row.name]),
+              ),
+            })),
+          }
+        : snapshot.details,
   })
-  const address = snapshot.common.location.address ?? {
-    status: 'unresolved',
-    address2dId: null,
-    address3dId: null,
-    address3dUnitId: null,
-    snapshotId: null,
-    rawSource: {},
-    fallbackDisplay: {},
-  }
+  const addressValues = (
+    field: 'displayAddress' | 'displayAddressOverride',
+  ): Record<string, string> =>
+    Object.fromEntries(
+      Object.entries(snapshot.i18n).flatMap(([locale, row]) =>
+        row[field] === undefined ? [] : [[locale, row[field]!]],
+      ),
+    )
+  const storedAddress = snapshot.common.location.address
+  const address = storedAddress
+    ? {
+        ...storedAddress,
+        fallbackDisplay: addressValues('displayAddress'),
+        ...(Object.values(snapshot.i18n).some(
+          row => row.displayAddressOverride !== undefined,
+        )
+          ? { displayOverrides: addressValues('displayAddressOverride') }
+          : {}),
+      }
+    : {
+        status: 'unresolved',
+        address2dId: null,
+        address3dId: null,
+        address3dUnitId: null,
+        snapshotId: null,
+        rawSource: {},
+        fallbackDisplay: {},
+      }
   const details = entity.details
   return LocationFactsSchema.parse({
-    names: snapshot.common.names,
+    names: Object.fromEntries(
+      Object.entries(snapshot.i18n).flatMap(([locale, row]) =>
+        row.name === undefined ? [] : [[locale, row.name]],
+      ),
+    ),
+    ...Object.fromEntries(
+      ['branch', 'format'].flatMap(field => {
+        const values = Object.fromEntries(
+          Object.entries(snapshot.i18n).flatMap(([locale, row]) => {
+            const value = row[field as 'branch' | 'format']
+            return value === undefined ? [] : [[locale, value]]
+          }),
+        )
+        return Object.keys(values).length ? [[field, values]] : []
+      }),
+    ),
     ...(snapshot.common.websites !== undefined
       ? { websites: snapshot.common.websites }
       : {}),
@@ -154,7 +264,7 @@ export function readLocationFacts(value: unknown): LocationFacts {
       : {}),
     phoneNumber: snapshot.common.phoneNumber ?? [],
     ...Object.fromEntries(
-      ['branch', 'format', 'branchId', 'groupId', 'brandId']
+      ['branchId', 'groupId', 'brandId']
         .filter(field => field in details)
         .map(field => [field, (details as Record<string, unknown>)[field]]),
     ),
@@ -218,7 +328,18 @@ export function prepareLocationFactsForWrite(
     ...readLocationFacts(snapshot),
     entity: LocationEntitySchema.parse({
       kind: snapshot.kind,
-      details: snapshot.details,
+      details:
+        snapshot.kind === 'establishment'
+          ? {
+              ...snapshot.details,
+              brands: snapshot.details.brands.map(brand => ({
+                identifiers: brand.identifiers,
+                names: Object.fromEntries(
+                  Object.entries(brand.i18n).map(([locale, row]) => [locale, row.name]),
+                ),
+              })),
+            }
+          : snapshot.details,
     }),
   }
 }

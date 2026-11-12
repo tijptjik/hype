@@ -1,5 +1,6 @@
 // DRIZZLE
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 // TYPES
 import type { IdentityCatalogueContent } from '#lib/locations/identityCatalogue.js'
 
@@ -36,4 +37,23 @@ export const identityCatalogueSource = sqliteTable(
       .references(() => identityCatalogue.id),
   },
   table => [primaryKey({ columns: [table.source, table.sourceId] })],
+)
+
+/** Current searchable names, projected from the selected immutable catalogue revision. */
+export const identityCatalogueI18n = sqliteTable(
+  'identityCatalogueI18n',
+  {
+    catalogueId: text('catalogueId')
+      .notNull()
+      .references(() => identityCatalogue.id),
+    locale: text('locale').notNull(),
+    name: text('name').notNull(),
+  },
+  table => [
+    primaryKey({ columns: [table.catalogueId, table.locale] }),
+    index('identity_catalogue_i18n_name').on(
+      sql`${table.name} COLLATE NOCASE`,
+      table.catalogueId,
+    ),
+  ],
 )

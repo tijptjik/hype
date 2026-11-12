@@ -61,6 +61,12 @@ export function setupLifecycleDatabase(
     '0148_location_relationships.sql',
   ])
     sqlite.exec(readFileSync('migrations/' + migration, 'utf8'))
+  // Current writers use locale-first content; these fixtures do not install Feature naming views.
+  sqlite.exec(
+    readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
+      'DROP VIEW featureAcceptedNamingLocation;',
+    )[0],
+  )
   beforeCorrections?.(sqlite)
   for (const migration of [
     '0149_location_correction_rows.sql',
@@ -76,6 +82,10 @@ export function setupLifecycleDatabase(
     sqlite.exec(`DROP TRIGGER feature_location_scope_insert;
     DROP TRIGGER feature_location_scope_update; DROP TRIGGER feature_location_feature_scope;
     DROP TRIGGER feature_location_owner_scope;`)
+
+  // This historical placement fixture retains old kind values but exposes current read columns.
+  sqlite.exec(`ALTER TABLE location ADD COLUMN class TEXT;
+    ALTER TABLE location ADD COLUMN matchingType TEXT GENERATED ALWAYS AS (coalesce(class,kind)) VIRTUAL;`)
 
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => {

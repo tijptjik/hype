@@ -35,7 +35,7 @@ function fixture(includeShared = false) {
     'venue',
     JSON.stringify({
       schemaVersion: 1,
-      common: { names: { en: 'Venue name', 'zh-hant': '場所名稱' } },
+      i18n: { en: { name: 'Venue name' }, 'zh-hant': { name: '場所名稱' } },
     }),
   )
   db.prepare('INSERT INTO locationRevision VALUES (?, ?, ?)').run(
@@ -43,7 +43,7 @@ function fixture(includeShared = false) {
     'venue',
     JSON.stringify({
       schemaVersion: 1,
-      common: { names: { en: 'Unaccepted rename' } },
+      i18n: { en: { name: 'Unaccepted rename' } },
     }),
   )
   db.exec(

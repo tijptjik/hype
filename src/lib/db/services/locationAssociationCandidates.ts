@@ -44,6 +44,7 @@ export async function nearbyAssociationLocations(
     location.id,
     locationRevision.facts,
     sql`${organisationId}`,
+    locationRevision.id,
   )
   const [lng, lat] = input.coordinates
   const dy = 100 / 110000

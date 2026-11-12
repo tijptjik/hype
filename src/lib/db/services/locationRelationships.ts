@@ -271,7 +271,7 @@ export async function readLocationRelationships(
     )
     const labels = endpoints.map(
       key =>
-        sql`(SELECT COALESCE(json_extract(v.facts,'$.common.names.en'),json_extract(v.facts,'$.names.en'),l.id) FROM location l LEFT JOIN locationRevision v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.version DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
+        sql`(SELECT COALESCE(json_extract(v.facts,'$.i18n.en.name'),json_extract(v.facts,'$.names.en'),l.id) FROM location l LEFT JOIN locationRevision v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.version DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
     )
     const addressLabel =
       table === 'locationAddress'

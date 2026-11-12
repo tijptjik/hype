@@ -447,7 +447,11 @@ describe('local Location creation', () => {
       )
       expect(snapshot.schemaVersion).toBe(1)
       expect(snapshot.kind).toBe('establishment')
-      expect(snapshot.common.names).toEqual(facts.names)
+      expect(snapshot.i18n).toMatchObject(
+        Object.fromEntries(
+          Object.entries(facts.names).map(([locale, name]) => [locale, { name }]),
+        ),
+      )
       expect(readLocationFacts(revision.facts).phoneNumber).toEqual([
         '+85223456789',
         '+85291234567',
@@ -6525,6 +6529,11 @@ describe('shared Location footprint persistence', () => {
           .replaceAll('payload', 'rawSource')
           .replaceAll('sequence', 'version'),
       )
+      sqlite.exec(
+        readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
+          'DROP VIEW featureAcceptedNamingLocation;',
+        )[0],
+      )
       const created = await createLocalLocation(
         db,
         'p',
@@ -6562,6 +6571,11 @@ describe('shared Location footprint persistence', () => {
       readFileSync('migrations/0142_location_facts_snapshots.sql', 'utf8')
         .replaceAll('payload', 'rawSource')
         .replaceAll('sequence', 'version'),
+    )
+    sqlite.exec(
+      readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
+        'DROP VIEW featureAcceptedNamingLocation;',
+      )[0],
     )
     const created = await createLocalLocation(
       db,

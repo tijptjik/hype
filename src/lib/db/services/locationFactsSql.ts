@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm'
 import type { SQL, SQLWrapper } from 'drizzle-orm'
 
 const paths = {
-  names: '$.common.names',
+  names: '$.i18n',
   phoneNumber: '$.common.phoneNumber',
   brands: '$.details.brands',
   location: '$.common.location',
@@ -33,10 +33,17 @@ export function locationFactsFieldSql(
   column: SQLWrapper,
   field: keyof typeof paths,
 ): SQL {
+  if (field === 'names')
+    return sql`CASE WHEN json_type(${column},'$.schemaVersion') IS NULL THEN json_extract(${column},'$.names') WHEN json_extract(${column},'$.schemaVersion')=1 THEN (SELECT json_group_object(n.key,json_extract(n.value,'$.name')) FROM json_each(${column},'$.i18n') n WHERE json_type(n.value,'$.name')='text') END`
+  if (field === 'location') {
+    const location = sql`json_extract(${column},'$.common.location')`
+    const address = sql`json_set(${location},'$.address.fallbackDisplay',json((SELECT json_group_object(n.key,json_extract(n.value,'$.displayAddress')) FROM json_each(${column},'$.i18n') n WHERE json_type(n.value,'$.displayAddress')='text')))`
+    return sql`CASE WHEN json_type(${column},'$.schemaVersion') IS NULL THEN json_extract(${column},'$.location') WHEN json_extract(${column},'$.schemaVersion') IS NOT 1 THEN NULL WHEN EXISTS(SELECT 1 FROM json_each(${column},'$.i18n') n WHERE json_type(n.value,'$.displayAddressOverride')='text') THEN json_set(${address},'$.address.displayOverrides',json((SELECT json_group_object(n.key,json_extract(n.value,'$.displayAddressOverride')) FROM json_each(${column},'$.i18n') n WHERE json_type(n.value,'$.displayAddressOverride')='text'))) ELSE ${address} END`
+  }
+  if (field === 'brands')
+    return sql`CASE WHEN json_type(${column},'$.schemaVersion') IS NULL THEN coalesce(json_extract(${column},'$.brands'),'[]') WHEN json_extract(${column},'$.schemaVersion')=1 THEN (SELECT json_group_array(json_object('identifiers',json_extract(b.value,'$.identifiers'),'names',json((SELECT json_group_object(n.key,json_extract(n.value,'$.name')) FROM json_each(b.value,'$.i18n') n)))) FROM json_each(${column},'$.details.brands') b) END`
   const result = sql`CASE json_extract(${column},'$.schemaVersion') WHEN 1 THEN json_extract(${column},${projectionConstant(paths[field])}) ELSE CASE WHEN json_type(${column},'$.schemaVersion') IS NULL THEN json_extract(${column},${projectionConstant(`$.${field}`)}) END END`
-  return field === 'brands' || field === 'phoneNumber'
-    ? sql`COALESCE(${result},'[]')`
-    : result
+  return field === 'phoneNumber' ? sql`COALESCE(${result},'[]')` : result
 }
 
 /** Read a Feature's accepted shared field, including field-specific direct-save pins.

@@ -137,6 +137,7 @@ export async function searchLocalLocationCandidates(
     locationTable.id,
     locationRevision.facts,
     sql`${organisationId}`,
+    locationRevision.id,
   )
   // Scope and latest-revision selection precede name matching and the result bound.
   const rows = await db
@@ -206,6 +207,7 @@ export async function nearbyLocalLocationCandidates(
     locationTable.id,
     locationRevision.facts,
     sql`${organisationId}`,
+    locationRevision.id,
   )
   const [lng, lat] = input.coordinates
   const dy = input.radius / 110000

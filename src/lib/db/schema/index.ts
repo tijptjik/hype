@@ -63,3 +63,5 @@ export * from './featureIntentPolicy'
 export * from './displayTemplate'
 
 export * from './identityCatalogue'
+
+export * from './locationRevisionI18n'

@@ -196,21 +196,27 @@ export const organisationProperty = sqliteTable(
  * @remarks
  * Stores multilingual content for properties
  */
-export const propertyI18n = sqliteTable('propertyI18n', {
-  ...automaticTranslationColumns(),
-  propertyId: text('propertyId')
-    .notNull()
-    .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  locale: text('locale', { enum: supportedLocales as [string, ...string[]] }).notNull(),
-  // Label in {locale}
-  label: text('label').notNull(),
-  labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
-  // Placeholder in {locale}
-  placeholder: text('placeholder').default('Type here'),
-  placeholderGen: integer('placeholderGen', { mode: 'boolean' })
-    .notNull()
-    .default(true),
-})
+export const propertyI18n = sqliteTable(
+  'propertyI18n',
+  {
+    ...automaticTranslationColumns(),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]],
+    }).notNull(),
+    // Label in {locale}
+    label: text('label').notNull(),
+    labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
+    // Placeholder in {locale}
+    placeholder: text('placeholder').default('Type here'),
+    placeholderGen: integer('placeholderGen', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+  },
+  table => [uniqueIndex('property_i18n_identity').on(table.propertyId, table.locale)],
+)
 
 /**
  * Property value definitions

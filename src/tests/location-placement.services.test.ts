@@ -65,6 +65,8 @@ async function setup(policy: 'follow' | 'fixed' | 'review' = 'review', hints = f
   s.sqlite.prepare("UPDATE project SET locationPolicy=? WHERE id='p'").run(
     JSON.stringify({
       ...DEFAULT_PROJECT_LOCATION_POLICY,
+      // These placement tests deliberately apply one policy to both change sources.
+      sameSources: true,
       relocation: policy,
       address: 'follow',
     }),
@@ -243,7 +245,7 @@ describe('Feature revisions during placement acceptance', () => {
         "INSERT INTO hub VALUES('core','core'); INSERT INTO property(id,key,scope,hubId,type,component,dataType,audience,isTranslatable,dateResolution,timeMaxHour,cardinality,presentation) VALUES('phone','phoneNumber','hub','core','field','input','text','public',0,'day',24,'many','text')",
       )
       s.sqlite.exec(
-        "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('replacement','establishment','unresolved','p'); INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'replacement-r','replacement',1,origin,contentHash,rawSource,json_set(facts,'$.common.names.en','Replacement') FROM locationRevision WHERE id='r'",
+        "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('replacement','establishment','unresolved','p'); INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'replacement-r','replacement',1,origin,contentHash,rawSource,json_set(facts,'$.i18n.en.name','Replacement') FROM locationRevision WHERE id='r'",
       )
       const result = await relinkFeatureLocation(s.db, {
         featureId: 'f',
@@ -474,7 +476,7 @@ describe('Feature revisions during placement acceptance', () => {
   })
 })
 describe('occupancy and canonical address acceptance', () => {
-  it('fixed does not propose or move; layer override resolves independently', async () => {
+  it('fixed does not propose or move; Project policy changes require review', async () => {
     const s = await setup('fixed')
     expect(
       await proposeLocationPlacement(s.db, {
@@ -484,7 +486,7 @@ describe('occupancy and canonical address acceptance', () => {
       }),
     ).toBeNull()
     s.sqlite.exec(
-      "UPDATE layer SET relocationPolicy='review',relocationPolicyRevision=1",
+      "UPDATE project SET locationPolicy=json_set(locationPolicy,'$.relocation','review'),locationPolicyRevision=locationPolicyRevision+1 WHERE id='p'",
     )
     const p = await proposeLocationPlacement(s.db, {
       featureId: 'f',

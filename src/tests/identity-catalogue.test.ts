@@ -45,7 +45,10 @@ function fixture() {
     )[0],
   )
   f.sqlite.exec(readFileSync('migrations/0232_community_curation_locks.sql', 'utf8'))
-  f.sqlite.exec(readFileSync('migrations/0237_identity_catalogue.sql', 'utf8'))
+  f.sqlite.exec(
+    readFileSync('migrations/0237_identity_catalogue.sql', 'utf8') +
+      readFileSync('migrations/0239_catalogue_i18n.sql', 'utf8'),
+  )
   const facts = {
     names: { en: 'AROME Central' },
     brands: [{ identifiers: { breadlineBrand: 'arome' }, names: { en: 'AROME' } }],

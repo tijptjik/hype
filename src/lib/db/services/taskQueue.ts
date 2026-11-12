@@ -180,7 +180,7 @@ export async function listTaskQueue(
       locationKind: string | null
     }
   >(
-    sql`${projection} SELECT task.*, (SELECT l.matchingType FROM location l WHERE l.id=json_extract(task.locationTask,'$.locationId')) locationKind, (SELECT COALESCE(json_extract(lr.facts,'$.common.names'),json_extract(lr.facts,'$.names')) FROM locationRevision lr WHERE lr.locationId=json_extract(task.locationTask,'$.locationId') ORDER BY lr.version DESC LIMIT 1) locationNames FROM task WHERE ${where} ORDER BY ${sort} ${order},COALESCE(json_extract(task.locationTask,'$.matchScore'),0) DESC,COALESCE(json_extract(task.locationTask,'$.matchDistance'),0) ASC,task.id ASC LIMIT ${limit ?? -1} OFFSET ${offset}`,
+    sql`${projection} SELECT task.*, (SELECT l.matchingType FROM location l WHERE l.id=json_extract(task.locationTask,'$.locationId')) locationKind, (SELECT (SELECT json_group_object(t.key,json_extract(t.value,'$.name')) FROM json_each(lr.facts,'$.i18n') t WHERE json_type(t.value,'$.name')='text') FROM locationRevision lr WHERE lr.locationId=json_extract(task.locationTask,'$.locationId') ORDER BY lr.version DESC LIMIT 1) locationNames FROM task WHERE ${where} ORDER BY ${sort} ${order},COALESCE(json_extract(task.locationTask,'$.matchScore'),0) DESC,COALESCE(json_extract(task.locationTask,'$.matchDistance'),0) ASC,task.id ASC LIMIT ${limit ?? -1} OFFSET ${offset}`,
   )
   // Hydrate only this page; JSON membership leaves room for relational LIMIT bindings.
   const nativeIds = refs.filter(row => !row.locationTask).map(row => row.id)

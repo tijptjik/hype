@@ -11,6 +11,7 @@ import type { Database } from '#lib/types.js'
 /** Build effective search expressions before pagination, using the same layer order as display.
  * @param db Database. @param id Trusted Location identity expression. @param facts Source facts column.
  * @param organisationId Authorized Organisation scope, or null for shared-only reads.
+ * @param revisionId Current source revision used by the translation projection.
  * @returns Fixed-field SQL expressions; legacy fixtures without shared storage retain source reads.
  */
 export async function locationReadFields(
@@ -18,16 +19,23 @@ export async function locationReadFields(
   id: SQLWrapper,
   facts: SQLWrapper,
   organisationId: SQLWrapper,
+  revisionId: SQLWrapper,
 ): Promise<Record<'names' | 'location' | 'operatingStatus' | 'buildingStatus', SQL>> {
   const storage = await db.get<{ n: number }>(
     sql`SELECT 1 n FROM sqlite_master WHERE name='locationSharedRevision' AND type='table' LIMIT 1`,
+  )
+  const translations = await db.get<{ n: number }>(
+    sql`SELECT 1 n FROM sqlite_master WHERE name='locationRevisionI18n' AND type='table' LIMIT 1`,
   )
   const overrides = sql`(SELECT overrides FROM organisationLocationHead WHERE locationId=${id} AND organisationId=${organisationId})`
   /** Resolve a fixed field below Organisation overrides. @param field Known field. @returns Hype effective value. */
   const shared = (
     field: 'names' | 'location' | 'operatingStatus' | 'buildingStatus',
   ): SQL => {
-    const source = locationFactsFieldSql(facts, field)
+    const source =
+      field === 'names' && translations?.n
+        ? sql`(SELECT json_group_object(locale,name) FROM locationRevisionI18n WHERE revisionId=${revisionId} AND name IS NOT NULL)`
+        : locationFactsFieldSql(facts, field)
     if (!storage?.n) return source
     const entry = sql`(SELECT json_extract(corrections,${`$.${field}`}) FROM locationSharedHead WHERE locationId=${id})`
     return sql`CASE WHEN json_extract(${entry},'$.supersededBy') IS NULL THEN CASE json_extract(${entry},'$.choice.mode') WHEN 'override' THEN json_extract(${entry},'$.choice.value') WHEN 'clear' THEN ${field === 'names' ? '{}' : null} ELSE ${source} END ELSE ${source} END`

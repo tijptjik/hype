@@ -67,8 +67,8 @@ describe('typed Location facts snapshots', () => {
     expect(snapshot).toMatchObject({
       schemaVersion: 1,
       kind: 'establishment',
-      common: { names: facts.names },
-      details: { brands: [{ identifiers: {}, names: { en: 'Brand' } }] },
+      i18n: { en: { name: 'Example' } },
+      details: { brands: [{ identifiers: {}, i18n: { en: { name: 'Brand' } } }] },
     })
     expect(snapshot).not.toHaveProperty('names')
     expect(readLocationFacts(snapshot)).toEqual({
@@ -83,8 +83,8 @@ describe('typed Location facts snapshots', () => {
     const snapshot = LocationFactsSnapshotSchema.parse({
       schemaVersion: 1,
       kind: 'building',
+      i18n: { en: { name: 'Example' } },
       common: {
-        names: facts.names,
         footprint,
         location: { geometry: facts.location.geometry },
       },
@@ -99,7 +99,7 @@ describe('typed Location facts snapshots', () => {
       serializeLocationFacts({ ...projected, names: { en: 'Corrected building' } }),
     )
     expect(next.common.footprint).toEqual(footprint)
-    expect(next.common.names.en).toBe('Corrected building')
+    expect(next.i18n.en.name).toBe('Corrected building')
     expect(resolveFeatureLocation(projected, projected.location, {}).footprint).toEqual(
       footprint,
     )
@@ -122,7 +122,8 @@ describe('typed Location facts snapshots', () => {
     const base = {
       schemaVersion: 1,
       kind: 'building',
-      common: { names: {}, location: facts.location },
+      i18n: {},
+      common: createLocationFactsSnapshot(facts, 'building').common,
     }
     for (const details of [
       { source: { inventory: 'landsd', buildingCSUID: 'source-record' } },
@@ -271,7 +272,7 @@ describe('typed Location facts snapshots', () => {
     expect(planLocationAdoption(input).decision.facts).toBe('review')
     const accepted = planLocationAdoption({
       ...input,
-      policy: { ...policy, establishment: 'follow' },
+      policy: { ...policy, sameSources: true, establishment: 'follow' },
     })
     expect(accepted.effective.footprint).toEqual(next.footprint)
     const cleared = planLocationAdoption({
@@ -327,6 +328,8 @@ describe('typed Location facts snapshots', () => {
         )
         .all()
       db.exec(readFileSync('migrations/0142_location_facts_snapshots.sql', 'utf8'))
+      db.exec('CREATE VIEW featureAcceptedNamingLocation AS SELECT 1')
+      db.exec(readFileSync('migrations/0238_location_i18n.sql', 'utf8'))
       const rows = db
         .prepare('SELECT facts FROM locationRevision ORDER BY sequence')
         .all()
@@ -360,9 +363,48 @@ describe('typed Location facts snapshots', () => {
           '{}',
           JSON.stringify(facts),
         ),
-      ).toThrow('versioned typed facts')
+      ).toThrow('locale-first i18n content')
     } finally {
       db.close()
     }
   })
+})
+
+it('stores localized identity and address labels under locale-first i18n', () => {
+  const input: LocationFacts = {
+    ...facts,
+    names: { en: 'AROME Bakery', 'zh-Hant': '東海堂' },
+    branch: { en: 'Central', 'zh-Hant': '中環' },
+    format: { en: 'AROME Bakery' },
+    branchId: '0012',
+    brands: [{ identifiers: { source: 'arome' }, names: { en: 'AROME' } }],
+    location: {
+      ...facts.location,
+      address: {
+        ...facts.location.address,
+        displayOverrides: { en: 'Reviewed address' },
+      },
+    },
+  }
+  const snapshot = createLocationFactsSnapshot(input, 'establishment')
+  expect(snapshot.i18n).toEqual({
+    en: {
+      name: 'AROME Bakery',
+      branch: 'Central',
+      format: 'AROME Bakery',
+      displayAddress: 'Retained address',
+      displayAddressOverride: 'Reviewed address',
+    },
+    'zh-Hant': { name: '東海堂', branch: '中環' },
+  })
+  expect(snapshot.common).not.toHaveProperty('names')
+  expect(snapshot.common.location.address).not.toHaveProperty('fallbackDisplay')
+  expect(snapshot.common.location.address).not.toHaveProperty('displayOverrides')
+  expect(snapshot.details).not.toHaveProperty('branch')
+  expect(snapshot.details).not.toHaveProperty('format')
+  expect(snapshot.details).toMatchObject({
+    branchId: '0012',
+    brands: [{ i18n: { en: { name: 'AROME' } } }],
+  })
+  expect(readLocationFacts(snapshot)).toEqual(input)
 })
