@@ -21,12 +21,25 @@ for (const [name, engine] of [
     )
     await page.goto(base + '/__review_header.html')
     await page.locator('[data-review-header] button').first().waitFor()
-    await page.waitForTimeout(350)
-    for (const destination of ['organisation', 'project', 'organisation', 'project']) {
+    for (const destination of ['hub', 'organisation', 'project', 'hub']) {
       await page
         .getByRole('button', { name: 'Switch to ' + destination, exact: true })
         .click()
-      await page.waitForTimeout(350)
+      const geometry = await page
+        .locator('[data-review-header] li')
+        .evaluateAll(items =>
+          items.map(item => ({
+            width: item.getBoundingClientRect().width,
+            opacity: getComputedStyle(item).opacity,
+            duration: getComputedStyle(item).transitionDuration,
+          })),
+        )
+      assert.ok(
+        geometry.every(
+          item => item.width > 0 && item.opacity === '1' && item.duration === '0s',
+        ),
+        'Tabs must appear fully expanded without a transition',
+      )
       const actual = await page
         .locator('[data-review-header] li[aria-hidden="false"] button')
         .allTextContents()

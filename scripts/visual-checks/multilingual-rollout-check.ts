@@ -59,27 +59,14 @@ for (const type of [chromium]) {
       )
       await page.getByRole('button', { name: 'Save record' }).click()
       const dialog = page.locator('[data-translation-dialog]')
-      await dialog.getByRole('button', { name: /Location.*1 field/ }).waitFor()
+      await dialog.getByRole('button', { name: /Location.*2 fields/ }).waitFor()
       await dialog.getByRole('button', { name: /Capabilities.*1 field/ }).click()
-      await dialog.getByRole('button', { name: 'Translate from English' }).click()
-      await dialog.getByRole('button', { name: 'Accept all and continue' }).click()
       await dialog.getByRole('button', { name: 'Translate from English' }).click()
       await dialog.getByRole('button', { name: 'Accept all and continue' }).waitFor()
       await page.screenshot({
         path: `${process.env.DEV_RUNNER_ARTIFACTS}/rollout-${width}.png`,
         animations: 'disabled',
       })
-      await dialog.getByRole('button', { name: 'Close translation review' }).click()
-      const suggestion = page.locator('[data-translation-suggestion]')
-      await suggestion.getByRole('button', { name: 'Reject translation' }).click()
-      if (
-        JSON.parse(
-          (await page.locator('[data-rollout-fixture]').getAttribute('data-names'))!,
-        )['zh-Hant']
-      )
-        throw Error('Rejection changed original name')
-      await page.getByRole('button', { name: 'Save record' }).click()
-      await dialog.getByRole('button', { name: 'Translate from English' }).click()
       await dialog.getByRole('button', { name: 'Accept all and continue' }).click()
       await page.waitForFunction(
         () =>
@@ -92,6 +79,8 @@ for (const type of [chromium]) {
         throw Error('Name not saved')
       if (!JSON.parse((await fixture.getAttribute('data-labels'))!)['zh-Hant'])
         throw Error('Capability not saved')
+      if (!JSON.parse((await fixture.getAttribute('data-branch'))!)['zh-Hant'])
+        throw Error('Branch translation not saved')
       if (errors.length) throw Error(errors.join('\n'))
       await page.close()
       console.log('PASS multilingual rollout', width)

@@ -80,7 +80,7 @@ for (const [name, engine] of [
           .getByLabel('Evidence URL', { exact: true })
           .waitFor({ state: 'hidden' })
         await content
-          .getByRole('link', { name: 'after: TEST · New Harbour House', exact: true })
+          .getByRole('link', { name: 'TEST · New Harbour House', exact: true })
           .first()
           .waitFor()
       }

@@ -29,6 +29,9 @@ try {
   await remove.waitFor({ state: 'visible', timeout: 60000 })
   if (!(await remove.isDisabled()))
     throw new Error('Expected disabled remove button in view mode')
+  const cursor = await remove.evaluate(el => getComputedStyle(el).cursor)
+  if (cursor !== 'default') throw new Error(`Disabled cursor is ${cursor}`)
+  result.disabledCursor = cursor
   const before = await remove.evaluate(el => getComputedStyle(el).backgroundColor)
   await remove.hover({ force: true })
   const after = await remove.evaluate(el => getComputedStyle(el).backgroundColor)
@@ -53,6 +56,29 @@ try {
       path: path.join(output, `data-model-toolbar-${width}.png`),
       fullPage: true,
     })
+  }
+  // Exercise all disabled semantics against the application's actual CSS cascade.
+  result.cursorCases = await page.evaluate(() => {
+    const fixture = document.createElement('div')
+    fixture.innerHTML = `
+      <button disabled class="cursor-pointer"><span class="cursor-pointer">Native</span></button>
+      <button aria-disabled="true" class="cursor-pointer">ARIA</button>
+      <a aria-disabled="true" href="#" class="cursor-pointer">Link</a>
+      <div role="menuitem" data-disabled class="cursor-pointer">Bits</div>
+      <fieldset disabled><button class="cursor-pointer">Fieldset</button></fieldset>
+      <div class="bits-theme"><div class="bits-switch-field--disabled"><label class="bits-switch-label">Switch label</label></div><div class="bits-checkbox-field--disabled"><label class="bits-checkbox-label">Checkbox label</label></div></div>
+      <button data-disabled="false" class="cursor-pointer">Enabled</button>`
+    document.body.append(fixture)
+    const cursors = [
+      ...fixture.querySelectorAll('button, a, [role="menuitem"], span, label'),
+    ].map(el => ({ text: el.textContent, cursor: getComputedStyle(el).cursor }))
+    fixture.remove()
+    return cursors
+  })
+  for (const entry of result.cursorCases) {
+    const expected = entry.text === 'Enabled' ? 'pointer' : 'default'
+    if (entry.cursor !== expected)
+      throw new Error(`${entry.text}: expected ${expected}, got ${entry.cursor}`)
   }
   result.passed = true
 } catch (error) {

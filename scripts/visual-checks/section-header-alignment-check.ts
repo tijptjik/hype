@@ -19,6 +19,17 @@ for (const [name, engine] of [
     await page.setContent(
       `<style>*{box-sizing:border-box}body{margin:0;font:16px sans-serif}.row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.column{min-width:0;border:1px solid #777}header{display:grid;align-items:center;grid-template-columns:minmax(0,1fr) auto;min-height:68px!important;padding:12px 24px;background:#342536;color:white}h2{font-size:20px;margin:0}p{font-size:12px;margin:4px 0 0}article{height:80px}@media(max-width:600px){.row{grid-template-columns:1fr}}</style><div data-form-surface><div class="row">${['Map Style', 'Marker Style', 'Card Style'].map((title, i) => `<div class="column"><section><header class="bits-form__section-header"><div><h2>${title}</h2><p>${['Choose the basemap assigned to this project.', 'Choose how locations appear on the map.', 'Choose how features are displayed.'][i]}</p></div><div></div></header><article>Content</article></section></div>`).join('')}</div></div>`,
     )
+    await page.evaluate(() => {
+      const OriginalResizeObserver = window.ResizeObserver
+      Object.assign(window, { headerObserveCalls: 0 })
+      window.ResizeObserver = class extends OriginalResizeObserver {
+        observe(target: Element, options?: ResizeObserverOptions): void {
+          const counters = window as unknown as { headerObserveCalls: number }
+          counters.headerObserveCalls++
+          super.observe(target, options)
+        }
+      }
+    })
     await page.addScriptTag({
       content:
         js +
@@ -36,6 +47,9 @@ for (const [name, engine] of [
       return h[0]
     }
     const wide = await equal('initial')
+    const initialSubscriptions = await page.evaluate(
+      () => (window as unknown as { headerObserveCalls: number }).headerObserveCalls,
+    )
     await page.setViewportSize({ width: 700, height: 800 })
     const narrow = await equal('wrap')
     if (narrow <= wide) throw Error('description did not wrap')
@@ -51,6 +65,11 @@ for (const [name, engine] of [
       .evaluate(e => (e.textContent = 'Short'))
     const short = await equal('dynamic shrink')
     if (short >= tall) throw Error('no shrink')
+    const subscriptions = await page.evaluate(
+      () => (window as unknown as { headerObserveCalls: number }).headerObserveCalls,
+    )
+    if (subscriptions !== initialSubscriptions)
+      throw Error('Unchanged headers were re-observed')
     await page.setViewportSize({ width: 390, height: 800 })
     await page
       .locator('p')
