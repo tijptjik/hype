@@ -30,7 +30,7 @@ import StoreIcon from '#lib/bits/custom/icon/StoreIcon.svelte'
 import ChatIcon from 'virtual:icons/proicons/chat'
 import TemplateIcon from '#lib/bits/custom/icon/TemplateIcon.svelte'
 import BookOpenIcon from 'virtual:icons/proicons/book-open'
-import CameraIcon from 'virtual:icons/proicons/camera'
+import FieldResearchIcon from '#lib/bits/custom/icon/FieldResearchIcon.svelte'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
@@ -193,8 +193,8 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   )
     items.push({
       href: `${ADMIN_PATH}/fieldresearch`,
-      label: 'Field research',
-      icon: CameraIcon,
+      label: 'Field Research',
+      icon: FieldResearchIcon,
     })
 
   return items
