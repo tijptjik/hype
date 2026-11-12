@@ -121,6 +121,22 @@ class KindSeedTest(unittest.TestCase):
     def tearDown(self):
         self.db.close()
 
+    def test_taxonomy_columns_and_generated_matching_type_replay(self):
+        self.db.executescript("""
+            ALTER TABLE location ADD COLUMN class TEXT;
+            UPDATE location SET class=kind,kind=CASE kind WHEN 'building' THEN 'built' ELSE 'operational' END
+                WHERE kind IN ('building','establishment');
+            ALTER TABLE location ADD COLUMN matchingType TEXT GENERATED ALWAYS AS (coalesce(class,kind)) VIRTUAL;
+        """)
+        document = seed.plan(self.db, "test:taxonomy")
+        seed.apply_local(self.db, document)
+        seed.apply_local(self.db, document)
+        row = self.db.execute("SELECT kind,class,matchingType FROM location WHERE id='building-to-seed'").fetchone()
+        self.assertEqual(tuple(row), ('built', 'building', 'building'))
+        seed.apply_local(self.db, document, True)
+        row = self.db.execute("SELECT kind,class,matchingType FROM location WHERE id='building-to-seed'").fetchone()
+        self.assertEqual(tuple(row), ('unknown', None, 'unknown'))
+
     def test_complete_inventory_and_conflicts(self):
         decisions = {d["locationId"]: d for d in self.document["decisions"]}
         self.assertEqual(self.document["counts"]["totalFeatures"], 11)

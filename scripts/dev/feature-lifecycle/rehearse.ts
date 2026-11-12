@@ -172,6 +172,9 @@ export async function rehearseFeatureLifecycle(
         'migrations/pending/feature-lifecycle/target.sql',
         'utf8',
       )
+      // Later migrations may already install guards replaced by this lifecycle contract.
+      for (const match of target.matchAll(/CREATE TRIGGER ([a-zA-Z0-9_]+)/g))
+        db.exec(`DROP TRIGGER IF EXISTS ${identifier(match[1])}`)
       const triggerStart = target.indexOf('CREATE TRIGGER')
       const definitions = target
         .slice(0, triggerStart)

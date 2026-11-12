@@ -12,6 +12,7 @@ import { resolve } from 'node:path'
 // SQLITE
 import { Database } from 'bun:sqlite'
 // REBUILD
+import { prepareLocalRevisions } from './prepare-local-revisions'
 import { backfillPreparedMessaging } from '../messaging/rebuild-stage'
 import { restoreD1Export } from './restore-d1-export'
 import { convertExistingLocations } from './convert-locations'
@@ -75,10 +76,13 @@ async function main(): Promise<void> {
     inputs: string | undefined
   let messagingOrganisation: string | undefined
   let identityReview: string | undefined
+  let resume: string | undefined
   const args = process.argv.slice(2)
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--apply') apply = true
     else if (args[i] === '--no-mocks') mocks = false
+    else if (args[i] === '--resume' && args[i + 1] && !args[i + 1].startsWith('--'))
+      resume = resolve(args[++i])
     else if (
       args[i] === '--messaging-organisation' &&
       args[i + 1] &&
@@ -95,7 +99,7 @@ async function main(): Promise<void> {
       identityReview = resolve(args[++i])
     else
       throw new Error(
-        'Usage: rebuild.ts [--apply] [--inputs retained-export-directory] [--no-mocks] [--identity-review private-review.json] [--messaging-organisation CODE]',
+        'Usage: rebuild.ts [--apply] [--resume prepared-directory] [--inputs retained-export-directory] [--no-mocks] [--identity-review private-review.json] [--messaging-organisation CODE]',
       )
   }
   if (
@@ -132,21 +136,42 @@ async function main(): Promise<void> {
   const destination = resolve(namespace, candidates[0])
   mkdirSync('.local/dev-rebuilds', { recursive: true, mode: 0o700 })
   const lock = '.local/dev-rebuilds/active.lock'
-  mkdirSync(lock)
-  const directory = resolve(
-    '.local/dev-rebuilds',
-    new Date().toISOString().replaceAll(':', '-') + '-' + randomUUID(),
-  )
-  mkdirSync(directory, { mode: 0o700 })
+  const directory =
+    resume ??
+    resolve(
+      '.local/dev-rebuilds',
+      new Date().toISOString().replaceAll(':', '-') + '-' + randomUUID(),
+    )
+  mkdirSync(directory, { mode: 0o700, recursive: true })
   let step = 'exports'
-  const receipt: Record<string, unknown> = {
-    version: 1,
-    createdAt: new Date().toISOString(),
-    destination,
-    targetIdentity: `local:${bindings[0].database_id}`,
-    mocks,
-    applied: false,
+  const receipt: Record<string, unknown> = resume
+    ? JSON.parse(readFileSync(resolve(directory, 'receipt.json'), 'utf8'))
+    : {
+        version: 1,
+        createdAt: new Date().toISOString(),
+        destination,
+        targetIdentity: `local:${bindings[0].database_id}`,
+        mocks,
+        applied: false,
+      }
+  if (resume) {
+    if (
+      !directory.startsWith(resolve('.local/dev-rebuilds') + '/') ||
+      receipt.targetIdentity !== `local:${bindings[0].database_id}` ||
+      receipt.destination !== destination ||
+      receipt.applied ||
+      !receipt.userReconciliation
+    )
+      throw new Error(
+        'Resume requires an unapplied local rebuild with completed user reconciliation',
+      )
+    inputs = String(receipt.inputs)
+    mocks = Boolean(receipt.mocks)
   }
+  mkdirSync(lock)
+  const seedPath = '.local/breadline/users/local/identity-seed.json'
+  let state: { seed: string; targetIdentity: string }
+  let reconciliation: ReturnType<typeof reconcilePreparedUsers>
   /** Run a command privately. @param command Literal command arguments. @param label Private log name. @returns Standard output after success. */
   async function run(command: string[], label: string): Promise<string> {
     const log = resolve(directory, label + '.log')
@@ -234,7 +259,7 @@ async function main(): Promise<void> {
       )
     }
     receipt.inputs = inputs
-    receipt.inputHashes = Object.fromEntries(
+    const inputHashes = Object.fromEntries(
       ['schema.json', 'hype.sql', 'breadline.sqlite'].map(name => [
         name,
         createHash('sha256')
@@ -242,230 +267,272 @@ async function main(): Promise<void> {
           .digest('hex'),
       ]),
     )
-    step = 'restore'
-    console.info('Restoring HYPE and applying migrations…')
-    receipt.restore = restoreD1Export(
-      resolve(inputs, 'hype.sql'),
-      resolve(inputs, 'schema.json'),
-      dbPath,
-    )
-    step = 'migrations'
-    await operation('migrate', resolve(directory, 'migrations.json'))
-    step = 'existing-feature-locations'
-    receipt.locationSplit = await convertExistingLocations(dbPath, directory)
-    step = 'breadline-users'
-    // Keep target-specific IDs stable across every rebuild; decisions are retained as reproducible inputs.
-    const seedPath = '.local/breadline/users/local/identity-seed.json'
-    mkdirSync(resolve('.local/breadline/users/local'), { recursive: true, mode: 0o700 })
-    if (!existsSync(seedPath))
+    if (resume && JSON.stringify(inputHashes) !== JSON.stringify(receipt.inputHashes))
+      throw new Error('Retained exports changed since preparation')
+    receipt.inputHashes = inputHashes
+    if (!resume) {
+      step = 'restore'
+      console.info('Restoring HYPE and applying migrations…')
+      receipt.restore = restoreD1Export(
+        resolve(inputs, 'hype.sql'),
+        resolve(inputs, 'schema.json'),
+        dbPath,
+      )
+      step = 'migrations'
+      await operation('migrate', resolve(directory, 'migrations.json'))
+      step = 'existing-feature-locations'
+      receipt.locationSplit = await convertExistingLocations(dbPath, directory)
+      step = 'breadline-users'
+      // Keep target-specific IDs stable across every rebuild; decisions are retained as reproducible inputs.
+      mkdirSync(resolve('.local/breadline/users/local'), {
+        recursive: true,
+        mode: 0o700,
+      })
+      if (!existsSync(seedPath))
+        writeFileSync(
+          seedPath,
+          JSON.stringify({
+            version: 1,
+            targetIdentity: receipt.targetIdentity,
+            seed: randomBytes(32).toString('hex'),
+          }),
+          { flag: 'wx' },
+        )
+      state = JSON.parse(readFileSync(seedPath, 'utf8'))
+      if (
+        state.targetIdentity !== receipt.targetIdentity ||
+        !/^[a-f0-9]{64}$/.test(state.seed)
+      )
+        throw new Error('Mismatched local identity seed')
+      writeFileSync(resolve(directory, 'identity-seed.json'), JSON.stringify(state))
+      // A fresh production mirror needs production's accepted source state and decisions,
+      // including reviewed distinct-person phone overrides; retain them with this rebuild.
+      const manifest = JSON.parse(
+        readFileSync('.local/breadline/users/production/accepted-sync.json', 'utf8'),
+      ) as {
+        version: number
+        targetIdentity: string
+        acceptedState: string
+        decisions: string
+      }
+      const production = Bun.TOML.parse(readFileSync('wrangler.toml', 'utf8')) as {
+        env: {
+          production: { d1_databases: Array<{ binding: string; database_id: string }> }
+        }
+      }
+      const productionDb = production.env.production.d1_databases.filter(
+        row => row.binding === 'DB',
+      )
+      if (
+        manifest.version !== 1 ||
+        productionDb.length !== 1 ||
+        manifest.targetIdentity !== `production:${productionDb[0].database_id}`
+      )
+        throw new Error(
+          'Production user reconciliation baseline does not match the exported target',
+        )
+      const acceptedState = JSON.parse(
+        readFileSync(manifest.acceptedState, 'utf8'),
+      ) as UserSyncLocalState
+      if (
+        acceptedState.version !== 1 ||
+        !Array.isArray(acceptedState.rows) ||
+        acceptedState.checkpoint?.targetIdentity !== manifest.targetIdentity
+      )
+        throw new Error('Invalid accepted production user source state')
       writeFileSync(
-        seedPath,
-        JSON.stringify({
-          version: 1,
-          targetIdentity: receipt.targetIdentity,
-          seed: randomBytes(32).toString('hex'),
-        }),
-        { flag: 'wx' },
+        resolve(directory, 'user-source-baseline.json'),
+        JSON.stringify(acceptedState),
       )
-    const state = JSON.parse(readFileSync(seedPath, 'utf8'))
-    if (
-      state.targetIdentity !== receipt.targetIdentity ||
-      !/^[a-f0-9]{64}$/.test(state.seed)
-    )
-      throw new Error('Mismatched local identity seed')
-    writeFileSync(resolve(directory, 'identity-seed.json'), JSON.stringify(state))
-    // A fresh production mirror needs production's accepted source state and decisions,
-    // including reviewed distinct-person phone overrides; retain them with this rebuild.
-    const manifest = JSON.parse(
-      readFileSync('.local/breadline/users/production/accepted-sync.json', 'utf8'),
-    ) as {
-      version: number
-      targetIdentity: string
-      acceptedState: string
-      decisions: string
-    }
-    const production = Bun.TOML.parse(readFileSync('wrangler.toml', 'utf8')) as {
-      env: {
-        production: { d1_databases: Array<{ binding: string; database_id: string }> }
+      writeFileSync(
+        resolve(directory, 'user-baseline-manifest.json'),
+        JSON.stringify(manifest),
+      )
+      const decisions = parseUserDecisions(
+        JSON.parse(readFileSync(manifest.decisions, 'utf8')),
+      )
+      writeFileSync(
+        resolve(directory, 'user-decisions.json'),
+        JSON.stringify(decisions),
+      )
+      receipt.userReconciliationInputs = {
+        productionTarget: manifest.targetIdentity,
+        sourceStateSha256: createHash('sha256')
+          .update(JSON.stringify(acceptedState))
+          .digest('hex'),
+        decisionsSha256: createHash('sha256')
+          .update(JSON.stringify(decisions))
+          .digest('hex'),
+        identitySeedSha256: createHash('sha256')
+          .update(JSON.stringify(state))
+          .digest('hex'),
       }
-    }
-    const productionDb = production.env.production.d1_databases.filter(
-      row => row.binding === 'DB',
-    )
-    if (
-      manifest.version !== 1 ||
-      productionDb.length !== 1 ||
-      manifest.targetIdentity !== `production:${productionDb[0].database_id}`
-    )
-      throw new Error(
-        'Production user reconciliation baseline does not match the exported target',
-      )
-    const acceptedState = JSON.parse(
-      readFileSync(manifest.acceptedState, 'utf8'),
-    ) as UserSyncLocalState
-    if (
-      acceptedState.version !== 1 ||
-      !Array.isArray(acceptedState.rows) ||
-      acceptedState.checkpoint?.targetIdentity !== manifest.targetIdentity
-    )
-      throw new Error('Invalid accepted production user source state')
-    writeFileSync(
-      resolve(directory, 'user-source-baseline.json'),
-      JSON.stringify(acceptedState),
-    )
-    writeFileSync(
-      resolve(directory, 'user-baseline-manifest.json'),
-      JSON.stringify(manifest),
-    )
-    const decisions = parseUserDecisions(
-      JSON.parse(readFileSync(manifest.decisions, 'utf8')),
-    )
-    writeFileSync(resolve(directory, 'user-decisions.json'), JSON.stringify(decisions))
-    receipt.userReconciliationInputs = {
-      productionTarget: manifest.targetIdentity,
-      sourceStateSha256: createHash('sha256')
-        .update(JSON.stringify(acceptedState))
-        .digest('hex'),
-      decisionsSha256: createHash('sha256')
-        .update(JSON.stringify(decisions))
-        .digest('hex'),
-      identitySeedSha256: createHash('sha256')
-        .update(JSON.stringify(state))
-        .digest('hex'),
-    }
-    const source = new Database(resolve(inputs, 'breadline.sqlite'), { readonly: true })
-    const rows = source
-      .query(
-        'SELECT id,volunteer_id,uid,email,name,telephone,locale,picture,created_at,last_updated_at FROM breadline__public__users ORDER BY id',
-      )
-      .all() as LegacyUser[]
-    source.close()
-    // Explicit reviewed target adoption runs only on the newly prepared offline database.
-    if (identityReview) {
-      receipt.identityAdoption = applyRebuildAdoptions(
-        dbPath,
-        rows,
-        identityReview,
-        state.seed,
+      const source = new Database(resolve(inputs, 'breadline.sqlite'), {
+        readonly: true,
+      })
+      const rows = source
+        .query(
+          'SELECT id,volunteer_id,uid,email,name,telephone,locale,picture,created_at,last_updated_at FROM breadline__public__users ORDER BY id',
+        )
+        .all() as LegacyUser[]
+      source.close()
+      // Explicit reviewed target adoption runs only on the newly prepared offline database.
+      if (identityReview) {
+        receipt.identityAdoption = applyRebuildAdoptions(
+          dbPath,
+          rows,
+          identityReview,
+          state.seed,
+          decisions,
+          resolve(directory, 'identity-adoption'),
+        )
+      }
+      reconciliation = reconcilePreparedUsers({
+        databasePath: dbPath,
+        sourcePath: resolve(inputs, 'breadline.sqlite'),
+        directory: resolve(directory, 'user-reconciliation'),
+        targetIdentity: String(receipt.targetIdentity),
+        seed: state.seed,
         decisions,
-        resolve(directory, 'identity-adoption'),
-      )
+        acceptedState,
+      })
+      receipt.users = reconciliation.counts
+      receipt.userReconciliation = reconciliation
+    } else {
+      state = JSON.parse(readFileSync(resolve(directory, 'identity-seed.json'), 'utf8'))
+      reconciliation = receipt.userReconciliation as ReturnType<
+        typeof reconcilePreparedUsers
+      >
+      if (reconciliation.status !== 'passed')
+        throw new Error('Cannot resume failed user reconciliation')
+      await operation('migrate', resolve(directory, 'resume-migrations.json'))
     }
-    const reconciliation = reconcilePreparedUsers({
-      databasePath: dbPath,
-      sourcePath: resolve(inputs, 'breadline.sqlite'),
-      directory: resolve(directory, 'user-reconciliation'),
-      targetIdentity: String(receipt.targetIdentity),
-      seed: state.seed,
-      decisions,
-      acceptedState,
-    })
-    receipt.users = reconciliation.counts
-    receipt.userReconciliation = reconciliation
-    step = 'breadline-features'
-    console.info('Importing Breadline Features…')
-    const featureSql = resolve(directory, 'features.sql')
-    planBreadlineFeatures([
-      '--source',
-      resolve(inputs, 'breadline.sqlite'),
-      '--target',
-      dbPath,
-      '--output',
-      featureSql,
-    ])
-    await operation('sql', featureSql)
-    receipt.features = JSON.parse(readFileSync(featureSql + '.receipt.json', 'utf8'))
-    const replaySql = resolve(directory, 'features-replay.sql')
-    planBreadlineFeatures([
-      '--source',
-      resolve(inputs, 'breadline.sqlite'),
-      '--target',
-      dbPath,
-      '--output',
-      replaySql,
-    ])
-    if (JSON.parse(readFileSync(replaySql + '.receipt.json', 'utf8')).created !== 0)
-      throw new Error('Feature replay creates records')
-    step = 'dataset-kinds'
-    await operation('kinds', resolve(directory, 'kinds.json'))
-    receipt.kinds = JSON.parse(
-      readFileSync(resolve(directory, 'kinds.json'), 'utf8'),
-    ).counts
-    step = 'policies'
-    await operation('policies', resolve(directory, 'policies.v1.jsonl'))
-    const styles = resolve(directory, 'map-styles.sql')
-    writeFileSync(styles, buildSyncSql('local', false))
-    await operation('sql', styles)
-    if (mocks) {
-      step = 'mocks'
-      const local = openSqliteDomain(dbPath)
-      try {
-        await seedDevPersonas(local.binding)
-      } finally {
-        local.close()
-      }
-      const fixtures = JSON.parse(
-        readFileSync('.local/breadline/local-users.json', 'utf8'),
-      )
-      writeFileSync(resolve(directory, 'local-users.json'), JSON.stringify(fixtures))
-      const plan = planLocalLatentUsers(fixtures, identities(dbPath), state.seed)
-      if (plan.exceptions.length) throw new Error('Local user fixtures conflict')
-      const mockSql = resolve(directory, 'mock-users.sql')
-      writeFileSync(mockSql, userPlanSql(plan))
-      await operation('sql', mockSql)
-      const command = [
-        'python3',
-        'scripts/locations/seed-lifecycle.py',
-        '--db',
+    if (!receipt.features) {
+      step = 'breadline-features'
+      console.info('Importing Breadline Features…')
+      const featureSql = resolve(directory, 'features.sql')
+      planBreadlineFeatures([
+        '--source',
+        resolve(inputs, 'breadline.sqlite'),
+        '--target',
         dbPath,
-        '--organisation',
-        'KpeoIsOhgyP-',
-        '--project',
-        'vGBvWfSZNELM',
-        '--layer',
-        '0bf1RYWdpaAt',
-        '--apply',
-      ]
-      await run(command, 'lifecycle-mocks')
-      await run(command, 'lifecycle-replay')
-      await run(
-        ['bun', 'run', 'scripts/dev/seed-tasks.ts', dbPath, '--apply'],
-        'task-mocks',
-      )
-      await run(
-        ['bun', 'run', 'scripts/dev/seed-tasks.ts', dbPath, '--apply'],
-        'task-replay',
-      )
-      receipt.mockSpatial = prepareMockSpatial(dbPath)
-      if (prepareMockSpatial(dbPath) !== 0)
-        throw new Error('Mock spatial replay differs')
-      const audit = await run(
-        [
+        '--output',
+        featureSql,
+      ])
+      await operation('sql', featureSql)
+      receipt.features = JSON.parse(readFileSync(featureSql + '.receipt.json', 'utf8'))
+      const replaySql = resolve(directory, 'features-replay.sql')
+      planBreadlineFeatures([
+        '--source',
+        resolve(inputs, 'breadline.sqlite'),
+        '--target',
+        dbPath,
+        '--output',
+        replaySql,
+      ])
+      if (JSON.parse(readFileSync(replaySql + '.receipt.json', 'utf8')).created !== 0)
+        throw new Error('Feature replay creates records')
+    }
+    if (!receipt.revisions) {
+      step = 'dataset-kinds'
+      await operation('kinds', resolve(directory, 'kinds.json'))
+      receipt.kinds = JSON.parse(
+        readFileSync(resolve(directory, 'kinds.json'), 'utf8'),
+      ).counts
+      step = 'policies'
+      await operation('policies', resolve(directory, 'policies.v1.jsonl'))
+      const styles = resolve(directory, 'map-styles.sql')
+      writeFileSync(styles, buildSyncSql('local', false))
+      await operation('sql', styles)
+      if (mocks && !receipt.mockSpatial) {
+        step = 'mocks'
+        const local = openSqliteDomain(dbPath)
+        try {
+          await seedDevPersonas(local.binding)
+        } finally {
+          local.close()
+        }
+        const fixtures = JSON.parse(
+          readFileSync('.local/breadline/local-users.json', 'utf8'),
+        )
+        writeFileSync(resolve(directory, 'local-users.json'), JSON.stringify(fixtures))
+        const plan = planLocalLatentUsers(fixtures, identities(dbPath), state.seed)
+        if (plan.exceptions.length) throw new Error('Local user fixtures conflict')
+        const mockSql = resolve(directory, 'mock-users.sql')
+        writeFileSync(mockSql, userPlanSql(plan))
+        await operation('sql', mockSql)
+        const command = [
           'python3',
-          'scripts/locations/audit-lifecycle-fixtures.py',
+          'scripts/locations/seed-lifecycle.py',
           '--db',
           dbPath,
-          '--base-url',
-          'http://127.0.0.1:4173',
-          '--markdown',
-          resolve(directory, 'scenarios.md'),
+          '--organisation',
+          'KpeoIsOhgyP-',
+          '--project',
+          'vGBvWfSZNELM',
+          '--layer',
+          '0bf1RYWdpaAt',
+          '--apply',
+        ]
+        await run(command, 'lifecycle-mocks')
+        await run(command, 'lifecycle-replay')
+        await run(
+          ['bun', 'run', 'scripts/dev/seed-tasks.ts', dbPath, '--apply'],
+          'task-mocks',
+        )
+        await run(
+          ['bun', 'run', 'scripts/dev/seed-tasks.ts', dbPath, '--apply'],
+          'task-replay',
+        )
+        receipt.mockSpatial = prepareMockSpatial(dbPath)
+        if (prepareMockSpatial(dbPath) !== 0)
+          throw new Error('Mock spatial replay differs')
+        const audit = await run(
+          [
+            'python3',
+            'scripts/locations/audit-lifecycle-fixtures.py',
+            '--db',
+            dbPath,
+            '--base-url',
+            'http://127.0.0.1:4173',
+            '--markdown',
+            resolve(directory, 'scenarios.md'),
+          ],
+          'fixture-audit',
+        )
+        const auditResult = JSON.parse(audit)
+        writeFileSync(resolve(directory, 'fixture-audit.json'), audit)
+        if (!auditResult.fixturePassed)
+          throw new Error('A–Z mock starting-state audit failed')
+        receipt.mockScenarios = auditResult.scenarios.length
+      }
+      if (messagingOrganisation) {
+        step = 'messaging-availability'
+        receipt.messagingAvailability = await backfillPreparedMessaging(
+          dbPath,
+          messagingOrganisation,
+          run,
+        )
+      }
+    }
+    step = 'revision-baselines'
+    console.info('Initializing verified revision baselines…')
+    if (!receipt.revisions)
+      receipt.revisions = await prepareLocalRevisions(dbPath, directory)
+    step = 'dependent-migrations'
+    await operation('migrate', resolve(directory, 'dependent-migrations.json'))
+    step = 'translation-schema-audit'
+    receipt.i18n = JSON.parse(
+      await run(
+        [
+          'python3',
+          'scripts/dev/audit-i18n-storage.py',
+          dbPath,
+          resolve(directory, 'i18n-storage.json'),
         ],
-        'fixture-audit',
-      )
-      const auditResult = JSON.parse(audit)
-      writeFileSync(resolve(directory, 'fixture-audit.json'), audit)
-      if (!auditResult.fixturePassed)
-        throw new Error('A–Z mock starting-state audit failed')
-      receipt.mockScenarios = auditResult.scenarios.length
-    }
-    if (messagingOrganisation) {
-      step = 'messaging-availability'
-      receipt.messagingAvailability = await backfillPreparedMessaging(
-        dbPath,
-        messagingOrganisation,
-        run,
-      )
-    }
+        'i18n-storage',
+      ),
+    )
     receipt.counts = JSON.parse(await operation('check'))
     if (apply) {
       step = 'install'

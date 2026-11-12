@@ -3,6 +3,7 @@
 import importlib.util
 import hashlib
 import json
+import re
 import os
 from pathlib import Path
 import sqlite3
@@ -30,7 +31,37 @@ def module(name, path):
 
 
 def local_migration_sql(db, name, sql):
-    """Retain a known production preference default during local column reordering."""
+    """Adapt reviewed pre-release content literals and retain a known production preference default."""
+    if name == '0207_former_bookstore_occupancy.sql':
+        # This reviewed fixture predates the locale-first Location storage contract.
+        # Adapt only complete normalized facts literals; publisher evidence is untouched.
+        def normalized_literal(match):
+            literal = match.group(0)
+            try:
+                value = json.loads(literal[1:-1].replace("''", "'"))
+            except (ValueError, TypeError):
+                return literal
+            if not isinstance(value, dict) or value.get('schemaVersion') != 1 or 'common' not in value:
+                return literal
+            common = value['common']
+            if 'names' not in common:
+                return literal
+            localized = value.setdefault('i18n', {})
+            details = value.get('details', {})
+            address = common.get('location', {}).get('address') or {}
+            for field, translations in [('name', common.pop('names', {})), ('branch', details.pop('branch', {})), ('format', details.pop('format', {})), ('displayAddress', address.pop('fallbackDisplay', {})), ('displayAddressOverride', address.pop('displayOverrides', {}))]:
+                for locale, text in translations.items():
+                    localized.setdefault(locale, {})[field] = text
+            for brand in details.get('brands', []):
+                brand['i18n'] = {locale: {'name': text} for locale, text in brand.pop('names', {}).items()}
+            return "'" + json.dumps(value, ensure_ascii=False, separators=(',', ':')).replace("'", "''") + "'"
+        sql = re.sub(r"'(?:''|[^'])*'", normalized_literal, sql)
+        # Deferred fixture SQL now runs after the kind/class taxonomy migration.
+        sql = re.sub(r"INSERT INTO location \(id,kind,ownerOrganisationId,state\) SELECT ('(?:''|[^'])*'),'building',", r"INSERT INTO location (id,kind,class,ownerOrganisationId,state) SELECT \1,'built','building',", sql)
+        sql = re.sub(r"INSERT INTO location \(id,kind,ownerOrganisationId,state\) SELECT ('(?:''|[^'])*'),'establishment',", r"INSERT INTO location (id,kind,class,ownerOrganisationId,state) SELECT \1,'operational','establishment',", sql)
+        sql = sql.replace("l.kind='building'", "l.kind='built' AND l.class='building'")
+        sql = sql.replace("l.kind='establishment'", "l.kind='operational' AND l.class='establishment'")
+        return sql
     if name != '0169_audit_column_order.sql':
         return sql
     canonical = '{"fallbackLocales":["en","zh-hant"], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'
@@ -74,6 +105,8 @@ def main():
                 db.row_factory = None
             # Keep shared migrations unchanged; retain exact local variants beside the receipt.
             variants = {}
+            current_lifecycle = any(row[1] == 'currentRevisionId' for row in db.execute("PRAGMA table_info('feature')"))
+            deferred = []
             source_hashes = {}
             with tempfile.TemporaryDirectory(prefix='hype-local-migrations-') as temporary:
                 migration_root = Path(temporary)
@@ -81,6 +114,9 @@ def main():
                 done = {row[0] for row in db.execute('SELECT name FROM d1_migrations')}
                 for path in sorted((ROOT / 'migrations').glob('*.sql')):
                     original = path.read_text()
+                    if path.name == '0207_former_bookstore_occupancy.sql' and path.name not in done and not current_lifecycle:
+                        deferred.append(path.name)
+                        continue
                     source_hashes[path.name] = hashlib.sha256(original.encode()).hexdigest()
                     sql = local_migration_sql(db, path.name, original) if path.name not in done else original
                     destination = migration_root / 'migrations' / path.name
@@ -97,7 +133,10 @@ def main():
                         row['sourceSha256'] = source_hashes[row['name']]
                         row['localVariant'] = variants[row['name']]
             checked(db)
-            assert not migration.apply_pending(db, ROOT)
+            remaining = {path.name for path in (ROOT / 'migrations').glob('*.sql')} - {row[0] for row in db.execute('SELECT name FROM d1_migrations')}
+            if remaining != set(deferred):
+                raise RuntimeError('Unexpected pending migrations after local schema preparation')
+            Path(args[0]).with_suffix('.deferred.json').write_text(json.dumps(deferred))
             Path(args[0]).write_text(json.dumps(applied, indent=2))
         elif action == 'sql':
             # executescript stops at the first error; ledger and history triggers share this transaction.

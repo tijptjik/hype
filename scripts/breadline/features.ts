@@ -1,3 +1,4 @@
+import { locationTaxonomy } from '../../src/lib/locations/taxonomy'
 import { breadlineBrandCatalogueSql } from './lib/brand-catalogue'
 import { createLocationFactsSnapshot } from '../../src/lib/locations/factsSnapshot'
 // SHARED ADDRESS PARSER
@@ -518,7 +519,7 @@ function buildBreadlineFeaturePlan(
         statements.push(
           insert('location', {
             id: locationId,
-            kind: table === 'donors' ? 'establishment' : 'unknown',
+            ...locationTaxonomy(table === 'donors' ? 'establishment' : 'unknown'),
             state: 'unresolved',
             ownerOrganisationId: scope.organisationId,
           }),

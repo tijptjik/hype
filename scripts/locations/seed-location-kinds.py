@@ -277,7 +277,7 @@ def plan(db: sqlite3.Connection, actor: str) -> dict:
             for identity in f["legacySourceIdentities"]
         ):
             decision, reason = "conflict", "breadline-source-cohort-mismatch"
-        elif location["kind"] == after:
+        elif (location.get("class") or location["kind"]) == after:
             decision, reason = "no-change", "already-correct"
         elif location["kind"] != "unknown":
             decision, reason = "conflict", "contradictory-existing-kind"
@@ -527,8 +527,17 @@ def statements(document: dict, rollback: bool = False) -> list[str]:
             continue
         revision = revision_for(document, decision, rollback)
         forward = revision_for(document, decision)
-        before = {**old, "kind": decision["proposedAfter"]} if rollback else old
-        after = {**old, "kind": old["kind"] if rollback else decision["proposedAfter"]}
+        # Current identities store taxonomy family and class separately.
+        proposed = {"kind": decision["proposedAfter"]}
+        if "class" in old:
+            target_type = decision["proposedAfter"]
+            proposed = {"kind": "operational" if target_type == "establishment" else "built" if target_type == "building" else target_type,
+                        "class": target_type if target_type in ("establishment", "building") else None}
+        before = {**old, **proposed} if rollback else old
+        after = old if rollback else {**old, **proposed}
+        assignments = ",".join(f"{identifier(key)}={literal(after[key])}" for key in proposed)
+        if "matchingType" in old:
+            (before if rollback else after)["matchingType"] = decision["proposedAfter"]
         predecessor = forward if rollback else baseline
         initial = (
             f"EXISTS(SELECT 1 FROM location WHERE {predicate(before)}) AND "
@@ -545,7 +554,7 @@ def statements(document: dict, rollback: bool = False) -> list[str]:
         changes.extend(
             [
                 f"INSERT INTO locationRevision({columns}) SELECT {values} WHERE {initial}",
-                f"UPDATE location SET kind={literal(after['kind'])} WHERE {predicate(before)} AND EXISTS(SELECT 1 FROM locationRevision WHERE {predicate(revision)})",
+                f"UPDATE location SET {assignments} WHERE {predicate(before)} AND EXISTS(SELECT 1 FROM locationRevision WHERE {predicate(revision)})",
                 check(applied),
             ]
         )
