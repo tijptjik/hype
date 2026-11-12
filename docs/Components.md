@@ -63,6 +63,16 @@ to the root account's `collections`, shared across surfaces. Use these owners di
 rather than adding forwarding APIs. Public map visibility, selection and camera
 orchestration remain on `AppCtx`.
 
+Admin editor maps belong to the admin layout through `AdminMapHost` and its `AdminMap`
+context. The host must be a sibling of `AdminShell`, outside its route-keyed
+`RouteViewport`; placing it in the shell's children remounts it on pathname changes.
+Feature and Location pages use the same `AdminMapOutlet` through `MapPrimitive`; the
+outlet receives the retained renderer DOM instead of owning a new WebGL instance. Route
+teardown parks the renderer and releases route callbacks and snippets. Matching marker
+coordinates retain the camera; changed coordinates use the existing flight behavior.
+Account changes discard the retained map. Isolated forms without this layout context
+retain their local map lifecycle.
+
 ## Startup dependency boundaries
 
 Use skeletons for pending content, including deferred sections, forms, search results,
