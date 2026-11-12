@@ -1,3 +1,4 @@
+import { setResearchSessionsArchived } from '#lib/db/services/fieldResearchArchive.js'
 import { mergeResearchStacks } from '#lib/db/services/fieldResearch.js'
 // @vitest-environment node
 // TESTS
@@ -41,6 +42,7 @@ async function fixture() {
   f.sqlite.exec(
     readFileSync('migrations/0244_field_research_stack_details.sql', 'utf8'),
   )
+  f.sqlite.exec(readFileSync('migrations/0246_field_research_archive.sql', 'utf8'))
   f.sqlite.exec(
     `INSERT INTO user(id) VALUES ('researcher'); CREATE TABLE featureIntentPolicy(scopeType TEXT,scopeId TEXT,definition TEXT,namingRules TEXT,version INTEGER);`,
   )
@@ -312,5 +314,78 @@ describe('field research capture and grouping', () => {
     expect(
       f.sqlite.prepare('SELECT featureId FROM fieldResearchStack').get()?.featureId,
     ).toBeNull()
+  })
+})
+
+describe('research session archive', () => {
+  it('archives and restores large selections without changing progress or captures', async () => {
+    const f = await fixture()
+    await captures(f, 3)
+    f.sqlite.exec(
+      `WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x<120) INSERT INTO fieldResearchSession(id,name,organisationId,projectId,createdBy,createdAt,updatedAt,status) SELECT 'bulk-'||x,'Outing','org','project','researcher','now','now','organising' FROM n`,
+    )
+    const rows = await f.db.select().from(fieldResearchSession)
+    const actor = {
+      db: f.db,
+      user: { id: 'researcher', superAdmin: true },
+      userRoles: [],
+    }
+    expect(await setResearchSessionsArchived(actor, rows, true)).toBe(true)
+    const archived = await f.db.select().from(fieldResearchSession)
+    expect(archived).toHaveLength(121)
+    expect(
+      archived.every(
+        row =>
+          row.isArchived &&
+          row.archivedBy === 'researcher' &&
+          row.archivedAt &&
+          row.revision === 1,
+      ),
+    ).toBe(true)
+    expect(archived.find(row => row.id === 'session')?.status).toBe('uploading')
+    expect(await f.db.select().from(fieldResearchImage)).toHaveLength(3)
+    expect(await setResearchSessionsArchived(actor, archived, false)).toBe(true)
+    const restored = await f.db.select().from(fieldResearchSession)
+    expect(
+      restored.every(
+        row =>
+          !row.isArchived &&
+          row.archivedAt === null &&
+          row.archivedBy === null &&
+          row.revision === 2,
+      ),
+    ).toBe(true)
+  })
+
+  it('rejects stale, missing and unauthorized selections without partial updates', async () => {
+    const f = await fixture()
+    const actor = {
+      db: f.db,
+      user: { id: 'researcher', superAdmin: true },
+      userRoles: [],
+    }
+    expect(
+      await setResearchSessionsArchived(
+        actor,
+        [
+          { id: 'session', revision: 0 },
+          { id: 'missing', revision: 0 },
+        ],
+        true,
+      ),
+    ).toBe(false)
+    expect(
+      await setResearchSessionsArchived(actor, [{ id: 'session', revision: 1 }], true),
+    ).toBe(false)
+    expect(
+      await setResearchSessionsArchived(
+        { ...actor, user: { id: 'researcher', superAdmin: false } },
+        [{ id: 'session', revision: 0 }],
+        true,
+      ),
+    ).toBe(false)
+    const [row] = await f.db.select().from(fieldResearchSession)
+    expect(row.isArchived).toBe(false)
+    expect(row.revision).toBe(0)
   })
 })
