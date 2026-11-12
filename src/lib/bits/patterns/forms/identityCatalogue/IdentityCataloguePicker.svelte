@@ -4,6 +4,8 @@ import {
   findIdentityCatalogue,
   getIdentityCatalogue,
 } from '#lib/api/identityCatalogue.remote.js'
+// DOMAIN
+import { catalogueDisplayName } from '#lib/locations/cataloguePresentation.js'
 // TYPES
 import type { IdentityCatalogueRecord } from '#lib/locations/identityCatalogue.js'
 let {
@@ -79,7 +81,7 @@ $effect(() => {
     <a
       class="text-sm underline"
       href={`/admin/catalogue?id=${selected.id}${organisationId ? `&organisation=${organisationId}` : ''}`}
-      >{selected.i18n.en.name}</a
+      >{catalogueDisplayName(selected)}</a
     >
   {/if}
   {#if !disabled}
@@ -92,13 +94,13 @@ $effect(() => {
       <option value="">No {kind} link</option>
       {#if selected && !results.some(row => row.id === selected?.id)}
         <option value={selected.id}>
-          {selected.i18n.en.name}
+          {catalogueDisplayName(selected)}
           · {selected.code ?? selected.id}
         </option>
       {/if}
       {#each results as record (record.id)}
         <option value={record.id}>
-          {record.i18n.en.name}
+          {catalogueDisplayName(record)}
           · {record.code ?? record.id}
         </option>
       {/each}
