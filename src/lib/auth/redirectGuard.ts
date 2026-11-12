@@ -37,3 +37,26 @@ export function isPublicUnauthenticatedPath(
     safePathname === '/manifest.webmanifest'
   )
 }
+
+/** Reject unauthenticated admin requests without sending HTML to remote clients.
+ * @param returnTo Original admin page path and query.
+ * @param isRemoteRequest Whether Kit is handling a native remote-function request.
+ * @returns A native JSON error for remote calls, or the normal page sign-in redirect.
+ * @remarks Remote request URLs identify the calling page. Reject before executing the
+ * endpoint, retaining the same account requirement as ordinary admin navigation.
+ */
+export function adminAuthRequiredResponse(
+  returnTo: string,
+  isRemoteRequest: boolean,
+): Response {
+  if (isRemoteRequest) {
+    return Response.json(
+      { type: 'error', error: { status: 401, message: 'UNAUTHENTICATED' } },
+      { status: 401, headers: { 'cache-control': 'no-store' } },
+    )
+  }
+  return new Response(null, {
+    status: 302,
+    headers: { location: `/?upgrade=admin&returnTo=${encodeURIComponent(returnTo)}` },
+  })
+}

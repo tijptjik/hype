@@ -3,6 +3,8 @@ import { APIError } from 'better-auth/api'
 // DB
 import { eq, sql } from 'drizzle-orm'
 import { user, breadlineImportUser } from '#lib/db/schema/index.js'
+// SERVICES
+import { retryBusyRead } from '#lib/db/services/sqlite.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -18,16 +20,18 @@ export async function requireAvailableAuthUser(
   db: Database,
   userId: string,
 ): Promise<void> {
-  const current = await db.query.user.findFirst({
-    where: eq(user.id, userId),
-    columns: { isArchived: true },
-    extras: {
-      isUnclaimed:
-        sql<boolean>`exists (select 1 from ${breadlineImportUser} where ${breadlineImportUser.userId} = ${user.id} and ${breadlineImportUser.state} = 'unclaimed')`.as(
-          'isUnclaimed',
-        ),
-    },
-  })
+  const current = await retryBusyRead(() =>
+    db.query.user.findFirst({
+      where: eq(user.id, userId),
+      columns: { isArchived: true },
+      extras: {
+        isUnclaimed:
+          sql<boolean>`exists (select 1 from ${breadlineImportUser} where ${breadlineImportUser.userId} = ${user.id} and ${breadlineImportUser.state} = 'unclaimed')`.as(
+            'isUnclaimed',
+          ),
+      },
+    }),
+  )
   if (!current || current.isArchived || current.isUnclaimed) {
     throw new APIError('UNAUTHORIZED', {
       code: 'ACCOUNT_UNAVAILABLE',

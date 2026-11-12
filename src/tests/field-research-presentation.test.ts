@@ -23,6 +23,18 @@ describe('research stack presentation', () => {
       }
     }
   })
+  it('explains auth and malformed server responses without exposing parser errors', () => {
+    expect(
+      researchErrorMessage(
+        new Error(
+          'JSON.parse: unexpected character at line 1 column 1 of the JSON data',
+        ),
+      ),
+    ).toBe('The server returned an unexpected response. Please try again.')
+    expect(researchErrorMessage({ body: { message: 'UNAUTHENTICATED' } })).toBe(
+      'Your sign-in could not be verified. Please try again or sign in again.',
+    )
+  })
   it('unwraps remote validation messages for toasts', () => {
     expect(
       researchErrorMessage(

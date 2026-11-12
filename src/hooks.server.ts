@@ -22,6 +22,7 @@ import { getAuthForRequest } from '#lib/auth.js'
 import { handleBreadlinePhone } from '#lib/auth/breadline-phone.server.js'
 import { DEV_PERSONAS, isDevPersona, isDevPersonaHost } from '#lib/auth/dev-personas.js'
 import {
+  adminAuthRequiredResponse,
   isAuthEntryPath,
   isPublicUnauthenticatedPath,
 } from '#lib/auth/redirectGuard.js'
@@ -397,12 +398,7 @@ const handle_auth_redirect: Handle = async ({ event, resolve }) => {
 
   if (isAdminPath && !hasAccount) {
     const returnTo = `${event.url.pathname}${event.url.search}`
-    return new Response(null, {
-      status: 302,
-      headers: {
-        location: `/?upgrade=admin&returnTo=${encodeURIComponent(returnTo)}`,
-      },
-    })
+    return adminAuthRequiredResponse(returnTo, event.isRemoteRequest)
   }
 
   return resolve(event)

@@ -46,6 +46,10 @@ export function researchErrorMessage(cause: unknown): string {
         ? cause.message
         : cause
   if (typeof value !== 'string') return 'Something went wrong. Please try again.'
+  if (value === 'UNAUTHENTICATED')
+    return 'Your sign-in could not be verified. Please try again or sign in again.'
+  if (/JSON\.parse|Unexpected (?:token|end).*JSON|not valid JSON/i.test(value))
+    return 'The server returned an unexpected response. Please try again.'
   try {
     const parsed: unknown = JSON.parse(value)
     if (typeof parsed === 'object' && parsed !== null)
