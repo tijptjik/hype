@@ -28,7 +28,7 @@ import InboxArrowDown from 'virtual:icons/proicons/mail-open'
 import MapPin from 'virtual:icons/proicons/location'
 import StoreIcon from '#lib/bits/custom/icon/StoreIcon.svelte'
 import ChatIcon from 'virtual:icons/proicons/chat'
-import TemplateIcon from 'virtual:icons/proicons/code'
+import TemplateIcon from '#lib/bits/custom/icon/TemplateIcon.svelte'
 import BookOpenIcon from 'virtual:icons/proicons/book-open'
 import CameraIcon from 'virtual:icons/proicons/camera'
 // CONTEXT

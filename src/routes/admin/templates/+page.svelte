@@ -3,7 +3,7 @@
 import { untrack, onDestroy } from 'svelte'
 import { page } from '$app/state'
 // ICONS
-import Braces from 'virtual:icons/proicons/code'
+import Braces from '#lib/bits/custom/icon/TemplateIcon.svelte'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
