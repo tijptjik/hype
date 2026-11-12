@@ -450,6 +450,32 @@ let viewportHeight = $state(0)
       </p>
     </section>
     <LocationMatchingDocs />
+    <section aria-labelledby="translation-storage">
+      <h2 id="translation-storage" class="text-2xl font-semibold">
+        Translations and search
+      </h2>
+      <p class="mt-3 max-w-3xl">
+        Location revision content stores translated fields together under
+        <code>facts.i18n[locale]</code>: <code>name</code>, <code>branch</code>,
+        <code>format</code>, <code>displayAddress</code> and
+        <code>displayAddressOverride</code>. Branch IDs and catalogue links are
+        non-translatable identifiers. Raw provider evidence stays unchanged.
+      </p>
+      <p class="mt-3 max-w-3xl">
+        Each revision also has dedicated <code>locationRevisionI18n</code> rows, keyed
+        by revision and locale, maintained atomically from its content. Brand and group
+        catalogue search uses <code>identityCatalogueI18n</code>. Feature search has an
+        FTS index; Location search currently uses substring matching after resolving the
+        permitted community and Organisation layers. Translation rows do not by
+        themselves provide indexed substring search.
+      </p>
+      <p class="mt-3 max-w-3xl">
+        Structured Address content retains the shared Address contract, including its
+        <code>i18n</code>
+        and <code>unitI18n</code> namespaces. Correction choices and acceptance state
+        are separate from the normalized revision content.
+      </p>
+    </section>
     <LocationChangePolicyDocs />
   </article>
 </div>

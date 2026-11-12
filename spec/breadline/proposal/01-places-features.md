@@ -3793,3 +3793,25 @@ Historical locale maps remain readable without rewriting immutable revisions. Re
 Location adapters expose locale maps. The global translatable Branch property uses the
 existing `propertyI18n` and `featurePropertyI18n` tables; automatic binding to the
 accepted Location Branch is a separate integration.
+
+### Pre-release translation storage correction (Refs #194)
+
+Migration 0238 standardizes Location revision content on
+`locationRevision.facts.i18n[locale]`, with scalar `name`, `branch`, `format`,
+`displayAddress` and `displayAddressOverride` fields. It removes the earlier field-first
+locale maps; raw publisher evidence is unchanged. Branch IDs remain non-translatable.
+Structured Address content retains its shared `i18n` and `unitI18n` contract. Correction
+operations are separate from normalized content.
+
+`locationRevisionI18n` provides relational translation rows keyed by revision and
+locale, populated atomically by an insertion trigger. Migration 0239 similarly projects
+the current brand/group catalogue into `identityCatalogueI18n`. Migration 0240 makes
+Property translation identity unique by Property and locale. Feature search already uses
+FTS5; Location search still resolves permitted overlays before substring matching and
+does not yet have a Location FTS index.
+
+The local rebuild exports production read-only, merges Breadline, initializes verified
+revision baselines and converts the Feature lifecycle before applying
+lifecycle-dependent fixture migrations. `--resume` reuses hash-checked private exports
+and successful stage receipts. Installation remains a separate local step after schema,
+translation projection, integrity and foreign-key validation.
