@@ -33,3 +33,33 @@ export const resolveTitle = (
   const normalizedTitle = title.replace(ENV_TITLE_PREFIX_PATTERN, '')
   return environmentLabel ? `${environmentLabel} ${normalizedTitle}` : normalizedTitle
 }
+
+/** Append the current admin resource to the shared application/environment title.
+ * @param title Existing shared title, including its environment prefix.
+ * @param pathname Current route path. @returns Shared title with an admin resource suffix.
+ */
+export const resolveAdminTitle = (title: string, pathname: string): string => {
+  const [, area, section] = pathname.split('/')
+  if (area !== 'admin') return title
+  const labels: Record<string, string> = {
+    fieldresearch: 'Field research',
+    import: 'Import',
+    catalogue: 'Catalogue',
+    features: 'Features',
+    locations: 'Locations',
+    organisations: 'Organisations',
+    projects: 'Projects',
+    layers: 'Layers',
+    hubs: 'Hubs',
+    users: 'Users',
+    tasks: 'Tasks',
+    templates: 'Templates',
+    docs: 'Docs',
+    analytics: 'Analytics',
+    messaging: 'Messaging',
+    whatsapp: 'WhatsApp',
+    styles: 'Styles',
+  }
+  const resource = section ? (labels[section] ?? section.replaceAll('-', ' ')) : 'Admin'
+  return `${title} - ${resource}`
+}
