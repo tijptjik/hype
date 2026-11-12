@@ -5,7 +5,7 @@ import { m } from '#lib/i18n.js'
 import Select from '#lib/bits/core/select/Select.svelte'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // ICONS
-import SharedIcon from 'virtual:icons/lucide/users'
+import CommunityIcon from '#lib/bits/custom/icon/CommunityIcon.svelte'
 import ExclusiveIcon from 'virtual:icons/lucide/lock-keyhole'
 import InfoIcon from 'virtual:icons/lucide/info'
 
@@ -29,7 +29,7 @@ let {
       aria-hidden="true"
     >
       {#if value !== 'exclusive'}
-        <SharedIcon class="size-4" />
+        <CommunityIcon class="size-4" />
       {:else}
         <ExclusiveIcon class="size-4" />
       {/if}
